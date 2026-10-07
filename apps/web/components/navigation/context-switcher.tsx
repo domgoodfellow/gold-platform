@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@gold/ui/components/dropdown-menu';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@gold/ui/components/sidebar';
-import { Building2, ChevronsUpDown } from 'lucide-react';
+import { Building2, ChevronsUpDown, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 import { organizationHomeHref } from '@/lib/navigation';
@@ -34,27 +34,24 @@ export type SwitchableOrganization = {
 export type SwitcherContext =
   | { kind: 'business'; organizationId: string; name: string; role: string }
   /** The fallback frame: no organization is trusted, so the trigger names only the platform. */
+  | { kind: 'platform'; organizationId: string }
   | { kind: 'global' };
+
+export type PlatformContext = { organizationId: string; href: string };
 
 type SwitcherProps = {
   mark: ReactNode;
   current: SwitcherContext;
   organizations: SwitchableOrganization[];
+  platform?: PlatformContext | null;
 };
 
-/**
- * One identity, its businesses, and exactly one current context. The current context is the header
- * of the menu and is never repeated in the list, so the list is always *where else can I go*. The
- * switcher answers one question — **which organization am I operating?** — and nothing else:
- * Platform is not an organization and is not offered here. Platform tools appear in GOLD's own
- * shell, for an operator holding the permission, and `/platform/**` renders inside that shell, so
- * the current context there is GOLD.
- */
-export function deriveSwitcherView(current: SwitcherContext, organizations: SwitchableOrganization[]) {
+/** Businesses and the separately authorized system control plane share one switcher. */
+export function deriveSwitcherView(current: SwitcherContext, organizations: SwitchableOrganization[], platform?: PlatformContext | null) {
   const triggerName =
-    current.kind === 'business' ? current.name : PLATFORM_NAME;
+    current.kind === 'business' ? current.name : current.kind === 'platform' ? `${PLATFORM_NAME} Platform` : PLATFORM_NAME;
   const triggerRole =
-    current.kind === 'business' ? current.role : 'Choose where to work';
+    current.kind === 'business' ? current.role : current.kind === 'platform' ? 'System control plane' : 'Choose where to work';
   const avatarInitial =
     current.kind === 'business' ? triggerName.charAt(0).toUpperCase() : 'G';
   const businesses =
@@ -62,7 +59,7 @@ export function deriveSwitcherView(current: SwitcherContext, organizations: Swit
       ? organizations.filter((organization) => organization.id !== current.organizationId)
       : organizations;
 
-  return { triggerName, triggerRole, avatarInitial, businesses, hasChoices: businesses.length > 0 };
+  return { triggerName, triggerRole, avatarInitial, businesses, hasChoices: businesses.length > 0 || !!platform };
 }
 
 function ContextSwitcherMenuContent({
@@ -70,6 +67,8 @@ function ContextSwitcherMenuContent({
   triggerRole,
   avatarInitial,
   businesses,
+  platform,
+  current,
 }: SwitcherProps & ReturnType<typeof deriveSwitcherView>) {
   return (
     <DropdownMenuContent side="bottom" align="start" className="w-64 min-w-64">
@@ -102,12 +101,24 @@ function ContextSwitcherMenuContent({
           ))}
         </>
       ) : null}
+      {platform ? (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="px-2 text-xs uppercase tracking-wide text-subtle">System</DropdownMenuLabel>
+          <DropdownMenuItem asChild>
+            <Link href={platform.href} aria-current={current.kind === 'platform' ? 'page' : undefined} className="flex items-center gap-2">
+              <LayoutDashboard aria-hidden className="shrink-0" />
+              <span>Platform</span>
+            </Link>
+          </DropdownMenuItem>
+        </>
+      ) : null}
     </DropdownMenuContent>
   );
 }
 
-export function ContextSwitcher({ mark, current, organizations }: SwitcherProps) {
-  const view = deriveSwitcherView(current, organizations);
+export function ContextSwitcher({ mark, current, organizations, platform }: SwitcherProps) {
+  const view = deriveSwitcherView(current, organizations, platform);
 
   // Nowhere else to go: a label, not a menu with nothing in it. `asChild` swaps the underlying
   // element for a non-interactive `<div>` — which means the button's own `flex` row classes land
@@ -127,6 +138,7 @@ export function ContextSwitcher({ mark, current, organizations }: SwitcherProps)
               <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded">{mark}</span>
               <span className="min-w-0 flex-1 truncate text-center text-sm font-semibold group-data-[collapsible=icon]:hidden">
                 {view.triggerName}
+                {current.kind === 'platform' ? <span className="block text-xs font-normal text-muted">{view.triggerRole}</span> : null}
               </span>
               {/* Balances the mark's width on the other side, so the centered name lands in the
                   middle of the whole row rather than the middle of the space left of it. */}
@@ -155,6 +167,7 @@ export function ContextSwitcher({ mark, current, organizations }: SwitcherProps)
               <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded">{mark}</span>
               <span className="min-w-0 flex-1 truncate text-center text-sm font-semibold group-data-[collapsible=icon]:hidden">
                 {view.triggerName}
+                {current.kind === 'platform' ? <span className="block text-xs font-normal text-muted">{view.triggerRole}</span> : null}
               </span>
               <span className="flex size-8 shrink-0 items-center justify-center group-data-[collapsible=icon]:hidden">
                 <ChevronsUpDown aria-hidden className="size-3.5 shrink-0" />
@@ -165,6 +178,7 @@ export function ContextSwitcher({ mark, current, organizations }: SwitcherProps)
             mark={mark}
             current={current}
             organizations={organizations}
+            platform={platform}
             {...view}
           />
         </DropdownMenu>
@@ -190,8 +204,8 @@ export function ContextIdentity({ mark, name, role }: { mark: ReactNode; name: s
   );
 }
 
-export function CompactContextSwitcher({ mark, current, organizations }: SwitcherProps) {
-  const view = deriveSwitcherView(current, organizations);
+export function CompactContextSwitcher({ mark, current, organizations, platform }: SwitcherProps) {
+  const view = deriveSwitcherView(current, organizations, platform);
 
   if (!view.hasChoices) {
     return (
@@ -221,6 +235,7 @@ export function CompactContextSwitcher({ mark, current, organizations }: Switche
         mark={mark}
         current={current}
         organizations={organizations}
+        platform={platform}
         {...view}
       />
     </DropdownMenu>

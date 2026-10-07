@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { useEffect, useMemo } from 'react';
+import { TooltipProvider } from '@gold/ui/components/tooltip';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -23,6 +24,7 @@ import {
  */
 
 beforeEach(() => {
+  vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
   // jsdom has no layout engine and no `matchMedia`; the rail's own breakpoint hook only needs
   // the call to exist, never fire a real change here.
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -33,7 +35,7 @@ beforeEach(() => {
   })) as unknown as typeof window.matchMedia;
 });
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 function AgentProbe({ onMount }: { onMount: () => void }) {
   useEffect(() => {
@@ -53,11 +55,13 @@ function RegisterAgentContent({ onMount }: { onMount: () => void }) {
 
 function Harness({ onMount }: { onMount: () => void }) {
   return (
-    <WorkspaceRailProvider>
-      <AgentTrigger />
-      <WorkspaceRightRail main={<div>The page</div>} />
-      <RegisterAgentContent onMount={onMount} />
-    </WorkspaceRailProvider>
+    <TooltipProvider>
+      <WorkspaceRailProvider>
+        <AgentTrigger />
+        <WorkspaceRightRail main={<div>The page</div>} />
+        <RegisterAgentContent onMount={onMount} />
+      </WorkspaceRailProvider>
+    </TooltipProvider>
   );
 }
 

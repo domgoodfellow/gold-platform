@@ -149,11 +149,11 @@ describe('the operator shell navigation', () => {
     // never a flag on the workspace and never an entitlement. Insights is not registered here at
     // all — it is cross-cutting, not a ninth workspace (D66).
     expect(WORKSPACES.map((workspace) => workspace.key)).toEqual([
-      'crm', 'communications', 'marketing', 'support', 'finance', 'ai', 'automations', 'field', 'studio',
+      'crm', 'communications', 'marketing', 'support', 'field', 'finance', 'automations', 'ai', 'studio',
     ]);
     const withAPage = (key: string) => AREAS.some((area) => area.workspace === key && area.group === 'workspaces' && area.sidebar !== false);
     expect(WORKSPACES.filter((workspace) => withAPage(workspace.key)).map((workspace) => workspace.key)).toEqual([
-      'crm', 'communications', 'finance', 'automations', 'field', 'studio',
+      'crm', 'communications', 'field', 'finance', 'automations', 'studio',
     ]);
     // Registered, not yet visible. Delete a key here in the same change that gives it a real page.
     expect(WORKSPACES.filter((workspace) => !withAPage(workspace.key)).map((workspace) => workspace.key)).toEqual([
@@ -169,7 +169,7 @@ describe('the operator shell navigation', () => {
     expect(label('marketing')).toBe('Marketing');
     expect(label('support')).toBe('Support');
     expect(label('automations')).toBe('Automations');
-    expect(label('field')).toBe('Field');
+    expect(label('field')).toBe('Work');
     for (const workspace of WORKSPACES) {
       expect(workspace.key).not.toBe('agents');
       expect(workspace.key).not.toBe('workspace');
@@ -206,14 +206,14 @@ describe('the operator shell navigation', () => {
     expect(AREAS.find((area) => area.segment === 'studio-website')?.workspace).toBe('studio');
   });
 
-  it('gives Field a Home, Work, Schedule, Resources, Locations and Equipment & Assets as its pages', () => {
+  it('gives Work a Home, Work items, Schedule, Resources, Locations and Equipment & Assets as its pages', () => {
     expect(AREAS.filter((area) => area.workspace === 'field').map((area) => area.segment)).toEqual([
       'field', 'work', 'schedule', 'resources', 'locations', 'assets',
     ]);
     expect(existsSync(`${ROUTES}/field/page.tsx`)).toBe(true);
     // Customer-facing navigation no longer says Operations.
     expect(AREAS.some((area) => area.label === 'Operations')).toBe(false);
-    expect(WORKSPACES.find((workspace) => workspace.key === 'field')?.label).toBe('Field');
+    expect(WORKSPACES.find((workspace) => workspace.key === 'field')?.label).toBe('Work');
     // Home is the workspace's own row, not a redundant 'Overview' child.
     expect(AREAS.find((area) => area.segment === 'field')?.label).not.toBe('Overview');
     // The existing routes stay canonical: no address moved to say which workspace a page belongs to.
@@ -891,7 +891,7 @@ describe('the organization shell taxonomy', () => {
     // Registered workspaces, in the order a customer meets them, with no Gild prefix and no ninth
     // Insights row. Which of them draw a row is a fact about pages.
     expect(WORKSPACES.map((workspace) => workspace.label)).toEqual([
-      'CRM', 'Communications', 'Marketing', 'Support', 'Finance', 'AI', 'Automations', 'Field', 'Studio',
+      'CRM', 'Communications', 'Marketing', 'Support', 'Work', 'Finance', 'Automations', 'AI', 'Studio',
     ]);
   });
 
@@ -991,7 +991,7 @@ describe('sibling views are navigation, not page actions', () => {
     expect(read(`${UI}/tab-styles.ts`)).toContain('aria-[current=page]:border-accent');
   });
 
-  it('Customers and Pipeline are pages of Sales in the sidebar, so neither repeats them as a tab strip', () => {
+  it('Customers and Pipeline remain contextual pages of CRM without a redundant tab strip', () => {
     const list = read(`${ROUTES}/customers/page.tsx`);
     const pipeline = read(`${ROUTES}/customers/pipeline/page.tsx`);
     for (const page of [list, pipeline]) expect(page).not.toMatch(/ViewNav|ViewTabs/);

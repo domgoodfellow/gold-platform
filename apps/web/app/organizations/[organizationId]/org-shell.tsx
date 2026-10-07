@@ -1,7 +1,9 @@
 'use client';
 
+import { WorkspaceHeader } from '@/components/headers/workspace-header';
+import { WorkspaceShell } from '@/components/layout/workspace-shell';
 import { AccountMenu } from '@/components/navigation/account-menu';
-import { ContextIdentity, ContextSwitcher, type SwitchableOrganization } from '@/components/navigation/context-switcher';
+import { ContextIdentity, ContextSwitcher, CompactContextSwitcher, GOLD_MARK, type SwitchableOrganization, type SwitcherContext, type PlatformContext } from '@/components/navigation/context-switcher';
 import {
   Sidebar,
   SidebarContent,
@@ -72,21 +74,17 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import {
-  ADMINISTRATION_SECTIONS,
   activeItemKey,
+  selectShellContext,
+  type HeaderUtility,
+  shellHomeItem,
   inPlatformScope,
   itemContains,
   type NavItem,
   type ShellSection,
 } from '@/lib/shell';
 
-/**
- * The shell's renderers. They decide nothing: every item they draw comes from one projection
- * (`projectShell`), which the layout resolves once from the organization's entitlements, the
- * member's permissions and — in GOLD's own organization only — their platform authority, and hands
- * to the desktop sidebar, the collapsed rail and the phone bar alike. There is no eligibility rule
- * here, so a breakpoint cannot disagree with another about what a person may reach.
- */
+/** Renderers share the selected projection and decide no destination eligibility. */
 
 /**
  * One icon per area, keyed by segment rather than declared on `Area` itself — icon choice is how
@@ -267,15 +265,7 @@ function NavRow({ item, active, expanded }: { item: NavItem; active: string | nu
   );
 }
 
-/**
- * The tablet and desktop rendering: `Sidebar`'s own grouped-menu vocabulary, one `SidebarGroup` per
- * projected section in order — Home, Library, Workspaces, and (only inside GOLD, only with
- * platform authority) Administration last, holding the Platform row. Administration is an extra
- * section beneath the business's own, never a replacement for any of it. Team, Connections and
- * Plan & usage are Settings destinations and have no row here. Collapse-to-icon, the
- * tooltip that appears while collapsed, and the `md`-and-up-only rendering are all `Sidebar`'s
- * own, not reimplemented here.
- */
+/** Every breakpoint draws the selected context's already resolved sections. */
 export function OrgNav({ sections }: { sections: ShellSection[] }) {
   const pathname = usePathname();
   const active = activeItemKey(sections, pathname);
@@ -287,24 +277,15 @@ export function OrgNav({ sections }: { sections: ShellSection[] }) {
       <SidebarGroupContent>
         <SidebarMenu>
           {section.items.map((item) => (
-            <NavRow key={item.key} item={item} active={active} expanded={section.key === 'administration' && platformActive} />
+            <NavRow key={item.key} item={item} active={active} expanded={section.key === 'platform' && platformActive} />
           ))}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
   );
-  const operating = sections.filter((section) => !ADMINISTRATION_SECTIONS.has(section.key));
-  const administration = sections.filter((section) => ADMINISTRATION_SECTIONS.has(section.key));
-
   return (
     <nav aria-label="This business" className="flex flex-1 flex-col">
-      {operating.map((section) => group(section, false))}
-      {/* Administration settles to the foot of the sidebar by layout, not by coordinates: the
-          auto margin takes whatever height the operating work leaves, so the highest authority
-          is always the furthest from the daily work and sits just above the account footer. */}
-      {administration.length > 0 ? (
-        <div className="mt-auto flex flex-col">{administration.map((section) => group(section, true))}</div>
-      ) : null}
+      {sections.map((section) => group(section, false))}
     </nav>
   );
 }
@@ -335,7 +316,7 @@ const BAR_TOGGLE =
 export function OrgNavBar({ sections }: { sections: ShellSection[] }) {
   const pathname = usePathname();
   const active = activeItemKey(sections, pathname);
-  const home = sections.find((section) => section.key === 'home')?.items[0];
+  const home = shellHomeItem(sections);
   const { agentOpen, toggleAgent } = useWorkspaceRail();
   const { openMobile, setOpenMobile } = useSidebar();
 
@@ -399,21 +380,23 @@ export function OrgNavBar({ sections }: { sections: ShellSection[] }) {
  * the same sidebar is the Menu: its own Sheet, opened from the right (`mobileSide`), drawing these same sections.
  */
 export function OrgSidebar({
-  organizationId,
   mark,
   name,
   role,
   organizations,
+  current,
+  platform,
   sections,
   email,
   signOutAction,
   ...props
 }: {
-  organizationId: string;
   mark: ReactNode;
   name: string;
   role: string;
   organizations: SwitchableOrganization[];
+  current: SwitcherContext;
+  platform?: PlatformContext | null;
   sections: ShellSection[];
   /** True only while the business is in SETUP — the layout decides, from `operationalState`. */
   email: string;
@@ -430,7 +413,8 @@ export function OrgSidebar({
         <div className="hidden md:block">
           <ContextSwitcher
             mark={mark}
-            current={{ kind: 'business', organizationId, name, role }}
+            current={current}
+            platform={platform}
             organizations={organizations}
           />
         </div>
@@ -458,6 +442,7 @@ export function LockedOrgSidebar({
   name,
   role,
   organizations,
+  platform,
   email,
   signOutAction,
   ...props
@@ -467,6 +452,7 @@ export function LockedOrgSidebar({
   name: string;
   role: string;
   organizations: SwitchableOrganization[];
+  platform?: PlatformContext | null;
   email: string;
   signOutAction: () => Promise<void>;
 } & React.ComponentProps<typeof Sidebar>) {
@@ -484,6 +470,7 @@ export function LockedOrgSidebar({
           <ContextSwitcher
             mark={mark}
             current={{ kind: 'business', organizationId, name, role }}
+            platform={platform}
             organizations={organizations}
           />
         </div>
@@ -508,5 +495,59 @@ export function LockedOrgSidebar({
       <SidebarFooter className="border-t border-sidebar-border"><AccountMenu email={email} signOutAction={signOutAction} /></SidebarFooter>
       <SidebarRail />
     </Sidebar>
+  );
+}
+
+/** Layouts persist across client navigation: select the already authorized context on each path. */
+export function OrganizationFrame({
+  organizationId, name, role, mark, organizations, sections: businessSections, utilities, platform,
+  locked, email, signOutAction, agent, children,
+}: {
+  organizationId: string;
+  name: string;
+  role: string;
+  mark: ReactNode;
+  organizations: SwitchableOrganization[];
+  sections: ShellSection[];
+  utilities: HeaderUtility[];
+  platform: (PlatformContext & { sections: ShellSection[] }) | null;
+  locked: boolean;
+  email: string;
+  signOutAction: () => Promise<void>;
+  agent: ReactNode;
+  children: ReactNode;
+}) {
+  const selected = selectShellContext(organizationId, usePathname(), platform);
+  const system = selected === 'platform';
+  const current: SwitcherContext = system
+    ? { kind: 'platform', organizationId }
+    : { kind: 'business', organizationId, name, role };
+  const sections = system ? platform!.sections : businessSections;
+  const identityName = system ? 'GildOps Platform' : name;
+  const identityRole = system ? 'System control plane' : role;
+  const identityMark = system ? GOLD_MARK : mark;
+  const recovery = locked && !system;
+  const shared = { mark: identityMark, name: identityName, role: identityRole, organizations, platform, email, signOutAction };
+
+  return (
+    <WorkspaceShell
+      sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} {...shared} /> : <OrgSidebar {...shared} current={current} sections={sections} />}
+      header={
+        <WorkspaceHeader
+          navigationTrigger={recovery ? 'always' : 'md'}
+          agentTrigger="md"
+          utilities={system ? [] : utilities}
+          context={
+            <div className="flex min-w-0 items-center gap-3 md:hidden">
+              <CompactContextSwitcher mark={identityMark} current={current} organizations={organizations} platform={platform} />
+            </div>
+          }
+        />
+      }
+      bottomBar={recovery ? undefined : <OrgNavBar sections={sections} />}
+      agent={agent}
+    >
+      {children}
+    </WorkspaceShell>
   );
 }

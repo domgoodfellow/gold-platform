@@ -1,3 +1,5 @@
+import { organizationIdFromPath } from '@/lib/route/platform-context';
+import { settingsScopeHref } from '@/lib/route/settings';
 import {
   AREAS,
   WORKSPACES,
@@ -5,6 +7,8 @@ import {
   areaHref,
   areaRelevantToShape,
   areaVisibleTo,
+  configTarget,
+  configTargetOffered,
   type Area,
 } from '@/lib/navigation';
 import {
@@ -17,33 +21,11 @@ import {
 import type { PlatformCapability } from '@/lib/domain/platform/permissions';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 
-/**
- * The shell is a **projection**: what one person sees in one organization is derived, in one place,
- * from four independent facts —
- *
- *   the organization's entitlements   (which modules and features it has),
- *   the member's permissions          (which capabilities their roles grant),
- *   the organization's identity       (is it GOLD's own workspace?), and
- *   the member's platform authority   (which platform permissions their staff row names).
- *
- * Every renderer — the desktop sidebar, the collapsed rail, the tablet rail, the phone Menu (the sidebar's own sheet),
- * the Settings map — consumes what this returns and decides nothing. There is no
- * `isOwner`, `isAdmin`, `isGold` or `isPlatformStaff` anywhere downstream, and no role name: a role
- * is an editable bundle of capabilities, and behaviour asks about capabilities. Hiding an item is
- * courtesy; the page, the domain function and the policy behind it still refuse (I12).
- *
- * Entitlement and permission are **separate questions, both required**: a business without
- * Communications has no calling workspace for its owner, and a member without `call.place` does not
- * operate calling in a business that has it.
- *
- * The shape is a hierarchy: a **workspace** is where an operator performs ongoing work (`WORKSPACES`), and
- * its **pages** are the areas that name it (`Area.workspace`). A Plan grants capabilities, a Product
- * groups them, a workspace is where they are used and a page is one task in it — four different
- * things, and only the last two are navigation. One real page makes the workspace a plain row;
- * several make it an expandable one. A registered workspace with no reachable page has no row at
- * all: registered is not visible.
+/** One eligibility projection for all breakpoints. Business Home is the operational cockpit;
+ * Work owns concrete execution. Platform is a separate system context, never a tenant workspace.
+ * Visibility is courtesy: each destination continues enforcing its own authority.
  */
-export type ShellSectionKey = 'home' | 'library' | 'workspaces' | 'administration';
+export type ShellSectionKey = 'home' | 'library' | 'workspaces' | 'platform';
 
 export type NavItem = {
   /** Unique across the whole projection; also the icon key. */
@@ -51,8 +33,10 @@ export type NavItem = {
   label: string;
   href: string;
   section: ShellSectionKey;
+  /** Operable Area addresses that activate this flat workspace row. */
+  activeHrefs?: string[];
   /**
-   * The pages of a workspace, or the destinations grouped under a Platform heading. A parent is
+   * The destinations grouped under a Platform heading. A parent is
    * itself a destination (a workspace has an overview; a Platform group opens its first page), so
    * a renderer without room for children — the collapsed rail — can still link to it.
    */
@@ -83,31 +67,16 @@ export type ShellInput = {
   capabilities: ReadonlySet<Capability>;
   /** `hasSchedulableWork` for this organization — its declared shape of work. Omitted means unknown, which hides nothing. */
   schedulableWork?: boolean;
-  /**
-   * The member's platform permissions **when, and only when, this is GOLD's own organization**.
-   * `null` everywhere else — including a customer's business the same person is looking at — so
-   * the platform control plane never appears beside a tenant's own work.
-   */
-  platform: ReadonlySet<PlatformCapability> | null;
 };
 
 const SECTION_LABELS: Record<ShellSectionKey, string | null> = {
   home: null,
   library: null,
   workspaces: 'Workspaces',
-  administration: 'Administration',
+  platform: null,
 };
 
-/**
- * Routine operating work first, then administration — which holds Platform and is drawn only for
- * GildOps' own staff. `projectShell` returns sections in this order and a renderer settles
- * administration toward the bottom of the sidebar, so the highest authority is the furthest from
- * the daily work. Team, Connections and Plan & usage are Settings destinations, not rows here.
- */
-export const SHELL_SECTION_ORDER: readonly ShellSectionKey[] = ['home', 'library', 'workspaces', 'administration'];
-
-/** The sections that are administration rather than operating work: drawn as one block, at the foot. */
-export const ADMINISTRATION_SECTIONS: ReadonlySet<ShellSectionKey> = new Set(['administration']);
+export const SHELL_SECTION_ORDER: readonly ShellSectionKey[] = ['home', 'library', 'workspaces'];
 
 function areaItem(organizationId: string, area: Area, section: ShellSectionKey): NavItem {
   return {
@@ -118,16 +87,7 @@ function areaItem(organizationId: string, area: Area, section: ShellSectionKey):
   };
 }
 
-/**
- * The Platform section, from the one registry: the destinations the caller's permissions reach,
- * nested beneath one workspace-style parent row — Platform itself, the same shape a workspace
- * takes in `workspaceItems()` below (a row that is both a link to its own Home and a disclosure
- * over its pages). Its Home is the root destination (`PLATFORM_DESTINATIONS`'s `overview`), never
- * repeated as a child beneath its own parent — the same rule every workspace's Home already
- * follows. Catalog, Commercial and Infrastructure are headings one level further in, each opening
- * its own first page; a heading none of whose pages the caller reaches is not drawn. A permission
- * set that reaches nothing produces no row at all.
- */
+/** The existing nested system navigation, filtered by canonical Platform permissions. */
 function projectPlatform(organizationId: string, permissions: ReadonlySet<PlatformCapability>): NavItem[] {
   const destinations = platformDestinationsFor(permissions);
   if (destinations.length === 0) return [];
@@ -136,7 +96,7 @@ function projectPlatform(organizationId: string, permissions: ReadonlySet<Platfo
     key: `platform-${destination.key}`,
     label: destination.label,
     href: platformHref(organizationId, destination.path),
-    section: 'administration',
+    section: 'platform',
   });
 
   const children: NavItem[] = [];
@@ -154,7 +114,7 @@ function projectPlatform(organizationId: string, permissions: ReadonlySet<Platfo
         key: `platform-group-${group.key}`,
         label: group.label,
         href: pages[0].href,
-        section: 'administration',
+        section: 'platform',
         heading: true,
         children: pages,
       });
@@ -167,16 +127,33 @@ function projectPlatform(organizationId: string, permissions: ReadonlySet<Platfo
     key: 'platform',
     label: 'Platform',
     href: platformHref(organizationId, ''),
-    section: 'administration',
+    section: 'platform',
+    exact: true,
   };
-  // Somebody holding only `platform.health` reaches the overview and nothing else: a plain row,
-  // never a chevron over an empty disclosure — the same rule a workspace with one reachable area
-  // follows.
   return [children.length === 0 ? root : { ...root, heading: true, children }];
 }
 
+/** The existing nested Platform IA, projected only for the separate system context. */
+export function projectPlatformShell(organizationId: string, permissions: ReadonlySet<PlatformCapability>): ShellSection[] {
+  const items = projectPlatform(organizationId, permissions);
+  return items.length ? [{ key: 'platform', label: null, items }] : [];
+}
+
+export type HeaderUtility = { key: 'team' | 'connections'; label: string; href: string };
+
+/** Organization utility offers use the same configuration eligibility as Settings. */
+export function projectHeaderUtilities(input: ShellInput): HeaderUtility[] {
+  const gate = input;
+  const team = configTargetOffered(configTarget('team'), gate);
+  const connections = configTargetOffered(configTarget('integrations'), gate) || configTargetOffered(configTarget('secrets'), gate);
+  return [
+    ...(team ? [{ key: 'team' as const, label: 'Team', href: settingsScopeHref('access', input.organizationId) }] : []),
+    ...(connections ? [{ key: 'connections' as const, label: 'Connections', href: settingsScopeHref('connections', input.organizationId) }] : []),
+  ];
+}
+
 export function projectShell(input: ShellInput): ShellSection[] {
-  const { organizationId, enabledModules, featureAvailability, capabilities, platform, schedulableWork } = input;
+  const { organizationId, enabledModules, featureAvailability, capabilities, schedulableWork } = input;
 
   const operable = (area: Area) =>
     area.sidebar !== false &&
@@ -186,38 +163,24 @@ export function projectShell(input: ShellInput): ShellSection[] {
 
   const inGroup = (group: Area['group']) => AREAS.filter((area) => area.group === group && operable(area));
 
-  // A workspace composes pages and capabilities independently of Products: each page is still gated by its own module and capability, so
-  // a business without Assets has a Field without that page. The parent row's own destination is
-  // the workspace's canonical Home (`WORKSPACES[].home`), never the first child — a Home is never
-  // repeated as a child beneath its own parent. What the row is is decided by how many areas are
-  // real — none, no row; one (Home alone, or a workspace with no declared Home and one page),
-  // a plain row; several, an expandable one. Never a dropdown of one, and never a row for a
-  // Product with nothing behind it.
-  const workspaceItems = (): NavItem[] =>
-    WORKSPACES.flatMap((workspace) => {
-      const areas = AREAS.filter((area) => area.workspace === workspace.key && operable(area));
-      if (areas.length === 0) return [];
-      const home = workspace.home ? areas.find((area) => area.segment === workspace.home) : undefined;
-      const childAreas = home ? areas.filter((area) => area.segment !== home.segment) : areas;
-      const children = childAreas.map((area) => areaItem(organizationId, area, 'workspaces'));
-      const homeItem = home ? areaItem(organizationId, home, 'workspaces') : children[0];
-      const row: NavItem = {
-        key: `workspace-${workspace.key}`,
-        label: workspace.label,
-        href: homeItem.href,
-        section: 'workspaces',
-      };
-      if (areas.length === 1) return [row];
-      return [{ ...row, heading: true, children: home ? children : children.slice(1) }];
-    });
-
-  const platformItems: NavItem[] = platform ? projectPlatform(organizationId, platform) : [];
+  // A real, operable Home earns one flat row; registered workspaces without Homes stay absent.
+  const workspaceItems = (): NavItem[] => WORKSPACES.flatMap((workspace) => {
+    const areas = AREAS.filter((area) => area.workspace === workspace.key && operable(area));
+    const home = workspace.home ? areas.find((area) => area.segment === workspace.home) : undefined;
+    if (!home) return [];
+    return [{
+      key: `workspace-${workspace.key}`,
+      label: workspace.label,
+      href: areaHref(organizationId, home.segment),
+      section: 'workspaces',
+      activeHrefs: areas.map((area) => areaHref(organizationId, area.segment)),
+    }];
+  });
 
   const sections: ShellSection[] = [
     { key: 'home', label: SECTION_LABELS.home, items: inGroup('home').map((area) => areaItem(organizationId, area, 'home')) },
     { key: 'library', label: SECTION_LABELS.library, items: inGroup('library').map((area) => areaItem(organizationId, area, 'library')) },
     { key: 'workspaces', label: SECTION_LABELS.workspaces, items: workspaceItems() },
-    { key: 'administration', label: SECTION_LABELS.administration, items: platformItems },
   ];
 
   // A section with nothing in it is not drawn: naming a part of the product that is not there for
@@ -247,9 +210,15 @@ export function itemContains(item: NavItem, key: string | null): boolean {
 export function activeItemKey(sections: readonly ShellSection[], pathname: string): string | null {
   const path = pathname.split(/[?#]/)[0].replace(/\/$/, '');
   let best: NavItem | null = null;
+  let bestLength = -1;
   for (const item of projectedItems(sections)) {
-    const inside = item.exact ? path === item.href : path === item.href || path.startsWith(`${item.href}/`);
-    if (inside && (!best || item.href.length >= best.href.length)) best = item;
+    for (const href of [item.href, ...(item.activeHrefs ?? [])]) {
+      const inside = item.exact ? path === href : path === href || path.startsWith(`${href}/`);
+      if (inside && href.length >= bestLength) {
+        best = item;
+        bestLength = href.length;
+      }
+    }
   }
   return best?.key ?? null;
 }
@@ -257,4 +226,15 @@ export function activeItemKey(sections: readonly ShellSection[], pathname: strin
 /** Whether a pathname is inside GOLD's Platform sub-scope — the one fact the sidebar disclosure follows. */
 export function inPlatformScope(pathname: string): boolean {
   return platformSubpath(pathname) !== null;
+}
+
+/** A URL selects a system identity only within the already resolved canonical Platform context. */
+export function selectShellContext(organizationId: string, pathname: string, platform: { organizationId: string } | null): 'business' | 'platform' {
+  return platform?.organizationId === organizationId && organizationIdFromPath(pathname) === organizationId && inPlatformScope(pathname) ? 'platform' : 'business';
+}
+
+/** The current context's landing item for the persistent phone Home control. */
+export function shellHomeItem(sections: readonly ShellSection[]): NavItem | undefined {
+  return sections.find((section) => section.key === 'home')?.items[0]
+    ?? sections.find((section) => section.key === 'platform')?.items[0];
 }

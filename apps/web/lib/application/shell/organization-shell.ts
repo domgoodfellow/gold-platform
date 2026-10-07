@@ -1,23 +1,21 @@
+import { loadPlatformContext } from './platform-context';
 import type { Db } from '@/lib/db/types';
 import { getBrand } from '@/lib/domain/branding/brand';
-import { isPlatformStaff } from '@/lib/domain/platform/tenants';
-import { platformPermissions } from '@/lib/domain/platform/permissions';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
-import { isGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 import { activeModuleKeys, availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { hasSchedulableWork } from '@/lib/domain/work-items/types';
-import { projectShell } from '@/lib/shell';
+import { projectShell, projectHeaderUtilities } from '@/lib/shell';
 
 export async function loadOrganizationShellModel(db: Db, input: { organizationId: string; capabilities: readonly Capability[]; locked: boolean }) {
   const { organizationId, locked } = input;
-  const [featureStates, schedulableWork, myOrganizations, staff, { data: userData }, gold, brand] = await Promise.all([
+  const [featureStates, schedulableWork, myOrganizations, { data: userData }, brand] = await Promise.all([
     locked ? Promise.resolve([]) : organizationResolvedFeatureStates(db, { organizationId }),
     // The one answer about the business's shape of work; a locked organization draws no workspaces at all, so it is not asked.
     locked ? Promise.resolve(undefined) : hasSchedulableWork(db, { organizationId }),
-    listMyOrganizations(db), isPlatformStaff(db), db.auth.getUser(), isGoldInternalOrganization(db, { organizationId }), getBrand(db, { organizationId }),
+    listMyOrganizations(db), db.auth.getUser(), getBrand(db, { organizationId }),
   ]);
-  const platform = staff && gold ? await platformPermissions(db) : null;
+  const platform = await loadPlatformContext(db, myOrganizations);
   const enabledModules = activeModuleKeys(featureStates);
   const featureAvailability = availableFeatureKeys(featureStates);
   const capabilities = new Set(input.capabilities);
@@ -28,6 +26,7 @@ export async function loadOrganizationShellModel(db: Db, input: { organizationId
     switchable: myOrganizations.map((organization) => ({
       id: organization.id, name: organization.name, role: organization.role, operationalState: organization.operationalState,
     })),
-    sections: projectShell({ organizationId, enabledModules, featureAvailability, capabilities, platform, schedulableWork }),
+    sections: projectShell({ organizationId, enabledModules, featureAvailability, capabilities, schedulableWork }),
+    utilities: locked ? [] : projectHeaderUtilities({ organizationId, enabledModules, featureAvailability, capabilities, schedulableWork }),
   };
 }

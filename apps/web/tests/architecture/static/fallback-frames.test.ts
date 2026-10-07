@@ -145,7 +145,7 @@ describe('the phone bar is Home, AI and Menu over the one projection', () => {
   const bar = shell.slice(shell.indexOf('export function OrgNavBar('), shell.indexOf('export function OrgSidebar('));
 
   it('a business’s bar renders the projection it is given — it decides no eligibility of its own', () => {
-    expect(bar).toContain("sections.find((section) => section.key === 'home')");
+    expect(bar).toContain("shellHomeItem(sections)");
     expect(bar).not.toMatch(/visibleAreas\(|areasIn\(|PlatformPhoneNavMenu|PLATFORM_NAV|inPlatformContext|capabilit/);
   });
 
@@ -159,7 +159,8 @@ describe('the phone bar is Home, AI and Menu over the one projection', () => {
     // Phase C (Slice 12) moved this read, with the rest of the shell's coordinating reads, out of
     // the layout component into one application-layer function the layout calls once.
     const orgShellModel = read('lib/application/shell/organization-shell.ts');
-    expect(orgShellModel).toContain('staff && gold ? await platformPermissions(db) : null');
+    expect(orgShellModel).toContain('loadPlatformContext(db, myOrganizations)');
+    expect(read('lib/application/shell/platform-context.ts')).toContain('platformPermissions(db)');
     expect(org).not.toMatch(/platformStaff=|isGoldInternal=/);
   });
 
@@ -183,7 +184,7 @@ describe('the phone bar is Home, AI and Menu over the one projection', () => {
 describe('the mobile sidebar trigger says what the layouts do', () => {
   it('Platform Context uses the unlocked trigger rule (md), and the header comment agrees', () => {
     // Platform renders inside the one organization shell, which asks for the trigger from md up.
-    expect(read('features/shell/organization-shell.tsx')).toContain("navigationTrigger={locked ? 'always' : 'md'}");
+    expect(read('app/organizations/[organizationId]/org-shell.tsx')).toContain("navigationTrigger={recovery ? 'always' : 'md'}");
     const header = read('components/headers/workspace-header.tsx');
     expect(header).toContain('Business *and*');
     expect(header).not.toMatch(/Platform, whose\s*\n\s*\*\s*`Sidebar` renders an off-canvas Sheet/);
@@ -191,7 +192,7 @@ describe('the mobile sidebar trigger says what the layouts do', () => {
 
   it('only shells with no bottom bar ask for the trigger at every width', () => {
     expect(read('features/account/global-fallback-shell.tsx')).toContain('navigationTrigger="always"');
-    expect(read('features/shell/organization-shell.tsx')).toContain("navigationTrigger={locked ? 'always' : 'md'}");
+    expect(read('app/organizations/[organizationId]/org-shell.tsx')).toContain("navigationTrigger={recovery ? 'always' : 'md'}");
   });
 });
 

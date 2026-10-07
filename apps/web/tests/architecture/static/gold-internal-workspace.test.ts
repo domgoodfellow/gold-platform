@@ -27,11 +27,13 @@ describe('GOLD Internal operating context composition', () => {
     expect(helper).not.toContain("organization.name === 'GOLD'");
   });
 
-  it('asks of the organization being drawn whether it is GOLD, by plan, never by the person', () => {
+  it('resolves the canonical Platform destination independently of the current business', () => {
     expect(helper).toContain('export async function isGoldInternalOrganization');
-    expect(shellModel).toContain('isGoldInternalOrganization(db, { organizationId })');
-    // Platform permissions are read only when both are true, and are null everywhere else.
-    expect(shellModel).toContain('staff && gold ? await platformPermissions(db) : null');
+    expect(shellModel).toContain('loadPlatformContext(db, myOrganizations)');
+    const platformContext = read('lib/application/shell/platform-context.ts');
+    expect(platformContext).toContain('platformPermissions(db)');
+    expect(platformContext).toContain('findGoldInternalOrganization(db, organizations)');
+    expect(platformContext).toContain('permissions.size === 0');
   });
 
   it('renders Platform beneath the one organization shell — no second shell exists', () => {

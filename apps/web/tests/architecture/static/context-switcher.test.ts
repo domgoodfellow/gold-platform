@@ -6,12 +6,7 @@ import { organizationIdFromPath } from '@/lib/route/platform-context';
 import { platformHref, platformSubpath } from '@/lib/platform-navigation';
 import { inPlatformScope } from '@/lib/shell';
 
-/**
- * A context switcher switches organization. One identity, zero or more memberships, one current
- * context — and no directory page between them. Platform is not an organization and is not a
- * destination here: platform tools are a section of GOLD's own shell, projected from the person's
- * platform permissions (`lib/shell.ts`).
- */
+/** The context switcher distinguishes business tenants from the authorized system context. */
 
 const WEB = fileURLToPath(new URL('../../..', import.meta.url));
 const read = (path: string) => readFileSync(`${WEB}/${path}`, 'utf8');
@@ -38,11 +33,12 @@ describe('the Platform sub-scope', () => {
 });
 
 describe('the switcher', () => {
-  it('links straight to a business home, never through /organizations, and offers no Platform destination', () => {
+  it('links directly to businesses and the resolved Platform system destination', () => {
     expect(switcher).toContain('organizationHomeHref(organization.id, organization.operationalState)');
     expect(switcher).not.toMatch(/\/organizations\?|All businesses|all=1/);
     const executable = switcher.replace(/\/\*[\s\S]*?\*\//g, '');
-    expect(executable).not.toContain('/platform');
+    expect(executable).toContain('href={platform.href}');
+    expect(executable).toContain('System');
     expect(executable).not.toMatch(/Platform Administration|platformAdministration|inPlatformContext|Global tools/);
     // The current context is the organization the shell was built for, never something read off the path.
     expect(executable).not.toMatch(/usePathname|inPlatformScope|platformSubpath/);
@@ -59,12 +55,13 @@ describe('the switcher', () => {
 
   it('is a plain label, not an empty menu, when there is nowhere else to go', () => {
     expect(switcher).toContain('!view.hasChoices');
-    expect(switcher).toContain('hasChoices: businesses.length > 0');
+    expect(switcher).toContain('hasChoices: businesses.length > 0 || !!platform');
   });
 
-  it('no shell hands it a platform fact: the one shell projects platform tools itself', () => {
+  it('the server resolves platform context before the shared frame renders it', () => {
     const shell = read('features/shell/organization-shell.tsx');
-    expect(shell).not.toMatch(/platformAdministration/);
+    expect(shell).toContain('platform={platform}');
+    expect(read('lib/application/shell/platform-context.ts')).toContain('platformPermissions(db)');
     expect(read('lib/route/person-context.ts')).not.toMatch(/platformAdministration/);
     expect(read('features/account/personal-settings-shell.tsx')).toContain('loadPersonContext()');
     expect(read('features/account/global-fallback-shell.tsx')).toContain('loadPersonContext()');
@@ -122,14 +119,18 @@ describe('moving between organizations', () => {
     const view = deriveSwitcherView(current, [gold, nextfund]);
     expect(view.triggerName).toBe('GOLD');
     expect(view.businesses.map((org) => org.id)).toEqual(['nf']);
-    expect(view).not.toHaveProperty('platform');
+    expect(view.hasChoices).toBe(true);
   });
 
-  it('stays GOLD while an operator works in the platform namespace, because /platform renders inside GOLD', () => {
-    // The switcher takes no pathname: the current context is the organization the shell was built for.
-    const view = deriveSwitcherView(current, [gold, nextfund]);
-    expect(view.triggerName).toBe('GOLD');
-    expect(view.businesses.map((org) => org.id)).toEqual(['nf']);
+  it('names the system scope and offers GildOps operating organization as a normal business', () => {
+    const view = deriveSwitcherView({ kind: 'platform', organizationId: 'gold' }, [gold, nextfund], { organizationId: 'gold', href: platformHref('gold') });
+    expect(view.triggerName).toBe('GildOps Platform');
+    expect(view.triggerRole).toBe('System control plane');
+    expect(view.businesses.map((org) => org.id)).toEqual(['gold', 'nf']);
+  });
+
+  it('an authorized operator with one business can still switch to Platform', () => {
+    expect(deriveSwitcherView(current, [gold], { organizationId: 'gold', href: platformHref('gold') }).hasChoices).toBe(true);
   });
 
   it('has nowhere to go for a person with one organization', () => {

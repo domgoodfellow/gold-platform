@@ -64,10 +64,10 @@ export const WORKSPACES = [
   { key: 'communications', label: 'Communications', home: 'comms', featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions', 'inbound_sms', 'outbound_sms', 'number_inventory', 'caller_id'] },
   { key: 'marketing', label: 'Marketing', home: undefined, featureKeys: [] },
   { key: 'support', label: 'Support', home: undefined, featureKeys: [] },
+  { key: 'field', label: 'Work', home: 'field', featureKeys: ['resource_records', 'assignment', 'locations', 'weather_aware_dispatch', 'assets'] },
   { key: 'finance', label: 'Finance', home: 'finance', featureKeys: ['price_book', 'quote_creation', 'quote_to_invoice', 'invoices', 'invoice_history', 'card_payments', 'connected_processor', 'adjustments_credits'] },
-  { key: 'ai', label: 'AI', home: undefined, featureKeys: ['agent_tools'] },
   { key: 'automations', label: 'Automations', home: 'automations', featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
-  { key: 'field', label: 'Field', home: 'field', featureKeys: ['resource_records', 'assignment', 'locations', 'weather_aware_dispatch', 'assets'] },
+  { key: 'ai', label: 'AI', home: undefined, featureKeys: ['agent_tools'] },
   { key: 'studio', label: 'Studio', home: 'studio', featureKeys: ['pages_sections', 'draft_review_publish', 'seo_metadata', 'booking', 'portal_auth', 'portal_history'] },
 ] as const;
 
@@ -391,8 +391,8 @@ export const AREAS: readonly Area[] = [
   // Field: what work is being done, where, when and with what. Home is a real page — kernel, like
   // Work and Schedule — and is never repeated as a child beneath it. Equipment & Assets is the one
   // page behind a module.
-  { segment: 'field', label: 'Field', group: 'workspaces', workspace: 'field' },
-  { segment: 'work', label: 'Work', group: 'workspaces', workspace: 'field' },
+  { segment: 'field', label: 'Work', group: 'workspaces', workspace: 'field' },
+  { segment: 'work', label: 'Work items', group: 'workspaces', workspace: 'field' },
   { segment: 'schedule', label: 'Schedule', group: 'workspaces', workspace: 'field', needsSchedulableWork: true },
   { segment: 'resources', label: 'Resources', group: 'workspaces', workspace: 'field', needsSchedulableWork: true },
   { segment: 'locations', label: 'Locations', group: 'workspaces', workspace: 'field', needsSchedulableWork: true },

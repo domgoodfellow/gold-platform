@@ -1,38 +1,16 @@
 import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
-import { LockedOrgSidebar, OrgNavBar, OrgSidebar } from '@/app/organizations/[organizationId]/org-shell';
+import { OrganizationFrame } from '@/app/organizations/[organizationId]/org-shell';
 import { BrandStyle } from '@/features/branding/brand-style';
 import { logoUrl } from '@/lib/domain/branding/brand';
 import { getDb } from '@/lib/db/server';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { requireOrganizationForBillingRecovery } from '@/lib/route/organization';
 import { loadOrganizationShellModel } from '@/lib/application/shell/organization-shell';
-import { CompactContextSwitcher } from '@/components/navigation/context-switcher';
-import { WorkspaceHeader } from '@/components/headers/workspace-header';
-import { WorkspaceShell } from '@/components/layout/workspace-shell';
 import { TenantAgentRail } from '@/features/agent/tenant-agent-rail';
 
-/**
- * The one application shell, for one organization. Everything beneath `/organizations/{id}` renders
- * inside it — Platform Administration included, which is `/organizations/{goldId}/platform`, a
- * privileged sub-scope of GOLD's own organization — so a person meets one recognisable frame
- * whatever they are doing, and moves between businesses with the context switcher alone.
- *
- * Not the authorization boundary: every page still calls `requireOrganization` (or its platform
- * guard) itself, since Next can reuse a layout across client navigations without re-rendering it.
- * What this does is **project**: it reads the organization's entitlements, the member's permissions
- * and — only when this organization is GOLD's own — their platform permissions, and resolves them
- * once into the sections every renderer draws (`projectShell`). Platform is a scope, so it appears
- * only here, only for an operator whose `platform_staff` row names a permission, and never beside a
- * customer's own business.
- *
- * It uses the billing-recovery guard, not `requireOrganization`, on purpose: while commercial
- * service access is locked the shell must still draw (a coherent GOLD frame around the locked
- * screen and Plan & usage), so the service question is answered here only to choose which shell to
- * draw. Every operational page and action then refuses the locked business for itself.
- *
- * Because that call runs here, a non-member's `notFound()` is thrown by this shell itself — the file
- * that renders for it is `app/organizations/not-found.tsx`, an ancestor segment. See its comment.
+/** Shared frame for business and system contexts, with canonical server authority resolution.
+ * Each page still enforces its own access; layouts persist across client navigations.
  */
 export async function OrganizationShell({
   organizationId,
@@ -45,7 +23,7 @@ export async function OrganizationShell({
   const locked = !access.permitted;
   // A locked business runs none of the workspace reads below — no feature resolution and no
   // Agent transcript — because none of it is drawn.
-  const { brand, email, switchable, sections } = await loadOrganizationShellModel(db, {
+  const { brand, email, switchable, sections, utilities, platform } = await loadOrganizationShellModel(db, {
     organizationId,
     capabilities: organization.capabilities,
     locked,
@@ -97,68 +75,22 @@ export async function OrganizationShell({
     </span>
   );
 
-  // The one place the shell asks whether this business is still being set up. The sidebar row reads
-  // this and nothing else, so it cannot outlive Launch. It is the lifecycle fact already on the
-  // organization — the shell prints no progress, so it runs no readiness query; the Setup page owns
-  // the count and `launchOrganization` the guard.
-  const sidebar = locked ? (
-    <LockedOrgSidebar
-      organizationId={organizationId}
-      mark={mark}
-      name={organization.name}
-      role={organization.role}
-      organizations={switchable}
-      email={email}
-      signOutAction={signOutAction}
-    />
-  ) : (
-    <OrgSidebar
-      organizationId={organizationId}
-      mark={mark}
-      name={organization.name}
-      role={organization.role}
-      organizations={switchable}
-      sections={sections}
-      email={email}
-      signOutAction={signOutAction}
-    />
-  );
-
-  /*
-    The global header, composed from the shared `WorkspaceHeader`.
-    - Phone, unlocked: the compact context switcher and the breadcrumb. Home, AI and Menu are the bottom
-      bar; Account lives in the Menu sheet's footer and Agent is the bar's AI, so the header has neither.
-    - Phone, locked: there is no bottom bar, so the sidebar trigger shows (`navigationTrigger="always"`)
-      and opens `LockedOrgSidebar` — Plan & usage and the account menu — beside the same switcher.
-    - Tablet and desktop: the sidebar trigger, the breadcrumb and Agent, the furthest-right control.
-    Page identity is each page's own `PageHeader`.
-  */
-  const header = (
-    <WorkspaceHeader
-      navigationTrigger={locked ? 'always' : 'md'}
-      agentTrigger="md"
-      context={
-        <div className="flex min-w-0 items-center gap-3 md:hidden">
-          <CompactContextSwitcher
-            mark={mark}
-            current={{ kind: 'business', organizationId, name: organization.name, role: organization.role }}
-            organizations={switchable}
-          />
-        </div>
-      }
-    />
-  );
-
   return (
     // `data-brand` sits here rather than on `<html>` — a brand belongs to one business, and this shell is the only thing that knows which.
     <div data-brand className="min-h-full">
       <BrandStyle brand={brand} />
-      <WorkspaceShell
-        sidebar={sidebar}
-        header={header}
-        bottomBar={
-          locked ? undefined : <OrgNavBar sections={sections} />
-        }
+      <OrganizationFrame
+        organizationId={organizationId}
+        name={organization.name}
+        role={organization.role}
+        mark={mark}
+        organizations={switchable}
+        sections={sections}
+        utilities={utilities}
+        platform={platform}
+        locked={locked}
+        email={email}
+        signOutAction={signOutAction}
         agent={
           locked ? null : (
             <TenantAgentRail
@@ -172,7 +104,7 @@ export async function OrganizationShell({
         }
       >
         {children}
-      </WorkspaceShell>
+      </OrganizationFrame>
     </div>
   );
 }

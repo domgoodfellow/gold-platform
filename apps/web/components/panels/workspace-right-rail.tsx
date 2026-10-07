@@ -15,6 +15,7 @@ import {
 } from 'react';
 import { BarChart3, Bot, History, Settings, X, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/controls/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@gold/ui/components/tooltip';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { HEADER_HEIGHT_STYLE, MOBILE_NAV_HEIGHT_STYLE } from '../layout/workspace-geometry';
 
@@ -237,18 +238,22 @@ export function AgentTrigger() {
   const { agentOpen, toggleAgent } = useWorkspaceRail();
 
   return (
-    <Button
-      type="button"
-      tone="secondary"
-      size="small"
-      aria-pressed={agentOpen}
-      aria-label="Agent"
-      onClick={toggleAgent}
-      className="gap-1.5 px-2 sm:px-3"
-    >
-      <Bot aria-hidden size={16} />
-      <span className="hidden sm:inline">Agent</span>
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          tone="secondary"
+          size="small"
+          aria-pressed={agentOpen}
+          aria-label="Agent"
+          onClick={toggleAgent}
+          className="size-9 p-0 [&_svg]:size-5"
+        >
+          <Bot aria-hidden size={20} />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>Agent</TooltipContent>
+    </Tooltip>
   );
 }
 

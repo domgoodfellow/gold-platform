@@ -5,12 +5,10 @@ import type { PlatformCapability } from '@/lib/domain/platform/permissions';
  * the phone menu and the route guard, so a destination cannot be offered by one and refused by
  * another. Presentation (icons) lives with the renderer, keyed by `key`.
  *
- * Platform is a **sub-scope of GOLD's own organization**, not a section of every business and not
- * a context of its own: these are shown only inside that organization, only to somebody whose
- * `platform_staff` row names the permission, and are served from
- * `/organizations/{goldId}/platform/**`. The URL says which application context an operator is in;
- * it says nothing about who owns the data behind a page — providers, catalogue and billing stay
- * platform-scoped records that a nested route merely draws. Nothing here reads a role name.
+ * Platform is the separately authorized system control plane. Its routes retain the
+ * `/organizations/{goldId}/platform/**` container; its data and identity remain system-scoped.
+ * Only canonical live platform permissions offer these destinations, regardless of which
+ * business context an operator was previously using.
  */
 export type PlatformGroupKey = 'catalog' | 'commercial' | 'infrastructure';
 

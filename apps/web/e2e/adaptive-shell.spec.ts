@@ -14,15 +14,43 @@ const sidebar = (page: import('@playwright/test').Page) => page.locator('[data-s
 test.describe('a tenant owner', () => {
   test.use({ storageState: OWNER_STORAGE_STATE });
 
-  test('sees their own administration and never the GOLD platform', async ({ page }) => {
+  test('sees flat workspaces and header utilities with no Platform context', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     await page.goto(`/organizations/${organizationId}/home`);
     const nav = sidebar(page);
-    await expect(nav.getByText('Business', { exact: true })).toBeVisible();
-    await expect(nav.getByRole('link', { name: 'Team', exact: true })).toBeVisible();
-    await expect(nav.getByRole('link', { name: 'Plan & usage', exact: true })).toBeVisible();
+    await expect(nav.getByText('Workspaces', { exact: true })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'CRM', exact: true })).toBeVisible();
+    await expect(nav.getByRole('button', { name: /Expand|Collapse/ })).toHaveCount(0);
+    await expect(nav.getByRole('link', { name: 'Team', exact: true })).toHaveCount(0);
+    const header = page.locator('header').first();
+    for (const name of ['Team', 'Connections']) {
+      const link = header.getByRole('link', { name, exact: true });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveText('');
+    }
+    await expect(header.getByRole('button', { name: 'Agent', exact: true })).toHaveText('');
     await expect(nav.getByText('Platform', { exact: true })).toHaveCount(0);
     await expect(nav.getByRole('link', { name: 'Organizations', exact: true })).toHaveCount(0);
+  });
+
+  test('keeps workspace ownership on nested routes', async ({ page }) => {
+    const { organizationId } = loadDemoContext();
+    for (const [route, owner] of [['customers', 'CRM'], ['customers/pipeline', 'CRM'], ['work', 'Work'], ['schedule', 'Work'], ['finance/invoices', 'Finance'], ['studio/forms', 'Studio']]) {
+      await page.goto(`/organizations/${organizationId}/${route}`);
+      await expect(sidebar(page).getByRole('link', { name: owner, exact: true })).toHaveAttribute('aria-current', 'page');
+    }
+  });
+
+  test('the collapsed rail keeps the same flat workspace destinations', async ({ page }) => {
+    const { organizationId } = loadDemoContext();
+    await page.goto(`/organizations/${organizationId}/customers`);
+    const nav = sidebar(page);
+    const links = await nav.getByRole('link').evaluateAll((items) => items.map((item) => item.getAttribute('href')));
+    await page.locator('header').first().getByRole('button', { name: 'Toggle Sidebar', exact: true }).click();
+    await expect(page.locator('[data-slot="sidebar"][data-state="collapsed"]')).toBeVisible();
+    expect(await nav.getByRole('link').evaluateAll((items) => items.map((item) => item.getAttribute('href')))).toEqual(links);
+    await expect(nav.getByRole('link', { name: 'CRM', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(nav.getByRole('button', { name: /Expand|Collapse/ })).toHaveCount(0);
   });
 
   test('is refused the platform when either address is typed', async ({ page }) => {
@@ -43,7 +71,7 @@ test.describe('a tenant owner', () => {
     await expect(sidebar(page).getByText('Platform', { exact: true })).toHaveCount(0);
   });
 
-  test('on a phone has Home, AI and Menu in the bar, and reaches Business through Menu', async ({ page }) => {
+  test('on a phone has Home, AI and Menu in the bar, and reaches Settings through the account footer', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/organizations/${organizationId}/home`);
@@ -62,21 +90,22 @@ test.describe('a tenant owner', () => {
     const header = page.locator('header');
     await expect(header.locator('[aria-label^="Switch context"], span[aria-label]').first()).toBeVisible();
     await expect(header.getByRole('button', { name: /^Account/ })).toHaveCount(0);
-    await expect(header.getByRole('button', { name: 'Agent' })).toHaveCount(0);
+    await expect(header.getByRole('button', { name: 'Agent' })).toBeHidden();
+    await expect(header.getByRole('link', { name: 'Team', exact: true })).toBeHidden();
+    await expect(header.getByRole('link', { name: 'Connections', exact: true })).toBeHidden();
 
     await bar.getByRole('button', { name: 'Menu', exact: true }).click();
     const sheet = page.getByRole('dialog');
     // The sheet names the business and offers no second switcher; Account is its footer.
     await expect(sheet.getByText('Grachtwerk Verhuur', { exact: true }).filter({ visible: true })).toHaveCount(1);
     await expect(sheet.getByRole('button', { name: /Switch context/ })).toHaveCount(0);
-    await expect(sheet.getByText('Business', { exact: true })).toBeVisible();
+    await expect(sheet.getByText('Workspaces', { exact: true })).toBeVisible();
     await expect(sheet.getByText('Platform', { exact: true })).toHaveCount(0);
     await sheet.getByRole('button', { name: /sanne@grachtwerk.test/ }).click();
     await expect(page.getByRole('menuitem', { name: 'Settings' })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: /Plan & usage/ })).toBeVisible();
-    await page.keyboard.press('Escape');
-    await sheet.getByRole('link', { name: 'Team', exact: true }).click();
-    await expect(page).toHaveURL(/\/settings\/access/);
+    await page.getByRole('menuitem', { name: 'Settings', exact: true }).click();
+    await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
@@ -128,9 +157,8 @@ test.describe('GOLD platform staff', () => {
     await expect(nav.getByText('Platform', { exact: true })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Organizations', exact: true })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Providers', exact: true })).toBeVisible();
-    // The same shell: GOLD's own workspaces are in it, beside Platform, not replaced by it.
-    await expect(nav.getByRole('link', { name: 'Home', exact: true })).toBeVisible();
-    await expect(nav.getByRole('link', { name: 'Gild Field', exact: true })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'CRM', exact: true })).toHaveCount(0);
+    await expect(page.locator('[data-slot="sidebar-container"]').getByRole('button', { name: /GildOps Platform/ })).toBeVisible();
   });
 
   test('the old /platform address lands on the canonical one, path and query kept', async ({ page }) => {
@@ -138,11 +166,23 @@ test.describe('GOLD platform staff', () => {
     await expect(page).toHaveURL(new RegExp(`/organizations/${loadDemoContext().goldOrganizationId}/platform/providers/twilio\\?tab=accounts`));
   });
 
-  test('are not offered Platform Administration as somewhere to switch to, and GOLD stays the context', async ({ page }) => {
+  test('switches between the system control plane and the GildOps operating business', async ({ page }) => {
+    const { goldOrganizationId } = loadDemoContext();
     await page.goto(platformUrl('providers'));
-    await expect(page.getByText('Platform Administration')).toHaveCount(0);
-    await expect(page.getByText('Global tools')).toHaveCount(0);
-    await expect(page.locator('[data-slot="sidebar-container"]').getByText('GOLD', { exact: true }).first()).toBeVisible();
+    const container = page.locator('[data-slot="sidebar-container"]');
+    await container.getByRole('button', { name: /GildOps Platform/ }).click();
+    await expect(page.getByText('Businesses', { exact: true })).toBeVisible();
+    await expect(page.getByText('System', { exact: true })).toBeVisible();
+    // MenuItem uses asChild, so the item itself is the link.
+    const goldLink = page.locator(`[role="menuitem"][href="/organizations/${goldOrganizationId}/home"]`);
+    await goldLink.click();
+    await expect(page).toHaveURL(`/organizations/${goldOrganizationId}/home`);
+    await expect(sidebar(page).getByRole('link', { name: 'CRM', exact: true })).toBeVisible();
+    await expect(sidebar(page).getByText('Platform', { exact: true })).toHaveCount(0);
+    await container.locator('[data-sidebar="header"] button').click();
+    await page.getByRole('menuitem', { name: 'Platform', exact: true }).click();
+    await expect(page).toHaveURL(platformUrl());
+    await expect(container.getByText('System control plane', { exact: true }).filter({ visible: true }).first()).toBeVisible();
   });
 
   test('on a phone, keep Home, AI and Menu in the bar inside Platform, and find Platform in Menu', async ({ page }) => {
@@ -156,10 +196,10 @@ test.describe('GOLD platform staff', () => {
     await expect(page.locator('header').getByRole('button', { name: /^Account/ })).toHaveCount(0);
     await bar.getByRole('button', { name: 'Menu', exact: true }).click();
     const sheet = page.getByRole('dialog');
-    // The sheet's header is the GOLD organization, not "Platform Administration"; Account stays reachable.
+    // The phone Menu names the system scope; Account stays reachable.
     const identity = sheet.locator('[data-sidebar="header"]');
-    await expect(identity.getByText('GOLD', { exact: true }).filter({ visible: true })).toHaveCount(1);
-    await expect(identity).not.toContainText('Platform');
+    await expect(identity.getByText('GildOps Platform', { exact: true }).filter({ visible: true })).toHaveCount(1);
+    await expect(identity).toContainText('System control plane');
     await expect(sheet.getByRole('button', { name: /staff@gold.test/ })).toBeVisible();
     await expect(sheet.getByRole('link', { name: 'Organizations', exact: true })).toBeVisible();
     await expect(sheet.getByRole('link', { name: 'Providers', exact: true })).toBeVisible();

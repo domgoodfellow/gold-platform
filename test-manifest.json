@@ -2556,6 +2556,14 @@
         "public-site"
       ],
       "note": "The Website workbench: creation, pages, sections, reordering, unsaved state and read-only review."
+    },
+    "apps/web/tests/component/shell-navigation.test.tsx": {
+      "category": "component",
+      "concerns": ["navigation", "security"]
+    },
+    "apps/web/tests/unit/platform-context.test.ts": {
+      "category": "unit",
+      "concerns": ["navigation", "security"]
     }
   }
 }

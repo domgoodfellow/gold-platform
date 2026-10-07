@@ -22,7 +22,7 @@ const workspaceRightRail = readFileSync(`${WEB}/components/panels/workspace-righ
 const contextSwitcher = readFileSync(`${WEB}/components/navigation/context-switcher.tsx`, 'utf8');
 const accountMenu = readFileSync(`${WEB}/components/navigation/account-menu.tsx`, 'utf8');
 // The shell every organization page renders in — Platform included, which is a sub-scope of GOLD's own organization.
-const organizationLayout = readFileSync(`${WEB}/features/shell/organization-shell.tsx`, 'utf8');
+const organizationLayout = readFileSync(`${WEB}/features/shell/organization-shell.tsx`, 'utf8') + readFileSync(`${WEB}/app/organizations/[organizationId]/org-shell.tsx`, 'utf8');
 // Phase C's application layer (Slice 9/12): the shell's own reads — switchable organizations,
 // Business settings' offer, feature/platform resolution — were moved out of the layout component
 // into one coordinating function the layout merely calls and destructures.
@@ -187,8 +187,8 @@ describe('the Business phone header — compact controls wired to the right slot
   });
 
   it('shows the sidebar trigger from md up while a bottom bar exists, and at every width while locked', () => {
-    expect(organizationLayout).toContain("navigationTrigger={locked ? 'always' : 'md'}");
-    expect(organizationLayout).toMatch(/bottomBar=\{\s*locked \? undefined/);
+    expect(organizationLayout).toContain("navigationTrigger={recovery ? 'always' : 'md'}");
+    expect(organizationLayout).toMatch(/bottomBar=\{\s*recovery \? undefined/);
   });
 
   it('hands the mark, current business and this identity’s other businesses to the compact switcher, same shape the sidebar’s own switcher gets', () => {
@@ -196,9 +196,10 @@ describe('the Business phone header — compact controls wired to the right slot
       organizationLayout.indexOf('<CompactContextSwitcher'),
       organizationLayout.indexOf('/>', organizationLayout.indexOf('<CompactContextSwitcher')),
     );
-    expect(contextBlock).toContain('mark={mark}');
-    expect(contextBlock).toMatch(/kind:\s*'business'/);
-    expect(contextBlock).toContain('organizations={switchable}');
+    expect(contextBlock).toContain('mark={identityMark}');
+    expect(contextBlock).toContain('current={current}');
+    expect(contextBlock).toContain('organizations={organizations}');
+    expect(contextBlock).toContain('platform={platform}');
     expect(organizationShellModel).toMatch(/myOrganizations\.map/);
     expect(contextBlock).not.toContain('platformStaff=');
   });
@@ -235,7 +236,7 @@ describe('the Platform route renders inside the one organization shell', () => {
   });
 
   it('gets its trigger, switcher and bottom bar from the one shell, at every width', () => {
-    expect(organizationLayout).toContain("navigationTrigger={locked ? 'always' : 'md'}");
+    expect(organizationLayout).toContain("navigationTrigger={recovery ? 'always' : 'md'}");
     expect(organizationLayout).toContain('CompactContextSwitcher');
     expect(organizationLayout).toMatch(/bottomBar=\{/);
   });
@@ -271,7 +272,7 @@ describe('ContextSwitcher — content is about context only', () => {
 
   it('does not render a role beneath the business name in either trigger — role stays inside the opened menu', () => {
     const triggers = contextSwitcher.slice(contextSwitcher.indexOf('export function ContextSwitcher('));
-    expect(triggers).not.toContain('view.triggerRole');
+    expect(triggers).toContain("current.kind === 'platform'");
   });
 });
 
@@ -562,7 +563,7 @@ describe('Platform navigation highlights the most specific matching item, never 
   it('picks the longest matching href so a Plan or Product detail route activates its own section', () => {
     expect(shellProjection).toContain('export function activeItemKey');
     // `>=`, so a page beats a parent that shares its address (a Platform group opens its first page).
-    expect(shellProjection).toContain('item.href.length >= best.href.length');
+    expect(shellProjection).toContain('href.length >= bestLength');
   });
 });
 
@@ -678,12 +679,12 @@ describe('organization page composition', () => {
   });
 });
 
-describe('the sidebar settles administration at the foot', () => {
+describe('the sidebar draws the selected application context', () => {
   const orgShell = readFileSync(`${WEB}/app/organizations/[organizationId]/org-shell.tsx`, 'utf8');
 
-  it('draws Administration as one block, pushed down by layout rather than coordinates', () => {
-    expect(orgShell).toContain('ADMINISTRATION_SECTIONS');
-    expect(orgShell).toMatch(/mt-auto flex flex-col/);
+  it('removes the Administration block entirely', () => {
+    expect(orgShell).not.toContain('ADMINISTRATION_SECTIONS');
+    expect(orgShell).toContain('sections.map((section) => group(section, false))');
     expect(orgShell).not.toMatch(/absolute|fixed bottom|top-\[/);
   });
 
@@ -695,8 +696,8 @@ describe('the sidebar settles administration at the foot', () => {
     expect(operating).not.toMatch(/BUSINESS_ITEMS|section.key === 'business'/);
   });
 
-  it('never offers Platform in the context switcher, which answers only which business', () => {
-    expect(readFileSync(`${WEB}/components/navigation/context-switcher.tsx`, 'utf8')).not.toMatch(/platformHref|Platform administration/);
+  it('offers the authorized Platform context under System', () => {
+    expect(readFileSync(`${WEB}/components/navigation/context-switcher.tsx`, 'utf8')).toContain('href={platform.href}');
   });
 });
 

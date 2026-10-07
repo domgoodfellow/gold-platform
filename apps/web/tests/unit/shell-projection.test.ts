@@ -1,354 +1,170 @@
 import { describe, expect, it } from 'vitest';
-import { AREAS, configTarget, configTargetOffered } from '@/lib/navigation';
-import {
-  ADMINISTRATION_SECTIONS,
-  SHELL_SECTION_ORDER,
-  activeItemKey,
-  inPlatformScope,
-  itemContains,
-  projectedItems,
-  projectShell,
-  type ShellInput,
-  type ShellSection,
-} from '@/lib/shell';
-import { PLATFORM_CAPABILITIES, type PlatformCapability } from '@/lib/domain/platform/permissions';
-import {
-  PLATFORM_DESTINATIONS,
-  platformDestinationsFor,
-  platformHref,
-  platformRouteRequires,
-} from '@/lib/platform-navigation';
+import { AREAS, WORKSPACES, configTarget, configTargetOffered, workspaceAncestry, areaLabel } from '@/lib/navigation';
+import { SHELL_SECTION_ORDER, activeItemKey, inPlatformScope, itemContains, projectedItems, projectShell, projectPlatformShell, projectHeaderUtilities, selectShellContext, shellHomeItem, type ShellInput, type ShellSection } from '@/lib/shell';
+import { PLATFORM_CAPABILITIES } from '@/lib/domain/platform/permissions';
+import { platformDestinationsFor, platformHref, platformRouteRequires } from '@/lib/platform-navigation';
 import { ALL_CAPABILITIES, type Capability } from '@/lib/domain/tenancy/capabilities';
 import { ROLE_PRESETS } from '@/lib/domain/tenancy/role-presets';
 
-/**
- * The matrix. One projection resolves entitlement, permission, organization identity and platform
- * authority into the sections every renderer draws; these are the combinations that matter, proven
- * on the pure function so no breakpoint, role name or single owner account stands in for them.
- */
-
-const ORG = 'org-1';
-
-const EVERYTHING_MODULES = ['billing', 'assets', 'automations', 'reporting', 'reception', 'integrations', 'card_payments'];
+const ORG = '11111111-1111-4111-8111-111111111111';
+const allPlatform = new Set(PLATFORM_CAPABILITIES);
 const everyFeature = () => new Set(AREAS.flatMap((area) => area.featureKeys ?? []));
-
-function project(
-  capabilities: readonly Capability[],
-  overrides: Partial<Pick<ShellInput, 'enabledModules' | 'featureAvailability' | 'platform'>> = {},
-): ShellSection[] {
-  return projectShell({
-    organizationId: ORG,
-    enabledModules: overrides.enabledModules ?? new Set(EVERYTHING_MODULES),
-    featureAvailability: overrides.featureAvailability ?? everyFeature(),
-    capabilities: new Set(capabilities),
-    platform: overrides.platform ?? null,
-  });
-}
-
-/** Every item in a section, a workspace followed by its pages — the order the sidebar draws them. */
-const keys = (sections: ShellSection[], section?: string) =>
-  projectedItems(section ? sections.filter((entry) => entry.key === section) : sections).map((item) => item.key);
-
-/** Only what is drawn at the top level, so a nested page cannot pass for a workspace. */
-const topLevel = (sections: ShellSection[], section: string) =>
-  sections.filter((entry) => entry.key === section).flatMap((entry) => entry.items.map((item) => item.key));
-
-const preset = (key: string) => ROLE_PRESETS.find((candidate) => candidate.key === key)!.capabilities;
-const allPlatform = new Set<PlatformCapability>(PLATFORM_CAPABILITIES);
-
-describe('GOLD owner who is also a platform operator', () => {
-  const sections = project(ALL_CAPABILITIES, { platform: allPlatform });
-
-  it('sees the business workspaces GOLD is entitled to', () => {
-    expect(keys(sections, 'home')).toEqual(['home']);
-    // One row per registered workspace that has a reachable area, in the order a customer meets
-    // them. Service and AI are registered and have no page, so they draw no row. Studio has Home
-    // plus its Website, Forms and Templates pages. Finance has Home plus its Quotes, Invoices
-    // and Payments pages, and nothing GildOps-commercial: Plans & Add-ons is Platform's. Insights is not a workspace row at all (D66) — it is
-    // reached contextually.
-    expect(topLevel(sections, 'workspaces')).toEqual(['workspace-crm', 'workspace-communications', 'workspace-finance', 'workspace-automations', 'workspace-field', 'workspace-studio']);
-    expect(keys(sections, 'workspaces')).toEqual([
-      'workspace-crm', 'customers', 'pipeline',
-      'workspace-communications', 'calls', 'comms-inbox', 'comms-numbers',
-      'workspace-finance', 'finance-quotes', 'finance-invoices', 'finance-payments',
-      'workspace-automations', 'automation-rules', 'automation-messages', 'automation-activity',
-      'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets',
-      'workspace-studio', 'studio-website', 'studio-forms', 'studio-templates',
-    ]);
-    const row = (key: string) => sections.flatMap((section) => section.items).find((item) => item.key === key)!;
-    // The parent's own destination is the workspace's Home, never repeated as a child beneath it.
-    expect(row('workspace-field').children?.map((page) => page.key)).toEqual(['work', 'schedule', 'resources', 'locations', 'assets']);
-    expect(row('workspace-crm').children?.map((page) => page.key)).toEqual(['customers', 'pipeline']);
-    expect(row('workspace-automations').children?.map((page) => page.label)).toEqual(['Rules', 'Messages', 'Activity']);
-    expect(row('workspace-communications').children?.map((page) => page.key)).toEqual(['calls', 'comms-inbox', 'comms-numbers']);
-    expect(row('workspace-field').label).toBe('Field');
-    expect(row('workspace-field').href).toBe(`/organizations/${ORG}/field`);
-    expect(row('workspace-crm').href).toBe(`/organizations/${ORG}/sales`);
-    expect(row('workspace-communications').href).toBe(`/organizations/${ORG}/comms`);
-    expect(row('workspace-automations').href).toBe(`/organizations/${ORG}/automations`);
-    // Finance is expandable for everyone with billing: Home plus its operating pages. Platform authority adds nothing to it.
-    expect(row('workspace-finance').children?.map((page) => page.key)).toEqual(['finance-quotes', 'finance-invoices', 'finance-payments']);
-    expect(row('workspace-finance').heading).toBe(true);
-    expect(row('workspace-finance').href).toBe(`/organizations/${ORG}/finance`);
-    expect(row('workspace-finance').children?.find((page) => page.key === 'finance-invoices')?.href).toBe(`/organizations/${ORG}/finance/invoices`);
-    // Studio is one workspace: its row is Home, its children are the pages that have earned one.
-    expect(row('workspace-studio').children?.map((page) => page.label)).toEqual(['Website', 'Forms', 'Templates']);
-    expect(row('workspace-studio').heading).toBe(true);
-    expect(row('workspace-studio').href).toBe(`/organizations/${ORG}/studio`);
-  });
-
-  it('draws the same Finance for a member with no platform authority', () => {
-    const noPlatform = project(ALL_CAPABILITIES, { platform: null });
-    const row = noPlatform.flatMap((section) => section.items).find((item) => item.key === 'workspace-finance')!;
-    expect(row.children?.map((page) => page.key)).toEqual(['finance-quotes', 'finance-invoices', 'finance-payments']);
-    expect(keys(noPlatform, 'workspaces')).not.toContain('finance-plans');
-  });
-
-  it('has no Business section: Team, Connections and Plan & usage are Settings destinations, not rows', () => {
-    expect(sections.map((section) => section.key)).not.toContain('business');
-    for (const key of ['team', 'connections', 'plan']) expect(keys(sections)).not.toContain(key);
-  });
-
-  it('sees every authorized Platform destination, and only through the projection', () => {
-    // The root destination is the Platform row itself, never a `platform-overview` child.
-    const destinations = keys(sections, 'administration').filter((key) => !key.startsWith('platform-group-'));
-    const expected = PLATFORM_DESTINATIONS.map((destination) => (destination.path === '' ? 'platform' : `platform-${destination.key}`));
-    expect(destinations.sort()).toEqual(expected.sort());
-  });
-
-  it('nests Platform as one row, holding Organizations and Catalog, Commercial and Infrastructure', () => {
-    // Platform is a single workspace-style parent at the top level — its own Home, never a repeated child.
-    expect(topLevel(sections, 'administration')).toEqual(['platform']);
-    expect(keys(sections, 'administration')).toEqual([
-      'platform',
-      'platform-organizations',
-      'platform-group-catalog',
-      'platform-products',
-      'platform-meters',
-      'platform-connectors',
-      'platform-group-commercial',
-      'platform-plans',
-      'platform-pricing',
-      'platform-usage-economics',
-      'platform-vendor-rates',
-      'platform-package-economics',
-      'platform-portfolio-economics',
-      'platform-billing',
-      'platform-group-infrastructure',
-      'platform-providers',
-      'platform-ai-runtime',
-      'platform-failures',
-    ]);
-    const platform = sections.flatMap((section) => section.items).find((item) => item.key === 'platform')!;
-    expect(platform.label).toBe('Platform');
-    expect(platform.href).toBe(platformHref(ORG, ''));
-    expect(platform.heading).toBe(true);
-    // Platform is an added section: GOLD's own workspaces are all still there.
-    expect(keys(sections, 'workspaces')).toContain('customers');
-  });
-
-  it('labels its sections Home, Library, Workspaces, Administration', () => {
-    expect(sections.map((section) => section.label)).toEqual([null, null, 'Workspaces', 'Administration']);
-  });
-
-  it('draws the platform Connectors row once and no tenant Connections row', () => {
-    const items = projectedItems(sections);
-    const label = (key: string) => items.find((item) => item.key === key)?.label;
-    expect(label('connections')).toBeUndefined();
-    expect(label('platform-connectors')).toBe('Connectors');
-    const labels = items.map((item) => item.label);
-    expect(labels).not.toContain('Connections');
-    expect(labels.filter((name) => name === 'Connectors')).toHaveLength(1);
-    expect(labels).not.toContain('Integrations');
-  });
-
-  it('draws sections in one fixed order: Home, Library, Workspaces, Administration', () => {
-    expect(sections.map((section) => section.key)).toEqual(['home', 'library', 'workspaces', 'administration']);
-  });
+const EVERYTHING_MODULES = ['billing', 'assets', 'automations', 'reporting', 'reception', 'integrations', 'card_payments'];
+const gate = (capabilities: readonly Capability[] = ALL_CAPABILITIES, overrides: Partial<ShellInput> = {}): ShellInput => ({
+  organizationId: ORG, enabledModules: new Set(EVERYTHING_MODULES), featureAvailability: everyFeature(), capabilities: new Set(capabilities), ...overrides,
 });
+const project = (capabilities: readonly Capability[] = ALL_CAPABILITIES, overrides: Partial<ShellInput> = {}) => projectShell(gate(capabilities, overrides));
+const keys = (sections: ShellSection[]) => projectedItems(sections).map((item) => item.key);
+const workspaceKeys = ['workspace-crm', 'workspace-communications', 'workspace-field', 'workspace-finance', 'workspace-automations', 'workspace-studio'];
 
-describe('GOLD sales member in the same organization', () => {
-  const sections = project(preset('sales'), { platform: null });
-
-  it('uses GOLD as an ordinary business: sales, customers and calls', () => {
-    expect(keys(sections, 'workspaces')).toEqual([
-      'workspace-crm', 'customers', 'pipeline', 'workspace-communications', 'calls', 'comms-inbox', 'comms-numbers', 'workspace-finance', 'finance-quotes', 'finance-invoices', 'finance-payments', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio',
-    ]);
-  });
-
-  it('sees no Platform and no administration they hold no authority for', () => {
-    expect(keys(sections, 'administration')).toEqual([]);
-    expect(sections.map((section) => section.key)).not.toContain('administration');
-  });
-
-  it('does not see automation, which needs its own permission', () => {
-    expect(keys(sections)).not.toContain('automations');
-  });
-
-  it('is not given platform items by being a member: platform authority is an input, not an inference', () => {
-    // Everything an ordinary member holds, entitled to everything, and still no Platform.
-    expect(keys(project(ALL_CAPABILITIES, { platform: null }), 'administration')).toEqual([]);
-  });
-});
-
-describe('a platform member with limited platform permissions', () => {
-  it('sees only the destinations their permissions reach', () => {
-    const providersOnly = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.providers']) });
-    expect(keys(providersOnly, 'administration')).toEqual(['platform', 'platform-group-infrastructure', 'platform-providers', 'platform-ai-runtime']);
-
-    const commercial = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.commercial']) });
-    expect(keys(commercial, 'administration')).toEqual(['platform', 'platform-group-commercial', 'platform-plans', 'platform-pricing', 'platform-usage-economics', 'platform-vendor-rates', 'platform-package-economics', 'platform-portfolio-economics', 'platform-billing']);
-
-    const catalogue = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.catalogue']) });
-    expect(keys(catalogue, 'administration')).toEqual(['platform', 'platform-group-catalog', 'platform-products', 'platform-meters', 'platform-connectors']);
-  });
-
-  it('does not gain full platform administration, nor organization administration, from one permission', () => {
-    const limited = project(preset('support'), { platform: new Set<PlatformCapability>(['platform.organizations']) });
-    expect(keys(limited, 'administration')).toEqual(['platform', 'platform-organizations']);
-  });
-
-  it('a person who holds no platform permission has an empty set, and so no Platform section', () => {
-    expect(project(preset('support'), { platform: new Set() }).map((section) => section.key)).not.toContain('administration');
-  });
-});
-
-describe('tenant owner or administrator', () => {
-  const sections = project(ALL_CAPABILITIES, { platform: null });
-
-  it('sees the tenant workspaces and the administration they hold authority for', () => {
-    expect(keys(sections, 'workspaces')).toContain('customers');
-  });
-
-  it('never sees GOLD Platform controls, however many capabilities they hold', () => {
-    expect(keys(sections, 'administration')).toEqual([]);
-    expect(projectedItems(sections).some((item) => item.href.includes('/platform'))).toBe(false);
-  });
-
-  it('a preset administrator holds the same reach as the founding role', () => {
-    expect(keys(project(preset('administrator')))).toEqual(keys(sections));
-  });
-});
-
-describe('tenant ordinary member', () => {
-  const technician = project(preset('technician'));
-
-  it('sees the operational workspaces their business has, and nothing administrative', () => {
-    expect(keys(technician, 'workspaces')).toEqual(['workspace-crm', 'customers', 'pipeline', 'workspace-finance', 'finance-quotes', 'finance-invoices', 'finance-payments', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio']);
-    expect(keys(technician, 'administration')).toEqual([]);
-  });
-
-  it('a viewer with no capability at all still gets the kernel, and no administration', () => {
-    const viewer = project(preset('viewer'));
-    expect(keys(viewer, 'home')).toEqual(['home']);
-    expect(keys(viewer, 'workspaces')).toEqual(['workspace-crm', 'customers', 'pipeline', 'workspace-finance', 'finance-quotes', 'finance-invoices', 'finance-payments', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'assets', 'workspace-studio']);
-  });
-});
-
-describe('configuration-only authority', () => {
-  it('has no permanent sidebar row for configuration', () => {
-    const configurer = project(['field.manage']);
-    // Cannot place calls, so there is no calling workspace for them.
-    expect(keys(configurer, 'workspaces')).not.toContain('calls');
-    for (const key of ['team', 'connections', 'plan']) expect(keys(configurer)).not.toContain(key);
-  });
-
-  it('keeps Team, Connections and Plan & usage out of the shell whatever authority names them, yet reachable as Settings targets', () => {
-    const gate = { enabledModules: new Set(EVERYTHING_MODULES), featureAvailability: everyFeature(), capabilities: new Set<Capability>(ALL_CAPABILITIES), schedulableWork: undefined };
-    for (const [capability, key, target] of [['role.manage', 'team', 'team'], ['billing.manage', 'plan', 'plan'], ['integration.manage', 'connections', 'integrations']] as const) {
-      const sections = project([capability]);
-      expect(sections.map((section) => section.key), capability).not.toContain('business');
-      expect(keys(sections), capability).not.toContain(key);
-      expect(configTargetOffered(configTarget(target), gate), target).toBe(true);
+describe('flat business navigation', () => {
+  const sections = project();
+  const rows = sections.find((section) => section.key === 'workspaces')!.items;
+  it('has Home, Library and Workspaces only, in canonical order', () => {
+    expect(sections.map((section) => section.key)).toEqual(SHELL_SECTION_ORDER);
+    expect(sections.map((section) => section.label)).toEqual([null, null, 'Workspaces']);
+    expect(keys(sections)).toEqual(['home', 'library', ...workspaceKeys]);
+    for (const row of rows) {
+      expect(row.children).toBeUndefined();
+      expect(row.heading).toBeUndefined();
     }
   });
-});
-
-describe('entitlement absent', () => {
-  it('a broad role does not conjure a workspace the business does not have', () => {
-    const sections = project(ALL_CAPABILITIES, { enabledModules: new Set(), featureAvailability: new Set() });
-    // Assets is a module: without it Field has the rest of its pages, and no more. No modules: no
-    // Pipeline, so Sales has just Home and the kernel Customers; the Home is never a child.
-    expect(keys(sections, 'workspaces')).toEqual([
-      'workspace-crm', 'customers', 'workspace-finance', 'workspace-field', 'work', 'schedule', 'resources', 'locations', 'workspace-studio', 'studio-website', 'studio-forms', 'studio-templates',
-    ]);
+  it('links every row to its real Home and preserves internal field identity', () => {
+    const homes = ['sales', 'comms', 'field', 'finance', 'automations', 'studio'];
+    expect(rows.map((row) => row.href)).toEqual(homes.map((home) => `/organizations/${ORG}/${home}`));
+    expect(rows.find((row) => row.key === 'workspace-field')?.label).toBe('Work');
+    expect(areaLabel('work')).toBe('Work items');
+    expect(workspaceAncestry(ORG, 'work')).toEqual([{ label: 'Work', href: `/organizations/${ORG}/field` }]);
+    expect(WORKSPACES.map((workspace) => workspace.label)).toEqual(['CRM', 'Communications', 'Marketing', 'Support', 'Work', 'Finance', 'Automations', 'AI', 'Studio']);
+    expect(rows.map((row) => row.label)).not.toContain('Operations');
   });
-
-  it('the kernel — Home, Customers, Work, Schedule, Setup — never depends on a module', () => {
+  it('keeps Settings and header utilities out of permanent business rows', () => {
+    for (const name of ['Settings', 'Team', 'Connections', 'Plan & usage', 'Platform', 'Providers']) {
+      expect(projectedItems(sections).map((item) => item.label)).not.toContain(name);
+    }
+  });
+  it.each(ROLE_PRESETS)('never adds Platform for the $key tenant role', (role) => {
+    expect(project(role.capabilities).map((section) => section.key)).not.toContain('platform');
+  });
+  it('does not conjure module or feature gated destinations', () => {
+    const none = project(ALL_CAPABILITIES, { enabledModules: new Set(), featureAvailability: new Set() });
+    expect(keys(none)).toEqual(['home', 'library', 'workspace-crm', 'workspace-field', 'workspace-finance', 'workspace-studio']);
+    const aliases = projectedItems(none).flatMap((item) => item.activeHrefs ?? []);
+    expect(aliases).not.toContain(`/organizations/${ORG}/assets`);
+    expect(aliases).not.toContain(`/organizations/${ORG}/customers/pipeline`);
+  });
+  it('configuration permission alone does not grant Communications operation', () => {
+    expect(keys(project(['integration.manage', 'secret.manage']))).not.toContain('workspace-communications');
+    expect(keys(project(['call.place']))).toContain('workspace-communications');
+    expect(keys(project(['call.place'], { enabledModules: new Set(), featureAvailability: new Set() }))).not.toContain('workspace-communications');
+  });
+  it('kernel areas remain independent of modules', () => {
     for (const segment of ['home', 'customers', 'work', 'schedule', 'setup']) {
-      const area = AREAS.find((candidate) => candidate.segment === segment)!;
-      expect(area.module, segment).toBeUndefined();
+      expect(AREAS.find((area) => area.segment === segment)?.module).toBeUndefined();
     }
   });
 });
 
-describe('the current item', () => {
-  const sections = project(ALL_CAPABILITIES, { platform: allPlatform });
-
-  it('marks the most specific item, never two', () => {
-    expect(activeItemKey(sections, `/organizations/${ORG}/settings/plan`)).toBeNull();
-    // Settings is no longer a permanent sidebar row (Business settings is reached from the
-    // account menu instead), so nothing in the sidebar highlights while visiting it.
-    expect(activeItemKey(sections, `/organizations/${ORG}/settings/general`)).toBeNull();
-    expect(activeItemKey(sections, `/organizations/${ORG}/settings/pricing`)).toBeNull();
-    expect(activeItemKey(sections, `/organizations/${ORG}/settings/custom-fields`)).toBeNull();
-    expect(activeItemKey(sections, `/organizations/${ORG}/work/abc`)).toBe('work');
-    expect(activeItemKey(sections, `/organizations/${ORG}/settings/access/roles`)).toBeNull();
-    expect(activeItemKey(sections, `/organizations/${ORG}/settings/access/members`)).toBeNull();
-    expect(activeItemKey(sections, `/organizations/${ORG}/settings/access/invitations`)).toBeNull();
-    expect(activeItemKey(sections, `/organizations/${ORG}/settings/connections/connection-1`)).toBeNull();
-    // Plans & Add-ons is Platform's commercial control plane, never Finance (D60).
-    expect(activeItemKey(sections, platformHref(ORG, 'plans/base'))).toBe('platform-plans');
-    expect(activeItemKey(sections, platformHref(ORG, 'economics/abc'))).toBe('platform-portfolio-economics');
-    expect(activeItemKey(sections, `/organizations/${ORG}/finance/invoices`)).toBe('finance-invoices');
-    expect(activeItemKey(sections, platformHref(ORG, 'catalog'))).toBe('platform-products');
-    expect(activeItemKey(sections, platformHref(ORG, 'catalog/families/comms'))).toBe('platform-products');
-    expect(activeItemKey(sections, platformHref(ORG))).toBe('platform');
-    expect(activeItemKey(sections, platformHref(ORG, 'organizations/x/usage'))).toBe('platform-organizations');
+describe('owning workspace stays active on contextual and detail routes', () => {
+  const sections = project();
+  it.each([
+    ['home', 'home'], ['library/files', 'library'],
+    ['sales', 'workspace-crm'], ['customers', 'workspace-crm'], ['customers/customer-1', 'workspace-crm'], ['customers/pipeline', 'workspace-crm'],
+    ['comms', 'workspace-communications'], ['calls/call-1', 'workspace-communications'], ['comms/inbox/conversation-1', 'workspace-communications'], ['comms/numbers/number-1', 'workspace-communications'],
+    ['finance/invoices/invoice-1', 'workspace-finance'], ['finance/payments/payment-1', 'workspace-finance'],
+    ['automations/activity', 'workspace-automations'], ['automations/rule-1', 'workspace-automations'],
+    ['field', 'workspace-field'], ['work/work-1', 'workspace-field'], ['schedule/date', 'workspace-field'], ['resources/person-1', 'workspace-field'], ['locations/site-1', 'workspace-field'], ['assets/asset-1', 'workspace-field'],
+    ['studio/forms/form-1', 'workspace-studio'],
+  ])('%s activates %s', (path, key) => {
+    expect(activeItemKey(sections, `/organizations/${ORG}/${path}`)).toBe(key);
+    expect(activeItemKey(sections, `/organizations/${ORG}/${path}/?tab=details#top`)).toBe(key);
   });
-
-  it('a page of a workspace activates itself and opens its workspace, and the workspace overview only itself', () => {
-    const items = sections.flatMap((section) => section.items);
-    const field = items.find((item) => item.key === 'workspace-field')!;
-    for (const page of ['work', 'schedule', 'resources', 'locations', 'assets']) {
-      const active = activeItemKey(sections, `/organizations/${ORG}/${page}`);
-      expect(active).toBe(page);
-      expect(itemContains(field, active)).toBe(true);
+  it('does not match similar prefixes, another tenant or configuration', () => {
+    for (const path of ['customers-other', 'settings/access', 'settings/connections', 'platform/providers']) {
+      expect(activeItemKey(sections, `/organizations/${ORG}/${path}`)).toBeNull();
     }
-    // Home is never a child, so its own address marks the parent — not a separate 'field' leaf.
-    expect(activeItemKey(sections, `/organizations/${ORG}/field`)).toBe('workspace-field');
-    expect(itemContains(items.find((item) => item.key === 'workspace-crm')!, 'work')).toBe(false);
-    // A page of a bigger route activates itself, not the page it is nested under.
-    expect(activeItemKey(sections, `/organizations/${ORG}/customers/pipeline`)).toBe('pipeline');
-    expect(activeItemKey(sections, `/organizations/${ORG}/customers/abc`)).toBe('customers');
-    expect(activeItemKey(sections, `/organizations/${ORG}/automations/messages`)).toBe('automation-messages');
-    // A rule's own detail route is nested under Automations Home's address, not Rules' — it
-    // activates the parent, the same rule the Home/child split follows everywhere else.
-    expect(activeItemKey(sections, `/organizations/${ORG}/automations/rule-1`)).toBe('workspace-automations');
-    expect(activeItemKey(sections, `/organizations/${ORG}/automations/rules`)).toBe('automation-rules');
-    // Studio is a plain row: its own address marks the row itself, the same as any other Home.
-    expect(activeItemKey(sections, `/organizations/${ORG}/studio`)).toBe('workspace-studio');
+    expect(activeItemKey(sections, '/organizations/other/work/1')).toBeNull();
   });
-
-  it('inside Platform the group holding the current page is the one that is open, and a heading yields to its first page', () => {
-    const platformRoot = sections.find((section) => section.key === 'administration')!.items[0];
-    const commercial = platformRoot.children!.find((item) => item.key === 'platform-group-commercial')!;
-    const infrastructure = platformRoot.children!.find((item) => item.key === 'platform-group-infrastructure')!;
-    const active = activeItemKey(sections, platformHref(ORG, 'pricing'));
-    expect(active).toBe('platform-pricing');
-    expect(itemContains(commercial, active)).toBe(true);
-    expect(itemContains(infrastructure, active)).toBe(false);
-    // Platform itself is the root of the whole tree and contains everything beneath it.
-    expect(itemContains(platformRoot, active)).toBe(true);
-    expect(activeItemKey(sections, platformHref(ORG, 'providers/twilio'))).toBe('platform-providers');
+  it('compares alias specificity and lets a later page win its heading tie', () => {
+    const sections: ShellSection[] = [{ key: 'workspaces', label: null, items: [
+      { key: 'first', label: 'First', href: '/first', section: 'workspaces', activeHrefs: ['/a/b'] },
+      { key: 'second', label: 'Second', href: '/second', section: 'workspaces', activeHrefs: ['/a'] },
+    ] }];
+    expect(activeItemKey(sections, '/a/b/detail')).toBe('first');
+    expect(activeItemKey(projectPlatformShell(ORG, allPlatform), platformHref(ORG, 'catalog'))).toBe('platform-products');
   });
+});
 
-  it('marks nothing on a Platform address when the person has no Platform in their projection', () => {
-    expect(activeItemKey(project(ALL_CAPABILITIES, { platform: null }), platformHref(ORG, 'providers'))).toBeNull();
+describe('Work follows the declared shape and entitlement', () => {
+  const field = (schedulableWork?: boolean, overrides: Partial<ShellInput> = {}) => projectedItems(project(['field.manage'], { schedulableWork, ...overrides })).find((item) => item.key === 'workspace-field')!;
+  it('keeps schedule-dependent aliases only where the work shape allows them', () => {
+    const paths = (scheduled?: boolean) => field(scheduled).activeHrefs!.map((href) => href.split('/').at(-1));
+    expect(paths(true)).toEqual(['field', 'work', 'schedule', 'resources', 'locations', 'assets']);
+    expect(paths(false)).toEqual(['field', 'work', 'assets']);
+    expect(paths(undefined)).toEqual(paths(true));
+    expect(field(false, { enabledModules: new Set(), featureAvailability: new Set() }).activeHrefs).toEqual([`/organizations/${ORG}/field`, `/organizations/${ORG}/work`]);
   });
+  it('configuration eligibility keeps the same shape gate', () => {
+    expect(configTargetOffered(configTarget('schedule-configuration'), gate(['field.manage'], { schedulableWork: false }))).toBe(false);
+    expect(configTargetOffered(configTarget('schedule-configuration'), gate(['field.manage'], { schedulableWork: true }))).toBe(true);
+    expect(configTargetOffered(configTarget('work-configuration'), gate(['field.manage'], { schedulableWork: false }))).toBe(true);
+  });
+});
 
-  it('marks nothing for a page the person’s projection does not list', () => {
-    expect(activeItemKey(project(preset('viewer')), `/organizations/${ORG}/settings/plan`)).toBeNull();
+describe('persistent header utility authority', () => {
+  it.each([
+    [[], []], [['role.manage'], ['team']], [['integration.manage'], ['connections']],
+    [['secret.manage'], ['connections']], [['role.manage', 'secret.manage'], ['team', 'connections']],
+  ] as [Capability[], string[]][])('capabilities %j offer %j', (capabilities, expected) => {
+    expect(projectHeaderUtilities(gate(capabilities)).map((item) => item.key)).toEqual(expected);
+  });
+  it('requires the existing integrations entitlement but secrets authority needs no module', () => {
+    const absent = { enabledModules: new Set<string>(), featureAvailability: new Set<string>() };
+    expect(projectHeaderUtilities(gate(['integration.manage'], absent))).toEqual([]);
+    expect(projectHeaderUtilities(gate(['secret.manage'], absent)).map((item) => item.key)).toEqual(['connections']);
+  });
+  it('links directly to canonical Team and Connections and offers no Settings gear', () => {
+    expect(projectHeaderUtilities(gate())).toEqual([
+      { key: 'team', label: 'Team', href: `/organizations/${ORG}/settings/access` },
+      { key: 'connections', label: 'Connections', href: `/organizations/${ORG}/settings/connections` },
+    ]);
+  });
+});
+
+describe('Platform is a separate system projection', () => {
+  const sections = projectPlatformShell(ORG, allPlatform);
+  it('holds only the existing nested Platform IA', () => {
+    expect(sections.map((section) => section.key)).toEqual(['platform']);
+    expect(sections[0].label).toBeNull();
+    const root = sections[0].items[0];
+    expect(root.href).toBe(platformHref(ORG));
+    expect(root.children?.map((item) => item.key)).toEqual(['platform-organizations', 'platform-group-catalog', 'platform-group-commercial', 'platform-group-infrastructure']);
+    expect(keys(sections)).toContain('platform-providers');
+    expect(keys(sections)).toContain('platform-connectors');
+    expect(keys(sections)).not.toContain('platform-overview');
+    expect(keys(sections)).not.toContain('workspace-crm');
+    expect(shellHomeItem(sections)).toBe(root);
+    expect(shellHomeItem(project())?.key).toBe('home');
+  });
+  it('an empty permission set has no system projection', () => {
+    expect(projectPlatformShell(ORG, new Set())).toEqual([]);
+  });
+  it.each(PLATFORM_CAPABILITIES)('partial %s authority projects only permitted pages', (permission) => {
+    const partial = projectPlatformShell(ORG, new Set([permission]));
+    const allowed = platformDestinationsFor(new Set([permission])).filter((item) => item.path).map((item) => `platform-${item.key}`);
+    expect(keys(partial).filter((key) => key !== 'platform' && !key.startsWith('platform-group-'))).toEqual(allowed);
+  });
+  it('nested detail links retain their group ancestry', () => {
+    const active = activeItemKey(sections, platformHref(ORG, 'providers/twilio'));
+    expect(active).toBe('platform-providers');
+    expect(itemContains(sections[0].items[0], active)).toBe(true);
+  });
+  it('only the already authorized canonical route container selects system identity', () => {
+    expect(selectShellContext(ORG, platformHref(ORG, 'providers'), { organizationId: ORG })).toBe('platform');
+    expect(selectShellContext(ORG, platformHref(ORG, 'providers'), null)).toBe('business');
+    expect(selectShellContext('tenant', '/organizations/tenant/platform', { organizationId: ORG })).toBe('business');
+    expect(selectShellContext(ORG, '/organizations/22222222-2222-4222-8222-222222222222/platform', { organizationId: ORG })).toBe('business');
+    expect(selectShellContext(ORG, `/organizations/${ORG}/home`, { organizationId: ORG })).toBe('business');
   });
 });
 
@@ -397,110 +213,5 @@ describe('role presets are templates, not personas', () => {
 
   it('carry no reference a saved role could keep: keys are unique and nothing branches on them', () => {
     expect(new Set(ROLE_PRESETS.map((candidate) => candidate.key)).size).toBe(ROLE_PRESETS.length);
-  });
-});
-
-describe('the permission gradient: operating work, then Administration', () => {
-  const partial = new Set<PlatformCapability>(['platform.catalogue']);
-  const personas: { name: string; sections: ShellSection[]; sectionKeys: string[]; platformTop: string[] }[] = [
-    { name: 'ordinary tenant member', sections: project(preset('technician')), sectionKeys: ['home', 'library', 'workspaces'], platformTop: [] },
-    { name: 'tenant administrator', sections: project(ALL_CAPABILITIES), sectionKeys: ['home', 'library', 'workspaces'], platformTop: [] },
-    // Same organization as the platform operator below, but no platform_staff permission: an ordinary business.
-    { name: 'GOLD member without platform permission', sections: project(preset('sales'), { platform: new Set() }), sectionKeys: ['home', 'library', 'workspaces'], platformTop: [] },
-    {
-      name: 'platform staff with partial permissions',
-      sections: project(ALL_CAPABILITIES, { platform: partial }),
-      sectionKeys: ['home', 'library', 'workspaces', 'administration'],
-      platformTop: ['platform'],
-    },
-    {
-      name: 'platform owner',
-      sections: project(ALL_CAPABILITIES, { platform: allPlatform }),
-      sectionKeys: ['home', 'library', 'workspaces', 'administration'],
-      platformTop: ['platform'],
-    },
-  ];
-
-  for (const persona of personas) {
-    it(`${persona.name}: sees exactly their tiers, in scope order`, () => {
-      expect(persona.sections.map((section) => section.key)).toEqual(persona.sectionKeys);
-      // Relative hierarchy: whatever is present follows the one fixed order.
-      const positions = persona.sections.map((section) => SHELL_SECTION_ORDER.indexOf(section.key));
-      expect(positions).toEqual([...positions].sort((a, b) => a - b));
-      expect(topLevel(persona.sections, 'administration')).toEqual(persona.platformTop);
-    });
-
-    it(`${persona.name}: every administration item comes after every operating item`, () => {
-      const all = projectedItems(persona.sections);
-      const lastOperating = Math.max(-1, ...all.map((item, index) => (ADMINISTRATION_SECTIONS.has(item.section) ? -1 : index)));
-      const firstAdministration = all.findIndex((item) => ADMINISTRATION_SECTIONS.has(item.section));
-      if (firstAdministration !== -1) expect(firstAdministration).toBeGreaterThan(lastOperating);
-    });
-  }
-
-  it('Administration is the last section, holds exactly one Platform parent that lands on Platform Home, and repeats no Overview', () => {
-    const sections = personas[4].sections;
-    expect(sections.at(-1)?.key).toBe('administration');
-    expect(sections.at(-1)?.label).toBe('Administration');
-    expect(sections.at(-1)?.items).toHaveLength(1);
-    const root = sections.at(-1)!.items[0];
-    expect(root.href).toBe(platformHref(ORG, ''));
-    expect(projectedItems(sections).map((item) => item.key)).not.toContain('platform-overview');
-    expect(root.children?.map((child) => child.href)).not.toContain(root.href);
-  });
-
-  it('an ordinary tenant organization gets no Administration section', () => {
-    expect(project(ALL_CAPABILITIES, { platform: null }).map((section) => section.key)).not.toContain('administration');
-  });
-
-  it('partial platform permissions reach only their own group, in registry order', () => {
-    const platformRoot = personas[3].sections.find((section) => section.key === 'administration')!.items[0];
-    const catalog = platformRoot.children![0];
-    expect(catalog.key).toBe('platform-group-catalog');
-    expect(catalog.children?.map((page) => page.key)).toEqual(['platform-products', 'platform-meters', 'platform-connectors']);
-  });
-
-  it('a workspace with one reachable area is a plain row; with several, an expandable one — never a dropdown of one Home', () => {
-    const rows = personas[1].sections.find((section) => section.key === 'workspaces')!.items;
-    for (const row of rows) expect(row.children === undefined || row.children.length >= 1).toBe(true);
-  });
-});
-
-describe('Field follows the business’s declared shape of work', () => {
-  const field = (schedulableWork: boolean | undefined, modules = EVERYTHING_MODULES, features = everyFeature()) =>
-    projectShell({
-      organizationId: ORG,
-      enabledModules: new Set(modules),
-      featureAvailability: features,
-      capabilities: new Set<Capability>(['field.manage']),
-      platform: null,
-      schedulableWork,
-    })
-      .flatMap((section) => section.items)
-      .find((item) => item.key === 'workspace-field')!;
-
-  it('a business with scheduled work gets Schedule, Resources and Locations beside Work', () => {
-    expect(field(true).children?.map((page) => page.key)).toEqual(['work', 'schedule', 'resources', 'locations', 'assets']);
-  });
-
-  it('a business with none keeps Work, and Assets by its own entitlement, and loses the three that need a schedule', () => {
-    expect(field(false).children?.map((page) => page.key)).toEqual(['work', 'assets']);
-    // Assets follows its module and nothing else: without it the workspace is Home and Work.
-    expect(field(false, ['billing'], new Set(['price_book'])).children?.map((page) => page.key)).toEqual(['work']);
-    // Field Home is never withheld.
-    expect(field(false).href).toBe(`/organizations/${ORG}/field`);
-  });
-
-  it('an unasked question hides nothing, so a caller that does not know the shape keeps every page', () => {
-    expect(field(undefined).children?.map((page) => page.key)).toEqual(['work', 'schedule', 'resources', 'locations', 'assets']);
-  });
-
-  it('Schedule configuration follows Schedule — configuring a page the business does not have is not offered', () => {
-    const gate = { enabledModules: new Set(EVERYTHING_MODULES), featureAvailability: everyFeature(), capabilities: new Set<Capability>(['field.manage']) };
-    const target = configTarget('schedule-configuration');
-    expect(configTargetOffered(target, { ...gate, schedulableWork: true })).toBe(true);
-    expect(configTargetOffered(target, { ...gate, schedulableWork: false })).toBe(false);
-    // Work configuration is where the declaration lives, so it is always offered.
-    expect(configTargetOffered(configTarget('work-configuration'), { ...gate, schedulableWork: false })).toBe(true);
   });
 });
