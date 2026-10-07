@@ -344,11 +344,13 @@ Tenant branding continues to own customer/business brand colour and brand typogr
 
 ## Phase 2 — UI Surface Lab
 
-The branch includes an internal Platform-only prototype route:
+The branch includes a development-only prototype route inside the ordinary organization shell:
 
 ```text
-/organizations/{gildopsOrganizationId}/platform/ui-lab
+/organizations/{organizationId}/ui-lab
 ```
+
+It is implemented under an App Router `(dev)` route group, requires normal organization access, and returns 404 in production.
 
 Purpose:
 
