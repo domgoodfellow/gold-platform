@@ -1,8 +1,10 @@
 import { chromium } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const WEB_ROOT = path.resolve(import.meta.dirname, '../..');
+const SCRIPT_DIR = path.resolve(fileURLToPath(new URL('.', import.meta.url)));
+const WEB_ROOT = path.resolve(SCRIPT_DIR, '../..');
 const E2E_ROOT = path.resolve(WEB_ROOT, 'e2e');
 const contextPath = path.resolve(E2E_ROOT, '.demo-context.json');
 const storageState = path.resolve(E2E_ROOT, '.auth', 'owner.json');
