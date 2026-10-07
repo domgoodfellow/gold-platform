@@ -1,0 +1,1166 @@
+# GildOps Security & Identity
+
+## Purpose
+
+This document defines the **canonical security, identity, authorization, tenant-isolation and trust-boundary rules for GildOps**.
+
+It answers:
+
+- Who or what is acting?
+- How is identity proven?
+- Which scope is the actor operating in?
+- What may the actor do?
+- What may the Organization use?
+- What data may be read or changed?
+- Which trust boundaries require validation or verification?
+- How are secrets and machine credentials handled?
+- How do public users, providers, AI and automation interact with protected state?
+
+This document defines current security requirements.
+
+Product ownership belongs in `docs/product.md`.
+
+Domain terminology belongs in `docs/domain-model.md`.
+
+System boundaries belong in `docs/architecture.md`.
+
+Deployment-specific secret placement and hosted-provider setup belong in `docs/deployment.md`.
+
+Public websites, portal/proposal session architecture and hostname behavior belong in `docs/public-web.md`.
+
+Security history belongs in `docs/decisions/`.
+
+---
+
+## Security objective
+
+Every meaningful operation must be performed:
+
+```text
+by a known or deliberately narrow actor
+within an explicit scope
+against an authorized resource
+through a controlled trust boundary
+with evidence appropriate to the risk
+```
+
+Security is not a UI feature.
+
+Security is a property of the entire system.
+
+---
+
+## Core security principles
+
+### 1. Identity, membership, authorization and entitlement are different
+
+The following questions are independent:
+
+```text
+Who is this actor?
+Which organizations are they related to?
+What may they do?
+What may this organization use commercially?
+```
+
+Do not collapse them.
+
+Authentication does not imply organization access.
+
+Organization membership does not imply every permission.
+
+Permission does not create commercial entitlement.
+
+Commercial entitlement does not grant every person permission.
+
+---
+
+### 2. The browser is not trusted
+
+The browser may:
+
+- display permission state;
+- hide unavailable actions;
+- validate input for usability;
+- preserve UI state.
+
+It is not the authoritative enforcement boundary.
+
+Every sensitive read and write must be refused independently by the trusted server/database boundary.
+
+---
+
+### 3. Tenant isolation is structural
+
+Tenant isolation applies to:
+
+- table reads;
+- mutations;
+- RPCs;
+- files;
+- provider resources;
+- integrations;
+- background jobs;
+- AI context;
+- exports;
+- reports;
+- caches;
+- logs where tenant data appears.
+
+Knowing an identifier must never grant access.
+
+---
+
+### 4. Platform authority is explicit
+
+Platform Administration is more privileged than ordinary organization administration.
+
+Membership in GildOps' own Organization is not Platform authority.
+
+Platform permission must be checked explicitly.
+
+---
+
+### 5. Use narrow privileged doors
+
+Privileged operations should be represented as narrow operations with the minimum required grant.
+
+Prefer:
+
+```text
+verified webhook
+↓
+specific machine identity
+↓
+specific RPC/function
+```
+
+over:
+
+```text
+provider webhook
+↓
+general service-role client
+↓
+unrestricted database
+```
+
+---
+
+### 6. Secrets are not application data
+
+A secret may be accepted, stored and used.
+
+It should not be casually readable back through the application.
+
+Where possible:
+
+```text
+write secret
+↓
+store by reference
+↓
+machine resolves when needed
+```
+
+rather than:
+
+```text
+store
+↓
+list plaintext
+↓
+render in UI
+```
+
+---
+
+### 7. External input is untrusted
+
+Treat as untrusted:
+
+- form input;
+- route/query parameters;
+- headers;
+- webhook bodies;
+- OAuth callbacks;
+- uploaded files;
+- provider responses;
+- AI-generated text/tool arguments;
+- imported data.
+
+Validation must happen at the appropriate trusted boundary.
+
+---
+
+## Actor model
+
+Canonical actor categories are:
+
+### Account user
+
+A non-anonymous authenticated Person.
+
+May hold one or more Organization Memberships.
+
+May also hold explicit Platform authority.
+
+---
+
+### Anonymous/external user
+
+A narrowly scoped authenticated or public actor used for flows such as:
+
+- public booking;
+- proposal review;
+- customer portal;
+- public form submission.
+
+An anonymous Supabase session is authenticated at the identity-provider level, but it is **not** an operator account.
+
+It must never be treated as a normal Organization member merely because `auth.uid()` exists.
+
+---
+
+### Machine actor
+
+A narrowly scoped machine identity used for a specific trusted operation.
+
+Examples:
+
+- payment webhook;
+- platform billing webhook;
+- voice webhook;
+- automation runner;
+- integration operator;
+- provider operator.
+
+A machine actor should hold only the database/API capability required for its operation.
+
+---
+
+### Provider caller
+
+An external provider calling a webhook or callback.
+
+Provider identity must be proven using the provider's supported authenticity mechanism before privileged processing.
+
+A provider-supplied tenant ID is not authorization.
+
+---
+
+### AI agent
+
+An AI model is not an independent authority.
+
+The effective actor is the person/system context under which the tool is invoked.
+
+AI tools must preserve that scope and permission boundary.
+
+---
+
+## Authentication
+
+Authentication proves identity.
+
+GildOps uses Supabase Auth as the primary human authentication authority.
+
+Do not introduce a duplicate application user table to become a competing identity source.
+
+---
+
+### Supported authentication concepts
+
+The identity architecture may support:
+
+- password;
+- OAuth;
+- email verification/code flows;
+- password recovery;
+- future MFA/passkey capabilities where implemented completely.
+
+The application must distinguish:
+
+```text
+normal authenticated session
+recovery proof
+fresh reauthentication proof
+anonymous session
+provider/OAuth account
+```
+
+These are not interchangeable security states.
+
+---
+
+## Password policy
+
+Current password policy should enforce a strong minimum while allowing long passphrases.
+
+Canonical requirements:
+
+- minimum length: **15 characters**;
+- accept long passwords/passphrases of at least **64 characters**;
+- do not impose composition rules that encourage predictable substitutions unless a provider forces one;
+- do not expose whether a login email exists through sign-in/recovery error wording;
+- use leaked-password protection on hosted environments where available.
+
+Exact hosted-provider toggles belong in `docs/deployment.md`.
+
+---
+
+## Sign in
+
+Password sign-in should return one generic rejection for:
+
+```text
+unknown account
+wrong password
+```
+
+Do not expose account enumeration through different messages.
+
+OAuth sign-in redirects must use application-controlled return addresses.
+
+Do not accept an arbitrary request-controlled redirect destination without validation against an explicit allowlist.
+
+---
+
+## Password recovery
+
+Password recovery must:
+
+- avoid revealing whether the address exists;
+- use a provider-issued recovery/email-code proof;
+- require fresh recovery authority before setting a new password;
+- reject ordinary authenticated sessions as recovery proof;
+- use fixed/validated redirect destinations.
+
+A recovery link is not equivalent to knowing the current password.
+
+---
+
+## Signed-in password change
+
+Changing a password from Account settings is a sensitive operation.
+
+Required behavior:
+
+```text
+current password
+new password
+new password confirmation
+```
+
+The application must verify the current password against the acting account.
+
+Do not rely solely on session age or a rendered password form.
+
+Where the auth provider also supports secure password-change/reauthentication enforcement, enable it.
+
+A temporary verification session must not replace the actor's active session or widen authority.
+
+---
+
+## Email change
+
+Email is part of identity.
+
+Changing it requires stronger proof than editing cosmetic profile metadata.
+
+Required behavior:
+
+1. verify the current actor;
+2. obtain fresh proof tied to the current identity;
+3. propose the new email;
+4. use secure provider confirmation;
+5. keep the existing address authoritative until the change completes;
+6. issue security notifications according to provider capability.
+
+Return URLs must be application-controlled or strictly validated.
+
+User-editable profile metadata must not authorize the change.
+
+---
+
+## Personal profile
+
+Personal display-name/profile metadata is cosmetic.
+
+It may improve UI presentation.
+
+It must never decide:
+
+- organization membership;
+- role;
+- capability;
+- Platform authority;
+- billing authority.
+
+Organization-specific names belong to Membership/business context.
+
+---
+
+## Sessions
+
+A session represents authenticated continuity.
+
+Security-sensitive behavior must account for:
+
+- session creation;
+- expiration;
+- renewal;
+- logout;
+- privilege changes;
+- recovery/step-up proof;
+- anonymous vs account identity.
+
+A long-lived active session should not automatically satisfy every high-risk operation forever.
+
+Sensitive actions may require fresh proof.
+
+---
+
+### MFA and session-management features
+
+MFA, device/session listing, sign-out-other-sessions and recovery flows must be implemented as complete security journeys.
+
+Do not expose an MFA enrollment switch and describe the account as MFA-protected unless:
+
+- sign-in actually challenges appropriately;
+- recovery is defined;
+- sensitive operations enforce the required assurance level;
+- loss/recovery behavior is safe.
+
+Current implementation status belongs in `docs/roadmap.md`, not here.
+
+---
+
+## Organization authorization
+
+Organization access flows through:
+
+```text
+Person
+↓
+Membership
+↓
+Role / capabilities
+↓
+requested operation
+```
+
+Membership answers whether the Person belongs to the Organization.
+
+Capabilities answer what they may do.
+
+---
+
+### Roles
+
+Roles group capabilities.
+
+Roles are organization-owned.
+
+A role assignment is not a global Person attribute.
+
+The same Person may have different Roles in different Organizations.
+
+---
+
+### Capabilities
+
+Capabilities describe operations, not UI placement.
+
+Prefer concepts like:
+
+```text
+customer.manage
+role.manage
+integration.manage
+billing.manage
+call.place
+message.send
+report.read
+```
+
+over concepts such as:
+
+```text
+sidebar.settings.access
+show_button_x
+```
+
+UI projection consumes authorization state.
+
+It does not define it.
+
+---
+
+## Server-side enforcement
+
+Every protected route/action must establish authoritative context on the server/trusted boundary.
+
+A client-visible check may improve UX, but direct requests must still fail without authority.
+
+Examples of protected boundaries:
+
+- server actions;
+- route handlers;
+- domain mutations;
+- database functions;
+- table policies;
+- API endpoints.
+
+---
+
+## Row Level Security
+
+RLS is a primary tenant-isolation control.
+
+For tenant-owned data, policies should derive access from authenticated tenant relationships rather than browser-supplied claims.
+
+Critical rules:
+
+- RLS enabled and forced where the model requires it;
+- tenant reads/writes restricted by Organization;
+- capability-sensitive operations checked by policy/function;
+- cross-tenant references structurally prevented;
+- public/external policies deliberately narrow.
+
+Do not treat a filtered application query as tenant isolation.
+
+---
+
+## Tenant-scoped schema rules
+
+Tenant-owned rows normally carry `organization_id`.
+
+Tenant-sensitive uniqueness and exclusion constraints should include Organization scope unless the identifier must be globally unique by design.
+
+Examples of legitimate globally unique public identifiers may include:
+
+- invitation token;
+- public hostname;
+- other externally presented opaque locator.
+
+Such exceptions must be explicit.
+
+---
+
+## Cross-tenant relationships
+
+If a row relates two tenant-owned records, persistence must ensure they belong to the same Organization.
+
+Do not rely on:
+
+```text
+load record A
+load record B
+compare organization IDs
+insert relation
+```
+
+alone where a database-level composite relationship can prevent the invalid state.
+
+---
+
+## Platform Administration security
+
+Platform is a distinct privileged scope.
+
+Access requires:
+
+```text
+GildOps organization context
++
+explicit platform permission
+```
+
+Both conditions matter.
+
+---
+
+### Platform staff permissions
+
+Platform authority should be granular.
+
+Examples of control-plane areas include:
+
+- organizations;
+- providers;
+- catalogue;
+- commercial/pricing;
+- billing;
+- AI runtime;
+- failures/operations.
+
+A person who can sell or operate GildOps' business should not automatically gain provider credentials or global tenant administration.
+
+---
+
+### Support access
+
+Cross-tenant support should be explicit and auditable.
+
+A Platform staff member inspecting or assisting an Organization should use a defined support/control-plane mechanism.
+
+Do not implement “staff bypasses RLS everywhere” as the ordinary support model.
+
+---
+
+## Entitlement security boundary
+
+Entitlement answers whether the Organization may use a commercial capability.
+
+Authorization answers whether the actor may operate it.
+
+A protected mutation may therefore need both:
+
+```text
+organization entitlement
++
+actor capability
+```
+
+UI gating alone does not satisfy either.
+
+---
+
+## Machine identities
+
+Machine writes must be attributable and least-privileged.
+
+Use distinct machine roles/identities where operations have different authority.
+
+Examples:
+
+```text
+payment webhook
+platform billing webhook
+voice webhook
+automation runner
+integration operator
+provider operator
+```
+
+Do not let one machine role inherit unrelated grants merely because both run in `apps/api`.
+
+---
+
+### Machine token/signing material
+
+Credentials capable of minting trusted machine tokens are highly sensitive.
+
+They belong only in trusted server environments.
+
+They must never enter:
+
+- browser bundles;
+- `NEXT_PUBLIC_*`;
+- committed source;
+- user-visible responses.
+
+Migration away from legacy signing mechanisms should preserve narrow role semantics rather than replacing them with a general privileged key.
+
+---
+
+## Secrets and credentials
+
+Different secret classes have different owners.
+
+### Platform provider credential
+
+Owned by GildOps Platform Administration.
+
+Example:
+
+- API key for a GildOps-managed provider account.
+
+Tenant users must not read it.
+
+---
+
+### Tenant Connection credential
+
+Owned by an Organization's relationship with an external Connector.
+
+Example:
+
+- OAuth token for the Organization's Google account.
+
+The credential is used only for that Connection/Organization.
+
+---
+
+### Secret Reference
+
+A private value explicitly given by an Organization for a stated application purpose.
+
+A Secret Reference is not:
+
+- a Provider Account credential;
+- an OAuth Connection;
+- a generated provider resource secret.
+
+The ordinary application may list:
+
+- name;
+- purpose;
+- status;
+- last-use metadata;
+
+without reading the secret value back.
+
+---
+
+### Generated provider resource secret
+
+A secret generated/provisioned for a concrete provider resource.
+
+Only the machine/provider operation that needs it should resolve it.
+
+---
+
+## Secret handling rules
+
+- never log secret values;
+- never return plaintext secrets from list/read APIs;
+- never store a secret in UI state longer than required to submit it;
+- use write-only/rotate operations where possible;
+- distinguish credential existence from credential value;
+- support disable/rotation without disclosing old material;
+- avoid placing secrets in URLs;
+- scrub provider/database error messages if they might echo secret input;
+- reject browser-public environment prefixes for private credentials.
+
+---
+
+## OAuth
+
+OAuth is a trust boundary.
+
+Required properties:
+
+- state/CSRF protection;
+- fixed/validated redirect URI;
+- organization/connection intent bound to the OAuth transaction;
+- callback verifies expected state;
+- provider errors handled without leaking secrets;
+- tokens stored through the credential boundary;
+- browser receives success/failure state, not provider secrets.
+
+An OAuth callback does not become trusted solely because it arrives at the correct path.
+
+---
+
+## Webhooks and provider callbacks
+
+Every provider ingress follows:
+
+```text
+receive
+↓
+authenticate/verify provider
+↓
+validate payload
+↓
+deduplicate/idempotency check
+↓
+resolve authoritative target
+↓
+execute narrow canonical operation
+↓
+record result
+```
+
+Provider signatures/tokens must be verified before privileged mutation.
+
+Do not trust:
+
+- organization ID;
+- customer ID;
+- amount;
+- currency;
+- sender;
+- resource ownership;
+
+solely because a provider payload supplied them.
+
+Where possible, resolve authoritative facts from a previously stored provider/resource relationship.
+
+---
+
+## Replay and idempotency
+
+External providers retry.
+
+A webhook or callback may arrive:
+
+- twice;
+- out of order;
+- late;
+- after local state changed.
+
+Handlers must be safe under retries.
+
+Use:
+
+- provider event IDs;
+- resource IDs;
+- idempotency keys;
+- monotonic lifecycle rules;
+- reconciliation state;
+
+as appropriate.
+
+A delayed callback must not regress a lifecycle that has already advanced beyond it.
+
+---
+
+## Public and anonymous access
+
+Public access should be task-scoped.
+
+Examples:
+
+- booking;
+- form submission;
+- portal;
+- proposal review;
+- public website.
+
+Public access must not infer broad tenant authority.
+
+---
+
+### Public locators
+
+Externally presented identifiers should be:
+
+- unguessable where secrecy is part of the control;
+- globally resolvable when the caller cannot know Organization first;
+- lifecycle/revocation bounded where applicable.
+
+A token that identifies a portal/proposal session should cease granting access when revoked/expired according to its domain lifecycle.
+
+---
+
+### Anonymous sessions
+
+An anonymous identity may be useful so RLS/event attribution still has an actor.
+
+It is not an operator account.
+
+Anonymous actors must be prevented from:
+
+- founding Organizations;
+- accepting operator privileges they are not eligible for;
+- entering operator shell;
+- using membership-only functions.
+
+---
+
+## File and import security
+
+Uploaded files are untrusted input.
+
+Enforce:
+
+- allowed type/format policy;
+- size limits;
+- parsing limits;
+- organization ownership;
+- storage isolation;
+- safe filename/path behavior;
+- no executable interpretation unless deliberately sandboxed;
+- output escaping.
+
+Do not trust MIME type or file extension alone when content matters.
+
+Imported rows remain untrusted until validated against domain rules.
+
+---
+
+## AI security
+
+AI output is untrusted application input.
+
+A model can:
+
+- hallucinate identifiers;
+- generate malformed arguments;
+- request unauthorized operations;
+- follow malicious instructions embedded in retrieved content.
+
+The tool boundary must enforce:
+
+- allowed tool set;
+- input schema;
+- actor scope;
+- Organization scope;
+- authorization;
+- entitlement;
+- domain validation.
+
+---
+
+### Prompt injection and connected content
+
+Content from:
+
+- files;
+- websites;
+- email;
+- connected apps;
+- customer messages;
+
+may contain instructions hostile to the agent.
+
+Treat retrieved content as data, not authority.
+
+Do not allow retrieved prose to redefine:
+
+- system policy;
+- permissions;
+- tool availability;
+- approval requirements.
+
+---
+
+### Consequential actions
+
+Where approval is required, record the intended action separately from execution.
+
+The model must not be able to turn a proposed action into an executed write by changing textual output.
+
+---
+
+## Automation security
+
+Automations are machine actors operating under Organization-defined rules.
+
+Actions must:
+
+- use canonical domain operations;
+- respect entitlement;
+- respect the authority granted to the automation runtime;
+- preserve attribution;
+- avoid general unrestricted credentials.
+
+Automation rule authorship/management and automation execution are different privileges.
+
+---
+
+## Logging and audit
+
+Logs should provide operational evidence without becoming a data leak.
+
+Do log:
+
+- request/event IDs;
+- operation names;
+- safe actor identifiers;
+- Organization identifier where appropriate;
+- provider event/resource references;
+- success/failure category;
+- timing;
+- retry/reconciliation state.
+
+Do not log:
+
+- passwords;
+- access tokens;
+- refresh tokens;
+- OAuth authorization codes;
+- API keys;
+- secret values;
+- complete payment credentials;
+- sensitive customer content without an operational reason.
+
+---
+
+## Security events
+
+Material security-relevant actions should be auditable.
+
+Examples:
+
+- membership/role changes;
+- invitation lifecycle;
+- credential rotation;
+- email/password changes where provider events are available;
+- provider credential changes;
+- Platform permission changes;
+- support-session activity;
+- entitlement/commercial changes with access consequences.
+
+Audit evidence must be attributable.
+
+---
+
+## Error handling
+
+Security errors should reveal enough to recover without leaking protected facts.
+
+Examples:
+
+Prefer:
+
+> That email and password do not match.
+
+over:
+
+> No account exists with that email.
+
+Prefer:
+
+> Your role cannot manage connections.
+
+over:
+
+> RLS policy integration_connections_update failed for organization abc...
+
+Provider/internal errors may be logged safely server-side while the UI receives a controlled message.
+
+---
+
+## Rate limiting and abuse prevention
+
+Internet-facing and high-cost operations should define abuse controls appropriate to risk.
+
+Candidates include:
+
+- sign-in;
+- password recovery;
+- email proof;
+- public forms;
+- booking;
+- proposal/portal access;
+- message/call initiation;
+- AI requests;
+- imports;
+- provider operations.
+
+Rate limiting is not a replacement for authorization.
+
+---
+
+## Security verification
+
+Security-sensitive work is not verified by source review alone.
+
+Use the appropriate proof.
+
+### Unit/domain tests
+
+Prove deterministic validation and security-state classification.
+
+### Database/integration tests
+
+Prove:
+
+- RLS;
+- grants;
+- tenant isolation;
+- cross-tenant refusal;
+- constraints;
+- machine-role limits.
+
+Use real PostgreSQL/RLS for policies whose behavior depends on the database.
+
+### API/provider tests
+
+Prove:
+
+- signature/authentication;
+- idempotency;
+- malformed payload refusal;
+- replay/out-of-order handling where applicable.
+
+### Browser/E2E tests
+
+Prove:
+
+- authentication journeys;
+- unauthorized navigation behavior;
+- Account security flows;
+- public/anonymous boundaries;
+- permissions reflected correctly in UI.
+
+---
+
+## Security review checklist
+
+Before shipping a new capability, answer:
+
+1. Who are the possible actors?
+2. How is each actor authenticated?
+3. Which scope does the operation target?
+4. Which capability/permission is required?
+5. Is Organization entitlement also required?
+6. Which data may be read?
+7. Which data may be changed?
+8. What prevents cross-tenant references?
+9. Does the browser supply any fact that should instead be resolved server-side?
+10. Does the flow cross a provider/webhook/OAuth/file/AI trust boundary?
+11. Is replay/idempotency relevant?
+12. Are secrets involved?
+13. What is logged?
+14. Which security events need audit evidence?
+15. What test proves the enforcement, not merely the UI?
+
+If these answers are unclear, the security model is not complete.
+
+---
+
+## Security anti-patterns
+
+Do not introduce:
+
+- authorization based on hidden buttons;
+- tenant isolation based only on `.eq('organization_id', routeId)` in application code;
+- service-role clients in ordinary product runtime;
+- Platform authority inferred from GildOps Membership;
+- user-editable metadata used for permission decisions;
+- arbitrary redirect URLs in auth flows;
+- plaintext secret readback;
+- one machine role with broad unrelated grants;
+- provider payload fields accepted as authoritative ownership without reconciliation;
+- duplicated local session tables when the identity provider already owns sessions;
+- anonymous users treated as operator accounts;
+- AI tools with direct unrestricted database access;
+- integration tokens in browser-visible environment variables;
+- detailed authentication errors that enumerate accounts;
+- “MFA enabled” UI without assurance enforcement;
+- security comments that contradict the actual RLS/grants.
+
+---
+
+## Document boundaries
+
+This document owns:
+
+- identity classes;
+- authentication requirements;
+- authorization model;
+- session security;
+- tenant isolation;
+- Platform authority;
+- machine identities;
+- secret handling;
+- public/external trust boundaries;
+- webhook/OAuth security;
+- AI/automation security;
+- security verification principles.
+
+It does not own:
+
+- exact database DDL;
+- provider setup steps;
+- environment-variable inventories;
+- UI composition;
+- roadmap status;
+- incident runbooks.
+
+Those belong to the respective canonical documents.

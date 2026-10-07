@@ -1,246 +1,1220 @@
-# Testing
+# GildOps Testing & Verification
 
-How the suite is classified, where a test lives, what runs when, and where it is thin. The
-classification is `test-manifest.json` at the repository root; this file explains it and does not
-repeat it.
+## Purpose
 
-## Three separate questions
+This document defines the **canonical testing and verification strategy for GildOps**.
 
-A test answers each independently. Do not fold them into one hierarchy.
+It answers:
 
-**1. Level: what does it prove?** One per file.
+- Which kinds of tests exist?
+- What does each test type prove?
+- Which runner and environment does each category use?
+- How are tests classified and invoked?
+- What belongs in CI?
+- When is browser or visual verification required?
+- How should security, database, provider and AI behavior be verified?
+- What evidence is required before work is called complete?
 
-| Level | It proves | Manifest category |
-|---|---|---|
-| Unit | One function or a small group, in-process, nothing external | `unit`, `python-unit` |
-| Component (string) | A coherent piece rendered to a string server-side, with its outer boundary faked | `component`, `python-component` |
-| Component (DOM) | The same piece, mounted in jsdom with `@testing-library/react`: focus, keyboard, ARIA state as the accessibility tree actually computes it, and a semantic a11y pass via `axe-core` (`tests/support/axe.ts`) | `component` |
-| Integration | Real GOLD layers together. Today that means the database: domain layer, Postgres, RLS | `database-integration` |
-| Contract | The shape at a boundary: a webhook signature, a vendor's request and reply. Offline; a vendor-sandbox contract is its own category | `offline-contract`, `python-contract`; `provider-contract` |
-| Architecture | A rule about the code, build or schema, not a business behaviour | `architecture-static`, `architecture-db` |
-| End to end (acceptance) | A durable journey through a real browser and the running app | `playwright-acceptance` |
-| End to end (visual) | A pixel baseline at desktop/tablet/phone width for a small set of representative patterns — spacing, alignment, density, responsive composition, never a business rule | `playwright-visual` |
-| Smoke | The smallest check that a running deployment is alive | `playwright-smoke` |
-| Manual browser review | What no automated layer below this one claims: genuinely subjective visual judgement, a first look at a brand-new screen, a provider-unconfigured empty state nobody has scripted yet. `CLAUDE.md`'s own rule — open it on `pnpm demo` data and say which of "screen" or "test" you did | none — never automated, and never skipped by claiming a lower level covers it |
+Testing asks:
 
-Component (DOM) and component (string) share one category and one directory
-(`tests/component/`) because they answer the same question — one coherent piece, outer boundary
-faked — at two depths; the file's own choice of `// @vitest-environment jsdom` (DOM) or
-`renderToStaticMarkup` (string) is what differs, not its category. A `.test.ts` file renders to a
-string; a `.test.tsx` file mounts.
+> Does this behavior satisfy an expected condition?
 
-**2. Execution requirement: what must be running?** Fixed by the category, never by the folder.
+Verification asks the broader question:
 
-| Needs | Categories |
-|---|---|
-| Nothing | `unit`, `component`, `architecture-static`, `offline-contract`, all `python-*` |
-| Local Supabase (`pnpm db:start`) | `architecture-db`, `database-integration` |
-| The running app, and an account | `playwright-acceptance` (plus seeded demo data), `playwright-smoke`, `playwright-visual` (plus seeded demo data) |
-| A vendor sandbox and its credentials | `provider-contract` |
+> Do we have sufficient evidence that the implemented change satisfies the requirement in the real system?
 
-**3. Concerns: what is it about?** Free tags in the manifest, several per file: `tenancy`,
-`security`, `billing`, `communications`, and so on. They cut across levels. *Regression*,
-*security*, *auth* and *tenancy* are concerns and never levels, and there is no regressions folder:
-a regression test lives at its level, beside the test it extends.
+Passing tests are evidence.
 
-## Tiers and commands
+They are not automatically proof of correctness.
 
-Run from the repository root. A tier is a set of categories; `test-manifest.json` says which.
+---
 
-| Tier | Command | Runs | Needs |
-|---|---|---|---|
-| **Fast** | `pnpm test:fast` | unit, component, architecture, contract, and all Python | nothing |
-| | `pnpm check:fast` | typecheck, lint, `test:fast`, `next build` | nothing |
-| **Local integration** | `pnpm test:local` | architecture-db, database-integration | local Supabase |
-| **Gate** | `pnpm check` | typecheck, lint, all of Vitest, build, all of pytest | local Supabase |
-| **E2E** | `pnpm test:e2e` | Playwright acceptance | Supabase, `pnpm demo:fresh`, `pnpm dev` |
-| **Visual** | `pnpm test:visual` | Playwright pixel baselines, three viewports each | Supabase, `pnpm demo:fresh`, `pnpm dev` |
-| **Smoke** | `pnpm test:smoke` | the deployment check | a running app, one account |
-| **Provider** | `pnpm test:provider` | vendor-sandbox contracts. None exist: it prints `NOT CONFIGURED`, exits 0, and verified no vendor | sandbox credentials |
+## Source of truth
 
-One category at a time: `test:unit`, `test:component`, `test:architecture`, `test:architecture:db`,
-`test:db`, `test:contract`, `test:api`. Python tests need
-`pip install -r apps/api/requirements-dev.txt`.
+The machine-readable classification source is:
 
-**`pnpm check` is the authoritative gate and its contract is unchanged.** Fast plus local is the
-whole gate, and the guard (`tests/architecture/static/test-manifest.test.ts`) fails if they stop
-being. `check` runs Vitest and pytest unfiltered, so a test nobody classified still runs and the
-guard is what fails for it. A category outside the gate (`e2e`, `smoke`, `provider`) is excluded
-from the default Vitest run by directory, so a sandbox test can never ride into `pnpm check`.
-Database files run one at a time (`fileParallelism: false`) in every command; they share one
-Postgres and some of its global tables.
+```text
+test-manifest.json
+```
 
-## Where a test lives
+It owns:
 
-The directory is the category; the manifest's `dir` says which, and the guard fails a file anywhere
-else.
+- test categories;
+- runner;
+- required environment;
+- gate status;
+- tier membership;
+- classification of each test file.
 
-| Directory | Category |
-|---|---|
-| `apps/web/tests/unit/` | `unit` |
-| `apps/web/tests/component/` | `component` |
-| `apps/web/tests/contract/` | `offline-contract` |
-| `apps/web/tests/provider-contract/` | `provider-contract` (none yet) |
-| `apps/web/tests/architecture/static/` | `architecture-static` |
-| `apps/web/tests/architecture/database/` | `architecture-db` |
-| `apps/web/tests/integration/database/` | `database-integration` |
-| `apps/web/tests/support/` | not tests: `setup.ts`, `founding.ts` (import `@/tests/support/founding`) |
-| `apps/web/e2e/`, `apps/web/e2e/smoke/`, `apps/web/e2e/visual/` | `playwright-acceptance`, `playwright-smoke`, `playwright-visual` |
-| `apps/api/tests/{unit,component,contract}/` | `python-unit`, `python-component`, `python-contract` |
+The test launcher is:
 
-**Naming.** The folder carries the level, so the file carries the subject: `economics.test.ts`,
-`test_handlers.py`, `<journey>.spec.ts`. No level in the name, no milestone number in a new name.
-A file that reads source with a relative path is depth-sensitive; moving one means changing its
-`..` count, and running its category proves it.
+```text
+scripts/test.mjs
+```
 
-## Choosing a category for a new test
+It reads the manifest and invokes the correct runner.
 
-Put the file in the category's directory and add one entry to `test-manifest.json` (`category`, at
-least one `concerns` tag, a `note` if it holds a second kind of test). Then, in order:
+Do not maintain a second hard-coded list of test files in another script.
 
-1. Does it open a browser? `playwright-smoke` only for the deployment check; `playwright-visual`
-   only for a pixel baseline with no assertion but the image diff itself; otherwise
-   `playwright-acceptance`.
-2. Does it call a real vendor sandbox? `provider-contract`, and it must skip itself without its credentials.
-3. Does it need real Postgres or Supabase Auth? A schema, grant or catalogue rule with no business
-   behaviour is `architecture-db`; anything else is `database-integration`.
-4. Does it read source or run the compiler to enforce a rule? `architecture-static`.
-5. Does it check what is sent to or read from a boundary, offline? `offline-contract` / `python-contract`.
-6. Does it run several internal modules with the outside faked? `component` / `python-component`.
-7. Otherwise `unit`.
+When a test file is added, moved or reclassified, update `test-manifest.json`.
 
-**Which level for which question.** A business rule (who may do what, what a total is) belongs in
-`database-integration` or `unit`, never only in a browser. A wiring fact (a handler verifies before
-it writes) is `component`. A drift risk between two runtimes, or between code and schema, is
-`architecture`. What we send a vendor is `contract`. A person's durable route through screens is
-`e2e`, and it should not re-prove a rule already held lower.
+---
 
-A file that is half one thing and half another is split when the halves need different things
-running, so a command never lies about what it needs. Otherwise keep it whole, pick what it mostly
-does, and say so in `note`.
+## Testing principles
 
-## What runs where
+### 1. Test behavior, not implementation trivia
 
-| Job | When | Runs |
-|---|---|---|
-| Pull request | every push to a PR | `fast` and `local` in parallel. Together they are `pnpm check` |
-| Main | merge to `main` | the same, so a green main is a green gate |
-| Nightly | schedule | `e2e` against a freshly seeded local stack |
-| Deployment smoke | manual, after a deploy | `smoke` against `SMOKE_BASE_URL` with `SMOKE_EMAIL`/`SMOKE_PASSWORD` |
-| Visual | none yet, run by hand | `pnpm test:visual` against a local `pnpm demo:fresh` + `pnpm dev` — never a PR gate (`gate: false`); a baseline diff is a prompt for a person to look |
-| Provider | none yet | `pnpm test:provider` with sandbox secrets, scheduled, never on a PR |
+Prefer assertions about observable behavior and durable contracts.
 
-`.github/workflows/ci.yml` defines these, and it has **not been run on GitHub**: its YAML parses, its
-shell steps were run locally, and the `.env.test` recipe was checked against the local stack, so expect
-a first-run fix. Promote `e2e` to every merge only after its first green nightly. Decisions it holds,
-each guarded by `ci-workflow.test.ts`:
+Good:
 
-- **No Supabase variable at workflow scope.** Next.js lets an existing `process.env` value beat
-  `.env.local`, so a workflow-wide placeholder would override the real pair the e2e job discovers, and
-  would put a fake localhost into the deployment smoke. `next build` needs none, so the fast job sets none.
-- **The Supabase CLI is the lockfile's** (`pnpm exec supabase`, 2.115.0 today), not a setup action, so
-  CI and `pnpm db:start` run the same binary and it moves only when the lockfile does.
-- **Manual smoke requires its inputs.** It fails before installing anything unless given an https
-  `base_url`, `SMOKE_EMAIL` and `SMOKE_PASSWORD`, and it never falls back to localhost or the demo owner.
+```text
+unauthorized member cannot update billing
+```
 
-## A name is not a category
+Weak:
 
-- `test_integration_operations.py` is a **component** test: the Integrations feature, every
-  boundary patched. Nothing real is integrated.
-- `communications.test.ts` is a **database integration** test about the credit purse and call cost.
-- `schema-conformance.test.ts` is **architecture** that happens to need a database.
-- `milestone-m11.test.ts` is a static source scan named for a roadmap period.
-- `platform-billing.test.ts` stubs Stripe's HTTP but is a database integration test, not a contract.
+```text
+helper X was called exactly once
+```
 
-The manifest is authoritative where a name and a category disagree.
+unless that call itself is the contract being tested.
 
-## Smoke
+---
 
-`playwright.smoke.config.ts` has no fixture setup. It checks that the app answers at `/login`, that
-the page renders, that a real sign-in works, and that the shell behind it loads; the last two prove
-the app reaches Supabase Auth and Postgres. Locally it signs in as the demo owner; anywhere else it
-needs `SMOKE_EMAIL` and `SMOKE_PASSWORD` and fails, not skips, without them. `/` is deliberately not
-checked: it renders the published GildOps homepage and answers 500 on a database where none is published.
+### 2. Use the lowest reliable test level
 
-## Where the suite is thin
+Use the cheapest test that can actually prove the requirement.
 
-Graded by level against each domain, not by percentage. **S** strong: the rules of the domain are
-held at this level. **P** partial: real but incomplete, or asserted only by proxy. **—** missing.
-**n/a** the level has nothing to say here.
+Examples:
 
-| Domain / concern | Unit | Component | Contract | Architecture | DB integration | E2E |
-|---|---|---|---|---|---|---|
-| Auth / session identity | P | S | n/a | S | S | P |
-| Tenancy / RLS | — | — | n/a | S | S | P |
-| Platform vs organization authority | — | — | n/a | S | S | P |
-| Commercial terms, usage, billing | P | S | S | P | S | P |
-| Provider bindings and secrets | — | S | P | S | S | — |
-| Communications / voice | P | S | S | P | S | P |
-| CRM / customers | — | S | n/a | P | S | S |
-| Work, scheduling, booking | P | — | n/a | P | S | P |
-| Integrations / OAuth | — | S | P | S | S | — |
-| Public site / intake | — | — | P | S | S | P |
-| Documents / assets | — | — | n/a | — | S | S |
-| Configuration / lifecycle | S | — | n/a | S | S | S |
-| Core UI / accessibility | — | P | n/a | P | n/a | P |
-| Platform administration | — | — | n/a | S | S | P |
-| AI / assistant | — | S | P | S | S | — |
-| Automation | P | S | n/a | — | S | P |
-| Reporting | — | — | n/a | — | S | — |
+```text
+pure calculation
+→ unit test
 
-Why each **P** and **—** is graded so:
+React interaction
+→ component test
 
-- **Auth E2E P:** sign-in and sign-up are walked; sign-out, password reset and OAuth sign-in are not.
-- **Tenancy / platform E2E P:** only the positive path is walked in a browser; no test opens another
-  business's URL, or `/platform` as a non-staff person. The database refuses both, so this is a
-  cheap browser guard to add, not an open hole.
-- **Contract P (providers, integrations, AI):** Stripe payments, Resend, Nominatim, the Twilio browser
-  token and every webhook signature are pinned. Not yet: Twilio call placement and provisioning (one
-  `fetch` spy inside a database test), the Anthropic drafting adapter, the answering adapter, and the
-  web platform-billing adapter's own request shape. No vendor-sandbox contract exists.
-- **Work / booking E2E P:** no browser test books, schedules or double-books. The exclusion
-  constraint is held at the database, which is where the rule lives.
-- **Public site / intake E2E P:** the preview link is walked; an anonymous visitor submitting an
-  inquiry or a booking is not.
-- **UI / accessibility P:** `@testing-library/react` + `@testing-library/user-event` + `axe-core`
-  (Phase C, Slice 13) now mount four representative shared patterns in jsdom and assert real
-  rendered behaviour — `FormField` (label/error association, `aria-invalid`), `ConfirmSubmit`
-  (focus moving into the dialog, Escape cancelling, the confirm action staying one explicit click
-  away), `ViewModeSwitcher` (Tab order, Enter/Space activation, `aria-pressed`), and the Agent
-  trigger/panel's lazy-mount lifecycle (`tests/component/{form-field,confirm-submit,view-mode-
-  switcher,agent-trigger}.test.tsx`, each environment-overridden to jsdom per file — the global
-  environment stays `node`). `tests/support/axe.ts` runs a real `axe-core` pass on each, with the
-  jsdom-unprovable rule categories (colour contrast, anything needing actual layout) explicitly
-  disabled rather than silently reported as passing. This is representative coverage of shared
-  primitives, not exhaustive coverage of every screen — most of this repository's UI conventions
-  are still held only by the architecture-static source scans below, and a DOM test is owed to a
-  pattern only once a real regression or a new shared primitive asks for one, the same bar as
-  everywhere else in this codebase.
-- **E2E visual:** `playwright-visual` (`pnpm test:visual`, never in the gate) now holds pixel
-  baselines at desktop/tablet/phone width for one instance each of a workspace home, a collection
-  board, Organization Settings, an authenticated 404/`StatePage`, a record/detail page and one
-  Platform control-plane page. A baseline drifts with design intent; a diff is a prompt for a
-  person to look, not a build failure, which is why this stays outside `pnpm check`.
+RLS isolation
+→ real database integration test
 
-**Architecture-static is for** dependency direction, layer ownership, forbidden authority,
-route/source-of-truth rules, semantic token ownership, and structural contracts actually provable
-from source. **Component (DOM) is for** interaction, focus, keyboard behavior, ARIA state as
-rendered, and semantic accessibility rules `axe-core` can actually evaluate without a layout
-engine. **Visual (`playwright-visual`) is for** spacing, alignment, hierarchy, density,
-responsive composition and colour contrast — everything jsdom cannot compute. A source-string
-assertion proves none of the DOM or visual group; do not write one that claims to.
-- **Voice, softphone:** call history renders; there is no browser softphone to test (M9/M14).
+route/navigation/browser behavior
+→ Playwright
 
-## Asymmetries found, and what was done
+provider protocol translation
+→ offline contract test
 
-| Asymmetry | Status |
-|---|---|
-| Every signature/secret/bearer check tested as a function, none as the wired handler | **Closed.** `test_handlers.py` drives all 13 deployable handlers and asserts each refusal *and* that the sink was never reached. The first version drove 12 and the README listed 7; `python-handler-inventory.test.ts` now holds the files, `vercel.json`, the README table and this test to one inventory |
-| Python names 27 database functions and only the assistant's tools were checked against the schema | **Closed.** `python-rpc-surface.test.ts`: names, the calling role's grant, machine doors closed to signed-in roles, and a new call must be declared |
-| "Every page calls `requireOrganization`" (I12) had an empty `Held by` | **Closed.** `organization-page-guard.test.ts`; verified by mutation |
-| Adapter mocks with no contract: card payments, transactional email, geocoding, browser telephone token | **Closed** for these four. See *Contract P* for what remains |
-| Credential-minting boundary `browserTelephoneToken` had no test | **Partly closed.** The minted token is pinned; the domain function around it is not |
-| Duplicate assertions at the expensive level: `documents.spec.ts` uploads to three records; four read-only `catalog-plans` render checks; `portal-payments.spec.ts` list checks | **Open.** Fold into one journey each once the rule is held lower; changing e2e was out of scope |
-| Source-scan files assert UI behaviour by matching text | **Partly closed.** The DOM harness now exists (`@testing-library/react` + `axe-core`, Slice 13) and holds four representative shared patterns by rendered behaviour; most source-scan files still assert the rest of the UI by matching text, each owed a DOM test only when it is the one that regresses or a new shared primitive needs one |
-| Python argument names (`p_...`) were not checked against the database functions' parameters | **Closed.** `apps/api/tests/rpc_contract.json` is held to `pg_proc` (overloads and defaults handled) by `python-rpc-surface.test.ts` and to the Python source by `test_rpc_contract.py`. Types are deliberately not compared |
-| E2E with no underlying authorization test | **None found.** Every mutating spec (`operator-paths`, `platform-catalog`, `feature-navigation-gate`) has a database test for its rule |
+actual provider sandbox behavior
+→ provider-contract test
+```
+
+Do not use a browser test to prove a pure function.
+
+Do not use a mock to prove real database authorization.
+
+---
+
+### 3. Do not mock the thing being proven
+
+If the requirement is:
+
+> PostgreSQL prevents tenant leakage.
+
+then a mocked database test does not prove it.
+
+If the requirement is:
+
+> Twilio signature verification rejects tampered requests.
+
+then replacing the signature verifier with a stub does not prove it.
+
+Mocks are appropriate around dependencies outside the behavior under test.
+
+---
+
+### 4. Test negative behavior
+
+Security and integrity are not proven by successful paths alone.
+
+For protected behavior, test relevant refusal cases such as:
+
+- wrong Organization;
+- missing Membership;
+- insufficient capability;
+- missing entitlement;
+- anonymous actor;
+- malformed input;
+- duplicate request;
+- stale/revoked credential;
+- invalid lifecycle transition;
+- provider signature failure.
+
+A system is not secure because the intended user can use it.
+
+It is secure only if unintended actors cannot.
+
+---
+
+### 5. Test the invariant directly
+
+If the invariant is:
+
+> One Work Item cannot reserve the same Resource in overlapping time.
+
+test the database/scheduling invariant directly.
+
+Do not only test that the UI hides an unavailable time.
+
+---
+
+### 6. Verification depth follows risk
+
+Increase verification depth with:
+
+- security impact;
+- data impact;
+- money;
+- shared infrastructure;
+- migration risk;
+- cross-runtime behavior;
+- provider interaction;
+- blast radius;
+- difficulty of rollback.
+
+A label change and a billing migration do not require the same evidence.
+
+---
+
+### 7. Tests should be deterministic
+
+Control unnecessary nondeterminism.
+
+Avoid failures caused by:
+
+- uncontrolled time;
+- randomness;
+- test ordering;
+- arbitrary sleeps;
+- live provider latency in ordinary tests;
+- shared mutable fixtures.
+
+Where time or randomness matters, inject or control it.
+
+---
+
+### 8. A green build is not UI verification
+
+Type checking, linting and unit tests do not prove:
+
+- visual hierarchy;
+- spacing;
+- responsive behavior;
+- focus;
+- browser APIs;
+- drawer/sheet geometry;
+- clipping/overflow.
+
+User-visible work requires rendered verification appropriate to its risk.
+
+---
+
+## Test taxonomy
+
+### Unit
+
+Category:
+
+```text
+unit
+python-unit
+```
+
+Purpose:
+
+> Verify deterministic behavior in isolation.
+
+Good candidates:
+
+- calculations;
+- parsers;
+- normalization;
+- state transitions;
+- domain helpers;
+- permission projection;
+- scheduling calculations;
+- format validation.
+
+Runners:
+
+- Vitest for TypeScript;
+- pytest for Python.
+
+External database/provider dependencies should not be required.
+
+---
+
+### Component
+
+Category:
+
+```text
+component
+python-component
+```
+
+Purpose:
+
+> Verify one coherent component/handler/use-case with outer boundaries controlled.
+
+Frontend examples:
+
+- forms;
+- keyboard behavior;
+- builder interactions;
+- view switching;
+- validation presentation.
+
+Python examples:
+
+- handler sequencing;
+- command behavior;
+- provider-operation orchestration with the network/database boundary replaced.
+
+A component test is not a database integration test merely because the product concept is called an “integration.”
+
+---
+
+### Static architecture
+
+Category:
+
+```text
+architecture-static
+```
+
+Purpose:
+
+> Enforce source, dependency and structural contracts without a database.
+
+Examples:
+
+- forbidden import direction;
+- provider SDK absent from domain code;
+- one canonical registry;
+- public route does not import operator shell;
+- source-control boundary;
+- AI runtime boundary.
+
+Architecture tests are appropriate for rules that otherwise regress silently during refactors.
+
+Do not encode arbitrary style preferences as architecture tests.
+
+---
+
+### Database architecture
+
+Category:
+
+```text
+architecture-db
+```
+
+Purpose:
+
+> Ask the real local PostgreSQL schema whether structural/security guarantees exist.
+
+Examples:
+
+- required functions exist;
+- grants are narrow;
+- privileged functions are not executable by `PUBLIC`;
+- RLS/role shape;
+- schema conformance.
+
+Requires a real local Supabase/Postgres stack.
+
+---
+
+### Database integration
+
+Category:
+
+```text
+database-integration
+```
+
+Purpose:
+
+> Verify domain/application behavior against real Supabase Auth, PostgreSQL and RLS.
+
+Use this category for requirements involving:
+
+- tenant isolation;
+- roles/capabilities;
+- transactions;
+- constraints;
+- scheduling concurrency;
+- authoritative domain functions;
+- commercial ledgers;
+- public/anonymous database doors.
+
+Do not mock RLS when RLS is what you need to prove.
+
+---
+
+### Offline contract
+
+Categories:
+
+```text
+offline-contract
+python-contract
+```
+
+Purpose:
+
+> Verify the protocol shape GildOps depends on without making a live vendor call.
+
+Examples:
+
+- HTTP request shape;
+- webhook signature algorithm;
+- provider response parsing;
+- RPC contract;
+- OAuth payload shape;
+- adapter error normalization.
+
+The external transport is controlled/replaced.
+
+The translation logic under test is real.
+
+---
+
+### Browser acceptance / E2E
+
+Category:
+
+```text
+playwright-acceptance
+```
+
+Purpose:
+
+> Verify integrated user journeys in an actual browser against a running app and seeded local stack.
+
+Examples:
+
+```text
+sign in
+↓
+navigate
+↓
+perform task
+↓
+database-backed result appears
+```
+
+Use E2E strategically for behavior that depends on:
+
+- routing;
+- browser rendering;
+- authentication continuity;
+- responsive shell;
+- cross-page journeys;
+- real server/database composition.
+
+Do not reproduce every unit or database test in Playwright.
+
+---
+
+### Smoke
+
+Category:
+
+```text
+playwright-smoke
+```
+
+Purpose:
+
+> Verify that a running deployment is alive enough to serve real users.
+
+Current smoke proves:
+
+1. the application answers;
+2. the login surface renders;
+3. a real session can be established;
+4. the authenticated shell loads.
+
+Smoke is intentionally broad and shallow.
+
+It is not acceptance coverage.
+
+---
+
+### Visual regression
+
+Category:
+
+```text
+playwright-visual
+```
+
+Purpose:
+
+> Detect unintended visual change in a deliberately small set of representative canonical surfaces.
+
+Current baselines cover representative patterns such as:
+
+- Workspace Home;
+- collection/board;
+- Organization Settings;
+- authenticated state/not-found;
+- record/detail;
+- Platform control plane;
+
+at:
+
+```text
+1440×900
+1024×800
+390×844
+```
+
+Visual regression is **not** a default correctness gate.
+
+A changed baseline requires human review because design intent may legitimately change.
+
+Do not snapshot every current page and thereby canonize every inconsistency.
+
+---
+
+### Provider contract
+
+Category:
+
+```text
+provider-contract
+```
+
+Purpose:
+
+> Verify behavior against a real provider sandbox or test account.
+
+Requires sandbox credentials.
+
+This tier is not part of ordinary CI.
+
+As of the current repository contract, the tier exists but no vendor-sandbox tests are classified under it.
+
+Running:
+
+```bash
+pnpm test:provider
+```
+
+therefore reports that no provider was verified.
+
+Do not treat an empty provider tier as provider verification.
+
+---
+
+## Test tiers
+
+The canonical tiers are:
+
+```text
+fast
+local
+e2e
+smoke
+visual
+provider
+```
+
+---
+
+### Fast tier
+
+Command:
+
+```bash
+pnpm test:fast
+```
+
+Includes:
+
+- TypeScript unit;
+- TypeScript component;
+- static architecture;
+- offline TypeScript contracts;
+- Python unit;
+- Python component;
+- Python contracts.
+
+Requires no local database.
+
+The broader fast repository gate is:
+
+```bash
+pnpm check:fast
+```
+
+which currently performs:
+
+```text
+web typecheck
+↓
+web lint
+↓
+fast test tier
+↓
+web production build
+```
+
+---
+
+### Local tier
+
+Command:
+
+```bash
+pnpm test:local
+```
+
+Includes:
+
+- database architecture;
+- database integration.
+
+Requires local Supabase/PostgreSQL.
+
+The local stack provides real:
+
+- Auth;
+- Postgres;
+- RLS;
+- RPCs;
+- constraints.
+
+---
+
+### Full default repository check
+
+Command:
+
+```bash
+pnpm check
+```
+
+This runs package checks plus the API test check.
+
+Use it before completion when the change has meaningful repository-wide blast radius.
+
+Do not assume `pnpm check` includes Playwright E2E, smoke, visual or live provider testing.
+
+It does not.
+
+---
+
+### E2E tier
+
+Command:
+
+```bash
+pnpm test:e2e
+```
+
+Requires:
+
+- local Supabase running;
+- migrations/seed/demo prepared;
+- web app running;
+- Playwright Chromium installed.
+
+The standard local setup is described in `docs/development.md`.
+
+---
+
+### Smoke tier
+
+Command:
+
+```bash
+pnpm test:smoke
+```
+
+Against localhost, the suite may use the demo account.
+
+Against a deployment, provide:
+
+```text
+SMOKE_BASE_URL
+SMOKE_EMAIL
+SMOKE_PASSWORD
+```
+
+A deployment smoke URL must be HTTPS and must not be localhost.
+
+Smoke should remain non-destructive.
+
+---
+
+### Visual tier
+
+Command:
+
+```bash
+pnpm test:visual
+```
+
+Requires the same local running-app/demo prerequisites as acceptance tests.
+
+Use visual tests to review canonical patterns, not to replace direct visual inspection.
+
+---
+
+### Provider tier
+
+Command:
+
+```bash
+pnpm test:provider
+```
+
+Requires provider-specific sandbox credentials for any test that actually exists.
+
+Never run provider tests with live production customer credentials as part of ordinary development.
+
+---
+
+## Runner commands
+
+Useful focused commands:
+
+```bash
+pnpm test:unit
+pnpm test:component
+pnpm test:architecture
+pnpm test:architecture:db
+pnpm test:db
+pnpm test:contract
+pnpm test:api
+```
+
+Web package commands:
+
+```bash
+pnpm --filter @gold/web typecheck
+pnpm --filter @gold/web lint
+pnpm --filter @gold/web build
+pnpm --filter @gold/web test
+```
+
+Python API tests:
+
+```bash
+python -m pytest apps/api/tests -q
+```
+
+The exact scripts in `package.json`, `apps/web/package.json`, and `scripts/test.mjs` remain executable authority.
+
+This document explains how to choose them.
+
+---
+
+## CI contract
+
+Current CI separates verification by dependency cost.
+
+### Pull request / push to `main`
+
+Runs:
+
+#### `fast`
+
+- install;
+- Python test dependencies;
+- typecheck;
+- lint;
+- fast test tier;
+- production web build.
+
+#### `local`
+
+- start local Supabase;
+- expose local test environment;
+- run real database architecture/integration tier.
+
+These two jobs are the ordinary merge gate.
+
+---
+
+### Scheduled / manual E2E
+
+The E2E workflow:
+
+- starts local Supabase;
+- seeds/demo-prepares it;
+- starts the web app;
+- installs Playwright Chromium;
+- runs acceptance;
+- runs smoke;
+- uploads traces/logs on failure.
+
+E2E is slower and therefore not part of the ordinary fast PR gate.
+
+---
+
+### Manual deployment smoke
+
+Manual smoke accepts an explicit deployment URL and smoke account.
+
+It starts no local application and verifies the actual deployment.
+
+---
+
+### Provider sandbox
+
+No provider-sandbox CI job should be enabled until:
+
+- at least one real provider-contract test exists;
+- sandbox credentials are safely configured;
+- the test has a clear non-production contract.
+
+---
+
+## Test data
+
+Test data is part of the verification.
+
+Fixtures should exercise relevant:
+
+- nullability;
+- relationships;
+- tenant isolation;
+- role differences;
+- lifecycle states;
+- edge values;
+- cross-domain composition.
+
+Do not use only the easiest “owner with everything configured” fixture for authorization work.
+
+---
+
+## Demo data
+
+The demo dataset supports browser journeys and manual exploration.
+
+It is not the canonical domain specification.
+
+A feature that only works for the current demo shape is incomplete.
+
+E2E global setup may add small browser-specific fixtures beyond the core demo where the acceptance suite needs them.
+
+Do not silently grow demo setup into hidden production configuration.
+
+---
+
+## Security verification
+
+Security tests require both positive and negative evidence.
+
+For a protected capability, consider:
+
+```text
+authorized actor succeeds
+unauthorized actor fails
+other tenant fails
+anonymous actor fails
+state remains unchanged after refusal
+```
+
+When the security property is database-enforced, use real database tests.
+
+---
+
+## Database verification
+
+For schema/migration work, verify as applicable:
+
+1. fresh local migration/reset succeeds;
+2. schema matches intended structure;
+3. generated database types are current;
+4. RLS/grants are correct;
+5. invalid direct database state is refused;
+6. intended domain operation succeeds;
+7. cross-tenant access is refused;
+8. historical behavior remains stable.
+
+Do not declare a database invariant verified based only on TypeScript mocks.
+
+---
+
+## Provider verification
+
+Provider behavior has three distinct levels.
+
+### Offline contract
+
+Proves the contract GildOps believes the provider uses.
+
+No network.
+
+### Sandbox/live-provider contract
+
+Proves the real test provider currently behaves that way.
+
+Network + sandbox credentials.
+
+### Production smoke/observation
+
+Proves the deployed production path is operating.
+
+Use narrow non-destructive checks.
+
+Do not confuse these levels.
+
+---
+
+## AI verification
+
+Probabilistic systems require several kinds of evidence.
+
+Use deterministic tests for:
+
+- tool schema;
+- authorization;
+- structured-output validation;
+- provider selection;
+- intended-action workflow;
+- usage accounting.
+
+Use evaluation sets for model-dependent qualities such as:
+
+- extraction accuracy;
+- classification;
+- response relevance;
+- tool-selection behavior.
+
+AI outputs must still pass deterministic domain/security boundaries.
+
+A “good-looking answer” is not sufficient verification of a tool-enabled action.
+
+---
+
+## UI verification
+
+For meaningful UI work, verify rendered behavior.
+
+At minimum, inspect relevant:
+
+- desktop layout;
+- phone layout;
+- intermediate/tablet layout when composition changes;
+- loading;
+- empty;
+- error;
+- permission/locked state;
+- drawer/sheet/dialog behavior;
+- focus/keyboard behavior.
+
+See `docs/ui-system.md`.
+
+---
+
+## Accessibility verification
+
+Automated accessibility checks help detect:
+
+- missing labels;
+- invalid semantics;
+- certain contrast/ARIA problems.
+
+They do not prove:
+
+- sensible keyboard order;
+- understandable focus movement;
+- meaningful screen-reader content;
+- task usability.
+
+Interactive surfaces require manual/browser inspection where those behaviors matter.
+
+---
+
+## Regression tests
+
+When fixing a defect with meaningful recurrence risk:
+
+```text
+reproduce
+↓
+add failing regression test at the correct layer
+↓
+fix
+↓
+prove test passes
+```
+
+Do not preserve tests for behavior that the product has intentionally removed.
+
+Obsolete tests are documentation bugs.
+
+---
+
+## Flakiness
+
+A flaky test damages confidence in the whole suite.
+
+Do not normalize flaky reruns as success.
+
+Investigate:
+
+- timing;
+- shared state;
+- unbounded polling;
+- provider/network dependency;
+- ordering;
+- animation;
+- race conditions;
+- environment contamination.
+
+Retries may be useful in provider/production contexts, but they must not hide deterministic defects.
+
+---
+
+## Coverage
+
+Code coverage is a signal, not a correctness score.
+
+Do not optimize for percentage alone.
+
+Prioritize coverage of:
+
+- domain invariants;
+- security boundaries;
+- money;
+- scheduling;
+- migrations;
+- provider translations;
+- known failure modes;
+- high-fan-out shared UI/architecture.
+
+---
+
+## Performance testing
+
+Performance verification should be introduced where user/system risk justifies it.
+
+Examples:
+
+- large collections;
+- scheduling queries;
+- heavy report aggregates;
+- provider fan-out;
+- AI throughput;
+- import volume;
+- public traffic.
+
+Possible methods:
+
+- benchmark;
+- load;
+- stress;
+- soak;
+- query-plan analysis.
+
+Do not manufacture arbitrary performance targets without product/operational requirements.
+
+---
+
+## Verification by change type
+
+### Pure domain helper
+
+Typical evidence:
+
+```text
+unit test
++
+relevant typecheck
+```
+
+### Shared React component
+
+Typical evidence:
+
+```text
+component test
++
+browser inspection
++
+broader visual/navigation regression if high fan-out
+```
+
+### Database/RLS change
+
+Typical evidence:
+
+```text
+fresh migration/reset
++
+database architecture/integration tests
++
+generated types
++
+negative tenant/security cases
+```
+
+### API/provider adapter
+
+Typical evidence:
+
+```text
+unit/component
++
+offline contract
++
+provider sandbox when the real vendor contract itself changed
+```
+
+### Auth/security change
+
+Typical evidence:
+
+```text
+unit/component
++
+real DB/RLS where relevant
++
+browser journey
++
+negative cases
+```
+
+### UI layout/navigation change
+
+Typical evidence:
+
+```text
+component/static tests where useful
++
+Playwright/browser behavior
++
+rendered desktop/tablet/phone inspection
++
+visual regression when canonical pattern changes
+```
+
+### Deployment/infrastructure change
+
+Typical evidence:
+
+```text
+CI
++
+deployment
++
+smoke
++
+runtime observation
++
+rollback/rollforward plan
+```
+
+---
+
+## Completion evidence
+
+A completion report must separate:
+
+### Implemented
+
+What changed.
+
+### Verified
+
+Exactly what commands or runtime checks were performed.
+
+### Not verified
+
+Anything that could not be executed or inspected.
+
+### Remaining risk
+
+Known limitations relevant to the change.
+
+Do not write:
+
+> Everything verified.
+
+unless every relevant claim actually has evidence.
+
+---
+
+## Verification matrix
+
+For substantial work, map requirements to evidence.
+
+Example:
+
+| Requirement | Evidence |
+| --- | --- |
+| Member can create customer | domain/database + browser journey |
+| Other tenant cannot read customer | database integration negative case |
+| Phone layout does not clip controls | rendered phone browser inspection |
+| Webhook rejects tampered signature | offline contract test |
+| Deployment can sign in | deployed smoke test |
+
+This exposes gaps before completion.
+
+---
+
+## Test-maintenance rules
+
+- test names describe behavior;
+- helpers remove mechanical setup, not scenario meaning;
+- fixtures remain understandable;
+- one behavior may be asserted at several layers only when each layer proves something different;
+- do not snapshot huge unstable objects without a reason;
+- do not test private implementation details that may change safely;
+- keep test environment isolated from production;
+- remove stale tests when the requirement is gone;
+- keep `test-manifest.json` synchronized.
+
+---
+
+## Testing anti-patterns
+
+Do not:
+
+- mock the database to prove RLS;
+- use browser tests for every pure function;
+- claim a build proves runtime behavior;
+- treat hidden UI as authorization;
+- call a test “integration” because the product feature is an integration;
+- run live vendor calls in the default gate;
+- update visual snapshots blindly;
+- use sleeps instead of observable conditions;
+- let test order determine success;
+- skip negative security cases;
+- treat provider-tier success with zero tests as vendor verification;
+- claim UI correctness without rendered inspection.
+
+---
+
+## Definition of verified
+
+A change is **verified** when:
+
+1. its requirements are explicit;
+2. each material requirement has appropriate evidence;
+3. security/integrity negative cases are tested where relevant;
+4. real dependencies are exercised where mocks cannot prove the contract;
+5. user-visible behavior is rendered/inspected where appropriate;
+6. broader regression is proportional to blast radius;
+7. unverified areas are stated plainly.
+
+The goal is not maximum test count.
+
+The goal is **credible evidence**.

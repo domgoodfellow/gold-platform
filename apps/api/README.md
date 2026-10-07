@@ -1,94 +1,257 @@
-# GOLD API
+# GildOps API
 
-The Python deployable handles provider callbacks, scheduled work and the authenticated AI loop.
-It deploys as Vercel serverless functions; it is not a daemon and does not own a general-purpose
-public REST API.
+`apps/api` is the Python serverless runtime for provider ingress, scheduled execution, AI/model work, provider operations, integration operations and a small number of cross-runtime domain commands.
 
-## Layout and routes
+It is **not** a general-purpose REST resource API.
 
-Physical Vercel entrypoints live in `apps/api/api/`. Application/runtime code lives under
-`apps/api/app/`. `app/auth/` is the one authentication boundary: it parses and verifies the
-caller's Supabase access token and hands handlers an immutable `CallerContext`, rather than each
-handler re-checking `Authorization: Bearer ...` for itself. It answers *is this token valid* and
-*who is it*, never *what may this person do* — that stays with RLS, `app/domains/**`, and the
-platform-staff checks (docs/constraints.md, "The AI axis" and "Tenancy and access").
+That is why most logical routes are `POST`:
 
-| Logical route | Entrypoint | Trust and purpose |
-|---|---|---|
-| `POST /webhooks/stripe` | `api/stripe_webhook.py` | Stripe signature over the raw body. Records a customer's settlement through the narrow payment machine role. |
-| `POST /webhooks/stripe-platform-billing` | `api/stripe_platform_billing_webhook.py` | Stripe signature, on its own secret and role. Applies GOLD's own subscription events; never the tenant-payment path. |
-| `GET, POST /tasks/automation-tick` | `api/automation_tick.py` | `Authorization: Bearer $CRON_SECRET` from the host's scheduler. Runs due automations and drains message and reading work. |
-| `POST /ai/ask` | `api/ai_ask.py` | The signed-in person's bearer token through `app/auth`, then forwarded; every tool reads under it. The business must hold the Agent (asked as the caller). The provider-operations role resolves the assigned model and writes what the answer consumed, and nothing else. |
-| `POST /crm/change-customer-stage` | `api/crm_change_customer_stage.py` | Bearer token, forwarded. A domain command under the caller's own rights. |
-| `POST /voice/wrap-up-call` | `api/voice_wrap_up_call.py` | Bearer token, forwarded. A domain command under the caller's own rights. |
-| `POST /routing/preview-inbound` | `api/routing_preview_inbound.py` | Bearer token, forwarded. Calls the exact resolver a live inbound call will use, never a second approximation. |
-| `POST /routing/preview-outbound` | `api/routing_preview_outbound.py` | Bearer token, forwarded. Resolves the outbound caller identity a placed call would actually use. |
-| `POST /integrations/operate` | `api/integration_operations.py` | Bearer token; the caller must be able to manage integrations for that business. OAuth handshake and disconnect. |
-| `POST /providers/operate` | `api/provider_operations.py` | Bearer token; platform staff only, proved by RLS. Operates GOLD's own provider account. |
-| `POST /organizations/domains` | `api/organization_domains.py` | Bearer token; the caller must hold `organization.manage` in that business, proved by RLS. Connects, rechecks or removes a custom domain at GildOps' hosting provider. |
-| `POST /organizations/email-domains` | `api/organization_email_domains.py` | Bearer token; the caller must hold `organization.manage` in that business, proved by RLS. Creates, rechecks, publishes DNS for or releases a sending domain at GildOps' email provider. |
-| `POST /voice/inbound` | `api/voice_inbound.py` | Twilio signature. Declines the call; a number with no configured behaviour says nothing of its own. |
-| `POST /voice/outbound` | `api/voice_outbound.py` | Twilio signature. Returns the conference instructions for the room the web app created. |
-| `POST /voice/status` | `api/voice_status.py` | Twilio signature. Records a call's status through the Voice machine role. |
-| `POST /voice/recording` | `api/voice_recording.py` | Twilio signature. Records recording metadata through the Voice machine role. |
-| `POST /sms/inbound` | `api/sms_inbound.py` | Twilio signature. Records an inbound text and applies STOP/START through the Messaging machine role. |
-| `POST /sms/status` | `api/sms_status.py` | Twilio signature. Records a message's delivery status through the Messaging machine role. |
-| `POST /ai/draft-configuration` | `api/ai_draft_configuration.py` | The signed-in person's bearer token, forwarded. Drafts a business's configuration for the `configuration_drafting` capability; the business must hold guided setup. |
-| `POST /public_chat` | `api/public_chat.py` | Shared server-to-server key (`x-gold-public-chat-key`) from `apps/web` only; the same answer as "not configured" on any mismatch. Public-site assistant. |
-| `POST /invitations/email` | `api/invitation_email.py` | Bearer token; the caller must be able to see the pending invitation named, proved by RLS. Sends or resends its email through GOLD's own Resend account (or the environment bootstrap fallback) — never a caller-supplied recipient, subject or body. |
-| `POST /communications/email/send` | `api/tenant_email_send.py` | Bearer token; names one queued email message and nothing else. RLS proves the caller may see it; the recipient, address, subject, body and attachments are all read from the message row, never from the request. Sends it through the provider that answers for the address beneath it, and records the provider's answer. |
-| `POST /webhooks/tenant-email` | `api/tenant_email_webhook.py` | The provider's Svix-shaped signature over the raw body, with its own secret. Records a business's email delivery events and arriving messages through the narrow `tenant_email_webhook` role; derives the business from the provider's own message id (delivery) or the receiving address (inbound). |
-| `POST /webhooks/invitation-email` | `api/invitation_email_webhook.py` | Resend's Svix-shaped signature over the raw body. Records a delivery event through the narrow invitation-email machine role; derives the organization and invitation from the provider's own message id. |
+- webhooks deliver events;
+- commands request an operation;
+- provider/integration endpoints perform controlled actions;
+- AI endpoints execute a task;
+- scheduler endpoints trigger work.
 
-24 deployable handlers, one file each. Vercel also serves every file under `api/` at its
-physical `/api/<name>` path, so a rewrite is the documented route, not the only reachable one.
-`tests/architecture/static/python-handler-inventory.test.ts` holds this table, `vercel.json`, the
-files in `api/` and the handler tests to one another.
+Resource reads for the operator application normally occur through the authenticated web/domain/database path rather than through a second Python CRUD API.
 
-`vercel.json` owns the rewrites from those logical routes to the physical handlers. Local
-development uses `python apps/api/dev.py` and defaults to port 8787.
+## Runtime shape
 
-Tests need `pip install -r apps/api/requirements-dev.txt` (production installs `requirements.txt`
-alone). `pytest.ini` sets the import root, so a test imports `app` and `api` as the handlers do.
+Production:
 
-These routes prove the payment, Automation, Ask and Voice foundations. They do not prove M9:
-recording metadata exists, but transcription, call analysis, timeline attachment of that
-analysis, reviewed domain actions, browser softphone and realtime voice-agent delegation remain.
+```text
+Vercel
+↓
+one Python handler file under apps/api/api/
+↓
+apps/api/app/
+↓
+narrow database/provider operation
+```
 
-## Environment contract
+Local development:
 
-Copy `apps/api/.env.example` to `apps/api/.env` for local development. Configure the same
-names in the API Vercel project for hosted environments; do not upload the file.
+```bash
+python apps/api/dev.py
+```
 
-| Variable | Used by | Notes |
-|---|---|---|
-| `SUPABASE_URL` | all database-backed handlers; `app/auth` derives the JWKS discovery URL from it | Required with the current low-privilege API key. |
-| `SUPABASE_PUBLISHABLE_KEY` | PostgREST calls | Target name, matching `apps/web`'s `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. User operations still carry the user's JWT; this is only the low-privilege `apikey` header. `SUPABASE_ANON_KEY` is read as a temporary fallback name — do not configure both to different values. |
-| `SUPABASE_JWT_SECRET` | payment, automation and Voice machine roles ONLY | Temporary legacy, very high-risk server secret. Used exclusively by `app/core/db.py` and `app/core/runner.py` to mint short-lived machine tokens — never by `app/auth`, which authoritatively verifies a human token either locally against Supabase's JWKS (asymmetric-signing-key tokens) or by asking Supabase's own Auth server (legacy HS256 tokens), and needs no shared secret for either. Without it the machine-role handlers remain unconfigured. Never substitute a service-role or `sb_secret_` key. |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook | Endpoint- and environment-specific signing secret. |
-| `CRON_SECRET` | automation tick | Random shared secret; Vercel Cron normally invokes Production. |
-| `RESEND_API_KEY`, `MESSAGE_FROM_ADDRESS` | tenant-channel email | Separate operational concern from platform invitation email below — a different purse, a different sender identity (D40). |
-| `RESEND_API_KEY`, `PLATFORM_EMAIL_FROM_ADDRESS` | platform invitation email, bootstrap fallback | Tried only when no `resend` row in `platform_provider_accounts` is both active, default and holds a credential; `app.services.platform_email` prefers the account (D62). `RESEND_API_KEY` is shared by name with the tenant-channel row above, but the two paths never combine a tenant's message with GOLD's own. |
-| `TENANT_EMAIL_WEBHOOK_SECRET` | the tenant-email webhook | The provider's Svix signing secret for the *separate* destination that carries a business's own email events (`whsec_...`) — never the invitation destination's. Register it for the sent, delivered, delayed, bounced, failed, complained, suppressed, opened, clicked and received events. |
-| `RESEND_WEBHOOK_SECRET` | the invitation-email webhook | Resend's own Svix signing secret for this one destination (`whsec_...`). Without it the endpoint is unconfigured, same as every other webhook here with no secret. |
-| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `MESSAGE_FROM_NUMBER` | messaging and Voice callbacks | Deployment/provider configuration; tenant resources increasingly live in provider bindings. |
-| `ANTHROPIC_API_KEY` | hosted model fallback | Optional. |
-| `ASSISTANT_BASE_URL`, `ASSISTANT_MODEL`, `ASSISTANT_API_KEY` | OpenAI-compatible model binding | Base URL and model are paired; key is optional for providers that do not need one. Local endpoints are useful in development but remain Platform Context configuration. |
-| `CONDITIONS_ENABLED` | external condition/weather readings | Explicit boolean feature switch. |
-| `PORT` | local dev server only | Do not configure on Vercel. |
+The local router reads `apps/api/vercel.json`.
 
-The authoritative deployment-by-environment and secret-handling table is in the repository root
-`SETUP.md`. In particular, `SUPABASE_JWT_SECRET` remains a current compatibility dependency,
-not a recommended long-term authentication architecture.
+Do not maintain a separate local route registry.
+
+Default local address:
+
+```text
+http://127.0.0.1:8787
+```
+
+## Route authority
+
+The executable logical-route mapping is:
+
+```text
+apps/api/vercel.json
+```
+
+Physical handler files live under:
+
+```text
+apps/api/api/
+```
+
+Architecture tests keep handler inventory, rewrites and tests aligned.
+
+Do not treat this README as the executable route registry.
+
+## Current route classes
+
+The current Vercel configuration includes logical routes for:
+
+- Stripe tenant-payment webhook;
+- Stripe platform-billing webhook;
+- automation scheduler tick;
+- operator AI ask;
+- AI configuration drafting;
+- CRM stage command;
+- Voice call wrap-up;
+- inbound/outbound routing preview;
+- tenant integration operations;
+- Platform provider operations;
+- Organization web-domain operations;
+- Organization email-domain operations;
+- Voice inbound/outbound/status/recording callbacks;
+- SMS inbound/status callbacks;
+- public-site assistant;
+- invitation email;
+- invitation email webhook;
+- tenant email send;
+- tenant email webhook.
+
+Check `vercel.json` before adding or documenting a route.
+
+## HTTP methods
+
+Methods follow the operation.
+
+Most commands and webhooks use:
+
+```text
+POST
+```
+
+The scheduler handler may accept the method(s) required by the local/hosted scheduler contract.
+
+Do not add `GET` merely to make the API look REST-like.
+
+Use `GET` only for a genuinely safe read or scheduler/provider contract that requires it.
+
+## Authentication boundaries
+
+Different callers use different trust proofs.
+
+### Human caller
+
+Human-authenticated commands receive the caller's Supabase bearer token.
+
+The API authentication boundary verifies the identity.
+
+Authorization remains with:
+
+- RLS;
+- domain operations;
+- explicit Platform checks;
+- entitlement checks where applicable.
+
+### Provider webhook
+
+Provider authenticity is verified before privileged mutation.
+
+The provider payload does not choose tenant authority merely by naming an Organization.
+
+### Scheduler / machine actor
+
+Scheduled and machine operations use narrow machine authority.
+
+Do not substitute a broad service-role database client.
+
+See:
+
+- `docs/security.md`
+- `docs/architecture.md`
+- `docs/integrations.md`
+
+## Layout
+
+```text
+apps/api/
+  api/
+    one deployed handler per physical entrypoint
+
+  app/
+    auth/
+    core/
+    domains/
+    providers/
+    connectors/
+    ai/
+    channels/
+    conditions/
+    ...
+
+  dev.py
+  vercel.json
+  requirements.txt
+  requirements-dev.txt
+  tests/
+```
+
+`app/domains/` contains only the narrow cross-runtime commands that genuinely require the Python boundary.
+
+It is not a second copy of `apps/web/lib/domain`.
+
+## Dependencies
+
+Production dependencies are declared in:
+
+```text
+apps/api/requirements.txt
+```
+
+Development/test dependencies are declared in:
+
+```text
+apps/api/requirements-dev.txt
+```
+
+This runtime is based on Vercel Python `BaseHTTPRequestHandler` handlers.
+
+It is **not FastAPI**.
+
+Do not add FastAPI documentation or assumptions unless the runtime is deliberately migrated.
+
+## Environment
+
+Copy:
+
+```text
+apps/api/.env.example
+```
+
+to:
+
+```text
+apps/api/.env
+```
+
+for local development.
+
+The example file is the variable-name/classification contract.
+
+Do not duplicate the full environment-variable inventory here.
+
+Hosted environment procedure belongs in `docs/deployment.md`.
+
+Local setup belongs in `docs/development.md`.
 
 ## Provider boundaries
 
-Runtime code calls capability adapters and narrow database functions. Product/domain code must
-not depend on a supplier brand. Provider bindings describe an organization's configured
-relationship; provider resources record concrete numbers, domains or accounts; normalized usage
-and cost enter the shared ledger.
+Provider-specific code belongs under the provider/adapter boundary.
 
-The long-term Intelligence runtime adds explicit model bindings, routing, fallback, budgets,
-quotas, concurrency, health, audit and safety. External tenants may consume managed AI features,
-but tenant-managed model endpoints, credentials and local-model selection are not supported by
-the current control plane.
+Domain/application code should consume capability-shaped operations.
+
+Never move a provider secret into browser-visible configuration merely because the initiating action starts in the web app.
+
+## Testing
+
+API tests:
+
+```bash
+pnpm test:api
+```
+
+or:
+
+```bash
+python -m pytest apps/api/tests -q
+```
+
+Provider protocol behavior should use the appropriate contract test.
+
+Live provider verification is separate and must be reported as such.
+
+See `docs/testing.md`.
+
+## Adding an endpoint
+
+Before adding a handler:
+
+1. identify the owning domain/capability;
+2. determine why the operation belongs in Python rather than the web/domain path;
+3. define authentication/trust proof;
+4. define authorization and Organization resolution;
+5. define idempotency if retry is possible;
+6. add the handler;
+7. add the logical rewrite to `vercel.json`;
+8. add tests;
+9. update route documentation only if the route class/operational contract materially changed.
+
+Do not create a generic Python CRUD API parallel to the existing application/domain layer.

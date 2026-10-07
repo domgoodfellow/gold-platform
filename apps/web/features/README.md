@@ -1,61 +1,91 @@
-# `features/`
+# `apps/web/features`
 
-Presentation and interaction for recognizable GOLD product capabilities.
+This directory owns **presentation and interaction for recognizable GildOps product capabilities**.
 
-Four related names are deliberately not interchangeable:
+A feature boundary answers:
 
-- A **Catalogue Feature** is a commercial capability, such as `communications.voice.call_history`.
-- A **web feature package** is a coherent workflow boundary, such as `communications/voice/`.
-- A **domain capability** is runtime behavior, such as `lib/domain/reception/`.
-- A **route** authenticates, loads and composes, such as `/organizations/[organizationId]/calls`.
+> Which product/domain workflow owns this interaction?
 
-The legacy runtime module `reception` backs both CRM Sales and Communications Voice. That is why
-the web has separate `crm/sales` and `communications/voice` packages rather than mirroring one
-runtime folder or creating one folder for every Catalogue Feature.
+It does not mirror every route, database table or commercial Feature one-to-one.
 
-A feature should prefer an existing shared GildOps semantic component from `apps/web/components`
-when that component already represents the required interaction. A feature may also use `@gold/ui`
-directly for low-level composition (an Accordion, an Alert, a Tabs, a Popover) where no shared
-application semantic exists — this is not a violation, and features must not be prohibited from
-importing `@gold/ui`. Promote a feature-local construction into `apps/web/components` only when it
-represents a stable cross-feature application contract, never merely to satisfy a layering diagram.
+## Related concepts
 
-A feature boundary answers which product workflow owns the UI, not how many routes currently call
-it. Route files load data and compose screens; features render and operate the capability; generic
-interface vocabulary stays in `components/`; business rules stay in `lib/domain/`.
+These names are not interchangeable:
 
-Current boundaries:
+- **Catalogue Feature** — sellable/entitled capability.
+- **Web feature package** — UI/interaction boundary in this directory.
+- **Domain capability** — authoritative runtime behavior under `lib/domain`.
+- **Route** — URL boundary and top-level composition under `app`.
 
-| Feature | Owns |
-|---|---|
-| `automations/` | Rule, condition, action and message-template UI |
-| `reporting/` | Report navigation, filters, results, dashboards and management forms |
-| `custom-fields/` | Rendering and collecting tenant-defined field values across supported entities, and — in `custom-fields/configuration/` — defining those fields: the entity-scoped list, its create/edit Sheets and forms, and the URL-backed entity nav. One component, every host that configures fields (Settings' own Data & automation page and every entity's own Configure rail) |
-| `documents/` | Listing, uploading and presenting documents attached to any entity `DOCUMENT_ENTITIES` allows |
-| `timeline/` | Rendering a record's own history — the interpretive work stays in `lib/domain/timeline/` |
-| `public-profile/` | Editing and rendering a business's public identity |
-| `portal-access/` | Making, listing and revoking one customer's own portal links — the customer's access to their own things, not the business's public one |
-| `branding/` | Applying a tenant's approved visual roles |
-| `locale/` | Timezone and currency controls used by organization-facing workflows |
-| `today/` | The lifecycle-aware operational cockpit and its expanded views |
-| `work/` | Work boards, job records, checklists, consumption, pricing and billing interactions |
-| `crm/customers/` | Customer list, create and edit interaction, the customer detail screen's own presentation, and the customer's Configure panel — its custom-field configuration (hosting `custom-fields/configuration/`) and, where Sales is on, its pipeline-stage configuration (hosting `crm/sales/stage-settings-sheet.tsx`) |
-| `crm/sales/` | The canonical Pipeline board, its per-card stage control, and stage-vocabulary settings |
-| `communications/voice/` | Call history, call wrap-up, outbound identity and outcome-vocabulary settings |
-| `integrations/` | The tenant Integrations product: `catalogue/` (Browse, its cards and brand identity), `connections/` (Connected, the CSV connect form, one connection's own record and its Disconnect/Check/assistant-access controls), `sources/` (the Data sources table) and `imports/` (upload, the CSV column-mapping editor, the run collection and one run's own review/apply). `integrations-nav.tsx` is the one `ViewNav` every one of the four views renders |
-| `forms/` | The one renderer that turns a form definition into fields (`form-renderer.tsx`, used by the Studio builder, template preview and the hosted form) and the hosted form's own submit wrapper |
-| `studio/forms/` | Studio's form builder, list-adjacent drawers, response viewer and template browser — authoring only; the form's rules are `lib/domain/forms/` |
-| `platform/providers/` | Platform's read of infrastructure GOLD operates: `ProviderIcon`, and `ProviderDetail` for every Provider without its own account model — Twilio keeps its own telephony-specific page instead |
+A web feature may represent several routes.
 
-`crm/` and `communications/voice/` are also this repository's reference example of a **command**
-routed through `apps/api/app/domains/` rather than `lib/domain/`: `crm/sales/stage-control.tsx`
-and `communications/voice/wrap-up-form.tsx` each call a route-owned server action that forwards
-the caller's own token to a FastAPI domain command, which calls one narrow Postgres RPC. Every
-other write above still goes straight to `lib/domain/`, and most of CRM's and Voice's own writes
-still do too — see `apps/api/app/domains/__init__.py` for which few do not and why.
+A route may compose several features.
 
-Keep a feature flat while its files remain easy to name. Add `components/`, `forms/` or `utils/`
-subdirectories only when the feature itself has enough distinct responsibilities to need them.
+## Dependency direction
 
-Features may import domain types and call route-owned server actions. They do not query the
-database, reimplement validation, calculate business results or weaken authorization checks.
+A feature may consume:
+
+- shared application components from `apps/web/components`;
+- generic primitives from `@gold/ui`;
+- domain/application types and readers;
+- route-owned server actions.
+
+A feature must not:
+
+- query the database directly;
+- reimplement authoritative domain rules;
+- weaken authorization;
+- import provider SDKs for privileged operations;
+- become a second source of navigation truth.
+
+## Shared vs feature-local UI
+
+Prefer an existing shared GildOps component when it already represents the semantic interaction.
+
+Using `@gold/ui` directly is valid for a low-level primitive when no shared semantic abstraction exists.
+
+Promote feature-local UI to `apps/web/components` only when it becomes a stable cross-feature application contract.
+
+Do not promote merely to satisfy a layering diagram.
+
+## Folder depth
+
+Keep a feature flat while its files remain easy to name.
+
+Add subdirectories such as:
+
+```text
+components/
+forms/
+configuration/
+utils/
+```
+
+only when the feature itself has enough real responsibilities to justify them.
+
+## Naming
+
+Use canonical domain/workspace vocabulary from:
+
+- `docs/product.md`
+- `docs/domain-model.md`
+
+Legacy runtime/module names may remain where they are still executable technical identifiers.
+
+Do not let a legacy route or runtime folder redefine current product ownership.
+
+## Business rules
+
+Features render and collect interaction.
+
+Authoritative decisions remain in:
+
+```text
+apps/web/lib/domain
+database constraints/functions
+apps/api/app/domains
+```
+
+according to `docs/architecture.md`.
+
+See `docs/ui-system.md` before introducing a new page/surface pattern.

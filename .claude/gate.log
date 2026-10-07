@@ -1,0 +1,231 @@
+$ pnpm -r --stream check && pnpm check:api
+Scope: 5 of 6 workspace projects
+apps/web check$ pnpm typecheck && pnpm lint && pnpm test && pnpm build
+apps/web check: $ next typegen && tsc --noEmit
+apps/web check: Generating route types...
+apps/web check: ✓ Types generated successfully
+apps/web check: $ eslint
+apps/web check: C:\Users\domin\Documents\GOLD_platform\apps\web\lib\shell.ts
+apps/web check:   193:9  warning  'gate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+apps/web check: C:\Users\domin\Documents\GOLD_platform\apps\web\tests\unit\travel-feasibility.test.ts
+apps/web check:   505:11  warning  'router' is assigned a value but never used  @typescript-eslint/no-unused-vars
+apps/web check: ✖ 2 problems (0 errors, 2 warnings)
+apps/web check: $ vitest run
+apps/web check:  RUN  v4.1.11 C:/Users/domin/Documents/GOLD_platform/apps/web
+apps/web check:  Test Files  255 passed (255)
+apps/web check:       Tests  3366 passed (3366)
+apps/web check:    Start at  00:39:55
+apps/web check:    Duration  474.23s (transform 4.13s, setup 49.88s, import 27.03s, tests 352.86s, environment 13.10s)
+apps/web check: $ next build
+apps/web check: ▲ Next.js 16.3.2 (Turbopack)
+apps/web check: - Environments: .env.local
+apps/web check: ✓ Running next.config.ts took 24ms
+apps/web check: - Experiments (use with caution):
+apps/web check:   · serverActions
+apps/web check:   Creating an optimized production build ...
+apps/web check: ✓ Compiled successfully in 9.9s
+apps/web check:   Running TypeScript ...
+apps/web check:   Finished TypeScript in 20.3s ...
+apps/web check:   Collecting page data using 31 workers ...
+apps/web check:   Generating static pages using 31 workers (0/14) ...
+apps/web check:   Generating static pages using 31 workers (3/14) 
+apps/web check:   Generating static pages using 31 workers (6/14) 
+apps/web check:   Generating static pages using 31 workers (10/14) 
+apps/web check: ✓ Generating static pages using 31 workers (14/14) in 251ms
+apps/web check:   Finalizing page optimization ...
+apps/web check: Route (app)
+apps/web check: ┌ ƒ /
+apps/web check: ├ ○ /_not-found
+apps/web check: ├ ƒ /api/public-communication
+apps/web check: ├ ƒ /auth/callback
+apps/web check: ├ ƒ /auth/recover
+apps/web check: ├ ƒ /book/[slug]
+apps/web check: ├ ƒ /book/[slug]/[workItemId]
+apps/web check: ├ ƒ /book/[slug]/[workItemId]/reschedule
+apps/web check: ├ ƒ /connect/oauth/callback
+apps/web check: ├ ƒ /contact
+apps/web check: ├ ƒ /customer-service
+apps/web check: ├ ƒ /demo
+apps/web check: ├ ƒ /embed/forms/[publicKey]
+apps/web check: ├ ƒ /f/[publicKey]
+apps/web check: ├ ○ /forgot-password
+apps/web check: ├ ƒ /forms/[organizationSlug]/[formSlug]
+apps/web check: ├ ƒ /how-it-works
+apps/web check: ├ ƒ /integrations
+apps/web check: ├ ○ /login
+apps/web check: ├ ƒ /operations
+apps/web check: ├ ƒ /organizations
+apps/web check: ├ ƒ /organizations/[organizationId]
+apps/web check: ├ ƒ /organizations/[organizationId]/[...unmatched]
+apps/web check: ├ ƒ /organizations/[organizationId]/assets
+apps/web check: ├ ƒ /organizations/[organizationId]/assets/[assetId]
+apps/web check: ├ ƒ /organizations/[organizationId]/automations
+apps/web check: ├ ƒ /organizations/[organizationId]/automations/[ruleId]
+apps/web check: ├ ƒ /organizations/[organizationId]/automations/activity
+apps/web check: ├ ƒ /organizations/[organizationId]/automations/messages
+apps/web check: ├ ƒ /organizations/[organizationId]/automations/rules
+apps/web check: ├ ƒ /organizations/[organizationId]/calls
+apps/web check: ├ ƒ /organizations/[organizationId]/calls/[callId]
+apps/web check: ├ ƒ /organizations/[organizationId]/calls/[callId]/recording
+apps/web check: ├ ƒ /organizations/[organizationId]/comms
+apps/web check: ├ ƒ /organizations/[organizationId]/comms/attachments/[attachmentId]
+apps/web check: ├ ƒ /organizations/[organizationId]/comms/inbox
+apps/web check: ├ ƒ /organizations/[organizationId]/comms/inbox/[conversationId]
+apps/web check: ├ ƒ /organizations/[organizationId]/comms/inbox/new
+apps/web check: ├ ƒ /organizations/[organizationId]/comms/numbers
+apps/web check: ├ ƒ /organizations/[organizationId]/comms/numbers/[phoneNumberId]
+apps/web check: ├ ƒ /organizations/[organizationId]/customers
+apps/web check: ├ ƒ /organizations/[organizationId]/customers/[customerId]
+apps/web check: ├ ƒ /organizations/[organizationId]/customers/pipeline
+apps/web check: ├ ƒ /organizations/[organizationId]/documents/[documentId]/download
+apps/web check: ├ ƒ /organizations/[organizationId]/field
+apps/web check: ├ ƒ /organizations/[organizationId]/fields
+apps/web check: ├ ƒ /organizations/[organizationId]/finance
+apps/web check: ├ ƒ /organizations/[organizationId]/finance/economics
+apps/web check: ├ ƒ /organizations/[organizationId]/finance/economics/[targetOrganizationId]
+apps/web check: ├ ƒ /organizations/[organizationId]/finance/invoices
+apps/web check: ├ ƒ /organizations/[organizationId]/finance/payments
+apps/web check: ├ ƒ /organizations/[organizationId]/finance/plans
+apps/web check: ├ ƒ /organizations/[organizationId]/finance/plans/[planKey]
+apps/web check: ├ ƒ /organizations/[organizationId]/finance/quotes
+apps/web check: ├ ƒ /organizations/[organizationId]/home
+apps/web check: ├ ƒ /organizations/[organizationId]/insights
+apps/web check: ├ ƒ /organizations/[organizationId]/insights/reports
+apps/web check: ├ ƒ /organizations/[organizationId]/integrations
+apps/web check: ├ ƒ /organizations/[organizationId]/integrations/[connectionId]
+apps/web check: ├ ƒ /organizations/[organizationId]/integrations/connect/[connectorKey]
+apps/web check: ├ ƒ /organizations/[organizationId]/integrations/imports
+apps/web check: ├ ƒ /organizations/[organizationId]/integrations/imports/[runId]
+apps/web check: ├ ƒ /organizations/[organizationId]/integrations/imports/new
+apps/web check: ├ ƒ /organizations/[organizationId]/integrations/sources
+apps/web check: ├ ƒ /organizations/[organizationId]/library
+apps/web check: ├ ƒ /organizations/[organizationId]/library/collections
+apps/web check: ├ ƒ /organizations/[organizationId]/library/files
+apps/web check: ├ ƒ /organizations/[organizationId]/library/knowledge
+apps/web check: ├ ƒ /organizations/[organizationId]/library/media
+apps/web check: ├ ƒ /organizations/[organizationId]/library/sources
+apps/web check: ├ ƒ /organizations/[organizationId]/library/templates
+apps/web check: ├ ƒ /organizations/[organizationId]/library/trash
+apps/web check: ├ ƒ /organizations/[organizationId]/locations
+apps/web check: ├ ƒ /organizations/[organizationId]/locations/[locationId]
+apps/web check: ├ ƒ /organizations/[organizationId]/platform
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/[...unmatched]
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/ai-runtime
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/billing
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/catalog
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/catalog/families/[familyKey]
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/catalog/meters
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/catalog/modules
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/catalog/products
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/catalog/products/[productKey]
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/economics
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/economics/[targetOrganizationId]
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/failures
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/integrations
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/integrations/[connectorKey]
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/integrations/new
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/organizations
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/organizations/[targetOrganizationId]
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/organizations/[targetOrganizationId]/commercial
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/organizations/[targetOrganizationId]/failures
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/organizations/[targetOrganizationId]/integrations
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/organizations/[targetOrganizationId]/providers
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/organizations/[targetOrganizationId]/usage
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/package-economics
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/plans
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/plans/[planKey]
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/pricing
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/providers
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/providers/[providerKey]
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/providers/twilio
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/providers/twilio/configure
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/usage
+apps/web check: ├ ƒ /organizations/[organizationId]/platform/vendor-rates
+apps/web check: ├ ƒ /organizations/[organizationId]/pricing
+apps/web check: ├ ƒ /organizations/[organizationId]/resources
+apps/web check: ├ ƒ /organizations/[organizationId]/resources/[resourceId]
+apps/web check: ├ ƒ /organizations/[organizationId]/roles
+apps/web check: ├ ƒ /organizations/[organizationId]/sales
+apps/web check: ├ ƒ /organizations/[organizationId]/schedule
+apps/web check: ├ ƒ /organizations/[organizationId]/schedule/configuration
+apps/web check: ├ ƒ /organizations/[organizationId]/settings
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/access
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/access/invitations
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/access/members
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/access/roles
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/branding
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/calls
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/commerce
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/communications
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/connections
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/connections/[connectionId]
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/connections/apps
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/connections/connect/[connectorKey]
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/custom-fields
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/data-automation
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/domains
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/email
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/features
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/general
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/organization
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/payments/callback
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/payments/connect
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/people
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/plan
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/plan/locked
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/pricing
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/sales-stages
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/secrets
+apps/web check: ├ ƒ /organizations/[organizationId]/settings/website
+apps/web check: ├ ƒ /organizations/[organizationId]/setup
+apps/web check: ├ ƒ /organizations/[organizationId]/studio
+apps/web check: ├ ƒ /organizations/[organizationId]/studio/forms
+apps/web check: ├ ƒ /organizations/[organizationId]/studio/forms/[formId]
+apps/web check: ├ ƒ /organizations/[organizationId]/studio/forms/[formId]/submissions
+apps/web check: ├ ƒ /organizations/[organizationId]/studio/templates
+apps/web check: ├ ƒ /organizations/[organizationId]/studio/website
+apps/web check: ├ ƒ /organizations/[organizationId]/work
+apps/web check: ├ ƒ /organizations/[organizationId]/work/[workItemId]
+apps/web check: ├ ƒ /organizations/[organizationId]/work/configuration
+apps/web check: ├ ƒ /organizations/accept-invite/[token]
+apps/web check: ├ ƒ /platform/[[...path]]
+apps/web check: ├ ƒ /portal
+apps/web check: ├ ƒ /portal/[token]
+apps/web check: ├ ○ /portal/payment-return
+apps/web check: ├ ○ /portal/unavailable
+apps/web check: ├ ƒ /preview/[organizationId]/[revisionId]/[[...page]]
+apps/web check: ├ ƒ /pricing
+apps/web check: ├ ƒ /privacy
+apps/web check: ├ ƒ /proposal
+apps/web check: ├ ƒ /proposal/[token]
+apps/web check: ├ ○ /proposal/unavailable
+apps/web check: ├ ƒ /reset-password
+apps/web check: ├ ○ /robots.txt
+apps/web check: ├ ƒ /sales
+apps/web check: ├ ƒ /settings/[[...unmatched]]
+apps/web check: ├ ƒ /settings/account
+apps/web check: ├ ƒ /settings/account/security
+apps/web check: ├ ○ /sign-up
+apps/web check: ├ ○ /sitemap.xml
+apps/web check: ├ ƒ /sites/[hostname]
+apps/web check: ├ ƒ /sites/[hostname]/[slug]
+apps/web check: ├ ƒ /sites/[hostname]/forms/[formSlug]
+apps/web check: └ ƒ /terms
+apps/web check: ƒ Proxy (Middleware)
+apps/web check: ○  (Static)   prerendered as static content
+apps/web check: ƒ  (Dynamic)  server-rendered on demand
+apps/web check: Done
+$ python -m pytest apps/api/tests -q
+........................................................................ [  9%]
+........................................................................ [ 18%]
+........................................................................ [ 28%]
+........................................................................ [ 37%]
+........................................................................ [ 47%]
+........................................................................ [ 56%]
+........................................................................ [ 65%]
+........................................................................ [ 75%]
+........................................................................ [ 84%]
+........................................................................ [ 94%]
+.............................................                            [100%]
+765 passed in 3.36s
+GATE-EXIT 0

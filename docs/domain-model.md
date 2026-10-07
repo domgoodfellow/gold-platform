@@ -1,538 +1,1676 @@
-# Domain model
-
-The authoritative description of the entities, the engine that owns each rule, and the
-invariants that must hold. If the code and this document disagree, one of them is a bug —
-decide which, then fix it. Do not resolve the contradiction by softening the wording here
-until it stops saying anything.
-
-Everything described here lives under `apps/web/lib/domain/`. Routes, components, server
-actions, and AI tools are thin callers.
-
-## Invariants
-
-The claims the system must always satisfy. **The `Enforced by` column is the point of this
-table.** An invariant with nothing in that column is an intention, not a guarantee — and the
-set of empty cells is the build backlog.
-
-Use `/verify <n>` to audit one. "The code appears to do the right thing" is not enforcement.
-
-| # | Invariant | Enforced by |
-| --- | --- | --- |
-| I1 | Every tenant-owned row carries `organization_id`, and RLS keyed to it is enabled on its table. | `20260825000001_tenancy.sql` — RLS enabled *and* forced; `tenancy.test.ts` hides the other tenant even when its id is known; `schema-conformance.test.ts` asserts it from `pg_class` for every table in `public`, so a table added later can't ship without it. |
-| I2 | Every unique index and every exclusion constraint on a tenant-owned table leads with `organization_id`. | `memberships_org_user_unique`, `work_item_types_org_name_unique`, `work_item_statuses_org_type_name_unique`; `schema-conformance.test.ts` asserts from `pg_index`/`pg_constraint` that every non-primary unique index and exclusion constraint on a table carrying `organization_id` leads with it. Three named exemptions, not lapses: `external_actors_one_tenant_per_user` is on `user_id` alone, since it enforces that one *actor* can never span two tenants (D22) — leading with `organization_id` would permit exactly the row it forbids. `customer_portal_invites (token)` and `organization_domains_active_hostname_unique (hostname, where released_at is null)` are the same shape: an identifier the outside world presents — an invitation token, a hostname a browser arrives holding — must be resolvable without already knowing its tenant, so it has to be unique across every tenant's claim rather than scoped by one. `invoices_org_number_unique (organization_id, number)` is the rule at its most visible — a global sequence would refuse two businesses their own invoice #1 and reveal how many invoices GildOps has ever issued. |
-| I3 | Tenant identity resolves through exactly one function; nothing assumes how many tenants a database holds. | `app.current_tenant_ids()` — returns a *set*, is the only tenant lookup, and every RLS policy calls it; `tenancy.test.ts` shows each user only their own organizations. |
-| I4 | There is exactly one price calculation. | `priceWorkItem` in `lib/domain/pricing/prices.ts` is the only place an amount is derived. A line copies its catalogue row rather than joining to it (`add_work_item_priced_line`); `work_item_priced_lines` holds no foreign key to `price_book_items` at all (`prices.test.ts`, from `pg_constraint`). `work_item_priced_lines_one_currency`, a gist exclusion, refuses a second currency on one job in the database rather than in a pre-insert check that would race identically (I6). Quantity is an integer, so nothing rounds. `jobEconomics` calls `priceWorkItem` rather than reshaping its answer (`economics.test.ts`). An invoice carries no `total_minor` column either — `invoiceStanding` calls `priceWorkItem` over the invoice's own snapshotted lines (`invoices.test.ts`). **Expressed a second time and pinned, not duplicated** (D35): `public.invoiced_and_incurred` totals lines in SQL for reports and AI tools, held honest by a correspondence test (`reporting.test.ts`) that fails on any disagreement — repaired by teaching the aggregate, never by relaxing the test, the same mechanism I5 uses for availability. |
-| I5 | There is exactly one availability calculation. | `freeWindows` in `lib/domain/scheduling/availability.ts`, with `listSchedule` above it, is the only availability calculation — `scheduleWorkItem` never calls it, so there's no second opinion to drift. `listSchedule`'s filters are the exclusion constraint's own partial predicate written as a query (`status_releases_resource = false`, overlap against `occupies`); `availability.test.ts`, `work-item-editing.test.ts` and `buffer.test.ts` assert both directions agree. Operating hours are subtracted first from `operating_hours`, and nothing anywhere seeds a default working week — a business with none configured is always open (`operating-hours.test.ts`). The predicate is written out four times, not three: the constraint, `listSchedule`'s filters, `time_committed`, and the `resource_commitments` view `bookableSlots` reads in place of `work_items` for a visitor who may not read them. `booking-availability-agreement.test.ts` pins the view to the constraint in both directions — a status that releases the resource frees the offered slot, and the tenant's buffer removes it — and fails when the view drops `not status_releases_resource`. Since `20261116000002` the view reads the assignment-level occupancy the constraint itself holds, and the agreement test also covers a job with two resources, each judged independently. `listSchedule`/`listScheduleDays` read the same predicate through each work item's assignments, and `freeWindows` is unchanged. |
-| I6 | Availability shown to a client is advisory; it is re-asserted server-side before work is committed. | The re-assertion is `work_item_resource_assignments_resource_not_double_booked` refusing the commit inside the transaction that would have written it, never a pre-insert check, which would race identically. `availability.test.ts` reads a free slot, lets a second caller take it, then commits against the stale answer and expects `23P01`. `booking.test.ts` proves the same on the public axis — nothing is checked first, on purpose — and the booking page says "not held until you book" rather than implying one. |
-| I7 | No resource is occupied twice over the same instant, for every resource on a work item. | `work_item_resource_assignments_resource_not_double_booked`, a gist exclusion over `(organization_id, resource_id, occupies)` on the assignment table — partial, `where occupies is not null`, tenant-leading (I2) and half-open. `occupies` there is **enforcement state, not a schedule**: the work item's own `occupies` (its `scheduled_during` plus the tenant's `buffer_minutes`), projected onto each assignment by `app.set_assignment_occupies` (on insert) and `app.sync_assignment_occupies` (when the work item's window or release state changes), and null while the work item is unscheduled or in a status the tenant says releases its resources (`work_item_statuses.releases_resource`, mirrored onto `work_items.status_releases_resource` by two triggers). It is in no column grant and no function argument; the application never computes it. The insert trigger takes `for share` on the work item so an assignment added while its job is being scheduled waits and reads the new window, and a reschedule that arrives mid-insert sees the new row — neither can slip past the other. Every change is one transaction: a conflict on any resource refuses the reschedule, the reassignment, the buffer change or the status change as a whole. Both windows are half-open (`work_items_window_is_bounded_half_open`), so back-to-back work doesn't collide. No overlap check exists in the domain layer. **Verified non-vacuous** by `work-item-resource-assignments.test.ts` (overlap on either resource, atomic set, reschedule, reassignment, release and restore, buffer both directions, two real transactions racing), which fails nine cases with the constraint dropped and the lock case with `for share` removed (`supabase/snippets/i7-vacuity-control.sql`). |
-| I8 | Editing today's configuration never changes yesterday's committed work. | Three snapshots protect three edit paths. `work_item_costs.currency` is written by `record_work_item_cost` from the organization, not joined at render, so a currency change can't reinterpret old costs. A checklist template is copied onto each work item at creation with no foreign key back, so editing a template can't rewrite what was already agreed or done. A field definition's `kind` and `key` are refused to every caller by column grant (`grant update (label, required, position, options)` is the whole of what may change) — `options` is inside that grant because adding a choice doesn't reinterpret stored values, but changing a kind does; removing a choice is permitted because it reaches nothing already written (`field-choices.test.ts`). **Verified non-vacuous**: granting `update (kind, key)` to `authenticated` fails all three tests. An invoice line is a fourth snapshot, one level up — it copies a priced line, which copies a catalogue row, and `invoice_lines` holds no foreign key back for the same reason (`invoices.test.ts`, from `pg_constraint`). **Where this invariant deliberately stops**: `work_item_statuses.releases_resource` is a maintained cache, not a snapshot, and does reach committed work — marking "Cancelled" as releasing frees every job already in it. Not a violation, because I8 protects amounts and terms someone agreed to; whether a cancelled job still occupies a resource is a live operational question, and snapshotting it would answer wrongly for every job cancelled before the status was configured. |
-| I9 | Every scheduled item is an absolute instant, rendered in the tenant's timezone. | `tstzrange` over `timestamptz` makes the instant absolute; `organizations.timezone` holds the tenant's IANA zone, checked against `pg_timezone_names`; `formatWindow` is the only place an instant becomes a rendered time, using that zone rather than the server's or the reader's. `scheduling.test.ts` reads one instant as 11:00 in Amsterdam and 05:00 in New York, and asserts no naive `timestamp` column exists anywhere (`pg_attribute`). The one bare `time` column is `operating_hours` — a recurring local reading, not an instant — resolved against the tenant's zone at the moment a day is calculated (`zonedTimeToInstant`). |
-| I10 | Money is integer minor units, and currency is per-tenant configuration. | `work_item_costs.amount_minor bigint`; `organizations.currency`, nullable with no platform default, snapshotted onto each amount rather than joined. **Nullable as of `20260904000001`, and that strengthens this rather than relaxing it** — it was `not null default 'EUR'`, silently recording every business with no chosen currency as trading in euro. Null now means *has not said*; `create_price_book_item` and `record_work_item_cost` both refuse the first amount until a currency is set, at the moment it's actually needed. `formatMoney` takes fraction digits from the currency rather than assuming two (`consumption.test.ts`, including a JPY case). `totalCost` groups per currency rather than summing across them, so `jobEconomics` returns null for margin across currencies rather than converting (`economics.test.ts`). `payments.amount_minor` is signed; only zero is refused — a wrong payment is corrected by its reverse, since the table has no update policy. `record_payment` writes the invoice's own currency and takes none as an argument; `record_provider_payment` derives organization, invoice, and currency from the `payment_requests` row, so a vendor payload can't assert any of the three. `invoiced_and_incurred` makes currency part of the group key, so a business that changed currency mid-year gets two rows for one customer rather than a converted figure (`reporting.test.ts`). |
-| I11 | Consequential writes are attributable to an actor. | `events.actor_id not null references auth.users`; policy `events_insert` pins `actor_id = auth.uid()` (`tenancy.test.ts`). A machine write is attributable too — the payment integration is a real `auth.users` row with no email or password, so a webhook satisfies the same not-null constraint without a sentinel (`adapters.test.ts`, D26). `listCustomerTimeline` is the table's reader (`timeline.test.ts`): attribution resolves to what *this tenant* calls that person, not to a global account, so someone who's left has an id and no name. Reading also surfaced a polymorphic-subject hazard — `location.linked` names the location and carries the customer only in its payload, which a reader filtering on `entity_id` would miss; the timeline reads it anyway. `document.created` carried the same hazard and, until `20260917000001`, did not carry the fix: it is written against the document's own id with no owning id in its payload at all, so neither a customer's nor a job's timeline could ever attribute an upload to itself despite both listing the action in their vocabulary. `create_document` now writes whichever of `customer_id`/`location_id`/`asset_id`/`work_item_id` the upload named (null-stripped); `customer_activity` gained the matching branches, and `listWorkItemTimeline` runs a second, direct query for it. Historical events were backfilled from `documents` in the same migration, touching only `payload`. An anonymous booker satisfies this unchanged, since anonymous sign-in still produces a genuine `auth.users` row (D22). |
-| I12 | Hiding UI is not authorization; every sensitive operation is checked server-side. | `requireActor()` runs server-side on every protected route in addition to the proxy redirect, which is convenience only; capability checks live in RLS policies via `app.has_capability`, so a direct RPC call is refused exactly as a form is. The Stripe webhook reaches Postgres as `payment_webhook`, a role holding no grant on any table and exactly one `execute` (`adapters.test.ts`, from `information_schema`) — proof that D14's refusal of service-role actually holds. `create_organization` needed a second look: it gated on `auth.uid() is not null`, which an anonymous booking session also satisfies. `20260830000001` checks `auth.users.is_anonymous` directly instead of trusting the JWT claim, since converting to a permanent user flips that column without reissuing the token. |
-| I13 | A work item's status transition is valid according to that tenant's configured transitions. | `app.check_status_transition`, a trigger on `work_items`, refuses any `status_id` change with no matching row in `work_item_transitions` for that organization/type/pair — a type with no configured transitions is frozen, not unconstrained. `work_items_update`'s `grant update (status_id)` keeps that capability from touching any other column, since a policy sees the old row or the new one but never both. `change_work_item_status` checks `returning`, so a policy-denied update (zero rows, no error) can't write a timeline entry for a move that never happened. `work-item-transitions.test.ts` asserts all of this through the domain and as a raw PostgREST update. |
-| I14 | An AI agent reaches business state only through domain tools that validate and check permissions. | **Enforced by an absence rather than a check.** `lib/adapters/drafting/` holds no database handle and no domain writer — `proposals.test.ts` reads the directory and fails the gate on any import of `@/lib/db` or `@supabase/*`. What it produces is a row in `configuration_proposals`, written by the person who asked, under their own session and capability. Applying one is `configureBusiness` called by that person, so every write lands on the policy it would have hit if typed by hand (`proposals.test.ts` demotes a member and shows the refusal comes from `price_book_items`'s own policy). **The tool half is the same shape twice over.** A tool is a `stable`, `security invoker` Postgres function called through PostgREST under the asking person's own token (D34) — it cannot write, because Postgres refuses a write inside a non-volatile function at execution (`ai-tools.test.ts` reads `provolatile` for every registered name), and it cannot read a row its caller couldn't, because RLS reads the caller's own JWT regardless of what argument a model supplies. This axis holds **no Postgres role at all** — `apps/api` forwards the token and mints nothing. Writes stay outside the loop entirely: an answer may carry one intended action, recorded as pending and performed by nobody until a person presses a button, mapped through a whitelist in `apps/web`; a name the loop invents that the whitelist doesn't know is recorded as a refusal, not dispatched, and `agent_runs_update` freezes a decided action. See D32, D34. |
-| I15 | No domain code imports a vendor SDK directly. | `lib/adapters/payments/` — the contract in `index.ts` names a capability, never a provider; `registry.ts` is the one file outside an implementation allowed to say `stripe`. `adapters.test.ts` reads every file under `lib/domain/` and fails on an import reaching past the capability *and* on a vendor's name appearing anywhere, comments stripped — the second assertion exists because the first draft broke I15 without an import (`settleProviderPayment` tested whether a reference started with `cs_`, which is domain code knowing what a Stripe id looks like). The same three-file shape now covers `lib/adapters/geocoding/` (*where is this address*) and `lib/adapters/telephony/` (*place a call*), and the test's vendor and contract lists grew with each rather than after. |
-| I16 | Every capability the platform declares is enforced by a database policy, not by application code alone. | `customers_insert`, `roles_insert`, `field_definitions_insert`, `memberships_update` each call `app.has_capability`; `schema-conformance.test.ts` reads `pg_policy` **and** `pg_proc` and fails if any entry in `CAPABILITIES` appears in neither — so a function that raises on the check counts as enforcing it, even with no policy of its own (`add_member_by_email` has enforced `role.manage` this way since M1, since `auth.users` isn't readable by `authenticated`). `report.read` gates `invoiced_and_incurred` itself rather than the rows underneath it, since an aggregate has no rows to put a policy on and the invoices/costs it reads must stay visible to every member for the job screen to work — what's gated is the summing. The search matches only function bodies that actually mention `has_capability`, so a comment naming a capability can't satisfy it. |
-| I17 | Only a field declared in that tenant's registry may appear in an entity's `custom`, and it holds the kind the registry says. | `app.check_custom_fields`, a trigger on `customers`, `locations`, `resources`, `work_items` and `assets`, refuses undeclared keys, absent required fields, and mistyped values, scoped by `organization_id` so another tenant's definition authorises nothing; `parseCustom` re-checks in the domain for the message. `field-choices.test.ts` bypasses `parseCustom` entirely to assert the database refuses an undeclared choice, an undeclared list, and another tenant's real option written straight to the table. |
-| I18 | A row referencing two tenant-owned entities can only reference entities in its own tenant. | Composite foreign keys carrying `organization_id` on every cross-entity reference — `memberships_role_same_org`, `customer_locations`, the five on `work_items`, `work_item_statuses_type_same_org`, `assets`, `documents` — so a cross-tenant row can't be written at all; `schema-conformance.test.ts` asserts every reference between two `organization_id`-carrying tables includes it, and separately forbids a polymorphic `(entity_type, entity_id)` attachment outside `events`. Verified by swapping a composite key for a plain one, at which point the cross-tenant insert succeeds and RLS raises nothing. `report_definitions`'s three typed filter columns (D36) are the newest case — a single JSONB filter would have accepted another business's customer id and produced an empty report nobody could explain; they're `on delete set null` rather than `cascade`, so deleting a customer widens a report rather than deleting it. Reception (`customers_stage_same_org`, `calls_outcome_same_org`) and the conference (`call_participants_call_same_org`, `call_events_call_same_org`) both followed the same pattern. `organization_domains`'s composite reference to `organization_provider_resources (organization_id, id)` keeps a hostname from ever naming another tenant's provider resource, even though the hostname itself must be globally unique (I2's exemption above) — the two rules operate on different columns of the same row. |
-| I19 | A private file is never reachable without a short-lived signature minted after the same permission check the rest of the operation gets. | The `documents` bucket is private; storage policies on `storage.objects` pin an object key's first path segment to the caller's organization, enforced under the caller's own JWT. `getDocumentUrl` reads the metadata row under RLS first — that read *is* the permission check — and signs for 60 seconds; the download route mints per click. `documents.test.ts` verifies by loosening the storage policy, at which point a cross-tenant write succeeds. On the external axis, the read under RLS is still the check (`app.has_capability` doesn't exist there): `created_by` scopes booking, `app.current_external_customer()` scopes the portal, and neither is writable by the caller. |
-| I20 | A work item's status belongs to that work item's own type. | `work_items_status_same_org_and_type`, a three-column reference `(organization_id, type_id, status_id)` to `work_item_statuses (organization_id, type_id, id)` — so the mismatch cannot be written down at all. Not a tenancy question and nothing in I18's machinery catches it: both rows belong to the same organization, so RLS is satisfied and every composite reference passes. `create_work_item` sidesteps it by deriving the type from the status rather than accepting both; `work-item-types.test.ts` inserts the mismatch directly. |
-| I21 | Platform authority may read across every tenant, may bring a new tenant into existence, and may write nothing belonging to a tenant that already exists — and, as of D45, may do all of that while its holder is simultaneously an ordinary member of one or more organizations. | **Rewritten by D45.** `platform_staff` stopped being a Postgres role a session had to wear instead of `authenticated` (`20260915000001_platform_staff_is_checked_not_worn.sql`) — the mechanism that used to force "somebody who is both staff and a member of an organization loses the membership half while signed in." Reads are now `for select to authenticated using (app.is_platform_staff())`, additive to whatever member-facing policy a table already had; `app.is_platform_staff()` is a live table read (`platform_staff`), never a role or a claim. **What this table's own claim rests on moved with it.** Before D45, the guarantee was privilege absence — `platform-staff.test.ts` asserted a literal `permission denied`, since the gap between a missing grant and a declining policy *was* the invariant. It is now held by a check instead, the same standing I16 already gives `app.has_capability` ("a function that raises on the check counts as enforcing it"): every narrow-door write (`provision_organization`, `record_provider_rate`, and the rest) widened its `execute` grant to `authenticated` and kept the internal `app.require_platform_staff()` check it already had, which is what was actually holding even before this record. **What did not move:** `memberships` and `platform_staff` itself still carry no insert grant to `authenticated` at all, so a write to either still fails on a missing privilege, unchanged — `platform-staff.test.ts` and `milestone-m5.test.ts` assert both shapes side by side now, the declining-policy kind and the missing-privilege kind, and say which is which. `organization_commercial_summary` and `organization_usage_detail` — `security invoker` functions that used to rely on `platform_staff`'s role-scoped grant to reach `usage_events`'s withheld columns (I29) — became `security definer` with `app.require_platform_staff()` as their first statement, since a column grant is not row-conditional and invoker mode could never reach those columns for anyone once staff share `authenticated`'s own grant. `platform_tenants` (a staff-only console view with no tenant-facing purpose) gained a `where app.is_platform_staff()` clause in its own body for the same reason — `organizations`' member-facing policy would otherwise let a member read their own row back through it. I2 doesn't govern `platform_staff` the table — it carries no `organization_id` and never will. `provisioning.test.ts` provisions a business, then fails to rename or join it, in one test, since either half alone proves nothing. |
-| I38 | An organization invitation may be accepted only by a permanent account matching the address it was sent to, never by an anonymous session and never for an address already a member; its token is never stored in a form that could be read back; and revoking one is itself attributable. | `organization_invitations.token_hash` is a `sha256` hex digest; `invite_member` generates the plaintext the same way `create_portal_invite` does and returns it once, never storing it. `accept_invitation` (`security definer`) refuses an anonymous `auth.users.is_anonymous` caller outright (`20260915000008`, the same reasoning `create_organization` already gives), hashes the presented token before lookup, and refuses unless the caller's own email matches the invitation's. `invite_member` separately refuses to create an invitation to an address already a member of that organization (`20260915000008`) — an invitation adds somebody, it does not change an existing member's role — and `accept_invitation` attempts the membership insert *before* writing `accepted_at`, so a membership that appeared through another path between invitation and acceptance is a refusal, not a false accepted state. `revoke_invitation` writes `organization.member_invitation_revoked` only when it actually moved the row (`20260915000009`). `invitations.test.ts` asserts all of the above: a mismatched account, an anonymous caller, an already-a-member invite and accept, the revocation event and its actor, and that the table has no plaintext `token` column. |
-| I39 | A platform support session records that and why staff opened one organization, grants no read or write beyond what platform authority already held before the session existed, and at most one is open per staff member per organization at a time. | `platform_support_sessions` carries no insert/update grant to anyone — `start_support_session`/`end_support_session` are the only doors, both staff-checked (`app.require_platform_staff()`), the `record_provider_resource` shape. `end_support_session` additionally restricts to `staff_user_id = auth.uid()`, so only the staff member who opened a session may close it early; `support-access.test.ts` asserts a different staff account's attempt silently matches no row. **The uniqueness half is `20260915000010`.** `platform_support_sessions_staff_org_open_unique`, a partial unique index on `(staff_user_id, organization_id) where ended_at is null`, is the backstop; `start_support_session` is idempotent (a staff member already actively supporting an organization gets the same session id back rather than a second row) and serializes concurrent starts for the same pair with `pg_advisory_xact_lock`, closing out a session that has lapsed past `expires_at` before deciding whether a fresh one is needed — `support-access.test.ts` proves a same-pair repeat, a genuine concurrent race, and that an ended or expired session does not block a later one. No policy on any other table reads this table, and no migration here adds a new grant to `authenticated` beyond the session table itself — `listMembersForSupport` reads `memberships` exactly as I21 already permitted, unchanged. |
-| I40 | _Superseded by I95._ A public website exposes exactly one deliberately published immutable revision; drafts, review candidates and history are never anonymous data. The per-page form of this rule held until `20261128000001`, which moved the unit to the whole site. | See I95. |
-| I41 | A Plan's Feature entitlement is resolved at read time — explicit Feature override, else a Module grant, else a Product grant restricted to `implementation_state = 'available'` — and never stored redundantly at every level of the hierarchy. | `app.plan_grants_feature`, `security definer`, is the one resolution function; `public.plan_entitled_features` and `public.organization_effective_entitlements` both call it rather than re-deriving the order. A Product or Module grant is one row (`platform_plan_product_grants`/`platform_plan_module_grants`) regardless of how many Features it covers, and covers only Features whose catalogue `implementation_state` is `available` at the moment it is asked — a planned Feature is never silently promised by a parent grant (`catalogue-plans.test.ts`: granting a Product includes an available Feature and excludes a planned one; an explicit override in either direction beats the grant it would otherwise inherit). `organization_effective_entitlements` is `security invoker`, so it discloses nothing beyond what `organization_plan_assignments` and `platform_plan_*` already grant the caller under their own RLS — a legacy organization with no assignment row returns no rows at all, and its existing `usable_modules` resolution (I28) is untouched. |
-| I22 | An automation performs only writes the platform already permits a person to make, and computes nothing the domain layer owns. | A rule's write goes through every trigger a person's would — `app.check_status_transition` refuses an illegal move (I13), `work_items_resource_not_double_booked` refuses a colliding reschedule (I7), each recorded as a failed run rather than swallowed. `automation_actions_action_kind_check` lists four action kinds, none of which prices anything or searches for a free slot — either would be a second `priceWorkItem` or `freeWindows` in a second runtime (I4, I5); `milestone-m6.test.ts` reads that constraint from `pg_constraint` rather than trusting the TypeScript list. |
-| I23 | A message is sent at most once per recipient per reason. | `message_deliveries_once_per_reason`, a unique index on `(organization_id, rule_id, subject_type, subject_id, recipient)` — the insert is attempted and the violation swallowed rather than checked for first, the same reasoning I6 and I7 carry. `automations.test.ts` writes to the same person twice about two jobs, and never twice about one — asserting both directions matters, since an index that blocked the first case too would be as wrong as one that allowed a duplicate. |
-| I24 | Nothing this platform sends on a business's behalf says anything that business did not write. | `app.resolve_message_template` substitutes five named values into text a tenant typed and adds nothing; an unknown placeholder is left as written. The finished words are snapshotted onto `message_deliveries` when queued, so editing a template can't reach an inbox or the record of what was sent (I8). Every layer after is a pipe — `apps/api/app/providers/resend/email.py` and `.../twilio/sms.py` send `body` verbatim. Asserted whole, not by fragment: `automations.test.ts` and `milestone-m6.test.ts` compare entire bodies, since a footer added by any layer is exactly what `toContain` would miss. |
-| I25 | Every automation run records an outcome; a failure is a row, not a log line. | `automation_runs.outcome` is `not null` and checked, with `automation_runs_detail_matches_outcome` forcing a failed run to carry the database's own words. Each rule runs inside its own plpgsql `exception` block (`app.fire_event_automations`, `public.run_due_automations`), so a failing rule rolls back its own work without touching the write that tripped it. `platform_failures` (`security_invoker`) is the reader; `platform-staff.test.ts` asserts staff see it across tenants while a member sees only their own, and neither can write it. |
-| I26 | A public write on the external axis may name its own target organization to nobody — the caller supplies no organization id, and no policy grants a way to read what was written. | `submit_public_inquiry` (the demo and contact forms' one door) takes no `p_organization_id` parameter at all (`public-intake.test.ts` reads `pg_proc.proargnames` from the catalogue rather than trusting the source); the target comes from `platform_settings`, a table with RLS forced and no grant to any role, set only by `supabase/snippets/workflow-review-target.sql` (D22, D42). Unlike `create_booking`, no `external_actors` binding is written, so `public-intake.test.ts` proves the caller can read back no customer, event, organization or membership even while its anonymous session is still live — the absence of a grant, not a policy that happens to decline (I21's shape, one axis over). |
-| I27 | An organization cannot transition SETUP → LIVE while a blocker exists, regardless of which caller invokes the transition. | `public.organization_launch_blockers(id)` is the one definition of what blocks the move — a switched-on `booking` module with no public address or nothing published to it, or a switched-on `card_payments` module with no connected account. `computeReadiness` calls it for presentation; `app.check_launch_readiness`, a `before update of operational_state` trigger, calls the same answer through `app.organization_launch_blockers_unchecked` for enforcement, so the two can never disagree (I13's shape, one table over). **Verified non-vacuous**: the first version of `launch_organization` checked only `organization.manage` and not this function at all, so any caller holding that capability could invoke it directly through PostgREST and skip `computeReadiness` entirely — `lifecycle.test.ts` asserts a direct RPC call is refused while a blocker is open. |
-| I28 | What a business is entitled to use is the intersection of what it wants and what it has paid for — a separate axis from `organization_modules`, and no RLS policy ever consults it. | D41, built **in full as a model** — the wanted∩paid intersection is computed, correct, and holds for every module. `organization_commercial_terms` is append-only and holds no insert/update/delete grant for anyone, staff included — `public.record_commercial_term` is the one door, `security definer`, checked against `platform_staff` and granted `execute` to that role alone. `public.usable_modules` computes the intersection fresh (`security invoker`, reading both source tables under the caller's own RLS); `public.module_commercial_state` returns all four states except the absent one, which produces no row rather than a false one. **A second, narrower claim, not to be read as the same one:** the model's *enforcement* — the write-refusal trigger that makes a lapsed term actually stop a write — is proven on exactly one table, `payment_accounts` (`card_payments`). The other five optional modules' tables carry no such trigger yet; their entitlement is correctly computed and correctly displayed, and simply not yet enforced at the write a person or an automation could still make. `commercial-terms.test.ts` proves all four states on one business, the entitlement refusal and its lift on the one table that has it, and that neither a tenant nor staff can insert a term directly. |
-| I29 | GildOps' own provider cost, a reconciliation of it, and the margin either implies, are never visible to a tenant. | `platform_provider_rates`, `platform_provider_cost_meters`, `platform_fx_rates`, `usage_cost_components` and `usage_cost_component_adjustments` have staff-checked select policies and no tenant-facing policy; the staff RPCs call `app.require_platform_staff()` before disclosing them. `usage_events`'s tenant column grant still withholds provider columns. `usage-economics.test.ts` reads the component table as an ordinary tenant and receives no rows; the existing `commercial-usage.test.ts` continues to assert the event-level columns and legacy reconciliation readers are refused. See D70. |
-| I30 | A rate is append-only, effective-dated, and named to the provider that set it; usage snapshots the cost and charge in effect when it happened, each in its own currency, and neither is reinterpreted when a rate changes later. | `platform_provider_rates` remains append-only and each row now also names its provider cost meter and optional region/direction/resource/account scope. `app.provider_component_rate_at` resolves at the event's occurrence time; `usage_cost_components.provider_rate_id` snapshots the selected version and native amount. `usage-economics.test.ts` adds a later rate, records historical usage, and asserts the component retains the earlier row. The legacy event-level snapshot and retail-rate tests remain intact. See D70. |
-| I31 | A provider's cost and a customer's charge are never assumed to share a currency, and a margin is reported only where they truthfully agree or an auditable conversion exists. | Every component preserves native amount/currency. A reporting amount in another currency is present only with both `fx_rate_id` and the snapshotted positive `fx_rate`; `app.fx_rate_at` resolves the effective-dated source. Missing FX leaves reporting amount/currency null and records the reason instead of assuming parity. Event-level margin remains withheld across currencies unless its older reader can compare truthfully. See D70. |
-| I32 | A reconciliation corrects what usage is believed to have cost GildOps; it never adds commercial quantity or customer charge, so it can never duplicate either. | Legacy event-level reconciliation remains append-only. For multi-component cost, `usage_cost_component_adjustments` contains amount, currency, state and provenance but no commercial quantity or customer-charge column; the staff reader selects the latest adjustment beside the immutable estimate rather than summing both. See D70. |
-| I33 | A provider resource belongs to the same organization as the binding it hangs off, and every write to either table goes through a narrow, staff-checked function — never a table grant. | `organization_provider_resources` references `organization_provider_bindings` by a composite foreign key, `(organization_id, binding_id)` against `(organization_id, id)` (I18, leading with `organization_id` per I2), so a resource cannot be recorded under another organization's binding even by a caller who already knows its id. Neither table carries an insert, update or delete grant to any role; `begin_provider_binding`, `set_provider_binding_status`, `record_provider_resource` and `set_provider_resource_status` are the only doors, each `security definer`, checked against `platform_staff` and granted `execute` to it alone. `provider-bindings.test.ts` asserts a direct table write is refused for both an ordinary tenant and platform staff, and that one organization cannot read another's rows through either the domain reader or the raw table. |
-| I34 | A secret this platform generates is written to Vault and never selected back out, by anyone, through any function. | `public.store_provider_secret` is the only function that ever calls `vault.create_secret` or `vault.update_secret`, and it returns the resource id it acted on — never the vault row's id, never the secret. No role, including `platform_staff`, holds `select` on `vault.secrets` or `vault.decrypted_secrets`, and `organization_provider_resources.secret_id` is withheld from every column grant, the same mechanism `usage_events` already uses to withhold GOLD's own cost from a tenant (I31). `provider-bindings.test.ts` confirms neither role holds the table privilege at all, confirms `secret_id` is unreachable through the resource row, and confirms the storing function's own return value is never the secret it was given. |
-| I35 | A tenant may configure only a provider resource actually bound to its own organization; a resource bound to another organization is refused, and one bound to nobody is unaffected. | `set_calling_number` (D39, recreated under D44) resolves a candidate number's owner through `app.phone_number_owner`, a `security definer` helper — needed because the function itself stays `security invoker`, and an invoker-mode read of `organization_provider_resources` would run under the caller's own RLS and could never see that a number belonged to somebody else. A number no `organization_provider_resources` row names stays free-text-settable, unchanged; one bound to a different organization is refused with its own sentence, distinguishable from the shape check. `public.record_organization_email_domain` extends the same idea to a tenant's own sending domain. `provider-bindings.test.ts` asserts both halves: the refusal across organizations, and the pre-existing behaviour left alone for a number nobody has bound. |
-| I36 | Editing an import mapping never reinterprets a run that already applied. | `import_runs.mapping_snapshot` is a copy written once by `begin_import_run`, not a live join — `integration_mappings` carries no foreign key any run consults to replay itself, the same shape `work_item_priced_lines` already holds against `price_book_items` (I8). `apply_import_run` reads only the snapshot. `tests/integration/database/integrations.test.ts` stages and applies a run, then re-creates a mapping and a second run from the same resource — the first run's own applied rows are untouched regardless of what the second mapping says. |
-| I37 | A source record that has already become a GOLD entity is recognised on a second import, and never produces a second entity. | `external_record_links_organization_id_connector_key_externa_key` (Postgres's own 63-character-truncated name for `unique (organization_id, connector_key, external_record_id, gold_entity_type)`) — `apply_import_run` upserts against it rather than inserting unconditionally. `tests/integration/database/integrations.test.ts` imports one file twice and asserts exactly one customer exists afterward, with the link's `gold_entity_id` unchanged between the two runs. |
-| I42 | An external customer may initiate a card payment only for an invoice truthfully their own, and never chooses its amount, currency, tenant or processor account. | `begin_external_card_payment`, `confirm_external_card_payment` and `external_card_payment_availability` — all `security definer` — derive `app.current_external_tenant()`/`app.current_external_customer()` themselves and re-prove invoice ownership on every call rather than trusting an earlier read (I12); no RLS policy grants the external axis any access to `payment_requests` or `payment_accounts` at all, so every write and every scrap of connected-account detail this caller ever sees passes through one of these three doors (D22's "an external actor holds insert on exactly one table," extended to a second axis via a function rather than a second table grant). `app.external_invoice_payment_context` computes the outstanding amount in SQL — the same arithmetic `invoiceStanding()`/`priceWorkItem()` already perform in TypeScript, pinned by a correspondence test (`tests/integration/database/portal-payments.test.ts`) rather than a second, independently-drifting calculation (D35's shape, one axis over). `tests/integration/database/portal-payments.test.ts` proves ownership across customers and tenants, that a settled invoice and a disabled `card_payments` module both refuse, and that this path never writes a `payments` row — only the verified provider webhook does. |
-| I43 | An organization's GOLD subscription status is the processor's own fact, applied only through a narrow webhook-authenticated door; a browser's return from Checkout is never treated as proof of payment, and browser input never chooses a Stripe price or customer reference. | `organization_platform_subscriptions` holds no insert/update/delete grant to any role — `apply_platform_subscription_event`/`record_platform_billing_notice`, granted only to `platform_billing_webhook` (its own Postgres role, no table grant, matching `payment_webhook`'s shape exactly — I12, D26), are the only doors, and both derive the organization from `platform_billing_customers` rather than trusting the event (an event naming a customer reference this platform never provisioned resolves to nothing, `platform-billing.test.ts`). `apps/web`'s own `beginPlatformBillingCheckout` resolves a Plan key to its provisioned price entirely server-side, through `platform_plan_provider_prices`, and never accepts one from the caller — a Plan with no provisioned price for the current environment refuses rather than inventing one (`platform-billing.test.ts`). `platform_billing_customers` and `platform_billing_checkout_sessions` prove `billing.manage` through an RLS-gated write *before* the processor is ever asked for anything (the "ask, then correct" shape `payment_requests` already uses, I6), rather than after — an earlier draft called the processor first and was corrected once `platform-billing.test.ts` showed an unauthorized member could still trigger a live provider call. `platform-billing.test.ts` also proves: two organizations cannot share a customer row undetected (a colliding resolution fails loudly via `select ... into strict` rather than misattributing an event), the same processor event id applied twice changes nothing the second time, and an invoice event never writes subscription status — only a `customer.subscription.*` event does. Checkout purchases the organization's already-assigned package, never an arbitrary sellable Plan the browser names: `beginPlatformBillingCheckout` refuses a Plan key that does not match `currentPlanAssignment` (`platform_billing.plan_not_assigned`, `platform-billing.test.ts`). The quote shown on the review step (`buildOrganizationPurchaseQuote`, `lib/domain/platform-billing/quote.ts`) is captured onto `platform_billing_checkout_sessions.quote_snapshot`/`quote_version` before the provider is asked for anything, so a package change the browser raced past is detectable rather than silently re-priced; `platform-billing-quote.test.ts` proves the quote reports a blocker rather than data for a business with no assignment, prices a recurring Add-on and a one-time Add-on into the correct bucket, and never resolves another organization's package even by id (RLS silently filters it to the same "no Plan" blocker). Checkout sends one Stripe line item per Plan/Add-on the quote resolved (`resolveCheckoutLineItems`, `lib/domain/platform-billing/line-items.ts`), through `plan_price_provider_reference` for a standard price or `organization_plan_agreement_provider_price_reference` for an organization's own negotiated one — never the Plan's own standard provider price mutated to fit (I8); `organization_plan_agreement_provider_prices` holds no insert/update/delete grant to any role, only `record_agreement_provider_price` (`platform.commercial`) writes it, and `platform-billing.test.ts` proves a tenant cannot reach that door directly, a negotiated price resolves to its own reference rather than the Plan's standard one, and a repeat provisioning call is idempotent. What the billing manager reviewed is what is bought: the quote carries an opaque server-derived `reviewVersion` (a hash over every commercially consequential field — Plan, assignment, exact price record, amount, currency, interval, quantity, recurring or one-time), the browser sends back only that version, and `beginPlatformBillingCheckout` rebuilds the quote and refuses with `platform_billing.quote_stale` before any customer, session row or provider call if it differs (`platform-billing.test.ts`: price, agreement and Add-on changes after review, an absent or invented version). Every quote line names its price's source record — `platform_plan_prices.id` or `organization_plan_agreements.id` (`organization_plan_price` returns `source_id`) — and a negotiated price's provider representation is keyed by that agreement id, so a later agreement gets its own provider price and never rewrites the earlier one (`organization_plan_agreement_provider_prices` is unique on `(organization_id, agreement_id, environment, billing_interval)`; the tenant door resolves only the in-force agreement's mapping). The persisted `quote_snapshot` — with the provider price each line resolved to — is the historical purchase intent a later webhook reconciles to, never a package recalculated afterwards. A one-time fee is owed until a finalized `one_time_service` charge component exists for its assignment (`organization_charge_components`), not merely while the Add-on is assigned; a new assignment is a new source record. `unlisted` means sellable privately, so an assigned `unlisted` Plan can be bought; `archived` cannot (`platform-billing.test.ts`). The provider's recurring state is a set of items, not one price (`organization_platform_subscription_items`, no grant to any role, written only by `apply_platform_subscription_event`): what the provider bills, never what was sold (assignments), granted (entitlements) or owed (charges), so a provider item never assigns an Add-on and a missing one never removes it. Each item is traced to its exact `platform_plan_prices.id` or `organization_plan_agreements.id` — an agreement only inside its own organization — or kept unmapped, never dropped. Checkout puts `platform_billing_checkout_sessions.id` on the subscription it creates; the webhook reads it as *correlation, never authorization* — the organization is still derived from the Customer, and a correlation naming another business's checkout, an unknown one or a malformed one is recorded as a mismatch while the provider's state is still cached. The parent's `reconciliation_state` (matched, mismatch, legacy_unlinked, ambiguous) compares the snapshot's recurring lines to the provider's items as price → total quantity, order-free, with a one-time line correctly absent. Events are ordered by the provider's own `event.created`, never receipt time: an older event is recorded as `stale` and changes nothing, two conflicting events at one instant keep held state and mark `ambiguous`, and a cancelled subscription is kept (inactive items, `canceled`) so a delayed older event cannot resurrect it. The checkout row's provider confirmation columns are outside every tenant column grant. `platform-billing-subscription-items.test.ts`; service access reads status alone and is unchanged by any of it. |
-| I44 | A business in SETUP is entered through Setup and a LIVE one through Home, decided in one place and never by a caller. Setup lists areas, not fields: an area blocks launch only when the database says it does (I27), and an unfinished recommended or optional area never does. | `organizationHomeHref(organizationId, operationalState)` takes the lifecycle state as a required argument, so a caller cannot forget to ask; every entry (`resolveOrganizationsLanding`, the switcher, the org root, business creation, Launch) goes through it. `computeSetupOverview` builds its `required` areas from `computeReadiness`'s blockers alone; kernel areas (work, resources, locations) are always `optional`. `landing.test.ts` asserts SETUP → `/setup` and LIVE → `/home`; `lifecycle.test.ts` asserts importance, that blockers equal what Launch refuses, and that Launch succeeds with a recommendation and every optional area open; `setup-lifecycle.test.ts` and `e2e/setup-lifecycle.spec.ts` assert the shell treatment leaves at Launch. |
-| I45 | A GOLD provider account's credential can be written and never read by a signed-in person, is used only by a runtime that first proved the caller is platform staff, and a binding's provider account is never moved by a retry. Reconciliation reports drift and repairs, adopts or deletes nothing. | `platform_provider_accounts.secret_id` is in no column grant; `read_provider_account_credential` and `record_provider_account_verification` are executable by `provider_operator` alone, which holds no table grant (`provider-accounts.test.ts` reads `has_function_privilege` and the grant catalogue); `apps/api/tests/component/test_provider_operations.py` proves a non-staff caller never causes a credential to be read and no response carries one; `begin_provider_binding` keeps `coalesce(existing, new)`; `compareWithRemote` is pure and `reconcileTelephonyAccount` writes only `record_provider_binding_reconciliation`. See D54. |
-| I46 | A business connects only to a connector that is catalogued, visible to it and not `planned`; a connector is neither a provider nor a business's own connection, and editing the catalogue never rewrites a connection. | `integration_connections_insert` requires a `beta`/`live` connector visible under the caller's own rights, and `integration_connections_connector_fk` names it; `platform_connectors` carries no write grant to any role; `connector-catalogue.test.ts` proves the refusals at the table, the private/public split and the provider separation. See D55. |
-| I47 | A business's OAuth credential can be written and never read by a signed-in person, is read and rotated only by the runtime that first proved, through the caller's own token, that the caller may manage integrations for that business, and a connection's health is recorded only by the runtime that asked the provider. | `integration_connections.secret_id` is in no `select` or `update` grant; `read_integration_credential` and the four other machine doors are executable by `integration_operator` alone, which holds no table grant (`integration-credentials.test.ts` reads the grant catalogue and calls each door as a business, staff and anon); `apps/api/tests/component/test_integration_operations.py` proves, for Google Workspace and Microsoft 365 alike, that a refused caller never causes a credential to be read, a refused sign-in creates nothing, a token is rotated before use, and no response carries one. See D56. |
-| I48 | An Agent conversation, and every run in it, is readable only by the person who started it, and the answering side is told only the earlier finished turns of that one conversation, bounded. | `agent_conversations_select` narrows to `created_by = auth.uid()` and there is no update or delete grant; `agent_runs` carries `(organization_id, created_by, conversation_id)` as a composite key onto `agent_conversations`, so a run cannot be filed under somebody else's conversation; `last_activity_at` is written only by the `security definer` insert trigger `app.touch_agent_conversation`. `askQuestion` reads prior turns for the conversation it was given (finished answers only, no tool rows) through `boundPriorTurns` and `apps/api`'s `bound_prior_turns` bounds them again. `agent-conversations.test.ts` proves a colleague and another business are both refused (read, write and ask-into), that a first question lazily creates the conversation, later ones append, only the same conversation's turns reach the adapter and the history is bounded, and that the migration's backfill files each old run under a conversation of its own; `test_ai_loop.py` and `test_handlers.py` prove the runtime's own bound and that extra fields never pass. See D34. |
-| I49 | A file attached to an Agent question is readable, listable and signable only by the person who attached it, is never a customer's or a job's document, and reaches the model only as bounded text. | `documents.agent_user_id` is a fifth owner; `documents_select` and the `documents` object policies narrow an Agent file (`<organization>/agent/<person>/…`) to its owner, and `documents_agent_file_is_safe` holds at the table that the path begins with that prefix, the type is one of four text types and the size is at most 1 MB, whoever writes the row. `agent_run_documents` carries the asker in both halves of its key, so a question cannot be linked to somebody else's file, and `documents_delete_unsent_agent_file` is the only delete `documents` allows, refused once a file has been sent. `readAttachmentsForQuestion` reads only `agent_user_id is not null` rows under the caller's token, refuses a missing, foreign, already-sent or over-limit set before anything is spent, and refuses bytes that are not UTF-8 text; `bound_attachments` in `apps/api` bounds and quotes them again. `agent-attachments.test.ts` proves the colleague and other-business refusals for the row, the bytes, a signed link and a folder listing, the table and bucket refusals for a foreign prefix, a bad type and an oversize file, a failed upload leaving no row, take-back before sending, persistence and reopening, and that ordinary documents are unchanged; `test_ai_loop.py` proves the runtime's own bound and fence. See D34. |
-| I50 | A business whose GOLD subscription does not include service reaches nothing operational — by URL, server action or route handler — while its data, its sign-in and its route to billing are untouched. | `resolveServiceAccess` is the one mapping from Plan and subscription status (`service-access.test.ts`, every status). `requireOrganization` refuses a locked business and `requireOrganizationForBillingRecovery` is the only way past it; `service-access-boundary.test.ts` fails on any exported action or route handler without a guard and on a recovery-guard user outside the closed list. `service-access.test.ts` (database) drives the guard and a real action through trialing, active, past_due, canceled, deleted and restored, and asserts the business's rows are unchanged throughout. No RLS policy reads it (D25, D57). |
-| I51 | What a person sees of the product is a projection of four separate facts — the organization's entitlements, the member's capabilities, whether the organization is GOLD's own, and the member's platform permissions — resolved once and never a second authorization system; and platform authority is a named set of permissions on a person's staff row, not membership of GOLD and not a bare boolean. | `projectShell` (`lib/shell.ts`) is the only place eligibility is decided; the desktop sidebar, the phone bar and its More menu, and the Settings map render what it returns and name no capability, module, role or platform permission (`adaptive-shell.test.ts`). Entitlement and permission are both required (`shell-projection.test.ts` proves a broad role does not conjure an absent product and a product does not conjure a permission). A Settings entry is a `ConfigTarget` borrowing a workspace's entitlement and declaring its own configuration permission (`settings-map.test.ts`). `platform_staff.capabilities` (`20260930000001`) is read live by `platformPermissions`; `projectShell` receives it only when the organization is GOLD's own and the caller is staff, and each Platform area's layout and page refuses a row that does not name it (`platform-permissions.test.ts`, `adaptive-shell.test.ts`). **What this does not yet enforce:** the narrow-door functions still check `platform_staff` membership only, so a limited operator is narrowed by the application's routes, not per database door (D59). Hiding an item is courtesy; the page, the domain function and the policy behind it still refuse (I12). |
-| I52 | Platform Administration is served only inside GOLD's own organization, to a member of it who holds a platform permission — and its address names the context an operator is working in, never an owner of the records on the page. | `requirePlatformScope` (`lib/route/platform.ts`) proves, in order, membership (the caller's own read of the organization), that the organization is GOLD's own by its current base Plan and never its name (`isGoldInternalOrganization`), and a live `platform_staff` permission; any other organization — staff or not — answers `notFound()`. The organization's layout, each area's layout and every page ask for themselves (`adaptive-shell.test.ts` checks each names the permission the registry gives its path). Nothing under `/platform` filters a record by the organization in the address: providers, catalogue and billing are the platform-scoped rows they were, and `platform-control-plane.test.ts` reads the source and refuses any use of the route's organization but spelling a link. The old `/platform` address redirects to the canonical one, resolving GOLD from the caller's memberships and Plan rather than from the URL. **What this does not enforce:** the narrow-door functions still check `platform_staff` only, as I51 says. |
-| I53 | A failed read of who is platform staff is never the answer "not staff": no row is an empty set of permissions, a row is its capabilities, and an error is an error. | `platformPermissions` and `isPlatformStaff` throw a `DomainError` on a query error (`platform.permissions_unreadable`, `platform.staff_unreadable`); `platform-permissions-read.test.ts` pins the three answers apart. This exists because a database behind the migration that added `platform_staff.capabilities` made the whole Platform section vanish with no error to read. |
-| I54 | The customer-facing Product set is the eight Gild Products, the shared Workspace beneath them is not a Product, and no organization's effective entitlement changed when the catalogue was renamed. | `platform_catalog_products_key_check` allows exactly the eight keys and `workspace`, and `platform_catalog_products_workspace_kind` ties `kind = 'workspace'` to that one key (`gild-taxonomy.test.ts` tries every old key and fails). Products were renamed in place so every grant, override and runtime mapping kept its id; the one module that moved between Products was given to each Plan that held its old Product whole. `gild-taxonomy.test.ts` asserts a home for every Module, Service planned only, and GOLD Internal granting every Product; `catalogue-plans.test.ts` asserts it still resolves every implemented Feature. |
-| I55 | Provider, Provider Service, Connector, Connection and Resource are five distinct nouns that never collapse into each other; a Provider Service or a Connector app's mapping to a Catalog Feature is descriptive only and grants no Plan entitlement; and a service's `vendor_status` (upstream maturity) is never read as its `implementation_state` (what GOLD runs). | `platform_provider_services`, `platform_provider_service_features` and `platform_connector_app_features` hold no insert/update/delete grant to any role — `upsert_platform_provider_service`, `set_provider_service_feature`/`remove_provider_service_feature` and `set_connector_app_feature`/`remove_connector_app_feature` are the only doors, each `app.require_platform_staff()`-checked; neither mapping table carries a `plan_id`, `organization_id` or `granted_scope` column, so no query against them could express a grant even by accident. `provider-service-catalogue.test.ts` proves the RLS/FK boundaries and that no seeded Google Provider Service key collides with a seeded Connector key; `provider-connector-identity.test.ts` proves the same separation holds in the presentation layer (`ConnectorIcon` never reaches the Provider Service domain module and the reverse). |
-| I56 | A file is an artifact and never a connection: nothing that is a file format is a connector, an uploaded file is a resource with no connection, and what may enter is decided in two places that do not imply each other — the caller's capability, and the organization's file policy — with only the format registry saying a reader exists. | `platform_connectors` holds no file format and `connection_method` has no `file` value (`20261005000002`); `integration_resources_has_an_owner` lets a resource have no connection only when it holds a stored file (`20261005000001`), and `begin_import_run` accepts one. `lib/domain/files/` imports no consumer (`file-boundary.test.ts`); `checkFileIntake` refuses, before any byte is stored, a recognized format the consumer cannot read, a policy-disabled category, and a file over the smaller of the organization's and the consumer's ceiling (`file-intake.test.ts`). `connector-catalogue.test.ts` fails on a seeded `csv`, `spreadsheet`, `xlsx`, `pdf` or `markdown` connector. **What this does not yet enforce:** policy is the platform default, not a stored per-organization setting; import is gated by `integration.manage` rather than a file capability; record documents are not under policy (D63). |
-| I57 | A definer function that answers for an organization proves the caller belongs to it, and one that answers for nobody in particular is granted to roles by name and never by default. | `public.organization_launch_blockers` requires a membership of that organization or a live `platform_staff` row and refuses a non-member identically whether or not the organization exists; the enforcement core is `app.organization_launch_blockers_unchecked`, which holds no grant. `launch-blockers-access.test.ts` (member and staff allowed; another business, an unbound visitor, a visitor bound to that business and a signed-out caller each refused). `function-surface.test.ts` asserts no definer function in `app` is executable by `PUBLIC` or `anon` and pins the short list a signed-in role may run. |
-| I58 | A platform table is vocabulary, commercial configuration or control plane, and its read policy says which: everyone signed in, a member of some business or staff, or staff alone (D64). | `catalogue-visibility.test.ts` compares what a member, a booking visitor, staff and a signed-out caller each see against the real row count of every one of the twenty tables, and asserts no table carries a `using (true)` select policy beside another for the same role. `platform_plan_provider_prices` is staff-only; a business reaches the one price reference checkout needs through `plan_price_provider_reference`, which requires `billing.manage`. |
-| I59 | A usage event is written by one function, priced from the rates in force when the usage occurred, and can name only what belongs to its own business, provider and meter. What it cost and what it charged are facts written once; later rates and reconciliations add rows beside it and never rewrite it. | `app.record_usage` is the only inserter of `usage_events`, and no role holds insert, update or delete on it. Composite foreign keys tie a binding to `(organization_id, provider_key)`, a resource to its binding, an account to its provider, and a rate row to its meter, provider and currency. `usage_events.fulfilled_through` says per event whether the usage ran through the business's own binding, through GOLD's account (nothing of the business's to name) or is unrecorded; a meter carries no topology, because the same meter can be served either way. The charge, its currency and the provider cost are nullable: null is *not priced* / *not costed* and zero is a price or cost that really is zero, so usage is recorded whatever its pricing state and is never made free by missing configuration. Retail and provider rates resolve to the approved row with the latest `effective_from` not after the moment, unique on `(meter, currency, effective_from)` so there is never a tie. **Work Order A extends this with the allowance split, under the same immutability.** `record_usage` resolves the one allowance governing the meter (`app.allowance_key_for_meter`) at the moment the usage occurred, takes an advisory lock on `(organization, allowance)` before reading consumption so two concurrent events cannot both spend the last included unit, and snapshots the split (`allowance_included_total`, `allowance_consumed_before`, `allowance_included_applied`, `allowance_overage_quantity`, the window and its basis) onto the row — a whole-or-none group (`usage_events_allowance_split_is_whole`) that sums to the event's own quantity (`usage_events_allowance_split_sums_to_quantity`). The retail rate is applied to the billable part alone, never the whole quantity. A later Plan, allowance or rate change leaves an already-written row untouched, proven by `allowances.test.ts`'s "a rated event is history". `usage-economics.test.ts`; `usage-boundary.test.ts`; `allowances.test.ts`. |
-| I60 | A Resource may represent at most one Membership, that Membership belongs to the same organization, and only `resource.update` may set, change or clear that link — regardless of who created the Resource, and regardless of whether the caller reaches it through the domain layer or a direct RPC call. Removing a Membership never deletes the Resource or touches its `organization_id`. | `resources_membership_same_org`, a composite foreign key `(organization_id, membership_id) references memberships (organization_id, id)`, leading with `organization_id` (I2, I18) — a cross-tenant link cannot be written even directly. `resources_membership_id_unique`, a tenant-leading partial unique index on `(organization_id, membership_id) where membership_id is not null`, is the one-Membership-one-Resource rule. `resources_update` (RLS) plus `grant update (membership_id)` require `resource.update`, checked by `app.has_capability` and independent of `resource.create`/role name; `set_resource_membership` is `security invoker`, so it adds nothing beyond the transaction boundary and the `resource.membership_changed` event. `on delete set null (membership_id)` — PostgreSQL 15+ column-targeted delete semantics — is what keeps a Membership's removal from ever attempting to null `resources.organization_id`, which is `not null`. `resource-membership.test.ts` proves same-org enforcement, the one-to-one rule, the capability boundary (domain and direct-RPC paths, both refused identically), and that deleting a Membership row directly leaves the Resource and its `organization_id` untouched. |
-| I61 | A discovery snapshot belongs to an existing customer inside an existing organization; there is no prospect entity independent of one. "Pre-tenant" names a customer who does not yet have their own organization, never a customer that exists outside every organization — a prospective GildOps customer is an ordinary `customers` row inside GildOps's own organization (D42), staged like any other (`20260905000001`'s "there is no leads table here and there must never be one"). | `customer_discovery_snapshots`'s composite foreign key `(organization_id, customer_id) references customers (organization_id, id)`, leading with `organization_id` (I2, I18); `customer_discovery_snapshots_org_customer_unique` keeps one snapshot per customer. `schema-conformance.test.ts`'s FK/unique-index checks. `discovery-snapshots.test.ts` proves cross-tenant refusal, the `customer.update` capability gate, and that a customer id from a different organization is refused by the FK rather than silently accepted. `submit_public_inquiry` seeds the snapshot only from a demo request's fields that are genuinely a discovery answer (team size, current tools), never from a contact inquiry's message text or from a value the sender did not give (D31); `public-intake.test.ts` proves both the seeded and the honestly-empty case. Each answer's own `{value, status, source, updatedAt}` is validated in the domain layer (`isDiscoverySnapshotAnswers`) against `discovery-requirements.ts`'s one requirement catalogue — the same keys public intake, the Discovery tab, and every later discovery surface all read (`discovery-requirements.test.ts`); `status` moves only from `provided` (the prospect's own words, unconfirmed) to `confirmed` (a person here read and affirmed it), never backwards, and an unknown requirement is absence, not a stored value, so `upsertDiscoverySnapshotAnswers` deletes rather than blanks a key a form resubmits empty (`discovery-snapshots.test.ts` proves it). |
-| I62 | A proposed configuration recommends canonical catalogue Features — outcomes, in the customer's own words — and never a provider, a resource, or a Feature the catalogue itself does not yet claim to deliver. | `recommendConfiguration` reads `platform_catalog_products/modules/features` live and excludes every `implementation_state = 'planned'` row from both its recommended and optional output; nothing here is stored (I4's reasoning: a stale recommendation is a second answer). `configuration-recommendation.test.ts` proves no planned Feature is ever suggested, that a Feature reachable from both an answered and a not-applicable requirement recommends rather than excludes, and that every entry names a real Product and Module. The prospect-facing preview (`previewByWorkspace`) groups the same recommended set under the real `WORKSPACES` array the operator sidebar itself reads (`lib/navigation.ts`) rather than a second, invented list of what a business's navigation would show — proven by the same test file. |
-| I63 | A commercial proposal is a versioned, immutable snapshot of what a plan and its add-ons priced, and what the catalogue recommended, at the moment it was built — never a live join or a live recompute a later change could disagree with underneath a customer's own copy (I8). Changing a proposal's terms creates a new version; only its status ever moves on the same row, and only forward from a non-terminal one. | `customer_commercial_proposals`/`customer_commercial_proposal_addons` snapshot `plan_price_minor`/`addon_price_minor` from `currentPlanPrice` at build time, and `proposed_configuration` from `recommendConfiguration` in the same call — the update policy allows `status` alone, and only while `status in ('draft','sent')`; `proposed_configuration` is in no update grant at all, written once. `commercial-proposals.test.ts` proves a second build creates a new, higher-versioned row naming the one it supersedes rather than editing it, that a discount requires a reason, that an add-on not on the chosen plan is refused, and that a later change to the discovery snapshot does not reach back into an already-built proposal's own configuration snapshot. Distinct from `configuration_proposals` (needs an existing organization) and from `commercial_draft_scenarios` (GildOps' own staff-only margin modeling, tied to no customer). |
-| I64 | A prospect reaches their own commercial proposal exactly the way a customer reaches the portal — a token binding `external_actors.customer_id`, the same D22 axis, never a new mechanism. A recognized customer reads only their own non-draft proposals, their own discovery snapshot, and may accept or decline only through a narrow SECURITY DEFINER door, never a column grant (D40) — and only while a proposal is `sent`. Accepting records exactly what the proposal itself already held as `proposed_configuration`, copied server-side — never a value a caller's own request could shape (C1 closeout). | `customer_proposal_invites`/`claim_proposal_invite` mirror `customer_portal_invites`/`claim_portal_invite` exactly; `accept_commercial_proposal(p_proposal_id)` takes no configuration argument at all, and copies `proposed_configuration` onto `accepted_configuration` itself, inside the same door that checks `app.current_external_customer()` against the proposal's own `customer_id` and refuses anything not `sent`. `customer_commercial_proposals_select_external` excludes `status = 'draft'` — a salesperson's unfinished work is not something a prospect has been sent. `proposal-invites.test.ts` proves a draft stays invisible, acceptance/decline record who and when, `accepted_configuration` always equals the proposal's own `proposed_configuration`, a proposal not open for a response is refused, a revoked link is refused, and a rival business's prospect never sees this one's proposal. |
-| I65 | "Create this business in GildOps" hands off exactly what an accepted proposal, its discovery snapshot and its terms hold — never more — and pays for no new provisioning door: `provision_organization` (D29) is still the only way a business comes to exist, staff-only, checked live. The original GildOps customer record is never mutated or replaced by this act. Provisioning and recording the handoff are one atomic, idempotent act: both happen or neither does, and a repeat call for an already-handed-off proposal returns the business already created rather than erroring or duplicating it (C1 closeout). | `hand_off_accepted_proposal(p_proposal_id)` is one PL/pgSQL function — a nested call to `provision_organization` and the `customer_proposal_handoffs` insert share the calling transaction by construction, so a failure after provisioning rolls both back rather than leaving an unrecorded business behind. `pg_advisory_xact_lock(hashtext(p_proposal_id::text))` serializes concurrent calls for the same proposal; an existing handoff row is returned rather than re-provisioned. `proposal-handoff.test.ts` proves a non-staff caller is refused, that the GildOps customer row is untouched after handoff, that a repeat call for the same proposal returns the same business with exactly one handoff row on record, and that a proposal which was never accepted cannot be handed off. Owner membership and default modules are `provisionOrganization`'s own doing; Agreement, Entitlements, Initial configuration, Readiness and Launch remain Conversation 2's, not built here. |
-
-| I66 | An `integration_resources` row that names a connection is evidence the connector itself observed, never a fact a tenant session can manufacture by writing the table directly; a tenant may still record a resource with no connection, such as an uploaded file (I56). | `integration_resources_insert`/`integration_resources_update` require `connection_id is null` in both `using` and `with check` (`20261103000001`) — a tenant with `integration.manage` can create or edit a connection-less row but cannot insert or repoint one that claims a connector's own authority. `record_managed_integration_resource`, `security definer` and granted only to `integration_operator` (the same shape I47's five doors already use), is the one door a connector's own runtime writes or corrects a connection-scoped resource through, upserting on `(organization_id, connection_id, resource_type, external_id)`. `integration-resource-authority.test.ts` proves a tenant session refused on insert and on claiming an existing connection-scoped row by `connection_id`, that `integration_operator` can record and idempotently correct one, that cross-tenant recording is refused, and that the pre-existing connection-less (file upload) path is unaffected. |
-| I67 | A tenant's provider-confirmed resource state — a custom hosting domain's verification, a sending domain's readiness — is written only by the runtime that itself asked the provider; no tenant submission, no DNS write succeeding, and no platform staff action can set it directly, and publishing a DNS record is never itself recorded as the provider having confirmed anything. | `record_email_domain_provisioning` (`20261106000001`) and the pre-existing `record_custom_domain_registration`/`set_custom_domain_verification` (`20261010000001`) are `provider_operator`-only and hold no grant to any signed-in role — not the tenant, not platform staff (D54, extended from a credential to the state it is used to confirm). `app.services.email_provisioning.operations` and `app.services.web_delivery.operations` both call their own narrow provider adapter (`app.providers.resend.domains`, `app.providers.vercel.domains`) under the caller's own proven `organization.manage`, then write the answer through that one door; DNS automation (`app.services.dns.operations.ensure_required_records`) is a separate, earlier step whose result is re-checked against the provider rather than trusted as verification. `email-sending-domains.test.ts` proves neither a tenant nor staff can call `record_email_domain_provisioning` directly and that it creates nothing for a resource never named; `test_email_provisioning.py` proves publishing every outstanding record and the provider still answering `pending` never writes `active`; `test_web_delivery_domains.py` proves the same shape for the pre-existing hosting-domain path. |
-| I68 | What an organization is allowed to consume right now is one resolved answer, composed across every contributing Plan and Add-on, and a runtime consumer's enforcement decision is the one contract every caller of it shares. | `app.allowance_states` composes `organization_plan_assignments` × `platform_plan_quotas` with any `organization_plan_quota_overrides` applied, refusing (`state: 'configuration_error'`) rather than silently picking a row when two contributions disagree on allowance type, unit, period, reset semantics, meter, service class or overage policy; compatible quantities and hard limits are summed. `app.allowance_window` resolves `reset_semantics` into a real boundary — the processor's own subscription period, the Plan assignment's own anchor, or the organization's calendar — and never substitutes one for another. `app.allowance_consumption` counts the one usage ledger for a metered allowance or a named counter in `platform_allowance_counters` for a counted one, and returns null consumption (never zero) where nothing enforces an allowance yet. `app.allowance_decision` is the one enforcement contract (`allowed`/`allowed_with_overage`/`soft_limit_warning` permit; `hard_limit_reached`/`not_entitled` refuse; `configuration_error` permits and is reported rather than stopping a business working); `app.spend_decision` composes it with the prepaid credit purse as a second, separate gate, so included usage never needs credit and a hard limit refuses regardless of balance. `open_call` enforces it at the mutation boundary, not only in a screen. `allowances.test.ts`. |
-| I69 | A Conversation is channel-capable, and what addresses it is per channel: an SMS conversation names a business number and an external number, an email conversation names the business's email identity, and neither carries a placeholder for the other's half. An email address is an identity of its own — never a sending domain and never, by being on one, a mailbox — and whether it may send is the state of what backs it, read when asked, never copied onto it. | `conversations.channel` with `conversations_channel_addressing` (`20261109000002`): an `sms` row holds `phone_number_id` and `external_number` and no email identity, an `email` row the reverse, and the unique key on the number pair is untouched so it is the SMS rule by construction (NULLs never collide). `email_identities` (`20261109000001`) is tenant-leading with composite foreign keys to its sending-domain resource and its mailbox connection; `can_receive` and `can_send` are capabilities, `customer_domain` identities are send-only by check, and `app.check_email_identity` refuses an address not beneath the domain it names or a resource that is not a sending domain. Readiness is `emailIdentityReadiness` over the provider resource's own status (`identities.ts`); releasing a domain nulls the reference, never the address or its history. `communications-foundation.test.ts` (database) and `email-identity-readiness.test.ts`. |
-| I70 | The address a message is sent from is decided by the server from a tenant-scoped identity id; no browser value is ever the `From`. A person's calling and messaging authorities (`call.place`, `message.send`) are independent, and neither navigation nor Communications Home treats one as the other. | `resolveSmsSender` loads the number inside the organization under the caller's own session and refuses one that is absent, inactive, not outbound-enabled, not a telephone number, or whose provider resource is not `active`; `sendMessage` accepts `phoneNumberId` and has no `fromNumber`, and `resolveEmailSender` is the same shape for `emailIdentityId`. `Area.relevantCapabilities` for Text messages is `['message.send']`, for Calls `['call.place']`, and Communications and Numbers take either. `messaging-sender.test.ts` drives the real send path against real RLS with the carrier replaced by a recorder; `communications-foundation.test.ts` (static) fails on a `fromNumber`, a `call.place` gate on Messages, or a parallel email conversation table. |
-| I71 | An email a business sends is queued by the database under the sender's own session, which alone decides the address it is from, the person it goes to, whether that address may send, and the thread; the provider is then asked about that one message by id, and only the runtime that asked may say what the provider answered. A client can neither supply a `From` nor write an email message's status, provider id or delivery time. | `queue_outbound_email` (`20261110000001`) resolves the identity, recipient and thread itself and refuses an address that is another business's, cannot send, or whose sending domain is not `active` (`app.email_identity_ready`, read from the provider resource and never stored); `messages_insert`/`messages_update` exclude `requested_transport = 'email'` so no signed-in role writes an email message row directly. `claim_email_for_send` (queued -> sending, once) and `record_email_send_result` are `provider_operator` only. `lib/adapters/tenant-email` carries a message id and nothing a caller could redirect; `apps/api/api/tenant_email_send.py` reads the message under the caller's token, never from the request. Usage is `email_send`, once per message, idempotent by `email:{message id}`. `email-channel.test.ts`, `email-send.test.ts`, `test_tenant_email.py`, `communications-foundation.test.ts`. |
-| I72 | A received email's business is derived from the address it was sent to and never from anything the provider's payload names; it joins a conversation only by what the mail itself says (`In-Reply-To`, then `References`, nearest ancestor first), only inside that business and that address, and a provider's thread id or a matching subject is never a conversation. A delivery event moves a message forward only, every failure outranks every success, and every event is kept once. | `record_inbound_email` and `record_email_event` are `tenant_email_webhook` only and take no organization argument; the address must belong to exactly one active, receiving identity beneath a verified domain, otherwise nothing is written. `app.resolve_email_thread` filters by organization and identity; a provider email id and an RFC Message-ID are each unique per organization, so a retried or reissued delivery is the same message. `app.message_status_rank` and `message_events` (unique on `(organization_id, provider_event_id)`) make a late `sent` after `delivered` history, a bounce after delivery real, and usage billed once. The signature is verified over the raw bytes before anything is read (`api/tenant_email_webhook.py`, its own secret). An unknown sender stays an unresolved participant; no customer is created. `email-channel.test.ts`, `test_tenant_email.py`. |
-| I73 | A received file and a received HTML body are untrusted. Bytes are fetched once from the provider, stored under the owning business's folder in a private bucket, and served only as an opaque download; a provider's temporary link is never stored. HTML reaches a screen only as `safeHtml`, after an allowlist that removes scripts, handlers, frames, forms, styles, images and non-http(s)/mailto links. | `message_attachments` has no URL column and a path check (`message_attachments_path_is_own`); the `communications` bucket's policies pin the first path segment to the caller's organization, outbound uploads need `message.send`, and the webhook role may only insert under `inbound`. `readAttachment` reads under the caller's session and the route serves `application/octet-stream`, `attachment`, `nosniff`. `sanitizeEmailHtml` is the only path from received HTML to a screen (`EmailThreadMessage` has no raw `html`). Not scanned for malware, and the product says so. `email-content.test.ts` (21 vectors), `email-send.test.ts`, `email-channel.test.ts`. |
-| I74 | A conversation has one current assignee at most, who is a *member of this business* (a membership, never a global user id), and who is handling a conversation is independent of who owns its customer in CRM. Assigning, reassigning, releasing, claiming, changing status and linking a customer are done only through database functions that check the caller may handle conversations here, check what they point at, and leave an event; nobody can write those columns directly. Two people claiming at once cannot both win. | `conversations.assignee_membership_id` (`20261111000001`) with a tenant-leading composite key to `memberships` (`on delete set null (assignee_membership_id)`); `claim_conversation` locks the row, so exactly one claim returns true; `assign_conversation` refuses a membership that is another business's or whose role lacks `message.send`; no column grant exists for `status`, `assignee_membership_id` or `customer_id`. History is the `events` trail (`conversation.assigned`, `.reassigned`, `.released`, `.opened`, `.waiting`, `.closed`, `.customer_linked`, `.customer_unlinked`), not a second table. Nothing touches `customers`. `inbox.test.ts` (31), `inbox-boundary.test.ts`. |
-| I75 | A conversation is associated with a customer only when exactly one customer *of this business* holds its contact point, or when a person with authority links one; it is never created for a stranger, never guessed between several, and never rewrites the customer. A contact point is compared after one normalization: an E.164 phone number (only when the country is unambiguous) or a trimmed, lowercased email. Removing a customer leaves the conversation and its history. | `app.normalize_phone`/`app.normalize_email`, `app.contact_matches` and `app.resolve_customer` are the one rule, applied to every new conversation by `conversations_resolve_customer` and offered as candidates by `conversation_customer_candidates`; `link_conversation_customer` refuses another business's customer. `customer_id`'s key is `on delete set null (customer_id)` (`20261111000002`) — the plain form nulled `organization_id` too and made deleting a customer with a conversation fail. `createCustomerFromConversation` calls CRM's own `createCustomer`. `inbox.test.ts`. |
-| I76 | A text message's state is the carrier's word, translated at the provider boundary and applied forward-only: no signed-in role creates a text with any carrier-owned column filled in or changes one afterwards, a late or repeated callback cannot undo what is already true, and a callback acts only on a text it unambiguously names. A text is billed once, when it first counts as sent (outbound) or when it arrives (inbound), and an inbound text, a retried callback or a number held by two businesses can never re-mark a read conversation unread or land in the wrong business. | `messages_insert` accepts a text only as `queued` with no carrier column set, and `messages` has no update grant (`20261114000001`); `record_sms_send_result` is the one door a sender may use, and refuses `delivered`, `read` and `undelivered`; `app.advance_sms_status` applies `app.message_status_rank` for every writer (the send report and `record_message_status`), and calls `app.charge_for_message` once — `record_usage` is idempotent by the message's own reference. `record_message_status` acts only when the carrier's id names exactly one outbound text, and refuses a status outside this platform's own vocabulary; `app/providers/twilio/sms.py` translates the carrier's words and error codes (a code never reaches a business). `app.sms_number_owner` resolves a business from a number only when exactly one active number holds it (inbound, STOP and START); `record_inbound_message` returns before touching the conversation when the text is already recorded, and meters the received text. Segments are estimated by length (`ceil(chars / 160)`), not the carrier's exact count. `sms-lifecycle.test.ts` (24), `sms-boundary.test.ts`, `test_sms_status.py`. |
-| I77 | A published form is one immutable revision, and a submission names the exact revision its answers were checked against, so renaming or removing a question later never makes an earlier answer unreadable. A visitor reaches a form only by its public address (business slug, form slug) and may only read the published revision and submit to it; a draft is never served, and an answer given to a revision that has since been replaced is refused rather than judged against another one. A submission is not a Customer: the fact that it happened is the `form.submitted` event (ids only, never the answers), and whatever follows is a consumer's. | `forms`, `form_revisions`, `form_submissions` (`20261113000001`) hold no grant for any role; every tenant door is a function that proves `organization.manage` (`app.require_public_site_manager`) and the two anonymous doors, `published_form` and `submit_public_form`, take slugs and no organization id. `form_one_working_revision` and `form_one_published_revision` are partial unique indexes; `app.guard_form_revision` validates every definition against the field vocabulary (`app.form_definition_is_valid`), forbids editing a published or archived revision and allows only draft -> published -> archived. `submit_public_form` validates answers with `app.form_answers_problem` against the published revision it was shown (`GD002` when stale). Platform starters live in `form_templates` (no `organization_id`, no grant) and are copied into a form's own draft, never inherited. `forms.test.ts` (tenant isolation, exact-revision history, template independence), `forms-definition.test.ts`, `forms-boundary.test.ts`, `studio-forms.spec.ts`. |
-| I78 | A Resource states what kind of schedulable thing it is, and what it can do. Its class is platform vocabulary — person, vehicle, equipment, facility, other — stated at creation and never inferred from a name, a role or a Membership's job title; a Resource that represents a Membership is always a person. What it can do is the business's own vocabulary of capabilities, owned by one organization, given to a Resource many-to-many and identified by id, never by a name or a JSON list in `custom`. Eligibility (class and capabilities) is not availability, and nothing in scheduling reads either yet. | `resources.resource_class` (`20261113000002`), `not null`, no default, checked to the five values (`resources_class_known`); `resources_member_is_person` makes a member-linked non-person unwritable, directly or through `create_resource`/`set_resource_class`/`set_resource_membership`. Existing rows were backfilled `person` where a Membership was linked and `other` otherwise — a name is not evidence. `resource_capabilities` (unique `(organization_id, lower(btrim(name)))`; archived, never deleted — no delete policy or grant) and `resource_capability_assignments` (primary key `(organization_id, resource_id, capability_id)`, both composite references tenant-leading, so a cross-tenant pair is unwritable); `app.check_capability_assignable` refuses an archived capability for anything new. Vocabulary is `field.manage`'s; giving or removing one is `resource.create`/`resource.update`'s, all in policies, with events for every change. `listResources` filters by class and capability and always returns every capability a resource holds. `resource-class-capabilities.test.ts` proves each refusal around the domain layer, runs the shipped backfill statement against a pre-migration shaped table, and the existing scheduling, availability and booking suites are unchanged. |
-| I79 | A form is placed by reference, never copied: a website section holds a form's id and a few words, the portal holds a list of form ids, and every surface reads the form's published revision when it is served. A response's source is one of `hosted`, `website`, `portal`, `booking`, `embed`; an anonymous caller may claim only `hosted`, `website` or `embed`, and a portal response's customer is the one the caller's portal binding names — never a value carried by the form or the request. A response is not a customer until a person with authority links one. A public write ends only a session it began. A form a live website or the portal still shows cannot be archived. | `submit_public_form_by_key` (`20261115000001`) is the only anonymous write and limits `p_source`; `submit_portal_form` takes the business and customer from `app.current_external_tenant()`/`app.current_external_customer()` and refuses a form not in `portal_forms`; `form_submissions_portal_names_a_customer` requires a customer for source `portal`; `app.record_form_submission` is the one recorder (published revision, answers, a per-form rate cap, `form.submitted` with ids and source only). `app.public_section_problem` allows a `form` section (id and words only) and `app.guard_public_site_revision` refuses an id that is not this business's non-archived form. `set_form_archived` refuses while `app.form_placements` says the website or portal still uses it. `forms_public_key_unique` is the one global key (an I2 exception named in `schema-conformance.test.ts`). `openPublicSession` is the only code that signs a public session out; `anonymous-session.test.ts`, `forms-boundary.test.ts`. `form-placements.test.ts`, `studio-form-distribution.spec.ts`. |
-| I80 | A Work Type states whether work of its kind is scheduled, and a publicly bookable type must be scheduled — the implication never runs the other way. Work whose type does not schedule cannot hold a scheduled window, and a type cannot stop scheduling while any of its work does. Whether a business schedules at all is one derived answer, read from that declaration and never from row counts, resources or whether booking is on. | `work_item_types.schedulable` (`20261112000001`), `not null` with no default, so `create_work_item_type` and `createWorkItemType` require the answer; existing types were backfilled `true` because every one was created when Schedule was available to all. `work_item_types_bookable_is_schedulable` refuses a booking status or duration on a type that is not scheduled, written directly or through `set_type_bookable`. `app.check_work_item_type_is_schedulable`, a trigger on `work_items`, refuses a window on work whose type does not schedule (`schedule_work_item`, `create_booking` and a raw update alike, `GD005`); `app.check_type_has_no_scheduled_work` refuses switching a type off while any item of it holds a window (`GD006`). Both run as owner and the first takes `for share` on the type, so neither race is possible. `hasSchedulableWork` is the one reader; `Area.needsSchedulableWork` withholds Schedule, Resources and Locations from navigation, and Field Home, Home, the Schedule page and `computeSetupOverview` ask the same answer. `work-type-scheduling.test.ts` proves each refusal, including around the domain layer; `schedulable-work-boundary.test.ts` fails on a second reader. Navigation hides a row and refuses nothing — the route still answers, and `scheduling` authority is unchanged. |
-| I81 | A Work Type may declare the minimum resources its work needs — a **Resource Requirement**: a resource class, a quantity from 1 to 50, and zero or more capabilities a resource must hold, *all* of them — and nothing more. Requirements belong to the type and are never copied onto a work item; coverage of a job is derived from them and the job's assignments, never stored. Eligibility (class and capabilities) is not availability, and requirements are minimums, not an allowlist: a job may carry more resources than it needs and may be scheduled with fewer, and the database does not require its assignments to satisfy its type. | `work_item_type_resource_requirements` and `work_item_type_resource_requirement_capabilities` (`20261117000001`): both tenant-leading and force-RLS'd, capabilities referenced by id (`requirement_capabilities_capability_same_org`, no cascade), class checked, `quantity between 1 and 50`, writes `field.manage`'s. Only schedulable work can need resources (`app.check_requirement_allowed`, `GD008`) and scheduling cannot be turned off under a type that does (`app.check_type_has_no_requirements`, `GD009`); a capability a type needs cannot be archived (`app.check_capability_not_required`, `GD010`) and an archived one is not newly attached (`GD007`). Public booking once committed one resource and capped a bookable type at one requirement of quantity 1 (`GD011`); I85 lifted that, and `create_booking` still reasserts eligibility (`app.resource_is_eligible`, `GD012`) for every resource it is handed. `isEligible`, `listEligibleResources` and `evaluateRequirements` (`lib/domain/work-items/requirements.ts`) are the one eligibility definition and the deterministic bipartite slot-matching that stops one resource filling two positions and finds the largest coverage. `work-type-requirements.test.ts` proves the structure and the booking guards around the domain layer; `resource-requirements.test.ts` pins the matching, including the overlapping-capability case a greedy match gets wrong. |
-| I82 | A **Resource** says when it works, and the answer is one calculation: *open* = organization hours ∩ the resource's working hours − its availability exceptions; *free* = open − committed work, and only the second subtraction is `freeWindows`. A resource with no working schedule **inherits** the organization's hours; having a schedule is a stated mode and never inferred from rows, so a schedule with no days is a resource that never works, which is not the same as having said nothing. Working hours are recurring tenant-local wall-clock periods resolved against the organization's zone, narrow the organization's hours and never widen them; an **Availability Exception** is a date-specific absolute interval (`unavailable` today) that is not Work and means the same for a person, vehicle, machine or room. A new or moved appointment may not fall outside an assigned resource's open windows or over its exception, and the refusal names the resource and why; a resource that inherits is held only to its exceptions, because organization hours remain advisory. Changing hours or adding an exception over work already booked refuses nothing and moves nothing — the work is flagged, derived on every read, never stored. Eligibility, assignment and availability remain three questions. | `resource_working_schedules` (a row is the *custom* mode), `resource_working_hours` (tenant-leading, `closes_at > opens_at`, a gist exclusion refuses overlap on one resource and day) and `resource_availability_exceptions` (`ends_at > starts_at`), all force-RLS'd, tenant-leading composite references to `resources`, **select-only** for `authenticated`; every write is `set_resource_working_hours`, `use_organization_hours` or the exception functions, `resource.update`-gated and evented (`20261118000001`). `app.resource_open_windows` is the one calculation (multiranges), read by `resource_open_windows`, which `listResourceOpenWindows` hands to `listSchedule`, `listScheduleDays` and `bookableSlots`; no second availability engine exists. Enforcement is `app.check_assignment_working` (a resource newly on an appointment — `schedule_work_item`, `set_work_item_resources`, `create_work_item`, `create_booking`, a raw insert) and `app.check_rescheduled_working` (the window moving), `GD013`, in the same transaction as the double-booking exclusion constraint, which is unchanged. `resource_availability_conflicts` reports booked work that no longer fits. `resource-availability.test.ts` proves each rule around the domain layer, including a stale booking after hours change, another zone from the server's, and both DST changes; `resource-availability.test.ts` (unit) pins validation and local-to-instant conversion. |
-| I83 | A **Call** is one business fact however many telephones were in it; a **leg** (a participant's telephone) is the carrier's, and only a leg has a provider identifier. A call is answered when two legs are connected at once, ends when its last leg leaves, and takes its status from its legs — never from the first one to report. Its status and each leg's only move forward, so a late *ringing*, a second ending or a retried callback changes nothing. It is billed once, when it first becomes *completed*, for the longest any one leg was connected: a three-party conference is one call. A caller who is not a known customer is still a call: the customer is linked only when exactly one of this business's customers holds the number (the rule a conversation uses), or when a person with authority says who it was, and is never created. An inbound call's business is derived from the number that was rung and from nothing the carrier or a browser names. A tenant cannot write a call's status, ending, duration or a leg at all, and cannot read the carrier's address for a recording. | `calls` has no `external_id`; `call_participants.external_id` is unique per business and set once, by the carrier's own callbacks (`record_call_event`, `record_call_leg`, `record_inbound_call` — `voice_webhook` only, no organization argument, no table grant) or, for a leg the web runtime itself rang, by `set_call_leg_provider_id` (call.place, once). `app.settle_call` locks the call, derives *answered* / *ended* / *status* / duration from the legs and calls `app.charge_for_call` exactly once on the transition into *completed*; `app.check_status_forward` is a trigger on both `calls.status` and `call_participants.status` for every writer. `calls.customer_id` is nullable and set by `calls_resolve_customer` through `app.resolve_customer`; `link_call_customer` links an unlinked call to this business's own customer. `record_inbound_call` finds the business with `app.voice_number_owner` (exactly one active number that takes calls) and records the call as not answered, because routing is not wired to the carrier's request; a withheld caller id is a call with no `from_number`. `update` on `calls` is granted to nobody; a failed dial goes through `fail_call_attempt`, wrap-up through `record_call_outcome` (which no longer touches status or a carrier's duration), a recording only through `call_recording_reference`. Internal legs name a membership (`call_participants.membership_id`), never a user. `call-lifecycle.test.ts` (47), `voice-boundary.test.ts` (static and database), `test_handlers.py`, `test_voice.py`. |
-| I84 | A **Phone Number** is the business's operational identity for a number, and what it can do is stated separately for calls and for texts (`voice_inbound/outbound_enabled`, `sms_inbound/outbound_enabled`). A number GildOps does not hold (`external`, `browser`, `sip`) cannot take inbound traffic: an external number is a caller id for outbound calls and nothing more. Whether a number is *ready* is never stored: it is read on every query from the provider resource and binding behind it, in four words (ready, setup required, degraded, unavailable). Which number a person dials from is one database function — their preference, then their default, then the business's — that passes over a number that is not ready, not enabled for outbound calls or not theirs, and no screen, route or runtime re-derives it. A tenant configures a number's name, purpose and capabilities and who dials from it; it never writes where the number came from, which resource stands behind it, or whether it exists. | `phone_numbers_inbound_needs_a_number_we_hold` (check), `phone_number_readiness` (a `security_invoker` view of `phone_numbers`, `organization_provider_resources` and `organization_provider_bindings`; `health` was a stored second truth with no writer and is gone), `resolve_outbound_number` (the only resolver; `placeCall` and the New call screen ask it; `resolveOutboundNumber` in `numbers.ts`), `configure_phone_number`, `assign_phone_number`, `release_phone_number_assignment`, `set_user_phone_number_preference` (all `organization.manage` or the member's own, and evented); `phone_numbers` has no insert/update/delete grant. `sync_phone_number` keeps a name a business gave a number. The routing preview's own outbound-identity decision in Python (`resolve_outbound_identity`) is a second resolver that Phase G must retire. `call-lifecycle.test.ts`, `voice-boundary.test.ts`, `phone-numbers.test.ts`, `messaging-sender.test.ts`. |
-| I85 | A **Resource** fills at most one required slot of one work item in a feasibility evaluation, and an interval is **feasible** for a Work Type only when every required slot — each requirement expanded to its quantity — can be matched to a distinct resource that is eligible (class and every capability), open (organization hours ∩ its working hours − its exceptions) and uncommitted for the whole interval. Eligibility, availability, assignment and feasibility are four different questions and none reads another's tables. The answer is derived and persisted nowhere: a deterministic combination (requirement position then id, resource name then id, a job's current resources preferred when asked), a structured reason for every infeasible interval from a closed vocabulary (business closed, no eligible resource, too few eligible, not working, unavailable, already committed, too few free, requirements competing for the same resources) and no ranking of any kind. A public visitor is offered times only: who takes part is worked out by the server when the booking is made and is never named by the browser. A type that needs nothing still books one resource, as before. | `lib/domain/matching.ts` (`maximumMatching`, augmenting paths, no enumeration of combinations) is the one matcher, called by `evaluateRequirements` (a job's coverage) and by `lib/domain/scheduling/feasibility.ts` (`evaluateFeasibility`, `evaluateAssignedResources`, `feasibleSlots`, `checkWorkTypeFeasibility`, `assessInterval`), which compose `isEligible`, `listResourceOpenWindows`, the assignments' `occupies` and `freeWindows` rather than recompute them; facts load in a fixed handful of reads for any number of resources. `bookable_candidates` hands a booking visitor ids and positions only. `create_booking` (`20261120000001`) is handed an allocation — which resource fills which required slot — and verifies it as a certificate: every requirement filled to exactly its quantity, each resource eligible (`GD012`), none named twice (`GD014`); the one-resource guards (`GD011`) are gone. Working hours, time off and double-booking stay the assignment triggers' and the exclusion constraint's, in the same transaction, so a booking commits every resource or none; `bookSlot` re-derives the combination at the moment of booking and retries a bounded number of times after losing a race, each attempt atomic. `feasibility.test.ts` (database, including simultaneous bookings on one combination and on two), `feasibility.test.ts` (unit: greedy-trap matching, competition, quantity, 100 resources, slot agreement), `feasibility-ui.test.tsx`. |
-| I86 | **Booking policy** is whether a *customer* may book an interval, and **customer change policy** is whether they may still reschedule or cancel their own booking; neither is feasibility, and neither binds staff. A Work Type states, beside the booking it already declares: **booking cadence** (how far apart start times are offered, independent of the duration and anchored to the start's own local midnight in the organization's zone), **minimum notice** (elapsed minutes, inclusive: a start exactly `now + notice` is allowed, and notice is applied before the start is snapped up to the next cadence boundary), **booking horizon** (a customer may book through the end of the organization's local date today + N, calendar days, so a clock change never shortens it), **same-day** (today in the organization's zone, never the browser's, the server's or UTC), a **reschedule cutoff** and a **cancellation cutoff** (minutes before the appointment; null means until it starts; exactly at the cutoff is still allowed; once the appointment has started a customer can change nothing, whatever the cutoff). A customer's cancellation moves the booking to the status the business named (one that releases its resources, reached by a transition the business configured); the work item is never deleted and no fee, refund or message is decided. Everything is reasserted where it is committed — a page's slot list is advisory — in a closed vocabulary (`minimum_notice_not_met`, `outside_booking_horizon`, `same_day_booking_not_allowed`, `invalid_booking_cadence`, `reschedule_cutoff_passed`, `cancellation_cutoff_passed`, `booking_already_started`, `booking_not_scheduled`, `booking_not_active`, `self_service_not_offered`). Policy is owned by the Work Type: there is no organization-level booking configuration to inherit from, so there is one row and nothing to merge. | `work_item_types.booking_cadence_minutes` / `_minimum_notice_minutes` / `_horizon_days` / `_allow_same_day` / `_reschedule_cutoff_minutes` / `_cancel_cutoff_minutes` / `_cancellation_status_id` (`20261123000001`; ranges are check constraints, the cancellation status is a three-column reference and `app.check_booking_cancellation_status` (`GD018`) refuses one that does not release resources; existing bookable types were backfilled `cadence = duration`, no notice, same-day open, a 365-day horizon). `app.booking_policy_refusal` and `app.booking_change_refusal` are the database's answer and `create_booking`, `customer_reschedule_booking` and `customer_cancel_booking` raise it as `GD017`; `evaluateBookingPolicy`, `evaluateCustomerChange`, `offerableStartBounds` and `getEffectiveBookingPolicy` (`lib/domain/booking/policy.ts`) are the one domain reader and evaluator, with `now` always an argument, and `bookableSlots` filters by policy *before* the feasibility engine so a forbidden day costs one read. `customer_*` authority is the visitor's own binding and `created_by`; the work-item capability guard exempts only the marker those two functions set on that one row (`app.acting_customer_change`). A reschedule moves the same work item and swaps assignments in one transaction, preferring its current resources; a failed one changes nothing. `booking-policy.test.ts` (unit: boundaries, DST, zones; database: defaults, bypass attempts, the notice race, SQL/domain agreement over 20 cases, reschedule rollback, cancellation release, authorization, cutoffs), `booking-policy-boundary.test.ts`, `booking-policy.spec.ts`. |
-| I87 | A proposal session ends when its link does, and a response is one outcome on the version shown. A proposal link is exchanged once, in a route handler, for a session in its own `HttpOnly` cookie; the recipient, the business and the link are resolved from it by the database and never carried by the browser. A revoked link or an exchange past 30 days answers as no recipient on the next request. A signed-in account is never bound as a recipient. Accept and decline are decided under a row lock on a `sent` version that has no non-draft successor; a second response, or one on a replaced version or another customer's proposal, is refused. A recipient, a customer and a membership are three things. | `external_actors.proposal_invite_id`/`proposal_expires_at` (`20261124000001`), in no column grant, with `external_actors_one_kind_of_link`; `app.current_external_customer()` honours both link kinds; `public.proposal_context()`; `claim_proposal_invite` refuses a non-anonymous caller; `accept_commercial_proposal`/`decline_commercial_proposal` lock and check supersession. `exchangeProposalLink`; `lib/db/proposal.ts` names the cookie and the proxy refreshes it for `/proposal`. `proposal-access.test.ts`, `proposal-session-boundary.test.ts`, `forms-boundary.test.ts`, `proposal-access.spec.ts`. |
-| I88 | An AI request is entitled before it is spent and metered once after it is known. The business must hold the module the capability is sold as — `assistant` for the operator and public assistants, `drafting` for configuration drafting — asked of Postgres by `apps/api` at the point of spend (as the caller, or from a deployment id for a public visitor), alongside the unchanged `assistant.ask` permission; and what the request consumed is the provider's own report, summed across every model call it made and written once through `public.record_ai_usage` → `app.record_usage`. A missing report is a gap, never a zero. | `app.module_entitled`, `public.organization_module_entitled`, `public.resolve_public_assistant` and `public.record_ai_usage` (`ai-usage.test.ts`, which holds the SQL resolver to `organizationResolvedFeatureStates`); `app/ai/loop.py` sums once and `app/ai/metering.py` writes once (`test_ai_usage.py`); the two endpoints refuse before a provider is resolved (`test_handlers.py`, `test_ai_draft_configuration.py`); `ai-runtime-boundary.test.ts` holds a model id, a vendor SDK and a model key out of `apps/web`. |
-| I89 | A business's private value is stored once and read back by no signed-in role. A Secret Reference has one owner, an organization; it is created, replaced, disabled and deleted only through narrow doors that each prove `secret.manage` and return no value; a business sees its own references' names and states and no other business's, and platform staff sees none (staff may not reach into a business that exists, I21). The one reader is a machine role no human session can wear, it answers by business and name, and a disabled or deleted value answers nothing so a dependent is not ready rather than stale. Every change is an audit fact naming the secret and its purpose and never the value. | `secret_references` holds no insert, update or delete grant for any role and withholds `secret_id` from select; `create_secret_reference`, `rotate_secret_reference`, `set_secret_reference_status`, `delete_secret_reference` call `app.require_capability(..., 'secret.manage')` and key every statement by `(organization_id, id)`; `resolve_secret_reference` is executable by `secret_operator` alone (`20261126000002`); `app.record_secret_event` writes `secret.created/rotated/disabled/enabled/deleted` to `events` with key, label and purpose only; the delete trigger removes the Vault row, including on a cascade from the organization. `secret-references.test.ts` (isolation, write-only, machine-only resolve, rotation, disable, delete, audit, no value anywhere a scan can find it), `test_secret_resolution.py`, `test_credential_boundaries.py`, `source-control-boundary.test.ts`. |
-| I90 | A business is offered Connect only for a connector that is not planned and that the API reports as implemented and configured on this deployment. *Planned*, *no adapter*, *no vendor registration* and *a business's own connection health* are four different facts and none stands in for another; the web keeps no list of which connectors run. A business never learns a registration's input names or values; platform staff sees why a connector is not offered. | `app.connectors.readiness_of` derives implemented and configured from the registry and the environment and `readiness` / `readiness_detail` are the only operations that answer it (`readiness_detail` is refused to anyone who is not staff); `connectorAvailability` and `connectorsForFilter` (`lib/domain/integrations/connectors.ts`) are the one reading of status plus readiness; an API that cannot answer reads as nothing connectable. `test_connector_readiness.py`, `integrations-browse.test.ts`, `connector-catalogue.test.ts`. |
-| I91 | Authorizing GitHub names an installation, and a person cannot name one that is not theirs. The installation id in the redirect is never trusted: the code issued to the person who installed is traded for a user token that is used once, to ask which installations that user can reach, and discarded; an id not among them mints nothing and creates no connection. A repository an installation reaches is recorded only by the machine role that holds the credential, so a business cannot assert that GildOps may use one; a connection that needs attention, is disconnected or loses its installation offers no repository to whatever asks. Studio asks for a repository through the source-control capability and names no vendor. | `GitHub.exchange` calls `_require_installation_is_theirs` before `_mint`; `integration_resources_insert/_update` refuse any row with a `connection_id` (`20261103000001`) and `replace_integration_resources` is `integration_operator`-only; `listSourceRepositories` reads only `active` rows under `active` connections; the vendor's vocabulary is `lib/adapters/source-control` alone. `test_github_connector.py` (the spoofing refusals, mint, pagination, rate limit, removed installation, malformed answers), `github-source-control.test.ts`, `source-control-boundary.test.ts`. |
-| I92 | A portal session ends when its link does. A portal link is exchanged once, in a route handler, for a session in the portal's own `HttpOnly` cookie; the customer, the business and the link are resolved from that session by the database and never carried by the browser. A revoked link, or an exchange past its 30 days, answers as no customer on the very next request, from the one function every portal policy reads. A signed-in account is never bound as a customer, and an exchange never inherits an earlier session. A customer, a portal binding and a membership are three things. | `external_actors.portal_invite_id`/`portal_expires_at` (`20261122000001`), in no column grant; `app.current_external_customer()` answers null once the link is revoked or the exchange expired; `public.portal_context()`; `claim_portal_invite` refuses a non-anonymous caller. `exchangePortalLink` ends the client's session first and again on refusal; `lib/db/portal.ts` names the cookie (`gold-portal`, `HttpOnly`, path `/portal`) and the proxy refreshes it for `/portal`. `portal.test.ts` (resolve, revoke, expire, renew, member refused, fresh session, refused leaves none, not writable), `portal-session-boundary.test.ts`, `forms-boundary.test.ts`, `portal-booking-forms.spec.ts` (journeys A, B, C, F). |
-| I93 | A booking and the answers it asked for are one act. A bookable type may reference one of its business's published forms; the booking page asks that form's published revision with the shared renderer; `create_booking` records the response in its own transaction against the exact revision the visitor saw. A stale revision, an invalid answer or a skipped question refuses the booking and leaves nothing; a form archived since asks nothing. The response names its booking and the customer the booking made, one response per booking, and is not rewritten by CRM. | `work_item_types.booking_intake_form_id` with a composite reference and `app.check_booking_intake_form` (`20261122000002`); `form_submissions.booking_work_item_id` with `form_submissions_booking_link_is_booking` and `form_submissions_one_per_booking`; `create_booking` calls `app.record_form_submission` (rate guard skipped for a booking-linked response); `link_form_submission_customer` refuses source `booking`. `form.submitted` carries ids only. `booking-intake.test.ts` (configuration refusals, both directions of the link, event without answers, invalid and stale leave nothing and free the slot, skipped and unsolicited refused, archived form, no flood guard), `forms-boundary.test.ts`, `portal-booking-forms.spec.ts` (journeys D, E). |
-| I94 | A Resource is **travel-feasible** for a candidate interval only when every required, known travel leg to the candidate and from it to the adjacent committed Work fits within the gaps between occupied windows; travel constraints participate in Resource matching, before the matching, and never alter Work identity or any persisted schedule duration. A resource states how it moves (`travel_mode`: mobile or fixed; unstated means travel is not evaluated for it) and may name a **routing base** that is a canonical Location. Travel is **derived**: no table stores a duration, and `occupies` never includes one. A leg whose origin, destination or router is unknown is *unknown*, never zero; staff are warned and may still schedule, and a public visitor is never offered a time whose travel could not be verified. The router is behind `RoutingProvider` and no vendor appears in scheduling. | `resources.travel_mode`, `resources_base_location_same_org` (tenant-leading composite key to `locations`) and `set_resource_routing`; `lib/domain/scheduling/travel.ts` (route context, gaps, three-state legs, the request-scoped route book) feeding `feasibility.ts`'s edge filter; `tests/unit/travel-feasibility.test.ts` (previous/next context, buffer counted once, alternative resource, cross-requirement matching, unknown policy, outage, one call per leg, 80-resource scale), `tests/integration/database/travel-feasibility.test.ts` (real assignments, `excludeWorkItemId`, base fallback, tenant isolation, existing schedules untouched), `tests/contract/osrm-routing.test.ts` (adapter), `adapters.test.ts` (no vendor in the domain). **Advisory at commit (I6):** a router cannot run inside the database, so travel is re-asked by the server immediately before a booking commits and is not a constraint the database holds. Public-booking use is not yet wired — see D87. |
-
-Invariants are added when a rule becomes load-bearing, not in anticipation. Each new one
-arrives with the slice that enforces it.
-
-## Foundation entities
-
-The foundation is shared by every Product. It is not itself a sellable Product and no Product
-may create a second version of one of these concepts.
-
-**Organization** is the tenant. **User / Membership / Role** binds global identity from
-`auth.users` to an organization and its capabilities. **Customer, Location, Asset, Resource,
-Work Item, Document/File, Event/Timeline and Field Definition** are shared business objects.
-Work Item remains the universal operational object; Calendar is a view over scheduled work;
-Activity is an Event. Tasks are Work Items configured with task-like types and statuses.
-
-The foundation also owns organization configuration, notifications and deliveries, audit,
-normalized usage, provider bindings and external connections. A future Team entity is earned
-only when assignment, filtering or reporting actually needs membership groups. Editable notes
-and per-recipient notifications likewise remain distinct future concepts rather than being
-forced into the append-only Event table.
-
-**A Resource may optionally represent one Membership (Slice 0B, built).** `resources.membership_id`
-is a nullable composite reference to `memberships (organization_id, id)` — null is the ordinary
-case (a vehicle, a room, a machine, a person with no GildOps account), and a value means that
-Resource represents that tenant Membership for scheduling purposes, never `auth.users` directly
-(D19). One Membership represents at most one Resource (`resources_membership_id_unique`, a
-tenant-leading partial unique index). This is a relational fact only — see "Visibility scope"
-below for what it does not yet do.
-
-### Authorization and visibility vocabulary (Slice 0A, updated 0B)
-
-Locked here because the terms were being used loosely across Scheduling, Automation and the
-commercial catalogue at once. Each is a distinct question; none substitutes for another.
-
-- **Membership** answers *does this human belong to this organization* — a `memberships` row,
-  `(organization_id, user_id)`, nothing else. Carries no scheduling, HR or commercial state.
-- **Role** answers *what may this member do* — an organization's own named bundle of
-  Capabilities (`roles`), assigned to a Membership. A role's *name* carries no authority; only
-  its `capabilities` array does.
-- **Capability** is a fixed, platform-declared action a Role may hold (`CAPABILITIES`,
-  `capabilities.ts`), enforced by RLS/`app.has_capability`, never by a role's or preset's name
-  (I16, I12).
-- **Role preset** is a named starting template of capabilities (`ROLE_PRESETS`), copied once
-  into an ordinary Role at creation and never referenced again. Never a runtime classification —
-  `role-preset-not-classification.test.ts` guards this.
-- **Visibility scope** answers *which rows may this member read*, distinct from what they may
-  write. **Today there is still exactly one scope: organization-wide.** The `resources`/`work_items`
-  select policies, and `listSchedule`/`listScheduleDays`, filter on `organization_id` alone —
-  nothing narrows a read below tenant membership, for any role, and Slice 0B did not change
-  this on purpose. What changed is only what is *representable*: a Resource may now name the
-  Membership it represents (above), so `getResourceForCurrentMember` can resolve "which Resource
-  is mine" as a real relational fact. **"Own schedule" is therefore relationally possible but not
-  yet enforced** — no capability, no RLS policy and no read function scopes by it. "Team
-  schedule" remains **not representable at all**, because no Team/group relationship exists to
-  filter by. Do not fake either with a role's name, a resource's own free-text name, `created_by`,
-  a custom field or a display name — `schedule-visibility-heuristic.test.ts` guards against
-  exactly that substitution. Note also that `work_items` itself is readable organization-wide
-  independent of `listSchedule` — a future scoped Schedule *read* alone would be a surface
-  projection, not a security boundary, unless `work_items`'s own visibility is scoped too; Slice
-  0C must choose between the two explicitly rather than silently building the weaker one under
-  the name of the stronger.
-- **Human actor** is a signed-in `auth.users` row acting through its own session/JWT — every
-  ordinary write (`requireActor`, RLS's own `auth.uid()`).
-- **System / automation actor** is the identity a write carries when no human is present —
-  `app.acting_automation()`, a transaction-local Postgres setting set only inside `security
-  definer` `app.run_automation`, unreachable from any client role. Authoring a rule
-  (`automation.manage`) is a human capability checked once, at write time, and never re-checked
-  or reused as runtime execution authority — `automation-authority-boundary.test.ts` guards
-  this, and I22 governs what a rule's runtime authority may actually do.
-- **Organization scope** is the tenant boundary itself — `app.current_tenant_ids()` (I1–I3).
-- **Platform scope** is GOLD's own operator authority, orthogonal to any tenant —
-  `platform_staff`, D45, I21. Never derived from a role's name or from membership of GOLD's own
-  organization alone (I52).
-
-## Canonical product and commercial model
-
-Use this vocabulary in product and platform UI. Existing persistence names are mapped below;
-they are not permission to preserve ambiguous product language.
-
-| Concept | Meaning | Repository correspondence |
-|---|---|---|
-| Product | Customer-facing capability family: the eight Gild Products (D61) — Sales, Service, Comms, Finance, Agents, Automations, Field, Studio. | Built (`20260918000001`, renamed to the Gild taxonomy by `20261001000001` — see D61). `platform_catalog_products` holds the eight Product rows plus one `kind = 'workspace'` row (Gild Workspace, shared substrate, never a ninth Product), locked by a key `CHECK` with no insert grant to any role, ever. Distinct from `platform_products` (D43's flat sellable-line-item catalogue), which is untouched and still the historical/billing record. |
-| Module | Coherent functional area inside a Product, such as Communications / Voice. | Built. `platform_catalog_modules`, not locked in count — new evidence may add one. Distinct from `MODULES`/`organization_modules` (the runtime/billing axis, D25), which is untouched; a canonical Feature reaches a legacy `MODULES` key through a runtime mapping (below), never a rename. |
-| Feature | Concrete capability inside a Module, such as Recording or Transcription. | Built. `platform_catalog_features`, with four independent axes — `lifecycle`, `implementation_state` (planned/partial/available, never inflated), `packaging_default`, `sale_status` — plus `metered`/`ai_powered` flags and advisory `meter_ids`/`provider_capabilities`. `platform_catalog_feature_dependencies` records one Feature requiring another. |
-| Runtime mapping | The seam between a canonical Feature and what actually backs it. | Built. `platform_catalog_runtime_mappings` — many-to-many by design: one legacy `MODULES` key (e.g. `reception`) backs Features under more than one Product (Communications/Voice's calling Features and CRM/Sales' pipeline Features alike), and a Feature may carry more than one mapping kind (`module_key`, `product_key`, `capability_key`, `provider_key`, `kernel`). |
-| Plan | Reusable package of Products, Modules, Features, limits, allowances and defaults. | Built. `platform_plans` (`kind` = `plan`, exclusive per organization at a time) or `addon` (stacks freely). Entitlement grants are three typed tables — `platform_plan_product_grants`, `platform_plan_module_grants`, `platform_plan_feature_grants` — deliberately not one polymorphic table (I18's own refusal, one layer up). A whole-Product/Module grant covers only `implementation_state = 'available'` Features, resolved live, never stored redundantly (I41). An effective-dated `platform_plan_prices` history holds the Plan's own standard price — never the sum of its Features' standalone prices. Do not call an effective-dated product price or a legacy commercial-term row a Plan; the two remain separate, coexisting provenance (see below). |
-| Add-on | Optional separately purchased capability or bundle, such as GOLD Intelligence or an AI Receptionist solution. | Built, as `platform_plans.kind = 'addon'` — the same packaging primitive as a Plan, distinguished only by whether it excludes other assignments of its own kind. Do not infer an Add-on from a module toggle. |
-| Subscription | One organization's active Plan, Add-ons, overrides and lifecycle. | Built as provenance, not yet a single named aggregate. `organization_plan_assignments` (which Plan/Add-ons, for a period — append-only, partial exclusion keeps at most one active base Plan while Add-ons stack), `organization_plan_agreements` (a negotiated price overriding the Plan's standard one, append-only), `organization_plan_quota_overrides` (a negotiated allowance overriding the Plan's default, append-only). None of these three write `organization_modules` or `organization_commercial_terms` — assigning a Plan pays for nothing and switches nothing on by itself (D29's boundary: staff may record a commercial fact about an existing organization, never its operational wanted-state). A legacy organization with no assignment row keeps resolving exactly as before this migration. |
-| Entitlement | Resolved right to use a Product, Module or Feature. GOLD decides this; a tenant cannot self-entitle. | Wanted-intersection-paid module resolution (legacy, D41) is generalized; write enforcement is complete only for `card_payments`. The canonical Plan-based resolution (`app.plan_grants_feature`, `organization_effective_entitlements`) is a second, additive resolution path for the new catalogue grain — computed the same way, never stored, and equally not yet write-enforced anywhere. An entitlement is not an RBAC capability. |
-| Activation | Whether an *entitled* Feature has been deliberately switched off by the organization. Independent of entitlement, readiness and role authorization (D25/D41, evolved). | Built. `organization_feature_activation_overrides` — a row means disabled, absence means active. Entitled ordinary Features are **active by default (opt-out, not opt-in)**; an unentitled Feature reports 'active' too, since activation has no meaning for something never granted, and the absence of an override must never be read as "on" for it. `feature.manage`, a capability distinct from `organization.manage`, gates the only two doors (`enableOrganizationFeature`/`disableOrganizationFeature`, RLS-backed). Never consulted by any RLS policy deciding authorization — the same separation D25 already drew for `organization_modules`. `organizationResolvedFeatureStates` is the one resolver combining this with entitlement and readiness; role authorization is never an input or output of it. |
-| Readiness | Whether an active, entitled Feature can do useful work right now. Separate from availability — an available-but-unconfigured Feature is `setup_required`, never `off`. | Built for the Features it can reach through a `module_key` runtime mapping, reusing `outstandingModuleSetup`'s existing per-module checks (billing, booking, card payments, drafting, reception) rather than a second calculation. Zero rows/zero connections is `ready` (Reporting, Automations, Integrations, Portal); only genuinely missing required configuration is `setup_required`. A Feature with no such mapping, or one that is disabled/unentitled, resolves `unavailable`. |
-| Limit / quota | Constraint on entitled use. | Structured, built: `platform_plan_quotas` (allowance key, label, unit, included quantity, period, hard limit, overage policy, optional service class/meter — never free text) and `organization_plan_quota_overrides` for a per-organization adjustment. `organization_effective_quotas` stays the raw per-Plan provenance (one row per contributing Plan, override applied); `app.allowance_states` (Work Order A) is the resolved runtime answer — composed across every contributing Plan/Add-on with a declared disagreement reported rather than silently resolved, a real window from `app.allowance_window` (the processor's own billing period, the Plan assignment's anchor, or the calendar — never a substituted one), and consumption from the one usage ledger or a named counter in `platform_allowance_counters`, with `enforcement: 'unenforced'` (null consumption, never zero) where nothing counts an allowance yet. `app.allowance_decision` is the one enforcement contract every runtime consumer asks; `app.record_usage` and `open_call`'s `app.spend_decision` enforce against it under an advisory lock, so a disabled button is never the only thing standing between a hard limit and a second write. `technicians` remains a real example of a configured allowance this resolves honestly without pretending to enforce, for want of a Resource-backed counter. |
-| Meter | Normalized measure of use. | `platform_meters` carries a `label`, `aggregation` (`sum`/`high_water`) and `writer` (the function that records it, or null for vocabulary-only) as of Work Order A — rates, usage events and reconciliations are built; current production writing is Voice (`app.charge_for_call`), Messaging (`app.charge_for_message`) and phone-number months (`public.record_phone_number_month`); recording, TTS, transcription and the two AI token meters remain vocabulary only. Unrelated to `platform_plan_quotas.allowance_key`, which is a broader vocabulary (e.g. `users` has no meter at all). |
-
-The catalogue terminology is the canonical product model, now built as its own additive layer
-(`20260918000001`) above the flatter legacy persistence, which stays exactly as load-bearing as
-it was rather than being normalized away.
-
-“Commercial” remains acceptable in persistence and accounting-oriented internal names such as
-`organization_commercial_terms`. Product UI should prefer Catalogue, Plans, Subscriptions,
-Entitlements, Usage and Billing because each names a different thing.
-
-Entitlement **resolution** answers whether the organization has the right to use a capability.
-Entitlement **enforcement** ensures every consequential UI, domain/server, direct RPC and
-automation write refuses that work when the right is absent. Resolution is generalized today;
-enforcement is partial. The complete path is Plan/Add-on → Entitlement → navigation/UI
-availability → domain/server authorization → database enforcement where appropriate.
-
-**Four independent axes decide whether a Feature is available to an organization, and none folds
-into another:** Entitlement (GildOps' grant), Activation (the organization's own opt-out — entitled
-ordinary capabilities are active by default), Readiness (whether it can do useful work right now,
-separate from whether it is switched on at all), and role authorization (`app.has_capability`,
-untouched by any of the first three). `organizationResolvedFeatureStates` is the one place the
-first three are combined for presentation; role authorization is never folded into it.
-
-Entitlement and limit resolution must follow this order: platform hard limit, Plan allowance,
-Add-on allowance, organization override, user or concurrency limit, then provider operational
-limit. An AI request additionally checks the actor's permission, safety policy, provider
-capability and allowed model; it records raw provider usage, normalized usage and cost. No
-credit unit, allowance, price or overage rule is authoritative until it is explicitly modeled.
-
-GildOps dogfoods this model as an ordinary internal organization with an ordinary Plan,
-Subscription and broad Entitlements. There is no tenant-zero, magic slug or unmetered bypass.
-
-## Product boundaries
-
-Catalogue Products and operator workspaces are separate facts (D68). The catalogue may continue to
-package Sales and Service while the operator works through CRM; a workspace can compose Features
-from several Products and a Product can contribute Features to several workspaces. Do not infer
-navigation from this catalogue table.
-
-| Product | Owns |
-|---|---|
-| Gild Sales | Commercial Sales capability family; contributes relationship and pipeline Features to CRM. |
-| Gild Service | Planned catalogue family with Features only, `unlisted`; case and request resolution surfaces belong to Support while relationship state remains in CRM. |
-| Gild Comms | Voice, SMS and Email. |
-| Gild Finance | Tenant pricing and Price Book, quotes, invoices, payments and job economics. This is separate from GildOps' own Plans, subscriptions and billing. |
-| Gild AI (catalogue key `agents`) | Intelligence capabilities: assistants, chatbots, knowledge, conversations, tools/actions, models/runtime, evaluations and AI usage. |
-| Gild Automations | Workflows, triggers, conditions, actions, AI actions, execution and human review. |
-| Gild Field | Work, Scheduling, Resources, Assets and Locations, plus dispatch policy. |
-| Gild Studio | Authoring and publishing website, booking entry, portal, forms, public brand/media and domains. It does not own campaign intent. |
-
-The shared catalogue row keyed `workspace` packages cross-cutting substrate. It does not create an
-Insights workspace. Insights is shared reporting infrastructure over the one aggregate.
-
-## Operator workspace composition
-
-| Workspace | Canonical responsibility |
-|---|---|
-| CRM | Customers, relationship intent/state, pipeline, qualification, follow-up and intake progression. |
-| Communications | Calls, voice, email, messaging, threads, delivery state, numbers and routing. |
-| Marketing | Campaigns, audiences, acquisition and lifecycle intent. It consumes Studio content and Communications delivery. |
-| Finance | Tenant/customer pricing, quotes, invoices, payments and job economics. |
-| AI | Assistants, business-intelligence interaction, knowledge and tool configuration. It reasons and invokes; it does not own durable workflows. |
-| Automations | Durable rules, triggers, sequences and workflow execution. |
-| Field | Operational work, scheduling, resources, locations and equipment/assets. |
-| Studio | Authoring and publishing website, forms, brand and portal experiences. |
-
-Home is the cross-workspace cockpit. Insights is cross-cutting analysis. Library is shared
-organization infrastructure. None is an owner workspace. Current navigation still exposes Sales
-rather than CRM, does not expose Marketing, and has only partial Finance, AI, Studio and Library
-surfaces; those are implementation facts, not changes to this target model.
-
-## Canonical records and projections
-
-A Customer, Conversation/thread, Invoice, Work Item and Document exists canonically once. A Form
-or reusable Template does too when multiple real consumers genuinely share it. Any workspace may
-project a canonical record. A projection reads authoritative state, may add context-specific
-secondary data and authorized actions, and links to the owning/canonical destination. It never
-copies authoritative state, takes ownership or reimplements business rules.
-
-Invocation follows the same rule. CRM can call through Communications; Marketing can use Studio
-content and Communications delivery; Finance can send through Communications; Automations can
-invoke every domain; AI can use permitted tools. The caller never acquires the invoked capability.
-
-Library is the target shared infrastructure for Files, Templates, Media and Knowledge. It has a
-shell — its own place in navigation and an empty-state page for each target collection plus
-Collections, Sources and Trash — but no organization-level collection behind any of them yet:
-record-attached Documents remain the only files that exist. Do not create a generic Form or
-Template persistence model until more than one real consumer needs the same canonical object;
-domain-specific templates retain domain behavior and ownership until then.
-
-A **Resource** is capacity — what work is done with. An **Asset** is the subject — what work is
-about. A work item may relate to both without merging their meaning or ownership.
-
-### Field and scheduling contract
-
-What exists, stated once so a later slice extends it rather than rediscovering it.
-
-- **Work Item is the operational unit.** A job, visit, appointment or inspection is a Work Item
-  whose Work Item Type is the tenant's own vocabulary; nothing branches on a type's name. A public
-  booking creates an ordinary Work Item through `create_booking`, in the status and for the
-  duration the type publishes, priced from the Price Book by `add_work_item_priced_line`. There is
-  no appointment, booking-job or dispatch-job entity, and no second service list.
-- **Work Item owns when; an assignment owns who.** `work_items.scheduled_during` (an absolute,
-  half-open `tstzrange`) and `occupies` (that window plus the tenant's buffer) are the one schedule.
-  `work_item_resource_assignments` is the only answer to which Resources take part — zero, one or
-  many, each for the work item's single window, with no "primary" one. Its `occupies` is derived
-  enforcement state, and `work_item_resource_assignments_resource_not_double_booked` is the only
-  guarantee a resource is not double-booked; `schedule_work_item`, `set_work_item_resources` and
-  `create_booking` write and never look first (I6, I7).
-- **Calendar and availability are derived.** No calendar, slot or availability table exists.
-  Operating hours are one input to availability, not availability, and a business that has set
-  none is treated as always open.
-- **Resource is schedulable capacity and is not a User.** `resources.membership_id` optionally
-  names the Membership a Resource represents; a van, a room or a contractor without a login is a
-  Resource with none, and a member with no Resource is not schedulable. A Resource has a
-  **class** (person, vehicle, equipment, facility, other) and optional **capabilities**, the
-  business's own words for what it can do (I78); a Membership-linked Resource is always a person.
-  Neither affects scheduling yet: no work type requires anything, so eligibility is not read.
-  Working hours and time off are I82.
-- **Location is where work happens**; **Asset is what the work is about** (`work_items.location_id`,
-  `asset_id`). A customer's vehicle is an Asset and the service van is, at most, a Resource.
-- **A work item may have many Resources.** A person, a van and a machine can all be on one job
-  (`work_item_resource_assignments`). Unscheduling releases every resource's time and keeps who is
-  on the job; scheduling given no list leaves the assignments alone and an empty list clears them.
-  A kind of work may say what it *needs* (a **Work Type Resource Requirement**, I81): class,
-  quantity and capabilities. That is a minimum, never an allowlist — any resource may still be
-  assigned, a job may be scheduled short of its needs, and whether it is short is derived on read.
-  *Eligible* (could do the role), *assigned* (on the job) and *available* (free at that time) are
-  three different questions, and only the last is `freeWindows`'.
-- **Resource Eligibility** is whether a resource can fill a requirement: its class matches and it holds
-  every capability the requirement names. **Resource Availability** is whether it is open and
-  uncommitted for an interval. A **Feasible Combination** is a set of distinct resources, one per
-  required slot, that are each eligible and available for one interval; a **Feasible Slot** is an
-  interval for which at least one exists (I85). *Eligibility ≠ availability ≠ assignment ≠
-  feasibility*: a job may carry a combination that is no longer feasible, and a feasible one may
-  not be assigned. Feasibility is advisory and derived; the schedule command and the database decide.
-- **Resource Route Context** is a resource's nearest previous and next committed Work around a candidate interval — within
-  the same working period, so yesterday's last job is not where today starts — plus an optional **routing base** Location as the
-  fallback origin. It is derived on read, never stored, and a job being rescheduled is never its own neighbour.
-  **Travel Feasibility** is whether the travel the route context requires fits within the unoccupied gaps: from the previous
-  job's occupied end to the candidate's start, and from the candidate's end *plus the business's one buffer* to the next job's
-  start. *Travel feasibility ≠ eligibility ≠ working availability ≠ commitment*: a resource can be eligible, open and free and
-  still be unable to arrive, and each is its own fact and reason (I94). Travel is **per resource** — a van and its driver have
-  different pasts — and is drawn into the matching's edges, so a free resource that cannot arrive is passed over for one that can.
-  No return to base is assumed after the last job, and nothing here orders a day's work, draws a route or keeps a position.
-- **Travel is derived, never copied onto Work.** The duration depends on whatever is adjacent, so moving the next job changes it;
-  there is no `travel_minutes`, and `work_items.occupies` is the schedule plus the buffer and nothing else. Scheduling asks a
-  `RoutingProvider` (`lib/adapters/routing`) for a driving duration between two stored points; vendor types never cross it, and
-  a map renderer is not a router. The default answer is the ordinary duration — no traffic model is assumed — and an
-  unconfigured or unreachable router makes a journey *unknown*, not free.
-- **Resource Working Hours** are the recurring, tenant-local declaration of when a resource
-  normally takes part (`resource_working_hours`, I82). **A Resource Availability Exception** is a
-  date-specific interval where that changes, today only *unavailable*. No custom hours means the
-  resource inherits the organization's. *Open* is organization hours ∩ resource hours − exceptions;
-  *free* is open − committed work. Time off is never a fake job.
-- **Booking Policy** is the set of rules for when customer self-service booking may happen; **Booking Cadence** is how far apart the
-  start times a customer is offered are, independent of the Work's duration (a 90-minute job may start every 30);
-  **Minimum Notice** is the elapsed time required between booking and start; **Booking Horizon** is how far ahead, in calendar days of
-  the organization's zone, a customer may book; **Reschedule Cutoff** and **Cancellation Cutoff** are the latest points before the start at
-  which a customer may still change or cancel their own booking (I86). *Policy ≠ feasibility*: a time can have every resource free and
-  still not be offered, and *duration ≠ cadence*. Staff scheduling is bound by feasibility and capability, never by customer policy.
-- **A Work Type declares whether it is scheduled** (`work_item_types.schedulable`, I80), apart
-  from `booking_status_id` and `booking_duration_minutes`, which answer *may a stranger book
-  this*. Bookable implies scheduled; scheduled implies nothing about booking. Schedule, Resources
-  and Locations are shown to a business that has declared some kind of work scheduled
-  (`hasSchedulableWork`) and withheld from one that has not; the routes still answer.
-- **Work with a window and no Resource occupies nothing**, so it blocks no slot — and it is on the
-  board: Schedule draws it as *Unassigned*, once, in Day, Week and Month.
-
-Business Offerings answer “what do we offer and how do we describe it?” and belong to shared
-BusinessOS context. Financial Operations' Price Book answers “what do we charge and under
-which pricing rules?” A Product may read both but must not merge them.
-
-Two financial directions must never share a ledger merely because GildOps dogfoods the platform:
-
-| Plane | Money direction | Owns |
-|---|---|---|
-| GildOps Plans & Billing | Organization → GildOps | Catalogue, Plans, Add-ons, Subscription terms, Entitlements, Usage/credits, retail rates, provider costs, GildOps invoices/payments and margin. |
-| Financial Operations | Tenant customer → Tenant | Price Book, quotes/estimates, invoices, payments, job economics and tenant revenue/margin. |
-
-CRM may display those business facts and Operations may contribute costs; neither absorbs
-Financial Operations. GildOps' internal organization uses Financial Operations only for its own
-customers, never as a shortcut for GildOps subscription revenue.
-
-## BusinessOS
-
-BusinessOS is the product-facing name for shared tenant semantic and operating context:
-identity, purpose, audience, Business Offerings, voice and messaging, policies, brand direction
-and operating configuration. Today that context is partly represented by Organization,
-organization profiles, brand settings, operating hours, work types and public-site content.
-Extend those precise owners; do not create a parallel “business context” record that drifts.
-Purpose, audience, voice, broader policies and strategic context are not yet complete.
-BusinessOS supplies context; it never overrides deterministic ownership. Pricing rules remain
-with Financial Operations/Pricing, availability and booking commitment with Scheduling,
-routing optimization with its owning policy/optimizer, invoice behavior with Financial
-Operations, and workflow execution with Automation.
-
-## Provider and Intelligence control planes
-
-A **Provider** is a supplier. A **provider capability** is the abstract service GildOps needs; a
-**provider binding** is an organization's configured relationship to a supplier; a **provider
-resource** is the concrete external number, domain, account or similar object. A **provider account** is GildOps' own upstream account (the Twilio parent) that bindings sit beneath, and is a different thing from an **integration connection**, which is a tenant's own authorization to an outside system (D54). Product features
-depend on capabilities, never on a provider brand. One supplier may implement several
-capabilities: Twilio can provide telephony voice, number inventory and SMS; Resend can provide
-email; Stripe can provide payments; an AI provider can provide model inference.
-
-Provider ownership may be platform-managed or tenant-specific and must be explicit. Twilio has
-the deepest current binding/resource/provisioning path (subaccounts, organizations bound
-beneath it); Resend's own tenant-facing binding (a business naming its sending domain) is
-lighter — one shared platform account rather than a subaccount per tenant — but is no longer
-naming-only: the domain is created and verified at the provider itself, the same proven lifecycle
-`organization_domains`'s own custom-hosting-domain binding already has (I67). OpenAI, Anthropic
-and Google share a third, generic **Provider Account** shape with
-neither — a label, a credential, verification and default status, and nothing per-organization
-beneath it (`platform_provider_accounts`, reused rather than duplicated per provider). Vercel and
-Resend reuse the same generic shape for two unrelated, platform-owned facts: Vercel's account is
-the hosting credential GildOps uses to register a tenant's own custom domain on its behalf;
-Resend's is GildOps' own platform invitation email, with the deployment's environment variable
-kept as the bootstrap fallback before one is configured. Automated health, drift detection and
-repair are still part of platform hardening.
-
-An **AI Runtime assignment** (`platform_ai_runtime_assignments`) is the platform-global choice of
-which implemented Provider Service, Provider Account and model answers one current AI
-capability — `operator_assistant`, `public_assistant` or `configuration_drafting` today, each a *model* choice. Speech to text, text to speech, realtime voice and embeddings are not model choices and will need their own capability dimension; that table is not generalized ahead of ElevenLabs or Deepgram being a concrete caller. Explicit beats implicit: an
-assignment is authoritative and a failure never falls back to another vendor; no assignment for a
-capability keeps that deployment's legacy environment-variable default. Assigning one is a
-platform-staff act through `record_ai_runtime_assignment`, never a tenant one.
-
-A **Provider Service** (`platform_provider_services`) is one capability a Provider exposes at a
-grain finer than the Provider itself — Google is a Provider; Gemini Interactions and Routes are
-two of its Services, each independently `implementation_state` (what GildOps runs) and
-`vendor_status` (the upstream service's own maturity, never collapsed into the first). A
-Connector's own child apps (`platform_connector_apps`) carry the identical two facts, at the
-same grain, for the outside-app axis. Either may map, descriptively only, to a Catalog Feature
-(`platform_provider_service_features`, `platform_connector_app_features`) to answer "what GildOps
-Feature can this external capability support" — never a Plan/entitlement grant, which stays
-`platform_plan_*_grants`'s alone. The five external nouns — Provider, Provider Service,
-Connector, Connection, Resource — are never collapsed into each other; see D55 and
-`provider-service-catalogue.test.ts`.
-
-The Locations Map (Slice 3.5) renders through MapLibre against a tenant-agnostic style URL
-(`mapConfig()`), never a Google Maps Provider Service — geocoding (an address to coordinates)
-and map rendering (coordinates to a picture) are two different capabilities behind two different
-adapters, and a Google routing/Places Provider Service's output is scheduling data or address
-data, not permission to draw Google's own map geometry on a different renderer.
-
-Intelligence is a horizontal runtime for model providers, routing, fallback, budgets, quotas,
-concurrency, metering, cost, health, audit, tools, safety and agents. Product-specific AI
-features stay inside their Products. GildOps Intelligence may package those features commercially;
-AI Receptionist is a Solution composed from Communications / Voice, Automation, CRM and the
-Intelligence runtime, not a new engine or Product.
-
-A domain caller asks for a capability, never a vendor. Two capabilities are managed by AI Runtime
-assignment (above): `operator_assistant` and `public_assistant`, each answered by whichever of the
-Anthropic, OpenAI or Gemini adapters (`apps/api/app/providers/{anthropic,openai,google}`) the
-current assignment names, through one shared tool loop (`apps/api/app/ai/loop.py`) — a provider
-adapter translates one turn and never authorizes tenant access, executes a business action, or
-owns the loop itself. `configuration_drafting` is the third, assigned the same way: the drafting
-adapter in `apps/web` (`lib/adapters/drafting`) holds no model, provider or key and calls
-`apps/api`'s `/ai/draft-configuration`, which resolves the assignment and offers the model one way
-to answer — a proposal a person reviews (D83).
-
-Initially local-model bindings are Platform Context only. GildOps' internal organization may
-consume those capabilities through ordinary managed features. External tenant organizations may
-also consume managed AI-backed GildOps features, but cannot configure Ollama URLs/local inference
-endpoints, view platform credentials, or select arbitrary internal models. Tenant-managed model
-credentials, endpoints, model selection and dedicated inference are deferred until their control
-and isolation model is designed.
-
-### Credentials: four kinds, four owners
-
-A credential is not one thing. Each kind below has one owner, one writer, one reader and one place
-it is stored, and none of them is another's synonym (D84). A new outside service starts by saying
-which of these it is, not by adding a form.
-
-| | **Platform Provider Account** | **Integration Connection** | **Secret Reference** | **Provider Resource Secret** |
-|---|---|---|---|---|
-| What it is | GildOps' own account with a supplier (Twilio, OpenAI, Resend) | A business's delegated sign-in to an account *it* owns (Google, Slack, a GitHub App installation) | A private value a business typed in, for a purpose it stated | A credential GildOps generated for a resource it provisioned for a business (a subaccount's API key) |
-| Owner | GildOps | The business (the account is theirs; GildOps holds a grant) | The business | The business's scope, created by GildOps |
-| Table | `platform_provider_accounts` | `integration_connections` | `secret_references` | `organization_provider_resources` |
-| Who may set it | Platform staff, `record_provider_account` / `store_provider_account_credential` | The signed-in person, through the provider's own consent screen; the API stores what comes back | A member holding `secret.manage`, `create_secret_reference` / `rotate_secret_reference` | Platform staff, `store_provider_secret`, at the moment of provisioning |
-| Who may replace it | Platform staff | The person reconnecting; the API rotating a token | A member holding `secret.manage` | Platform staff re-provisioning |
-| Who may see that it exists | Platform staff | The business (`integration_connections`); platform staff counts only | A member holding `secret.manage`. Not platform staff | Platform staff |
-| Who may read the plaintext | `provider_operator`, which only `apps/api` wears, after proving the caller is staff | `integration_operator`, which only `apps/api` wears, after proving the caller may manage the business's integrations | `secret_operator`, which only `apps/api` wears. **No runtime asks yet** | Nobody. The door that stores it returns an id, never the value |
-| Stored | Vault; `secret_id` in no grant | Vault; `secret_id` in no grant | Vault; `secret_id` in no grant | Vault; `secret_id` in no grant |
-| Used by | `apps/api` provider calls and the AI loop | `apps/api` connector operations, DNS automation | Nothing yet. The first consumer is a Studio deployment that names the key it requires | Provider calls scoped to that business |
-| Revoked by | Disabling the account; replacing the value | Disconnect (revoke upstream where the vendor allows, delete the credential, retire the row) | Disable (kept, refused) or delete (the Vault row goes with it) | Provider-side deprovisioning |
-
-Two more things are credentials in a loose sense and are **not** any of these: a deployment's own
-environment (the bootstrap for the runtime itself, and the vendor registrations GildOps holds for
-its OAuth clients and the GitHub App, which are `apps/api` configuration and never reach a tenant),
-and an opaque *identifier* a business stores because an identifier grants nothing (D39).
-
-**A GitHub connection is not a repository, a Studio project or a deployment.** The *connection* is
-the business's authorization (a GitHub App installation, the one `integration_connections` row). A
-*repository* is one thing that authorization reaches (`integration_resources`, written only by the
-machine role that holds the credential). A *Studio project* is GildOps' own record of something it
-builds, and a *deployment* is one release of it. Studio asks the source-control capability for
-repositories (`lib/domain/source-control`) and names no vendor; nothing stores a Studio project or
-deployment yet, so nothing yet stores a reference from one to a repository (D86).
-
-A **Connector's** operational state is three independent facts and a fourth that is not the
-connector's at all: the catalogue's *product status* (`planned`, `beta`, `live`); whether this
-deployment holds an *adapter*; whether it holds the vendor's *registration*; and, separately, one
-business's *connection* health. `apps/api` is the only runtime that knows the middle two, so the web
-asks it (D85). A **Provider's** progress is likewise six separate facts — catalogued, account
-configurable, credential configured, service implemented, AI runtime assigned, operational — and a
-catalogue row is only the first (`lib/domain/providers/stages.ts`).
-
-## Engine ownership
-
-An engine is code that owns a load-bearing calculation or runtime, not something a tenant buys.
-Products, Modules, Features and Add-ons are commercial/product taxonomy; engines are technical
-ownership boundaries.
-
-| Engine | Owns |
-|---|---|
-| Pricing | `priceWorkItem`, tenant Price Book calculation, quoted and invoice line semantics, and job economics (I4). It does not own GildOps Plans or subscription billing. |
-| Scheduling | `freeWindows`, `listSchedule`, resource commitment, availability, operating hours and conflict prevention (I5, I7). |
-| Automation | The single trigger-condition-action execution runtime and its recorded outcomes (I22-I25). |
-
-Scheduling owns every time/resource commitment. Booking, Maintenance and Dispatch are Modules,
-policies and interfaces over the Scheduling engine; they must not grow separate calendars or
-availability calculations. Only a future route/travel optimizer with its own independent
-optimization rules may earn a separate engine boundary. Automation and workflows similarly
-share one execution runtime even when they have different authoring experiences.
-
-Communications, CRM, Marketing, Insights, Studio, Voice and AI are not engines merely because
-they are important product areas. Add an engine only when a distinct load-bearing calculation or
-runtime has evidence and enforced invariants; do not stub future engine directories.
-| I95 | A website is one revision of many pages. Pages, sections and navigation are a single validated snapshot; a stranger reads the one snapshot a site points at, so no page, section or link of one revision is ever shown beside another's, and publishing moves that pointer and archives the previous snapshot in one transaction. Pages and sections have stable ids and navigation names a page by id, never by path. Exactly one page is the homepage; a page path is one segment, unique within the site and never a path the platform owns. Content is a closed typed vocabulary — no HTML, script, component name or foreign URL — and a form section names a form of the same business. A business creates its own website and a starter is copied, never referenced. | `public_site_revisions` and `public_sites.current_published_revision_id` (composite `(organization_id, site_id, id)` key) with partial unique indexes for one working and one published revision per site; `app.public_site_content_problem`/`app.public_section_problem` run in `app.guard_public_site_revision` for every writer, which also makes a published revision immutable and refuses a foreign or archived form; `publish_public_site_revision` is the only pointer move; all tables forced RLS, no role grants, manager RPCs check `organization.manage`; `create_public_site` copies a platform template through `app.rekey_site_content` (fresh ids). `public-site-publishing.test.ts` (creation with no hostname, coherent switch, restore, malformed content, reserved and duplicate paths, tenant isolation, immutability, GildOps' root), `form-placements.test.ts`, `public-site-schema.test.ts` (one definition per kind, reserved lists agree, no markup, one renderer, Studio sidebar), `website-composition.test.ts`, `website-workbench.test.tsx`, `studio-website.spec.ts`. |
+# GildOps Domain Model
+
+## Purpose
+
+This document defines the **canonical business concepts, ownership boundaries, relationships and invariants** used by GildOps.
+
+It answers:
+
+- What is this thing?
+- Who owns it?
+- What is it related to?
+- What is authoritative?
+- What is only a projection?
+- What must never be confused with it?
+
+This document is intentionally smaller than a schema reference.
+
+The database schema remains the executable persistence contract. The domain model defines the meaning that the schema and application must preserve.
+
+Implementation status belongs in `docs/roadmap.md`.
+
+Historical rationale belongs in `docs/decisions/`.
+
+---
+
+## Modeling rules
+
+### 1. A fact has one canonical owner
+
+A business fact should exist canonically once.
+
+Other workspaces may display it, summarize it, link to it or act on it through authorized domain operations.
+
+They do not create their own authoritative copy.
+
+```text
+canonical record
+      ↓
+projections / related views / summaries
+```
+
+A projection may contain context-specific presentation or derived data.
+
+It must not:
+
+- become a second lifecycle;
+- copy the authoritative business rule;
+- silently fork status;
+- require two updates to keep one fact correct.
+
+---
+
+### 2. Ownership does not follow invocation
+
+A domain does not acquire another domain's state merely because it invokes it.
+
+Examples:
+
+- CRM may ask Communications to contact a customer.
+- Support may reply through Communications.
+- Marketing may send through Communications.
+- Finance may send an invoice through Communications.
+- Automations may invoke CRM, Communications, Finance, Field or Studio operations.
+- AI may invoke approved tools from any domain.
+
+The invoked domain remains the owner.
+
+---
+
+### 3. Tenant state is organization-scoped
+
+Tenant-owned business state belongs to one Organization.
+
+Cross-tenant access is not a UI convention. It is an authorization and database boundary.
+
+A caller must not gain access to another organization by:
+
+- knowing an identifier;
+- constructing a URL;
+- changing a request parameter;
+- being Platform staff without using an explicitly privileged path;
+- belonging to GildOps' own organization.
+
+---
+
+### 4. Entitlement and authorization are different
+
+Two independent questions must be answered:
+
+```text
+Is this organization entitled to use the capability?
+Is this actor allowed to perform this operation?
+```
+
+An organization buying a capability does not grant every member permission to operate it.
+
+A role having a capability does not create a commercial entitlement that the organization has not purchased or activated.
+
+---
+
+### 5. Historical facts do not silently follow today's configuration
+
+When a business commits to a financial or operational fact whose historical meaning matters, the committed record should preserve the relevant terms.
+
+Examples include:
+
+- invoice lines;
+- priced work;
+- recorded costs;
+- commercial terms;
+- usage pricing;
+- provider cost attribution;
+- checklist instances where later template edits must not rewrite completed work.
+
+Configuration answers how the business operates now.
+
+It must not rewrite history unless the domain explicitly models a correction.
+
+---
+
+### 6. Derived state is not a second source of truth
+
+A value may be cached or projected for enforcement or performance.
+
+That does not make it authoritative.
+
+Every derived value must have a clear source and synchronization rule.
+
+---
+
+### 7. Public identity does not imply tenant membership
+
+A public customer, booking visitor, proposal reviewer or portal user is not automatically an organization member.
+
+Public access is narrow and task-specific.
+
+Organization membership is explicit.
+
+---
+
+## Scope model
+
+GildOps has three human operating scopes.
+
+### Person
+
+A Person is the signed-in human identity.
+
+Person-owned concerns include:
+
+- personal profile;
+- sign-in email;
+- password/authentication state;
+- person-level security settings.
+
+A Person may belong to several Organizations.
+
+A Person is not a Role.
+
+A Person is not a Membership.
+
+---
+
+### Organization
+
+An Organization is one business operating in GildOps.
+
+It owns tenant business state, including its:
+
+- memberships;
+- business configuration;
+- customers;
+- work;
+- communications;
+- resources;
+- locations;
+- assets;
+- financial operations;
+- automations;
+- public experiences;
+- connections;
+- entitlements and usage.
+
+An Organization is the tenant boundary.
+
+GildOps' own business is an ordinary Organization for tenant product behavior.
+
+---
+
+### Platform Administration
+
+Platform Administration is the privileged SaaS control plane operated by GildOps.
+
+It is a scope, not a tenant and not a workspace.
+
+Platform authority is independent of ordinary organization membership.
+
+Platform Administration may inspect or manage platform-owned facts across organizations only through explicitly authorized platform operations.
+
+---
+
+## Identity and access
+
+### Person
+
+**Definition:** A human identity authenticated by the identity provider.
+
+**Canonical authority:** authentication identity.
+
+**Owns:**
+
+- authentication credentials;
+- verified email;
+- person-level profile metadata.
+
+**Does not own:**
+
+- organization role;
+- organization-specific display name;
+- tenant business permissions.
+
+---
+
+### Organization profile
+
+**Definition:** The business's own identity and operating metadata.
+
+Typical facts include:
+
+- business name;
+- locale;
+- timezone;
+- currency;
+- public identity;
+- operating configuration.
+
+Organization profile data belongs to the Organization, not to the owner's personal profile.
+
+---
+
+### Membership
+
+**Definition:** The relationship between one Person and one Organization.
+
+A Membership answers:
+
+> This person participates in this organization.
+
+It may include organization-specific information such as:
+
+- display name;
+- assigned Role;
+- membership lifecycle.
+
+A Membership does not replace the Person.
+
+Deleting or changing a Membership must not rewrite the Person's global identity.
+
+---
+
+### Role
+
+**Definition:** A reusable organization-owned grouping of permissions/capabilities.
+
+A Role belongs to one Organization.
+
+Roles describe what a member may do in that organization.
+
+Roles are not commercial entitlements.
+
+---
+
+### Capability
+
+**Definition:** An authorization-level permission to perform or manage a class of operation.
+
+Examples include the ability to:
+
+- place calls;
+- send messages;
+- manage roles;
+- manage integrations;
+- manage billing;
+- read reports.
+
+Capabilities are enforced by server/database authorization.
+
+Hiding a UI control is not enforcement.
+
+---
+
+### Platform authority
+
+**Definition:** Explicit permission to operate part of the GildOps control plane.
+
+Platform authority is separate from:
+
+- tenant Membership;
+- tenant Role;
+- ownership of GildOps' own Organization.
+
+Platform authority must be checked explicitly.
+
+---
+
+### Invitation
+
+**Definition:** A time/lifecycle-bounded invitation for a person to join an Organization.
+
+An invitation is not a Membership until accepted under the rules of the access system.
+
+Invitation state should move through an explicit lifecycle and remain auditable.
+
+---
+
+### External actor
+
+**Definition:** An identity or narrow access context used for a customer/public task without organization membership.
+
+Examples include:
+
+- portal access;
+- proposal review;
+- public booking;
+- anonymous/public form submission.
+
+External actors receive only the minimum access required for their specific flow.
+
+---
+
+## CRM
+
+### Customer
+
+**Definition:** The canonical organization-owned record representing a customer or prospect relationship.
+
+CRM owns the Customer relationship.
+
+A Customer may be related to:
+
+- communications;
+- locations;
+- work items;
+- proposals;
+- quotes;
+- invoices;
+- payments;
+- documents;
+- support cases;
+- form submissions;
+- discovery information.
+
+Those related records remain owned by their respective domains.
+
+A Customer should not be copied into each workspace.
+
+---
+
+### Lead
+
+**Definition:** A CRM lifecycle concept representing a potential customer relationship that has not yet reached the organization's chosen qualification/relationship state.
+
+A Lead is not automatically a second person/customer table.
+
+Unless a later accepted domain decision introduces a separate canonical Lead entity, lead state belongs to the Customer/relationship lifecycle.
+
+---
+
+### Opportunity
+
+**Definition:** A commercial relationship context representing potential future business.
+
+Opportunity semantics belong to CRM.
+
+Do not create an Opportunity entity merely to rename pipeline stage.
+
+If a distinct Opportunity record is introduced, it must have a lifecycle and use case that cannot be represented safely as Customer relationship state.
+
+---
+
+### Relationship stage
+
+**Definition:** The organization's configured vocabulary for where a Customer relationship currently sits in its CRM process.
+
+Stages are organization-owned configuration.
+
+Changing stage configuration must not silently falsify historical activity.
+
+---
+
+### Discovery Snapshot
+
+**Definition:** A durable record of what GildOps learned about a prospect or customer during discovery.
+
+It may capture facts such as:
+
+- business shape;
+- people/resources;
+- operating hours;
+- locations;
+- current tools;
+- communication channels;
+- scheduling needs;
+- quoting/invoicing needs;
+- automation requirements;
+- website/public needs.
+
+A Discovery Snapshot is evidence captured at a point in time.
+
+It is not the Organization configuration itself.
+
+It may seed a configuration proposal or provisioning handoff after acceptance.
+
+---
+
+### Commercial Proposal
+
+**Definition:** A durable proposal offered to a prospect/customer describing a proposed GildOps commercial and implementation arrangement.
+
+A proposal is not a Subscription.
+
+Acceptance may create a handoff into provisioning.
+
+The resulting Organization, Plan, Entitlements and configuration are canonical in their own domains after provisioning.
+
+---
+
+## Support
+
+### Support Case
+
+**Definition:** The canonical record for a customer problem, request, complaint or service issue that requires managed resolution.
+
+Support owns:
+
+- case lifecycle;
+- assignment;
+- priority;
+- queue;
+- escalation;
+- service target/SLA policy;
+- resolution state.
+
+A Support Case may relate to:
+
+- Customer;
+- Conversation;
+- Call;
+- Work Item;
+- Invoice;
+- Asset;
+- Location.
+
+It does not own copies of those records.
+
+---
+
+### Request
+
+A request may be represented by a Support Case when it needs durable ownership, assignment, service expectations or resolution tracking.
+
+Not every message is a request.
+
+Not every request requires a Support Case.
+
+---
+
+## Communications
+
+### Conversation
+
+**Definition:** A durable business conversation over a supported messaging channel.
+
+A Conversation owns channel-level continuity.
+
+Examples include:
+
+- SMS thread;
+- email thread.
+
+A Conversation may relate to a Customer without becoming CRM-owned.
+
+Channel-specific addressing belongs to communication identities.
+
+---
+
+### Message
+
+**Definition:** One inbound or outbound communication event within a Conversation.
+
+A Message includes channel-relevant delivery state and addressing context.
+
+The carrier/provider's delivery vocabulary may be preserved as observed state, while business presentation may normalize it.
+
+A Message is not an Automation run even when sent by an Automation.
+
+---
+
+### Call
+
+**Definition:** One business-level voice interaction.
+
+The business Call is distinct from provider legs/participants used to fulfil it.
+
+A Call may include:
+
+- inbound/outbound direction;
+- customer relationship;
+- business number/identity;
+- participants;
+- events;
+- recording metadata;
+- outcome/disposition;
+- follow-up context.
+
+Provider callbacks update the same Call rather than creating competing business records.
+
+---
+
+### Call participant / provider leg
+
+**Definition:** One participant or provider-level leg used to fulfil a Call.
+
+This is execution detail under the Call.
+
+It should not be presented as a second business Call.
+
+---
+
+### Communication identity
+
+**Definition:** An organization-controlled identity used to send or receive through a communication channel.
+
+Examples:
+
+- Phone Number;
+- Email Identity.
+
+A communication identity is not the same as a provider account.
+
+The server resolves authoritative sender/address information from the selected identity rather than trusting a browser-supplied address.
+
+---
+
+### Phone Number
+
+**Definition:** An organization-facing telephony identity backed by provider-observed/provisioned state.
+
+A Phone Number may have:
+
+- lifecycle/readiness;
+- inbound/outbound capability;
+- routing configuration;
+- provider resource reference.
+
+The organization must not forge provider-observed facts.
+
+---
+
+### Email Identity
+
+**Definition:** An organization-facing email sending identity.
+
+It is distinct from the sending domain that proves the organization controls the domain.
+
+One sending domain may support one or more email identities according to provider/domain policy.
+
+---
+
+### Routing policy
+
+**Definition:** Organization-owned Communications policy determining how inbound/outbound communications are handled.
+
+Routing belongs to Communications.
+
+Provider-specific implementation belongs behind an adapter/control-plane boundary.
+
+---
+
+## Field and work
+
+### Service / Offering
+
+**Definition:** A reusable definition of what the business offers or performs.
+
+A Service/Offering describes the work concept.
+
+It is distinct from:
+
+- one Work Item instance;
+- its price;
+- its schedule.
+
+A Service may eventually reference:
+
+- expected duration;
+- resource requirements;
+- checklist/template;
+- bookability;
+- scheduling policy;
+- pricing rule.
+
+Do not collapse these concerns into one record without explicit ownership.
+
+---
+
+### Work Type
+
+**Definition:** Organization-owned configuration describing a class of Work Item and its operational behavior.
+
+Work Type may determine:
+
+- available statuses;
+- transitions;
+- whether work is schedulable;
+- requirements;
+- checklist/template policy.
+
+---
+
+### Work Item
+
+**Definition:** One instance of work to be performed.
+
+Work owns:
+
+- what must be done;
+- customer/subject context;
+- type;
+- status/lifecycle;
+- requirements;
+- execution-related facts.
+
+Work does not own the calculation of availability.
+
+A Work Item may be related to:
+
+- Customer;
+- Location;
+- Asset;
+- one or more Resources;
+- Schedule;
+- priced lines;
+- Invoice;
+- Documents;
+- Events.
+
+---
+
+### Work status
+
+**Definition:** The current configured operational state of a Work Item.
+
+Status transition validity belongs to the organization's configured Work Type transition model.
+
+A status change must be validated authoritatively.
+
+---
+
+### Work transition
+
+**Definition:** An allowed movement between two statuses for a Work Type.
+
+A Work Type with configured transition rules does not become unconstrained merely because the UI fails to show a control.
+
+---
+
+### Checklist Template
+
+**Definition:** Reusable configuration for checklist content applied to work.
+
+Where historical meaning matters, a Work Item receives a snapshot/copy rather than permanently depending on a mutable template.
+
+---
+
+### Resource
+
+**Definition:** Capacity used to perform work.
+
+Examples:
+
+- technician;
+- crew;
+- service vehicle;
+- room;
+- machine used by the business.
+
+A Resource can have:
+
+- class;
+- capabilities;
+- availability/working-hours policy;
+- routing base;
+- travel mode;
+- membership relationship where applicable.
+
+A Resource is not a Person, though a Resource may represent a member's capacity.
+
+---
+
+### Resource assignment
+
+**Definition:** The relationship between a Work Item and a Resource committed or proposed to perform it.
+
+Assignment is organization-scoped and participates in scheduling feasibility.
+
+---
+
+### Location
+
+**Definition:** A physical or service location relevant to the Organization.
+
+A Location may relate to:
+
+- Customer;
+- Work Item;
+- Resource routing;
+- public/service context.
+
+Coordinates/geocoding are attributes or derived provider observations, not a replacement for the Location record.
+
+---
+
+### Asset
+
+**Definition:** A thing the business tracks, maintains, services or performs work about.
+
+An Asset may be customer-owned or organization-owned.
+
+An Asset is the **subject** of work.
+
+A Resource is **capacity used to perform** work.
+
+---
+
+### Asset reading
+
+**Definition:** A time-stamped measurement or counter associated with an Asset.
+
+Examples include mileage, hours or another configured measure.
+
+Readings can inform maintenance/automation policy without turning the Asset into an Automation record.
+
+---
+
+## Scheduling
+
+### Schedule
+
+**Definition:** The projection of committed or candidate work over time and resources.
+
+Scheduling owns:
+
+- when work may occur;
+- resource commitment;
+- feasibility;
+- availability.
+
+Work owns the Work Item itself.
+
+---
+
+### Availability
+
+**Definition:** The answer to whether one or more Resources can accept work in a time window under current scheduling constraints.
+
+There must be one authoritative availability model.
+
+Public Booking, internal Schedule and automation must not invent separate opinions.
+
+Displayed availability is advisory until the authoritative write/constraint accepts the commitment.
+
+---
+
+### Feasibility
+
+**Definition:** Whether a proposed scheduling choice satisfies all required scheduling constraints.
+
+Feasibility may include:
+
+- resource availability;
+- required capabilities;
+- operating hours;
+- resource working hours/exceptions;
+- travel/routing constraints;
+- work requirements;
+- scheduling policy.
+
+---
+
+### Operating Hours
+
+**Definition:** Organization-local recurring business operating windows.
+
+Operating Hours are local-time policy, not absolute timestamps.
+
+---
+
+### Resource Hours / Exceptions
+
+**Definition:** Resource-specific availability policy that further constrains organization operating time.
+
+---
+
+### Booking Policy
+
+**Definition:** Rules controlling what a public/customer booking experience may offer or accept.
+
+Booking policy is distinct from scheduling feasibility.
+
+Policy may restrict what is allowed to be offered even when a technically feasible slot exists.
+
+---
+
+## Finance
+
+### Price Book
+
+**Definition:** The organization's reusable tenant-facing pricing configuration.
+
+It answers what the Organization charges for its own services/work.
+
+It is separate from GildOps' SaaS catalogue.
+
+---
+
+### Price Book Item
+
+**Definition:** One reusable price definition in the organization's Price Book.
+
+When applied to committed work, historical pricing should be snapshotted rather than resolved forever against the mutable Price Book row.
+
+---
+
+### Priced Work Line
+
+**Definition:** A snapshotted price applied to a Work Item.
+
+It captures the commercial meaning required to preserve the agreed amount even if the Price Book changes later.
+
+---
+
+### Quote
+
+**Definition:** A commercial offer from the Organization to its Customer.
+
+A Quote is tenant Finance.
+
+It is not a GildOps subscription proposal.
+
+---
+
+### Invoice
+
+**Definition:** A financial claim by the Organization against its Customer.
+
+An Invoice owns:
+
+- invoice identity/number;
+- currency;
+- line snapshots;
+- status/standing;
+- customer relationship.
+
+An Invoice total is derived from its lines and related financial facts rather than maintained as an independently editable truth.
+
+---
+
+### Invoice Line
+
+**Definition:** A historical/snapshotted charge represented on an Invoice.
+
+It must remain understandable after upstream pricing changes.
+
+---
+
+### Payment
+
+**Definition:** A recorded movement or correction against an Invoice.
+
+Provider settlement may be observed through a payment provider, but the tenant financial record remains canonical in Finance.
+
+Corrections should preserve history rather than rewriting the original payment into a different event.
+
+---
+
+### Work Cost
+
+**Definition:** A cost attributable to performing Work.
+
+A Work Cost carries its own monetary/currency context.
+
+---
+
+### Job Economics
+
+**Definition:** A derived financial reading connecting tenant revenue and work costs.
+
+Job Economics is analysis over canonical pricing/invoice/cost facts.
+
+It is not a separate ledger.
+
+---
+
+## Platform commercial model
+
+### Catalogue Product
+
+**Definition:** A customer-facing commercial grouping of GildOps capability.
+
+It is not a workspace.
+
+---
+
+### Module
+
+**Definition:** A commercially/configurationally meaningful capability group.
+
+A Module may map to one or more Features and may support multiple workspace surfaces.
+
+---
+
+### Feature
+
+**Definition:** A concrete capability that can be represented in catalogue/entitlement state.
+
+---
+
+### Plan
+
+**Definition:** A reusable package of GildOps commercial capability and defaults.
+
+A Plan may include:
+
+- Features;
+- allowances;
+- limits;
+- recurring price.
+
+---
+
+### Add-on
+
+**Definition:** An optional package that extends the base Plan.
+
+---
+
+### Subscription
+
+**Definition:** The provider-backed and GildOps-recorded commercial lifecycle for one Organization's recurring GildOps package.
+
+A Subscription is not the same as Entitlement.
+
+Subscription state is an input to commercial/service-access resolution.
+
+---
+
+### Commercial Term
+
+**Definition:** Effective-dated evidence of what GildOps has agreed/sold for a period.
+
+Terms preserve historical commercial meaning.
+
+---
+
+### Entitlement
+
+**Definition:** Resolved organization-level permission to use a Feature/capability.
+
+Entitlement combines the relevant commercial state and activation rules.
+
+It remains separate from member authorization.
+
+---
+
+### Allowance
+
+**Definition:** A resolved quantity included for an Organization over a defined period or reset policy.
+
+An allowance is not descriptive marketing text. It must resolve to an enforceable/measurable quantity where the product depends on it.
+
+---
+
+### Limit
+
+**Definition:** A constraint on operation or capacity.
+
+Limits may be commercial or operational.
+
+They must have a clear enforcement point.
+
+---
+
+### Meter
+
+**Definition:** The normalized product concept used to measure usage.
+
+Meters should represent what GildOps sells/measures rather than directly exposing provider billing vocabulary.
+
+---
+
+### Usage Event
+
+**Definition:** One immutable commercial reading of what an Organization consumed.
+
+A Usage Event may include:
+
+- meter;
+- quantity;
+- moment/period;
+- allowance application;
+- retail charge state;
+- fulfilment/provider attribution.
+
+There should be one commercial usage ledger.
+
+---
+
+### Retail Rate
+
+**Definition:** Effective-dated GildOps pricing for a tenant-facing Meter.
+
+Changing a rate must not reinterpret historical Usage Events.
+
+---
+
+### Provider Cost Component
+
+**Definition:** One provider-billed ingredient used to fulfil a Usage Event.
+
+One Usage Event may have several independently reconciled cost components.
+
+Provider cost is platform-private.
+
+---
+
+### Provider Rate
+
+**Definition:** Effective-dated provider cost information used to estimate/record fulfilment cost.
+
+---
+
+### FX Rate
+
+**Definition:** Effective-dated conversion evidence used for reporting across currencies.
+
+Missing conversion data is unknown, not zero.
+
+---
+
+## Automations
+
+### Automation Rule
+
+**Definition:** A durable organization-owned orchestration rule.
+
+A Rule defines:
+
+```text
+Trigger
+Conditions
+Actions
+```
+
+It may be enabled/disabled and has execution history.
+
+A rule is not a one-off AI suggestion.
+
+---
+
+### Trigger
+
+**Definition:** The event or condition that begins rule evaluation.
+
+Triggers should reference canonical domain events or scheduled/external conditions through explicit contracts.
+
+---
+
+### Condition
+
+**Definition:** A predicate evaluated against the rule's allowed context.
+
+---
+
+### Automation Action
+
+**Definition:** An approved operation the automation runtime may invoke.
+
+Actions should call canonical domain operations rather than reproducing business logic.
+
+---
+
+### Automation Run
+
+**Definition:** One execution attempt/history record for an Automation Rule.
+
+The run records what happened.
+
+It is not the canonical business record changed by the action.
+
+---
+
+## AI
+
+### Agent Conversation
+
+**Definition:** A durable interaction between an authorized actor and a GildOps AI assistant.
+
+It contains conversational context, not business truth.
+
+---
+
+### Agent Run
+
+**Definition:** One model/tool execution lifecycle within an AI interaction.
+
+A run may produce:
+
+- an answer;
+- tool observations;
+- a proposed action;
+- a refusal/error.
+
+---
+
+### Tool
+
+**Definition:** A narrow operation through which AI may read or act on GildOps capability.
+
+Tools must respect:
+
+- current actor;
+- organization scope;
+- entitlement;
+- authorization;
+- canonical domain rules.
+
+A tool is not a direct unrestricted database handle.
+
+---
+
+### Intended / Proposed Action
+
+**Definition:** A consequential action suggested by AI but not yet executed when approval is required.
+
+The action remains pending until an authorized human explicitly approves it.
+
+The execution then uses the normal domain operation.
+
+---
+
+### Configuration Proposal
+
+**Definition:** A structured proposed Organization configuration produced from discovery or guided setup.
+
+A Configuration Proposal is not authoritative configuration.
+
+Applying it invokes the same canonical configuration operations used by a person.
+
+---
+
+### AI runtime assignment
+
+**Definition:** Platform-owned policy determining which supported model/runtime fulfils a GildOps AI capability.
+
+It is Platform Administration state.
+
+Tenants consume the capability; they do not thereby own the platform runtime assignment.
+
+---
+
+## Studio and public experiences
+
+### Brand
+
+**Definition:** Organization-owned visual/public identity configuration.
+
+Brand is source context consumed by public/customer-facing surfaces.
+
+It is not a separate public-site copy of the Organization.
+
+---
+
+### Domain / Hostname
+
+**Definition:** A public hostname claim/configuration associated with the Organization's published experiences.
+
+Domain verification/provisioning may depend on providers, but the organization-facing domain relationship remains canonical in GildOps.
+
+---
+
+### Public Site
+
+**Definition:** A publishable customer-facing website owned by Studio.
+
+The public renderer reads the current published state.
+
+Drafting and publishing must preserve a distinction between editable draft and public revision.
+
+---
+
+### Site Revision
+
+**Definition:** A versioned authored state of a Public Site.
+
+Publishing selects approved revision state rather than making every editor keystroke public.
+
+---
+
+### Form
+
+**Definition:** A reusable authored form owned by Studio.
+
+A Form may be placed in:
+
+- website;
+- standalone/public route;
+- booking flow;
+- portal;
+- other supported experiences.
+
+Placement references the Form; it should not create uncontrolled copies.
+
+---
+
+### Form Revision
+
+**Definition:** Versioned published form definition.
+
+A submission must remain interpretable even after the Form is edited later.
+
+---
+
+### Form Submission
+
+**Definition:** One immutable submission against a published form context.
+
+A submission may create or update records owned elsewhere.
+
+Example:
+
+```text
+Studio owns Form
+CRM owns resulting Customer/intake state
+```
+
+---
+
+### Portal
+
+**Definition:** A customer-facing authenticated experience exposing a narrow projection of the Organization's records to the customer.
+
+The Portal does not become owner of:
+
+- Customer;
+- Work Item;
+- Invoice;
+- Payment.
+
+It reads/acts through those domains.
+
+---
+
+### Proposal Review Session
+
+**Definition:** A narrow external-access session allowing the intended prospect/customer to review a commercial proposal.
+
+It is not organization membership.
+
+---
+
+## Marketing
+
+Marketing is a canonical workspace/domain boundary even where the concrete data model is still evolving.
+
+Marketing owns:
+
+- audiences;
+- segmentation;
+- campaigns;
+- acquisition intent;
+- attribution;
+- lifecycle/promotional consent and intent.
+
+Marketing consumes but does not own:
+
+- Studio content;
+- Communications delivery;
+- CRM customer state.
+
+Do not introduce durable Marketing entities until their lifecycle and source-of-truth requirements are defined.
+
+---
+
+## Library and documents
+
+### Document / File
+
+**Definition:** An organization-owned artifact with metadata and explicit relationships to canonical records.
+
+A Document may relate to:
+
+- Customer;
+- Work Item;
+- Location;
+- Asset;
+- Invoice;
+- other supported records.
+
+The related record does not acquire file ownership merely because the file appears in its UI.
+
+---
+
+### Media
+
+**Definition:** A file/artifact used primarily as reusable visual/audio/public content.
+
+Media remains a Library concern unless a domain has a more specific canonical object.
+
+---
+
+### Template
+
+**Definition:** Reusable authored content or configuration intended to instantiate or support more than one use.
+
+Do not create a universal Template entity merely because several domains each use the word “template.”
+
+A shared Template model requires shared semantics.
+
+---
+
+### Knowledge
+
+**Definition:** Organization-level material intended for retrieval/reference by operators or AI.
+
+Knowledge is not automatically trusted business state.
+
+Using knowledge does not bypass canonical record ownership.
+
+---
+
+### Collection
+
+**Definition:** A reusable Library grouping when the product has a real organization-level collection model.
+
+A navigation placeholder is not proof that the canonical data model exists.
+
+---
+
+## Integrations and providers
+
+### Provider
+
+**Definition:** An external vendor/service that supplies a technical capability to GildOps.
+
+Provider names belong at adapter/control-plane boundaries.
+
+Domain code depends on capability contracts.
+
+---
+
+### Provider Account
+
+**Definition:** A platform-controlled account/credential relationship with a Provider.
+
+Examples may include GildOps-owned API accounts or provider parent accounts.
+
+Provider Accounts are Platform Administration state.
+
+They are not tenant Connections.
+
+---
+
+### Provider Binding
+
+**Definition:** The relationship determining which provider account/capability fulfils service for an Organization or platform function.
+
+A binding may scope provider service without exposing credentials to the tenant.
+
+---
+
+### Provider Resource
+
+**Definition:** A concrete provider-side object observed or provisioned through a Provider Account.
+
+Examples:
+
+- phone number;
+- sending domain;
+- subaccount;
+- endpoint.
+
+Provider-observed facts must not be forgeable by tenant input.
+
+---
+
+### Connector
+
+**Definition:** A catalogue definition describing an external application GildOps knows how to connect to.
+
+A Connector describes capability/readiness.
+
+It is not an Organization's active relationship.
+
+---
+
+### Connection
+
+**Definition:** One Organization's durable relationship with a Connector/external system.
+
+A Connection may have:
+
+- authorization state;
+- credential reference;
+- resources;
+- readiness;
+- lifecycle.
+
+---
+
+### Connection credential
+
+**Definition:** Sensitive authorization material used to operate a Connection.
+
+Credentials are stored through the approved secret/credential boundary.
+
+They are not rendered back as ordinary application data.
+
+---
+
+### Integration Resource
+
+**Definition:** A discoverable external object made available through a Connection.
+
+Examples may include repositories, calendars, drives or other connector-specific resources.
+
+---
+
+### Import Run
+
+**Definition:** One auditable ingestion attempt from a file or connected source into GildOps.
+
+An Import Run should snapshot:
+
+- source;
+- mapping;
+- execution state;
+- reconciliation/result.
+
+Changing the mapping later must not rewrite what an old import claims it did.
+
+---
+
+### File Intake
+
+A file is an artifact/input.
+
+It is not a Connector merely because it can be imported.
+
+Supported file formats belong to file-intake policy and parsing, not the connection catalogue.
+
+---
+
+## Events, activity and audit
+
+### Domain Event
+
+**Definition:** A durable record that something meaningful happened in the business.
+
+Events support:
+
+- timeline/activity;
+- automation triggers;
+- reporting context;
+- AI context;
+- audit.
+
+An Event is not necessarily the canonical state itself.
+
+Example:
+
+```text
+Customer stage changed
+```
+
+The Customer/stage relation is canonical current state.
+
+The Event records that the change happened.
+
+---
+
+### Actor attribution
+
+Consequential writes should be attributable to an actor.
+
+Actors may include:
+
+- signed-in human;
+- narrowly scoped machine identity;
+- approved automated execution.
+
+Avoid anonymous sentinel attribution for privileged machine actions.
+
+---
+
+## Shared configuration concepts
+
+### Custom Field Definition
+
+**Definition:** Organization-owned configuration extending supported canonical entities with declared structured fields.
+
+Custom fields must preserve:
+
+- declared key;
+- type;
+- allowed values where applicable;
+- required/optional policy;
+- organization scope.
+
+A custom value not declared by that Organization is invalid.
+
+Custom fields extend a domain entity.
+
+They do not replace a proper canonical field when the product itself needs the concept.
+
+---
+
+### Lifecycle state
+
+A durable entity should have an explicit lifecycle only when the business needs one.
+
+Do not invent generic status fields as a substitute for modeling.
+
+When a lifecycle exists:
+
+- allowed transitions must be clear;
+- terminal states must be defined where relevant;
+- external/provider observations must not silently regress authoritative state.
+
+---
+
+## Cross-domain relationship map
+
+The high-level relationship model is:
+
+```text
+Person
+  └─ Membership ── Organization
+                     │
+                     ├─ Customer
+                     │   ├─ Discovery Snapshot
+                     │   ├─ Commercial Proposal
+                     │   ├─ Conversation / Call
+                     │   ├─ Support Case
+                     │   ├─ Location
+                     │   ├─ Work Item
+                     │   ├─ Quote / Invoice / Payment
+                     │   └─ Document
+                     │
+                     ├─ Work Type
+                     ├─ Work Item
+                     │   ├─ Resource Assignment ── Resource
+                     │   ├─ Location
+                     │   ├─ Asset
+                     │   ├─ Checklist instance
+                     │   ├─ priced work
+                     │   └─ costs
+                     │
+                     ├─ Communications identities
+                     ├─ Automation Rules / Runs
+                     ├─ Connections
+                     ├─ Brand / Public Site / Forms
+                     ├─ Documents / Library
+                     └─ Entitlements / Usage
+```
+
+Platform-owned state sits above organizations:
+
+```text
+Platform Administration
+  ├─ Catalogue
+  │   ├─ Product
+  │   ├─ Module
+  │   ├─ Feature
+  │   ├─ Plan
+  │   └─ Add-on
+  ├─ Provider Accounts
+  ├─ Provider Rates / Cost Meters
+  ├─ Retail Rates
+  ├─ AI runtime policy
+  ├─ Platform billing
+  └─ Organization portfolio
+```
+
+---
+
+## Core invariants
+
+The detailed executable invariants belong in schema/domain tests.
+
+This document defines the semantic rules they must enforce.
+
+1. **Every tenant-owned business fact belongs to one Organization.**
+2. **Knowing another organization's identifier grants nothing.**
+3. **UI visibility is never authorization.**
+4. **Entitlement and actor permission are independent.**
+5. **A canonical record has one owner even when several workspaces display it.**
+6. **Provider SDK concepts do not become domain concepts without a product reason.**
+7. **Historical committed terms are not silently reinterpreted by current configuration.**
+8. **Money is represented with explicit currency and non-floating arithmetic.**
+9. **Time instants are absolute; business recurring times are interpreted in the appropriate local timezone.**
+10. **Availability and resource commitment have one authoritative enforcement model.**
+11. **A public/customer identity is not organization membership.**
+12. **AI tools do not bypass domain authorization or business rules.**
+13. **Automation actions use canonical domain operations.**
+14. **Platform authority is explicit and separate from tenant membership.**
+15. **Tenant Finance and GildOps platform economics never become one ledger.**
+16. **A file is not a Connection.**
+17. **A Provider Account is not a tenant Connection.**
+18. **Unknown price/cost/FX data is not zero.**
+19. **Corrections preserve evidence rather than rewriting history where the domain requires auditability.**
+20. **Compatibility routes do not create competing ownership or information architecture.**
+
+---
+
+## Terminology rules
+
+Prefer the canonical terms in this document.
+
+Avoid ambiguous legacy terms where a canonical term exists.
+
+Examples:
+
+| Avoid as canonical vocabulary | Use |
+| --- | --- |
+| tenant user | Person + Membership |
+| team as a scope | Access |
+| Sales workspace | CRM |
+| Customer Experience workspace | Studio / Marketing / Support as appropriate |
+| Insights workspace | Insights as cross-cutting analysis |
+| platform tenant | Organization or Platform Administration, whichever is meant |
+| integration for a file upload | File intake / Import |
+| provider connection | Provider Binding or tenant Connection, whichever is meant |
+| AI owns the action | AI proposes/invokes a domain-owned action |
+| Finance for GildOps SaaS billing | Platform commercial control plane |
+| Overview as a workspace page type | Workspace Home |
+
+Legacy routes and symbols may retain legacy names until migrated safely.
+
+Display terminology may later be organization-configurable.
+
+Canonical keys and ownership must remain stable underneath presentation.
+
+---
+
+## Document boundaries
+
+This document owns:
+
+- canonical domain definitions;
+- ownership;
+- conceptual relationships;
+- semantic invariants;
+- canonical terminology.
+
+It does not own:
+
+- database DDL;
+- route layout;
+- UI component rules;
+- deployment;
+- testing procedure;
+- implementation status;
+- historical rationale.
+
+When a new concept is introduced, define it here if it becomes part of the durable product language.

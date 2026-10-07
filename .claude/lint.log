@@ -1,0 +1,23 @@
+
+C:\Users\domin\Documents\GOLD_platform\apps\web\lib\shell.ts
+  193:9  warning  'gate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\domin\Documents\GOLD_platform\apps\web\tests\component\website-workbench.test.tsx
+  17:39   warning  '_state' is defined but never used  @typescript-eslint/no-unused-vars
+  17:56   warning  '_data' is defined but never used   @typescript-eslint/no-unused-vars
+  17:116  warning  '_state' is defined but never used  @typescript-eslint/no-unused-vars
+  17:133  warning  '_data' is defined but never used   @typescript-eslint/no-unused-vars
+  17:191  warning  '_state' is defined but never used  @typescript-eslint/no-unused-vars
+  17:208  warning  '_data' is defined but never used   @typescript-eslint/no-unused-vars
+  18:40   warning  '_state' is defined but never used  @typescript-eslint/no-unused-vars
+  18:57   warning  '_data' is defined but never used   @typescript-eslint/no-unused-vars
+  18:121  warning  '_state' is defined but never used  @typescript-eslint/no-unused-vars
+  18:138  warning  '_data' is defined but never used   @typescript-eslint/no-unused-vars
+
+C:\Users\domin\Documents\GOLD_platform\apps\web\tests\unit\travel-feasibility.test.ts
+  505:11  warning  'router' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 12 problems (0 errors, 12 warnings)
+
+ESLint found too many warnings (maximum: 0).
+exit 1
