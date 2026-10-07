@@ -1,6 +1,9 @@
 import { notFound } from 'next/navigation';
 import { AppPage } from '@/components/layout/app-page';
 import { CustomerDetail } from '@/features/crm/customers/customer-detail';
+import { CustomerOpportunities } from '@/features/crm/opportunities/customer-opportunities';
+import { listOpportunities, listOpportunityStages } from '@/lib/domain/opportunities/opportunities';
+import { listMembers } from '@/lib/domain/tenancy/members';
 import { listCustomerInvoices } from '@/lib/domain/billing/invoices';
 import { listPlans } from '@/lib/domain/catalogue/plans';
 import { listCommercialProposals } from '@/lib/domain/customers/commercial-proposals';
@@ -32,6 +35,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
   if (!customer) notFound();
 
   const origin = await requestOrigin();
+  const [opportunities, opportunityStages, members] = await Promise.all([listOpportunities(db, { organizationId, customerId, limit: 20 }), listOpportunityStages(db, { organizationId }), listMembers(db, { organizationId })]);
   const [documents, definitions, timeline, invites, resolvedFeatures, stages, calls, invoices, work, locations, discoverySnapshot, commercialProposals, proposalInvites, plans, addonPlans] = await Promise.all([
     listDocuments(db, { organizationId, attachedTo: { entity: 'customer', id: customerId } }),
     listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
@@ -73,6 +77,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
       <CustomerDetail
         organizationId={organizationId}
         customer={customer}
+        opportunities={<CustomerOpportunities organizationId={organizationId} customer={customer} items={opportunities} total={opportunities.total} stages={opportunityStages} members={members} defaultCurrency={organization.currency ?? ''} mayCreate={organization.capabilities.includes('opportunity.create')} />}
         stage={voice ? stages.find((entry) => entry.id === customer.stageId) ?? null : null}
         stages={stages}
         definitions={definitions}

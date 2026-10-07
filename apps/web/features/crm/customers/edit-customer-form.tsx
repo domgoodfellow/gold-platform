@@ -83,7 +83,7 @@ export function EditCustomerForm({
 
       {stages.length > 0 ? (
         <div className="flex flex-col gap-1">
-          <FieldLabel htmlFor="stageId">Stage</FieldLabel>
+          <FieldLabel htmlFor="stageId">Relationship stage</FieldLabel>
           <SelectInput
             id="stageId"
             name="stageId"

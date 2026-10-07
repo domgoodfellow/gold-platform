@@ -8,6 +8,7 @@ import { CAPABILITIES, CAPABILITY_LABELS, type Capability } from '@/lib/domain/t
  */
 const GROUPS: readonly { label: string; capabilities: readonly Capability[] }[] = [
   { label: 'Customers', capabilities: ['customer.create', 'customer.update'] },
+  { label: 'Opportunities', capabilities: ['opportunity.create', 'opportunity.update'] },
   {
     label: 'Work',
     capabilities: [

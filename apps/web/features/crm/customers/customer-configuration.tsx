@@ -47,7 +47,7 @@ export function CustomerConfiguration({
 
       {salesEnabled ? (
         <FieldSet>
-          <FieldLegend>Sales stages</FieldLegend>
+          <FieldLegend>Relationship stages</FieldLegend>
           <FieldGroup>
             <Hint>The stages a relationship moves through, in order.</Hint>
             <StageSettingsSheet

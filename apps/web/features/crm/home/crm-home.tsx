@@ -9,6 +9,8 @@ import { DividedList, EmptyState, Section, SectionHeading } from '@/components/s
 import { CreateCustomerTrigger } from '@/features/crm/customers/create-customer-sheet';
 import type { Customer } from '@/lib/domain/customers/customers';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
+import type { OpportunitySummary } from '@/lib/domain/opportunities/opportunities';
+import { formatOpportunityValue } from '@/lib/domain/opportunities/money';
 import { areaHref, areaLabel, workspaceLabel } from '@/lib/navigation';
 
 export type CrmHomeProps = {
@@ -16,8 +18,10 @@ export type CrmHomeProps = {
   timezone: string;
   customers: Customer[];
   totalCustomers: number;
-  pipeline: { stages: (CustomerStage & { count: number })[]; unstaged: number } | null;
+  pipeline: { stages: CustomerStage[] } | null;
   stagesSettingsHref?: string;
+  opportunitySummary?: OpportunitySummary[];
+  opportunityStagesSettingsHref?: string;
   mayCreate: boolean;
   mayImport: boolean;
   mayConfigure: boolean;
@@ -29,17 +33,20 @@ export type CrmHomeProps = {
 export function CrmHome({
   organizationId, timezone, customers, totalCustomers, pipeline, stagesSettingsHref,
   mayCreate, mayImport, mayConfigure, mayInsight, activity,
+  opportunitySummary = [], opportunityStagesSettingsHref,
 }: CrmHomeProps) {
   const customersHref = areaHref(organizationId, 'customers');
   const pipelineHref = areaHref(organizationId, 'pipeline');
+  const opportunitiesHref = areaHref(organizationId, 'opportunities');
+  const opportunityPipelineHref = areaHref(organizationId, 'opportunity-pipeline');
   const importHref = `/organizations/${organizationId}/integrations/imports/new`;
   const stageNames = new Map(pipeline?.stages.map((stage) => [stage.id, stage.name]) ?? []);
   const date = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeZone: timezone });
-  const kpis: Kpi[] = [{ key: 'customers', label: areaLabel('customers'), value: totalCustomers, href: customersHref }];
-  if (pipeline) kpis.push(
-    { key: 'pipeline', label: 'In pipeline', value: totalCustomers - pipeline.unstaged, href: pipelineHref },
-    { key: 'unstaged', label: 'Unstaged', value: pipeline.unstaged, href: `${customersHref}?stage=unstaged` },
-  );
+  const kpis: Kpi[] = [
+    { key: 'open', label: 'Open opportunities', value: opportunitySummary.filter((stage) => stage.kind === 'open').reduce((count, stage) => count + stage.count, 0), href: `${opportunitiesHref}?kind=open` },
+    { key: 'customers', label: areaLabel('customers'), value: totalCustomers, href: customersHref },
+    { key: 'unstaged', label: 'Unstaged opportunities', value: opportunitySummary.find((stage) => stage.stageId === null)?.count ?? 0, href: `${opportunitiesHref}?stage=unstaged` },
+  ];
 
   return (
     <WorkspaceHome
@@ -57,6 +64,10 @@ export function CrmHome({
         </>
       }
     >
+      <nav aria-label="CRM tools" className="mb-4 flex flex-wrap gap-2">
+        <ButtonLink href={customersHref}>Customers</ButtonLink><ButtonLink href={opportunitiesHref}>Opportunities</ButtonLink><ButtonLink href={opportunityPipelineHref}>Opportunity pipeline</ButtonLink>
+        {pipeline ? <ButtonLink href={pipelineHref}>Relationship pipeline</ButtonLink> : null}
+      </nav>
       <div className="grid gap-4 sm:grid-cols-3">
         {kpis.map((kpi) => <KpiCard key={kpi.key} kpi={kpi} />)}
       </div>
@@ -64,28 +75,27 @@ export function CrmHome({
         <div className="min-w-0 space-y-6">
           <Section aria-labelledby="crm-pipeline-heading">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <SectionHeading id="crm-pipeline-heading">Pipeline snapshot</SectionHeading>
-              {pipeline ? <ButtonLink href={pipelineHref} tone="text">View pipeline</ButtonLink> : null}
+              <SectionHeading id="crm-pipeline-heading">Opportunity pipeline snapshot</SectionHeading>
+              <ButtonLink href={opportunityPipelineHref} tone="text">View opportunity pipeline</ButtonLink>
             </div>
-            {!pipeline ? (
-              <EmptyState>Pipeline is not available. Availability follows this organization’s enabled CRM features.</EmptyState>
-            ) : pipeline.stages.length === 0 ? (
+            {opportunitySummary.filter((stage) => stage.stageId !== null).length === 0 ? (
               <div className="space-y-2">
-                <p className="text-sm font-medium">No sales stages configured</p>
-                <p className="text-sm text-muted">Define the stages this business moves customer relationships through.</p>
-                {stagesSettingsHref ? <ButtonLink href={stagesSettingsHref} tone="secondary">Configure sales stages</ButtonLink> : null}
+                <p className="text-sm font-medium">No opportunity stages configured</p>
+                <p className="text-sm text-muted">Name the stages this business moves opportunities through. Unstaged opportunities are counted separately.</p>
+                {opportunityStagesSettingsHref ? <ButtonLink href={opportunityStagesSettingsHref} tone="secondary">Configure opportunity stages</ButtonLink> : null}
               </div>
             ) : (
               <DividedList>
-                {pipeline.stages.map((stage) => (
-                  <li key={stage.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                    <Link href={`${customersHref}?stage=${encodeURIComponent(stage.id)}`} className="underline-offset-4 hover:underline">{stage.name}</Link>
-                    <span className="font-medium tabular-nums">{stage.count}</span>
+                {opportunitySummary.map((stage) => (
+                  <li key={stage.stageId ?? 'unstaged'} className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm">
+                    <Link href={`${opportunitiesHref}?stage=${encodeURIComponent(stage.stageId ?? 'unstaged')}`} className="underline-offset-4 hover:underline">{stage.name}{stage.kind ? ` (${stage.kind})` : ''}</Link>
+                    <div className="text-right"><span className="font-medium tabular-nums">{stage.count}</span>{stage.values.map((value) => <p key={value.currency} className="text-xs text-muted">{formatOpportunityValue(value.amountMinor, value.currency)}</p>)}</div>
                   </li>
                 ))}
               </DividedList>
             )}
           </Section>
+          {pipeline && stagesSettingsHref ? <ButtonLink href={stagesSettingsHref} tone="text">Configure relationship stages</ButtonLink> : null}
           <Section aria-labelledby="crm-customers-heading">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <SectionHeading id="crm-customers-heading">Recent customers</SectionHeading>

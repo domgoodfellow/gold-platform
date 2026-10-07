@@ -438,6 +438,8 @@ Current implementation status belongs in `docs/roadmap.md`, not here.
 
 ## Organization authorization
 
+CRM Opportunity creation requires `opportunity.create`; editing and stage movement require `opportunity.update`. Customer permissions grant neither. Stage configuration requires `field.manage`. Application actions check these capabilities, and tenant RLS plus column grants enforce them for direct authenticated database writes. Read access follows ordinary Organization Membership, with no new commercial module gate. Existing administrators with `organization.manage` receive the two Opportunity capabilities through a forward backfill; newly provisioned full roles use the canonical capability registry. No Opportunity or stage deletion grant is provided.
+
 Organization access flows through:
 
 ```text

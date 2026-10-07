@@ -368,13 +368,17 @@ Unless a later accepted domain decision introduces a separate canonical Lead ent
 
 ### Opportunity
 
-**Definition:** A commercial relationship context representing potential future business.
+**Definition:** One organization-owned potential piece of business with a Customer, with an independently closing lifecycle.
 
 Opportunity semantics belong to CRM.
 
-Do not create an Opportunity entity merely to rename pipeline stage.
+An Organization has Customers; each Customer may have many Opportunities. `Customer.stageId` and `customer_stages` remain relationship lifecycle vocabulary. An Opportunity's nullable stage belongs to `opportunity_stages`; stages explicitly classify potential business as Open, Won or Lost. Unstaged is separate from Open. No stages are seeded.
 
-If a distinct Opportunity record is introduced, it must have a lifecycle and use case that cannot be represented safely as Customer relationship state.
+Opportunity owns its title, optional owner Membership, optional integer minor-unit value with explicit currency, and optional expected-close calendar date. Unknown value is not zero. Owner is a same-Organization Membership, not a free-text name or resource assignment.
+
+Stages have tenant-defined names and ordering. At most one Won and one Lost stage exist per Organization. Once a stage has been used, its classification is protected even after all Opportunities move away; names and ordering may still change. Events snapshot title, stage name/classification and commercial terms so configuration edits do not rewrite history.
+
+CRM Home, the Opportunity collection/pipeline and the Customer's Opportunities tab project the same canonical records. Opportunity does not imply a Commercial Proposal, quote, invoice, forecast, conversion or fulfillment handoff. Those links require a later explicit domain decision.
 
 ---
 

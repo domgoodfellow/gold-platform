@@ -26,7 +26,7 @@ export default async function SalesStagesSettingsPage({
   return (
     <SettingsPageFrame>
       <PageHeader
-        title="Sales stages"
+        title="Relationship stages"
         crumbs={[
           { label: 'Settings', href: settingsLandingHref(organizationId) },
           { label: 'Organization', href: settingsScopeHref('organization', organizationId) },

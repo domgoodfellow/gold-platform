@@ -39,7 +39,7 @@ export default async function PipelinePage({ params }: PageProps<'/organizations
       />
       {!reception ? (
         <EmptyState
-          title="Pipeline is not available"
+          title="Relationship pipeline is not available"
           description="Switch Communications/Voice on before this business can name pipeline stages."
         />
       ) : stages.length === 0 ? (

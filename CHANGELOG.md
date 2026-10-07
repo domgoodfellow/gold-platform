@@ -34,6 +34,11 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### CRM — 2026-10-07
+
+- Add first-class Opportunities, collection/detail/pipeline views and a Customer Opportunities tab. Opportunity stages classify potential business as Open, Won or Lost while existing Customer stages remain the relationship lifecycle.
+- CRM Home now summarizes canonical Opportunities with exact stage counts and separate currency values. Opportunity ownership uses Membership, permissions are separate from Customer editing, and events preserve historical stage meanings. No stages are seeded; unstaged remains separate from Open.
+
 ### Documentation
 
 - Replace the legacy documentation sprawl with a canonical documentation set covering product, domain model, architecture, UI, security, data, integrations, testing, development, deployment, operations, roadmap and ADRs.

@@ -139,9 +139,16 @@ describe('the operator shell navigation', () => {
     // of Customers. A workspace has pages independently of the commercial catalogue.
     for (const area of AREAS.filter((entry) => entry.workspace)) {
       expect(WORKSPACES.some((workspace) => workspace.key === area.workspace), `"${area.segment}" names a workspace that is not one`).toBe(true);
-      // Owned is not drawn: an owned area with no sidebar row (Pricing, owned by Finance) is configuration.
-      expect(area.group === 'workspaces', `"${area.segment}"`).toBe(area.sidebar !== false);
+      // Workspace ownership also applies to tools launched from Home without sidebar rows.
+      if (area.sidebar !== false) expect(area.group, `"${area.segment}"`).toBe('workspaces');
     }
+  });
+
+  it('keeps Opportunity tools under CRM without permanent sidebar children', () => {
+    for (const segment of ['opportunities', 'opportunity-pipeline']) {
+      expect(AREAS.find((area) => area.segment === segment)).toMatchObject({ workspace: 'crm', sidebar: false });
+    }
+    expect(areaHref('org', 'opportunity-pipeline')).toBe('/organizations/org/opportunities/pipeline');
   });
 
   it('registers every workspace and draws a row for only those with a page', () => {

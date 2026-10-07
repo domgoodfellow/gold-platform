@@ -62,7 +62,8 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     title: 'Customer data',
     entries: [
       entry('custom-fields', 'Custom fields', 'The extra details this business records about its customers, jobs and places.'),
-      entry('sales-stages', 'Sales stages', 'The stages a relationship moves through, in order.'),
+      entry('sales-stages', 'Relationship stages', 'The stages a customer relationship moves through, in order.'),
+      entry('opportunity-stages', 'Opportunity stages', 'The stages potential business moves through, classified as Open, Won or Lost.'),
     ],
   },
   {

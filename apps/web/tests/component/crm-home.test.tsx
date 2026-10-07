@@ -19,6 +19,10 @@ vi.mock('@/lib/domain/catalogue/organization-plans', () => ({
 }));
 vi.mock('@/lib/domain/customers/customers', () => ({ listCustomers: (...args: unknown[]) => state.list(...args) }));
 vi.mock('@/lib/domain/customers/stages', () => ({ listCustomerStages: async () => state.stages }));
+vi.mock('@/lib/domain/opportunities/opportunities', () => ({ summarizeOpportunities: async () => state.stages.length ? [
+  { stageId: 'review', name: 'Review together', kind: 'open', position: 0, count: state.stageCount, values: [{ currency: 'CAD', amountMinor: '125050' }] },
+  { stageId: null, name: 'Unstaged', kind: null, position: null, count: state.unstaged, values: [] },
+] : [] }));
 vi.mock('@/lib/domain/fields/field-definitions', () => ({ listFieldDefinitions: async () => [] }));
 vi.mock('@/features/timeline/workspace-activity', () => ({ WorkspaceActivity: (props: unknown) => { state.activity(props); return <p>No CRM activity yet.</p>; } }));
 vi.mock('@/features/insights/workspace-insights', () => ({ CustomersInsights: (props: unknown) => { state.insights(props); return <p>Canonical insights</p>; } }));
@@ -47,11 +51,23 @@ beforeEach(() => {
 const renderRoute = async () => render(await SalesPage({ params: Promise.resolve({ organizationId: 'org' }) } as Parameters<typeof SalesPage>[0]));
 
 describe('CRM Home', () => {
+  it('counts only classified Open opportunities and retains currency-specific summaries', () => {
+    render(<CrmHome {...defaults} opportunitySummary={[
+      { stageId: 'open', name: 'Discuss', kind: 'open', position: 0, count: 8, values: [{ currency: 'CAD', amountMinor: '125050' }, { currency: 'USD', amountMinor: '50000' }] },
+      { stageId: 'won', name: 'Agreed', kind: 'won', position: 1, count: 3, values: [] },
+      { stageId: 'lost', name: 'Declined', kind: 'lost', position: 2, count: 4, values: [] },
+      { stageId: null, name: 'Unstaged', kind: null, position: null, count: 9, values: [] },
+    ]} />);
+    expect(screen.getByRole('link', { name: /Open opportunities\s*8$/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Unstaged opportunities\s*9$/ })).toBeInTheDocument();
+    expect(screen.getByText('CA$1,250.50')).toBeInTheDocument();
+    expect(screen.getByText('US$500.00')).toBeInTheDocument();
+  });
   it('retains useful empty structure and distinguishes unavailable pipeline from zero', () => {
     render(<CrmHome {...defaults} />);
     expect(screen.getByRole('heading', { name: 'CRM' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Customers\s*0$/ })).toHaveAttribute('href', '/organizations/org/customers');
-    expect(screen.getByText(/Pipeline is not available/)).toBeInTheDocument();
+    expect(screen.getByText('No opportunity stages configured')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /In pipeline/ })).not.toBeInTheDocument();
     expect(screen.getByText('No customers have been added yet.')).toBeInTheDocument();
     expect(screen.getByText('No CRM activity yet.')).toBeInTheDocument();
@@ -63,13 +79,13 @@ describe('CRM Home', () => {
     expect(screen.getByRole('search')).toHaveAttribute('action', '/organizations/org/customers');
     expect(screen.getByRole('search')).toHaveAttribute('method', 'get');
     expect(screen.getByRole('searchbox', { name: 'Search customers' })).toHaveAttribute('name', 'q');
-    expect(document.body.textContent).not.toMatch(/opportunities|follow-ups|contacts|forecast|conversion|assignee|owner/i);
+    expect(document.body.textContent).not.toMatch(/follow-ups|contacts|forecast|conversion|assignee/i);
   });
 
   it('shows configured zero-count stages in an empty organization', () => {
-    render(<CrmHome {...defaults} pipeline={{ unstaged: 0, stages: [{ id: 'review', name: 'Review together', position: 0, count: 0 }] }} />);
-    const section = screen.getByRole('region', { name: 'Pipeline snapshot' });
-    expect(within(section).getByText('Review together')).toBeInTheDocument();
+    render(<CrmHome {...defaults} opportunitySummary={[{ stageId: 'review', name: 'Review together', kind: 'open', position: 0, count: 0, values: [] }]} />);
+    const section = screen.getByRole('region', { name: 'Opportunity pipeline snapshot' });
+    expect(within(section).getByText('Review together (open)')).toBeInTheDocument();
     expect(within(section).getByText('0')).toBeInTheDocument();
     expect(screen.queryByText('No sales stages configured')).not.toBeInTheDocument();
   });
@@ -80,20 +96,20 @@ describe('CRM Home', () => {
     state.stages = [{ id: 'review', name: 'Review together', position: 0 }];
     await renderRoute();
     expect(screen.getByRole('link', { name: /Customers\s*1205$/ })).toHaveAttribute('href', '/organizations/org/customers');
-    expect(screen.getByRole('link', { name: /In pipeline\s*1005$/ })).toHaveAttribute('href', '/organizations/org/customers/pipeline');
-    expect(screen.getByRole('link', { name: /Unstaged\s*200$/ })).toHaveAttribute('href', '/organizations/org/customers?stage=unstaged');
-    expect(screen.getByRole('link', { name: 'View pipeline' })).toHaveAttribute('href', '/organizations/org/customers/pipeline');
+    expect(screen.getByRole('link', { name: /Open opportunities\s*1005$/ })).toHaveAttribute('href', '/organizations/org/opportunities?kind=open');
+    expect(screen.getByRole('link', { name: /Unstaged opportunities\s*200$/ })).toHaveAttribute('href', '/organizations/org/opportunities?stage=unstaged');
+    expect(screen.getByRole('link', { name: 'Relationship pipeline' })).toHaveAttribute('href', '/organizations/org/customers/pipeline');
     expect(screen.getAllByRole('link', { name: 'Ada & Co' })[0]).toHaveAttribute('href', '/organizations/org/customers/ada');
     expect(screen.getAllByText('6 Oct 2026').length).toBeGreaterThan(0);
     expect(state.list).toHaveBeenCalledWith({}, { organizationId: 'org', limit: 5 });
-    expect(state.list).toHaveBeenCalledWith({}, { organizationId: 'org', limit: 1, stageId: 'review' });
-    expect(state.activity).toHaveBeenCalledWith(expect.objectContaining({ organizationId: 'org', scope: 'customers', limit: 5 }));
+    expect(state.list).toHaveBeenCalledTimes(1);
+    expect(state.activity).toHaveBeenCalledWith(expect.objectContaining({ organizationId: 'org', scope: 'crm', limit: 5 }));
   });
 
   it('uses feature availability even when another reception feature keeps the module on', async () => {
     state.modules.add('reception'); state.features.add('call_history');
     await renderRoute();
-    expect(screen.getByText(/Pipeline is not available/)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Relationship pipeline' })).not.toBeInTheDocument();
     expect(state.list).toHaveBeenCalledTimes(1);
   });
 
@@ -102,8 +118,8 @@ describe('CRM Home', () => {
     state.features = new Set(['pipeline', 'file_imports', 'saved_reports']);
     state.capabilities = ['customer.create', 'field.manage', 'integration.manage', 'report.read'];
     await renderRoute();
-    expect(screen.getByText('No sales stages configured')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Configure sales stages' })).toHaveAttribute('href', '/organizations/org/settings/sales-stages');
+    expect(screen.getByText('No opportunity stages configured')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Configure opportunity stages' })).toHaveAttribute('href', '/organizations/org/settings/opportunity-stages');
     expect(screen.getAllByRole('button', { name: 'New customer' })).toHaveLength(2);
     expect(screen.getAllByRole('link', { name: 'Import customers' })[0]).toHaveAttribute('href', '/organizations/org/integrations/imports/new');
     expect(screen.getByRole('link', { name: 'Custom field settings' })).toHaveAttribute('href', '/organizations/org/settings/custom-fields');
@@ -112,7 +128,7 @@ describe('CRM Home', () => {
     await renderRoute();
     expect(screen.queryByRole('button', { name: 'New customer' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Import customers' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Configure sales stages' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Configure opportunity stages' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'configure' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'insights' })).not.toBeInTheDocument();
   });

@@ -14,7 +14,7 @@ export function StageSettingsSheet({ organizationId, stages, mayConfigure, role 
       <PageDrawerTrigger asChild><Button type="button" tone="secondary"><Settings2 aria-hidden /> Stages</Button></PageDrawerTrigger>
       <PageDrawerContent>
         <PageDrawerHeader>
-          <PageDrawerTitle>Pipeline stages</PageDrawerTitle>
+          <PageDrawerTitle>Relationship stages</PageDrawerTitle>
           <PageDrawerDescription>The words this business uses for where a relationship has got to.</PageDrawerDescription>
         </PageDrawerHeader>
         <div className="space-y-6 px-4 pb-4">

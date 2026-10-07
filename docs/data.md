@@ -47,6 +47,12 @@ Application code should not repeatedly compensate for ambiguity that the data mo
 
 ## Sources of truth
 
+### CRM Opportunity persistence
+
+CRM Opportunities use `opportunities` and `opportunity_stages` as canonical storage. Composite Organization-leading foreign keys bind Customer, stage and owner Membership to the same tenant. Value and currency are jointly nullable; each stored value is a non-negative, JavaScript-safe integer in minor units. Aggregate sums return decimal integer text and remain separate per currency. Expected close is a calendar `date`, not a timestamp.
+
+Opportunity writes and their existing-log events commit together through an invoker trigger. Event snapshots preserve title, stage name/classification, value, currency, owner and expected close. Used stage classifications cannot change, including after Opportunities move away. Opportunity/stage deletion is not offered. The security-invoker `opportunity_stage_summary` SQL projection retains empty configured stages and counts unstaged records separately; it is not another persistence model.
+
 Different kinds of truth live in different places.
 
 ### Domain meaning

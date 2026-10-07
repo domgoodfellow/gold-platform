@@ -66,6 +66,8 @@ const ASSET_DIRECT_ACTIONS = ['asset.created'] as const;
 const ASSET_WORK_ITEM_ACTIONS = ['work_item.created', 'work_item.updated'] as const;
 
 /** Actions a customer's history is made of. Anything else is noise on this screen. */
+const OPPORTUNITY_ACTIONS = ['opportunity.created', 'opportunity.updated', 'opportunity.stage_changed'] as const;
+const CRM_ACTIONS = ['customer.created', 'customer.updated', 'customer.stage_changed', 'customer.imported', 'customer.import_matched', ...OPPORTUNITY_ACTIONS] as const;
 const CUSTOMER_ACTIONS = [
   'customer.created',
   'customer.updated',
@@ -77,6 +79,7 @@ const CUSTOMER_ACTIONS = [
   'location.linked',
   'document.created',
   ...WORK_ITEM_ACTIONS,
+  ...OPPORTUNITY_ACTIONS,
 ] as const;
 
 /**
@@ -140,6 +143,12 @@ function describe(row: EventRow, words: Vocabulary, perspective?: 'location'): s
   const on = job ? ` on ${job}` : '';
 
   switch (row.action) {
+    case 'opportunity.created':
+      return `Opportunity created: ${text(row.payload, 'title') ?? 'Untitled'}`;
+    case 'opportunity.updated':
+      return `Opportunity updated: ${text(row.payload, 'title') ?? 'Untitled'}`;
+    case 'opportunity.stage_changed':
+      return `Opportunity ${text(row.payload, 'title') ?? 'Untitled'} moved to ${text(row.payload, 'stage_name') ?? 'Unstaged'}${text(row.payload, 'stage_kind') ? ` (${text(row.payload, 'stage_kind')})` : ''}`;
     case 'customer.created':
       return 'Added as a customer';
     case 'customer.updated':
@@ -309,6 +318,8 @@ export async function listCustomerTimeline(
  * event log for anything the timeline has not already decided is worth a sentence.
  */
 const ACTIVITY_SCOPE_ACTIONS = {
+  opportunities: OPPORTUNITY_ACTIONS,
+  crm: CRM_ACTIONS,
   customers: [
     'customer.created',
     'customer.updated',
@@ -335,16 +346,18 @@ export type ActivityScope = keyof typeof ACTIVITY_SCOPE_ACTIONS;
  */
 export async function listRecentActivity(
   db: Db,
-  input: { organizationId: string; limit?: number; scope?: ActivityScope },
+  input: { organizationId: string; limit?: number; scope?: ActivityScope; opportunityId?: string },
 ): Promise<TimelineEntry[]> {
   const limit = input.limit ?? 20;
   const actions = input.scope ? ACTIVITY_SCOPE_ACTIONS[input.scope] : ORGANIZATION_ACTIONS;
 
-  const { data, error } = await db
+  let query = db
     .from('events')
     .select('id, action, payload, occurred_at, actor_id, entity_id')
     .eq('organization_id', input.organizationId)
-    .in('action', actions as unknown as string[])
+    .in('action', actions as unknown as string[]);
+  if (input.opportunityId) query = query.eq('entity_type', 'opportunity').eq('entity_id', input.opportunityId);
+  const { data, error } = await query
     .order('occurred_at', { ascending: false })
     .limit(limit);
 

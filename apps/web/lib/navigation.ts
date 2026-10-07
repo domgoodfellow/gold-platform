@@ -351,7 +351,9 @@ export const AREAS: readonly Area[] = [
   // offered where the business has it (the reception module).
   { segment: 'sales', label: 'CRM', group: 'workspaces', workspace: 'crm' },
   { segment: 'customers', label: 'Customers', group: 'workspaces', workspace: 'crm' },
-  { segment: 'pipeline', label: 'Pipeline', group: 'workspaces', workspace: 'crm', route: 'customers/pipeline', module: 'reception', featureKeys: ['pipeline', 'configurable_stages', 'qualification_state'] },
+  { segment: 'pipeline', label: 'Relationship pipeline', group: 'workspaces', workspace: 'crm', route: 'customers/pipeline', module: 'reception', featureKeys: ['pipeline', 'configurable_stages', 'qualification_state'] },
+  { segment: 'opportunities', label: 'Opportunities', group: 'workspaces', workspace: 'crm', sidebar: false },
+  { segment: 'opportunity-pipeline', label: 'Opportunity pipeline', group: 'workspaces', workspace: 'crm', route: 'opportunities/pipeline', sidebar: false },
   // Communications. Home is the workspace's own destination, so it is offered to anyone who can
   // operate **any** of its channels — placing calls (`call.place`) or sending texts
   // (`message.send`), two independent authorities — and entitled through either channel's
@@ -468,6 +470,7 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'custom-fields', scope: 'organization', path: 'settings/custom-fields', permission: ['field.manage'] },
   // Entitled through Pipeline, permitted through field.manage: naming stages is not moving a customer between them.
   { key: 'sales-stages', scope: 'organization', workspace: 'crm', path: 'settings/sales-stages', entitledBy: 'pipeline', permission: ['field.manage'] },
+  { key: 'opportunity-stages', scope: 'organization', workspace: 'crm', path: 'settings/opportunity-stages', entitledBy: 'opportunity-pipeline', permission: ['field.manage'] },
   // Entitled through Calls, permitted through field.manage: configuring outcomes and routing is not making calls.
   // A dedicated settings route, never `calls#setup` — a fragment into an operational page is not a canonical destination.
   { key: 'call-setup', scope: 'organization', workspace: 'communications', path: 'settings/calls', entitledBy: 'calls', permission: ['field.manage'] },

@@ -6,6 +6,8 @@
 export const CAPABILITIES = [
   'customer.create',
   'customer.update',
+  'opportunity.create',
+  'opportunity.update',
   'role.manage',
   'field.manage',
   'location.create',
@@ -48,6 +50,8 @@ export function isCapability(value: string): value is Capability {
 /** Describes what the platform does, not tenant terminology — that's a separate, later concern. */
 export const CAPABILITY_LABELS: Record<Capability, string> = {
   'customer.create': 'Add customers',
+  'opportunity.create': 'Add opportunities',
+  'opportunity.update': 'Edit opportunities and move their stages',
   /** Separate from creating one — correcting a record and moving a relationship along its stages are plausibly two different people. */
   'customer.update': 'Correct a customer and move them along',
   'role.manage': 'Manage roles',

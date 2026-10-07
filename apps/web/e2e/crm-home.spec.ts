@@ -30,7 +30,7 @@ test.describe('CRM Home empty organization', () => {
     const home = `/organizations/${organizationId}/sales`;
     await page.goto(home);
     await expect(page.getByRole('heading', { name: 'CRM', exact: true })).toBeVisible();
-    await expect(page.getByText(/Pipeline is not available/)).toBeVisible();
+    await expect(page.getByText('No opportunity stages configured')).toBeVisible();
     await expect(page.getByText('No customers have been added yet.')).toBeVisible();
     await expect(page.getByText('No CRM activity yet.')).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('crm-home-empty-unavailable.png'), fullPage: true });
@@ -41,9 +41,9 @@ test.describe('CRM Home empty organization', () => {
       periodEnd: '9999-12-31', priceMinor: 0, note: 'Local CRM Home acceptance fixture',
     });
     await page.reload();
-    await expect(page.getByText('No sales stages configured')).toBeVisible();
+    await expect(page.getByText('No opportunity stages configured')).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('crm-home-empty-setup.png'), fullPage: true });
-    await page.getByRole('link', { name: 'Configure sales stages' }).click();
+    await page.getByRole('link', { name: 'Configure relationship stages' }).click();
     await expect(page).toHaveURL(`/organizations/${organizationId}/settings/sales-stages`);
     await page.getByRole('button', { name: 'Stages', exact: true }).click();
     await page.getByLabel('Stage name', { exact: true }).fill('Review together');
@@ -51,9 +51,9 @@ test.describe('CRM Home empty organization', () => {
     await expect(page.getByLabel('Stage name', { exact: true })).toHaveCount(2);
     await expect(page.getByLabel('Stage name', { exact: true }).first()).toHaveValue('Review together');
     await page.goto(home);
-    const pipeline = page.getByRole('region', { name: 'Pipeline snapshot' });
-    await expect(pipeline.getByRole('link', { name: 'Review together' })).toBeVisible();
-    await expect(pipeline.getByText('0', { exact: true })).toBeVisible();
+    const pipeline = page.getByRole('region', { name: 'Opportunity pipeline snapshot' });
+    await expect(pipeline.getByText('No opportunity stages configured')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Relationship pipeline', exact: true })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('crm-home-empty-stages.png'), fullPage: true });
     await page.getByRole('button', { name: 'Configure', exact: true }).click();
     await page.getByRole('button', { name: 'New field', exact: true }).click();

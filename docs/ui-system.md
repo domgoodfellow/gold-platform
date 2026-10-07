@@ -524,6 +524,10 @@ Never add:
 
 ### Workspace Home
 
+CRM Home launches Customers, Opportunities and the Opportunity pipeline; the feature-gated Customer board is labeled Relationship pipeline. Its primary commercial summary counts only Opportunities whose configured stage is Open. Unstaged Opportunities have a separate count. Stage values are displayed separately per currency. Opportunity routes remain registered CRM children with `sidebar: false`, preserving the flattened workspace switcher.
+
+Opportunity creation and editing use the shared PageDrawer. The collection preserves filters and pagination in the URL. Pipeline cards share the same records and detail destinations; stage movement uses a labeled select and explicit save action. Bounded board pages identify their subset, while stage headers show exact totals. Customer detail hosts an Opportunities tab with that Customer preselected for creation. Organization Settings owns Opportunity stages independently of Relationship stages; both use the configuration registry.
+
 Workspace Home is the parent destination.
 
 It answers:

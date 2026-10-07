@@ -122,13 +122,13 @@ export function PageDrawerContent({ className, children }: { className?: string;
 
   // Focus moves in when the drawer opens and back to what opened it when it closes.
   useEffect(() => {
-    if (!open || !pageSlot) return;
+    if (!open || !pageSlot || !visible) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     ref.current
       ?.querySelector<HTMLElement>('[data-autofocus], input:not([type=hidden]), select, textarea')
       ?.focus();
     return () => previous?.focus();
-  }, [open, pageSlot]);
+  }, [open, pageSlot, visible]);
 
   if (!open || !pageSlot) return null;
 

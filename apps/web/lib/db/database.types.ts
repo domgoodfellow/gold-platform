@@ -4392,6 +4392,129 @@ export type Database = {
           },
         ]
       }
+      opportunities: {
+        Row: {
+          amount_minor: number | null
+          created_at: string
+          created_by: string
+          currency: string | null
+          customer_id: string
+          expected_close_on: string | null
+          id: string
+          organization_id: string
+          owner_membership_id: string | null
+          stage_id: string | null
+          title: string
+        }
+        Insert: {
+          amount_minor?: number | null
+          created_at?: string
+          created_by: string
+          currency?: string | null
+          customer_id: string
+          expected_close_on?: string | null
+          id?: string
+          organization_id: string
+          owner_membership_id?: string | null
+          stage_id?: string | null
+          title: string
+        }
+        Update: {
+          amount_minor?: number | null
+          created_at?: string
+          created_by?: string
+          currency?: string | null
+          customer_id?: string
+          expected_close_on?: string | null
+          id?: string
+          organization_id?: string
+          owner_membership_id?: string | null
+          stage_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunities_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "opportunities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_owner_same_org"
+            columns: ["organization_id", "owner_membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "opportunities_stage_same_org"
+            columns: ["organization_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "opportunity_stages"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      opportunity_stages: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          name: string
+          organization_id: string
+          position: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          kind: string
+          name: string
+          organization_id: string
+          position?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind?: string
+          name?: string
+          organization_id?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_stages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_stages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_charge_components: {
         Row: {
           amount_minor: number
@@ -10966,6 +11089,18 @@ export type Database = {
           p_to_number: string
         }
         Returns: string
+      }
+      opportunity_stage_summary: {
+        Args: { p_organization_id: string }
+        Returns: {
+          currency: string
+          opportunity_count: number
+          stage_id: string
+          stage_kind: string
+          stage_name: string
+          stage_position: number
+          value_minor: string
+        }[]
       }
       organization_allowance_state: {
         Args: {

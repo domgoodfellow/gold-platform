@@ -10,7 +10,7 @@ test.describe('CRM reference vertical', () => {
 
     await page.goto(`/organizations/${ctx.organizationId}/sales`);
     await expect(page.getByRole('heading', { name: 'CRM', exact: true })).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Pipeline snapshot' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Opportunity pipeline snapshot' })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Recent CRM activity' })).toBeVisible();
     await expect(page.getByRole('search')).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('crm-home-populated.png'), fullPage: true });
@@ -60,7 +60,7 @@ test.describe('CRM reference vertical', () => {
     await page.getByRole('button', { name: 'Configure', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'CRM configuration', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Custom field settings' })).toHaveAttribute('href', `/organizations/${ctx.organizationId}/settings/custom-fields`);
-    await expect(page.getByRole('link', { name: 'Sales-stage settings' })).toHaveAttribute('href', `/organizations/${ctx.organizationId}/settings/sales-stages`);
+    await expect(page.getByRole('link', { name: 'Relationship-stage settings' })).toHaveAttribute('href', `/organizations/${ctx.organizationId}/settings/sales-stages`);
   });
 });
 

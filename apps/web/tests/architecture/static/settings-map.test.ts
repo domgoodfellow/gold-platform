@@ -75,7 +75,7 @@ describe('the Settings configuration map', () => {
       roles: 'team',
       integrations: 'integrations',
     };
-    for (const area of AREAS.filter((candidate) => candidate.sidebar === false && !['setup', 'insights', 'studio-website', 'studio-forms', 'studio-templates'].includes(candidate.segment))) {
+    for (const area of AREAS.filter((candidate) => candidate.sidebar === false && !['setup', 'insights', 'studio-website', 'studio-forms', 'studio-templates', 'opportunities', 'opportunity-pipeline'].includes(candidate.segment))) {
       expect(
         CONFIG_TARGETS.some((target) => target.key === settingsOwned[area.segment] || target.path.split(/[/#]/)[0] === area.segment),
         `${area.segment} left the sidebar and is not on the Settings map`,

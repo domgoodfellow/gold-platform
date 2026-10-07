@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Hint } from '@/components/controls/inputs';
 import { DefinitionList, Detail } from '@/components/display/data';
 import { Section, SectionHeading } from '@/components/surfaces/section';
@@ -65,8 +66,10 @@ export function CustomerDetail({
   role,
   features,
   permissions,
+  opportunities,
 }: {
   organizationId: string;
+  opportunities?: ReactNode;
   customer: Customer;
   stage: CustomerStage | null;
   stages: CustomerStage[];
@@ -102,6 +105,7 @@ export function CustomerDetail({
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          {opportunities ? <TabsTrigger value="opportunities">Opportunities</TabsTrigger> : null}
           <TabsTrigger value="discovery">Discovery</TabsTrigger>
           <TabsTrigger value="configuration">Proposed configuration</TabsTrigger>
           <TabsTrigger value="commercial">Commercial proposal</TabsTrigger>
@@ -156,6 +160,7 @@ export function CustomerDetail({
           />
         </TabsContent>
         <TabsContent value="activity" className="mt-6"><ActivityList timeline={timeline} timezone={timezone} /></TabsContent>
+        {opportunities ? <TabsContent value="opportunities" className="mt-6">{opportunities}</TabsContent> : null}
         <TabsContent value="work" className="mt-6"><CustomerRelatedWork organizationId={organizationId} work={work} /></TabsContent>
         <TabsContent value="locations" className="mt-6">
           <CustomerLocationsSection

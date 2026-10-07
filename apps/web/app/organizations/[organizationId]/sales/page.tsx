@@ -9,6 +9,7 @@ import { WorkspaceActivity } from '@/features/timeline/workspace-activity';
 import { activeModuleKeys, availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
+import { summarizeOpportunities } from '@/lib/domain/opportunities/opportunities';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { todayInZone } from '@/lib/domain/scheduling/window';
 import { areaAvailable, configTarget, configTargetOffered } from '@/lib/navigation';
@@ -19,10 +20,11 @@ export const dynamic = 'force-dynamic';
 export default async function SalesPage({ params }: PageProps<'/organizations/[organizationId]/sales'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
-  const [resolvedFeatures, customers, definitions] = await Promise.all([
+  const [resolvedFeatures, customers, definitions, opportunitySummary] = await Promise.all([
     organizationResolvedFeatureStates(db, { organizationId }),
     listCustomers(db, { organizationId, limit: 5 }),
     listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
+    summarizeOpportunities(db, { organizationId }),
   ]);
   const modules = activeModuleKeys(resolvedFeatures);
   const features = availableFeatureKeys(resolvedFeatures);
@@ -32,6 +34,8 @@ export default async function SalesPage({ params }: PageProps<'/organizations/[o
   const gate = { enabledModules: modules, featureAvailability: features, capabilities };
   const fieldsTarget = configTarget('custom-fields');
   const stagesTarget = configTarget('sales-stages');
+  const opportunityStagesTarget = configTarget('opportunity-stages');
+  const mayConfigureOpportunityStages = configTargetOffered(opportunityStagesTarget, gate);
   const mayConfigure = configTargetOffered(fieldsTarget, gate);
   const mayConfigureStages = configTargetOffered(stagesTarget, gate);
   const mayCreate = capabilities.has('customer.create');
@@ -39,14 +43,6 @@ export default async function SalesPage({ params }: PageProps<'/organizations/[o
   const mayInsight = areaAvailable('insights', availability) && capabilities.has('report.read');
   const settingsHref = (path: string) => `/organizations/${organizationId}/${path}`;
   const stages = pipelineAvailable ? await listCustomerStages(db, { organizationId }) : [];
-  // Exact canonical counts, never counts over the five recent rows (or LIST_LIMIT).
-  const [unstaged, stageCounts] = await Promise.all([
-    pipelineAvailable ? listCustomers(db, { organizationId, stageId: null, limit: 1 }) : Promise.resolve(null),
-    Promise.all(stages.map(async (stage) => {
-      const result = await listCustomers(db, { organizationId, stageId: stage.id, limit: 1 });
-      return { ...stage, count: result.total };
-    })),
-  ]);
 
   const home = (
     <>
@@ -55,13 +51,15 @@ export default async function SalesPage({ params }: PageProps<'/organizations/[o
         timezone={organization.timezone}
         customers={customers}
         totalCustomers={customers.total}
-        pipeline={unstaged ? { stages: stageCounts, unstaged: unstaged.total } : null}
+        pipeline={pipelineAvailable ? { stages } : null}
+        opportunitySummary={opportunitySummary}
+        opportunityStagesSettingsHref={mayConfigureOpportunityStages ? settingsHref(opportunityStagesTarget.path) : undefined}
         stagesSettingsHref={mayConfigureStages ? settingsHref(stagesTarget.path) : undefined}
         mayCreate={mayCreate}
         mayImport={mayImport}
         mayConfigure={mayConfigure}
         mayInsight={mayInsight}
-        activity={<WorkspaceActivity db={db} organizationId={organizationId} timezone={organization.timezone} scope="customers" limit={5} emptyMessage="No CRM activity yet." />}
+        activity={<WorkspaceActivity db={db} organizationId={organizationId} timezone={organization.timezone} scope="crm" limit={5} emptyMessage="No CRM activity yet." />}
       />
       {mayInsight ? (
         <SupportRegistrar mode="insights" title="Customer insights">
@@ -72,7 +70,8 @@ export default async function SalesPage({ params }: PageProps<'/organizations/[o
         <ConfigureRegistrar title="CRM configuration" settingsHref={settingsHref(fieldsTarget.path)}>
           <div className="mb-6 flex flex-wrap gap-2">
             <ButtonLink tone="secondary" href={settingsHref(fieldsTarget.path)}>Custom field settings</ButtonLink>
-            {mayConfigureStages ? <ButtonLink tone="secondary" href={settingsHref(stagesTarget.path)}>Sales-stage settings</ButtonLink> : null}
+            {mayConfigureStages ? <ButtonLink tone="secondary" href={settingsHref(stagesTarget.path)}>Relationship-stage settings</ButtonLink> : null}
+            {mayConfigureOpportunityStages ? <ButtonLink tone="secondary" href={settingsHref(opportunityStagesTarget.path)}>Opportunity-stage settings</ButtonLink> : null}
           </div>
           <CustomerConfiguration organizationId={organizationId} role={organization.role} mayConfigure={mayConfigure} definitions={definitions} stages={stages} salesEnabled={pipelineAvailable} />
         </ConfigureRegistrar>

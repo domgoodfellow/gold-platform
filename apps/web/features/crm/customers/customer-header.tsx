@@ -17,7 +17,7 @@ export function CustomerHeader({ organizationId, customer, stage, definitions, s
     <RecordHeader
       title={customer.name}
       crumbs={[{ label: 'Customers', href: `/organizations/${organizationId}/customers` }, { label: customer.name }]}
-      summary={stage ? `Stage: ${stage.name}` : 'No sales stage'}
+      summary={stage ? `Relationship stage: ${stage.name}` : 'No relationship stage'}
       actions={<>{mayCall ? <CallCustomerSheet organizationId={organizationId} customer={customer} /> : null}{mayEdit ? <EditCustomerSheet organizationId={organizationId} customer={customer} definitions={definitions} stages={stages} /> : null}</>}
     />
   );
