@@ -13,6 +13,7 @@
     "demo": "tsx scripts/demo/run.ts",
     "audit:ui": "node scripts/audit/ui-surfaces.mjs",
     "audit:ui:write": "node scripts/audit/ui-surfaces.mjs --write",
+    "audit:ui:capture": "node scripts/audit/ui-capture.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:visual": "playwright test -c playwright.visual.config.ts"
