@@ -45,9 +45,15 @@ export async function updateProfileAction(_previous: AccountFormState, formData:
     given_name: String(formData.get('given_name') ?? ''),
     family_name: String(formData.get('family_name') ?? ''),
     preferred_name: String(formData.get('preferred_name') ?? ''),
-    avatar: String(formData.get('avatar') ?? '') || null,
     locale: String(formData.get('locale') ?? 'en'),
     timezone: String(formData.get('timezone') ?? 'UTC'),
+    phone_e164: String(formData.get('phone_e164') ?? '') || null,
+    address_line_1: String(formData.get('address_line_1') ?? '') || null,
+    address_line_2: String(formData.get('address_line_2') ?? '') || null,
+    city: String(formData.get('city') ?? '') || null,
+    administrative_area: String(formData.get('administrative_area') ?? '') || null,
+    postal_code: String(formData.get('postal_code') ?? '') || null,
+    country_code: String(formData.get('country_code') ?? '') || null,
   }), 'Profile saved.');
 }
 

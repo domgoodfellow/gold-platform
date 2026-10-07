@@ -267,3 +267,49 @@ describe('signup verification and profile privacy', () => {
     expect((await getPersonalProfile(session)).preferred_name).toBe('');
   });
 });
+
+describe('private account contact data under RLS', () => {
+  it('persists optional contact data, keeps it private, and supports clearing it', async () => {
+    const owner = anonClient();
+    const stranger = anonClient();
+    await registerWithPassword(owner, { email: `contact-${randomUUID().slice(0, 8)}@example.test`, password: PASSWORD, passwordConfirmation: PASSWORD });
+    await registerWithPassword(stranger, { email: `outsider-${randomUUID().slice(0, 8)}@example.test`, password: PASSWORD, passwordConfirmation: PASSWORD });
+    const id = (await owner.auth.getUser()).data.user!.id;
+    const initial = await getPersonalProfile(owner);
+    expect(initial.phone_e164).toBeNull();
+    expect(initial.country_code).toBeNull();
+    await updatePersonalProfile(owner, { ...initial, phone_e164: ' +819012345678 ', address_line_1: ' 10 Main Street ', address_line_2: ' Apt 2 ', city: ' Kyoto ', administrative_area: ' Kyoto ', postal_code: ' 600-8001 ', country_code: ' jp ' });
+    expect(await getPersonalProfile(owner)).toMatchObject({ phone_e164: '+819012345678', address_line_1: '10 Main Street', address_line_2: 'Apt 2', city: 'Kyoto', administrative_area: 'Kyoto', postal_code: '600-8001', country_code: 'JP' });
+    const hidden = await stranger.from('account_profiles').select('*').eq('user_id', id);
+    expect(hidden.error).toBeNull();
+    expect(hidden.data).toEqual([]);
+    const forged = await stranger.from('account_profiles').update({ city: 'Forged' }).eq('user_id', id).select();
+    expect(forged.error).toBeNull();
+    expect(forged.data).toEqual([]);
+    expect((await getPersonalProfile(owner)).city).toBe('Kyoto');
+    const invalid = await owner.from('account_profiles').update({ phone_e164: 'not-a-number' }).eq('user_id', id);
+    expect(invalid.error?.code).toBe('23514');
+    await updatePersonalProfile(owner, { ...initial, phone_e164: ' ', address_line_1: '', country_code: '' });
+    expect(await getPersonalProfile(owner)).toMatchObject({ phone_e164: null, address_line_1: null, country_code: null });
+  });
+  it('excludes anonymous identities from profile creation, reads and updates', async () => {
+    const pg = new Client(process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres');
+    const id = randomUUID();
+    await pg.connect();
+    try {
+      await pg.query('begin');
+      await pg.query("insert into auth.users (id, is_anonymous) values ($1, true)", [id]);
+      expect((await pg.query('select * from public.account_profiles where user_id = $1', [id])).rows).toEqual([]);
+      // Even a legacy row belonging to this anonymous identity must remain inaccessible.
+      await pg.query('insert into public.account_profiles(user_id, city) values ($1, $2)', [id, 'Private city']);
+      await pg.query('set local role authenticated');
+      await pg.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: id, role: 'authenticated', is_anonymous: true })]);
+      expect((await pg.query('select * from public.account_profiles')).rows).toEqual([]);
+      expect((await pg.query("update public.account_profiles set city = 'Forged' returning user_id")).rows).toEqual([]);
+      await expect(pg.query('insert into public.account_profiles(user_id, city) values ($1, $2)', [id, 'Kyoto'])).rejects.toMatchObject({ code: '42501' });
+    } finally {
+      await pg.query('rollback');
+      await pg.end();
+    }
+  });
+});

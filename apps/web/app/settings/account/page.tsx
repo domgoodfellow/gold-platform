@@ -1,5 +1,4 @@
 import { PageHeader } from '@/components/headers/page-header';
-import { Section, SectionHeading } from '@/components/surfaces/section';
 import { PersonalProfileForm, ChangeEmailForm } from '@/features/account/profile-form';
 import { Hint } from '@/components/controls/inputs';
 import { AccountSectionNav } from '@/features/account/account-section-nav';
@@ -15,22 +14,16 @@ export default async function ProfilePage({ searchParams }: PageProps<'/settings
   return (
     <PersonalSettingsShell returnOrganizationId={typeof org === 'string' ? org : undefined}>
       {({ email, profile, pendingEmail, organizationId }) => (
-        <>
+        <div className="mx-auto w-full max-w-5xl space-y-6">
           <PageHeader title="Profile" crumbs={personalSettingsAncestry(organizationId)} />
           <AccountSectionNav organizationId={organizationId} />
           {emailChange === 'failed' ? <Hint role="alert">That confirmation link is invalid or expired. Request a new change.</Hint> : null}
-          <Section>
-            <SectionHeading>Personal profile</SectionHeading>
-            <PersonalProfileForm profile={profile} />
-          </Section>
-          <Section>
-            <SectionHeading>Email address</SectionHeading>
-            <ChangeEmailForm email={email} pendingEmail={pendingEmail} />
-            <Hint className="mt-4 block">
-              Your identity. It belongs to you, not to any business, and applies in every business you belong to.
-            </Hint>
-          </Section>
-        </>
+          <PersonalProfileForm profile={profile} email={email} />
+          <ChangeEmailForm email={email} pendingEmail={pendingEmail} />
+          <Hint className="pb-6">
+            Your identity belongs to you, not to any business, and applies across every business you belong to.
+          </Hint>
+        </div>
       )}
     </PersonalSettingsShell>
   );

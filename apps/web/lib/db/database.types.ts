@@ -36,33 +36,54 @@ export type Database = {
     Tables: {
       account_profiles: {
         Row: {
+          address_line_1: string | null
+          address_line_2: string | null
+          administrative_area: string | null
           avatar: string | null
+          city: string | null
+          country_code: string | null
           created_at: string
           family_name: string
           given_name: string
           locale: string
+          phone_e164: string | null
+          postal_code: string | null
           preferred_name: string
           timezone: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          address_line_1?: string | null
+          address_line_2?: string | null
+          administrative_area?: string | null
           avatar?: string | null
+          city?: string | null
+          country_code?: string | null
           created_at?: string
           family_name?: string
           given_name?: string
           locale?: string
+          phone_e164?: string | null
+          postal_code?: string | null
           preferred_name?: string
           timezone?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          address_line_1?: string | null
+          address_line_2?: string | null
+          administrative_area?: string | null
           avatar?: string | null
+          city?: string | null
+          country_code?: string | null
           created_at?: string
           family_name?: string
           given_name?: string
           locale?: string
+          phone_e164?: string | null
+          postal_code?: string | null
           preferred_name?: string
           timezone?: string
           updated_at?: string

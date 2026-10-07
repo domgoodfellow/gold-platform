@@ -2,7 +2,7 @@ import { verifySignupEmail, requestSignupVerification } from '@/lib/domain/ident
 import { describe, expect, it, vi } from 'vitest';
 import type { Db } from '@/lib/db/types';
 import { changePassword, registerWithPassword, setNewPassword } from '@/lib/domain/identity/credentials';
-import { requestEmailChange, requestEmailChangeProof, updatePersonalProfile } from '@/lib/domain/identity/profile';
+import { getPersonalProfile, requestEmailChange, requestEmailChangeProof, updatePersonalProfile } from '@/lib/domain/identity/profile';
 
 const PASSWORD = 'a long new passphrase for this account';
 function clients() {
@@ -135,5 +135,51 @@ describe('signup verification', () => {
     const resend = vi.fn().mockResolvedValue({ error: { message: 'Supabase internal details' } });
     await expect(requestSignupVerification({ auth: { resend } } as unknown as Db, { email: 'pat@example.test' })).rejects.toMatchObject({ message: 'Unable to send a code. Wait a minute and try again.' });
     expect(resend).toHaveBeenCalledWith({ type: 'signup', email: 'pat@example.test' });
+  });
+});
+
+describe('optional private contact contract', () => {
+  const basic = { given_name: ' Pat ', family_name: ' Lee ', preferred_name: '', locale: 'en', timezone: 'UTC' };
+  function profileClient() {
+    const { db, auth } = clients();
+    const single = vi.fn().mockResolvedValue({ data: { user_id: 'person-1' }, error: null });
+    const eq = vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ single }) });
+    const update = vi.fn().mockReturnValue({ eq });
+    Object.assign(db, { from: vi.fn().mockReturnValue({ update }) });
+    return { db, auth, update, eq };
+  }
+  it('normalizes optional whitespace, nulls and country casing without posting unrelated properties', async () => {
+    const { db, update, eq } = profileClient();
+    await updatePersonalProfile(db, { ...basic, phone_e164: ' +819012345678 ', address_line_1: '  10 Main Street ', address_line_2: '  ', city: ' Kyoto ', administrative_area: ' Kyoto ', postal_code: ' 600-8001 ', country_code: ' jp ', ...{ email: 'forged@example.test', user_id: 'someone-else' } });
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ phone_e164: '+819012345678', address_line_1: '10 Main Street', address_line_2: null, city: 'Kyoto', administrative_area: 'Kyoto', postal_code: '600-8001', country_code: 'JP' }));
+    expect(update.mock.calls[0][0]).not.toHaveProperty('email');
+    expect(update.mock.calls[0][0]).not.toHaveProperty('user_id');
+    expect(update.mock.calls[0][0]).not.toHaveProperty('avatar');
+    expect(eq).toHaveBeenCalledWith('user_id', 'person-1');
+  });
+  it.each([
+    [{ phone_e164: '4165550142' }, 'identity.phone_invalid'],
+    [{ phone_e164: '+1 416 555 0142' }, 'identity.phone_invalid'],
+    [{ phone_e164: '+012345678' }, 'identity.phone_invalid'],
+    [{ country_code: 'ZZ' }, 'identity.country_invalid'],
+    [{ country_code: '\u00df' }, 'identity.country_invalid'],
+    [{ address_line_1: 'x'.repeat(201) }, 'identity.contact_invalid'],
+    [{ postal_code: 'x'.repeat(33) }, 'identity.contact_invalid'],
+    [{ timezone: 'Not/AZone' }, 'identity.preferences_invalid'],
+  ])('rejects invalid input %j before any write', async (contact, code) => {
+    const { db, update } = profileClient();
+    await expect(updatePersonalProfile(db, { ...basic, ...contact })).rejects.toMatchObject({ code });
+    expect(update).not.toHaveBeenCalled();
+  });
+  it('loads all contact fields from the acting profile', async () => {
+    const { db } = clients();
+    const data = { ...basic, phone_e164: '+819012345678', city: 'Kyoto', country_code: 'JP' };
+    const single = vi.fn().mockResolvedValue({ data, error: null });
+    const eq = vi.fn().mockReturnValue({ single });
+    const select = vi.fn().mockReturnValue({ eq });
+    Object.assign(db, { from: vi.fn().mockReturnValue({ select }) });
+    expect(await getPersonalProfile(db)).toEqual(data);
+    expect(select.mock.calls[0][0]).toContain('address_line_2');
+    expect(eq).toHaveBeenCalledWith('user_id', 'person-1');
   });
 });

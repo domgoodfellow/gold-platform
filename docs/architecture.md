@@ -692,6 +692,15 @@ Plan & usage owns the organization's GildOps commercial relationship.
 
 Account is person-owned and follows the Person across Organizations.
 
+Supabase Auth owns authentication identity, email, credentials, provider identities and sessions.
+`account_profiles` owns personal names, avatar, locale, timezone and optional personal contact/address
+information. Contact/address fields are private to the account owner and never authorization inputs.
+`memberships` owns organization participation, roles and an optional organization-specific name override.
+Personal contact information is separate from organization, customer and billing addresses.
+Phone numbers require explicit E.164 (`+` and 2-15 digits); no country inference or international
+formatting parser is installed. Empty optional contact fields become null. Country codes use assigned
+ISO 3166-1 alpha-2 identifiers. Addresses have length bounds without country-specific postal rules.
+
 Legacy Settings routes may redirect to canonical owners.
 
 Redirect compatibility must not be rendered as duplicate navigation.
