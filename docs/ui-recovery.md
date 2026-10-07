@@ -33,8 +33,8 @@ The current repository is strong at the first two layers and inconsistent above 
 - The web app is already ShadCN-based. `apps/web/components.json` uses `radix-nova`, neutral base colour, CSS variables and Lucide.
 - `packages/ui` already owns source-level primitives: cards, buttons, inputs, badges, dialogs, drawers, sheets, sidebar, empty states, tabs, tables and related controls.
 - `apps/web/components` already has application-level controls and several composition attempts: `WorkspaceHome`, `PageHeader`, `CollectionHeader`, `CollectionView`, `KpiCard`, `Widget`, `AppPage`, drawers and the shared shell.
-- The authenticated organization tree currently contains roughly ninety non-Platform `page.tsx` routes, plus a large Platform control plane and public/auth/marketing surfaces.
-- Only six visual Playwright fixtures currently represent the application: a workspace Home, collection board, organization settings, 404/state, work-item detail and Platform control-plane page. They are useful samples, not exhaustive surface QA.
+- The authenticated organization tree currently contains **125** organization-scoped `page.tsx` routes: **92** non-Platform operator/settings/library surfaces and **33** Platform control-plane surfaces, plus public/auth/marketing surfaces outside that tree.
+- Before this branch, only six visual Playwright fixtures represented the application: a workspace Home, collection board, organization settings, 404/state, work-item detail and Platform control-plane page. They are useful samples, not exhaustive surface QA.
 - `CollectionView` exists, but the UI spec itself says Settings is the first consumer and other eligible collections have not yet been migrated.
 - Page-wide padding is already centralized in `PAGE_PADDING = 'p-4 sm:p-6 lg:p-8'`. Screens that appear to have inconsistent padding are therefore likely bypassing the canonical shell/composition, adding local full-bleed structures, or using nested patterns with their own spacing. The solution is not to hand-tune every route.
 - The current CSS follows `prefers-color-scheme` directly. There is no explicit user Appearance override for System / Light / Dark.
@@ -374,6 +374,11 @@ It demonstrates:
 - light neutral surface hierarchy
 
 Later slices should extract only repeated, stable contracts into `apps/web/components`.
+
+Phase 0 also adds two repeatable audit tools:
+
+- `pnpm audit:ui` / `pnpm audit:ui:write` — static organization-route census and pattern adoption report.
+- `pnpm audit:ui:capture` — authenticated browser crawler that follows safely reachable organization links, captures full-page screenshots and records console/page/request failures. It requires the existing local E2E/demo stack and does not click mutations.
 
 ---
 
