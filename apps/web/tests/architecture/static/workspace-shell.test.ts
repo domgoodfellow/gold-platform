@@ -748,8 +748,8 @@ describe('the breadcrumb contract — every page publishes a location, ancestors
   it('workspaceAncestry reads WORKSPACES/AREAS, takes organizationId, and links a real workspace Home', () => {
     expect(navigationSource).toContain('export function workspaceAncestry(organizationId: string, segment: string)');
     expect(navigationSource).toContain("const owner = WORKSPACES.find((candidate) => candidate.key === area.workspace)!");
-    // A workspace with a declared Home gets a real href; one without stays a plain label.
-    expect(navigationSource).toContain('if (!owner.home) return [{ label: owner.label }];');
+    // Every canonical workspace now has a real Home.
+    expect(navigationSource).not.toContain('if (!owner.home)');
     expect(navigationSource).toContain('return [{ label: owner.label, href: areaHref(organizationId, owner.home) }];');
   });
 

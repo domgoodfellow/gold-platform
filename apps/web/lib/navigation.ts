@@ -40,8 +40,8 @@ export type AreaGroup = 'home' | 'library' | 'workspaces' | 'settings';
  * workspace is where an operator does a kind of work — never a Product, Plan, Module, Feature or
  * permission (D68). Registered is not visible. A workspace draws a row in the sidebar only
  * when at least one page names it (`Area.workspace`) and that page is reachable to this person
- * (`projectShell`), so Marketing, Support and AI are registered here and absent from
- * navigation until a real page arrives. Navigation never leads to an empty placeholder, and
+ * (`projectShell`). An authenticated Home with an honest starting state is a real page,
+ * even before the workspace has records. Navigation never leads to a dead placeholder, and
  * readiness is a fact about the pages, never a flag on the workspace or an entitlement.
  *
  * Plan ≠ Product ≠ Module ≠ Feature ≠ Workspace ≠ Page. No Product key is stored here: Products
@@ -62,12 +62,12 @@ export type AreaGroup = 'home' | 'library' | 'workspaces' | 'settings';
 export const WORKSPACES = [
   { key: 'crm', label: 'CRM', home: 'sales', featureKeys: ['customer_profile', 'contacts', 'relationships', 'ownership_assignment', 'pipeline', 'configurable_stages', 'qualification_state', 'follow_ups', 'booking_intake'] },
   { key: 'communications', label: 'Communications', home: 'comms', featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions', 'inbound_sms', 'outbound_sms', 'number_inventory', 'caller_id'] },
-  { key: 'marketing', label: 'Marketing', home: undefined, featureKeys: [] },
-  { key: 'support', label: 'Support', home: undefined, featureKeys: [] },
+  { key: 'marketing', label: 'Marketing', home: 'marketing', featureKeys: [] },
+  { key: 'support', label: 'Support', home: 'support', featureKeys: [] },
   { key: 'field', label: 'Work', home: 'field', featureKeys: ['resource_records', 'assignment', 'locations', 'weather_aware_dispatch', 'assets'] },
   { key: 'finance', label: 'Finance', home: 'finance', featureKeys: ['price_book', 'quote_creation', 'quote_to_invoice', 'invoices', 'invoice_history', 'card_payments', 'connected_processor', 'adjustments_credits'] },
   { key: 'automations', label: 'Automations', home: 'automations', featureKeys: ['rule_authoring', 'domain_event_trigger', 'email_action', 'run_history'] },
-  { key: 'ai', label: 'AI', home: undefined, featureKeys: ['agent_tools'] },
+  { key: 'ai', label: 'AI', home: 'ai', featureKeys: ['agent_tools'] },
   { key: 'studio', label: 'Studio', home: 'studio', featureKeys: ['pages_sections', 'draft_review_publish', 'seo_metadata', 'booking', 'portal_auth', 'portal_history'] },
 ] as const;
 
@@ -87,7 +87,7 @@ export const AREA_GROUPS = [
   // same reason Home draws none.
   { key: 'library', label: null },
   // Where an operator does a kind of work: each row is a workspace, and a workspace with several
-  // pages holds them as children (`Area.workspace`) rather than as peers.
+  // pages opens those pages contextually; the sidebar stays flat (`Area.workspace`).
   { key: 'workspaces', label: 'Workspaces' },
   { key: 'settings', label: null },
 ] as const satisfies readonly { key: AreaGroup; label: string | null }[];
@@ -372,6 +372,9 @@ export const AREAS: readonly Area[] = [
   // and by either channel's Features: a business with only one of the two channels still has its Inbox.
   { segment: 'comms-inbox', label: 'Inbox', group: 'workspaces', workspace: 'communications', route: 'comms/inbox', module: 'reception', relevantCapabilities: ['message.send'], featureKeys: ['inbound_sms', 'outbound_sms', 'sending'] },
   { segment: 'comms-numbers', label: 'Numbers', group: 'workspaces', workspace: 'communications', route: 'comms/numbers', module: 'reception', relevantCapabilities: ['call.place', 'message.send'], featureKeys: ['number_inventory', 'caller_id'] },
+  { segment: 'marketing', label: 'Marketing', group: 'workspaces', workspace: 'marketing' },
+  { segment: 'support', label: 'Support', group: 'workspaces', workspace: 'support' },
+  { segment: 'ai', label: 'AI', group: 'workspaces', workspace: 'ai' },
   // Finance: how this business prices, bills, gets paid and understands what its work earns —
   // tenant Financial Operations, customer to business, and nothing a business pays GildOps (that is
   // Settings → Plan & usage, and Platform for GildOps' own control plane). Home is kernel, like
@@ -683,7 +686,7 @@ export function areaLabel(segment: string): string {
 
 /**
  * The static ancestor trail for a page of a workspace, read from the one hierarchy that already
- * owns sidebar nesting (`Area.workspace`) rather than a page inventing its own. The current
+ * owns workspace membership (`Area.workspace`) rather than a page inventing its own. The current
  * organization is never one of these crumbs — the sidebar's own identity row already establishes
  * it, and repeating it in the trail would say the same thing twice (`Platform → Business →
  * Workspace → Page`, with the sidebar carrying the first two).
@@ -692,9 +695,7 @@ export function areaLabel(segment: string): string {
  * `Sales / Sales` or `Sales / Home`) — its `<h1>` is `workspaceLabel`, read directly. A page of a
  * workspace with several pages still names only the workspace: `Pipeline` reads as
  * `Sales / Pipeline`, not `Sales / Customers / Pipeline` — the workspace is the ancestor, its pages
- * are peers. The workspace ancestor is a real link to its canonical Home when the workspace has
- * one (`WORKSPACES[].home`) — a workspace with no declared Home (Service, Finance, AI, Studio, not
- * yet given a landing page) stays a plain label, since there is nowhere real to send the click.
+ * are peers. Every workspace ancestor links to its canonical Home (`WORKSPACES[].home`).
  */
 export function workspaceAncestry(organizationId: string, segment: string): { label: string; href?: string }[] {
   const workspace = WORKSPACES.find((candidate) => candidate.home === segment);
@@ -702,11 +703,5 @@ export function workspaceAncestry(organizationId: string, segment: string): { la
   const area = AREAS.find((candidate) => candidate.segment === segment);
   if (!area?.workspace) return [];
   const owner = WORKSPACES.find((candidate) => candidate.key === area.workspace)!;
-  if (!owner.home) return [{ label: owner.label }];
   return [{ label: owner.label, href: areaHref(organizationId, owner.home) }];
 }
-
-/**
- * Marketing and Support are canonical identities even before either has a reachable page. Their
- * registration creates no sidebar row; `projectShell` derives visibility from real areas.
- */

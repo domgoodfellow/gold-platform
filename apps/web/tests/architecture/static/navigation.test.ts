@@ -1,6 +1,7 @@
 import { readdirSync, existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { Bot, Headset, Megaphone, Wrench } from 'lucide-react';
 import {
   AREAS,
   AREA_GROUPS,
@@ -88,8 +89,7 @@ describe('the operator shell navigation', () => {
   });
 
   it('gives every registered workspace row an icon — a canonical key with no NAV_ICONS entry renders blank in the collapsed rail and the phone Menu', () => {
-    // Only a workspace with a Home page draws a row at all (`projectShell`); Marketing, Support
-    // and AI register no `home` yet and so project no `workspace-*` key to carry an icon.
+    // Only a workspace with a real Home draws a row (`projectShell`).
     for (const workspace of WORKSPACES.filter((entry) => entry.home)) {
       expect(NAV_ICONS[`workspace-${workspace.key}`], `"workspace-${workspace.key}" has no nav icon`).toBeDefined();
     }
@@ -160,12 +160,29 @@ describe('the operator shell navigation', () => {
     ]);
     const withAPage = (key: string) => AREAS.some((area) => area.workspace === key && area.group === 'workspaces' && area.sidebar !== false);
     expect(WORKSPACES.filter((workspace) => withAPage(workspace.key)).map((workspace) => workspace.key)).toEqual([
-      'crm', 'communications', 'field', 'finance', 'automations', 'studio',
+      'crm', 'communications', 'marketing', 'support', 'field', 'finance', 'automations', 'ai', 'studio',
     ]);
-    // Registered, not yet visible. Delete a key here in the same change that gives it a real page.
-    expect(WORKSPACES.filter((workspace) => !withAPage(workspace.key)).map((workspace) => workspace.key)).toEqual([
-      'marketing', 'support', 'ai',
+    expect(WORKSPACES.filter((workspace) => !withAPage(workspace.key))).toEqual([]);
+  });
+
+  it('assigns canonical workspace icons without changing Work', () => {
+    for (const [key, icon] of [['marketing', Megaphone], ['support', Headset], ['ai', Bot], ['field', Wrench]] as const) {
+      expect(AREA_ICONS[key]).toBe(icon);
+      expect(NAV_ICONS[`workspace-${key}`]).toBe(icon);
+    }
+  });
+
+  it.each(['marketing', 'support', 'ai'])('%s has one guarded starting Home and no invented child destinations', (key) => {
+    expect(WORKSPACES.find((workspace) => workspace.key === key)?.home).toBe(key);
+    expect(AREAS.filter((area) => area.workspace === key)).toEqual([
+      { segment: key, label: areaLabel(key), group: 'workspaces', workspace: key },
     ]);
+    const page = readFileSync(`${ROUTES}/${key}/page.tsx`, 'utf8');
+    expect(page).toContain('await requireOrganization(organizationId)');
+    expect(page).toContain('<WorkspaceHome');
+    expect(page).toContain('<EmptyState');
+    expect(page).not.toMatch(/redirect\(|href=|<Widget|<Card|\.insert\(|\.update\(|\.upsert\(|platform|credentials/i);
+    expect(readdirSync(`${ROUTES}/${key}`)).toEqual(['page.tsx']);
   });
 
   it('uses the nine stable canonical workspace identities and default labels', () => {
@@ -268,6 +285,7 @@ describe('the operator shell navigation', () => {
       'library',
       'sales', 'customers', 'pipeline',
       'comms', 'calls', 'comms-inbox', 'comms-numbers',
+      'marketing', 'support', 'ai',
       'finance', 'finance-quotes', 'finance-invoices', 'finance-payments',
       'automations', 'automation-rules', 'automation-messages', 'automation-activity',
       'field', 'work', 'schedule', 'resources', 'locations', 'assets',
@@ -914,9 +932,8 @@ describe('the organization shell taxonomy', () => {
     for (const area of inSidebar) {
       expect(existsSync(`${ROUTES}/${area.route ?? area.segment}/page.tsx`)).toBe(true);
     }
-    // Nor a workspace row with nothing behind it: Service and AI are registered but
-    // have no operating page, so `projectShell` draws none (shell-projection.test.ts proves the rows).
-    for (const absent of ['service', 'ai']) {
+    // Retired workspace identities must not return as sidebar destinations.
+    for (const absent of ['service']) {
       expect(inSidebar.some((area) => area.workspace === absent), `${absent} has no operating surface yet`).toBe(false);
     }
   });

@@ -478,16 +478,15 @@ Workspaces
   Communications
   Marketing
   Support
+  Work
   Finance
-  AI
   Automations
-  Field
+  AI
   Studio
 
-Settings
-
-Platform Administration
-  only in GildOps organization + platform permission
+Team / Connections / Agent are workspace-header utilities.
+Settings is reached through the account menu.
+Platform Administration is a separate context in the context switcher for authorized platform staff.
 ```
 
 Only real, reachable and authorized destinations render.
@@ -496,22 +495,7 @@ Only real, reachable and authorized destinations render.
 
 ## Workspace navigation
 
-A workspace is a parent navigation concept.
-
-The interaction contract is:
-
-```text
-workspace row body → navigate to Workspace Home
-workspace chevron  → expand/collapse child destinations
-```
-
-These interactions must not be conflated.
-
-The chevron's visual state reflects actual disclosure state.
-
-Home is never repeated as a child.
-
-A child list contains only real pages.
+A tenant workspace has one flat navigation row that opens its canonical Home. No tenant workspace chevrons, dropdowns or child rows render at any breakpoint. Contextual and detail routes keep their owning workspace active through the shared projection's route aliases. Nested navigation remains available within the separate Platform context.
 
 Never add:
 
@@ -523,6 +507,8 @@ Never add:
 ---
 
 ### Workspace Home
+
+Marketing, Support and tenant AI use `WorkspaceHome` at `/marketing`, `/support` and `/ai`. Each has an honest starting state and non-link explanatory operating areas, without invented metrics, records or unfinished destination links. Marketing covers acquisition and campaigns; Support covers problem/request resolution; AI covers the business's AI capabilities and behavior. Support uses Headset, Marketing uses Megaphone, AI uses Bot, and Work retains Wrench. The global Agent utility also retains Bot and opens the Agent rail. Tenant AI exposes neither Platform AI Runtime nor provider credentials.
 
 CRM Home launches Customers, Opportunities and the Opportunity pipeline; the feature-gated Customer board is labeled Relationship pipeline. Its primary commercial summary counts only Opportunities whose configured stage is Open. Unstaged Opportunities have a separate count. Stage values are displayed separately per currency. Opportunity routes remain registered CRM children with `sidebar: false`, preserving the flattened workspace switcher.
 
@@ -740,7 +726,7 @@ Examples:
 ```text
 Customers       → navigation
 New customer    → action
-CRM chevron     → disclosure
+Platform group  → disclosure within system navigation
 Configure       → page-support trigger
 ```
 

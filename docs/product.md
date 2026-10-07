@@ -153,21 +153,16 @@ A workspace earns a visible navigation row only when the organization and user h
 
 The product must not expose:
 
-- empty workspaces;
+- workspace rows without a real Home;
 - “coming soon” workspace rows;
 - placeholder children;
 - configuration pages pretending to be operating workspaces.
 
 The workspace-row body opens the workspace's canonical **Home**.
 
-The workspace chevron expands or collapses its real child destinations.
+Tenant workspace navigation is flat: the row opens Home, with no chevron or child rows. Contextual pages are reached from the workspace's operating surfaces.
 
-The two interactions are distinct:
-
-```text
-workspace row body → navigate to Home
-workspace chevron  → expand/collapse children
-```
+Marketing (`/marketing`), Support (`/support`) and tenant AI (`/ai`) have authenticated first-stage Homes with honest starting states and explanatory operating areas. A workspace with no records remains visible. These Homes retain organization membership and service-access enforcement and introduce no additional entitlement or capability gate; future operations must enforce their own canonical gates.
 
 Home is not repeated as a child.
 

@@ -15,7 +15,7 @@ const gate = (capabilities: readonly Capability[] = ALL_CAPABILITIES, overrides:
 });
 const project = (capabilities: readonly Capability[] = ALL_CAPABILITIES, overrides: Partial<ShellInput> = {}) => projectShell(gate(capabilities, overrides));
 const keys = (sections: ShellSection[]) => projectedItems(sections).map((item) => item.key);
-const workspaceKeys = ['workspace-crm', 'workspace-communications', 'workspace-field', 'workspace-finance', 'workspace-automations', 'workspace-studio'];
+const workspaceKeys = ['workspace-crm', 'workspace-communications', 'workspace-marketing', 'workspace-support', 'workspace-field', 'workspace-finance', 'workspace-automations', 'workspace-ai', 'workspace-studio'];
 
 describe('flat business navigation', () => {
   const sections = project();
@@ -30,7 +30,7 @@ describe('flat business navigation', () => {
     }
   });
   it('links every row to its real Home and preserves internal field identity', () => {
-    const homes = ['sales', 'comms', 'field', 'finance', 'automations', 'studio'];
+    const homes = ['sales', 'comms', 'marketing', 'support', 'field', 'finance', 'automations', 'ai', 'studio'];
     expect(rows.map((row) => row.href)).toEqual(homes.map((home) => `/organizations/${ORG}/${home}`));
     expect(rows.find((row) => row.key === 'workspace-field')?.label).toBe('Work');
     expect(areaLabel('work')).toBe('Work items');
@@ -48,7 +48,7 @@ describe('flat business navigation', () => {
   });
   it('does not conjure module or feature gated destinations', () => {
     const none = project(ALL_CAPABILITIES, { enabledModules: new Set(), featureAvailability: new Set() });
-    expect(keys(none)).toEqual(['home', 'library', 'workspace-crm', 'workspace-field', 'workspace-finance', 'workspace-studio']);
+    expect(keys(none)).toEqual(['home', 'library', 'workspace-crm', 'workspace-marketing', 'workspace-support', 'workspace-field', 'workspace-finance', 'workspace-ai', 'workspace-studio']);
     const aliases = projectedItems(none).flatMap((item) => item.activeHrefs ?? []);
     expect(aliases).not.toContain(`/organizations/${ORG}/assets`);
     expect(aliases).not.toContain(`/organizations/${ORG}/customers/pipeline`);
@@ -63,6 +63,13 @@ describe('flat business navigation', () => {
       expect(AREAS.find((area) => area.segment === segment)?.module).toBeUndefined();
     }
   });
+  it('offers starting Homes without records, feature entitlements or arbitrary capabilities', () => {
+    const rows = projectedItems(project([], { enabledModules: new Set(), featureAvailability: new Set() }));
+    for (const key of ['marketing', 'support', 'ai']) {
+      expect(rows.find((row) => row.key === `workspace-${key}`)).toMatchObject({ href: `/organizations/${ORG}/${key}` });
+      expect(workspaceAncestry(ORG, key)).toEqual([]);
+    }
+  });
 });
 
 describe('owning workspace stays active on contextual and detail routes', () => {
@@ -71,6 +78,7 @@ describe('owning workspace stays active on contextual and detail routes', () => 
     ['home', 'home'], ['library/files', 'library'],
     ['sales', 'workspace-crm'], ['customers', 'workspace-crm'], ['customers/customer-1', 'workspace-crm'], ['customers/pipeline', 'workspace-crm'],
     ['comms', 'workspace-communications'], ['calls/call-1', 'workspace-communications'], ['comms/inbox/conversation-1', 'workspace-communications'], ['comms/numbers/number-1', 'workspace-communications'],
+    ['marketing', 'workspace-marketing'], ['support', 'workspace-support'], ['ai', 'workspace-ai'],
     ['finance/invoices/invoice-1', 'workspace-finance'], ['finance/payments/payment-1', 'workspace-finance'],
     ['automations/activity', 'workspace-automations'], ['automations/rule-1', 'workspace-automations'],
     ['field', 'workspace-field'], ['work/work-1', 'workspace-field'], ['schedule/date', 'workspace-field'], ['resources/person-1', 'workspace-field'], ['locations/site-1', 'workspace-field'], ['assets/asset-1', 'workspace-field'],
@@ -133,6 +141,12 @@ describe('persistent header utility authority', () => {
 
 describe('Platform is a separate system projection', () => {
   const sections = projectPlatformShell(ORG, allPlatform);
+  it('keeps Platform AI Runtime unrelated to tenant AI', () => {
+    expect(activeItemKey(project(), platformHref(ORG, 'ai-runtime'))).toBeNull();
+    expect(activeItemKey(sections, `/organizations/${ORG}/ai`)).toBeNull();
+    expect(activeItemKey(sections, platformHref(ORG, 'ai-runtime'))).toBe('platform-ai-runtime');
+    expect(selectShellContext(ORG, `/organizations/${ORG}/ai`, { organizationId: ORG })).toBe('business');
+  });
   it('holds only the existing nested Platform IA', () => {
     expect(sections.map((section) => section.key)).toEqual(['platform']);
     expect(sections[0].label).toBeNull();

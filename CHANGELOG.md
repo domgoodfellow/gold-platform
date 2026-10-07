@@ -34,6 +34,11 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Workspace Homes — 2026-10-07
+
+- Add authenticated Marketing, Support and tenant AI Homes with honest starting states and explanatory operating areas. All nine workspaces now have real Home destinations in the flat tenant sidebar, subject to existing eligibility rules.
+- Use Megaphone for Marketing, Headset for Support and Bot for AI; retain Wrench for Work and the global Agent's Bot rail control. Tenant AI remains separate from Platform AI Runtime and provider credentials.
+
 ### CRM — 2026-10-07
 
 - Add first-class Opportunities, collection/detail/pipeline views and a Customer Opportunities tab. Opportunity stages classify potential business as Open, Won or Lost while existing Customer stages remain the relationship lifecycle.

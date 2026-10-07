@@ -48,11 +48,13 @@ import {
   Hash,
   History,
   Home,
+  Headset,
   Landmark,
   Layers,
   LayoutDashboard,
   Library,
   MapPin,
+  Megaphone,
   Menu,
   Inbox,
   LayoutTemplate,
@@ -95,6 +97,9 @@ import {
 export const AREA_ICONS: Record<string, LucideIcon> = {
   home: Home,
   library: Library,
+  marketing: Megaphone,
+  support: Headset,
+  ai: Bot,
   work: ClipboardList,
   field: Wrench,
   sales: Users,
@@ -127,9 +132,12 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
 /** Every item the projection can produce: the areas and the platform destinations. */
 export const NAV_ICONS: Record<string, LucideIcon> = {
   ...AREA_ICONS,
-  // A workspace row is drawn with its Product's mark; its pages, in the phone sheet, with their own.
+  // Workspace destinations share their icons across sidebar, rail and phone Menu.
   'workspace-crm': Users,
   'workspace-communications': Phone,
+  'workspace-marketing': Megaphone,
+  'workspace-support': Headset,
+  'workspace-ai': Bot,
   'workspace-finance': CircleDollarSign,
   'workspace-automations': Zap,
   'workspace-field': Wrench,

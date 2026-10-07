@@ -633,6 +633,8 @@ Registration does not mean visibility.
 
 A workspace earns navigation only when it has a real reachable operating surface.
 
+Marketing, Support and tenant AI now have authenticated first-stage Homes with honest starting states. Their operating domains remain planned; these Homes add no campaigns, cases, AI activity records or provider configuration.
+
 ---
 
 ### Studio and public distribution
@@ -677,7 +679,7 @@ Do not build Support as another inbox.
 
 ### Marketing
 
-Marketing earns a visible surface when real workflow exists for:
+Marketing's Home establishes acquisition scope. Deeper workflow remains planned for:
 
 - audience;
 - segmentation;
@@ -696,7 +698,7 @@ CRM owns the relationship.
 
 ### AI
 
-AI requires an operator Home/operating surface only when that surface adds real value beyond the global Agent.
+Tenant AI's Home establishes the business's AI operating scope separately from the global Agent and Platform AI Runtime. Deeper operating features remain planned.
 
 Do not add a workspace row merely to satisfy the canonical taxonomy.
 

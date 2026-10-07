@@ -598,10 +598,9 @@ The canonical organization navigation model contains:
 Home
 Library
 Workspaces
-Settings
 ```
 
-Platform may appear as an additional privileged section only inside GildOps' own organization for authorized platform staff.
+Settings is reached from the account menu. Team, Connections and Agent are workspace-header utilities. Platform is a separate privileged context in the context switcher for authorized platform staff, with its own nested projection.
 
 ---
 
@@ -610,6 +609,8 @@ Platform may appear as an additional privileged section only inside GildOps' own
 The workspace registry contains all canonical workspace identities.
 
 Visibility is derived from real reachable operating pages plus the relevant entitlement/permission projection.
+
+All nine workspaces have canonical Homes. Marketing, Support and tenant AI register matching Areas and authenticated pages at `/organizations/[organizationId]/marketing`, `/organizations/[organizationId]/support` and `/organizations/[organizationId]/ai`. These first-stage Homes compose `WorkspaceHome` and truthful starting states without domain writes or synthetic read models. They retain organization membership and service-access enforcement and have no additional Home-level capability or entitlement gate. Tenant workspace projection remains flat; contextual Areas supply active-route aliases rather than child rows. Tenant AI is separate from Platform AI Runtime and the global Agent rail.
 
 Do not create a separate “visible workspaces” hard-coded list.
 

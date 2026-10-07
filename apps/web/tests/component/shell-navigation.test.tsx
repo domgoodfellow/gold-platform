@@ -63,6 +63,9 @@ describe('workspace header icon utilities', () => {
     const team = screen.getByRole('link', { name: 'Team' });
     const connections = screen.getByRole('link', { name: 'Connections' });
     const agent = screen.getByRole('button', { name: 'Agent' });
+    expect(agent).not.toHaveAttribute('href');
+    expect(agent.querySelector('svg')).toHaveClass('lucide-bot');
+    expect(screen.queryByRole('link', { name: 'Agent' })).not.toBeInTheDocument();
     for (const control of [team, connections, agent]) {
       expect(control.textContent).toBe('');
       expect(control.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
