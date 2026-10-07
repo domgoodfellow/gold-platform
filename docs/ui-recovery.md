@@ -2,7 +2,7 @@
 
 This document is the migration target for the GildOps operator UI recovery. It records what the current repository actually does, what should remain, what must change, and the visual/composition direction that later implementation slices must follow.
 
-It does **not** pretend the migration is already complete. Where this document conflicts with `docs/ui-spec.md`, the existing spec describes current/legacy behavior and this document names the approved recovery target until the implementation slice updates the Tier 1 source of truth.
+It does **not** pretend the migration is already complete. `docs/ui-system.md` is the canonical current UI system. This recovery document records the audit, migration rationale and implementation sequence; when a recovery decision becomes canonical, it must also be reflected in `docs/ui-system.md` or an ADR rather than living here alone.
 
 ## Goal
 
@@ -381,23 +381,22 @@ Later slices should extract only repeated, stable contracts into `apps/web/compo
 
 The remaining work should be handed off as small verified slices:
 
-1. update authoritative UI docs and tests to the recovered shell/mobile rules
-2. shell + mobile navigation migration
-3. global Home
-4. workspace Home composition infrastructure
-5. CRM Home
-6. Communications Home and move Numbers to configuration prominence
-7. Finance Home
-8. Automations Home and reclassify Messages/Activity
-9. Field Home
-10. Studio Home
-11. Library Home
-12. eligible collections onto the canonical collection grammar
-13. record/detail surfaces
-14. settings/configuration consistency
-15. Appearance settings
-16. exhaustive desktop/tablet/phone audit crawler
-17. final consistency sweep and end-to-end cross-workspace journeys
+1. shell + mobile navigation migration and update the tests that still encode the retired bottom bar
+2. global Home
+3. workspace Home composition infrastructure
+4. CRM Home
+5. Communications Home and move Numbers to configuration prominence
+6. Finance Home
+7. Automations Home and reclassify Messages/Activity
+8. Field Home
+9. Studio Home
+10. Library Home
+11. eligible collections onto the canonical collection grammar
+12. record/detail surfaces
+13. settings/configuration consistency
+14. Appearance settings
+15. exhaustive desktop/tablet/phone audit crawler
+16. final consistency sweep and end-to-end cross-workspace journeys
 
 Every slice must inspect current implementation, preserve domain ownership and authoritative reads, verify desktop and mobile, and update the visual audit evidence.
 
