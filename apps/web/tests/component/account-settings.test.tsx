@@ -1,3 +1,4 @@
+import { VerificationForm } from '@/app/(auth)/verify-email/verification-form';
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -7,6 +8,11 @@ import { SidebarProvider } from '@gold/ui/components/sidebar';
 import { AccountMenu } from '@/components/navigation/account-menu';
 import { SettingsNavigationRow } from '@/features/settings/settings-navigation-row';
 import { ChangePasswordForm } from '@/features/account/change-password-form';
+
+vi.mock('@/app/(auth)/verify-email/actions', () => ({
+  verifyEmailAction: vi.fn(async () => ({ error: 'That code is invalid, expired, or already used. Request a new code.' })),
+  resendEmailAction: vi.fn(async () => ({ error: null, message: 'A new code is on its way.' })),
+}));
 
 vi.mock('next/navigation', () => ({ usePathname: () => '/organizations/8b1f0a1e-5d4c-4b7e-9a3f-1c2d3e4f5a6b/home' }));
 vi.mock('@/app/settings/account/actions', () => ({
@@ -51,5 +57,20 @@ describe('Settings interactions', () => {
     expect(screen.getByLabelText('New password')).toHaveAttribute('autocomplete', 'new-password');
     expect(screen.getByLabelText('New password')).toHaveAttribute('minlength', '15');
     expect(screen.getByLabelText('Confirm new password')).toHaveAttribute('autocomplete', 'new-password');
+  });
+});
+
+
+describe('email verification interactions', () => {
+  it('supports code autocomplete, rejected codes and requesting another', async () => {
+    const user = userEvent.setup();
+    render(<VerificationForm />);
+    const code = screen.getByLabelText('Verification code');
+    expect(code).toHaveAttribute('autocomplete', 'one-time-code');
+    await user.type(code, '123456');
+    await user.click(screen.getByRole('button', { name: 'Verify email' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('invalid, expired, or already used');
+    await user.click(screen.getByRole('button', { name: 'Resend code' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('A new code is on its way.');
   });
 });

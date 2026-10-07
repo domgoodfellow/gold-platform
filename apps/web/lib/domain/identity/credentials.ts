@@ -40,6 +40,7 @@ export async function signInWithPassword(
   const { error } = await db.auth.signInWithPassword({ email, password: input.password });
 
   if (error) {
+    if (error.code === 'email_not_confirmed') throw new DomainError('Verify your email to finish signing in.', 'identity.email_unverified');
     // One message for "no such account" and "wrong password" — distinguishing them tells an attacker which addresses are registered.
     throw new DomainError('That email and password do not match.', 'identity.rejected');
   }
@@ -52,20 +53,26 @@ export async function registerWithPassword(
     password: string;
     passwordConfirmation: string;
     emailRedirectTo?: string;
+    givenName?: string;
+    familyName?: string;
+    preferredName?: string;
   },
-): Promise<void> {
+): Promise<{ verificationRequired: boolean }> {
   const email = normaliseEmail(input.email);
   checkPassword(input.password, input.passwordConfirmation);
+  const names = [input.givenName, input.familyName, input.preferredName].map((name) => (name ?? "").trim());
+  if (names.some((name) => name.length > 100)) throw new DomainError("Use at most 100 characters for each name.", "identity.name_invalid");
 
-  const { error } = await db.auth.signUp({
+  const { data, error } = await db.auth.signUp({
     email,
     password: input.password,
-    options: input.emailRedirectTo ? { emailRedirectTo: input.emailRedirectTo } : undefined,
+    options: { emailRedirectTo: input.emailRedirectTo, data: { given_name: names[0], family_name: names[1], preferred_name: names[2] } },
   });
 
   if (error) {
-    throw new DomainError(error.message, 'identity.registration_failed');
+    throw new DomainError('Unable to create your account. Try again shortly, or log in if you already have an account.', 'identity.registration_failed');
   }
+  return { verificationRequired: !data?.session };
 }
 
 /**
@@ -163,7 +170,7 @@ export async function changePassword(
       password: input.password,
       ...(input.nonce ? { nonce: input.nonce } : {}),
     });
-    if (error) throw new DomainError(error.message, 'identity.password_change_failed');
+    if (error) throw new DomainError('Unable to change your password. Check your verification code and try again.', 'identity.password_change_failed');
   } finally {
     if (proof.data.session) await verifier.auth.signOut({ scope: 'local' });
   }
@@ -198,6 +205,6 @@ export async function signOut(db: Db): Promise<void> {
   const { error } = await db.auth.signOut();
 
   if (error) {
-    throw new DomainError(error.message, 'identity.sign_out_failed');
+    throw new DomainError('Unable to sign out. Try again.', 'identity.sign_out_failed');
   }
 }

@@ -14,7 +14,7 @@ import { cookies } from 'next/headers';
 
 const COOKIE_NAME = 'gold.pending-invite';
 const TOKEN_SHAPE = /^[0-9a-f]{64}$/i;
-const MAX_AGE_SECONDS = 15 * 60;
+const MAX_AGE_SECONDS = 24 * 60 * 60;
 
 export async function storePendingInvite(token: string): Promise<void> {
   if (!TOKEN_SHAPE.test(token)) return;

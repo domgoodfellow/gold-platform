@@ -1,12 +1,14 @@
+import { Client } from 'pg';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { requestEmailChange, updatePersonalProfile } from '@/lib/domain/identity/profile';
+import { getPersonalProfile, requestEmailChange, updatePersonalProfile } from '@/lib/domain/identity/profile';
+import { verifySignupEmail, requestSignupVerification } from '@/lib/domain/identity/verification';
 import { DomainError } from '@/lib/domain/errors';
 import {
   changePassword,
   setNewPassword,
-  registerWithPassword,
+  registerWithPassword as beginRegistration,
   signInWithPassword,
   signOut,
 } from '@/lib/domain/identity/credentials';
@@ -18,6 +20,28 @@ function anonClient(): SupabaseClient {
   return createClient(SUPABASE_URL, ANON_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+}
+
+async function signupCode(address: string, previousCode?: string): Promise<string> {
+  if (!['localhost', '127.0.0.1'].includes(new URL(SUPABASE_URL).hostname)) throw new Error('Mail capture fixtures are local-only.');
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const inbox = await (await fetch('http://127.0.0.1:54324/api/v1/messages')).json();
+    const message = inbox.messages?.find((entry: { To: { Address: string }[]; Subject: string }) =>
+      entry.To.some((recipient) => recipient.Address === address) && entry.Subject === 'Verify your GildOps email');
+    if (message) {
+      const content = await (await fetch(`http://127.0.0.1:54324/api/v1/message/${message.ID}`)).json();
+      const code = content.HTML?.match(/>([0-9]{6})<\/p>/)?.[1];
+      if (code && code !== previousCode) return code;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error('Signup verification email was not captured.');
+}
+
+async function registerWithPassword(client: SupabaseClient, input: Parameters<typeof beginRegistration>[1]) {
+  const result = await beginRegistration(client, input);
+  if (result.verificationRequired) await verifySignupEmail(client, { email: input.email.trim().toLowerCase(), code: await signupCode(input.email.trim().toLowerCase()) });
+  return result;
 }
 
 let db: SupabaseClient;
@@ -150,12 +174,12 @@ describe('changing password from a signed-in session', () => {
 
 
 describe('personal profile and email identity against local Auth', () => {
-  it('saves a personal display name as Auth metadata only', async () => {
+  it('saves the canonical personal profile under the acting account', async () => {
     const session = anonClient();
     const address = `profile-${randomUUID().slice(0, 8)}@example.test`;
     await registerWithPassword(session, { email: address, password: PASSWORD, passwordConfirmation: PASSWORD });
-    await updatePersonalProfile(session, { displayName: 'Personal display name' });
-    expect((await session.auth.getUser()).data.user?.user_metadata.display_name).toBe('Personal display name');
+    await updatePersonalProfile(session, { given_name: 'Pat', family_name: 'Lee', preferred_name: 'Personal display name', avatar: null, locale: 'en', timezone: 'UTC' });
+    expect((await getPersonalProfile(session)).preferred_name).toBe('Personal display name');
   });
 
   it('requires fresh proof, proposes a new address, and keeps the existing address until confirmation', async () => {
@@ -202,5 +226,44 @@ describe('recovery never accepts an ordinary active session', () => {
     expect(verified.error).toBeNull();
     await setNewPassword(recovered, { password: 'a fresh recovered password', passwordConfirmation: 'a fresh recovered password' });
     await signInWithPassword(anonClient(), { email: address, password: 'a fresh recovered password' });
+  });
+});
+
+
+describe('signup verification and profile privacy', () => {
+  it('rejects an expired code and resends a new branded signup email', async () => {
+    const session = anonClient();
+    const address = `expired-${randomUUID().slice(0, 8)}@example.test`;
+    await beginRegistration(session, { email: address, password: PASSWORD, passwordConfirmation: PASSWORD });
+    const code = await signupCode(address);
+    const pg = new Client(process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres');
+    await pg.connect();
+    try { await pg.query("update auth.users set confirmation_sent_at = now() - interval '2 hours' where email = $1", [address]); }
+    finally { await pg.end(); }
+    await expect(verifySignupEmail(session, { email: address, code })).rejects.toMatchObject({ code: 'identity.code_expired' });
+    await requestSignupVerification(session, { email: address });
+    await verifySignupEmail(session, { email: address, code: await signupCode(address, code) });
+    expect((await session.auth.getUser()).data.user?.email_confirmed_at).toBeTruthy();
+  });
+
+  it('requires email verification, rejects bad and reused codes, and creates the profile once', async () => {
+    const session = anonClient();
+    const address = `verify-${randomUUID().slice(0, 8)}@example.test`;
+    const result = await beginRegistration(session, { email: address, password: PASSWORD, passwordConfirmation: PASSWORD, givenName: 'Pat', familyName: 'Lee' });
+    expect(result.verificationRequired).toBe(true);
+    expect((await session.auth.getUser()).data.user).toBeNull();
+    await expect(signInWithPassword(session, { email: address, password: PASSWORD })).rejects.toMatchObject({ code: 'identity.email_unverified' });
+    await expect(verifySignupEmail(session, { email: address, code: '000000' })).rejects.toMatchObject({ code: 'identity.code_expired' });
+    const code = await signupCode(address);
+    await verifySignupEmail(session, { email: address, code });
+    expect((await getPersonalProfile(session)).given_name).toBe('Pat');
+    await expect(verifySignupEmail(anonClient(), { email: address, code })).rejects.toMatchObject({ code: 'identity.code_expired' });
+    const id = (await session.auth.getUser()).data.user!.id;
+    const stranger = anonClient();
+    await registerWithPassword(stranger, { email: `stranger-${randomUUID().slice(0, 8)}@example.test`, password: PASSWORD, passwordConfirmation: PASSWORD });
+    expect((await stranger.from('account_profiles').select('*').eq('user_id', id)).data).toEqual([]);
+    const forged = await stranger.from('account_profiles').update({ preferred_name: 'Forged' }).eq('user_id', id).select();
+    expect(forged.data).toEqual([]);
+    expect((await getPersonalProfile(session)).preferred_name).toBe('');
   });
 });

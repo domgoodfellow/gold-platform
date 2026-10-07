@@ -7,27 +7,13 @@ import { createBusinessAction, type CreateBusinessState } from './actions';
 
 const INITIAL: CreateBusinessState = { error: null };
 
-/**
- * The first screen somebody who signed up actually meets — asks two questions (their name, the
- * business's name) and nothing else. The zone is derived from the browser, shown with a Change
- * link rather than asked; currency is collected later, on the pricing screen, since that's the
- * first moment it's actually needed (never guessed in between — "hasn't said" is a real state
- * the schema holds).
- */
+/** Account identity is collected at signup; this screen creates the business and its timezone. */
 export function CreateBusinessForm() {
   const [state, formAction, pending] = useActionState(createBusinessAction, INITIAL);
 
   return (
     <form action={formAction} className="mt-8 flex flex-col gap-6">
-      <Field
-        name="displayName"
-        label="What should we call you?"
-        autoComplete="name"
-        maxLength={120}
-        autoFocus
-      />
-
-      <Field name="name" label="And what is the business called?" maxLength={200} />
+      <Field name="name" label="What is the business called?" maxLength={200} autoFocus />
 
       <TimeZoneChoice />
 

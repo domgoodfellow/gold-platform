@@ -109,8 +109,8 @@ port = 54324
 # Uncomment to expose additional ports for testing user applications that send emails.
 # smtp_port = 54325
 # pop3_port = 54326
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+admin_email = "no-reply@gildops.test"
+sender_name = "GildOps"
 
 [storage]
 enabled = true
@@ -160,7 +160,7 @@ site_url = "http://127.0.0.1:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = ["http://127.0.0.1:3000/auth/callback", "http://localhost:3000/auth/callback", "http://127.0.0.1:3000/auth/recover", "http://localhost:3000/auth/recover", "http://127.0.0.1:3000/auth/email-change", "http://localhost:3000/auth/email-change"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -199,7 +199,7 @@ password_requirements = ""
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
+email_sent = 100 # Local mail capture; choose a separate production limit.
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -226,11 +226,11 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = true
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
-max_frequency = "1s"
+max_frequency = "60s"
 # Number of characters used in the email OTP.
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
@@ -250,18 +250,6 @@ otp_expiry = 3600
 # [auth.email.template.invite]
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
-
-# Identity-sensitive changes notify the account owner independently of the form response.
-[auth.email.notification.password_changed]
-enabled = true
-
-[auth.email.notification.email_changed]
-enabled = true
-
-# Email-change step-up uses an email code, including for provider-only identities.
-[auth.email.template.magic_link]
-subject = "Your GildOps verification code"
-content_path = "./supabase/templates/identity-verification.html"
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.
@@ -443,3 +431,62 @@ enabled = true
 # declarative_schema_path = "./schemas"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+[auth.email.template.confirmation]
+subject = "Verify your GildOps email"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.invite]
+subject = "You are invited to GildOps"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.magic_link]
+subject = "Your GildOps verification code"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.reauthentication]
+subject = "Your GildOps security code"
+content_path = "./supabase/templates/reauthentication.html"
+
+[auth.email.template.recovery]
+subject = "Reset your GildOps password"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.email_change]
+subject = "Confirm your GildOps email change"
+content_path = "./supabase/templates/email_change.html"
+
+[auth.email.notification.password_changed]
+enabled = true
+subject = "Your GildOps password changed"
+content_path = "./supabase/templates/password_changed_notification.html"
+
+[auth.email.notification.email_changed]
+enabled = true
+subject = "Your GildOps email changed"
+content_path = "./supabase/templates/email_changed_notification.html"
+
+[auth.email.notification.phone_changed]
+enabled = true
+subject = "Your GildOps phone number changed"
+content_path = "./supabase/templates/phone_changed_notification.html"
+
+[auth.email.notification.identity_linked]
+enabled = true
+subject = "A GildOps sign-in method was added"
+content_path = "./supabase/templates/identity_linked_notification.html"
+
+[auth.email.notification.identity_unlinked]
+enabled = true
+subject = "A GildOps sign-in method was removed"
+content_path = "./supabase/templates/identity_unlinked_notification.html"
+
+[auth.email.notification.mfa_factor_enrolled]
+enabled = true
+subject = "A GildOps verification method was added"
+content_path = "./supabase/templates/mfa_factor_enrolled_notification.html"
+
+[auth.email.notification.mfa_factor_unenrolled]
+enabled = true
+subject = "A GildOps verification method was removed"
+content_path = "./supabase/templates/mfa_factor_unenrolled_notification.html"

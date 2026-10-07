@@ -17,6 +17,8 @@ const PUBLIC_PATHS = [
   '/',
   '/login',
   '/sign-up',
+  '/verify-email',
+  '/auth/confirm',
   '/forgot-password',
   // GOLD's own marketing site: the three product pages, how it works, integrations, pricing,
   // the demo request itself, contact, and the two legal pages — same public standing as the four screens above. A visitor

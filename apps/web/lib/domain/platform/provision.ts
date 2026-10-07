@@ -24,7 +24,7 @@ export async function provisionOrganization(
     ownerEmail: string;
     name: string;
     /** What the business will call its owner — per-tenant, never a global profile (D19). */
-    displayName: string;
+    displayName?: string;
     timezone?: string;
     currency: string;
   },
@@ -48,13 +48,7 @@ export async function provisionOrganization(
     throw new DomainError('That is not an email address.', 'platform.owner_email_invalid');
   }
 
-  const displayName = input.displayName.trim();
-  if (displayName.length === 0) {
-    throw new DomainError(
-      'Say what the business should call its owner.',
-      'platform.display_name_required',
-    );
-  }
+  const displayName = (input.displayName ?? '').trim();
 
   const { data, error } = await db.rpc('provision_organization', {
     p_owner_email: ownerEmail,

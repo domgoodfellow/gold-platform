@@ -1,3 +1,4 @@
+import { getPersonalProfile, profileName, type AccountProfile } from '@/lib/domain/identity/profile';
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
@@ -18,6 +19,7 @@ export type PersonContext = {
   email: string;
   hasPassword: boolean;
   displayName: string;
+  profile: AccountProfile;
   pendingEmail: string | null;
   signInMethods: string[];
   organizations: Organization[];
@@ -31,13 +33,15 @@ export async function loadPersonContext(): Promise<PersonContext> {
   let email: string;
   let hasPassword: boolean;
   let displayName: string;
+  let profile: AccountProfile;
   let pendingEmail: string | null;
   let signInMethods: string[];
   try {
     await requireActor(db);
     const { data } = await db.auth.getUser();
     email = data.user?.email ?? '';
-    displayName = typeof data.user?.user_metadata.display_name === 'string' ? data.user.user_metadata.display_name : '';
+    profile = await getPersonalProfile(db);
+    displayName = profileName(profile);
     pendingEmail = data.user?.new_email || null;
     signInMethods = [...new Set((data.user?.identities ?? []).map((identity) => identity.provider))];
     // Supabase records how somebody actually signed in as a list of identities. A Google-only
@@ -58,6 +62,7 @@ export async function loadPersonContext(): Promise<PersonContext> {
     email,
     hasPassword,
     displayName,
+    profile,
     pendingEmail,
     signInMethods,
     organizations,

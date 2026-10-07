@@ -1,3 +1,5 @@
+import { updatePersonalProfile } from '@/lib/domain/identity/profile';
+import { memberDisplayNames } from '@/lib/domain/tenancy/members';
 import { createHash, randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
@@ -87,6 +89,19 @@ describe('organization invitations', () => {
 
     const pending = await listPendingInvitations(admin.db, { organizationId });
     expect(pending.some((i) => i.email === invitee)).toBe(true);
+  });
+
+  it('accepts with no organization name and resolves the personal name without sharing private preferences', async () => {
+    const invitee = await signUp('inv-profile');
+    await updatePersonalProfile(invitee.db, { given_name: 'Pat', family_name: 'Lee', preferred_name: 'Patricia', avatar: null, locale: 'fr-CA', timezone: 'America/Toronto' });
+    const token = await inviteMember(admin.db, { organizationId, email: invitee.email, roleId });
+    expect(await acceptInvitation(invitee.db, { token })).toBe(organizationId);
+    const names = await memberDisplayNames(admin.db, organizationId);
+    expect([...names.values()]).toContain('Patricia');
+    expect((await admin.db.from('account_profiles').select('*').eq('user_id', invitee.userId)).data).toEqual([]);
+    expect([...(await memberDisplayNames(stranger.db, organizationId)).values()]).toEqual([]);
+    await updatePersonalProfile(invitee.db, { given_name: 'Pat', family_name: 'Lee', preferred_name: 'P. Lee', avatar: null, locale: 'fr-CA', timezone: 'America/Toronto' });
+    expect([...(await memberDisplayNames(admin.db, organizationId)).values()]).toContain('P. Lee');
   });
 
   it('never stores the plaintext token, only a hash', async () => {

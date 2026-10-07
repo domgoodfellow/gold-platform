@@ -189,7 +189,7 @@ export async function createOrganization(
     /** What this business calls the person who owns it. Theirs to change afterwards (D6). */
     role?: string;
     /** What this person is called inside this business. Per-tenant, never a global profile. */
-    displayName: string;
+    displayName?: string;
     timezone: string;
     /** Optional — signup doesn't ask (the first screen is about who they are, not money). Leaving it out records that this business hasn't said (`20260904000001`); the pricing screen asks when it's first needed. `provisionOrganization` passes one because staff already know the answer. */
     currency?: string;
@@ -205,10 +205,7 @@ export async function createOrganization(
     throw new DomainError('A timezone is required.', 'organizations.timezone_required');
   }
 
-  const displayName = input.displayName.trim();
-  if (displayName.length === 0) {
-    throw new DomainError('Please give a name for yourself.', 'organizations.display_name_required');
-  }
+  const displayName = (input.displayName ?? '').trim();
 
   const { data, error } = await db.rpc('create_organization', {
     p_name: name,

@@ -1,3 +1,4 @@
+import { memberDisplayNames } from '@/lib/domain/tenancy/members';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
@@ -144,7 +145,12 @@ export async function listResources(
     throw new DomainError(error.message, 'resources.list_failed');
   }
 
-  return counted((data ?? []).map((row) => toResource(row as ResourceRow)), count);
+  const names = await memberDisplayNames(db, input.organizationId);
+  return counted((data ?? []).map((row) => {
+    const resource = toResource(row as ResourceRow);
+    if (resource.member) resource.member.displayName = names.get(resource.member.membershipId) ?? resource.member.displayName;
+    return resource;
+  }), count);
 }
 
 /**
@@ -169,7 +175,12 @@ export async function getResource(
   }
   if (!data) return null;
 
-  return toResource(data as ResourceRow);
+  const resource = toResource(data as ResourceRow);
+  if (resource.member) {
+    const names = await memberDisplayNames(db, input.organizationId);
+    resource.member.displayName = names.get(resource.member.membershipId) ?? resource.member.displayName;
+  }
+  return resource;
 }
 
 /**
@@ -425,5 +436,10 @@ export async function getResourceForCurrentMember(
   }
   if (!data) return null;
 
-  return toResource(data as ResourceRow);
+  const resource = toResource(data as ResourceRow);
+  if (resource.member) {
+    const names = await memberDisplayNames(db, input.organizationId);
+    resource.member.displayName = names.get(resource.member.membershipId) ?? resource.member.displayName;
+  }
+  return resource;
 }

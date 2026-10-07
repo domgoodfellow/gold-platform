@@ -69,18 +69,17 @@ export function ProvisionForm({ compact = false }: { compact?: boolean }) {
       <div className="flex flex-col gap-4 sm:flex-row">
         <div className="flex flex-1 flex-col gap-1">
           <FieldLabel htmlFor="displayName">
-            What should it call them?
+            Name in this business (optional)
           </FieldLabel>
           <TextInput
             id="displayName"
             name="displayName"
             type="text"
-            required
             maxLength={120}
             placeholder="Sam Okafor"
           />
           <Hint weight="subtle" className="text-xs">
-            Only this business sees this name (D19).
+            Leave blank to use their personal profile name.
           </Hint>
         </div>
 

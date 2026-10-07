@@ -14,14 +14,14 @@ export default async function ProfilePage({ searchParams }: PageProps<'/settings
 
   return (
     <PersonalSettingsShell returnOrganizationId={typeof org === 'string' ? org : undefined}>
-      {({ email, displayName, pendingEmail, organizationId }) => (
+      {({ email, profile, pendingEmail, organizationId }) => (
         <>
           <PageHeader title="Profile" crumbs={personalSettingsAncestry(organizationId)} />
           <AccountSectionNav organizationId={organizationId} />
           {emailChange === 'failed' ? <Hint role="alert">That confirmation link is invalid or expired. Request a new change.</Hint> : null}
           <Section>
-            <SectionHeading>Display name</SectionHeading>
-            <PersonalProfileForm displayName={displayName} />
+            <SectionHeading>Personal profile</SectionHeading>
+            <PersonalProfileForm profile={profile} />
           </Section>
           <Section>
             <SectionHeading>Email address</SectionHeading>

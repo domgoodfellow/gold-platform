@@ -27,9 +27,9 @@ export async function PersonalSettingsShell({
   /** The `?org=` hint. Honoured only if the caller is genuinely a member of that business. */
   returnOrganizationId?: string;
   /** `organizationId` is the verified origin — honoured only if it is genuinely a membership — so a page can render `AccountSectionNav` with it after its own `PageHeader`, the same order every other Settings scope uses. */
-  children: (person: Pick<PersonContext, 'email' | 'hasPassword' | 'displayName' | 'pendingEmail' | 'signInMethods'> & { organizationId: string | null }) => ReactNode;
+  children: (person: Pick<PersonContext, 'email' | 'hasPassword' | 'displayName' | 'profile' | 'pendingEmail' | 'signInMethods'> & { organizationId: string | null }) => ReactNode;
 }) {
-  const { email, hasPassword, displayName, pendingEmail, signInMethods, organizations: myOrganizations } = await loadPersonContext();
+  const { email, hasPassword, displayName, profile, pendingEmail, signInMethods, organizations: myOrganizations } = await loadPersonContext();
   const hinted = returnOrganizationId
     ? myOrganizations.find((organization) => organization.id === returnOrganizationId)
     : undefined;
@@ -38,7 +38,7 @@ export async function PersonalSettingsShell({
 
   const body = (
     <SettingsPageFrame>
-      {children({ email, hasPassword, displayName, pendingEmail, signInMethods, organizationId: origin?.id ?? null })}
+      {children({ email, hasPassword, displayName, profile, pendingEmail, signInMethods, organizationId: origin?.id ?? null })}
     </SettingsPageFrame>
   );
 

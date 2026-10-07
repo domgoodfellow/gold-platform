@@ -7,15 +7,25 @@ import { Hint, TextInput } from '@/components/controls/inputs';
 import { changeEmailAction, requestEmailCodeAction, updateProfileAction } from '@/app/settings/account/actions';
 import { ACCOUNT_FORM_INITIAL } from './account-form-state';
 
-export function PersonalProfileForm({ displayName }: { displayName: string }) {
+export function PersonalProfileForm({ profile }: { profile: import('@/lib/domain/identity/profile').AccountProfile }) {
   const [state, action, pending] = useActionState(updateProfileAction, ACCOUNT_FORM_INITIAL);
+  const fields = [
+    { name: 'given_name', label: 'Given name', autoComplete: 'given-name', maxLength: 100 },
+    { name: 'family_name', label: 'Family name', autoComplete: 'family-name', maxLength: 100 },
+    { name: 'preferred_name', label: 'Preferred name', autoComplete: 'nickname', maxLength: 100 },
+    { name: 'avatar', label: 'Avatar URL', autoComplete: 'url', maxLength: 2048 },
+    { name: 'locale', label: 'Language', autoComplete: 'language', maxLength: 64 },
+    { name: 'timezone', label: 'Timezone', autoComplete: 'off', maxLength: 100 },
+  ] as const;
   return (
     <form action={action} className="mt-4 flex max-w-md flex-col gap-4">
-      <FormField id="displayName" label="Display name">
-        {(field) => <TextInput {...field} name="displayName" defaultValue={displayName} maxLength={100} autoComplete="name" />}
-      </FormField>
-      <Hint>This personal name is separate from what each organization calls you.</Hint>
-      <Button type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save profile'}</Button>
+      {fields.map(({ name, label, autoComplete, maxLength }) => (
+        <FormField key={name} id={name} label={label}>
+          {(field) => <TextInput {...field} name={name} defaultValue={profile[name] ?? ''} maxLength={maxLength} autoComplete={autoComplete} required={name === 'locale' || name === 'timezone'} type={name === 'avatar' ? 'url' : 'text'} />}
+        </FormField>
+      ))}
+      <Hint>Your preferred name is used across GildOps. A business can set an optional name override.</Hint>
+      <Button type="submit" disabled={pending}>{pending ? 'Saving?' : 'Save profile'}</Button>
       <FormError>{state.error}</FormError>
       {state.message ? <Hint role="status">{state.message}</Hint> : null}
     </form>

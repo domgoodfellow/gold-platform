@@ -1,3 +1,4 @@
+import { verifySignupEmail, requestSignupVerification } from '@/lib/domain/identity/verification';
 import { describe, expect, it, vi } from 'vitest';
 import type { Db } from '@/lib/db/types';
 import { changePassword, registerWithPassword, setNewPassword } from '@/lib/domain/identity/credentials';
@@ -76,10 +77,16 @@ describe('password change requires fresh proof of the acting identity', () => {
 });
 
 describe('personal profile and verified email change', () => {
-  it('updates only cosmetic metadata, never a membership or permission', async () => {
+  it('updates the account profile without mutating Auth or memberships', async () => {
     const { db, auth } = clients();
-    await updatePersonalProfile(db, { displayName: '  Pat  ' });
-    expect(auth.updateUser).toHaveBeenCalledWith({ data: { display_name: 'Pat' } });
+    const single = vi.fn().mockResolvedValue({ data: { user_id: 'person-1' }, error: null });
+    const update = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ single }) }) });
+    const from = vi.fn().mockReturnValue({ update });
+    Object.assign(db, { from });
+    await updatePersonalProfile(db, { given_name: ' Pat ', family_name: ' Lee ', preferred_name: '', avatar: null, locale: 'en', timezone: 'UTC' });
+    expect(from).toHaveBeenCalledWith('account_profiles');
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ given_name: 'Pat', family_name: 'Lee' }));
+    expect(auth.updateUser).not.toHaveBeenCalled();
   });
   it('sends proof only to the authenticated existing address and never creates an account', async () => {
     const { db, verifier, verification } = clients();
@@ -105,5 +112,28 @@ describe('personal profile and verified email change', () => {
     expect(verification.verifyOtp).toHaveBeenCalledWith({ email: 'old@example.test', token: '123456', type: 'email' });
     expect(auth.updateUser).toHaveBeenCalledWith({ email: 'new@example.test' }, { emailRedirectTo: emailInput.redirectTo });
     expect(verification.signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+});
+
+
+describe('signup verification', () => {
+  it('rejects malformed codes without contacting Auth', async () => {
+    const verifyOtp = vi.fn();
+    const db = { auth: { verifyOtp } } as unknown as Db;
+    await expect(verifySignupEmail(db, { email: 'pat@example.test', code: 'abcdef' })).rejects.toMatchObject({ code: 'identity.code_invalid' });
+    expect(verifyOtp).not.toHaveBeenCalled();
+  });
+  it('verifies only signup codes and requires a confirmed session', async () => {
+    const verifyOtp = vi.fn().mockResolvedValue({ data: { user: { email_confirmed_at: '2026-10-07' }, session: {} }, error: null });
+    const db = { auth: { verifyOtp } } as unknown as Db;
+    await verifySignupEmail(db, { email: 'pat@example.test', code: ' 123456 ' });
+    expect(verifyOtp).toHaveBeenCalledWith({ email: 'pat@example.test', token: '123456', type: 'signup' });
+    verifyOtp.mockResolvedValue({ data: { user: null, session: null }, error: { code: 'otp_expired' } });
+    await expect(verifySignupEmail(db, { email: 'pat@example.test', code: '123456' })).rejects.toMatchObject({ code: 'identity.code_expired' });
+  });
+  it('uses signup resend and hides infrastructure errors', async () => {
+    const resend = vi.fn().mockResolvedValue({ error: { message: 'Supabase internal details' } });
+    await expect(requestSignupVerification({ auth: { resend } } as unknown as Db, { email: 'pat@example.test' })).rejects.toMatchObject({ message: 'Unable to send a code. Wait a minute and try again.' });
+    expect(resend).toHaveBeenCalledWith({ type: 'signup', email: 'pat@example.test' });
   });
 });

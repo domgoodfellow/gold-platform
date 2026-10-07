@@ -46,10 +46,9 @@ export function AddMemberForm({
         <TextInput
           name="displayName"
           type="text"
-          required
           maxLength={120}
-          placeholder="What to call them here"
-          aria-label="Name"
+          placeholder="Business name override (optional)"
+          aria-label="Name in this business (optional)"
           className="flex-1"
         />
         <SelectInput name="roleId" aria-label="Role" className="flex-1">

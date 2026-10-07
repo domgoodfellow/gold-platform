@@ -42,7 +42,12 @@ export async function requestPasswordCodeAction(): Promise<AccountFormState> {
 
 export async function updateProfileAction(_previous: AccountFormState, formData: FormData): Promise<AccountFormState> {
   return perform(async () => updatePersonalProfile(await getDb(), {
-    displayName: String(formData.get('displayName') ?? ''),
+    given_name: String(formData.get('given_name') ?? ''),
+    family_name: String(formData.get('family_name') ?? ''),
+    preferred_name: String(formData.get('preferred_name') ?? ''),
+    avatar: String(formData.get('avatar') ?? '') || null,
+    locale: String(formData.get('locale') ?? 'en'),
+    timezone: String(formData.get('timezone') ?? 'UTC'),
   }), 'Profile saved.');
 }
 

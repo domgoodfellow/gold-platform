@@ -34,6 +34,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_profiles: {
+        Row: {
+          avatar: string | null
+          created_at: string
+          family_name: string
+          given_name: string
+          locale: string
+          preferred_name: string
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar?: string | null
+          created_at?: string
+          family_name?: string
+          given_name?: string
+          locale?: string
+          preferred_name?: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar?: string | null
+          created_at?: string
+          family_name?: string
+          given_name?: string
+          locale?: string
+          preferred_name?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       agent_conversations: {
         Row: {
           created_at: string
@@ -3888,7 +3924,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
-          display_name: string
+          display_name?: string
           id?: string
           organization_id: string
           role_id: string
@@ -10884,6 +10920,13 @@ export type Database = {
       list_page_templates: { Args: never; Returns: Json }
       list_section_patterns: { Args: never; Returns: Json }
       list_site_templates: { Args: never; Returns: Json }
+      member_display_names: {
+        Args: { p_organization_id: string }
+        Returns: {
+          display_name: string
+          membership_id: string
+        }[]
+      }
       module_commercial_state: {
         Args: { p_organization_id: string }
         Returns: {

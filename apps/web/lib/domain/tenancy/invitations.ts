@@ -197,11 +197,11 @@ export async function listInvitationDeliveryStatus(
  */
 export async function acceptInvitation(
   db: Db,
-  input: { token: string; displayName: string },
+  input: { token: string; displayName?: string },
 ): Promise<string> {
   const { data, error } = await db.rpc('accept_invitation', {
     p_token: input.token,
-    p_display_name: input.displayName,
+    p_display_name: (input.displayName ?? '').trim(),
   });
 
   if (error) {
@@ -217,7 +217,7 @@ export async function acceptInvitation(
         'invitations.already_member',
       );
     }
-    throw new DomainError(error.message, 'invitations.accept_failed');
+    throw new DomainError('Unable to accept this invitation. Try again or request a new invitation.', 'invitations.accept_failed');
   }
 
   return data as string;

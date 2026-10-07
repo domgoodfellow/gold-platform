@@ -16,6 +16,7 @@ export default function SignUpPage() {
         submitLabel="Create account"
         pendingLabel="Creating…"
         passwordAutoComplete="new-password"
+        collectProfile
         confirmPassword
       />
 

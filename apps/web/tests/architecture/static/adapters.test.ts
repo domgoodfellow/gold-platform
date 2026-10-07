@@ -86,7 +86,8 @@ describe('the adapter boundary (I15)', () => {
       // test, so comments are stripped before looking.
       .map((file) => ({
         path: file.path,
-        code: file.text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, ''),
+        // Auth's resend verb is an SDK method, not a delivery vendor reference.
+        code: file.text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '').replace(/\.auth\.resend\b/g, ''),
       }))
       .filter((file) => VENDORS.some((vendor) => file.code.includes(vendor)));
 

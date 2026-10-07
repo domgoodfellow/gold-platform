@@ -1,5 +1,6 @@
 'use server';
 
+import { storeVerificationEmail } from '@/lib/route/verification-email';
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
@@ -14,13 +15,17 @@ export async function signUpAction(
 ): Promise<CredentialsState> {
   const db = await getDb();
 
+  let verificationRequired: boolean;
   try {
-    await registerWithPassword(db, {
+    ({ verificationRequired } = await registerWithPassword(db, {
       email: String(formData.get('email') ?? ''),
       password: String(formData.get('password') ?? ''),
       passwordConfirmation: String(formData.get('passwordConfirmation') ?? ''),
       emailRedirectTo: `${await requestOrigin()}/auth/callback`,
-    });
+      givenName: String(formData.get('givenName') ?? ''),
+      familyName: String(formData.get('familyName') ?? ''),
+      preferredName: String(formData.get('preferredName') ?? ''),
+    }));
   } catch (error) {
     if (error instanceof DomainError) {
       return { error: error.message };
@@ -28,5 +33,9 @@ export async function signUpAction(
     throw error;
   }
 
+  if (verificationRequired) {
+    await storeVerificationEmail(String(formData.get('email') ?? ''));
+    redirect('/verify-email');
+  }
   redirect(await resolvePostAuthDestination(db));
 }

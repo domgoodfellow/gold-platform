@@ -1,5 +1,6 @@
 'use server';
 
+import { storeVerificationEmail } from '@/lib/route/verification-email';
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
@@ -19,6 +20,10 @@ export async function logInAction(
       password: String(formData.get('password') ?? ''),
     });
   } catch (error) {
+    if (error instanceof DomainError && error.code === 'identity.email_unverified') {
+      await storeVerificationEmail(String(formData.get('email') ?? ''));
+      redirect('/verify-email');
+    }
     if (error instanceof DomainError) {
       return { error: error.message };
     }

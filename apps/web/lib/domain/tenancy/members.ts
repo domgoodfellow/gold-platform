@@ -24,14 +24,7 @@ function one<T>(value: T | T[] | null): T | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-/**
- * Everyone in one organization, with the role they hold.
- *
- * There is no email address and no account detail here, and that is not an omission: this
- * repository owns no users table and mirrors nothing from `auth.users` (D19). What a
- * membership carries is what *this tenant* calls this person, which is the only identity
- * fact the tenant is entitled to have written down.
- */
+/** Members and roles visible under organization RLS, with only their resolved public names. */
 export async function listMembers(
   db: Db,
   input: { organizationId: string },
@@ -46,6 +39,7 @@ export async function listMembers(
     throw new DomainError(error.message, 'members.list_failed');
   }
 
+  const names = await memberDisplayNames(db, input.organizationId);
   return (data ?? []).flatMap((row) => {
     const role = one(row.role);
     // A membership without a role cannot exist — role_id is NOT NULL behind a composite
@@ -56,7 +50,7 @@ export async function listMembers(
       {
         id: row.id,
         userId: row.user_id,
-        displayName: row.display_name,
+        displayName: names.get(row.id) ?? row.display_name ?? 'Member',
         role: {
           id: role.id,
           name: role.name,
@@ -84,7 +78,7 @@ export async function addMember(
   input: {
     organizationId: string;
     email: string;
-    displayName: string;
+    displayName?: string;
     roleId: string;
   },
 ): Promise<string> {
@@ -98,10 +92,7 @@ export async function addMember(
     throw new DomainError('That email address is not valid.', 'members.email_invalid');
   }
 
-  const displayName = input.displayName.trim();
-  if (displayName.length === 0) {
-    throw new DomainError('A name is required.', 'members.name_required');
-  }
+  const displayName = (input.displayName ?? '').trim();
   if (displayName.length > DISPLAY_NAME_MAX) {
     throw new DomainError(
       `That name is longer than ${DISPLAY_NAME_MAX} characters.`,
@@ -142,4 +133,11 @@ export async function addMember(
   }
 
   return data;
+}
+
+/** A colleague sees only the resolved public name, not another account's private profile. */
+export async function memberDisplayNames(db: Db, organizationId: string): Promise<Map<string, string>> {
+  const { data, error } = await db.rpc('member_display_names', { p_organization_id: organizationId });
+  if (error) throw new DomainError('Unable to load member names.', 'members.names_failed');
+  return new Map((data ?? []).map((row) => [row.membership_id, row.display_name]));
 }

@@ -22,6 +22,7 @@ type Props = {
   passwordAutoComplete: 'current-password' | 'new-password';
   /** Sign-up and setting a new password ask twice; logging in has nothing to confirm against. */
   confirmPassword?: boolean;
+  collectProfile?: boolean;
   /** Shown once the action reports `done`. The one caller is the recovery request. */
   successMessage?: ReactNode;
   /** Where somebody who has forgotten the password goes. Sits in the Password label row, at the right. */
@@ -46,6 +47,7 @@ export function CredentialsForm({
   pendingLabel,
   passwordAutoComplete,
   confirmPassword = false,
+  collectProfile = false,
   successMessage,
   recoveryHref,
 }: Props) {
@@ -56,6 +58,17 @@ export function CredentialsForm({
 
   return (
     <form action={formAction} className="mt-6 flex flex-col gap-4">
+      {collectProfile ? <>
+        <FormField id="givenName" label="Given name">
+          {(field) => <TextInput {...field} name="givenName" autoComplete="given-name" maxLength={100} />}
+        </FormField>
+        <FormField id="familyName" label="Family name">
+          {(field) => <TextInput {...field} name="familyName" autoComplete="family-name" maxLength={100} />}
+        </FormField>
+        <FormField id="preferredName" label="Preferred name (optional)">
+          {(field) => <TextInput {...field} name="preferredName" autoComplete="nickname" maxLength={100} />}
+        </FormField>
+      </> : null}
       {wantsEmail ? (
         <FormField id="email" label="Email">
           {(field) => <TextInput {...field} name="email" type="email" required autoComplete="email" />}
