@@ -36,5 +36,6 @@ export async function createCustomerAction(
   // fine and deliberately not re-validated here: RLS refuses an insert into an organization
   // the caller does not belong to, so tampering produces a refusal rather than a leak.
   revalidatePath(`/organizations/${organizationId}/customers`);
+  revalidatePath(`/organizations/${organizationId}/sales`);
   return { error: null, created: true };
 }

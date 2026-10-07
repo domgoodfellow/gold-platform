@@ -31,6 +31,9 @@ describe('CRM and Voice feature boundaries', () => {
     const customers = routeSource('app/organizations/[organizationId]/customers/page.tsx');
     const detail = routeSource('app/organizations/[organizationId]/customers/[customerId]/page.tsx');
     const pipeline = routeSource('app/organizations/[organizationId]/customers/pipeline/page.tsx');
+    const home = routeSource('app/organizations/[organizationId]/sales/page.tsx');
+    expect(home).toContain("@/features/crm/home/crm-home");
+    expect(routeSource('features/crm/home/crm-home.tsx')).toContain('<WorkspaceHome');
 
     expect(calls).toContain("@/features/communications/voice/voice-overview");
     expect(calls).toContain("@/features/communications/voice/voice-settings-sheet");
@@ -40,7 +43,7 @@ describe('CRM and Voice feature boundaries', () => {
     expect(detail).toContain("@/features/crm/customers/customer-detail");
     expect(pipeline).toContain("@/features/crm/sales/pipeline-board");
 
-    for (const source of [calls, customers, detail, pipeline]) {
+    for (const source of [calls, customers, detail, pipeline, home]) {
       expect(source).not.toContain('<form');
     }
   });

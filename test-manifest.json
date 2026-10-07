@@ -417,6 +417,10 @@
         "platform"
       ]
     },
+    "apps/web/e2e/crm-home.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": ["crm", "navigation", "rbac", "accessibility"]
+    },
     "apps/web/e2e/crm-voice.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": [
@@ -1055,6 +1059,10 @@
         "navigation",
         "ui"
       ]
+    },
+    "apps/web/tests/component/crm-home.test.tsx": {
+      "category": "component",
+      "concerns": ["crm", "navigation", "rbac"]
     },
     "apps/web/tests/component/context-identity.test.tsx": {
       "category": "component",

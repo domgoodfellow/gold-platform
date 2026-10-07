@@ -438,7 +438,7 @@ describe('the page-header contract — the page, not the workspace header, owns 
     // Phase C's loader+Screen route pairs (Slice 9) put the identity component one file down, in
     // the Screen the page delegates to, rather than inline in the page itself — the same shape
     // `CustomerDetail`/`HomeDashboard` already had: a feature component that renders the real one.
-    const identity = /<PageHeader|<CollectionHeader|<WorkspaceHome|<StatePage|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<HomeDashboard|<TenantWorkspaceHeader|<PlatformOverview|<LibrarySectionPage|<AccessPage|<ConnectionsPage|<PlanDetailScreen|<OrganizationCommercialScreen|<CatalogFamilyScreen|<TwilioProviderScreen|<PlanUsageScreen|<WorkItemDetailScreen/;
+    const identity = /<PageHeader|<CollectionHeader|<WorkspaceHome|<StatePage|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<CrmHome|<HomeDashboard|<TenantWorkspaceHeader|<PlatformOverview|<LibrarySectionPage|<AccessPage|<ConnectionsPage|<PlanDetailScreen|<OrganizationCommercialScreen|<CatalogFamilyScreen|<TwilioProviderScreen|<PlanUsageScreen|<WorkItemDetailScreen/;
     // A master-detail screen (the Inbox: a persistent list beside whichever pane is selected) renders its one
     // identity in the layout that frames every pane, because a page-owned header would be torn down and drawn
     // again on every selection. Only a layout *below* the organization root counts — the root layout frames

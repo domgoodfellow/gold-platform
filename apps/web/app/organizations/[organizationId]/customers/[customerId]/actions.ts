@@ -154,6 +154,9 @@ export async function editCustomerAction(
   }
 
   revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
+  revalidatePath(`/organizations/${organizationId}/customers`);
+  revalidatePath(`/organizations/${organizationId}/customers/pipeline`);
+  revalidatePath(`/organizations/${organizationId}/sales`);
   return { error: null, updated: true };
 }
 

@@ -4,13 +4,16 @@ import { loadDemoContext, OWNER_STORAGE_STATE } from './helpers';
 test.describe('CRM reference vertical', () => {
   test.use({ storageState: OWNER_STORAGE_STATE });
 
-  test('finds and creates customers, opens detail, and reads the canonical pipeline', async ({ page }) => {
+  test('finds and creates customers, opens detail, and reads the canonical pipeline', async ({ page }, testInfo) => {
     const ctx = loadDemoContext();
     const customerName = `E2E customer ${Date.now()}`;
 
-    await page.goto(`/organizations/${ctx.organizationId}/customers`);
-    await expect(page.getByRole('heading', { name: 'Customers' }).last()).toBeVisible();
+    await page.goto(`/organizations/${ctx.organizationId}/sales`);
+    await expect(page.getByRole('heading', { name: 'CRM', exact: true })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Pipeline snapshot' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Recent CRM activity' })).toBeVisible();
     await expect(page.getByRole('search')).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('crm-home-populated.png'), fullPage: true });
 
     await page.getByRole('button', { name: 'New customer' }).click();
     const createSheet = page.getByRole('dialog', { name: 'New customer' });
@@ -18,6 +21,12 @@ test.describe('CRM reference vertical', () => {
     await createSheet.getByLabel('Name').fill(customerName);
     await createSheet.getByRole('button', { name: 'Add customer' }).click();
     await expect(createSheet).toBeHidden();
+
+    await expect(page.getByRole('region', { name: 'Recent customers' }).getByRole('link', { name: customerName })).toBeVisible();
+    await page.getByRole('searchbox', { name: 'Search customers' }).fill(customerName);
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/customers\\?q=${encodeURIComponent(customerName).replace(/%20/g, '\\+')}`));
+    await expect(page.getByRole('heading', { name: 'Customers', exact: true }).last()).toBeVisible();
 
     const customerLink = page.getByRole('link', { name: customerName });
     await expect(customerLink).toBeVisible();
@@ -41,7 +50,17 @@ test.describe('CRM reference vertical', () => {
     );
     expect(target).toBeTruthy();
     await stageSelect.selectOption(target!);
+    await expect(stageSelect).toBeEnabled();
+    await page.reload();
     await expect(stageSelect).toHaveValue(target!);
+    await page.goto(`/organizations/${ctx.organizationId}/sales`);
+    await expect(page.getByRole('region', { name: 'Recent customers' }).getByRole('link', { name: customerName })).toBeVisible();
+    await page.getByRole('button', { name: 'Insights', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Customer insights', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Configure', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'CRM configuration', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Custom field settings' })).toHaveAttribute('href', `/organizations/${ctx.organizationId}/settings/custom-fields`);
+    await expect(page.getByRole('link', { name: 'Sales-stage settings' })).toHaveAttribute('href', `/organizations/${ctx.organizationId}/settings/sales-stages`);
   });
 });
 

@@ -13,13 +13,15 @@ export async function WorkspaceActivity({
   timezone,
   scope,
   emptyMessage,
+  limit = 20,
 }: {
   db: Db;
   organizationId: string;
   timezone: string;
   scope: ActivityScope;
   emptyMessage: string;
+  limit?: number;
 }) {
-  const timeline = await listRecentActivity(db, { organizationId, scope, limit: 20 });
+  const timeline = await listRecentActivity(db, { organizationId, scope, limit });
   return <ActivityList compact timeline={timeline} timezone={timezone} emptyMessage={emptyMessage} />;
 }
