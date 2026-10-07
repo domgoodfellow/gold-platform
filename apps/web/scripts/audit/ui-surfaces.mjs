@@ -1,7 +1,9 @@
-import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const WEB_ROOT = resolve(import.meta.dirname, '../..');
+const SCRIPT_DIR = resolve(fileURLToPath(new URL('.', import.meta.url)));
+const WEB_ROOT = resolve(SCRIPT_DIR, '../..');
 const APP_ROOT = resolve(WEB_ROOT, 'app/organizations/[organizationId]');
 const OUTPUT = resolve(WEB_ROOT, '../../docs/audits/ui-surfaces.generated.md');
 
