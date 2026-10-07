@@ -62,3 +62,5 @@ apps/web/test-results/
 apps/web/blob-report/
 
 .artifacts/
+# UI recovery audit captures are local review artifacts, not canonical visual baselines.
+docs/audits/ui-captures/

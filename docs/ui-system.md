@@ -524,41 +524,59 @@ Never add:
 
 ### Workspace Home
 
-Workspace Home is the parent destination.
+Workspace Home is the parent destination and operating cockpit for one domain.
 
 It answers:
 
-> What matters in this workspace, and where can I go from here?
+> What is happening here, what needs my attention, what can I do, where can I go, and is this workspace ready?
 
-It may contain:
+Its stable grammar may contain:
 
-- concise operational summary;
-- relevant status/KPIs;
-- recent/urgent items;
+- needs-attention / exception items;
+- high-value operational metrics;
+- current, upcoming or recent work;
 - primary next actions;
-- direct links into child surfaces;
+- native workspace widgets;
+- authorized cross-workspace projections;
+- an Explore/destination directory;
+- readiness/configuration summary;
 - contextual Activity / Insights / Configure where valid.
 
-A Workspace Home is not a giant dashboard by default.
+A Workspace Home is **not** a generic KPI grid and it is not replaced by one giant empty-state
+rectangle when the organization has no data. Zero-data Homes still expose useful destinations,
+readiness and honest next actions. As the organization matures, setup-oriented regions recede and
+operational regions take their place.
 
-Every card or metric must serve navigation, awareness or action.
+Homes may surface records owned by another workspace, but the projection never becomes a second
+source of truth. Following it opens the canonical owner.
+
+Every card, metric, chart or widget must serve navigation, awareness or action. Do not add charts
+merely to make a Home look like a dashboard.
 
 ---
 
 ## Organization Home
 
-Organization Home is cross-workspace.
+Organization Home is the cross-workspace command center.
 
-It may surface important facts from several domains.
+It answers:
 
-It does not become their owner.
+> What matters across this business right now?
+
+It may surface important facts from several domains without becoming their owner.
 
 Organization Home should prioritize:
 
-- current operational state;
-- work requiring attention;
-- business-level shortcuts;
-- launch/setup/readiness when relevant.
+- needs-attention items from the workspaces the user may access;
+- today / upcoming / personally relevant work;
+- business-level quick actions;
+- user-selected or pinned widgets;
+- concise workspace summaries;
+- recent cross-workspace activity;
+- launch/setup/readiness only while it remains useful.
+
+A projected invoice opens Finance. A customer reply opens Communications. A scheduling exception
+opens Field. Home does not reimplement those operating surfaces.
 
 It should not replicate every workspace dashboard.
 
@@ -631,23 +649,34 @@ Canonical behavior:
 
 ### Phone
 
-Persistent bottom navigation:
+The workspace header carries a Menu/hamburger trigger.
+
+Opening it reveals the full-height mobile navigation Sheet using the same projected hierarchy as
+desktop:
 
 ```text
-Home | AI | Menu
+Organization switcher
+
+Home
+Library
+Workspaces
+  ...
+
+Platform Administration        when authorized
+
+Account                         pinned at the bottom
 ```
 
-Three equal controls.
+The sheet closes through its explicit close control, backdrop, Escape where applicable, or
+destination selection.
 
-The bar does not scroll.
+Do not maintain a separate lossy phone navigation information architecture.
 
-- **Home** navigates to the projected organization Home.
-- **AI** toggles the workspace-global Agent.
-- **Menu** opens the full organization navigation in a right-side sheet.
+The Agent remains a workspace-global utility and may be opened from a compact header control. It is
+not a permanent navigation destination. Back/parent navigation remains distinct from opening the
+global Menu.
 
-The Menu renders the same projected hierarchy used by desktop navigation.
-
-Do not maintain a separate lossy “phone navigation” information architecture.
+Do not render a persistent Home / AI / Menu bottom bar.
 
 ### Tablet
 
@@ -1403,6 +1432,42 @@ feature not implemented
 ```
 
 Do not collapse these into “Disabled.”
+
+---
+
+## Appearance
+
+Personal appearance is a **Person preference**, separate from organization branding.
+
+The initial preference surface belongs under Account / Personal Settings and supports:
+
+```text
+Theme
+  System
+  Light
+  Dark
+
+Density
+  Comfortable
+  Compact
+
+Motion
+  System
+  Reduced
+```
+
+Theme must support an explicit user override rather than relying only on
+`prefers-color-scheme`. System remains the default.
+
+Density may change shared control/collection spacing; it must not fork page architecture or create
+a second component family.
+
+Organization branding continues to own tenant accent and customer-facing brand typography.
+Personal appearance must never change public booking, websites, forms, proposals or customer portal
+presentation.
+
+Do not introduce runtime-switchable ShadCN registry styles as an appearance feature. Mature the
+default GildOps visual language first; additional style presets require a separate product decision.
 
 ---
 
