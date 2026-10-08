@@ -91,7 +91,7 @@ export function NewCallForm({
             <option key={number.id} value={number.id}>{number.label ? `${number.label} (${number.e164})` : number.e164}</option>
           ))}
         </SelectInput>
-        {unavailable ? <Hint>There is no number to call from yet. Assign one under Numbers.</Hint> : null}
+        {unavailable ? <Hint>Calling is unavailable. Check number assignments and calling setup.</Hint> : null}
       </div>
 
       {compact ? (

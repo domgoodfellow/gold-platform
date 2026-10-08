@@ -71,19 +71,20 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
   const channel = (params.get('channel') as Channel | null) ?? 'all';
   const view = (params.get('view') as View | null) ?? 'everything';
   const status = (params.get('status') as Status | null) ?? 'active';
+  const search = params.get('q')?.slice(0, 100) ?? '';
   const selectedId = pathname.startsWith(`${base}/`) ? pathname.slice(base.length + 1).split('/')[0] : null;
   const detailOpen = selectedId !== null;
 
   const filter = useMemo<InboxFilter>(
-    () => ({ channel: channel === 'all' ? undefined : channel, view: view === 'everything' ? undefined : view, status }),
-    [channel, view, status],
+    () => ({ channel: channel === 'all' ? undefined : channel, view: view === 'everything' ? undefined : view, status, search }),
+    [channel, view, status, search],
   );
 
   const [items, setItems] = useState<InboxItem[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   // The key of the filter the list on screen was read for: a list read for another filter is not loaded yet.
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
-  const filterKey = `${channel}|${view}|${status}`;
+  const filterKey = `${channel}|${view}|${status}|${search}`;
   const loaded = loadedFor === filterKey;
   const [counts, setCounts] = useState<InboxCounts | null>(null);
   const [error, setError] = useState<string | null>(null);

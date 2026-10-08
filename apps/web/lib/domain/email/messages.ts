@@ -133,6 +133,10 @@ export async function listSendableEmailIdentities(db: Db, input: { organizationI
   return identities.filter((identity) => identity.canSend && identity.readiness.state === 'ready');
 }
 
+export async function emailDeliveryAvailable(db: Db): Promise<boolean> {
+  return !!(await emailProvider({ token: await requireAccessToken(db) }));
+}
+
 const STORAGE_BUCKET = 'communications';
 
 function storageKey(organizationId: string, fileName: string): string {

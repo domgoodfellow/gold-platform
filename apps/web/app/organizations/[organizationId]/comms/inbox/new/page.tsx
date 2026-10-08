@@ -1,6 +1,5 @@
 import { NewConversation } from '@/features/communications/inbox/new-conversation';
-import { listSendableEmailIdentities } from '@/lib/domain/email/messages';
-import { listPhoneNumbers } from '@/lib/domain/reception/numbers';
+import { messagingSenders } from '@/lib/domain/reception/channel-readiness';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -22,8 +21,7 @@ export default async function NewConversationPage({
     return <div className="p-4 text-sm text-muted">Your role cannot start conversations here.</div>;
   }
 
-  const [numbers, senders] = await Promise.all([listPhoneNumbers(db, { organizationId }), listSendableEmailIdentities(db, { organizationId })]);
-  const outbound = numbers.filter((number) => number.smsOutboundEnabled && number.lifecycle === 'active' && (number.origin === 'provisioned' || number.origin === 'external'));
+  const { numbers: outbound, senders } = await messagingSenders(db, { organizationId });
 
   return (
     <NewConversation

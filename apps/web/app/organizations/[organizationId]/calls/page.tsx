@@ -1,17 +1,16 @@
 import { Phone } from 'lucide-react';
 import { ButtonLink } from '@/components/controls/button';
-import { WorkspaceHome } from '@/components/patterns/workspace-home';
+import { AppPage } from '@/components/layout/app-page';
+import { CollectionHeader } from '@/components/patterns/collection-header';
 import { SectionHeading } from '@/components/surfaces/section';
 import { PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
 import { Button } from '@/components/controls/button';
 import { CallFilters, callFilterFromParams, callsHref, parseCallParams } from '@/features/communications/voice/call-filters';
 import { CallHistory } from '@/features/communications/voice/call-history';
 import { NewCallForm } from '@/features/communications/voice/new-call-form';
-import { VoiceCounters, VoiceDayDetail } from '@/features/communications/voice/voice-overview';
+import { VoiceCounters } from '@/features/communications/voice/voice-overview';
 import { VoiceSettingsSheet } from '@/features/communications/voice/voice-settings-sheet';
 import { WrapUpCallSheet } from '@/features/communications/voice/wrap-up-sheet';
-import { listCustomers } from '@/lib/domain/customers/customers';
-import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { getCallCounts, listCallPage } from '@/lib/domain/reception/calls';
 import { listPhoneNumbers, resolveOutboundNumber } from '@/lib/domain/reception/numbers';
 import { listCallOutcomes } from '@/lib/domain/reception/outcomes';
@@ -20,6 +19,9 @@ import { callingNumber } from '@/lib/domain/reception/telephony';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
+import { callbackBase, telephonyProvider } from '@/lib/adapters/telephony';
+import { communicationsProviderReadiness } from '@/lib/domain/reception/provider-readiness';
+import { availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -37,34 +39,38 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
   const mayCall = organization.capabilities.includes('call.place');
   const base = `/organizations/${organizationId}/calls`;
 
-  const [page, counts, todays, outcomes, stages, customers, number, routes, numbers, members, usual] = await Promise.all([
+  const [page, counts, todays, outcomes, number, routes, numbers, members, usual, provider, readiness, featureStates] = await Promise.all([
     listCallPage(db, { organizationId, filter: callFilterFromParams(callParams, organization.timezone), cursor }),
     getCallCounts(db, { organizationId, dayStart: day.startsAt, dayEnd: day.endsAt }),
     listCallPage(db, { organizationId, filter: { since: day.startsAt, until: day.endsAt }, limit: 100 }),
     listCallOutcomes(db, { organizationId }),
-    listCustomerStages(db, { organizationId }),
-    listCustomers(db, { organizationId }),
     callingNumber(db, { organizationId }),
     listRoutes(db, { organizationId }),
     listPhoneNumbers(db, { organizationId }),
     listMembers(db, { organizationId }),
     mayCall ? resolveOutboundNumber(db, { organizationId }) : Promise.resolve(null),
+    mayCall ? telephonyProvider() : null,
+    communicationsProviderReadiness(db, { organizationId }),
+    organizationResolvedFeatureStates(db, { organizationId }),
   ]);
 
   const numberById = new Map(numbers.map((entry) => [entry.id, { e164: entry.e164, label: entry.label }]));
-  const dialable = numbers
+  const canCall = mayCall && availableFeatureKeys(featureStates).has('outbound_calling');
+  const runtimeReady = canCall && !!provider && !!callbackBase() && readiness === 'ready';
+  const dialable = (runtimeReady ? numbers : [])
     .filter((entry) => entry.voiceOutboundEnabled && entry.readiness === 'ready' && entry.lifecycle === 'active' && (entry.origin === 'provisioned' || entry.origin === 'external'))
     .map((entry) => ({ id: entry.id, e164: entry.e164, label: entry.label }));
-  const usualNumber = usual ? { id: usual.phoneNumberId, e164: usual.e164, label: numberById.get(usual.phoneNumberId)?.label ?? null } : null;
+  const usualNumber = runtimeReady && usual ? { id: usual.phoneNumberId, e164: usual.e164, label: numberById.get(usual.phoneNumberId)?.label ?? null } : null;
   const filtered = Object.keys(callParams).length > 0;
 
   return (
-    <WorkspaceHome
+    <AppPage>
+    <CollectionHeader
       title={areaLabel('calls')}
       crumbs={workspaceAncestry(organizationId, 'calls')}
       actions={
         <>
-          {mayCall ? (
+          {canCall ? (
             <PageDrawer>
               <PageDrawerTrigger asChild><Button type="button"><Phone aria-hidden /> New call</Button></PageDrawerTrigger>
               <PageDrawerContent>
@@ -91,7 +97,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
           </div>
         </>
       }
-    >
+    />
       <VoiceCounters organizationId={organizationId} counts={counts} todaysCalls={todays.items} />
 
       <section className="mt-8" aria-labelledby="call-history">
@@ -120,7 +126,6 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
         </nav>
       </section>
 
-      <VoiceDayDetail organizationId={organizationId} todaysCalls={todays.items} customers={customers} stages={stages} />
-    </WorkspaceHome>
+    </AppPage>
   );
 }

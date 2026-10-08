@@ -198,6 +198,7 @@ export async function listCustomerCalls(
 
 /** Which calls to list. One value per axis; all optional. */
 export type CallFilter = {
+  search?: string;
   direction?: CallDirection;
   /** `missed` is an inbound call nobody answered; `active` is one still ringing or connected. */
   state?: 'active' | 'missed' | CallStatus;
@@ -211,7 +212,7 @@ export type CallFilter = {
   until?: string;
 };
 
-export type CallPage = { items: Call[]; nextCursor: string | null };
+export type CallPage = { items: Call[]; nextCursor: string | null; total?: number };
 
 export const CALL_PAGE_SIZE = 25;
 
@@ -242,7 +243,9 @@ export async function listCallPage(
   const select = filter.membershipId
     ? CALL_SELECT.replace('legs:call_participants!call_participants_call_same_org', 'legs:call_participants!call_participants_call_same_org!inner')
     : CALL_SELECT;
-  let query = db.from('calls').select(select).eq('organization_id', input.organizationId);
+  let query = db.from('calls').select(select, { count: 'exact' }).eq('organization_id', input.organizationId);
+  const search = filter.search?.replace(/[^\p{L}\p{N} @+._-]/gu, '').slice(0, 100).trim();
+  if (search) query = query.or(`from_number.ilike.%${search}%,to_number.ilike.%${search}%,note.ilike.%${search}%`);
 
   if (filter.direction) query = query.eq('direction', filter.direction);
   if (filter.state === 'missed') query = query.eq('direction', 'inbound').in('status', ['no_answer', 'busy', 'failed']);
@@ -260,7 +263,7 @@ export async function listCallPage(
     query = query.or(`started_at.lt."${at}",and(started_at.eq."${at}",id.lt.${id})`);
   }
 
-  const { data, error } = await query
+  const { data, error, count } = await query
     .order('started_at', { ascending: false })
     .order('id', { ascending: false })
     .limit(limit + 1);
@@ -269,7 +272,7 @@ export async function listCallPage(
   const rows = (data ?? []) as unknown as CallRow[];
   const page = rows.slice(0, limit).map(toCall);
   const last = page[page.length - 1];
-  return { items: page, nextCursor: rows.length > limit && last ? encodeCursor(last) : null };
+  return { items: page, nextCursor: rows.length > limit && last ? encodeCursor(last) : null, total: count ?? 0 };
 }
 
 export type CallCounts = { active: number; today: number; missedToday: number; needsWrapUp: number };

@@ -113,9 +113,10 @@ describe('calling and messaging are separate authorities in navigation', () => {
   });
 
   it('keeps Communications Home from asserting a calling warning to a person who cannot call', () => {
-    const source = code('app/organizations/[organizationId]/comms/page.tsx');
-    expect(source).toMatch(/mayCall && !number/);
-    expect(source).toContain("'message.send'");
+    const source = code('lib/application/communications/dashboard.ts');
+    expect(source).toContain("capabilities.includes('call.place')");
+    expect(source).toContain("capabilities.includes('message.send')");
+    expect(source).toMatch(/mayCall \? getCallCounts/);
   });
 });
 

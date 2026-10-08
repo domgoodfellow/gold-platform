@@ -25,15 +25,17 @@ export function CreateOutcomeForm({ organizationId }: { organizationId: string }
     <form action={formAction} className="flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
 
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-end">
+        <label className="flex flex-1 flex-col gap-1 text-xs text-muted">Outcome name
         <TextInput
           name="name"
           type="text"
           required
           maxLength={64}
           aria-label="Outcome name"
-          className="flex-1"
-        />
+          className="w-full"
+        /></label>
+        <label className="flex flex-col gap-1 text-xs text-muted">Sort order
         <TextInput
           name="position"
           type="number"
@@ -41,7 +43,7 @@ export function CreateOutcomeForm({ organizationId }: { organizationId: string }
           defaultValue={0}
           aria-label="Where it sits"
           className="w-28"
-        />
+        /></label>
         <Button type="submit" disabled={pending}>
           Add outcome
         </Button>

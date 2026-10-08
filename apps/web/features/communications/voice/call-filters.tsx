@@ -18,6 +18,7 @@ const STATES = ['active', 'missed', 'completed'] as const;
 const WHENS = ['today', 'week', 'month'] as const;
 
 export type CallParams = {
+  q?: string;
   direction?: (typeof DIRECTIONS)[number];
   state?: (typeof STATES)[number];
   when?: (typeof WHENS)[number];
@@ -37,6 +38,8 @@ function pick<T extends string>(value: string | undefined, allowed: readonly T[]
 /** Anything in the address that is not a value this screen offers is ignored rather than trusted. */
 export function parseCallParams(query: Query): { params: CallParams; cursor: string | null } {
   const params: CallParams = {};
+  const search = first(query.q)?.slice(0, 100).trim();
+  if (search) params.q = search;
   const direction = pick(first(query.direction), DIRECTIONS);
   const state = pick(first(query.state), STATES);
   const when = pick(first(query.when), WHENS);
@@ -60,7 +63,9 @@ export function callFilterFromParams(params: CallParams, timeZone: string): Call
     phoneNumberId: params.number,
     membershipId: params.member,
     needsWrapUp: params.wrap === '1',
+    search: params.q,
     since: params.when ? zonedDayRange(shiftDate(today, -daysBack), timeZone).startsAt : undefined,
+    until: params.when ? zonedDayRange(today, timeZone).endsAt : undefined,
   };
 }
 

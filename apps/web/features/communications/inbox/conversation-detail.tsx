@@ -37,6 +37,7 @@ export function ConversationDetailView({
   members,
   myMembershipId,
   mayHandle,
+  mayReply = mayHandle,
   mayCreateCustomer,
 }: {
   organizationId: string;
@@ -44,6 +45,7 @@ export function ConversationDetailView({
   members: Member[];
   myMembershipId: string | null;
   mayHandle: boolean;
+  mayReply?: boolean;
   mayCreateCustomer: boolean;
 }) {
   const router = useRouter();
@@ -173,7 +175,7 @@ export function ConversationDetailView({
         <div ref={bottom} />
       </div>
 
-      {mayHandle ? (
+      {mayHandle && mayReply ? (
         <Composer
           organizationId={organizationId}
           conversationId={conversation.id}
@@ -185,7 +187,7 @@ export function ConversationDetailView({
           onError={setError}
         />
       ) : (
-        <div className="border-t border-border p-3"><Hint>Your role can read this conversation but not reply to it.</Hint></div>
+        <div className="border-t border-border p-3"><Hint>{mayHandle ? 'This channel is not ready to send. Check number or email configuration before replying.' : 'Your role can read this conversation but not reply to it.'}</Hint></div>
       )}
     </div>
   );

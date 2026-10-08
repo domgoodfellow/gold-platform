@@ -40,7 +40,7 @@ export function NumberList({ organizationId, numbers, assignedCount }: {
             );
           },
         },
-        { key: 'origin', header: 'Source', emphasis: 'secondary', cell: (number) => ORIGIN_LABEL[number.origin] },
+        { key: 'origin', header: 'Source', cell: (number) => ORIGIN_LABEL[number.origin] },
         { key: 'assignments', header: 'Assigned to', numeric: true, cell: (number) => assignedCount.get(number.id) ?? 0 },
       ]}
     />

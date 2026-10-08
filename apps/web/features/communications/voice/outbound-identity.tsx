@@ -32,6 +32,7 @@ export function OutboundIdentity({
     <form action={formAction} className="mt-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <div className="flex flex-wrap items-center gap-3">
+        <label className="flex flex-col gap-1 text-xs text-muted">Organization fallback number
         <TextInput
           name="number"
           type="tel"
@@ -43,13 +44,13 @@ export function OutboundIdentity({
           // what the database would have refused, with a sentence instead of a constraint name.
           pattern="\+[1-9][0-9]{7,14}"
           className="w-56"
-        />
+        /></label>
         <Button type="submit" disabled={pending}>
           {pending ? 'Saving…' : 'Save'}
         </Button>
       </div>
       <Hint className="mt-2">
-        With a country code, like +14165550142. Clearing it stops the dialer.
+        Use a country code, like +14165550142. Assigned number preferences take precedence. Clearing this removes the organization fallback.
       </Hint>
       {state.error ? <ErrorText>{state.error}</ErrorText> : null}
     </form>

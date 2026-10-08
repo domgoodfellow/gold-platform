@@ -25,6 +25,9 @@ export type ConversationStatus = 'open' | 'waiting' | 'closed';
 
 /** Which conversations to list. One value per axis; all optional. */
 export type InboxFilter = {
+  search?: string;
+  since?: string;
+  until?: string;
   channel?: ConversationChannel;
   /** Narrow by who has to look at it. */
   view?: 'unread' | 'mine' | 'unassigned';
@@ -48,7 +51,7 @@ export type InboxItem = {
   customer: { id: string; name: string } | null;
 };
 
-export type InboxPage = { items: InboxItem[]; nextCursor: string | null };
+export type InboxPage = { items: InboxItem[]; nextCursor: string | null; total?: number };
 
 export const INBOX_PAGE_SIZE = 30;
 
@@ -125,7 +128,11 @@ export async function listInbox(
   const filter = input.filter ?? {};
   const limit = Math.min(Math.max(input.limit ?? INBOX_PAGE_SIZE, 1), 100);
 
-  let query = db.from('conversations').select(INBOX_COLUMNS).eq('organization_id', input.organizationId);
+  let query = db.from('conversations').select(INBOX_COLUMNS, { count: 'exact' }).eq('organization_id', input.organizationId);
+  const search = filter.search?.replace(/[^\p{L}\p{N} @+._-]/gu, '').slice(0, 100).trim();
+  if (search) query = query.or(`external_number.ilike.%${search}%,external_email.ilike.%${search}%,subject.ilike.%${search}%,last_message_preview.ilike.%${search}%`);
+  if (filter.since) query = query.gte('last_message_at', filter.since);
+  if (filter.until) query = query.lt('last_message_at', filter.until);
 
   if (filter.channel) query = query.eq('channel', filter.channel);
   if (filter.view === 'unread') query = query.eq('unread', true);
@@ -144,7 +151,7 @@ export async function listInbox(
     query = query.or(`last_message_at.lt."${at}",and(last_message_at.eq."${at}",id.lt.${id})`);
   }
 
-  const { data, error } = await query
+  const { data, error, count } = await query
     .order('last_message_at', { ascending: false })
     .order('id', { ascending: false })
     .limit(limit + 1);
@@ -153,7 +160,7 @@ export async function listInbox(
   const rows = (data ?? []) as unknown as InboxRow[];
   const page = rows.slice(0, limit).map(toItem);
   const last = page[page.length - 1];
-  return { items: page, nextCursor: rows.length > limit && last ? encodeCursor(last) : null };
+  return { items: page, nextCursor: rows.length > limit && last ? encodeCursor(last) : null, total: count ?? 0 };
 }
 
 export type InboxCounts = { unread: number; open: number; waiting: number; unassigned: number; mine: number };

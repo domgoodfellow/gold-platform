@@ -1,9 +1,4 @@
 import Link from 'next/link';
-import { DividedList, EmptyState } from '@/components/surfaces/section';
-import { Widget, WidgetGrid } from '@/components/display/widget';
-import { PipelineSummary } from '@/features/crm/sales/pipeline-summary';
-import type { Customer } from '@/lib/domain/customers/customers';
-import type { CustomerStage } from '@/lib/domain/customers/stages';
 import type { Call, CallCounts } from '@/lib/domain/reception/calls';
 import { callsHref } from './call-filters';
 
@@ -25,7 +20,7 @@ export function VoiceCounters({ organizationId, counts, todaysCalls }: {
     { label: 'Calls today', value: counts.today, note: counts.active ? `${counts.active} live now` : 'None live now', href: callsHref(base, { when: 'today' }) },
     { label: 'Missed today', value: counts.missedToday, note: 'Inbound, not taken', href: callsHref(base, { state: 'missed', when: 'today' }) },
     { label: 'Needs wrap-up', value: counts.needsWrapUp, note: 'Answered, no outcome', href: counts.needsWrapUp ? callsHref(base, { wrap: '1' }) : undefined },
-    { label: 'Average length', value: average === null ? '—' : `${average}s`, note: average === null ? 'No timed calls today' : `${durations.length} timed ${durations.length === 1 ? 'call' : 'calls'} today` },
+    { label: 'Recent call average', value: average === null ? '—' : `${average}s`, note: average === null ? 'No timed calls today' : `${durations.length} sampled timed ${durations.length === 1 ? 'call' : 'calls'} today` },
   ];
 
   return (
@@ -45,29 +40,5 @@ export function VoiceCounters({ organizationId, counts, todaysCalls }: {
         );
       })}
     </dl>
-  );
-}
-
-/** What was written up today, and the CRM pipeline the calls feed — beneath the history, because the history is what the screen is for. */
-export function VoiceDayDetail({ organizationId, todaysCalls, customers, stages }: {
-  organizationId: string;
-  todaysCalls: Call[];
-  customers: Customer[];
-  stages: CustomerStage[];
-}) {
-  const perOutcome = new Map<string, number>();
-  for (const call of todaysCalls) if (call.outcome) perOutcome.set(call.outcome.name, (perOutcome.get(call.outcome.name) ?? 0) + 1);
-
-  return (
-    <WidgetGrid className="mt-10">
-      <Widget title="Call outcomes today" wide>
-        {perOutcome.size === 0 ? <EmptyState weight="subtle">Nothing has been written up today.</EmptyState> : (
-          <DividedList className="text-sm">{[...perOutcome.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => <li key={name} className="flex gap-2 py-1.5"><span>{name}</span><span className="ml-auto tabular-nums text-muted">{count}</span></li>)}</DividedList>
-        )}
-      </Widget>
-      <Widget title="CRM pipeline" wide href={stages.length ? `/organizations/${organizationId}/customers/pipeline` : undefined}>
-        <PipelineSummary stages={stages} customers={customers} />
-      </Widget>
-    </WidgetGrid>
   );
 }

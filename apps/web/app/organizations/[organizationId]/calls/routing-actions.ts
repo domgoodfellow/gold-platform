@@ -7,6 +7,7 @@ import { requireAccessToken } from '@/lib/api/client';
 import { previewInboundRoute, previewOutboundIdentity, type OutboundIdentityDecision, type RouteDecision } from '@/lib/api/routing';
 import {
   createRoute,
+  listRouteTargets,
   setRouteEnabled,
   setRouteTargets,
   updateRoute,
@@ -16,10 +17,14 @@ import { requireOrganization } from '@/lib/route/organization';
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
-async function attempt<T>(organizationId: string, run: () => Promise<T>): Promise<ActionResult<T>> {
+async function attempt<T>(organizationId: string, run: () => Promise<T>, revalidate = true): Promise<ActionResult<T>> {
   try {
     const data = await run();
-    revalidatePath(`/organizations/${organizationId}/calls`);
+    if (revalidate) {
+      revalidatePath(`/organizations/${organizationId}/calls`);
+      revalidatePath(`/organizations/${organizationId}/comms`);
+      revalidatePath(`/organizations/${organizationId}/settings/calls`);
+    }
     return { ok: true, data };
   } catch (error) {
     if (error instanceof DomainError) return { ok: false, error: error.message };
@@ -43,6 +48,11 @@ export async function createRouteAction(
     }
     return { routeId };
   });
+}
+
+export async function readRouteTargetsAction(organizationId: string, routeId: string) {
+  await requireOrganization(organizationId);
+  return attempt(organizationId, async () => listRouteTargets(await getDb(), { organizationId, routeId }), false);
 }
 
 export async function updateRouteAction(

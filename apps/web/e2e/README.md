@@ -87,6 +87,8 @@ Do not use the acceptance harness against Production as a destructive test suite
 
 ## Maintenance
 
+`communications-operating.spec.ts` provisions a fresh local tenant and captures empty/populated desktop, 768/390px, Inbox split/mobile, Calls, Numbers and configuration. It verifies exact bounded counts, real search/date controls, persisted read/assignment and call wrap-up, and routing preview/save without losing primary/fallback members. Both Supabase and PostgreSQL targets must be loopback. Telephony/message records are local fixtures; the test never places carrier calls or sends external messages. Run the existing local API and set `GOLD_API_URL` on the web process for wrap-up and routing preview. Screenshots are in the Playwright result directory; the full-page capture temporarily expands the fixed shell only for the screenshot.
+
 `finance-operating.spec.ts` covers price creation/editing, canonical Work quoting, invoice issuance, invalid and partial/final payment entry, currency changes without historical repricing, collection pagination/filter persistence, search, and reduced-role controls. It provisions a fresh local tenant and never charges a live payment method. The journey captures empty/populated Finance, collection, pricing, invoice/payment drawer, and lower-dashboard screenshots at 1440, 768 and 390 pixels in its Playwright result directory. Database tests separately verify signed corrections, timezone boundaries, mixed currencies and tenant/report permissions.
 
 `dialer-popout.spec.ts` covers the separate dialer window, keypad draft, persistence through workspace navigation, phone-width layout, and return when the browser window is closed. It uses the demo owner's session and never places a carrier call.

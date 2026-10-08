@@ -34,6 +34,12 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Communications operating workspace — 2026-10-08
+
+- Replace the sparse Communications Home with a dense operational dashboard: readiness strip, missed calls/unread/unassigned/wrap-up attention, bounded Inbox queue and canonical call history, Today/status/activity/insights rail. Search, date and queue filters operate on tenant-scoped records; counts are exact rather than preview lengths.
+- Keep Calls, Inbox split view, Numbers and configuration as canonical destinations; remove the old CRM summary from Calls and expose handler/source columns. Reuse dialer, conversation assignment/read actions and call wrap-up; unavailable senders and calling connections cannot appear ready to send.
+- Expand Communications configuration into visible sections. Restore saved ordered primary/fallback routing targets before allowing edits to save, retain route-to-route destinations, and expose routing preview with failure handling. No new persistence model or migration.
+
 ### Finance operating workspace — 2026-10-08
 
 - Replace the sparse Finance Home with a contained financial dashboard: period-scoped recorded payments, current receivables and uninvoiced quotes, attention categories, due invoices, activity, aging and financial performance. Currency totals remain separate; unsupported reminders and processor outcomes are never implied.

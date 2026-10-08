@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { PhoneIncoming, PhoneOutgoing } from 'lucide-react';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import { callStatusLabel, type Call } from '@/lib/domain/reception/calls';
@@ -18,6 +19,7 @@ export function CallHistory({
   numbers,
   renderWrapUp,
   empty = 'No calls recorded.',
+  compact = false,
 }: {
   organizationId: string;
   timeZone: string;
@@ -26,6 +28,8 @@ export function CallHistory({
   numbers?: Map<string, { e164: string; label: string | null }>;
   renderWrapUp?: (call: Call) => ReactNode;
   empty?: ReactNode;
+  /** A dense preview on the Communications Home; collection pages keep full detail. */
+  compact?: boolean;
 }) {
   const businessNumber = (call: Call) => {
     const e164 = call.direction === 'outbound' ? call.fromNumber : call.toNumber;
@@ -48,8 +52,8 @@ export function CallHistory({
               <Link href={`/organizations/${organizationId}/calls/${call.id}`} className="underline underline-offset-4">
                 {callerName(call)}
               </Link>
-              <span className="mt-0.5 block text-xs font-normal text-subtle">
-                {call.direction === 'inbound' ? 'Inbound' : 'Outbound'}
+              <span className={compact ? "ml-1 text-xs font-normal text-subtle" : "mt-0.5 block text-xs font-normal text-subtle"}>
+                {compact ? <span title={call.direction === 'inbound' ? 'Inbound' : 'Outbound'}>{call.direction === 'inbound' ? <PhoneIncoming aria-label="Inbound" className="inline size-3" /> : <PhoneOutgoing aria-label="Outbound" className="inline size-3" />}</span> : call.direction === 'inbound' ? 'Inbound' : 'Outbound'}
                 {call.customerName === null && call.externalNumber !== null ? ' · Unknown caller' : ''}
               </span>
             </>
@@ -62,12 +66,12 @@ export function CallHistory({
           header: 'When',
           cell: (call) => (
             <>
-              {formatCallTime(call.startedAt, timeZone)}
+              {compact ? new Intl.DateTimeFormat('en-CA', { timeZone, hour: 'numeric', minute: '2-digit' }).format(new Date(call.startedAt)) : formatCallTime(call.startedAt, timeZone)}
               {call.answeredAt ? <span className="ml-2 text-xs text-subtle tabular-nums">{formatCallDuration(call.durationSeconds)}</span> : null}
             </>
           ),
         },
-        { key: 'handledBy', header: 'Handled by', emphasis: 'secondary', cell: (call) => call.handledBy.map((member) => member.name).join(', ') || '—' },
+        { key: 'handledBy', header: 'Handled by', emphasis: compact ? 'secondary' : undefined, cell: (call) => call.handledBy.map((member) => member.name).join(', ') || '—' },
         { key: 'outcome', header: 'Outcome', cell: (call) => call.outcome?.name ?? <span className="text-subtle">Not written up</span> },
       ]}
       actions={renderWrapUp}

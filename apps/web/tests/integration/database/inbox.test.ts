@@ -185,6 +185,16 @@ describe('one Inbox over both channels', () => {
     );
   });
 
+  it('returns exact totals for bounded previews and searches real message fields', async () => {
+    const page = await inbox(both, both.owner, {}, { limit: 1 });
+    expect(page.items).toHaveLength(1);
+    expect(page.total).toBe(2);
+    expect((await inbox(both, both.owner, { search: 'Thursday' })).items.map(item => item.id)).toEqual([sms]);
+    expect((await inbox(both, both.owner, { search: 'kim@example.test' })).items.map(item => item.id)).toEqual([email]);
+    expect((await inbox(both, both.owner, { since: '2099-01-01T00:00:00Z' })).total).toBe(0);
+    expect((await inbox(both, both.owner, { search: '%,id.not.is.null' })).items).toEqual([]);
+  });
+
   it('filters by channel', async () => {
     expect(await ids(both, both.owner, { channel: 'sms' })).toEqual([sms]);
     expect(await ids(both, both.owner, { channel: 'email' })).toEqual([email]);

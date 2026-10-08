@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
@@ -8,6 +8,7 @@ import { DividedList, EmptyState, GroupHeading } from '@/components/surfaces/sec
 import { ErrorText, FieldLabel, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import {
   createRouteAction,
+  readRouteTargetsAction,
   previewInboundRouteAction,
   setRouteEnabledAction,
   updateRouteAction,
@@ -80,6 +81,7 @@ export function RoutingSection({
         route={editing === 'new' ? null : editing}
         numbers={numbers}
         members={members}
+        routes={routes}
         onDone={() => setEditing(null)}
       />
     );
@@ -186,11 +188,12 @@ function OrderedMemberPicker({ label, members, selected, onChange }: {
   );
 }
 
-function RouteEditor({ organizationId, route, numbers, members, onDone }: {
+function RouteEditor({ organizationId, route, numbers, members, routes, onDone }: {
   organizationId: string;
   route: Route | null;
   numbers: NumberOption[];
   members: Member[];
+  routes: Route[];
   onDone: () => void;
 }) {
   const [name, setName] = useState(route?.name ?? '');
@@ -205,13 +208,30 @@ function RouteEditor({ organizationId, route, numbers, members, onDone }: {
   const [callbackAffinityEnabled, setCallbackAffinityEnabled] = useState(route?.callbackAffinityEnabled ?? false);
   const [primaryMemberIds, setPrimaryMemberIds] = useState<string[]>([]);
   const [fallbackMemberIds, setFallbackMemberIds] = useState<string[]>([]);
+  const [targetsLoaded, setTargetsLoaded] = useState(!route);
+  const [destinationRouteId, setDestinationRouteId] = useState(route?.destinationRouteId ?? '');
+  const [fallbackRouteId, setFallbackRouteId] = useState(route?.fallbackRouteId ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<RouteDecision | null>(null);
   const [previewNumber, setPreviewNumber] = useState('');
   const [previewing, setPreviewing] = useState(false);
 
+  useEffect(() => {
+    if (!route) return;
+    let cancelled = false;
+    readRouteTargetsAction(organizationId, route.id).then(result => {
+      if (cancelled) return;
+      if (!result.ok) { setError(result.error); return; }
+      setPrimaryMemberIds(result.data.filter(target => target.slot === 'primary').map(target => target.memberId));
+      setFallbackMemberIds(result.data.filter(target => target.slot === 'fallback').map(target => target.memberId));
+      setTargetsLoaded(true);
+    }).catch(() => { if (!cancelled) setError('Could not load saved route members. Close and reopen this editor to retry.'); });
+    return () => { cancelled = true; };
+  }, [organizationId, route]);
+
   const save = async () => {
+    if (!targetsLoaded) return;
     setSaving(true);
     setError(null);
     const input = {
@@ -222,28 +242,33 @@ function RouteEditor({ organizationId, route, numbers, members, onDone }: {
       ringTimeoutSeconds,
       destinationType,
       destinationExternalNumber: destinationType === 'external_number' ? destinationExternalNumber : null,
+      destinationRouteId: destinationType === 'route' ? destinationRouteId || null : null,
       fallbackType,
       fallbackExternalNumber: fallbackType === 'external_number' ? fallbackExternalNumber : null,
+      fallbackRouteId: fallbackType === 'route' ? fallbackRouteId || null : null,
       callbackAffinityEnabled,
       primaryMemberIds,
       fallbackMemberIds,
     };
-    const result = route
-      ? await updateRouteAction(organizationId, route.id, input)
-      : await createRouteAction(organizationId, input);
-    setSaving(false);
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
-    onDone();
+    try {
+      const result = route
+        ? await updateRouteAction(organizationId, route.id, input)
+        : await createRouteAction(organizationId, input);
+      if (!result.ok) { setError(result.error); return; }
+      onDone();
+    } catch { setError('Could not save this route. Try again.'); }
+    finally { setSaving(false); }
   };
 
   const testRoute = async () => {
     setPreviewing(true);
-    const result = await previewInboundRouteAction(organizationId, { numberId: numberId || null, fromNumber: previewNumber || null });
-    setPreviewing(false);
-    if (result.ok) setPreview(result.data);
+    setError(null);
+    setPreview(null);
+    try {
+      const result = await previewInboundRouteAction(organizationId, { numberId: numberId || null, fromNumber: previewNumber || null });
+      if (result.ok) setPreview(result.data); else setError(result.error);
+    } catch { setError('Routing preview could not be reached. Try again.'); }
+    finally { setPreviewing(false); }
   };
 
   const status = statusFor(preview);
@@ -278,6 +303,7 @@ function RouteEditor({ organizationId, route, numbers, members, onDone }: {
         <SelectInput id="route-destination" className="mt-1" value={destinationType} onChange={(event) => setDestinationType(event.target.value as DestinationType)}>
           <option value="members">Team members</option>
           <option value="external_number">An external number</option>
+          <option value="route">Another route</option>
         </SelectInput>
       </div>
 
@@ -306,13 +332,13 @@ function RouteEditor({ organizationId, route, numbers, members, onDone }: {
             Return calls to the last agent
           </label>
         </>
-      ) : (
+      ) : destinationType === 'external_number' ? (
         <div>
           <FieldLabel htmlFor="route-external">Number</FieldLabel>
           <TextInput id="route-external" type="tel" className="mt-1" placeholder="+14165550142" value={destinationExternalNumber}
             onChange={(event) => setDestinationExternalNumber(event.target.value)} />
         </div>
-      )}
+      ) : <SelectInput aria-label="Destination route" value={destinationRouteId} onChange={event => setDestinationRouteId(event.target.value)}><option value="">Choose route</option>{routes.filter(candidate => candidate.id !== route?.id).map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</SelectInput>}
 
       <div>
         <FieldLabel htmlFor="route-fallback">If unanswered</FieldLabel>
@@ -321,6 +347,7 @@ function RouteEditor({ organizationId, route, numbers, members, onDone }: {
           <option value="members">Team members</option>
           <option value="external_number">An external number</option>
           <option value="none">Nothing — the call ends</option>
+          <option value="route">Another route</option>
         </SelectInput>
       </div>
       {fallbackType === 'members' ? (
@@ -329,17 +356,24 @@ function RouteEditor({ organizationId, route, numbers, members, onDone }: {
       {fallbackType === 'external_number' ? (
         <TextInput type="tel" placeholder="+14165550142" value={fallbackExternalNumber} onChange={(event) => setFallbackExternalNumber(event.target.value)} />
       ) : null}
+      {fallbackType === 'route' ? <SelectInput aria-label="Fallback route" value={fallbackRouteId} onChange={event => setFallbackRouteId(event.target.value)}><option value="">Choose route</option>{routes.filter(candidate => candidate.id !== route?.id).map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</SelectInput> : null}
 
       {error ? <ErrorText>{error}</ErrorText> : null}
 
       <div className="flex gap-2">
-        <Button type="button" onClick={save} disabled={saving || !name}>{saving ? 'Saving…' : 'Save'}</Button>
+        <Button type="button" onClick={save} disabled={saving || !name || !targetsLoaded}>{saving ? 'Saving…' : !targetsLoaded ? 'Loading saved members…' : 'Save'}</Button>
         <Button type="button" tone="secondary" onClick={onDone}>Cancel</Button>
         {route ? (
           <Button
             type="button"
             tone="secondary"
-            onClick={() => setRouteEnabledAction(organizationId, { routeId: route.id, enabled: !route.enabled }).then(onDone)}
+            onClick={async () => {
+              setError(null);
+              try {
+                const result = await setRouteEnabledAction(organizationId, { routeId: route.id, enabled: !route.enabled });
+                if (result.ok) onDone(); else setError(result.error);
+              } catch { setError('Could not change this route. Try again.'); }
+            }}
           >
             {route.enabled ? 'Disable' : 'Enable'}
           </Button>
@@ -348,8 +382,9 @@ function RouteEditor({ organizationId, route, numbers, members, onDone }: {
 
       <div className="border-t border-border pt-4">
         <GroupHeading>Test route</GroupHeading>
+        <Hint className="mt-1">Tests saved routing for the selected number. Save changes before testing.</Hint>
         <div className="mt-2 flex items-center gap-2">
-          <TextInput placeholder="+14165558821" size="small" value={previewNumber} onChange={(event) => setPreviewNumber(event.target.value)} className="w-40" />
+          <TextInput aria-label="Routing test caller number" placeholder="+14165558821" size="small" value={previewNumber} onChange={(event) => setPreviewNumber(event.target.value)} className="w-40" />
           <Button type="button" tone="secondary" size="small" onClick={testRoute} disabled={previewing}>Test route</Button>
         </div>
         {preview ? (

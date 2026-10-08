@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { ConversationDetailView } from '@/features/communications/inbox/conversation-detail';
 import { currentMembershipId, getConversationDetail, listAssignableMembers } from '@/lib/domain/reception/inbox';
 import { requireOrganization } from '@/lib/route/organization';
+import { messagingSenders } from '@/lib/domain/reception/channel-readiness';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,11 @@ export default async function ConversationPage({ params }: PageProps<'/organizat
     currentMembershipId(db, { organizationId }),
   ]);
   if (!detail) notFound();
+  const senders = organization.capabilities.includes('message.send') ? await messagingSenders(db, { organizationId }) : { numbers: [], senders: [] };
+  const conversation = detail.conversation;
+  const mayReply = conversation.channel === 'sms'
+    ? senders.numbers.some(number => number.id === conversation.phoneNumberId)
+    : senders.senders.some(sender => sender.id === conversation.emailIdentityId);
 
   return (
     <ConversationDetailView
@@ -30,6 +36,7 @@ export default async function ConversationPage({ params }: PageProps<'/organizat
       members={members}
       myMembershipId={myMembershipId}
       mayHandle={organization.capabilities.includes('message.send')}
+      mayReply={mayReply}
       mayCreateCustomer={organization.capabilities.includes('customer.create')}
     />
   );

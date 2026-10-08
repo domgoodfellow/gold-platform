@@ -95,7 +95,7 @@ must agree.
 
 The current program therefore prioritizes consolidation and operational completeness before adding broad new surface area.
 
-The operational CRM pass now provides Customers, independent Opportunities, Follow-ups and their calendar, an actionable Home, per-stage pipeline previews, currency-safe expected-close forecast and event-backed conversion. The next workspace completion focus is Communications. Contacts, probability-weighted forecasting, marketing lead acquisition and deeper sales analytics remain later expansions.
+The operational CRM pass now provides Customers, independent Opportunities, Follow-ups and their calendar, an actionable Home, per-stage pipeline previews, currency-safe expected-close forecast and event-backed conversion. Communications now has an operational Home, canonical Inbox/Calls/Numbers destinations and visible configuration; provider provisioning and deeper two-way Communications completion remain in R3. Contacts, probability-weighted forecasting, marketing lead acquisition and deeper sales analytics remain later expansions.
 
 ---
 
