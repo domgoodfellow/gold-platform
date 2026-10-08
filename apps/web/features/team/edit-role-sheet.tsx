@@ -41,7 +41,7 @@ export function EditRoleSheet({ organizationId, role }: { organizationId: string
             Changes take effect immediately for everyone already assigned this role.
           </PageDrawerDescription>
         </PageDrawerHeader>
-        <form action={formAction} className="flex flex-col gap-4 px-4 pb-4">
+        <form action={formAction} className="flex flex-col gap-4">
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="roleId" value={role.id} />
 

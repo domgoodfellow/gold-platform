@@ -2,11 +2,7 @@ import path from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import { COLLEAGUE_STORAGE_STATE, loadDemoContext, OWNER_STORAGE_STATE } from './helpers';
 
-/**
- * Studio is one workspace whose pages are navigation, not a card on its Home: the row opens Studio
- * Home, the chevron opens Website, Forms and Templates. The editor's own parts (structure, canvas,
- * inspector) never reach the sidebar.
- */
+/** Studio stays flat in the sidebar; Home launches the operating destinations. */
 
 const SHOTS = process.env.E2E_SHOTS ?? '';
 const sidebar = (page: Page) => page.locator('[data-slot="sidebar-container"] nav[aria-label="This business"]');
@@ -17,18 +13,18 @@ const shot = async (page: Page, name: string) => {
 test.describe('an owner', () => {
   test.use({ storageState: OWNER_STORAGE_STATE });
 
-  test('desktop: the Studio row is Home, and its chevron lists Website, Forms and Templates', async ({ page }) => {
+  test('desktop: the flat Studio row opens Home and its operating destinations', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     await page.goto(`/organizations/${organizationId}/home`);
     const nav = sidebar(page);
 
-    await nav.getByRole('button', { name: 'Expand Studio' }).click();
-    for (const label of ['Website', 'Forms', 'Templates']) await expect(nav.getByRole('link', { name: label, exact: true })).toBeVisible();
-    // The editor's own concepts are not places.
-    for (const label of ['Structure', 'Canvas', 'Inspector']) await expect(nav.getByRole('link', { name: label, exact: true })).toHaveCount(0);
+    await nav.getByRole('link', { name: 'Studio', exact: true }).click();
+    await expect(nav.getByRole('button', { name: 'Expand Studio' })).toHaveCount(0);
+    const destinations = page.getByRole('navigation', { name: 'Studio destinations' });
+    for (const label of ['Website', 'Forms', 'Templates']) await expect(destinations.getByRole('link', { name: label, exact: true })).toBeVisible();
     await shot(page, 'studio-nav-desktop');
 
-    await nav.getByRole('link', { name: 'Forms', exact: true }).click();
+    await destinations.getByRole('link', { name: 'Forms', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/studio/forms$`));
 
     await nav.getByRole('link', { name: 'Studio', exact: true }).click();
@@ -38,11 +34,14 @@ test.describe('an owner', () => {
   test('phone: the menu reaches Studio Home and each Studio page', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(`/organizations/${organizationId}/studio`);
+    await page.goto(`/organizations/${organizationId}/home`);
     await page.locator('nav[aria-label="This business"].fixed').getByRole('button', { name: 'Menu', exact: true }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
     await shot(page, 'studio-nav-phone');
-    for (const label of ['Website', 'Forms', 'Templates']) await expect(page.getByRole('link', { name: label, exact: true }).first()).toBeVisible();
-    await page.getByRole('link', { name: 'Templates', exact: true }).first().click();
+    await expect(page.getByRole('button', { name: 'Expand Studio' })).toHaveCount(0);
+    await page.getByRole('dialog').getByRole('link', { name: 'Studio', exact: true }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.getByRole('navigation', { name: 'Studio destinations' }).getByRole('link', { name: 'Templates', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/studio/templates$`));
   });
 });

@@ -40,7 +40,7 @@ export function CreateCustomerSheetProvider({
             <PageDrawerTitle>New customer</PageDrawerTitle>
             <PageDrawerDescription>Add the identity and contact details this business knows today.</PageDrawerDescription>
           </PageDrawerHeader>
-          <div className="px-4 pb-4">
+          <div>
             <CreateCustomerForm
               organizationId={organizationId}
               definitions={definitions}

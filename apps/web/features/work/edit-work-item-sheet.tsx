@@ -44,7 +44,7 @@ export function EditWorkItemSheet({
           <PageDrawerTitle>Correct job details</PageDrawerTitle>
           <PageDrawerDescription>Title, customer, location and asset.</PageDrawerDescription>
         </PageDrawerHeader>
-        <div className="px-4 pb-4">
+        <div>
           <EditWorkItemForm
             organizationId={organizationId}
             workItem={workItem}

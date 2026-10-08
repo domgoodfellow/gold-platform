@@ -51,7 +51,7 @@ export function AddMemberSheetProvider({
               Invite somebody by email, or add somebody who already has a GildOps account.
             </PageDrawerDescription>
           </PageDrawerHeader>
-          <div className="flex flex-col gap-4 px-4 pb-4">
+          <div className="flex flex-col gap-4">
             <AddMemberSheetBody organizationId={organizationId} roles={roles} onDone={() => setOpen(false)} />
           </div>
         </PageDrawerContent>

@@ -61,7 +61,7 @@ function CreateRoleForm({
   }, [state.created, onCreated]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4 px-4 pb-4">
+    <form action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="organizationId" value={organizationId} />
       <RoleEditorFields idPrefix="create-role" withPresets />
       <Button type="submit" disabled={pending} className="w-fit">

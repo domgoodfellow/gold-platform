@@ -27,7 +27,7 @@ export function FollowUpSheet(props: Props) {
   return <PageDrawer open={open} onOpenChange={changeOpen}>
     <PageDrawerTrigger asChild><Button tone={props.item || props.reference ? 'text' : 'primary'} className={props.children || props.reference ? 'h-auto justify-start whitespace-normal p-0 text-left' : undefined}>{props.children ?? props.reference?.title ?? (props.item ? 'Edit follow-up' : 'New follow-up')}</Button></PageDrawerTrigger>
     <PageDrawerContent><PageDrawerHeader><PageDrawerTitle>{item ? props.mayManage && item.status==='open' ? 'Edit follow-up' : 'Follow-up' : props.reference?'Follow-up':'New follow-up'}</PageDrawerTitle></PageDrawerHeader>
-      {open && (!props.reference || item) ? <FollowUpForm {...props} item={item} onSaved={()=>setOpen(false)} /> : <div className="p-4"><p role="status">{loadError??'Loading follow-up…'}</p></div>}
+      {open && (!props.reference || item) ? <FollowUpForm {...props} item={item} onSaved={()=>setOpen(false)} /> : <div><p role="status">{loadError??'Loading follow-up…'}</p></div>}
     </PageDrawerContent>
   </PageDrawer>;
 }
@@ -46,7 +46,7 @@ function FollowUpForm({ organizationId, timezone, members, mayManage, item, cust
   useEffect(()=>{ if(customerIsFixed) return; let active=true; const timer=setTimeout(()=>{void searchOpportunityCustomers(organizationId,search).then(result=>{if(active)setCustomers(result.customers);}).catch(()=>{if(active)setLoadError('Customers could not be loaded.');});},200); return()=>{active=false;clearTimeout(timer);}; },[organizationId,search,customerIsFixed]);
   useEffect(()=>{let active=true; void searchFollowUpOpportunities(organizationId,customerId).then(result=>{if(active)setOpportunities(result);}).catch(()=>{if(active)setLoadError('Opportunities could not be loaded.');}); return()=>{active=false;};},[organizationId,customerId]);
   useEffect(()=>{if(state.savedId){onSaved();router.refresh();}},[state.savedId,onSaved,router]);
-  return <form action={action} className="space-y-4 p-4">
+  return <form action={action} className="space-y-4">
     <input type="hidden" name="organizationId" value={organizationId}/><input type="hidden" name="id" value={item?.id ?? ''}/>
     {fixed ? <><input type="hidden" name="customerId" value={fixed.id}/><p className="text-sm">Customer: <strong>{fixed.name}</strong></p></> : <>
       <FormField id={`${prefix}-search`} label="Find customer">{p=><TextInput {...p} type="search" value={search} onChange={e=>setSearch(e.target.value)}/>}</FormField>

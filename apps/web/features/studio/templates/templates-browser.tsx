@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { TextInput, SelectInput } from '@/components/controls/inputs';
 import type { PageTemplate, SectionPattern, SiteTemplate } from '@gold/schemas';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { TemplateList } from '@/features/studio/forms/template-list';
@@ -8,6 +10,8 @@ import type { FormTemplate } from '@/lib/domain/forms/forms';
 import { PageTemplateList, SectionPatternList, SiteTemplateList } from './website-templates';
 
 type Filter = 'all' | 'website' | 'pages' | 'sections' | 'forms';
+type TemplateMetadata = { name: string; description: string; category?: string; kind?: string };
+const categoryOf = (item: TemplateMetadata) => item.category ?? item.kind ?? 'general';
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'All' }, { key: 'website', label: 'Website' }, { key: 'pages', label: 'Pages' },
@@ -27,24 +31,42 @@ export function TemplatesBrowser({ organizationId, hasWebsite, siteTemplates, pa
   sectionPatterns: SectionPattern[];
   formTemplates: FormTemplate[];
 }) {
-  const [filter, setFilter] = useState<Filter>('all');
+  const router = useRouter();
+  const params = useSearchParams();
+  const kind = params.get('kind');
+  const filter: Filter = FILTERS.find((entry) => entry.key === kind)?.key ?? 'all';
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('all');
+  const [sort, setSort] = useState('recommended');
+  const categories = [...new Set([...siteTemplates, ...pageTemplates, ...sectionPatterns, ...formTemplates].map(categoryOf))].sort();
+  const matches = (item: TemplateMetadata) => (category === 'all' || categoryOf(item) === category) && `${item.name} ${item.description}`.toLowerCase().includes(search.trim().toLowerCase());
+  const visible = <T extends TemplateMetadata,>(items: T[]) => {
+    const result = items.filter(matches);
+    return sort === 'name' ? result.sort((a, b) => a.name.localeCompare(b.name)) : result;
+  };
   const show = (kind: Exclude<Filter, 'all'>) => filter === 'all' || filter === kind;
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-5">
+      <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-surface p-3">
+        <TextInput type="search" aria-label="Search templates" placeholder="Search templates…" value={search} onChange={(event) => setSearch(event.target.value)} className="sm:max-w-sm" />
+        <SelectInput aria-label="Template category" value={category} onChange={(event) => setCategory(event.target.value)}><option value="all">All categories</option>{categories.map((value) => <option key={value} value={value}>{value}</option>)}</SelectInput>
+        <SelectInput aria-label="Sort templates" value={sort} onChange={(event) => setSort(event.target.value)}><option value="recommended">Catalog order</option><option value="name">Name</option></SelectInput>
+      </div>
       <div role="group" aria-label="Kind of template" className="flex flex-wrap gap-1">
         {FILTERS.map((entry) => (
           <button
-            key={entry.key} type="button" aria-pressed={filter === entry.key} onClick={() => setFilter(entry.key)}
+            key={entry.key} type="button" aria-pressed={filter === entry.key} onClick={() => router.replace(`?kind=${entry.key}`, { scroll: false })}
             className={cx('rounded-md border border-border px-3 py-1 text-sm transition', FOCUS_RING, filter === entry.key ? 'bg-foreground text-background' : 'text-muted hover:text-foreground')}
           >
             {entry.label}
           </button>
         ))}
       </div>
-      {show('website') ? <section aria-label="Website templates" className="grid gap-3"><h2 className="text-base font-semibold">Website</h2><SiteTemplateList organizationId={organizationId} templates={siteTemplates} hasWebsite={hasWebsite} /></section> : null}
-      {show('pages') ? <section aria-label="Page templates" className="grid gap-3"><h2 className="text-base font-semibold">Pages</h2><PageTemplateList organizationId={organizationId} templates={pageTemplates} /></section> : null}
-      {show('sections') ? <section aria-label="Section patterns" className="grid gap-3"><h2 className="text-base font-semibold">Sections</h2><SectionPatternList organizationId={organizationId} patterns={sectionPatterns} /></section> : null}
-      {show('forms') ? <section aria-label="Form templates" className="grid gap-3"><h2 className="text-base font-semibold">Forms</h2><TemplateList organizationId={organizationId} templates={formTemplates} /></section> : null}
+      {show('website') ? <section aria-label="Website templates" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Website</h2><SiteTemplateList organizationId={organizationId} templates={visible(siteTemplates)} hasWebsite={hasWebsite} /></section> : null}
+      {show('pages') ? <section aria-label="Page templates" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Pages</h2><PageTemplateList organizationId={organizationId} templates={visible(pageTemplates)} /></section> : null}
+      {show('sections') ? <section aria-label="Section patterns" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Sections</h2><SectionPatternList organizationId={organizationId} patterns={visible(sectionPatterns)} /></section> : null}
+      {show('forms') ? <section aria-label="Form templates" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Forms</h2><TemplateList organizationId={organizationId} templates={visible(formTemplates)} /></section> : null}
+      {![...(show('website') ? siteTemplates : []), ...(show('pages') ? pageTemplates : []), ...(show('sections') ? sectionPatterns : []), ...(show('forms') ? formTemplates : [])].some(matches) ? <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted">No templates match these filters.</p> : null}
     </div>
   );
 }

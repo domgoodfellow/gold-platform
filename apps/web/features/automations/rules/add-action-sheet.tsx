@@ -77,7 +77,7 @@ export function AddActionSheet({
           </PageDrawerDescription>
         </PageDrawerHeader>
 
-        <form action={formAction} className="flex flex-col gap-4 px-4 pb-4">
+        <form action={formAction} className="flex flex-col gap-4">
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="ruleId" value={rule.id} />
           {action && <input type="hidden" name="actionId" value={action.id} />}

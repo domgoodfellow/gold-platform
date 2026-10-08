@@ -50,7 +50,7 @@ function OpportunityForm({ organizationId, stages, members, defaultCurrency, opp
     const { name, value } = event.target;
     setDraft((current) => ({ ...current, [name]: value }));
   };
-  return <form action={action} className="space-y-4 p-4" onReset={(event) => event.preventDefault()}>
+  return <form action={action} className="space-y-4" onReset={(event) => event.preventDefault()}>
     <input type="hidden" name="organizationId" value={organizationId} />
     <input type="hidden" name="opportunityId" value={opportunity?.id ?? ''} />
     {fixedCustomer ? <><input type="hidden" name="customerId" value={fixedCustomer.id} /><p className="text-sm">Customer: <strong>{fixedCustomer.name}</strong></p></> : <>

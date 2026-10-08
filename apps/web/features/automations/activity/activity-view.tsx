@@ -266,7 +266,7 @@ export function ActivityView({
               {selectedDelivery?.ruleName ?? selectedRun?.ruleName}
             </PageDrawerDescription>
           </PageDrawerHeader>
-          <div className="space-y-4 px-4 pb-4 text-sm">
+          <div className="space-y-4 text-sm">
             {selectedRun && (
               <>
                 <AutomationState value={selectedRun.outcome} />

@@ -1,11 +1,12 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import {
   WebsiteSectionSchema,
   type PageTemplate, type SectionPattern, type SiteTemplate, type WebsiteSection,
 } from '@gold/schemas';
 import { Button, ButtonLink } from '@/components/controls/button';
+import { PreviewFrame } from '@/components/display/preview-frame';
 import { ErrorText, Hint } from '@/components/controls/inputs';
 import { DividedList, GroupHeading } from '@/components/surfaces/section';
 import {
@@ -29,12 +30,16 @@ function drawable(sections: Record<string, unknown>[]): WebsiteSection[] {
 const CANVAS = { mode: 'canvas', forms: {} } as const;
 
 function Preview({ title, label, children }: { title: string; label: string; children: React.ReactNode }) {
+  const [width, setWidth] = useState(390);
   return (
     <PageDrawer>
       <PageDrawerTrigger asChild><Button tone="secondary" size="small" aria-label={`Preview ${title}`}>{label}</Button></PageDrawerTrigger>
       <PageDrawerContent>
         <PageDrawerHeader><PageDrawerTitle>{title}</PageDrawerTitle></PageDrawerHeader>
-        <div className="grid gap-4">{children}</div>
+        <div role="group" aria-label="Preview viewport" className="flex flex-wrap gap-2">
+          {[[390, 'Mobile'], [768, 'Tablet'], [1120, 'Desktop']].map(([value, label]) => <Button key={value} tone={width === value ? 'primary' : 'secondary'} size="small" aria-pressed={width === value} onClick={() => setWidth(Number(value))}>{label}</Button>)}
+        </div>
+        <PreviewFrame title={`${title} template preview`} width={width}><div className="grid gap-8">{children}</div></PreviewFrame>
       </PageDrawerContent>
     </PageDrawer>
   );

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { checkFormAnswers, FormDefinitionSchema, formIsPublishable, newFieldId, type FormDefinition } from '@gold/schemas';
-import { addField, moveField, removeField, updateField } from '@/features/studio/forms/form-editing';
+import { addField, duplicateField, moveField, removeField, updateField } from '@/features/studio/forms/form-editing';
 
 const BASE: FormDefinition = {
   title: 'Request a quote',
@@ -119,5 +119,16 @@ describe('builder edits keep a field\'s identity', () => {
 
   it('removes a field', () => {
     expect(removeField(BASE, 'age').fields.some((field) => field.id === 'age')).toBe(false);
+  });
+
+  it('duplicates choices with independent identity and content', () => {
+    const source = structuredClone(BASE);
+    const result = duplicateField(source, 'vehicle_type');
+    const copy = result.definition.fields.find((field) => field.id === result.fieldId)!;
+    expect(copy.id).not.toBe('vehicle_type');
+    expect(FormDefinitionSchema.safeParse(result.definition).success).toBe(true);
+    if (copy.type === 'select') copy.options[0].label = 'Changed copy';
+    const original = source.fields.find((field) => field.id === 'vehicle_type');
+    expect(original?.type === 'select' && original.options[0].label).toBe('Car');
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useState } from 'react';
 import type { PageTemplate, SectionPattern, SiteTemplate, WebsiteContent, WebsiteSection } from '@gold/schemas';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { ErrorText, Hint } from '@/components/controls/inputs';
@@ -25,6 +25,8 @@ import {
   createDraftAction,
   type WebsiteActionState,
 } from '@/app/organizations/[organizationId]/studio/website/actions';
+import { useUnsavedChanges } from '../use-unsaved-changes';
+import { EditorLayout } from '../editor-layout';
 import { SiteStructure } from './site-structure';
 import { WebsiteCanvas, VIEWPORT_LABEL, type Viewport } from './website-canvas';
 import { PageInspector } from './page-inspector';
@@ -47,7 +49,7 @@ function Feedback({ state }: { state: WebsiteActionState }) {
 function NoDraftState({ organizationId, published, history }: { organizationId: string; published: EditorRevision | null; history: RevisionHistoryEntry[] }) {
   const [createState, createAction, creating] = useActionState(createDraftAction, INITIAL);
   return (
-    <div className="grid gap-4">
+    <div className="@container/editor grid min-w-0 gap-4">
       <div className="flex justify-end gap-2">
         <WebsiteHistorySheet organizationId={organizationId} history={history} canRestore />
         {published ? <ButtonLink tone="secondary" size="small" href={`/preview/${organizationId}/${published.id}`} target="_blank">View published</ButtonLink> : null}
@@ -93,6 +95,7 @@ function Editor({ organizationId, working, history, forms, pageTemplates, sectio
 }) {
   const start: WebsiteContent = { pages: working.pages, navigation: working.navigation };
   const [content, setContent] = useState<WebsiteContent>(start);
+  const [submittedSnapshot, setSubmittedSnapshot] = useState(() => JSON.stringify(start));
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(start));
   const [pageId, setPageId] = useState(() => (working.pages.find((page) => page.isHome) ?? working.pages[0]!).id);
   const [selected, setSelected] = useState<Selection>('page');
@@ -110,19 +113,12 @@ function Editor({ organizationId, working, history, forms, pageTemplates, sectio
   const [processedSaveState, setProcessedSaveState] = useState(saveState);
   if (saveState !== processedSaveState) {
     setProcessedSaveState(saveState);
-    if (saveState.success) setSavedSnapshot(JSON.stringify(content));
+    if (saveState.success) setSavedSnapshot(submittedSnapshot);
   }
 
   const dirty = JSON.stringify(content) !== savedSnapshot;
 
-  // Moving between pages never discards anything (the whole website is one piece of state), but
-  // closing the tab with unsaved edits would. Say so, once, the way the browser does.
-  useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
-    window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
-  }, [dirty]);
+  useUnsavedChanges(dirty);
 
   const isDraft = working.status === 'draft';
   const home = content.pages.find((page) => page.isHome) ?? content.pages[0]!;
@@ -149,7 +145,7 @@ function Editor({ organizationId, working, history, forms, pageTemplates, sectio
   const structure = (
     <SiteStructure
       content={content} pageId={page.id} selected={selected} disabled={!isDraft} pageTemplates={pageTemplates}
-      onSelectPage={setPageId} onSelect={setSelected}
+      onSelectPage={(id) => { setPageId(id); setSelected('page'); }} onSelect={setSelected}
       onAddPage={(name, templateKey) => {
         const template = pageTemplates.find((entry) => entry.key === templateKey);
         const created = template ? { ...pageFromTemplate(content, template), name } : blankPage(content, name);
@@ -206,7 +202,7 @@ function Editor({ organizationId, working, history, forms, pageTemplates, sectio
   );
 
   return (
-    <div className="grid gap-4">
+    <div className="@container/editor grid min-w-0 gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3">
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-sm font-medium">Revision {working.number} · {isDraft ? 'Draft' : 'In review'}</span>
@@ -219,7 +215,7 @@ function Editor({ organizationId, working, history, forms, pageTemplates, sectio
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-2 lg:hidden">
+          <div className="flex gap-2 @min-[56rem]/editor:hidden">
             <PageDrawer>
               <PageDrawerTrigger asChild><Button tone="secondary" size="small">Structure</Button></PageDrawerTrigger>
               <PageDrawerContent>
@@ -243,7 +239,7 @@ function Editor({ organizationId, working, history, forms, pageTemplates, sectio
           </ButtonLink>
           {isDraft ? (
             <>
-              <form action={saveAction}>
+              <form action={saveAction} onSubmit={() => setSubmittedSnapshot(JSON.stringify(content))}>
                 {identityFields}
                 <input type="hidden" name="content" value={JSON.stringify(content)} />
                 <Button size="small" disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
@@ -272,19 +268,9 @@ function Editor({ organizationId, working, history, forms, pageTemplates, sectio
         <Hint>Review the exact preview before publishing. Publishing changes every page and the navigation of the public website together.</Hint>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)_20rem]">
-        <div className="hidden rounded-lg border border-border bg-surface p-3 lg:sticky lg:top-4 lg:block lg:self-start">
-          {structure}
-        </div>
-
-        <div className="min-w-0">
-          <WebsiteCanvas page={page} selected={selected} onSelect={setSelected} viewport={viewport} formNames={formNames} />
-        </div>
-
-        <div className={cx('hidden rounded-lg border border-border bg-surface p-4 lg:sticky lg:top-4 lg:block lg:self-start', !isDraft && 'opacity-60')}>
-          {inspector}
-        </div>
-      </div>
+      <EditorLayout structure={structure} inspector={inspector}>
+        <WebsiteCanvas page={page} selected={selected} onSelect={setSelected} viewport={viewport} formNames={formNames} />
+      </EditorLayout>
 
       <SectionLibrary open={libraryOpen} onOpenChange={setLibraryOpen} forms={forms} patterns={sectionPatterns} onAdd={onAddSection} />
       <NavigationEditor

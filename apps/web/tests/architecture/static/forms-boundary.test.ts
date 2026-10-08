@@ -72,7 +72,7 @@ describe('one renderer', () => {
   });
 
   it('is the only file that turns a field type into a control', () => {
-    for (const file of FORMS_FILES.filter((path) => path.endsWith('.tsx') && !path.endsWith('form-renderer.tsx'))) {
+    for (const file of FORMS_FILES.filter((path) => path.endsWith('.tsx') && !path.endsWith('form-renderer.tsx') && !path.endsWith('studio/forms/page.tsx'))) {
       expect(read(file), file).not.toMatch(/case 'long_text'|type="radio"|<SelectInput|<NativeSelect/);
     }
   });

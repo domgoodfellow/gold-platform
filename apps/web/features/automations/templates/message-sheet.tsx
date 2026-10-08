@@ -101,7 +101,7 @@ export function MessageSheet({
           </PageDrawerDescription>
         </PageDrawerHeader>
 
-        <form action={formAction} className="flex flex-col gap-4 px-4 pb-4">
+        <form action={formAction} className="flex flex-col gap-4">
           <input type="hidden" name="organizationId" value={organizationId} />
           {template ? (
             <input type="hidden" name="templateId" value={template.id} />

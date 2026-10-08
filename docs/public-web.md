@@ -199,6 +199,12 @@ Later edits to the Platform starter must not silently modify an existing Organiz
 
 A Form is authored once and placed by reference.
 
+Studio response review reads `list_form_submission_page` in pages of 50. This bounded manager-only RPC returns the authoritative total, customer/booking associations and the exact submitted revision definitions. It orders by submission timestamp and id so responses with identical timestamps do not overlap adjacent pages. The existing `list_form_submissions` latest-responses RPC remains available for bounded summaries. Selecting a response changes only local review state; pagination retains the owning form route.
+
+Studio exposes copyable public links and embed snippets only while a form has a published revision and is not archived. Unpublished forms retain placement configuration and a publishing explanation. Archiving requires confirmation that public responses stop; historical responses and revisions remain available under the existing archive semantics.
+
+Form History inspects a single saved definition through the manager-only `read_form_revision` RPC, scoped by Organization, Form and revision. It uses the canonical form renderer with disabled controls. Inspection does not restore content, edit history or replace the published revision. This also permits inspecting revisions with no submissions.
+
 The consuming surface owns the placement.
 
 The Form owns its fields/revision.

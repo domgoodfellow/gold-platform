@@ -58,7 +58,7 @@ export function SecretSheet(props: SheetProps) {
               : 'GildOps stores the value encrypted and can use it, but never shows it again — not to you, and not to GildOps staff.'}
           </PageDrawerDescription>
         </PageDrawerHeader>
-        <div className="px-4 pb-4">
+        <div>
           <SecretForm {...props} onSaved={() => setOpen(false)} />
         </div>
       </PageDrawerContent>

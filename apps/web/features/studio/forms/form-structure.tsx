@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Copy, Trash2 } from 'lucide-react';
 import { FORM_FIELD_TYPES, FORM_FIELD_TYPE_LABEL, FORM_MAX_FIELDS, type FormDefinition, type FormFieldType } from '@gold/schemas';
 import { Button } from '@/components/controls/button';
 import { cx, FOCUS_RING } from '@/components/class-names';
@@ -12,7 +12,7 @@ export type FormSelection = 'form' | string;
  * is two buttons per row — a keyboard reaches every position, and nothing here is drag-only. The
  * list holds identity (each row is a field id); the label shown is only the author's current copy.
  */
-export function FormStructure({ definition, selected, disabled, onSelect, onAdd, onMove, onRemove }: {
+export function FormStructure({ definition, selected, disabled, onSelect, onAdd, onMove, onRemove, onDuplicate }: {
   definition: FormDefinition;
   selected: FormSelection;
   disabled?: boolean;
@@ -20,6 +20,7 @@ export function FormStructure({ definition, selected, disabled, onSelect, onAdd,
   onAdd: (type: FormFieldType) => void;
   onMove: (fieldId: string, delta: -1 | 1) => void;
   onRemove: (fieldId: string) => void;
+  onDuplicate: (fieldId: string) => void;
 }) {
   const full = definition.fields.length >= FORM_MAX_FIELDS;
   return (
@@ -36,19 +37,22 @@ export function FormStructure({ definition, selected, disabled, onSelect, onAdd,
         {definition.fields.length === 0 ? <p className="px-2 py-1 text-sm text-muted">No questions yet. Add one below.</p> : null}
         <ol className="flex flex-col gap-1">
           {definition.fields.map((field, index) => (
-            <li key={field.id} className={cx('flex items-center gap-1 rounded-md', selected === field.id && 'bg-secondary')}>
+            <li key={field.id} className={cx('grid gap-1 rounded-md border border-transparent pb-1', selected === field.id && 'border-border bg-secondary')}>
               <button
                 type="button"
                 onClick={() => onSelect(field.id)}
                 aria-current={selected === field.id ? 'true' : undefined}
                 className={cx('min-w-0 flex-1 rounded-md px-2 py-1.5 text-left text-sm transition', FOCUS_RING, selected !== field.id && 'hover:bg-secondary')}
               >
-                <span className="block truncate font-medium">{field.label}</span>
+                <span className="block break-words font-medium">{field.label}</span>
                 <span className="block text-xs text-subtle">{FORM_FIELD_TYPE_LABEL[field.type]}{field.required ? ' · required' : ''}</span>
               </button>
+              <div className="flex items-center justify-end gap-1 px-1">
               <Button type="button" tone="text" size="tiny" disabled={disabled || index === 0} aria-label={`Move “${field.label}” up`} onClick={() => onMove(field.id, -1)}><ArrowUp aria-hidden className="size-3.5" /></Button>
               <Button type="button" tone="text" size="tiny" disabled={disabled || index === definition.fields.length - 1} aria-label={`Move “${field.label}” down`} onClick={() => onMove(field.id, 1)}><ArrowDown aria-hidden className="size-3.5" /></Button>
+              <Button type="button" tone="text" size="tiny" disabled={disabled || full} aria-label={`Duplicate “${field.label}”`} onClick={() => onDuplicate(field.id)}><Copy aria-hidden className="size-3.5" /></Button>
               <Button type="button" tone="text" size="tiny" disabled={disabled} aria-label={`Remove “${field.label}”`} onClick={() => onRemove(field.id)}><Trash2 aria-hidden className="size-3.5" /></Button>
+              </div>
             </li>
           ))}
         </ol>

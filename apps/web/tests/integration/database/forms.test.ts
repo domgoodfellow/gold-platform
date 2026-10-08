@@ -7,6 +7,8 @@ import {
   createForm,
   createFormDraft,
   formEditorState,
+  formSubmissionPage,
+  readFormRevision,
   listFormSubmissions,
   listFormTemplates,
   listForms,
@@ -86,6 +88,30 @@ describe('forms', () => {
 
   afterAll(async () => {
     await Promise.all([a, b].map((tenant) => tenant?.db.auth.signOut()));
+  });
+
+  it('pages every response deterministically and keeps historical definitions and tenant authorization', async () => {
+    const { formId, revisionId } = await publishedQuote(a, 'Paged responses');
+    const user = (await a.db.auth.getUser()).data.user!;
+    await pgQuery(`insert into public.form_submissions (organization_id, form_id, form_revision_id, submitted_by, answers)
+      select $1, $2, $3, $4, jsonb_build_object('name', 'Respondent ' || n) from generate_series(1,55) n`,
+    [a.organizationId, formId, revisionId, user.id]);
+    const draftId = await createFormDraft(a.db, a.organizationId, formId);
+    await saveFormDraft(a.db, { organizationId: a.organizationId, revisionId: draftId, definition: { ...QUOTE, fields: [{ id: 'name', type: 'short_text', label: 'Renamed question' }] } });
+    await publishFormRevision(a.db, { organizationId: a.organizationId, revisionId: draftId });
+    const first = (await formSubmissionPage(a.db, a.organizationId, formId, 0))!;
+    const second = (await formSubmissionPage(a.db, a.organizationId, formId, 50))!;
+    expect(first.total).toBe(55);
+    expect(first.submissions).toHaveLength(50);
+    expect(second.submissions).toHaveLength(5);
+    expect(new Set([...first.submissions, ...second.submissions].map((row) => row.id)).size).toBe(55);
+    expect(first.revisions[0].definition.fields[0].label).toBe('Your name');
+    expect(second.revisions[0].id).toBe(revisionId);
+    expect((await readFormRevision(a.db, a.organizationId, formId, revisionId))?.definition.fields[0].label).toBe('Your name');
+    await expect(readFormRevision(b.db, a.organizationId, formId, revisionId)).rejects.toThrow();
+    expect(await readFormRevision(b.db, b.organizationId, formId, revisionId)).toBeNull();
+    await expect(formSubmissionPage(b.db, a.organizationId, formId, 0)).rejects.toThrow();
+    expect(await formSubmissionPage(b.db, b.organizationId, formId, 0)).toBeNull();
   });
 
   describe('lifecycle', () => {

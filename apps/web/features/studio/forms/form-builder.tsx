@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useId, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { FormDefinitionSchema, formIsPublishable, type FormDefinition, type FormField } from '@gold/schemas';
+import { checkFormAnswers, FormDefinitionSchema, formIsPublishable, type FormDefinition, type FormField } from '@gold/schemas';
 import { Button, ButtonLink } from '@/components/controls/button';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import { ErrorText, Hint } from '@/components/controls/inputs';
 import { cx } from '@/components/class-names';
 import {
@@ -13,7 +14,9 @@ import {
   PageDrawerTitle,
   PageDrawerTrigger,
 } from '@/components/panels/page-drawer';
-import { FormRenderer, type FormValues } from '@/features/forms/form-renderer';
+import { useUnsavedChanges } from '../use-unsaved-changes';
+import { EditorLayout } from '../editor-layout';
+import { FormRenderer, type FormValues, type FormErrors } from '@/features/forms/form-renderer';
 import { FormDistribution } from './form-distribution';
 import type { FormEditorState } from '@/lib/domain/forms/forms';
 import {
@@ -25,7 +28,7 @@ import {
   type FormActionResult,
 } from '@/app/organizations/[organizationId]/studio/forms/actions';
 import { RevisionHistorySheet } from '../website/revision-history-sheet';
-import { addField, moveField, removeField, updateField } from './form-editing';
+import { addField, duplicateField, moveField, removeField, updateField } from './form-editing';
 import { FieldInspector, FormSettingsInspector } from './form-inspector';
 import { FormStructure, type FormSelection } from './form-structure';
 
@@ -43,14 +46,19 @@ export function FormBuilder({ organizationId, state, distribution }: {
   distribution: { origin: string; organizationSlug: string | null; siteHostname: string | null };
 }) {
   const router = useRouter();
+  const archiveFormId = useId();
   const { form, working, published, history } = state;
   const [name, setName] = useState(form.name);
   const [definition, setDefinition] = useState<FormDefinition | null>(working?.definition ?? null);
   const [saved, setSaved] = useState(() => snapshot(form.name, working?.definition ?? ({} as FormDefinition)));
   const [selected, setSelected] = useState<FormSelection>('form');
   const [previewValues, setPreviewValues] = useState<FormValues>({});
+  const [previewErrors, setPreviewErrors] = useState<FormErrors>({});
+  const [previewSent, setPreviewSent] = useState(false);
   const [message, setMessage] = useState<{ tone: 'error' | 'info'; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  const dirty = definition !== null && snapshot(name, definition) !== saved;
+  useUnsavedChanges(dirty);
 
   const finish = (result: FormActionResult, success: string, after?: () => void) => {
     if (result.error) { setMessage({ tone: 'error', text: result.error }); return; }
@@ -68,7 +76,7 @@ export function FormBuilder({ organizationId, state, distribution }: {
     </div>
   ) : null;
 
-  const publicLink = published ? (
+  const publicLink = published && !form.archived ? (
     <ButtonLink tone="secondary" size="small" href={`/f/${form.publicKey}`} target="_blank" rel="noreferrer">Open public form</ButtonLink>
   ) : null;
   const distribute = (
@@ -80,7 +88,7 @@ export function FormBuilder({ organizationId, state, distribution }: {
       organizationSlug={distribution.organizationSlug}
       siteHostname={distribution.siteHostname}
       origin={distribution.origin}
-      published={published !== null}
+      published={published !== null && !form.archived}
       placements={state.placements}
     />
   );
@@ -88,14 +96,14 @@ export function FormBuilder({ organizationId, state, distribution }: {
   // No draft: the form is read as published, and editing begins by making a draft copy.
   if (!working || !definition) {
     return (
-      <div className="grid gap-4">
+      <div className="@container/editor grid min-w-0 gap-4">
         {archivedBar}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3">
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm text-muted">{published ? `Published · Revision ${published.number}` : 'Not published'}</span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <RevisionHistorySheet history={history} />
+            <RevisionHistorySheet organizationId={organizationId} formId={form.id} history={history} />
             {publicLink}
             {distribute}
             <ButtonLink tone="secondary" size="small" href={`/organizations/${organizationId}/studio/forms/${form.id}/submissions`}>Submissions</ButtonLink>
@@ -104,7 +112,12 @@ export function FormBuilder({ organizationId, state, distribution }: {
                 <Button size="small" disabled={pending} onClick={() => run(() => createFormDraftAction({ organizationId, formId: form.id }), 'Draft ready.', () => router.refresh())}>
                   {published ? 'Edit form' : 'Create draft'}
                 </Button>
-                <Button tone="secondary" size="small" disabled={pending} onClick={() => run(() => setFormArchivedAction({ organizationId, formId: form.id, archived: true }), 'Form archived.', () => router.refresh())}>Archive</Button>
+                <form id={archiveFormId} onSubmit={(event) => {
+                  event.preventDefault();
+                  run(() => setFormArchivedAction({ organizationId, formId: form.id, archived: true }), 'Form archived.', () => router.refresh());
+                }}>
+                  <ConfirmSubmit formId={archiveFormId} label="Archive" confirmLabel="Archive form" description="This form will stop accepting public responses. Existing responses and revision history are preserved. Remove any placements before archiving." tone="secondary" pending={pending} />
+                </form>
               </>
             ) : null}
           </div>
@@ -119,7 +132,6 @@ export function FormBuilder({ organizationId, state, distribution }: {
     );
   }
 
-  const dirty = snapshot(name, definition) !== saved;
   const parsed = FormDefinitionSchema.safeParse(definition);
   const readyToPublish = parsed.success && formIsPublishable(parsed.data);
   const selectedField = selected === 'form' ? null : definition.fields.find((field) => field.id === selected) ?? null;
@@ -138,6 +150,11 @@ export function FormBuilder({ organizationId, state, distribution }: {
         if (result.fieldId) setSelected(result.fieldId);
       }}
       onMove={(fieldId, delta) => editDefinition(moveField(definition, fieldId, delta))}
+      onDuplicate={(fieldId) => {
+        const result = duplicateField(definition, fieldId);
+        editDefinition(result.definition);
+        if (result.fieldId) setSelected(result.fieldId);
+      }}
       onRemove={(fieldId) => {
         editDefinition(removeField(definition, fieldId));
         if (selected === fieldId) setSelected('form');
@@ -162,7 +179,7 @@ export function FormBuilder({ organizationId, state, distribution }: {
   };
 
   return (
-    <div className="grid gap-4">
+    <div className="@container/editor grid min-w-0 gap-4">
       {archivedBar}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3">
         <div className="flex flex-wrap items-center gap-3">
@@ -172,7 +189,7 @@ export function FormBuilder({ organizationId, state, distribution }: {
           <span className={cx('text-xs font-medium', dirty ? 'text-foreground' : 'text-muted')} role="status">{dirty ? 'Unsaved changes' : 'Saved'}</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-2 lg:hidden">
+          <div className="flex gap-2 @min-[56rem]/editor:hidden">
             <PageDrawer>
               <PageDrawerTrigger asChild><Button tone="secondary" size="small">Questions</Button></PageDrawerTrigger>
               <PageDrawerContent>
@@ -188,7 +205,7 @@ export function FormBuilder({ organizationId, state, distribution }: {
               </PageDrawerContent>
             </PageDrawer>
           </div>
-          <RevisionHistorySheet history={history} />
+          <RevisionHistorySheet organizationId={organizationId} formId={form.id} history={history} />
           {publicLink}
           {distribute}
           <ButtonLink tone="secondary" size="small" href={`/organizations/${organizationId}/studio/forms/${form.id}/submissions`}>Submissions</ButtonLink>
@@ -214,18 +231,21 @@ export function FormBuilder({ organizationId, state, distribution }: {
       {!parsed.success ? <ErrorText role="alert">{parsed.error.issues[0]?.message ?? 'The form is not valid.'}</ErrorText> : null}
       {published ? <Hint>Visitors keep seeing Revision {published.number} until you publish this draft.</Hint> : null}
 
-      <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)_20rem]">
-        <div className="hidden rounded-lg border border-border bg-surface p-3 lg:sticky lg:top-4 lg:block lg:self-start">{structure}</div>
-
-        <div className="min-w-0">
-          <div className="mx-auto w-full max-w-xl rounded-lg border border-border bg-surface p-6">
-            <p className="mb-4 text-xs uppercase tracking-wide text-subtle">Preview · the form as a visitor sees it</p>
-            <FormRenderer definition={definition} values={previewValues} onChange={(id, value) => setPreviewValues((current) => ({ ...current, [id]: value }))} />
-          </div>
+      <EditorLayout structure={structure} inspector={inspector} structureLabel="Questions" canvasLabel="Live preview">
+        <div className="mx-auto w-full max-w-xl rounded-lg border border-border bg-surface p-4 sm:p-6">
+          <p className="mb-4 text-xs text-muted">Test inputs here without sending a response.</p>
+          {previewSent ? <div className="space-y-3" role="status"><h3 className="text-xl font-semibold">{definition.confirmation.title}</h3><p className="text-sm text-muted">{definition.confirmation.message}</p><p className="text-xs text-muted">Preview only. No response was sent.</p><Button tone="secondary" size="small" onClick={() => { setPreviewSent(false); setPreviewValues({}); }}>Test again</Button></div> : <FormRenderer
+            definition={definition} values={previewValues} errors={previewErrors}
+            onChange={(id, value) => setPreviewValues((current) => ({ ...current, [id]: value }))}
+            onSelectField={setSelected} selectedFieldId={selectedField?.id}
+            onSubmit={() => {
+              const checked = checkFormAnswers(definition, Object.fromEntries(definition.fields.filter((field) => previewValues[field.id] !== undefined).map((field) => [field.id, previewValues[field.id]])));
+              setPreviewErrors(checked.ok ? {} : checked.errors);
+              if (checked.ok) setPreviewSent(true);
+            }}
+          />}
         </div>
-
-        <div className="hidden rounded-lg border border-border bg-surface p-4 lg:sticky lg:top-4 lg:block lg:self-start">{inspector}</div>
-      </div>
+      </EditorLayout>
     </div>
   );
 }

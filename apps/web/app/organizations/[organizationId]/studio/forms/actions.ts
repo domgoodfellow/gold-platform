@@ -16,12 +16,24 @@ import {
   linkFormSubmissionCustomer,
   publishFormRevision,
   renameForm,
+  readFormRevision,
   saveFormDraft,
   setFormArchived,
   type FormCustomerCandidate,
+  type FormRevision,
 } from '@/lib/domain/forms/forms';
 
 export type FormActionResult = { error: string | null };
+
+export async function inspectFormRevisionAction(input: { organizationId: string; formId: string; revisionId: string }): Promise<{ error: string | null; revision: FormRevision | null }> {
+  const { db } = await requireOrganization(input.organizationId);
+  try {
+    const revision = await readFormRevision(db, input.organizationId, input.formId, input.revisionId);
+    return { error: revision ? null : 'This form revision was not found.', revision };
+  } catch (error) {
+    return { ...failure(error), revision: null };
+  }
+}
 
 function failure(error: unknown): FormActionResult {
   if (error instanceof DomainError) return { error: error.message };

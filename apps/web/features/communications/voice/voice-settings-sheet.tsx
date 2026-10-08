@@ -27,7 +27,7 @@ type VoiceSettingsProps = {
 };
 
 export function VoiceSettingsSheet(props: VoiceSettingsProps) {
-  return <PageDrawer><PageDrawerTrigger asChild><Button type="button" tone="secondary"><Settings2 aria-hidden /> Communications settings</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>Communications settings</PageDrawerTitle><PageDrawerDescription>Calling, channels, routing and outcomes.</PageDrawerDescription></PageDrawerHeader><div className="px-4 pb-4"><VoiceSettingsContent {...props} /></div></PageDrawerContent></PageDrawer>;
+  return <PageDrawer><PageDrawerTrigger asChild><Button type="button" tone="secondary"><Settings2 aria-hidden /> Communications settings</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>Communications settings</PageDrawerTitle><PageDrawerDescription>Calling, channels, routing and outcomes.</PageDrawerDescription></PageDrawerHeader><div><VoiceSettingsContent {...props} /></div></PageDrawerContent></PageDrawer>;
 }
 export function VoiceSettingsContent({ organizationId, number, outcomes, routes, numbers, members, mayManageIdentity, mayConfigureOutcomes, role, channelReadiness }: VoiceSettingsProps) {
  return (

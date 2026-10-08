@@ -36,7 +36,7 @@ function WorkflowBody({ organizationId, kind, initialId, mayCreateWork }: { orga
   useEffect(() => { if (!selected) return; let active = true; startTransition(async () => { try { const result = await financeReview(organizationId, selected); if (active) { setReview(result); setError(null); } } catch { if (active) setError('Could not load financial details. Choose another record.'); } }); return () => { active = false; }; }, [organizationId, selected, state]);
   const total = review ? priceWorkItem(review.lines) : null;
   const standing = review?.invoice ? invoiceStanding(review.invoice) : null;
-  return <div className="space-y-4 p-4">
+  return <div className="space-y-4">
     <p className="text-sm text-muted">{kind === 'invoice' ? 'Select priced Work, review its lines, then issue an immutable invoice.' : kind === 'quote' ? 'Select Work and add services from your price book.' : 'Select an invoice to record money received or an append-only correction.'}</p>
     {!initialId ? <><FormField id="finance-workflow-search" label="Find a record">{field => <TextInput {...field} value={q} onChange={e => setQ(e.target.value)} placeholder={kind === 'quote' ? 'Work title' : 'Customer or invoice number'} />}</FormField>
       <FormField id="finance-workflow-record" label={kind === 'payment' ? 'Invoice' : 'Work item'}>{field => <SelectInput {...field} value={selected} onChange={e => { setReview(null); setSelected(e.target.value); }}><option value="">Choose a record</option>{choices.rows.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}</SelectInput>}</FormField>

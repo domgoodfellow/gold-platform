@@ -17,7 +17,7 @@ export function EditCustomerSheet({ organizationId, customer, definitions, stage
       <PageDrawerTrigger asChild><Button type="button" tone="secondary"><Pencil aria-hidden /> Edit</Button></PageDrawerTrigger>
       <PageDrawerContent>
         <PageDrawerHeader><PageDrawerTitle>Edit {customer.name}</PageDrawerTitle><PageDrawerDescription>Correct contact details, custom fields, or the current sales stage.</PageDrawerDescription></PageDrawerHeader>
-        <div className="px-4 pb-4"><EditCustomerForm organizationId={organizationId} customer={customer} definitions={definitions} stages={stages} onUpdated={() => setOpen(false)} /></div>
+        <div><EditCustomerForm organizationId={organizationId} customer={customer} definitions={definitions} stages={stages} onUpdated={() => setOpen(false)} /></div>
       </PageDrawerContent>
     </PageDrawer>
   );
@@ -29,7 +29,7 @@ export function CallCustomerSheet({ organizationId, customer }: { organizationId
       <PageDrawerTrigger asChild><Button type="button"><Phone aria-hidden /> Call</Button></PageDrawerTrigger>
       <PageDrawerContent>
         <PageDrawerHeader><PageDrawerTitle>Call {customer.name}</PageDrawerTitle><PageDrawerDescription>Place a provider call, or record one made outside GildOps.</PageDrawerDescription></PageDrawerHeader>
-        <div className="px-4 pb-4"><CallCustomerForm organizationId={organizationId} customerId={customer.id} customerName={customer.name} phone={customer.phone} /></div>
+        <div><CallCustomerForm organizationId={organizationId} customerId={customer.id} customerName={customer.name} phone={customer.phone} /></div>
       </PageDrawerContent>
     </PageDrawer>
   );

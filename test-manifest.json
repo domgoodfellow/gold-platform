@@ -2380,6 +2380,7 @@
       ],
       "note": "Portal link exchanged once into its own session, portal form, revocation, booking with the business's own questions, refusals that book nothing, Studio/portal/public coexistence, phone width."
     },
+    "apps/web/e2e/studio-drawer-layout.spec.ts": {"category": "playwright-acceptance", "concerns": ["studio", "ui", "responsive", "drawers"], "note": "Shared drawer gutters, fixed chrome, focus return and isolated template previews at desktop, tablet and phone widths."},
     "apps/web/e2e/studio-forms.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": [

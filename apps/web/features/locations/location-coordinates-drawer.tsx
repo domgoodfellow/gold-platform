@@ -48,7 +48,7 @@ export function LocationCoordinatesDrawer({
             none is an ordinary place.
           </PageDrawerDescription>
         </PageDrawerHeader>
-        <div className="px-4 pb-4">
+        <div>
           <LocationCoordinatesForm organizationId={organizationId} location={location} mayLookUp={mayLookUp} />
         </div>
       </PageDrawerContent>

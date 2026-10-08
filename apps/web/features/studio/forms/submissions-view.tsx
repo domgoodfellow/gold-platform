@@ -76,21 +76,21 @@ function CustomerLine({ organizationId, formId, submission }: { organizationId: 
   );
 }
 
-export function SubmissionsView({ organizationId, formId, formName, read }: { organizationId: string; formId: string; formName: string; read: FormSubmissionsRead }) {
-  const [selectedId, setSelectedId] = useState<string | null>(read.submissions[0]?.id ?? null);
+export function SubmissionsView({ organizationId, formId, formName, read, initialSelection, offset = 0 }: { organizationId: string; formId: string; formName: string; read: FormSubmissionsRead; initialSelection?: string; offset?: number }) {
+  const [selectedId, setSelectedId] = useState<string | null>(read.submissions.find((entry) => entry.id === initialSelection)?.id ?? read.submissions[0]?.id ?? null);
   const revisions = new Map(read.revisions.map((revision) => [revision.id, revision]));
   const selected = read.submissions.find((submission) => submission.id === selectedId) ?? null;
   const revision = selected ? revisions.get(selected.revisionId) : undefined;
 
   if (read.submissions.length === 0) {
-    return <EmptyState title="No responses yet" description={`Responses to ${formName} appear here once someone submits the published form.`} />;
+    return <EmptyState title={read.total ? 'No responses on this page' : 'No responses yet'} description={read.total ? 'Return to an earlier page to review responses.' : `Responses to ${formName} appear here once someone submits the published form.`} />;
   }
 
   return (
     <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
       <div className="rounded-lg border border-border bg-surface">
         <p className="border-b border-border px-3 py-2 text-xs text-subtle">
-          {read.total} response{read.total === 1 ? '' : 's'}{read.total > read.submissions.length ? ` · showing the latest ${read.submissions.length}` : ''}
+          {read.total} response{read.total === 1 ? '' : 's'}{read.total > read.submissions.length ? ` · showing ${offset + 1}–${offset + read.submissions.length}` : ''}
         </p>
         <ul aria-label="Responses" className="max-h-[70vh] divide-y divide-border overflow-y-auto">
           {read.submissions.map((submission) => (
@@ -102,6 +102,7 @@ export function SubmissionsView({ organizationId, formId, formName, read }: { or
                 className={cx('block w-full px-3 py-2 text-left text-sm transition', FOCUS_RING, submission.id === selectedId ? 'bg-secondary' : 'hover:bg-secondary')}
               >
                 <span className="block font-medium">{new Date(submission.submittedAt).toLocaleString()}</span>
+                <span className="block text-xs text-muted">{FORM_SOURCE_LABEL[submission.source]} · {submission.customerName ?? 'Not linked to a customer'}</span>
                 <span className="block truncate text-xs text-subtle">
                   Revision {revisions.get(submission.revisionId)?.number ?? '?'}
                   {' · '}
@@ -114,7 +115,7 @@ export function SubmissionsView({ organizationId, formId, formName, read }: { or
       </div>
 
       {selected && revision ? (
-        <article aria-label="Response detail" className="rounded-lg border border-border bg-surface p-5">
+        <article aria-label="Response detail" className="min-w-0 rounded-lg border border-border bg-surface p-5">
           <dl className="mb-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm text-muted">
             <dt>Submitted</dt><dd>{new Date(selected.submittedAt).toLocaleString()}</dd>
             <dt>Form</dt><dd>{formName}</dd>
@@ -132,7 +133,7 @@ export function SubmissionsView({ organizationId, formId, formName, read }: { or
             {revision.definition.fields.map((field) => (
               <div key={field.id}>
                 <dt className="text-sm font-medium">{field.label}</dt>
-                <dd className="mt-0.5 whitespace-pre-line text-sm">{displayAnswer(field, selected.answers[field.id])}</dd>
+                <dd className="mt-0.5 break-words whitespace-pre-line text-sm">{displayAnswer(field, selected.answers[field.id])}</dd>
               </div>
             ))}
           </dl>

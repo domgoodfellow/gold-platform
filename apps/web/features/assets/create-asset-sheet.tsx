@@ -50,7 +50,7 @@ export function CreateAssetSheetProvider({
               What work is about — machines, vehicles, properties, customer-owned equipment.
             </PageDrawerDescription>
           </PageDrawerHeader>
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="min-w-0">
             <CreateAssetForm
               organizationId={organizationId}
               customers={customers}

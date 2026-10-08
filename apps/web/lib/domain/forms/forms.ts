@@ -127,12 +127,31 @@ export async function listForms(db: Db, organizationId: string): Promise<FormLis
   return (data ?? []) as unknown as FormListEntry[];
 }
 
+export async function studioResponses(db: Db, organizationId: string, forms: FormListEntry[]) {
+  // Only these forms can contribute to the latest five responses across the organization.
+  const latestForms = forms.filter((form) => form.lastSubmittedAt)
+    .sort((a, b) => b.lastSubmittedAt!.localeCompare(a.lastSubmittedAt!)).slice(0, 5);
+  const reads = await Promise.all(latestForms.map(async (form) => {
+    const { data, error } = await db.rpc('list_form_submissions', { p_organization_id: organizationId, p_form_id: form.id, p_limit: 5 });
+    if (error) fail(error, 'Responses could not be read.');
+    const read = data as unknown as FormSubmissionsRead | null;
+    return (read?.submissions ?? []).map((entry) => ({ id: entry.id, form_id: form.id, form_name: form.name, source: entry.source, submitted_at: entry.submittedAt }));
+  }));
+  return { total: forms.reduce((sum, form) => sum + form.submissionCount, 0), recent: reads.flat().sort((a, b) => b.submitted_at.localeCompare(a.submitted_at)).slice(0, 5) };
+}
+
 export async function formEditorState(db: Db, organizationId: string, formId: string): Promise<FormEditorState | null> {
   const { data, error } = await db.rpc('form_editor_state', { p_organization_id: organizationId, p_form_id: formId });
   if (error) fail(error, 'The form could not be read.');
   if (!data) return null;
   const raw = data as unknown as FormEditorState;
   return { ...raw, published: parseRevision(raw.published), working: parseRevision(raw.working) };
+}
+
+export async function readFormRevision(db: Db, organizationId: string, formId: string, revisionId: string): Promise<FormRevision | null> {
+  const { data, error } = await db.rpc('read_form_revision', { p_organization_id: organizationId, p_form_id: formId, p_revision_id: revisionId });
+  if (error) fail(error, 'The revision could not be read.');
+  return parseRevision(data as unknown as FormRevision | null);
 }
 
 export async function listFormTemplates(db: Db): Promise<FormTemplate[]> {
@@ -203,6 +222,14 @@ export async function setFormArchived(db: Db, input: { organizationId: string; f
 
 export async function listFormSubmissions(db: Db, organizationId: string, formId: string): Promise<FormSubmissionsRead | null> {
   const { data, error } = await db.rpc('list_form_submissions', { p_organization_id: organizationId, p_form_id: formId });
+  if (error) fail(error, 'The submissions could not be read.');
+  if (!data) return null;
+  const raw = data as unknown as FormSubmissionsRead;
+  return { ...raw, revisions: raw.revisions.map((revision) => ({ ...revision, definition: FormDefinitionSchema.parse(revision.definition) })) };
+}
+
+export async function formSubmissionPage(db: Db, organizationId: string, formId: string, offset: number): Promise<FormSubmissionsRead | null> {
+  const { data, error } = await db.rpc('list_form_submission_page', { p_organization_id: organizationId, p_form_id: formId, p_offset: offset, p_limit: 50 });
   if (error) fail(error, 'The submissions could not be read.');
   if (!data) return null;
   const raw = data as unknown as FormSubmissionsRead;

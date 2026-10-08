@@ -178,6 +178,7 @@ test('portal: a customer opens an offered form and the response is theirs, whate
   // A form the portal offers is not archived out from under it.
   await page.goto(`${studio()}/forms/${form.formId}`);
   await page.getByRole('button', { name: 'Archive' }).click();
+  await page.getByRole('dialog', { name: 'Archive form', exact: true }).getByRole('button', { name: 'Archive form', exact: true }).click();
   await expect(page.getByText(/still used by the portal/)).toBeVisible();
   void setPortalForm;
 });

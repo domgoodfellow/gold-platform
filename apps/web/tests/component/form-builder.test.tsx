@@ -62,6 +62,31 @@ afterEach(cleanup);
 const structure = () => screen.getByRole('navigation', { name: 'Form structure' });
 
 describe('form builder', () => {
+  it('archives only after confirmation and lets the author cancel', async () => {
+    const user = userEvent.setup();
+    renderBuilder(state({ working: null, published: { id: 'p1', number: 3, status: 'published', definition: DEFINITION, publishedAt: '2026-01-01T00:00:00Z' } }));
+    await user.click(screen.getByRole('button', { name: /^Archive$/ }));
+    const confirmation = screen.getByRole('dialog', { name: 'Archive form' });
+    expect(confirmation.textContent).toContain('Existing responses and revision history are preserved');
+    expect(actions.setFormArchivedAction).not.toHaveBeenCalled();
+    await user.click(within(confirmation).getByRole('button', { name: 'Cancel' }));
+    expect(actions.setFormArchivedAction).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Archive' }));
+    await user.click(within(screen.getByRole('dialog', { name: 'Archive form' })).getByRole('button', { name: 'Archive form' }));
+    expect(actions.setFormArchivedAction).toHaveBeenCalledWith({ organizationId: 'o1', formId: 'f1', archived: true });
+  });
+  it('tests validation and confirmation locally without a server write', async () => {
+    const user = userEvent.setup();
+    renderBuilder();
+    await user.click(screen.getByRole('button', { name: /^Send$/ }));
+    expect(screen.getAllByRole('textbox').some((input) => input.getAttribute('aria-invalid') === 'true')).toBe(true);
+    await user.type(screen.getByLabelText('Your name'), 'Local Visitor');
+    await user.type(screen.getByLabelText('Email'), 'visitor@example.test');
+    await user.click(screen.getByRole('button', { name: /^Send$/ }));
+    expect(screen.getByText('Preview only. No response was sent.')).toBeTruthy();
+    expect(actions.saveFormDraftAction).not.toHaveBeenCalled();
+    expect(actions.publishFormAction).not.toHaveBeenCalled();
+  });
   it('starts saved, and marks the draft unsaved after an edit', async () => {
     const user = userEvent.setup();
     renderBuilder();

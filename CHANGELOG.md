@@ -34,6 +34,13 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Studio and shared page drawers — 2026-10-08
+
+- Replace the sparse Studio Home with a contained website preview, factual website/form/response summaries, content and submission previews, publishing attention, creation shortcuts and public-surface configuration links. Preserve flat workspace navigation and canonical ownership.
+- Unify contextual drawers around shared padded bodies, fixed headers/footers, body-only scrolling, Escape dismissal and focus return; remove repeated outer gutters from existing feature drawers. Add an isolated responsive website-template preview with mobile/tablet/desktop controls.
+- Share responsive Website/Form editor panes, preserve compact editing state, add form-question duplication, local validation/confirmation testing and unsaved-change warnings. Forms exposes URL-backed search, publication filters, sorting and pagination; submission links retain the selected response.
+- Add bounded response pages and read-only inspection of saved Form revisions with the existing manager authorization. Apply `20261203000001_studio_submission_pages.sql` and `20261203000002_studio_form_revision_inspection.sql` before deploying; database types are regenerated. Gate distribution links on publication, confirm archiving, and move legacy Catalogue/Plan drawer actions into fixed shell footers. Existing publishing/revision operations remain authoritative. No hosted data changes.
+
 ### Automations operating workspace — 2026-10-08
 
 - Replace the minimal Home, Rules and Activity presentation with a contained operational dashboard, filtered collections, execution/delivery inspectors, and a linear visual Rule Builder. Retain legacy links, flat navigation and canonical execution authority.

@@ -40,7 +40,7 @@ export function EditFieldSheet({
           <PageDrawerTitle>Edit {definition.label}</PageDrawerTitle>
           <PageDrawerDescription>Change how this field appears; its identity stays fixed.</PageDrawerDescription>
         </PageDrawerHeader>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 px-4 pb-4 text-sm">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
           <dt className="text-subtle">Key</dt><dd><code>{definition.key}</code></dd>
           <dt className="text-subtle">Type</dt><dd>{FIELD_KIND_LABELS[definition.kind]}</dd>
           <dt className="text-subtle">Applies to</dt><dd>{CUSTOM_FIELD_ENTITY_LABELS[definition.entityType]}</dd>

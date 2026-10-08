@@ -38,6 +38,16 @@ export function addField(definition: FormDefinition, type: FormFieldType): { def
   return { definition: { ...definition, fields: [...definition.fields, field] }, fieldId: field.id };
 }
 
+export function duplicateField(definition: FormDefinition, fieldId: string): { definition: FormDefinition; fieldId: string | null } {
+  const index = definition.fields.findIndex((field) => field.id === fieldId);
+  if (index < 0 || definition.fields.length >= FORM_MAX_FIELDS) return { definition, fieldId: null };
+  const field = structuredClone(definition.fields[index]);
+  field.id = newFieldId(field.label, new Set(definition.fields.map((entry) => entry.id)));
+  const fields = [...definition.fields];
+  fields.splice(index + 1, 0, field);
+  return { definition: { ...definition, fields }, fieldId: field.id };
+}
+
 export function updateField(definition: FormDefinition, fieldId: string, next: FormField): FormDefinition {
   // The id is identity: whatever the inspector produced, it stays what it was.
   return { ...definition, fields: definition.fields.map((field) => (field.id === fieldId ? { ...next, id: fieldId } as FormField : field)) };

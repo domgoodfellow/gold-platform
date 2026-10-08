@@ -86,7 +86,7 @@ async function publishDraft(page: Page) {
 
 test('Studio keeps Home, Website, Forms and Templates in one workspace', async ({ page }) => {
   await page.goto(studio());
-  const nav = page.locator('[data-slot="sidebar-container"]');
+  const nav = page.getByRole('navigation', { name: 'Studio destinations' });
   for (const name of ['Website', 'Forms', 'Templates']) await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
 });
 
@@ -167,6 +167,11 @@ test('journey A: create a blank website, compose a page, preview it privately, p
   await page.goto(`${studio()}/forms/${formId}/submissions`);
   await expect(page.getByRole('article', { name: 'Response detail' })).toContainText('Website Visitor');
   await expect(page.getByRole('article', { name: 'Response detail' })).toContainText('Website');
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.goto(studio());
+  await expect(page.getByRole('region', { name: 'Website overview' }).getByText(/Published/).first()).toBeVisible();
+  await expect(page.locator('iframe[title="Website overview preview"]').contentFrame().getByRole('heading', { level: 1, name: 'We fix boilers' })).toBeVisible();
+  await shot(page, '12-studio-home-published-1440');
 });
 
 test('journey C: add a page from a template, link it in the navigation, and it is served at its own path', async ({ page, browser }) => {

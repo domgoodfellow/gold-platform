@@ -1,6 +1,8 @@
 'use client';
 
 import {
+  Children,
+  isValidElement,
   createContext,
   useCallback,
   useContext,
@@ -124,9 +126,8 @@ export function PageDrawerContent({ className, children }: { className?: string;
   useEffect(() => {
     if (!open || !pageSlot || !visible) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    ref.current
-      ?.querySelector<HTMLElement>('[data-autofocus], input:not([type=hidden]), select, textarea')
-      ?.focus();
+    const firstControl = ref.current?.querySelector<HTMLElement>('[data-autofocus], input:not([type=hidden]):not(:disabled), select:not(:disabled), textarea:not(:disabled)');
+    (firstControl ?? ref.current)?.focus();
     return () => previous?.focus();
   }, [open, pageSlot, visible]);
 
@@ -147,14 +148,16 @@ export function PageDrawerContent({ className, children }: { className?: string;
       aria-labelledby={titleId}
       hidden={!visible}
       onKeyDown={onKeyDown}
-      className={cx('relative flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto text-sm', visible ? undefined : 'hidden', className)}
+      tabIndex={-1}
+      data-page-drawer=""
+      className={cx('relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden text-sm', visible ? undefined : 'hidden', className)}
     >
-      {children}
+      {drawerLayout(children)}
       <button
         type="button"
         onClick={() => setOpen(false)}
         className={cx(
-          'absolute right-3 flex size-8 items-center justify-center rounded text-muted hover:bg-hover hover:text-foreground',
+          'absolute right-3 z-20 flex size-8 items-center justify-center rounded text-muted hover:bg-hover hover:text-foreground',
           DRAWER_CLOSE_OFFSET,
           FOCUS_RING,
         )}
@@ -176,7 +179,7 @@ export function PageDrawerHeader({
   return (
     <div
       className={cx(
-        'flex gap-0.5',
+        'z-10 flex shrink-0 gap-0.5 border-b border-border bg-surface',
         DRAWER_HEADER,
         inline ? 'items-center justify-between gap-3' : 'flex-col justify-center',
         className,
@@ -187,7 +190,21 @@ export function PageDrawerHeader({
 }
 
 export function PageDrawerFooter({ className, ...props }: ComponentProps<'div'>) {
-  return <div className={cx('mt-auto flex flex-col gap-2 p-4', className)} {...props} />;
+  return <div data-drawer-footer="" className={cx('mt-auto flex shrink-0 flex-wrap items-center gap-2 border-t border-border bg-surface p-4', className)} {...props} />;
+}
+
+/** The body owns gutters and scrolling; headers and actions stay visible. */
+export function PageDrawerBody({ className, padding = 'standard', ...props }: ComponentProps<'div'> & { padding?: 'standard' | 'none' }) {
+  return <div data-drawer-body="" {...props} className={cx('min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain', padding === 'standard' && 'p-4', className)} />;
+}
+
+function drawerLayout(children: ReactNode) {
+  const parts = Children.toArray(children);
+  const isPart = (part: ReactNode, type: unknown) => isValidElement(part) && part.type === type;
+  const header = parts.filter((part) => isPart(part, PageDrawerHeader));
+  const footer = parts.filter((part) => isPart(part, PageDrawerFooter));
+  const body = parts.filter((part) => !isPart(part, PageDrawerHeader) && !isPart(part, PageDrawerFooter));
+  return <>{header}{body.some((part) => isPart(part, PageDrawerBody)) ? body : <PageDrawerBody className="space-y-4">{body}</PageDrawerBody>}{footer}</>;
 }
 
 export function PageDrawerTitle({ className, ...props }: ComponentProps<'h2'>) {

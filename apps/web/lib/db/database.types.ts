@@ -11462,6 +11462,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      list_form_submission_page: {
+        Args: {
+          p_form_id: string
+          p_limit?: number
+          p_offset?: number
+          p_organization_id: string
+        }
+        Returns: Json
+      }
       list_form_submissions: {
         Args: { p_form_id: string; p_limit?: number; p_organization_id: string }
         Returns: Json
@@ -11985,6 +11994,14 @@ export type Database = {
           recipient: string
           subject_line: string
         }[]
+      }
+      read_form_revision: {
+        Args: {
+          p_form_id: string
+          p_organization_id: string
+          p_revision_id: string
+        }
+        Returns: Json
       }
       read_integration_credential: {
         Args: { p_connection_id: string }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useId, useState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import {
@@ -26,6 +26,7 @@ const INITIAL: FormState = { error: null, updated: false };
 
 export function EditProductSheet({ product }: { product: CatalogProduct }) {
   const [open, setOpen] = useState(false);
+  const formId = useId();
   const [state, action, pending] = useActionState(updateCatalogProductAction, INITIAL);
 
   return (
@@ -42,7 +43,7 @@ export function EditProductSheet({ product }: { product: CatalogProduct }) {
             Presentation only. The key ({product.key}) is locked — the Gild Products are fixed.
           </PageDrawerDescription>
         </PageDrawerHeader>
-        <form action={action} className="flex flex-col gap-3 px-4">
+        <form id={formId} action={action} className="flex flex-col gap-3">
           <input type="hidden" name="familyKey" value={product.key} />
           <div className="flex flex-col gap-1">
             <FieldLabel htmlFor="label">Label</FieldLabel>
@@ -76,13 +77,13 @@ export function EditProductSheet({ product }: { product: CatalogProduct }) {
             <TextInput id="displayOrder" name="displayOrder" type="number" min={0} defaultValue={product.displayOrder} className="w-28" />
           </div>
           <ErrorText role="alert">{state.error}</ErrorText>
-          <PageDrawerFooter className="px-0">
-            <Button type="submit" disabled={pending}>
-              {pending ? 'Saving…' : 'Save'}
-            </Button>
-            {state.updated ? <Hint role="status">Saved.</Hint> : null}
-          </PageDrawerFooter>
         </form>
+        <PageDrawerFooter>
+          <Button type="submit" form={formId} disabled={pending}>
+            {pending ? 'Saving…' : 'Save'}
+          </Button>
+          {state.updated ? <Hint role="status">Saved.</Hint> : null}
+        </PageDrawerFooter>
       </PageDrawerContent>
     </PageDrawer>
   );
@@ -90,6 +91,7 @@ export function EditProductSheet({ product }: { product: CatalogProduct }) {
 
 export function EditModuleSheet({ module, familyKey }: { module: CatalogModule; familyKey: string }) {
   const [open, setOpen] = useState(false);
+  const formId = useId();
   const [state, action, pending] = useActionState(updateCatalogModuleAction, INITIAL);
 
   return (
@@ -104,7 +106,7 @@ export function EditModuleSheet({ module, familyKey }: { module: CatalogModule; 
           <PageDrawerTitle>Edit {module.label}</PageDrawerTitle>
           <PageDrawerDescription>Presentation metadata for this Module.</PageDrawerDescription>
         </PageDrawerHeader>
-        <form action={action} className="flex flex-col gap-3 px-4">
+        <form id={formId} action={action} className="flex flex-col gap-3">
           <input type="hidden" name="familyKey" value={familyKey} />
           <input type="hidden" name="moduleId" value={module.id} />
           <div className="flex flex-col gap-1">
@@ -120,13 +122,13 @@ export function EditModuleSheet({ module, familyKey }: { module: CatalogModule; 
             <TextInput id={`module-order-${module.id}`} name="displayOrder" type="number" min={0} defaultValue={module.displayOrder} className="w-28" />
           </div>
           <ErrorText role="alert">{state.error}</ErrorText>
-          <PageDrawerFooter className="px-0">
-            <Button type="submit" disabled={pending}>
-              {pending ? 'Saving…' : 'Save'}
-            </Button>
-            {state.updated ? <Hint role="status">Saved.</Hint> : null}
-          </PageDrawerFooter>
         </form>
+        <PageDrawerFooter>
+          <Button type="submit" form={formId} disabled={pending}>
+            {pending ? 'Saving…' : 'Save'}
+          </Button>
+          {state.updated ? <Hint role="status">Saved.</Hint> : null}
+        </PageDrawerFooter>
       </PageDrawerContent>
     </PageDrawer>
   );
@@ -164,7 +166,7 @@ export function FeatureSheet({
           <PageDrawerDescription>{feature.description || 'No description yet.'}</PageDrawerDescription>
         </PageDrawerHeader>
 
-        <div className="flex flex-col gap-6 px-4 pb-4">
+        <div className="flex flex-col gap-6">
           <form action={action} className="flex flex-col gap-3">
             <input type="hidden" name="familyKey" value={familyKey} />
             <input type="hidden" name="featureId" value={feature.id} />

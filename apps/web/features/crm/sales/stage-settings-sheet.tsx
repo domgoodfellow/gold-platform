@@ -17,7 +17,7 @@ export function StageSettingsSheet({ organizationId, stages, mayConfigure, role 
           <PageDrawerTitle>Relationship stages</PageDrawerTitle>
           <PageDrawerDescription>The words this business uses for where a relationship has got to.</PageDrawerDescription>
         </PageDrawerHeader>
-        <div className="space-y-6 px-4 pb-4">
+        <div className="space-y-6">
           {stages.length === 0 ? <EmptyState>No stages named.</EmptyState> : (
             <DividedList>{stages.map((stage) => <li key={stage.id}>{mayConfigure ? <EditStageForm organizationId={organizationId} stage={stage} /> : <div className="py-3">{stage.name}</div>}</li>)}</DividedList>
           )}

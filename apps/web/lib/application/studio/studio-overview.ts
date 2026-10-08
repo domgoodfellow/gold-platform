@@ -3,7 +3,8 @@ import { listBookableTypes } from '@/lib/domain/booking/booking';
 import { getBrand } from '@/lib/domain/branding/brand';
 import { getManagedHostname } from '@/lib/domain/domains/domains';
 import { organizationPortalInviteCount } from '@/lib/domain/portal/portal';
-import { listForms } from '@/lib/domain/forms/forms';
+import { listForms, studioResponses, type FormListEntry } from '@/lib/domain/forms/forms';
+import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { siteEditorState } from '@/lib/domain/public-site/public-site';
 import { publicProfile } from '@/lib/domain/tenancy/profile';
 
@@ -20,6 +21,8 @@ export type StudioWebsiteSummary = {
   state: StudioWebsiteState;
   revisionNumber: number | null;
   publishedAt: string | null;
+  preview: { id: string; number: number; status: string } | null;
+  working: { id: string; number: number; status: string } | null;
 };
 
 export type StudioAttentionItem = {
@@ -41,35 +44,41 @@ export type StudioOverview = {
   website: StudioWebsiteSummary | null;
   /** Null when this member's role cannot manage forms. */
   forms: StudioFormsSummary | null;
+  formPreview: FormListEntry[];
+  recentResponses: Awaited<ReturnType<typeof studioResponses>>['recent'];
   recentPublishing: Array<{ id: string; number: number; status: string }>;
   brand: { logoConfigured: boolean; accentConfigured: boolean };
-  booking: { bookableTypeCount: number };
+  booking: { bookableTypeCount: number; available: boolean };
   portal: { activeInviteCount: number };
   /** The GildOps-managed address this business's slug resolves to, or null until it has a slug or the deployment offers none. */
   publicUrl: string | null;
+  hostname: string | null;
   attention: StudioAttentionItem[];
 };
 
 function summarizeWebsite(state: Awaited<ReturnType<typeof siteEditorState>>): StudioWebsiteSummary {
-  if (!state) return { state: 'not_configured', revisionNumber: null, publishedAt: null };
+  const revision = state?.published ?? state?.working;
+  const details = { preview: revision ? { id: revision.id, number: revision.number, status: revision.status } : null, working: state?.working ? { id: state.working.id, number: state.working.number, status: state.working.status } : null };
+  if (!state) return { state: 'not_configured', revisionNumber: null, publishedAt: null, ...details };
   if (state.published) {
-    return { state: 'published', revisionNumber: state.published.number, publishedAt: state.published.publishedAt ?? null };
+    return { state: 'published', revisionNumber: state.published.number, publishedAt: state.published.publishedAt ?? null, ...details };
   }
   if (state.working) {
     return {
       state: state.working.status === 'in_review' ? 'in_review' : 'draft',
       revisionNumber: state.working.number,
       publishedAt: null,
+      ...details,
     };
   }
-  return { state: 'not_configured', revisionNumber: null, publishedAt: null };
+  return { state: 'not_configured', revisionNumber: null, publishedAt: null, ...details };
 }
 
 export async function studioOverview(
   db: Db,
   input: { organizationId: string; slug: string | null; organizationName: string; mayManageWebsite: boolean },
 ): Promise<StudioOverview> {
-  const [siteState, forms, brand, bookableTypes, portal, managedAddress, profile] = await Promise.all([
+  const [siteState, forms, brand, bookableTypes, portal, managedAddress, profile, modules] = await Promise.all([
     input.mayManageWebsite ? siteEditorState(db, input.organizationId) : Promise.resolve(null),
     input.mayManageWebsite ? listForms(db, input.organizationId) : Promise.resolve(null),
     getBrand(db, { organizationId: input.organizationId }),
@@ -77,40 +86,46 @@ export async function studioOverview(
     organizationPortalInviteCount(db, { organizationId: input.organizationId }),
     getManagedHostname(db, { slug: input.slug }),
     publicProfile(db, { organizationId: input.organizationId, fallbackName: input.organizationName }),
+    listUsableModules(db, { organizationId: input.organizationId }),
   ]);
+  const responses = forms ? await studioResponses(db, input.organizationId, forms) : null;
 
   const website = input.mayManageWebsite ? summarizeWebsite(siteState) : null;
 
   const attention: StudioAttentionItem[] = [];
   if (website?.state === 'not_configured') attention.push({ key: 'website-not-published', label: 'No homepage has been published.' });
-  if (website?.state === 'draft') attention.push({ key: 'website-draft', label: 'Website has an unpublished draft.' });
-  if (website?.state === 'in_review') attention.push({ key: 'website-in-review', label: 'A website revision is waiting for review.' });
+  if (siteState?.working?.status === 'draft') attention.push({ key: 'website-draft', label: 'Website has an unpublished draft.' });
+  if (siteState?.working?.status === 'in_review') attention.push({ key: 'website-in-review', label: 'A website revision is waiting for review.' });
   const liveForms = (forms ?? []).filter((form) => !form.archived);
   const formsSummary: StudioFormsSummary | null = forms
     ? {
         total: liveForms.length,
         published: liveForms.filter((form) => form.publishedRevisionNumber !== null).length,
         withDraft: liveForms.filter((form) => form.hasDraft).length,
-        responses: liveForms.reduce((sum, form) => sum + form.submissionCount, 0),
+        responses: responses?.total ?? 0,
       }
     : null;
   if (liveForms.some((form) => form.publishedRevisionNumber === null)) attention.push({ key: 'form-unpublished', label: 'A form has never been published.' });
   if (!brand.logoPath) attention.push({ key: 'brand-logo', label: 'Brand logo is missing.' });
-  if (bookableTypes.length === 0) attention.push({ key: 'no-bookable-type', label: 'No bookable type exists.' });
+  if (modules.has('booking') && bookableTypes.length === 0) attention.push({ key: 'no-bookable-type', label: 'No bookable type exists.' });
+  if (liveForms.some((form) => form.hasDraft && form.publishedRevisionNumber !== null)) attention.push({ key: 'form-draft', label: 'A published form has unpublished changes.' });
   if (!profile.intro) attention.push({ key: 'profile-incomplete', label: 'Public profile is incomplete.' });
 
   return {
     website,
     forms: formsSummary,
+    formPreview: (forms ?? []).slice(0, 6),
+    recentResponses: responses?.recent ?? [],
     recentPublishing: (siteState?.history ?? []).slice(0, 5).map((revision) => ({
       id: revision.id,
       number: revision.number,
       status: revision.status,
     })),
     brand: { logoConfigured: Boolean(brand.logoPath), accentConfigured: Boolean(brand.accent) },
-    booking: { bookableTypeCount: bookableTypes.length },
+    booking: { bookableTypeCount: bookableTypes.length, available: modules.has('booking') && Boolean(input.slug) && bookableTypes.length > 0 },
     portal: { activeInviteCount: portal.active },
-    publicUrl: managedAddress.state === 'ready' ? `https://${managedAddress.hostname}` : null,
+    publicUrl: managedAddress.state === 'ready' && siteState?.published ? `https://${managedAddress.hostname}` : null,
+    hostname: managedAddress.state === 'ready' ? managedAddress.hostname : null,
     attention,
   };
 }

@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import ts from 'typescript';
 
 /**
  * Phase A — the authenticated application frame Business, Platform, Settings, Import, Schedule
@@ -13,6 +14,39 @@ import { describe, expect, it } from 'vitest';
  */
 
 const WEB = fileURLToPath(new URL('../../..', import.meta.url));
+
+it('page drawer actions stay outside scrolling forms', () => {
+  const offenders: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const file = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) { walk(file); continue; }
+      if (!file.endsWith('.tsx')) continue;
+      const source = readFileSync(file, 'utf8');
+      if (!source.includes('<PageDrawerFooter')) continue;
+      const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+      const visit = (node: ts.Node) => {
+        if (ts.isJsxElement(node) && node.openingElement.tagName.getText(tree) === 'PageDrawerFooter') {
+          for (let parent = node.parent; parent; parent = parent.parent) {
+            if (!ts.isJsxElement(parent)) continue;
+            const tag = parent.openingElement.tagName.getText(tree);
+            if (tag === 'PageDrawerContent') break;
+            if (tag === 'form') {
+              const line = tree.getLineAndCharacterOfPosition(node.getStart(tree)).line + 1;
+              offenders.push(`${file.slice(WEB.length)}:${line}`);
+              break;
+            }
+          }
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(tree);
+    }
+  };
+  walk(`${WEB}/features`);
+  walk(`${WEB}/app`);
+  expect(offenders).toEqual([]);
+});
 
 // Doc comments legitimately name what a file does not do; only the code is under test.
 const code = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
@@ -438,7 +472,7 @@ describe('the page-header contract — the page, not the workspace header, owns 
     // Phase C's loader+Screen route pairs (Slice 9) put the identity component one file down, in
     // the Screen the page delegates to, rather than inline in the page itself — the same shape
     // `CustomerDetail`/`HomeDashboard` already had: a feature component that renders the real one.
-    const identity = /<PageHeader|<CollectionHeader|<WorkspaceHome|<StatePage|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<CrmHome|<HomeDashboard|<TenantWorkspaceHeader|<PlatformOverview|<LibrarySectionPage|<AccessPage|<ConnectionsPage|<PlanDetailScreen|<OrganizationCommercialScreen|<CatalogFamilyScreen|<TwilioProviderScreen|<PlanUsageScreen|<WorkItemDetailScreen/;
+    const identity = /<PageHeader|<CollectionHeader|<WorkspaceHome|<StatePage|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<CrmHome|<HomeDashboard|<TenantWorkspaceHeader|<PlatformOverview|<LibrarySectionPage|<AccessPage|<ConnectionsPage|<PlanDetailScreen|<OrganizationCommercialScreen|<CatalogFamilyScreen|<TwilioProviderScreen|<PlanUsageScreen|<WorkItemDetailScreen|<StudioHome/;
     // A master-detail screen (the Inbox: a persistent list beside whichever pane is selected) renders its one
     // identity in the layout that frames every pane, because a page-owned header would be torn down and drawn
     // again on every selection. Only a layout *below* the organization root counts — the root layout frames

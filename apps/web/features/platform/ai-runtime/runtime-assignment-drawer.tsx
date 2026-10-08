@@ -43,7 +43,7 @@ export function RuntimeAssignmentDrawer({
         <PageDrawerHeader>
           <PageDrawerTitle>{label}</PageDrawerTitle>
         </PageDrawerHeader>
-        <div className="flex flex-col gap-4 p-4">
+        <div className="flex flex-col gap-4">
           <RuntimeAssignmentForm capability={capability} services={services} accounts={accounts} current={current} />
         </div>
       </PageDrawerContent>

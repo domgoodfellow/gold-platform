@@ -155,6 +155,8 @@ export function FormFields({
   errors = {},
   disabled,
   onChange,
+  onSelectField,
+  selectedFieldId,
 }: {
   definition: FormDefinition;
   idPrefix: string;
@@ -162,11 +164,17 @@ export function FormFields({
   errors?: FormErrors;
   disabled?: boolean;
   onChange: (fieldId: string, value: string | boolean | string[]) => void;
+  onSelectField?: (fieldId: string) => void;
+  selectedFieldId?: string;
 }) {
   return (
     <>
       {definition.fields.length === 0 ? <Hint>This form has no questions yet.</Hint> : null}
-      {definition.fields.map((field) => (
+      {definition.fields.map((field) => <div key={field.id}
+        onFocusCapture={onSelectField ? () => onSelectField(field.id) : undefined}
+        onClick={onSelectField ? () => onSelectField(field.id) : undefined}
+        className={onSelectField ? cx('rounded-md p-2 ring-1 ring-transparent hover:ring-border', selectedFieldId === field.id && 'ring-foreground') : undefined}
+      >
         <RenderedField
           key={field.id}
           field={field}
@@ -176,7 +184,7 @@ export function FormFields({
           disabled={disabled}
           onChange={(value) => onChange(field.id, value)}
         />
-      ))}
+      </div>)}
     </>
   );
 }
@@ -192,6 +200,8 @@ export function FormRenderer({
   submitDisabled,
   showTitle = true,
   className,
+  onSelectField,
+  selectedFieldId,
 }: {
   definition: FormDefinition;
   values: FormValues;
@@ -206,6 +216,8 @@ export function FormRenderer({
   /** A page that already has a heading for the form (a website section) draws the form without its own. */
   showTitle?: boolean;
   className?: string;
+  onSelectField?: (fieldId: string) => void;
+  selectedFieldId?: string;
 }) {
   const prefix = useId();
   return (
@@ -223,7 +235,7 @@ export function FormRenderer({
         {definition.description ? <p className="mt-1 text-sm text-muted">{definition.description}</p> : null}
       </div>
 
-      <FormFields definition={definition} idPrefix={prefix} values={values} errors={errors} disabled={disabled} onChange={onChange} />
+      <FormFields definition={definition} idPrefix={prefix} values={values} errors={errors} disabled={disabled} onChange={onChange} onSelectField={onSelectField} selectedFieldId={selectedFieldId} />
       {footer}
       <div>
         <Button type="submit" disabled={disabled || submitDisabled}>{definition.submitLabel}</Button>

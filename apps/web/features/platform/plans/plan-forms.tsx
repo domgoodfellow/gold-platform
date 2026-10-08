@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useId, useState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import {
@@ -37,6 +37,7 @@ const ACTION_INITIAL: PlanActionState = { error: null, updated: false };
 
 export function CreatePlanSheet() {
   const [open, setOpen] = useState(false);
+  const formId = useId();
   const [state, action, pending] = useActionState(createPlanAction, CREATE_INITIAL);
 
   return (
@@ -49,7 +50,7 @@ export function CreatePlanSheet() {
           <PageDrawerTitle>Create a Plan or Add-on</PageDrawerTitle>
           <PageDrawerDescription>The key is permanent once created.</PageDrawerDescription>
         </PageDrawerHeader>
-        <form action={action} className="flex flex-col gap-3 px-4">
+        <form id={formId} action={action} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
             <FieldLabel htmlFor="key">Key</FieldLabel>
             <TextInput id="key" name="key" required pattern="[a-z][a-z0-9_]{1,60}" placeholder="growth" />
@@ -74,12 +75,12 @@ export function CreatePlanSheet() {
             <input type="checkbox" name="billable" defaultChecked /> Billable
           </label>
           <ErrorText role="alert">{state.error}</ErrorText>
-          <PageDrawerFooter className="px-0">
-            <Button type="submit" disabled={pending}>
-              {pending ? 'Creating…' : 'Create'}
-            </Button>
-          </PageDrawerFooter>
         </form>
+        <PageDrawerFooter>
+          <Button type="submit" form={formId} disabled={pending}>
+            {pending ? 'Creating…' : 'Create'}
+          </Button>
+        </PageDrawerFooter>
       </PageDrawerContent>
     </PageDrawer>
   );
@@ -87,6 +88,7 @@ export function CreatePlanSheet() {
 
 export function EditPlanSheet({ plan }: { plan: Plan }) {
   const [open, setOpen] = useState(false);
+  const formId = useId();
   const [state, action, pending] = useActionState(updatePlanAction, ACTION_INITIAL);
 
   return (
@@ -101,7 +103,7 @@ export function EditPlanSheet({ plan }: { plan: Plan }) {
           <PageDrawerTitle>Edit {plan.label}</PageDrawerTitle>
           <PageDrawerDescription>Key and kind are permanent.</PageDrawerDescription>
         </PageDrawerHeader>
-        <form action={action} className="flex flex-col gap-3 px-4">
+        <form id={formId} action={action} className="flex flex-col gap-3">
           <input type="hidden" name="planId" value={plan.id} />
           <input type="hidden" name="planKey" value={plan.key} />
           <div className="flex flex-col gap-1">
@@ -128,13 +130,13 @@ export function EditPlanSheet({ plan }: { plan: Plan }) {
             <TextInput id="displayOrder" name="displayOrder" type="number" min={0} defaultValue={plan.displayOrder} className="w-28" />
           </div>
           <ErrorText role="alert">{state.error}</ErrorText>
-          <PageDrawerFooter className="px-0">
-            <Button type="submit" disabled={pending}>
-              {pending ? 'Saving…' : 'Save'}
-            </Button>
-            {state.updated ? <Hint role="status">Saved.</Hint> : null}
-          </PageDrawerFooter>
         </form>
+        <PageDrawerFooter>
+          <Button type="submit" form={formId} disabled={pending}>
+            {pending ? 'Saving…' : 'Save'}
+          </Button>
+          {state.updated ? <Hint role="status">Saved.</Hint> : null}
+        </PageDrawerFooter>
       </PageDrawerContent>
     </PageDrawer>
   );
@@ -215,6 +217,7 @@ export function FeatureOverrideControl({
 
 export function QuotaSheet({ planId, planKey, quota }: { planId: string; planKey: string; quota?: PlanQuota }) {
   const [open, setOpen] = useState(false);
+  const formId = useId();
   const [state, action, pending] = useActionState(setPlanQuotaAction, ACTION_INITIAL);
   const [overageBehavior, setOverageBehavior] = useState(quota?.overageBehavior ?? 'not_applicable');
 
@@ -230,7 +233,7 @@ export function QuotaSheet({ planId, planKey, quota }: { planId: string; planKey
           <PageDrawerTitle>{quota ? `Edit ${quota.label}` : 'Add a structured quota'}</PageDrawerTitle>
           <PageDrawerDescription>Structured fields only — no free-text allowance.</PageDrawerDescription>
         </PageDrawerHeader>
-        <form action={action} className="flex flex-col gap-3 px-4">
+        <form id={formId} action={action} className="flex flex-col gap-3">
           <input type="hidden" name="planId" value={planId} />
           <input type="hidden" name="planKey" value={planKey} />
           <div className="flex flex-col gap-1">
@@ -293,13 +296,13 @@ export function QuotaSheet({ planId, planKey, quota }: { planId: string; planKey
             <input type="hidden" name="overagePolicy" value={overageBehavior === 'metered' ? 'allowed' : overageBehavior === 'hard_limit' ? 'blocked' : 'not_applicable'} />
           </div>
           <ErrorText role="alert">{state.error}</ErrorText>
-          <PageDrawerFooter className="px-0">
-            <Button type="submit" disabled={pending}>
-              {pending ? 'Saving…' : 'Save'}
-            </Button>
-            {state.updated ? <Hint role="status">Saved.</Hint> : null}
-          </PageDrawerFooter>
         </form>
+        <PageDrawerFooter>
+          <Button type="submit" form={formId} disabled={pending}>
+            {pending ? 'Saving…' : 'Save'}
+          </Button>
+          {state.updated ? <Hint role="status">Saved.</Hint> : null}
+        </PageDrawerFooter>
       </PageDrawerContent>
     </PageDrawer>
   );
@@ -320,6 +323,7 @@ export function RemoveQuotaButton({ planId, planKey, allowanceKey }: { planId: s
 
 export function RecordPlanPriceSheet({ planId, planKey }: { planId: string; planKey: string }) {
   const [open, setOpen] = useState(false);
+  const formId = useId();
   const [state, action, pending] = useActionState(recordPlanPriceAction, ACTION_INITIAL);
 
   return (
@@ -332,7 +336,7 @@ export function RecordPlanPriceSheet({ planId, planKey }: { planId: string; plan
           <PageDrawerTitle>Record a standard price</PageDrawerTitle>
           <PageDrawerDescription>Appends a new effective-dated price. Past prices are never rewritten.</PageDrawerDescription>
         </PageDrawerHeader>
-        <form action={action} className="flex flex-col gap-3 px-4">
+        <form id={formId} action={action} className="flex flex-col gap-3">
           <input type="hidden" name="planId" value={planId} />
           <input type="hidden" name="planKey" value={planKey} />
           <div className="flex gap-3">
@@ -362,13 +366,13 @@ export function RecordPlanPriceSheet({ planId, planKey }: { planId: string; plan
             <TextInput id="source" name="source" placeholder="Decided with the owner, 2026-09" />
           </div>
           <ErrorText role="alert">{state.error}</ErrorText>
-          <PageDrawerFooter className="px-0">
-            <Button type="submit" disabled={pending}>
-              {pending ? 'Saving…' : 'Record price'}
-            </Button>
-            {state.updated ? <Hint role="status">Recorded.</Hint> : null}
-          </PageDrawerFooter>
         </form>
+        <PageDrawerFooter>
+          <Button type="submit" form={formId} disabled={pending}>
+            {pending ? 'Saving…' : 'Record price'}
+          </Button>
+          {state.updated ? <Hint role="status">Recorded.</Hint> : null}
+        </PageDrawerFooter>
       </PageDrawerContent>
     </PageDrawer>
   );
@@ -376,13 +380,13 @@ export function RecordPlanPriceSheet({ planId, planKey }: { planId: string; plan
 
 export function RecordOverageRateSheet({ planId, planKey, meterId, label, currency = 'CAD' }: { planId: string; planKey: string; meterId: string; label: string; currency?: string }) {
   const [state, action, pending] = useActionState(recordPlanOverageRateAction, ACTION_INITIAL);
-  return <PageDrawer><PageDrawerTrigger asChild><Button type="button" tone="secondary" size="small">Add rate</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>Record {label} overage rate</PageDrawerTitle><PageDrawerDescription>Appends a Plan-scoped effective version. Historical rates remain unchanged.</PageDrawerDescription></PageDrawerHeader><form action={action} className="flex flex-col gap-3 px-4"><input type="hidden" name="planId" value={planId} /><input type="hidden" name="planKey" value={planKey} /><input type="hidden" name="meterId" value={meterId} /><div className="grid grid-cols-[1fr_6rem] gap-3"><div className="grid gap-1"><FieldLabel htmlFor={`overage-amount-${meterId}`}>Rate per unit</FieldLabel><TextInput id={`overage-amount-${meterId}`} name="amount" type="number" min="0" step="0.0001" required /></div><div className="grid gap-1"><FieldLabel htmlFor={`overage-currency-${meterId}`}>Currency</FieldLabel><TextInput id={`overage-currency-${meterId}`} name="currency" defaultValue={currency} minLength={3} maxLength={3} required /></div></div><div className="grid gap-1"><FieldLabel htmlFor={`overage-effective-${meterId}`}>Effective from</FieldLabel><TextInput id={`overage-effective-${meterId}`} name="effectiveFrom" type="date" required defaultValue={new Date().toISOString().slice(0,10)} /></div><div className="grid gap-1"><FieldLabel htmlFor={`overage-source-${meterId}`}>Source</FieldLabel><TextInput id={`overage-source-${meterId}`} name="source" required placeholder="Commercial decision" /></div><ErrorText>{state.error}</ErrorText>{state.updated ? <Hint>Rate recorded.</Hint> : null}<Button type="submit" disabled={pending} className="w-fit">{pending ? 'Recording…' : 'Record rate'}</Button></form></PageDrawerContent></PageDrawer>;
+  return <PageDrawer><PageDrawerTrigger asChild><Button type="button" tone="secondary" size="small">Add rate</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>Record {label} overage rate</PageDrawerTitle><PageDrawerDescription>Appends a Plan-scoped effective version. Historical rates remain unchanged.</PageDrawerDescription></PageDrawerHeader><form action={action} className="flex flex-col gap-3"><input type="hidden" name="planId" value={planId} /><input type="hidden" name="planKey" value={planKey} /><input type="hidden" name="meterId" value={meterId} /><div className="grid grid-cols-[1fr_6rem] gap-3"><div className="grid gap-1"><FieldLabel htmlFor={`overage-amount-${meterId}`}>Rate per unit</FieldLabel><TextInput id={`overage-amount-${meterId}`} name="amount" type="number" min="0" step="0.0001" required /></div><div className="grid gap-1"><FieldLabel htmlFor={`overage-currency-${meterId}`}>Currency</FieldLabel><TextInput id={`overage-currency-${meterId}`} name="currency" defaultValue={currency} minLength={3} maxLength={3} required /></div></div><div className="grid gap-1"><FieldLabel htmlFor={`overage-effective-${meterId}`}>Effective from</FieldLabel><TextInput id={`overage-effective-${meterId}`} name="effectiveFrom" type="date" required defaultValue={new Date().toISOString().slice(0,10)} /></div><div className="grid gap-1"><FieldLabel htmlFor={`overage-source-${meterId}`}>Source</FieldLabel><TextInput id={`overage-source-${meterId}`} name="source" required placeholder="Commercial decision" /></div><ErrorText>{state.error}</ErrorText>{state.updated ? <Hint>Rate recorded.</Hint> : null}<Button type="submit" disabled={pending} className="w-fit">{pending ? 'Recording…' : 'Record rate'}</Button></form></PageDrawerContent></PageDrawer>;
 }
 
 export function PlanEconomicsSettingsSheet({ planId, planKey, currency, quotas, policy, assumptions }: { planId: string; planKey: string; currency: string; quotas: PlanQuota[]; policy: PlanMarginPolicy | null; assumptions: PlanUtilizationAssumption[] }) {
   const [state, action, pending] = useActionState(savePlanEconomicsSettingsAction, ACTION_INITIAL);
   const assumption = (scenario: string, key: string, fallback: number) => Math.round((assumptions.find((item) => item.scenario === scenario && item.allowanceKey === key)?.utilization ?? fallback) * 100);
-  return <PageDrawer><PageDrawerTrigger asChild><Button type="button">Economics settings</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>Economics settings</PageDrawerTitle><PageDrawerDescription>Versioned planning assumptions only; operational usage and provider costs are unchanged.</PageDrawerDescription></PageDrawerHeader><form action={action} className="flex flex-col gap-4 px-4"><input type="hidden" name="planId" value={planId} /><input type="hidden" name="planKey" value={planKey} /><input type="hidden" name="currency" value={currency} /><div className="grid grid-cols-3 gap-3"><div className="grid gap-1"><FieldLabel htmlFor="targetMargin">Target %</FieldLabel><TextInput id="targetMargin" name="targetMargin" type="number" min="1" max="99" step="0.1" defaultValue={(policy?.targetMargin ?? .7) * 100} required /></div><div className="grid gap-1"><FieldLabel htmlFor="warningMargin">Warning %</FieldLabel><TextInput id="warningMargin" name="warningMargin" type="number" min="0" max="99" step="0.1" defaultValue={(policy?.warningMargin ?? .6) * 100} required /></div><div className="grid gap-1"><FieldLabel htmlFor="hardFloorMargin">Floor %</FieldLabel><TextInput id="hardFloorMargin" name="hardFloorMargin" type="number" min="0" max="99" step="0.1" defaultValue={(policy?.hardFloorMargin ?? .45) * 100} required /></div></div><Section><SectionHeading>Utilization</SectionHeading><div className="mt-3 space-y-3">{quotas.map((quota) => <div key={quota.allowanceKey} className="grid grid-cols-[1fr_5rem_5rem] items-end gap-3"><p className="pb-2 text-sm">{quota.label}</p><div className="grid gap-1"><FieldLabel htmlFor={`expected-${quota.allowanceKey}`}>Expected</FieldLabel><TextInput id={`expected-${quota.allowanceKey}`} name={`utilization:expected:${quota.allowanceKey}`} type="number" min="0" max="100" defaultValue={assumption('expected', quota.allowanceKey, .5)} /></div><div className="grid gap-1"><FieldLabel htmlFor={`heavy-${quota.allowanceKey}`}>Heavy</FieldLabel><TextInput id={`heavy-${quota.allowanceKey}`} name={`utilization:heavy:${quota.allowanceKey}`} type="number" min="0" max="100" defaultValue={assumption('heavy', quota.allowanceKey, .8)} /></div></div>)}</div></Section><TextInput name="effectiveFrom" type="date" required defaultValue={new Date().toISOString().slice(0,10)} aria-label="Effective from" /><TextInput name="source" required defaultValue="Staff planning assumption" aria-label="Source" /><ErrorText>{state.error}</ErrorText>{state.updated ? <Hint>New assumption versions recorded.</Hint> : null}<Button type="submit" disabled={pending} className="w-fit">{pending ? 'Saving…' : 'Save assumptions'}</Button></form></PageDrawerContent></PageDrawer>;
+  return <PageDrawer><PageDrawerTrigger asChild><Button type="button">Economics settings</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>Economics settings</PageDrawerTitle><PageDrawerDescription>Versioned planning assumptions only; operational usage and provider costs are unchanged.</PageDrawerDescription></PageDrawerHeader><form action={action} className="flex flex-col gap-4"><input type="hidden" name="planId" value={planId} /><input type="hidden" name="planKey" value={planKey} /><input type="hidden" name="currency" value={currency} /><div className="grid grid-cols-3 gap-3"><div className="grid gap-1"><FieldLabel htmlFor="targetMargin">Target %</FieldLabel><TextInput id="targetMargin" name="targetMargin" type="number" min="1" max="99" step="0.1" defaultValue={(policy?.targetMargin ?? .7) * 100} required /></div><div className="grid gap-1"><FieldLabel htmlFor="warningMargin">Warning %</FieldLabel><TextInput id="warningMargin" name="warningMargin" type="number" min="0" max="99" step="0.1" defaultValue={(policy?.warningMargin ?? .6) * 100} required /></div><div className="grid gap-1"><FieldLabel htmlFor="hardFloorMargin">Floor %</FieldLabel><TextInput id="hardFloorMargin" name="hardFloorMargin" type="number" min="0" max="99" step="0.1" defaultValue={(policy?.hardFloorMargin ?? .45) * 100} required /></div></div><Section><SectionHeading>Utilization</SectionHeading><div className="mt-3 space-y-3">{quotas.map((quota) => <div key={quota.allowanceKey} className="grid grid-cols-[1fr_5rem_5rem] items-end gap-3"><p className="pb-2 text-sm">{quota.label}</p><div className="grid gap-1"><FieldLabel htmlFor={`expected-${quota.allowanceKey}`}>Expected</FieldLabel><TextInput id={`expected-${quota.allowanceKey}`} name={`utilization:expected:${quota.allowanceKey}`} type="number" min="0" max="100" defaultValue={assumption('expected', quota.allowanceKey, .5)} /></div><div className="grid gap-1"><FieldLabel htmlFor={`heavy-${quota.allowanceKey}`}>Heavy</FieldLabel><TextInput id={`heavy-${quota.allowanceKey}`} name={`utilization:heavy:${quota.allowanceKey}`} type="number" min="0" max="100" defaultValue={assumption('heavy', quota.allowanceKey, .8)} /></div></div>)}</div></Section><TextInput name="effectiveFrom" type="date" required defaultValue={new Date().toISOString().slice(0,10)} aria-label="Effective from" /><TextInput name="source" required defaultValue="Staff planning assumption" aria-label="Source" /><ErrorText>{state.error}</ErrorText>{state.updated ? <Hint>New assumption versions recorded.</Hint> : null}<Button type="submit" disabled={pending} className="w-fit">{pending ? 'Saving…' : 'Save assumptions'}</Button></form></PageDrawerContent></PageDrawer>;
 }
 
 export function PlanAddonToggle({ planId, planKey, addonId, label, attached }: { planId: string; planKey: string; addonId: string; label: string; attached: boolean }) {

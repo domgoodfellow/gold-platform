@@ -57,23 +57,23 @@ function ProductPreview() {
         <span className="text-sm font-semibold">Today</span>
         <span className="font-mono text-xs text-subtle">Example configuration</span>
       </div>
-      <div className="grid sm:grid-cols-[150px_1fr]">
-        <nav aria-label="Product preview" className="hidden border-r border-border p-3 sm:block">
+      <div className="grid @min-[40rem]/site:grid-cols-[150px_1fr]">
+        <nav aria-label="Product preview" className="hidden border-r border-border p-3 @min-[40rem]/site:block">
           {[[CalendarDays, 'Today'], [ClipboardList, 'Work'], [Users, 'Customers'], [MessageSquare, 'Calls']].map(([Icon, label], index) => (
             <div key={label as string} className={cx('flex items-center gap-2 rounded px-2.5 py-2 text-xs', index === 0 ? 'bg-foreground font-medium text-background' : 'text-muted')}>
               <Icon aria-hidden size={14} />{label as string}
             </div>
           ))}
         </nav>
-        <div className="p-4 sm:p-5">
+        <div className="p-4 @min-[40rem]/site:p-5">
           <div className="grid grid-cols-2 gap-3">
             <div className="border-t-2 border-foreground pt-3"><p className="text-xs text-muted">Committed today</p><p className="mt-1 text-2xl font-semibold tabular-nums">6</p></div>
             <div className="border-t-2 border-foreground pt-3"><p className="text-xs text-muted">Waiting to schedule</p><p className="mt-1 text-2xl font-semibold tabular-nums">2</p></div>
           </div>
           <div className="mt-6 divide-y divide-border border-y border-border">
             {rows.map(([time, work, resource]) => (
-              <div key={`${time}-${work}`} className="grid grid-cols-[3.5rem_1fr] gap-3 py-3 text-xs sm:grid-cols-[3.5rem_1fr_auto]">
-                <span className="font-mono text-subtle">{time}</span><span className="font-medium">{work}</span><span className="hidden text-muted sm:block">{resource}</span>
+              <div key={`${time}-${work}`} className="grid grid-cols-[3.5rem_1fr] gap-3 py-3 text-xs @min-[40rem]/site:grid-cols-[3.5rem_1fr_auto]">
+                <span className="font-mono text-subtle">{time}</span><span className="font-medium">{work}</span><span className="hidden text-muted @min-[40rem]/site:block">{resource}</span>
               </div>
             ))}
           </div>
@@ -87,7 +87,7 @@ type RenderProps<K extends SectionKind> = { section: SectionOf<K>; context: Form
 
 function Hero({ section, context }: RenderProps<'hero'>) {
   const actions = (
-    <div className={cx('mt-2 flex flex-col gap-4 sm:flex-row sm:items-center', section.variant === 'centered' && 'sm:justify-center')}>
+    <div className={cx('mt-2 flex flex-col gap-4 @min-[40rem]/site:flex-row @min-[40rem]/site:items-center', section.variant === 'centered' && '@min-[40rem]/site:justify-center')}>
       <ButtonLink href={internal(section.primaryCta.href, context)} tone="primary">{section.primaryCta.label}</ButtonLink>
       <Secondary link={section.secondaryCta} context={context} />
     </div>
@@ -97,14 +97,14 @@ function Hero({ section, context }: RenderProps<'hero'>) {
   const text = (
     <div className={cx('flex flex-col gap-6', centered ? 'mx-auto w-full max-w-3xl items-center text-center' : 'items-start')}>
       <Eyebrow>{section.eyebrow}</Eyebrow>
-      <h1 className={cx('font-semibold tracking-tight', preview ? 'max-w-2xl text-4xl leading-[1.04] sm:text-6xl' : 'text-4xl leading-[1.06] sm:text-5xl')}>{section.heading}</h1>
+      <h1 className={cx('font-semibold tracking-tight', preview ? 'max-w-2xl text-4xl leading-[1.04] @min-[40rem]/site:text-6xl' : 'text-4xl leading-[1.06] @min-[40rem]/site:text-5xl')}>{section.heading}</h1>
       <p className="max-w-xl text-lg leading-relaxed text-muted">{section.body}</p>
       {actions}
     </div>
   );
   if (!preview) return <section className={centered ? undefined : 'max-w-3xl'}>{text}</section>;
   return (
-    <section className="grid gap-12 lg:grid-cols-[1fr_460px] lg:items-center lg:gap-16">
+    <section className="grid gap-12 @min-[64rem]/site:grid-cols-[1fr_460px] @min-[64rem]/site:items-center @min-[64rem]/site:gap-16">
       {text}<ProductPreview />
     </section>
   );
@@ -112,9 +112,9 @@ function Hero({ section, context }: RenderProps<'hero'>) {
 
 function Problem({ section }: RenderProps<'problem'>) {
   return (
-    <section className="-mx-2 grid gap-10 rounded-2xl bg-secondary px-6 py-12 sm:px-12 sm:py-16 lg:grid-cols-[0.7fr_1fr] lg:gap-20">
-      <h2 className="max-w-md text-2xl font-semibold tracking-tight sm:text-3xl">{section.heading}</h2>
-      <div className="grid gap-5 text-sm leading-relaxed text-muted sm:grid-cols-2">{section.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
+    <section className="-mx-2 grid gap-10 rounded-2xl bg-secondary px-6 py-12 @min-[40rem]/site:px-12 @min-[40rem]/site:py-16 @min-[64rem]/site:grid-cols-[0.7fr_1fr] @min-[64rem]/site:gap-20">
+      <h2 className="max-w-md text-2xl font-semibold tracking-tight @min-[40rem]/site:text-3xl">{section.heading}</h2>
+      <div className="grid gap-5 text-sm leading-relaxed text-muted @min-[40rem]/site:grid-cols-2">{section.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
     </section>
   );
 }
@@ -123,7 +123,7 @@ function Content({ section }: RenderProps<'content'>) {
   return (
     <section className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <Eyebrow>{section.eyebrow}</Eyebrow>
-      <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{section.heading}</h2>
+      <h2 className="text-2xl font-semibold tracking-tight @min-[40rem]/site:text-3xl">{section.heading}</h2>
       <div className="grid gap-4 leading-relaxed text-muted">{section.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
     </section>
   );
@@ -132,8 +132,8 @@ function Content({ section }: RenderProps<'content'>) {
 function Capabilities({ section, anchored }: RenderProps<'capabilities'>) {
   return (
     <section id={anchored ? 'products' : undefined} className="scroll-mt-24">
-      <div className="flex max-w-2xl flex-col gap-3"><Eyebrow>{section.eyebrow}</Eyebrow><h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{section.heading}</h2><p className="text-muted">{section.body}</p></div>
-      <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="flex max-w-2xl flex-col gap-3"><Eyebrow>{section.eyebrow}</Eyebrow><h2 className="text-2xl font-semibold tracking-tight @min-[40rem]/site:text-3xl">{section.heading}</h2><p className="text-muted">{section.body}</p></div>
+      <div className="mt-10 grid gap-5 @min-[40rem]/site:grid-cols-2 @min-[64rem]/site:grid-cols-3">
         {section.items.map((item, index) => {
           const href = PRODUCT_HREF_BY_TITLE[item.title];
           const Icon = PRODUCT_ICON_BY_TITLE[item.title] ?? Layers;
@@ -164,26 +164,26 @@ function Capabilities({ section, anchored }: RenderProps<'capabilities'>) {
 
 function Process({ section, anchored }: RenderProps<'process'>) {
   return (
-    <section id={anchored ? 'how-it-works' : undefined} className="scroll-mt-24"><div className="grid gap-10 lg:grid-cols-[0.7fr_1fr] lg:gap-20">
-      <div><Eyebrow>{section.eyebrow}</Eyebrow><h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">{section.heading}</h2></div>
-      <ol className="flex flex-col gap-3">{section.items.map((item, index) => <li key={index} className="grid gap-2 rounded-xl border border-border bg-surface p-5 shadow-sm sm:grid-cols-[3rem_12rem_1fr] sm:gap-4"><span className="font-mono text-xs text-subtle">{item.step}</span><h3 className="text-sm font-semibold">{item.title}</h3><p className="text-sm leading-relaxed text-muted">{item.body}</p></li>)}</ol>
+    <section id={anchored ? 'how-it-works' : undefined} className="scroll-mt-24"><div className="grid gap-10 @min-[64rem]/site:grid-cols-[0.7fr_1fr] @min-[64rem]/site:gap-20">
+      <div><Eyebrow>{section.eyebrow}</Eyebrow><h2 className="mt-3 text-2xl font-semibold tracking-tight @min-[40rem]/site:text-3xl">{section.heading}</h2></div>
+      <ol className="flex flex-col gap-3">{section.items.map((item, index) => <li key={index} className="grid gap-2 rounded-xl border border-border bg-surface p-5 shadow-sm @min-[40rem]/site:grid-cols-[3rem_12rem_1fr] @min-[40rem]/site:gap-4"><span className="font-mono text-xs text-subtle">{item.step}</span><h3 className="text-sm font-semibold">{item.title}</h3><p className="text-sm leading-relaxed text-muted">{item.body}</p></li>)}</ol>
     </div></section>
   );
 }
 
 function Trust({ section }: RenderProps<'trust'>) {
   return (
-    <section className="grid gap-8 rounded-xl border border-border bg-surface p-6 sm:p-10 lg:grid-cols-3">
+    <section className="grid gap-8 rounded-xl border border-border bg-surface p-6 @min-[40rem]/site:p-10 @min-[64rem]/site:grid-cols-3">
       <div><Eyebrow>{section.eyebrow}</Eyebrow><h2 className="mt-3 text-2xl font-semibold tracking-tight">{section.heading}</h2></div>
-      <div className="grid gap-8 text-sm leading-relaxed text-muted sm:grid-cols-2 lg:col-span-2">{section.items.map((item, index) => <div key={index}><h3 className="font-semibold text-foreground">{item.title}</h3><p className="mt-2">{item.body}</p></div>)}</div>
+      <div className="grid gap-8 text-sm leading-relaxed text-muted @min-[40rem]/site:grid-cols-2 @min-[64rem]/site:col-span-2">{section.items.map((item, index) => <div key={index}><h3 className="font-semibold text-foreground">{item.title}</h3><p className="mt-2">{item.body}</p></div>)}</div>
     </section>
   );
 }
 
 function Cta({ section, context }: RenderProps<'cta'>) {
   return (
-    <section className="-mx-4 rounded-xl bg-foreground px-6 py-14 text-background sm:-mx-6 sm:px-12"><div className="mx-auto flex w-full max-w-3xl flex-col items-start gap-5">
-      <h2 className="text-2xl font-semibold tracking-tight sm:text-4xl">{section.heading}</h2><p className="max-w-xl opacity-75">{section.body}</p>
+    <section className="-mx-4 rounded-xl bg-foreground px-6 py-14 text-background @min-[40rem]/site:-mx-6 @min-[40rem]/site:px-12"><div className="mx-auto flex w-full max-w-3xl flex-col items-start gap-5">
+      <h2 className="text-2xl font-semibold tracking-tight @min-[40rem]/site:text-4xl">{section.heading}</h2><p className="max-w-xl opacity-75">{section.body}</p>
       <ButtonLink href={internal(section.primaryCta.href, context)} className="!inline-flex items-center gap-2 !bg-background !text-foreground">{section.primaryCta.label} <ArrowRight aria-hidden size={16} /></ButtonLink>
       {section.secondaryCta ? <p className="text-sm opacity-75"><Link href={internal(section.secondaryCta.href, context)} className="font-medium underline underline-offset-4">{section.secondaryCta.label}</Link></p> : null}
     </div></section>
@@ -201,14 +201,14 @@ export const SECTION_RENDERERS: { [K in SectionKind]: (props: RenderProps<K>) =>
 /** One section, rendered exactly as the public website would. */
 export function SectionView({ section, context, anchored = true }: { section: WebsiteSection; context: FormSectionContext; anchored?: boolean }) {
   const Render = SECTION_RENDERERS[section.kind] as (props: RenderProps<SectionKind>) => ReactNode;
-  return <>{Render({ section: section as never, context, anchored })}</>;
+  return <div className="@container/site min-w-0">{Render({ section: section as never, context, anchored })}</div>;
 }
 
 /** The sections of a page, in order. A page never holds two elements with one anchor id. */
 export function PageSections({ sections, context = NO_FORMS }: { sections: WebsiteSection[]; context?: FormSectionContext }) {
   const seen = new Set<SectionKind>();
   return (
-    <div className="flex flex-col gap-24 py-6 sm:gap-32 sm:py-10">
+    <div className="@container/site flex min-w-0 flex-col gap-24 py-6 @min-[40rem]/site:gap-32 @min-[40rem]/site:py-10">
       {sections.map((section) => {
         const anchored = !seen.has(section.kind);
         seen.add(section.kind);

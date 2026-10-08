@@ -46,7 +46,7 @@ export function CreateLocationSheetProvider({
             <PageDrawerTitle>New location</PageDrawerTitle>
             <PageDrawerDescription>Places where this organization works.</PageDrawerDescription>
           </PageDrawerHeader>
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="min-w-0">
             <CreateLocationForm
               organizationId={organizationId}
               definitions={definitions}

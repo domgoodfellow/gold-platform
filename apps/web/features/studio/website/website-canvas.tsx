@@ -39,9 +39,16 @@ export function WebsiteCanvas({ page, selected, onSelect, viewport, formNames }:
         {page.sections.map((section) => {
           const isSelected = selected !== 'page' && selected.sectionId === section.id;
           return (
-            <button
+            <div
               key={section.id}
-              type="button"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onSelect({ sectionId: section.id });
+                }
+              }}
               onClick={() => onSelect({ sectionId: section.id })}
               aria-current={isSelected ? 'true' : undefined}
               aria-label={`Select the ${sectionLabel(section.kind)} section`}
@@ -51,10 +58,10 @@ export function WebsiteCanvas({ page, selected, onSelect, viewport, formNames }:
                 isSelected && 'border-foreground',
               )}
             >
-              <div className="pointer-events-none">
+              <div inert className="pointer-events-none">
                 <SectionView section={section} anchored={false} context={{ mode: 'canvas', forms: {}, formNames }} />
               </div>
-            </button>
+            </div>
           );
         })}
       </div>

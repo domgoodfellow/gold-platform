@@ -49,7 +49,7 @@ export function RecordReadingDrawer({
           <PageDrawerTitle>Record reading</PageDrawerTitle>
           <PageDrawerDescription>What {assetName}&rsquo;s counter says today.</PageDrawerDescription>
         </PageDrawerHeader>
-        <div className="px-4 pb-4">
+        <div>
           <RecordReadingForm
             organizationId={organizationId}
             assetId={assetId}

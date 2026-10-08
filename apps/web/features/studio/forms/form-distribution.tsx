@@ -58,13 +58,13 @@ export function FormDistribution({ organizationId, formId, formSlug, publicKey, 
         <div className="grid gap-6 text-sm">
           {!published ? <Hint>Publish this form to share it. Links and embeds open the published version only.</Hint> : null}
 
-          <section className="grid gap-2" aria-label="Link">
+          {published ? <section className="grid gap-2" aria-label="Link">
             <GroupHeading>Link</GroupHeading>
             <CopyField label="Form link" value={`${origin}${stableFormPath(publicKey)}`} />
             <Hint>This link keeps working if you rename the form or your business.</Hint>
             {organizationSlug ? <CopyField label="Readable form link" value={`${origin}${publicFormPath(organizationSlug, formSlug)}`} size="small" /> : null}
             {siteHostname ? <CopyField label="Form link on your site" value={`https://${siteHostname}/forms/${formSlug}`} size="small" /> : null}
-          </section>
+          </section> : null}
 
           <section className="grid gap-2" aria-label="Website">
             <GroupHeading>Website</GroupHeading>
@@ -82,11 +82,11 @@ export function FormDistribution({ organizationId, formId, formSlug, publicKey, 
             <div><Button tone="secondary" size="small" disabled={pending} onClick={togglePortal}>{placements.portal ? 'Remove from portal' : 'Add to portal'}</Button></div>
           </section>
 
-          <section className="grid gap-2" aria-label="Embed">
+          {published ? <section className="grid gap-2" aria-label="Embed">
             <GroupHeading>Embed on another site</GroupHeading>
             <CopyField label="Embed code" value={embedSnippet(origin, publicKey)} mono size="small" copiedMessage="Embed code copied" />
             <Hint>Paste it where the form should appear. It shows only the published form.</Hint>
-          </section>
+          </section> : null}
 
           <section className="grid gap-1" aria-label="Used by">
             <GroupHeading>Used by</GroupHeading>
