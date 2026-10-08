@@ -8,7 +8,7 @@ import {
   makeAxisScale,
   PX_PER_HOUR,
 } from './calendar-geometry';
-import { formatHourLabel } from './calendar-format';
+import { formatHourLabel } from '@/components/calendar/calendar-format';
 import { ScheduleEvent } from './schedule-event';
 
 /** The lane header row's own height (`h-9`, every lane and the time rail alike) — what the "now" line's pixel offset has to clear before the hour axis itself begins. */

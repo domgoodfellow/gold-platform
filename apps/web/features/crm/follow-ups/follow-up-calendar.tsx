@@ -1,17 +1,40 @@
+import { CalendarAgenda, CalendarMonth } from '@/components/calendar/calendar-boards';
+import { calendarHref, type CalendarView } from '@/components/calendar/calendar-workspace';
 import type { FollowUp } from '@/lib/domain/follow-ups/follow-ups';
-import Link from 'next/link';
 import { todayInZone } from '@/lib/domain/scheduling/window';
-import { FollowUpSheet,type FollowUpOptions } from './follow-up-sheet';
-export function FollowUpCalendar({items,dates,view,month,today,owner,...options}:FollowUpOptions & {items:FollowUp[];dates:string[];view:'day'|'week'|'month';month:string;today:string;owner?:string}) {
-  const time=new Intl.DateTimeFormat('en-CA',{timeZone:options.timezone,hour:'numeric',minute:'2-digit'});
-  return <div className={view==='day'?'grid gap-3':view==='month'?'grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-border bg-border':'grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-7'} aria-label={`${view} calendar`}>
-    {view==='month'?['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(day=><div key={day} className="bg-surface py-2 text-center text-xs font-medium text-muted">{day}</div>):null}
-    {dates.map(date=>{const dayItems=items.filter(item=>todayInZone(options.timezone,new Date(item.dueAt))===date);return <section key={date} className={`min-w-0 bg-background ${view==='month'?'min-h-20 p-1 sm:min-h-32 sm:p-3':'min-h-72 p-3'} ${view==='month' && date.slice(0,7)!==month.slice(0,7)?'text-muted':''}`} aria-label={date}>
-      <h2 className={`mb-3 flex flex-wrap items-center gap-2 text-sm font-medium ${date===today?'text-primary':''}`}><Link href={`/organizations/${options.organizationId}/follow-ups/calendar?${new URLSearchParams({on:date,view:'day',...(owner?{owner}:{})})}`} aria-label={`View ${date}`}><time dateTime={date}><span className={view==='month'?'hidden sm:inline':''}>{new Intl.DateTimeFormat('en-CA',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(`${date}T12:00:00Z`))}</span>{view==='month'?<span className="sm:hidden">{Number(date.slice(-2))}</span>:null}</time></Link>{date===today?<span className={`rounded-full bg-foreground px-2 py-0.5 text-xs text-background ${view==='month'?'hidden sm:inline':''}`}>Today</span>:null}</h2>
-      {view==='month'?<Link className="block text-xs sm:hidden" href={`/organizations/${options.organizationId}/follow-ups/calendar?${new URLSearchParams({on:date,view:'day',...(owner?{owner}:{})})}`}>{dayItems.length?`${dayItems.length} due`:''}</Link>:null}
-      <ul className={`space-y-2 ${view==='month'?'hidden sm:block':''}`}>{dayItems.slice(0,view==='month'?3:500).map(item=><li key={item.id} className={`rounded-md border-l-2 p-2 ${item.status==='completed'?'border-emerald-500 bg-emerald-50/40':item.status==='cancelled'?'border-border bg-surface opacity-60':'border-foreground bg-surface'}`}>
-        <p className="mb-1 text-xs capitalize text-muted">{time.format(new Date(item.dueAt))} · {item.kind} · {item.status}</p><FollowUpSheet {...options} item={item}>{item.title}</FollowUpSheet><p className="mt-1 text-xs text-muted">{item.customerName}</p>{item.opportunityTitle?<p className="mt-1 text-xs text-muted">{item.opportunityTitle}</p>:null}<p className="mt-1 text-xs text-muted">{item.ownerName??'Unassigned'}</p>
-      </li>)}</ul>{view==='month' && dayItems.length>3?<Link className="hidden text-xs underline sm:block" href={`/organizations/${options.organizationId}/follow-ups/calendar?${new URLSearchParams({on:date,view:'day',...(owner?{owner}:{})})}`}>+{dayItems.length-3} more</Link>:null}
-    </section>;})}
-  </div>;
+import { FollowUpSheet, type FollowUpOptions } from './follow-up-sheet';
+
+export function FollowUpCalendar({ items, dates, view, month, today, owner, ...options }: FollowUpOptions & {
+  items: FollowUp[];
+  dates: string[];
+  view: CalendarView;
+  month: string;
+  today: string;
+  owner?: string;
+}) {
+  const time = new Intl.DateTimeFormat('en-CA', { timeZone: options.timezone, hour: 'numeric', minute: '2-digit' });
+  const byDate = new Map<string, FollowUp[]>();
+  for (const item of items) {
+    const date = todayInZone(options.timezone, new Date(item.dueAt));
+    const entries = byDate.get(date) ?? [];
+    entries.push(item);
+    byDate.set(date, entries);
+  }
+  if (view === 'month') return <CalendarMonth monthDate={month} today={today} days={dates.map(date => ({
+    date,
+    href: calendarHref(`/organizations/${options.organizationId}/follow-ups/calendar`, 'day', date, owner ? { owner } : {}),
+    entries: (byDate.get(date) ?? []).map(item => ({ id: item.id, content: <FollowUpSheet {...options} item={item}>{item.title}</FollowUpSheet> })),
+  }))} />;
+  return <CalendarAgenda today={today} emptyLabel="No follow-ups due." days={dates.map(date => {
+    const entries = byDate.get(date) ?? [];
+    return { date, content: entries.length ? <ul className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
+      {entries.map(item => <li key={item.id} className={`rounded-md border-l-2 p-2 ${item.status === 'completed' ? 'border-emerald-500 bg-emerald-50/40' : item.status === 'cancelled' ? 'border-border bg-surface opacity-60' : 'border-foreground bg-surface'}`}>
+        <p className="mb-1 text-xs capitalize text-muted">{time.format(new Date(item.dueAt))} · {item.kind} · {item.status}</p>
+        <FollowUpSheet {...options} item={item}>{item.title}</FollowUpSheet>
+        <p className="mt-1 text-xs text-muted">{item.customerName}</p>
+        {item.opportunityTitle ? <p className="mt-1 text-xs text-muted">{item.opportunityTitle}</p> : null}
+        <p className="mt-1 text-xs text-muted">{item.ownerName ?? 'Unassigned'}</p>
+      </li>)}
+    </ul> : null };
+  })} />;
 }

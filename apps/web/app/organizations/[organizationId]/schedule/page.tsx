@@ -15,7 +15,8 @@ import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { RESOURCE_CLASS_LABELS } from '@/lib/domain/resources/resource-class';
 import { describeShortfall, evaluateWorkItems } from '@/lib/domain/work-items/requirements';
 import { hasSchedulableWork } from '@/lib/domain/work-items/types';
-import { isoDayOfWeek, shiftDate, startOfMonth, todayInZone } from '@/lib/domain/scheduling/window';
+import { startOfMonth, todayInZone } from '@/lib/domain/scheduling/window';
+import { calendarDates } from '@/components/calendar/calendar-period';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
@@ -70,20 +71,8 @@ export default async function SchedulePage({
   const date = parseScheduleDate(query.on, today);
   const selectedResourceIds = parseScheduleResourceIds(query.resource);
 
-  // Week is the ISO week (Monday first) containing the selected day — the same numbering
-  // opening hours already use, so there is one answer to "which day is that" across the feature.
-  const weekStart = shiftDate(date, -(isoDayOfWeek(date) - 1));
-  // Month is a coarser projection of the same Work Items: six full ISO weeks (42 tenant calendar
-  // days, Monday first) spanning the viewed month plus whatever lead/trail days complete the
-  // grid — never a second availability calculation, and never a calendar entity.
   const monthStart = startOfMonth(date);
-  const monthGridStart = shiftDate(monthStart, -(isoDayOfWeek(monthStart) - 1));
-  const dates =
-    view === 'week'
-      ? Array.from({ length: 7 }, (_, index) => shiftDate(weekStart, index))
-      : view === 'month'
-        ? Array.from({ length: 42 }, (_, index) => shiftDate(monthGridStart, index))
-        : [date];
+  const dates = calendarDates(view, date);
 
   const mayConfigure = organization.capabilities.includes('field.manage');
   const mayAddResource = organization.capabilities.includes('resource.create');

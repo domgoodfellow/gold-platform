@@ -34,6 +34,10 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Shared calendar foundation — 2026-10-07
+
+- CRM Follow-ups and Work Schedule now share calendar navigation, date picker, workspace frame, week/day agenda and month grid. Domain filters, records and event actions remain contextual additions.
+
 ### Operational CRM — 2026-10-07
 
 - Recompose CRM Home around attention, today, currency-safe forecast/pipeline and event-backed Opportunity conversion. Add Customer/Opportunity search and contextual creation.

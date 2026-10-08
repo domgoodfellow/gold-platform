@@ -28,7 +28,8 @@ test.describe('Operating CRM journey',()=>{
     await page.getByRole('button',{name:'New follow-up',exact:true}).click();drawer=page.getByRole('dialog',{name:'New follow-up',exact:true});await expect(drawer.getByText('CRM acceptance customer',{exact:true})).toBeVisible();await expect(drawer.getByLabel('Opportunity')).not.toHaveValue('');await drawer.getByLabel('Type',{exact:true}).selectOption('meeting');await drawer.getByLabel('Title',{exact:true}).fill('Proposal review');await drawer.getByLabel('Due',{exact:true}).fill(`${today}T23:30`);await drawer.getByLabel('Owner').selectOption({label:'CRM owner'});await drawer.getByRole('button',{name:'Save follow-up',exact:true}).click();await expect(drawer).toBeHidden();await expect(page.getByText('Next action',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Proposal review',exact:true}).first()).toBeVisible();
     await page.goto(`${base}/sales`);await expect(page.getByRole('link',{name:/Follow-ups due today 1/})).toBeVisible();await expect(page.getByRole('link',{name:/Forecast this month/})).toContainText('CA$1,250.50');await expect(page.getByRole('region',{name:/Today/}).getByRole('button',{name:'Proposal review',exact:true})).toBeVisible();await page.screenshot({path:testInfo.outputPath('crm-operating-desktop.png'),fullPage:true});
     await page.getByRole('link',{name:'View calendar',exact:true}).click();await expect(page).toHaveURL(/follow-ups\/calendar/);await expect(page.getByRole('button',{name:'Proposal review',exact:true})).toBeVisible();await page.getByRole('button',{name:'Proposal review',exact:true}).click();drawer=page.getByRole('dialog',{name:'Edit follow-up',exact:true});await drawer.getByLabel('Notes').fill('Review the revised proposal');await drawer.getByRole('button',{name:'Save follow-up',exact:true}).click();await expect(drawer).toBeHidden();await expect(page).toHaveURL(/follow-ups\/calendar/);
-    await page.getByRole('link',{name:'month',exact:true}).click();await expect(page.getByLabel('month calendar')).toBeVisible();await page.screenshot({path:testInfo.outputPath('crm-calendar-month-desktop.png'),fullPage:true});await page.getByRole('link',{name:'week',exact:true}).click();await page.screenshot({path:testInfo.outputPath('crm-calendar-week-desktop.png'),fullPage:true});
+    await page.getByRole('combobox',{name:'Owner',exact:true}).selectOption({label:'CRM owner'});await page.getByRole('button',{name:'Apply',exact:true}).click();await expect(page).toHaveURL(/owner=[a-f0-9-]+/);const calendarOwner=new URL(page.url()).searchParams.get('owner');
+    await page.getByRole('link',{name:'Month',exact:true}).click();await expect.poll(()=>new URL(page.url()).searchParams.get('owner')).toBe(calendarOwner);await page.getByRole('button',{name:'Proposal review',exact:true}).click();drawer=page.getByRole('dialog',{name:'Edit follow-up',exact:true});await expect(drawer.getByLabel('Notes')).toHaveValue('Review the revised proposal');await drawer.getByRole('button',{name:'Close',exact:true}).click();await expect(page.getByLabel('month calendar',{exact:true})).toBeVisible();await page.screenshot({path:testInfo.outputPath('crm-calendar-month-desktop.png'),fullPage:true});await page.getByRole('link',{name:'Week',exact:true}).click();await page.screenshot({path:testInfo.outputPath('crm-calendar-week-desktop.png'),fullPage:true});
     await page.goto(`${base}/opportunities/pipeline`);await expect(page.getByRole('region',{name:'Discuss',exact:true}).getByText('Proposal review',{exact:true})).toBeVisible();await page.screenshot({path:testInfo.outputPath('crm-pipeline-desktop.png'),fullPage:true});await page.getByRole('button',{name:'Proposal review',exact:true}).click();drawer=page.getByRole('dialog',{name:'Edit follow-up',exact:true});await expect(drawer.getByLabel('Notes')).toHaveValue('Review the revised proposal');await drawer.getByRole('button',{name:'Close',exact:true}).click();await expect(page).toHaveURL(/opportunities\/pipeline/);
     await page.goto(`${base}/customers/${customer.id}`);await page.getByRole('tab',{name:'Follow-ups',exact:true}).click();await expect(page.getByRole('button',{name:'Proposal review',exact:true}).first()).toBeVisible();
     await page.goto(`${base}/sales`);await page.getByRole('searchbox',{name:'Search CRM',exact:true}).fill('Workshop');await page.getByRole('button',{name:'Search',exact:true}).click();await expect(page).toHaveURL(/sales\/search\?q=Workshop/);await expect(page.getByRole('link',{name:'Workshop expansion',exact:true})).toBeVisible();
@@ -39,3 +40,45 @@ test.describe('Operating CRM journey',()=>{
   });
 });
 test.describe('CRM reduced role',()=>{test.use({storageState:COLLEAGUE_STORAGE_STATE});test('reads the cockpit without unauthorized mutation',async({page})=>{await page.goto(`/organizations/${loadDemoContext().organizationId}/sales`);await expect(page.getByRole('heading',{name:'CRM',exact:true})).toBeVisible();for(const name of ['New customer','New opportunity','New follow-up','Configure'])await expect(page.getByRole('button',{name,exact:true})).toHaveCount(0);});});
+
+
+test.describe('Shared Work calendar foundation',()=>{
+  test.use({storageState:OWNER_STORAGE_STATE});
+  test('retains resource filters and navigates every view at desktop and phone widths',async({page},testInfo)=>{
+    test.setTimeout(90000);
+    const base=`/organizations/${loadDemoContext().organizationId}/schedule`;
+    await page.setViewportSize({width:1600,height:1000});
+    await page.goto(`${base}?view=day`);
+    await expect(page.getByRole('navigation',{name:'Calendar views'})).toBeVisible();
+    await expect(page.getByLabel('day calendar',{exact:true})).toBeVisible();
+    await page.screenshot({path:testInfo.outputPath('work-calendar-day-desktop.png'),fullPage:true});
+    await page.getByRole('button',{name:'All resources',exact:true}).click();
+    await expect(page.getByRole('checkbox').first()).toBeVisible();
+    await page.getByRole('checkbox').first().click();
+    await expect(page).toHaveURL(/resource=/);
+    await page.keyboard.press('Escape');
+    const resources=new URL(page.url()).searchParams.getAll('resource');
+    for(const view of ['Week','Month']){
+      await page.getByRole('link',{name:view,exact:true}).click();
+      await expect(page.getByLabel(`${view.toLowerCase()} calendar`,{exact:true})).toBeVisible();
+      expect(new URL(page.url()).searchParams.getAll('resource')).toEqual(resources);
+      await page.screenshot({path:testInfo.outputPath(`work-calendar-${view.toLowerCase()}-desktop.png`),fullPage:true});
+    }
+    await page.getByRole('link',{name:'Next →',exact:true}).click();
+    await expect(page).toHaveURL(/view=month/);
+    expect(new URL(page.url()).searchParams.getAll('resource')).toEqual(resources);
+    await page.getByRole('link',{name:/^View [0-9]{4}-/}).first().click();
+    await expect(page).toHaveURL(/view=day/);
+    expect(new URL(page.url()).searchParams.getAll('resource')).toEqual(resources);
+    await page.getByRole('button',{name:'Show this day',exact:true}).click();
+    await expect(page.getByRole('grid')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await page.setViewportSize({width:390,height:844});
+    for(const view of ['Day','Week','Month']){
+      await page.getByRole('link',{name:view,exact:true}).click();
+      await expect(page.getByLabel(`${view.toLowerCase()} calendar`,{exact:true})).toBeVisible();
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+      await page.screenshot({path:testInfo.outputPath(`work-calendar-${view.toLowerCase()}-mobile.png`),fullPage:true});
+    }
+  });
+});

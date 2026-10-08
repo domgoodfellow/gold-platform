@@ -3,8 +3,7 @@ import { DaySchedule } from './day-schedule';
 import { WeekSchedule } from './week-schedule';
 import { MonthSchedule } from './month-schedule';
 import { ScheduleResourceFilter } from './schedule-resource-filter';
-import { ScheduleToolbar } from './schedule-toolbar';
-import { ScheduleViewNav } from './schedule-view-nav';
+import { CalendarWorkspace } from '@/components/calendar/calendar-workspace';
 import type { ScheduleView } from './schedule-url';
 
 /**
@@ -54,21 +53,14 @@ export function ScheduleWorkspace({
   const activeDay = days.find((day) => day.date === date) ?? days[0];
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <ScheduleViewNav organizationId={organizationId} view={view} date={date} resourceIds={selectedResourceIds} />
-        <ScheduleResourceFilter
-          organizationId={organizationId}
-          view={view}
-          date={date}
-          resources={allResources}
-          selectedIds={selectedResourceIds}
-        />
-      </div>
-
-      <ScheduleToolbar organizationId={organizationId} view={view} date={date} timezone={timezone} resourceIds={selectedResourceIds} />
-
-      <div className="mt-3 min-h-0 flex-1 overflow-hidden rounded-lg border border-border">
+    <CalendarWorkspace
+      basePath={`/organizations/${organizationId}/schedule`}
+      view={view}
+      date={date}
+      today={today}
+      filters={{ resource: selectedResourceIds }}
+      filterControls={<ScheduleResourceFilter organizationId={organizationId} view={view} date={date} resources={allResources} selectedIds={selectedResourceIds} />}
+    >
         {view === 'week' ? (
           <WeekSchedule organizationId={organizationId} days={days} today={today} timezone={timezone} shortfalls={shortfalls} />
         ) : view === 'month' ? (
@@ -96,7 +88,6 @@ export function ScheduleWorkspace({
             mayAddResource={mayAddResource}
           />
         )}
-      </div>
-    </div>
+    </CalendarWorkspace>
   );
 }

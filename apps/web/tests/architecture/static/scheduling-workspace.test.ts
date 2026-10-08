@@ -13,6 +13,7 @@ import { describe, expect, it } from 'vitest';
 const WEB = fileURLToPath(new URL('../../..', import.meta.url));
 const ROUTES = `${WEB}/app/organizations/[organizationId]`;
 const CALENDAR = `${WEB}/features/scheduling/calendar`;
+const SHARED_CALENDAR = `${WEB}/components/calendar`;
 const CONFIG = `${WEB}/features/scheduling/configuration`;
 const read = (path: string) => readFileSync(path, 'utf8');
 const code = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
@@ -38,8 +39,8 @@ describe('Day and Week are URL-backed, not React memory', () => {
   const page = read(`${ROUTES}/schedule/page.tsx`);
 
   it('parses view, date and resource filters from the query string, never from client state', () => {
-    expect(urlModule).toContain("export function parseScheduleView");
-    expect(urlModule).toContain("export function parseScheduleDate");
+    expect(urlModule).toContain("parseCalendarView as parseScheduleView");
+    expect(urlModule).toContain("parseCalendarDate as parseScheduleDate");
     expect(urlModule).toContain("export function parseScheduleResourceIds");
     expect(page).toContain('parseScheduleView(query.view)');
     expect(page).toContain('parseScheduleDate(query.on,');
@@ -47,13 +48,13 @@ describe('Day and Week are URL-backed, not React memory', () => {
   });
 
   it('an invalid or missing view resolves to Day, and an invalid or missing date resolves to today in the organization’s timezone', () => {
-    expect(urlModule).toContain("VIEWS.includes(value as ScheduleView) ? (value as ScheduleView) : 'day'");
+    expect(read(`${SHARED_CALENDAR}/calendar-period.ts`)).toContain("value === 'week' || value === 'month' ? value : 'day'");
     expect(page).toContain('todayInZone(organization.timezone)');
   });
 
   it('every Schedule address is built through the one scheduleHref, never assembled by hand', () => {
     expect(urlModule).toContain('export function scheduleHref(');
-    for (const file of ['schedule-view-nav.tsx', 'schedule-toolbar.tsx', 'schedule-resource-filter.tsx']) {
+    for (const file of ['schedule-resource-filter.tsx']) {
       const source = code(read(`${CALENDAR}/${file}`));
       expect(source, file).toContain('scheduleHref(');
       expect(source, file).not.toMatch(/router\.push\(`\/organizations/);
@@ -62,8 +63,8 @@ describe('Day and Week are URL-backed, not React memory', () => {
 
   it('Day, Week and Month are all URL-backed views, not React memory', () => {
     const urlModule2 = read(`${CALENDAR}/schedule-url.ts`);
-    expect(urlModule2).toContain("export type ScheduleView = 'day' | 'week' | 'month';");
-    expect(read(`${CALENDAR}/schedule-view-nav.tsx`)).toContain("key: 'month'");
+    expect(urlModule2).toContain("export type ScheduleView = CalendarView;");
+    expect(read(`${SHARED_CALENDAR}/calendar-workspace.tsx`)).toContain("['day', 'week', 'month']");
   });
 });
 
@@ -77,7 +78,8 @@ describe('Month is a real, persistent board — a coarser projection of the same
 
   it('the route builds a 42-day Monday-first grid for Month, through the same listScheduleDays every other view uses', () => {
     const page = read(`${ROUTES}/schedule/page.tsx`);
-    expect(page).toContain("length: 42");
+    expect(page).toContain("calendarDates(view, date)");
+    expect(read(`${SHARED_CALENDAR}/calendar-period.ts`)).toContain("? 42");
     expect(page).toContain('startOfMonth(date)');
   });
 
@@ -97,8 +99,6 @@ describe('Schedule composes feature-owned scheduling UI', () => {
   it('every piece named for the workspace exists, feature-owned', () => {
     for (const file of [
       'schedule-workspace.tsx',
-      'schedule-view-nav.tsx',
-      'schedule-toolbar.tsx',
       'schedule-resource-filter.tsx',
       'schedule-event.tsx',
       'day-schedule.tsx',
@@ -123,7 +123,8 @@ describe('Schedule composes feature-owned scheduling UI', () => {
 describe('Week does not force seven Resource-lane columns, and narrows to an agenda', () => {
   it('Week groups by day, not by Resource column', () => {
     const week = read(`${CALENDAR}/week-schedule.tsx`);
-    expect(week).toContain('md:grid-cols-7');
+    expect(week).toContain('<CalendarAgenda');
+    expect(read(`${SHARED_CALENDAR}/calendar-boards.tsx`)).toContain('md:grid-cols-7');
     expect(week).not.toMatch(/resources\.map[\s\S]{0,80}resources\.map/);
   });
 
@@ -182,12 +183,12 @@ describe('date/time calculations stay timezone aware', () => {
   it('shiftDate is pure calendar-date arithmetic, reused by the toolbar and the route’s week math', () => {
     const window = read(`${WEB}/lib/domain/scheduling/window.ts`);
     expect(window).toContain('export function shiftDate(');
-    expect(read(`${CALENDAR}/schedule-toolbar.tsx`)).toContain('shiftDate(');
-    expect(read(`${ROUTES}/schedule/page.tsx`)).toContain('shiftDate(weekStart, index)');
+    expect(read(`${SHARED_CALENDAR}/calendar-workspace.tsx`)).toContain('shiftDate(');
+    expect(read(`${SHARED_CALENDAR}/calendar-period.ts`)).toContain('shiftDate(first, index)');
   });
 
   it('the week is the ISO week (Monday first) containing the selected day', () => {
-    expect(read(`${ROUTES}/schedule/page.tsx`)).toContain('isoDayOfWeek(date)');
+    expect(read(`${SHARED_CALENDAR}/calendar-period.ts`)).toContain('isoDayOfWeek(anchor)');
   });
 });
 
@@ -360,12 +361,13 @@ describe('the Schedule canvas exists and fills the workspace even when there is 
     const week = code(read(`${CALENDAR}/week-schedule.tsx`));
     expect(week).not.toMatch(/if \(total === 0\)\s*{?\s*return\s*\(?\s*<EmptyState/);
     expect(week).not.toContain('Nothing scheduled this week');
-    expect(week).toContain('days.map((day)');
+    expect(week).toContain('days.map(day');
   });
 
   it('zero-event Month still renders the six-week grid', () => {
     const month = read(`${CALENDAR}/month-schedule.tsx`);
-    expect(month).toContain('weeks.map(');
+    expect(month).toContain('<CalendarMonth');
+    expect(read(`${SHARED_CALENDAR}/calendar-boards.tsx`)).toContain('weeks.map(');
     expect(month).not.toMatch(/if \([\s\S]{0,40}=== 0\)\s*{?\s*return\s*\(?\s*<EmptyState/);
   });
 
@@ -397,8 +399,10 @@ describe('Day no longer sizes itself to its own contents as the primary layout s
 describe('the Schedule workspace and every board fill the available height through a real flex chain', () => {
   it('schedule-workspace.tsx composes a min-h-0/flex-1 column, not a fixed or arbitrary pixel height', () => {
     const workspace = read(`${CALENDAR}/schedule-workspace.tsx`);
-    expect(workspace).toMatch(/min-h-0/);
-    expect(workspace).toMatch(/flex-1/);
+    expect(workspace).toContain('<CalendarWorkspace');
+    const foundation = read(`${SHARED_CALENDAR}/calendar-workspace.tsx`);
+    expect(foundation).toMatch(/min-h-0/);
+    expect(foundation).toMatch(/flex-1/);
     expect(workspace).not.toMatch(/min-h-\[\d+px\]/);
   });
 
@@ -432,6 +436,30 @@ describe('Month navigates coherently and keeps the resource filter and URL-backe
   it('shiftMonth is pure calendar-date arithmetic, reused by the toolbar for Month’s Previous/Next', () => {
     const window = read(`${WEB}/lib/domain/scheduling/window.ts`);
     expect(window).toContain('export function shiftMonth(');
-    expect(read(`${CALENDAR}/schedule-toolbar.tsx`)).toContain('shiftMonth(');
+    expect(read(`${SHARED_CALENDAR}/calendar-workspace.tsx`)).toContain('shiftMonth(');
+  });
+});
+
+
+describe('CRM and Work use one calendar foundation', () => {
+  it('both compose shared navigation, toolbar and frame with contextual filters', () => {
+    for (const path of [`${CALENDAR}/schedule-workspace.tsx`, `${ROUTES}/follow-ups/calendar/page.tsx`]) {
+      const source = code(read(path));
+      expect(source).toContain("from '@/components/calendar/calendar-workspace'");
+      expect(source).toContain('<CalendarWorkspace');
+      expect(source).toContain('filterControls=');
+      expect(source).not.toContain('<DatePicker');
+      expect(source).not.toContain('<ViewNav');
+    }
+    expect(existsSync(`${CALENDAR}/schedule-toolbar.tsx`)).toBe(false);
+    expect(existsSync(`${CALENDAR}/schedule-view-nav.tsx`)).toBe(false);
+  });
+  it('CRM supplies Follow-up content to the same month and agenda boards as Work', () => {
+    const crm = code(read(`${WEB}/features/crm/follow-ups/follow-up-calendar.tsx`));
+    expect(crm).toContain('<CalendarAgenda');
+    expect(crm).toContain('<CalendarMonth');
+    expect(crm).not.toMatch(/grid-cols-7|grid-rows-6/);
+    expect(read(`${CALENDAR}/week-schedule.tsx`)).toContain('<CalendarAgenda');
+    expect(read(`${CALENDAR}/month-schedule.tsx`)).toContain('<CalendarMonth');
   });
 });
