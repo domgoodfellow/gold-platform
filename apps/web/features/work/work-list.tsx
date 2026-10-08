@@ -1,23 +1,21 @@
 import Link from 'next/link';
-import { Card, Disclosure } from '@/components/surfaces/card';
-import { EmptyState, SectionHeading } from '@/components/surfaces/section';
-import { ButtonLink } from '@/components/controls/button';
-import { Hint } from '@/components/controls/inputs';
+import { Button, ButtonLink } from '@/components/controls/button';
+import { SelectInput, TextInput } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
-import { CustomFieldValues } from '@/features/custom-fields/values';
+import { WorkCreateDrawer } from './work-create-drawer';
+import { WorkTable } from './operations-panels';
+import { MoveWorkItemForm } from './work-operations-forms';
+import { formatWindow } from '@/lib/domain/scheduling/window';
+import { allowedNextStatusIds, type WorkItemTransition } from '@/lib/domain/work-items/transitions';
 import type { Counted } from '@/lib/domain/counted';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
-import { formatWindow } from '@/lib/domain/scheduling/window';
 import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
-import { allowedNextStatusIds, type WorkItemTransition } from '@/lib/domain/work-items/transitions';
 import type { WorkItemType } from '@/lib/domain/work-items/types';
 import type { WorkItem } from '@/lib/domain/work-items/work-items';
-import { CreateWorkItemForm } from './work-create-form';
 import type { CoverageView, ResourceNeedsView } from '@/lib/domain/work-items/requirements';
-import { AssignResourcesForm, MoveWorkItemForm, ScheduleWorkItemForm } from './work-operations-forms';
-
-export function WorkList({ organizationId, role, timezone, types, selectedType, statuses, transitions, workItems, customers, locations, resources, assets, definitions, assetsEnabled, needs, coverage, mayAdd, mayConfigure, mayMove, maySchedule, createOpen = false }: {
+export function WorkList({ organizationId, role, timezone, types, selectedType, statuses, transitions, workItems, customers, locations, resources, assets, definitions, assetsEnabled, coverage, mayAdd, mayConfigure, mayMove, maySchedule, createOpen = false, view = 'list', page = 1, q = '', sort = 'newest', statusId = '', stages = {} }: {
   createOpen?: boolean;
+  view?: 'list' | 'board'; page?: number; q?: string; sort?: string; statusId?: string; stages?: Record<string, Counted<WorkItem>>;
   organizationId: string;
   role: string;
   timezone: string;
@@ -41,209 +39,21 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
   mayMove: boolean;
   maySchedule: boolean;
 }) {
-  const configHref = `/organizations/${organizationId}/work/configuration`;
-  const statusName = new Map(statuses.map((status) => [status.id, status.name]));
-
-  return (
-    <>
-      {types.length > 0 ? (
-        <nav className="mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Kind of work">
-          {types.map((type) => {
-            const current = type.id === selectedType?.id;
-            return (
-              <ButtonLink
-                key={type.id}
-                href={`/organizations/${organizationId}/work?type=${type.id}`}
-                aria-current={current ? 'page' : undefined}
-                tone={current ? 'primary' : 'secondary'}
-                size="small"
-                className="shrink-0"
-              >
-                {type.name}
-              </ButtonLink>
-            );
-          })}
-        </nav>
-      ) : null}
-
-      {selectedType === null ? (
-        <section className="mt-6 rounded-lg border border-border bg-surface px-5 py-10 text-center" aria-labelledby="work-empty-heading">
-          <SectionHeading id="work-empty-heading">No work types yet</SectionHeading>
-          <p className="mx-auto mt-2 w-full max-w-lg text-sm text-muted">
-            Define the kinds of work this organization delivers before adding jobs.
-          </p>
-          {mayConfigure ? (
-            <ButtonLink href={configHref} tone="primary" className="mt-4">
-              Configure work
-            </ButtonLink>
-          ) : (
-            <Hint className="mt-4">Your role, {role}, cannot configure work types.</Hint>
-          )}
-        </section>
-      ) : (
-        <>
-          {mayAdd ? (
-            <Disclosure
-              summary="Add work"
-              tone="primary"
-              defaultOpen={createOpen || workItems.length === 0}
-              className="mt-5"
-            >
-              <CreateWorkItemForm
-                organizationId={organizationId}
-                statuses={statuses}
-                customers={customers}
-                locations={locations}
-                resources={resources}
-                assets={assets}
-                assetsEnabled={assetsEnabled}
-                definitions={definitions}
-              />
-            </Disclosure>
-          ) : (
-            <Hint className="mt-5">Your role, {role}, cannot add work items here.</Hint>
-          )}
-
-          {workItems.total > workItems.length ? (
-            <Hint weight="subtle" className="mt-4">
-              Showing the {workItems.length} most recent of {workItems.total} in this kind of work.
-            </Hint>
-          ) : null}
-
-          {statuses.map((status) => {
-            const rows = workItems.filter((item) => item.status.id === status.id);
-            return (
-              <section key={status.id} className="mt-7" aria-labelledby={`status-${status.id}`}>
-                <SectionHeading id={`status-${status.id}`}>
-                  {status.name}
-                  <span className="ml-2 text-subtle">{rows.length}</span>
-                </SectionHeading>
-                {rows.length === 0 ? (
-                  <EmptyState weight="subtle" className="mt-1">
-                    Nothing here.
-                  </EmptyState>
-                ) : (
-                  <ul className="mt-3 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,19rem),1fr))]">
-                    {rows.map((item) => (
-                      <li key={item.id}>
-                        <Card className="flex h-full flex-col">
-                          <Link
-                            href={`/organizations/${organizationId}/work/${item.id}`}
-                            className="font-medium underline underline-offset-4"
-                          >
-                            {item.title}
-                          </Link>
-                          <div className="mt-1 text-sm">
-                            {item.window ? (
-                              <span className="tabular-nums text-muted">
-                                {formatWindow(item.window, timezone)}
-                              </span>
-                            ) : (
-                              <span className="font-medium text-foreground">Not scheduled</span>
-                            )}
-                          </div>
-                          {item.customer || item.location || (assetsEnabled && item.asset) || item.resources.length > 0 || coverage[item.id] ? (
-                            <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
-                              <dt className="text-subtle">Customer</dt>
-                              <dd>{item.customer?.label ?? '—'}</dd>
-                              <dt className="text-subtle">Location</dt>
-                              <dd>{item.location?.label ?? '—'}</dd>
-                              {assetsEnabled ? (
-                                <>
-                                  <dt className="text-subtle">Asset</dt>
-                                  <dd>{item.asset?.label ?? '—'}</dd>
-                                </>
-                              ) : null}
-                              <dt className="text-subtle">Assigned</dt>
-                              <dd className="flex flex-wrap gap-1">
-                                {item.resources.length > 0
-                                  ? item.resources.map((resource) => (
-                                      <Badge key={resource.id} tone="accent">
-                                        {resource.label}
-                                      </Badge>
-                                    ))
-                                  : '—'}
-                              </dd>
-                              {coverage[item.id] ? (
-                                <>
-                                  <dt className="text-subtle">Needs</dt>
-                                  <dd>
-                                    {coverage[item.id].satisfied ? (
-                                      'All assigned'
-                                    ) : (
-                                      <span className="font-medium">
-                                        <span aria-hidden>! </span>
-                                        {coverage[item.id].shortfall}
-                                      </span>
-                                    )}
-                                  </dd>
-                                </>
-                              ) : null}
-                            </dl>
-                          ) : null}
-                          <CustomFieldValues definitions={definitions} custom={item.custom} />
-                          {mayMove || maySchedule ? (
-                            <div className="mt-auto flex flex-col gap-2 border-t border-border pt-3">
-                              <MoveWorkItemForm
-                                organizationId={organizationId}
-                                workItemId={item.id}
-                                moves={
-                                  mayMove
-                                    ? allowedNextStatusIds(transitions, item.status.id).flatMap((id) => {
-                                        const name = statusName.get(id);
-                                        return name ? [{ id, name }] : [];
-                                      })
-                                    : []
-                                }
-                              />
-                              {maySchedule && item.type.schedulable ? (
-                                <Disclosure
-                                  summary={item.window ? 'Reschedule' : 'Schedule'}
-                                  className="border-0"
-                                >
-                                  <ScheduleWorkItemForm
-                                    organizationId={organizationId}
-                                    workItemId={item.id}
-                                    resources={resources}
-                                    assigned={item.resources.map((resource) => resource.id)}
-                                    needs={needs}
-                                    scheduled={item.window !== null}
-                                  />
-                                </Disclosure>
-                              ) : null}
-                              {maySchedule && item.type.schedulable ? (
-                                <Disclosure summary="Assign" className="border-0">
-                                  <AssignResourcesForm
-                                    organizationId={organizationId}
-                                    workItemId={item.id}
-                                    resources={resources}
-                                    assigned={item.resources.map((resource) => resource.id)}
-                                    needs={needs}
-                                  />
-                                </Disclosure>
-                              ) : null}
-                            </div>
-                          ) : null}
-                        </Card>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            );
-          })}
-        </>
-      )}
-
-      {mayConfigure && selectedType ? (
-        <Hint className="mt-10">
-          Kinds of work, statuses, allowed moves and checklists are configured in{' '}
-          <Link href={configHref} className="underline underline-offset-4">
-            Work configuration
-          </Link>
-          .
-        </Hint>
-      ) : null}
-    </>
-  );
+  const base = `/organizations/${organizationId}`;
+  const href = (patch: Record<string, string>) => { const p = new URLSearchParams({ type: selectedType?.id ?? '', view, q, sort, status: statusId }); for (const [k, v] of Object.entries(patch)) { if (v) p.set(k, v); else p.delete(k); } return `${base}/work?${p}`; };
+  const statusName = new Map(statuses.map(s => [s.id, s.name]));
+  return <div className="space-y-3">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <nav aria-label="Work view" className="flex gap-1"><ButtonLink size="small" tone={view === 'list' ? 'primary' : 'secondary'} href={href({ view: 'list' })}>List</ButtonLink><ButtonLink size="small" tone={view === 'board' ? 'primary' : 'secondary'} href={href({ view: 'board', status: '' })}>Board</ButtonLink><ButtonLink size="small" tone="secondary" href={`${base}/work/dispatch`}>Dispatch board</ButtonLink></nav>
+      {mayAdd && selectedType ? <WorkCreateDrawer defaultOpen={createOpen} options={{ organizationId, types: [selectedType], statusesByType: { [selectedType.id]: statuses }, customers, locations, resources, assets, assetsEnabled, definitions }}/> : null}
+    </div>
+    <form method="get" className="flex flex-wrap items-end gap-2 rounded-lg border border-border p-3">
+      <input type="hidden" name="view" value={view}/>
+      <label className="text-xs text-muted">Work type<SelectInput name="type" defaultValue={selectedType?.id ?? ''}>{types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</SelectInput></label>
+      <label className="text-xs text-muted">Search<TextInput name="q" defaultValue={q} placeholder="Search work title"/></label>
+      {view === 'list' ? <label className="text-xs text-muted">Status<SelectInput name="status" defaultValue={statusId}><option value="">All statuses</option>{statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</SelectInput></label> : null}
+      <label className="text-xs text-muted">Sort<SelectInput name="sort" defaultValue={sort}><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="title">Title</option><option value="schedule">Schedule</option></SelectInput></label><Button size="small">Apply filters</Button>
+    </form>
+    {!selectedType ? <div className="rounded-lg border border-border p-6"><h2 className="font-semibold">No work types yet</h2><p className="my-2 text-sm text-muted">Define the work this organization delivers, then add jobs.</p>{mayConfigure ? <ButtonLink href={`${base}/work/configuration`} size="small">Configure work</ButtonLink> : <p className="text-sm text-muted">Your role, {role}, cannot configure work types.</p>}</div> : view === 'list' ? <div className="overflow-hidden rounded-lg border border-border"><WorkTable organizationId={organizationId} timezone={timezone} rows={workItems} issues={Object.fromEntries(Object.entries(coverage).flatMap(([id, c]) => c.shortfall ? [[id, c.shortfall]] : []))}/><div className="flex justify-between border-t border-border p-3 text-xs"><span>{workItems.total} work items · Page {page}</span><nav aria-label="Work pagination" className="flex gap-4">{page > 1 ? <Link href={href({ page: String(page - 1) })}>Previous</Link> : null}{page * 20 < workItems.total ? <Link href={href({ page: String(page + 1) })}>Next</Link> : null}</nav></div></div> : <div className="overflow-x-auto pb-3"><div className="flex items-start gap-3">{statuses.map(status => { const rows = stages[status.id] ?? []; const total = stages[status.id]?.total ?? 0; return <section key={status.id} aria-label={status.name} className="w-72 shrink-0 rounded-lg border border-border bg-surface/40"><h2 className="flex justify-between border-b border-border p-3 text-sm font-semibold">{status.name}<span className="tabular-nums text-muted">{total}</span></h2><ul className="space-y-2 p-2">{rows.map(item => <li key={item.id} className="space-y-2 rounded-md border border-border bg-background p-3"><Link className="text-sm font-medium hover:underline" href={`${base}/work/${item.id}`}>{item.title}</Link><p className="text-xs text-muted">{item.customer?.label ?? 'No customer'}</p><p className="text-xs tabular-nums text-muted">{item.window ? formatWindow(item.window, timezone) : 'Unscheduled'}</p><div className="flex flex-wrap gap-1">{item.resources.map(r => <Badge key={r.id}>{r.label}</Badge>)}{!item.resources.length ? <span className="text-xs text-muted">Unassigned</span> : null}</div>{coverage[item.id]?.shortfall ? <p className="text-xs text-danger">{coverage[item.id].shortfall}</p> : null}<MoveWorkItemForm organizationId={organizationId} workItemId={item.id} moves={mayMove ? allowedNextStatusIds(transitions, item.status.id).flatMap(id => statusName.has(id) ? [{ id, name: statusName.get(id)! }] : []) : []}/>{maySchedule && item.type.schedulable ? <Link href={`${base}/work/dispatch?selected=${item.id}`} className="block text-xs text-accent">Assign / schedule</Link> : null}</li>)}</ul>{!rows.length ? <p className="px-3 pb-5 text-xs text-muted">No work in this stage.</p> : null}{total > rows.length ? <Link className="block px-3 pb-3 text-xs text-accent" href={href({ view: 'list', status: status.id })}>View all {total} in {status.name}</Link> : null}</section>; })}</div></div>}
+  </div>;
 }

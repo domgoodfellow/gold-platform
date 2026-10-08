@@ -331,7 +331,7 @@ describe('Work, as an operational surface (source scan)', () => {
   });
 
   it('still renders the operational board and its own forms', () => {
-    for (const kept of ['CreateWorkItemForm', 'MoveWorkItemForm', 'ScheduleWorkItemForm']) {
+    for (const kept of ['WorkCreateDrawer', 'MoveWorkItemForm', '/work/dispatch']) {
       expect(work).toContain(kept);
     }
   });

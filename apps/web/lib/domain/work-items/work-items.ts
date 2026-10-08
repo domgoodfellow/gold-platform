@@ -46,7 +46,7 @@ const TITLE_MAX = 300;
 // status hint names the three-column constraint, which carries type_id as well — a work item
 // cannot sit in another type's status, and that is a database fact rather than a convention.
 const WORK_ITEM_SELECT =
-  'id, title, custom, created_at, scheduled_during, type:work_item_types!work_items_type_same_org (id, name, schedulable), status:work_item_statuses!work_items_status_same_org_and_type (id, name), customer:customers!work_items_customer_same_org (id, name), location:locations!work_items_location_same_org (id, label), assignments:work_item_resource_assignments!work_item_resource_assignments_work_item_same_org (resource:resources!work_item_resource_assignments_resource_same_org (id, name)), asset:assets!work_items_asset_same_org (id, name)';
+  'id, title, custom, created_at, scheduled_during, type:work_item_types!work_items_type_same_org!inner (id, name, schedulable), status:work_item_statuses!work_items_status_same_org_and_type!inner (id, name, releases_resource), customer:customers!work_items_customer_same_org (id, name), location:locations!work_items_location_same_org (id, label), assignments:work_item_resource_assignments!work_item_resource_assignments_work_item_same_org (resource:resources!work_item_resource_assignments_resource_same_org (id, name)), assignment_filter:work_item_resource_assignments!work_item_resource_assignments_work_item_same_org (resource_id), asset:assets!work_items_asset_same_org (id, name)';
 
 function one<T>(value: T | T[] | null): T | undefined {
   if (value === null) return undefined;
@@ -87,9 +87,18 @@ export async function listWorkItems(
     assetId?: string;
     locationId?: string;
     resourceId?: string;
+    resourceIds?: string[];
     customerId?: string;
     limit?: number;
     q?: string;
+    statusId?: string;
+    offset?: number;
+    active?: boolean;
+    scheduled?: boolean;
+    unassigned?: boolean;
+    within?: Window;
+    ids?: string[];
+    sort?: 'newest' | 'oldest' | 'title' | 'schedule';
   },
 ): Promise<Counted<WorkItem>> {
   let query = db
@@ -98,6 +107,13 @@ export async function listWorkItems(
     .eq('organization_id', input.organizationId);
 
   if (input.q?.trim()) query = query.ilike('title', `%${input.q.trim().replace(/[%_]/g, '').slice(0, 100)}%`);
+  if (input.statusId) query = query.eq('status_id', input.statusId);
+  if (input.ids) query = query.in('id', input.ids);
+  if (input.active) query = query.eq('status.releases_resource', false);
+  if (input.scheduled === true) query = query.not('scheduled_during', 'is', null);
+  if (input.scheduled === false) query = query.is('scheduled_during', null).eq('type.schedulable', true);
+  if (input.unassigned) query = query.is('assignment_filter', null).eq('type.schedulable', true);
+  if (input.within) query = query.overlaps('scheduled_during', `[${input.within.startsAt},${input.within.endsAt})`);
 
   if (input.typeId) {
     query = query.eq('type_id', input.typeId);
@@ -105,20 +121,8 @@ export async function listWorkItems(
   if (input.assetId) {
     query = query.eq('asset_id', input.assetId);
   }
-  if (input.resourceId) {
-    // The work this resource takes part in, however many others take part with it. Two steps
-    // rather than a filter on the embedded assignments, which would also trim the resources each
-    // job is shown with — and a job must still list everyone on it.
-    const { data: held, error: heldError } = await db
-      .from('work_item_resource_assignments')
-      .select('work_item_id')
-      .eq('organization_id', input.organizationId)
-      .eq('resource_id', input.resourceId);
-    if (heldError) {
-      throw new DomainError(heldError.message, 'work_items.list_failed');
-    }
-    query = query.in('id', (held ?? []).map((assignment) => assignment.work_item_id));
-  }
+  if (input.resourceId) query = query.eq('assignment_filter.resource_id', input.resourceId).not('assignment_filter', 'is', null);
+  if (input.resourceIds) query = query.in('assignment_filter.resource_id', input.resourceIds).not('assignment_filter', 'is', null);
   if (input.locationId) {
     query = query.eq('location_id', input.locationId);
   }
@@ -126,9 +130,13 @@ export async function listWorkItems(
     query = query.eq('customer_id', input.customerId);
   }
 
+  const column = input.sort === 'title' ? 'title' : input.sort === 'schedule' ? 'scheduled_during' : 'created_at';
+  const offset = Math.max(0, input.offset ?? 0);
+  const limit = Math.max(1, Math.min(input.limit ?? LIST_LIMIT, 1000));
   const { data, error, count } = await query
-    .order('created_at', { ascending: false })
-    .limit(input.limit ?? LIST_LIMIT);
+    .order(column, { ascending: input.sort !== 'newest' && input.sort !== undefined, nullsFirst: false })
+    .order('id', { ascending: true })
+    .range(offset, offset + limit - 1);
 
   if (error) {
     throw new DomainError(error.message, 'work_items.list_failed');

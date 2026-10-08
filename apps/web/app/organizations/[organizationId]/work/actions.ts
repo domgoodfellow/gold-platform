@@ -14,7 +14,14 @@ import { changeWorkItemStatus } from '@/lib/domain/work-items/transitions';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
 import { requireOrganization } from '@/lib/route/organization';
 
-export type WorkActionState = { error: string | null };
+export type WorkActionState = { error: string | null; success?: string };
+
+function refreshOperations(organizationId: string) {
+  for (const path of ['field', 'work', 'work/dispatch', 'schedule', 'resources']) {
+    revalidatePath(`/organizations/${organizationId}/${path}`);
+  }
+  revalidatePath(`/organizations/${organizationId}/resources/[resourceId]`, 'page');
+}
 
 export async function createWorkItemAction(
   _previous: WorkActionState,
@@ -46,7 +53,8 @@ export async function createWorkItemAction(
   }
 
   revalidatePath(`/organizations/${organizationId}/work`);
-  return { error: null };
+  refreshOperations(organizationId);
+  return { error: null, success: 'Saved.' };
 }
 
 export async function changeStatusAction(
@@ -76,7 +84,8 @@ export async function changeStatusAction(
   revalidatePath(
     `/organizations/${organizationId}/work/${String(formData.get('workItemId') ?? '')}`,
   );
-  return { error: null };
+  refreshOperations(organizationId);
+  return { error: null, success: 'Saved.' };
 }
 
 /**
@@ -122,7 +131,8 @@ export async function scheduleWorkItemAction(
   );
   revalidatePath(`/organizations/${organizationId}/schedule`);
   revalidatePath(`/organizations/${organizationId}/field`);
-  return { error: null };
+  refreshOperations(organizationId);
+  return { error: null, success: 'Saved.' };
 }
 
 /**
@@ -156,5 +166,6 @@ export async function setWorkItemResourcesAction(
   revalidatePath(`/organizations/${organizationId}/schedule`);
   revalidatePath(`/organizations/${organizationId}/resources`);
   revalidatePath(`/organizations/${organizationId}/field`);
-  return { error: null };
+  refreshOperations(organizationId);
+  return { error: null, success: 'Saved.' };
 }

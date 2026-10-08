@@ -15,6 +15,7 @@ import type { SelectOption } from '@/components/controls/optional-select';
 import { ResourceChecklist } from '@/components/controls/resource-checklist';
 import type { ResourceNeedsView } from '@/lib/domain/work-items/requirements';
 import { FeasibilityPanel } from './feasibility-panel';
+import type { Window } from '@/lib/domain/scheduling/window';
 
 const CHECK_INITIAL: FeasibilityState = { error: null };
 
@@ -76,6 +77,8 @@ export function ScheduleWorkItemForm({
   assigned,
   needs,
   scheduled,
+  window,
+  timezone,
 }: {
   organizationId: string;
   workItemId: string;
@@ -85,6 +88,8 @@ export function ScheduleWorkItemForm({
   /** What this kind of work needs, with the resources eligible for each — absent when it says nothing. */
   needs?: ResourceNeedsView | null;
   scheduled: boolean;
+  window?: Window | null;
+  timezone?: string;
 }) {
   const [state, formAction, pending] = useActionState(scheduleWorkItemAction, INITIAL);
   // Asking *would this work?* is a second action on the same form: it reads the same fields, writes
@@ -92,27 +97,35 @@ export function ScheduleWorkItemForm({
   const [check, checkAction, checking] = useActionState(checkFeasibilityAction, CHECK_INITIAL);
   const [selected, setSelected] = useState<readonly string[]>(assigned);
   const [version, setVersion] = useState(0);
+  const [inputVersion, setInputVersion] = useState(0);
+  const [checkedVersion, setCheckedVersion] = useState(-1);
   const formRef = useRef<HTMLFormElement>(null);
   const [, startTransition] = useTransition();
+  const localTime = (instant: string | undefined) => {
+    if (!instant || !timezone) return undefined;
+    const parts = new Intl.DateTimeFormat('sv-SE', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(instant));
+    return parts.replace(' ', 'T');
+  };
 
   // Dispatched by hand, not as the form's action: a form action resets the form when it finishes,
   // which would wipe the times and ticks the operator is in the middle of choosing.
   const runCheck = () => {
     if (!formRef.current) return;
     const data = new FormData(formRef.current);
+    setCheckedVersion(inputVersion);
     startTransition(() => checkAction(data));
   };
 
   return (
-    <form ref={formRef} action={formAction} className="flex flex-col gap-3">
+    <form ref={formRef} action={formAction} onChange={() => setInputVersion(v => v + 1)} className="flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="workItemId" value={workItemId} />
       <div className="grid gap-3 sm:grid-cols-2">
         <FormField id={`schedule-start-${workItemId}`} label="Starts">
-          {(field) => <TextInput {...field} name="startsAt" type="datetime-local" />}
+          {(field) => <TextInput {...field} name="startsAt" type="datetime-local" defaultValue={localTime(window?.startsAt)} />}
         </FormField>
         <FormField id={`schedule-end-${workItemId}`} label="Ends">
-          {(field) => <TextInput {...field} name="endsAt" type="datetime-local" />}
+          {(field) => <TextInput {...field} name="endsAt" type="datetime-local" defaultValue={localTime(window?.endsAt)} />}
         </FormField>
       </div>
       {/* Re-keyed when a suggestion is applied, so the boxes start from it; otherwise they are the operator's own. */}
@@ -125,16 +138,17 @@ export function ScheduleWorkItemForm({
           {...needsProps(needs)}
         />
       </div>
-      {check.error ? (
+      {check.error && checkedVersion === inputVersion ? (
         <p role="alert" className="text-sm text-danger">
           {check.error}
         </p>
       ) : null}
-      {check.view ? (
+      {check.view && checkedVersion === inputVersion ? (
         <FeasibilityPanel
           view={check.view}
           onUseSuggested={(ids) => {
             setSelected(ids);
+            setInputVersion(v => v + 1);
             setVersion((current) => current + 1);
           }}
         />
@@ -160,6 +174,7 @@ export function ScheduleWorkItemForm({
         ) : null}
       </FormActions>
       <FormError>{state.error}</FormError>
+      {state.success ? <p role="status" className="text-xs text-success">{state.success}</p> : null}
     </form>
   );
 }
@@ -194,6 +209,7 @@ export function AssignResourcesForm({
         </Button>
       </FormActions>
       <FormError>{state.error}</FormError>
+      {state.success ? <p role="status" className="text-xs text-success">{state.success}</p> : null}
     </form>
   );
 }
@@ -227,6 +243,7 @@ export function AssignSuggestedForm({
         </Button>
       </div>
       <FormError>{state.error}</FormError>
+      {state.success ? <p role="status" className="text-xs text-success">{state.success}</p> : null}
     </form>
   );
 }

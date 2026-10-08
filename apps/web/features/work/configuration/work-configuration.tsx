@@ -3,7 +3,6 @@ import { DividedList, EmptyState } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { FieldSet, FieldLegend, FieldGroup } from '@gold/ui/components/field';
-import { Item, ItemContent, ItemGroup, ItemTitle } from '@gold/ui/components/item';
 import { EntityFieldsConfiguration } from '@/features/custom-fields/configuration/entity-fields-configuration';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
@@ -78,9 +77,9 @@ export function WorkConfiguration({
   const statusName = new Map(statuses.map((status) => [status.id, status.name]));
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className={types.length ? "grid min-w-0 gap-4 lg:grid-cols-[13rem_minmax(0,1fr)]" : "min-w-0"}>
       {types.length > 0 ? (
-        <nav className="flex flex-wrap gap-2" aria-label="Kind of work">
+        <nav className="flex gap-2 overflow-x-auto rounded-lg border border-border p-2 lg:flex-col lg:self-start" aria-label="Kind of work">
           {types.map((type) => {
             const current = type.id === selectedType?.id;
             return (
@@ -90,8 +89,8 @@ export function WorkConfiguration({
                 aria-current={current ? 'page' : undefined}
                 className={
                   current
-                    ? 'rounded bg-foreground px-3 py-1 text-sm text-background'
-                    : 'rounded border border-border px-3 py-1 text-sm'
+                    ? 'shrink-0 rounded bg-foreground px-3 py-2 text-sm text-background'
+                    : 'shrink-0 rounded px-3 py-2 text-sm hover:bg-surface'
                 }
               >
                 {type.name}
@@ -101,31 +100,20 @@ export function WorkConfiguration({
         </nav>
       ) : null}
 
-      <Tabs defaultValue="types">
-        <TabsList>
-          <TabsTrigger value="types">Types</TabsTrigger>
+      <Tabs defaultValue="types" className="min-w-0 rounded-lg border border-border p-4">
+        <TabsList className="max-w-full justify-start overflow-x-auto">
+          <TabsTrigger value="types">General</TabsTrigger>
+          <TabsTrigger value="requirements">Requirements</TabsTrigger>
           <TabsTrigger value="workflow">Workflow</TabsTrigger>
-          <TabsTrigger value="checklists">Checklists</TabsTrigger>
+          <TabsTrigger value="checklists">Checklist</TabsTrigger>
+          {bookingEnabled ? <TabsTrigger value="booking">Booking</TabsTrigger> : null}
           <TabsTrigger value="fields">Fields</TabsTrigger>
         </TabsList>
 
         <TabsContent value="types" className="mt-4 flex flex-col gap-8">
           <FieldSet>
             <FieldLegend>Kinds of work</FieldLegend>
-            {types.length === 0 ? (
-              <EmptyState>A type is what scopes a board — statuses belong to one. Name what this business does.</EmptyState>
-            ) : (
-              <ItemGroup>
-                {types.map((type) => (
-                  <Item key={type.id} variant="outline" size="sm">
-                    <ItemContent>
-                      <ItemTitle>{type.name}</ItemTitle>
-                      <p className="text-sm text-muted">{type.schedulable ? 'Scheduled' : 'Not scheduled'}</p>
-                    </ItemContent>
-                  </Item>
-                ))}
-              </ItemGroup>
-            )}
+            <Hint>{selectedType ? `Manage ${selectedType.name}, or create another work type.` : 'Create a work type, then configure its statuses and allowed transitions.'}</Hint>
             {mayConfigure ? (
               <CreateTypeForm organizationId={organizationId} />
             ) : (
@@ -159,6 +147,9 @@ export function WorkConfiguration({
             </FieldSet>
           ) : null}
 
+        </TabsContent>
+
+        <TabsContent value="requirements" className="mt-4">
           {selectedType && selectedType.schedulable ? (
             <FieldSet>
               <FieldLegend variant="label">Resources needed for {selectedType.name}</FieldLegend>
@@ -173,6 +164,9 @@ export function WorkConfiguration({
             </FieldSet>
           ) : null}
 
+          {selectedType && !selectedType.schedulable ? <Hint>Resource requirements apply to scheduled work. Enable scheduling in General first.</Hint> : null}
+        </TabsContent>
+        <TabsContent value="booking" className="mt-4">
           {selectedType && bookingEnabled ? (
             <FieldSet>
               <FieldLegend variant="label">Publish {selectedType.name} to the public booking page</FieldLegend>

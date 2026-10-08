@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import type { ResourceSchedule } from '@/lib/domain/scheduling/availability';
+import { formatWindow } from '@/lib/domain/scheduling/window';
 import { CustomFieldValues } from '@/features/custom-fields/values';
 import { DataTable } from '@/components/display/table';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
@@ -10,11 +12,11 @@ import type { Resource } from '@/lib/domain/resources/resources';
 export function ResourceTable({
   organizationId,
   resources,
-  definitions,
+  definitions, schedule = [], timezone = 'UTC',
 }: {
   organizationId: string;
   resources: Resource[];
-  definitions: FieldDefinition[];
+  definitions: FieldDefinition[]; schedule?: ResourceSchedule[]; timezone?: string;
 }) {
   return (
     <DataTable
@@ -61,6 +63,8 @@ export function ResourceTable({
           cell: (resource) =>
             resource.resourceClass === 'person' ? (resource.member ? resource.member.displayName : 'No login') : '—',
         },
+        { key: 'availability', header: 'Availability ? selected day', cell: (resource) => { const day = schedule.find(s => s.resource.id === resource.id); return day?.free.length ? <span className="text-xs">{formatWindow(day.free[0], timezone)}{day.free.length > 1 ? ` +${day.free.length - 1} windows` : ''}</span> : 'No free windows'; } },
+        { key: 'assignments', header: 'Assigned work ? selected day', cell: (resource) => { const day = schedule.find(s => s.resource.id === resource.id); return day?.booked.length ? <span className="flex flex-col gap-1">{day.booked.map(b => <Link key={b.workItemId} href={`/organizations/${organizationId}/work/${b.workItemId}`} className="text-xs underline">{b.title}</Link>)}</span> : 'No committed work'; } },
         ...(definitions.length > 0
           ? [
               {

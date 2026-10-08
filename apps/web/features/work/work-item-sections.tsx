@@ -112,7 +112,7 @@ export function WorkIdentity({ organizationId, workItem, definitions, assetsEnab
 
 /** The actions that move the job forward stay together, immediately after its identity. */
 export function WorkOperationalActions({
-  organizationId,
+  organizationId, timezone,
   workItem,
   statuses,
   transitions,
@@ -121,7 +121,7 @@ export function WorkOperationalActions({
   mayMove,
   maySchedule,
 }: {
-  organizationId: string;
+  organizationId: string; timezone?: string;
   workItem: WorkItem;
   statuses: WorkItemStatus[];
   transitions: WorkItemTransition[];
@@ -168,6 +168,8 @@ export function WorkOperationalActions({
             assigned={workItem.resources.map((resource) => resource.id)}
             needs={needs}
             scheduled={workItem.window !== null}
+            window={workItem.window}
+            timezone={timezone}
           />
         </Disclosure>
       ) : null}

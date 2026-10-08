@@ -14,6 +14,7 @@ import { formatMoney } from '@/lib/domain/work-items/consumption';
 
 export type TimelineEntry = {
   id: string;
+  record?: { type: string; id: string };
   occurredAt: string;
   /** The platform's own word for what happened. Never a tenant's. */
   action: string;
@@ -99,6 +100,7 @@ type EventRow = {
   occurred_at: string;
   actor_id: string;
   entity_id: string;
+  entity_type?: string;
 };
 
 /** Names this tenant currently uses, for resolving the ids an event carries. */
@@ -353,14 +355,14 @@ export type ActivityScope = keyof typeof ACTIVITY_SCOPE_ACTIONS;
  */
 export async function listRecentActivity(
   db: Db,
-  input: { organizationId: string; limit?: number; scope?: ActivityScope; opportunityId?: string },
+  input: { organizationId: string; limit?: number; scope?: ActivityScope; opportunityId?: string; includeRecords?: boolean },
 ): Promise<TimelineEntry[]> {
   const limit = input.limit ?? 20;
   const actions = input.scope ? ACTIVITY_SCOPE_ACTIONS[input.scope] : ORGANIZATION_ACTIONS;
 
   let query = db
     .from('events')
-    .select('id, action, payload, occurred_at, actor_id, entity_id')
+    .select('id, action, payload, occurred_at, actor_id, entity_id, entity_type')
     .eq('organization_id', input.organizationId)
     .in('action', actions as unknown as string[]);
   if (input.opportunityId) query = query.eq('entity_type', 'opportunity').eq('entity_id', input.opportunityId);
@@ -404,6 +406,7 @@ export async function listRecentActivity(
 
   return rows.map((row) => ({
     id: row.id,
+    ...(input.includeRecords && row.entity_type ? { record: { type: row.entity_type, id: row.entity_id } } : {}),
     occurredAt: row.occurred_at,
     action: row.action,
     description: describe(row, words),

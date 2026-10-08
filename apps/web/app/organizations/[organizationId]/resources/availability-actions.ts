@@ -43,6 +43,9 @@ function revalidate(organizationId: string, resourceId: string): void {
   revalidatePath(`/organizations/${organizationId}/resources/${resourceId}`);
   revalidatePath(`/organizations/${organizationId}/resources`);
   revalidatePath(`/organizations/${organizationId}/schedule`);
+  revalidatePath(`/organizations/${organizationId}/work/dispatch`);
+  revalidatePath(`/organizations/${organizationId}/field`);
+  revalidatePath(`/organizations/${organizationId}/resources`);
 }
 
 export async function saveWorkingHoursAction(

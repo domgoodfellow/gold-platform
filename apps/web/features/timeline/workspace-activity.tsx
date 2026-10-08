@@ -14,6 +14,7 @@ export async function WorkspaceActivity({
   scope,
   emptyMessage,
   limit = 20,
+  dense = false,
 }: {
   db: Db;
   organizationId: string;
@@ -21,7 +22,8 @@ export async function WorkspaceActivity({
   scope: ActivityScope;
   emptyMessage: string;
   limit?: number;
+  dense?: boolean;
 }) {
-  const timeline = await listRecentActivity(db, { organizationId, scope, limit });
-  return <ActivityList compact timeline={timeline} timezone={timezone} emptyMessage={emptyMessage} />;
+  const timeline = await listRecentActivity(db, { organizationId, scope, limit, includeRecords: true });
+  return <ActivityList organizationId={organizationId} compact dense={dense} timeline={timeline} timezone={timezone} emptyMessage={emptyMessage} />;
 }

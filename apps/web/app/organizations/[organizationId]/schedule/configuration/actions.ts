@@ -33,6 +33,9 @@ export async function updateScheduleBufferAction(
 
   revalidatePath(`/organizations/${organizationId}/schedule/configuration`);
   revalidatePath(`/organizations/${organizationId}/schedule`);
+  revalidatePath(`/organizations/${organizationId}/work/dispatch`);
+  revalidatePath(`/organizations/${organizationId}/field`);
+  revalidatePath(`/organizations/${organizationId}/resources`);
   if (organization.slug) revalidatePath(`/book/${organization.slug}`);
   return { error: null };
 }
@@ -61,6 +64,9 @@ export async function addOperatingHoursAction(
 
   revalidatePath(`/organizations/${organizationId}/schedule/configuration`);
   revalidatePath(`/organizations/${organizationId}/schedule`);
+  revalidatePath(`/organizations/${organizationId}/work/dispatch`);
+  revalidatePath(`/organizations/${organizationId}/field`);
+  revalidatePath(`/organizations/${organizationId}/resources`);
   return { error: null };
 }
 
@@ -81,5 +87,8 @@ export async function removeOperatingHoursAction(
 
   revalidatePath(`/organizations/${organizationId}/schedule/configuration`);
   revalidatePath(`/organizations/${organizationId}/schedule`);
+  revalidatePath(`/organizations/${organizationId}/work/dispatch`);
+  revalidatePath(`/organizations/${organizationId}/field`);
+  revalidatePath(`/organizations/${organizationId}/resources`);
   return { error: null };
 }

@@ -99,6 +99,7 @@ export async function listResources(
   input: {
     organizationId: string;
     limit?: number;
+    offset?: number;
     /** Only resources of this class. */
     resourceClass?: ResourceClass;
     /** Only resources that hold this capability. Eligibility, not availability — nothing here looks at time. */
@@ -112,7 +113,8 @@ export async function listResources(
     .select(RESOURCE_SELECT, { count: 'exact' })
     .eq('organization_id', input.organizationId)
     .order('created_at', { ascending: false })
-    .limit(input.limit ?? LIST_LIMIT);
+    .order('id', { ascending: true })
+    .range(Math.max(0, input.offset ?? 0), Math.max(0, input.offset ?? 0) + Math.max(1, input.limit ?? LIST_LIMIT) - 1);
 
   if (input.resourceClass) query = query.eq('resource_class', input.resourceClass);
 

@@ -126,6 +126,7 @@
     "apps/web/tests/component/dialer-popout.test.tsx": {"category": "component", "concerns": ["communications", "voice"], "note": "Compact dialer window shares telephone state, preserves drafts, and restores controls without ending calls."},
     "apps/web/e2e/communications-operating.spec.ts": {"category": "playwright-acceptance", "concerns": ["communications", "voice", "inbox", "routing"]},
     "apps/web/e2e/finance-operating.spec.ts": {"category": "playwright-acceptance", "concerns": ["finance", "pricing", "payments"]},
+    "apps/web/e2e/work-operating.spec.ts": {"category": "playwright-acceptance", "concerns": ["finance", "pricing", "payments"]},
     "apps/web/tests/integration/database/follow-ups.test.ts": {
       "category": "database-integration",
       "concerns": ["crm", "tenancy", "rbac"]

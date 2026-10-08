@@ -40,17 +40,23 @@ export const dynamic = 'force-dynamic';
 /** Work route authority and URL-owned board selection; the feature owns the operator view. */
 export default async function WorkPage({ params, searchParams }: PageProps<'/organizations/[organizationId]/work'>) {
   const { organizationId } = await params;
-  const { type: requestedType, create } = await searchParams;
+  const query = await searchParams;
+  const { type: requestedType, create } = query;
+  const text = (key: string) => typeof query[key] === 'string' ? query[key] as string : '';
+  const view = text('view') === 'board' ? 'board' : 'list';
+  const page = Math.max(1, Math.min(100000, Math.trunc(Number(text('page'))) || 1));
+  const sort = ['oldest', 'title', 'schedule'].includes(text('sort')) ? text('sort') as 'oldest' | 'title' | 'schedule' : 'newest';
   const { db, organization } = await requireOrganization(organizationId);
   const types = await listWorkItemTypes(db, { organizationId });
   const selectedType = types.find((type) => type.id === requestedType) ?? types[0] ?? null;
-  const [statuses, transitions, workItems, customers, locations, resources, assets, definitions, enabledModules, templateSteps, prices, booking, requirements, capabilities, intakeForms] = await Promise.all([
-    selectedType ? listWorkItemStatuses(db, { organizationId, typeId: selectedType.id }) : Promise.resolve([]),
+  const statuses = selectedType ? await listWorkItemStatuses(db, { organizationId, typeId: selectedType.id }) : [];
+  const statusId = statuses.find(s => s.id === text('status'))?.id;
+  const [transitions, workItems, customers, locations, resources, assets, definitions, enabledModules, templateSteps, prices, booking, requirements, capabilities, intakeForms] = await Promise.all([
     selectedType ? listWorkItemTransitions(db, { organizationId, typeId: selectedType.id }) : Promise.resolve([]),
-    selectedType ? listWorkItems(db, { organizationId, typeId: selectedType.id }) : Promise.resolve(counted([] as WorkItem[], 0)),
+    selectedType ? listWorkItems(db, { organizationId, typeId: selectedType.id, q: text('q'), statusId, limit: 20, offset: (page - 1) * 20, sort }) : Promise.resolve(counted([] as WorkItem[], 0)),
     listCustomers(db, { organizationId }),
     listLocations(db, { organizationId }),
-    listResources(db, { organizationId }),
+    listResources(db, { organizationId, limit: 1000 }),
     listAssets(db, { organizationId }),
     listFieldDefinitions(db, { organizationId, entityType: 'work_item' }),
     listUsableModules(db, { organizationId }),
@@ -62,12 +68,15 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
     listBookingIntakeForms(db, { organizationId }),
   ]);
 
+  const stageLists = view === 'board' ? await Promise.all(statuses.map(status => listWorkItems(db, { organizationId, typeId: selectedType!.id, statusId: status.id, q: text('q'), limit: 10, sort }))) : [];
+  const stages = Object.fromEntries(statuses.map((s, i) => [s.id, stageLists[i]]));
+
   // What the selected kind of work needs against who is on each job — derived on this read from the
   // type's requirements and the assignments, stored nowhere.
   const needs = requirements.length > 0 ? requirementGroups(requirements, resources, RESOURCE_CLASS_LABELS) : null;
   const resourcesById = new Map(resources.map((resource) => [resource.id, resource]));
   const coverage: Record<string, CoverageView> = {};
-  for (const item of workItems) {
+  for (const item of [...workItems, ...stageLists.flat()]) {
     if (requirements.length === 0) break;
     const assigned = item.resources.flatMap((ref) => resourcesById.get(ref.id) ?? []);
     coverage[item.id] = coverageView(evaluateRequirements(requirements, assigned), RESOURCE_CLASS_LABELS);
@@ -136,6 +145,12 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
       />
       <WorkList
         createOpen={create === '1'}
+        view={view}
+        page={page}
+        q={text('q')}
+        sort={sort}
+        statusId={statusId ?? ''}
+        stages={stages}
         organizationId={organizationId}
         role={organization.role}
         timezone={organization.timezone}

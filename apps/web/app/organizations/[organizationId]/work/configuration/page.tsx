@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/headers/page-header';
 import { areaLabel } from '@/lib/navigation';
 
 import { Hint } from '@/components/controls/inputs';
-import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { AppPage } from '@/components/layout/app-page';
 import { WorkConfiguration } from '@/features/work/configuration/work-configuration';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listResourceCapabilities } from '@/lib/domain/resources/resource-capabilities';
@@ -57,7 +57,7 @@ export default async function WorkConfigurationPage({
   const mayConfigure = organization.capabilities.includes('field.manage');
 
   return (
-    <SettingsPageFrame>
+    <AppPage>
       <PageHeader title="Work configuration" crumbs={[{ label: areaLabel('work'), href: `/organizations/${organizationId}/work` }]} />
       <Hint className="mt-1">
         The kinds of work this business does, the stages a job moves through, and the steps every
@@ -88,6 +88,6 @@ export default async function WorkConfigurationPage({
           typeHref={(typeId) => `/organizations/${organizationId}/work/configuration?type=${typeId}`}
         />
       </div>
-    </SettingsPageFrame>
+    </AppPage>
   );
 }

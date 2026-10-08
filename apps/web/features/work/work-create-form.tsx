@@ -100,6 +100,7 @@ export function CreateWorkItemForm({
         </Button>
       </FormActions>
       <FormError>{state.error}</FormError>
+      {state.success ? <p role="status" className="text-sm text-success">Work created.</p> : null}
     </form>
   );
 }

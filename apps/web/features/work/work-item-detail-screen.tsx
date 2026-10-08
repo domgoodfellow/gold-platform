@@ -71,6 +71,7 @@ export function WorkItemDetailScreen({ organizationId, organization, model, defa
             />
             <WorkOperationalActions
               organizationId={organizationId}
+              timezone={organization.timezone}
               workItem={workItem}
               statuses={statuses}
               transitions={transitions}

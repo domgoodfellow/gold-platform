@@ -34,6 +34,12 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Work operating workspace ? 2026-10-08
+
+- Replace the sparse Work Home with a contained operational dashboard using exact backlog counts, canonical daily commitments and resource availability, bounded previews and linked activity. Keep honest empty panels and opening-hours setup states.
+- Add Dispatch with URL-backed queue filters, resource assignments/free windows, a contextual scheduling/feasibility inspector and actual Location map selection. Reuse the existing authorized mutation paths and refresh every affected operating surface.
+- Add compact Work List/Board views with independent status reads and exact per-stage counts; reorganize Work configuration as a type workbench and expose Resource class/capability and day-availability filters. Preserve configured transitions, tenant boundaries and overlap prevention without a schema migration.
+
 ### Communications operating workspace — 2026-10-08
 
 - Replace the sparse Communications Home with a dense operational dashboard: readiness strip, missed calls/unread/unassigned/wrap-up attention, bounded Inbox queue and canonical call history, Today/status/activity/insights rail. Search, date and queue filters operate on tenant-scoped records; counts are exact rather than preview lengths.

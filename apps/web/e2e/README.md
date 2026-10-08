@@ -101,3 +101,5 @@ When a user-visible flow changes intentionally:
 4. verify failures produce useful Playwright traces/logs.
 
 The source of truth for test classification is `test-manifest.json`.
+
+`work-operating.spec.ts` provisions a local-only tenant, configures types/workflow/resources/opening hours through the UI, creates Work in its drawer, assigns and schedules in Dispatch, checks feasibility and day/week/month consistency, reschedules, rejects an overlap, moves a configured status and checks Resource assignments. It captures empty/populated Work and responsive Dispatch and verifies reduced/read-only roles and tenant boundaries.

@@ -153,7 +153,8 @@ describe('listSchedule still works for its existing callers, and Week reuses the
 
   it('keeps listSchedule exported, and Field and Home read the one day through listScheduleDays — it carries who is unassigned, which their counts need', () => {
     expect(availability).toMatch(/export async function listSchedule\(/);
-    expect(read(`${ROUTES}/field/page.tsx`)).toContain('listScheduleDays(db, {');
+    expect(read(`${ROUTES}/field/page.tsx`)).toContain('workOperations(db,');
+    expect(read(`${WEB}/lib/application/work/operations.ts`)).toContain('listScheduleDays(db, {');
     expect(read(`${ROUTES}/home/page.tsx`)).toContain('listScheduleDays(db, {');
   });
 

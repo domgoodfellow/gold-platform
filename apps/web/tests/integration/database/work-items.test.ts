@@ -361,3 +361,29 @@ describe('work items', () => {
     }
   });
 });
+
+
+describe('Operational Work reads', () => {
+  it('counts and pages each configured stage independently, without trimming assignment labels', async () => {
+    const typeId = await createWorkItemType(alice.db, { organizationId: alice.organizationId, name: 'Operational pagination', schedulable: true });
+    const primary = await createWorkItemStatus(alice.db, { organizationId: alice.organizationId, typeId, name: 'Queue' });
+    const other = await createWorkItemStatus(alice.db, { organizationId: alice.organizationId, typeId, name: 'Review' });
+    const target = await createWorkItem(alice.db, { organizationId: alice.organizationId, statusId: other, title: 'Independent review', resourceIds: [alice.resourceId] });
+    for (let i = 0; i < 23; i++) await createWorkItem(alice.db, { organizationId: alice.organizationId, statusId: primary, title: `Queue ${String(i).padStart(2, '0')}` });
+    const all = await listWorkItems(alice.db, { organizationId: alice.organizationId, typeId, limit: 20 });
+    expect(all.total).toBe(24);
+    expect(all.some(w => w.id === target)).toBe(false);
+    const review = await listWorkItems(alice.db, { organizationId: alice.organizationId, typeId, statusId: other, limit: 10 });
+    expect(review.total).toBe(1); expect(review[0].id).toBe(target);
+    const second = await listWorkItems(alice.db, { organizationId: alice.organizationId, typeId, statusId: primary, offset: 20, limit: 20 });
+    expect(second.total).toBe(23); expect(second).toHaveLength(3);
+    const unassigned = await listWorkItems(alice.db, { organizationId: alice.organizationId, typeId, unassigned: true, scheduled: false, active: true, limit: 6 });
+    expect(unassigned.total).toBe(23); expect(unassigned).toHaveLength(6);
+    const assigned = await listWorkItems(alice.db, { organizationId: alice.organizationId, typeId, resourceIds: [alice.resourceId] });
+    expect(assigned.total).toBe(1); expect(assigned[0].resources.map(r => r.id)).toEqual([alice.resourceId]);
+    expect((await listWorkItems(alice.db, { organizationId: alice.organizationId, ids: [] })).total).toBe(0);
+    expect((await listWorkItems(alice.db, { organizationId: bob.organizationId, typeId })).total).toBe(0);
+    const found = await listWorkItems(alice.db, { organizationId: alice.organizationId, typeId, q: 'Independent', sort: 'title' });
+    expect(found.total).toBe(1); expect(found[0].id).toBe(target);
+  });
+});

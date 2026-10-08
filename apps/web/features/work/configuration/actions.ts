@@ -39,6 +39,12 @@ export type WorkConfigActionState = { error: string | null };
 function revalidateWork(organizationId: string): void {
   revalidatePath(`/organizations/${organizationId}/work/configuration`);
   revalidatePath(`/organizations/${organizationId}/work`);
+  revalidatePath(`/organizations/${organizationId}/work/dispatch`);
+  revalidatePath(`/organizations/${organizationId}/field`);
+  revalidatePath(`/organizations/${organizationId}/resources`);
+  revalidatePath(`/organizations/${organizationId}/schedule`);
+  revalidatePath(`/organizations/${organizationId}/work/[workItemId]`, 'page');
+  revalidatePath(`/organizations/${organizationId}/resources/[resourceId]`, 'page');
 }
 
 export async function createStatusAction(

@@ -33,3 +33,5 @@ Domain ownership remains in `apps/web/lib/domain`.
 See `docs/architecture.md`.
 
 `communications/dashboard.ts` composes the bounded Communications Home read model from canonical calls, Inbox, numbers, routing, outcomes and runtime readiness. It projects recorded activity without introducing another event store or UI dependencies.
+
+`work/operations.ts` composes Work Home from exact filtered Work counts, bounded previews and canonical scheduling/requirement projections. `work/create-options.ts` supplies canonical creation options without duplicating Work ownership.
