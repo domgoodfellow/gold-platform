@@ -3,7 +3,7 @@
 import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
 import { SectionHeading } from '@/components/surfaces/section';
 import { Button } from '@/components/controls/button';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { CurrencyField } from '@/features/locale/locale-fields';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 import {
@@ -46,14 +46,14 @@ function step(currency: string): string {
  * guess would be the platform deciding what this business trades in, which `constraints.md`
  * forbids outright.
  */
-export function ChooseCurrencyForm({ organizationId }: { organizationId: string }) {
+export function ChooseCurrencyForm({ organizationId, currentCurrency }: { organizationId: string; currentCurrency?: string | null }) {
   const [state, formAction, pending] = useActionState(chooseCurrencyAction, INITIAL);
 
   return (
     <form action={formAction} className="mt-8 max-w-md">
       <input type="hidden" name="organizationId" value={organizationId} />
 
-      <SectionHeading>First, what do you charge in?</SectionHeading>
+      <SectionHeading>{currentCurrency ? 'Trading currency' : 'First, what do you charge in?'}</SectionHeading>
       <Hint className="mt-1">
         Every amount is recorded in the currency it was written in, so this is a starting point
         rather than a setting that reaches backwards. You can change it later without
@@ -61,13 +61,14 @@ export function ChooseCurrencyForm({ organizationId }: { organizationId: string 
       </Hint>
 
       <div className="mt-4 flex flex-col gap-3">
-        <CurrencyField />
+        <CurrencyField id="finance-trading-currency" defaultValue={currentCurrency ?? undefined} />
         <Button type="submit" size="small" disabled={pending} className="w-fit">
-          {pending ? 'Saving…' : 'Save and start pricing'}
+          {pending ? 'Saving…' : currentCurrency ? 'Save currency' : 'Save and start pricing'}
         </Button>
       </div>
 
       <ErrorText role="alert" className="mt-2">{state.error}</ErrorText>
+      {state.success ? <p role="status" className="text-sm text-success">{state.success}</p> : null}
     </form>
   );
 }
@@ -80,19 +81,18 @@ export function CreatePriceItemForm({
   currency: string;
 }) {
   const [state, formAction, pending] = useActionState(createPriceItemAction, INITIAL);
+  const [fields, setFields] = useState({ name: '', unit: '', amount: '' });
+  const control = (name: keyof typeof fields) => ({ name, value: fields[name], onChange: (event: { target: { value: string } }) => setFields(previous => ({ ...previous, [name]: event.target.value })) });
 
   return (
     <form action={formAction} className="mt-8 flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
-      {/* Decides the decimal places only. What is stored is read from the organization
-          inside the RPC, so editing this cannot change what the business prices in. */}
-      <input type="hidden" name="currency" value={currency} />
 
       <SectionHeading>Something you charge for</SectionHeading>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="grid gap-3">
         <TextInput
-          name="name"
+          {...control('name')}
           type="text"
           required
           maxLength={200}
@@ -101,7 +101,7 @@ export function CreatePriceItemForm({
           className="flex-1"
         />
         <TextInput
-          name="unit"
+          {...control('unit')}
           type="text"
           required
           maxLength={40}
@@ -110,14 +110,14 @@ export function CreatePriceItemForm({
           className="flex-1"
         />
         <TextInput
-          name="amount"
+          {...control('amount')}
           type="number"
           required
           min={0}
           step={step(currency)}
           placeholder={`Amount in ${currency}`}
           aria-label={`Amount in ${currency}`}
-          className="w-40"
+          className="w-full"
         />
       </div>
 
@@ -126,6 +126,7 @@ export function CreatePriceItemForm({
       </Button>
 
       <ErrorText role="alert">{state.error}</ErrorText>
+      {state.success ? <p role="status" className="text-sm text-success">{state.success}</p> : null}
     </form>
   );
 }
@@ -146,41 +147,39 @@ export function EditPriceItemForm({
   item: PriceBookItem;
 }) {
   const [state, formAction, pending] = useActionState(updatePriceItemAction, INITIAL);
+  const [fields, setFields] = useState({ name: item.name, unit: item.unit, amount: minorToTyped(item.unitAmountMinor, item.currency) });
+  const control = (name: keyof typeof fields) => ({ name, value: fields[name], onChange: (event: { target: { value: string } }) => setFields(previous => ({ ...previous, [name]: event.target.value })) });
 
   return (
     <form action={formAction} className="flex flex-wrap items-center gap-2 py-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="itemId" value={item.id} />
-      <input type="hidden" name="currency" value={item.currency} />
 
       <TextInput
-        name="name"
+        {...control('name')}
         type="text"
         required
         maxLength={200}
-        defaultValue={item.name}
         aria-label={`Name of ${item.name}`}
         size="small"
         className="min-w-0 flex-1"
       />
       <span className="text-sm text-subtle">per</span>
       <TextInput
-        name="unit"
+        {...control('unit')}
         type="text"
         required
         maxLength={40}
-        defaultValue={item.unit}
         aria-label={`Unit of ${item.name}`}
         size="small"
         className="w-28"
       />
       <TextInput
-        name="amount"
+        {...control('amount')}
         type="number"
         required
         min={0}
         step={step(item.currency)}
-        defaultValue={minorToTyped(item.unitAmountMinor, item.currency)}
         aria-label={`Amount for ${item.name}`}
         size="small"
         className="w-28"
@@ -191,6 +190,7 @@ export function EditPriceItemForm({
       </Button>
 
       <ErrorText role="alert" className="w-full">{state.error}</ErrorText>
+      {state.success ? <p role="status" className="w-full text-sm text-success">{state.success}</p> : null}
     </form>
   );
 }

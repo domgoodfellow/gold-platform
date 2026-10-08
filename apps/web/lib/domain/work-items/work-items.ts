@@ -89,12 +89,15 @@ export async function listWorkItems(
     resourceId?: string;
     customerId?: string;
     limit?: number;
+    q?: string;
   },
 ): Promise<Counted<WorkItem>> {
   let query = db
     .from('work_items')
     .select(WORK_ITEM_SELECT, { count: 'exact' })
     .eq('organization_id', input.organizationId);
+
+  if (input.q?.trim()) query = query.ilike('title', `%${input.q.trim().replace(/[%_]/g, '').slice(0, 100)}%`);
 
   if (input.typeId) {
     query = query.eq('type_id', input.typeId);

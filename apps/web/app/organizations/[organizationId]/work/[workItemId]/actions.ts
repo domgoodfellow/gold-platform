@@ -34,6 +34,7 @@ export type UpdateWorkItemState = { error: string | null; updated: boolean };
 
 function revalidate(organizationId: string, workItemId: string) {
   revalidatePath(`/organizations/${organizationId}/work/${workItemId}`);
+  revalidatePath(`/organizations/${organizationId}/finance`, 'layout');
 }
 
 export async function addChecklistItemAction(

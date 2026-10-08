@@ -2704,6 +2704,13 @@ export type Database = {
             foreignKeyName: "documents_work_item_same_org"
             columns: ["organization_id", "work_item_id"]
             isOneToOne: false
+            referencedRelation: "finance_quote_records"
+            referencedColumns: ["organization_id", "work_item_id"]
+          },
+          {
+            foreignKeyName: "documents_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
             referencedRelation: "work_items"
             referencedColumns: ["organization_id", "id"]
           },
@@ -3247,6 +3254,13 @@ export type Database = {
           submitted_by?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "form_submissions_booking_fk"
+            columns: ["organization_id", "booking_work_item_id"]
+            isOneToOne: false
+            referencedRelation: "finance_quote_records"
+            referencedColumns: ["organization_id", "work_item_id"]
+          },
           {
             foreignKeyName: "form_submissions_booking_fk"
             columns: ["organization_id", "booking_work_item_id"]
@@ -3828,6 +3842,13 @@ export type Database = {
             foreignKeyName: "invoice_lines_invoice_same_org"
             columns: ["organization_id", "invoice_id"]
             isOneToOne: false
+            referencedRelation: "finance_invoice_records"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invoice_lines_invoice_same_org"
+            columns: ["organization_id", "invoice_id"]
+            isOneToOne: false
             referencedRelation: "invoices"
             referencedColumns: ["organization_id", "id"]
           },
@@ -3905,6 +3926,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "finance_quote_records"
+            referencedColumns: ["organization_id", "work_item_id"]
           },
           {
             foreignKeyName: "invoices_work_item_same_org"
@@ -5809,6 +5837,13 @@ export type Database = {
             foreignKeyName: "payment_requests_invoice_same_org"
             columns: ["organization_id", "invoice_id"]
             isOneToOne: false
+            referencedRelation: "finance_invoice_records"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "payment_requests_invoice_same_org"
+            columns: ["organization_id", "invoice_id"]
+            isOneToOne: false
             referencedRelation: "invoices"
             referencedColumns: ["organization_id", "id"]
           },
@@ -5866,6 +5901,13 @@ export type Database = {
           received_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payments_invoice_same_org"
+            columns: ["organization_id", "invoice_id"]
+            isOneToOne: false
+            referencedRelation: "finance_invoice_records"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "payments_invoice_same_org"
             columns: ["organization_id", "invoice_id"]
@@ -9525,6 +9567,13 @@ export type Database = {
             foreignKeyName: "work_item_checklist_items_work_item_same_org"
             columns: ["organization_id", "work_item_id"]
             isOneToOne: false
+            referencedRelation: "finance_quote_records"
+            referencedColumns: ["organization_id", "work_item_id"]
+          },
+          {
+            foreignKeyName: "work_item_checklist_items_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
             referencedRelation: "work_items"
             referencedColumns: ["organization_id", "id"]
           },
@@ -9583,6 +9632,13 @@ export type Database = {
             foreignKeyName: "work_item_costs_work_item_same_org"
             columns: ["organization_id", "work_item_id"]
             isOneToOne: false
+            referencedRelation: "finance_quote_records"
+            referencedColumns: ["organization_id", "work_item_id"]
+          },
+          {
+            foreignKeyName: "work_item_costs_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
             referencedRelation: "work_items"
             referencedColumns: ["organization_id", "id"]
           },
@@ -9626,6 +9682,13 @@ export type Database = {
           work_item_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "work_item_priced_lines_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "finance_quote_records"
+            referencedColumns: ["organization_id", "work_item_id"]
+          },
           {
             foreignKeyName: "work_item_priced_lines_work_item_same_org"
             columns: ["organization_id", "work_item_id"]
@@ -9688,6 +9751,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "resources"
             referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_item_resource_assignments_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "finance_quote_records"
+            referencedColumns: ["organization_id", "work_item_id"]
           },
           {
             foreignKeyName: "work_item_resource_assignments_work_item_same_org"
@@ -9815,6 +9885,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "resources"
             referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_item_time_entries_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "finance_quote_records"
+            referencedColumns: ["organization_id", "work_item_id"]
           },
           {
             foreignKeyName: "work_item_time_entries_work_item_same_org"
@@ -10309,6 +10386,148 @@ export type Database = {
           },
           {
             foreignKeyName: "events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_invoice_records: {
+        Row: {
+          billed_to: string | null
+          created_by: string | null
+          currency: string | null
+          customer_id: string | null
+          due_at: string | null
+          id: string | null
+          issued_at: string | null
+          number: number | null
+          organization_id: string | null
+          outstanding_minor: number | null
+          overdue: boolean | null
+          paid_minor: number | null
+          settled: boolean | null
+          total_minor: number | null
+          work_item_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invoices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "finance_quote_records"
+            referencedColumns: ["organization_id", "work_item_id"]
+          },
+          {
+            foreignKeyName: "invoices_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      finance_payment_records: {
+        Row: {
+          amount_minor: number | null
+          billed_to: string | null
+          created_by: string | null
+          currency: string | null
+          customer_id: string | null
+          id: string | null
+          invoice_id: string | null
+          invoice_number: number | null
+          note: string | null
+          organization_id: string | null
+          provider: string | null
+          provider_reference: string | null
+          received_at: string | null
+          work_item_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_invoice_same_org"
+            columns: ["organization_id", "invoice_id"]
+            isOneToOne: false
+            referencedRelation: "finance_invoice_records"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "payments_invoice_same_org"
+            columns: ["organization_id", "invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_quote_records: {
+        Row: {
+          created_at: string | null
+          currency: string | null
+          customer_id: string | null
+          customer_name: string | null
+          invoiced: boolean | null
+          line_count: number | null
+          organization_id: string | null
+          status: string | null
+          title: string | null
+          total_minor: number | null
+          work_item_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_items_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_items_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "platform_tenants"
@@ -11147,6 +11366,10 @@ export type Database = {
           p_organization_id: string
         }
         Returns: number
+      }
+      finance_dashboard_summary: {
+        Args: { p_from: string; p_organization_id: string; p_to: string }
+        Returns: Json
       }
       form_editor_state: {
         Args: { p_form_id: string; p_organization_id: string }

@@ -24,13 +24,15 @@ import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
 import { foundBusiness } from '@/tests/support/founding';
+import { readFinanceInvoices, readFinanceQuotes, readFinancePayments, readFinanceSummary } from '@/lib/domain/billing/finance-reads';
+import { getOrganization, updateOrganization } from '@/lib/domain/tenancy/organizations';
 
 /**
  * Invoicing, and money arriving.
  *
  * The claims worth holding here are all about things the schema deliberately does *not* have.
  * An invoice has no total column, so re-pricing the catalogue or amending the quote must move
- * nothing on an issued document — which is I8 applied one level up from where the priced line
+ * nothing on an issued document â€” which is I8 applied one level up from where the priced line
  * already applies it. An invoice has no `paid` flag, so settlement has to be arithmetic that
  * cannot disagree with the payments it was derived from. And a second invoice for one job is
  * refused by a unique index rather than by a check before the insert, for the reason I6 gives
@@ -165,7 +167,7 @@ describe('invoicing a job', () => {
     expect(invoice!.currency).toBe('CAD');
 
     const standing = invoiceStanding(invoice!);
-    // 12000 × 2, and the same answer `priceWorkItem` gives the quote — because it *is*
+    // 12000 Ã— 2, and the same answer `priceWorkItem` gives the quote â€” because it *is*
     // `priceWorkItem`, called over the invoice's own lines. There is no second total.
     expect(standing.total).toEqual({ totalMinor: 24_000, currency: 'CAD' });
     expect(standing.total).toEqual(priceWorkItem(invoice!.lines));
@@ -185,7 +187,7 @@ describe('invoicing a job', () => {
 
     expect(await read()).toBe(12_000);
 
-    // The business puts its prices up. Nothing already quoted moves — that is the priced
+    // The business puts its prices up. Nothing already quoted moves â€” that is the priced
     // line's snapshot, already proved in `prices.test.ts`.
     await updatePriceBookItem(alice.db, {
       id: alice.calloutId,
@@ -349,7 +351,7 @@ describe('invoicing a job', () => {
 
   it('numbers by the order invoices were raised, never by the dates on them', async () => {
     // The consequence of the field above, asserted rather than left to be discovered. A
-    // business that back-dates out of order gets a number that does not follow its date —
+    // business that back-dates out of order gets a number that does not follow its date â€”
     // which is the business's to notice, because numbering by date would mean renumbering
     // documents that have already been sent.
     const later = await quotedJob(alice, 'Raised first, dated last');
@@ -401,9 +403,9 @@ describe('money arriving', () => {
     expect(done.settled).toBe(true);
   });
 
-  it('takes the invoice’s currency and never the caller’s', async () => {
+  it('takes the invoiceâ€™s currency and never the callerâ€™s', async () => {
     // `record_payment` reads the currency off the invoice. There is no argument for it, so a
-    // caller cannot assert that a job priced in CAD was paid in something else — which would
+    // caller cannot assert that a job priced in CAD was paid in something else â€” which would
     // need a rate, and a rate has a date (`vision.md`: not accounting software).
     const job = await quotedJob(alice, 'Currency is not an argument');
     const invoiceId = await issueInvoice(alice.db, { workItemId: job });
@@ -502,7 +504,7 @@ describe('what has arrived, totalled', () => {
   });
 
   it('says nothing rather than zero when there is nothing to total', () => {
-    // Unreachable through `issue_invoice`, which refuses an unquoted job — but if that
+    // Unreachable through `issue_invoice`, which refuses an unquoted job â€” but if that
     // guarantee were ever dropped, an honest absence beats a confident zero.
     const standing = invoiceStanding({ lines: [], payments: [] });
     expect(standing.total).toBeNull();
@@ -587,7 +589,7 @@ describe('money arriving from a processor', () => {
     )) as { id: string };
 
     // Idempotent by constraint rather than by a check before the insert, which would race
-    // identically (I6) — and here the race costs a refund rather than a double booking.
+    // identically (I6) â€” and here the race costs a refund rather than a double booking.
     expect(second.id).toBe(first.id);
 
     const invoice = await getInvoiceForWorkItem(alice.db, {
@@ -637,7 +639,7 @@ describe('money arriving from a processor', () => {
 /**
  * The organization-wide reads Finance lists from (`listInvoices`, `listOrganizationPayments`,
  * `listPricedWork`). They add no table and no calculation: each is the same RLS-scoped rows the
- * per-job reads return, gathered for a screen — so what is proved here is scope, snapshot and
+ * per-job reads return, gathered for a screen â€” so what is proved here is scope, snapshot and
  * honesty about what was not recorded.
  */
 describe('the organization-wide financial reads', () => {
@@ -699,5 +701,70 @@ describe('the organization-wide financial reads', () => {
     const bare = await createWorkItem(alice.db, { organizationId: alice.organizationId, statusId: alice.statusId, title: 'Unpriced' });
     const work = await listPricedWork(alice.db, { organizationId: alice.organizationId });
     expect(work.map((entry) => entry.workItemId)).not.toContain(bare);
+  });
+});
+
+
+describe('Finance operating reads against real tenant policies', () => {
+  let tenant: Tenant;
+  beforeAll(async () => { tenant = await newTenant('finance-reads'); });
+  it('paginates complete collections and aggregates beyond a preview without currency mixing', async () => {
+    for (let index = 0; index < 27; index++) {
+      const workItemId = await quotedJob(tenant, `Finance page ${index}`);
+      const invoiceId = await issueInvoice(tenant.db, { workItemId, issuedAt: '2026-10-01T12:00:00Z', dueAt: index === 0 ? '2020-01-01T12:00:00Z' : null });
+      if (index === 0) {
+        await recordPayment(tenant.db, { invoiceId, amountMinor: 2000, receivedAt: '2026-10-01T03:59:59Z' });
+        await recordPayment(tenant.db, { invoiceId, amountMinor: 3000, receivedAt: '2026-10-01T04:00:00Z' });
+        await recordPayment(tenant.db, { invoiceId, amountMinor: -1000, receivedAt: '2026-10-02T04:00:00Z' });
+      }
+    }
+    await quotedJob(tenant, 'Uninvoiced Finance quote', 2);
+    const first = await readFinanceInvoices(tenant.db, tenant.organizationId);
+    const second = await readFinanceInvoices(tenant.db, tenant.organizationId, { page: 2 });
+    expect(first.total).toBe(27); expect(first.rows).toHaveLength(25); expect(second.rows).toHaveLength(2);
+    expect(new Set([...first.rows,...second.rows].map(r=>r.id)).size).toBe(27);
+    const overdue = await readFinanceInvoices(tenant.db, tenant.organizationId, { status:'overdue' });
+    expect(overdue.total).toBe(1); expect(overdue.rows[0].outstandingMinor).toBe(8000);
+    const summary = await readFinanceSummary(tenant.db,tenant.organizationId,'2026-10-01','2026-11-01');
+    expect(summary.issued).toBe(27); expect(summary.quoteCount).toBe(1);
+    expect(summary.received).toEqual([{currency:'CAD',amount:'2000',count:2}]);
+    expect(summary.outstanding).toEqual([{currency:'CAD',amount:String(27*12000-4000),count:27}]);
+    expect(summary.aging.some(a=>a.band==='No due date')).toBe(true);
+    const quotes = await readFinanceQuotes(tenant.db,tenant.organizationId,{status:'not-invoiced'});
+    expect(quotes.total).toBe(1); expect(quotes.rows[0].quoted?.totalMinor).toBe(24000);
+    const payments = await readFinancePayments(tenant.db,tenant.organizationId,{from:'2026-10-01T04:00:00Z',to:'2026-11-01T04:00:00Z'});
+    expect(payments.total).toBe(2);
+  });
+  it('does not reveal another tenant through views or summary', async () => {
+    expect((await readFinanceInvoices(bob.db,tenant.organizationId)).rows).toEqual([]);
+    expect((await readFinanceQuotes(bob.db,tenant.organizationId)).rows).toEqual([]);
+    expect((await readFinancePayments(bob.db,tenant.organizationId)).rows).toEqual([]);
+    await expect(readFinanceSummary(bob.db,tenant.organizationId,'2026-10-01','2026-11-01')).rejects.toThrow();
+  });
+  it('keeps historical currencies separate and matches canonical invoice standing', async () => {
+    const mixed = await newTenant('finance-currencies');
+    const cadWork = await quotedJob(mixed,'CAD historical quote');
+    await issueInvoice(mixed.db,{workItemId:cadWork});
+    const org = (await getOrganization(mixed.db,mixed.organizationId))!;
+    await updateOrganization(mixed.db,{id:org.id,name:org.name,timezone:org.timezone,bufferMinutes:org.bufferMinutes,slug:org.slug,currency:'USD'});
+    const usdPrice = await createPriceBookItem(mixed.db,{organizationId:mixed.organizationId,name:'USD service',unit:'visit',unitAmountMinor:7000});
+    const usdWork = await createWorkItem(mixed.db,{organizationId:mixed.organizationId,statusId:mixed.statusId,title:'USD quote'});
+    await addPricedLine(mixed.db,{workItemId:usdWork,priceBookItemId:usdPrice,quantity:2});
+    const invoiceId = await issueInvoice(mixed.db,{workItemId:usdWork});
+    await recordPayment(mixed.db,{invoiceId,amountMinor:3000});
+    const summary = await readFinanceSummary(mixed.db,mixed.organizationId,'2026-01-01','2027-01-01');
+    expect(summary.outstanding).toEqual([{currency:'CAD',amount:'12000',count:1},{currency:'USD',amount:'11000',count:1}]);
+    const rows = await readFinanceInvoices(mixed.db,mixed.organizationId);
+    for(const row of rows.rows) {
+      const invoice = await getInvoiceForWorkItem(mixed.db,{organizationId:mixed.organizationId,workItemId:row.workItemId});
+      expect(row.total).toEqual(invoiceStanding(invoice!).total);
+      expect(row.outstandingMinor).toBe(invoiceStanding(invoice!).outstandingMinor);
+    }
+  });
+  it('enforces aggregate reporting permission in PostgreSQL independently of record visibility', async () => {
+    const roleId = await createRole(tenant.db,{organizationId:tenant.organizationId,name:'Finance records only',capabilities:CAPABILITIES.filter(c=>c!=='report.read')});
+    await assignRole(tenant.db,{membershipId:tenant.membershipId,roleId});
+    expect((await readFinanceInvoices(tenant.db,tenant.organizationId)).total).toBe(27);
+    await expect(readFinanceSummary(tenant.db,tenant.organizationId,'2026-10-01','2026-11-01')).rejects.toThrow(/not permitted/i);
   });
 });

@@ -19,7 +19,7 @@ import {
   WorkTimeSection,
 } from '@/features/work/work-item-sections';
 
-export function WorkItemDetailScreen({ organizationId, organization, model }: { organizationId: string; organization: { timezone: string; currency: string | null; role: string }; model: WorkItemDetailModel }) {
+export function WorkItemDetailScreen({ organizationId, organization, model, defaultTab }: { organizationId: string; organization: { timezone: string; currency: string | null; role: string }; model: WorkItemDetailModel; defaultTab?: string }) {
   const { workItem, checklist, timeEntries, costs, definitions, lines, priceBook, customers, locations,
     assets, invoice, statuses, transitions, documents, timeline, price, economics, standing, mayAttach,
     billingEnabled, assetsEnabled, cardsAccepted, resourceOptions, mayEditDetails, needs, coverage, suggestion, intake } = model;
@@ -34,6 +34,7 @@ export function WorkItemDetailScreen({ organizationId, organization, model }: { 
         timezone={organization.timezone}
       />
       <WorkItemTabs
+        defaultTab={defaultTab}
         overview={
           <>
             <WorkIdentity

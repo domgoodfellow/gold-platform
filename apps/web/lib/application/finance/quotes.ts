@@ -1,23 +1,14 @@
 import type { Db } from '@/lib/db/types';
 import { invoicedWorkItemIds } from '@/lib/domain/billing/invoices';
-import { listPricedWork, priceWorkItem, type Price } from '@/lib/domain/pricing/prices';
+import { listPricedWork, priceWorkItem } from '@/lib/domain/pricing/prices';
 
 /**
  * A quote is a job with priced lines — there is no quote table (I4). The amount is
  * `priceWorkItem` over the lines the job holds, which are snapshots of the price book as it read
  * when each was added (I8); nothing here reads the price book.
  */
-export type FinanceQuoteRow = {
-  workItemId: string;
-  title: string;
-  status: string;
-  customer: { id: string; name: string } | null;
-  createdAt: string;
-  lineCount: number;
-  quoted: Price;
-  /** Whether an invoice already exists for this job. Invoicing is the invoice's own fact, read from `invoices`. */
-  invoiced: boolean;
-};
+export type { FinanceQuoteRow } from '@/lib/domain/billing/finance-reads';
+import type { FinanceQuoteRow } from '@/lib/domain/billing/finance-reads';
 
 export type FinanceQuotes = {
   rows: FinanceQuoteRow[];

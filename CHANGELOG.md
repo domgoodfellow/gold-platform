@@ -34,6 +34,12 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Finance operating workspace — 2026-10-08
+
+- Replace the sparse Finance Home with a contained financial dashboard: period-scoped recorded payments, current receivables and uninvoiced quotes, attention categories, due invoices, activity, aging and financial performance. Currency totals remain separate; unsupported reminders and processor outcomes are never implied.
+- Add contextual Work pricing, invoice review/issue and payment-recording drawers, searchable paginated collections, a financial report destination and compact Services & Pricing management. Finance links open canonical Work financials directly.
+- Add tenant-policy-preserving database read projections and permission-checked complete summaries. Invoice snapshots, one invoice per Work item and append-only payment corrections remain unchanged. A forward migration is required before deploying the new surfaces.
+
 ### Communications dialer pop-out — 2026-10-08
 
 - Add a compact dialer window, informed by Next-Fund's keypad and calling presentation, from New call and the active call dock. It shares the existing telephone and call actions, preserves the number draft on return, and keeps live calls under control while moving between workspaces.

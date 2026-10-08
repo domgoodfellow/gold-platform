@@ -124,6 +124,10 @@ Every derived representation needs a known upstream source and refresh/synchroni
 
 ---
 
+## Finance operating reads
+
+Finance operating reads use `finance_invoice_records`, `finance_quote_records` and `finance_payment_records` as security-invoker projections over canonical records. They persist no alternative financial state. Invoice standing projects immutable line totals less signed payments; quote values project snapshotted Work pricing. Collection filters, exact counts and pagination run in PostgreSQL. `finance_dashboard_summary` additionally enforces tenant membership and `report.read`, groups money by stored currency, and applies Organization timezone to selected-period payment boundaries. Receivables aging uses actual due instants and retains a separate no-due-date bucket. No FX conversions, payment-method inference or historical rewrites occur. Aggregate amounts cross the JSON boundary as integer strings; supported-display-range checks refuse unsafe JavaScript integers. Canonical invoiced/incurred report reads retrieve every ordered result page before calculating per-currency totals. Preview limits never define dashboard aggregates.
+
 ## Tenant ownership
 
 Tenant-owned business data belongs to one Organization.

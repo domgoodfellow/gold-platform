@@ -94,9 +94,11 @@ export function TimeZoneField({
 }
 
 export function CurrencyField({
+  id = 'currency',
   defaultValue,
   label = 'Currency',
 }: {
+  id?: string;
   defaultValue?: string;
   label?: string;
 }) {
@@ -124,11 +126,11 @@ export function CurrencyField({
 
   return (
     <div className="flex flex-1 flex-col gap-1">
-      <FieldLabel htmlFor="currency">
+      <FieldLabel htmlFor={id}>
         {label}
       </FieldLabel>
       {codes ? (
-        <SelectInput id="currency" name="currency" required defaultValue={defaultValue ?? ''}>
+        <SelectInput id={id} name="currency" required defaultValue={defaultValue ?? ''}>
           {/* No preselection when founding. There is no neutral currency, so the platform
               does not offer one — and deriving it from the timezone above would be the
               assumption this whole field exists to avoid. */}
@@ -148,7 +150,7 @@ export function CurrencyField({
         </SelectInput>
       ) : (
         <TextInput
-          id="currency"
+          id={id}
           name="currency"
           type="text"
           required

@@ -314,12 +314,14 @@ export function WorkMarginSection({ economics }: { economics: JobEconomics }) {
  * (billing, module, capability) stays exactly where the page already put it.
  */
 export function WorkItemTabs({
+  defaultTab = 'overview',
   overview,
   execution,
   financials,
   documents,
   activity,
 }: {
+  defaultTab?: string;
   overview: ReactNode;
   execution: ReactNode;
   financials: ReactNode;
@@ -327,7 +329,7 @@ export function WorkItemTabs({
   activity: ReactNode;
 }) {
   return (
-    <Tabs defaultValue="overview">
+    <Tabs defaultValue={defaultTab}>
       <TabsList>
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="execution">Execution</TabsTrigger>

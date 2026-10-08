@@ -16,7 +16,8 @@ import { CreateWorkItemForm } from './work-create-form';
 import type { CoverageView, ResourceNeedsView } from '@/lib/domain/work-items/requirements';
 import { AssignResourcesForm, MoveWorkItemForm, ScheduleWorkItemForm } from './work-operations-forms';
 
-export function WorkList({ organizationId, role, timezone, types, selectedType, statuses, transitions, workItems, customers, locations, resources, assets, definitions, assetsEnabled, needs, coverage, mayAdd, mayConfigure, mayMove, maySchedule }: {
+export function WorkList({ organizationId, role, timezone, types, selectedType, statuses, transitions, workItems, customers, locations, resources, assets, definitions, assetsEnabled, needs, coverage, mayAdd, mayConfigure, mayMove, maySchedule, createOpen = false }: {
+  createOpen?: boolean;
   organizationId: string;
   role: string;
   timezone: string;
@@ -85,7 +86,7 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
             <Disclosure
               summary="Add work"
               tone="primary"
-              defaultOpen={workItems.length === 0}
+              defaultOpen={createOpen || workItems.length === 0}
               className="mt-5"
             >
               <CreateWorkItemForm

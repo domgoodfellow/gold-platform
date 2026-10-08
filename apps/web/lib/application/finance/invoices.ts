@@ -1,6 +1,5 @@
 import type { Db } from '@/lib/db/types';
 import { invoiceStanding, listInvoices, type Invoice } from '@/lib/domain/billing/invoices';
-import type { Price } from '@/lib/domain/pricing/prices';
 
 /**
  * One invoice as Finance lists it: the invoice's own snapshot and the standing
@@ -8,22 +7,8 @@ import type { Price } from '@/lib/domain/pricing/prices';
  * time (I4) — `invoiceStanding` calls `priceWorkItem` over the invoice's own lines, and a payment
  * is only ever a recorded one.
  */
-export type FinanceInvoiceRow = {
-  id: string;
-  workItemId: string;
-  number: number;
-  billedTo: string;
-  customerId: string | null;
-  currency: string;
-  issuedAt: string;
-  dueAt: string | null;
-  total: Price;
-  paidMinor: number;
-  outstandingMinor: number | null;
-  settled: boolean;
-  /** Unpaid past a due date the business set. False when no due date was set — never inferred from the issue date. */
-  overdue: boolean;
-};
+export type { FinanceInvoiceRow } from '@/lib/domain/billing/finance-reads';
+import type { FinanceInvoiceRow } from '@/lib/domain/billing/finance-reads';
 
 export function financeInvoiceRow(invoice: Invoice, now: Date): FinanceInvoiceRow {
   const standing = invoiceStanding(invoice);

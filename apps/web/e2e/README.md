@@ -87,6 +87,8 @@ Do not use the acceptance harness against Production as a destructive test suite
 
 ## Maintenance
 
+`finance-operating.spec.ts` covers price creation/editing, canonical Work quoting, invoice issuance, invalid and partial/final payment entry, currency changes without historical repricing, collection pagination/filter persistence, search, and reduced-role controls. It provisions a fresh local tenant and never charges a live payment method. The journey captures empty/populated Finance, collection, pricing, invoice/payment drawer, and lower-dashboard screenshots at 1440, 768 and 390 pixels in its Playwright result directory. Database tests separately verify signed corrections, timezone boundaries, mixed currencies and tenant/report permissions.
+
 `dialer-popout.spec.ts` covers the separate dialer window, keypad draft, persistence through workspace navigation, phone-width layout, and return when the browser window is closed. It uses the demo owner's session and never places a carrier call.
 
 When a user-visible flow changes intentionally:

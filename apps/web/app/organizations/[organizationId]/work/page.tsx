@@ -40,7 +40,7 @@ export const dynamic = 'force-dynamic';
 /** Work route authority and URL-owned board selection; the feature owns the operator view. */
 export default async function WorkPage({ params, searchParams }: PageProps<'/organizations/[organizationId]/work'>) {
   const { organizationId } = await params;
-  const { type: requestedType } = await searchParams;
+  const { type: requestedType, create } = await searchParams;
   const { db, organization } = await requireOrganization(organizationId);
   const types = await listWorkItemTypes(db, { organizationId });
   const selectedType = types.find((type) => type.id === requestedType) ?? types[0] ?? null;
@@ -135,6 +135,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
         configure={mayConfigure}
       />
       <WorkList
+        createOpen={create === '1'}
         organizationId={organizationId}
         role={organization.role}
         timezone={organization.timezone}

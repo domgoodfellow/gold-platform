@@ -3,8 +3,40 @@ import { financeInvoiceRow, outstandingByCurrency } from '@/lib/application/fina
 import { awaitingInvoiceByCurrency, type FinanceQuoteRow } from '@/lib/application/finance/quotes';
 import { receivedByCurrency } from '@/lib/application/finance/payments';
 import type { Invoice, Payment } from '@/lib/domain/billing/invoices';
+import { parseMoneyInput } from '@/lib/domain/pricing/money-input';
+import { financePeriod, financeFilters } from '@/lib/application/finance/operating';
+import { listInvoicedAndIncurred, totalsByCurrency } from '@/lib/domain/reporting/financials';
+import type { Db } from '@/lib/db/types';
 
 const NOW = new Date('2026-10-05T12:00:00Z');
+
+describe('Finance operator input', () => {
+  it('includes financial groups beyond a capped report response before totaling currencies', async () => {
+    const records = Array.from({ length: 501 }, (_, index) => ({ group_id: String(index), group_label: `Customer ${index}`, currency: index === 500 ? 'USD' : 'CAD', invoiced_minor: 100, incurred_minor: 25, margin_minor: 75 }));
+    const response = { order() { return this; }, range(from: number, to: number) { return Promise.resolve({ data: records.slice(from, to + 1), error: null }); } };
+    const db = { rpc: () => response } as unknown as Db;
+    const groups = await listInvoicedAndIncurred(db, { organizationId: 'tenant', grouping: 'customer' });
+    expect(groups).toHaveLength(501);
+    expect(totalsByCurrency(groups)).toEqual([
+      { currency: 'CAD', invoicedMinor: 50000, incurredMinor: 12500, marginMinor: 37500 },
+      { currency: 'USD', invoicedMinor: 100, incurredMinor: 25, marginMinor: 75 },
+    ]);
+  });
+  it('converts decimal input exactly to integer minor units across currency precisions', () => {
+    expect(parseMoneyInput('42.55','CAD')).toBe(4255);
+    expect(parseMoneyInput('-1.25','CAD')).toBe(-125);
+    expect(parseMoneyInput('1250','JPY')).toBe(1250);
+    expect(parseMoneyInput('1.005','KWD')).toBe(1005);
+    for (const raw of ['1.001','NaN','1e3','9007199254740992']) expect(()=>parseMoneyInput(raw,'CAD')).toThrow();
+    expect(()=>parseMoneyInput('1.1','JPY')).toThrow();
+  });
+  it('preserves historical months, rejects invalid periods and applies Organization timezone', () => {
+    expect(financePeriod('2026-10-08','2025-12')).toEqual({from:'2025-12-01',to:'2026-01-01',month:'2025-12'});
+    expect(financePeriod('2026-10-08','bad').month).toBe('2026-10');
+    expect(financeFilters({from:'2026-10-01',page:'2'},'America/Toronto').from).toBe('2026-10-01T04:00:00.000Z');
+    expect(financeFilters({from:'2026-02-31',page:'-1'},'UTC')).toMatchObject({from:undefined,page:1});
+  });
+});
 
 function invoice(overrides: Partial<Invoice> & { totalMinor: number; paid?: number[] }): Invoice {
   const currency = overrides.currency ?? 'CAD';

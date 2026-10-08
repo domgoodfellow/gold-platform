@@ -1,151 +1,45 @@
-import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
+import Link from 'next/link';
+import { Section, SectionHeading } from '@/components/surfaces/section';
 import { PageHeader } from '@/components/headers/page-header';
-import { areaLabel } from '@/lib/navigation';
 import { Hint } from '@/components/controls/inputs';
 import { Disclosure } from '@/components/surfaces/card';
-import { DataTable } from '@/components/display/table';
 import { paymentProvider } from '@/lib/adapters/payments';
 import { getPaymentAccount } from '@/lib/domain/billing/payment-accounts';
 import { listModuleSettings } from '@/lib/domain/tenancy/modules';
-import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { requireOrganization } from '@/lib/route/organization';
 import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
-import { ChooseCurrencyForm, CreatePriceItemForm, EditPriceItemForm } from '@/features/pricing/price-forms';
+import { ChooseCurrencyForm } from '@/features/pricing/price-forms';
+import { PricingManagement } from '@/features/pricing/pricing-management';
 import { PaymentAccountRow } from '@/features/pricing/payment-account-row';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 
 export const dynamic = 'force-dynamic';
-
-/**
- * "What do we sell, what do we charge, and how do our customers pay us?" — the
- * BUSINESS → CUSTOMER commercial plane. Getting paid lives on the same page as the price book it
- * charges through, reached at `#getting-paid` when card payments is switched on.
- */
-export default async function PricingPage({
-  params,
-}: PageProps<'/organizations/[organizationId]/settings/pricing'>) {
+export default async function PricingPage({ params }: PageProps<'/organizations/[organizationId]/settings/pricing'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
-
   const provider = await paymentProvider();
   const [items, modules, paymentAccount] = await Promise.all([
-    listPriceBookItems(db, { organizationId }),
-    listModuleSettings(db, { organizationId }),
+    listPriceBookItems(db, { organizationId }), listModuleSettings(db, { organizationId }),
     provider ? getPaymentAccount(db, { organizationId, provider: provider.name }) : null,
   ]);
-  const enabled = new Set(
-    modules.filter((entry) => entry.enabledAt !== null).map((entry) => entry.module.key),
-  );
+  const enabled = modules.some(m => m.module.key === 'card_payments' && m.enabledAt !== null);
   const mayManage = organization.capabilities.includes('price.manage');
   const mayManagePayments = organization.capabilities.includes('organization.manage');
-  const currency = organization.currency;
-  const stale = items.filter((item) => item.currency !== organization.currency);
-
-  return (
-    <SettingsPageFrame>
-      <PageHeader
-        title={areaLabel('pricing')}
-        crumbs={[
-          { label: 'Settings', href: settingsLandingHref(organizationId) },
-          { label: 'Organization', href: settingsScopeHref('organization', organizationId) },
-        ]}
-      />
-      <Section>
-        <SectionHeading>Services &amp; pricing</SectionHeading>
-        <Hint className="mt-1">
-          What this business charges for. Nothing here is quoted until it is put on a job, and
-          re-pricing an item never changes a job that already exists.
-        </Hint>
-
-        {items.length === 0 ? (
-          currency === null ? null : (
-            <EmptyState className="mt-4">
-              Nothing priced yet. What you sell and what you call it are yours — the platform
-              ships no catalogue.
-            </EmptyState>
-          )
-        ) : mayManage ? (
-          <DividedList className="mt-4">
-            {items.map((item) => (
-              <li key={item.id}>
-                <EditPriceItemForm organizationId={organizationId} item={item} />
-              </li>
-            ))}
-          </DividedList>
-        ) : (
-          <div className="mt-4">
-            <DataTable
-              rows={items}
-              rowKey={(item) => item.id}
-              empty="Nothing priced yet."
-              columns={[
-                { key: 'name', header: 'What', emphasis: 'primary', cell: (item) => item.name },
-                { key: 'unit', header: 'Per', cell: (item) => item.unit },
-                {
-                  key: 'amount',
-                  header: 'Price',
-                  numeric: true,
-                  cell: (item) => formatMoney(item.unitAmountMinor, item.currency),
-                },
-              ]}
-            />
-          </div>
-        )}
-
-        {stale.length > 0 ? (
-          <Hint className="mt-4">
-            {stale.length === 1 ? 'One item is' : `${stale.length} items are`} priced in a
-            currency this business no longer trades in. Their amounts were not converted, because
-            converting one would be inventing an exchange rate nobody recorded.
-          </Hint>
-        ) : null}
-
-        {!mayManage ? (
-          <Hint className="mt-6">Your role, {organization.role}, cannot set prices here.</Hint>
-        ) : currency === null ? (
-          organization.capabilities.includes('organization.manage') ? (
-            <ChooseCurrencyForm organizationId={organizationId} />
-          ) : (
-            <Hint className="mt-6 max-w-prose">
-              Before anything can be priced, this business has to say what it charges in. Your
-              role, {organization.role}, cannot answer that — somebody who manages this
-              business&rsquo;s settings can, and then prices can go in here.
-            </Hint>
-          )
-        ) : (
-          <Disclosure summary="Add something to the price book" defaultOpen={items.length === 0} className="mt-4">
-            <CreatePriceItemForm organizationId={organizationId} currency={currency} />
-          </Disclosure>
-        )}
-      </Section>
-
-      {enabled.has('card_payments') ? (
-        <Section id="getting-paid" className="mt-10 scroll-mt-6">
-          <SectionHeading>Getting paid</SectionHeading>
-          <Hint className="mt-1">
-            Card payments go directly to this business. GildOps never holds the money, and this
-            business keeps its own account with the payment provider.
-          </Hint>
-          {provider ? (
-            <div className="mt-2 border-t border-border">
-              <PaymentAccountRow
-                organizationId={organizationId}
-                provider={provider.name}
-                accountId={paymentAccount?.account.accountId ?? null}
-                connectedAt={paymentAccount?.connectedAt ?? null}
-                mayManage={mayManagePayments}
-              />
-            </div>
-          ) : (
-            <Hint className="mt-2">
-              This deployment has no payment processor yet, so there is no account to connect.
-              Nothing is wrong with this business&rsquo;s settings and there is nothing to do
-              here until one is configured. Invoices still record cash and bank payments.
-            </Hint>
-          )}
-        </Section>
-      ) : null}
-    </SettingsPageFrame>
-  );
+  return <SettingsPageFrame>
+    <PageHeader title="Services & Pricing" crumbs={[{label:'Settings',href:settingsLandingHref(organizationId)},{label:'Organization',href:settingsScopeHref('organization',organizationId)}]} />
+    <Link href={`/organizations/${organizationId}/finance`} className="text-sm text-primary hover:underline">Back to Finance</Link>
+    <Section><Hint>Manage what your business charges. Existing quotes and issued invoices keep their original prices.</Hint>
+      <PricingManagement organizationId={organizationId} items={items} currency={organization.currency} mayManage={mayManage} />
+      {!mayManage ? <Hint className="mt-3">Your role can view the price book but cannot change prices.</Hint> : null}
+    </Section>
+    <Section id="currency"><SectionHeading>Trading currency</SectionHeading><Hint className="mt-2">{organization.currency ?? 'No currency configured. Choose a currency before adding prices.'}</Hint>
+      {mayManagePayments ? <Disclosure summary={organization.currency ? 'Change trading currency' : 'Set trading currency'} defaultOpen={!organization.currency}><ChooseCurrencyForm organizationId={organizationId} currentCurrency={organization.currency} /></Disclosure> : null}
+      {items.some(i => i.currency !== organization.currency) ? <Hint className="mt-2">Historical catalogue currencies remain unchanged. Amounts are never converted without a recorded rate.</Hint> : null}
+    </Section>
+    <Section id="getting-paid"><SectionHeading>Payment configuration</SectionHeading><Hint className="mt-2">Manual payment recording remains available to people with payment permission.</Hint>
+      {!enabled ? <Hint className="mt-2">Card payments are not enabled for this organization.</Hint> : provider ? <PaymentAccountRow organizationId={organizationId} provider={provider.name} accountId={paymentAccount?.account.accountId ?? null} connectedAt={paymentAccount?.connectedAt ?? null} mayManage={mayManagePayments} /> : <Hint className="mt-2">Processor unavailable. This deployment has no payment processor configured.</Hint>}
+      <Link href={`/organizations/${organizationId}/settings/features`} className="mt-3 inline-block text-sm text-primary hover:underline">{organization.capabilities.includes('feature.manage') ? 'Manage payment features' : 'View available payment features'}</Link>
+    </Section>
+  </SettingsPageFrame>;
 }

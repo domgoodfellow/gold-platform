@@ -1,151 +1,68 @@
+'use client';
+
+import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { Widget, WidgetGrid } from '@/components/display/widget';
-import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
-import { InvoiceStandingBadge } from '@/features/finance/collections/finance-tables';
-import type { FinanceAttention, FinanceOverview } from '@/lib/application/finance/finance-overview';
+import { useRouter } from 'next/navigation';
+import { Banknote, FileText, Settings2, TrendingUp, Search, ArrowUpRight, Clock } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@gold/ui/components/dropdown-menu';
+import { AppPage } from '@/components/layout/app-page';
+import { PageLocation } from '@/components/navigation/page-location';
+import { Button } from '@/components/controls/button';
+import { TextInput } from '@/components/controls/inputs';
+import { InvoicesTable, PaymentsTable, QuotesTable } from '@/features/finance/collections/finance-tables';
+import { FinanceWorkflow } from '../finance-workflow';
+import type { FinanceOperating } from '@/lib/application/finance/operating';
+import type { CurrencyAmount } from '@/lib/domain/billing/finance-reads';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 
-function attentionText(item: FinanceAttention): string {
-  switch (item.kind) {
-    case 'overdue_invoices': return `${item.count} ${item.count === 1 ? 'invoice is' : 'invoices are'} past ${item.count === 1 ? 'its' : 'their'} due date and unpaid.`;
-    case 'unpaid_invoices': return `${item.count} ${item.count === 1 ? 'invoice is' : 'invoices are'} unpaid.`;
-    case 'quoted_not_invoiced': return `${item.jobs} quoted ${item.jobs === 1 ? 'job has' : 'jobs have'} no invoice yet.`;
-    case 'setup': return item.message;
-  }
+export function FinancePanel({ title, count, href, children }: { title: string; count?: number; href?: string; children: ReactNode }) {
+  return <section aria-label={title} className="min-w-0 rounded-lg border border-border bg-surface"><div className="flex items-center justify-between gap-2 px-3 py-2.5"><h2 className="text-base font-semibold tracking-tight">{title}{count !== undefined ? <span className="ml-2 rounded-full bg-hover px-2 py-0.5 text-xs font-medium text-muted">{count}</span> : null}</h2>{href ? <Link href={href} className="shrink-0 text-xs font-medium text-primary hover:underline">View all <span aria-hidden>›</span></Link> : null}</div><div className="px-3 pb-3 [&_td]:py-1.5 [&_td]:text-xs [&_th]:text-xs">{children}</div></section>;
 }
-
-function attentionHref(base: string, pricing: string, item: FinanceAttention): string {
-  switch (item.kind) {
-    case 'overdue_invoices':
-    case 'unpaid_invoices': return `${base}/invoices`;
-    case 'quoted_not_invoiced': return `${base}/quotes`;
-    case 'setup': return pricing;
-  }
+function Amounts({ values, empty = 'No activity' }: { values: CurrencyAmount[] | undefined; empty?: string }) {
+  return values === undefined ? <span className="text-sm text-muted">Reporting restricted</span> : values.length ? values.map(v => <span key={v.currency} className="block tabular-nums">{formatMoney(Number(v.amount), v.currency)}</span>) : <span className="text-sm text-muted">{empty}</span>;
 }
-
-/**
- * Finance Home draws a `FinanceOverview` and decides nothing: every figure and every attention
- * item arrived computed by the application layer from the domain's own reads. Money is shown one
- * currency at a time, and an unknown cost reads as unknown, never as zero.
- */
-export function FinanceHomeBody({
-  organizationId,
-  overview,
-}: {
-  organizationId: string;
-  overview: FinanceOverview;
-}) {
-  const base = `/organizations/${organizationId}/finance`;
-  const pricing = `/organizations/${organizationId}/settings/pricing`;
-
-  return (
-    <>
-      {overview.empty && overview.attention.length === 0 ? (
-        <EmptyState
-          title="No financial activity yet"
-          description="Price a work item and it appears under Quotes. Issue an invoice from it and record a payment, and they appear here."
-        />
-      ) : (
-        <>
-          {overview.attention.length > 0 ? (
-            <Section className="mb-6">
-              <SectionHeading>Needs attention</SectionHeading>
-              <DividedList className="mt-2 text-sm">
-                {overview.attention.map((item) => (
-                  <li key={item.kind === 'setup' ? `setup-${item.module}` : item.kind} className="py-2">
-                    <Link className="underline-offset-4 hover:underline" href={attentionHref(base, pricing, item)}>{attentionText(item)}</Link>
-                  </li>
-                ))}
-              </DividedList>
-            </Section>
-          ) : null}
-
-          {overview.partial ? <p className="mb-3 text-xs text-muted">Showing the most recent records only — figures below cover those, not everything.</p> : null}
-
-          <WidgetGrid>
-            <Widget title="Outstanding" href={`${base}/invoices`}>
-              {overview.outstanding.length === 0 ? (
-                <EmptyState>Nothing is outstanding.</EmptyState>
-              ) : (
-                <DividedList as="div" className="text-sm">
-                  {overview.outstanding.map((entry) => (
-                    <div key={entry.currency} className="flex flex-wrap items-baseline justify-between gap-x-3 py-2">
-                      <span className="text-muted">{entry.invoices} {entry.invoices === 1 ? 'invoice' : 'invoices'}</span>
-                      <span className="font-medium tabular-nums">{formatMoney(entry.outstandingMinor, entry.currency)}</span>
-                    </div>
-                  ))}
-                </DividedList>
-              )}
-            </Widget>
-
-            <Widget title="Quoted, not invoiced" href={`${base}/quotes`}>
-              {overview.awaitingInvoice.length === 0 ? (
-                <EmptyState>No quoted work is waiting to be invoiced.</EmptyState>
-              ) : (
-                <DividedList as="div" className="text-sm">
-                  {overview.awaitingInvoice.map((entry) => (
-                    <div key={entry.currency} className="flex flex-wrap items-baseline justify-between gap-x-3 py-2">
-                      <span className="text-muted">{entry.jobs} {entry.jobs === 1 ? 'job' : 'jobs'}</span>
-                      <span className="font-medium tabular-nums">{formatMoney(entry.quotedMinor, entry.currency)}</span>
-                    </div>
-                  ))}
-                </DividedList>
-              )}
-            </Widget>
-
-            {overview.month ? (
-              <Widget title="This month" wide>
-                {overview.month.length === 0 ? (
-                  <EmptyState>Nothing invoiced or incurred this month.</EmptyState>
-                ) : (
-                  <div className="divide-y divide-border text-sm">
-                    {overview.month.map((total) => (
-                      <dl key={total.currency} className="grid grid-cols-3 gap-x-4 py-2">
-                        <div><dt className="text-muted">Invoiced</dt><dd className="font-medium tabular-nums">{formatMoney(total.invoicedMinor, total.currency)}</dd></div>
-                        <div><dt className="text-muted">Costs recorded</dt><dd className="font-medium tabular-nums">{total.incurredMinor === null ? 'Unknown' : formatMoney(total.incurredMinor, total.currency)}</dd></div>
-                        <div><dt className="text-muted">Margin on recorded costs</dt><dd className="font-medium tabular-nums">{total.marginMinor === null ? 'Unknown' : formatMoney(total.marginMinor, total.currency)}</dd></div>
-                      </dl>
-                    ))}
-                  </div>
-                )}
-              </Widget>
-            ) : null}
-
-            <Widget title="Recent invoices" href={`${base}/invoices`}>
-              {overview.recentInvoices.length === 0 ? (
-                <EmptyState>No invoices yet.</EmptyState>
-              ) : (
-                <DividedList as="div" className="text-sm">
-                  {overview.recentInvoices.map((invoice) => (
-                    <div key={invoice.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-2">
-                      <span className="min-w-0 truncate">#{invoice.number} · {invoice.billedTo}</span>
-                      <span className="flex items-center gap-2">
-                        <InvoiceStandingBadge row={invoice} />
-                        <span className="tabular-nums text-muted">{invoice.total ? formatMoney(invoice.total.totalMinor, invoice.total.currency) : '—'}</span>
-                      </span>
-                    </div>
-                  ))}
-                </DividedList>
-              )}
-            </Widget>
-
-            <Widget title="Recent payments" href={`${base}/payments`}>
-              {overview.recentPayments.length === 0 ? (
-                <EmptyState>No payments recorded yet.</EmptyState>
-              ) : (
-                <DividedList as="div" className="text-sm">
-                  {overview.recentPayments.map((payment) => (
-                    <div key={payment.id} className="flex flex-wrap items-baseline justify-between gap-x-3 py-2">
-                      <span className="min-w-0 truncate">#{payment.invoiceNumber} · {payment.billedTo}</span>
-                      <span className="tabular-nums text-muted">{formatMoney(payment.amountMinor, payment.currency)}</span>
-                    </div>
-                  ))}
-                </DividedList>
-              )}
-            </Widget>
-          </WidgetGrid>
-        </>
-      )}
-    </>
-  );
+const emptyStyle = 'py-6 text-center text-sm text-muted';
+export function FinanceHome({ organizationId, timezone, today, data, capabilities }: { organizationId: string; timezone: string; today: string; data: FinanceOperating; capabilities: string[] }) {
+  const router = useRouter();
+  const [attention, setAttention] = useState('overdue');
+  const [invoiceTab, setInvoiceTab] = useState('outstanding');
+  const base = `/organizations/${organizationId}`, finance = `${base}/finance`;
+  const { summary, open, overdue, quotes, payments, period, setup } = data;
+  const may = (cap: string) => capabilities.includes(cap) && (!['invoice.issue','work_item.price','payment.record'].includes(cap) || data.billingEnabled);
+  const formatDate = (value: string) => new Intl.DateTimeFormat('en-CA', { timeZone: timezone, month: 'short', day: 'numeric' }).format(new Date(value));
+  const tabs = [{ key: 'overdue', label: 'Overdue invoices', count: overdue.total }, { key: 'outstanding', label: 'Outstanding invoices', count: open.total }, { key: 'quoted', label: 'Quoted, not invoiced', count: quotes.total }, { key: 'setup', label: 'Payment setup', count: setup.length }];
+  const attentionHref = attention === 'quoted' ? `${finance}/quotes?status=not-invoiced` : attention === 'setup' ? `${base}/settings/pricing#getting-paid` : `${finance}/invoices?status=${attention}`;
+  const periodQuery = `from=${period.from}&to=${period.to}`;
+  const readiness = setup.length ? 'Setup needed' : data.cardPaymentsEnabled ? 'Account connected' : 'Manual payments';
+  const kpis = [
+    { label: 'Payments received', icon: TrendingUp, value: <Amounts values={summary?.received} empty="No payments recorded" />, context: `${period.month} · net of corrections`, href: `${finance}/payments?${periodQuery}`, color: 'bg-success/10 text-success' },
+    { label: 'Outstanding invoices', icon: FileText, value: <Amounts values={summary?.outstanding} empty="Nothing outstanding" />, context: `${open.total} invoices · ${overdue.total} overdue · current`, href: `${finance}/invoices?status=outstanding`, color: 'bg-hover text-foreground' },
+    { label: 'Quoted, not invoiced', icon: FileText, value: <Amounts values={summary?.quoted} empty="No uninvoiced quotes" />, context: `${quotes.total} priced Work items · current`, href: `${finance}/quotes?status=not-invoiced`, color: 'bg-hover text-foreground' },
+    { label: 'Payment readiness', icon: Settings2, value: <span className="text-lg">{readiness}</span>, context: setup.length ? `${setup.length} configuration items` : 'Services, currency & payment acceptance', href: `${base}/settings/pricing#getting-paid`, color: 'bg-success/10 text-success' },
+  ];
+  return <AppPage className="@container/finance space-y-3 pb-16 md:pb-0"><PageLocation current="Finance" />
+    <header className="flex flex-wrap items-center justify-between gap-3 @min-[60rem]/finance:flex-nowrap"><div className="@min-[60rem]/finance:max-w-56"><h1 className="text-2xl font-semibold tracking-tight">Finance</h1><p className="text-sm text-muted">Quotes, invoices, payments, and collections.</p></div><div className="flex flex-wrap items-center gap-2">
+      <form action={`${finance}/search`} className="relative min-w-0"><Search aria-hidden className="absolute left-2.5 top-2.5 size-4 text-muted" /><TextInput type="search" name="q" aria-label="Search Finance" placeholder="Invoices, quotes, customers…" className="h-9 w-full pl-8 sm:w-44" /></form>
+      <TextInput type="month" aria-label="Reporting month" value={period.month} onChange={e => { if (e.target.value) router.push(`${finance}?month=${e.target.value}`); }} className="h-9 w-44 sm:w-40" />
+      {may('invoice.issue') ? <FinanceWorkflow organizationId={organizationId} kind="invoice" /> : null}{may('work_item.price') ? <FinanceWorkflow organizationId={organizationId} kind="quote" mayCreateWork={may('work_item.create')} /> : null}{may('payment.record') ? <FinanceWorkflow organizationId={organizationId} kind="payment" /> : null}
+      <DropdownMenu><DropdownMenuTrigger asChild><Button tone="secondary" size="small" aria-label="Configure Finance"><Settings2 aria-hidden className="size-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">{[['Services & Pricing',''],['Trading currency','#currency'],['Payment configuration','#getting-paid']].map(([label,hash]) => <DropdownMenuItem key={label} asChild><Link href={`${base}/settings/pricing${hash}`}>{label}</Link></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
+    </div></header>
+    <nav aria-label="Finance destinations" className="flex flex-wrap gap-4 text-xs font-medium text-primary">{[['Quotes','quotes'],['Invoices','invoices'],['Payments','payments']].map(([label,path]) => <Link key={path} className="hover:underline" href={`${finance}/${path}`}>{label}</Link>)}<Link className="hover:underline" href={`${base}/settings/pricing`}>Services &amp; Pricing</Link>{may('report.read') ? <Link className="hover:underline" href={`${finance}/reports`}>Financial reports</Link> : null}</nav>
+    <div className="grid grid-cols-2 gap-3 @min-[60rem]/finance:grid-cols-4">{kpis.map(k => <Link key={k.label} href={k.href} className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-surface p-3 hover:bg-hover"><div className={`hidden size-12 shrink-0 items-center justify-center rounded-full @min-[40rem]/finance:flex ${k.color}`}><k.icon aria-hidden className="size-6" /></div><div className="min-w-0 flex-1"><p className="text-xs text-muted">{k.label}</p><div className="my-1 text-lg font-semibold tracking-tight @min-[60rem]/finance:text-xl">{k.value}</div><p className="text-xs text-muted">{k.context}</p></div><ArrowUpRight aria-hidden className="hidden size-4 shrink-0 text-muted @min-[40rem]/finance:block" /></Link>)}</div>
+    <div className="grid min-w-0 gap-3 @min-[60rem]/finance:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]"><div className="min-w-0 space-y-3">
+      <FinancePanel title="Needs attention" count={open.total + quotes.total + setup.length} href={attentionHref}>
+        <div role="tablist" aria-label="Needs attention categories" className="mb-1 flex overflow-x-auto border-b border-border">{tabs.map(t => <button key={t.key} role="tab" aria-selected={attention === t.key} tabIndex={attention === t.key ? 0 : -1} onKeyDown={event => { const index = tabs.findIndex(tab => tab.key === t.key); const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : -1; if (next >= 0) { event.preventDefault(); setAttention(tabs[next].key); (event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next])?.focus(); } }} aria-controls="finance-attention-content" id={`finance-tab-${t.key}`} onClick={() => setAttention(t.key)} className={`shrink-0 border-b-2 px-3 py-2 text-xs ${attention === t.key ? 'border-primary font-semibold text-primary' : 'border-transparent text-muted hover:bg-hover'}`}>{t.label} ({t.count})</button>)}</div>
+        <div role="tabpanel" id="finance-attention-content" aria-labelledby={`finance-tab-${attention}`}>{attention === 'setup' ? setup.length ? setup.map(s => <div key={s.module} className="flex items-center justify-between gap-4 border-b border-border py-3 text-sm"><span>{s.message}</span><Link href={`${base}/settings/pricing${s.module === 'card_payments' ? '#getting-paid' : ''}`} className="shrink-0 text-primary hover:underline">Resolve setup</Link></div>) : <p className={emptyStyle}>No configuration issues found.</p> : attention === 'quoted' ? <QuotesTable organizationId={organizationId} rows={quotes.rows} empty="No priced Work is waiting to be invoiced." /> : <InvoicesTable compact timezone={timezone} organizationId={organizationId} rows={attention === 'overdue' ? overdue.rows : open.rows.slice(0,4)} empty="No financial items need attention." />}</div>
+      </FinancePanel>
+      <FinancePanel title="Open invoices" count={open.total} href={`${finance}/invoices?status=${invoiceTab}`}><div className="mb-2 flex gap-1 border-b border-border">{['outstanding','overdue'].map(t => <button key={t} onClick={() => setInvoiceTab(t)} aria-pressed={invoiceTab === t} className={`border-b-2 px-3 py-2 text-xs capitalize ${invoiceTab === t ? 'border-primary font-semibold text-primary' : 'border-transparent text-muted'}`}>{t} ({t === 'overdue' ? overdue.total : open.total})</button>)}</div><InvoicesTable compact timezone={timezone} organizationId={organizationId} rows={invoiceTab === 'overdue' ? overdue.rows : open.rows} empty="No invoices issued yet." /></FinancePanel>
+      <div className="grid min-w-0 gap-3 @min-[60rem]/finance:grid-cols-2"><FinancePanel title="Recent payments" href={`${finance}/payments`}><PaymentsTable timezone={timezone} organizationId={organizationId} rows={payments.rows} empty="No payments recorded." compact /></FinancePanel>
+        <FinancePanel title="Collections & financial performance" href={may('report.read') ? `${finance}/reports` : undefined}>{summary ? <><p className="mb-3 text-xs text-muted">Activity: {period.month} · Receivables: current</p><div className="grid gap-3 sm:grid-cols-2"><div><h3 className="mb-2 text-xs font-semibold">Payments by received date</h3>{summary.trend.length ? <ul className="space-y-2">{summary.trend.slice(-8).map(t => <li key={`${t.day}-${t.currency}`} className="text-xs"><div className="flex justify-between gap-2"><span>{t.day}</span><span>{formatMoney(Number(t.amount),t.currency)}</span></div><div className="mt-1 h-1.5 rounded bg-primary/60" style={{ width: `${Math.max(0.02, Math.abs(Number(t.amount)) / Math.max(1,...summary.trend.filter(v=>v.currency===t.currency).map(v=>Math.abs(Number(v.amount)))))*100}%` }} /></li>)}</ul> : <p className="py-3 text-xs text-muted">No payments in this period.</p>}</div><div><h3 className="mb-2 text-xs font-semibold">Receivables aging</h3>{summary.aging.length ? summary.aging.map(a => <div key={`${a.band}-${a.currency}`} className="flex justify-between gap-2 border-b border-border py-1.5 text-xs"><span>{a.band}</span><span className="tabular-nums">{formatMoney(Number(a.amount),a.currency)}</span></div>) : <p className="py-3 text-xs text-muted">No outstanding balances.</p>}</div></div>{data.financials?.map(f => <dl key={f.currency} className="mt-3 grid grid-cols-3 gap-2 border-t border-border pt-3 text-xs"><div><dt className="text-muted">Invoiced</dt><dd className="mt-1 font-semibold">{formatMoney(f.invoicedMinor,f.currency)}</dd></div><div><dt className="text-muted">Costs recorded</dt><dd className="mt-1">{f.incurredMinor === null ? 'Unknown' : formatMoney(f.incurredMinor,f.currency)}</dd></div><div><dt className="text-muted">Margin on recorded costs</dt><dd className="mt-1">{f.marginMinor === null ? 'Unknown' : formatMoney(f.marginMinor,f.currency)}</dd></div></dl>)}</> : <p className={emptyStyle}>Your role cannot read aggregate financial reports.</p>}</FinancePanel>
+      </div>
+    </div><aside className="grid min-w-0 content-start gap-3 @min-[40rem]/finance:grid-cols-2 @min-[60rem]/finance:grid-cols-1">
+      <FinancePanel title="Today / due items" count={data.due.total} href={`${finance}/invoices?status=outstanding&due=${today}`}><p className="mb-2 text-xs text-muted">{today} · {timezone}</p>{data.due.rows.length ? data.due.rows.map(r => <Link key={r.id} href={`${base}/work/${r.workItemId}?tab=financials`} className="flex gap-3 border-b border-border py-3 text-xs hover:bg-hover"><Clock aria-hidden className="size-4 shrink-0 text-primary" /><span><span className="block font-medium">Invoice #{r.number} due today</span><span className="mt-1 block text-muted">{r.billedTo} · {formatMoney(r.outstandingMinor ?? 0,r.currency)}</span></span></Link>) : <p className={emptyStyle}>No outstanding invoices due today.</p>}</FinancePanel>
+      <FinancePanel title="Finance status"><dl className="divide-y divide-border text-xs">{[{label:'Issued invoices',value:summary?.issued ?? 'Restricted',href:`${finance}/invoices`},{label:'Overdue invoices',value:overdue.total,href:`${finance}/invoices?status=overdue`},{label:'Outstanding invoices',value:open.total,href:`${finance}/invoices?status=outstanding`},{label:'Quoted Work not invoiced',value:quotes.total,href:`${finance}/quotes?status=not-invoiced`},{label:'Payments this period',value:summary?.paymentCount ?? 'Restricted',href:`${finance}/payments?${periodQuery}`},{label:'Payment configuration',value:readiness,href:`${base}/settings/pricing#getting-paid`}].map(s => <div key={s.label}><Link href={s.href} className="flex items-center justify-between gap-3 py-2 hover:text-primary"><dt>{s.label}</dt><dd className="text-right font-medium tabular-nums">{s.value}</dd></Link></div>)}</dl></FinancePanel>
+      <FinancePanel title="Recent activity">{data.activity.length ? data.activity.map(a => { const p = a.payload as Record<string, unknown>; const label = a.action === 'invoice.issued' ? `Invoice #${p.number ?? ''} issued` : a.action === 'payment.recorded' ? 'Payment recorded' : a.action === 'work_item.line_added' ? 'Quote line added' : a.action === 'work_item.line_removed' ? 'Quote line removed' : a.action === 'price_book_item.created' ? 'Price item created' : 'Price item updated'; return <Link key={a.id} href={a.entity_type === 'work_item' ? `${base}/work/${a.entity_id}?tab=financials` : `${base}/settings/pricing`} className="flex items-start gap-2 border-b border-border py-2.5 text-xs hover:bg-hover"><span className="rounded-full bg-primary/10 p-1.5 text-primary">{a.action === 'payment.recorded' ? <Banknote aria-hidden className="size-4" /> : <FileText aria-hidden className="size-4" />}</span><span className="min-w-0"><span className="block font-medium">{label}</span><span className="mt-1 block text-muted">{typeof p.description === 'string' ? p.description : typeof p.name === 'string' ? p.name : typeof p.amount_minor === 'number' && typeof p.currency === 'string' ? formatMoney(p.amount_minor,p.currency) : 'Open financial context'}</span></span><time dateTime={a.occurred_at} className="ml-auto shrink-0 text-muted">{formatDate(a.occurred_at)}</time></Link>; }) : <p className={emptyStyle}>No financial activity recorded.</p>}</FinancePanel>
+      <FinancePanel title="Insights"><div className="grid grid-cols-2 gap-2">{[{label:'Overdue now',count:overdue.total,href:`${finance}/invoices?status=overdue`,context:'Current unpaid invoices'},{label:'Ready to invoice',count:quotes.total,href:`${finance}/quotes?status=not-invoiced`,context:'Priced Work items'}].map(i => <Link key={i.label} href={i.href} className="rounded-lg border border-border p-3"><p className="text-xs text-muted">{i.label}</p><p className="mt-2 text-xl font-semibold tabular-nums">{i.count}</p><p className="mt-1 text-xs text-muted">{i.context}</p></Link>)}</div></FinancePanel>
+    </aside></div>
+  </AppPage>;
 }

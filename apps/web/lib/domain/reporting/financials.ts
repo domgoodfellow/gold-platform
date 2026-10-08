@@ -32,28 +32,34 @@ export async function listInvoicedAndIncurred(
     filters?: Filters;
   },
 ): Promise<FinancialGroup[]> {
-  const { data, error } = await db.rpc('invoiced_and_incurred', {
-    p_organization_id: input.organizationId,
-    p_grouping: input.grouping,
-    p_from: input.period?.from ?? undefined,
-    p_to: input.period?.to ?? undefined,
-    p_customer_id: input.filters?.customerId ?? undefined,
-    p_resource_id: input.filters?.resourceId ?? undefined,
-    p_location_id: input.filters?.locationId ?? undefined,
-  });
+  const pageSize = 500;
+  const groups: FinancialGroup[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    // Read every group before computing totals; PostgREST caps a single response.
+    const { data, error } = await db.rpc('invoiced_and_incurred', {
+      p_organization_id: input.organizationId,
+      p_grouping: input.grouping,
+      p_from: input.period?.from ?? undefined,
+      p_to: input.period?.to ?? undefined,
+      p_customer_id: input.filters?.customerId ?? undefined,
+      p_resource_id: input.filters?.resourceId ?? undefined,
+      p_location_id: input.filters?.locationId ?? undefined,
+    }).order('currency').order('group_id', { nullsFirst: true }).order('group_label', { nullsFirst: true }).range(offset, offset + pageSize - 1);
 
-  if (error) {
-    throw new DomainError(error.message, 'reporting.financials_failed');
+    if (error) {
+      throw new DomainError(error.message, 'reporting.financials_failed');
+    }
+
+    groups.push(...(data ?? []).map((row) => ({
+      groupId: row.group_id,
+      label: row.group_label,
+      currency: row.currency,
+      invoicedMinor: Number(row.invoiced_minor),
+      incurredMinor: row.incurred_minor === null ? null : Number(row.incurred_minor),
+      marginMinor: row.margin_minor === null ? null : Number(row.margin_minor),
+    })));
+    if ((data?.length ?? 0) < pageSize) return groups;
   }
-
-  return (data ?? []).map((row) => ({
-    groupId: row.group_id,
-    label: row.group_label,
-    currency: row.currency,
-    invoicedMinor: Number(row.invoiced_minor),
-    incurredMinor: row.incurred_minor === null ? null : Number(row.incurred_minor),
-    marginMinor: row.margin_minor === null ? null : Number(row.margin_minor),
-  }));
 }
 
 export type PeriodTotal = {
