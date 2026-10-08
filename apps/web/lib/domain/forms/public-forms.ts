@@ -77,7 +77,7 @@ export function checkAgainst(form: FormProjection['definition'], answers: Record
  */
 export async function submitPublicFormByKey(
   db: Db,
-  input: { publicKey: string; revisionId: string; answers: Record<string, unknown>; source: PublicFormSource },
+  input: { publicKey: string; revisionId: string; answers: Record<string, unknown>; source: PublicFormSource; attribution?: { token?: string; utm: Record<string, string>; requestId: string } },
 ): Promise<SubmitFormResult> {
   const form = await publishedFormByKey(db, input.publicKey);
   if (!form) return CLOSED;
@@ -89,7 +89,15 @@ export async function submitPublicFormByKey(
   const session = await openPublicSession(db);
   if (!session.ok) return { ok: false, message: 'This form is not available right now. Please try again shortly.', fieldErrors: {}, stale: false };
   try {
-    const { error } = await db.rpc('submit_public_form_by_key', {
+    const { error } = input.attribution ? await db.rpc('submit_marketing_form', {
+      p_public_key: input.publicKey,
+      p_revision_id: input.revisionId,
+      p_answers: checked.answers,
+      p_source: input.source,
+      p_token: (input.attribution.token ?? null) as unknown as string,
+      p_utm: input.attribution.utm,
+      p_request_id: input.attribution.requestId,
+    }) : await db.rpc('submit_public_form_by_key', {
       p_public_key: input.publicKey,
       p_revision_id: input.revisionId,
       p_answers: checked.answers,

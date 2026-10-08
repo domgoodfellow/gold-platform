@@ -121,6 +121,8 @@
     ]
   },
   "files": {
+    "apps/web/e2e/marketing.spec.ts": { "category": "playwright-acceptance", "concerns": ["marketing", "forms", "crm", "responsive"] },
+    "apps/web/tests/integration/database/marketing.test.ts": { "category": "database-integration", "concerns": ["marketing", "forms", "crm", "authorization", "attribution"] },
     "apps/web/e2e/dialer-popout.spec.ts": {"category": "playwright-acceptance", "concerns": ["communications", "voice"], "note": "Real browser popup, draft, workspace navigation, mobile geometry and browser-chrome closure; never places a call."},
     "apps/web/tests/component/routing-editor.test.tsx": {"category": "component", "concerns": ["communications", "routing"]},
     "apps/web/tests/component/dialer-popout.test.tsx": {"category": "component", "concerns": ["communications", "voice"], "note": "Compact dialer window shares telephone state, preserves drafts, and restores controls without ending calls."},

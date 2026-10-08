@@ -1168,3 +1168,9 @@ It does not own:
 - incident runbooks.
 
 Those belong to the respective canonical documents.
+
+## Marketing authorization
+
+Marketing uses `marketing.read` to inspect campaigns, dynamic audiences, acquisition inquiries and aggregates; `marketing.manage` additionally permits campaign/audience edits and inquiry review. Manage includes read behavior. Founding roles receive both through the capability registry; existing organization managers receive them through a forward migration. These are actor authorities, not a separately sellable Marketing entitlement. Organization service access remains enforced by operational routes and actions.
+
+Marketing tables have tenant RLS and authenticated SELECT grants only. Capability-checked RPCs own writes and sensitive submission inspection. CRM creation additionally requires `customer.create` and calls canonical `create_customer`; Marketing management grants no message delivery or CRM stage authority. Public acquisition resolves the tenant from the canonical Form public key, validates an opaque Campaign/Form token in that same tenant, publication and campaign state, and bounds/allowlists UTM fields. Browser-supplied organization IDs are never accepted by public acquisition. Request retries and CRM handoffs are transactionally idempotent. Raw answers stay in Studio and are excluded from tables, event payloads and logs.

@@ -1,6 +1,7 @@
 'use client';
 
 import type { FormDefinition } from '@gold/schemas';
+import { useRef } from 'react';
 import { submitFormByKeyAction } from '@/app/(public)/forms/actions';
 import { PublicForm } from './public-form';
 
@@ -16,12 +17,23 @@ export function KeyedPublicForm({ definition, revisionId, publicKey, source, sho
   source: 'hosted' | 'website' | 'embed';
   showTitle?: boolean;
 }) {
+  const requestId = useRef<string | null>(null);
   return (
     <PublicForm
       definition={definition}
       revisionId={revisionId}
       showTitle={showTitle}
-      submit={(input) => submitFormByKeyAction({ publicKey, source, ...input })}
+      submit={(input) => {
+        requestId.current ??= crypto.randomUUID();
+        const query = new URLSearchParams(window.location.search);
+        const utm: Record<string, string> = {};
+        for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']) {
+          const value = query.get(key);
+          if (value) utm[key] = value;
+        }
+        const token = query.get('campaign_token') ?? undefined;
+        return submitFormByKeyAction({ publicKey, source, ...input, attribution: token || Object.keys(utm).length ? { token, utm, requestId: requestId.current } : undefined });
+      }}
     />
   );
 }

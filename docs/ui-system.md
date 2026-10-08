@@ -1837,3 +1837,7 @@ It does not own:
 - provider contracts.
 
 Those belong to their respective canonical documents.
+
+## Marketing workspace
+
+Marketing Home is a compact operational dashboard: four evidence-backed KPIs, a contained attention panel with inline categories, campaign performance and active-campaign tables, recent inquiries and acquisition/source results, plus a supporting activity/readiness/insights rail. Empty organizations retain all panel geometry. Local Home/Campaigns/Audiences/Leads/Performance navigation keeps the global workspace switcher flat. Campaign detail is deep-linkable; campaign and audience editors and inquiry review use shared PageDrawer primitives. Collection search, review/status/objective/owner/source filters, date bounds and pagination persist in the URL. Table overflow is contained within its panel at narrow widths. Activation expresses Marketing lifecycle, not delivery success; unestablished consent and unavailable promotional delivery are shown explicitly.

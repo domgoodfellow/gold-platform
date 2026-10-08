@@ -3997,6 +3997,360 @@ export type Database = {
           },
         ]
       }
+      marketing_audiences: {
+        Row: {
+          created_at: string
+          created_before: string | null
+          created_by: string
+          created_from: string | null
+          definition_version: number
+          description: string
+          id: string
+          name: string
+          organization_id: string
+          stage_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_before?: string | null
+          created_by: string
+          created_from?: string | null
+          definition_version?: number
+          description?: string
+          id?: string
+          name: string
+          organization_id: string
+          stage_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_before?: string | null
+          created_by?: string
+          created_from?: string | null
+          definition_version?: number
+          description?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          stage_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_audiences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_audiences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_audiences_organization_id_stage_id_fkey"
+            columns: ["organization_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "customer_stages"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      marketing_campaign_audiences: {
+        Row: {
+          audience_id: string
+          campaign_id: string
+          organization_id: string
+        }
+        Insert: {
+          audience_id: string
+          campaign_id: string
+          organization_id: string
+        }
+        Update: {
+          audience_id?: string
+          campaign_id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_campaign_audiences_organization_id_audience_id_fkey"
+            columns: ["organization_id", "audience_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_audiences"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "marketing_campaign_audiences_organization_id_campaign_id_fkey"
+            columns: ["organization_id", "campaign_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_campaigns"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      marketing_campaign_forms: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          form_id: string
+          organization_id: string
+          token: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          form_id: string
+          organization_id: string
+          token?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          form_id?: string
+          organization_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_campaign_forms_organization_id_campaign_id_fkey"
+            columns: ["organization_id", "campaign_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_campaigns"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "marketing_campaign_forms_organization_id_form_id_fkey"
+            columns: ["organization_id", "form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      marketing_campaigns: {
+        Row: {
+          archived_at: string | null
+          channels: string[]
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          landing_page_id: string | null
+          landing_revision_id: string | null
+          landing_site_id: string | null
+          name: string
+          objective: string
+          organization_id: string
+          owner_membership_id: string | null
+          planned_end_on: string | null
+          planned_start_on: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          channels?: string[]
+          created_at?: string
+          created_by: string
+          description?: string
+          id?: string
+          landing_page_id?: string | null
+          landing_revision_id?: string | null
+          landing_site_id?: string | null
+          name: string
+          objective: string
+          organization_id: string
+          owner_membership_id?: string | null
+          planned_end_on?: string | null
+          planned_start_on?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          channels?: string[]
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          landing_page_id?: string | null
+          landing_revision_id?: string | null
+          landing_site_id?: string | null
+          name?: string
+          objective?: string
+          organization_id?: string
+          owner_membership_id?: string | null
+          planned_end_on?: string | null
+          planned_start_on?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_campaigns_organization_id_landing_site_id_landin_fkey"
+            columns: [
+              "organization_id",
+              "landing_site_id",
+              "landing_revision_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "public_site_revisions"
+            referencedColumns: ["organization_id", "site_id", "id"]
+          },
+          {
+            foreignKeyName: "marketing_campaigns_organization_id_owner_membership_id_fkey"
+            columns: ["organization_id", "owner_membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      marketing_inquiries: {
+        Row: {
+          campaign_id: string | null
+          campaign_name_at_capture: string | null
+          created_at: string
+          customer_id: string | null
+          form_id: string
+          form_name_at_capture: string
+          handed_off_at: string | null
+          id: string
+          occurred_at: string
+          organization_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source: string
+          source_context: Json
+          status: string
+          submission_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          campaign_name_at_capture?: string | null
+          created_at?: string
+          customer_id?: string | null
+          form_id: string
+          form_name_at_capture: string
+          handed_off_at?: string | null
+          id?: string
+          occurred_at: string
+          organization_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source: string
+          source_context?: Json
+          status?: string
+          submission_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          campaign_name_at_capture?: string | null
+          created_at?: string
+          customer_id?: string | null
+          form_id?: string
+          form_name_at_capture?: string
+          handed_off_at?: string | null
+          id?: string
+          occurred_at?: string
+          organization_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source?: string
+          source_context?: Json
+          status?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_inquiries_organization_id_campaign_id_fkey"
+            columns: ["organization_id", "campaign_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_campaigns"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "marketing_inquiries_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "marketing_inquiries_organization_id_form_id_fkey"
+            columns: ["organization_id", "form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "marketing_inquiries_organization_id_form_id_submission_id_fkey"
+            columns: ["organization_id", "form_id", "submission_id"]
+            isOneToOne: false
+            referencedRelation: "form_submissions"
+            referencedColumns: ["organization_id", "form_id", "id"]
+          },
+        ]
+      }
+      marketing_submission_requests: {
+        Row: {
+          fingerprint: string
+          form_id: string
+          organization_id: string
+          request_id: string
+          submission_id: string
+        }
+        Insert: {
+          fingerprint: string
+          form_id: string
+          organization_id: string
+          request_id: string
+          submission_id: string
+        }
+        Update: {
+          fingerprint?: string
+          form_id?: string
+          organization_id?: string
+          request_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_submission_requests_organization_id_form_id_fkey"
+            columns: ["organization_id", "form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "marketing_submission_requests_organization_id_form_id_subm_fkey"
+            columns: ["organization_id", "form_id", "submission_id"]
+            isOneToOne: false
+            referencedRelation: "form_submissions"
+            referencedColumns: ["organization_id", "form_id", "id"]
+          },
+        ]
+      }
       media_assets: {
         Row: {
           alt_text: string | null
@@ -11480,6 +11834,14 @@ export type Database = {
       list_page_templates: { Args: never; Returns: Json }
       list_section_patterns: { Args: never; Returns: Json }
       list_site_templates: { Args: never; Returns: Json }
+      marketing_command: {
+        Args: { p_command: string; p_input: Json; p_organization_id: string }
+        Returns: string
+      }
+      marketing_read: {
+        Args: { p_filters?: Json; p_organization_id: string; p_view: string }
+        Returns: Json
+      }
       member_display_names: {
         Args: { p_organization_id: string }
         Returns: {
@@ -13102,6 +13464,18 @@ export type Database = {
           p_organization_id: string
           p_resource_id: string
           p_secret: string
+        }
+        Returns: string
+      }
+      submit_marketing_form: {
+        Args: {
+          p_answers: Json
+          p_public_key: string
+          p_request_id: string
+          p_revision_id: string
+          p_source: string
+          p_token: string
+          p_utm: Json
         }
         Returns: string
       }

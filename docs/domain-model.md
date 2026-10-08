@@ -1298,7 +1298,19 @@ Marketing consumes but does not own:
 - Communications delivery;
 - CRM customer state.
 
-Do not introduce durable Marketing entities until their lifecycle and source-of-truth requirements are defined.
+Marketing's operating records have these source-of-truth contracts:
+
+- `marketing_campaigns` owns name, objective, notes, planned dates, optional Membership owner and intended channels. Draft may activate or archive; Active may pause, complete or archive; Paused may activate, complete or archive; Completed may archive. Archived is terminal and retains evidence. Activation enables tracked acquisition; it does not purchase ads, schedule posts or send messages.
+- `marketing_audiences` stores version 1 dynamic CRM filters: optional relationship stage and inclusive Customer creation-date bounds. Membership is calculated from canonical Customers, never copied. Saved/matching audiences establish neither consent nor channel eligibility.
+- Campaign audience and Form associations reference their canonical organization-scoped records. Landing page associations reference a published Studio revision and its actual page; Marketing owns no page content. Form publication remains Studio's responsibility. Public acquisition tokens identify one Campaign/Form association; only an Active campaign and currently published, unarchived Form accept attributed interest.
+- `marketing_inquiries` represents one explicit tracked Form acquisition, not a Customer. New may enter review; New and In review may be explicitly handed off or disqualified after inspection. Handed off and disqualified are terminal. Linking a Customer is explicit; handoff may use an existing Customer or call canonical `create_customer` with separate `customer.create` authority. It creates no Opportunity and changes no CRM stages.
+- Studio retains the original submission, revision and answers. An inquiry references them and snapshots source names and bounded UTM evidence at capture. Renaming campaigns and Forms does not reinterpret captured source context. Untagged submissions keep their existing Studio behavior and are not automatically reclassified as Marketing inquiries.
+- Public submission and acquisition are one database transaction. A request UUID plus content fingerprint prevents duplicate responses on retries; one inquiry per tenant/submission is enforced structurally. Handoff locks the inquiry and returns its existing result on retry, so concurrent attempts cannot create duplicate Customers.
+- Canonical append-only events record campaign changes, association changes, acquisition, review, linking and handoff. Marketing introduces no competing activity or automation engine.
+
+Reporting counts acquisition by its occurred timestamp and handoffs by their handoff timestamp. The handoff rate uses the acquisition cohort in the selected period and its current handed-off state. Linked Form submission totals include untracked responses and are explicitly distinguished from campaign-attributed inquiries. Unknown source is preserved; visitor counts, ad spend, ROI, revenue and delivery claims are absent without supporting evidence.
+
+Promotional sending is unavailable. Existing Communications suppression and sender readiness do not establish purpose-specific promotional consent; no Marketing broadcast path is provided.
 
 ---
 

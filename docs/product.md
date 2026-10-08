@@ -162,7 +162,7 @@ The workspace-row body opens the workspace's canonical **Home**.
 
 Tenant workspace navigation is flat: the row opens Home, with no chevron or child rows. Contextual pages are reached from the workspace's operating surfaces.
 
-Marketing (`/marketing`), Support (`/support`) and tenant AI (`/ai`) have authenticated first-stage Homes with honest starting states and explanatory operating areas. A workspace with no records remains visible. These Homes retain organization membership and service-access enforcement and introduce no additional entitlement or capability gate; future operations must enforce their own canonical gates.
+Marketing (`/marketing`) is an operational workspace for Campaigns, dynamic Audiences, attributed acquisition inquiries, explicit CRM handoff and Performance. It requires `marketing.read` or `marketing.manage`, retains organization service-access enforcement, and introduces no independently sellable module gate. Its local destinations preserve the flat global workspace switcher. Support (`/support`) and tenant AI (`/ai`) retain authenticated first-stage Homes with honest starting states and explanatory operating areas; future operations must enforce their own canonical gates.
 
 Home is not repeated as a child.
 

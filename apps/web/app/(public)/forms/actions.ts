@@ -23,6 +23,7 @@ export async function submitFormByKeyAction(input: {
   answers: Record<string, unknown>;
   source: string;
   website?: string;
+  attribution?: { token?: string; utm: Record<string, string>; requestId: string };
 }): Promise<PublicFormActionState> {
   if (input.website) return { status: 'sent' };
   const source = SOURCES.find((candidate) => candidate === input.source) ?? 'hosted';
@@ -31,6 +32,7 @@ export async function submitFormByKeyAction(input: {
     revisionId: input.revisionId,
     answers: input.answers,
     source,
+    attribution: input.attribution,
   });
   if (result.ok) return { status: 'sent' };
   return { status: 'error', message: result.message, fieldErrors: result.fieldErrors, stale: result.stale };

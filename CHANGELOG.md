@@ -34,6 +34,13 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Marketing operating workspace — 2026-10-08
+
+- Added tenant-scoped campaigns, saved dynamic audiences, attributed acquisition inquiries and explicit canonical CRM handoff, with narrow Marketing capabilities and RLS.
+- Replaced the Marketing placeholder with operational Home, Campaigns, Campaign detail, Audiences, Leads review and Performance routes.
+- Connected tracked published Studio Form links to transactional, idempotent inquiry capture; retained revision/source history and existing untracked submissions.
+- Added database journey and negative authorization coverage. Promotional broadcast delivery remains unavailable.
+
 ### Studio and shared page drawers — 2026-10-08
 
 - Replace the sparse Studio Home with a contained website preview, factual website/form/response summaries, content and submission previews, publishing attention, creation shortcuts and public-surface configuration links. Preserve flat workspace navigation and canonical ownership.

@@ -4,6 +4,8 @@
  * which capability, and what that role is called, are tenant rows (D6).
  */
 export const CAPABILITIES = [
+  'marketing.read',
+  'marketing.manage',
   'customer.create',
   'customer.update',
   'opportunity.create',
@@ -50,6 +52,8 @@ export function isCapability(value: string): value is Capability {
 
 /** Describes what the platform does, not tenant terminology — that's a separate, later concern. */
 export const CAPABILITY_LABELS: Record<Capability, string> = {
+  'marketing.read': 'View campaigns, audiences and acquisition results',
+  'marketing.manage': 'Manage campaigns and audiences and review acquisition inquiries',
   'customer.create': 'Add customers',
   'opportunity.create': 'Add opportunities',
   'opportunity.update': 'Edit opportunities and move their stages',

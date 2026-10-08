@@ -1166,3 +1166,7 @@ It does not own:
 - roadmap status.
 
 Those belong to the respective canonical documents.
+
+## Marketing persistence
+
+Marketing persistence uses organization-bound composite foreign keys for Campaign, Audience, Form, submission, Customer and Membership references. Campaigns and inquiries preserve history and have no authenticated deletion grants. Dynamic audience definitions are typed version 1 filters, not materialized copies of CRM identities. Acquisition provenance snapshots only historical source names and bounded UTM context; submitted answers and immutable revision definitions remain Studio-owned. Tenant/submission uniqueness and a private request fingerprint ledger enforce acquisition idempotency; inquiry row locks enforce canonical CRM handoff idempotency. Landing page associations retain tenant-bound published Studio revision and page references. Reporting calendar boundaries use the organization timezone. Campaign/inquiry period, state and association indexes support exact database aggregates and bounded paginated collections. The Marketing migration follows the repository's latest migration sequence, whose existing timestamps extend beyond the workstation date.
