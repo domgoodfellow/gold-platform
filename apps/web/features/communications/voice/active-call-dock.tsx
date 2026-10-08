@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { ArrowRightLeft, Grid3x3, Mic, MicOff, Pause, Phone, PhoneOff, Play, UserPlus, UserX } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { ArrowRightLeft, ExternalLink, Grid3x3, Mic, MicOff, Pause, Phone, PhoneOff, Play, UserPlus, UserX } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
 import { ErrorText, TextInput } from '@/components/controls/inputs';
@@ -20,6 +21,7 @@ import {
 } from '@/app/organizations/[organizationId]/calls/conference-actions';
 import type { Participant } from '@/lib/domain/reception/conference';
 import { useTelephoneDevice } from './telephone-device';
+import { useDialerPopout } from './dialer-popout-context';
 
 const CALL_STATE_LABEL: Record<string, string> = { ringing: 'Ringing', in_progress: 'In call', closed: 'Ended' };
 const PARTY_LABEL: Record<Participant['party'], string> = {
@@ -62,12 +64,18 @@ type Panel = 'keypad' | 'add' | 'transfer' | null;
  */
 export function ActiveCallDock({ organizationId }: { organizationId: string }) {
   const { status, error, activeCall, incoming, hangUp, toggleMute, sendDigits } = useTelephoneDevice();
+  const popout = useDialerPopout();
   const [now, setNow] = useState(() => Date.now());
   const [roster, setRoster] = useState<Roster>({ participants: [], ownMembershipId: null });
   const [number, setNumber] = useState('');
   const [pending, setPending] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [panel, setPanel] = useState<Panel>(null);
+  const container = popout?.container;
+  const surfaceClass = container
+    ? 'order-2 m-4 rounded-lg border border-border bg-surface p-4'
+    : 'fixed inset-x-0 bottom-(--mobile-nav-height) z-50 max-h-[70dvh] overflow-y-auto border-t border-border bg-surface px-4 py-3 shadow-lg md:bottom-0 md:px-6';
+  const renderSurface = (content: ReactNode) => container ? createPortal(content, container) : content;
 
   useEffect(() => {
     if (!activeCall) return undefined;
@@ -93,10 +101,10 @@ export function ActiveCallDock({ organizationId }: { organizationId: string }) {
   }, [organizationId, activeCallId]);
 
   if (incoming) {
-    return (
+    return renderSurface(
       <div
         style={MOBILE_NAV_HEIGHT_STYLE}
-        className="fixed inset-x-0 bottom-(--mobile-nav-height) z-50 flex flex-wrap items-center justify-between gap-3 border-t border-border bg-surface px-4 py-3 shadow-lg md:bottom-0 md:px-6"
+        className={`${surfaceClass} flex flex-wrap items-center justify-between gap-3`}
       >
         <span className="font-medium">Incoming call</span>
         <div className="flex gap-2">
@@ -145,10 +153,10 @@ export function ActiveCallDock({ organizationId }: { organizationId: string }) {
 
   const connected = activeCall.status === 'in_progress';
 
-  return (
+  return renderSurface(
     <div
       style={MOBILE_NAV_HEIGHT_STYLE}
-      className="fixed inset-x-0 bottom-(--mobile-nav-height) z-50 max-h-[70dvh] overflow-y-auto border-t border-border bg-surface px-4 py-3 shadow-lg md:bottom-0 md:px-6"
+      className={surfaceClass}
     >
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
@@ -162,7 +170,7 @@ export function ActiveCallDock({ organizationId }: { organizationId: string }) {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={container ? 'grid w-full grid-cols-2 gap-2' : 'flex flex-wrap items-center gap-2'}>
           <Button tone="secondary" size="small" onClick={toggleMute} aria-pressed={activeCall.muted}>
             {activeCall.muted ? <MicOff aria-hidden /> : <Mic aria-hidden />} {activeCall.muted ? 'Unmute' : 'Mute'}
           </Button>
@@ -192,6 +200,7 @@ export function ActiveCallDock({ organizationId }: { organizationId: string }) {
           <Button tone="danger" size="small" disabled={pending === 'leave'} onClick={leaveOrEnd}>
             <PhoneOff aria-hidden /> {staying ? 'Leave call' : 'End call'}
           </Button>
+          {!container && popout ? <Button tone="secondary" size="small" data-dialer-popout-trigger onClick={() => popout.open()}><ExternalLink aria-hidden /> Pop out dialer</Button> : null}
         </div>
       </div>
 
@@ -279,6 +288,7 @@ export function ActiveCallDock({ organizationId }: { organizationId: string }) {
       ) : null}
 
       {error || actionError ? <ErrorText className="mt-2">{error ?? actionError}</ErrorText> : null}
+      {!container && popout?.error ? <ErrorText className="mt-2">{popout.error}</ErrorText> : null}
     </div>
   );
 }

@@ -34,6 +34,11 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Communications dialer pop-out — 2026-10-08
+
+- Add a compact dialer window, informed by Next-Fund's keypad and calling presentation, from New call and the active call dock. It shares the existing telephone and call actions, preserves the number draft on return, and keeps live calls under control while moving between workspaces.
+- Handle blocked pop-ups and window closure without hanging up; prevent the New call form from starting another call while one is active.
+
 ### Shared calendar foundation — 2026-10-07
 
 - CRM Follow-ups and Work Schedule now share calendar navigation, date picker, workspace frame, week/day agenda and month grid. Domain filters, records and event actions remain contextual additions.

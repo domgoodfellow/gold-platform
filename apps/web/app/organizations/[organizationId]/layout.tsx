@@ -1,5 +1,6 @@
 import { ActiveCallDock } from '@/features/communications/voice/active-call-dock';
 import { TelephoneDeviceProvider } from '@/features/communications/voice/telephone-device';
+import { DialerPopoutProvider } from '@/features/communications/voice/dialer-popout';
 import { OrganizationShell } from '@/features/shell/organization-shell';
 
 /**
@@ -19,8 +20,10 @@ export default async function OrganizationLayout({
   const { organizationId } = await params;
   return (
     <TelephoneDeviceProvider organizationId={organizationId}>
-      <OrganizationShell organizationId={organizationId}>{children}</OrganizationShell>
-      <ActiveCallDock organizationId={organizationId} />
+      <DialerPopoutProvider key={organizationId} organizationId={organizationId}>
+        <OrganizationShell organizationId={organizationId}>{children}</OrganizationShell>
+        <ActiveCallDock organizationId={organizationId} />
+      </DialerPopoutProvider>
     </TelephoneDeviceProvider>
   );
 }

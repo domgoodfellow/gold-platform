@@ -87,6 +87,8 @@ Do not use the acceptance harness against Production as a destructive test suite
 
 ## Maintenance
 
+`dialer-popout.spec.ts` covers the separate dialer window, keypad draft, persistence through workspace navigation, phone-width layout, and return when the browser window is closed. It uses the demo owner's session and never places a carrier call.
+
 When a user-visible flow changes intentionally:
 
 1. update the relevant acceptance test if the durable contract changed;
