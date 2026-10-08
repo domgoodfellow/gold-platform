@@ -405,6 +405,8 @@ Use UTC/`timestamptz` semantics for absolute time.
 
 Rendering uses the relevant Organization/user timezone.
 
+Automations operating aggregates use `automation_operating_summary`, a security-invoker function over RLS-protected canonical rules history and message deliveries. Runs, failures, local-date trends and delivery-state counts use explicit half-open period boundaries; latest execution metadata retains lifetime scope. Current rule/configuration collections are read in ordered pages, while monitoring previews and history pages remain bounded. Rule deletion and template editing do not rewrite historical run names or resolved delivery content. Authorized condition/action edits update only configuration columns atomically; tenant, rule identity, creation attribution, action position and immutable trigger columns cannot be reassigned through that grant.
+
 ---
 
 ### Organization timezone

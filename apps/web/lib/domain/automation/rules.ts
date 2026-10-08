@@ -1,3 +1,4 @@
+import { readAutomationCollection } from './monitoring';
 import { CHANNELS } from '@/lib/domain/automation/templates';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
@@ -30,8 +31,14 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 export const TRIGGER_KINDS = [
   { kind: 'event', label: 'when something happens' },
   { kind: 'schedule', label: 'a set time before a job starts' },
-  { kind: 'external_reading', label: 'when conditions at the job cross a line' },
-  { kind: 'counter_threshold', label: 'every so many hours or miles on a machine' },
+  {
+    kind: 'external_reading',
+    label: 'when conditions at the job cross a line',
+  },
+  {
+    kind: 'counter_threshold',
+    label: 'every so many hours or miles on a machine',
+  },
 ] as const;
 
 /**
@@ -64,7 +71,10 @@ export type TriggerKind = (typeof TRIGGER_KINDS)[number]['kind'];
  */
 export const TRIGGER_EVENTS = [
   { action: 'work_item.created', label: 'a job is created' },
-  { action: 'work_item.booked', label: 'somebody books through the public page' },
+  {
+    action: 'work_item.booked',
+    label: 'somebody books through the public page',
+  },
   { action: 'work_item.status_changed', label: 'a job changes status' },
   { action: 'work_item.scheduled', label: 'a job is put in the diary' },
   { action: 'work_item.unscheduled', label: 'a job is taken out of the diary' },
@@ -180,42 +190,44 @@ export async function listAutomationRules(
   db: Db,
   input: { organizationId: string },
 ): Promise<AutomationRule[]> {
-  const { data, error } = await db
-    .from('automation_rules')
-    .select(
-      'id, name, trigger_kind, trigger_event_action, trigger_offset_minutes, trigger_metric, trigger_comparison, trigger_threshold, trigger_unit, trigger_counter_step, enabled, created_at',
-    )
-    .eq('organization_id', input.organizationId)
-    .order('created_at', { ascending: true });
-
-  if (error) {
-    throw new DomainError(error.message, 'automations.list_failed');
-  }
-
-  const rules = data ?? [];
-  if (rules.length === 0) return [];
-
-  const [conditions, actions] = await Promise.all([
+  const rules = await readAutomationCollection((from, to) =>
     db
-      .from('automation_conditions')
-      .select('id, rule_id, subject_field, operator, value, position')
-      .eq('organization_id', input.organizationId)
-      .order('position', { ascending: true }),
-    db
-      .from('automation_actions')
+      .from('automation_rules')
       .select(
-        'id, rule_id, action_kind, status_id, template_id, channel, shift_minutes, work_item_type_id, position',
+        'id, name, trigger_kind, trigger_event_action, trigger_offset_minutes, trigger_metric, trigger_comparison, trigger_threshold, trigger_unit, trigger_counter_step, enabled, created_at',
       )
       .eq('organization_id', input.organizationId)
-      .order('position', { ascending: true }),
+      .order('created_at')
+      .order('id')
+      .range(from, to),
+  );
+  if (!rules.length) return [];
+  const [conditionRows, actionRows] = await Promise.all([
+    readAutomationCollection((from, to) =>
+      db
+        .from('automation_conditions')
+        .select('id, rule_id, subject_field, operator, value, position')
+        .eq('organization_id', input.organizationId)
+        .order('position')
+        .order('created_at')
+        .order('id')
+        .range(from, to),
+    ),
+    readAutomationCollection((from, to) =>
+      db
+        .from('automation_actions')
+        .select(
+          'id, rule_id, action_kind, status_id, template_id, channel, shift_minutes, work_item_type_id, position',
+        )
+        .eq('organization_id', input.organizationId)
+        .order('position')
+        .order('created_at')
+        .order('id')
+        .range(from, to),
+    ),
   ]);
-
-  if (conditions.error) {
-    throw new DomainError(conditions.error.message, 'automations.conditions_failed');
-  }
-  if (actions.error) {
-    throw new DomainError(actions.error.message, 'automations.actions_failed');
-  }
+  const conditions = { data: conditionRows };
+  const actions = { data: actionRows };
 
   return rules.map((rule) => ({
     id: rule.id,
@@ -267,6 +279,7 @@ export async function createAutomationRule(
     organizationId: string;
     name: string;
     triggerKind: string;
+    enabled?: boolean;
     /** Required when the kind is `event`. */
     triggerEventAction?: string;
     /** Required when the kind is `schedule`. Minutes before a job starts, as a positive number. */
@@ -294,7 +307,10 @@ export async function createAutomationRule(
   }
 
   if (!TRIGGER_KINDS.some((entry) => entry.kind === input.triggerKind)) {
-    throw new DomainError('This platform has no such trigger.', 'automations.trigger_unknown');
+    throw new DomainError(
+      'This platform has no such trigger.',
+      'automations.trigger_unknown',
+    );
   }
 
   const scheduled = input.triggerKind === 'schedule';
@@ -320,14 +336,22 @@ export async function createAutomationRule(
         'automations.metric_unknown',
       );
     }
-    if (!COMPARISONS.some((entry) => entry.comparison === input.triggerComparison)) {
+    if (
+      !COMPARISONS.some((entry) => entry.comparison === input.triggerComparison)
+    ) {
       throw new DomainError(
         'This platform has no such comparison.',
         'automations.comparison_unknown',
       );
     }
-    if (input.triggerThreshold === undefined || !Number.isFinite(input.triggerThreshold)) {
-      throw new DomainError('A line has to be drawn somewhere.', 'automations.threshold_required');
+    if (
+      input.triggerThreshold === undefined ||
+      !Number.isFinite(input.triggerThreshold)
+    ) {
+      throw new DomainError(
+        'A line has to be drawn somewhere.',
+        'automations.threshold_required',
+      );
     }
     // **The unit is required and is never assumed**, for the reason the reading table gives: a
     // rule written in one unit against a reading taken in another is a rule about something
@@ -345,7 +369,12 @@ export async function createAutomationRule(
   // column when something asks for it.
   if (scheduled) {
     const minutes = input.triggerMinutesBefore;
-    if (minutes === undefined || !Number.isInteger(minutes) || minutes < 0 || minutes > 20160) {
+    if (
+      minutes === undefined ||
+      !Number.isInteger(minutes) ||
+      minutes < 0 ||
+      minutes > 20160
+    ) {
       throw new DomainError(
         'A reminder runs between now and fourteen days before the job starts.',
         'automations.offset_invalid',
@@ -374,14 +403,20 @@ export async function createAutomationRule(
     .insert({
       organization_id: input.organizationId,
       name,
+      enabled: input.enabled ?? true,
       trigger_kind: input.triggerKind,
       trigger_event_action:
-        scheduled || measured || counted ? null : (input.triggerEventAction ?? null),
-      trigger_offset_minutes: scheduled ? -(input.triggerMinutesBefore ?? 0) : null,
+        scheduled || measured || counted
+          ? null
+          : (input.triggerEventAction ?? null),
+      trigger_offset_minutes: scheduled
+        ? -(input.triggerMinutesBefore ?? 0)
+        : null,
       trigger_metric: measured ? (input.triggerMetric ?? null) : null,
       trigger_comparison: measured ? (input.triggerComparison ?? null) : null,
       trigger_threshold: measured ? (input.triggerThreshold ?? null) : null,
-      trigger_unit: measured || counted ? (input.triggerUnit ?? '').trim() : null,
+      trigger_unit:
+        measured || counted ? (input.triggerUnit ?? '').trim() : null,
       trigger_counter_step: counted ? (input.triggerCounterStep ?? null) : null,
       created_by: actor.id,
     })
@@ -390,10 +425,16 @@ export async function createAutomationRule(
 
   if (error) {
     if (error.code === '23505') {
-      throw new DomainError('This business already has a rule with that name.', 'automations.name_taken');
+      throw new DomainError(
+        'This business already has a rule with that name.',
+        'automations.name_taken',
+      );
     }
     if (error.code === '42501') {
-      throw new DomainError('Your role cannot write rules here.', 'automations.forbidden');
+      throw new DomainError(
+        'Your role cannot write rules here.',
+        'automations.forbidden',
+      );
     }
     throw new DomainError(error.message, 'automations.create_failed');
   }
@@ -423,7 +464,10 @@ export async function updateAutomationRule(
   if (input.name !== undefined) {
     const name = input.name.trim();
     if (name.length === 0) {
-      throw new DomainError('A rule needs a name.', 'automations.name_required');
+      throw new DomainError(
+        'A rule needs a name.',
+        'automations.name_required',
+      );
     }
     if (name.length > NAME_MAX) {
       throw new DomainError(
@@ -450,10 +494,16 @@ export async function updateAutomationRule(
 
   if (error) {
     if (error.code === '23505') {
-      throw new DomainError('This business already has a rule with that name.', 'automations.name_taken');
+      throw new DomainError(
+        'This business already has a rule with that name.',
+        'automations.name_taken',
+      );
     }
     if (error.code === '42501') {
-      throw new DomainError('Your role cannot change rules here.', 'automations.forbidden');
+      throw new DomainError(
+        'Your role cannot change rules here.',
+        'automations.forbidden',
+      );
     }
     throw new DomainError(error.message, 'automations.update_failed');
   }
@@ -473,7 +523,10 @@ export async function updateAutomationRule(
  * key to `automation_rules`, so what a rule did survives the rule. That absence is the same one
  * `work_item_priced_lines` keeps against the price book, and for the same reason (I8).
  */
-export async function deleteAutomationRule(db: Db, input: { id: string }): Promise<void> {
+export async function deleteAutomationRule(
+  db: Db,
+  input: { id: string },
+): Promise<void> {
   await requireActor(db);
 
   const { data, error } = await db
@@ -484,7 +537,10 @@ export async function deleteAutomationRule(db: Db, input: { id: string }): Promi
 
   if (error) {
     if (error.code === '42501') {
-      throw new DomainError('Your role cannot remove rules here.', 'automations.forbidden');
+      throw new DomainError(
+        'Your role cannot remove rules here.',
+        'automations.forbidden',
+      );
     }
     throw new DomainError(error.message, 'automations.delete_failed');
   }
@@ -501,6 +557,7 @@ export async function deleteAutomationRule(db: Db, input: { id: string }): Promi
 export async function addAutomationCondition(
   db: Db,
   input: {
+    id?: string;
     organizationId: string;
     ruleId: string;
     subjectField: string;
@@ -512,7 +569,10 @@ export async function addAutomationCondition(
 
   const operator = OPERATORS.find((entry) => entry.operator === input.operator);
   if (!operator) {
-    throw new DomainError('This platform has no such comparison.', 'automations.operator_unknown');
+    throw new DomainError(
+      'This platform has no such comparison.',
+      'automations.operator_unknown',
+    );
   }
 
   // **Refused rather than ignored**, and that is the whole reason this check exists. Every
@@ -533,17 +593,40 @@ export async function addAutomationCondition(
 
   const value = operator.takesValue ? (input.value ?? '').trim() : '';
   if (operator.takesValue && value.length === 0) {
-    throw new DomainError('That comparison needs something to compare with.', 'automations.value_required');
+    throw new DomainError(
+      'That comparison needs something to compare with.',
+      'automations.value_required',
+    );
   }
 
-  const { error } = await db.from('automation_conditions').insert({
-    organization_id: input.organizationId,
-    rule_id: input.ruleId,
+  const config = {
     subject_field: input.subjectField,
     operator: operator.operator,
     value: operator.takesValue ? value : null,
-    created_by: actor.id,
-  });
+  };
+  const result = input.id
+    ? await db
+        .from('automation_conditions')
+        .update(config)
+        .eq('id', input.id)
+        .eq('rule_id', input.ruleId)
+        .eq('organization_id', input.organizationId)
+        .select('id')
+    : await db
+        .from('automation_conditions')
+        .insert({
+          ...config,
+          organization_id: input.organizationId,
+          rule_id: input.ruleId,
+          created_by: actor.id,
+        })
+        .select('id');
+  const { error } = result;
+  if (!error && !result.data?.length)
+    throw new DomainError(
+      'No such configuration here, or your role cannot change it.',
+      'automations.not_found',
+    );
 
   if (error) {
     if (error.code === '23514') {
@@ -558,13 +641,19 @@ export async function addAutomationCondition(
       throw new DomainError('No such rule here.', 'automations.not_found');
     }
     if (error.code === '42501') {
-      throw new DomainError('Your role cannot change rules here.', 'automations.forbidden');
+      throw new DomainError(
+        'Your role cannot change rules here.',
+        'automations.forbidden',
+      );
     }
     throw new DomainError(error.message, 'automations.condition_failed');
   }
 }
 
-export async function removeAutomationCondition(db: Db, input: { id: string }): Promise<void> {
+export async function removeAutomationCondition(
+  db: Db,
+  input: { id: string },
+): Promise<void> {
   await requireActor(db);
 
   const { data, error } = await db
@@ -575,7 +664,10 @@ export async function removeAutomationCondition(db: Db, input: { id: string }): 
 
   if (error) {
     if (error.code === '42501') {
-      throw new DomainError('Your role cannot change rules here.', 'automations.forbidden');
+      throw new DomainError(
+        'Your role cannot change rules here.',
+        'automations.forbidden',
+      );
     }
     throw new DomainError(error.message, 'automations.condition_failed');
   }
@@ -600,6 +692,7 @@ export async function removeAutomationCondition(db: Db, input: { id: string }): 
 export async function addAutomationAction(
   db: Db,
   input: {
+    id?: string;
     organizationId: string;
     ruleId: string;
     kind: string;
@@ -615,11 +708,17 @@ export async function addAutomationAction(
   const actor = await requireActor(db);
 
   if (!ACTION_KINDS.some((entry) => entry.kind === input.kind)) {
-    throw new DomainError('This platform has no such action.', 'automations.action_unknown');
+    throw new DomainError(
+      'This platform has no such action.',
+      'automations.action_unknown',
+    );
   }
 
   if (input.kind === 'change_status' && !input.statusId) {
-    throw new DomainError('Moving a job needs a status to move it to.', 'automations.status_required');
+    throw new DomainError(
+      'Moving a job needs a status to move it to.',
+      'automations.status_required',
+    );
   }
 
   if (input.kind === 'notify' && !input.templateId) {
@@ -629,8 +728,14 @@ export async function addAutomationAction(
     );
   }
 
-  if (input.kind === 'notify' && !CHANNELS.some((entry) => entry.channel === input.channel)) {
-    throw new DomainError('This platform has no such way of reaching somebody.', 'automations.channel_unknown');
+  if (
+    input.kind === 'notify' &&
+    !CHANNELS.some((entry) => entry.channel === input.channel)
+  ) {
+    throw new DomainError(
+      'This platform has no such way of reaching somebody.',
+      'automations.channel_unknown',
+    );
   }
 
   if (
@@ -656,17 +761,37 @@ export async function addAutomationAction(
   const shift = input.kind === 'shift_schedule';
   const raise = input.kind === 'create_work_item';
 
-  const { error } = await db.from('automation_actions').insert({
-    organization_id: input.organizationId,
-    rule_id: input.ruleId,
+  const config = {
     action_kind: input.kind,
     status_id: notify || shift ? null : (input.statusId ?? null),
     template_id: notify ? input.templateId : null,
     channel: notify ? input.channel : null,
     shift_minutes: shift ? input.shiftMinutes : null,
     work_item_type_id: raise ? input.typeId : null,
-    created_by: actor.id,
-  });
+  };
+  const result = input.id
+    ? await db
+        .from('automation_actions')
+        .update(config)
+        .eq('id', input.id)
+        .eq('rule_id', input.ruleId)
+        .eq('organization_id', input.organizationId)
+        .select('id')
+    : await db
+        .from('automation_actions')
+        .insert({
+          ...config,
+          organization_id: input.organizationId,
+          rule_id: input.ruleId,
+          created_by: actor.id,
+        })
+        .select('id');
+  const { error } = result;
+  if (!error && !result.data?.length)
+    throw new DomainError(
+      'No such configuration here, or your role cannot change it.',
+      'automations.not_found',
+    );
 
   if (error) {
     if (error.code === '23503') {
@@ -676,13 +801,19 @@ export async function addAutomationAction(
       );
     }
     if (error.code === '42501') {
-      throw new DomainError('Your role cannot change rules here.', 'automations.forbidden');
+      throw new DomainError(
+        'Your role cannot change rules here.',
+        'automations.forbidden',
+      );
     }
     throw new DomainError(error.message, 'automations.action_failed');
   }
 }
 
-export async function removeAutomationAction(db: Db, input: { id: string }): Promise<void> {
+export async function removeAutomationAction(
+  db: Db,
+  input: { id: string },
+): Promise<void> {
   await requireActor(db);
 
   const { data, error } = await db
@@ -693,7 +824,10 @@ export async function removeAutomationAction(db: Db, input: { id: string }): Pro
 
   if (error) {
     if (error.code === '42501') {
-      throw new DomainError('Your role cannot change rules here.', 'automations.forbidden');
+      throw new DomainError(
+        'Your role cannot change rules here.',
+        'automations.forbidden',
+      );
     }
     throw new DomainError(error.message, 'automations.action_failed');
   }
@@ -716,15 +850,35 @@ export async function removeAutomationAction(db: Db, input: { id: string }): Pro
  */
 export async function listAutomationRuns(
   db: Db,
-  input: { organizationId: string; ruleId?: string; failedOnly?: boolean; limit?: number },
+  input: {
+    organizationId: string;
+    ruleId?: string;
+    failedOnly?: boolean;
+    limit?: number;
+    since?: string;
+    until?: string;
+    offset?: number;
+    outcome?: string;
+    search?: string;
+    id?: string;
+  },
 ): Promise<AutomationRun[]> {
   let query = db
     .from('automation_runs')
-    .select('id, rule_id, rule_name, subject_type, subject_id, outcome, detail, occurred_at')
+    .select(
+      'id, rule_id, rule_name, subject_type, subject_id, outcome, detail, occurred_at',
+    )
     .eq('organization_id', input.organizationId)
     .order('occurred_at', { ascending: false })
-    .limit(input.limit ?? 50);
+    .order('id', { ascending: false })
+    .range(input.offset ?? 0, (input.offset ?? 0) + (input.limit ?? 50) - 1);
 
+  if (input.since) query = query.gte('occurred_at', input.since);
+  if (input.until) query = query.lt('occurred_at', input.until);
+  if (input.outcome === 'done') query = query.eq('outcome', 'done');
+  if (input.search)
+    query = query.ilike('rule_name', `%${input.search.replace(/[%_]/g, '')}%`);
+  if (input.id) query = query.eq('id', input.id);
   if (input.ruleId) query = query.eq('rule_id', input.ruleId);
   if (input.failedOnly) query = query.eq('outcome', 'failed');
 

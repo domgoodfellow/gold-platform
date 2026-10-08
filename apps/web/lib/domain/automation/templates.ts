@@ -1,3 +1,4 @@
+import { readAutomationCollection } from './monitoring';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
@@ -22,7 +23,10 @@ export const PLACEHOLDERS = [
   { token: '{{business}}', label: 'this business’s name' },
   { token: '{{customer}}', label: 'the customer’s name' },
   { token: '{{status}}', label: 'the status the job is in' },
-  { token: '{{when}}', label: 'when it is scheduled, in this business’s timezone' },
+  {
+    token: '{{when}}',
+    label: 'when it is scheduled, in this business’s timezone',
+  },
 ] as const;
 
 export const CHANNELS = [
@@ -60,25 +64,15 @@ export async function listMessageTemplates(
   db: Db,
   input: { organizationId: string },
 ): Promise<MessageTemplate[]> {
-  const { data, error } = await db
-    .from('message_templates')
-    .select('id, name, subject, body')
-    .eq('organization_id', input.organizationId)
-    .order('name', { ascending: true });
+  return readAutomationCollection((from,to) => db.from('message_templates').select('id,name,subject,body').eq('organization_id',input.organizationId).order('name').order('id').range(from,to));
 
-  if (error) {
-    throw new DomainError(error.message, 'messages.templates_failed');
-  }
-
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    name: row.name,
-    subject: row.subject,
-    body: row.body,
-  }));
 }
 
-function checkText(input: { name: string; subject: string; body: string }): void {
+function checkText(input: {
+  name: string;
+  subject: string;
+  body: string;
+}): void {
   if (input.name.trim().length === 0) {
     throw new DomainError('A template needs a name.', 'messages.name_required');
   }
@@ -95,7 +89,10 @@ function checkText(input: { name: string; subject: string; body: string }): void
     );
   }
   if (input.body.trim().length === 0) {
-    throw new DomainError('A template needs something to say.', 'messages.body_required');
+    throw new DomainError(
+      'A template needs something to say.',
+      'messages.body_required',
+    );
   }
   if (input.body.trim().length > BODY_MAX) {
     throw new DomainError(
@@ -107,7 +104,12 @@ function checkText(input: { name: string; subject: string; body: string }): void
 
 export async function createMessageTemplate(
   db: Db,
-  input: { organizationId: string; name: string; subject: string; body: string },
+  input: {
+    organizationId: string;
+    name: string;
+    subject: string;
+    body: string;
+  },
 ): Promise<string> {
   const actor = await requireActor(db);
   checkText(input);
@@ -132,7 +134,10 @@ export async function createMessageTemplate(
       );
     }
     if (error.code === '42501') {
-      throw new DomainError('Your role cannot write messages here.', 'messages.forbidden');
+      throw new DomainError(
+        'Your role cannot write messages here.',
+        'messages.forbidden',
+      );
     }
     throw new DomainError(error.message, 'messages.create_failed');
   }
@@ -173,7 +178,10 @@ export async function updateMessageTemplate(
       );
     }
     if (error.code === '42501') {
-      throw new DomainError('Your role cannot change messages here.', 'messages.forbidden');
+      throw new DomainError(
+        'Your role cannot change messages here.',
+        'messages.forbidden',
+      );
     }
     throw new DomainError(error.message, 'messages.update_failed');
   }
@@ -186,7 +194,10 @@ export async function updateMessageTemplate(
   }
 }
 
-export async function deleteMessageTemplate(db: Db, input: { id: string }): Promise<void> {
+export async function deleteMessageTemplate(
+  db: Db,
+  input: { id: string },
+): Promise<void> {
   await requireActor(db);
 
   const { data, error } = await db
@@ -205,7 +216,10 @@ export async function deleteMessageTemplate(db: Db, input: { id: string }): Prom
       );
     }
     if (error.code === '42501') {
-      throw new DomainError('Your role cannot remove messages here.', 'messages.forbidden');
+      throw new DomainError(
+        'Your role cannot remove messages here.',
+        'messages.forbidden',
+      );
     }
     throw new DomainError(error.message, 'messages.delete_failed');
   }
@@ -226,15 +240,36 @@ export async function deleteMessageTemplate(db: Db, input: { id: string }): Prom
  */
 export async function listMessageDeliveries(
   db: Db,
-  input: { organizationId: string; subjectId?: string; failedOnly?: boolean; limit?: number },
+  input: {
+    organizationId: string;
+    subjectId?: string;
+    failedOnly?: boolean;
+    limit?: number;
+    since?: string;
+    until?: string;
+    offset?: number;
+    state?: string;
+    search?: string;
+    id?: string;
+  },
 ): Promise<MessageDelivery[]> {
   let query = db
     .from('message_deliveries')
-    .select('id, rule_name, channel, recipient, subject_line, body, state, detail, queued_at, sent_at')
+    .select(
+      'id, rule_name, channel, recipient, subject_line, body, state, detail, queued_at, sent_at',
+    )
     .eq('organization_id', input.organizationId)
     .order('queued_at', { ascending: false })
-    .limit(input.limit ?? 50);
+    .order('id', { ascending: false })
+    .range(input.offset ?? 0, (input.offset ?? 0) + (input.limit ?? 50) - 1);
 
+  if (input.since) query = query.gte('queued_at', input.since);
+  if (input.until) query = query.lt('queued_at', input.until);
+  if (input.state && ['queued', 'sent', 'failed'].includes(input.state))
+    query = query.eq('state', input.state);
+  if (input.search)
+    query = query.ilike('rule_name', `%${input.search.replace(/[%_]/g, '')}%`);
+  if (input.id) query = query.eq('id', input.id);
   if (input.subjectId) query = query.eq('subject_id', input.subjectId);
   if (input.failedOnly) query = query.eq('state', 'failed');
 

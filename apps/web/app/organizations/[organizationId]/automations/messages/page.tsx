@@ -1,3 +1,4 @@
+import { listAutomationRules } from '@/lib/domain/automation/rules';
 import { PageHeader } from '@/components/headers/page-header';
 import { requireOrganization } from '@/lib/route/organization';
 import { listMessageTemplates } from '@/lib/domain/automation/templates';
@@ -12,7 +13,7 @@ export default async function AutomationMessagesPage({
 }: PageProps<'/organizations/[organizationId]/automations/messages'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
-  const templates = await listMessageTemplates(db, { organizationId });
+  const [templates, rules] = await Promise.all([listMessageTemplates(db, { organizationId }), listAutomationRules(db, { organizationId })]);
 
   return (
     <>
@@ -20,6 +21,7 @@ export default async function AutomationMessagesPage({
       <MessagesView
         organizationId={organizationId}
         templates={templates}
+        rules={rules}
         mayManage={organization.capabilities.includes('automation.manage')}
         role={organization.role}
       />

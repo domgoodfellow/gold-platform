@@ -1,3 +1,4 @@
+import { readAutomationCollection } from './monitoring';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
@@ -41,20 +42,26 @@ async function unitsInUse(
   organizationId: string,
 ): Promise<{ readings: Set<string>; counters: Set<string> }> {
   const [external, counters] = await Promise.all([
-    db.from('external_readings').select('unit').eq('organization_id', organizationId).limit(500),
-    db.from('asset_readings').select('unit').eq('organization_id', organizationId).limit(500),
+    readAutomationCollection((from, to) =>
+      db
+        .from('external_readings')
+        .select('id,unit')
+        .eq('organization_id', organizationId)
+        .order('id')
+        .range(from, to),
+    ),
+    readAutomationCollection((from, to) =>
+      db
+        .from('asset_readings')
+        .select('id,unit')
+        .eq('organization_id', organizationId)
+        .order('id')
+        .range(from, to),
+    ),
   ]);
-
-  if (external.error) {
-    throw new DomainError(external.error.message, 'automations.review_failed');
-  }
-  if (counters.error) {
-    throw new DomainError(counters.error.message, 'automations.review_failed');
-  }
-
   return {
-    readings: new Set((external.data ?? []).map((row) => row.unit)),
-    counters: new Set((counters.data ?? []).map((row) => row.unit)),
+    readings: new Set(external.map((r) => r.unit)),
+    counters: new Set(counters.map((r) => r.unit)),
   };
 }
 
@@ -69,6 +76,7 @@ export async function reviewAutomationRules(
   input: {
     organizationId: string;
     rules: AutomationRule[];
+    includeDisabled?: boolean;
     /** Every status this business has, with the kind of work it belongs to. */
     statuses: { id: string; typeId: string; name: string; typeName: string }[];
   },
@@ -80,30 +88,47 @@ export async function reviewAutomationRules(
       .from('work_item_transitions')
       .select('to_status_id')
       .eq('organization_id', input.organizationId),
-    listFieldDefinitions(db, { organizationId: input.organizationId, entityType: 'work_item' }),
+    listFieldDefinitions(db, {
+      organizationId: input.organizationId,
+      entityType: 'work_item',
+    }),
     unitsInUse(db, input.organizationId),
   ]);
 
   if (transitions.error) {
-    throw new DomainError(transitions.error.message, 'automations.review_failed');
+    throw new DomainError(
+      transitions.error.message,
+      'automations.review_failed',
+    );
   }
 
-  const reachable = new Set((transitions.data ?? []).map((row) => row.to_status_id));
+  const reachable = new Set(
+    (transitions.data ?? []).map((row) => row.to_status_id),
+  );
   const fieldKeys = new Set(definitions.map((entry) => `custom.${entry.key}`));
-  const statusById = new Map(input.statuses.map((status) => [status.id, status]));
+  const statusById = new Map(
+    input.statuses.map((status) => [status.id, status]),
+  );
 
   const warnings: RuleWarning[] = [];
-  const say = (ruleId: string, message: string) => warnings.push({ ruleId, message });
+  const say = (ruleId: string, message: string) =>
+    warnings.push({ ruleId, message });
 
   // Rules that fire on the same moment and disagree about where the job should end up. Only the
   // first one to run gets its way; the second finds the job already moved, or is refused.
-  const movesByTrigger = new Map<string, { ruleId: string; statusId: string }[]>();
+  const movesByTrigger = new Map<
+    string,
+    { ruleId: string; statusId: string }[]
+  >();
 
   for (const rule of input.rules) {
-    if (!rule.enabled) continue;
+    if (!rule.enabled && !input.includeDisabled) continue;
 
     if (rule.actions.length === 0) {
-      say(rule.id, 'This rule has nothing to do, so it runs and changes nothing.');
+      say(
+        rule.id,
+        'This rule has no actions. Configure an action before expecting a business operation.',
+      );
     }
 
     for (const action of rule.actions) {
@@ -122,7 +147,7 @@ export async function reviewAutomationRules(
           );
         }
 
-        if (rule.triggerKind === 'event') {
+        if (rule.triggerKind === 'event' && rule.enabled) {
           const key = String(rule.triggerEventAction);
           movesByTrigger.set(key, [
             ...(movesByTrigger.get(key) ?? []),
@@ -136,7 +161,9 @@ export async function reviewAutomationRules(
       // once — and on a busy day that is a page of failures a business has to read past.
       if (action.kind === 'notify') {
         const guarded = rule.conditions.some(
-          (condition) => condition.subjectField === 'customer_id' && condition.operator === 'is_set',
+          (condition) =>
+            condition.subjectField === 'customer_id' &&
+            condition.operator === 'is_set',
         );
         if (!guarded) {
           say(
@@ -147,7 +174,10 @@ export async function reviewAutomationRules(
       }
 
       if (action.kind === 'create_work_item' && !action.typeId) {
-        say(rule.id, 'This raises a job without saying what kind of work it is.');
+        say(
+          rule.id,
+          'This raises a job without saying what kind of work it is.',
+        );
       }
     }
 
@@ -155,7 +185,10 @@ export async function reviewAutomationRules(
     // which is the right behaviour and also the reason nobody would notice: the rule quietly
     // starts matching a different set of jobs.
     for (const condition of rule.conditions) {
-      if (condition.subjectField.startsWith('custom.') && !fieldKeys.has(condition.subjectField)) {
+      if (
+        condition.subjectField.startsWith('custom.') &&
+        !fieldKeys.has(condition.subjectField)
+      ) {
         say(
           rule.id,
           `This checks a field that no longer exists (${condition.subjectField.slice(7)}), so it reads as empty on every job.`,
@@ -167,6 +200,11 @@ export async function reviewAutomationRules(
     // the unit does not match. Only warned about once something has actually been recorded —
     // before that there is nothing to compare against and no reason to doubt what was typed.
     if (rule.triggerKind === 'external_reading' && rule.triggerUnit) {
+      if (!units.readings.size)
+        say(
+          rule.id,
+          'No external readings are recorded. This trigger definition does not verify a connected data source.',
+        );
       if (units.readings.size > 0 && !units.readings.has(rule.triggerUnit)) {
         say(
           rule.id,
@@ -176,6 +214,11 @@ export async function reviewAutomationRules(
     }
 
     if (rule.triggerKind === 'counter_threshold' && rule.triggerUnit) {
+      if (!units.counters.size)
+        say(
+          rule.id,
+          'No Asset counter readings are recorded. Matching readings in the configured unit are required.',
+        );
       if (units.counters.size > 0 && !units.counters.has(rule.triggerUnit)) {
         say(
           rule.id,
@@ -184,10 +227,17 @@ export async function reviewAutomationRules(
       }
     }
 
-    if (rule.triggerKind === 'external_reading' && rule.actions.some((a) => a.kind === 'notify')) {
+    if (
+      rule.triggerKind === 'external_reading' &&
+      rule.actions.some((a) => a.kind === 'notify')
+    ) {
       // Weather rules act on jobs in the diary; a rule that only tells somebody, without moving
       // anything, tells them about a job that has not changed.
-      if (!rule.actions.some((a) => a.kind === 'shift_schedule' || a.kind === 'change_status')) {
+      if (
+        !rule.actions.some(
+          (a) => a.kind === 'shift_schedule' || a.kind === 'change_status',
+        )
+      ) {
         say(
           rule.id,
           'This tells the customer about conditions but changes nothing about the job, so the message will describe a booking that has not moved.',

@@ -45,6 +45,11 @@ async function run(paths: string[], write: () => Promise<unknown>): Promise<Auto
   }
 
   for (const path of paths) revalidatePath(path);
+  for (const path of paths.filter((entry) => entry.endsWith('/automations'))) {
+    revalidatePath(`${path}/rules`);
+    revalidatePath(`${path}/messages`);
+    revalidatePath(`${path}/activity`);
+  }
   return { error: null };
 }
 
@@ -61,6 +66,7 @@ export async function createRuleAction(
     ruleId = await createAutomationRule(db, {
       organizationId,
       name: String(formData.get('name') ?? ''),
+      enabled: false,
       triggerKind: String(formData.get('triggerKind') ?? ''),
       triggerEventAction: String(formData.get('triggerEventAction') ?? ''),
       triggerMinutesBefore: Number(formData.get('triggerMinutesBefore') ?? Number.NaN),
@@ -142,6 +148,7 @@ export async function addConditionAction(
 
   return run([rootPath(organizationId), rulePath(organizationId, ruleId)], () =>
     addAutomationCondition(db, {
+      id: String(formData.get('conditionId') ?? '') || undefined,
       organizationId,
       ruleId,
       subjectField: String(formData.get('subjectField') ?? ''),
@@ -176,6 +183,7 @@ export async function addActionAction(
 
   return run([rootPath(organizationId), rulePath(organizationId, ruleId)], () =>
     addAutomationAction(db, {
+      id: String(formData.get('actionId') ?? '') || undefined,
       organizationId,
       ruleId,
       kind: String(formData.get('kind') ?? ''),

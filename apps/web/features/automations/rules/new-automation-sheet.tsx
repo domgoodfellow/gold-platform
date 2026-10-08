@@ -20,7 +20,10 @@ import {
   type TriggerKind,
 } from '@/lib/domain/automation/rules';
 import { createRuleAction } from '@/app/organizations/[organizationId]/automations/actions';
-import { ActionError, INITIAL_AUTOMATION_ACTION_STATE as INITIAL } from '../shared';
+import {
+  ActionError,
+  INITIAL_AUTOMATION_ACTION_STATE as INITIAL,
+} from '../shared';
 
 /**
  * Establishes only a name and a trigger — the domain layer creates a rule with no conditions and
@@ -29,10 +32,17 @@ import { ActionError, INITIAL_AUTOMATION_ACTION_STATE as INITIAL } from '../shar
  * one question. On success `createRuleAction` redirects straight to the new rule's own detail
  * route rather than leaving the caller back on the list.
  */
-export function NewAutomationSheet({ organizationId }: { organizationId: string }) {
+export function NewAutomationSheet({
+  organizationId,
+}: {
+  organizationId: string;
+}) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<TriggerKind | ''>('');
-  const [state, formAction, pending] = useActionState(createRuleAction, INITIAL);
+  const [state, formAction, pending] = useActionState(
+    createRuleAction,
+    INITIAL,
+  );
 
   return (
     <PageDrawer open={open} onOpenChange={setOpen}>
@@ -45,8 +55,9 @@ export function NewAutomationSheet({ organizationId }: { organizationId: string 
         <PageDrawerHeader>
           <PageDrawerTitle>New automation</PageDrawerTitle>
           <PageDrawerDescription>
-            Name it and say what sets it off. It starts with no conditions and nothing to do —
-            add those from the rule&rsquo;s own page once it exists.
+            Name it and choose its trigger. The new rule starts disabled.
+            Configure conditions and actions in the Rule Builder, review
+            diagnostics, then enable it deliberately.
           </PageDrawerDescription>
         </PageDrawerHeader>
 
@@ -155,9 +166,15 @@ export function NewAutomationSheet({ organizationId }: { organizationId: string 
             </>
           ) : null}
 
-          {kind === '' ? <Hint>Choose what sets it off to see the rest of the form.</Hint> : null}
+          {kind === '' ? (
+            <Hint>Choose what sets it off to see the rest of the form.</Hint>
+          ) : null}
 
-          <Button type="submit" disabled={pending || kind === ''} className="w-fit">
+          <Button
+            type="submit"
+            disabled={pending || kind === ''}
+            className="w-fit"
+          >
             {pending ? 'Adding…' : 'Add rule'}
           </Button>
           <ActionError state={state} />

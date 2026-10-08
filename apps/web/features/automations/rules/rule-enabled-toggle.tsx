@@ -2,15 +2,14 @@
 
 import { useActionState } from 'react';
 import { Button, type ButtonSize } from '@/components/controls/button';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import type { AutomationRule } from '@/lib/domain/automation/rules';
 import { setRuleEnabledAction } from '@/app/organizations/[organizationId]/automations/actions';
-import { ActionError, INITIAL_AUTOMATION_ACTION_STATE as INITIAL } from '../shared';
+import {
+  ActionError,
+  INITIAL_AUTOMATION_ACTION_STATE as INITIAL,
+} from '../shared';
 
-/**
- * Enabled/off, direct — no confirmation, because it is reversible and the database remains the
- * guard either way. Shared between the Rules collection row and the rule detail heading, which
- * is the one state this platform lets a caller flip without opening anything.
- */
 export function RuleEnabledToggle({
   organizationId,
   rule,
@@ -20,16 +19,31 @@ export function RuleEnabledToggle({
   rule: AutomationRule;
   size?: ButtonSize;
 }) {
-  const [state, formAction, pending] = useActionState(setRuleEnabledAction, INITIAL);
+  const [state, formAction, pending] = useActionState(
+    setRuleEnabledAction,
+    INITIAL,
+  );
 
   return (
-    <form action={formAction}>
+    <form id={`enable-rule-${rule.id}`} action={formAction}>
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="ruleId" value={rule.id} />
       <input type="hidden" name="enabled" value={rule.enabled ? '0' : '1'} />
-      <Button type="submit" disabled={pending} tone="secondary" size={size}>
-        {pending ? '…' : rule.enabled ? 'Switch off' : 'Switch on'}
-      </Button>
+      {rule.enabled ? (
+        <Button type="submit" disabled={pending} tone="secondary" size={size}>
+          {pending ? '…' : 'Disable'}
+        </Button>
+      ) : (
+        <ConfirmSubmit
+          formId={`enable-rule-${rule.id}`}
+          label="Enable"
+          confirmLabel="Enable automation"
+          description={`${rule.actions.length ? 'Matching future triggers can change Work and queue Customer messages.' : 'This rule has no actions and will perform no business operation.'} Review diagnostics and provider prerequisites before enabling.`}
+          pending={pending}
+          tone="text"
+          size={size}
+        />
+      )}
       <ActionError state={state} />
     </form>
   );

@@ -46,6 +46,7 @@ import {
   updateWorkItem,
 } from '@/lib/domain/work-items/work-items';
 import { foundBusiness } from '@/tests/support/founding';
+import { getAutomationSummary } from '@/lib/domain/automation/monitoring';
 
 /**
  * The automation runtime, and the four claims that make it worth having.
@@ -1502,5 +1503,73 @@ describe('reading the rules back', () => {
     expect(warnings.filter((w) => w.ruleId === ruleId)).toEqual([]);
 
     await deleteAutomationRule(one.db, { id: ruleId });
+  });
+});
+
+
+describe('operating reads and atomic configuration edits', () => {
+  let business: Business;
+  let ruleId: string;
+  beforeAll(async () => {
+    business = await newBusiness('operating');
+    ruleId = await createAutomationRule(business.db, { organizationId: business.organizationId, name: 'Controlled authoring', triggerKind: 'event', triggerEventAction: 'work_item.created', enabled: false });
+  });
+
+  it('creates disabled authoring rules without changing existing persisted enablement', async () => {
+    expect((await listAutomationRules(business.db, { organizationId: business.organizationId }))[0].enabled).toBe(false);
+  });
+
+  it('updates condition and action configuration atomically and retains identity and order', async () => {
+    const scope = { organizationId: business.organizationId, ruleId };
+    await addAutomationCondition(business.db, { ...scope, subjectField: 'title', operator: 'equals', value: 'before' });
+    await addAutomationAction(business.db, { ...scope, kind: 'change_status', statusId: business.confirmedId });
+    let rule = (await listAutomationRules(business.db, scope))[0];
+    const conditionId = rule.conditions[0].id;
+    const actionId = rule.actions[0].id;
+    await addAutomationCondition(business.db, { ...scope, id: conditionId, subjectField: 'title', operator: 'not_equals', value: 'after' });
+    await addAutomationAction(business.db, { ...scope, id: actionId, kind: 'shift_schedule', shiftMinutes: 60 });
+    rule = (await listAutomationRules(business.db, scope))[0];
+    expect(rule.conditions).toEqual([{ id: conditionId, subjectField: 'title', operator: 'not_equals', value: 'after' }]);
+    expect(rule.actions).toHaveLength(1);
+    expect(rule.actions[0]).toMatchObject({ id: actionId, kind: 'shift_schedule', shiftMinutes: 60, statusId: null });
+    await expect(addAutomationAction(business.db, { ...scope, id: actionId, kind: 'change_status', statusId: randomUUID() })).rejects.toMatchObject({ code: 'automations.not_found' });
+    expect((await listAutomationRules(business.db, scope))[0].actions[0]).toMatchObject({ id: actionId, kind: 'shift_schedule', shiftMinutes: 60 });
+    await expect(addAutomationAction(two.db, { ...scope, id: actionId, kind: 'shift_schedule', shiftMinutes: 90 })).rejects.toMatchObject({ code: 'automations.not_found' });
+    await expect(addAutomationCondition(two.db, { ...scope, id: conditionId, subjectField:'title',operator:'is_set' })).rejects.toMatchObject({ code:'automations.not_found' });
+  });
+
+  it('aggregates every execution beyond the preview limit and respects tenant and period scope', async () => {
+    const scope = { organizationId: business.organizationId };
+    const good = await createAutomationRule(business.db, { ...scope, name: 'Aggregate valid', triggerKind:'event',triggerEventAction:'work_item.created' });
+    const bad = await createAutomationRule(business.db, { ...scope, name: 'Aggregate invalid transition', triggerKind:'event',triggerEventAction:'work_item.created' });
+    await addAutomationAction(business.db, { ...scope, ruleId:good, kind:'change_status',statusId:business.confirmedId });
+    await addAutomationAction(business.db, { ...scope, ruleId:bad, kind:'change_status',statusId:business.unreachableId });
+    const since = new Date(Date.now()-1000).toISOString();
+    for (let i=0;i<55;i++) await createWorkItem(business.db, { ...scope,statusId:business.requestedId,title:`Aggregate ${i}` });
+    const until = new Date(Date.now()+1000).toISOString();
+    const summary = await getAutomationSummary(business.db, { ...scope,since,until });
+    expect(summary.runs).toBe(110);
+    expect(summary.failed).toBe(55);
+    expect(summary.days.reduce((n,d)=>n+d.total,0)).toBe(110);
+    expect(summary.rules.find((r)=>r.rule_id===good)).toMatchObject({total:55,failed:0,last_outcome:'done'});
+    expect((await listAutomationRuns(business.db,scope)).length).toBe(50);
+    const cross = await getAutomationSummary(two.db, { ...scope,since,until });
+    expect(cross.runs).toBe(0);
+    expect(cross.rules).toEqual([]);
+    const outside = await getAutomationSummary(business.db, { ...scope,since:'2000-01-01T00:00:00Z',until:'2000-01-02T00:00:00Z' });
+    expect(outside.runs).toBe(0);
+    await updateAutomationRule(business.db,{id:good,enabled:false});
+    await updateAutomationRule(business.db,{id:bad,enabled:false});
+  });
+
+  it('refuses atomic edits by read-only actors while allowing inspection', async () => {
+    const account = await newAccount('operating-reader');
+    const roleId = await createRole(business.db, { organizationId:business.organizationId,name:'Automation reader',capabilities:[] });
+    await addMember(business.db,{organizationId:business.organizationId,email:account.email,roleId,displayName:'Reader'});
+    const reader = await signIn(account.email,account.password);
+    const rule = (await listAutomationRules(reader,{organizationId:business.organizationId})).find((r)=>r.id===ruleId)!;
+    await expect(addAutomationAction(reader,{organizationId:business.organizationId,ruleId,id:rule.actions[0].id,kind:'shift_schedule',shiftMinutes:120})).rejects.toMatchObject({code:'automations.not_found'});
+    await expect(addAutomationCondition(reader,{organizationId:business.organizationId,ruleId,id:rule.conditions[0].id,subjectField:'title',operator:'is_set'})).rejects.toMatchObject({code:'automations.not_found'});
+    expect((await reader.from('automation_rules').update({trigger_event_action:'work_item.updated'}).eq('id',ruleId)).error).not.toBeNull();
   });
 });

@@ -6,6 +6,7 @@
    listed in `packages/ui`'s README) is never scanned and never generated. Registered explicitly
    rather than left to be found. */
 @source "../../../packages/ui/src";
+@source "../features/automations";
 
 /* The colour roles. `docs/ui-spec.md` §3 says why each one exists; this file is where the
    values live and is the only place they may. A role is named for what it is used for, never

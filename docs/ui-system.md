@@ -497,6 +497,8 @@ Only real, reachable and authorized destinations render.
 
 A tenant workspace has one flat navigation row that opens its canonical Home. No tenant workspace chevrons, dropdowns or child rows render at any breakpoint. Contextual and detail routes keep their owning workspace active through the shared projection's route aliases. Nested navigation remains available within the separate Platform context.
 
+Automations Home is an operational dashboard with a compact search/period/action toolbar, four current-rule or period-execution metrics, contained attention categories, Rules preview, recent executions, execution trends, and an activity/health/failures/insights rail. Period boundaries and displayed timestamps use the Organization timezone. Exact aggregates remain separate from bounded previews; execution completion never proves message delivery. Empty organizations retain every panel. Rules and Activity use URL-backed filters and pagination; runs and deliveries have deep-linkable contextual inspectors. The existing rule-detail route is a linear Trigger → all Conditions → ordered Actions workbench with a contextual node inspector, single-pane mobile navigation, canonical diagnostics, and read-only inspection. New rules authored through the UI start disabled; enabling explains future effects and requires deliberate confirmation. Triggers remain immutable. Condition/action edits replace the configuration in one authorized database statement. Templates use the existing message-template store and focused drawers with supported placeholder insertion and a labeled sample-only preview. No sidebar children or alternative execution engine are introduced.
+
 Never add:
 
 - “Coming soon” child pages;

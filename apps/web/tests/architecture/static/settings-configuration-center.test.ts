@@ -136,10 +136,12 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
     expect(readFileSync(`${ROUTES}/automations/activity/page.tsx`, 'utf8')).toContain('ActivityView');
 
     const detail = readFileSync(`${ROUTES}/automations/[ruleId]/page.tsx`, 'utf8');
-    expect(detail).toContain('RuleHeading');
-    expect(detail).toContain('ConditionList');
-    expect(detail).toContain('ActionList');
-    expect(detail).toContain('RuleActivity');
+    expect(detail).toContain('RuleBuilder');
+    const builder = readFileSync(`${WEB_FEATURES}/automations/rules/rule-builder.tsx`, 'utf8');
+    expect(builder).toContain('RuleHeading');
+    expect(builder).toContain('AddConditionSheet');
+    expect(builder).toContain('AddActionSheet');
+    expect(builder).toContain('/activity?when=all&rule=');
   });
 
   it('/fields is canonical and renders the shared, entity-scoped fields component', () => {

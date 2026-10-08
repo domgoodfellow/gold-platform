@@ -1024,6 +1024,8 @@ Automation actions call canonical domain operations or provider capability contr
 
 A rule does not duplicate the target domain's business rule.
 
+The web operating read model in `lib/application/automations/dashboard.ts` composes canonical rule review, exact execution aggregates and bounded history previews. The rule-detail route hosts a constrained linear builder; its inspectors call the existing authoring mutations, which now support atomic condition/action configuration updates using the same validation as creation. The UI creates disabled rules without changing the enablement of existing rules or the execution authority. Execution and delivery inspectors remain independent because the current records do not provide per-action snapshots or an exact run-to-delivery identity. Inspection is read-only, and provider readiness is never inferred from the presence of a rule definition.
+
 ---
 
 ## Events and reporting architecture

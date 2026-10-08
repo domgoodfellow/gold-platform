@@ -10858,6 +10858,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      automation_operating_summary: {
+        Args: { p_organization_id: string; p_since: string; p_until: string }
+        Returns: Json
+      }
       begin_custom_domain_connection: {
         Args: {
           p_hostname: string

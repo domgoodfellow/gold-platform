@@ -1,6 +1,9 @@
 import { DataTable } from '@/components/display/table';
 import { Hint } from '@/components/controls/inputs';
-import { PLACEHOLDERS, type MessageTemplate } from '@/lib/domain/automation/templates';
+import {
+  PLACEHOLDERS,
+  type MessageTemplate,
+} from '@/lib/domain/automation/templates';
 import { MessageSheet } from './message-sheet';
 import { DeleteMessageDialog } from './delete-message-dialog';
 
@@ -15,7 +18,9 @@ export function MessagesView({
   templates,
   mayManage,
   role,
+  rules = [],
 }: {
+  rules?: import('@/lib/domain/automation/rules').AutomationRule[];
   organizationId: string;
   templates: MessageTemplate[];
   mayManage: boolean;
@@ -24,8 +29,8 @@ export function MessagesView({
   return (
     <div className="mt-4 flex flex-col gap-4">
       <Hint className="max-w-2xl">
-        Every word a customer reads is written here. The platform adds nothing — no greeting, no
-        signature, no footer — and puts values where you write{' '}
+        Every word a customer reads is written here. The platform adds nothing —
+        no greeting, no signature, no footer — and puts values where you write{' '}
         {PLACEHOLDERS.map((entry) => entry.token).join(', ')}.
       </Hint>
 
@@ -41,7 +46,43 @@ export function MessagesView({
         rowKey={(template) => template.id}
         empty="Nothing written yet."
         columns={[
-          { key: 'name', header: 'Name', emphasis: 'primary', cell: (template) => template.name },
+          {
+            key: 'name',
+            header: 'Name',
+            emphasis: 'primary',
+            cell: (template) =>
+              mayManage ? (
+                <MessageSheet
+                  organizationId={organizationId}
+                  template={template}
+                  label={template.name}
+                />
+              ) : (
+                template.name
+              ),
+          },
+          {
+            key: 'channels',
+            header: 'Channel usage',
+            cell: (template) =>
+              [
+                ...new Set(
+                  rules.flatMap((r) =>
+                    r.actions
+                      .filter((a) => a.templateId === template.id)
+                      .map((a) => a.channel),
+                  ),
+                ),
+              ].join(', ') || 'Not referenced',
+          },
+          {
+            key: 'rules',
+            header: 'Rules using template',
+            cell: (template) =>
+              rules.filter((r) =>
+                r.actions.some((a) => a.templateId === template.id),
+              ).length,
+          },
           {
             key: 'subject',
             header: 'Subject',
@@ -57,8 +98,14 @@ export function MessagesView({
           mayManage
             ? (template) => (
                 <>
-                  <MessageSheet organizationId={organizationId} template={template} />
-                  <DeleteMessageDialog organizationId={organizationId} template={template} />
+                  <MessageSheet
+                    organizationId={organizationId}
+                    template={template}
+                  />
+                  <DeleteMessageDialog
+                    organizationId={organizationId}
+                    template={template}
+                  />
                 </>
               )
             : undefined

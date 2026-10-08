@@ -34,6 +34,12 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Automations operating workspace — 2026-10-08
+
+- Replace the minimal Home, Rules and Activity presentation with a contained operational dashboard, filtered collections, execution/delivery inspectors, and a linear visual Rule Builder. Retain legacy links, flat navigation and canonical execution authority.
+- Add atomic condition/action editing, disabled-by-default UI authoring with deliberate activation, canonical readiness warnings, and message-template placeholder insertion with a sample-only preview.
+- Add exact RLS-scoped execution aggregates and Organization-timezone trends through a forward-only migration. Preserve historical runs and snapshotted message content; per-action history and live provider verification remain outside the recorded telemetry.
+
 ### Work operating workspace ? 2026-10-08
 
 - Replace the sparse Work Home with a contained operational dashboard using exact backlog counts, canonical daily commitments and resource availability, bounded previews and linked activity. Keep honest empty panels and opening-hours setup states.
