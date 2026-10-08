@@ -47,6 +47,12 @@ Application code should not repeatedly compensate for ambiguity that the data mo
 
 ## Sources of truth
 
+### CRM Follow-up persistence and operating reads
+
+`crm_follow_ups` stores future/actionable CRM work. Organization-leading foreign keys enforce Customer and owner scope; `(organization_id, customer_id, opportunity_id)` also enforces the Opportunity's Customer. RLS requires tenant membership and `follow_up.manage` for writes. Column grants protect identity, creator and completion evidence. An invoker trigger stamps completion and records created/updated/completed/cancelled Events in the existing log atomically. Completed/cancelled records cannot be edited or deleted. Customer activity uses snapshotted Customer attribution.
+
+The security-invoker `opportunity_worklist` derives the earliest open Follow-up and future-open existence. `crm_pipeline_preview` partitions records by stage, including null/Unstaged, and returns at most ten per stage for the board; `opportunity_stage_summary` supplies exact counts and currency-safe totals. `crm_dashboard_summary` computes exact operating counts, grouped text minor-unit totals, and selected-month closure metrics under caller RLS. These are projections, not parallel persistence.
+
 ### CRM Opportunity persistence
 
 CRM Opportunities use `opportunities` and `opportunity_stages` as canonical storage. Composite Organization-leading foreign keys bind Customer, stage and owner Membership to the same tenant. Value and currency are jointly nullable; each stored value is a non-negative, JavaScript-safe integer in minor units. Aggregate sums return decimal integer text and remain separate per currency. Expected close is a calendar `date`, not a timestamp.

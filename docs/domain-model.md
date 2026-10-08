@@ -378,7 +378,13 @@ Opportunity owns its title, optional owner Membership, optional integer minor-un
 
 Stages have tenant-defined names and ordering. At most one Won and one Lost stage exist per Organization. Once a stage has been used, its classification is protected even after all Opportunities move away; names and ordering may still change. Events snapshot title, stage name/classification and commercial terms so configuration edits do not rewrite history.
 
-CRM Home, the Opportunity collection/pipeline and the Customer's Opportunities tab project the same canonical records. Opportunity does not imply a Commercial Proposal, quote, invoice, forecast, conversion or fulfillment handoff. Those links require a later explicit domain decision.
+CRM Home, the Opportunity collection/pipeline and the Customer's Opportunities tab project the same canonical records. The next action is the earliest open attached Follow-up, including overdue work; it is not a separate Opportunity text field. Opportunity does not imply a Commercial Proposal, quote, invoice or fulfillment handoff.
+
+### Follow-up
+
+A Follow-up is actionable CRM work for one Customer, optionally attached to an Opportunity for that same Customer. Its type is Call, Email, Meeting or Task. It has a due instant, optional notes and same-Organization owner Membership, and Open, Completed or Cancelled status. Completed and cancelled records remain historical; subsequent work uses a new Follow-up. Customer and Opportunity surfaces, the Follow-ups collection and calendar all project `crm_follow_ups`. Follow-ups are separate from immutable activity Events and from Work Items/resource scheduling.
+
+CRM Home forecasts currently Open Opportunity values with an expected-close date in the selected month, unweighted and grouped by currency. Win rate is Won / (Won + Lost), using the last recorded closed transition per Opportunity in the selected month, including creation in a terminal stage. Reclosures count once per Opportunity in that month. Later reopening does not erase recorded closure evidence. A period with no closures has no defined win rate.
 
 ---
 

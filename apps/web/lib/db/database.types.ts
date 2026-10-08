@@ -1871,6 +1871,100 @@ export type Database = {
           },
         ]
       }
+      crm_follow_ups: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string
+          customer_id: string
+          due_at: string
+          id: string
+          kind: string
+          notes: string | null
+          opportunity_id: string | null
+          organization_id: string
+          owner_membership_id: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by: string
+          customer_id: string
+          due_at: string
+          id?: string
+          kind: string
+          notes?: string | null
+          opportunity_id?: string | null
+          organization_id: string
+          owner_membership_id?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          due_at?: string
+          id?: string
+          kind?: string
+          notes?: string | null
+          opportunity_id?: string | null
+          organization_id?: string
+          owner_membership_id?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_follow_ups_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_follow_ups_organization_id_customer_id_opportunity_id_fkey"
+            columns: ["organization_id", "customer_id", "opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["organization_id", "customer_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_follow_ups_organization_id_customer_id_opportunity_id_fkey"
+            columns: ["organization_id", "customer_id", "opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunity_worklist"
+            referencedColumns: ["organization_id", "customer_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_follow_ups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_follow_ups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_follow_ups_organization_id_owner_membership_id_fkey"
+            columns: ["organization_id", "owner_membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       customer_commercial_proposal_addons: {
         Row: {
           addon_plan_id: string
@@ -10222,6 +10316,62 @@ export type Database = {
           },
         ]
       }
+      opportunity_worklist: {
+        Row: {
+          amount_minor: number | null
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          customer_id: string | null
+          expected_close_on: string | null
+          has_future_follow_up: boolean | null
+          id: string | null
+          next_follow_up_due_at: string | null
+          next_follow_up_id: string | null
+          next_follow_up_title: string | null
+          organization_id: string | null
+          owner_membership_id: string | null
+          stage_id: string | null
+          title: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunities_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "opportunities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_owner_same_org"
+            columns: ["organization_id", "owner_membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "opportunities_stage_same_org"
+            columns: ["organization_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "opportunity_stages"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       phone_number_readiness: {
         Row: {
           organization_id: string | null
@@ -10878,6 +11028,36 @@ export type Database = {
         Returns: string
       }
       credit_balance: { Args: { p_organization_id: string }; Returns: number }
+      crm_dashboard_summary: {
+        Args: { p_month: string; p_organization_id: string }
+        Returns: Json
+      }
+      crm_pipeline_preview: {
+        Args: { p_limit?: number; p_organization_id: string }
+        Returns: {
+          amount_minor: number | null
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          customer_id: string | null
+          expected_close_on: string | null
+          has_future_follow_up: boolean | null
+          id: string | null
+          next_follow_up_due_at: string | null
+          next_follow_up_id: string | null
+          next_follow_up_title: string | null
+          organization_id: string | null
+          owner_membership_id: string | null
+          stage_id: string | null
+          title: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "opportunity_worklist"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       custom_domain_provider_account: {
         Args: { p_domain_id: string; p_organization_id: string }
         Returns: string

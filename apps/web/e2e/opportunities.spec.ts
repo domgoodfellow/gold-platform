@@ -102,8 +102,8 @@ test.describe('Opportunity journey', () => {
     await expect(page.getByLabel('Classification', { exact: true })).toHaveValue('won');
     await expect(page.getByRole('link', { name: 'Workshop expansion revised' })).toBeVisible();
     await page.goto(`${base}/sales`);
-    await expect(page.getByRole('link', { name: /Open opportunities\s*0$/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Agreed (won)' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Open opportunities\s*0/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Agreed 1 won/i })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('opportunity-home-populated.png'), fullPage: true });
     for (const width of [768, 390]) {
       await page.setViewportSize({ width, height: 844 });

@@ -440,6 +440,8 @@ Current implementation status belongs in `docs/roadmap.md`, not here.
 
 CRM Opportunity creation requires `opportunity.create`; editing and stage movement require `opportunity.update`. Customer permissions grant neither. Stage configuration requires `field.manage`. Application actions check these capabilities, and tenant RLS plus column grants enforce them for direct authenticated database writes. Read access follows ordinary Organization Membership, with no new commercial module gate. Existing administrators with `organization.manage` receive the two Opportunity capabilities through a forward backfill; newly provisioned full roles use the canonical capability registry. No Opportunity or stage deletion grant is provided.
 
+CRM Follow-up creation, editing, completion and cancellation require `follow_up.manage`, checked in server actions and RLS. Administrators receive the authority through a forward backfill; reduced roles receive no implied authority from Customer or Opportunity permissions. Follow-up routes and actions also check resolved feature entitlement/activation. Database column grants protect tenant/Customer identity, creator and completion attribution; the invoker trigger owns completion evidence and Events. Completed/cancelled records are immutable to authenticated callers, and deletion is not granted. Composite references enforce tenant scope and the attached Opportunity's Customer independently of application checks.
+
 Organization access flows through:
 
 ```text

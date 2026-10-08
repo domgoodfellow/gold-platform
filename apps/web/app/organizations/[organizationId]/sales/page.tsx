@@ -1,84 +1,37 @@
 import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
-import { SupportRegistrar } from '@/components/panels/support-registrar';
 import { ButtonLink } from '@/components/controls/button';
 import { CreateCustomerSheetProvider } from '@/features/crm/customers/create-customer-sheet';
-import { CustomerConfiguration } from '@/features/crm/customers/customer-configuration';
 import { CrmHome } from '@/features/crm/home/crm-home';
-import { CustomersInsights } from '@/features/insights/workspace-insights';
 import { WorkspaceActivity } from '@/features/timeline/workspace-activity';
-import { activeModuleKeys, availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
+import { availableFeatureKeys,organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
-import { summarizeOpportunities } from '@/lib/domain/opportunities/opportunities';
+import { listOpportunities,listOpportunityStages,summarizeOpportunities } from '@/lib/domain/opportunities/opportunities';
+import { listFollowUps } from '@/lib/domain/follow-ups/follow-ups';
+import { listMembers } from '@/lib/domain/tenancy/members';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { todayInZone } from '@/lib/domain/scheduling/window';
-import { areaAvailable, configTarget, configTargetOffered } from '@/lib/navigation';
+import { dueFilter } from '@/lib/application/crm/follow-ups';
+import { crmDashboardSummary } from '@/lib/application/crm/dashboard';
 import { requireOrganization } from '@/lib/route/organization';
-
-export const dynamic = 'force-dynamic';
-
-export default async function SalesPage({ params }: PageProps<'/organizations/[organizationId]/sales'>) {
-  const { organizationId } = await params;
-  const { db, organization } = await requireOrganization(organizationId);
-  const [resolvedFeatures, customers, definitions, opportunitySummary] = await Promise.all([
-    organizationResolvedFeatureStates(db, { organizationId }),
-    listCustomers(db, { organizationId, limit: 5 }),
-    listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
-    summarizeOpportunities(db, { organizationId }),
-  ]);
-  const modules = activeModuleKeys(resolvedFeatures);
-  const features = availableFeatureKeys(resolvedFeatures);
-  const capabilities = new Set(organization.capabilities);
-  const availability = { enabled: modules, featureAvailability: features, capabilities };
-  const pipelineAvailable = areaAvailable('pipeline', availability);
-  const gate = { enabledModules: modules, featureAvailability: features, capabilities };
-  const fieldsTarget = configTarget('custom-fields');
-  const stagesTarget = configTarget('sales-stages');
-  const opportunityStagesTarget = configTarget('opportunity-stages');
-  const mayConfigureOpportunityStages = configTargetOffered(opportunityStagesTarget, gate);
-  const mayConfigure = configTargetOffered(fieldsTarget, gate);
-  const mayConfigureStages = configTargetOffered(stagesTarget, gate);
-  const mayCreate = capabilities.has('customer.create');
-  const mayImport = modules.has('integrations') && features.has('file_imports') && capabilities.has('integration.manage');
-  const mayInsight = areaAvailable('insights', availability) && capabilities.has('report.read');
-  const settingsHref = (path: string) => `/organizations/${organizationId}/${path}`;
-  const stages = pipelineAvailable ? await listCustomerStages(db, { organizationId }) : [];
-
-  const home = (
-    <>
-      <CrmHome
-        organizationId={organizationId}
-        timezone={organization.timezone}
-        customers={customers}
-        totalCustomers={customers.total}
-        pipeline={pipelineAvailable ? { stages } : null}
-        opportunitySummary={opportunitySummary}
-        opportunityStagesSettingsHref={mayConfigureOpportunityStages ? settingsHref(opportunityStagesTarget.path) : undefined}
-        stagesSettingsHref={mayConfigureStages ? settingsHref(stagesTarget.path) : undefined}
-        mayCreate={mayCreate}
-        mayImport={mayImport}
-        mayConfigure={mayConfigure}
-        mayInsight={mayInsight}
-        activity={<WorkspaceActivity db={db} organizationId={organizationId} timezone={organization.timezone} scope="crm" limit={5} emptyMessage="No CRM activity yet." />}
-      />
-      {mayInsight ? (
-        <SupportRegistrar mode="insights" title="Customer insights">
-          <CustomersInsights db={db} organizationId={organizationId} today={todayInZone(organization.timezone)} salesEnabled={pipelineAvailable} />
-        </SupportRegistrar>
-      ) : null}
-      {mayConfigure ? (
-        <ConfigureRegistrar title="CRM configuration" settingsHref={settingsHref(fieldsTarget.path)}>
-          <div className="mb-6 flex flex-wrap gap-2">
-            <ButtonLink tone="secondary" href={settingsHref(fieldsTarget.path)}>Custom field settings</ButtonLink>
-            {mayConfigureStages ? <ButtonLink tone="secondary" href={settingsHref(stagesTarget.path)}>Relationship-stage settings</ButtonLink> : null}
-            {mayConfigureOpportunityStages ? <ButtonLink tone="secondary" href={settingsHref(opportunityStagesTarget.path)}>Opportunity-stage settings</ButtonLink> : null}
-          </div>
-          <CustomerConfiguration organizationId={organizationId} role={organization.role} mayConfigure={mayConfigure} definitions={definitions} stages={stages} salesEnabled={pipelineAvailable} />
-        </ConfigureRegistrar>
-      ) : null}
-    </>
-  );
-  return mayCreate ? (
-    <CreateCustomerSheetProvider organizationId={organizationId} definitions={definitions}>{home}</CreateCustomerSheetProvider>
-  ) : home;
+export const dynamic='force-dynamic';
+export default async function SalesPage({params,searchParams}:{params:Promise<{organizationId:string}>;searchParams:Promise<{month?:string}>}) {
+  const {organizationId}=await params; const q=await searchParams; const {db,organization}=await requireOrganization(organizationId);
+  const month=/^\d{4}-(0[1-9]|1[0-2])$/.test(q.month??'')?`${q.month}-01`:`${todayInZone(organization.timezone).slice(0,7)}-01`;
+  const [states,customers,definitions,opportunitySummary,opportunityStages,members,stages,summary,opportunities,unassigned]=await Promise.all([
+    organizationResolvedFeatureStates(db,{organizationId}),listCustomers(db,{organizationId,limit:5}),listFieldDefinitions(db,{organizationId,entityType:'customer'}),summarizeOpportunities(db,{organizationId}),listOpportunityStages(db,{organizationId}),listMembers(db,{organizationId}),listCustomerStages(db,{organizationId}),crmDashboardSummary(db,organizationId,month),listOpportunities(db,{organizationId,kind:'open',limit:5}),listOpportunities(db,{organizationId,kind:'open',ownerMembershipId:null,limit:5})]);
+  const features=availableFeatureKeys(states); const followUpsEnabled=features.has('follow_ups'); const conversionEnabled=features.has('conversion_tracking');
+  const [today,overdue,noNext]=await Promise.all([followUpsEnabled?listFollowUps(db,{organizationId,status:'open',...dueFilter('today',organization.timezone),limit:8}):[],followUpsEnabled?listFollowUps(db,{organizationId,status:'open',...dueFilter('overdue',organization.timezone),limit:5}):[],followUpsEnabled?listOpportunities(db,{organizationId,kind:'open',noNext:true,limit:5}):[]]);
+  const contextEntries=await Promise.all(customers.map(async customer=>{
+    const [touch,next]=await Promise.all([db.from('customer_activity').select('occurred_at').eq('organization_id',organizationId).eq('customer_id',customer.id).in('entity_type',['customer','opportunity','follow_up']).order('occurred_at',{ascending:false}).limit(1),followUpsEnabled?listFollowUps(db,{organizationId,customerId:customer.id,status:'open',limit:1}):[]]);
+    if(touch.error)throw touch.error;
+    return [customer.id,{stage:stages.find(s=>s.id===customer.stageId)?.name??'Unstaged',touch:touch.data?.[0]?.occurred_at??null,next:next[0]??null}] as const;
+  }));
+  const mayCreate=organization.capabilities.includes('customer.create');const mayConfigure=organization.capabilities.includes('field.manage');
+  const home=<><CrmHome organizationId={organizationId} timezone={organization.timezone} month={month} summary={summary} customers={customers} customerContext={Object.fromEntries(contextEntries)} opportunitySummary={opportunitySummary} opportunities={opportunities} today={today} overdue={overdue} noNext={noNext} unassigned={unassigned} followUpsEnabled={followUpsEnabled} conversionEnabled={conversionEnabled}
+    followUpOptions={{organizationId,timezone:organization.timezone,members,mayManage:followUpsEnabled && organization.capabilities.includes('follow_up.manage')}} opportunityOptions={{organizationId,stages:opportunityStages,members,defaultCurrency:organization.currency??''}} mayCreate={mayCreate} mayCreateOpportunity={organization.capabilities.includes('opportunity.create')} mayConfigure={mayConfigure}
+    activity={<WorkspaceActivity db={db} organizationId={organizationId} timezone={organization.timezone} scope="crm" limit={6} emptyMessage="No CRM activity yet."/>}/>
+    {mayConfigure?<ConfigureRegistrar title="CRM configuration" settingsHref={`/organizations/${organizationId}/settings/opportunity-stages`}><div className="flex flex-col items-start gap-3"><ButtonLink href={`/organizations/${organizationId}/settings/opportunity-stages`}>Opportunity stages</ButtonLink><ButtonLink href={`/organizations/${organizationId}/settings/sales-stages`}>Relationship stages</ButtonLink><ButtonLink href={`/organizations/${organizationId}/settings/custom-fields`}>Custom fields</ButtonLink></div></ConfigureRegistrar>:null}
+  </>;
+  return mayCreate?<CreateCustomerSheetProvider organizationId={organizationId} definitions={definitions}>{home}</CreateCustomerSheetProvider>:home;
 }

@@ -67,7 +67,8 @@ const ASSET_WORK_ITEM_ACTIONS = ['work_item.created', 'work_item.updated'] as co
 
 /** Actions a customer's history is made of. Anything else is noise on this screen. */
 const OPPORTUNITY_ACTIONS = ['opportunity.created', 'opportunity.updated', 'opportunity.stage_changed'] as const;
-const CRM_ACTIONS = ['customer.created', 'customer.updated', 'customer.stage_changed', 'customer.imported', 'customer.import_matched', ...OPPORTUNITY_ACTIONS] as const;
+const FOLLOW_UP_ACTIONS = ['follow_up.created', 'follow_up.updated', 'follow_up.completed', 'follow_up.cancelled'] as const;
+const CRM_ACTIONS = ['customer.created', 'customer.updated', 'customer.stage_changed', 'customer.imported', 'customer.import_matched', ...OPPORTUNITY_ACTIONS, ...FOLLOW_UP_ACTIONS] as const;
 const CUSTOMER_ACTIONS = [
   'customer.created',
   'customer.updated',
@@ -80,6 +81,7 @@ const CUSTOMER_ACTIONS = [
   'document.created',
   ...WORK_ITEM_ACTIONS,
   ...OPPORTUNITY_ACTIONS,
+  ...FOLLOW_UP_ACTIONS,
 ] as const;
 
 /**
@@ -143,6 +145,11 @@ function describe(row: EventRow, words: Vocabulary, perspective?: 'location'): s
   const on = job ? ` on ${job}` : '';
 
   switch (row.action) {
+    case 'follow_up.created':
+    case 'follow_up.updated':
+    case 'follow_up.completed':
+    case 'follow_up.cancelled':
+      return `Follow-up ${row.action.split('.')[1]}: ${text(row.payload, 'title') ?? 'Untitled'}`;
     case 'opportunity.created':
       return `Opportunity created: ${text(row.payload, 'title') ?? 'Untitled'}`;
     case 'opportunity.updated':

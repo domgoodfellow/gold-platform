@@ -17,12 +17,14 @@ export type CatalogueSurfaceCoverage = {
 /** Every non-planned row in the canonical seed, qualified to survive repeated feature names. */
 const FEATURE_STATES = {
   'sales.customers_contacts.customer_profile': 'available',
-  'sales.customers_contacts.ownership_assignment': 'available',
+  'sales.customers_contacts.ownership_assignment': 'partial',
   'sales.customers_contacts.tags_segmentation': 'partial',
   'sales.customers_contacts.activity_timeline': 'available',
   'sales.sales.pipeline': 'available',
   'sales.sales.configurable_stages': 'available',
   'sales.sales.qualification_state': 'partial',
+  'sales.sales.follow_ups': 'available',
+  'sales.sales.conversion_tracking': 'available',
   'sales.data.custom_fields': 'available',
   'sales.data.configurable_views': 'partial',
   'sales.data.file_imports': 'available',
@@ -100,6 +102,8 @@ const FEATURE_STATES = {
 } as const;
 
 const EVIDENCE: readonly [string, readonly string[]][] = [
+  ['sales.sales.follow_ups', ['apps/web/lib/domain/follow-ups/follow-ups.ts', 'apps/web/app/organizations/[organizationId]/follow-ups/page.tsx', 'apps/web/app/organizations/[organizationId]/follow-ups/calendar/page.tsx', 'apps/web/tests/integration/database/follow-ups.test.ts']],
+  ['sales.sales.conversion_tracking', ['apps/web/lib/application/crm/dashboard.ts', 'apps/web/features/crm/home/crm-home.tsx', 'apps/web/tests/integration/database/follow-ups.test.ts']],
   ['sales.customers_contacts', ['apps/web/lib/domain/customers/customers.ts', 'apps/web/features/crm/customers/customer-detail.tsx', 'apps/web/app/organizations/[organizationId]/customers/page.tsx', 'apps/web/tests/integration/database/reception.test.ts']],
   ['sales.sales', ['apps/web/lib/domain/customers/stages.ts', 'apps/web/features/crm/sales/pipeline-board.tsx', 'apps/web/app/organizations/[organizationId]/customers/pipeline/page.tsx', 'apps/web/tests/integration/database/reception.test.ts']],
   ['sales.data', ['apps/web/lib/domain/fields/field-definitions.ts', 'apps/web/features/custom-fields/inputs.tsx', 'apps/web/app/organizations/[organizationId]/integrations/imports/page.tsx', 'apps/web/tests/integration/database/integrations.test.ts']],
@@ -125,7 +129,7 @@ const EVIDENCE: readonly [string, readonly string[]][] = [
 ];
 
 const GAPS: Record<string, Partial<Omit<CatalogueSurfaceCoverage, 'key' | 'catalogueState' | 'evidence'>>> = {
-  'sales.customers_contacts.ownership_assignment': { domain: 'none', ui: 'none', interaction: 'none', gap: 'No customer owner is stored or shown; catalogue availability overstates the tenant surface.' },
+  'sales.customers_contacts.ownership_assignment': { domain: 'none', ui: 'none', interaction: 'none', gap: 'Customer ownership remains unimplemented; Opportunity ownership is independent.' },
   'sales.customers_contacts.tags_segmentation': { domain: 'none', ui: 'none', interaction: 'none', gap: 'No tag or segment model exists.' },
   'sales.sales.qualification_state': { domain: 'none', ui: 'none', interaction: 'none', gap: 'Stages exist, but no independent qualification state exists.' },
   'sales.data.configurable_views': { domain: 'partial', ui: 'partial', interaction: 'configurable', gap: 'Customers can be filtered, but views cannot be saved.' },

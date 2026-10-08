@@ -34,6 +34,12 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Operational CRM — 2026-10-07
+
+- Recompose CRM Home around attention, today, currency-safe forecast/pipeline and event-backed Opportunity conversion. Add Customer/Opportunity search and contextual creation.
+- Add canonical CRM Follow-ups with collection, day/week/month calendar, Customer/Opportunity integration, inline completion, contextual editing and immutable activity evidence. Tenant-aware references and `follow_up.manage` enforce writes in PostgreSQL and server actions.
+- Replace global pipeline paging with independent per-stage previews and exact stage totals. Mark Follow-ups and conversion implemented; correct the unsupported Customer-ownership catalogue claim.
+
 ### Workspace Homes — 2026-10-07
 
 - Add authenticated Marketing, Support and tenant AI Homes with honest starting states and explanatory operating areas. All nine workspaces now have real Home destinations in the flat tenant sidebar, subject to existing eligibility rules.

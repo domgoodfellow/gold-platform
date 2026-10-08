@@ -12,13 +12,14 @@ export type Opportunity = {
   amountMinor: number | null; currency: string | null;
   ownerMembershipId: string | null; ownerName: string | null;
   expectedCloseOn: string | null; createdAt: string;
+  nextFollowUp?: { id: string; title: string; dueAt: string } | null;
 };
 export type OpportunityInput = {
   organizationId: string; title: string; stageId?: string | null;
   amountMinor?: number | null; currency?: string | null;
   ownerMembershipId?: string | null; expectedCloseOn?: string | null;
 };
-const SELECT = 'id, customer_id, title, stage_id, amount_minor, currency, owner_membership_id, expected_close_on, created_at, customer:customers!opportunities_customer_same_org(name), stage:opportunity_stages!opportunities_stage_same_org(id,name,kind,position), owner:memberships!opportunities_owner_same_org(display_name)';
+const SELECT = 'id, customer_id, title, stage_id, amount_minor, currency, owner_membership_id, expected_close_on, created_at, next_follow_up_id, next_follow_up_title, next_follow_up_due_at, customer:customers!opportunities_customer_same_org(name), stage:opportunity_stages!opportunities_stage_same_org(id,name,kind,position), owner:memberships!opportunities_owner_same_org(display_name)';
 
 function failure(error: { message: string }, code: string): never {
   if (error.message.includes('opportunity_stages_org_terminal')) throw new DomainError('Only one Won stage and one Lost stage may be configured.', 'opportunities.stage_terminal_taken');
@@ -30,22 +31,27 @@ type ReadRow = {
   currency: string | null; owner_membership_id: string | null; expected_close_on: string | null; created_at: string;
   customer: { name: string } | null; stage: { id: string; name: string; kind: string; position: number } | null;
   owner: { display_name: string } | null;
+  next_follow_up_id?: string | null; next_follow_up_title?: string | null; next_follow_up_due_at?: string | null;
 };
 function opportunity(row: ReadRow, ownerNames?: Map<string, string>): Opportunity {
   return { id: row.id, customerId: row.customer_id, customerName: row.customer?.name ?? 'Customer', title: row.title,
     stageId: row.stage_id, stage: row.stage ? { ...row.stage, kind: row.stage.kind as OpportunityKind } : null,
     amountMinor: row.amount_minor, currency: row.currency, ownerMembershipId: row.owner_membership_id,
     ownerName: row.owner_membership_id ? ownerNames?.get(row.owner_membership_id) ?? row.owner?.display_name ?? 'Member' : null,
-    expectedCloseOn: row.expected_close_on, createdAt: row.created_at };
+    expectedCloseOn: row.expected_close_on, createdAt: row.created_at,
+    nextFollowUp: row.next_follow_up_id && row.next_follow_up_due_at ? { id: row.next_follow_up_id, title: row.next_follow_up_title ?? 'Follow-up', dueAt: row.next_follow_up_due_at } : null };
 }
 
 /** Exact total plus a bounded page; all filters run in Postgres under organization RLS. */
 export async function listOpportunities(db: Db, input: {
   organizationId: string; customerId?: string; stageId?: string | null; ownerMembershipId?: string | null;
-  kind?: OpportunityKind; search?: string; limit?: number; offset?: number;
+  kind?: OpportunityKind; search?: string; limit?: number; offset?: number; noNext?: boolean; closeFrom?: string; closeBefore?: string;
 }): Promise<Counted<Opportunity>> {
   const select = input.kind ? SELECT.replace('opportunities_stage_same_org(', 'opportunities_stage_same_org!inner(') : SELECT;
-  let query = db.from('opportunities').select(select, { count: 'exact' }).eq('organization_id', input.organizationId);
+  let query = db.from('opportunity_worklist').select(select, { count: 'exact' }).eq('organization_id', input.organizationId);
+  if (input.noNext) query = query.eq('has_future_follow_up', false);
+  if (input.closeFrom) query = query.gte('expected_close_on', input.closeFrom);
+  if (input.closeBefore) query = query.lt('expected_close_on', input.closeBefore);
   if (input.customerId) query = query.eq('customer_id', input.customerId);
   if (input.stageId === null) query = query.is('stage_id', null);
   else if (input.stageId) query = query.eq('stage_id', input.stageId);
@@ -64,11 +70,17 @@ export async function listOpportunities(db: Db, input: {
   return counted(rows.map((row) => opportunity(row, ownerNames)), count);
 }
 export async function getOpportunity(db: Db, input: { organizationId: string; opportunityId: string }): Promise<Opportunity | null> {
-  const { data, error } = await db.from('opportunities').select(SELECT).eq('organization_id', input.organizationId).eq('id', input.opportunityId).maybeSingle();
+  const { data, error } = await db.from('opportunity_worklist').select(SELECT).eq('organization_id', input.organizationId).eq('id', input.opportunityId).maybeSingle();
   if (error) failure(error, 'get_failed');
   if (!data) return null;
   const ownerNames = data.owner_membership_id ? await memberDisplayNames(db, input.organizationId) : undefined;
-  return opportunity(data, ownerNames);
+  return opportunity(data as unknown as ReadRow, ownerNames);
+}
+export async function previewOpportunityPipeline(db: Db, organizationId: string): Promise<Opportunity[]> {
+  const { data, error } = await db.rpc('crm_pipeline_preview', { p_organization_id: organizationId, p_limit: 10 }).select(SELECT);
+  if (error) failure(error, 'pipeline_failed');
+  const names = await memberDisplayNames(db, organizationId);
+  return (data as unknown as ReadRow[] ?? []).map(row => opportunity(row, names));
 }
 function values(input: OpportunityInput) {
   const title = input.title.trim();

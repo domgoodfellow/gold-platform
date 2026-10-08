@@ -121,6 +121,14 @@
     ]
   },
   "files": {
+    "apps/web/tests/integration/database/follow-ups.test.ts": {
+      "category": "database-integration",
+      "concerns": ["crm", "tenancy", "rbac"]
+    },
+    "apps/web/tests/unit/crm-follow-up-time.test.ts": {
+      "category": "unit",
+      "concerns": ["crm", "time"]
+    },
     "apps/web/tests/unit/email-change-callback.test.ts": {
       "category": "unit",
       "concerns": ["identity", "security"]

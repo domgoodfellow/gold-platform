@@ -25,6 +25,8 @@ import { listCustomerTimeline } from '@/lib/domain/timeline/timeline';
 import { listWorkItems } from '@/lib/domain/work-items/work-items';
 import { requireOrganization } from '@/lib/route/organization';
 import { requestOrigin } from '@/lib/route/origin';
+import { followUpsAvailable, relatedFollowUps } from '@/lib/application/crm/follow-ups';
+import { RelatedFollowUps } from '@/features/crm/follow-ups/related-follow-ups';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,6 +59,8 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
     answers: discoverySnapshot?.answers ?? {},
   });
   const modules = activeModuleKeys(resolvedFeatures);
+  const followUpsEnabled = await followUpsAvailable(db, organizationId);
+  const followUps = followUpsEnabled ? await relatedFollowUps(db, organizationId, customerId) : null;
   const voice = modules.has('reception');
 
   const mayHandoff = await isPlatformStaff(db);
@@ -77,6 +81,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
       <CustomerDetail
         organizationId={organizationId}
         customer={customer}
+        followUps={followUps ? <RelatedFollowUps organizationId={organizationId} timezone={organization.timezone} members={members} mayManage={organization.capabilities.includes('follow_up.manage')} customer={customer} {...followUps}/> : undefined}
         opportunities={<CustomerOpportunities organizationId={organizationId} customer={customer} items={opportunities} total={opportunities.total} stages={opportunityStages} members={members} defaultCurrency={organization.currency ?? ''} mayCreate={organization.capabilities.includes('opportunity.create')} />}
         stage={voice ? stages.find((entry) => entry.id === customer.stageId) ?? null : null}
         stages={stages}

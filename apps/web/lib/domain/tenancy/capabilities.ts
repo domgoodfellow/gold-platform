@@ -8,6 +8,7 @@ export const CAPABILITIES = [
   'customer.update',
   'opportunity.create',
   'opportunity.update',
+  'follow_up.manage',
   'role.manage',
   'field.manage',
   'location.create',
@@ -52,6 +53,7 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'customer.create': 'Add customers',
   'opportunity.create': 'Add opportunities',
   'opportunity.update': 'Edit opportunities and move their stages',
+  'follow_up.manage': 'Create, edit, complete and cancel CRM follow-ups',
   /** Separate from creating one — correcting a record and moving a relationship along its stages are plausibly two different people. */
   'customer.update': 'Correct a customer and move them along',
   'role.manage': 'Manage roles',

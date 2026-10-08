@@ -67,9 +67,11 @@ export function CustomerDetail({
   features,
   permissions,
   opportunities,
+  followUps,
 }: {
   organizationId: string;
   opportunities?: ReactNode;
+  followUps?: ReactNode;
   customer: Customer;
   stage: CustomerStage | null;
   stages: CustomerStage[];
@@ -106,6 +108,7 @@ export function CustomerDetail({
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           {opportunities ? <TabsTrigger value="opportunities">Opportunities</TabsTrigger> : null}
+          {followUps ? <TabsTrigger value="follow-ups">Follow-ups</TabsTrigger> : null}
           <TabsTrigger value="discovery">Discovery</TabsTrigger>
           <TabsTrigger value="configuration">Proposed configuration</TabsTrigger>
           <TabsTrigger value="commercial">Commercial proposal</TabsTrigger>
@@ -130,6 +133,7 @@ export function CustomerDetail({
             {!permissions.edit ? <Hint className="mt-6">Your role, {role}, cannot change this customer.</Hint> : null}
           </Section>
         </TabsContent>
+        {followUps ? <TabsContent value="follow-ups" className="mt-6">{followUps}</TabsContent> : null}
 
         <TabsContent value="discovery" className="mt-6">
           <DiscoverySnapshotSection
