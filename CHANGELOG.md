@@ -34,6 +34,12 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Branding editor and theme foundation — 2026-10-09
+
+- Branding is now a visual identity editor (logo, one brand colour with presets, typography with samples) beside a live preview that renders the shared controls in light, dark, workspace and customer views, at desktop and phone widths. Public profile and the public booking address moved to their own Settings destinations: Public profile and Domains.
+- Shared links now use the brand's readable link colour, a chosen body font applies to inherited text, a font choice applies without an accent, and the dark-mode focus ring is visible. Brand roles never override error, warning or success colours.
+- No schema change. Workspace-local hard-coded blue remains for the workspace convergence work; separate dark-background logos and concurrent-edit detection are not yet supported.
+
 ### Global Home operational dashboard — 2026-10-09
 
 - Replace the starting Home with authorized projections across nine workspaces, exact exception counts, assigned priorities, local-day operations, period performance, activity and readiness.

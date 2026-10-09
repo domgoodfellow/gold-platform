@@ -114,6 +114,42 @@ Routes do not invent new token values for local convenience.
 
 ---
 
+### Brand and theme
+
+An Organization's visual identity is one accent colour, a heading and body typeface from a closed list, and an optional logo. Authority is `brand_settings`, read by `getBrand` and written by `setBrand`, `uploadLogo` and `removeLogo`. Nothing else stores brand state.
+
+Resolution path:
+
+```text
+brand_settings → getBrand → brandPalette → BrandStyle / brandStyleProperties → [data-brand] custom properties → shared components
+```
+
+- `brandPalette` (`lib/domain/branding/palette.ts`) is the only place a role is derived. The stored accent is never replaced; a foreground (`--on-accent`) and per-scheme link colour (`--accent-text`) are derived from it to meet 4.5:1 text contrast.
+- `BrandStyle` writes `--accent`, `--on-accent`, `--accent-text`, `--font-heading` and `--font-body` on `[data-brand]`, which the Organization shell and public pages set. An Organization that has chosen nothing writes nothing and renders the platform's neutral look. A font choice applies without an accent.
+- `[data-brand]` also sets `font-family: var(--font-body)`. Body text inherits from the `<body>` element, which sits above the brand scope, so the scope must apply the font itself.
+- The Branding preview renders the shared `Button` and `TextInput` inside its own `[data-brand]` scope whose properties come from `brandStyleProperties`, the same derivation the shell uses. `[data-appearance="light|dark"]` forces a scheme for the preview; a role that is an alias must be declared again inside that selector.
+
+Role ownership:
+
+| Role | Owner | Brand may change it |
+| --- | --- | --- |
+| Background, surface, border, text, muted, hover, selected, ring | Platform | No |
+| Primary action fill, its foreground, branded links | Organization accent | Yes |
+| Danger, warning, success | Platform and domain rules | No |
+| Heading and body typeface | Organization, from `FONT_STACKS` | Yes |
+
+Use `bg-accent text-on-accent` for a branded action and `text-accent-text` for a branded link. Use `text-foreground`, not `text-primary`, for ordinary neutral text. Never colour an operational status with the accent: a status colour carries meaning the Organization cannot override.
+
+Branding edits are a local draft over the persisted brand. An unfinished or malformed colour is rejected, blocks saving, and leaves the preview on the saved value. "Use platform default" clears the accent and resets both typefaces; it is saved like any other edit. Logos are uploaded and removed independently of colour and type.
+
+Configuration ownership: Branding owns the logo, accent and typography. Public profile (`settings/public-profile`) owns customer-facing name, tagline, description and contact details. Domains (`settings/domains`) owns the public booking address and connected domains. Studio may read the brand; it does not store a second one. A viewer's light/dark preference is personal and is never an Organization setting.
+
+Not yet supported: separate logo variants for dark backgrounds, advanced colour overrides, and optimistic-concurrency checks on simultaneous brand edits (the last save wins).
+
+Hard-coded palette colours remain in workspace-local code and are Work Order B migration targets: `text-blue-*`, `bg-blue-*` and `border-blue-*` in `components/operational/primitives.tsx`, `features/marketing`, `features/ai`, `features/support`, `features/automations` and `features/communications/inbox`.
+
+---
+
 ### Primitives
 
 Generic primitives live in `packages/ui`.
