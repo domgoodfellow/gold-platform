@@ -1,41 +1,66 @@
-import { brandPalette } from '@/lib/domain/branding/palette';
+import type { CSSProperties } from 'react';
+import { brandPalette, type BrandPalette, type FontKey } from '@/lib/domain/branding/palette';
 import type { Brand } from '@/lib/domain/branding/brand';
 
 /**
- * A business's own colour and lettering, as three overridden CSS custom properties and nothing
- * else — every control already reads a role rather than a literal (ui-spec §3), so a theme is
- * just where those values come from. Only accent/on-accent/accent-text ever change; background,
- * border, muted, subtle and danger stay the platform's, so a tenant can't make its own text or
- * its own refusals unreadable (§7). A `<style>` element rather than inline styles, because
- * `--accent-text` needs a dark-mode media query.
+ * A business's own colour and lettering, as overridden CSS custom properties and nothing else —
+ * every control already reads a role rather than a literal (ui-spec §3), so a theme is just
+ * where those values come from. Only accent/on-accent/accent-text and the two font stacks ever
+ * change; background, border, muted, subtle and the semantic roles stay the platform's, so a
+ * tenant can't make its own text or its own refusals unreadable.
+ *
+ * `brandRoles` is the one place a palette becomes custom properties. The shell's `<style>` and
+ * the Branding preview both go through it, so the preview cannot disagree with the page.
  */
+
+const HEX = /^#[0-9a-f]{6}$/;
+
+/** Everything interpolated into CSS comes from a validated palette, never from raw input. */
+function brandRoles(palette: BrandPalette): { accent: string; onAccent: string; light: string; dark: string } | null {
+  const { accent, onAccent, accentTextLight: light, accentTextDark: dark } = palette;
+  if (![accent, onAccent, light, dark].every((value) => HEX.test(value))) return null;
+  return { accent, onAccent, light, dark };
+}
+
+/** The roles as inline properties, for one named scheme — the Branding preview's scope. */
+export function brandStyleProperties(
+  input: { accent: string | null; headingFont: FontKey; bodyFont: FontKey },
+  scheme: 'light' | 'dark',
+): CSSProperties {
+  const palette = brandPalette({ ...input, accent: input.accent ?? '#000000' });
+  const roles = input.accent ? brandRoles(palette) : null;
+  const properties: Record<string, string> = {
+    '--font-heading': palette.headingFont,
+    '--font-body': palette.bodyFont,
+    '--accent': roles?.accent ?? 'var(--foreground)',
+    '--on-accent': roles?.onAccent ?? 'var(--background)',
+    '--accent-text': roles ? (scheme === 'dark' ? roles.dark : roles.light) : 'var(--foreground)',
+  };
+  return properties as CSSProperties;
+}
+
 export function BrandStyle({ brand }: { brand: Brand }) {
-  if (!brand.accent) return null;
+  const customFonts = brand.headingFont !== 'sans' || brand.bodyFont !== 'sans';
+  if (!brand.accent && !customFonts) return null;
 
   const palette = brandPalette({
-    accent: brand.accent,
+    accent: brand.accent ?? '#000000',
     headingFont: brand.headingFont,
     bodyFont: brand.bodyFont,
   });
 
-  // Never interpolate anything unvalidated into the CSS text below.
-  const safe = (value: string) => (/^#[0-9a-f]{6}$/.test(value) ? value : null);
-  const accent = safe(palette.accent);
-  const onAccent = safe(palette.onAccent);
-  const light = safe(palette.accentTextLight);
-  const dark = safe(palette.accentTextDark);
-  if (!accent || !onAccent || !light || !dark) return null;
-
-  const css = [
-    `[data-brand]{`,
-    `--accent:${accent};`,
-    `--on-accent:${onAccent};`,
-    `--accent-text:${light};`,
+  const rules = [
     `--font-heading:${palette.headingFont};`,
     `--font-body:${palette.bodyFont};`,
-    `}`,
-    `@media (prefers-color-scheme:dark){[data-brand]{--accent-text:${dark};}}`,
-  ].join('');
+  ];
+  let dark = '';
 
-  return <style>{css}</style>;
+  if (brand.accent) {
+    const roles = brandRoles(palette);
+    if (!roles) return null;
+    rules.unshift(`--accent:${roles.accent};`, `--on-accent:${roles.onAccent};`, `--accent-text:${roles.light};`);
+    dark = `@media (prefers-color-scheme:dark){[data-brand]{--accent-text:${roles.dark};}}`;
+  }
+
+  return <style>{`[data-brand]{${rules.join('')}}${dark}`}</style>;
 }

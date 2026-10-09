@@ -192,3 +192,13 @@ export function brandPalette(input: {
     bodyFont: FONT_STACKS[input.bodyFont],
   };
 }
+
+/** Starting points for a business without a hex code. Values to pick, never stored as objects — choosing one writes the same accent a typed hex would. */
+export const BRAND_PRESETS = [
+  { label: 'Blue', value: '#2563eb' },
+  { label: 'Teal', value: '#0f766e' },
+  { label: 'Violet', value: '#7c3aed' },
+  { label: 'Orange', value: '#c2410c' },
+  { label: 'Pink', value: '#be185d' },
+  { label: 'Slate', value: '#334155' },
+] as const;

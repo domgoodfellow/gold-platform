@@ -14,7 +14,7 @@ test('opens the public booking preview from Settings and finds the real public p
 }) => {
   const ctx = loadDemoContext();
 
-  await page.goto(`/organizations/${ctx.organizationId}/settings/branding#public-page`);
+  await page.goto(`/organizations/${ctx.organizationId}/settings/domains#booking-address`);
   const preview = page.getByRole('link', { name: new RegExp(`Preview.*${ctx.bookingSlug}`) });
   await expect(preview).toBeVisible();
 

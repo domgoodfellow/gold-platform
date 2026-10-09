@@ -72,8 +72,9 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     key: 'brand',
     title: 'Brand & public presence',
     entries: [
-      entry('branding', 'Branding', 'Logo, colours, public page content, and public booking address.'),
-      entry('domains', 'Domains', 'This business’s GildOps address, and any domain it owns and has connected.'),
+      entry('branding', 'Branding', 'Logo, brand colour and lettering, with a preview.'),
+      entry('public-profile', 'Public profile', 'The name, tagline, description and contact details customers see.'),
+      entry('domains', 'Domains', 'The public booking address, this business’s GildOps address, and any domain it owns and has connected.'),
       entry('website', 'Website', 'Author, review and publish this business’s public website in Studio.'),
     ],
   },

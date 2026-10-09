@@ -154,6 +154,14 @@
       "category": "unit",
       "concerns": ["identity", "security"]
     },
+    "apps/web/tests/component/brand-editor.test.tsx": {
+      "category": "component",
+      "concerns": ["settings", "branding"]
+    },
+    "apps/web/tests/unit/brand-theme.test.ts": {
+      "category": "unit",
+      "concerns": ["settings", "branding"]
+    },
     "apps/web/tests/component/account-settings.test.tsx": {
       "category": "component",
       "concerns": ["settings", "navigation", "security"]
@@ -507,6 +515,10 @@
         "payments",
         "portal"
       ]
+    },
+    "apps/web/e2e/branding.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": ["branding", "settings", "responsive", "permissions"]
     },
     "apps/web/e2e/public-presence.spec.ts": {
       "category": "playwright-acceptance",

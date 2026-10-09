@@ -17,7 +17,7 @@ const GROUPS = [
   { key: 'customers', label: 'Customers and data', description: 'Choose relationship stages, opportunity stages and the information you collect.', targets: ['sales-stages', 'opportunity-stages', 'custom-fields'] },
   { key: 'communications', label: 'Communications', description: 'Configure calling, messaging and verified email identities.', targets: ['communications', 'call-setup', 'email', 'integrations'] },
   { key: 'finance', label: 'Finance', description: 'Configure customer pricing and payment collection. Your GildOps subscription stays separate.', targets: ['pricing'] },
-  { key: 'presence', label: 'Public presence', description: 'Review branding, domain verification and your published website.', targets: ['branding', 'domains', 'website'] },
+  { key: 'presence', label: 'Public presence', description: 'Review branding, domain verification and your published website.', targets: ['branding', 'public-profile', 'domains', 'website'] },
   { key: 'ai', label: 'AI and Automations', description: 'Configure supported agents and automation rules for this business.', targets: ['ai-agents', 'automation-rules'] },
 ] as const;
 

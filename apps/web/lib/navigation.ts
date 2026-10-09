@@ -164,7 +164,7 @@ export const MODULES = [
     description:
       'A page the public can reach, where somebody with no account takes a free slot.',
     outside: 'the public page at /book/{slug}',
-    configuredAt: { segment: 'settings', path: 'branding', section: 'public-page' },
+    configuredAt: { segment: 'settings', path: 'domains', section: 'booking-address' },
   },
   {
     key: 'portal',
@@ -488,6 +488,7 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'call-setup', scope: 'organization', workspace: 'communications', path: 'settings/calls', entitledBy: 'calls', permission: ['field.manage'] },
   { key: 'team', scope: 'access', path: 'settings/access', permission: ['role.manage'] },
   { key: 'branding', scope: 'organization', workspace: 'studio', path: 'settings/branding', permission: ['organization.manage'] },
+  { key: 'public-profile', scope: 'organization', workspace: 'studio', path: 'settings/public-profile', permission: ['organization.manage'] },
   { key: 'domains', scope: 'organization', workspace: 'studio', path: 'settings/domains', permission: ['organization.manage'] },
   { key: 'communications', scope: 'organization', workspace: 'communications', path: 'settings/communications', permission: ['organization.manage'] },
   // Proving a sending domain is infrastructure readiness, not a Communications operating act, so

@@ -91,13 +91,23 @@ describe('configuration fields stay with their owning surfaces', () => {
     expect(schedule).toContain('ScheduleBufferForm');
   });
 
-  it('renders the public booking address in Branding, outside ProfileForm', () => {
+  it('renders the public booking address in Domains, outside ProfileForm and Branding', () => {
+    const domains = readFileSync(`${ROUTES}/settings/domains/page.tsx`, 'utf8');
     const branding = readFileSync(`${ROUTES}/settings/branding/page.tsx`, 'utf8');
     const profile = readFileSync(`${WEB_FEATURES}/public-profile/profile-form.tsx`, 'utf8');
-    expect(branding).toContain('PublicBookingAddressForm');
+    expect(domains).toContain('PublicBookingAddressForm');
+    expect(branding).not.toContain('PublicBookingAddressForm');
     expect(profile).not.toContain('/book/');
     expect(profile).not.toContain('hasBookableType');
     expect(profile).not.toContain('slug');
+  });
+
+  it('renders the public profile in its own route, and Branding owns visual identity only', () => {
+    const publicProfile = readFileSync(`${ROUTES}/settings/public-profile/page.tsx`, 'utf8');
+    const branding = readFileSync(`${ROUTES}/settings/branding/page.tsx`, 'utf8');
+    expect(publicProfile).toContain('ProfileForm');
+    expect(branding).not.toContain('ProfileForm');
+    expect(branding).toContain('BrandEditor');
   });
 });
 

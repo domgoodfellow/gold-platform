@@ -736,7 +736,7 @@ describe('a switch leads to its inputs', () => {
 
     const booking = MODULES.find((sold) => sold.key === 'booking')!;
     expect(moduleConfiguration('org-1', booking).href).toBe(
-      '/organizations/org-1/settings/branding#public-page',
+      '/organizations/org-1/settings/domains#booking-address',
     );
 
     const billing = MODULES.find((sold) => sold.key === 'billing')!;

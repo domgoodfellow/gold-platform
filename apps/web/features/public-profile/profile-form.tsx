@@ -104,7 +104,7 @@ export function ProfileForm({
       </label>
 
       <Button type="submit" disabled={pending} className="w-fit">
-        {pending ? 'Saving…' : 'Save'}
+        {pending ? 'Saving…' : 'Save profile'}
       </Button>
 
       <ErrorText role="alert">{state.error}</ErrorText>

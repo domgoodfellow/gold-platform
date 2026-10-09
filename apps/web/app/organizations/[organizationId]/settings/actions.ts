@@ -68,7 +68,7 @@ export async function updatePublicBookingAddressAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings/branding`);
+  revalidatePath(`/organizations/${organizationId}/settings/domains`);
   if (organization.slug) revalidatePath(`/book/${organization.slug}`);
   const normalizedSlug = slug.trim().toLowerCase();
   if (normalizedSlug) revalidatePath(`/book/${normalizedSlug}`);
@@ -171,7 +171,7 @@ export async function disconnectPaymentAccountAction(
   return { error: null };
 }
 
-export type BrandState = { error: string | null };
+export type BrandState = { error: string | null; saved?: boolean };
 
 /**
  * Choose a colour and a pair of lettering choices.
@@ -202,7 +202,7 @@ export async function updateBrandAction(
 
   revalidatePath(`/organizations/${organizationId}`, 'layout');
   await invalidateGoldHomepageIfReferenced(db, organizationId);
-  return { error: null };
+  return { error: null, saved: true };
 }
 
 export async function uploadLogoAction(

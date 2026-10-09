@@ -1,6 +1,7 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
+import { LOGO_MAX_BYTES, LOGO_TYPES } from './logo-rules';
 import { FONT_KEYS, isFontKey, normaliseBrandColour, type FontKey } from './palette';
 
 /**
@@ -108,9 +109,7 @@ export async function setBrand(
   }
 }
 
-/** What a logo may weigh and what it may be, matching the bucket's own limit. */
-export const LOGO_MAX_BYTES = 2 * 1024 * 1024;
-export const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'] as const;
+export { LOGO_MAX_BYTES, LOGO_TYPES };
 
 /**
  * Put a logo up, and take down the one it replaces. Stored in a public bucket, not signed — a
