@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -12445,6 +12445,19 @@ export type Database = {
           p_thread_id: string
         }
         Returns: undefined
+      }
+      home_financial_totals: {
+        Args: { p_from: string; p_organization_id: string; p_to: string }
+        Returns: {
+          currency: string
+          incurred_minor: number
+          invoiced_minor: number
+          margin_minor: number
+        }[]
+      }
+      home_studio_summary: {
+        Args: { p_organization_id: string }
+        Returns: Json
       }
       hostname_binding: {
         Args: { p_hostname: string }

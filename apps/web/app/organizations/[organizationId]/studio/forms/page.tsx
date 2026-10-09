@@ -46,7 +46,7 @@ export default async function StudioFormsPage({ params, searchParams }: PageProp
         actions={mayManage ? (
           <>
             <ButtonLink tone="secondary" href={`${base}/templates`}>Browse templates</ButtonLink>
-            <NewFormDrawer organizationId={organizationId} />
+            <NewFormDrawer organizationId={organizationId} defaultOpen={forms.length > 0 && query.create === '1'} />
           </>
         ) : null}
       />
@@ -58,7 +58,7 @@ export default async function StudioFormsPage({ params, searchParams }: PageProp
           description="Create a blank form or start from a template."
           action={
             <div className="flex flex-wrap gap-2">
-              <NewFormDrawer organizationId={organizationId} />
+              <NewFormDrawer organizationId={organizationId} defaultOpen={query.create === '1'} />
               <ButtonLink tone="secondary" href={`${base}/templates`}>Browse templates</ButtonLink>
             </div>
           }

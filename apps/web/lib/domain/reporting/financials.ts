@@ -69,6 +69,18 @@ export type PeriodTotal = {
   marginMinor: number | null;
 };
 
+/** Same canonical facts and access boundary, grouped in Postgres rather than in the web process. */
+export async function readFinancialTotals(db: Db, organizationId: string, from: string, to: string): Promise<PeriodTotal[]> {
+  const { data, error } = await db.rpc('home_financial_totals', { p_organization_id: organizationId, p_from: from, p_to: to });
+  if (error) throw new DomainError(error.message, 'reporting.financials_failed');
+  const amount = (value: number) => {
+    const n = Number(value);
+    if (!Number.isSafeInteger(n)) throw new DomainError('Financial amount exceeds the supported display range.', 'reporting.amount_out_of_range');
+    return n;
+  };
+  return (data ?? []).map(row => ({ currency: row.currency, invoicedMinor: amount(row.invoiced_minor), incurredMinor: amount(row.incurred_minor), marginMinor: amount(row.margin_minor) }));
+}
+
 /** A function rather than an inline `reduce` (I4). Per currency, not one number — there's no conversion rate here (same choice as `totalCost`). */
 export function totalsByCurrency(groups: FinancialGroup[]): PeriodTotal[] {
   const byCurrency = new Map<string, PeriodTotal>();

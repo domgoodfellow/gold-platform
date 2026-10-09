@@ -27,6 +27,8 @@ export type ActivityFilters = {
   state: string;
   rule: string;
   page: number;
+  from?: string;
+  to?: string;
 };
 export function ActivityView({
   organizationId,
@@ -66,6 +68,7 @@ export function ActivityView({
   return (
     <div className="min-w-0">
       <form className="my-3 flex flex-wrap items-center gap-2">
+        {filters.from && filters.to ? <><input type="hidden" name="from" value={filters.from} /><input type="hidden" name="to" value={filters.to} /><span className="text-xs text-muted">{filters.from} to {filters.to} (exclusive)</span></> : null}
         <TextInput
           name="q"
           aria-label="Search execution history"
@@ -78,6 +81,7 @@ export function ActivityView({
           name="when"
           aria-label="History period"
           defaultValue={filters.when}
+          onChange={(event) => router.push(href({ when: event.target.value, from: '', to: '', page: '1' }))}
           size="small"
         >
           <option value="today">Today</option>

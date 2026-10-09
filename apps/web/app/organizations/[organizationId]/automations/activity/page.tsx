@@ -6,6 +6,7 @@ import { automationPeriod } from '@/lib/application/automations/dashboard';
 import { workspaceAncestry } from '@/lib/navigation';
 import { ActivityView } from '@/features/automations/activity/activity-view';
 import { presentAutomationRuleIds } from '@/lib/domain/automation/monitoring';
+import { calendarDate, zonedDayRange } from '@/lib/domain/scheduling/window';
 
 export const dynamic = 'force-dynamic';
 export default async function AutomationActivityPage({
@@ -20,6 +21,8 @@ export default async function AutomationActivityPage({
   };
   const { db, organization } = await requireOrganization(organizationId);
   const period = automationPeriod(organization.timezone, first('when'));
+  const from = calendarDate(first('from')), to = calendarDate(first('to'));
+  const explicitPeriod = from && to && from < to ? { from, to } : undefined;
   const filters = {
     when: first('when') === 'all' ? 'all' : period.when,
     q: (first('q') ?? '').slice(0, 100),
@@ -28,10 +31,12 @@ export default async function AutomationActivityPage({
     state: first('state') ?? '',
     rule: first('rule') ?? '',
     page: Math.min(10000, Math.max(1, Math.floor(Number(first('page')) || 1))),
+    from: explicitPeriod?.from ?? '',
+    to: explicitPeriod?.to ?? '',
   };
   const scope = {
     organizationId,
-    ...(filters.when === 'all'
+    ...(explicitPeriod ? { since: zonedDayRange(explicitPeriod.from, organization.timezone).startsAt, until: zonedDayRange(explicitPeriod.to, organization.timezone).startsAt } : filters.when === 'all'
       ? {}
       : { since: period.since, until: period.until }),
     offset: (filters.page - 1) * 50,

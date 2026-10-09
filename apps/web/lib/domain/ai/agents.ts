@@ -76,7 +76,7 @@ export function configuration(agent: Agent | Version): AgentConfiguration {
   return (agent.configuration ?? {}) as AgentConfiguration;
 }
 export function deploymentReadiness(
-  deployment: Deployment,
+  deployment: Pick<Deployment, 'surface' | 'version_id' | 'enabled'>,
   agent: Pick<Agent, "status"> | undefined,
   entitled: boolean,
   runtimeConfigured: boolean,

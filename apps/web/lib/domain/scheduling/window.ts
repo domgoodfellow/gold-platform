@@ -11,6 +11,12 @@ export type Window = {
   endsAt: string;
 };
 
+/** Strict calendar-date input for URL filters; instants are resolved in the organization's zone. */
+export function calendarDate(value: string | undefined): string | undefined {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value))) return undefined;
+  return new Date(value).toISOString().slice(0, 10) === value ? value : undefined;
+}
+
 // Postgres renders a bounded tstzrange as ["2026-08-27 09:00:00+00","2026-08-27 10:00:00+00").
 // The database guarantees the shape (bounded, non-empty, half-open), so this is a parser, not a validator.
 const RANGE = /^\[\s*"?([^",]+?)"?\s*,\s*"?([^",]+?)"?\s*\)$/;

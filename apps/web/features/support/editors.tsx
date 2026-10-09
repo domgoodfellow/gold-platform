@@ -109,6 +109,7 @@ export function DrawerForm({
   save,
   primary = false,
   refreshAfterSave = true,
+  defaultOpen = false,
 }: {
   title: string;
   description: string;
@@ -120,10 +121,11 @@ export function DrawerForm({
   ) => Promise<{ error: string | null; id: string | null }>;
   primary?: boolean;
   refreshAfterSave?: boolean;
+  defaultOpen?: boolean;
 }) {
   const id = useId(),
     router = useRouter();
-  const [open, setOpen] = useState(false),
+  const [open, setOpen] = useState(defaultOpen),
     [pending, start] = useTransition(),
     [error, setError] = useState<string | null>(null);
   return (
@@ -201,12 +203,14 @@ export function NewCase({
   mayAssign,
   defaults = {},
   label = "+ New Case",
+  defaultOpen = false,
 }: {
   organizationId: string;
   data: Pick<SupportData, "queues" | "members">;
   mayAssign: boolean;
   defaults?: Partial<Record<RecordKind, string>> & { customerName?: string };
   label?: string;
+  defaultOpen?: boolean;
 }) {
   const router = useRouter();
   const [kind, setKind] = useState<RecordKind>("conversation");
@@ -217,6 +221,7 @@ export function NewCase({
       trigger={label}
       submit="Create Case"
       primary
+      defaultOpen={defaultOpen}
       refreshAfterSave={false}
       save={async (f) => {
         const input: Record<string, Json> = {

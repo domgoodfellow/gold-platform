@@ -11,6 +11,7 @@
 @source "../features/marketing";
 @source "../features/support";
 @source "../features/ai";
+@source "../features/home";
 @source "../features/setup";
 @source "../features/settings";
 @source "../features/team";
@@ -75,6 +76,8 @@
   /* A refusal, an error, a destructive action. The screens spelled this as red-600 in some
      places and red-700 in others; one role is the point. */
   --danger: #dc2626;
+  /* A genuine operational exception requiring review; never implies service health. */
+  --warning: #b45309;
 
   /* A state GOLD itself reports as good -- Setup ready, a connection live, a feature included. A
      platform fact, never a tenant's word (ui-spec §7), so it is not one of the three roles a
@@ -134,6 +137,7 @@
   --color-muted: var(--muted);
   --color-subtle: var(--subtle);
   --color-danger: var(--danger);
+  --color-warning: var(--warning);
   --color-success: var(--success);
   --color-destructive: var(--destructive);
   --color-accent: var(--accent);
@@ -155,6 +159,7 @@
     --muted: rgb(237 237 237 / 0.7);
     --subtle: rgb(237 237 237 / 0.6);
     --danger: #f87171;
+    --warning: #fbbf24;
     --success: #6ee7b7;
   }
 }

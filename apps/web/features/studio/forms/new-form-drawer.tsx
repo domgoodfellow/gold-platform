@@ -21,7 +21,7 @@ import { createFormAction } from '@/app/organizations/[organizationId]/studio/fo
  * Name a blank form, or the form a template is about to become. The business owns the result from
  * the moment it exists: the template contributes its starting questions and nothing after that.
  */
-export function NewFormDrawer({ organizationId, templateKey, defaultName = '', triggerLabel = 'New form', triggerTone = 'primary', triggerSize = 'default', title }: {
+export function NewFormDrawer({ organizationId, templateKey, defaultName = '', triggerLabel = 'New form', triggerTone = 'primary', triggerSize = 'default', title, defaultOpen = false }: {
   organizationId: string;
   templateKey?: string;
   defaultName?: string;
@@ -29,9 +29,10 @@ export function NewFormDrawer({ organizationId, templateKey, defaultName = '', t
   triggerTone?: 'primary' | 'secondary';
   triggerSize?: 'default' | 'small';
   title?: string;
+  defaultOpen?: boolean;
 }) {
   const formId = useId();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [name, setName] = useState(defaultName);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Button } from '@/components/controls/button';
 import { SelectInput } from '@/components/controls/inputs';
 import type { CallFilter } from '@/lib/domain/reception/calls';
-import { shiftDate, todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
+import { calendarDate, shiftDate, todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
 
 /**
  * The filters of the call history, written in the address so a filtered view can be linked to and
@@ -25,6 +25,9 @@ export type CallParams = {
   number?: string;
   member?: string;
   wrap?: '1';
+  followup?: '1';
+  from?: string;
+  to?: string;
 };
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -51,6 +54,9 @@ export function parseCallParams(query: Query): { params: CallParams; cursor: str
   if (number && /^[0-9a-f-]{36}$/.test(number)) params.number = number;
   if (member && /^[0-9a-f-]{36}$/.test(member)) params.member = member;
   if (first(query.wrap) === '1') params.wrap = '1';
+  if (first(query.followup) === '1') params.followup = '1';
+  const from = calendarDate(first(query.from)), to = calendarDate(first(query.to));
+  if (from && to && from < to) { params.from = from; params.to = to; }
   return { params, cursor: first(query.cursor) ?? null };
 }
 
@@ -63,9 +69,10 @@ export function callFilterFromParams(params: CallParams, timeZone: string): Call
     phoneNumberId: params.number,
     membershipId: params.member,
     needsWrapUp: params.wrap === '1',
+    needsFollowUp: params.followup === '1',
     search: params.q,
-    since: params.when ? zonedDayRange(shiftDate(today, -daysBack), timeZone).startsAt : undefined,
-    until: params.when ? zonedDayRange(today, timeZone).endsAt : undefined,
+    since: params.from ? zonedDayRange(params.from, timeZone).startsAt : params.when ? zonedDayRange(shiftDate(today, -daysBack), timeZone).startsAt : undefined,
+    until: params.to ? zonedDayRange(params.to, timeZone).startsAt : params.when ? zonedDayRange(today, timeZone).endsAt : undefined,
   };
 }
 
@@ -111,7 +118,7 @@ export function CallFilters({
   members: { id: string; displayName: string }[];
 }) {
   const link = (change: Partial<Record<keyof CallParams, string | undefined>>) =>
-    callsHref(base, { ...params, ...change } as CallParams);
+    callsHref(base, { ...params, ...('when' in change ? { from: undefined, to: undefined } : {}), ...change } as CallParams);
 
   return (
     <div className="flex flex-col gap-2">
@@ -126,9 +133,11 @@ export function CallFilters({
         <Chip active={params.state === 'missed'} href={link({ state: 'missed' })}>Missed</Chip>
         <Chip active={params.state === 'completed'} href={link({ state: 'completed' })}>Completed</Chip>
         <Chip active={params.wrap === '1'} href={link({ wrap: params.wrap === '1' ? undefined : '1' })}>Needs wrap-up</Chip>
+        <Chip active={params.followup === '1'} href={link({ followup: params.followup === '1' ? undefined : '1' })}>Missed awaiting outcome</Chip>
       </Group>
       <Group label="When">
-        <Chip active={!params.when} href={link({ when: undefined })}>Any time</Chip>
+        {params.from && params.to ? <span className="text-xs text-muted">{params.from} to {params.to} (exclusive)</span> : null}
+        <Chip active={!params.when && !params.from} href={link({ when: undefined })}>Any time</Chip>
         <Chip active={params.when === 'today'} href={link({ when: 'today' })}>Today</Chip>
         <Chip active={params.when === 'week'} href={link({ when: 'week' })}>7 days</Chip>
         <Chip active={params.when === 'month'} href={link({ when: 'month' })}>30 days</Chip>

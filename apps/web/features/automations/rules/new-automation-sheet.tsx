@@ -34,10 +34,12 @@ import {
  */
 export function NewAutomationSheet({
   organizationId,
+  defaultOpen = false,
 }: {
   organizationId: string;
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [kind, setKind] = useState<TriggerKind | ''>('');
   const [state, formAction, pending] = useActionState(
     createRuleAction,

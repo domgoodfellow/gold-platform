@@ -676,6 +676,7 @@ export function SupportWorkspace({
               organizationId={organizationId}
               data={data}
               mayAssign={can("support.case.assign")}
+              defaultOpen={view === 'cases' && query.get('create') === '1'}
             />
           )}{" "}
           {view === "home" && (

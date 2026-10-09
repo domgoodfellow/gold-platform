@@ -1,192 +1,101 @@
+'use client';
+
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { useState, useSyncExternalStore, useTransition, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { Activity, ArrowUpRight, Bot, CalendarClock, CheckCircle2, ChevronDown, CircleAlert, Clock3, ListTodo, Plus, RefreshCw, Search, Settings2, ShieldCheck, TrendingUp } from 'lucide-react';
 import { AppPage } from '@/components/layout/app-page';
-import { Card } from '@/components/surfaces/card';
-import { KpiCard, type Kpi } from '@/components/surfaces/kpi-card';
-import { PageHeader } from '@/components/headers/page-header';
-import { DividedList, EmptyState, SectionHeading } from '@/components/surfaces/section';
+import { Button, ButtonLink } from '@/components/controls/button';
+import { PageDrawer, PageDrawerBody, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
+import { useWorkspaceRail } from '@/components/panels/workspace-right-rail';
 import { cx, FOCUS_RING } from '@/components/class-names';
-import { Badge } from '@/components/display/data';
-import { ActivityList } from '@/features/timeline/activity-list';
-import type { AutomationRun } from '@/lib/domain/automation/rules';
-import type { MessageDelivery } from '@/lib/domain/automation/templates';
-import type { PeriodTotal } from '@/lib/domain/reporting/financials';
+import { prioritize, type HomeAttentionItem, type HomeData, type HomeObligation, type HomeQuery, type HomeSourceData } from '@/lib/application/home/contracts';
+import { zonedDayRange } from '@/lib/domain/scheduling/window';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
-import { formatWindow, type Window } from '@/lib/domain/scheduling/window';
-import type { TimelineEntry } from '@/lib/domain/timeline/timeline';
-import type { WorkItem } from '@/lib/domain/work-items/work-items';
-import { areaHref, areaLabel } from '@/lib/navigation';
+export type { HomeData } from '@/lib/application/home/contracts';
 
-const PREVIEW = 6;
-
-type Commitment = { workItemId: string; title: string; window: Window; occupied: Window; resource: string };
-
-/**
- * What one block of Home may read. A block is **absent** (`null`) when its capability is not
- * entitled to this organization or the role cannot read it — never present-and-zero. Home draws a
- * block from a value somebody else computed; it computes none (I4, I5).
- */
-export type HomeData = {
-  organizationId: string;
-  timezone: string;
-  /** The organization's own calendar date. Formatting it must not shift it again. */
-  date: string;
-  customers: { total: number };
-  work: {
-    total: number;
-    /** Null when the list was truncated, because a count taken from a partial list is a wrong count. */
-    waiting: WorkItem[] | null;
-  };
-  /** Null when no kind of work is declared scheduled — there is no Schedule to summarise, which is different from an empty one. */
-  schedule: { committed: Commitment[]; byId: Map<string, WorkItem> } | null;
-  communications: { today: number; unwritten: number } | null;
-  automation: { failedRuns: AutomationRun[]; failedMessages: MessageDelivery[] } | null;
-  /** This month's invoiced and incurred, per currency — the reporting aggregate's own totals. Null when reporting is not available to this reader. */
-  financials: { period: string; totals: PeriodTotal[] } | null;
-  activity: TimelineEntry[];
-};
-
-function formatBusinessDate(date: string): string {
-  return new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
+const iconClass = 'size-4 shrink-0 text-muted';
+const emptyClass = 'px-4 py-5 text-sm text-muted';
+function Panel({ title, icon, meta, action, children }: { title: string; icon: ReactNode; meta?: ReactNode; action?: ReactNode; children: ReactNode }) {
+  return <section aria-label={title} className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface"><div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3"><div className="flex items-center gap-2">{icon}<h2 className="text-sm font-semibold tracking-tight">{title}</h2>{meta}</div>{action}</div>{children}</section>;
 }
-
-function Panel({ title, href, hrefLabel, className, children }: { title: string; href?: string; hrefLabel?: string; className?: string; children: ReactNode }) {
-  return (
-    <Card as="section" className={cx('flex flex-col', className)}>
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <SectionHeading>{title}</SectionHeading>
-        {href ? (
-          <Link href={href} className={cx('shrink-0 rounded text-sm text-muted underline-offset-4 hover:underline', FOCUS_RING)}>
-            {hrefLabel ?? 'Open'}
-          </Link>
-        ) : null}
-      </div>
-      <div className="min-w-0 flex-1">{children}</div>
-    </Card>
-  );
+function State({ children, warning = false }: { children: ReactNode; warning?: boolean }) {
+  return <span className={cx('inline-flex rounded border px-1.5 py-0.5 text-[11px] font-medium', warning ? 'border-warning/30 bg-warning/10 text-foreground' : 'border-border bg-secondary text-muted')}>{children}</span>;
 }
+function timestamp(value: string, timezone: string, timeOnly = false) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: timezone, ...(timeOnly ? {} : { month: 'short', day: 'numeric' }), hour: 'numeric', minute: '2-digit' }).format(new Date(value));
+}
+function AttentionRows({ rows, timezone, agent }: { rows: HomeAttentionItem[]; timezone: string; agent: () => void }) {
+  const open = (row: HomeAttentionItem) => row.source === 'AI' && row.category === 'approval' ? <Button size="tiny" tone="text" onClick={agent}>Review in Agent</Button> : <Link aria-label={`Open ${row.title}`} href={row.destination.href} className={cx('inline-flex items-center gap-1 rounded text-xs font-medium hover:underline', FOCUS_RING)}>Open <ArrowUpRight aria-hidden className="size-3" /></Link>;
+  const priority = (r: HomeAttentionItem) => <State warning={r.urgency !== 'normal' || r.overdue}>{r.overdue ? 'Overdue' : r.urgency === 'critical' ? 'Critical' : r.urgency === 'high' ? 'High' : 'Normal'}</State>;
+  const date = (r: HomeAttentionItem) => r.dueAt || r.occurredAt ? <time dateTime={r.dueAt ?? r.occurredAt}>{timestamp((r.dueAt ?? r.occurredAt)!, timezone)}</time> : 'No deadline';
+  return <>
+    <div className="hidden @min-[48rem]/home:block"><table className="w-full table-fixed text-left text-xs"><caption className="sr-only">Operational exceptions · bounded previews from authorized sources</caption><thead className="border-b border-border bg-secondary/60 text-[11px] text-muted"><tr>{['Type', 'Subject / context', 'Priority', 'Due / activity', 'Owner', 'Action'].map((h, i) => <th key={h} scope="col" className={cx('px-3 py-2 font-medium', i === 1 ? 'w-[30%]' : i === 0 ? 'w-[13%]' : '')}>{h}</th>)}</tr></thead><tbody className="divide-y divide-border">{rows.map(row => <tr key={row.key} className="hover:bg-hover"><td className="break-words px-3 py-3 text-muted">{row.source}<span className="mt-1 block text-[10px] capitalize">{row.record.kind.replaceAll('-', ' ')}</span></td><td className="px-3 py-3"><Link className={cx('break-words rounded font-medium hover:underline', FOCUS_RING)} href={row.destination.href}>{row.title}</Link><p className="mt-1 break-words text-[11px] text-muted">{row.description}</p></td><td className="px-3 py-3">{priority(row)}</td><td className="px-3 py-3 text-[11px] text-muted">{date(row)}</td><td className="break-words px-3 py-3 text-[11px] text-muted">{row.ownerName ?? (row.ownerMembershipId ? 'Assigned member' : 'Unassigned')}</td><td className="px-3 py-3">{open(row)}</td></tr>)}</tbody></table></div>
+    <ul className="divide-y divide-border @min-[48rem]/home:hidden">{rows.map(row => <li key={row.key} className="space-y-2 px-4 py-3"><div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[11px] text-muted">{row.source} · {row.record.kind.replaceAll('-', ' ')}</span>{priority(row)}</div><Link href={row.destination.href} className={cx('block break-words rounded text-sm font-medium hover:underline', FOCUS_RING)}>{row.title}</Link><p className="break-words text-xs text-muted">{row.description}</p><div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted"><span>{date(row)} · {row.ownerName ?? 'Unassigned'}</span>{open(row)}</div></li>)}</ul>
+  </>;
+}
+function Obligations({ rows, timezone, today = false }: { rows: HomeObligation[]; timezone: string; today?: boolean }) {
+  return rows.length ? <ul className="divide-y divide-border">{rows.map(row => <li key={row.key}><Link href={row.href} className={cx('flex flex-wrap items-start gap-x-4 gap-y-1 px-4 py-3 hover:bg-hover', FOCUS_RING)}><time className="w-24 shrink-0 text-xs tabular-nums text-muted" dateTime={row.at}>{timestamp(row.at, timezone, today)}</time><div className="min-w-0 flex-1"><p className="break-words text-sm font-medium">{row.title}</p><p className="mt-1 break-words text-xs text-muted">{row.source} · {row.context}</p><p className="mt-1 text-[11px] text-muted">{row.owner}</p></div><ArrowUpRight aria-hidden className="size-3 text-muted" /></Link></li>)}</ul> : <p className={emptyClass}>{today ? 'No dated obligations in this preview for today.' : 'No dated obligations in this preview for the next 7 days.'}</p>;
+}
+function PaymentTrend({ trends }: { trends: HomeSourceData['trends'] }) {
+  const [currency, setCurrency] = useState('');
+  const selected = trends.find(t => t.currency === currency) ?? trends[0];
+  if (!selected || selected.points.length < 2) return null;
+  const max = Math.max(1, ...selected.points.map(p => Math.abs(p.amountMinor)));
+  return <div className="border-t border-border p-4"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-medium">Payments recorded by local day</p><label className="flex items-center gap-2 text-xs text-muted">Currency<select className="rounded border border-border bg-surface px-2 py-1" value={selected.currency} onChange={e => setCurrency(e.target.value)}>{trends.map(t => <option key={t.currency}>{t.currency}</option>)}</select></label></div><div className="flex h-24 items-end gap-1" aria-hidden>{selected.points.map(p => <div key={p.day} className={cx('min-w-0 flex-1 rounded-t', p.amountMinor < 0 ? 'bg-warning/60' : 'bg-foreground/65')} style={{ height: `${Math.max(p.amountMinor ? 3 : 0, Math.abs(p.amountMinor) / max * 100)}%` }} />)}</div><div className="mt-2 flex justify-between text-[10px] text-muted"><span>{selected.points[0].day}</span><span>{selected.points.at(-1)?.day}</span></div><details className="mt-3 text-xs"><summary className="cursor-pointer text-muted">Daily amounts · {selected.currency}</summary><table className="mt-2 w-full text-left"><caption className="sr-only">Signed payments by organization-local day, separate currency</caption><thead><tr><th scope="col">Local date</th><th scope="col">Amount recorded</th></tr></thead><tbody>{selected.points.map(p => <tr key={p.day}><td className="py-1">{p.day}</td><td className="tabular-nums">{formatMoney(p.amountMinor, selected.currency)}</td></tr>)}</tbody></table></details></div>;
+}
+const subscribePreferences = (callback: () => void) => { window.addEventListener('storage', callback); window.addEventListener('home-preferences', callback); return () => { window.removeEventListener('storage', callback); window.removeEventListener('home-preferences', callback); }; };
+function usePreferences(key: string) {
+  const raw = useSyncExternalStore(subscribePreferences, () => { try { return localStorage.getItem(key) ?? ''; } catch { return ''; } }, () => '');
+  const hidden: string[] = (() => { try { const parsed: unknown = JSON.parse(raw); return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string' && ['performance', 'activity', 'health'].includes(v)) : []; } catch { return []; } })();
+  const toggle = (panel: string) => { try { localStorage.setItem(key, JSON.stringify(hidden.includes(panel) ? hidden.filter(v => v !== panel) : [...hidden, panel])); window.dispatchEvent(new Event('home-preferences')); } catch { /* Blocked storage leaves the default layout intact. */ } };
+  return { hidden, toggle };
+}
+function Launcher({ title, label, icon, description, children }: { title: string; label?: string; icon: ReactNode; description: string; children: ReactNode }) {
+  return <PageDrawer><PageDrawerTrigger asChild><Button tone={title === 'Quick actions' ? 'primary' : 'secondary'} size="small">{icon}{label ?? title}</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>{title}</PageDrawerTitle><PageDrawerDescription>{description}</PageDrawerDescription></PageDrawerHeader><PageDrawerBody>{children}</PageDrawerBody></PageDrawerContent></PageDrawer>;
+}
+const attentionFilters: { label: string; scope: HomeQuery['scope']; attention: HomeQuery['attention'] }[] = [{ label: 'All', scope: 'organization', attention: 'all' }, { label: 'Mine', scope: 'mine', attention: 'all' }, { label: 'Urgent', scope: 'organization', attention: 'urgent' }, { label: 'Overdue', scope: 'organization', attention: 'overdue' }];
 
-/**
- * Home: what matters in this organization right now. A dashboard, not a list page — figures first,
- * then the two panels an operator acts from, then what recently changed. Every figure is read from
- * the domain aggregate that owns it (see `app/organizations/[organizationId]/home/page.tsx`); a
- * block whose source is not available to this organization is not drawn at all.
- */
-export function HomeDashboard({ data, readiness }: { data: HomeData; readiness?: ReactNode }) {
-  const { organizationId, timezone } = data;
-  const href = (segment: string) => areaHref(organizationId, segment);
-  const workHref = (id: string) => `${href('work')}/${id}`;
-
-  const operationalEmpty =
-    data.customers.total === 0 &&
-    data.work.total === 0 &&
-    (data.schedule?.committed.length ?? 0) === 0;
-
-  const kpis: Kpi[] = [];
-  if (!operationalEmpty) {
-    kpis.push({ key: 'customers', label: areaLabel('customers'), value: data.customers.total, href: href('customers') });
-    kpis.push({ key: 'work', label: areaLabel('work'), value: data.work.total, note: 'jobs recorded', href: href('work') });
-    if (data.schedule) {
-      kpis.push({ key: 'schedule', label: 'Scheduled today', value: data.schedule.committed.length, href: href('schedule') });
-    }
-  }
-  if (data.communications && (data.communications.today > 0 || !operationalEmpty)) {
-    kpis.push({
-      key: 'calls',
-      label: 'Calls today',
-      value: data.communications.today,
-      note: data.communications.unwritten ? `${data.communications.unwritten} not written up` : undefined,
-      href: href('calls'),
-    });
-  }
-  const failures = data.automation ? data.automation.failedRuns.length + data.automation.failedMessages.length : 0;
-  if (data.automation && failures > 0) {
-    kpis.push({ key: 'automation', label: 'Automation failures', value: failures, note: 'runs and messages', href: href('automations') });
-  }
-  if (data.financials) {
-    for (const total of data.financials.totals) {
-      kpis.push({
-        key: `invoiced-${total.currency}`,
-        label: `Invoiced ${data.financials.period}`,
-        value: formatMoney(total.invoicedMinor, total.currency),
-        // Margin only where the aggregate defines one — a null is left unsaid, never shown as zero.
-        note: total.marginMinor === null ? total.currency : `${formatMoney(total.marginMinor, total.currency)} margin`,
-        href: `${href('insights')}/reports`,
-      });
-    }
-  }
-
-  const waiting = data.work.waiting ?? [];
-  const schedule = data.schedule;
-  const attention = [
-    ...(data.automation?.failedRuns ?? []).map((run) => ({ key: `run-${run.id}`, title: run.ruleName, detail: run.detail })),
-    ...(data.automation?.failedMessages ?? []).map((message) => ({ key: `message-${message.id}`, title: `${message.channel} to ${message.recipient}`, detail: message.detail })),
-  ];
-
-  return (
-    <AppPage>
-      <PageHeader
-        title={areaLabel('home')}
-        meta={<><time dateTime={data.date}>{formatBusinessDate(data.date)}</time> · {timezone}</>}
-      />
-
-      <div className="flex flex-col gap-4">
-          {readiness}
-          {kpis.length > 0 ? (
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {kpis.map((kpi) => <KpiCard key={kpi.key} kpi={kpi} />)}
-          </div>
-          ) : null}
-
-          <div className="grid gap-4 lg:grid-cols-3">
-            {schedule ? (
-            <Panel title="Scheduled today" href={href('schedule')} hrefLabel="Open schedule" className="lg:col-span-2">
-              {schedule.committed.length === 0 ? (
-                <EmptyState weight="subtle">Nothing is scheduled today.</EmptyState>
-              ) : (
-                <DividedList className="text-sm">
-                  {schedule.committed.slice(0, PREVIEW).map((row) => {
-                    const item = schedule.byId.get(row.workItemId);
-                    return (
-                      <li key={row.workItemId} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-2">
-                        <span className="w-28 shrink-0 tabular-nums text-muted">{formatWindow(row.window, timezone)}</span>
-                        <Link href={workHref(row.workItemId)} className={cx('min-w-0 truncate rounded underline underline-offset-4', FOCUS_RING)}>{row.title}</Link>
-                        {item ? <Badge>{item.status.label}</Badge> : null}
-                        <span className="ml-auto shrink-0 text-muted">{row.resource}</span>
-                      </li>
-                    );
-                  })}
-                </DividedList>
-              )}
-            </Panel>
-            ) : null}
-
-            <Panel title="Needs attention" href={waiting.length > 0 ? href('work') : undefined} hrefLabel="Open work" className={data.schedule ? undefined : 'lg:col-span-3'}>
-              {waiting.length === 0 && attention.length === 0 ? (
-                <EmptyState weight="subtle">Nothing needs attention.</EmptyState>
-              ) : (
-                <DividedList className="text-sm">
-                  {waiting.slice(0, PREVIEW).map((item) => (
-                    <li key={item.id} className="py-2">
-                      <Link href={workHref(item.id)} className={cx('block truncate rounded underline underline-offset-4', FOCUS_RING)}>{item.title}</Link>
-                      <span className="text-xs text-muted">Waiting to be scheduled{item.customer ? ` · ${item.customer.label}` : ''}</span>
-                    </li>
-                  ))}
-                  {attention.slice(0, PREVIEW).map((entry) => (
-                    <li key={entry.key} className="py-2">
-                      <Link href={href('automations')} className={cx('block truncate rounded underline underline-offset-4', FOCUS_RING)}>{entry.title}</Link>
-                      <span className="block truncate text-xs text-muted">Failed{entry.detail ? ` · ${entry.detail}` : ''}</span>
-                    </li>
-                  ))}
-                </DividedList>
-              )}
-            </Panel>
-          </div>
-
-          <Panel title="Recent activity">
-            <ActivityList timeline={data.activity.slice(0, PREVIEW)} timezone={timezone} emptyMessage="No activity yet." />
-          </Panel>
-        </div>
-    </AppPage>
-  );
+export function HomeDashboard({ data, readiness, creationActions }: { data: HomeData; readiness?: ReactNode; creationActions?: ReactNode }) {
+  const router = useRouter(), [refreshing, refresh] = useTransition(), [expanded, setExpanded] = useState(false);
+  const { launchAgent, toggleAgent } = useWorkspaceRail();
+  const preferences = usePreferences(`gildops:home:v1:${data.organizationId}:${data.membershipId}`);
+  const sources = data.results.flatMap(r => r.state === 'ready' ? [r.data] : []), unavailable = data.results.filter(r => r.state === 'unavailable');
+  const dayEnd = zonedDayRange(data.date, data.timezone).endsAt;
+  const attention = prioritize(sources.flatMap(s => s.attention), dayEnd), mine = prioritize(sources.flatMap(s => s.priorities), dayEnd).slice(0, 3);
+  const categories = sources.flatMap(s => s.categories), performance = sources.flatMap(s => s.performance);
+  const scheduleEnabled = sources.some(s => s.metrics.some(m => m.key === 'scheduled'));
+  const today = sources.flatMap(s => s.today).sort((a,b) => a.at.localeCompare(b.at) || a.key.localeCompare(b.key));
+  const upcoming = sources.flatMap(s => s.upcoming).sort((a,b) => a.at.localeCompare(b.at) || a.key.localeCompare(b.key));
+  const activity = [...new Map(sources.flatMap(s => s.activity).map(a => [a.key,a])).values()].sort((a,b) => b.at.localeCompare(a.at) || a.key.localeCompare(b.key)).slice(0, 10);
+  const href = (change: Partial<HomeQuery>) => `/organizations/${data.organizationId}/home?${new URLSearchParams({ ...data.query, ...change })}`;
+  const periodLabel = data.query.when === 'month' ? 'This month' : data.query.when === 'week' ? 'Last 7 days' : 'Today';
+  return <AppPage className="@container/home space-y-4">
+    <header className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-2xl font-semibold tracking-tight">Home</h1><p className="mt-1 text-xs text-muted"><time dateTime={data.date}>{new Intl.DateTimeFormat('en-CA', { dateStyle: 'full', timeZone: 'UTC' }).format(new Date(`${data.date}T12:00:00Z`))}</time> · {data.timezone}</p></div><div className="flex flex-wrap items-center gap-2">
+      <Launcher title="Search the organization" label="Search" icon={<Search aria-hidden className="size-4" />} description="Choose an authorized workspace to search its records."><nav aria-label="Workspace search" className="grid gap-2">{data.search.map(s => <ButtonLink key={s.label} href={s.href}>{s.label}<ArrowUpRight aria-hidden className="size-3" /></ButtonLink>)}</nav></Launcher>
+      <nav aria-label="Reporting period" className="inline-flex rounded-md border border-border bg-secondary p-0.5">{(['today', 'week', 'month'] as const).map(when => <Link key={when} href={href({ when })} aria-current={data.query.when === when ? 'page' : undefined} className={cx('rounded px-2.5 py-1.5 text-xs', data.query.when === when ? 'bg-surface font-semibold shadow-sm' : 'text-muted hover:bg-hover', FOCUS_RING)}>{when === 'today' ? 'Today' : when === 'week' ? 'This week' : 'This month'}</Link>)}</nav>
+      <Button tone="secondary" size="small" aria-label="Refresh Home" disabled={refreshing} onClick={() => refresh(() => router.refresh())}><RefreshCw aria-hidden className={cx('size-4', refreshing && 'animate-spin')} /></Button>
+      <Launcher title="Quick actions" icon={<Plus aria-hidden className="size-4" />} description="Changes use the owning workspace’s forms and permission checks."><div className="flex flex-wrap gap-2">{creationActions}</div><ul className="divide-y divide-border">{data.quickActions.filter(a => !creationActions || a.key !== 'invoice').map(a => <li key={a.key}><Link href={a.href} className={cx('block rounded py-3 hover:bg-hover', FOCUS_RING)}><p className="text-sm font-medium">{a.label} <ArrowUpRight aria-hidden className="inline size-3" /></p><p className="mt-1 text-xs text-muted">{a.description}</p></Link></li>)}</ul>{!data.quickActions.length ? <p className="text-sm text-muted">Your role has no available creation actions.</p> : null}</Launcher>
+      <Launcher title="Customize Home" label="Customize" icon={<Settings2 aria-hidden className="size-4" />} description="Optional panels are saved on this browser for you in this organization.">{[['performance', 'Business performance'], ['activity', 'Recent activity'], ['health', 'Workspace health']].map(([key, label]) => <label key={key} className="flex items-center gap-3 rounded border border-border p-3 text-sm"><input type="checkbox" checked={!preferences.hidden.includes(key)} onChange={() => preferences.toggle(key)} />{label}</label>)}</Launcher>
+    </div></header>
+    {readiness}
+    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted"><p>Priorities and schedule use current obligations. Performance and failure history: {periodLabel}.</p><time dateTime={data.refreshedAt}>Updated {timestamp(data.refreshedAt, data.timezone, true)}</time></div>
+    {data.kpis.length ? <div className="grid grid-cols-2 gap-3 @min-[60rem]/home:grid-cols-4">{data.kpis.map(k => <Link key={k.key} href={k.href} title={k.definition} className={cx('min-w-0 rounded-lg border border-border bg-surface p-4 transition hover:bg-hover', FOCUS_RING)}><div className="flex items-center justify-between gap-2 text-xs text-muted"><span>{k.label}</span><ArrowUpRight aria-hidden className="size-3 shrink-0" /></div><p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">{k.value}</p><p className="mt-2 text-[11px] leading-relaxed text-muted">{k.definition}</p></Link>)}</div> : null}
+    <div className="grid items-start gap-4 @min-[64rem]/home:grid-cols-[minmax(0,2.35fr)_minmax(15rem,1fr)]"><div className="grid min-w-0 gap-4">
+      <Panel title="Needs attention" icon={<CircleAlert aria-hidden className="size-4 text-warning" />} action={<div className="flex flex-wrap gap-1" role="group" aria-label="Attention filters">{attentionFilters.map(f => <Link key={f.label} href={href({ scope: f.scope, attention: f.attention })} aria-current={data.query.scope === f.scope && data.query.attention === f.attention ? 'page' : undefined} className={cx('rounded px-2 py-1 text-xs', data.query.scope === f.scope && data.query.attention === f.attention ? 'bg-selected font-medium' : 'text-muted hover:bg-hover', FOCUS_RING)}>{f.label}</Link>)}</div>}>
+        {unavailable.length ? <div role="alert" className="border-b border-border bg-warning/10 px-4 py-3 text-xs"><p className="font-medium">Some sources are temporarily unavailable</p><p className="mt-1">{unavailable.map(s => s.source).join(', ')} could not be read. Refresh to retry; their queues are unknown.</p></div> : null}
+        {categories.some(c => c.total > 0) ? <div className="flex flex-wrap gap-x-4 gap-y-2 border-b border-border px-4 py-3">{categories.filter(c => c.total > 0).map(c => <Link key={c.key} href={c.href} className={cx('rounded text-xs hover:underline', FOCUS_RING)}><strong className="tabular-nums">{c.total}</strong> {c.label}</Link>)}</div> : null}
+        {attention.length ? <AttentionRows rows={expanded ? attention : attention.slice(0, 8)} timezone={data.timezone} agent={toggleAgent} /> : <div className={emptyClass}><CheckCircle2 aria-hidden className="mb-2 size-5 text-muted" /><p>{unavailable.length ? 'No items in the available source previews. Other queues are unknown.' : 'No items requiring attention in this authorized view.'}</p>{data.query.scope === 'mine' ? <p className="mt-1 text-xs">Only real member and Resource assignments are included.</p> : null}</div>}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2.5"><p className="text-[11px] text-muted">Exact category totals · up to 5 records per category. Counts can overlap; they are not added together.</p>{attention.length > 8 ? <Button tone="text" size="tiny" onClick={() => setExpanded(v => !v)}>{expanded ? 'Collapse previews' : 'Expand previews'}<ChevronDown aria-hidden className="size-3" /></Button> : null}</div>
+      </Panel>
+      {scheduleEnabled || categories.some(c => c.key === 'follow-up') || sources.some(s => s.source === 'Support') ? <><Panel title="Today's operations" icon={<CalendarClock aria-hidden className={iconClass} />} action={scheduleEnabled ? <Link className={cx('rounded text-xs hover:underline', FOCUS_RING)} href={`/organizations/${data.organizationId}/schedule`}>Open schedule →</Link> : null}><Obligations rows={today.slice(0, 8)} timezone={data.timezone} today /><p className="border-t border-border px-4 py-2 text-[11px] text-muted">Bounded schedule and dated-obligation previews · {data.query.scope === 'mine' ? 'assigned to you' : 'organization'}.</p></Panel><Panel title="Upcoming obligations" icon={<Clock3 aria-hidden className={iconClass} />} meta={<span className="text-[11px] text-muted">Next 7 days</span>}><Obligations rows={upcoming.slice(0, 6)} timezone={data.timezone} /></Panel></> : null}
+      {!preferences.hidden.includes('performance') ? <Panel title="Business performance" icon={<TrendingUp aria-hidden className={iconClass} />} meta={<State>{periodLabel}</State>}><div className="grid divide-y divide-border @min-[40rem]/home:grid-cols-2 @min-[40rem]/home:divide-y-0">{performance.length ? performance.map(m => <Link key={m.key} href={m.href} className={cx('min-w-0 px-4 py-4 hover:bg-hover', FOCUS_RING)}><p className="text-xs text-muted">{m.label}</p><p className="mt-2 break-words text-xl font-semibold tabular-nums">{m.value}</p><p className="mt-2 text-[11px] text-muted">{m.definition}</p></Link>) : <p className={emptyClass}>No authorized performance projection is available for this period.</p>}</div><PaymentTrend trends={sources.flatMap(s => s.trends)} /><p className="border-t border-border px-4 py-2 text-[11px] text-muted">Each indicator names its query scope. Money stays separate by stored currency.</p></Panel> : null}
+      {!preferences.hidden.includes('activity') ? <Panel title="Recent activity" icon={<Activity aria-hidden className={iconClass} />} meta={<span className="text-[11px] text-muted">Latest authorized previews</span>}><ul className="divide-y divide-border">{activity.length ? activity.map(a => <li key={a.key}><Link href={a.href} className={cx('flex flex-wrap items-start justify-between gap-2 px-4 py-3 hover:bg-hover', FOCUS_RING)}><div className="min-w-0"><p className="break-words text-sm">{a.title}</p><p className="mt-1 text-[11px] text-muted">{a.source}{a.actor ? ` · ${a.actor}` : ''}</p></div><time className="text-[11px] text-muted" dateTime={a.at}>{timestamp(a.at, data.timezone)}</time></Link></li>) : <li className={emptyClass}>No activity in the available previews for this period.</li>}</ul><p className="border-t border-border px-4 py-2 text-[11px] text-muted">A bounded preview, not a complete event history. Private notes and transcripts are excluded.</p></Panel> : null}
+    </div><aside className="grid min-w-0 gap-4">
+      <Panel title="My priorities" icon={<ListTodo aria-hidden className={iconClass} />}><ol className="divide-y divide-border">{mine.length ? mine.map((row, i) => <li key={row.key}><Link href={row.destination.href} className={cx('flex items-start gap-3 px-4 py-3 hover:bg-hover', FOCUS_RING)}><span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-secondary text-xs">{i+1}</span><div className="min-w-0"><p className="break-words text-sm font-medium">{row.title}</p><p className="mt-1 text-[11px] text-muted">{row.source} · {row.dueAt ? timestamp(row.dueAt, data.timezone) : row.description}</p></div></Link></li>) : <li className={emptyClass}>{unavailable.length ? 'No assignments in available previews; failed sources are unknown.' : 'No current assignments in your authorized previews.'}</li>}</ol><Link href={href({ scope: 'mine', attention: 'all' })} className={cx('block border-t border-border px-4 py-2.5 text-xs hover:underline', FOCUS_RING)}>Open my workload →</Link></Panel>
+      <Panel title="Quick actions" icon={<Plus aria-hidden className={iconClass} />}><div className="grid gap-2 p-3">{creationActions}{data.quickActions.filter(a => !creationActions || a.key !== 'invoice').slice(0, 5).map(a => <Link key={a.key} href={a.href} className={cx('flex items-center justify-between gap-2 rounded border border-border px-3 py-2 text-xs hover:bg-hover', FOCUS_RING)}>{a.label}<ArrowUpRight aria-hidden className="size-3" /></Link>)}{!data.quickActions.length ? <p className="text-xs text-muted">No creation actions available to your role.</p> : null}</div></Panel>
+      {!preferences.hidden.includes('health') ? <Panel title="Workspace health" icon={<ShieldCheck aria-hidden className={iconClass} />}><ul className="divide-y divide-border">{data.results.map(r => <li key={r.source} className="px-4 py-3"><p className="mb-2 text-xs font-semibold">{r.source}</p>{r.state === 'unavailable' ? <><State warning>Temporarily unavailable</State><p className="mt-1 text-[11px] text-muted">Refresh Home to retry the authorized read.</p></> : r.data.health.map(h => <Link key={h.key} href={h.href} className={cx('mb-2 block rounded last:mb-0 hover:underline', FOCUS_RING)}><State warning={h.warning}>{h.state}</State><p className="mt-1 text-[11px] leading-relaxed text-muted">{h.detail}</p></Link>)}</li>)}</ul><p className="border-t border-border px-4 py-2 text-[11px] text-muted">Only authorized sources. Entitlement and activation are separate from live readiness.</p></Panel> : null}
+      <Panel title="Insights" icon={<Bot aria-hidden className={iconClass} />}><div className="space-y-3 p-4"><p className="text-xs leading-relaxed text-muted">{unavailable.length ? 'Review unavailable sources before treating this as a complete operating picture.' : attention.some(i => i.overdue) ? 'Overdue obligations appear first. Open the owning record to resolve them.' : 'Start with assigned priorities, then review unassigned operational work.'}</p>{data.agentPrompts.length ? <><p className="text-xs font-medium">Ask the global Agent</p>{data.agentPrompts.map(prompt => <Button key={prompt} tone="secondary" size="small" className="h-auto w-full justify-start whitespace-normal text-left" onClick={() => launchAgent(`${prompt}\nHome context: ${data.date}, ${data.timezone}. Reporting period: ${data.period.from} to ${data.period.to} (exclusive). Use authorized tools; dashboard records have not been shared.`)}>{prompt}</Button>)}<p className="text-[11px] text-muted">The Agent uses its own authorized tools and approval rules.</p></> : null}</div></Panel>
+    </aside></div>
+  </AppPage>;
 }

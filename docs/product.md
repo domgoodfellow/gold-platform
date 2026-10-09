@@ -841,6 +841,10 @@ Modeled or proposed values must not silently become product facts.
 
 ---
 
+## Global Home
+
+Global Home is the organization's cross-workspace operating starting point: current exceptions, three personal priorities, dated obligations, canonical creation shortcuts, recorded business figures, recent activity and workspace readiness. It composes existing domain authorities and sends users back to them to act. Personal work requires real Membership/Resource ownership. Reporting periods and current queues are separate scopes; empty, restricted, unavailable and runtime-unverified states remain distinguishable. Search launches authorized workspace search, customization affects optional presentation panels, and supported prompts use the existing global Agent.
+
 ## Non-goals
 
 GildOps is not intended to become:

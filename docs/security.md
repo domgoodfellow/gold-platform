@@ -1145,6 +1145,10 @@ Do not introduce:
 
 ---
 
+## Global Home authorization
+
+Global Home uses the signed-in actor's tenant client and resolves optional sources from canonical feature availability and capabilities before querying them. Finance aggregates require `report.read` and supported Finance availability; Support requires its workspace read capability; private operator Agent metadata retains actor RLS. Shared activity excludes private notes, prompts, answers, message content and transcripts. The Studio metadata RPC reuses the existing tenant manager guard rather than granting direct revision reads. Financial totals invoke the canonical report's database capability check and RLS. Local personalization is scoped to actor and Organization; it cannot alter read authorization. Source failures disclose unavailable status, not substituted zero totals. All creation and resolution paths retain owning domain checks.
+
 ## Document boundaries
 
 This document owns:

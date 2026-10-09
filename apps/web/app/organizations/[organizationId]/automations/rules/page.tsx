@@ -60,7 +60,7 @@ export default async function AutomationRulesPage({
         crumbs={workspaceAncestry(organizationId, 'automation-rules')}
         actions={
           mayManage ? (
-            <NewAutomationSheet organizationId={organizationId} />
+            <NewAutomationSheet organizationId={organizationId} defaultOpen={first('create') === '1'} />
           ) : null
         }
       />

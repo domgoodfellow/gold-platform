@@ -24,12 +24,14 @@ export function CreateCustomerSheetProvider({
   organizationId,
   definitions,
   children,
+  defaultOpen = false,
 }: {
   organizationId: string;
   definitions: FieldDefinition[];
   children: ReactNode;
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   return (
     <CreateCustomerSheetContext.Provider value={() => setOpen(true)}>

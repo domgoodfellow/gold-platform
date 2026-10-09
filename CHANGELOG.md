@@ -34,6 +34,12 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Global Home operational dashboard — 2026-10-09
+
+- Replace the starting Home with authorized projections across nine workspaces, exact exception counts, assigned priorities, local-day operations, period performance, activity and readiness.
+- Keep creation and resolution in owning workflows, preserve the global Agent rail, and exclude private conversation content from Home. Separate stored currencies and expose unavailable sources honestly.
+- Add guarded Studio metadata and canonical financial-total RPCs. Migrations are verified locally; hosted application and live provider verification remain release steps.
+
 ### Tenant AI agent operations ? 2026-10-08
 
 - Replace the tenant AI starting page with agent collections, a draft/version workbench, deployment configuration, published website knowledge, governed tools, personal evaluations and real activity/allowance reporting.

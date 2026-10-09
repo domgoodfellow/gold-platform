@@ -121,6 +121,9 @@
     ]
   },
   "files": {
+    "apps/web/e2e/global-home.spec.ts": { "category": "playwright-acceptance", "concerns": ["home", "permissions", "canonical-actions", "responsive", "agent"] },
+    "apps/web/tests/unit/home-projection.test.ts": { "category": "unit", "concerns": ["home", "time", "projections"] },
+    "apps/web/tests/integration/database/home-dashboard.test.ts": { "category": "database-integration", "concerns": ["home", "authorization", "tenant-isolation", "counts", "currencies"] },
     "apps/web/tests/component/locale-fields.test.tsx": { "category": "component", "concerns": ["settings", "hydration", "locale"] },
     "apps/web/tests/unit/setup-guide.test.ts": { "category": "unit", "concerns": ["setup", "navigation", "authorization"] },
     "apps/web/e2e/ai-workspace.spec.ts": { "category": "playwright-acceptance", "concerns": ["ai", "agents", "responsive", "communications"] },

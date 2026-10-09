@@ -78,6 +78,7 @@ export async function readFinanceInvoices(db: Db, organizationId: string, f: Fin
   if (f.q && searchTerm(f.q)) { const q = searchTerm(f.q); query = /^#?\d+$/.test(f.q.trim()) ? query.eq('number', Number(f.q.replace('#', ''))) : query.ilike('billed_to', `%${q}%`); }
   const { data, error, count } = await query.order('issued_at', { ascending: false }).order('id').range(...bounds(f));
   if (error) throw new DomainError(error.message, 'invoices.list_failed');
+  if (count === null) throw new DomainError('Invoice count unavailable.', 'invoices.count_failed');
   const rows: FinanceInvoiceRow[] = (data ?? []).map(r => ({ id: r.id!, workItemId: r.work_item_id!, number: r.number!, billedTo: r.billed_to!, customerId: r.customer_id,
     currency: r.currency!, issuedAt: r.issued_at!, dueAt: r.due_at, total: r.total_minor === null ? null : { totalMinor: safeMinor(r.total_minor), currency: r.currency! },
     paidMinor: safeMinor(r.paid_minor ?? 0), outstandingMinor: r.outstanding_minor === null ? null : safeMinor(r.outstanding_minor), settled: r.settled ?? false, overdue: r.overdue ?? false }));

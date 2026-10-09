@@ -24,7 +24,8 @@ export default async function FollowUpsPage({params,searchParams}:{params:Promis
   const page=Math.max(1,parseInt(q.page??'',10)||1);
   const isDate=(raw:string|undefined):raw is string=>Boolean(raw && /^\d{4}-\d{2}-\d{2}$/.test(raw) && Number.isFinite(Date.parse(`${raw}T00:00:00Z`)) && new Date(`${raw}T00:00:00Z`).toISOString().slice(0,10)===raw);
   const bounds=dueFilter(q.due??'',organization.timezone);
-  const [items,members,customers,opportunities,customer,opportunity]=await Promise.all([listFollowUps(db,{organizationId,search:q.q,status,kind,customerId:q.customer,opportunityId:q.opportunity,
+  const selected = /^[0-9a-f-]{36}$/i.test(q.selected ?? '') ? q.selected : undefined;
+  const [items,members,customers,opportunities,customer,opportunity]=await Promise.all([listFollowUps(db,{organizationId,id:selected,search:q.q,status,kind,customerId:q.customer,opportunityId:q.opportunity,
     ownerMembershipId:q.owner==='unassigned'?null:q.owner||undefined,from:isDate(q.from)?zonedDayRange(q.from,organization.timezone).startsAt:bounds.from,before:isDate(q.to)?zonedDayRange(shiftDate(q.to,1),organization.timezone).startsAt:bounds.before,
     limit:50,offset:(page-1)*50}),listMembers(db,{organizationId}),listCustomers(db,{organizationId,search:q.customerSearch,limit:20}),listOpportunities(db,{organizationId,customerId:q.customer,search:q.opportunitySearch,limit:20}),q.customer?getCustomer(db,{organizationId,customerId:q.customer}):null,q.opportunity?getOpportunity(db,{organizationId,opportunityId:q.opportunity}):null]);
   const options={organizationId,timezone:organization.timezone,members,mayManage:organization.capabilities.includes('follow_up.manage')};

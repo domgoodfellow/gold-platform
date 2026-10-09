@@ -160,7 +160,7 @@ export async function listInbox(
   const rows = (data ?? []) as unknown as InboxRow[];
   const page = rows.slice(0, limit).map(toItem);
   const last = page[page.length - 1];
-  return { items: page, nextCursor: rows.length > limit && last ? encodeCursor(last) : null, total: count ?? 0 };
+  return { items: page, nextCursor: rows.length > limit && last ? encodeCursor(last) : null, total: count ?? undefined };
 }
 
 export type InboxCounts = { unread: number; open: number; waiting: number; unassigned: number; mine: number };

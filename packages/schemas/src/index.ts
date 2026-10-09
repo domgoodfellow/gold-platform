@@ -32,3 +32,4 @@ export type PlatformBillingCheckoutInput = z.infer<typeof PlatformBillingCheckou
 
 export * from './forms';
 export * from './website';
+export { HomeStudioSummarySchema } from './home';

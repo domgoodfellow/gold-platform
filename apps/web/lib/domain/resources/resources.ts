@@ -100,6 +100,8 @@ export async function listResources(
     organizationId: string;
     limit?: number;
     offset?: number;
+    /** Resolve only canonical identities already assigned to the jobs being evaluated. */
+    ids?: readonly string[];
     /** Only resources of this class. */
     resourceClass?: ResourceClass;
     /** Only resources that hold this capability. Eligibility, not availability — nothing here looks at time. */
@@ -116,6 +118,7 @@ export async function listResources(
     .order('id', { ascending: true })
     .range(Math.max(0, input.offset ?? 0), Math.max(0, input.offset ?? 0) + Math.max(1, input.limit ?? LIST_LIMIT) - 1);
 
+  if (input.ids) query = query.in('id', [...input.ids]);
   if (input.resourceClass) query = query.eq('resource_class', input.resourceClass);
 
   const wanted = [...new Set([...(input.capabilityIds ?? []), ...(input.capabilityId ? [input.capabilityId] : [])])];

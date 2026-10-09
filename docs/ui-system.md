@@ -587,6 +587,12 @@ Every card or metric must serve navigation, awareness or action.
 
 Organization Home is cross-workspace.
 
+Global Home uses a compact action/period header, at most four authorized KPI cards, and an approximately 70/30 operating/supporting layout when its actual content container is wide enough. Needs attention leads the main column, followed by today's operations, next-seven-day obligations, business performance and bounded recent activity. The supporting column holds three personal priorities, canonical Quick Actions, workspace readiness and supported global Agent prompts. Narrow containers replace attention tables with cards and stack columns; opening the existing Agent rail therefore changes composition without squeezing a desktop table into a narrow pane.
+
+All/Mine/Urgent/Overdue and reporting periods live in the URL. Mine uses Membership and linked Resource ownership, never a display name or inferred assignment. Exact category totals are independent of five-record previews and may overlap. Source failures say unavailable and unknown; successful empty reads say empty. Current queue and schedule scopes are distinct from Today/rolling-seven-day/calendar-month reporting scopes. Monetary figures and payment series remain separate by stored currency. `--warning` denotes an operational exception requiring review; it does not denote provider health.
+
+Quick Actions reuse owning drawers; invoice creation composes the existing Finance workflow. Search is an authorized workspace launcher. Optional performance/activity/health panels have browser-local, actor-and-Organization-scoped preferences. Critical attention and operating responsibility remain visible. The global Agent stays in its existing rail, using its own tools and approvals. Visual references and destination classifications live in `docs/design/home/`.
+
 It may surface important facts from several domains.
 
 It does not become their owner.

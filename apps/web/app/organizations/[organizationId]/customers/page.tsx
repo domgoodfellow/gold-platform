@@ -54,10 +54,11 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
     stageId: stage === 'unstaged' ? null : stage || undefined,
   });
   const emptyCollection = customers.total === 0 && !search && !stage;
+  const mayCreate = organization.capabilities.includes('customer.create');
 
   return (
     <AppPage>
-      <CreateCustomerSheetProvider organizationId={organizationId} definitions={definitions}>
+      <CreateCustomerSheetProvider organizationId={organizationId} definitions={definitions} defaultOpen={mayCreate && query.create === '1'}>
         <CollectionHeader
           title={areaLabel('customers')}
           crumbs={workspaceAncestry(organizationId, 'customers')}

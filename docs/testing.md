@@ -1235,3 +1235,7 @@ checks reduced-role controls, search and horizontal containment. Screenshots req
 inspection in addition to test assertions. Real external OAuth/payment/AI calls remain outside this suite.
 Account captures use the personal Settings routes, explicitly reject 404s, and assert profile/password
 fields; the invitation capture waits for the newly created invitation to render.
+
+## Global Home verification
+
+Global Home verification combines `home-projection.test.ts` for local date/DST, normalization, exact-count evidence and deterministic identity/priority semantics; `home-dashboard.test.ts` for canonical local records, exact counts beyond previews, scheduling exceptions, currency separation, actor scope, private Agent approval/failure metadata, restricted RPC access and real source-failure isolation; and `global-home.spec.ts` for owning creation workflows, filters, persistent browser preferences, Agent rail, narrow-container containment and the 16 requested captures. Fixtures require loopback Supabase, use canonical provisioning and domain commands, and simulate carrier ingress only in the local database. Screenshot inspection is required in addition to passing browser assertions. Hosted migrations and live voice, payment and AI providers are outside these local checks.

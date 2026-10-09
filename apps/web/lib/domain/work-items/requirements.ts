@@ -313,7 +313,8 @@ export async function evaluateWorkItems(
     byType.set(requirement.typeId, [...(byType.get(requirement.typeId) ?? []), requirement]);
   }
 
-  const resources = await listResources(db, { organizationId: input.organizationId, limit: 1000 });
+  const assignedIds = [...new Set(input.items.flatMap(item => [...item.resourceIds]))];
+  const resources = assignedIds.length ? await listResources(db, { organizationId: input.organizationId, ids: assignedIds, limit: assignedIds.length }) : [];
   const byId = new Map(resources.map((resource) => [resource.id, resource]));
 
   for (const item of input.items) {

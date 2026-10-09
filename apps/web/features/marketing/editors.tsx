@@ -15,13 +15,13 @@ import type { Json } from '@/lib/db/database.types';
 const control = 'w-full rounded-md border border-border bg-background px-3 py-2 text-sm';
 function Field({ label, children }: { label: string; children: ReactNode }) { return <label className="grid gap-1.5 text-sm font-medium">{label}{children}</label>; }
 
-export function CampaignEditor({ organizationId, members, campaign }: { organizationId: string; members: MarketingData['members']; campaign?: Campaign }) {
+export function CampaignEditor({ organizationId, members, campaign, defaultOpen = false }: { organizationId: string; members: MarketingData['members']; campaign?: Campaign; defaultOpen?: boolean }) {
   const router = useRouter();
   const id = useId();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [requestId, setRequestId] = useState<string | null>(null);
+  const [requestId, setRequestId] = useState<string | null>(() => defaultOpen ? crypto.randomUUID() : null);
   return <PageDrawer open={open} onOpenChange={(value) => { setOpen(value); if (value && !requestId) setRequestId(crypto.randomUUID()); }}>
     <PageDrawerTrigger asChild><Button tone={campaign ? 'secondary' : 'primary'} size="small" className={campaign ? undefined : 'bg-blue-600 text-white hover:bg-blue-700'}>{campaign ? 'Edit campaign' : '+ New campaign'}</Button></PageDrawerTrigger>
     <PageDrawerContent>

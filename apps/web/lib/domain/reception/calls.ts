@@ -208,6 +208,7 @@ export type CallFilter = {
   customerId?: string;
   /** Only conversations that have not been written up with an outcome yet — a call nobody answered has nothing to say. */
   needsWrapUp?: boolean;
+  needsFollowUp?: boolean;
   since?: string;
   until?: string;
 };
@@ -254,6 +255,7 @@ export async function listCallPage(
   if (filter.phoneNumberId) query = query.eq('phone_number_id', filter.phoneNumberId);
   if (filter.customerId) query = query.eq('customer_id', filter.customerId);
   if (filter.needsWrapUp) query = query.is('outcome_id', null).eq('status', 'completed');
+  if (filter.needsFollowUp) query = query.is('outcome_id', null).eq('direction', 'inbound').in('status', ['no_answer', 'busy', 'failed']);
   if (filter.since) query = query.gte('started_at', filter.since);
   if (filter.until) query = query.lt('started_at', filter.until);
   if (filter.membershipId) query = query.eq('legs.membership_id', filter.membershipId);
@@ -272,7 +274,7 @@ export async function listCallPage(
   const rows = (data ?? []) as unknown as CallRow[];
   const page = rows.slice(0, limit).map(toCall);
   const last = page[page.length - 1];
-  return { items: page, nextCursor: rows.length > limit && last ? encodeCursor(last) : null, total: count ?? 0 };
+  return { items: page, nextCursor: rows.length > limit && last ? encodeCursor(last) : null, total: count ?? undefined };
 }
 
 export type CallCounts = { active: number; today: number; missedToday: number; needsWrapUp: number };

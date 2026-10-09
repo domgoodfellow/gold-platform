@@ -12,6 +12,8 @@
  * everything.
  */
 export type Counted<T> = T[] & {
+  /** Whether PostgREST actually answered the exact-count request. */
+  exactCount: number | null;
   /** How many rows the query matches, which is not always how many are here. */
   total: number;
 };
@@ -28,6 +30,7 @@ export const LIST_LIMIT = 500;
  * so read it on the server; if a client component needs the number, pass the number.
  */
 export function counted<T>(items: T[], count: number | null | undefined): Counted<T> {
+  Object.defineProperty(items, 'exactCount', { value: count ?? null, enumerable: false, configurable: true });
   return Object.defineProperty(items, 'total', {
     value: count ?? items.length,
     enumerable: false,
