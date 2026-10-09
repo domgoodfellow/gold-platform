@@ -531,6 +531,25 @@ It is not part of the ordinary test gate.
 
 ---
 
+### Recover a recorded migration whose schema is absent
+
+Migration history alone does not prove that the schema was installed. If application queries fail on missing objects while `db:push:dry` reports no pending migrations, compare the existing migration SQL with the linked database's tables, columns, functions, constraints and policies.
+
+For a confirmed falsely recorded migration:
+
+1. Confirm the linked project and back up schema, data, roles and `supabase_migrations` history outside Git. Retain the backups securely; a successful export is not a restore test.
+2. Verify that the migration's new objects are absent, its dependencies exist, and existing rows satisfy its new constraints. If changes are partially present, stop and inspect before replaying non-idempotent SQL.
+3. Run the relevant local database integration tests.
+4. Mark only the affected version pending with `pnpm exec supabase migration repair <version> --status reverted --linked`. This removes its history record; it does not undo schema changes.
+5. Run `pnpm db:push:dry` and inspect the exact pending set. If an out-of-order version requires `--include-all`, repeat the dry run with that flag first. Stop if unrelated migrations are selected.
+6. Apply only the reviewed set, then confirm the expected objects, execute the application read functions under caller authorization, check preserved records and repeat the dry run.
+
+Keep the original migration file unchanged. Do not reset the hosted database, delete existing tables or create duplicate table migrations to repair a false history entry. This recovery is an explicit operational correction, not permission to rewrite valid applied history.
+
+Supabase documents the history-only behavior of [`migration repair`](https://supabase.com/docs/reference/cli/supabase-migration-repair) and logical exports in [Database Backups](https://supabase.com/docs/guides/platform/backups).
+
+---
+
 ## Schema/application compatibility
 
 Database and application deployments are not atomic with each other.

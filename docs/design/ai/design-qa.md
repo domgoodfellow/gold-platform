@@ -2,6 +2,8 @@
 
 Final result: pass for the rendered management, responsive editor and website handoff surfaces reviewed on 2026-10-09. This is a visual result, not certification of live model or carrier operation.
 
+Image links below refer to local artifacts. Design PNGs are ignored by Git; the written QA record and interaction matrix remain tracked.
+
 Targets: [supplied Home](home-reference.png), 1458 × 890 pixels, and [destination reference sheet](destinations.png), 1536 × 1024 pixels. Production-build Chromium captures use 1440 × 1000, 768 × 1000 and 390 × 1000 CSS viewports at device scale 1. Source and rendered captures were opened together in the same comparison inputs. Home comparisons account for the existing 288-pixel tenant navigation and compare the content hierarchy rather than treating that shell as part of the supplied image. Destination-sheet panels are conceptual references, not equal-scale pixel targets. Mobile comparisons assess responsive adaptation; the source has no phone target.
 
 ## Iterations

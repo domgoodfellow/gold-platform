@@ -1,6 +1,7 @@
 'use server';
 
 import { getDb } from '@/lib/db/server';
+import { unstable_rethrow } from 'next/navigation';
 import {
   askQuestion,
   decideOnAction,
@@ -34,6 +35,8 @@ export type AskActionState = {
 
 export type AgentBootstrapState = {
   error: string | null;
+  errorCode?: 'authentication' | 'permission' | 'database' | 'transient';
+  identityError?: string;
   canAnswer: boolean;
   conversations: AgentConversationSummary[];
   initialConversation: { id: string; runs: AgentRun[] } | null;
@@ -41,29 +44,53 @@ export type AgentBootstrapState = {
 };
 
 export async function loadAgentBootstrapAction(organizationId: string): Promise<AgentBootstrapState> {
-  const { db, organization } = await requireOrganization(organizationId);
+  let stage: 'access' | 'history' | 'readiness' = 'access';
   try {
-    const [conversations, canAnswer] = await Promise.all([
-      listAgentConversationSummaries(db, { organizationId }),
-      canAnswerQuestions(),
-    ]);
+    const { db, organization } = await requireOrganization(organizationId);
+    stage = 'history';
+    const conversations = await listAgentConversationSummaries(db, { organizationId });
     const latest = conversations[0];
-    const identity = organization.capabilities.includes('assistant.ask')
-      ? await db.rpc('resolve_operator_agent', { p_organization_id: organizationId })
+    const initialConversation = latest
+      ? { id: latest.id, runs: await listAgentConversationRuns(db, { organizationId, conversationId: latest.id }) }
       : null;
-    const configured = identity?.data as { name?: string } | null;
+    stage = 'readiness';
+    const canAnswer = await canAnswerQuestions();
+    let identity = 'Built-in Operator Copilot';
+    let identityError: string | undefined;
+    if (organization.capabilities.includes('assistant.ask')) {
+      try {
+        const result = await db.rpc('resolve_operator_agent', { p_organization_id: organizationId });
+        if (result.error) throw result.error;
+        const configured = result.data as { name?: string } | null;
+        identity = configured?.name || identity;
+      } catch (error) {
+        unstable_rethrow(error);
+        console.error('Agent identity lookup failed.');
+        identityError = 'Agent identity could not be loaded. Using Built-in Operator Copilot.';
+      }
+    }
     return {
-      identity: configured?.name ?? 'Built-in Operator Copilot',
+      identity,
+      identityError,
       error: null,
       canAnswer,
       conversations,
-      initialConversation: latest
-        ? { id: latest.id, runs: await listAgentConversationRuns(db, { organizationId, conversationId: latest.id }) }
-        : null,
+      initialConversation,
     };
   } catch (error) {
-    if (error instanceof DomainError) return { error: error.message, canAnswer: false, conversations: [], initialConversation: null };
-    throw error;
+    // Preserve framework redirects/not-found signals; never turn revoked access into chat data.
+    unstable_rethrow(error);
+    const code = error instanceof DomainError ? error.code :
+      typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : '';
+    const errorCode = code === 'auth.required' || code === 'PGRST301' ? 'authentication'
+      : code === '42501' || code.endsWith('.forbidden') || code.endsWith('.denied') || code.endsWith('.not_permitted') ? 'permission'
+      : code.endsWith('_failed') || /^[0-9A-Z]{5}$/.test(code) ? 'database' : 'transient';
+    const message = errorCode === 'authentication' ? 'Sign in again to load your Agent conversations.'
+      : errorCode === 'permission' ? 'You do not have permission to load Agent conversations here.'
+      : errorCode === 'database' ? 'Could not load your Agent conversation history. Try again.'
+      : 'Could not load Agent right now. Try again.';
+    console.error('Agent bootstrap failed.', { stage, errorCode, code });
+    return { error: message, errorCode, canAnswer: false, conversations: [], initialConversation: null };
   }
 }
 

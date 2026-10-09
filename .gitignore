@@ -19,6 +19,9 @@ next-env.d.ts
 # Test output
 coverage/
 
+# Local design references and rendered screenshots. Keep design notes in Git.
+/docs/design/**/*.png
+
 # Environment. Nothing with credentials in it is tracked, including the local Supabase
 # keys that `pnpm db:start` prints into .env.test. The example file is the exception:
 # it names the variables without carrying any value.

@@ -1124,6 +1124,14 @@
       ],
       "note": "Phase F: the live call bar over a fake telephone; leave vs end, hold, add and transfer tell the truth about what the server said."
     },
+    "apps/web/tests/component/agent-bootstrap.test.tsx": {
+      "category": "component",
+      "concerns": ["ai", "reliability"]
+    },
+    "apps/web/tests/unit/agent-bootstrap-action.test.ts": {
+      "category": "unit",
+      "concerns": ["ai", "security", "reliability"]
+    },
     "apps/web/tests/component/agent-trigger.test.tsx": {
       "category": "component",
       "concerns": [

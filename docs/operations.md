@@ -983,6 +983,10 @@ Financial correction should preserve history.
 
 ## AI runtime operations
 
+Opening the tenant Agent panel loads the signed-in operator's conversation history, checks answering readiness and resolves an optional configured Agent identity. It does not send a question to `/ai/ask`. Investigate initial-load failures at the browser-to-Next.js server action and its authorized database reads before diagnosing model-provider failures.
+
+Bootstrap request and history-read failures appear as recoverable errors with Retry. Identity lookup failures keep history available through the built-in Operator Copilot fallback and display a retryable notice. Retries retain an already mounted conversation and composer draft; changing Organization clears the cached panel and ignores responses from the previous Organization. Sign-in, membership and service-access redirects remain enforced.
+
 AI is provider-dependent and cost-sensitive.
 
 Operational signals may include:

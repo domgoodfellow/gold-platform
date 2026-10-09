@@ -1,10 +1,10 @@
 'use client';
 
-import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useActionState, useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { usePathname } from 'next/navigation';
 import { Checkbox } from '@gold/ui/components/checkbox';
 import { SlidersHorizontal, Info } from 'lucide-react';
-import { ButtonLink } from '@/components/controls/button';
+import { Button, ButtonLink } from '@/components/controls/button';
 import { useAgentContent, useWorkspaceRail } from '@/components/panels/workspace-right-rail';
 import {
   AgentComposer,
@@ -35,6 +35,7 @@ import {
   removeAttachmentAction,
   uploadAttachmentAction,
   type AskActionState,
+  type AgentBootstrapState,
 } from './actions';
 
 const INITIAL: AskActionState = { error: null };
@@ -74,6 +75,9 @@ function TenantAgentPanel({
   conversations,
   initialConversation,
   identity,
+  bootstrapError,
+  bootstrapLoading,
+  onRetry,
 }: {
   organizationId: string;
   organizationName: string;
@@ -84,6 +88,9 @@ function TenantAgentPanel({
   conversations: AgentConversationSummary[];
   initialConversation: InitialConversation | null;
   identity?: string;
+  bootstrapError: string | null;
+  bootstrapLoading: boolean;
+  onRetry: () => void;
 }) {
   const [view, setView] = useState<View>({ kind: 'default' });
   // Lifted from the bootstrap read so a write can hand History its own refreshed state directly,
@@ -260,6 +267,7 @@ function TenantAgentPanel({
 
   return (
     <AgentPanelFrame>
+      {bootstrapError ? <BootstrapError message={bootstrapError} loading={bootstrapLoading} onRetry={onRetry} /> : null}
       <div className="border-b border-border px-4 py-2 text-xs text-muted">{identity ?? 'Built-in Operator Copilot'} · signed-in operator scope</div>
       <AgentConversationHeader
         title={title}
@@ -377,13 +385,31 @@ function TenantAgentPanel({
  * Agent is ever opened, so fetching eagerly here would be the same N+1-on-every-page-load the shell
  * was just relieved of, moved one component down rather than removed.
  */
-export function TenantAgentRail(props: {
+type TenantAgentRailProps = {
   organizationId: string;
   organizationName: string;
   timezone: string;
   mayAsk: boolean;
   canManageConnections: boolean;
-}) {
+};
+
+export function TenantAgentRail(props: TenantAgentRailProps) {
+  // Scope both cached history and pending requests to this organization.
+  return <TenantAgentBootstrap key={props.organizationId} {...props} />;
+}
+
+function BootstrapError({ message, loading, onRetry }: { message: string; loading: boolean; onRetry: () => void }) {
+  return (
+    <div className="shrink-0 space-y-2 px-4 py-3">
+      <p role="alert" className="text-sm text-danger">{message}</p>
+      <Button type="button" tone="secondary" size="small" disabled={loading} onClick={onRetry}>
+        {loading ? 'Retrying…' : 'Retry'}
+      </Button>
+    </div>
+  );
+}
+
+function TenantAgentBootstrap(props: TenantAgentRailProps) {
   const { organizationId, organizationName, timezone, mayAsk, canManageConnections } = props;
 
   // The same lazy-mount rule `AgentPanel` applies to whether the panel's content is shown at all:
@@ -394,23 +420,37 @@ export function TenantAgentRail(props: {
   if (agentOpen && !everOpened) setEverOpened(true);
 
   const [bootstrap, setBootstrap] = useState<{
+    status: 'loading' | 'success' | 'failure';
+    data: AgentBootstrapState | null;
     error: string | null;
-    canAnswer: boolean;
-    conversations: AgentConversationSummary[];
-    initialConversation: InitialConversation | null;
-    identity?: string;
-  } | null>(null);
+  }>({ status: 'loading', data: null, error: null });
+  const [attempt, setAttempt] = useState(0);
+  const retry = useCallback(() => {
+    setBootstrap((current) => ({ ...current, status: 'loading' }));
+    setAttempt((current) => current + 1);
+  }, []);
 
   useEffect(() => {
-    if (!everOpened || bootstrap) return;
+    if (!everOpened) return;
     let active = true;
-    void loadAgentBootstrapAction(organizationId).then((result) => {
-      if (active) setBootstrap(result);
-    });
+    async function load() {
+      try {
+        const result = await loadAgentBootstrapAction(organizationId);
+        if (!active) return;
+        setBootstrap((current) => result.error
+          ? { status: 'failure', data: current.data, error: result.error }
+          : { status: 'success', data: result, error: result.identityError ?? null });
+      } catch {
+        if (active) setBootstrap((current) => ({
+          ...current, status: 'failure', error: 'Could not connect to Agent. Try again.',
+        }));
+      }
+    }
+    void load();
     return () => {
       active = false;
     };
-  }, [everOpened, bootstrap, organizationId]);
+  }, [everOpened, attempt, organizationId]);
 
   // Memoized so `useAgentContent`'s effect — keyed on this element's identity — runs once rather
   // than on every re-render this component takes as a `RailContext` consumer (it re-renders
@@ -418,35 +458,36 @@ export function TenantAgentRail(props: {
   // business so a selection never outlives switching to another one.
   const content = useMemo(() => {
     if (!everOpened) return null;
-    if (!bootstrap) {
+    if (!bootstrap.data) {
       return (
         <AgentPanelFrame>
-          <div role="status" className="flex flex-1 items-center justify-center text-sm text-muted">
+          {bootstrap.status === 'failure' ? (
+            <BootstrapError message={bootstrap.error!} loading={false} onRetry={retry} />
+          ) : <div role="status" className="flex flex-1 items-center justify-center text-sm text-muted">
             Loading…
-          </div>
+          </div>}
         </AgentPanelFrame>
       );
     }
-    // A bootstrap error (the session no longer belongs to this business, say) is treated the same
-    // way a deployment that cannot answer is: the conversation grammar stays — History, the
-    // composer, the transcript — and only asking goes off. A separate "Agent unavailable" surface
-    // for this would say something different from what `canAnswer` already says everywhere else
-    // in this panel.
+    // Keep the panel mounted during retries so its selected conversation and draft survive.
     return (
       <TenantAgentPanel
         key={organizationId}
         organizationId={organizationId}
         organizationName={organizationName}
         timezone={timezone}
-        canAnswer={bootstrap.error === null && bootstrap.canAnswer}
+        canAnswer={bootstrap.status === 'success' && bootstrap.data.canAnswer}
         mayAsk={mayAsk}
         canManageConnections={canManageConnections}
-        conversations={bootstrap.conversations}
-        initialConversation={bootstrap.initialConversation}
-        identity={bootstrap.identity}
+        conversations={bootstrap.data.conversations}
+        initialConversation={bootstrap.data.initialConversation}
+        identity={bootstrap.data.identity}
+        bootstrapError={bootstrap.error}
+        bootstrapLoading={bootstrap.status === 'loading'}
+        onRetry={retry}
       />
     );
-  }, [everOpened, bootstrap, organizationId, organizationName, timezone, mayAsk, canManageConnections]);
+  }, [everOpened, bootstrap, organizationId, organizationName, timezone, mayAsk, canManageConnections, retry]);
 
   useAgentContent(content);
   return null;
