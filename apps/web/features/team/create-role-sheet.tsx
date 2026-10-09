@@ -7,6 +7,8 @@ import { ErrorText } from '@/components/controls/inputs';
 import {
   PageDrawer,
   PageDrawerContent,
+  PageDrawerBody,
+  PageDrawerFooter,
   PageDrawerDescription,
   PageDrawerHeader,
   PageDrawerTitle,
@@ -32,13 +34,7 @@ export function CreateRoleSheet({ organizationId }: { organizationId: string }) 
           <Plus aria-hidden className="size-4" /> New role
         </Button>
       </PageDrawerTrigger>
-      <PageDrawerContent>
-        <PageDrawerHeader>
-          <PageDrawerTitle>New role</PageDrawerTitle>
-          <PageDrawerDescription>Name it and choose what it may do.</PageDrawerDescription>
-        </PageDrawerHeader>
-        <CreateRoleForm organizationId={organizationId} onCreated={() => setOpen(false)} />
-      </PageDrawerContent>
+      {open ? <CreateRoleForm organizationId={organizationId} onCreated={() => setOpen(false)} /> : null}
     </PageDrawer>
   );
 }
@@ -61,13 +57,16 @@ function CreateRoleForm({
   }, [state.created, onCreated]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
-      <input type="hidden" name="organizationId" value={organizationId} />
-      <RoleEditorFields idPrefix="create-role" withPresets />
-      <Button type="submit" disabled={pending} className="w-fit">
-        {pending ? 'Creating…' : 'Create role'}
-      </Button>
-      <ErrorText role="alert">{state.error}</ErrorText>
-    </form>
+    <PageDrawerContent>
+      <PageDrawerHeader><PageDrawerTitle>New role</PageDrawerTitle><PageDrawerDescription>Name it and choose what it may do.</PageDrawerDescription></PageDrawerHeader>
+      <PageDrawerBody>
+        <form id={`create-role-${organizationId}`} action={formAction} className="flex flex-col gap-4">
+          <input type="hidden" name="organizationId" value={organizationId} />
+          <RoleEditorFields idPrefix="create-role" withPresets />
+          <ErrorText role="alert">{state.error}</ErrorText>
+        </form>
+      </PageDrawerBody>
+      <PageDrawerFooter><Button type="submit" form={`create-role-${organizationId}`} disabled={pending}>{pending ? 'Creating…' : 'Create role'}</Button></PageDrawerFooter>
+    </PageDrawerContent>
   );
 }

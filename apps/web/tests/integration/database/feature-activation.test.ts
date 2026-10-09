@@ -8,7 +8,8 @@ import {
   recordPlanAssignment,
   type ResolvedFeatureState,
 } from '@/lib/domain/catalogue/organization-plans';
-import { createPlan } from '@/lib/domain/catalogue/plans';
+import { createPlan, setPlanFeatureOverride } from '@/lib/domain/catalogue/plans';
+import { computeReadiness, computeSetupOverview } from '@/lib/domain/tenancy/lifecycle';
 import { createPriceBookItem } from '@/lib/domain/pricing/price-book';
 import { assignRole, createRole, listRoles } from '@/lib/domain/tenancy/roles';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
@@ -149,6 +150,8 @@ describe('feature entitlement, activation and readiness', () => {
     await expect(
       disableOrganizationFeature(db, { organizationId, featureId: billingFeatureId }),
     ).rejects.toMatchObject({ code: 'organization_plans.feature_forbidden' });
+    await expect(enableOrganizationFeature(db, { organizationId, featureId: billingFeatureId }))
+      .rejects.toMatchObject({ code: 'organization_plans.feature_forbidden' });
 
     const roles = await listRoles(db, { organizationId });
     const admin = roles.find((r) => r.name === 'Admin')!;
@@ -164,6 +167,41 @@ describe('feature entitlement, activation and readiness', () => {
  * fallback, exactly as a Plan granting fifty Features would.
  */
 describe('Plan-assignment authority over legacy fallback', () => {
+  it('does not demand or declare telephone readiness for a CRM-only plan', async () => {
+    const owner = await signUp('crm-only-readiness');
+    const organizationId = await foundBusiness({ ownerEmail: owner.email, name: 'CRM only', currency: 'EUR' });
+    const feature = (await listFeaturesByRuntimeMapping(owner.db, { mappingKind: 'module_key', mappingValue: 'reception' })).find((entry) => entry.key === 'pipeline')!;
+    const staff = await asPlatformStaff();
+    const planId = await createPlan(staff, { key: `crm_${randomUUID().slice(0, 8)}`, kind: 'plan', label: 'CRM readiness fixture', description: 'Controlled test', billable: false });
+    await setPlanFeatureOverride(staff, { planId, featureId: feature.id, included: true });
+    await recordPlanAssignment(staff, { organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+    expect((await organizationResolvedFeatureStates(owner.db, { organizationId })).find((state) => state.featureId === feature.id)?.readiness).toBe('ready');
+    const overview = await computeSetupOverview(owner.db, { organizationId });
+    expect(overview.areas.map((area) => area.key)).not.toContain('reception');
+    expect(overview.blockers).toEqual([]);
+  });
+  it('checks plan-only booking readiness and removes its blocker when disabled, including direct launch enforcement', async () => {
+    const staff = await asPlatformStaff();
+    const owner = await signUp('plan-booking');
+    const org = await foundBusiness({ ownerEmail: owner.email, name: 'Plan-only booking', currency: 'EUR' });
+    const features = await listFeaturesByRuntimeMapping(owner.db, { mappingKind: 'module_key', mappingValue: 'booking' });
+    const feature = features.find((entry) => entry.key === 'booking')!;
+    const planId = await createPlan(staff, { key: `booking_${randomUUID().slice(0, 8)}`, kind: 'plan', label: 'Booking verification', description: 'Controlled local fixture', billable: false });
+    await setPlanFeatureOverride(staff, { planId, featureId: feature.id, included: true });
+    await recordPlanAssignment(staff, { organizationId: org, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+    const states = await organizationResolvedFeatureStates(owner.db, { organizationId: org });
+    expect(states.find((entry) => entry.featureId === feature.id)?.readiness).toBe('setup_required');
+    expect((await computeReadiness(owner.db, { organizationId: org })).blockers.map((entry) => entry.key)).toContain('booking');
+    expect((await owner.db.rpc('launch_organization', { p_id: org })).error?.code).toBe('55000');
+    await disableOrganizationFeature(owner.db, { organizationId: org, featureId: feature.id });
+    expect((await computeReadiness(owner.db, { organizationId: org })).blockers).toEqual([]);
+    expect((await owner.db.rpc('organization_launch_blockers', { p_id: org })).data).toEqual([]);
+    await enableOrganizationFeature(owner.db, { organizationId: org, featureId: feature.id });
+    expect((await owner.db.rpc('launch_organization', { p_id: org })).error?.code).toBe('55000');
+    await disableOrganizationFeature(owner.db, { organizationId: org, featureId: feature.id });
+    expect((await owner.db.rpc('launch_organization', { p_id: org })).error).toBeNull();
+  });
+
   it('never falls back to legacy wanted∩paid once a real Plan assignment exists, even one granting nothing', async () => {
     const staff = await asPlatformStaff();
     const owner = await signUp('plan-authority');

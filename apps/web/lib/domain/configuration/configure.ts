@@ -1,4 +1,5 @@
 import type { Db } from '@/lib/db/types';
+import { readBusinessShape } from './shape';
 import { DomainError } from '@/lib/domain/errors';
 import {
   createFieldDefinition,
@@ -15,7 +16,7 @@ import { setBrand } from '@/lib/domain/branding/brand';
 import { createPriceBookItem } from '@/lib/domain/pricing/price-book';
 import { addOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { createRole } from '@/lib/domain/tenancy/roles';
-import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
+import { enableOrganizationFeature, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { MODULES, isModuleKey, type ModuleKey } from '@/lib/navigation';
 import { publicProfile, setPublicProfile } from '@/lib/domain/tenancy/profile';
 import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
@@ -23,8 +24,7 @@ import { createWorkItemTransition } from '@/lib/domain/work-items/transitions';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 
 /**
- * Standing a whole business up from data, in one function with no branch in it —
- * `milestone-m3.test.ts` asserts that by reading this function's own source. `BusinessShape` is
+ * Standing a business up from reviewed data through its canonical owners. `BusinessShape` is
  * a type rather than an argument list because a proposal has to survive being generated,
  * rendered, edited by a human, and only then applied (the second caller is M8's onboarding
  * flow). Not a business template — nothing here is seeded or known to the platform in advance.
@@ -96,6 +96,8 @@ export type BusinessShape = {
    * because a proposal is a description of a business and not an inventory of it.
    */
   modules?: ModuleKey[];
+  /** Individually reviewed catalogue activations. They never purchase entitlement. */
+  featureKeys?: string[];
   /** What it says about itself. The only prose field in a shape — a public page with no tagline is honest and blank, but a business that just described itself has already said the thing that belongs there. Optional; empty strings clear rather than write. */
   voice?: { tagline: string; intro: string };
   /** How it looks — a colour and a pair of lettering choices. Optional, and no branch on what kind of business this is: a colour is a colour, whoever chose it. */
@@ -112,7 +114,7 @@ export type ConfiguredBusiness = {
   priceBookItemIds: string[];
   /** In `shape.automations` order, so an index into one indexes the other. */
   automationRuleIds: string[];
-  /** What this shape asked for, in its order. Not a list of what changed: `setModuleEnabled` treats switching on something already on as success, so a key here was not necessarily off before. */
+  /** Historical grouped activation selections, not a list of purchases or new entitlements. */
   moduleKeys: ModuleKey[];
 };
 
@@ -210,9 +212,21 @@ export async function configureBusiness(
   organizationId: string,
   shape: BusinessShape,
 ): Promise<ConfiguredBusiness> {
+  shape = readBusinessShape(shape);
   validateTransitions(shape);
   validateModules(shape);
   validateScheduling(shape);
+  const featureStates = shape.modules?.length || shape.featureKeys?.length ? await organizationResolvedFeatureStates(db, { organizationId }) : [];
+  for (const key of shape.featureKeys ?? []) {
+    if (!featureStates.some((state) => state.featureKey === key && state.entitled && state.implementationState === 'available')) {
+      throw new DomainError('This proposal includes a feature unavailable to this business.', 'configuration.feature_not_entitled');
+    }
+  }
+  for (const key of shape.modules ?? []) {
+    if (!featureStates.some((state) => state.moduleKey === key && state.entitled && state.implementationState === 'available')) {
+      throw new DomainError('This proposal includes a capability outside this business’s plan.', 'configuration.module_not_entitled');
+    }
+  }
 
   const roleIds: string[] = [];
   for (const role of shape.roles) {
@@ -310,13 +324,20 @@ export async function configureBusiness(
   // is gated on enablement, and D25 is why that stays true.
   const moduleKeys: ModuleKey[] = [];
   for (const key of shape.modules ?? []) {
-    await setModuleEnabled(db, { organizationId, key, enabled: true });
+    for (const state of featureStates.filter((state) => state.moduleKey === key && state.entitled && state.implementationState === 'available')) {
+      await enableOrganizationFeature(db, { organizationId, featureId: state.featureId });
+    }
     moduleKeys.push(key);
   }
 
   // Last, and after everything else that can fail on a capability — a business's look and voice
   // are `organization.manage`, so a member who may operate but not rename the business still
   // gets the whole operational setup before being refused here.
+  for (const key of new Set(shape.featureKeys ?? [])) {
+    const state = featureStates.find((state) => state.featureKey === key)!;
+    await enableOrganizationFeature(db, { organizationId, featureId: state.featureId });
+  }
+
   if (shape.voice) {
     // Read first — `setPublicProfile` writes the whole row, and a shape carries only two of its
     // six fields; passing empty strings for the rest would clear a phone number already typed in.

@@ -21,7 +21,7 @@ test.describe('canonical Settings routes', () => {
       await page.getByRole('link', { name: /^Organization Business/ }).click();
       await expect(page).toHaveURL(`${root}/organization`);
       await expect(page.getByRole('heading', { level: 1, name: 'Organization', exact: true })).toBeVisible();
-      const main = page.getByRole('main');
+      const main = page.getByRole('main').locator('section[aria-labelledby^="settings-"]');
       for (const removed of ['Team', 'Apps and files', 'Plan & usage', 'Secrets & credentials']) {
         await expect(main.getByRole('link', { name: removed, exact: true })).toHaveCount(0);
       }
@@ -29,7 +29,7 @@ test.describe('canonical Settings routes', () => {
 
       await page.goto(root);
       await page.getByRole('link', { name: /^Account Your/ }).click();
-      await expect(page.getByLabel('Display name')).toBeVisible();
+      await expect(page.getByLabel('Given name', { exact: true })).toBeVisible();
       await expect(page.getByLabel('New email address')).toBeVisible();
       await page.getByRole('link', { name: 'Security & sign-in', exact: true }).click();
       await expect(page.getByLabel('Current password', { exact: true })).toBeVisible();

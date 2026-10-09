@@ -3,7 +3,7 @@ import { FIELD_KINDS, CUSTOM_FIELD_ENTITIES } from '@/lib/domain/fields/field-de
 import { TRIGGER_EVENTS } from '@/lib/domain/automation/rules';
 import { FONT_KEYS } from '@/lib/domain/branding/palette';
 import { MODULES } from '@/lib/navigation';
-import type { BusinessShape } from '@/lib/domain/configuration/configure';
+import { readBusinessShape } from '@/lib/domain/configuration/shape';
 import {
   DraftingNotEntitledError,
   type ConfigurationGap,
@@ -303,12 +303,6 @@ function userMessage(input: DraftingRequest): string {
   return parts.join('\n');
 }
 
-/** Every value in `list` that is a string, and nothing else. */
-function strings(list: unknown): string[] | null {
-  if (!Array.isArray(list)) return null;
-  return list.every((entry) => typeof entry === 'string') ? (list as string[]) : null;
-}
-
 /**
  * The answer, narrowed into the domain's own types — or null.
  *
@@ -331,23 +325,6 @@ function narrow(value: unknown): DraftedConfiguration | null {
   if (typeof rawShape !== 'object' || rawShape === null) return null;
   const shape = rawShape as Record<string, unknown>;
 
-  const statuses = strings(shape.statuses);
-  if (typeof shape.typeName !== 'string' || typeof shape.schedulable !== 'boolean' || statuses === null) return null;
-
-  if (!Array.isArray(shape.transitions) || !Array.isArray(shape.prices)) return null;
-  if (!Array.isArray(shape.hours) || !Array.isArray(shape.roles)) return null;
-  if (typeof shape.fields !== 'object' || shape.fields === null) return null;
-
-  const transitions: [number, number][] = [];
-  for (const pair of shape.transitions) {
-    // A pair with a third element is not a transition, whatever else it might be. Refused here
-    // rather than silently truncated, because a truncated one is a legal-looking move nobody
-    // proposed.
-    if (!Array.isArray(pair) || pair.length !== 2) return null;
-    if (!pair.every((index) => typeof index === 'number')) return null;
-    transitions.push([pair[0] as number, pair[1] as number]);
-  }
-
   const gaps: ConfigurationGap[] = [];
   for (const gap of Array.isArray(answer.gaps) ? answer.gaps : []) {
     if (typeof gap !== 'object' || gap === null) continue;
@@ -365,29 +342,27 @@ function narrow(value: unknown): DraftedConfiguration | null {
   const voice = record(shape.voice);
   const brand = record(shape.brand);
 
-  return {
-    shape: {
-      ...(shape as unknown as BusinessShape),
-      statuses,
-      transitions,
-      voice:
-        voice && typeof voice.tagline === 'string' && typeof voice.intro === 'string'
-          ? { tagline: voice.tagline, intro: voice.intro }
-          : undefined,
-      brand:
-        brand &&
-        typeof brand.accent === 'string' &&
-        typeof brand.headingFont === 'string' &&
-        typeof brand.bodyFont === 'string'
-          ? {
-              accent: brand.accent,
-              headingFont: brand.headingFont,
-              bodyFont: brand.bodyFont,
-            }
-          : undefined,
-    },
-    gaps,
-  };
+  try {
+    return {
+      shape: readBusinessShape({
+        ...shape,
+        voice:
+          voice && typeof voice.tagline === 'string' && typeof voice.intro === 'string'
+            ? { tagline: voice.tagline, intro: voice.intro }
+            : undefined,
+        brand:
+          brand &&
+          typeof brand.accent === 'string' &&
+          typeof brand.headingFont === 'string' &&
+          typeof brand.bodyFont === 'string'
+            ? { accent: brand.accent, headingFont: brand.headingFont, bodyFont: brand.bodyFont }
+            : undefined,
+      }),
+      gaps,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function record(value: unknown): Record<string, unknown> | null {

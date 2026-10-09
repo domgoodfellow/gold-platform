@@ -3,6 +3,7 @@ import { SectionHeading } from '@/components/surfaces/section';
 import { DefinitionList, Detail } from '@/components/display/data';
 import type { AcceptedProposalHandoff } from '@/lib/domain/customers/proposal-handoff';
 import { previewByWorkspace, type ConfigurationRecommendation } from '@/lib/domain/customers/configuration-recommendation';
+import { describeDiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
 
 type CommercialTerms = {
   planLabel?: string;
@@ -25,6 +26,7 @@ export function FoundingHandoff({ handoff }: { handoff: AcceptedProposalHandoff 
   const terms = handoff.commercialTerms as CommercialTerms;
   const recommendation = handoff.acceptedConfiguration as ConfigurationRecommendation | null;
   const preview = recommendation ? previewByWorkspace(recommendation.recommended) : [];
+  const knownFacts = describeDiscoverySnapshot({ answers: handoff.discoverySnapshot });
 
   return (
     <Card as="section" aria-labelledby="founding-handoff-heading">
@@ -33,6 +35,11 @@ export function FoundingHandoff({ handoff }: { handoff: AcceptedProposalHandoff 
         Created from an accepted proposal. {handoff.confirmedRequirements} discovery{' '}
         {handoff.confirmedRequirements === 1 ? 'question was' : 'questions were'} confirmed before it was sent.
       </p>
+      {knownFacts ? <div className="mt-4">
+        <h3 className="text-sm font-medium">Here’s what we understood about your business</h3>
+        <p className="mt-1 text-sm text-muted">Confirm or change these facts in the configuration steps. This discovery snapshot stays as historical evidence.</p>
+        <p className="mt-3 whitespace-pre-wrap text-sm">{knownFacts}</p>
+      </div> : null}
 
       {terms.planLabel ? (
         <DefinitionList className="mt-3">

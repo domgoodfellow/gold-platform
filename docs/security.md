@@ -1184,3 +1184,19 @@ All Support tables force tenant RLS and deny direct authenticated writes. Comman
 Marketing uses `marketing.read` to inspect campaigns, dynamic audiences, acquisition inquiries and aggregates; `marketing.manage` additionally permits campaign/audience edits and inquiry review. Manage includes read behavior. Founding roles receive both through the capability registry; existing organization managers receive them through a forward migration. These are actor authorities, not a separately sellable Marketing entitlement. Organization service access remains enforced by operational routes and actions.
 
 Marketing tables have tenant RLS and authenticated SELECT grants only. Capability-checked RPCs own writes and sensitive submission inspection. CRM creation additionally requires `customer.create` and calls canonical `create_customer`; Marketing management grants no message delivery or CRM stage authority. Public acquisition resolves the tenant from the canonical Form public key, validates an opaque Campaign/Form token in that same tenant, publication and campaign state, and bounds/allowlists UTM fields. Browser-supplied organization IDs are never accepted by public acquisition. Request retries and CRM handoffs are transactionally idempotent. Raw answers stay in Studio and are excluded from tables, event payloads and logs.
+
+## Configuration review and launch
+
+Proposal mutations bind both proposal ID and organization ID, including when an actor administers
+multiple organizations. Application atomically changes a draft to `applying` before any configuration
+write; racing requests cannot both execute the sequence. RLS requires `configuration.propose` for the
+claim and outcome updates. A database trigger freezes the claimed document and refuses replay or
+discard. Each operational write still requires its existing domain capability. Historical terminal
+outcomes remain immutable and interrupted claims are inspected rather than automatically retried.
+
+Untrusted proposal structure is validated before document persistence and canonical application;
+individual feature activations are checked for actual catalogue availability and entitlement.
+Feature enablement explicitly checks `feature.manage` even when no activation override exists,
+because an unauthorized RLS DELETE may return no rows without an error. Database launch blockers
+consume canonical entitlement/activation and refuse direct launch past required domain setup.
+Connection projections do not send raw provider diagnostics to the browser.

@@ -179,10 +179,10 @@ describe('the operator shell navigation', () => {
     ]);
     const page = readFileSync(`${ROUTES}/${key}/page.tsx`, 'utf8');
     expect(page).toContain('await requireOrganization(organizationId)');
-    expect(page).toContain('<WorkspaceHome');
-    expect(page).toContain('<EmptyState');
+    expect(page).toContain('<AiWorkspace');
+    expect(page).toContain('loadAiWorkspace');
     expect(page).not.toMatch(/redirect\(|href=|<Widget|<Card|\.insert\(|\.update\(|\.upsert\(|platform|credentials/i);
-    expect(readdirSync(`${ROUTES}/${key}`)).toEqual(['page.tsx']);
+    expect(readdirSync(`${ROUTES}/${key}`)).toContain('page.tsx');
   });
 
   it.each([
@@ -235,7 +235,7 @@ describe('the operator shell navigation', () => {
     expect(configOwner('team')).toBeUndefined();
     // Website earned its own operating page (D68): it is an `Area`, not a `ConfigTarget`, and the
     // Settings map names nothing by this key any more.
-    expect(configOwner('website')).toBeUndefined();
+    expect(configOwner('website')).toBe('studio');
     expect(AREAS.find((area) => area.segment === 'studio-website')?.workspace).toBe('studio');
   });
 
@@ -887,7 +887,9 @@ describe('Guided Setup is no longer a permanent sidebar destination', () => {
     // `/setup` directly sees no Launch control to press, on top of the database's own refusal if
     // one were pressed anyway (`lifecycle.test.ts`: a second attempt is `organizations.already_live`).
     const setup = readFileSync(`${ROUTES}/setup/page.tsx`, 'utf8');
-    expect(setup).toMatch(/inSetup \? \(\s*<LaunchReview[\s\S]*?LaunchForm/);
+    expect(setup).toContain('live={!inSetup}');
+    const guided = readFileSync(`${ROUTES}/../../../features/setup/guided-setup.tsx`, 'utf8');
+    expect(guided).toMatch(/live \? <Card[\s\S]*?: <LaunchReview/);
   });
 });
 

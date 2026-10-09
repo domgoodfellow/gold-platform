@@ -214,6 +214,7 @@ async function standUp(business: typeof SWEEP | typeof DIVE, label: string): Pro
   // drafting never produced, and that word is what has to end up in the database.
   const editedStatus = `${business.shape.statuses.at(-1)} ✓`;
   await reviseConfigurationProposal(db, {
+    organizationId,
     proposalId: proposal!.id,
     shape: {
       ...business.shape,

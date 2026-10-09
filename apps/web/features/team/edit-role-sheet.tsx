@@ -7,6 +7,8 @@ import { ErrorText } from '@/components/controls/inputs';
 import {
   PageDrawer,
   PageDrawerContent,
+  PageDrawerBody,
+  PageDrawerFooter,
   PageDrawerDescription,
   PageDrawerHeader,
   PageDrawerTitle,
@@ -41,7 +43,7 @@ export function EditRoleSheet({ organizationId, role }: { organizationId: string
             Changes take effect immediately for everyone already assigned this role.
           </PageDrawerDescription>
         </PageDrawerHeader>
-        <form action={formAction} className="flex flex-col gap-4">
+        <PageDrawerBody><form id={`edit-role-${role.id}`} action={formAction} className="flex flex-col gap-4">
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="roleId" value={role.id} />
 
@@ -51,12 +53,9 @@ export function EditRoleSheet({ organizationId, role }: { organizationId: string
             idPrefix={`edit-role-${role.id}`}
           />
 
-          <Button type="submit" disabled={pending} className="w-fit">
-            {pending ? 'Saving…' : 'Save role'}
-          </Button>
-
           <ErrorText role="alert">{state.error}</ErrorText>
-        </form>
+        </form></PageDrawerBody>
+        <PageDrawerFooter><Button type="submit" form={`edit-role-${role.id}`} disabled={pending}>{pending ? 'Saving…' : 'Save role'}</Button></PageDrawerFooter>
       </PageDrawerContent>
     </PageDrawer>
   );

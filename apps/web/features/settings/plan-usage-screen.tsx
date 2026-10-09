@@ -256,7 +256,7 @@ export function PlanUsageScreen({
           What GildOps charged for what this business used. Recent activity, most recent first.
         </Hint>
         {usage.length === 0 ? (
-          <EmptyState className="mt-2">Nothing metered yet.</EmptyState>
+            <EmptyState className="mt-2">No usage has been reported. Provider reporting can be delayed; this does not establish zero consumption.</EmptyState>
         ) : (
           <DividedList as="div" className="mt-2">
             {usage.map((entry) => (

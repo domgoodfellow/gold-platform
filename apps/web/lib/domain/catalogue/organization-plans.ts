@@ -1,9 +1,10 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
-import { listCatalogFeatures, listCatalogModules, listCatalogProducts } from './catalogue';
+import { getOrganization } from '@/lib/domain/tenancy/organizations';
+import { listCatalogFeatures, listCatalogModules, listCatalogProducts, type CatalogFeature, type CatalogModule, type CatalogProduct } from './catalogue';
 import type { PlanKind } from './plans';
-import { isModuleKey, moduleConfiguration, MODULES, type ModuleKey } from '@/lib/navigation';
+import { isModuleKey, moduleConfiguration, MODULES, featureConfigurationTarget, type ModuleKey } from '@/lib/navigation';
 import { listUsableModules, outstandingModuleSetup } from '@/lib/domain/tenancy/modules';
 
 /**
@@ -406,12 +407,13 @@ export type ResolvedFeatureState = {
 export async function organizationResolvedFeatureStates(
   db: Db,
   input: { organizationId: string },
+  catalogue?: { features: CatalogFeature[]; modules: CatalogModule[]; products: CatalogProduct[] },
 ): Promise<ResolvedFeatureState[]> {
   const [features, modules, products, mappingsResult, planEntitlements, usable, overridesResult, planAssignment] =
     await Promise.all([
-      listCatalogFeatures(db),
-      listCatalogModules(db),
-      listCatalogProducts(db),
+      catalogue ? Promise.resolve(catalogue.features) : listCatalogFeatures(db),
+      catalogue ? Promise.resolve(catalogue.modules) : listCatalogModules(db),
+      catalogue ? Promise.resolve(catalogue.products) : listCatalogProducts(db),
       db
         .from('platform_catalog_runtime_mappings')
         .select('feature_id, mapping_value')
@@ -451,9 +453,15 @@ export async function organizationResolvedFeatureStates(
   // Readiness re-uses the one place per-module setup checks already live, restricted to the
   // modules this resolver is about to report entitled — a module never wanted/paid is never
   // "setup_required", it is simply not entitled.
+  const active = new Set<ModuleKey>();
+  for (const feature of features) {
+    const key = readinessModuleKey({ featureKey: feature.key, moduleKey: moduleKeyByFeature.get(feature.id) ?? null });
+    if (key && feature.implementationState === 'available' && !disabledFeatureIds.has(feature.id)
+      && (hasPlanAssignment ? planEntitledIds.has(feature.id) : usable.has(key))) active.add(key);
+  }
   const outstanding = await outstandingModuleSetup(db, {
     organizationId: input.organizationId,
-    enabled: usable,
+    enabled: active,
   });
 
   return features.map((feature) => {
@@ -480,13 +488,16 @@ export async function organizationResolvedFeatureStates(
     let readiness: ResolvedFeatureState['readiness'] = 'unavailable';
     let reason: string | undefined;
     if (feature.implementationState === 'available' && entitled && activation === 'active') {
-      const outstandingReason = moduleKey ? outstanding.get(moduleKey) : undefined;
+      const readinessKey = readinessModuleKey({ featureKey: feature.key, moduleKey });
+      const outstandingReason = readinessKey ? outstanding.get(readinessKey) : undefined;
       readiness = outstandingReason ? 'setup_required' : 'ready';
       reason = outstandingReason;
     }
 
     const moduleEntry = moduleKey ? MODULES.find((m) => m.key === moduleKey) : undefined;
-    const primaryHref = moduleEntry ? moduleConfiguration(input.organizationId, moduleEntry).href : undefined;
+    const target = featureConfigurationTarget(feature.key);
+    const primaryHref = target ? `/organizations/${input.organizationId}/${target.path}`
+      : moduleEntry ? moduleConfiguration(input.organizationId, moduleEntry).href : undefined;
 
     return {
       featureId: feature.id,
@@ -515,6 +526,14 @@ export async function enableOrganizationFeature(
   input: { organizationId: string; featureId: string },
 ): Promise<void> {
   await requireActor(db);
+  const organization = await getOrganization(db, input.organizationId);
+  if (!organization?.capabilities.includes('feature.manage')) {
+    throw new DomainError('You cannot manage features here.', 'organization_plans.feature_forbidden');
+  }
+  const states = await organizationResolvedFeatureStates(db, input);
+  if (!states.some((state) => state.featureId === input.featureId && state.entitled)) {
+    throw new DomainError('This feature is not included for this business.', 'organization_plans.feature_not_entitled');
+  }
 
   const { error } = await db
     .from('organization_feature_activation_overrides')
@@ -568,11 +587,16 @@ export async function disableOrganizationFeature(
 export function activeModuleKeys(states: readonly ResolvedFeatureState[]): Set<ModuleKey> {
   const keys = new Set<ModuleKey>();
   for (const state of states) {
-    if (state.moduleKey && state.entitled && state.activation === 'active') {
+    if (state.moduleKey && state.implementationState === 'available' && state.entitled && state.activation === 'active') {
       keys.add(state.moduleKey);
     }
   }
   return keys;
+}
+
+/** Runtime aliases do not imply shared setup requirements: CRM never needs a telephone account. */
+export function readinessModuleKey(state: Pick<ResolvedFeatureState, 'featureKey' | 'moduleKey'>): ModuleKey | null {
+  return ['pipeline', 'configurable_stages', 'qualification_state'].includes(state.featureKey) ? null : state.moduleKey;
 }
 
 /**

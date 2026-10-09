@@ -18,6 +18,8 @@ const read = (path: string) => readFileSync(fileURLToPath(new URL(path, import.m
 const SETUP_PAGE = read('../../../app/organizations/[organizationId]/setup/page.tsx');
 const SETUP_ACTIONS = read('../../../app/organizations/[organizationId]/setup/actions.ts');
 const COCKPIT = read('../../../features/setup/setup-cockpit.tsx');
+const GUIDED = read('../../../features/setup/guided-setup.tsx');
+const REVIEW = read('../../../app/organizations/[organizationId]/setup/proposal/page.tsx');
 const SHELL = read('../../../app/organizations/[organizationId]/org-shell.tsx');
 const LAYOUT = read('../../../features/shell/organization-shell.tsx');
 const PLATFORM_LAYOUT = read('../../../app/organizations/[organizationId]/platform/layout.tsx');
@@ -95,7 +97,9 @@ describe('Launch — a review boundary, not a mystery button', () => {
   });
 
   it('only offers Launch while SETUP, and the domain re-checks regardless of the page', () => {
-    expect(SETUP_PAGE).toMatch(/inSetup \? \(\s*<LaunchReview/);
+    expect(SETUP_PAGE).toContain('live={!inSetup}');
+    expect(GUIDED).toContain('live ?');
+    expect(GUIDED).toContain(': <LaunchReview');
     expect(SETUP_ACTIONS).toContain('launchOrganization(db, { organizationId })');
   });
 
@@ -112,15 +116,16 @@ describe('Launch — a review boundary, not a mystery button', () => {
 describe('AI drafting — an accelerator the cockpit does not depend on', () => {
   it('sits in its own optional section and keeps the review-and-apply path', () => {
     expect(SETUP_PAGE).toContain('Set up faster with Agent');
-    expect(SETUP_PAGE).toContain('<ProposalReview');
+    expect(SETUP_PAGE).toContain('/setup/proposal');
+    expect(REVIEW).toContain('<ProposalReview');
     expect(SETUP_PAGE).toContain('nothing takes effect until you apply it');
   });
 
   it('renders the areas and Launch outside every drafting condition', () => {
     const agentStart = SETUP_PAGE.indexOf('{draftingOn ? (');
     expect(agentStart).toBeGreaterThan(-1);
-    expect(SETUP_PAGE.indexOf('<SetupAreaList')).toBeLessThan(agentStart);
-    expect(SETUP_PAGE.indexOf('<LaunchReview')).toBeLessThan(agentStart);
+    expect(SETUP_PAGE.indexOf('<GuidedSetup')).toBeGreaterThan(-1);
+    expect(SETUP_PAGE.indexOf('<GuidedSetup')).toBeLessThan(agentStart);
   });
 
   it('says so, and points at the areas, when this installation cannot draft', () => {

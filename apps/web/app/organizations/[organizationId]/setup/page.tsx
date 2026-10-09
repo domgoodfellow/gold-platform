@@ -3,7 +3,12 @@ import { Card } from '@/components/surfaces/card';
 import { EmptyState, SectionHeading } from '@/components/surfaces/section';
 import { AppPage } from '@/components/layout/app-page';
 import { Hint } from '@/components/controls/inputs';
-import { LaunchReview, SetupAreaList, SetupProgressCard } from '@/features/setup/setup-cockpit';
+import { GuidedSetup } from '@/features/setup/guided-setup';
+import { setupGuide, resumeSetupStep, setupStepHref } from '@/features/setup/setup-guide';
+import { OrganizationSettingsForm } from '@/features/tenancy/organization-settings-form';
+import { ButtonLink } from '@/components/controls/button';
+import { activeModuleKeys, availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
+import { hasSchedulableWork } from '@/lib/domain/work-items/types';
 import {
   canDraftConfiguration,
   currentConfigurationProposal,
@@ -12,13 +17,11 @@ import {
 import { describeDiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
 import { getFoundingHandoff } from '@/lib/domain/customers/proposal-handoff';
 import { computeSetupOverview } from '@/lib/domain/tenancy/lifecycle';
-import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { requireOrganization } from '@/lib/route/organization';
 import { DescribeForm } from '@/features/setup/describe-form';
 import { FoundingHandoff } from '@/features/setup/founding-handoff';
 import { LaunchForm } from '@/features/setup/launch-form';
 import { ProposalHistory } from '@/features/setup/proposal-history';
-import { ProposalReview } from '@/features/setup/proposal-review';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,27 +47,35 @@ export const dynamic = 'force-dynamic';
  */
 export default async function SetupPage({
   params,
+  searchParams,
 }: PageProps<'/organizations/[organizationId]/setup'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
   const inSetup = organization.operationalState === 'setup';
 
-  const [overview, proposal, history, canDraft, usableModules, foundingHandoff] = await Promise.all([
-    computeSetupOverview(db, { organizationId }),
+  const states = await organizationResolvedFeatureStates(db, { organizationId });
+  const [overview, proposal, history, canDraft, foundingHandoff, schedulableWork] = await Promise.all([
+    computeSetupOverview(db, { organizationId }, states),
     currentConfigurationProposal(db, { organizationId }),
     listConfigurationProposals(db, { organizationId }),
     canDraftConfiguration(),
-    listUsableModules(db, { organizationId }),
     getFoundingHandoff(db, { organizationId }),
+    hasSchedulableWork(db, { organizationId }),
   ]);
 
   // Asking for a proposal is its own authority; applying one is not, because every step of
-  // applying is already gated by the capability that step needs (D32). So Apply and Launch are
-  // shown to everybody who could plausibly press them and refused by the database — I12's rule,
-  // not a shortcut around it.
+  // applying is already gated by the capability that step needs (D32). Offered owner links and
+  // Launch still respect this actor's authority; each write independently rechecks that authority.
   const mayPropose = organization.capabilities.includes('configuration.propose');
   const mayLaunch = organization.capabilities.includes('organization.manage');
-  const draftingOn = usableModules.has('drafting');
+  const draftingOn = mayPropose || proposal !== null;
+  const steps = setupGuide(organizationId, overview, {
+    enabledModules: activeModuleKeys(states), featureAvailability: availableFeatureKeys(states),
+    capabilities: new Set(organization.capabilities), schedulableWork,
+  });
+  const requested = (await searchParams).step;
+  const resume = resumeSetupStep(steps);
+  const selected = steps.find((step) => step.key === requested) ?? resume;
   const pastProposals = history.filter((entry) => entry.outcome !== 'draft');
 
   // Prefill the very first draft from what Sales already recorded, and never again — a
@@ -79,7 +90,8 @@ export default async function SetupPage({
   return (
     <AppPage>
       <PageHeader
-        title="Organization readiness"
+        title={inSetup ? 'Set up your organization' : 'Organization setup'}
+        actions={<ButtonLink href={setupStepHref(organizationId, resume.key)} tone="secondary" size="small">Resume setup</ButtonLink>}
         meta={
           inSetup
             ? `Complete the required setup for ${organization.name}.`
@@ -88,24 +100,10 @@ export default async function SetupPage({
       />
 
       <div className="space-y-4">
-        {foundingHandoff ? <FoundingHandoff handoff={foundingHandoff} /> : null}
-
-        {inSetup ? <SetupProgressCard overview={overview} /> : null}
-
-        <SetupAreaList areas={overview.areas} />
-
-        {inSetup ? (
-          <LaunchReview
-            overview={overview}
-            launch={
-              mayLaunch ? (
-                <LaunchForm organizationId={organizationId} />
-              ) : (
-                <Hint>Your role, {organization.role}, cannot launch this business.</Hint>
-              )
-            }
-          />
-        ) : null}
+        <GuidedSetup organizationId={organizationId} steps={steps} selected={selected} overview={overview} live={!inSetup}
+          business={mayLaunch ? <OrganizationSettingsForm organizationId={organizationId} name={organization.name} timezone={organization.timezone} currency={organization.currency} /> : <Hint>Your role cannot change business information.</Hint>}
+          handoff={foundingHandoff ? <FoundingHandoff handoff={foundingHandoff} /> : null}
+          launch={mayLaunch ? <LaunchForm organizationId={organizationId} /> : <Hint>Your role, {organization.role}, cannot launch this business.</Hint>} />
 
         {draftingOn ? (
           <Card id="agent-setup" as="section" aria-labelledby="setup-agent-heading">
@@ -143,7 +141,7 @@ export default async function SetupPage({
             ) : null}
 
             {proposal ? (
-              <ProposalReview organizationId={organizationId} proposal={proposal} />
+              <ButtonLink href={`/organizations/${organizationId}/setup/proposal`} tone="secondary" className="mt-4">Review proposed configuration</ButtonLink>
             ) : (
               canDraft && (
                 <EmptyState className="mt-6 max-w-2xl">Nothing is waiting to be reviewed.</EmptyState>

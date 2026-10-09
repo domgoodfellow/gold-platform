@@ -15,7 +15,7 @@ export type IntegrationConnection = {
   accountLabel: string | null;
   status: 'connecting' | 'active' | 'needs_attention' | 'disconnected';
   scopes: string[];
-  /** The provider's own words when the connection last failed; never a credential. */
+  /** Safe user-facing verification failure; raw provider diagnostics stay in the server record. */
   lastError: string | null;
   connectedBy: string;
   lastVerifiedAt: string | null;
@@ -44,7 +44,7 @@ export async function listConnections(
     accountLabel: row.account_label,
     status: row.status as IntegrationConnection['status'],
     scopes: row.scopes ?? [],
-    lastError: row.last_error,
+    lastError: row.last_error ? 'Connection verification failed. Reconnect the application.' : null,
     connectedBy: row.connected_by,
     lastVerifiedAt: row.last_verified_at,
     createdAt: row.created_at,
@@ -73,7 +73,7 @@ export async function getConnection(
     accountLabel: data.account_label,
     status: data.status as IntegrationConnection['status'],
     scopes: data.scopes ?? [],
-    lastError: data.last_error,
+    lastError: data.last_error ? 'Connection verification failed. Reconnect the application.' : null,
     connectedBy: data.connected_by,
     lastVerifiedAt: data.last_verified_at,
     createdAt: data.created_at,

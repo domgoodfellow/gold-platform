@@ -4,7 +4,8 @@ import { Button } from '@/components/controls/button';
 import { Card } from '@/components/surfaces/card';
 import { EmptyState } from '@/components/surfaces/section';
 import { Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import {
   CAPABILITIES,
   CAPABILITY_LABELS,
@@ -20,6 +21,8 @@ import {
 } from '@/lib/domain/fields/field-definitions';
 import { TRIGGER_EVENTS } from '@/lib/domain/automation/rules';
 import { MODULES } from '@/lib/navigation';
+import type { ResolvedFeatureState } from '@/lib/domain/catalogue/organization-plans';
+import type { CatalogFeature } from '@/lib/domain/catalogue/catalogue';
 import { FONT_KEYS, FONT_LABELS } from '@/lib/domain/branding/palette';
 import type { BusinessShape, ShapeField } from '@/lib/domain/configuration/configure';
 import type { ConfigurationProposal } from '@/lib/domain/configuration/proposals';
@@ -72,14 +75,32 @@ function Row({ children, onRemove }: { children: React.ReactNode; onRemove: () =
 export function ProposalReview({
   organizationId,
   proposal,
+  featureStates = [],
+  features = [],
 }: {
   organizationId: string;
   proposal: ConfigurationProposal;
+  featureStates?: ResolvedFeatureState[];
+  features?: CatalogFeature[];
 }) {
   const [shape, setShape] = useState<BusinessShape>(proposal.shape);
-  const [saveState, save, saving] = useActionState(reviseAction, INITIAL);
+  const [domain, setDomain] = useState('operations');
+  const [savedShape, setSavedShape] = useState(JSON.stringify(proposal.shape));
+  const [saveState, save, saving] = useActionState(async (previous: SetupActionState, data: FormData) => {
+    const result = await reviseAction(previous, data);
+    if (!result.error) setSavedShape(String(data.get('shape')));
+    return result;
+  }, INITIAL);
   const [applyState, apply, applying] = useActionState(applyAction, INITIAL);
   const [discardState, discard, discarding] = useActionState(discardAction, INITIAL);
+  const dirty = JSON.stringify(shape) !== savedShape;
+  const pending = saving || applying || discarding;
+  useEffect(() => {
+    if (!dirty) return;
+    const guard = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', guard);
+    return () => window.removeEventListener('beforeunload', guard);
+  }, [dirty]);
 
   const set = <K extends keyof BusinessShape>(key: K, value: BusinessShape[K]) =>
     setShape((current) => ({ ...current, [key]: value }));
@@ -91,6 +112,10 @@ export function ProposalReview({
 
   return (
     <div className="mt-6">
+      <div role="group" aria-label="Proposal domains" className="flex flex-wrap gap-1">
+          {['operations', 'finance', 'people', 'data', 'automations', 'presence', 'features'].map((key) =>
+            <Button key={key} type="button" tone={domain === key ? 'primary' : 'secondary'} size="small" aria-pressed={domain === key} onClick={() => setDomain(key)} className="capitalize">{key}</Button>)}
+      </div>
       {proposal.gaps.length > 0 && (
         <Card>
           <h3 className="text-sm font-medium">What this still needs from you</h3>
@@ -106,50 +131,59 @@ export function ProposalReview({
             ))}
           </ul>
           <Hint className="mt-2">
-            Answer these in the box above and redraft, or fill them in below yourself.
+            Review these questions and fill in the relevant fields before applying.
           </Hint>
         </Card>
       )}
 
       {/* **First, because it is the only part of this proposal that changes what the business
           owns rather than how it is described** — and the part somebody must not apply without
-          having read. Each one is switched on and paid for, so it is a list of checkboxes
+          having read. Included features can be activated, so it is a list of checkboxes
           somebody clears rather than a summary they scroll past. A module already on stays on:
           applying never switches anything off. */}
-      <Section title="What this switches on">
+      <Section title="What this switches on" hidden={domain !== 'features'}>
         <Hint>
-          Each of these is part of your business once you apply this, and each one can be
-          switched off again in Settings.
+          Only included capabilities can be activated. Applying never purchases a feature or changes commercial terms.
         </Hint>
         <div className="mt-2 space-y-2">
-          {MODULES.map((module) => {
-            const chosen = (shape.modules ?? []).includes(module.key);
+          {features.map((feature) => {
+            const state = featureStates.find((candidate) => candidate.featureId === feature.id);
+            const included = state?.entitled && state.implementationState === 'available';
+            const chosen = (shape.featureKeys ?? []).includes(feature.key);
+            if (!included && !chosen) return null;
             return (
-              <label key={module.key} className="flex gap-2 text-sm">
+              <label key={feature.id} className="flex gap-2 text-sm">
                 <input
                   type="checkbox"
                   className="mt-1 shrink-0"
                   checked={chosen}
+                  disabled={!included && !chosen}
                   onChange={(event) =>
                     set(
-                      'modules',
+                      'featureKeys',
                       event.target.checked
-                        ? [...(shape.modules ?? []), module.key]
-                        : (shape.modules ?? []).filter((key) => key !== module.key),
+                        ? [...(shape.featureKeys ?? []), feature.key]
+                        : (shape.featureKeys ?? []).filter((key) => key !== feature.key),
                     )
                   }
                 />
                 <span className="min-w-0">
-                  <span className="font-medium">{module.label}</span>
-                  <Hint>{module.description}</Hint>
+                  <span className="font-medium">{feature.label}</span>
+                  {!included ? <Hint>Not included. Remove this recommendation before applying.</Hint> : <Hint>Included capability</Hint>}
+                  <Hint>{feature.description}</Hint>
                 </span>
               </label>
             );
           })}
+          {(shape.modules ?? []).map((key) => <div key={key} className="rounded-md border border-border p-3 text-sm">
+            <p>Earlier grouped recommendation: {MODULES.find((module) => module.key === key)?.label ?? key}.</p>
+            <Hint>To review individual capabilities, remove this group and choose included features above.</Hint>
+            <Button type="button" tone="secondary" size="small" className="mt-2" onClick={() => set('modules', (shape.modules ?? []).filter((candidate) => candidate !== key))}>Remove grouped recommendation</Button>
+          </div>)}
         </div>
       </Section>
 
-      <Section title="What you call the work">
+      <Section title="What you call the work" hidden={domain !== 'operations'}>
         <TextInput
           value={shape.typeName}
           aria-label="What you call the work"
@@ -166,7 +200,7 @@ export function ProposalReview({
         </label>
       </Section>
 
-      <Section title="How a job moves">
+      <Section title="How a job moves" hidden={domain !== 'operations'}>
         {shape.statuses.map((status, index) => (
           <Row
             key={index}
@@ -215,7 +249,7 @@ export function ProposalReview({
         </Button>
       </Section>
 
-      <Section title="Which moves are allowed">
+      <Section title="Which moves are allowed" hidden={domain !== 'operations'}>
         {/* A type with no moves is frozen rather than unconstrained (I13), so an empty list here
             is a real answer and the screen says which one it is. */}
         {shape.transitions.length === 0 && (
@@ -272,7 +306,7 @@ export function ProposalReview({
         </Button>
       </Section>
 
-      <Section title="What you charge for">
+      <Section title="What you charge for" hidden={domain !== 'finance'}>
         {shape.prices.map((price, index) => (
           <Row
             key={index}
@@ -340,7 +374,7 @@ export function ProposalReview({
         </Button>
       </Section>
 
-      <Section title="When you are open">
+      <Section title="When you are open" hidden={domain !== 'operations'}>
         {shape.hours.length === 0 && (
           <EmptyState>
             Nothing set, which is treated as always open. Nothing here assumes a working week.
@@ -406,7 +440,7 @@ export function ProposalReview({
         </Button>
       </Section>
 
-      <Section title="Roles besides your own">
+      <Section title="Roles besides your own" hidden={domain !== 'people'}>
         {shape.roles.map((role, index) => (
           <div key={index} className="rounded border border-border p-2">
             <Row
@@ -470,7 +504,7 @@ export function ProposalReview({
         </Button>
       </Section>
 
-      <Section title="What else you record">
+      <Section title="What else you record" hidden={domain !== 'data'}>
         {CUSTOM_FIELD_ENTITIES.map((entity) => (
           <div key={entity}>
             <Hint>{CUSTOM_FIELD_ENTITY_LABELS[entity]}</Hint>
@@ -544,7 +578,7 @@ export function ProposalReview({
         ))}
       </Section>
 
-      <Section title="What happens on its own">
+      <Section title="What happens on its own" hidden={domain !== 'automations'}>
         {(shape.automations ?? []).map((rule, index) => (
           <Row
             key={index}
@@ -628,7 +662,7 @@ export function ProposalReview({
           it works**, and they are last on purpose: somebody reviewing a setup is deciding
           whether the stages and the prices are right, and a colour picker above that would be
           the least consequential thing on the screen sitting at the top of it. */}
-      <Section title="What you say about yourself">
+      <Section title="What you say about yourself" hidden={domain !== 'presence'}>
         <Hint weight="subtle">
           Shown to customers on your public page, above anything else. Yours to write — the
           platform adds nothing to it, and leaving it empty shows your name and nothing else.
@@ -662,7 +696,7 @@ export function ProposalReview({
         />
       </Section>
 
-      <Section title="How it looks">
+      <Section title="How it looks" hidden={domain !== 'presence'}>
         <Hint weight="subtle">
           Your colour is used for buttons and links, on these screens and on your public page.
           Everything else stays as it is, and the colour is darkened automatically wherever it
@@ -742,23 +776,22 @@ export function ProposalReview({
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="proposalId" value={proposal.id} />
           <input type="hidden" name="shape" value={JSON.stringify(shape)} />
-          <Button type="submit" disabled={saving} tone="secondary" size="small">
+          <Button type="submit" disabled={pending || !dirty} tone="secondary" size="small">
             {saving ? 'Saving…' : 'Save changes'}
           </Button>
         </form>
 
-        <form action={apply}>
+        <form id={`apply-${proposal.id}`} action={apply}>
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="proposalId" value={proposal.id} />
-          <Button type="submit" disabled={applying} tone="secondary" size="small">
-            {applying ? 'Applying…' : 'Apply this setup'}
-          </Button>
+          {dirty ? <Button type="button" disabled size="small">Apply this setup</Button> : <ConfirmSubmit formId={`apply-${proposal.id}`} label="Apply this setup" confirmLabel="Apply reviewed setup" tone="primary" pending={pending}
+            description="Apply the saved proposal through each configuration owner. This can stop partway if a write is refused; successful earlier changes are retained and reported in history." />}
         </form>
 
         <form action={discard}>
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="proposalId" value={proposal.id} />
-          <Button type="submit" disabled={discarding} tone="secondary" size="small">
+          <Button type="submit" disabled={pending} tone="secondary" size="small">
             Discard
           </Button>
         </form>

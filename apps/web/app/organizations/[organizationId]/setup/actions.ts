@@ -37,6 +37,7 @@ async function run(
   }
 
   revalidatePath(`/organizations/${organizationId}/setup`);
+  revalidatePath(`/organizations/${organizationId}/setup/proposal`);
   return { error: null };
 }
 
@@ -95,7 +96,7 @@ export async function reviseAction(
       );
     }
 
-    await reviseConfigurationProposal(db, { proposalId, shape });
+    await reviseConfigurationProposal(db, { organizationId, proposalId, shape });
   });
 }
 
@@ -153,5 +154,5 @@ export async function discardAction(
   await requireOrganization(organizationId);
   const proposalId = String(formData.get('proposalId') ?? '');
 
-  return run(organizationId, () => discardConfigurationProposal(db, { proposalId }));
+  return run(organizationId, () => discardConfigurationProposal(db, { organizationId, proposalId }));
 }

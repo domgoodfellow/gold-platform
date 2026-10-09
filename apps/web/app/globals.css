@@ -11,6 +11,11 @@
 @source "../features/marketing";
 @source "../features/support";
 @source "../features/ai";
+@source "../features/setup";
+@source "../features/settings";
+@source "../features/team";
+@source "../features/catalogue";
+@source "../features/locale";
 @source "../components/operational";
 
 /* The colour roles. `docs/ui-spec.md` §3 says why each one exists; this file is where the

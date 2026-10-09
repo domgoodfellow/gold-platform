@@ -8,6 +8,7 @@ import { listRoles } from '@/lib/domain/tenancy/roles';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { configureBusiness, type BusinessShape } from './configure';
+import { readBusinessShape } from './shape';
 
 /**
  * Proposals: a configuration drafted from a business's own description, for a person to review.
@@ -21,7 +22,7 @@ import { configureBusiness, type BusinessShape } from './configure';
 /** Re-exported so no screen imports the adapter directly for the type. */
 export type { ConfigurationGap };
 
-export type ConfigurationProposalOutcome = 'draft' | 'applied' | 'failed' | 'discarded';
+export type ConfigurationProposalOutcome = 'draft' | 'applying' | 'applied' | 'failed' | 'discarded';
 
 export type ConfigurationProposal = {
   id: string;
@@ -43,13 +44,13 @@ export type ConfigurationProposal = {
 
 const DESCRIPTION_MAX = 8000;
 
-const OUTCOMES: ConfigurationProposalOutcome[] = ['draft', 'applied', 'failed', 'discarded'];
+const OUTCOMES: ConfigurationProposalOutcome[] = ['draft', 'applying', 'applied', 'failed', 'discarded'];
 
 function isOutcome(value: string): value is ConfigurationProposalOutcome {
   return (OUTCOMES as string[]).includes(value);
 }
 
-/** `shape` and `gaps` are cast rather than re-checked — the adapter already narrowed them before the write, and re-validating on the way out would be a second copy of that check with nothing useful to do on failure. */
+/** Stored documents cross the same structural boundary as adapter and human edits. */
 function toProposal(row: {
   id: string;
   description: string;
@@ -65,7 +66,7 @@ function toProposal(row: {
   return {
     id: row.id,
     description: row.description,
-    shape: row.shape as BusinessShape,
+    shape: readBusinessShape(row.shape),
     gaps: (row.gaps ?? []) as ConfigurationGap[],
     outcome: isOutcome(row.outcome) ? row.outcome : 'draft',
     detail: row.detail,
@@ -218,7 +219,7 @@ export async function proposeConfiguration(
     .insert({
       organization_id: input.organizationId,
       description,
-      shape: drafted.shape as never,
+      shape: readBusinessShape(drafted.shape) as never,
       gaps: drafted.gaps as never,
       drafted_by: provider.name,
       created_by: actor.id,
@@ -247,14 +248,16 @@ export async function proposeConfiguration(
  */
 export async function reviseConfigurationProposal(
   db: Db,
-  input: { proposalId: string; shape: BusinessShape },
+  input: { organizationId: string; proposalId: string; shape: BusinessShape },
 ): Promise<ConfigurationProposal> {
   await requireActor(db);
 
   const { data, error } = await db
     .from('configuration_proposals')
-    .update({ shape: input.shape as never })
+    .update({ shape: readBusinessShape(input.shape) as never })
     .eq('id', input.proposalId)
+    .eq('organization_id', input.organizationId)
+    .eq('outcome', 'draft')
     .select(COLUMNS)
     .single();
 
@@ -310,12 +313,12 @@ export async function applyConfigurationProposal(
 ): Promise<ConfigurationProposal> {
   await requireActor(db);
 
-  // Read rather than take what the caller is holding — a stale snapshot once walked past the
-  // guard and ran the whole sequence twice against a business that already had it.
+  // Read through the tenant boundary, then atomically claim exactly that draft below.
   const { data: row, error: readError } = await db
     .from('configuration_proposals')
     .select(COLUMNS)
     .eq('id', input.proposalId)
+    .eq('organization_id', input.organizationId)
     .maybeSingle();
 
   if (readError) {
@@ -325,13 +328,26 @@ export async function applyConfigurationProposal(
     throw new DomainError('That proposal is not there.', 'proposals.not_found');
   }
 
-  const proposal = toProposal(row);
-  if (proposal.outcome !== 'draft') {
+  if (row.outcome !== 'draft') {
     throw new DomainError(
       'That proposal has already been applied or discarded.',
       'proposals.not_a_draft',
     );
   }
+  readBusinessShape(row.shape);
+
+  const { data: claimed, error: claimError } = await db
+    .from('configuration_proposals')
+    .update({ outcome: 'applying' })
+    .eq('id', input.proposalId)
+    .eq('organization_id', input.organizationId)
+    .eq('outcome', 'draft')
+    .select(COLUMNS)
+    .maybeSingle();
+  if (claimError || !claimed) {
+    throw new DomainError('That proposal cannot be applied. It may already be running or your permission has changed.', 'proposals.not_a_draft');
+  }
+  const proposal = toProposal(claimed);
 
   let result: Record<string, unknown>;
   let detail: string | null = null;
@@ -357,6 +373,8 @@ export async function applyConfigurationProposal(
       applied_at: new Date().toISOString(),
     })
     .eq('id', input.proposalId)
+    .eq('organization_id', input.organizationId)
+    .eq('outcome', 'applying')
     .select(COLUMNS)
     .single();
 
@@ -374,16 +392,21 @@ export async function applyConfigurationProposal(
 /** An outcome, not a delete — a decision to turn a proposal down stays on the record beside the ones that stuck. */
 export async function discardConfigurationProposal(
   db: Db,
-  input: { proposalId: string },
+  input: { organizationId: string; proposalId: string },
 ): Promise<void> {
   await requireActor(db);
 
-  const { error } = await db
+  const { data, error } = await db
     .from('configuration_proposals')
     .update({ outcome: 'discarded' })
-    .eq('id', input.proposalId);
+    .eq('id', input.proposalId)
+    .eq('organization_id', input.organizationId)
+    .eq('outcome', 'draft')
+    .select('id')
+    .maybeSingle();
 
   if (error) {
     throw new DomainError(error.message, 'proposals.discard_failed');
   }
+  if (!data) throw new DomainError('That proposal is not an editable draft here.', 'proposals.not_a_draft');
 }

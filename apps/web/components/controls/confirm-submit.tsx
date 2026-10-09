@@ -70,7 +70,7 @@ export function ConfirmSubmit({
           <DialogClose asChild>
             <Button type="button" tone="secondary" size="small">Cancel</Button>
           </DialogClose>
-          <Button type="submit" form={formId} tone="danger" size="small">
+          <Button type="submit" form={formId} tone={tone} size="small" disabled={pending}>
             {confirmLabel}
           </Button>
         </DialogFooter>

@@ -10,7 +10,8 @@ import {
 } from '@/lib/domain/tenancy/lifecycle';
 import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
 import { createOrganization, getOrganization } from '@/lib/domain/tenancy/organizations';
-import { foundBusiness, newAccountEmail } from '@/tests/support/founding';
+import { asPlatformStaff, foundBusiness, newAccountEmail } from '@/tests/support/founding';
+import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
 
 /**
  * ORGANIZATION CREATED → SETUP → BUSINESS SETUP OVERVIEW → COMPUTED READINESS →
@@ -67,6 +68,11 @@ async function freshOrganization(): Promise<{ db: SupabaseClient; organizationId
   return { db, organizationId };
 }
 
+async function enableEntitledBooking(db: SupabaseClient, organizationId: string) {
+  await recordCommercialTerm(await asPlatformStaff(), { organizationId, productKey: 'module:booking', periodStart: '2020-01-01', periodEnd: '9999-12-31', priceMinor: 0, currency: 'EUR' });
+  await setModuleEnabled(db, { organizationId, key: 'booking', enabled: true });
+}
+
 describe('a business starts in setup and someone launches it', () => {
   it('begins SETUP the moment it is created, through either door', async () => {
     const { db, organizationId: selfFounded } = await freshOrganization();
@@ -109,7 +115,7 @@ describe('a business starts in setup and someone launches it', () => {
     // Nothing yet — booking is off by default.
     expect((await computeReadiness(db, { organizationId })).blockers).toEqual([]);
 
-    await setModuleEnabled(db, { organizationId, key: 'booking', enabled: true });
+    await enableEntitledBooking(db, organizationId);
 
     // Public booking with no address at all is not "unfinished", it is unreachable — the
     // product reality audit's own example of a real per-module requirement.
@@ -169,7 +175,7 @@ describe('a business starts in setup and someone launches it', () => {
     // exactly the capability the function checks, which is the caller a capability check alone
     // cannot stop.
     const { db, organizationId } = await freshOrganization();
-    await setModuleEnabled(db, { organizationId, key: 'booking', enabled: true });
+    await enableEntitledBooking(db, organizationId);
 
     const readiness = await computeReadiness(db, { organizationId });
     expect(readiness.blockers.map((item) => item.key)).toEqual(['booking']);
@@ -267,7 +273,7 @@ describe('the setup overview — areas, importance and progress', () => {
     const { db, organizationId } = await freshOrganization();
 
     await createWorkItemType(db, { schedulable: true, organizationId, name: 'Repair' });
-    await setModuleEnabled(db, { organizationId, key: 'booking', enabled: true });
+    await enableEntitledBooking(db, organizationId);
 
     const overview = await computeSetupOverview(db, { organizationId });
     const byKey = new Map(overview.areas.map((area) => [area.key, area]));
@@ -283,7 +289,7 @@ describe('the setup overview — areas, importance and progress', () => {
 
   it('agrees with what Launch actually refuses — blockers here are exactly the ones the database names', async () => {
     const { db, organizationId } = await freshOrganization();
-    await setModuleEnabled(db, { organizationId, key: 'booking', enabled: true });
+    await enableEntitledBooking(db, organizationId);
 
     const [overview, readiness] = await Promise.all([
       computeSetupOverview(db, { organizationId }),

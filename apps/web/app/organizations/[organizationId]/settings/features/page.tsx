@@ -11,6 +11,9 @@ import {
 import { organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { requireOrganization } from '@/lib/route/organization';
 import { FeatureRow } from '@/features/catalogue/feature-row';
+import { configTargetOffered, featureConfigurationTarget } from '@/lib/navigation';
+import { activeModuleKeys, availableFeatureKeys } from '@/lib/domain/catalogue/organization-plans';
+import { hasSchedulableWork } from '@/lib/domain/work-items/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,14 +32,16 @@ export default async function FeaturesSettingsPage({
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
 
-  const [features, modules, products, resolved] = await Promise.all([
+  const [features, modules, products, schedulableWork] = await Promise.all([
     listCatalogFeatures(db),
     listCatalogModules(db),
     listCatalogProducts(db),
-    organizationResolvedFeatureStates(db, { organizationId }),
+    hasSchedulableWork(db, { organizationId }),
   ]);
+  const resolved = await organizationResolvedFeatureStates(db, { organizationId }, { features, modules, products });
 
   const mayManage = organization.capabilities.includes('feature.manage');
+  const gate = { capabilities: new Set(organization.capabilities), enabledModules: activeModuleKeys(resolved), featureAvailability: availableFeatureKeys(resolved), schedulableWork };
   const resolvedByFeatureId = new Map(resolved.map((r) => [r.featureId, r]));
 
   // Grouped by canonical Product then Module, in catalogue display order — never by the legacy
@@ -81,6 +86,7 @@ export default async function FeaturesSettingsPage({
                     {moduleFeatures.map((feature) => {
                       const state = resolvedByFeatureId.get(feature.id);
                       if (!state) return null;
+                      const target = featureConfigurationTarget(feature.key);
                       return (
                         <FeatureRow
                           key={feature.id}
@@ -89,6 +95,7 @@ export default async function FeaturesSettingsPage({
                           description={feature.description}
                           state={state}
                           mayManage={mayManage}
+                          mayConfigure={target ? configTargetOffered(target, gate) : mayManage || organization.capabilities.includes('organization.manage')}
                         />
                       );
                     })}

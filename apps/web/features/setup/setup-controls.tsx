@@ -13,9 +13,9 @@ export function Error({ state }: { state: SetupActionState }) {
   );
 }
 
-export function Section({ title, children }: { title: string; children: React.ReactNode }) {
+export function Section({ title, children, hidden = false }: { title: string; children: React.ReactNode; hidden?: boolean }) {
   return (
-    <section className="mt-6">
+    <section className="mt-6" hidden={hidden}>
       <h3 className="text-sm font-medium">{title}</h3>
       <div className="mt-2 space-y-2">{children}</div>
     </section>

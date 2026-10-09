@@ -3,10 +3,11 @@ import { ChevronRight } from 'lucide-react';
 import { FOCUS_RING } from '@/components/class-names';
 
 /** One full-row link, with the focus outline enclosing the complete target. */
-export function SettingsNavigationRow({ href, title, description }: {
+export function SettingsNavigationRow({ href, title, description, status }: {
   href: string;
   title: string;
   description: string;
+  status?: string;
 }) {
   return (
     <li>
@@ -14,6 +15,7 @@ export function SettingsNavigationRow({ href, title, description }: {
         <div className="min-w-0 flex-1">
           <span className="font-medium">{title}</span>
           <p className="mt-0.5 text-sm text-muted">{description}</p>
+          {status ? <p className="mt-1 text-xs text-subtle">{status}</p> : null}
         </div>
         <ChevronRight aria-hidden className="size-4 shrink-0 text-subtle" />
       </Link>

@@ -103,10 +103,12 @@ export function SetupAreaList({ areas }: { areas: SetupArea[] }) {
 export function LaunchReview({
   overview,
   launch,
+  allowedDestinations,
 }: {
   overview: SetupOverview;
   /** The interactive Launch control, or the sentence saying this role cannot use it. */
   launch: ReactNode;
+  allowedDestinations?: readonly string[];
 }) {
   const blocked = overview.blockers.length > 0;
 
@@ -125,9 +127,9 @@ export function LaunchReview({
                 <span className="min-w-0 flex-1 basis-64">
                   <span className="font-medium">{area.label}.</span> {area.message}
                 </span>
-                <ButtonLink href={area.area.href} tone="text" size="small" aria-label={`Configure ${area.area.label}`}>
+                {!allowedDestinations || allowedDestinations.includes(area.area.href.split('#')[0]) ? <ButtonLink href={area.area.href} tone="text" size="small" aria-label={`Configure ${area.area.label}`}>
                   Configure
-                </ButtonLink>
+                </ButtonLink> : <span className="text-xs text-muted">Ask an administrator to resolve this.</span>}
               </li>
             ))}
           </DividedList>

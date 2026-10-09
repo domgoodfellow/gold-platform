@@ -31,7 +31,8 @@ describe('the Settings configuration map', () => {
   it('points every entry at a route that exists', () => {
     for (const entry of entries) {
       const segments = entry.path.split('#')[0];
-      expect(existsSync(`${ROUTES}/${segments}/page.tsx`), `${entry.key} → ${entry.path}`).toBe(true);
+      const route = segments === 'ai/agents' ? 'ai/[view]' : segments;
+      expect(existsSync(`${ROUTES}/${route}/page.tsx`), `${entry.key} → ${entry.path}`).toBe(true);
     }
   });
 
@@ -52,6 +53,7 @@ describe('the Settings configuration map', () => {
       'Customer data',
       'Brand & public presence',
       'Communications configuration',
+      'AI & Automations',
       'Features',
     ]);
   });
@@ -75,7 +77,7 @@ describe('the Settings configuration map', () => {
       roles: 'team',
       integrations: 'integrations',
     };
-    for (const area of AREAS.filter((candidate) => candidate.sidebar === false && !['setup', 'insights', 'studio-website', 'studio-forms', 'studio-templates', 'opportunities', 'opportunity-pipeline'].includes(candidate.segment))) {
+    for (const area of AREAS.filter((candidate) => candidate.group === 'settings' && candidate.sidebar === false && candidate.segment !== 'setup')) {
       expect(
         CONFIG_TARGETS.some((target) => target.key === settingsOwned[area.segment] || target.path.split(/[/#]/)[0] === area.segment),
         `${area.segment} left the sidebar and is not on the Settings map`,

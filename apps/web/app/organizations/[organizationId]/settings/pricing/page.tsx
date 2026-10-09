@@ -5,7 +5,7 @@ import { Hint } from '@/components/controls/inputs';
 import { Disclosure } from '@/components/surfaces/card';
 import { paymentProvider } from '@/lib/adapters/payments';
 import { getPaymentAccount } from '@/lib/domain/billing/payment-accounts';
-import { listModuleSettings } from '@/lib/domain/tenancy/modules';
+import { organizationResolvedFeatureStates, availableFeatureKeys } from '@/lib/domain/catalogue/organization-plans';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { requireOrganization } from '@/lib/route/organization';
 import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
@@ -19,11 +19,11 @@ export default async function PricingPage({ params }: PageProps<'/organizations/
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
   const provider = await paymentProvider();
-  const [items, modules, paymentAccount] = await Promise.all([
-    listPriceBookItems(db, { organizationId }), listModuleSettings(db, { organizationId }),
+  const [items, featureStates, paymentAccount] = await Promise.all([
+    listPriceBookItems(db, { organizationId }), organizationResolvedFeatureStates(db, { organizationId }),
     provider ? getPaymentAccount(db, { organizationId, provider: provider.name }) : null,
   ]);
-  const enabled = modules.some(m => m.module.key === 'card_payments' && m.enabledAt !== null);
+  const enabled = availableFeatureKeys(featureStates).has('card_payments');
   const mayManage = organization.capabilities.includes('price.manage');
   const mayManagePayments = organization.capabilities.includes('organization.manage');
   return <SettingsPageFrame>

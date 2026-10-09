@@ -12,7 +12,8 @@ import {
   describeServiceAccess,
   getOrganizationServiceAccess,
 } from '@/lib/domain/platform-billing/service-access';
-import { listEnabledModules, MODULES_WITH_READINESS_CHECK, outstandingModuleSetup } from './modules';
+import { MODULES_WITH_READINESS_CHECK } from './modules';
+import { activeModuleKeys, readinessModuleKey, organizationResolvedFeatureStates, type ResolvedFeatureState } from '@/lib/domain/catalogue/organization-plans';
 import { areaHref, areaLabel, MODULES, moduleConfiguration } from '@/lib/navigation';
 
 /**
@@ -61,10 +62,12 @@ export type Readiness = {
 export async function computeReadiness(
   db: Db,
   input: { organizationId: string },
+  resolved?: ResolvedFeatureState[],
 ): Promise<Readiness> {
-  const enabled = await listEnabledModules(db, { organizationId: input.organizationId });
-  const [outstanding, blocking, serviceIfLive] = await Promise.all([
-    outstandingModuleSetup(db, { organizationId: input.organizationId, enabled }),
+  const states = resolved ?? await organizationResolvedFeatureStates(db, input);
+  const outstanding = new Map(states.filter((state) => state.moduleKey && state.readiness === 'setup_required')
+    .map((state) => [state.moduleKey!, state.reason ?? 'Configuration is required.']));
+  const [blocking, serviceIfLive] = await Promise.all([
     launchBlockers(db, { organizationId: input.organizationId }),
     // The one service-access resolver, asked the question Launch is: would this business be
     // permitted once it is live? Setup's own leniency (`subscription_pending_setup`) ends there.
@@ -160,11 +163,13 @@ const IMPORTANCE_ORDER: Record<string, number> = { required: 0, recommended: 1, 
 export async function computeSetupOverview(
   db: Db,
   input: { organizationId: string },
+  resolved?: ResolvedFeatureState[],
 ): Promise<SetupOverview> {
   const { organizationId } = input;
+  const states = resolved ?? await organizationResolvedFeatureStates(db, input);
   const [readiness, enabled, types] = await Promise.all([
-    computeReadiness(db, { organizationId }),
-    listEnabledModules(db, { organizationId }),
+    computeReadiness(db, { organizationId }, states),
+    Promise.resolve(activeModuleKeys(states.filter((state) => readinessModuleKey(state) !== null))),
     listWorkItemTypes(db, { organizationId }),
   ]);
   // The declaration, read from the types already loaded — the same fact `hasSchedulableWork`

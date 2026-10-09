@@ -1478,6 +1478,23 @@ Settings directory/landing rows should share one row pattern:
 
 ### Organization Settings
 
+The landing adds searchable, permission-filtered configuration destinations and compact observed
+status on the five scope rows. Search accepts equivalent spacing such as `timezone` and `time zone`.
+The Organization directory includes workspace-owned configuration links; access, personal identity,
+connections and platform subscription remain peer scopes.
+
+Organization setup uses an adaptive step navigation, a focused current-step panel and observed
+readiness/launch support panel. Desktop supports three columns, tablet stacks readiness below the
+current task, and phone uses contained horizontally scrollable step navigation. Continue changes the
+step URL only; completion is always derived from saved domain records. Review lists required,
+recommended and optional areas and offers only authorized owning destinations.
+
+Proposal review is a dedicated workbench with independent operations, finance, people, data,
+automation, presence and feature views. Switching views retains edits. Save and Apply are separate;
+unsaved changes disable Apply and protect browser unload. Apply and launch use deliberate confirmation
+dialogs. A failed application reports partial state; an interrupted application asks for inspection
+before any new remainder draft. Roles use a scrolling capability body with a fixed action footer.
+
 Organization Settings is a directory of organization-owned configuration.
 
 Do not put:

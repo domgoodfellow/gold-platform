@@ -53,7 +53,7 @@ export function ConnectionDetail({
       ) : null}
       {connection.lastError ? (
         <Hint className="block" role="alert">
-          This connection stopped working: {connection.lastError}
+          This connection needs attention. Reconnect the application or ask an administrator to review its connection.
         </Hint>
       ) : null}
 

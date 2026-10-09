@@ -248,7 +248,7 @@ export const MODULES = [
     // `call-setup` and CRM's `sales-stages`, split from the single combined Settings entry they
     // used to share). Pointed at the larger of the two rather than widened to carry both — a
     // follow-up architecture issue, not solved here.
-    configuredAt: { segment: 'calls', section: 'setup' },
+    configuredAt: { segment: 'settings', path: 'calls', label: 'Call setup' },
   },
   {
     key: 'integrations',
@@ -464,12 +464,18 @@ export type ConfigTarget = {
   path: string;
   /** The area whose module/feature entitlement this needs. Absent means kernel: every business has it. */
   entitledBy?: string;
+  featureKeys?: readonly string[];
   /** Holding **any** of these lets a member configure it. Never empty — a target nobody may configure is a dead door. */
   permission: readonly Capability[];
 };
 
 export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'general', scope: 'organization', path: 'settings/general', permission: ['organization.manage'] },
+  { key: 'resources', scope: 'organization', workspace: 'field', path: 'resources', entitledBy: 'resources', permission: ['resource.create', 'resource.update'] },
+  { key: 'locations', scope: 'organization', workspace: 'field', path: 'locations', entitledBy: 'locations', permission: ['location.create'] },
+  { key: 'website', scope: 'organization', workspace: 'studio', path: 'studio/website', permission: ['organization.manage'] },
+  { key: 'automation-rules', scope: 'organization', workspace: 'automations', path: 'automations/rules', entitledBy: 'automations', permission: ['automation.manage'] },
+  { key: 'ai-agents', scope: 'organization', workspace: 'ai', path: 'ai/agents', featureKeys: ['agent_tools'], permission: ['organization.manage'] },
   { key: 'work-configuration', scope: 'organization', workspace: 'field', path: 'work/configuration', permission: ['field.manage'] },
   { key: 'schedule-configuration', scope: 'organization', workspace: 'field', path: 'schedule/configuration', entitledBy: 'schedule', permission: ['field.manage'] },
   { key: 'pricing', scope: 'organization', workspace: 'finance', path: 'settings/pricing', entitledBy: 'pricing', permission: ['price.manage'] },
@@ -514,12 +520,29 @@ export function configTarget(key: string): ConfigTarget {
   return target;
 }
 
+/** Feature configuration uses the same destination keys as the organization directory. */
+export const FEATURE_CONFIG_TARGETS: Readonly<Record<string, string>> = {
+  pipeline: 'sales-stages', configurable_stages: 'sales-stages', qualification_state: 'sales-stages',
+  inbound_calling: 'communications', outbound_calling: 'communications', recording: 'call-setup', call_dispositions: 'call-setup',
+  price_book: 'pricing', card_payments: 'pricing', connected_processor: 'pricing',
+  resource_records: 'resources', locations: 'locations',
+  pages_sections: 'website', draft_review_publish: 'website', seo_metadata: 'website',
+  rule_authoring: 'automation-rules', domain_event_trigger: 'automation-rules', email_action: 'automation-rules',
+  agent_tools: 'ai-agents',
+};
+
+export function featureConfigurationTarget(featureKey: string): ConfigTarget | undefined {
+  const key = FEATURE_CONFIG_TARGETS[featureKey];
+  return key ? configTarget(key) : undefined;
+}
+
 /**
  * Whether a member may be offered a configuration target: the business is entitled to what it
  * configures **and** the member holds a configuration permission for it. Both, never either — a
  * broad role does not conjure an entitlement, and an entitlement does not conjure a permission.
  */
 export function configTargetOffered(target: ConfigTarget, gate: ConfigGate): boolean {
+  if (target.featureKeys && gate.featureAvailability && !target.featureKeys.some((key) => gate.featureAvailability!.has(key))) return false;
   if (target.entitledBy) {
     const area = AREAS.find((candidate) => candidate.segment === target.entitledBy);
     if (!area || !areaEntitled(area, gate.enabledModules, gate.featureAvailability)) return false;

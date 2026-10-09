@@ -48,6 +48,8 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     entries: [
       entry('work-configuration', 'Kinds of work', 'The kinds of work this business does, their stages, and the checklists that come with them.'),
       entry('schedule-configuration', 'Working hours', 'Opening hours and the default buffer after scheduled work.'),
+      entry('resources', 'Resources', 'People, vehicles, equipment and rooms available for scheduled work.'),
+      entry('locations', 'Locations', 'Places where this business performs work.'),
     ],
   },
   {
@@ -72,6 +74,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     entries: [
       entry('branding', 'Branding', 'Logo, colours, public page content, and public booking address.'),
       entry('domains', 'Domains', 'This business’s GildOps address, and any domain it owns and has connected.'),
+      entry('website', 'Website', 'Author, review and publish this business’s public website in Studio.'),
     ],
   },
   {
@@ -81,6 +84,14 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
       entry('communications', 'Phone and messaging', 'The phone numbers this business has, and how its website answers a visitor.'),
       entry('call-setup', 'Call setup', 'The words this business uses for how a call went, routing, and caller identity.'),
       entry('email', 'Email', 'The domain this business sends email from, and what it still needs to be verified.'),
+    ],
+  },
+  {
+    key: 'ai-automations',
+    title: 'AI & Automations',
+    entries: [
+      entry('ai-agents', 'Agent deployments', 'Configure this business’s agents and their deployment state.'),
+      entry('automation-rules', 'Automation rules', 'Configure triggers, conditions and actions through Automations.'),
     ],
   },
   {

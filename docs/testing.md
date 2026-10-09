@@ -1220,3 +1220,18 @@ A change is **verified** when:
 The goal is not maximum test count.
 
 The goal is **credible evidence**.
+
+Configuration coverage includes real-database tests for a proposal forged into another organization
+owned by the same actor, concurrent Apply claims, frozen applying documents, malformed nested shape
+data, unavailable feature preflight, feature enablement without an existing override, and Plan-only
+booking readiness across disable/re-enable/direct RPC launch. Existing identity, invitation, role,
+last-manager, provider, plan and Sales handoff suites exercise the retained owners.
+
+`e2e/configuration-onboarding.spec.ts` uses staff provisioning and the signed-in demo owner's session
+against loopback Supabase only. Its explicitly labeled local review fixture is edited, saved, applied
+and launched through the browser; canonical Work and Organization records verify the result. The
+suite captures Settings, setup, proposal and role drawer surfaces at 1440, 768 and 390 pixels and
+checks reduced-role controls, search and horizontal containment. Screenshots require rendered visual
+inspection in addition to test assertions. Real external OAuth/payment/AI calls remain outside this suite.
+Account captures use the personal Settings routes, explicitly reject 404s, and assert profile/password
+fields; the invitation capture waits for the newly created invitation to render.

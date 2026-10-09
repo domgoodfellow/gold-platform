@@ -24,6 +24,7 @@ export function ProposalHistory({ proposals }: { proposals: ConfigurationProposa
               {proposal.draftedBy}
             </span>
             <p className="mt-1 max-w-2xl whitespace-pre-wrap opacity-80">{proposal.description}</p>
+            {proposal.outcome === 'applying' ? <p className="mt-1 text-muted">Application started. If it was interrupted, inspect the saved configuration before creating a new draft for the remaining work.</p> : null}
             {proposal.detail && (
               <ErrorText className="mt-1 max-w-2xl">
                 Stopped part-way: {proposal.detail}

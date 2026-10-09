@@ -3,11 +3,11 @@
 import { ErrorText, TextInput } from '@/components/controls/inputs';
 import { FormField } from '@/components/controls/form';
 import { Button } from '@/components/controls/button';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { CurrencyField, TimeZoneField } from '@/features/locale/locale-fields';
 import { updateOrganizationGeneralAction, type SettingsActionState } from '@/app/organizations/[organizationId]/settings/actions';
 
-const INITIAL: SettingsActionState = { error: null };
+const INITIAL: SettingsActionState & { saved: boolean } = { error: null, saved: false };
 
 export function OrganizationSettingsForm({
   organizationId,
@@ -21,10 +21,15 @@ export function OrganizationSettingsForm({
   /** Null when this business has not said yet — signing up no longer asks. */
   currency: string | null;
 }) {
-  const [state, formAction, pending] = useActionState(updateOrganizationGeneralAction, INITIAL);
+  const [dirty, setDirty] = useState(false);
+  const [state, formAction, pending] = useActionState(async (previous: typeof INITIAL, data: FormData) => {
+    const result = await updateOrganizationGeneralAction(previous, data);
+    if (!result.error) setDirty(false);
+    return { ...result, saved: !result.error };
+  }, INITIAL);
 
   return (
-    <form action={formAction} className="mt-4 flex flex-col gap-3">
+    <form action={formAction} onChange={() => setDirty(true)} className="mt-4 flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
 
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -49,6 +54,7 @@ export function OrganizationSettingsForm({
       </Button>
 
       <ErrorText role="alert">{state.error}</ErrorText>
+      {state.saved && !dirty ? <p role="status" className="text-sm text-muted">Business information saved.</p> : null}
     </form>
   );
 }

@@ -1,100 +1,43 @@
 import { randomUUID } from 'node:crypto';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { OWNER_STORAGE_STATE, provisionBrowserOrganization } from './helpers';
 
-/**
- * A business is created, set up, launched and then stops being treated as onboarding.
- *
- * Self-contained on purpose: it founds its own account and business through the real sign-up and
- * create-business forms (local Supabase has email confirmation off), so it needs no demo data and
- * leaves nothing behind that another spec reads. What it proves that `tests/**` cannot: the
- * redirect a browser actually follows, that Setup is reachable at phone width without a header
- * badge, and that nothing still says "setting up" once the business is Live.
- */
+test.use({ storageState: OWNER_STORAGE_STATE });
+test.setTimeout(90_000);
 
-test.use({ storageState: { cookies: [], origins: [] } });
+for (const width of [1440, 390]) {
+  test(`Setup remains voluntary and launch opens Home at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    const { organizationId, owner } = await provisionBrowserOrganization(`Lifecycle Co ${randomUUID().slice(0, 4)}`);
+    const root = `/organizations/${organizationId}`;
+    const before = await owner.from('organizations').select('operational_state').eq('id', organizationId).single();
+    expect(before.data?.operational_state).toBe('setup');
 
-async function foundBusiness(page: Page): Promise<string> {
-  const email = `setup-${randomUUID().slice(0, 8)}@example.test`;
-  await page.goto('/sign-up');
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password', { exact: true }).fill('correct-horse-battery');
-  await page.getByLabel('Confirm password').fill('correct-horse-battery');
-  await page.getByRole('button', { name: 'Create account' }).click();
+    // Home remains the canonical organization entry; Settings offers the setup journey.
+    await page.goto(root);
+    await expect(page).toHaveURL(`${root}/home`);
+    await page.goto(`${root}/settings`);
+    await page.getByRole('link', { name: 'Continue organization setup', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Set up your organization', exact: true })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Setup steps' })).toBeVisible();
+    await page.goto(`${root}/setup?step=review`);
+    await expect(page.getByText('This organization is ready to operate.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open Work items', exact: true })).toHaveAttribute('href', `${root}/work/configuration`);
 
-  await expect(page).toHaveURL(/\/organizations$/);
-  await page.getByLabel('What should we call you?').fill('Founder');
-  await page.getByLabel('And what is the business called?').fill(`Lifecycle Co ${randomUUID().slice(0, 4)}`);
-  await page.getByRole('button', { name: 'Create business' }).click();
+    // Visiting an operating workspace neither launches nor traps a setup organization.
+    await page.goto(`${root}/home`);
+    const stillSetup = await owner.from('organizations').select('operational_state').eq('id', organizationId).single();
+    expect(stillSetup.data?.operational_state).toBe('setup');
+    await page.goto(`${root}/setup?step=review`);
+    await page.getByRole('button', { name: 'Finish setup', exact: true }).click();
+    await page.getByRole('button', { name: 'Launch organization', exact: true }).click();
+    await expect(page).toHaveURL(`${root}/home`);
 
-  // The new business is in SETUP, so entry goes to Setup — not the operating cockpit.
-  await expect(page).toHaveURL(/\/organizations\/[^/]+\/setup$/);
-  return /\/organizations\/([^/]+)\/setup/.exec(page.url())![1];
+    await page.goto(`${root}/settings`);
+    await page.getByRole('link', { name: 'Review readiness', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Organization setup', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Finish setup', exact: true })).toHaveCount(0);
+    await page.goto(root);
+    await expect(page).toHaveURL(`${root}/home`);
+  });
 }
-
-test('a new business enters Setup, can leave it freely, launches, and lands on Home with Setup gone', async ({
-  page,
-}) => {
-  const organizationId = await foundBusiness(page);
-
-  // The cockpit: progress as a count of areas, areas in words, Launch available (nothing blocks).
-  await expect(page.getByRole('heading', { level: 1, name: /^Set up / })).toBeVisible();
-  await expect(page.getByText(/\d+ of \d+/).first()).toBeVisible();
-  await expect(page.getByText('setup areas ready')).toBeVisible();
-  await expect(page.getByText('Optional').first()).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Configure Work' })).toHaveAttribute(
-    'href',
-    `/organizations/${organizationId}/work/configuration`,
-  );
-  await expect(page.getByText('Nothing blocks launch.')).toBeVisible();
-
-  // One Setup treatment in the sidebar, none in the header.
-  await expect(page.getByRole('link', { name: /^Setup/ })).toBeVisible();
-  await expect(page.getByText('Setting up')).toHaveCount(0);
-  await expect(page.getByText('Set up your business')).toHaveCount(0);
-
-  // SETUP is not a route prison: Home opens as the ordinary workspace, with no setup chrome of
-  // its own — the sidebar's one Setup row is the way back.
-  await page.goto(`/organizations/${organizationId}/home`);
-  await expect(page.getByText('This business is still being set up.')).toHaveCount(0);
-  await expect(page.getByText('Setup readiness')).toHaveCount(0);
-
-  // Launch.
-  await page.getByRole('link', { name: /^Setup/ }).first().click();
-  await page.getByRole('button', { name: 'Launch business' }).click();
-  await expect(page).toHaveURL(`/organizations/${organizationId}/home`);
-
-  // LIVE: nothing treats this business as onboarding any more.
-  await expect(page.getByText('This business is still being set up.')).toHaveCount(0);
-  await expect(page.getByRole('link', { name: /^Setup/ })).toHaveCount(0);
-
-  // Setup remains reachable from Settings, as a reconfiguration map with no Launch.
-  await page.goto(`/organizations/${organizationId}/settings`);
-  await page.getByRole('link', { name: 'Setup', exact: true }).click();
-  await expect(page).toHaveURL(`/organizations/${organizationId}/setup`);
-  await expect(page.getByRole('heading', { level: 1, name: 'Setup' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Launch business' })).toHaveCount(0);
-
-  // And the business now opens on Home.
-  await page.goto(`/organizations/${organizationId}`);
-  await expect(page).toHaveURL(`/organizations/${organizationId}/home`);
-});
-
-test('a phone reaches Setup from the bottom bar while SETUP lasts, and the header carries no badge', async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  const organizationId = await foundBusiness(page);
-
-  await page.goto(`/organizations/${organizationId}/home`);
-  const bar = page.getByRole('navigation', { name: 'This business' });
-  const setupLink = bar.getByRole('link', { name: /^Setup/ });
-  await expect(setupLink).toBeVisible();
-  await expect(page.getByText('Setting up')).toHaveCount(0);
-
-  await setupLink.click();
-  await expect(page).toHaveURL(`/organizations/${organizationId}/setup`);
-
-  await page.getByRole('button', { name: 'Launch business' }).click();
-  await expect(page).toHaveURL(`/organizations/${organizationId}/home`);
-  await expect(bar.getByRole('link', { name: /^Setup/ })).toHaveCount(0);
-});

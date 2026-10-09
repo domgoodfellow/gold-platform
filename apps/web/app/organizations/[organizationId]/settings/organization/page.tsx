@@ -10,6 +10,7 @@ import {
 } from '@/lib/domain/catalogue/organization-plans';
 import { requireOrganization } from '@/lib/route/organization';
 import { settingsLandingHref } from '@/lib/route/settings';
+import { hasSchedulableWork } from '@/lib/domain/work-items/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,11 +25,14 @@ export default async function OrganizationSettingsPage({
 }: PageProps<'/organizations/[organizationId]/settings/organization'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
-  const featureStates = await organizationResolvedFeatureStates(db, { organizationId });
+  const [featureStates, schedulableWork] = await Promise.all([
+    organizationResolvedFeatureStates(db, { organizationId }), hasSchedulableWork(db, { organizationId }),
+  ]);
   const sections = offeredSections({
     enabledModules: new Set(activeModuleKeys(featureStates)),
     featureAvailability: new Set(availableFeatureKeys(featureStates)),
     capabilities: new Set(organization.capabilities),
+    schedulableWork,
   });
 
   return (

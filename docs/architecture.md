@@ -706,6 +706,43 @@ Legacy Settings routes may redirect to canonical owners.
 
 Redirect compatibility must not be rendered as duplicate navigation.
 
+### Organization setup and configuration ownership
+
+Setup groups the canonical configuration targets into adaptive business, operations, people/resources,
+customers/data, communications, finance, public presence, AI/automations, and review steps. Offered
+destinations require their own configuration capability, resolved feature availability, and, for
+scheduling configuration, schedulable work. URL step selection is navigation, not persisted completion.
+Business identity uses the same Organization form and mutation as General; work, hours, pricing,
+membership, roles, branding and connections remain with their existing domain owners.
+
+`organizationResolvedFeatureStates` supplies entitlement, activation and feature readiness to Settings,
+Setup and navigation. Readiness evaluates active available catalogue features, including Plan-only
+assignments, rather than raw legacy switches. PostgreSQL launch blockers use `app.module_entitled`;
+subscription access remains deployment-environment-aware through the existing service-access resolver.
+The launch action rechecks both before transitioning to Live.
+
+Sales discovery and accepted recommendations remain historical handoff evidence. Setup displays known
+facts and unresolved questions and can prefill a first draft without treating discovery as saved
+operational configuration. `/setup/proposal` is the domain-grouped document review surface. Structural
+validation is shared by adapter, document edits and canonical application. Individual feature selections
+activate only entitled, implemented catalogue features; historical grouped selections remain readable
+and removable, without creating commercial terms or modifying Plan assignments.
+
+Proposal application atomically claims a tenant-bound draft as `applying` before canonical writes.
+The claimed shape is frozen. Application retains the existing partial-write semantics and records
+success or failure; interrupted claims stay visible for inspection and are never automatically replayed.
+Revise, discard and apply all bind the proposal identifier to the requested organization.
+
+The Settings landing uses exact tenant-scoped counts and authorized directory destinations for status
+and search. It loads no provider credentials. Connections expose neutral verification failures to UI
+consumers; provider accounts, bindings and platform AI credentials retain their separate authorities.
+
+Legacy organizations still retain the catalogue's existing distinction between kernel runtime
+mappings and explicit Plan/module entitlement. Kernel surfaces are not commercially gated by a
+missing Plan assignment; a catalogue row without a legacy module mapping is not proof that the
+underlying primitive is unavailable. Full kernel-feature activation/runtime parity remains a
+commercial-model limitation, rather than grounds for inventing Plan grants during setup.
+
 ---
 
 ## Data and persistence architecture

@@ -60,8 +60,9 @@ export function TimeZoneField({
   defaultValue?: string;
   label?: string;
 }) {
-  const zones = useMemo(() => supported('timeZone'), []);
-  const current = defaultValue ?? browserTimeZone();
+  const mounted = useIsClient();
+  const zones = useMemo(() => mounted ? supported('timeZone') : null, [mounted]);
+  const current = defaultValue ?? (mounted ? browserTimeZone() : 'UTC');
 
   return (
     <div className="flex flex-1 flex-col gap-1">
@@ -70,6 +71,7 @@ export function TimeZoneField({
       </FieldLabel>
       {zones ? (
         <SelectInput id="timezone" name="timezone" defaultValue={current}>
+          {!zones.includes(current) ? <option value={current}>{current.replace(/_/g, ' ')}</option> : null}
           {zones.map((zone) => (
             <option key={zone} value={zone}>
               {zone.replace(/_/g, ' ')}
@@ -102,19 +104,17 @@ export function CurrencyField({
   defaultValue?: string;
   label?: string;
 }) {
-  const codes = useMemo(() => supported('currency'), []);
+  const mounted = useIsClient();
+  const codes = useMemo(() => mounted ? supported('currency') : null, [mounted]);
 
   // Names, not just the list, are ICU output — and ICU's own CLDR data genuinely differs
   // between Node's build (server render) and a browser's (hydration) for at least some
   // currencies ("BYN" alone renders "Belarusian Rouble" server-side and "Belarusian Ruble" in
   // Chromium on some paired versions), which React reports as a hydration mismatch and then
-  // discards and re-renders the whole tree to recover from. The list of codes is stable across
-  // both runtimes; only the display name is not. So the first render — server and the client's
-  // first pass alike — shows codes alone, deterministic on both sides, and the name is filled
-  // in only after mount, the same "client-only, once mounted" escape hatch Next's own hydration
-  // guidance recommends for a value that cannot be the same on both renders.
-  const mounted = useIsClient();
-
+  // discards and re-renders the whole tree. Currency codes and timezone aliases can also change
+  // between ICU versions. The first render uses the same text input on both sides; catalogue
+  // choices and their names are offered after hydration. Saved values absent from the current
+  // catalogue remain explicit options rather than silently selecting the first alternative.
   const names = useMemo(() => {
     if (!mounted) return null;
     try {
@@ -131,6 +131,7 @@ export function CurrencyField({
       </FieldLabel>
       {codes ? (
         <SelectInput id={id} name="currency" required defaultValue={defaultValue ?? ''}>
+          {defaultValue && !codes.includes(defaultValue) ? <option value={defaultValue}>{defaultValue}</option> : null}
           {/* No preselection when founding. There is no neutral currency, so the platform
               does not offer one — and deriving it from the timezone above would be the
               assumption this whole field exists to avoid. */}

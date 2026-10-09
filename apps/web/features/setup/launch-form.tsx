@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/controls/button';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import { useActionState } from 'react';
 import { launchAction, type SetupActionState } from '@/app/organizations/[organizationId]/setup/actions';
 import { Error } from './setup-controls';
@@ -16,11 +16,10 @@ export function LaunchForm({ organizationId }: { organizationId: string }) {
   const [state, action, pending] = useActionState(launchAction, INITIAL);
 
   return (
-    <form action={action}>
+    <form id={`launch-${organizationId}`} action={action}>
       <input type="hidden" name="organizationId" value={organizationId} />
-      <Button type="submit" disabled={pending}>
-        {pending ? 'Finishing…' : 'Finish setup'}
-      </Button>
+      <ConfirmSubmit formId={`launch-${organizationId}`} label="Finish setup" confirmLabel="Launch organization" tone="primary" pending={pending}
+        description="This makes the organization Live and opens Home. Required setup is checked again before launch. You can continue changing configuration in Settings." />
       <Error state={state} />
     </form>
   );

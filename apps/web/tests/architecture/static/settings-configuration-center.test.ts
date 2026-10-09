@@ -109,8 +109,7 @@ describe('configuration fields stay with their owning surfaces', () => {
 describe('Pricing, Automations, Custom fields and Team are canonical, not Settings sub-routes', () => {
   it('/pricing is canonical and renders both the price book and, when connected, Getting paid', () => {
     const page = readFileSync(`${ROUTES}/settings/pricing/page.tsx`, 'utf8');
-    expect(page).toContain('CreatePriceItemForm');
-    expect(page).toContain('EditPriceItemForm');
+    expect(page).toContain('PricingManagement');
     expect(page).toContain('PaymentAccountRow');
     expect(page).not.toContain('redirect(');
   });
@@ -211,7 +210,7 @@ describe('Website is a canonical Studio operating page, not a Settings sub-route
       fileURLToPath(new URL('../../../lib/navigation.ts', import.meta.url)),
       'utf8',
     );
-    expect(map).not.toMatch(/key:\s*'website'/);
+    expect(map).toMatch(/key:\s*'website'.*path:\s*'studio\/website'/);
     expect(map).toContain("segment: 'studio-website'");
   });
 

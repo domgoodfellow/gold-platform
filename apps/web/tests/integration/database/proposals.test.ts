@@ -8,11 +8,14 @@ import type { BusinessShape } from '@/lib/domain/configuration/configure';
 import {
   applyConfigurationProposal,
   currentConfigurationProposal,
+  reviseConfigurationProposal,
+  discardConfigurationProposal,
 } from '@/lib/domain/configuration/proposals';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
+import { createOrganization } from '@/lib/domain/tenancy/organizations';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
@@ -305,6 +308,59 @@ describe('a proposal is a row between the drafting and the applying', () => {
     const result = applied.result as { typeId: string; statusIds: string[] };
     expect(typeof result.typeId).toBe('string');
     expect(result.statusIds).toHaveLength(WORKSHOP_SHAPE.statuses.length);
+  });
+
+  it('refuses a forged organization even when the actor owns both businesses', async () => {
+    const tenant = await newTenant('proposal-scope');
+    const other = await createOrganization(tenant.db, { name: 'Separate business', displayName: 'Owner', timezone: 'UTC', currency: 'EUR' });
+    const { data, error } = await insertProposal(tenant, 'Bound to its original business.', WORKSHOP_SHAPE);
+    if (error) throw error;
+    await expect(applyConfigurationProposal(tenant.db, { organizationId: other, proposalId: data!.id }))
+      .rejects.toMatchObject({ code: 'proposals.not_found' });
+    expect(await listWorkItemTypes(tenant.db, { organizationId: other })).toEqual([]);
+    expect((await currentConfigurationProposal(tenant.db, { organizationId: tenant.organizationId }))?.outcome).toBe('draft');
+    await expect(reviseConfigurationProposal(tenant.db, { organizationId: other, proposalId: data!.id, shape: EMPTY_SHAPE })).rejects.toMatchObject({ code: 'proposals.not_a_draft' });
+    await expect(discardConfigurationProposal(tenant.db, { organizationId: other, proposalId: data!.id })).rejects.toMatchObject({ code: 'proposals.not_a_draft' });
+    expect((await currentConfigurationProposal(tenant.db, { organizationId: tenant.organizationId }))?.outcome).toBe('draft');
+  });
+
+  it('rejects malformed nested data and unavailable features before configuration writes', async () => {
+    const tenant = await newTenant('proposal-untrusted');
+    const { data, error } = await insertProposal(tenant, 'Reviewed setup.', WORKSHOP_SHAPE);
+    if (error) throw error;
+    await expect(reviseConfigurationProposal(tenant.db, { organizationId: tenant.organizationId, proposalId: data!.id, shape: { ...WORKSHOP_SHAPE, roles: [null] } as unknown as BusinessShape }))
+      .rejects.toMatchObject({ code: 'configuration.shape_invalid' });
+    await reviseConfigurationProposal(tenant.db, { organizationId: tenant.organizationId, proposalId: data!.id, shape: { ...WORKSHOP_SHAPE, featureKeys: ['invented_feature'] } });
+    const applied = await applyConfigurationProposal(tenant.db, { organizationId: tenant.organizationId, proposalId: data!.id });
+    expect(applied.outcome).toBe('failed');
+    expect(await listWorkItemTypes(tenant.db, { organizationId: tenant.organizationId })).toEqual([]);
+  });
+
+  it('claims a draft once when two Apply requests race', async () => {
+    const tenant = await newTenant('proposal-race');
+    const { data, error } = await insertProposal(tenant, 'Apply exactly once.', WORKSHOP_SHAPE);
+    if (error) throw error;
+    const input = { organizationId: tenant.organizationId, proposalId: data!.id };
+    const results = await Promise.allSettled([
+      applyConfigurationProposal(tenant.db, input),
+      applyConfigurationProposal(tenant.db, input),
+    ]);
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    expect((await listWorkItemTypes(tenant.db, { organizationId: tenant.organizationId })).filter((type) => type.name === 'Repair')).toHaveLength(1);
+  });
+
+  it('freezes a claimed shape and refuses discard or replay', async () => {
+    const tenant = await newTenant('proposal-frozen');
+    const { data, error } = await insertProposal(tenant, 'Claimed setup.', WORKSHOP_SHAPE);
+    if (error) throw error;
+    expect((await tenant.db.from('configuration_proposals').update({ outcome: 'applying' }).eq('id', data!.id)).error).toBeNull();
+    for (const edit of [{ shape: {} }, { outcome: 'draft' }, { outcome: 'discarded' }]) {
+      const refused = await tenant.db.from('configuration_proposals').update(edit).eq('id', data!.id);
+      expect(refused.error?.code).toBe('55000');
+    }
+    await expect(applyConfigurationProposal(tenant.db, { organizationId: tenant.organizationId, proposalId: data!.id })).rejects.toMatchObject({ code: 'proposals.not_a_draft' });
+    expect(await listWorkItemTypes(tenant.db, { organizationId: tenant.organizationId })).toEqual([]);
   });
 
   it('is refused by the policy of whatever step the person may not take (D32)', async () => {

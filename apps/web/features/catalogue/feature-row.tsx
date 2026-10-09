@@ -39,6 +39,7 @@ export function FeatureRow({
   description,
   state,
   mayManage,
+  mayConfigure = true,
 }: {
   organizationId: string;
   label: string;
@@ -46,6 +47,7 @@ export function FeatureRow({
   state: ResolvedFeatureState;
   /** Gated on `feature.manage`, never on `organization.manage` — a distinct capability now that one exists. */
   mayManage: boolean;
+  mayConfigure?: boolean;
 }) {
   const [actionState, formAction, pending] = useActionState(setFeatureActivationAction, {
     error: null,
@@ -57,7 +59,7 @@ export function FeatureRow({
 
   const statusLine = notEntitled
     ? 'Not included in your plan'
-    : `Included · ${READINESS_LABEL[disabled ? 'unavailable' : state.readiness]}`;
+    : `Included · ${disabled ? 'Disabled' : 'Enabled'} · ${READINESS_LABEL[disabled ? 'unavailable' : state.readiness]}`;
 
   return (
     <div className="flex flex-col gap-1 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
@@ -81,7 +83,7 @@ export function FeatureRow({
           </ButtonLink>
         ) : (
           <>
-            {!disabled && state.primaryHref ? (
+            {!disabled && mayConfigure && state.primaryHref ? (
               <ButtonLink
                 href={state.readiness === 'setup_required' ? (state.setupHref ?? state.primaryHref) : state.primaryHref}
                 tone="secondary"
