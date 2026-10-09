@@ -34,6 +34,14 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Tenant AI agent operations ? 2026-10-08
+
+- Replace the tenant AI starting page with agent collections, a draft/version workbench, deployment configuration, published website knowledge, governed tools, personal evaluations and real activity/allowance reporting.
+- Connect published Operator Copilot configuration to the existing global Agent rail and shared runtime. Add contextual supervised drafting in Communications and summaries in Support.
+- Add website conversation continuity and a Communications claim/reply/resolve workflow; restrict generated reply writes to the machine role and stop automated replies on handoff.
+- Keep unsupported SMS/email/Support autonomous runtimes, Voice and Customer Portal explicitly unavailable; configuration never implies a verified channel integration.
+
+
 ### 2026-10-08
 
 - Implemented the Support operating workspace: persistent Cases, queue ownership, priority, escalation, internal notes, resolution and explicit reopening, elapsed service levels, exact reports and private attributed history. Added shared contextual Case creation from CRM, Inbox, Calls and Work, six scoped capabilities, tenant-bound relationships and responsive Home/list/board/workbench/detail/configuration/report surfaces.

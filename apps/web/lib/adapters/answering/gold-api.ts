@@ -32,6 +32,7 @@ export function goldApiAnsweringProvider(config: { baseUrl: string }): Answering
           attachments: input.attachments,
           organization_id: input.organizationId,
           context: input.context,
+          conversation_id: input.conversationId,
         }),
         signal: AbortSignal.timeout(120_000),
       });
@@ -43,6 +44,8 @@ export function goldApiAnsweringProvider(config: { baseUrl: string }): Answering
       }
 
       const body = (await response.json()) as {
+        agent_version_id?: string | null;
+        agent_deployment_id?: string | null;
         outcome?: string;
         answer?: string;
         detail?: string;
@@ -55,6 +58,8 @@ export function goldApiAnsweringProvider(config: { baseUrl: string }): Answering
         body.outcome === 'answered' || body.outcome === 'unanswered' ? body.outcome : 'failed';
 
       return {
+        agentVersionId: body.agent_version_id,
+        agentDeploymentId: body.agent_deployment_id,
         outcome,
         text: body.answer ?? '',
         detail: outcome === 'failed' ? (body.detail || 'the assistant could not answer') : null,

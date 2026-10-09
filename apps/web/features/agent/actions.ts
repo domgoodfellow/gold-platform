@@ -37,17 +37,23 @@ export type AgentBootstrapState = {
   canAnswer: boolean;
   conversations: AgentConversationSummary[];
   initialConversation: { id: string; runs: AgentRun[] } | null;
+  identity?: string;
 };
 
 export async function loadAgentBootstrapAction(organizationId: string): Promise<AgentBootstrapState> {
-  const { db } = await requireOrganization(organizationId);
+  const { db, organization } = await requireOrganization(organizationId);
   try {
     const [conversations, canAnswer] = await Promise.all([
       listAgentConversationSummaries(db, { organizationId }),
       canAnswerQuestions(),
     ]);
     const latest = conversations[0];
+    const identity = organization.capabilities.includes('assistant.ask')
+      ? await db.rpc('resolve_operator_agent', { p_organization_id: organizationId })
+      : null;
+    const configured = identity?.data as { name?: string } | null;
     return {
+      identity: configured?.name ?? 'Built-in Operator Copilot',
       error: null,
       canAnswer,
       conversations,

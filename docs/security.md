@@ -888,6 +888,10 @@ Imported rows remain untrusted until validated against domain rules.
 
 ## AI security
 
+Tenant agent commands require `organization.manage`; operator execution additionally requires `assistant.ask` and entitlement. Published versions are immutable to clients. Configuration cannot grant the actor additional capabilities, add unregistered tools or activate unsupported channel runtimes. The loop dispatches only tools explicitly supplied for that request; public turns and safe previews cannot reach the global private-tool registry. Retrieved website text and incoming messages are untrusted reference data.
+
+Public reply persistence is machine-only. Visitors may record inbound messages and request a fixed configured handoff message, but cannot forge assistant or staff reply text. Staff replies require `message.send` and a claimed conversation owned by the caller. Automated replies lock the conversation and refuse handoff/claimed threads. Public history requires the opaque visitor key and site, is rate-limited at the web boundary, and excludes private notes and staff identities. Inbound appends enforce the canonical rate limit inside the database command as well, so a direct anonymous RPC cannot bypass the write limit. Tenant evaluation reads are personal; public conversation oversight stays in Communications. Provider credentials and vendor costs remain platform-controlled.
+
 AI output is untrusted application input.
 
 A model can:

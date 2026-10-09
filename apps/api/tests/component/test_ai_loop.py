@@ -70,6 +70,15 @@ class Scripted:
         return self.turns.pop(0)
 
 
+def test_public_and_preview_cannot_execute_a_global_tool_that_was_not_offered(monkeypatch):
+    calls = []
+    monkeypatch.setattr(loop_module, "call_tool", lambda *args, **kwargs: calls.append(kwargs))
+    provider = Scripted(Turn(calls=(ToolCall(name="work_at_risk", arguments={}, reference="denied"),)), Turn(text="Cannot access private work"))
+    result = answer(SETTINGS, provider, question="Read private work", token="", organization_id=ORG, tools=(), actions=(), audience="public")
+    assert calls == []
+    assert result.tools[0].error == "no tool by that name"
+
+
 def call(name: str, **arguments) -> ToolCall:
     return ToolCall(name=name, arguments=arguments, reference=f"ref-{name}")
 
@@ -497,3 +506,49 @@ def test_a_closing_tag_inside_a_file_cannot_end_its_fence_early() -> None:
 
     assert rendered.count("</attachment>") == 1
     assert rendered.endswith("</attachment>")
+
+
+def test_operator_configuration_intersects_the_registered_tool_allowlist(monkeypatch):
+    from app.ai import configuration
+    from types import SimpleNamespace
+    calls = []
+    def post(url, **kwargs):
+        calls.append((url, kwargs))
+        return SimpleNamespace(raise_for_status=lambda: None, json=lambda: {
+            "enabled": True, "instructions": "Published policy", "versionId": "version",
+            "configuration": {"tools": ["work_at_risk", "unregistered_tool"], "policy": "read_only"},
+        })
+    monkeypatch.setattr(configuration.httpx, "post", post)
+    settings = SimpleNamespace(supabase_url="http://local", supabase_publishable_key="public")
+    instructions, tools, actions, metadata = configuration.resolve_configuration(settings, token="caller-token", organization_id=ORG, conversation_id="conversation")
+    assert instructions == "Published policy"
+    assert [t.name for t in tools] == ["work_at_risk"]
+    assert actions == ()
+    assert metadata["versionId"] == "version"
+    assert calls[0][1]["headers"]["Authorization"] == "Bearer caller-token"
+    assert calls[0][1]["json"]["p_conversation_id"] == "conversation"
+
+
+def test_safe_preview_cannot_inherit_business_tools_or_actions(monkeypatch):
+    from app.ai import configuration
+    from types import SimpleNamespace
+    calls = []
+    def post(url, **kwargs):
+        calls.append((url, kwargs))
+        return SimpleNamespace(raise_for_status=lambda: None, json=lambda: {"instructions": "Version policy", "knowledge": "Published text", "configuration": {"tools": ["work_at_risk"], "policy": "human_approval"}})
+    monkeypatch.setattr(configuration.httpx, "post", post)
+    settings = SimpleNamespace(supabase_url="http://local", supabase_publishable_key="public")
+    instructions, tools, actions, _ = configuration.resolve_configuration(settings, token="caller", organization_id=ORG, preview={"agentId": "agent", "versionId": "version"})
+    assert "Published text" in instructions
+    assert tools == actions == ()
+    assert calls[0][0].endswith("/ai_preview_configuration")
+    assert calls[0][1]["json"]["p_version_id"] == "version"
+
+
+def test_a_disabled_operator_selection_never_falls_back_to_broader_builtin_policy(monkeypatch):
+    import pytest
+    from app.ai import configuration
+    from types import SimpleNamespace
+    monkeypatch.setattr(configuration.httpx, "post", lambda *a, **k: SimpleNamespace(raise_for_status=lambda: None, json=lambda: {"enabled": False}))
+    with pytest.raises(ValueError, match="disabled"):
+        configuration.resolve_configuration(SimpleNamespace(supabase_url="http://local", supabase_publishable_key="public"), token="caller", organization_id=ORG)

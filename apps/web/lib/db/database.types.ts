@@ -193,6 +193,8 @@ export type Database = {
           action_taken_at: string | null
           answer: string
           answered_by: string
+          assistant_deployment_id: string | null
+          assistant_version_id: string | null
           conversation_id: string
           created_by: string
           detail: string | null
@@ -210,6 +212,8 @@ export type Database = {
           action_taken_at?: string | null
           answer?: string
           answered_by: string
+          assistant_deployment_id?: string | null
+          assistant_version_id?: string | null
           conversation_id: string
           created_by: string
           detail?: string | null
@@ -227,6 +231,8 @@ export type Database = {
           action_taken_at?: string | null
           answer?: string
           answered_by?: string
+          assistant_deployment_id?: string | null
+          assistant_version_id?: string | null
           conversation_id?: string
           created_by?: string
           detail?: string | null
@@ -247,6 +253,20 @@ export type Database = {
             referencedColumns: ["organization_id", "created_by", "id"]
           },
           {
+            foreignKeyName: "agent_runs_organization_id_assistant_deployment_id_fkey"
+            columns: ["organization_id", "assistant_deployment_id"]
+            isOneToOne: false
+            referencedRelation: "ai_assistant_deployments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "agent_runs_organization_id_assistant_version_id_fkey"
+            columns: ["organization_id", "assistant_version_id"]
+            isOneToOne: false
+            referencedRelation: "ai_assistant_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
             foreignKeyName: "agent_runs_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -265,6 +285,7 @@ export type Database = {
       ai_assistant_deployments: {
         Row: {
           assistant_id: string
+          configuration: Json
           created_at: string
           display_name: string
           enabled: boolean
@@ -276,9 +297,11 @@ export type Database = {
           public_site_id: string | null
           surface: string
           updated_at: string
+          version_id: string | null
         }
         Insert: {
           assistant_id: string
+          configuration?: Json
           created_at?: string
           display_name?: string
           enabled?: boolean
@@ -290,9 +313,11 @@ export type Database = {
           public_site_id?: string | null
           surface: string
           updated_at?: string
+          version_id?: string | null
         }
         Update: {
           assistant_id?: string
+          configuration?: Json
           created_at?: string
           display_name?: string
           enabled?: boolean
@@ -304,6 +329,7 @@ export type Database = {
           public_site_id?: string | null
           surface?: string
           updated_at?: string
+          version_id?: string | null
         }
         Relationships: [
           {
@@ -318,6 +344,73 @@ export type Database = {
             columns: ["organization_id", "public_site_id"]
             isOneToOne: false
             referencedRelation: "public_sites"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_assistant_deployments_organization_id_version_id_fkey"
+            columns: ["organization_id", "version_id"]
+            isOneToOne: false
+            referencedRelation: "ai_assistant_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      ai_assistant_evaluations: {
+        Row: {
+          answer: string
+          assistant_id: string
+          created_at: string
+          created_by: string
+          criterion: string
+          detail: string | null
+          id: string
+          organization_id: string
+          outcome: string
+          scenario: string
+          verdict: string | null
+          version_id: string
+        }
+        Insert: {
+          answer: string
+          assistant_id: string
+          created_at?: string
+          created_by?: string
+          criterion: string
+          detail?: string | null
+          id?: string
+          organization_id: string
+          outcome: string
+          scenario: string
+          verdict?: string | null
+          version_id: string
+        }
+        Update: {
+          answer?: string
+          assistant_id?: string
+          created_at?: string
+          created_by?: string
+          criterion?: string
+          detail?: string | null
+          id?: string
+          organization_id?: string
+          outcome?: string
+          scenario?: string
+          verdict?: string | null
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_assistant_evaluations_organization_id_assistant_id_fkey"
+            columns: ["organization_id", "assistant_id"]
+            isOneToOne: false
+            referencedRelation: "ai_assistants"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_assistant_evaluations_organization_id_version_id_fkey"
+            columns: ["organization_id", "version_id"]
+            isOneToOne: false
+            referencedRelation: "ai_assistant_versions"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -364,10 +457,59 @@ export type Database = {
           },
         ]
       }
-      ai_assistants: {
+      ai_assistant_versions: {
         Row: {
+          assistant_id: string
+          configuration: Json
           created_at: string
           created_by: string
+          id: string
+          instructions: string
+          knowledge_site_ids: string[]
+          name: string
+          organization_id: string
+          version_number: number
+        }
+        Insert: {
+          assistant_id: string
+          configuration: Json
+          created_at?: string
+          created_by: string
+          id?: string
+          instructions: string
+          knowledge_site_ids?: string[]
+          name: string
+          organization_id: string
+          version_number: number
+        }
+        Update: {
+          assistant_id?: string
+          configuration?: Json
+          created_at?: string
+          created_by?: string
+          id?: string
+          instructions?: string
+          knowledge_site_ids?: string[]
+          name?: string
+          organization_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_assistant_versions_organization_id_assistant_id_fkey"
+            columns: ["organization_id", "assistant_id"]
+            isOneToOne: false
+            referencedRelation: "ai_assistants"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      ai_assistants: {
+        Row: {
+          configuration: Json
+          created_at: string
+          created_by: string
+          draft_number: number
           id: string
           instructions: string
           name: string
@@ -377,8 +519,10 @@ export type Database = {
           updated_by: string
         }
         Insert: {
+          configuration?: Json
           created_at?: string
           created_by: string
+          draft_number?: number
           id?: string
           instructions?: string
           name: string
@@ -388,8 +532,10 @@ export type Database = {
           updated_by: string
         }
         Update: {
+          configuration?: Json
           created_at?: string
           created_by?: string
+          draft_number?: number
           id?: string
           instructions?: string
           name?: string
@@ -1425,6 +1571,7 @@ export type Database = {
           body: string
           channel: string
           created_at: string
+          created_by: string | null
           delivery_state: string
           direction: string
           id: string
@@ -1435,6 +1582,7 @@ export type Database = {
           body?: string
           channel: string
           created_at?: string
+          created_by?: string | null
           delivery_state?: string
           direction: string
           id?: string
@@ -1445,6 +1593,7 @@ export type Database = {
           body?: string
           channel?: string
           created_at?: string
+          created_by?: string | null
           delivery_state?: string
           direction?: string
           id?: string
@@ -1631,7 +1780,10 @@ export type Database = {
       }
       communication_threads: {
         Row: {
+          assistant_deployment_id: string | null
+          assistant_version_id: string | null
           channel: string
+          claimed_by: string | null
           created_at: string
           customer_id: string | null
           external_actor_id: string | null
@@ -1643,7 +1795,10 @@ export type Database = {
           visitor_key: string | null
         }
         Insert: {
+          assistant_deployment_id?: string | null
+          assistant_version_id?: string | null
           channel: string
+          claimed_by?: string | null
           created_at?: string
           customer_id?: string | null
           external_actor_id?: string | null
@@ -1655,7 +1810,10 @@ export type Database = {
           visitor_key?: string | null
         }
         Update: {
+          assistant_deployment_id?: string | null
+          assistant_version_id?: string | null
           channel?: string
+          claimed_by?: string | null
           created_at?: string
           customer_id?: string | null
           external_actor_id?: string | null
@@ -1667,6 +1825,20 @@ export type Database = {
           visitor_key?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "communication_threads_organization_id_assistant_deployment_fkey"
+            columns: ["organization_id", "assistant_deployment_id"]
+            isOneToOne: false
+            referencedRelation: "ai_assistant_deployments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "communication_threads_organization_id_assistant_version_id_fkey"
+            columns: ["organization_id", "assistant_version_id"]
+            isOneToOne: false
+            referencedRelation: "ai_assistant_versions"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "communication_threads_organization_id_customer_id_fkey"
             columns: ["organization_id", "customer_id"]
@@ -11612,6 +11784,25 @@ export type Database = {
         Args: { p_organization_id: string; p_route_id: string }
         Returns: number
       }
+      ai_preview_configuration: {
+        Args: {
+          p_assistant_id: string
+          p_organization_id: string
+          p_version_id: string
+        }
+        Returns: Json
+      }
+      ai_published_sites: {
+        Args: { p_organization_id: string }
+        Returns: {
+          current_published_revision_id: string
+          id: string
+        }[]
+      }
+      ai_workspace_summary: {
+        Args: { p_organization_id: string; p_since: string }
+        Returns: Json
+      }
       allowance_decision: {
         Args: {
           p_allowance_key: string
@@ -12161,6 +12352,14 @@ export type Database = {
         Args: { p_provider_key: string }
         Returns: string
       }
+      delete_ai_assistant: {
+        Args: { p_id: string; p_organization_id: string }
+        Returns: undefined
+      }
+      delete_ai_deployment: {
+        Args: { p_id: string; p_organization_id: string }
+        Returns: undefined
+      }
       delete_resource_availability_exception: {
         Args: { p_id: string }
         Returns: undefined
@@ -12237,6 +12436,15 @@ export type Database = {
       hand_off_accepted_proposal: {
         Args: { p_proposal_id: string }
         Returns: string
+      }
+      handle_website_conversation: {
+        Args: {
+          p_action: string
+          p_body?: string
+          p_organization_id: string
+          p_thread_id: string
+        }
+        Returns: undefined
       }
       hostname_binding: {
         Args: { p_hostname: string }
@@ -12766,6 +12974,10 @@ export type Database = {
         Args: { p_site_id: string }
         Returns: Json
       }
+      public_communication_history: {
+        Args: { p_site_id: string; p_visitor_key: string }
+        Returns: Json
+      }
       public_plan_catalog: {
         Args: never
         Returns: {
@@ -12786,6 +12998,15 @@ export type Database = {
       public_site_preview: {
         Args: { p_organization_id: string; p_revision_id: string }
         Returns: Json
+      }
+      publish_ai_assistant: {
+        Args: {
+          p_expected_draft: number
+          p_id: string
+          p_organization_id: string
+          p_status: string
+        }
+        Returns: string
       }
       publish_form_revision: {
         Args: { p_organization_id: string; p_revision_id: string }
@@ -13526,6 +13747,10 @@ export type Database = {
         Args: { p_connection_id: string; p_resources: Json }
         Returns: undefined
       }
+      request_public_communication_handoff: {
+        Args: { p_site_id: string; p_visitor_key: string }
+        Returns: string
+      }
       resolve_ai_runtime_assignment: {
         Args: { p_capability: string }
         Returns: {
@@ -13551,6 +13776,14 @@ export type Database = {
           unit_amount_micros: number
         }[]
       }
+      resolve_operator_agent: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      resolve_operator_agent_turn: {
+        Args: { p_conversation_id?: string; p_organization_id: string }
+        Returns: Json
+      }
       resolve_outbound_number: {
         Args: { p_organization_id: string; p_phone_number_id?: string }
         Returns: {
@@ -13558,6 +13791,10 @@ export type Database = {
           phone_number_id: string
           source: string
         }[]
+      }
+      resolve_public_agent_turn: {
+        Args: { p_deployment_id: string; p_visitor_key: string }
+        Returns: Json
       }
       resolve_public_assistant: {
         Args: { p_deployment_id: string }
@@ -13606,6 +13843,33 @@ export type Database = {
         Returns: undefined
       }
       run_due_automations: { Args: never; Returns: number }
+      save_ai_assistant: {
+        Args: {
+          p_configuration: Json
+          p_expected_draft?: number
+          p_id: string
+          p_instructions: string
+          p_name: string
+          p_organization_id: string
+        }
+        Returns: string
+      }
+      save_ai_deployment: {
+        Args: {
+          p_assistant_id: string
+          p_configuration: Json
+          p_display_name: string
+          p_enabled: boolean
+          p_greeting: string
+          p_handoff: string
+          p_id: string
+          p_organization_id: string
+          p_site_id: string
+          p_surface: string
+          p_version_id: string
+        }
+        Returns: string
+      }
       save_commercial_draft_scenario: {
         Args: {
           p_addon_plan_ids?: string[]
@@ -13650,6 +13914,15 @@ export type Database = {
           p_resource_ids: string[]
           p_starts_at: string
           p_work_item_id: string
+        }
+        Returns: undefined
+      }
+      set_ai_knowledge: {
+        Args: {
+          p_assistant_id: string
+          p_enabled: boolean
+          p_organization_id: string
+          p_site_id: string
         }
         Returns: undefined
       }

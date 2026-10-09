@@ -102,6 +102,8 @@ type RailContextValue = {
   layout: RailLayout;
   agentOpen: boolean;
   toggleAgent: () => void;
+  launchAgent: (prompt: string) => void;
+  agentLaunch: { id: number; prompt: string } | null;
   closeAgent: () => void;
   /** The one open page-support mode, or null. Never two. */
   supportMode: SupportMode | null;
@@ -125,12 +127,18 @@ const RailContext = createContext<RailContextValue | null>(null);
 export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
   const layout = useRailLayout();
   const [agentOpen, setAgentOpen] = useState(false);
+  const [agentLaunch, setAgentLaunch] = useState<{ id: number; prompt: string } | null>(null);
   const [supportMode, setSupportMode] = useState<SupportMode | null>(null);
   const [agent, setAgent] = useState<ReactNode | null>(null);
   const [agentWidth, setAgentWidthState] = useState(readStoredWidth);
   const [pageSlot, setPageSlot] = useState<HTMLElement | null>(null);
   const [pageStack, setPageStack] = useState<string[]>([]);
   const [latest, setLatest] = useState<Panel>('page');
+  const launchAgent = useCallback((prompt: string) => {
+    setAgentLaunch({ id: Date.now(), prompt: prompt.slice(0, 1900) });
+    setAgentOpen(true);
+    setLatest('agent');
+  }, []);
 
   const setAgentWidth = useCallback((next: number) => {
     const clamped = Math.min(AGENT_MAX_WIDTH, Math.max(AGENT_MIN_WIDTH, next));
@@ -175,6 +183,8 @@ export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
       layout,
       agentOpen,
       toggleAgent,
+      launchAgent,
+      agentLaunch,
       closeAgent,
       supportMode,
       setSupportMode,
@@ -208,6 +218,8 @@ export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
       closePage,
       showAgent,
       showPage,
+      launchAgent,
+      agentLaunch,
     ],
   );
 

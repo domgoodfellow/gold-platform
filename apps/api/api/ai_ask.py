@@ -33,6 +33,7 @@ from http.server import BaseHTTPRequestHandler
 from app.ai import AttachedText, PriorTurn
 from app.ai.entitlement import ASSISTANT_MODULE, EntitlementUnavailable, holds_module
 from app.ai.loop import answer
+from app.ai.configuration import resolve_configuration
 from app.ai.metering import meter
 from app.ai.registry import unconfigured_reason
 from app.ai.runtime import OPERATOR_ASSISTANT, resolve_provider
@@ -125,6 +126,18 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             )
             return
 
+        try:
+            preview = body.get("preview")
+            if preview is not None and not isinstance(preview, dict):
+                raise ValueError("Invalid preview")
+            instructions, allowed_tools, allowed_actions, agent_configuration = resolve_configuration(
+                settings, token=caller.token, organization_id=organization_id, preview=preview,
+                conversation_id=body.get("conversation_id") or None,
+            )
+        except Exception:
+            self._reply(403, {"error": "Agent configuration is unavailable or access was denied"})
+            return
+
         operations = load_provider_operations_settings()
         try:
             # An explicit assignment is authoritative and never fails over; a capability with
@@ -147,6 +160,9 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             # Trusted only as far as RLS allows, which is the whole point: a caller naming a
             # business they are not in gets empty answers rather than somebody else's rows.
             organization_id=organization_id,
+            instructions=instructions,
+            tools=allowed_tools,
+            actions=allowed_actions,
             # What the application knows and a model cannot. Sent by `apps/web`, which is
             # holding the organization already; asking Postgres for it here would be this
             # runtime reading business state outside a tool.
@@ -182,6 +198,8 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
                 # Whether what this answer consumed was written down: `recorded`, `none_reported`
                 # or `failed`. Carried back rather than swallowed, so a failed meter is visible.
                 "metering": usage,
+                "agent_version_id": agent_configuration.get("versionId"),
+                "agent_deployment_id": agent_configuration.get("deploymentId"),
             },
         )
 

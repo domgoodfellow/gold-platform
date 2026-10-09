@@ -85,7 +85,7 @@ describe('every test file is classified exactly once', () => {
 describe('a category that needs no database really needs none', () => {
   // What makes a file need Postgres: a client for it, or the helper that founds a business in it.
   // Built from parts so this file's own source does not match itself.
-  const NEEDS_DATABASE = new RegExp(['@supabase/supabase-js', 'pg', '@/tests/support/founding'].map((module) => `from '${module}'`).join('|'));
+  const NEEDS_DATABASE = new RegExp(['@supabase/supabase-js', 'pg', '@/tests/support/founding'].map((module) => `from ['"]${module}['"]`).join('|'));
 
   it('imports no database client in a category that declares none', () => {
     for (const [path, entry] of Object.entries(manifest.files)) {

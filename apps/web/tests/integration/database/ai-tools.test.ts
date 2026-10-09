@@ -384,7 +384,9 @@ describe('a run is recorded, and only its asker may read it', () => {
       // Plus the conversation it is filed under, which is structure rather than a record of
       // anything it read — the key carries the asker and the business, so a run cannot be filed
       // under somebody else's conversation.
-      expect(rows.map((row) => row.target).sort()).toEqual(['agent_conversations', 'organizations', 'users']);
+      // Published agent/deployment references identify the configuration used, not business
+      // records returned by tools. Their immutable version is historical attribution.
+      expect(rows.map((row) => row.target).sort()).toEqual(['agent_conversations', 'ai_assistant_deployments', 'ai_assistant_versions', 'organizations', 'users']);
     } finally {
       await client.end();
     }

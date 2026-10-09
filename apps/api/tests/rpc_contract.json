@@ -594,6 +594,27 @@
         "p_deployment_id"
       ]
     },
+    "resolve_public_agent_turn": {
+      "role": "provider_operator",
+      "callers": ["app/core/db.py"],
+      "sends": ["p_deployment_id", "p_visitor_key"]
+    },
+    "resolve_operator_agent_turn": {
+      "role": "authenticated",
+      "callers": ["app/ai/configuration.py"],
+      "sends": ["p_organization_id", "p_conversation_id"],
+      "optional": ["p_conversation_id"]
+    },
+    "ai_preview_configuration": {
+      "role": "authenticated",
+      "callers": ["app/ai/configuration.py"],
+      "sends": ["p_organization_id", "p_assistant_id", "p_version_id"]
+    },
+    "record_public_communication_reply": {
+      "role": "provider_operator",
+      "callers": ["app/ai/public_reply.py"],
+      "sends": ["p_site_id", "p_visitor_key", "p_body", "p_handoff"]
+    },
     "resolve_secret_reference": {
       "role": "secret_operator",
       "callers": [

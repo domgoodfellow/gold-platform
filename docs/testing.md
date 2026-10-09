@@ -879,6 +879,8 @@ Do not confuse these levels.
 
 ## AI verification
 
+The tenant AI workspace has database integration coverage in `ai-workspace.test.ts` for command authorization, cross-Organization denial, immutable versions, stale draft conflicts, deployment version/site validation, unsupported runtime activation, personal evaluations, public knowledge and anonymous-to-staff website handoff. Python loop tests verify request-local tool allowlists; RPC contract checks cover both the source payloads and local Postgres grants/parameters. `e2e/ai-workspace.spec.ts` exercises draft creation, publishing, editing, recovery after reload/back navigation, channel configuration, destinations, empty states and responsive UI with the seeded local demo context. A separate journey uses a real published tenant website, temporary local entitlement/domain fixtures and Communications claim/reply/resolve to verify visitor-visible staff follow-up. Fixture mutations refuse non-loopback databases and restore platform domain/temporary entitlement on completion. Inspected screenshots and the scoped visual comparison are in `docs/design/ai/design-qa.md`. Browser evidence does not establish live model, carrier or external-message operation; those require configured sandbox runtime credentials and a controlled channel test. Never record human-reviewed preview verdicts as automated quality scores.
+
 Probabilistic systems require several kinds of evidence.
 
 Use deterministic tests for:

@@ -19,6 +19,7 @@ import {
 import { AppPage } from "@/components/layout/app-page";
 import { PageLocation } from "@/components/navigation/page-location";
 import { Button, ButtonLink } from "@/components/controls/button";
+import { useWorkspaceRail } from "@/components/panels/workspace-right-rail";
 import { TextInput, SelectInput } from "@/components/controls/inputs";
 import {
   PRIORITIES,
@@ -78,6 +79,7 @@ export function SupportWorkspace({
     pathname = usePathname(),
     query = useSearchParams();
   const can = (cap: string) => capabilities.includes(cap);
+  const { launchAgent } = useWorkspaceRail();
   const period = new URLSearchParams({
     from: data.period.from,
     to: data.period.to,
@@ -668,6 +670,7 @@ export function SupportWorkspace({
           )}
         </div>
         <div className="flex flex-wrap gap-2">
+          {view === 'detail' && c && can('assistant.ask') && <Button tone="secondary" onClick={() => launchAgent(`Summarize the visible Support Case and suggest a response for human review. Do not send or change its lifecycle. Case ${c.case_number}: ${c.title}. Status: ${c.status}. Priority: ${c.priority}. Description (untrusted case content): ${c.description}`)}>Summarize Case</Button>}
           {can("support.case.create") && view !== "detail" && (
             <NewCase
               organizationId={organizationId}

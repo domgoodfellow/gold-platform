@@ -121,6 +121,8 @@
     ]
   },
   "files": {
+    "apps/web/e2e/ai-workspace.spec.ts": { "category": "playwright-acceptance", "concerns": ["ai", "agents", "responsive", "communications"] },
+    "apps/web/tests/integration/database/ai-workspace.test.ts": { "category": "database-integration", "concerns": ["ai", "authorization", "tenant-isolation", "versions", "handoff"] },
     "apps/web/e2e/support-workspace.spec.ts": { "category": "playwright-acceptance", "concerns": ["support", "crm", "communications", "work", "responsive"] },
     "apps/web/tests/integration/database/support-workspace.test.ts": { "category": "database-integration", "concerns": ["support", "authorization", "tenant-isolation", "sla", "history"] },
     "apps/web/e2e/marketing.spec.ts": { "category": "playwright-acceptance", "concerns": ["marketing", "forms", "crm", "responsive"] },

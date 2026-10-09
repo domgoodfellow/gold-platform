@@ -354,7 +354,7 @@ describe('a public deployment is resolved from its own id', () => {
 
     // The business comes from the deployment, never from whoever asked; Alice holds the Agent.
     expect(found).toEqual([
-      { organization_id: alice.organizationId, instructions: 'Be brief. Never discuss prices.', entitled: true },
+      { organization_id: alice.organizationId, instructions: expect.stringContaining('Be brief. Never discuss prices.'), entitled: true },
     ]);
   });
 

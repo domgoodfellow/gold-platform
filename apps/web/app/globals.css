@@ -10,6 +10,7 @@
 @source "../features/studio";
 @source "../features/marketing";
 @source "../features/support";
+@source "../features/ai";
 @source "../components/operational";
 
 /* The colour roles. `docs/ui-spec.md` §3 says why each one exists; this file is where the

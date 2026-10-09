@@ -7,6 +7,7 @@ import { logoUrl } from '@/lib/domain/branding/brand';
 import { publishedHostnameSite } from '@/lib/domain/domains/resolve';
 import { pageForSlug } from '@/lib/domain/public-site/paths';
 import { SiteView } from './site-view';
+import { PublicSiteCommunication } from '@/features/communications/public-site-communication';
 
 /**
  * One page of a business's published website at its own hostname. The hostname is resolved again
@@ -55,5 +56,8 @@ export async function HostedPage({ hostname, slug }: { hostname: string; slug: s
   const page = found.site ? pageForSlug(found.site.pages, slug) : null;
   if (!found.site || !page) notFound();
   const logoSrc = found.site.brand.logoPath ? logoUrl(getPublicDb(), found.site.brand.logoPath) : null;
-  return <SiteView site={found.site} page={page} logoSrc={logoSrc} context={{ mode: 'live', forms: found.site.forms }} />;
+  return <>
+    <SiteView site={found.site} page={page} logoSrc={logoSrc} context={{ mode: 'live', forms: found.site.forms }} />
+    <PublicSiteCommunication siteId={found.site.siteId} />
+  </>;
 }

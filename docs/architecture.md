@@ -610,7 +610,7 @@ The workspace registry contains all canonical workspace identities.
 
 Visibility is derived from real reachable operating pages plus the relevant entitlement/permission projection.
 
-All nine workspaces have canonical Homes. Marketing, Support and tenant AI register matching Areas and authenticated pages at `/organizations/[organizationId]/marketing`, `/organizations/[organizationId]/support` and `/organizations/[organizationId]/ai`. Marketing and Support compose domain operating read models; tenant AI retains `WorkspaceHome`. Support requires organization membership, service access and `support.read`. Its server actions delegate to transactional capability-checked database commands, while exact aggregate queries bound collection and board previews independently. Support keeps its private immutable Case evidence separate from the general tenant event feed, whose broader read and append permissions are unsuitable for internal notes. Tenant workspace projection remains flat; contextual Areas supply active-route aliases rather than child rows. Tenant AI is separate from Platform AI Runtime and the global Agent rail.
+All nine workspaces have canonical Homes. Marketing, Support and tenant AI register matching Areas and authenticated pages at `/organizations/[organizationId]/marketing`, `/organizations/[organizationId]/support` and `/organizations/[organizationId]/ai`. Marketing and Support compose domain operating read models; tenant AI composes the agent-management read model. Support requires organization membership, service access and `support.read`. Its server actions delegate to transactional capability-checked database commands, while exact aggregate queries bound collection and board previews independently. Support keeps its private immutable Case evidence separate from the general tenant event feed, whose broader read and append permissions are unsuitable for internal notes. Tenant workspace projection remains flat; contextual Areas supply active-route aliases rather than child rows. Tenant AI is separate from Platform AI Runtime and the global Agent rail.
 
 Do not create a separate “visible workspaces” hard-coded list.
 
@@ -957,6 +957,16 @@ AI has four distinct responsibilities:
 4. **Proposed consequential actions**
 
 These must not collapse into “the model can access the database.”
+
+---
+
+### Tenant agent management
+
+The tenant AI workspace manages the existing `ai_assistants`, knowledge associations and `ai_assistant_deployments`. Draft saves use optimistic concurrency; publishing creates an immutable `ai_assistant_versions` snapshot. Deployments explicitly pin a version. Operator conversations and website threads retain their effective version attribution, without copying transcripts to a second store. Organization managers configure agents; tools still run under the asking actor's token and canonical domain authorization.
+
+The global Agent rail remains the operator interaction surface. A configured Operator Copilot supplies its published instructions, allowed read tools and approval policy to the shared Python loop; organizations without a selection retain the built-in agent. Public website turns use that same loop with no private business tools. Only published same-organization website snapshots supply public knowledge. Communications owns website conversations, staff claims, replies and resolution; handoff stops automated replies.
+
+SMS/email drafting and Support summaries launch the existing contextual rail and require human review in their owning workspaces. Their channel deployments, Voice and Customer Portal are configuration-only: they cannot be enabled as autonomous conversational runtimes. Voice configuration does not alter the existing Communications telephone lifecycle. MCP execution is unavailable. Preview tests use a published version with no business tools/actions or external sending, and record personal human-assessed evaluations.
 
 ---
 

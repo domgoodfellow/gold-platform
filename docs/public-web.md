@@ -597,3 +597,9 @@ Hosted configuration belongs in `docs/deployment.md`.
 ## Marketing acquisition
 
 Tracked Marketing Form links append `campaign_token` and optional `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term` to the canonical `/f/{publicKey}` URL. Hosted, website and embed Form clients forward these values through the existing public submission action. The database validates the token against the owning Form and active Campaign, writes the exact published revision through `app.record_form_submission`, preserves attribution context and creates one inquiry in a single transaction. A per-attempt request UUID is reused on retries and rejects mismatched payload reuse. A forged or inactive token refuses the submission without partial writes. Untracked Forms continue their existing submission path; no historical reclassification occurs.
+
+## Website agent conversations
+
+A website agent deployment resolves from the published site and an active agent's explicitly selected version. The widget records the inbound message in Communications before requesting a reply. The Python runtime resolves the effective thread version, published knowledge and bounded visitor history; it executes no private business tools. Only the provider machine role can persist generated replies. Missing runtime, runtime failure or an explicit visitor request records a human handoff rather than claiming a delivered AI answer.
+
+The Communications Website inbox supports claim, staff reply and resolution. Handoff and claim stop automated responses; an open widget polls bounded public history for staff replies. Visitors remain anonymous; this flow does not silently create Customers or Support Cases. The live widget preview in agent configuration sends real messages and says so. Enabling a deployment is configuration evidence, not proof that a model/provider has passed an integration test.

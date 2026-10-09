@@ -24,6 +24,7 @@ export function resolveAgentViewing(pathname: string): AgentViewing {
   if (!area) return { workspace: null, recordId: null };
 
   // /organizations/{id}/{area}/{record}
-  const record = pathname.split(/[?#]/)[0].split('/').filter(Boolean)[3];
+  const parts = pathname.split(/[?#]/)[0].split('/').filter(Boolean);
+  const record = parts[2] === 'support' && parts[3] === 'cases' ? parts[4] : parts[3];
   return { workspace: area.label, recordId: record && UUID.test(record) ? record : null };
 }

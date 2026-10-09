@@ -34,7 +34,7 @@ from app.ai import (
     Turn,
 )
 from app.ai.actions import ACTIONS, action_named
-from app.ai.tools import TOOLS, tool_named
+from app.ai.tools import TOOLS
 from app.core.caller import ToolFailed, call_tool
 from app.core.config import AssistantSettings
 
@@ -320,7 +320,7 @@ def answer(
 
         results: list[ToolResult] = []
         for call in turn.calls:
-            tool = tool_named(call.name)
+            tool = next((allowed for allowed in tools if allowed.name == call.name), None)
             if tool is None:
                 # A name nothing matches. Handed back rather than raised: the model chose a
                 # word, and being told the word is wrong is how it chooses another.

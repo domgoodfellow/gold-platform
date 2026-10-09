@@ -38,6 +38,8 @@ export type ProposedAction = {
 };
 
 export type Answer = {
+  agentVersionId?: string | null;
+  agentDeploymentId?: string | null;
   outcome: AnswerOutcome;
   text: string;
   detail: string | null;
@@ -69,6 +71,7 @@ export type AttachedText = {
 };
 
 export type AnsweringRequest = {
+  conversationId?: string | null;
   question: string;
   /** Files sent with *this* question, as text. Earlier questions' files are not carried forward. */
   attachments: AttachedText[];

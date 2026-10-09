@@ -518,6 +518,7 @@ def resolve_public_assistant(
     settings: ProviderOperationsSettings,
     *,
     deployment_id: str,
+    visitor_key: str | None = None,
 ) -> dict | None:
     """The business, the instructions its owner wrote and whether it holds the Agent, for one live
     website-chat deployment -- or `None` for a deployment that does not exist or is not live.
@@ -530,13 +531,13 @@ def resolve_public_assistant(
     token = machine_token(settings.supabase_jwt_secret, role=PROVIDER_ROLE, sub=PROVIDER_ACTOR)
 
     response = httpx.post(
-        f"{settings.supabase_url}/rest/v1/rpc/resolve_public_assistant",
+        f"{settings.supabase_url}" + ("/rest/v1/rpc/resolve_public_agent_turn" if visitor_key else "/rest/v1/rpc/resolve_public_assistant"),
         headers={
             "apikey": settings.supabase_publishable_key,
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         },
-        json={"p_deployment_id": deployment_id},
+        json={"p_deployment_id": deployment_id, **({"p_visitor_key": visitor_key} if visitor_key else {})},
         timeout=10.0,
     )
 
@@ -544,6 +545,8 @@ def resolve_public_assistant(
         raise RuntimeError(f"resolve_public_assistant failed: {response.status_code}")
 
     rows = response.json()
+    if visitor_key:
+        return rows
     return rows[0] if rows else None
 
 

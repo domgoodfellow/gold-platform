@@ -1,0 +1,1286 @@
+"use client";
+
+import { useEffect, useRef, useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, Save, Play, Plus, Globe, ShieldCheck } from "lucide-react";
+import { AppPage } from "@/components/layout/app-page";
+import { Button, ButtonLink } from "@/components/controls/button";
+import { TextInput, TextArea, SelectInput } from "@/components/controls/inputs";
+import {
+  PageDrawer,
+  PageDrawerContent,
+  PageDrawerHeader,
+  PageDrawerTitle,
+  PageDrawerDescription,
+  PageDrawerBody,
+  PageDrawerFooter,
+} from "@/components/panels/page-drawer";
+import { useWorkspaceRail } from "@/components/panels/workspace-right-rail";
+import { PublicCommunicationWidget } from "@/features/communications/public-widget";
+import {
+  CHANNELS,
+  TOOL_CATALOGUE,
+  configuration,
+  type Agent,
+  type AgentConfiguration,
+  type Deployment,
+  type Evaluation,
+  type Channel,
+} from "@/lib/domain/ai/agents";
+import type { AiWorkspaceData } from "@/lib/application/ai/workspace";
+import {
+  saveAgent,
+  publishAgent,
+  setKnowledge,
+  saveDeployment,
+  testAgent,
+  evaluateResult,
+  deleteAgent,
+  deleteDeployment,
+} from "./actions";
+import { AgentIcon, Badge, Empty, Field, Panel } from "./ui";
+
+const SECTIONS = [
+  "overview",
+  "instructions",
+  "channels",
+  "knowledge",
+  "tools",
+  "handoff",
+  "testing",
+  "activity",
+  "versions",
+] as const;
+const LABELS: Record<string, string> = {
+  overview: "Overview",
+  instructions: "Instructions",
+  channels: "Channels",
+  knowledge: "Knowledge",
+  tools: "Tools & permissions",
+  handoff: "Handoff",
+  testing: "Testing",
+  activity: "Activity",
+  versions: "Versions",
+};
+
+export function AgentWorkbench({
+  organizationId,
+  agent,
+  data,
+  canManage,
+  userId,
+}: {
+  organizationId: string;
+  agent: Agent;
+  data: AiWorkspaceData;
+  canManage: boolean;
+  userId: string;
+}) {
+  const router = useRouter(),
+    params = useSearchParams(),
+    base = `/organizations/${organizationId}/ai`;
+  const initialSection = params.get("section") ?? "overview";
+  const [section, setSection] = useState<string>(
+    SECTIONS.includes(initialSection as (typeof SECTIONS)[number])
+      ? initialSection
+      : "overview",
+  );
+  const [name, setName] = useState(agent.name),
+    [instructions, setInstructions] = useState(agent.instructions),
+    [config, setConfig] = useState<AgentConfiguration>(configuration(agent));
+  const [dirty, setDirty] = useState(false),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState(""),
+    [pending, start] = useTransition();
+  const [deployment, setDeployment] = useState<Deployment | null>(
+      data.deployments.find((d) => d.id === params.get("deployment")) ?? null,
+    ),
+    [channelOpen, setChannelOpen] = useState(Boolean(params.get("deployment")));
+  const [versionInspected, setVersionInspected] = useState<string | null>(null);
+  const versions = data.versions.filter((v) => v.assistant_id === agent.id),
+    deployments = data.deployments.filter((d) => d.assistant_id === agent.id);
+  const { agentOpen, toggleAgent } = useWorkspaceRail();
+  const draftBase = useRef(agent.draft_number);
+  const recoveryReady = useRef(false);
+  const recoveryKey = `gold.ai-draft.${userId}.${organizationId}.${agent.id}`;
+  useEffect(() => {
+    let active = true;
+    let saved: { name: string; instructions: string; configuration: AgentConfiguration; draft: number } | null = null;
+    try {
+      const raw = sessionStorage.getItem(recoveryKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.name === "string" && typeof parsed.instructions === "string" && Number.isInteger(parsed.draft) && parsed.configuration && typeof parsed.configuration === "object") saved = parsed;
+      }
+    } catch { /* Recovery is optional when browser storage is unavailable. */ }
+    queueMicrotask(() => {
+      if (!active) return;
+      recoveryReady.current = true;
+      if (saved) {
+        draftBase.current = saved.draft;
+        setName(saved.name);
+        setInstructions(saved.instructions);
+        setConfig(saved.configuration);
+        setDirty(true);
+        setNotice("Recovered unsaved changes from this browser tab. Save checks the original draft revision.");
+      }
+    });
+    return () => { active = false; };
+  }, [recoveryKey]);
+  useEffect(() => {
+    if (!recoveryReady.current) return;
+    try {
+      if (dirty) sessionStorage.setItem(recoveryKey, JSON.stringify({ name, instructions, configuration: config, draft: draftBase.current }));
+      else sessionStorage.removeItem(recoveryKey);
+    } catch { /* Navigation confirmation remains available without recovery storage. */ }
+  }, [recoveryKey, dirty, name, instructions, config]);
+  function markDirty() {
+    if (!dirty) draftBase.current = agent.draft_number;
+    setDirty(true);
+  }
+  useEffect(() => {
+    if (!dirty) return;
+    const unload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    const click = (event: MouseEvent) => {
+      const anchor = (event.target as Element).closest("a");
+      if (
+        anchor?.href &&
+        !window.confirm("You have unsaved agent changes. Leave this editor?")
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    window.addEventListener("beforeunload", unload);
+    document.addEventListener("click", click, true);
+    return () => {
+      window.removeEventListener("beforeunload", unload);
+      document.removeEventListener("click", click, true);
+    };
+  }, [dirty]);
+  function update(key: keyof AgentConfiguration, value: string | string[]) {
+    setConfig((c) => ({ ...c, [key]: value }));
+    markDirty();
+  }
+  function selectSection(next: string) {
+    setSection(next);
+    const url = new URL(window.location.href);
+    url.searchParams.set("section", next);
+    window.history.replaceState(null, "", url);
+  }
+  function save() {
+    start(async () => {
+      setError("");
+      const result = await saveAgent(organizationId, {
+        id: agent.id,
+        name,
+        instructions,
+        configuration: config as never,
+        draft: draftBase.current,
+      });
+      if (result.error) setError(result.error);
+      else {
+        setDirty(false);
+        setNotice(
+          "Draft saved. Published deployments retain their selected version.",
+        );
+        router.refresh();
+      }
+    });
+  }
+  function publish(status: "active" | "disabled") {
+    if (dirty) {
+      setError("Save your draft before changing lifecycle.");
+      return;
+    }
+    if (
+      !window.confirm(
+        status === "active"
+          ? "Publish this draft as a new immutable version? Existing deployments keep their selected version."
+          : "Disable this agent across its deployments?",
+      )
+    )
+      return;
+    start(async () => {
+      const result = await publishAgent(
+        organizationId,
+        agent.id,
+        agent.draft_number,
+        status,
+      );
+      if (result.error) setError(result.error);
+      else {
+        setNotice(
+          status === "active"
+            ? "Version published. Select it in each deployment to adopt it."
+            : "Agent disabled.",
+        );
+        router.refresh();
+      }
+    });
+  }
+  return (
+    <AppPage className="space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link aria-label="Back to agents" href={`${base}/agents`}>
+            <ArrowLeft size={18} />
+          </Link>
+          <AgentIcon />
+          <div className="min-w-0">
+            <h1 className="truncate text-xl font-semibold">{agent.name}</h1>
+            <p className="text-xs text-muted">
+              Draft {agent.draft_number} ·{" "}
+              {versions.length
+                ? `Latest published v${versions[0].version_number}`
+                : "No published version"}
+            </p>
+          </div>
+          <Badge>{agent.status}</Badge>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button tone="secondary" onClick={() => selectSection("testing")}>
+            <Play size={14} />
+            Test
+          </Button>
+          <Button disabled={pending || !canManage || !dirty} onClick={save}>
+            <Save size={14} />
+            Save draft
+          </Button>
+          <Button
+            tone="secondary"
+            disabled={pending || !canManage}
+            onClick={() => publish("active")}
+          >
+            Publish version
+          </Button>
+          {agent.status === "active" && (
+            <Button
+              tone="secondary"
+              disabled={pending || !canManage}
+              onClick={() => publish("disabled")}
+            >
+              Disable
+            </Button>
+          )}
+          {agent.status === "draft" && !versions.length && !deployments.length && canManage && (
+            <Button tone="secondary" disabled={pending} onClick={() => {
+              if (!window.confirm("Delete this unpublished draft? This cannot be undone.")) return;
+              start(async () => {
+                const result = await deleteAgent(organizationId, agent.id);
+                if (result.error) setError(result.error);
+                else { setDirty(false); router.push(`${base}/agents`); }
+              });
+            }}>Delete draft</Button>
+          )}
+        </div>
+      </header>
+      {error && (
+        <p
+          role="alert"
+          className="rounded-md border border-danger p-3 text-sm text-danger"
+        >
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p role="status" className="text-sm text-blue-600">
+          {notice}
+        </p>
+      )}
+      <div className={`grid grid-cols-1 items-start gap-4 lg:grid-cols-[150px_minmax(0,1fr)] ${channelOpen ? "" : "xl:grid-cols-[160px_minmax(0,1fr)_260px]"}`}>
+        <nav
+          className="hidden space-y-1 lg:block"
+          aria-label="Agent configuration"
+        >
+          {SECTIONS.map((s) => (
+            <button
+              key={s}
+              onClick={() => selectSection(s)}
+              className={`w-full rounded-md px-3 py-2 text-left text-sm ${section === s ? "bg-blue-50 font-medium text-blue-600" : "text-muted hover:bg-secondary"}`}
+            >
+              {LABELS[s]}
+            </button>
+          ))}
+        </nav>
+        <div className="min-w-0 space-y-4">
+          <div className="lg:hidden">
+            <SelectInput
+              aria-label="Configuration section"
+              value={section}
+              onChange={(e) => selectSection(e.target.value)}
+            >
+              {SECTIONS.map((s) => (
+                <option value={s} key={s}>
+                  {LABELS[s]}
+                </option>
+              ))}
+            </SelectInput>
+          </div>
+          {section === "overview" && (
+            <Panel title="Agent identity">
+              <div className="space-y-5">
+                <Field label="Name">
+                  <TextInput
+                    disabled={!canManage}
+                    value={name}
+                    maxLength={100}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      markDirty();
+                    }}
+                  />
+                </Field>
+                <Field label="Purpose">
+                  <SelectInput
+                    disabled={!canManage}
+                    value={config.purpose ?? "General assistant"}
+                    onChange={(e) => update("purpose", e.target.value)}
+                  >
+                    {[
+                      "General assistant",
+                      "Customer service",
+                      "Sales assistant",
+                      "Support assistant",
+                      "Scheduling assistant",
+                      "Receptionist",
+                    ].map((p) => (
+                      <option key={p}>{p}</option>
+                    ))}
+                  </SelectInput>
+                </Field>
+                <Field label="Description">
+                  <TextArea
+                    disabled={!canManage}
+                    value={config.description ?? ""}
+                    maxLength={1000}
+                    onChange={(e) => update("description", e.target.value)}
+                  />
+                </Field>
+                <div className="grid grid-cols-3 gap-3 border-t border-border pt-4 text-sm">
+                  <div>
+                    <strong>{deployments.length}</strong>
+                    <p className="text-xs text-muted">Deployments</p>
+                  </div>
+                  <div>
+                    <strong>
+                      {
+                        data.knowledge.filter(
+                          (k) => k.assistant_id === agent.id,
+                        ).length
+                      }
+                    </strong>
+                    <p className="text-xs text-muted">Draft sources</p>
+                  </div>
+                  <div>
+                    <strong>{config.tools?.length ?? 0}</strong>
+                    <p className="text-xs text-muted">Allowed tools</p>
+                  </div>
+                </div>
+              </div>
+            </Panel>
+          )}
+          {section === "instructions" && (
+            <Panel title="Instructions">
+              <div className="space-y-5">
+                <p className="text-xs text-muted">
+                  Tenant instructions shape behavior beneath platform rules.
+                  Retrieved material cannot grant permissions.
+                </p>
+                <Field label="Core instructions">
+                  <TextArea
+                    className="min-h-52"
+                    disabled={!canManage}
+                    value={instructions}
+                    maxLength={8000}
+                    onChange={(e) => {
+                      setInstructions(e.target.value);
+                      markDirty();
+                    }}
+                  />
+                </Field>
+                <Field label="Tone & communication style">
+                  <TextInput
+                    disabled={!canManage}
+                    value={config.tone ?? ""}
+                    maxLength={500}
+                    onChange={(e) => update("tone", e.target.value)}
+                  />
+                </Field>
+                <Field label="Boundaries & business-specific behavior">
+                  <TextArea
+                    disabled={!canManage}
+                    value={config.boundaries ?? ""}
+                    maxLength={2000}
+                    onChange={(e) => update("boundaries", e.target.value)}
+                  />
+                </Field>
+                <Field label="Escalation policy">
+                  <TextArea
+                    disabled={!canManage}
+                    value={config.escalation ?? ""}
+                    maxLength={1000}
+                    onChange={(e) => update("escalation", e.target.value)}
+                  />
+                </Field>
+              </div>
+            </Panel>
+          )}
+          {section === "channels" && (
+            <Panel
+              title="Channel deployments"
+              action={
+                <Button
+                  tone="secondary"
+                  disabled={!canManage || !versions.length}
+                  onClick={() => {
+                    setDeployment(null);
+                    setChannelOpen(true);
+                  }}
+                >
+                  <Plus size={14} />
+                  Add channel
+                </Button>
+              }
+            >
+              <p className="mb-4 text-xs text-muted">
+                One agent, multiple deployments. Each deployment selects a
+                published version and applies channel restrictions.
+              </p>
+              <div className="divide-y divide-border">
+                {deployments.map((d) => (
+                  <button
+                    key={d.id}
+                    className="flex w-full items-center justify-between gap-3 py-4 text-left"
+                    onClick={() => {
+                      setDeployment(d);
+                      setChannelOpen(true);
+                    }}
+                  >
+                    <span>
+                      <strong className="block text-sm">
+                        {d.display_name}
+                      </strong>
+                      <span className="text-xs text-muted">
+                        {CHANNELS[d.surface as Channel]} · v
+                        {versions.find((v) => v.id === d.version_id)
+                          ?.version_number ?? "Legacy"}
+                      </span>
+                    </span>
+                    <Badge>
+                      {data.readiness.find((r) => r.id === d.id)?.state ??
+                        "Unavailable"}
+                    </Badge>
+                  </button>
+                ))}
+                {!deployments.length && (
+                  <Empty>
+                    {versions.length
+                      ? "No channels configured. Add a deployment."
+                      : "Publish an agent version to configure channels."}
+                  </Empty>
+                )}
+              </div>
+            </Panel>
+          )}
+          {section === "knowledge" && (
+            <Panel title="Knowledge sources">
+              <p className="mb-4 text-xs text-muted">
+                Published websites only. Source selections update the draft;
+                publish a new version to deploy them. Private Library ingestion
+                is unavailable.
+              </p>
+              <div className="space-y-4">
+                {data.sites
+                  .filter((s) => s.current_published_revision_id)
+                  .map((s) => (
+                    <label
+                      key={s.id}
+                      className="flex gap-3 rounded-md border border-border p-3 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        disabled={!canManage || pending || dirty}
+                        checked={data.knowledge.some(
+                          (k) =>
+                            k.assistant_id === agent.id &&
+                            k.public_site_id === s.id,
+                        )}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          start(async () => {
+                            const result = await setKnowledge(
+                              organizationId,
+                              agent.id,
+                              s.id,
+                              checked,
+                            );
+                            if (result.error) setError(result.error);
+                            else {
+                              setNotice(
+                                "Draft knowledge selection saved. Publish a version to deploy it.",
+                              );
+                              router.refresh();
+                            }
+                          });
+                        }}
+                      />
+                      <span>
+                        <strong className="block">{`Website ${s.id.slice(0, 8)}`}</strong>
+                        <span className="text-xs text-muted">
+                          Current published revision · public text only
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                {dirty && (
+                  <p className="text-xs text-amber-700">
+                    Save your draft before changing source associations.
+                  </p>
+                )}
+                {!data.sites.some((s) => s.current_published_revision_id) && (
+                  <Empty>
+                    Publish a website in Studio before adding knowledge.
+                  </Empty>
+                )}
+              </div>
+            </Panel>
+          )}
+          {section === "tools" && (
+            <Panel title="Tools & permissions">
+              <div className="space-y-4">
+                <Field label="Action policy">
+                  <SelectInput
+                    disabled={!canManage}
+                    value={config.policy ?? "read_only"}
+                    onChange={(e) => update("policy", e.target.value)}
+                  >
+                    <option value="read_only">Read only</option>
+                    <option value="suggest">
+                      Suggest actions · human decision required
+                    </option>
+                    <option value="human_approval">
+                      Human approval required
+                    </option>
+                  </SelectInput>
+                </Field>
+                <p className="text-xs text-muted">
+                  These tools are available to the Operator Copilot only.
+                  Assignment never expands the signed-in person’s authorization.
+                  Public and safe preview contexts cannot execute them.
+                </p>
+                {TOOL_CATALOGUE.map((t) => (
+                  <label
+                    key={t.key}
+                    className="flex items-start gap-3 border-t border-border pt-4 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      disabled={!canManage}
+                      checked={config.tools?.includes(t.key) ?? false}
+                      onChange={(e) =>
+                        update(
+                          "tools",
+                          e.target.checked
+                            ? [...(config.tools ?? []), t.key]
+                            : (config.tools ?? []).filter((k) => k !== t.key),
+                        )
+                      }
+                    />
+                    <span>
+                      <strong className="block">{t.name}</strong>
+                      <span className="text-xs text-muted">
+                        {t.description} Read · {t.owner}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+                <p className="border-t border-border pt-4 text-xs text-muted">
+                  Reschedule proposals require a human decision in the global
+                  rail and canonical Work authorization at execution. External
+                  MCP execution is unavailable.
+                </p>
+              </div>
+            </Panel>
+          )}
+          {section === "handoff" && (
+            <Panel title="Human handoff">
+              <div className="space-y-4">
+                <Field label="Escalation policy">
+                  <TextArea
+                    disabled={!canManage}
+                    value={config.escalation ?? ""}
+                    maxLength={1000}
+                    onChange={(e) => update("escalation", e.target.value)}
+                  />
+                </Field>
+                <p className="text-sm text-muted">
+                  Website conversations requesting a human remain in
+                  Communications. SMS and email sending remain human-supervised.
+                  Voice transfer requires the canonical call routing runtime.
+                </p>
+                <ButtonLink
+                  tone="secondary"
+                  href={`/organizations/${organizationId}/comms/inbox/website`}
+                >
+                  Open Communications Inbox
+                </ButtonLink>
+                <Button
+                  tone="secondary"
+                  onClick={() => selectSection("channels")}
+                >
+                  Configure channel handoff messages
+                </Button>
+              </div>
+            </Panel>
+          )}
+          {section === "testing" && (
+            <Testing
+              organizationId={organizationId}
+              agent={agent}
+              versions={versions}
+              canManage={canManage}
+              initial={data.evaluations.filter(
+                (e) => e.assistant_id === agent.id,
+              )}
+            />
+          )}
+          {section === "activity" && (
+            <Panel title="Agent activity">
+              <p className="mb-4 text-xs text-muted">
+                Agent-specific execution attribution is not yet available for
+                legacy runs. Your operator runs and public conversation metadata
+                are accessible in Activity.
+              </p>
+              <ButtonLink tone="secondary" href={`${base}/activity`}>
+                Open activity inspector
+              </ButtonLink>
+              <div className="mt-4 divide-y divide-border">
+                {data.runs.filter(r => versions.some(v => v.id === r.assistant_version_id)).map(r => (
+                  <Link key={r.id} href={`${base}/activity?run=${r.id}`} className="block py-3 text-sm">
+                    <Badge>{r.outcome}</Badge>
+                    <p className="mt-2 truncate">{r.question}</p>
+                    <p className="mt-1 text-xs text-muted">{new Date(r.occurred_at).toLocaleString()}</p>
+                  </Link>
+                ))}
+                {data.evaluations
+                  .filter((e) => e.assistant_id === agent.id)
+                  .map((e) => (
+                    <div key={e.id} className="py-3 text-sm">
+                      <Badge>{e.outcome}</Badge>
+                      <p className="mt-2">{e.scenario}</p>
+                    </div>
+                  ))}
+              </div>
+            </Panel>
+          )}
+          {section === "versions" && (
+            <Panel title="Published versions">
+              <p className="mb-4 text-xs text-muted">
+                Versions are immutable. Select a previous published version in a
+                deployment for deliberate rollback.
+              </p>
+              {versions.map((v) => (
+                <button
+                  key={v.id}
+                  className="flex w-full justify-between gap-3 border-b border-border py-4 text-left text-sm"
+                  onClick={() => setVersionInspected(v.id)}
+                >
+                  <span>
+                    Version {v.version_number} · {v.name}
+                  </span>
+                  <span className="text-xs text-muted">
+                    {new Date(v.created_at).toLocaleString()}
+                  </span>
+                </button>
+              ))}
+              {!versions.length && <Empty>No version published yet.</Empty>}
+            </Panel>
+          )}
+        </div>
+        <aside className={`${channelOpen ? "hidden" : ""} min-w-0 space-y-4 lg:col-start-2 xl:col-start-auto`}>
+          <Panel title="Readiness inspector">
+            <div className="space-y-4 text-xs">
+              <div className="flex justify-between gap-2">
+                <span>Local changes</span>
+                <Badge>{dirty ? "Unsaved" : "Saved"}</Badge>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span>Instructions</span>
+                <Badge>{instructions.trim() ? "Configured" : "Missing"}</Badge>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span>Published versions</span>
+                <span>{versions.length}</span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span>Enabled channels</span>
+                <span>{deployments.filter((d) => d.enabled).length}</span>
+              </div>
+              <p className="border-t border-border pt-3 text-muted">
+                Editing a draft does not update deployed behavior. Publish,
+                test, then select the version in each channel.
+              </p>
+            </div>
+          </Panel>
+          <Panel title="Operator Copilot">
+            <ShieldCheck size={20} className="text-blue-600" />
+            <p className="my-3 text-xs text-muted">
+              Work with the assistant in the persistent global Agent rail.
+              Conversations remain private to their operator.
+            </p>
+            <Button
+              tone="secondary"
+              onClick={() => {
+                if (!agentOpen) toggleAgent();
+              }}
+            >
+              Open Agent
+            </Button>
+          </Panel>
+        </aside>
+      </div>
+      {channelOpen && (
+        <DeploymentEditor
+          key={deployment?.id ?? "new"}
+          organizationId={organizationId}
+          agent={agent}
+          data={data}
+          deployment={deployment}
+          canManage={canManage}
+          close={() => setChannelOpen(false)}
+        />
+      )}
+      <PageDrawer
+        open={Boolean(versionInspected)}
+        onOpenChange={(open) => {
+          if (!open) setVersionInspected(null);
+        }}
+      >
+        <PageDrawerContent>
+          <PageDrawerHeader>
+            <PageDrawerTitle>Published configuration</PageDrawerTitle>
+            <PageDrawerDescription>
+              Immutable version evidence
+            </PageDrawerDescription>
+          </PageDrawerHeader>
+          <PageDrawerBody>
+            {versions
+              .filter((v) => v.id === versionInspected)
+              .map((v) => (
+                <div key={v.id} className="space-y-4 text-sm">
+                  <Badge>Version {v.version_number}</Badge>
+                  <h3 className="font-medium">{v.name}</h3>
+                  <p className="whitespace-pre-wrap">{v.instructions}</p>
+                  <pre className="overflow-auto whitespace-pre-wrap break-all text-xs">
+                    {JSON.stringify(v.configuration, null, 2)}
+                  </pre>
+                  <p>{v.knowledge_site_ids.length} published-site sources</p>
+                </div>
+              ))}
+          </PageDrawerBody>
+        </PageDrawerContent>
+      </PageDrawer>
+    </AppPage>
+  );
+}
+
+function Testing({
+  organizationId,
+  agent,
+  versions,
+  canManage,
+  initial,
+}: {
+  organizationId: string;
+  agent: Agent;
+  versions: AiWorkspaceData["versions"];
+  canManage: boolean;
+  initial: Evaluation[];
+}) {
+  const [version, setVersion] = useState(versions[0]?.id ?? ""),
+    [question, setQuestion] = useState(""),
+    [criterion, setCriterion] = useState(""),
+    [results, setResults] = useState(initial),
+    [error, setError] = useState(""),
+    [pending, start] = useTransition();
+  return (
+    <Panel title="Agent testing playground">
+      <div className="space-y-4">
+        <div className="rounded-md border border-border bg-secondary p-3 text-xs">
+          <strong>Safe preview</strong>
+          <p className="mt-1 text-muted">
+            Uses a published version and public knowledge. No business tools,
+            writes, SMS, email or calls. Model requests consume the
+            organization’s AI allowance.
+          </p>
+        </div>
+        <Field label="Published version">
+          <SelectInput
+            value={version}
+            onChange={(e) => setVersion(e.target.value)}
+          >
+            {!versions.length && (
+              <option value="">Publish a version first</option>
+            )}
+            {versions.map((v) => (
+              <option key={v.id} value={v.id}>
+                Version {v.version_number}
+              </option>
+            ))}
+          </SelectInput>
+        </Field>
+        <Field label="Test question">
+          <TextArea
+            value={question}
+            maxLength={2000}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="Can you help me find your opening hours?"
+          />
+        </Field>
+        <Field label="Expected behavior">
+          <TextArea
+            value={criterion}
+            maxLength={1000}
+            onChange={(e) => setCriterion(e.target.value)}
+            placeholder="Answer only from selected published sources or explain what is missing."
+          />
+        </Field>
+        <Button
+          disabled={
+            !canManage ||
+            pending ||
+            !version ||
+            !question.trim() ||
+            !criterion.trim()
+          }
+          onClick={() =>
+            start(async () => {
+              setError("");
+              const result = await testAgent(
+                organizationId,
+                agent.id,
+                version,
+                question,
+                criterion,
+              );
+              if (result.error) setError(result.error);
+              else if (result.evaluation)
+                setResults((r) => [result.evaluation!, ...r]);
+            })
+          }
+        >
+          {pending ? "Testing…" : "Run safe preview"}
+        </Button>
+        {error && (
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
+        )}
+        <div className="space-y-4">
+          {results.map((r) => (
+            <article
+              key={r.id}
+              className="space-y-3 rounded-lg border border-border p-4 text-sm"
+            >
+              <div className="flex flex-wrap justify-between gap-2">
+                <Badge>{r.outcome}</Badge>
+                <Badge>{r.verdict ?? "Human assessment required"}</Badge>
+              </div>
+              <p className="font-medium">{r.scenario}</p>
+              <p className="whitespace-pre-wrap rounded-md bg-secondary p-3">
+                {r.answer || r.detail || "No answer returned."}
+              </p>
+              <p className="text-xs text-muted">Criterion: {r.criterion}</p>
+              <p className="text-xs text-muted">
+                Policy: no tools, no actions. Published website text only. No
+                hidden reasoning is recorded.
+              </p>
+              <div className="flex gap-2">
+                {(["passed", "failed"] as const).map((verdict) => (
+                  <Button
+                    key={verdict}
+                    tone="secondary"
+                    disabled={pending || !canManage}
+                    onClick={() =>
+                      start(async () => {
+                        const result = await evaluateResult(
+                          organizationId,
+                          r.id,
+                          verdict,
+                        );
+                        if (result.error) setError(result.error);
+                        else
+                          setResults((rs) =>
+                            rs.map((item) =>
+                              item.id === r.id ? { ...item, verdict } : item,
+                            ),
+                          );
+                      })
+                    }
+                  >
+                    Mark {verdict}
+                  </Button>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function DeploymentEditor({
+  organizationId,
+  agent,
+  data,
+  deployment,
+  canManage,
+  close,
+}: {
+  organizationId: string;
+  agent: Agent;
+  data: AiWorkspaceData;
+  deployment: Deployment | null;
+  canManage: boolean;
+  close: () => void;
+}) {
+  const router = useRouter(),
+    versions = data.versions.filter((v) => v.assistant_id === agent.id),
+    existing = (deployment?.configuration ?? {}) as Record<string, string>;
+  const [surface, setSurface] = useState<Channel>(
+      (deployment?.surface as Channel) ?? "website_chat",
+    ),
+    [version, setVersion] = useState(
+      deployment?.version_id ?? versions[0]?.id ?? "",
+    ),
+    [site, setSite] = useState(deployment?.public_site_id ?? ""),
+    [enabled, setEnabled] = useState(deployment?.enabled ?? false),
+    [error, setError] = useState(""),
+    [pending, start] = useTransition(),
+    [preview, setPreview] = useState(false),
+    [dirty, setDirty] = useState(false);
+  const supported =
+    surface === "website_chat" || surface === "operator_copilot";
+  function dismiss() {
+    if (!dirty || window.confirm("Discard unsaved channel changes?")) close();
+  }
+  return (
+    <PageDrawer
+      open
+      onOpenChange={(open) => {
+        if (!open) dismiss();
+      }}
+    >
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>{CHANNELS[surface]} deployment</PageDrawerTitle>
+          <PageDrawerDescription>
+            Channel policy and explicit published version.
+          </PageDrawerDescription>
+        </PageDrawerHeader>
+        <form
+          onChange={() => setDirty(true)}
+          onSubmit={(e) => {
+            e.preventDefault();
+            const form = new FormData(e.currentTarget);
+            start(async () => {
+              const config: Record<string, string> = {};
+              for (const key of [
+                "instructions",
+                "identity",
+                "hours",
+                "language",
+                "voice",
+                "recording",
+                "retention",
+                "duration",
+                "fallback",
+                "handoffDestination",
+                "signature",
+                "routing",
+              ])
+                config[key] = String(form.get(key) ?? "");
+              const result = await saveDeployment(organizationId, {
+                id: deployment?.id ?? null,
+                agentId: agent.id,
+                versionId: version,
+                surface,
+                siteId: surface === "website_chat" ? site : null,
+                enabled,
+                name: String(form.get("name")),
+                greeting: String(form.get("greeting")),
+                handoff: String(form.get("handoff")),
+                configuration: config,
+              });
+              if (result.error) setError(result.error);
+              else {
+                setDirty(false);
+                close();
+                router.refresh();
+              }
+            });
+          }}
+        >
+          <PageDrawerBody className="space-y-5">
+            <Field label="Channel">
+              <SelectInput
+                disabled={Boolean(deployment) || !canManage}
+                value={surface}
+                onChange={(e) => {
+                  setSurface(e.target.value as Channel);
+                  setEnabled(false);
+                }}
+              >
+                {Object.entries(CHANNELS).map(([key, label]) => (
+                  <option value={key} key={key}>
+                    {label}
+                  </option>
+                ))}
+              </SelectInput>
+            </Field>
+            <Field label="Effective published version">
+              <SelectInput
+                disabled={!canManage}
+                value={version}
+                onChange={(e) => setVersion(e.target.value)}
+              >
+                {versions.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    Version {v.version_number}
+                  </option>
+                ))}
+              </SelectInput>
+            </Field>
+            <Field label="Display name">
+              <TextInput
+                name="name"
+                disabled={!canManage}
+                defaultValue={deployment?.display_name ?? agent.name}
+                required
+                maxLength={80}
+              />
+            </Field>
+            {surface === "website_chat" && (
+              <Field label="Published website">
+                <SelectInput
+                  disabled={Boolean(deployment) || !canManage}
+                  value={site}
+                  onChange={(e) => setSite(e.target.value)}
+                >
+                  <option value="">Select website</option>
+                  {data.sites
+                    .filter((s) => s.current_published_revision_id)
+                    .map((s) => (
+                      <option
+                        key={s.id}
+                        value={s.id}
+                      >{`Website ${s.id.slice(0, 8)}`}</option>
+                    ))}
+                </SelectInput>
+              </Field>
+            )}
+            {!supported && (
+              <div className="rounded-md border border-border bg-secondary p-3 text-sm">
+                <strong>Runtime unavailable</strong>
+                <p className="mt-1 text-xs text-muted">
+                  {surface === "voice"
+                    ? "There is no conversational audio runtime. A phone number, greeting or voice preference does not make this a functioning receptionist."
+                    : "This deployment stores channel policy only. Automated response execution is not available."}{" "}
+                  Activation is blocked on the server.
+                </p>
+              </div>
+            )}
+            {surface !== "website_chat" && surface !== "operator_copilot" && (
+              <Field
+                label={
+                  surface === "voice" || surface === "sms"
+                    ? "Communications phone/routing identity reference"
+                    : surface === "email"
+                      ? "Verified email identity reference"
+                      : surface === "support"
+                        ? "Support queue reference"
+                        : "Portal identity scope"
+                }
+              >
+                <TextInput
+                  name="identity"
+                  disabled={!canManage}
+                  defaultValue={existing.identity ?? ""}
+                  maxLength={200}
+                  placeholder="Configuration reference only; runtime not connected"
+                />
+              </Field>
+            )}
+            <Field label="Greeting">
+              <TextArea
+                name="greeting"
+                disabled={!canManage}
+                defaultValue={deployment?.greeting ?? "Hello. How can I help?"}
+                required
+                maxLength={1000}
+              />
+            </Field>
+            <Field label="Channel instructions">
+              <TextArea
+                name="instructions"
+                disabled={!canManage}
+                defaultValue={existing.instructions ?? ""}
+                maxLength={2000}
+              />
+            </Field>
+            <Field label="Human handoff message">
+              <TextArea
+                name="handoff"
+                disabled={!canManage}
+                defaultValue={
+                  deployment?.handoff_message ??
+                  "Your request has been recorded for the team. Please contact the business directly if urgent."
+                }
+                required
+                maxLength={1000}
+              />
+            </Field>
+            <Field label="Handoff destination reference">
+              <TextInput
+                name="handoffDestination"
+                disabled={!canManage}
+                defaultValue={existing.handoffDestination ?? ""}
+                maxLength={500}
+              />
+            </Field>
+            {["voice", "sms", "email"].includes(surface) && (
+              <Field label="Business-hours behavior">
+                <TextArea
+                  name="hours"
+                  disabled={!canManage}
+                  defaultValue={existing.hours ?? ""}
+                  maxLength={1000}
+                />
+              </Field>
+            )}
+            {surface === "email" && (
+              <>
+                <Badge>Human review required · draft assistance</Badge>
+                <Field label="Signature rules">
+                  <TextArea
+                    name="signature"
+                    disabled={!canManage}
+                    defaultValue={existing.signature ?? ""}
+                    maxLength={1000}
+                  />
+                </Field>
+              </>
+            )}
+            {surface === "sms" && (
+              <p className="text-xs text-muted">
+                Human review required. Consent, suppression, sender verification
+                and inbound idempotency remain Communications-owned. No
+                automated SMS will be sent.
+              </p>
+            )}
+            {surface === "voice" && (
+              <>
+                {[
+                  ["routing", "Inbound routing reference"],
+                  ["language", "Language"],
+                  ["voice", "Preferred voice (availability unverified)"],
+                  ["recording", "Recording / disclosure policy"],
+                  ["retention", "Conversation retention"],
+                  ["duration", "Maximum call duration (seconds)"],
+                  ["fallback", "Timeout / failure fallback"],
+                ].map(([key, label]) => (
+                  <Field key={key} label={label}>
+                    <TextInput
+                      name={key}
+                      disabled={!canManage}
+                      defaultValue={existing[key] ?? ""}
+                      maxLength={500}
+                    />
+                  </Field>
+                ))}
+                <p className="text-xs text-muted">
+                  Operational readiness requires verified inbound events, audio
+                  ingestion/output, turn handling, fallback, transfer and a
+                  successful controlled call. No voice test is recorded.
+                </p>
+              </>
+            )}
+            <label className="flex gap-3 text-sm">
+              <input
+                type="checkbox"
+                disabled={!canManage || !supported}
+                checked={enabled}
+                onChange={(e) => setEnabled(e.target.checked)}
+              />
+              <span>
+                Enable deployment
+                <span className="mt-1 block text-xs text-muted">
+                  Requires active agent, entitlement and published version.
+                  Enabled does not establish provider health.
+                </span>
+              </span>
+            </label>
+            {surface === "website_chat" && deployment?.enabled && site && (
+              <>
+                <Button
+                  type="button"
+                  tone="secondary"
+                  onClick={() => setPreview((p) => !p)}
+                >
+                  <Globe size={14} />
+                  {preview ? "Close live widget" : "Open live widget preview"}
+                </Button>
+                <p className="text-xs text-muted">
+                  Live widget sends real test messages through the public
+                  runtime and records them in Communications.
+                </p>
+                {preview && (
+                  <PublicCommunicationWidget
+                    siteId={site}
+                    name={deployment.display_name}
+                    greeting={deployment.greeting}
+                  />
+                )}
+              </>
+            )}
+            {error && (
+              <p role="alert" className="text-sm text-danger">
+                {error}
+              </p>
+            )}
+          </PageDrawerBody>
+          <PageDrawerFooter>
+            {deployment && !deployment.enabled && canManage && (
+              <Button type="button" tone="secondary" disabled={pending} onClick={() => {
+                if (!window.confirm("Delete this disabled deployment? Deployments with conversation history are retained.")) return;
+                start(async () => {
+                  const result = await deleteDeployment(organizationId, deployment.id);
+                  if (result.error) setError(result.error);
+                  else { close(); router.refresh(); }
+                });
+              }}>Delete deployment</Button>
+            )}
+            <Button type="button" tone="secondary" onClick={dismiss}>
+              Cancel
+            </Button>
+            <Button
+              disabled={
+                pending ||
+                !canManage ||
+                !version ||
+                (surface === "website_chat" && !site)
+              }
+            >
+              {pending ? "Saving…" : "Save deployment"}
+            </Button>
+          </PageDrawerFooter>
+        </form>
+      </PageDrawerContent>
+    </PageDrawer>
+  );
+}

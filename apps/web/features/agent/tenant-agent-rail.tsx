@@ -73,6 +73,7 @@ function TenantAgentPanel({
   canManageConnections,
   conversations,
   initialConversation,
+  identity,
 }: {
   organizationId: string;
   organizationName: string;
@@ -82,6 +83,7 @@ function TenantAgentPanel({
   canManageConnections: boolean;
   conversations: AgentConversationSummary[];
   initialConversation: InitialConversation | null;
+  identity?: string;
 }) {
   const [view, setView] = useState<View>({ kind: 'default' });
   // Lifted from the bootstrap read so a write can hand History its own refreshed state directly,
@@ -104,6 +106,14 @@ function TenantAgentPanel({
   const [includeRecord, setIncludeRecord] = useState(true);
   const [opening, startOpening] = useTransition();
   const composer = useRef<HTMLTextAreaElement>(null);
+  const { agentLaunch } = useWorkspaceRail();
+  const lastLaunch = useRef<number | null>(null);
+  useEffect(() => {
+    if (!agentLaunch || lastLaunch.current === agentLaunch.id || !composer.current) return;
+    lastLaunch.current = agentLaunch.id;
+    composer.current.value = [composer.current.value, agentLaunch.prompt].filter(Boolean).join('\n\n').slice(0, 2000);
+    composer.current.focus();
+  }, [agentLaunch]);
 
   const pathname = usePathname();
   const viewing = resolveAgentViewing(pathname);
@@ -250,6 +260,7 @@ function TenantAgentPanel({
 
   return (
     <AgentPanelFrame>
+      <div className="border-b border-border px-4 py-2 text-xs text-muted">{identity ?? 'Built-in Operator Copilot'} · signed-in operator scope</div>
       <AgentConversationHeader
         title={title}
         conversations={conversationList}
@@ -387,6 +398,7 @@ export function TenantAgentRail(props: {
     canAnswer: boolean;
     conversations: AgentConversationSummary[];
     initialConversation: InitialConversation | null;
+    identity?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -431,6 +443,7 @@ export function TenantAgentRail(props: {
         canManageConnections={canManageConnections}
         conversations={bootstrap.conversations}
         initialConversation={bootstrap.initialConversation}
+        identity={bootstrap.identity}
       />
     );
   }, [everOpened, bootstrap, organizationId, organizationName, timezone, mayAsk, canManageConnections]);

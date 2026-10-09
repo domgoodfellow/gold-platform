@@ -545,6 +545,7 @@ class TestAiAskAuthenticatesBeforeReadingAnyCredential:
 
     def _armed(self, monkeypatch):
         monkeypatch.setattr(ai_ask, "load_assistant_settings", lambda: SETTINGS)
+        monkeypatch.setattr(ai_ask, "resolve_configuration", lambda *a, **k: ("", (), (), {}))
         monkeypatch.setattr(ai_ask, "holds_module", lambda *a, **k: True)
         monkeypatch.setattr(ai_ask, "meter", lambda *a, **k: "none_reported")
         resolved: list[str] = []
@@ -592,6 +593,7 @@ class TestAiAskChecksEntitlementBeforeSpending:
 
     def _armed(self, monkeypatch, *, holds):
         monkeypatch.setattr(ai_ask, "load_assistant_settings", lambda: SETTINGS)
+        monkeypatch.setattr(ai_ask, "resolve_configuration", lambda *a, **k: ("", (), (), {}))
         monkeypatch.setattr(ai_ask, "require_caller", lambda headers, **kw: SimpleNamespace(token="the-callers-token"))
         asked: list[dict] = []
 

@@ -386,9 +386,12 @@ export async function askQuestion(
   let tools: ToolCallRecord[] = [];
   let action: ProposedAction | null = null;
   let actionRefusal: string | null = null;
+  let agentVersionId: string | null = null;
+  let agentDeploymentId: string | null = null;
 
   try {
     const answer = await provider.answer({
+      conversationId: input.conversationId,
       question,
       priorTurns,
       attachments: sending.texts,
@@ -401,6 +404,8 @@ export async function askQuestion(
       }).format(new Date())} in ${organization.timezone}, which is the time zone this business works in. Any date you give must be in that zone.${describeViewing(input.viewing)}`,
     });
     outcome = answer.outcome;
+    agentVersionId = answer.agentVersionId ?? null;
+    agentDeploymentId = answer.agentDeploymentId ?? null;
     text = answer.text;
     detail = answer.detail;
     answeredBy = answer.answeredBy;
@@ -447,6 +452,8 @@ export async function askQuestion(
       organization_id: input.organizationId,
       conversation_id: conversationId,
       question,
+      assistant_version_id: agentVersionId,
+      assistant_deployment_id: agentDeploymentId,
       answer: text,
       outcome,
       detail,
