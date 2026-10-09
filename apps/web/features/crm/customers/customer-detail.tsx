@@ -68,10 +68,12 @@ export function CustomerDetail({
   permissions,
   opportunities,
   followUps,
+  support,
 }: {
   organizationId: string;
   opportunities?: ReactNode;
   followUps?: ReactNode;
+  support?: ReactNode;
   customer: Customer;
   stage: CustomerStage | null;
   stages: CustomerStage[];
@@ -103,6 +105,7 @@ export function CustomerDetail({
   return (
     <>
       <CustomerHeader organizationId={organizationId} customer={customer} stage={stage} definitions={definitions} stages={features.voice ? stages : []} mayEdit={permissions.edit} mayCall={features.voice && permissions.call} />
+      {support}
 
       <Tabs defaultValue="overview">
         <TabsList>

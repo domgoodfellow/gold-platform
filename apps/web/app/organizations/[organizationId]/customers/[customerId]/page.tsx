@@ -81,6 +81,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
       <CustomerDetail
         organizationId={organizationId}
         customer={customer}
+        support={<RelatedSupport organizationId={organizationId} kind="customer" recordId={customerId} customerName={customer.name}/>}
         followUps={followUps ? <RelatedFollowUps organizationId={organizationId} timezone={organization.timezone} members={members} mayManage={organization.capabilities.includes('follow_up.manage')} customer={customer} {...followUps}/> : undefined}
         opportunities={<CustomerOpportunities organizationId={organizationId} customer={customer} items={opportunities} total={opportunities.total} stages={opportunityStages} members={members} defaultCurrency={organization.currency ?? ''} mayCreate={organization.capabilities.includes('opportunity.create')} />}
         stage={voice ? stages.find((entry) => entry.id === customer.stageId) ?? null : null}
@@ -118,3 +119,4 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
     </AppPage>
   );
 }
+import { RelatedSupport } from '@/features/support/related';

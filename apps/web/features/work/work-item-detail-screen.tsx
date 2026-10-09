@@ -33,6 +33,7 @@ export function WorkItemDetailScreen({ organizationId, organization, model, defa
         workItem={workItem}
         timezone={organization.timezone}
       />
+      <RelatedSupport organizationId={organizationId} kind="work_item" recordId={workItemId} customerId={workItem.customer?.id}/>
       <WorkItemTabs
         defaultTab={defaultTab}
         overview={
@@ -153,3 +154,4 @@ export function WorkItemDetailScreen({ organizationId, organization, model, defa
     </>
   );
 }
+import { RelatedSupport } from '@/features/support/related';

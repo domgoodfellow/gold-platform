@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArrowLeft, Mail, MessageSquare, Paperclip, Send, X } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
@@ -39,6 +39,7 @@ export function ConversationDetailView({
   mayHandle,
   mayReply = mayHandle,
   mayCreateCustomer,
+  support,
 }: {
   organizationId: string;
   detail: ConversationDetail;
@@ -47,6 +48,7 @@ export function ConversationDetailView({
   mayHandle: boolean;
   mayReply?: boolean;
   mayCreateCustomer: boolean;
+  support?: ReactNode;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -121,6 +123,7 @@ export function ConversationDetailView({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex flex-col gap-2 border-b border-border p-3">
+        {support}
         <div className="flex items-start gap-2">
           <Link href={back} scroll={false} className="mt-0.5 inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-xs md:hidden">
             <ArrowLeft className="h-3 w-3" aria-hidden /> Back

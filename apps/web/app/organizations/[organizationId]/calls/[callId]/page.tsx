@@ -55,6 +55,7 @@ export default async function CallDetailPage({
 
   return (
     <AppPage>
+      <RelatedSupport organizationId={organizationId} kind="call" recordId={callId} customerId={call.customerId}/>
       <PageHeader
         title={callerName(call)}
         crumbs={[
@@ -164,3 +165,4 @@ export default async function CallDetailPage({
     </AppPage>
   );
 }
+import { RelatedSupport } from '@/features/support/related';

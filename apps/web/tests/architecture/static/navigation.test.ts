@@ -172,7 +172,7 @@ describe('the operator shell navigation', () => {
     }
   });
 
-  it.each(['marketing', 'support', 'ai'])('%s has one guarded starting Home and no invented child destinations', (key) => {
+  it.each(['ai'])('%s has one guarded starting Home and no invented child destinations', (key) => {
     expect(WORKSPACES.find((workspace) => workspace.key === key)?.home).toBe(key);
     expect(AREAS.filter((area) => area.workspace === key)).toEqual([
       { segment: key, label: areaLabel(key), group: 'workspaces', workspace: key },
@@ -183,6 +183,15 @@ describe('the operator shell navigation', () => {
     expect(page).toContain('<EmptyState');
     expect(page).not.toMatch(/redirect\(|href=|<Widget|<Card|\.insert\(|\.update\(|\.upsert\(|platform|credentials/i);
     expect(readdirSync(`${ROUTES}/${key}`)).toEqual(['page.tsx']);
+  });
+
+  it.each([
+    ['support', ['support.read']],
+    ['marketing', ['marketing.read', 'marketing.manage']],
+  ])('%s retains one flat workspace row with its read authority', (key, capabilities) => {
+    expect(AREAS.filter((area) => area.workspace === key)).toEqual([
+      { segment: key, label: areaLabel(key as string), group: 'workspaces', workspace: key, relevantCapabilities: capabilities },
+    ]);
   });
 
   it('uses the nine stable canonical workspace identities and default labels', () => {

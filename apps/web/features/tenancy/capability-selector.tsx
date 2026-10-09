@@ -9,6 +9,7 @@ import { CAPABILITIES, CAPABILITY_LABELS, type Capability } from '@/lib/domain/t
 const GROUPS: readonly { label: string; capabilities: readonly Capability[] }[] = [
   { label: 'Customers', capabilities: ['customer.create', 'customer.update'] },
   { label: 'Opportunities', capabilities: ['opportunity.create', 'opportunity.update'] },
+  { label: 'Follow-ups', capabilities: ['follow_up.manage'] },
   {
     label: 'Work',
     capabilities: [
@@ -25,6 +26,11 @@ const GROUPS: readonly { label: string; capabilities: readonly Capability[] }[] 
     capabilities: ['location.create', 'asset.create', 'resource.create', 'resource.update'],
   },
   { label: 'Communications', capabilities: ['call.place', 'message.send'] },
+  { label: 'Marketing', capabilities: ['marketing.read', 'marketing.manage'] },
+  {
+    label: 'Support',
+    capabilities: ['support.read', 'support.case.create', 'support.case.update', 'support.case.assign', 'support.case.resolve', 'support.configure'],
+  },
   { label: 'Finance', capabilities: ['price.manage', 'invoice.issue', 'payment.record'] },
   {
     label: 'Automation & AI',

@@ -1167,6 +1167,12 @@ It does not own:
 
 Those belong to the respective canonical documents.
 
+## Support persistence
+
+Support uses `support_cases`, `support_queues`, `support_service_levels`, `support_case_counters`, `support_case_events` and `support_case_links`. Organization-leading composite foreign keys bind Customer, Membership, queue, policy and each typed canonical relation to the same tenant. An atomic per-organization counter allocates Case numbers safely under concurrent creation. One transaction validates and writes each command and its attributed immutable evidence. No authenticated direct mutation or deletion is granted.
+
+`support_case_records` is an invoker view. `support_read` computes exact database totals and bounded independent status previews, paginated collections and history. Calendar periods and Today boundaries use the organization timezone. Resolution targets use elapsed minutes, immutable policy/deadline snapshots and current time for overdue classification. Reports use latest resolution for currently terminal Cases; reopened Cases retain historical evidence but leave resolution aggregates until resolved again. Private notes have no portal/public projection. Migration ordering follows the latest repository timestamp rather than the workstation date.
+
 ## Marketing persistence
 
 Marketing persistence uses organization-bound composite foreign keys for Campaign, Audience, Form, submission, Customer and Membership references. Campaigns and inquiries preserve history and have no authenticated deletion grants. Dynamic audience definitions are typed version 1 filters, not materialized copies of CRM identities. Acquisition provenance snapshots only historical source names and bounded UTM context; submitted answers and immutable revision definitions remain Studio-owned. Tenant/submission uniqueness and a private request fingerprint ledger enforce acquisition idempotency; inquiry row locks enforce canonical CRM handoff idempotency. Landing page associations retain tenant-bound published Studio revision and page references. Reporting calendar boundaries use the organization timezone. Campaign/inquiry period, state and association indexes support exact database aggregates and bounded paginated collections. The Marketing migration follows the repository's latest migration sequence, whose existing timestamps extend beyond the workstation date.

@@ -1,0 +1,19 @@
+# Support interaction and visual contract
+
+The supplied Home screenshot is the primary reference. `destinations.png` is the generated destination contact sheet. Examples in visual references are design-only; operating screens use database results.
+
+| Surface / goal | Clickable elements | Destination / behavior | Data |
+| --- | --- | --- | --- |
+| Home / triage | New Case; search; dates; KPI cards; attention tabs; case number; row actions; view all; queue workload; resources; Configure | Shared creation drawer; URL query; date inputs; filtered collection preserving dates; inline tabs; dedicated detail; assignment/priority popovers and escalation/resolution drawers; queue workbench; configuration subpage | Exact aggregates, bounded cases/events, tenant queues and deadlines |
+| Cases / operate backlog | Search, status, priority, queue, assignee, dates, sort, pagination, List/Board, case title, row actions | URL state; independently counted/bounded board columns; full detail; contextual controls | Database filters and exact counts, stable pagination |
+| Case detail / resolve a problem | Edit, owner, queue, priority, status, note, escalate, resolve, close/reopen, customer and related links, link record, Create Work | Focused drawers; selects; canonical transitions; internal timeline append; reason/summary drawers; confirmed lifecycle action; canonical domain routes; related-record search drawer; canonical Work creation route | Case, complete paginated timeline, membership/customer references, snapshotted deadline |
+| New Case / capture problem | Title, description, Customer search, priority, queue, assignee, related type/search, Save, Cancel | One reusable contextual PageDrawer; tenant search; canonical atomic creation; opens resulting detail | Canonical records, authorized assignments, queue/policy application |
+| Resolution / record outcome | Summary, Resolve, Cancel | Contextual PageDrawer; meaningful summary required; event preserved on reopen | Canonical lifecycle command |
+| Queues / route workload | Queue selector, search/filters, selected case, Open case, New/Edit queue, active toggle | URL queue/selection; responsive master/detail; dedicated record; focused configuration drawer | Exact queue counts; paginated cases; selected inspector |
+| Service levels / configure targets | New/Edit policy, priority, queue, duration, active, Save | Focused PageDrawer; elapsed-time clock; immutable applied target evidence | Tenant policies, exact applicability, historical snapshots |
+| Reports / assess outcomes | Dates, KPI links, queue/priority rows | URL period; filtered collection | Database aggregates and historical events; latest resolution duration explicitly labeled |
+| CRM / customer support history | Create Support Case, linked Cases | Same drawer with Customer default; filtered collection and dedicated case links | Canonical Customer identity |
+| Inbox and Call / track problem | Create Support Case, linked Cases | Same drawer with typed origin and available Customer; filtered collection | Canonical Conversation/Call; independent lifecycles |
+| Work / problem context | Create Support Case, linked Cases | Same contextual creation drawer; filtered cases | Canonical Work identity |
+
+All significant surfaces use the same thin gray containment, compact typography, blue actions and pastel state badges. Home uses four compact KPIs and a 70/30 main/rail composition. Collections use dense tables; detail uses a wide timeline and a narrow inspector; queues use master/detail. Drawers use the existing app rail and full-width mobile behavior. At 768px panels reflow; at 390px toolbars wrap, tables scroll within their panels, and queue selection precedes the inspector. Empty states retain all panel geometry. Small popovers and confirmations use shared controls.

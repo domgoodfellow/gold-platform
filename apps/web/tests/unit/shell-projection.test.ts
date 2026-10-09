@@ -65,10 +65,15 @@ describe('flat business navigation', () => {
   });
   it('offers starting Homes without records, feature entitlements or arbitrary capabilities', () => {
     const rows = projectedItems(project([], { enabledModules: new Set(), featureAvailability: new Set() }));
-    for (const key of ['marketing', 'support', 'ai']) {
+    for (const key of ['ai']) {
       expect(rows.find((row) => row.key === `workspace-${key}`)).toMatchObject({ href: `/organizations/${ORG}/${key}` });
       expect(workspaceAncestry(ORG, key)).toEqual([]);
     }
+    expect(rows.some((row) => row.key === 'workspace-support')).toBe(false);
+    expect(rows.some((row) => row.key === 'workspace-marketing')).toBe(false);
+    const support = projectedItems(project(['support.read'], { enabledModules: new Set(), featureAvailability: new Set() }));
+    expect(support.find((row) => row.key === 'workspace-support')?.href).toBe(`/organizations/${ORG}/support`);
+    expect(workspaceAncestry(ORG, 'support')).toEqual([]);
   });
 });
 

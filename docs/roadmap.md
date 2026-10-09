@@ -635,7 +635,7 @@ Registration does not mean visibility.
 
 A workspace earns navigation only when it has a real reachable operating surface.
 
-Marketing, Support and tenant AI now have authenticated first-stage Homes with honest starting states. Their operating domains remain planned; these Homes add no campaigns, cases, AI activity records or provider configuration.
+Marketing and Support now have operating Homes backed by their canonical domain records. Tenant AI retains an authenticated starting Home; AI activity and provider configuration remain outside that Home.
 
 ---
 
@@ -656,16 +656,18 @@ Do not create a separate public-web data model for Customers, Work or Finance.
 
 ## Support
 
-Support must become a real operating domain for:
+Support now implements:
 
 - Cases;
-- Requests;
+- customer problems and requests represented as Cases;
 - Queues;
 - assignment;
 - priority;
 - service targets;
 - escalation;
 - resolution.
+
+Home, Cases list/board, queue workbench, Case detail, service-level configuration and reports use persistent organization-scoped records and private attributed history. CRM, Inbox, Call and Work contexts share the New Case drawer. Business-hours clocks, first-response measurement, automatic escalation, satisfaction metrics and customer-portal exposure remain future work.
 
 Rule:
 

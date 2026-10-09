@@ -33,6 +33,7 @@ export default async function ConversationPage({ params }: PageProps<'/organizat
       key={conversationId}
       organizationId={organizationId}
       detail={detail}
+      support={<RelatedSupport organizationId={organizationId} kind="conversation" recordId={conversationId} customerId={conversation.customerId} customerName={detail.resolution.state==='resolved'?detail.resolution.customer.name:undefined}/>}
       members={members}
       myMembershipId={myMembershipId}
       mayHandle={organization.capabilities.includes('message.send')}
@@ -41,3 +42,4 @@ export default async function ConversationPage({ params }: PageProps<'/organizat
     />
   );
 }
+import { RelatedSupport } from '@/features/support/related';

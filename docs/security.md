@@ -1169,6 +1169,12 @@ It does not own:
 
 Those belong to the respective canonical documents.
 
+## Support authorization
+
+Support requires `support.read`; `support.case.create`, `support.case.update`, `support.case.assign`, `support.case.resolve` and `support.configure` independently authorize commands. Creating with a queue or owner additionally requires assignment authority. Resolution authority covers resolve, close and explicit reopen; update alone cannot change those states. Configuration authority covers queues and elapsed service levels. Founding roles receive the registry capabilities; a forward migration grants them to existing organization managers.
+
+All Support tables force tenant RLS and deny direct authenticated writes. Commands require a signed-in member, read authority and the command-specific capability, use a pinned search path, and validate same-organization references through composite keys. Case history and internal notes use a dedicated read-protected append-only store because the general tenant event feed is broader. No public/customer-portal projection exposes these records. Linking creates only an association and grants no authority over the linked domain's lifecycle or messages.
+
 ## Marketing authorization
 
 Marketing uses `marketing.read` to inspect campaigns, dynamic audiences, acquisition inquiries and aggregates; `marketing.manage` additionally permits campaign/audience edits and inquiry review. Manage includes read behavior. Founding roles receive both through the capability registry; existing organization managers receive them through a forward migration. These are actor authorities, not a separately sellable Marketing entitlement. Organization service access remains enforced by operational routes and actions.

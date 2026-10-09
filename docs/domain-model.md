@@ -439,6 +439,10 @@ The resulting Organization, Plan, Entitlements and configuration are canonical i
 
 ### Support Case
 
+The implemented lifecycle is New, Open, Waiting, Resolved and Closed. Resolution requires a meaningful summary; Closed follows Resolved. Explicit reopening requires a reason and retains earlier resolution evidence. Priority is Low, Normal, High or Urgent. Escalation records an attributed reason and can route ownership without inventing another Case status.
+
+An elapsed resolution policy matches queue and priority, with a priority fallback. Creation snapshots its policy and deadline. Subsequent policy, queue, priority and ownership changes and reopening retain that historical deadline. Reports count the latest resolution of currently Resolved/Closed Cases, excluding reopened Cases until resolved again. Resolution duration includes all elapsed time from initial creation through that latest resolution.
+
 **Definition:** The canonical record for a customer problem, request, complaint or service issue that requires managed resolution.
 
 Support owns:

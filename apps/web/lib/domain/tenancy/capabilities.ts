@@ -4,6 +4,12 @@
  * which capability, and what that role is called, are tenant rows (D6).
  */
 export const CAPABILITIES = [
+  'support.read',
+  'support.case.create',
+  'support.case.update',
+  'support.case.assign',
+  'support.case.resolve',
+  'support.configure',
   'marketing.read',
   'marketing.manage',
   'customer.create',
@@ -52,6 +58,12 @@ export function isCapability(value: string): value is Capability {
 
 /** Describes what the platform does, not tenant terminology — that's a separate, later concern. */
 export const CAPABILITY_LABELS: Record<Capability, string> = {
+  'support.read': 'View Support Cases, private history and reports',
+  'support.case.create': 'Create Support Cases',
+  'support.case.update': 'Edit and escalate Cases and add internal notes',
+  'support.case.assign': 'Assign Support Cases and queues',
+  'support.case.resolve': 'Resolve, close and explicitly reopen Support Cases',
+  'support.configure': 'Configure Support queues and service levels',
   'marketing.read': 'View campaigns, audiences and acquisition results',
   'marketing.manage': 'Manage campaigns and audiences and review acquisition inquiries',
   'customer.create': 'Add customers',

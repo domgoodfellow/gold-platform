@@ -34,6 +34,10 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### 2026-10-08
+
+- Implemented the Support operating workspace: persistent Cases, queue ownership, priority, escalation, internal notes, resolution and explicit reopening, elapsed service levels, exact reports and private attributed history. Added shared contextual Case creation from CRM, Inbox, Calls and Work, six scoped capabilities, tenant-bound relationships and responsive Home/list/board/workbench/detail/configuration/report surfaces.
+
 ### Marketing operating workspace — 2026-10-08
 
 - Added tenant-scoped campaigns, saved dynamic audiences, attributed acquisition inquiries and explicit canonical CRM handoff, with narrow Marketing capabilities and RLS.

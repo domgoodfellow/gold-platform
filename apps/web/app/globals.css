@@ -9,6 +9,8 @@
 @source "../features/automations";
 @source "../features/studio";
 @source "../features/marketing";
+@source "../features/support";
+@source "../components/operational";
 
 /* The colour roles. `docs/ui-spec.md` §3 says why each one exists; this file is where the
    values live and is the only place they may. A role is named for what it is used for, never

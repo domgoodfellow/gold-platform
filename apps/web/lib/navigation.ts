@@ -376,7 +376,7 @@ export const AREAS: readonly Area[] = [
   { segment: 'comms-inbox', label: 'Inbox', group: 'workspaces', workspace: 'communications', route: 'comms/inbox', module: 'reception', relevantCapabilities: ['message.send'], featureKeys: ['inbound_sms', 'outbound_sms', 'sending'] },
   { segment: 'comms-numbers', label: 'Numbers', group: 'workspaces', workspace: 'communications', route: 'comms/numbers', module: 'reception', relevantCapabilities: ['call.place', 'message.send'], featureKeys: ['number_inventory', 'caller_id'] },
   { segment: 'marketing', label: 'Marketing', group: 'workspaces', workspace: 'marketing', relevantCapabilities: ['marketing.read', 'marketing.manage'] },
-  { segment: 'support', label: 'Support', group: 'workspaces', workspace: 'support' },
+  { segment: 'support', label: 'Support', group: 'workspaces', workspace: 'support', relevantCapabilities: ['support.read'] },
   { segment: 'ai', label: 'AI', group: 'workspaces', workspace: 'ai' },
   // Finance: how this business prices, bills, gets paid and understands what its work earns —
   // tenant Financial Operations, customer to business, and nothing a business pays GildOps (that is

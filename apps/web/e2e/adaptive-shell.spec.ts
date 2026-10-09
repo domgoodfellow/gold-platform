@@ -17,8 +17,8 @@ test.describe('a tenant owner', () => {
   test('keeps Marketing, Support and AI stable across workspace navigation', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     const homes = [
-      { segment: 'marketing', label: 'Marketing', empty: 'No marketing activity is configured yet.' },
-      { segment: 'support', label: 'Support', empty: 'No support cases yet.' },
+      { segment: 'marketing', label: 'Marketing', empty: null },
+      { segment: 'support', label: 'Support', empty: null },
       { segment: 'ai', label: 'AI', empty: 'No AI workspace activity yet.' },
     ];
     for (const segment of ['home', 'comms', 'field', 'finance', ...homes.map((home) => home.segment)]) {
@@ -31,13 +31,14 @@ test.describe('a tenant owner', () => {
       const home = homes.find((candidate) => candidate.segment === segment);
       if (home) {
         await expect(page.getByRole('heading', { name: home.label, exact: true })).toBeVisible();
-        await expect(page.getByRole('main').getByText(home.empty, { exact: true })).toBeVisible();
+        if (home.empty) await expect(page.getByRole('main').getByText(home.empty, { exact: true })).toBeVisible();
         await expect(nav.getByRole('link', { name: home.label, exact: true })).toHaveAttribute('aria-current', 'page');
       }
       for (const destination of homes) {
         await nav.getByRole('link', { name: destination.label, exact: true }).click();
         await expect(page).toHaveURL(`/organizations/${organizationId}/${destination.segment}`);
-        await expect(page.getByRole('main').getByText(destination.empty, { exact: true })).toBeVisible();
+        await expect(page.getByRole('heading', { name: destination.label, exact: true })).toBeVisible();
+        if (destination.empty) await expect(page.getByRole('main').getByText(destination.empty, { exact: true })).toBeVisible();
         await expect(nav.getByRole('link', { name: destination.label, exact: true })).toHaveAttribute('aria-current', 'page');
         for (const peer of homes) await expect(nav.getByRole('link', { name: peer.label, exact: true })).toBeVisible();
       }

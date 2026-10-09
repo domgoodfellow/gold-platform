@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -9315,6 +9315,424 @@ export type Database = {
           },
         ]
       }
+      support_case_counters: {
+        Row: {
+          last_number: number
+          organization_id: string
+        }
+        Insert: {
+          last_number: number
+          organization_id: string
+        }
+        Update: {
+          last_number?: number
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_case_counters_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_case_counters_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_case_events: {
+        Row: {
+          actor_id: string
+          actor_name: string
+          body: string
+          case_id: string
+          id: string
+          kind: string
+          new_value: Json | null
+          occurred_at: string
+          organization_id: string
+          previous_value: Json | null
+        }
+        Insert: {
+          actor_id: string
+          actor_name: string
+          body?: string
+          case_id: string
+          id?: string
+          kind: string
+          new_value?: Json | null
+          occurred_at?: string
+          organization_id: string
+          previous_value?: Json | null
+        }
+        Update: {
+          actor_id?: string
+          actor_name?: string
+          body?: string
+          case_id?: string
+          id?: string
+          kind?: string
+          new_value?: Json | null
+          occurred_at?: string
+          organization_id?: string
+          previous_value?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_case_events_organization_id_case_id_fkey"
+            columns: ["organization_id", "case_id"]
+            isOneToOne: false
+            referencedRelation: "support_case_records"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_case_events_organization_id_case_id_fkey"
+            columns: ["organization_id", "case_id"]
+            isOneToOne: false
+            referencedRelation: "support_cases"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      support_case_links: {
+        Row: {
+          asset_id: string | null
+          call_id: string | null
+          case_id: string
+          conversation_id: string | null
+          created_at: string
+          id: string
+          invoice_id: string | null
+          location_id: string | null
+          organization_id: string
+          work_item_id: string | null
+        }
+        Insert: {
+          asset_id?: string | null
+          call_id?: string | null
+          case_id: string
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          location_id?: string | null
+          organization_id: string
+          work_item_id?: string | null
+        }
+        Update: {
+          asset_id?: string | null
+          call_id?: string | null
+          case_id?: string
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          location_id?: string | null
+          organization_id?: string
+          work_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_case_links_organization_id_asset_id_fkey"
+            columns: ["organization_id", "asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_case_links_organization_id_call_id_fkey"
+            columns: ["organization_id", "call_id"]
+            isOneToOne: false
+            referencedRelation: "calls"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_case_links_organization_id_case_id_fkey"
+            columns: ["organization_id", "case_id"]
+            isOneToOne: false
+            referencedRelation: "support_case_records"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_case_links_organization_id_case_id_fkey"
+            columns: ["organization_id", "case_id"]
+            isOneToOne: false
+            referencedRelation: "support_cases"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_case_links_organization_id_conversation_id_fkey"
+            columns: ["organization_id", "conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_case_links_organization_id_invoice_id_fkey"
+            columns: ["organization_id", "invoice_id"]
+            isOneToOne: false
+            referencedRelation: "finance_invoice_records"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_case_links_organization_id_invoice_id_fkey"
+            columns: ["organization_id", "invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_case_links_organization_id_location_id_fkey"
+            columns: ["organization_id", "location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_case_links_organization_id_work_item_id_fkey"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "finance_quote_records"
+            referencedColumns: ["organization_id", "work_item_id"]
+          },
+          {
+            foreignKeyName: "support_case_links_organization_id_work_item_id_fkey"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      support_cases: {
+        Row: {
+          assigned_membership_id: string | null
+          case_number: string
+          closed_at: string | null
+          created_at: string
+          created_by: string
+          customer_id: string | null
+          description: string
+          escalated_at: string | null
+          id: string
+          organization_id: string
+          policy_id: string | null
+          priority: string
+          queue_id: string | null
+          resolution_due_at: string | null
+          resolution_summary: string | null
+          resolved_at: string | null
+          status: string
+          target_snapshot: Json | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_membership_id?: string | null
+          case_number: string
+          closed_at?: string | null
+          created_at?: string
+          created_by: string
+          customer_id?: string | null
+          description?: string
+          escalated_at?: string | null
+          id?: string
+          organization_id: string
+          policy_id?: string | null
+          priority?: string
+          queue_id?: string | null
+          resolution_due_at?: string | null
+          resolution_summary?: string | null
+          resolved_at?: string | null
+          status?: string
+          target_snapshot?: Json | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_membership_id?: string | null
+          case_number?: string
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string
+          customer_id?: string | null
+          description?: string
+          escalated_at?: string | null
+          id?: string
+          organization_id?: string
+          policy_id?: string | null
+          priority?: string
+          queue_id?: string | null
+          resolution_due_at?: string | null
+          resolution_summary?: string | null
+          resolved_at?: string | null
+          status?: string
+          target_snapshot?: Json | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_cases_organization_id_assigned_membership_id_fkey"
+            columns: ["organization_id", "assigned_membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_cases_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_cases_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_cases_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_cases_organization_id_policy_id_fkey"
+            columns: ["organization_id", "policy_id"]
+            isOneToOne: false
+            referencedRelation: "support_service_levels"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_cases_organization_id_queue_id_fkey"
+            columns: ["organization_id", "queue_id"]
+            isOneToOne: false
+            referencedRelation: "support_queues"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      support_queues: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          name: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by: string
+          description?: string
+          id?: string
+          name: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_queues_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_queues_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_service_levels: {
+        Row: {
+          active: boolean
+          clock_basis: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          organization_id: string
+          priority: string
+          queue_id: string | null
+          target_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          clock_basis?: string
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          organization_id: string
+          priority: string
+          queue_id?: string | null
+          target_minutes: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          clock_basis?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          priority?: string
+          queue_id?: string | null
+          target_minutes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_service_levels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_service_levels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_service_levels_organization_id_queue_id_fkey"
+            columns: ["organization_id", "queue_id"]
+            isOneToOne: false
+            referencedRelation: "support_queues"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       telephony_settings: {
         Row: {
           calling_number: string | null
@@ -11057,6 +11475,77 @@ export type Database = {
             columns: ["organization_id", "resource_id"]
             isOneToOne: false
             referencedRelation: "resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      support_case_records: {
+        Row: {
+          assigned_membership_id: string | null
+          case_number: string | null
+          closed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          customer_id: string | null
+          customer_name: string | null
+          description: string | null
+          escalated_at: string | null
+          id: string | null
+          organization_id: string | null
+          owner_name: string | null
+          policy_id: string | null
+          priority: string | null
+          queue_id: string | null
+          queue_name: string | null
+          resolution_due_at: string | null
+          resolution_summary: string | null
+          resolved_at: string | null
+          status: string | null
+          target_snapshot: Json | null
+          title: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_cases_organization_id_assigned_membership_id_fkey"
+            columns: ["organization_id", "assigned_membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_cases_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_cases_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_cases_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_cases_organization_id_policy_id_fkey"
+            columns: ["organization_id", "policy_id"]
+            isOneToOne: false
+            referencedRelation: "support_service_levels"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_cases_organization_id_queue_id_fkey"
+            columns: ["organization_id", "queue_id"]
+            isOneToOne: false
+            referencedRelation: "support_queues"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -13509,6 +13998,14 @@ export type Database = {
       submit_public_site_revision: {
         Args: { p_organization_id: string; p_revision_id: string }
         Returns: undefined
+      }
+      support_command: {
+        Args: { p_command: string; p_input: Json; p_organization_id: string }
+        Returns: string
+      }
+      support_read: {
+        Args: { p_filters?: Json; p_organization_id: string; p_view: string }
+        Returns: Json
       }
       sync_phone_number: {
         Args: {
