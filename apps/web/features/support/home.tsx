@@ -11,7 +11,6 @@ import {
   Clock,
   Headset,
   Layers,
-  Search,
   SlidersHorizontal,
   TriangleAlert,
   Users,
@@ -23,8 +22,6 @@ import {
   PopoverTrigger,
 } from "@gold/ui/components/popover";
 import { Button, ButtonLink } from "@/components/controls/button";
-import { TextInput } from "@/components/controls/inputs";
-import { DateRangeFilter } from "@/components/operational/date-range-filter";
 import {
   ActivityList,
   FilterMenu,
@@ -260,24 +257,8 @@ export function SupportHome({
           </div>
           <form
             className="flex flex-wrap items-center gap-2 border-b border-border px-2.5 py-2.5"
-            onSubmit={(e) => {
-              e.preventDefault();
-              change({
-                q: String(new FormData(e.currentTarget).get("q") ?? ""),
-              });
-            }}
+            onSubmit={(e) => e.preventDefault()}
           >
-            <div className="relative min-w-40 flex-1">
-              <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-subtle" />
-              <TextInput
-                key={query.get("q")}
-                name="q"
-                aria-label="Search Cases"
-                placeholder="Search cases, customers, or keywords…"
-                defaultValue={query.get("q") ?? ""}
-                className="h-9 rounded-md border-border pl-8 text-xs shadow-none"
-              />
-            </div>
             <FilterMenu
               label="Queue"
               name="queue"
@@ -327,12 +308,6 @@ export function SupportHome({
                 { value: "unassigned", label: "Unassigned" },
                 ...data.members.map((m) => ({ value: m.id, label: m.name })),
               ]}
-            />
-            <DateRangeFilter
-              from={data.period.from}
-              to={data.period.to}
-              timezone={timezone}
-              onApply={change}
             />
             <Popover>
               <PopoverTrigger asChild>

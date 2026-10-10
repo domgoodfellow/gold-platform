@@ -14,7 +14,7 @@ import { Button, ButtonLink } from '@/components/controls/button';
 import { ConfigureLink } from '@/components/controls/configure-link';
 import { PageHeader } from '@/components/headers/page-header';
 import { MetricTile, OperationalPanel, PanelState } from '@/components/operational/primitives';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { SelectInput } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import type { AutomationDashboardData } from '@/lib/application/automations/dashboard';
 import { NewAutomationSheet } from '../rules/new-automation-sheet';
@@ -149,21 +149,7 @@ export function AutomationDashboard({
         title="Automations"
         meta={<span className="text-xs">Execution period {data.period.dates[0]} – {data.period.dates.at(-1)} · {timezone}. Rule counts reflect current configuration.</span>}
         actions={<>
-          {mayManage && <NewAutomationSheet organizationId={organizationId} />}
-          <ButtonLink href={activity} tone="secondary">View runs</ButtonLink>
-          {mayConfigure && <ConfigureLink href={`/organizations/${organizationId}/settings/features`} />}
-        </>}
-      />
-      <div className="flex flex-wrap items-center gap-2"><form className="flex min-w-0 flex-wrap items-center gap-2">
-            <TextInput
-              name="q"
-              aria-label="Search automations"
-              placeholder="Search automations…"
-              defaultValue={search}
-              className="w-48"
-              size="small"
-            />
-            <SelectInput
+          <form className="flex items-center gap-1"><SelectInput
               name="when"
               aria-label="Date range"
               defaultValue={data.period.when}
@@ -172,11 +158,12 @@ export function AutomationDashboard({
               <option value="today">Today</option>
               <option value="week">Last 7 days</option>
               <option value="month">Last 30 days</option>
-            </SelectInput>
-            <Button size="tiny" tone="secondary">
-              Apply
-            </Button>
-          </form></div>
+            </SelectInput><Button size="small" tone="secondary" type="submit">Apply</Button></form>
+          {mayManage && <NewAutomationSheet organizationId={organizationId} />}
+          <ButtonLink href={activity} tone="secondary">View runs</ButtonLink>
+          {mayConfigure && <ConfigureLink href={`/organizations/${organizationId}/settings/features`} />}
+        </>}
+      />
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {metrics.map(({ label, value, note, href, Icon }) => (
           <MetricTile

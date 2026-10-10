@@ -35,12 +35,9 @@ export function CrmHome({organizationId,timezone,month,summary,customers,custome
     {label:'Follow-ups due today',value:followUpsEnabled?summary.today:'Unavailable',context:timezone,href:followUpsEnabled?`${base}/follow-ups?status=open&due=today`:undefined,icon:CalendarClock},
     {label:'Forecast this month',value:<CurrencyValues values={summary.forecast}/>,context:'Open · unweighted expected close',href:`${base}/opportunities?kind=open&closeFrom=${month}&closeBefore=${nextMonth.toISOString().slice(0,10)}`,icon:TrendingUp}];
   return <WorkspaceHome title="CRM" configure={mayConfigure} actions={<>
+    <form method="get" className="flex items-center gap-1"><TextInput aria-label="Reporting month" name="month" type="month" defaultValue={month.slice(0,7)} className="w-40"/><Button type="submit" tone="text" size="small">Apply</Button></form>
     {mayCreate?<CreateCustomerTrigger/>:null}{mayCreateOpportunity?<OpportunitySheet {...opportunityOptions}/>:null}
   </>}>
-    <div className="mb-4 flex flex-wrap items-center gap-3">
-      <form action={`${base}/sales/search`} method="get" role="search" className="flex items-center gap-1"><TextInput aria-label="Search CRM" type="search" name="q" placeholder="Search CRM" className="w-40"/><Button type="submit" tone="text" size="small">Search</Button></form>
-      <form method="get" className="flex items-center gap-1"><TextInput aria-label="Reporting month" name="month" type="month" defaultValue={month.slice(0,7)} className="w-40"/><Button type="submit" tone="text" size="small">Apply</Button></form>
-    </div>
     <div className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">{kpis.map(kpi=><MetricTile key={kpi.label} label={kpi.label} value={kpi.value} detail={kpi.context} icon={kpi.icon} href={kpi.href}/>)}</div>
     <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_18rem] 2xl:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="order-1 min-w-0 space-y-6 xl:order-none">

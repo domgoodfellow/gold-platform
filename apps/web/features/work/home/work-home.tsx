@@ -34,10 +34,11 @@ export function WorkHome({ organizationId, timezone, data: d, createOptions, may
   const time = (instant: string) => new Intl.DateTimeFormat('en-CA', { timeZone: timezone, hour: 'numeric', minute: '2-digit' }).format(new Date(instant));
   return <AppPage className="space-y-3">
     <PageHeader title="Work" meta={<span>{d.date} · {timezone}</span>} actions={<>
+      <form method="get" className="flex items-center gap-1"><TextInput type="date" name="on" aria-label="Work date" defaultValue={d.date} className="w-36"/><Button size="small" tone="text">Apply</Button></form>
       {createOptions ? <WorkCreateDrawer options={createOptions}/> : null}<ButtonLink tone="secondary" href={dispatch}>Dispatch board</ButtonLink>
       {mayConfigure ? <ConfigureLink href={`${base}/work/configuration`} /> : null}
     </>}/>
-    <div className="flex flex-wrap items-center gap-2"><form action={`${base}/work/dispatch`} method="get" role="search" className="flex min-w-0 items-center gap-1"><TextInput name="q" type="search" aria-label="Search work" placeholder="Search work…" className="w-36 lg:w-48"/><Button type="submit" tone="text" size="small">Search</Button></form><form method="get" className="flex items-center gap-1"><TextInput type="date" name="on" aria-label="Work date" defaultValue={d.date} className="w-36"/><Button size="small" tone="text">Apply</Button></form></div>
+
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{kpis.map(k => <MetricTile key={k.label} label={k.label} value={k.value} detail={k.note} icon={k.icon} href={k.href}/>)}</div>
     <div className="grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,7fr)_minmax(280px,3fr)]">
       <div className="min-w-0 space-y-3">

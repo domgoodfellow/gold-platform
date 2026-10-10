@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Banknote, FileText, Settings2, TrendingUp, Search, Clock } from 'lucide-react';
+import { Banknote, FileText, Settings2, TrendingUp, Clock } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@gold/ui/components/dropdown-menu';
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
@@ -39,13 +39,11 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
   ];
   return <AppPage className="@container/finance space-y-3 pb-16 md:pb-0">
     <PageHeader title="Finance" actions={<>
+      <TextInput type="month" aria-label="Reporting month" value={period.month} onChange={e => { if (e.target.value) router.push(`${finance}?month=${e.target.value}`); }} className="h-9 w-44 sm:w-40" />
       {may('invoice.issue') ? <FinanceWorkflow organizationId={organizationId} kind="invoice" /> : null}{may('work_item.price') ? <FinanceWorkflow organizationId={organizationId} kind="quote" mayCreateWork={may('work_item.create')} /> : null}{may('payment.record') ? <FinanceWorkflow organizationId={organizationId} kind="payment" /> : null}
       <DropdownMenu><DropdownMenuTrigger asChild><Button tone="secondary"><Settings2 aria-hidden /> Configure</Button></DropdownMenuTrigger><DropdownMenuContent align="end">{[['Services & Pricing',''],['Trading currency','#currency'],['Payment configuration','#getting-paid']].map(([label,hash]) => <DropdownMenuItem key={label} asChild><Link href={`${base}/settings/pricing${hash}`}>{label}</Link></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
     </>} />
-    <div className="flex flex-wrap items-center gap-2">
-      <form action={`${finance}/search`} className="relative min-w-0"><Search aria-hidden className="absolute left-2.5 top-2.5 size-4 text-muted" /><TextInput type="search" name="q" aria-label="Search Finance" placeholder="Invoices, quotes, customers…" className="h-9 w-full pl-8 sm:w-44" /></form>
-      <TextInput type="month" aria-label="Reporting month" value={period.month} onChange={e => { if (e.target.value) router.push(`${finance}?month=${e.target.value}`); }} className="h-9 w-44 sm:w-40" />
-    </div>
+
     <nav aria-label="Finance destinations" className="flex flex-wrap gap-4 text-xs font-medium text-accent-text underline decoration-border underline-offset-4">{[['Quotes','quotes'],['Invoices','invoices'],['Payments','payments']].map(([label,path]) => <Link key={path} className="hover:underline" href={`${finance}/${path}`}>{label}</Link>)}<Link className="hover:underline" href={`${base}/settings/pricing`}>Services &amp; Pricing</Link>{may('report.read') ? <Link className="hover:underline" href={`${finance}/reports`}>Financial reports</Link> : null}</nav>
     <div className="grid grid-cols-2 gap-3 @min-[60rem]/finance:grid-cols-4">{kpis.map(k => <MetricTile key={k.label} label={k.label} value={k.value} detail={k.context} icon={k.icon} href={k.href} />)}</div>
     <div className="grid min-w-0 gap-3 @min-[60rem]/finance:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]"><div className="min-w-0 space-y-3">

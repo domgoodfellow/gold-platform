@@ -442,6 +442,14 @@ export function AiWorkspace({
       <PageHeader
         title={title}
         actions={<>
+          {(!view || view === "activity") && <SelectInput
+          aria-label="Date range"
+          value={data.days}
+          onChange={(e) => filter("days", e.target.value)}
+        >
+          <option value="30">Last 30 days</option>
+          <option value="7">Last 7 days</option>
+        </SelectInput>}
           <NewAgent organizationId={organizationId} canManage={canManage} />
           <ButtonLink tone="secondary" href={`${base}/agents`}>
             <Play aria-hidden />
@@ -489,20 +497,7 @@ export function AiWorkspace({
       <AiNav base={base} active={view} />
       {["", "agents", "deployments", "activity"].includes(view) && <form
         className="flex flex-wrap gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          filter("q", String(new FormData(e.currentTarget).get("q") ?? ""));
-        }}
-      >
-        <div className="min-w-40 flex-1">
-          <TextInput
-            aria-label={view === "activity" ? "Search interactions" : "Search agents"}
-            name="q"
-            defaultValue={search.get("q") ?? ""}
-            placeholder={view === "activity" ? "Search interactions…" : "Search agents…"}
-          />
-        </div>
-        <Button tone="secondary">Search</Button>
+              >
         <SelectInput
           aria-label="Status"
           value={search.get(view === "activity" ? "outcome" : "status") ?? ""}
@@ -525,14 +520,7 @@ export function AiWorkspace({
             </option>
           ))}
         </SelectInput>}
-        {(!view || view === "activity") && <SelectInput
-          aria-label="Date range"
-          value={data.days}
-          onChange={(e) => filter("days", e.target.value)}
-        >
-          <option value="30">Last 30 days</option>
-          <option value="7">Last 7 days</option>
-        </SelectInput>}
+        
       </form>}
       {!view ? (
         <>

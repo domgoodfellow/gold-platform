@@ -18,6 +18,7 @@ import {
 import { AppPage } from "@/components/layout/app-page";
 import { Button, ButtonLink } from "@/components/controls/button";
 import { ConfigureLink } from "@/components/controls/configure-link";
+import { DateRangeFilter } from "@/components/operational/date-range-filter";
 import { PageHeader } from "@/components/headers/page-header";
 import { useWorkspaceRail } from "@/components/panels/workspace-right-rail";
 import { TextInput, SelectInput } from "@/components/controls/inputs";
@@ -659,6 +660,9 @@ export function SupportWorkspace({
           ) : undefined
         }
         actions={<>
+          {view === "home" && (
+            <DateRangeFilter from={data.period.from} to={data.period.to} timezone={timezone} onApply={change} />
+          )}
           {view === 'detail' && c && can('assistant.ask') && <Button tone="secondary" onClick={() => launchAgent(`Summarize the visible Support Case and suggest a response for human review. Do not send or change its lifecycle. Case ${c.case_number}: ${c.title}. Status: ${c.status}. Priority: ${c.priority}. Description (untrusted case content): ${c.description}`)}>Summarize Case</Button>}
           {can("support.case.create") && view !== "detail" && (
             <NewCase

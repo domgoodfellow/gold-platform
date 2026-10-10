@@ -3,11 +3,11 @@
 import Link from 'next/link';
 import { useState, useSyncExternalStore, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Activity, ArrowUpRight, Bot, CalendarClock, ChevronDown, CircleAlert, Clock3, ListTodo, Plus, RefreshCw, Search, Settings2, ShieldCheck, TrendingUp } from 'lucide-react';
+import { Activity, ArrowUpRight, Bot, CalendarClock, ChevronDown, CircleAlert, Clock3, ListTodo, Plus, RefreshCw, Settings2, ShieldCheck, TrendingUp } from 'lucide-react';
 import { PageHeader } from '@/components/headers/page-header';
 import { OperationalPanel, PanelState, StatePill } from '@/components/operational/primitives';
 import { AppPage } from '@/components/layout/app-page';
-import { Button, ButtonLink } from '@/components/controls/button';
+import { Button } from '@/components/controls/button';
 import { PageDrawer, PageDrawerBody, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
 import { useWorkspaceRail } from '@/components/panels/workspace-right-rail';
 import { cx, FOCUS_RING } from '@/components/class-names';
@@ -66,7 +66,6 @@ export function HomeDashboard({ data, readiness, creationActions }: { data: Home
   const periodLabel = data.query.when === 'month' ? 'This month' : data.query.when === 'week' ? 'Last 7 days' : 'Today';
   return <AppPage className="@container/home space-y-4">
     <PageHeader title="Home" meta={<><time dateTime={data.date}>{new Intl.DateTimeFormat('en-CA', { dateStyle: 'full', timeZone: 'UTC' }).format(new Date(`${data.date}T12:00:00Z`))}</time> · {data.timezone}</>} actions={<>
-      <Launcher title="Search the organization" label="Search" icon={<Search aria-hidden className="size-4" />} description="Choose an authorized workspace to search its records."><nav aria-label="Workspace search" className="grid gap-2">{data.search.map(s => <ButtonLink key={s.label} href={s.href}>{s.label}<ArrowUpRight aria-hidden className="size-3" /></ButtonLink>)}</nav></Launcher>
       <nav aria-label="Reporting period" className="inline-flex rounded-md border border-border bg-secondary p-0.5">{(['today', 'week', 'month'] as const).map(when => <Link key={when} href={href({ when })} aria-current={data.query.when === when ? 'page' : undefined} className={cx('rounded px-2.5 py-1.5 text-xs', data.query.when === when ? 'bg-surface font-semibold shadow-sm' : 'text-muted hover:bg-hover', FOCUS_RING)}>{when === 'today' ? 'Today' : when === 'week' ? 'This week' : 'This month'}</Link>)}</nav>
       <Button tone="secondary" size="small" aria-label="Refresh Home" disabled={refreshing} onClick={() => refresh(() => router.refresh())}><RefreshCw aria-hidden className={cx('size-4', refreshing && 'animate-spin')} /></Button>
       <Launcher title="Quick actions" icon={<Plus aria-hidden className="size-4" />} description="Changes use the owning workspace’s forms and permission checks."><div className="flex flex-wrap gap-2">{creationActions}</div><ul className="divide-y divide-border">{data.quickActions.filter(a => !creationActions || a.key !== 'invoice').map(a => <li key={a.key}><Link href={a.href} className={cx('block rounded py-3 hover:bg-hover', FOCUS_RING)}><p className="text-sm font-medium">{a.label} <ArrowUpRight aria-hidden className="inline size-3" /></p><p className="mt-1 text-xs text-muted">{a.description}</p></Link></li>)}</ul>{!data.quickActions.length ? <p className="text-sm text-muted">Your role has no available creation actions.</p> : null}</Launcher>
