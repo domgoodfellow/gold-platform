@@ -146,7 +146,29 @@ Configuration ownership: Branding owns the logo, accent and typography. Public p
 
 Not yet supported: separate logo variants for dark backgrounds, advanced colour overrides, and optimistic-concurrency checks on simultaneous brand edits (the last save wins).
 
-Hard-coded palette colours remain in workspace-local code and are Work Order B migration targets: `text-blue-*`, `bg-blue-*` and `border-blue-*` in `components/operational/primitives.tsx`, `features/marketing`, `features/ai`, `features/support`, `features/automations` and `features/communications/inbox`.
+No workspace spells a palette colour. A test (`e2e/workspace-convergence.spec.ts`) fails if a hub paints one of Tailwind's default palette values, and `residual-polish` / `interaction-states` enforce the same in source.
+
+---
+
+### Shared operational components
+
+`components/operational/primitives.tsx` is the one source of the operational presentation vocabulary. A workspace composes these; it does not define its own panel, tile, badge, empty box or tab strip. They are presentation only: they take data and links, never fetch, and never decide permission.
+
+| Component | Owns | A workspace still decides |
+| --- | --- | --- |
+| `OperationalPanel` | titled section: heading, count, destination link, action, `flush` or padded body, `compact` or `standard` density | the content and which destination it links to |
+| `MetricTile` | label, value, detail, optional passive icon, linked or plain; `emphasis` only for a platform-reported exception | the figure, its meaning and its destination |
+| `StatePill` / `StatusTone` | neutral, accent, success, warning, danger | which platform-owned fact maps to a tone; tenant labels stay neutral |
+| `PanelState` | `empty`, `not-configured`, `unavailable`, `restricted` | the message and any first action |
+| `ViewNavigation` | URL-backed sibling views; current view is marked by `aria-current`, weight and an underline | the views and their URLs |
+| `OperationalTable` | header, row and overflow geometry | columns and rows |
+| `ConfigureLink` (`components/controls`) | the one "Configure" entry on a hub | the destination; it is never a second editor |
+
+Page identity is `PageHeader` (or `WorkspaceHome`). Search and period filters sit in a toolbar under it, not in its actions, so the actions are the workspace's real tasks. A restated purpose sentence is not used; factual metadata (period, timezone, working date) is `meta`.
+
+Empty states are one of four facts and must not be rendered alike: **empty** (a true zero), **not configured** (something required is missing; link to where), **unavailable** (the read failed or could not be verified; never shown as zero or healthy), **restricted** (about the viewer, not the data). Optional polish, such as a missing logo or introduction, is a suggestion, not an exception.
+
+`interactive.tsx` holds the client-only pieces (`FilterMenu`, `RelativeTime`) so Server Component workspaces can use the rest.
 
 ---
 

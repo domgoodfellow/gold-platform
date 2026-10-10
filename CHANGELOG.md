@@ -34,6 +34,12 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Workspace visual convergence — 2026-10-09
+
+- All nine workspaces and Home share one set of operational components for panels, metrics, status, empty states, view navigation, page headers and the Configure entry. Local panel, badge and tab implementations are removed, so an organization's brand and dark mode now reach every hub.
+- Operator UI no longer contains hard-coded palette colours; interaction colour follows the organization accent and status colour is limited to platform-owned facts. Empty regions distinguish empty, not configured, unavailable and restricted. Studio lists a missing logo or introduction as a suggestion, not an exception.
+- Verification baseline repaired: stale architecture contracts updated and genuine route-guard, layering and drawer defects fixed. Eight browser journeys and five database files that fail independently of this work are recorded in the completion report.
+
 ### Branding editor and theme foundation — 2026-10-09
 
 - Branding is now a visual identity editor (logo, one brand colour with presets, typography with samples) beside a live preview that renders the shared controls in light, dark, workspace and customer views, at desktop and phone widths. Public profile and the public booking address moved to their own Settings destinations: Public profile and Domains.

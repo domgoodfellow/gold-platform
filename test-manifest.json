@@ -154,6 +154,10 @@
       "category": "unit",
       "concerns": ["identity", "security"]
     },
+    "apps/web/tests/component/operational-primitives.test.tsx": {
+      "category": "component",
+      "concerns": ["design-system", "accessibility"]
+    },
     "apps/web/tests/component/brand-editor.test.tsx": {
       "category": "component",
       "concerns": ["settings", "branding"]

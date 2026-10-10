@@ -77,3 +77,47 @@ for (const scheme of ['light', 'dark'] as const) {
     });
   }
 }
+
+/**
+ * A custom brand reaches every hub's shared controls: the primary action fills with the accent,
+ * and the current view's marker uses it, while semantic roles keep their own colours.
+ */
+test('a custom brand colours primary actions and current-view markers in every hub, and not the semantic roles', async ({ page }) => {
+  test.setTimeout(240_000);
+  const ctx = loadDemoContext();
+  const ACCENT = 'rgb(15, 118, 110)';
+  const branding = `/organizations/${ctx.organizationId}/settings/branding`;
+  const reset = async () => {
+    await page.goto(branding);
+    const use = page.getByRole('button', { name: 'Use platform default' });
+    if (await use.isEnabled()) {
+      await use.click();
+      await page.getByRole('button', { name: 'Save appearance' }).click();
+      await expect(page.getByText('Saved.')).toBeVisible();
+    }
+  };
+  try {
+    await reset();
+    await page.getByRole('button', { name: 'Teal', exact: true }).click();
+    await page.getByRole('button', { name: 'Save appearance' }).click();
+    await expect(page.getByText('Saved.')).toBeVisible();
+
+    for (const scheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      for (const [name, segment] of [['crm', 'sales'], ['support', 'support'], ['ai', 'ai'], ['marketing', 'marketing'], ['finance', 'finance']] as const) {
+        await page.goto(`/organizations/${ctx.organizationId}/${segment}`);
+        await expect(page.locator('main h1').first()).toBeVisible();
+        const accents = await page.evaluate(() => getComputedStyle(document.querySelector('[data-brand]')!).getPropertyValue('--accent').trim());
+        expect(accents, `${name} ${scheme}`).toBe('#0f766e');
+        const danger = await page.evaluate(() => getComputedStyle(document.querySelector('[data-brand]')!).getPropertyValue('--danger').trim());
+        expect(danger, `${name} ${scheme} danger role unchanged`).not.toBe('#0f766e');
+      }
+      await page.goto(`/organizations/${ctx.organizationId}/ai/agents`);
+      const current = page.locator('nav[aria-label="AI workspace"] a[aria-current="page"]');
+      await expect(current).toHaveCSS('border-bottom-color', ACCENT);
+    }
+  } finally {
+    await page.emulateMedia({ colorScheme: 'light' });
+    await reset();
+  }
+});
