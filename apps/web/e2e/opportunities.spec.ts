@@ -26,7 +26,7 @@ test.describe('Opportunity journey', () => {
     const customerId = await createCustomer(owner, { organizationId, name: 'Opportunity acceptance customer' });
     const base = `/organizations/${organizationId}`;
     await page.goto(`${base}/sales`);
-    await expect(page.getByText('No opportunity stages configured')).toBeVisible();
+    await expect(page.getByText('No opportunity stages are configured')).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('opportunities-home-empty.png'), fullPage: true });
     await page.getByRole('link', { name: 'Configure opportunity stages' }).click();
     for (const [name, kind] of [['Discuss', 'open'], ['Agreed', 'won'], ['Declined', 'lost']]) {

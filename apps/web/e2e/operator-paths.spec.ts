@@ -1,5 +1,9 @@
 import { test, expect, type Locator } from '@playwright/test';
 import { loadDemoContext, COLLEAGUE_STORAGE_STATE, OWNER_STORAGE_STATE } from './helpers';
+import { restoreDemoRoles } from './restore-demo-roles';
+
+// These specs reassign the demo members' roles. Restore them after every test, pass or fail, so one failure cannot demote the owner for every spec that follows.
+test.afterEach(async () => { await restoreDemoRoles(); });
 
 /**
  * The two P0 gaps `docs/product-surface-audit.md` named: `assignRole` and `revokePortalInvite`

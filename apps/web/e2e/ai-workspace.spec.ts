@@ -1,4 +1,5 @@
 import { mkdirSync } from "node:fs";
+import { createWebsite, listSiteTemplates, publishSiteRevision, siteEditorState, submitSiteRevision } from "../lib/domain/public-site/public-site";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { loadDemoContext, OWNER_STORAGE_STATE } from "./helpers";
@@ -230,7 +231,20 @@ test("published website fallback hands off to Communications and receives a staf
     moduleAdded = inserted.rowCount === 1;
     term = (await pg.query("insert into public.organization_commercial_terms(organization_id,product_key,period_start,period_end,quantity,price_minor,currency,recorded_by,note) values($1,'module:assistant','2020-01-01','9999-12-31',1,0,null,$2,'local browser AI handoff test') returning id", [organizationId, signed.data.user!.id])).rows[0].id;
     await pg.query("update public.platform_settings set platform_public_domain='ai-browser.test' where singleton");
-    const site = (await db.rpc("ai_published_sites", { p_organization_id: organizationId })).data![0].id;
+    // The journey needs a published website to ground and deploy on. It must not depend on another
+    // spec having left one behind, so publish one through the supported operations when absent.
+    let sites = (await db.rpc("ai_published_sites", { p_organization_id: organizationId })).data ?? [];
+    if (!sites.length) {
+      const templates = await listSiteTemplates(db as never);
+      await createWebsite(db as never, { organizationId, templateKey: templates[0]?.key }).catch(() => undefined);
+      const editor = await siteEditorState(db as never, organizationId);
+      if (editor?.working) {
+        await submitSiteRevision(db as never, organizationId, editor.working.id);
+        await publishSiteRevision(db as never, organizationId, editor.working.id);
+      }
+      sites = (await db.rpc("ai_published_sites", { p_organization_id: organizationId })).data ?? [];
+    }
+    const site = sites[0].id;
     const saved = await db.rpc("save_ai_assistant", { p_organization_id: organizationId, p_id: null, p_name: `Browser website ${Date.now()}`, p_instructions: "Answer published FAQs only.", p_configuration: { tools: [], policy: "read_only" }, p_expected_draft: null });
     expect(saved.error).toBeNull();
     const published = await db.rpc("publish_ai_assistant", { p_organization_id: organizationId, p_id: saved.data, p_status: "active", p_expected_draft: 1 });
