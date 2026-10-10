@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ClipboardList } from 'lucide-react';
 import { MetricTile, OperationalPanel, PanelState, StatePill, ViewNavigation } from '@/components/operational/primitives';
 
-vi.mock('next/link', () => ({ default: ({ href, children, scroll: _scroll, ...rest }: Record<string, unknown>) => <a href={String(href)} {...rest}>{children as never}</a> }));
+vi.mock('next/link', () => ({ default: ({ href, children, scroll, ...rest }: Record<string, unknown>) => <a href={String(href)} data-scroll={String(scroll)} {...rest}>{children as never}</a> }));
 afterEach(cleanup);
 
 describe('shared operational components', () => {
