@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { holdPlatformProviderTables, releasePlatformProviderTables } from '@/tests/support/exclusive';
 import { recordProviderRate, recordRetailRate } from '@/lib/domain/commercial/catalogue';
 import { organizationCommercialSummary, organizationUsageDetail, recordUsageReconciliation } from '@/lib/domain/commercial/usage';
 import { createCustomer } from '@/lib/domain/customers/customers';
@@ -95,11 +96,33 @@ async function retailAt(meter: string, moment: string, organizationId = tenant.o
   return rows[0] as { id: string; unit_amount_micros: string } | undefined;
 }
 
+
+/**
+ * Usage rows are immutable, and a rate they reference cannot be deleted. A run that failed
+ * part-way therefore leaves its own rates pinned by its own events. Both are identified by this
+ * file's source markers, so they — and only they — are removed before and after a run; nothing
+ * another suite or a real business wrote is touched.
+ */
+async function purgeOwnRateHistory(): Promise<void> {
+  const ownEvents = `select id from public.usage_events
+     where provider_account_id in (select id from public.platform_provider_accounts where label like 'usage-economics %')
+        or retail_rate_id in (select id from public.platform_retail_rates where source = 'usage-economics.test.ts')
+        or provider_rate_id in (select id from public.platform_provider_rates
+             where source = 'usage-economics.test.ts' or source like 'components-%' or source like 'history-%')`;
+  await pg.query(`delete from public.usage_cost_component_adjustments where cost_component_id in (select id from public.usage_cost_components where usage_event_id in (${ownEvents}))`);
+  await pg.query(`delete from public.usage_cost_components where usage_event_id in (${ownEvents})`);
+  await pg.query(`delete from public.usage_events where id in (${ownEvents})`);
+  await pg.query(`update public.organization_provider_bindings set provider_account_id = null where provider_account_id in (select id from public.platform_provider_accounts where label like 'usage-economics %')`);
+  await pg.query(`delete from public.platform_provider_accounts where label like 'usage-economics %'`);
+}
+
 beforeAll(async () => {
   if (!ANON_KEY || !SERVICE_ROLE_KEY) throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
   pg = new Client({ connectionString: CONNECTION });
   await pg.connect();
+  await holdPlatformProviderTables(pg);
   staff = await asPlatformStaff();
+  await purgeOwnRateHistory();
 
   // Retail history for voice in this run's currency: two past prices, one scheduled, and a draft
   // that must never apply. Effective dates are explicit so the resolution is what is tested.
@@ -134,7 +157,7 @@ beforeAll(async () => {
     `insert into public.organization_credits (organization_id, amount_minor, currency, reason) values ($1, 1000000, $2, 'purchase')`,
     [tenant.organizationId, CURRENCY],
   );
-}, 120_000);
+}, 300_000);
 
 afterAll(async () => {
   try {
@@ -142,6 +165,7 @@ afterAll(async () => {
     await pg.query(`delete from public.usage_cost_component_adjustments where organization_id = any($1)`, [orgs]);
     await pg.query(`delete from public.usage_cost_components where organization_id = any($1)`, [orgs]);
     await pg.query('delete from public.usage_events where organization_id = any($1)', [orgs]);
+    await purgeOwnRateHistory();
     await pg.query('delete from public.phone_numbers where organization_id = any($1)', [orgs]);
     await pg.query('delete from public.organization_provider_resources where organization_id = any($1)', [orgs]);
     await pg.query('delete from public.organization_provider_bindings where organization_id = any($1)', [orgs]);
@@ -154,6 +178,7 @@ afterAll(async () => {
            or source like 'history-%'`,
     );
   } finally {
+    await releasePlatformProviderTables(pg);
     await pg.end();
   }
 });

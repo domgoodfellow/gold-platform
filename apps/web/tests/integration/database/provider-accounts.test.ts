@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { holdPlatformProviderTables, releasePlatformProviderTables } from '@/tests/support/exclusive';
 import type { TelephonyAccountOperations } from '@/lib/adapters/telephony';
 import {
   getProviderAccount,
@@ -132,14 +133,16 @@ beforeAll(async () => {
   if (!ANON_KEY || !SERVICE_ROLE_KEY) throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
   pg = new Client({ connectionString: CONNECTION });
   await pg.connect();
+  await holdPlatformProviderTables(pg);
   await wipe();
   staff = await asPlatformStaff();
   tenant = await newTenant('acct-tenant');
   second = await newTenant('acct-second');
-}, 60_000);
+}, 300_000);
 
 afterAll(async () => {
   await wipe();
+  await releasePlatformProviderTables(pg);
   await pg?.end();
 });
 
@@ -246,7 +249,7 @@ describe('a credential goes in and never comes out', () => {
     expect(rows[0]).toEqual({ decrypted: false, secrets: false });
   });
 
-  it('gives the machine role no table grant and exactly fourteen executes', async () => {
+  it('gives the machine role no table grant and exactly sixteen executes', async () => {
     const tables = await pg.query(`select table_name from information_schema.role_table_grants where grantee = 'provider_operator'`);
     expect(tables.rows).toEqual([]);
 
@@ -266,6 +269,11 @@ describe('a credential goes in and never comes out', () => {
     // one capability at a time, never a table grant. `claim_email_for_send` and
     // `record_email_send_result` joined once a business's own email needed the same: apps/api,
     // after proving the caller may send one message, says what the provider answered.
+    // `resolve_public_agent_turn` and `record_public_communication_reply` joined with website
+    // chat: apps/api assembles one visitor turn for an enabled deployment and records the reply
+    // (or a handoff) on that visitor's open thread. Both derive the organization from the thread
+    // or deployment, set `search_path = ''`, refuse a closed thread or a disabled deployment,
+    // and are granted to this role alone — never to a signed-in or anonymous caller.
     expect(functions.rows.map((row) => row.proname)).toEqual([
       'claim_email_for_send',
       'custom_domain_provider_account',
@@ -278,7 +286,9 @@ describe('a credential goes in and never comes out', () => {
       'record_email_send_result',
       'record_invitation_delivery',
       'record_provider_account_verification',
+      'record_public_communication_reply',
       'resolve_ai_runtime_assignment',
+      'resolve_public_agent_turn',
       'resolve_public_assistant',
       'set_custom_domain_verification',
     ]);

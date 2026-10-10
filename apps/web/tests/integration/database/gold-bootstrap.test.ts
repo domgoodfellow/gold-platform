@@ -34,7 +34,19 @@ afterAll(async () => {
 });
 
 describe('bootstrap_gold_internal_workspace', () => {
-  it('creates a real GOLD membership with canonical founding authority', async () => {
+  it('creates a real GOLD membership with canonical founding authority', async (context) => {
+    // GOLD Internal has exactly one current holder. A database that already has one (a seeded demo,
+    // an earlier GOLD workspace) cannot give this test a second, and removing the holder would be
+    // destroying someone's workspace — so say so and stand aside; a clean database runs it.
+    const probe = new Client(CONNECTION);
+    await probe.connect();
+    const held = await probe.query(
+      `select 1 from public.organization_plan_assignments a
+         join public.platform_plans p on p.id = a.plan_id
+        where p.key = 'gold_internal' and a.period_end >= current_date limit 1`,
+    );
+    await probe.end();
+    if (held.rowCount) context.skip('GOLD Internal already has a holder in this database; run against a clean database.');
     const staff = await asPlatformStaff();
     const user = await staff.auth.getUser();
     const actorId = user.data.user?.id;
