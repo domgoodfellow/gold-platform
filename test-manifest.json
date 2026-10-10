@@ -174,6 +174,10 @@
       "category": "unit",
       "concerns": ["scheduling", "timezones"]
     },
+    "apps/web/tests/unit/hostname-routing.test.ts": {
+      "category": "unit",
+      "concerns": ["domains", "tenancy", "security"]
+    },
     "apps/web/tests/unit/brand-theme.test.ts": {
       "category": "unit",
       "concerns": ["settings", "branding"]
@@ -543,6 +547,10 @@
     "apps/web/e2e/configure.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": ["settings", "configuration", "permissions", "workspaces"]
+    },
+    "apps/web/e2e/tenant-acceptance.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": ["tenancy", "authentication", "branding", "acceptance"]
     },
     "apps/web/e2e/public-presence.spec.ts": {
       "category": "playwright-acceptance",
