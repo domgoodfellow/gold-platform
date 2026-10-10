@@ -13,7 +13,7 @@ import time
 
 import httpx
 
-from app.connectors.base import Account, OAuthApp, OAuthProvider, Tokens, _json
+from app.connectors.base import Account, Capability, OAuthApp, OAuthProvider, Tokens, _json, bounded, segment
 from app.providers.providers import UpstreamRefused
 
 API = "https://api.notion.com/v1"
@@ -29,6 +29,33 @@ class Notion(OAuthProvider):
     scopes = ()
     authorize_extra = {"owner": "user"}
     default_expires_in = _TEN_YEARS
+
+    capabilities = (
+        Capability("notion.search", "Pages and databases shared with GildOps", "search", "library"),
+        Capability("notion.database.query", "Rows of one shared database", "query_database", "library"),
+        Capability("notion.page.get", "One shared page's properties", "get_page", "library"),
+    )
+
+    def search(self, access_token: str, params) -> dict:
+        body: dict = {"page_size": bounded(params, "limit", 25, 100)}
+        if params.get("query"):
+            body["query"] = str(params["query"])[:200]
+        found = self._post(f"{API}/search", access_token, body, headers=VERSION)
+        return {
+            "results": [
+                {"id": r.get("id"), "type": r.get("object"), "url": r.get("url"), "last_edited": r.get("last_edited_time")}
+                for r in found.get("results", [])
+            ]
+        }
+
+    def query_database(self, access_token: str, params) -> dict:
+        database = segment(params.get("database_id"), "database_id")
+        found = self._post(f"{API}/databases/{database}/query", access_token, {"page_size": bounded(params, "limit", 25, 100)}, headers=VERSION)
+        return {"results": [{"id": r.get("id"), "properties": r.get("properties")} for r in found.get("results", [])], "next_cursor": found.get("next_cursor")}
+
+    def get_page(self, access_token: str, params) -> dict:
+        found = self._get(f"{API}/pages/{segment(params.get('page_id'), 'page_id')}", access_token, headers=VERSION)
+        return {"id": found.get("id"), "url": found.get("url"), "properties": found.get("properties")}
 
     def _token_request(self, app: OAuthApp, form: dict[str, str]) -> Tokens:
         basic = base64.b64encode(f"{app.client_id}:{app.client_secret}".encode()).decode()

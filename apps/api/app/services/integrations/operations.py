@@ -26,7 +26,7 @@ from app.core.postgrest import caller_rest
 from app.errors import DomainError, NotFoundError, ValidationError
 from app.services.integrations.state import StateInvalid, sign_state, verify_state
 from app.connectors import Readiness, oauth_app_for, oauth_provider_for, readiness_of, registered_connector_keys
-from app.connectors.base import OAuthApp, OAuthProvider, Tokens
+from app.connectors.base import OAuthApp, CapabilityInputError, OAuthProvider, Tokens, UnsupportedCapability
 from app.providers.providers import UpstreamRefused
 
 # A token this close to expiring is refreshed before it is used.
@@ -204,6 +204,18 @@ def _discover(settings: IntegrationSettings, provider: OAuthProvider, connection
     return len(resources)
 
 
+def _usable_token(settings: IntegrationSettings, provider: OAuthProvider, app: OAuthApp, connection_id: str, held: dict):
+    """The stored access token, renewed first (and the new pair stored) when it is near expiry."""
+    if int(held.get("expires_at", 0)) - _REFRESH_MARGIN_SECONDS > int(time.time()):
+        return held["access_token"], None
+    if not held.get("refresh_token"):
+        raise UpstreamRefused("The sign-in has expired and cannot be renewed. Reconnect it.")
+    renewed = provider.refresh(app, refresh_token=held["refresh_token"])
+    # Rotation: the new pair replaces the old before anything else uses it.
+    db.store_integration_credential(settings, connection_id=connection_id, secret=_pack(renewed))
+    return renewed.access_token, renewed.scopes or None
+
+
 def sync(settings: IntegrationSettings, caller: CallerContext, arguments: dict) -> dict:
     """Check a connection: rotate its token if it is near expiry, ask who the account is, list what it reaches."""
     connection = _connection(settings, caller, str(arguments.get("connection_id") or ""))
@@ -215,16 +227,7 @@ def sync(settings: IntegrationSettings, caller: CallerContext, arguments: dict) 
         raise ValidationError("That connection has no credential stored. Reconnect it.")
 
     try:
-        access_token = held["access_token"]
-        if int(held.get("expires_at", 0)) - _REFRESH_MARGIN_SECONDS <= int(time.time()):
-            if not held.get("refresh_token"):
-                raise UpstreamRefused("The sign-in has expired and cannot be renewed. Reconnect it.")
-            renewed = provider.refresh(app, refresh_token=held["refresh_token"])
-            # Rotation: the new pair replaces the old before anything else uses it.
-            db.store_integration_credential(settings, connection_id=connection_id, secret=_pack(renewed))
-            access_token, scopes = renewed.access_token, renewed.scopes or None
-        else:
-            scopes = None
+        access_token, scopes = _usable_token(settings, provider, app, connection_id, held)
         account = provider.account(access_token)
     except UpstreamRefused as failure:
         db.record_integration_health(settings, connection_id=connection_id, ok=False, error=str(failure))
@@ -235,6 +238,71 @@ def sync(settings: IntegrationSettings, caller: CallerContext, arguments: dict) 
         settings, connection_id=connection_id, ok=True, account_label=account.label, scopes=scopes
     )
     return {"ok": True, "resources": count}
+
+
+def capabilities(settings: IntegrationSettings, caller: CallerContext, arguments: dict) -> dict:
+    """What each connector declares it can do. A fact about the deployed code, so it reads no business."""
+    listed = []
+    for key in _keys_asked(arguments):
+        provider = oauth_provider_for(key)
+        if provider is not None:
+            listed.append(
+                {
+                    "connector_key": key,
+                    "capabilities": [
+                        {"key": c.key, "summary": c.summary, "workspace": c.workspace, "writes": c.writes} for c in provider.capabilities
+                    ],
+                }
+            )
+    return {"connectors": listed}
+
+
+def invoke(settings: IntegrationSettings, caller: CallerContext, arguments: dict) -> dict:
+    """Run one declared capability on a connection the caller manages.
+
+    Authorization is the same proof `sync` makes. Only capabilities the connector declares can run, and
+    one that writes is refused here until a grant model exists to authorize it. It never records a
+    connection as healthy: a call that worked proves one operation, not the connection.
+    """
+    connection = _connection(settings, caller, str(arguments.get("connection_id") or ""))
+    connection_id = connection["id"]
+    if connection["status"] != "active":
+        raise ValidationError("That connection is not active. Reconnect it.")
+    provider, app = _client(connection["connector_key"])
+
+    key = str(arguments.get("capability") or "")
+    declared = next((c for c in provider.capabilities if c.key == key), None)
+    if declared is None:
+        raise ValidationError("That app does not offer that operation.")
+    if declared.writes:
+        raise ValidationError("Operations that change data in the app are not available yet.")
+    params = arguments.get("params")
+    if params is None:
+        params = {}
+    if not isinstance(params, dict):
+        raise ValidationError("params must be an object.")
+
+    held = _held_credential(settings, connection_id)
+    if held is None:
+        raise ValidationError("That connection has no credential stored. Reconnect it.")
+
+    try:
+        access_token, scopes = _usable_token(settings, provider, app, connection_id, held)
+    except UpstreamRefused as failure:
+        # The sign-in itself is dead, which is a fact about the whole connection.
+        db.record_integration_health(settings, connection_id=connection_id, ok=False, error=str(failure))
+        raise ProviderRefusedError(str(failure)) from failure
+
+    try:
+        data = provider.invoke(key, access_token, params)
+    except (UnsupportedCapability, CapabilityInputError) as failure:
+        raise ValidationError(str(failure)) from failure
+    except UpstreamRefused as failure:
+        # One refused operation (a scope never granted, say) does not make the connection unhealthy;
+        # only `sync` re-verifies the connection as a whole.
+        raise ProviderRefusedError(str(failure)) from failure
+
+    return {"capability": key, "data": data}
 
 
 def disconnect(settings: IntegrationSettings, caller: CallerContext, arguments: dict) -> dict:
@@ -307,6 +375,8 @@ OPERATIONS = {
     "complete": complete,
     "sync": sync,
     "disconnect": disconnect,
+    "capabilities": capabilities,
+    "invoke": invoke,
     "readiness": readiness,
     "readiness_detail": readiness_detail,
 }

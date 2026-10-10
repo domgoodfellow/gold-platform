@@ -37,7 +37,7 @@ from urllib.parse import quote, urlencode
 import httpx
 import jwt
 
-from app.connectors.base import Account, OAuthApp, OAuthProvider, Tokens
+from app.connectors.base import Account, Capability, OAuthApp, OAuthProvider, Tokens, bounded, segment
 from app.providers.providers import MalformedAnswer, UpstreamRefused
 
 API = "https://api.github.com"
@@ -55,6 +55,40 @@ class GitHub(OAuthProvider):
     # A GitHub App's permissions are set on the App, not requested per sign-in.
     scopes = ()
     default_expires_in = 3600
+
+    capabilities = (
+        Capability("github.repositories.list", "Repositories the installation reaches", "repositories", "studio"),
+        Capability("github.issues.list", "Open issues of one repository", "issues", "support"),
+        Capability("github.commits.list", "Recent commits of one repository", "commits", "studio"),
+    )
+
+    @staticmethod
+    def _repo(params) -> str:
+        return f"{API}/repos/{segment(params.get('owner'), 'owner')}/{segment(params.get('repo'), 'repo')}"
+
+    def repositories(self, access_token: str, params) -> dict:
+        return {"repositories": [{"id": r["external_id"], "full_name": r["display_name"], **r["metadata"]} for r in self.resources(access_token)]}
+
+    def issues(self, access_token: str, params) -> dict:
+        rows = self._get_list(f"{self._repo(params)}/issues", access_token, {"state": "open", "per_page": str(bounded(params, "limit", 25, 100))})
+        return {"issues": [{"number": i.get("number"), "title": i.get("title"), "state": i.get("state"), "url": i.get("html_url")} for i in rows if "pull_request" not in i]}
+
+    def commits(self, access_token: str, params) -> dict:
+        rows = self._get_list(f"{self._repo(params)}/commits", access_token, {"per_page": str(bounded(params, "limit", 25, 100))})
+        return {
+            "commits": [
+                {
+                    "sha": c.get("sha"),
+                    "message": ((c.get("commit") or {}).get("message") or "").split("\n")[0],
+                    "date": (((c.get("commit") or {}).get("author")) or {}).get("date"),
+                }
+                for c in rows
+            ]
+        }
+
+    def _get_list(self, url: str, token: str, params: dict) -> list[dict]:
+        # GitHub's list endpoints answer with a bare array; `_call` wraps it so one error path serves both.
+        return self._call("GET", url, token, params=params).get("_list", [])
 
     # --- the handshake ---------------------------------------------------------------------
 
@@ -200,6 +234,8 @@ class GitHub(OAuthProvider):
             body = response.json()
         except ValueError as failure:
             raise MalformedAnswer("GitHub answered with something that is not JSON.") from failure
+        if isinstance(body, list) and response.status_code < 400:
+            return {"_list": [row for row in body if isinstance(row, dict)]}
         if not isinstance(body, dict):
             raise MalformedAnswer("GitHub answered with an unexpected shape.")
 

@@ -287,6 +287,20 @@
       ],
       "note": "Drives every apps/api/api entrypoint in-process: the refusal, and that the sink was never reached."
     },
+    "apps/api/tests/component/test_integration_capabilities.py": {
+      "category": "python-component",
+      "concerns": [
+        "integrations"
+      ],
+      "note": "Declared connector capabilities and the invoke operation, with the network and database substituted; proves no live vendor account."
+    },
+    "apps/api/tests/component/test_mcp_client.py": {
+      "category": "python-component",
+      "concerns": [
+        "integrations"
+      ],
+      "note": "MCP Streamable HTTP client against a scripted server: protocol steps, endpoint refusals, size and redirect limits."
+    },
     "apps/api/tests/component/test_integration_operations.py": {
       "category": "python-component",
       "concerns": [

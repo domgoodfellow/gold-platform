@@ -7,7 +7,7 @@ files and calendars through Graph.
 
 from __future__ import annotations
 
-from app.connectors.base import Account, OAuthProvider
+from app.connectors.base import Account, Capability, OAuthProvider, bounded, segment
 
 GRAPH = "https://graph.microsoft.com/v1.0"
 
@@ -18,6 +18,49 @@ class Microsoft365(OAuthProvider):
     token_endpoint = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
     scopes = ("offline_access", "User.Read", "Calendars.Read", "Files.Read")
     authorize_extra = {"response_mode": "query", "prompt": "select_account"}
+
+    capabilities = (
+        Capability("calendar.events.list", "Upcoming events on the default calendar", "list_events", "field"),
+        Capability("onedrive.files.list", "Files and folders in OneDrive, at the root or in one folder", "list_files", "library"),
+        Capability("excel.range.get", "Cell values from one worksheet range of a workbook", "workbook_range", "library"),
+    )
+
+    def list_events(self, access_token: str, params) -> dict:
+        found = self._get(
+            f"{GRAPH}/me/events",
+            access_token,
+            {"$top": str(bounded(params, "limit", 25, 100)), "$select": "id,subject,start,end,isCancelled", "$orderby": "start/dateTime"},
+        )
+        return {
+            "events": [
+                {
+                    "id": e.get("id"),
+                    "title": e.get("subject"),
+                    "start": e.get("start"),
+                    "end": e.get("end"),
+                    "status": "cancelled" if e.get("isCancelled") else "confirmed",
+                }
+                for e in found.get("value", [])
+            ]
+        }
+
+    def list_files(self, access_token: str, params) -> dict:
+        folder = params.get("folder_id")
+        url = f"{GRAPH}/me/drive/items/{segment(folder, 'folder_id')}/children" if folder else f"{GRAPH}/me/drive/root/children"
+        found = self._get(url, access_token, {"$top": str(bounded(params, "limit", 25, 100)), "$select": "id,name,size,lastModifiedDateTime,folder,file"})
+        return {
+            "files": [
+                {"id": i.get("id"), "name": i.get("name"), "size": i.get("size"), "modified": i.get("lastModifiedDateTime"), "is_folder": bool(i.get("folder"))}
+                for i in found.get("value", [])
+            ]
+        }
+
+    def workbook_range(self, access_token: str, params) -> dict:
+        item = segment(params.get("workbook_id"), "workbook_id")
+        sheet = segment(params.get("worksheet") or "Sheet1", "worksheet")
+        address = segment(params.get("range") or "A1:Z100", "range")
+        found = self._get(f"{GRAPH}/me/drive/items/{item}/workbook/worksheets/{sheet}/range(address='{address}')", access_token)
+        return {"address": found.get("address"), "values": found.get("values", [])[:500]}
 
     # No `revoke`: Microsoft revokes sessions for a whole user, not one token, and doing that to a
     # person's own sign-in for every app is a larger act than disconnecting one. The credential

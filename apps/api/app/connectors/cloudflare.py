@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import httpx
 
-from app.connectors.base import Account, OAuthProvider
+from app.connectors.base import Account, Capability, OAuthProvider, bounded, segment
 from app.providers.providers import MalformedAnswer, UpstreamRefused
 
 API = "https://api.cloudflare.com/client/v4"
@@ -52,6 +52,19 @@ class Cloudflare(OAuthProvider):
     token_endpoint = "https://dash.cloudflare.com/oauth2/token"
     # Permission-group scopes, least privilege for DNS discovery and reconciliation only.
     scopes = ("zone.read", "dns.read", "dns.write", "user-details.read")
+
+    capabilities = (
+        Capability("cloudflare.zones.list", "Zones the authorization reaches", "zones", "studio"),
+        Capability("cloudflare.dns.records.list", "DNS records of one zone", "dns_records", "studio"),
+    )
+
+    def zones(self, access_token: str, params) -> dict:
+        return {"zones": [{"id": z["external_id"], "name": z["display_name"], **z["metadata"]} for z in self.resources(access_token)]}
+
+    def dns_records(self, access_token: str, params) -> dict:
+        zone = segment(params.get("zone_id"), "zone_id")
+        answer = self._call("GET", f"{API}/zones/{zone}/dns_records", access_token, {"per_page": str(bounded(params, "limit", 50, 100))})
+        return {"records": [{k: r.get(k) for k in ("id", "type", "name", "content", "ttl", "proxied")} for r in answer.get("result") or []]}
 
     def _call(self, method: str, url: str, access_token: str, params: dict | None = None) -> dict:
         try:

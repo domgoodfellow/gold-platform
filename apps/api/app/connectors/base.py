@@ -16,7 +16,7 @@ from __future__ import annotations
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 import httpx
 
@@ -52,8 +52,48 @@ class Account:
     label: str
 
 
+class CapabilityInputError(ValueError):
+    """The caller's parameters were unusable. Raised before any request, so never a vendor failure."""
+
+
+class UnsupportedCapability(RuntimeError):
+    """The connector does not declare this capability, so nothing was sent to the vendor."""
+
+
+@dataclass(frozen=True)
+class Capability:
+    """One operation a connector declares, and the only way a caller reaches a vendor beyond sign-in.
+
+    Declaring is the whole registration: `handler` names a method on the connector, `workspace` names
+    the canonical workspace that consumes it, and `writes` marks an operation that changes the vendor's
+    data. A connector that does not declare an operation cannot be asked for it.
+    """
+
+    key: str
+    summary: str
+    handler: str
+    workspace: str
+    writes: bool = False
+
+
+def segment(value: object, name: str) -> str:
+    """A caller-supplied identifier placed in a URL path: encoded whole, so it can never add a path part."""
+    text = str(value or "").strip()
+    if not text:
+        raise CapabilityInputError(f"{name} is required.")
+    return quote(text, safe="")
+
+
+def bounded(params: Mapping[str, object], name: str, default: int, maximum: int) -> int:
+    try:
+        value = int(params.get(name, default))  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return default
+    return max(1, min(value, maximum))
+
+
 class OAuthProvider:
-    """A connector's OAuth behaviour. Subclasses are configuration plus two reads."""
+    """A connector's OAuth behaviour. Subclasses are configuration plus two reads, and declare `capabilities`."""
 
     key: str = ""
     authorize_endpoint: str = ""
@@ -63,6 +103,7 @@ class OAuthProvider:
     # What a token response with no `expires_in` means. A vendor whose tokens do not expire says so
     # here, rather than the default making GOLD try (and fail) to refresh one after an hour.
     default_expires_in: int = 3600
+    capabilities: tuple[Capability, ...] = ()
 
     # --- the handshake, identical for every vendor -----------------------------------------
 
@@ -103,6 +144,13 @@ class OAuthProvider:
     def resources(self, access_token: str) -> list[dict]:
         """Everything this authorization can reach, as `{resource_type, external_id, display_name, metadata}`."""
         raise NotImplementedError
+
+    def invoke(self, capability_key: str, access_token: str, params: Mapping[str, object]) -> dict:
+        """Run one declared capability. Anything undeclared is refused before a request is made."""
+        declared = next((item for item in self.capabilities if item.key == capability_key), None)
+        if declared is None:
+            raise UnsupportedCapability(f"{self.key} does not offer {capability_key}.")
+        return getattr(self, declared.handler)(access_token, params)
 
     # --- shared plumbing --------------------------------------------------------------------
 
