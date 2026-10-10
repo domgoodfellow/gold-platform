@@ -65,6 +65,10 @@ describe('SECURITY DEFINER functions in app', () => {
         'require_platform_capability',
         // Called by invoker functions (`open_call`, `set_calling_number`, the entitlement readers)
         // and by one policy (`publishes_bookings`).
+        // A colleague's public name only (account locale, timezone and avatar stay private),
+        // returned for an organization the caller is a member of (`current_tenant_ids`), through a
+        // definer function because the profile table itself is readable only by its owner.
+        'member_display_names',
         'may_spend_on',
         'phone_number_owner',
         'plan_grants_feature',

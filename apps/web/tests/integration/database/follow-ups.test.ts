@@ -20,7 +20,7 @@ describe('operating CRM under real PostgreSQL RLS',()=>{
   let organizationId:string,otherOrg:string,customerId:string,secondCustomer:string,otherCustomer:string,opportunityId:string,wrongOpportunity:string,open:string,secondStage:string,won:string,lost:string,member:string,otherMember:string;
   beforeAll(async()=>{
     [owner,outsider,limited]=await Promise.all([account(),account(),account()]);
-    organizationId=await foundBusiness({ownerEmail:owner.email,name:'Operating CRM',currency:'CAD'});otherOrg=await foundBusiness({ownerEmail:outsider.email,name:'Private CRM',currency:'USD'});
+    organizationId=await foundBusiness({ownerEmail:owner.email,name:'Operating CRM',currency:'CAD',timezone:'America/Toronto'});otherOrg=await foundBusiness({ownerEmail:outsider.email,name:'Private CRM',currency:'USD'});
     customerId=await createCustomer(owner.db,{organizationId,name:'Working customer'});secondCustomer=await createCustomer(owner.db,{organizationId,name:'Different customer'});otherCustomer=await createCustomer(outsider.db,{organizationId:otherOrg,name:'Private customer'});
     open=await createOpportunityStage(owner.db,{organizationId,name:'Review',kind:'open',position:0});secondStage=await createOpportunityStage(owner.db,{organizationId,name:'Proposal',kind:'open',position:1});won=await createOpportunityStage(owner.db,{organizationId,name:'Won',kind:'won',position:2});lost=await createOpportunityStage(owner.db,{organizationId,name:'Lost',kind:'lost',position:3});
     const month=`${todayInZone('America/Toronto').slice(0,7)}-01`;

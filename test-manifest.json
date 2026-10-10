@@ -170,6 +170,10 @@
       "category": "unit",
       "concerns": ["readiness", "setup"]
     },
+    "apps/web/tests/unit/day-boundaries.test.ts": {
+      "category": "unit",
+      "concerns": ["scheduling", "timezones"]
+    },
     "apps/web/tests/unit/brand-theme.test.ts": {
       "category": "unit",
       "concerns": ["settings", "branding"]
