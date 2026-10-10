@@ -6,7 +6,7 @@ connection is healthy. A scope that writes arrives with the feature that needs i
 
 from __future__ import annotations
 
-from app.connectors.base import Account, Capability, OAuthProvider, bounded
+from app.connectors.base import Account, Capability, OAuthProvider, bounded, limit, text
 
 API = "https://api.hubapi.com"
 
@@ -18,9 +18,9 @@ class HubSpot(OAuthProvider):
     scopes = ("oauth", "crm.objects.contacts.read", "crm.objects.companies.read", "crm.objects.deals.read")
 
     capabilities = (
-        Capability("crm.contacts.list", "Contacts", "contacts", "crm"),
-        Capability("crm.companies.list", "Companies", "companies", "crm"),
-        Capability("crm.deals.list", "Deals and their pipeline stage", "deals", "crm"),
+        Capability("crm.contacts.list", "Contacts", "contacts", "crm", properties={"limit": limit(), "after": text("Cursor from a previous page.")}),
+        Capability("crm.companies.list", "Companies", "companies", "crm", properties={"limit": limit(), "after": text("Cursor from a previous page.")}),
+        Capability("crm.deals.list", "Deals and their pipeline stage", "deals", "crm", properties={"limit": limit(), "after": text("Cursor from a previous page.")}),
         Capability("crm.pipelines.list", "Deal pipelines and their stages", "pipelines", "crm"),
     )
 

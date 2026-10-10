@@ -37,7 +37,7 @@ from urllib.parse import quote, urlencode
 import httpx
 import jwt
 
-from app.connectors.base import Account, Capability, OAuthApp, OAuthProvider, Tokens, bounded, segment
+from app.connectors.base import Account, Capability, OAuthApp, OAuthProvider, Tokens, bounded, limit, segment, text
 from app.providers.providers import MalformedAnswer, UpstreamRefused
 
 API = "https://api.github.com"
@@ -58,8 +58,8 @@ class GitHub(OAuthProvider):
 
     capabilities = (
         Capability("github.repositories.list", "Repositories the installation reaches", "repositories", "studio"),
-        Capability("github.issues.list", "Open issues of one repository", "issues", "support"),
-        Capability("github.commits.list", "Recent commits of one repository", "commits", "studio"),
+        Capability("github.issues.list", "Open issues of one repository", "issues", "support", properties={"owner": text("Repository owner."), "repo": text("Repository name."), "limit": limit()}, required=("owner", "repo")),
+        Capability("github.commits.list", "Recent commits of one repository", "commits", "studio", properties={"owner": text("Repository owner."), "repo": text("Repository name."), "limit": limit()}, required=("owner", "repo")),
     )
 
     @staticmethod

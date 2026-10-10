@@ -122,8 +122,22 @@
   },
   "files": {
     "apps/web/e2e/global-home.spec.ts": { "category": "playwright-acceptance", "concerns": ["home", "permissions", "canonical-actions", "responsive", "agent"] },
+    "apps/web/tests/unit/tool-labels.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "integrations"
+      ],
+      "note": "How a recorded execution and a server's four facts read in plain words."
+    },
     "apps/web/tests/unit/home-projection.test.ts": { "category": "unit", "concerns": ["home", "time", "projections"] },
     "apps/web/tests/integration/database/home-dashboard.test.ts": { "category": "database-integration", "concerns": ["home", "authorization", "tenant-isolation", "counts", "currencies"] },
+    "apps/web/tests/component/mcp-overview.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "integrations"
+      ],
+      "note": "MCP servers screen and connection capabilities: the separate facts, what is offered, what is hidden."
+    },
     "apps/web/tests/component/locale-fields.test.tsx": { "category": "component", "concerns": ["settings", "hydration", "locale"] },
     "apps/web/tests/unit/setup-guide.test.ts": { "category": "unit", "concerns": ["setup", "navigation", "authorization"] },
     "apps/web/e2e/ai-workspace.spec.ts": { "category": "playwright-acceptance", "concerns": ["ai", "agents", "responsive", "communications"] },
@@ -300,6 +314,20 @@
         "integrations"
       ],
       "note": "MCP Streamable HTTP client against a scripted server: protocol steps, endpoint refusals, size and redirect limits."
+    },
+    "apps/api/tests/component/test_integration_executor.py": {
+      "category": "python-component",
+      "concerns": [
+        "integrations"
+      ],
+      "note": "Running a granted tool: authorization before credentials, identity from the runtime, what a model sees, MCP registration; database and network substituted."
+    },
+    "apps/api/tests/component/test_integration_credentials.py": {
+      "category": "python-component",
+      "concerns": [
+        "integrations"
+      ],
+      "note": "Token renewal decisions around the compare-and-swap rotation."
     },
     "apps/api/tests/component/test_integration_operations.py": {
       "category": "python-component",
@@ -1633,6 +1661,14 @@
         "auth",
         "identity"
       ]
+    },
+    "apps/web/tests/integration/database/integration-tool-grants.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "integrations",
+        "ai"
+      ],
+      "note": "MCP registry, tool grants, the authorization decision, approvals and the execution record against real Postgres."
     },
     "apps/web/tests/integration/database/integration-credentials.test.ts": {
       "category": "database-integration",

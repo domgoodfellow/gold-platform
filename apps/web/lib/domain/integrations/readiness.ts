@@ -18,7 +18,7 @@ export type ConnectorReadiness = {
   implemented: boolean;
   configured: boolean;
   /** A coarse code. Never an input name and never a value — those are `ConnectorReadinessDetail`'s, for staff. */
-  reason: 'adapter_missing' | 'oauth_client_missing' | null;
+  reason: 'adapter_missing' | 'oauth_client_missing' | 'egress_controls_not_declared' | null;
 };
 
 export type ConnectorReadinessDetail = ConnectorReadiness & {

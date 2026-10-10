@@ -38,7 +38,9 @@ from app.ai.metering import meter
 from app.ai.registry import unconfigured_reason
 from app.ai.runtime import OPERATOR_ASSISTANT, resolve_provider
 from app.auth import AuthError, require_caller
-from app.core.config import load_assistant_settings, load_provider_operations_settings
+from app.ai.external import external_tools_for
+from app.core.config import load_assistant_settings, load_integration_settings, load_provider_operations_settings
+from app.services.integrations.executor import ExecutionContext
 
 
 def _prior_turns(raw: object) -> tuple[PriorTurn, ...]:
@@ -152,6 +154,22 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             self._reply(503, {"error": unconfigured_reason()})
             return
 
+        external = None
+        integrations = load_integration_settings()
+        assistant_id = agent_configuration.get("id") if isinstance(agent_configuration, dict) and preview is None else None
+        if integrations is not None and assistant_id:
+            try:
+                # The identity is what was just resolved for this signed-in caller, never anything the
+                # body or a model said; the database re-proves membership on every call.
+                external = external_tools_for(
+                    integrations,
+                    ExecutionContext.for_assistant(
+                        organization_id=organization_id, assistant_id=str(assistant_id), caller_token=caller.token
+                    ),
+                )
+            except Exception:  # noqa: BLE001 - granted tools are an addition; without them the agent still answers
+                external = None
+
         given = answer(
             settings,
             provider,
@@ -171,6 +189,7 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             # the loop bounds it again rather than trusting how carefully it was built.
             prior_turns=_prior_turns(body.get("history")),
             attachments=_attachments(body.get("attachments")),
+            external=external,
         )
 
         usage = meter(

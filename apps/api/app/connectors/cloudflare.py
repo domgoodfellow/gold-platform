@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import httpx
 
-from app.connectors.base import Account, Capability, OAuthProvider, bounded, segment
+from app.connectors.base import Account, Capability, OAuthProvider, bounded, limit, segment, text
 from app.providers.providers import MalformedAnswer, UpstreamRefused
 
 API = "https://api.cloudflare.com/client/v4"
@@ -55,7 +55,7 @@ class Cloudflare(OAuthProvider):
 
     capabilities = (
         Capability("cloudflare.zones.list", "Zones the authorization reaches", "zones", "studio"),
-        Capability("cloudflare.dns.records.list", "DNS records of one zone", "dns_records", "studio"),
+        Capability("cloudflare.dns.records.list", "DNS records of one zone", "dns_records", "studio", properties={"zone_id": text("The zone."), "limit": limit(50)}, required=("zone_id",), resource_type="cloudflare_zone", resource_param="zone_id"),
     )
 
     def zones(self, access_token: str, params) -> dict:

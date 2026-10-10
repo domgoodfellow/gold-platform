@@ -123,7 +123,7 @@ describe('nothing signed in can read a credential', () => {
     expect(direct.error).not.toBeNull();
   });
 
-  it('holds no table grant and exactly six executes for the machine role', async () => {
+  it('holds no table grant and only the machine doors it was given', async () => {
     const tables = await pg.query("select 1 from information_schema.role_table_grants where grantee = 'integration_operator'");
     expect(tables.rowCount).toBe(0);
     const columns = await pg.query("select 1 from information_schema.column_privileges where grantee = 'integration_operator' and table_schema = 'public'");
@@ -134,13 +134,23 @@ describe('nothing signed in can read a credential', () => {
     // `record_managed_integration_resource` joined the other five once the DNS bridge needed a
     // single-resource upsert door, so a tenant's own forwarded token never has to write a
     // connection-scoped resource (work order 1 closeout, section 2).
+    // The execution slice added the record of an outcome, MCP server and tool registration, a
+    // compare-and-swap rotation, retention and the two doors an automation's tools are authorized
+    // through -- each a door only the runtime that did the work may use (`integration-tool-grants.test.ts` proves every one is closed to a signed-in session).
     expect(routines.rows.map((row) => row.routine_name)).toEqual([
+      'authorize_automation_tool_call',
       'clear_integration_credential',
+      'complete_integration_execution',
+      'granted_tools_for_automation',
+      'purge_integration_executions',
       'read_integration_credential',
       'record_integration_health',
       'record_managed_integration_resource',
+      'record_mcp_discovery',
       'replace_integration_resources',
       'store_integration_credential',
+      'swap_integration_credential',
+      'upsert_mcp_server',
     ]);
   });
 

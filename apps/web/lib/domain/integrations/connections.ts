@@ -125,11 +125,12 @@ export async function disconnectConnection(
 ): Promise<void> {
   await requireActor(db);
 
-  // A connection made through a vendor's sign-in holds a credential only the API can reach, so it
-  // is the API that revokes upstream, deletes it and retires the connection.
+  // A connection made through a vendor's sign-in, or to an MCP server with an access token, holds a
+  // credential only the API can reach, so it is the API that revokes upstream, deletes it and
+  // retires the connection.
   const connection = await getConnection(db, input);
   const connector = connection ? await getConnector(db, connection.connectorKey) : null;
-  if (connector && usesSignIn(connector)) {
+  if (connector && (usesSignIn(connector) || connector.connectionMethod === 'mcp')) {
     await disconnectOAuth(db, { connectionId: input.connectionId });
     return;
   }

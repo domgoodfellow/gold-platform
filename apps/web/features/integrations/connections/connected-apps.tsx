@@ -35,6 +35,7 @@ export function ConnectedApps({
   browseHref,
   connectable,
   organizationName,
+  mcpServerCount,
 }: {
   organizationId: string;
   active: IntegrationConnection[];
@@ -48,6 +49,7 @@ export function ConnectedApps({
   /** Only what this deployment can connect right now — never the roadmap. */
   connectable: Connector[];
   organizationName: string;
+  mcpServerCount: number;
 }) {
   if (active.length === 0) {
     const offered = connectable.slice(0, 4);
@@ -95,6 +97,7 @@ export function ConnectedApps({
         <Widget title="Connected apps" value={active.length} />
         <Widget title="Data sources" value={resourceCount} href={`/organizations/${organizationId}/integrations/sources`} />
         <Widget title="Imports" value={importCount} href={`/organizations/${organizationId}/integrations/imports`} />
+        <Widget title="MCP servers" value={mcpServerCount} href={`/organizations/${organizationId}/settings/connections/mcp`} />
         <Widget
           title="Needs attention"
           value={needsAttentionCount}

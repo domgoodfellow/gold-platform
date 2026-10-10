@@ -6,7 +6,7 @@ the status. A bot token does not expire, so there is nothing to refresh.
 
 from __future__ import annotations
 
-from app.connectors.base import Account, Capability, CapabilityInputError, OAuthApp, OAuthProvider, bounded
+from app.connectors.base import Account, Capability, CapabilityInputError, OAuthApp, OAuthProvider, bounded, limit, text
 from app.providers.providers import UpstreamRefused
 
 API = "https://slack.com/api"
@@ -26,7 +26,7 @@ class Slack(OAuthProvider):
     default_expires_in = 10 * 365 * 24 * 3600
     capabilities = (
         Capability("slack.channels.list", "Public channels in the workspace", "channels", "communications"),
-        Capability("slack.messages.history", "Recent messages in one channel GildOps has joined", "history", "communications"),
+        Capability("slack.messages.history", "Recent messages in one channel GildOps has joined", "history", "communications", properties={"channel_id": text("The channel."), "limit": limit()}, required=("channel_id",), resource_type="slack_channel", resource_param="channel_id"),
     )
 
     def channels(self, access_token: str, params) -> dict:

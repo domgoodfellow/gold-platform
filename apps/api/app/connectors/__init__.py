@@ -70,8 +70,26 @@ def registered_connector_keys() -> list[str]:
     return sorted(_REGISTRY)
 
 
+MCP_CONNECTOR_KEY = "mcp_server"
+MCP_EGRESS_DECLARATION = "GILDOPS_MCP_CUSTOM_ENDPOINTS"
+
+
 def readiness_of(connector_key: str) -> Readiness:
-    """`adapter_missing`, `oauth_client_missing`, or ready -- the three answers, derived rather than stored."""
+    """`adapter_missing`, `oauth_client_missing`, or ready -- the three answers, derived rather than stored.
+
+    An MCP server is not an OAuth app: there is no vendor registration to hold. What a deployment must
+    declare instead is that outbound traffic from this runtime is filtered by the network (see
+    `app.connectors.mcp`), and until it does, a business cannot be asked for a server address.
+    """
+    if connector_key == MCP_CONNECTOR_KEY:
+        declared = os.environ.get(MCP_EGRESS_DECLARATION) == "enabled-behind-egress-controls"
+        return Readiness(
+            connector_key,
+            implemented=True,
+            configured=declared,
+            reason=None if declared else "egress_controls_not_declared",
+            required_configuration=(MCP_EGRESS_DECLARATION,),
+        )
     entry = _REGISTRY.get(connector_key)
     if entry is None:
         return Readiness(connector_key, implemented=False, configured=False, reason="adapter_missing", required_configuration=())

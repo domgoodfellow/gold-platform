@@ -45,12 +45,18 @@ export async function ConnectionsPage({
   const oauthError = first(query.oauth_error);
   const { db, organization } = context;
 
-  const [connections, resources, runs, connectors] = await Promise.all([
+  const [allConnections, resources, runs, everyConnector] = await Promise.all([
     listConnections(db, { organizationId }),
     listResources(db, { organizationId }),
     listImportRuns(db, { organizationId }),
     listConnectors(db),
   ]);
+  // An MCP server has its own view (its tools are reviewed and granted one by one) and is never
+  // offered through Browse, whose Connect starts a vendor sign-in.
+  const connectors = everyConnector.filter((connector) => connector.connectionMethod !== 'mcp');
+  const mcpKeys = new Set(everyConnector.filter((connector) => connector.connectionMethod === 'mcp').map((connector) => connector.key));
+  const connections = allConnections.filter((connection) => !mcpKeys.has(connection.connectorKey));
+  const mcpServerCount = allConnections.filter((connection) => mcpKeys.has(connection.connectorKey) && connection.status !== 'disconnected').length;
 
   const mayManage = organization.capabilities.includes('integration.manage');
   // A repository is something GildOps may read, not a source a business imports customers from, so it is not a "data source".
@@ -118,6 +124,7 @@ export async function ConnectionsPage({
           browseHref={browseHref({})}
           connectable={connectable}
           organizationName={organization.name}
+          mcpServerCount={mcpServerCount}
         />
       ) : (
         <ConnectorCatalogue

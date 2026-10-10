@@ -866,6 +866,83 @@ def store_integration_credential(settings: IntegrationSettings, *, connection_id
     _integration_rpc(settings, "store_integration_credential", {"p_connection_id": connection_id, "p_secret": secret})
 
 
+def swap_integration_credential(
+    settings: IntegrationSettings, *, connection_id: str, expected_refresh_token: str | None, secret: str
+) -> bool:
+    """Store a rotated credential only if the one on file still holds the refresh token this caller
+    renewed from. `False` means someone else rotated first and their pair is the one to keep."""
+    return bool(
+        _integration_rpc(
+            settings,
+            "swap_integration_credential",
+            {"p_connection_id": connection_id, "p_expected_refresh": expected_refresh_token, "p_secret": secret},
+        )
+    )
+
+
+def complete_integration_execution(
+    settings: IntegrationSettings,
+    *,
+    execution_id: str,
+    succeeded: bool,
+    error_class: str | None = None,
+    result_bytes: int | None = None,
+) -> None:
+    _integration_rpc(
+        settings,
+        "complete_integration_execution",
+        {"p_execution_id": execution_id, "p_succeeded": succeeded, "p_error_class": error_class, "p_result_bytes": result_bytes},
+    )
+
+
+def upsert_mcp_server(settings: IntegrationSettings, *, organization_id: str, connection_id: str, name: str, endpoint: str) -> str:
+    return str(
+        _integration_rpc(
+            settings,
+            "upsert_mcp_server",
+            {"p_organization_id": organization_id, "p_connection_id": connection_id, "p_name": name, "p_endpoint": endpoint},
+        )
+    )
+
+
+def record_mcp_discovery(
+    settings: IntegrationSettings,
+    *,
+    server_id: str,
+    ok: bool,
+    error: str | None = None,
+    protocol_version: str | None = None,
+    server_name: str | None = None,
+    tools: list[dict] | None = None,
+) -> int:
+    payload = {
+        "p_server_id": server_id,
+        "p_ok": ok,
+        "p_error": error,
+        "p_protocol_version": protocol_version,
+        "p_server_name": server_name,
+        "p_tools": tools or [],
+    }
+    return int(_integration_rpc(settings, "record_mcp_discovery", payload) or 0)  # type: ignore[call-overload]
+
+
+def authorize_automation_tool_call(
+    settings: IntegrationSettings, *, rule_id: str, grant_id: str, arguments: dict, resource_value: str | None, correlation: str | None
+) -> dict:
+    payload = {
+        "p_rule_id": rule_id,
+        "p_grant_id": grant_id,
+        "p_arguments": arguments,
+        "p_resource_value": resource_value,
+        "p_correlation": correlation,
+    }
+    return _integration_rpc(settings, "authorize_automation_tool_call", payload)  # type: ignore[return-value]
+
+
+def granted_tools_for_automation(settings: IntegrationSettings, *, rule_id: str) -> list[dict]:
+    return _integration_rpc(settings, "granted_tools_for_automation", {"p_rule_id": rule_id}) or []  # type: ignore[return-value]
+
+
 def record_integration_health(
     settings: IntegrationSettings,
     *,

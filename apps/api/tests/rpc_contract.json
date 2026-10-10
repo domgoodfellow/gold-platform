@@ -1,6 +1,119 @@
 {
   "_about": "The named arguments apps/api sends to each database function, and the role it sends them as. `sends` is every name Python may send; `optional` is the subset it may leave out. Checked against Python by tests/contract/test_rpc_contract.py and against pg_proc by apps/web/tests/architecture/database/python-rpc-surface.test.ts. Change a database function's parameters, or a Python payload, and update this file with it. A function with `naming: bare` is called by a domain command that names its arguments without the `p_` prefix; app/core/caller.py adds it.",
   "functions": {
+    "swap_integration_credential": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_connection_id",
+        "p_expected_refresh",
+        "p_secret"
+      ]
+    },
+    "complete_integration_execution": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_error_class",
+        "p_execution_id",
+        "p_result_bytes",
+        "p_succeeded"
+      ]
+    },
+    "upsert_mcp_server": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_connection_id",
+        "p_endpoint",
+        "p_name",
+        "p_organization_id"
+      ]
+    },
+    "record_mcp_discovery": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_error",
+        "p_ok",
+        "p_protocol_version",
+        "p_server_id",
+        "p_server_name",
+        "p_tools"
+      ]
+    },
+    "authorize_automation_tool_call": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_arguments",
+        "p_correlation",
+        "p_grant_id",
+        "p_resource_value",
+        "p_rule_id"
+      ],
+      "optional": [
+        "p_correlation",
+        "p_resource_value"
+      ]
+    },
+    "granted_tools_for_automation": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_rule_id"
+      ]
+    },
+    "authorize_assistant_tool_call": {
+      "role": "authenticated",
+      "callers": [
+        "app/services/integrations/executor.py"
+      ],
+      "sends": [
+        "p_arguments",
+        "p_assistant_id",
+        "p_correlation",
+        "p_grant_id",
+        "p_organization_id",
+        "p_resource_value"
+      ],
+      "optional": [
+        "p_correlation",
+        "p_resource_value"
+      ]
+    },
+    "granted_tools_for_assistant": {
+      "role": "authenticated",
+      "callers": [
+        "app/services/integrations/executor.py"
+      ],
+      "sends": [
+        "p_assistant_id",
+        "p_organization_id"
+      ]
+    },
+    "decide_integration_execution": {
+      "role": "authenticated",
+      "callers": [
+        "app/services/integrations/operations.py"
+      ],
+      "sends": [
+        "p_approve",
+        "p_execution_id"
+      ]
+    },
     "advance_route_round_robin": {
       "role": "authenticated",
       "callers": [

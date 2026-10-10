@@ -67,6 +67,10 @@ class Capability:
     Declaring is the whole registration: `handler` names a method on the connector, `workspace` names
     the canonical workspace that consumes it, and `writes` marks an operation that changes the vendor's
     data. A connector that does not declare an operation cannot be asked for it.
+
+    `properties` and `required` are the inputs, as JSON-schema fragments: they are what an agent is
+    shown and what every caller is validated against. `resource_type` and `resource_param` bind the
+    operation to a discovered resource, so a grant can be narrowed to one of them.
     """
 
     key: str
@@ -74,6 +78,26 @@ class Capability:
     handler: str
     workspace: str
     writes: bool = False
+    properties: Mapping[str, Mapping[str, object]] = field(default_factory=dict)
+    required: tuple[str, ...] = ()
+    resource_type: str | None = None
+    resource_param: str | None = None
+
+    def input_schema(self) -> dict:
+        return {
+            "type": "object",
+            "properties": {name: dict(spec) for name, spec in self.properties.items()},
+            "required": list(self.required),
+            "additionalProperties": False,
+        }
+
+
+def text(description: str, *, maximum: int = 200) -> dict:
+    return {"type": "string", "description": description, "maxLength": maximum}
+
+
+def limit(default: int = 25, maximum: int = 100) -> dict:
+    return {"type": "integer", "minimum": 1, "maximum": maximum, "description": f"How many to return (default {default})."}
 
 
 def segment(value: object, name: str) -> str:

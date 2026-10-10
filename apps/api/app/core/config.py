@@ -137,6 +137,10 @@ class IntegrationSettings:
     supabase_jwt_secret: str
     state_secret: str
     redirect_uri: str
+    # Whether a business may point GildOps at an MCP server address of its own choosing. Off unless the
+    # deployment says outbound traffic from this runtime is filtered by the network itself: the address
+    # check in `app.connectors.mcp` is one line of defence, not the whole of one.
+    mcp_custom_endpoints: bool = False
 
 
 def load_integration_settings() -> IntegrationSettings | None:
@@ -151,7 +155,10 @@ def load_integration_settings() -> IntegrationSettings | None:
     if not all(values.values()):
         return None
 
-    return IntegrationSettings(**values)  # type: ignore[arg-type]
+    return IntegrationSettings(
+        **values,  # type: ignore[arg-type]
+        mcp_custom_endpoints=os.environ.get("GILDOPS_MCP_CUSTOM_ENDPOINTS") == "enabled-behind-egress-controls",
+    )
 
 
 @dataclass(frozen=True)

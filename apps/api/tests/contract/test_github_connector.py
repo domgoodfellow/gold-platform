@@ -355,6 +355,7 @@ class Stored:
         self.cleared = 0
         self.held: dict | None = None
         monkeypatch.setattr(ops.db, "store_integration_credential", lambda s, *, connection_id, secret: self.stored.append(secret))
+        monkeypatch.setattr(ops.db, "swap_integration_credential", lambda s, *, connection_id, expected_refresh_token, secret: self.stored.append(secret) or True)
         monkeypatch.setattr(ops.db, "record_integration_health", lambda s, **kw: self.health.append(kw))
         monkeypatch.setattr(ops.db, "replace_integration_resources", lambda s, *, connection_id, resources: self.resources.extend(resources))
         monkeypatch.setattr(ops.db, "clear_integration_credential", lambda s, *, connection_id: setattr(self, "cleared", self.cleared + 1))

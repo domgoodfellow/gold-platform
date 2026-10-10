@@ -146,3 +146,17 @@ def test_someone_who_is_not_staff_is_told_there_is_no_such_operation(monkeypatch
     staff(monkeypatch, is_staff=False)
     with pytest.raises(NotFoundError):
         operate(SETTINGS, CALLER, operation="readiness_detail", arguments={})
+
+
+def test_mcp_servers_are_ready_only_when_the_deployment_declares_egress_controls(monkeypatch):
+    from app.connectors import readiness_of
+
+    monkeypatch.delenv("GILDOPS_MCP_CUSTOM_ENDPOINTS", raising=False)
+    off = readiness_of("mcp_server")
+    assert (off.implemented, off.configured, off.reason) == (True, False, "egress_controls_not_declared")
+
+    monkeypatch.setenv("GILDOPS_MCP_CUSTOM_ENDPOINTS", "yes")
+    assert readiness_of("mcp_server").configured is False  # only the exact declaration counts
+
+    monkeypatch.setenv("GILDOPS_MCP_CUSTOM_ENDPOINTS", "enabled-behind-egress-controls")
+    assert readiness_of("mcp_server").operational

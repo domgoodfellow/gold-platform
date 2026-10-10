@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import httpx
 
-from app.connectors.base import Account, Capability, OAuthApp, OAuthProvider, bounded, segment
+from app.connectors.base import Account, Capability, OAuthApp, OAuthProvider, bounded, limit, segment, text
 from app.providers.providers import UpstreamRefused
 
 
@@ -27,9 +27,9 @@ class GoogleWorkspace(OAuthProvider):
     authorize_extra = {"access_type": "offline", "prompt": "consent", "include_granted_scopes": "true"}
 
     capabilities = (
-        Capability("calendar.events.list", "Upcoming events on one calendar", "list_events", "field"),
-        Capability("drive.files.list", "Files in Drive, optionally matching a name", "list_files", "library"),
-        Capability("sheets.values.get", "Cell values from one range of a spreadsheet", "sheet_values", "library"),
+        Capability("calendar.events.list", "Upcoming events on one calendar", "list_events", "field", properties={"calendar_id": text("Calendar id; defaults to the primary calendar."), "time_min": text("Only events after this RFC 3339 time."), "limit": limit()}, resource_type="google_calendar", resource_param="calendar_id"),
+        Capability("drive.files.list", "Files in Drive, optionally matching a name", "list_files", "library", properties={"name_contains": text("Only files whose name contains this."), "limit": limit()}),
+        Capability("sheets.values.get", "Cell values from one range of a spreadsheet", "sheet_values", "library", properties={"spreadsheet_id": text("The spreadsheet."), "range": text("A1 range, e.g. A1:D50.")}, required=("spreadsheet_id",), resource_type="google_sheet", resource_param="spreadsheet_id"),
     )
 
     def list_events(self, access_token: str, params) -> dict:

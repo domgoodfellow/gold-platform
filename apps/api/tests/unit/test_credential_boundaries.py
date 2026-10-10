@@ -79,7 +79,7 @@ def test_a_business_s_stored_value_has_no_caller_yet() -> None:
 
 def test_a_business_s_delegated_credential_is_read_only_where_it_is_used() -> None:
     assert _callers("read_integration_credential") <= {
-        "app/services/integrations/operations.py",
+        "app/services/integrations/credentials.py",
         "app/services/dns/operations.py",
     }
 

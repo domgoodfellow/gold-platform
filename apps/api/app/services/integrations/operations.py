@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import json
 import secrets
-import time
 
 import httpx
 
@@ -24,13 +23,13 @@ from app.core import db
 from app.core.config import IntegrationSettings
 from app.core.postgrest import caller_rest
 from app.errors import DomainError, NotFoundError, ValidationError
+from app.services.integrations import arguments as schema
+from app.services.integrations import credentials, executor
 from app.services.integrations.state import StateInvalid, sign_state, verify_state
 from app.connectors import Readiness, oauth_app_for, oauth_provider_for, readiness_of, registered_connector_keys
-from app.connectors.base import OAuthApp, CapabilityInputError, OAuthProvider, Tokens, UnsupportedCapability
+from app.connectors.base import CapabilityInputError, OAuthApp, OAuthProvider, Tokens, UnsupportedCapability
+from app.connectors.mcp import EndpointRefused, McpClient, check_endpoint
 from app.providers.providers import UpstreamRefused
-
-# A token this close to expiring is refreshed before it is used.
-_REFRESH_MARGIN_SECONDS = 120
 
 
 class ProviderRefusedError(DomainError):
@@ -85,12 +84,6 @@ def _relayed(arguments: dict) -> dict[str, str]:
     if not isinstance(given, dict):
         return {}
     return {str(k)[:40]: str(v)[:200] for k, v in list(given.items())[:10] if isinstance(v, (str, int))}
-
-
-def _pack(tokens: Tokens) -> str:
-    return json.dumps(
-        {"access_token": tokens.access_token, "refresh_token": tokens.refresh_token, "expires_at": tokens.expires_at}
-    )
 
 
 def begin(settings: IntegrationSettings, caller: CallerContext, arguments: dict) -> dict:
@@ -176,7 +169,7 @@ def complete(settings: IntegrationSettings, caller: CallerContext, arguments: di
         if held and held.get("refresh_token"):
             tokens = Tokens(tokens.access_token, held["refresh_token"], tokens.expires_at, tokens.scopes)
 
-    db.store_integration_credential(settings, connection_id=connection_id, secret=_pack(tokens))
+    db.store_integration_credential(settings, connection_id=connection_id, secret=credentials.pack(tokens))
     db.record_integration_health(
         settings, connection_id=connection_id, ok=True, account_label=account.label, scopes=tokens.scopes
     )
@@ -185,13 +178,7 @@ def complete(settings: IntegrationSettings, caller: CallerContext, arguments: di
 
 
 def _held_credential(settings: IntegrationSettings, connection_id: str) -> dict | None:
-    row = db.read_integration_credential(settings, connection_id=connection_id)
-    if not row or not row.get("secret"):
-        return None
-    try:
-        return json.loads(row["secret"])
-    except json.JSONDecodeError:
-        return None
+    return credentials.held(settings, connection_id)
 
 
 def _discover(settings: IntegrationSettings, provider: OAuthProvider, connection_id: str, access_token: str) -> int:
@@ -205,15 +192,7 @@ def _discover(settings: IntegrationSettings, provider: OAuthProvider, connection
 
 
 def _usable_token(settings: IntegrationSettings, provider: OAuthProvider, app: OAuthApp, connection_id: str, held: dict):
-    """The stored access token, renewed first (and the new pair stored) when it is near expiry."""
-    if int(held.get("expires_at", 0)) - _REFRESH_MARGIN_SECONDS > int(time.time()):
-        return held["access_token"], None
-    if not held.get("refresh_token"):
-        raise UpstreamRefused("The sign-in has expired and cannot be renewed. Reconnect it.")
-    renewed = provider.refresh(app, refresh_token=held["refresh_token"])
-    # Rotation: the new pair replaces the old before anything else uses it.
-    db.store_integration_credential(settings, connection_id=connection_id, secret=_pack(renewed))
-    return renewed.access_token, renewed.scopes or None
+    return credentials.usable_token(settings, provider, app, connection_id, held)
 
 
 def sync(settings: IntegrationSettings, caller: CallerContext, arguments: dict) -> dict:
@@ -250,7 +229,15 @@ def capabilities(settings: IntegrationSettings, caller: CallerContext, arguments
                 {
                     "connector_key": key,
                     "capabilities": [
-                        {"key": c.key, "summary": c.summary, "workspace": c.workspace, "writes": c.writes} for c in provider.capabilities
+                        {
+                            "key": c.key,
+                            "summary": c.summary,
+                            "workspace": c.workspace,
+                            "writes": c.writes,
+                            "inputs": c.input_schema(),
+                            "resource_type": c.resource_type,
+                        }
+                        for c in provider.capabilities
                     ],
                 }
             )
@@ -281,6 +268,9 @@ def invoke(settings: IntegrationSettings, caller: CallerContext, arguments: dict
         params = {}
     if not isinstance(params, dict):
         raise ValidationError("params must be an object.")
+    found = schema.problems(declared.input_schema(), params)
+    if found:
+        raise ValidationError("; ".join(found))
 
     held = _held_credential(settings, connection_id)
     if held is None:
@@ -303,6 +293,142 @@ def invoke(settings: IntegrationSettings, caller: CallerContext, arguments: dict
         raise ProviderRefusedError(str(failure)) from failure
 
     return {"capability": key, "data": data}
+
+
+# --- MCP servers ------------------------------------------------------------------------------
+
+_MAX_SERVERS_PER_ORGANIZATION = 20
+_MAX_BEARER = 4000
+
+
+def _require_mcp_enabled(settings: IntegrationSettings) -> None:
+    if not settings.mcp_custom_endpoints:
+        raise ValidationError("Custom MCP servers are not enabled on this deployment.")
+
+
+def _words(failure: Exception, bearer: str | None) -> str:
+    message = str(failure)
+    if bearer:
+        message = message.replace(bearer, "[redacted]")
+    return message[:300]
+
+
+def _discover_server(settings: IntegrationSettings, *, connection_id: str, server_id: str, endpoint: str, bearer: str | None) -> dict:
+    """Initialize, list the tools, and record what was found. Finding tools enables nothing."""
+    client: McpClient | None = None
+    try:
+        client = McpClient(endpoint, bearer=bearer)
+        client.initialize()
+        tools = client.list_tools()
+        protocol, server_name = client.protocol_version, str(client.server_info.get("name") or "")
+    except (EndpointRefused, UpstreamRefused) as failure:
+        error = _words(failure, bearer)
+        db.record_mcp_discovery(settings, server_id=server_id, ok=False, error=error)
+        db.record_integration_health(settings, connection_id=connection_id, ok=False, error=error)
+        return {"ok": False, "error": error}
+    finally:
+        if client is not None:
+            client.close()
+
+    count = db.record_mcp_discovery(
+        settings,
+        server_id=server_id,
+        ok=True,
+        protocol_version=protocol,
+        server_name=server_name,
+        tools=[
+            {"name": t.name, "description": t.description, "input_schema": t.input_schema, "read_only_hint": t.read_only_hint}
+            for t in tools
+        ],
+    )
+    db.record_integration_health(settings, connection_id=connection_id, ok=True)
+    return {"ok": True, "tools": count, "protocol_version": protocol}
+
+
+def mcp_connect(settings: IntegrationSettings, caller: CallerContext, arguments: dict) -> dict:
+    """Register an MCP server for a business, store its credential, and discover its tools."""
+    _require_mcp_enabled(settings)
+    organization_id = str(arguments["organization_id"])
+    name = str(arguments.get("name") or "").strip()
+    bearer = arguments.get("bearer")
+    if not 1 <= len(name) <= 120:
+        raise ValidationError("A server needs a name of up to 120 characters.")
+    if bearer is not None and (
+        not isinstance(bearer, str) or not bearer.strip() or len(bearer) > _MAX_BEARER or any(ord(ch) < 33 for ch in bearer.strip())
+    ):
+        raise ValidationError("That access token is not usable.")
+    bearer = bearer.strip() if isinstance(bearer, str) else None
+    try:
+        endpoint = check_endpoint(str(arguments.get("endpoint") or "")).url
+    except EndpointRefused as refused:
+        raise ValidationError(str(refused)) from refused
+
+    _require_manage(settings, caller, organization_id)
+    existing = _rest(
+        settings, caller, "GET", "integration_mcp_servers", params={"organization_id": f"eq.{organization_id}", "select": "id"}
+    ).json()
+    if len(existing) >= _MAX_SERVERS_PER_ORGANIZATION:
+        raise ValidationError("This business has reached its limit of MCP servers. Remove one first.")
+
+    connection_id = _rest(
+        settings,
+        caller,
+        "POST",
+        "rpc/record_integration_connection",
+        json={"p_organization_id": organization_id, "p_connector_key": "mcp_server", "p_account_label": name},
+    ).json()
+    if bearer:
+        db.store_integration_credential(settings, connection_id=connection_id, secret=json.dumps({"bearer": bearer}))
+    server_id = db.upsert_mcp_server(settings, organization_id=organization_id, connection_id=connection_id, name=name, endpoint=endpoint)
+
+    result = _discover_server(settings, connection_id=connection_id, server_id=server_id, endpoint=endpoint, bearer=bearer)
+    return {"connection_id": connection_id, "server_id": server_id, **result}
+
+
+def mcp_discover(settings: IntegrationSettings, caller: CallerContext, arguments: dict) -> dict:
+    """Test a server and refresh its tool list. A changed tool returns to unreviewed and disabled."""
+    _require_mcp_enabled(settings)
+    connection = _connection(settings, caller, str(arguments["connection_id"]))
+    if connection["connector_key"] != "mcp_server":
+        raise NotFoundError("No such server.")
+    servers = _rest(
+        settings,
+        caller,
+        "GET",
+        "integration_mcp_servers",
+        params={"connection_id": f"eq.{connection['id']}", "select": "id,endpoint"},
+    ).json()
+    if not servers:
+        raise NotFoundError("No such server.")
+    held = credentials.held(settings, connection["id"]) or {}
+    bearer = held.get("bearer") if isinstance(held.get("bearer"), str) else None
+    return _discover_server(
+        settings, connection_id=connection["id"], server_id=servers[0]["id"], endpoint=servers[0]["endpoint"], bearer=bearer
+    )
+
+
+def approve_execution(settings: IntegrationSettings, caller: CallerContext, arguments: dict) -> dict:
+    """Decide a request waiting for approval, and run it if it was approved.
+
+    The database decides whether this caller may decide it and whether the grant, the target and the
+    principal are all still live; what runs is the request as stored, not anything sent here.
+    """
+    approve = arguments.get("approve") is True
+    try:
+        decision = _rest(
+            settings,
+            caller,
+            "POST",
+            "rpc/decide_integration_execution",
+            json={"p_execution_id": str(arguments["execution_id"]), "p_approve": approve},
+        ).json()
+    except DomainError as refused:
+        raise NotFoundError("That request could not be decided. It may have been decided already or have expired.") from refused
+
+    if decision.get("decision") != "approved":
+        return {"decision": decision.get("decision"), "reason": decision.get("reason")}
+    outcome = executor.run_approved(settings, decision)
+    return {"decision": "approved", "status": outcome.status, "reason": outcome.reason, "execution_id": outcome.execution_id}
 
 
 def disconnect(settings: IntegrationSettings, caller: CallerContext, arguments: dict) -> dict:
@@ -376,6 +502,9 @@ OPERATIONS = {
     "sync": sync,
     "disconnect": disconnect,
     "capabilities": capabilities,
+    "mcp_connect": mcp_connect,
+    "mcp_discover": mcp_discover,
+    "approve_execution": approve_execution,
     "invoke": invoke,
     "readiness": readiness,
     "readiness_detail": readiness_detail,

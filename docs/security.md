@@ -936,6 +936,18 @@ Do not allow retrieved prose to redefine:
 
 ---
 
+### Connected tools
+
+An agent may use a connected app's capability or an MCP tool only through a grant that names that agent and
+that target. A grant is created by someone with `integration.manage`, is revocable, and stops working when
+its connection, server, tool, resource or the agent itself is no longer live. An MCP tool always needs a
+person's approval. The identity and Organization of an execution come from the runtime and the database,
+never from model-supplied arguments. A third party's tool description, schema and result are untrusted data.
+Outbound requests to a customer-chosen MCP address are limited by address checks and a pinned connection, and
+by network egress controls the deployment must declare; see `docs/integrations.md`.
+
+---
+
 ### Consequential actions
 
 Where approval is required, record the intended action separately from execution.

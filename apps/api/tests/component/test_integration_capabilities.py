@@ -133,6 +133,7 @@ class World:
         monkeypatch.setattr(httpx, "post", self._post)
         monkeypatch.setattr(ops.db, "read_integration_credential", lambda s, *, connection_id: {"secret": json.dumps(self.held)})
         monkeypatch.setattr(ops.db, "store_integration_credential", lambda s, *, connection_id, secret: self.stored.append(secret))
+        monkeypatch.setattr(ops.db, "swap_integration_credential", lambda s, *, connection_id, expected_refresh_token, secret: self.stored.append(secret) or True)
         monkeypatch.setattr(ops.db, "record_integration_health", lambda s, **kw: self.health.append(kw))
 
     def _rest_or_vendor(self, method, url, **kwargs):
@@ -218,9 +219,18 @@ def test_missing_input_is_a_validation_error_and_not_a_vendor_failure(monkeypatc
     assert w.vendor_calls == [] and w.health == []
 
 
-def test_limits_are_bounded(monkeypatch):
+def test_inputs_are_checked_against_the_declared_schema(monkeypatch):
     w = World(monkeypatch, "hubspot", answer={"results": []})
-    invoke(w, "crm.contacts.list", {"limit": 100000})
+    with pytest.raises(ValidationError, match="too large"):
+        invoke(w, "crm.contacts.list", {"limit": 100000})
+    with pytest.raises(ValidationError, match="not an input"):
+        invoke(w, "crm.contacts.list", {"path": "/etc/passwd"})
+    assert w.vendor_calls == []
+
+
+def test_a_handler_bounds_its_own_limit_even_when_called_directly(monkeypatch):
+    w = World(monkeypatch, "hubspot", answer={"results": []})
+    oauth_provider_for("hubspot").invoke("crm.contacts.list", "token", {"limit": 100000})
     assert w.vendor_calls[0][1]["params"]["limit"] == "100"
 
 

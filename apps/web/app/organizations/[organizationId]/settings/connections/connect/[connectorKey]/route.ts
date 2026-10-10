@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
+import { getConnector } from '@/lib/domain/integrations/connectors';
 import { beginOAuth } from '@/lib/domain/integrations/oauth';
 import { OAUTH_NONCE_COOKIE } from '@/lib/domain/integrations/oauth-cookie';
 import { requireOrganization } from '@/lib/route/organization';
@@ -21,6 +22,11 @@ export async function GET(
   const connectionId = new URL(request.url).searchParams.get('connection') ?? undefined;
 
   try {
+    // An MCP server is added with its address on its own screen; there is no vendor sign-in to start.
+    const connector = await getConnector(await getDb(), connectorKey);
+    if (connector?.connectionMethod === 'mcp') {
+      return NextResponse.redirect(new URL(`/organizations/${organizationId}/settings/connections/mcp`, request.url));
+    }
     const { url, nonce } = await beginOAuth(await getDb(), { organizationId, connectorKey, connectionId });
     const response = NextResponse.redirect(url);
     response.cookies.set(OAUTH_NONCE_COOKIE, nonce, {

@@ -19,7 +19,7 @@ than a gap.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.ai import (
     AnswerFailed,
@@ -37,6 +37,9 @@ from app.ai.actions import ACTIONS, action_named
 from app.ai.tools import TOOLS
 from app.core.caller import ToolFailed, call_tool
 from app.core.config import AssistantSettings
+
+if TYPE_CHECKING:
+    from app.ai.external import ExternalTools
 
 # **A cap rather than a budget.** Every tool here answers in one call, so a question needing
 # more than a handful of turns is a model going in circles rather than a hard question -- and an
@@ -240,6 +243,7 @@ def answer(
     actions: tuple[Tool, ...] = ACTIONS,
     audience: str = "operator",
     instructions: str = "",
+    external: "ExternalTools | None" = None,
 ) -> Answer:
     """Run the loop until the provider stops asking for tools, or the cap is reached.
 
@@ -279,7 +283,7 @@ def answer(
                 # a name in `TOOLS` resolves to a function and runs; a name in `ACTIONS`
                 # resolves to nothing and stops the loop.
                 question=question,
-                tools=tools + actions,
+                tools=tools + (external.tools if external is not None else ()) + actions,
                 history=tuple(history),
                 context=context,
                 prior_turns=prior_turns,
@@ -320,6 +324,12 @@ def answer(
 
         results: list[ToolResult] = []
         for call in turn.calls:
+            if external is not None and external.owns(call.name):
+                # A granted tool: the executor re-checks the grant at this moment, whatever the list said.
+                result, record = external.run(call)
+                results.append(result)
+                performed.append(record)
+                continue
             tool = next((allowed for allowed in tools if allowed.name == call.name), None)
             if tool is None:
                 # A name nothing matches. Handed back rather than raised: the model chose a

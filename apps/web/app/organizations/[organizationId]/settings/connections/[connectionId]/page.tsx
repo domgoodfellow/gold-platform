@@ -13,6 +13,8 @@ import { loadConnectorReadiness } from '@/lib/domain/integrations/readiness';
 import { sourceControlReader, type SourceRepository } from '@/lib/adapters/source-control';
 import { listGrantedResourceIds } from '@/lib/domain/integrations/assistant-grants';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { ConnectionCapabilities } from '@/features/integrations/connections/connection-capabilities';
+import { listActiveGrants, listGrantableAgents, listNativeCapabilities } from '@/lib/domain/integrations/tool-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +54,16 @@ export default async function ConnectionDetailPage({
         .filter((repository): repository is SourceRepository => repository !== null)
     : null;
   const connectable = connector !== null && isConnectable(connector, readiness.get(connector.key));
+  // What an agent could be given on this connection. Only an active sign-in connection that someone may
+  // manage; the API is the authority on what a connector declares, and an unreachable one offers nothing.
+  const offersCapabilities = mayManage && connection.status === 'active' && connector !== null && connector.connectionMethod === 'native';
+  const [capabilities, agents, grants] = offersCapabilities
+    ? await Promise.all([
+        listNativeCapabilities(db, { connectorKey: connection.connectorKey }),
+        listGrantableAgents(db, { organizationId }),
+        listActiveGrants(db, { organizationId }),
+      ])
+    : [[], [], []];
   const needsReconnect = connector !== null && connector.authMethod !== 'none' && connectable && connection.status !== 'active';
 
   return (
@@ -118,6 +130,16 @@ export default async function ConnectionDetailPage({
         mayManage={mayManage}
         justConnected={justConnected}
       />
+      {offersCapabilities ? (
+        <ConnectionCapabilities
+          organizationId={organizationId}
+          connectionId={connectionId}
+          capabilities={capabilities}
+          grants={grants.filter((grant) => grant.connectionId === connectionId)}
+          agents={agents}
+          resources={resources}
+        />
+      ) : null}
     </SettingsPageFrame>
   );
 }

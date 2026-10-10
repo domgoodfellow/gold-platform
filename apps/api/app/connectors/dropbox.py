@@ -6,7 +6,7 @@ authorize step asks for offline access.
 
 from __future__ import annotations
 
-from app.connectors.base import Account, Capability, CapabilityInputError, OAuthApp, OAuthProvider, bounded
+from app.connectors.base import Account, Capability, CapabilityInputError, OAuthApp, OAuthProvider, bounded, limit, text
 from app.providers.providers import UpstreamRefused
 
 API = "https://api.dropboxapi.com/2"
@@ -20,8 +20,8 @@ class Dropbox(OAuthProvider):
     authorize_extra = {"token_access_type": "offline"}
 
     capabilities = (
-        Capability("dropbox.files.list", "Files and folders in one folder", "list_folder", "library"),
-        Capability("dropbox.files.metadata", "Metadata for one file or folder", "metadata", "library"),
+        Capability("dropbox.files.list", "Files and folders in one folder", "list_folder", "library", properties={"path": text("Folder path; empty for the root.", maximum=500), "limit": limit(50, 200)}),
+        Capability("dropbox.files.metadata", "Metadata for one file or folder", "metadata", "library", properties={"path": text("File or folder path.", maximum=500)}, required=("path",)),
     )
 
     def list_folder(self, access_token: str, params) -> dict:

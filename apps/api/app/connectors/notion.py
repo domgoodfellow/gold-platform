@@ -13,7 +13,7 @@ import time
 
 import httpx
 
-from app.connectors.base import Account, Capability, OAuthApp, OAuthProvider, Tokens, _json, bounded, segment
+from app.connectors.base import Account, Capability, OAuthApp, OAuthProvider, Tokens, _json, bounded, limit, segment, text
 from app.providers.providers import UpstreamRefused
 
 API = "https://api.notion.com/v1"
@@ -31,9 +31,9 @@ class Notion(OAuthProvider):
     default_expires_in = _TEN_YEARS
 
     capabilities = (
-        Capability("notion.search", "Pages and databases shared with GildOps", "search", "library"),
-        Capability("notion.database.query", "Rows of one shared database", "query_database", "library"),
-        Capability("notion.page.get", "One shared page's properties", "get_page", "library"),
+        Capability("notion.search", "Pages and databases shared with GildOps", "search", "library", properties={"query": text("Words to search for."), "limit": limit()}),
+        Capability("notion.database.query", "Rows of one shared database", "query_database", "library", properties={"database_id": text("The database."), "limit": limit()}, required=("database_id",), resource_type="notion_database", resource_param="database_id"),
+        Capability("notion.page.get", "One shared page's properties", "get_page", "library", properties={"page_id": text("The page.")}, required=("page_id",)),
     )
 
     def search(self, access_token: str, params) -> dict:

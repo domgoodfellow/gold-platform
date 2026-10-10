@@ -665,6 +665,98 @@ Resource/tool grants should be:
 
 AI tool access remains subject to the actor's own authority.
 
+`assistant_resource_grants` is the per-resource reading gate. A tool grant that is limited to one resource
+also requires that gate for an assistant (`assistant_may_read_resource`), so being granted a tool never
+widens what the assistant may read.
+
+---
+
+## Tool grants and execution
+
+A Connection says an external system is connected. It does not say who may use it, and nothing about how it
+is connected changes that.
+
+Five concepts stay apart, each in its own place:
+
+| Concept | Owner | Meaning |
+| --- | --- | --- |
+| Capability | declared in code (`app.connectors`) | A read operation a native connector supports, with its inputs and the workspace that uses it |
+| MCP server | `integration_mcp_servers` (one per Connection) | An external endpoint that offers tools |
+| MCP tool | `integration_mcp_tools` | A tool a server lists, reviewed and enabled by the Organization |
+| Grant | `integration_tool_grants` | One agent (or automation rule) may use one capability or tool, optionally on one resource |
+| Execution | `integration_executions` | One invocation: who asked, which target, the decision and the outcome |
+
+### Rules
+
+- **Discovered is not enabled is not granted.** A listed tool starts unreviewed and disabled. A person with
+  `integration.manage` reviews it (reads, or can change things) and enables it; only then can it be
+  granted. A tool whose name, description or schema later changes returns to unreviewed and disabled; a tool
+  the server stops listing is marked removed and disabled. Rediscovery never enables a tool or widens a grant.
+- **An MCP tool always needs a person's approval in this slice.** A server's `readOnlyHint` is its own claim.
+  The platform cannot enforce that a remote tool is read-only, so the reviewer's classification is recorded
+  but never removes the approval step. The table refuses an MCP grant that does not require approval.
+- **Native capabilities only read.** No native capability that writes is declared, and the executor refuses
+  one if it appears. A write needs its own permission and approval design.
+- **The principal and the Organization come from the runtime, never from arguments.** The execution context is
+  built only by `ExecutionContext.for_assistant` (a verified bearer token and the assistant resolved for that
+  caller) or `for_automation` (a rule id). Postgres derives the Organization from the caller's membership or
+  from the rule's own row, and refuses a business the caller is not in.
+- **A model sees handles, not targets.** Each live grant is offered under an opaque handle. A name the model
+  invents resolves to nothing; a grant revoked after the list was built is refused at the moment of the call.
+- **Descriptions, schemas and results from a third party are untrusted.** They reach a prompt shortened and
+  stripped, a schema reduced to its shape, and a result as bounded data. A credential used for a call is
+  removed from anything returned.
+
+### Execution sequence
+
+```text
+caller (agent or automation, on a verified session / its own rule)
+↓
+authorize (database): grant exists, belongs to this principal, target is live,
+principal is active, resource limit holds, approval required?
+↓ records the execution (allowed / refused / waiting for approval)
+↓
+allowed → read credential → native adapter or MCP client → bounded, redacted result
+waiting → a person approves or rejects; approval re-checks everything, then runs what was stored
+↓
+outcome recorded (status, error class, duration, size)
+```
+
+Authorization is asked before a credential is read. Approval is tied to one request: this principal, this
+target, these arguments, an expiry; a client-supplied `approved` flag does not exist.
+
+### What is recorded
+
+Facts, not content: principal, target, decision and reason, approval state, outcome, error class, duration,
+result size and a hash of the arguments. Arguments are held only while a request waits for a decision or is
+running, and are cleared afterwards. Results are never stored. `purge_integration_executions` fails calls
+that never reported back and deletes terminal history past the retention window; **no scheduler calls it yet**.
+
+### Who can be granted
+
+The operator agent (the assistant with an enabled `operator_copilot` deployment) is wired. Public and
+website assistants are never given external tools. The database also holds automation grants and an
+authorization path for them, and the executor accepts an automation context, but no automation action runs a
+capability yet, so the interface offers only agents.
+
+### Known limits
+
+- **A grant is the administrator's decision about everyone who may ask the agent.** The grant and the
+  agent's own state are checked at each call; the *asking operator's* own rights to the app's data are not.
+  A member with `assistant.ask` can therefore have the agent read through a tool even if that member could
+  not use the app directly. Mapping each capability to the actor permission it should also require is
+  follow-up work; until then grant only what everyone who may ask the agent may see.
+- An approved request runs at the moment of approval and its result is not returned to the conversation that
+  asked; agent runs are not resumable.
+- The person who triggered a request may approve it, and a business with one administrator will.
+- MCP servers authenticate with a bearer token only.
+
+### Health
+
+`sync` verifies a connection as a whole and writes its health. An execution never marks a connection healthy,
+and one refused operation (for example a scope never granted) does not mark it unhealthy; only a sign-in
+that can no longer be renewed does.
+
 ---
 
 ## Imports
@@ -1257,6 +1349,44 @@ MCP tools exposed to AI remain tools under the security model.
 
 ---
 
+### MCP servers
+
+An MCP server is an ordinary Connection (`mcp_server`, method `mcp`), so its access token lives in the same
+Vault path as any other credential and is disconnected, revoked and health-checked the same way. It has its
+own screen (Settings → Connections → MCP servers) and is not offered through Browse apps, whose Connect
+starts a vendor sign-in.
+
+Registering a server (`mcp_connect`, `apps/api`) checks the address, stores the optional bearer token, then
+initializes the server and lists its tools. It enables nothing.
+
+Supported: remotely hosted servers over Streamable HTTP (protocol versions `2025-06-18` and `2025-03-26`),
+authenticated by a bearer token or not at all. Not supported: stdio servers, OAuth for MCP servers, and
+using a server's resources or prompts. Each is a separate piece of work.
+
+### MCP transport safeguards
+
+- HTTPS only; no credentials in the address; loopback, private, link-local, metadata and other non-public
+  addresses are refused, including after DNS resolution (IPv4-mapped IPv6 included).
+- The address is resolved once, checked, and then **connected to** with the original hostname carried as the
+  `Host` header and the TLS server name, so a name that resolves differently later has nothing to change.
+- Redirects are never followed.
+- Responses are read as a bounded stream (1 MB), event streams are parsed as they arrive and read no further
+  than the reply, and there is a total deadline per request. Discovery is bounded in pages, items and bytes.
+- Replies that are not well-formed JSON-RPC are rejected. Protocol version is negotiated; an unknown one is
+  refused.
+- Credentials are never in a response, a log line, a discovery record or an error message: a server's own
+  error text has the bearer token removed before it is kept.
+
+**These are not a network control.** Address checks and pinning remove specific bypasses; they do not stop a
+compromised runtime from reaching internal addresses. A deployment that lets a business name an endpoint must
+filter outbound traffic from `apps/api` at the network (block private, link-local and metadata ranges), and
+declares that by setting `GILDOPS_MCP_CUSTOM_ENDPOINTS=enabled-behind-egress-controls`. Without it, MCP
+registration is refused, existing servers are not called, and Connections says custom servers are not
+available. Vercel's Python functions do not give this control by themselves; do not set the variable on a
+deployment that cannot enforce it.
+
+---
+
 ## Observability
 
 Every important external operation should emit enough structured evidence to troubleshoot without exposing secrets.
@@ -1364,7 +1494,11 @@ Before implementing a new Connector:
 11. define permissions and AI grants;
 12. add tenant Connections UI;
 13. add Platform support/operational view where needed;
-14. test OAuth/API-key failure and revocation.
+14. test OAuth/API-key failure and revocation;
+15. declare each read operation as a `Capability` on the connector (inputs, the workspace that uses it, and the
+    resource it works on if any), with a test case in `test_integration_capabilities.py`. A connector that
+    declares none offers nothing to an agent, and a capability that writes is refused until a write design
+    exists.
 
 Do not advertise a Connect control until the deployment is genuinely connectable.
 

@@ -7,7 +7,7 @@ files and calendars through Graph.
 
 from __future__ import annotations
 
-from app.connectors.base import Account, Capability, OAuthProvider, bounded, segment
+from app.connectors.base import Account, Capability, OAuthProvider, bounded, limit, segment, text
 
 GRAPH = "https://graph.microsoft.com/v1.0"
 
@@ -20,9 +20,9 @@ class Microsoft365(OAuthProvider):
     authorize_extra = {"response_mode": "query", "prompt": "select_account"}
 
     capabilities = (
-        Capability("calendar.events.list", "Upcoming events on the default calendar", "list_events", "field"),
-        Capability("onedrive.files.list", "Files and folders in OneDrive, at the root or in one folder", "list_files", "library"),
-        Capability("excel.range.get", "Cell values from one worksheet range of a workbook", "workbook_range", "library"),
+        Capability("calendar.events.list", "Upcoming events on the default calendar", "list_events", "field", properties={"limit": limit()}),
+        Capability("onedrive.files.list", "Files and folders in OneDrive, at the root or in one folder", "list_files", "library", properties={"folder_id": text("Folder id; defaults to the root."), "limit": limit()}),
+        Capability("excel.range.get", "Cell values from one worksheet range of a workbook", "workbook_range", "library", properties={"workbook_id": text("The workbook."), "worksheet": text("Worksheet name; defaults to Sheet1."), "range": text("A1 range, e.g. A1:D50.")}, required=("workbook_id",), resource_type="microsoft_workbook", resource_param="workbook_id"),
     )
 
     def list_events(self, access_token: str, params) -> dict:

@@ -71,12 +71,15 @@ export function AgentWorkbench({
   data,
   canManage,
   userId,
+  connectedTools = [],
 }: {
   organizationId: string;
   agent: Agent;
   data: AiWorkspaceData;
   canManage: boolean;
   userId: string;
+  /** What this agent has been given through Connections, read-only here. */
+  connectedTools?: { id: string; label: string; source: string; needsApproval: boolean }[];
 }) {
   const router = useRouter(),
     params = useSearchParams(),
@@ -601,9 +604,32 @@ export function AgentWorkbench({
                 ))}
                 <p className="border-t border-border pt-4 text-xs text-muted">
                   Reschedule proposals require a human decision in the global
-                  rail and canonical Work authorization at execution. External
-                  MCP execution is unavailable.
+                  rail and canonical Work authorization at execution.
                 </p>
+                <div className="space-y-2 border-t border-border pt-4 text-sm">
+                  <strong className="block">Connected tools</strong>
+                  <p className="text-xs text-muted">
+                    Tools from connected apps and MCP servers are given in Connections, never here. A tool an MCP server offers always waits for a person to approve each use.
+                  </p>
+                  {connectedTools.length === 0 ? (
+                    <p className="text-xs text-muted">Nothing from a connected app has been given to this agent.</p>
+                  ) : (
+                    <ul className="divide-y divide-border">
+                      {connectedTools.map((tool) => (
+                        <li key={tool.id} className="py-2">
+                          <span className="block">{tool.label}</span>
+                          <span className="text-xs text-muted">
+                            {tool.source}
+                            {tool.needsApproval ? " · a person approves each use" : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <ButtonLink tone="secondary" size="small" href={`/organizations/${organizationId}/settings/connections/mcp`}>
+                    Manage connected tools
+                  </ButtonLink>
+                </div>
               </div>
             </OperationalPanel>
           )}

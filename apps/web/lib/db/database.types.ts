@@ -3783,6 +3783,117 @@ export type Database = {
           },
         ]
       }
+      integration_executions: {
+        Row: {
+          approval_state: string
+          approved_at: string | null
+          approved_by: string | null
+          arguments_hash: string | null
+          capability_key: string | null
+          completed_at: string | null
+          connection_id: string | null
+          connector_key: string | null
+          correlation_id: string | null
+          decision: string
+          duration_ms: number | null
+          error_class: string | null
+          expires_at: string | null
+          grant_id: string | null
+          id: string
+          invoked_by: string | null
+          mcp_server_id: string | null
+          mcp_tool_id: string | null
+          organization_id: string
+          pending_arguments: Json | null
+          principal_id: string
+          principal_kind: string
+          refusal_reason: string | null
+          requested_at: string
+          result_bytes: number | null
+          started_at: string | null
+          status: string
+          target_kind: string | null
+          tool_name: string | null
+        }
+        Insert: {
+          approval_state?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          arguments_hash?: string | null
+          capability_key?: string | null
+          completed_at?: string | null
+          connection_id?: string | null
+          connector_key?: string | null
+          correlation_id?: string | null
+          decision: string
+          duration_ms?: number | null
+          error_class?: string | null
+          expires_at?: string | null
+          grant_id?: string | null
+          id?: string
+          invoked_by?: string | null
+          mcp_server_id?: string | null
+          mcp_tool_id?: string | null
+          organization_id: string
+          pending_arguments?: Json | null
+          principal_id: string
+          principal_kind: string
+          refusal_reason?: string | null
+          requested_at?: string
+          result_bytes?: number | null
+          started_at?: string | null
+          status: string
+          target_kind?: string | null
+          tool_name?: string | null
+        }
+        Update: {
+          approval_state?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          arguments_hash?: string | null
+          capability_key?: string | null
+          completed_at?: string | null
+          connection_id?: string | null
+          connector_key?: string | null
+          correlation_id?: string | null
+          decision?: string
+          duration_ms?: number | null
+          error_class?: string | null
+          expires_at?: string | null
+          grant_id?: string | null
+          id?: string
+          invoked_by?: string | null
+          mcp_server_id?: string | null
+          mcp_tool_id?: string | null
+          organization_id?: string
+          pending_arguments?: Json | null
+          principal_id?: string
+          principal_kind?: string
+          refusal_reason?: string | null
+          requested_at?: string
+          result_bytes?: number | null
+          started_at?: string | null
+          status?: string
+          target_kind?: string | null
+          tool_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_executions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_executions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integration_mappings: {
         Row: {
           created_at: string
@@ -3840,6 +3951,141 @@ export type Database = {
             columns: ["organization_id", "resource_id"]
             isOneToOne: false
             referencedRelation: "integration_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      integration_mcp_servers: {
+        Row: {
+          connection_id: string
+          created_at: string
+          created_by: string
+          discovery_status: string
+          enabled: boolean
+          endpoint: string
+          id: string
+          last_discovered_at: string | null
+          last_discovery_error: string | null
+          name: string
+          organization_id: string
+          protocol_version: string | null
+          server_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          connection_id: string
+          created_at?: string
+          created_by: string
+          discovery_status?: string
+          enabled?: boolean
+          endpoint: string
+          id?: string
+          last_discovered_at?: string | null
+          last_discovery_error?: string | null
+          name: string
+          organization_id: string
+          protocol_version?: string | null
+          server_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          connection_id?: string
+          created_at?: string
+          created_by?: string
+          discovery_status?: string
+          enabled?: boolean
+          endpoint?: string
+          id?: string
+          last_discovered_at?: string | null
+          last_discovery_error?: string | null
+          name?: string
+          organization_id?: string
+          protocol_version?: string | null
+          server_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_mcp_servers_organization_id_connection_id_fkey"
+            columns: ["organization_id", "connection_id"]
+            isOneToOne: true
+            referencedRelation: "integration_connections"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "integration_mcp_servers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_mcp_servers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_mcp_tools: {
+        Row: {
+          classification: string
+          description: string
+          enabled: boolean
+          first_seen_at: string
+          id: string
+          input_schema: Json
+          last_seen_at: string
+          name: string
+          organization_id: string
+          read_only_hint: boolean | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          schema_hash: string
+          server_id: string
+          status: string
+        }
+        Insert: {
+          classification?: string
+          description?: string
+          enabled?: boolean
+          first_seen_at?: string
+          id?: string
+          input_schema?: Json
+          last_seen_at?: string
+          name: string
+          organization_id: string
+          read_only_hint?: boolean | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          schema_hash: string
+          server_id: string
+          status?: string
+        }
+        Update: {
+          classification?: string
+          description?: string
+          enabled?: boolean
+          first_seen_at?: string
+          id?: string
+          input_schema?: Json
+          last_seen_at?: string
+          name?: string
+          organization_id?: string
+          read_only_hint?: boolean | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          schema_hash?: string
+          server_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_mcp_tools_organization_id_server_id_fkey"
+            columns: ["organization_id", "server_id"]
+            isOneToOne: false
+            referencedRelation: "integration_mcp_servers"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -3905,6 +4151,110 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_tool_grants: {
+        Row: {
+          assistant_id: string | null
+          automation_rule_id: string | null
+          capability_key: string | null
+          connection_id: string | null
+          granted_at: string
+          granted_by: string
+          id: string
+          mcp_tool_id: string | null
+          organization_id: string
+          requires_approval: boolean
+          resource_id: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          status: string
+          target_kind: string
+        }
+        Insert: {
+          assistant_id?: string | null
+          automation_rule_id?: string | null
+          capability_key?: string | null
+          connection_id?: string | null
+          granted_at?: string
+          granted_by: string
+          id?: string
+          mcp_tool_id?: string | null
+          organization_id: string
+          requires_approval?: boolean
+          resource_id?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          status?: string
+          target_kind: string
+        }
+        Update: {
+          assistant_id?: string | null
+          automation_rule_id?: string | null
+          capability_key?: string | null
+          connection_id?: string | null
+          granted_at?: string
+          granted_by?: string
+          id?: string
+          mcp_tool_id?: string | null
+          organization_id?: string
+          requires_approval?: boolean
+          resource_id?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          status?: string
+          target_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_tool_grants_organization_id_assistant_id_fkey"
+            columns: ["organization_id", "assistant_id"]
+            isOneToOne: false
+            referencedRelation: "ai_assistants"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "integration_tool_grants_organization_id_automation_rule_id_fkey"
+            columns: ["organization_id", "automation_rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "integration_tool_grants_organization_id_connection_id_fkey"
+            columns: ["organization_id", "connection_id"]
+            isOneToOne: false
+            referencedRelation: "integration_connections"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "integration_tool_grants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_tool_grants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_tool_grants_organization_id_mcp_tool_id_fkey"
+            columns: ["organization_id", "mcp_tool_id"]
+            isOneToOne: false
+            referencedRelation: "integration_mcp_tools"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "integration_tool_grants_organization_id_resource_id_fkey"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "integration_resources"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -11892,6 +12242,27 @@ export type Database = {
         }
         Returns: undefined
       }
+      authorize_assistant_tool_call: {
+        Args: {
+          p_arguments: Json
+          p_assistant_id: string
+          p_correlation?: string
+          p_grant_id: string
+          p_organization_id: string
+          p_resource_value?: string
+        }
+        Returns: Json
+      }
+      authorize_automation_tool_call: {
+        Args: {
+          p_arguments: Json
+          p_correlation?: string
+          p_grant_id: string
+          p_resource_value?: string
+          p_rule_id: string
+        }
+        Returns: Json
+      }
       automation_operating_summary: {
         Args: { p_organization_id: string; p_since: string; p_until: string }
         Returns: Json
@@ -12020,6 +12391,15 @@ export type Database = {
       }
       clear_plan_feature_override: {
         Args: { p_feature_id: string; p_plan_id: string }
+        Returns: undefined
+      }
+      complete_integration_execution: {
+        Args: {
+          p_error_class?: string
+          p_execution_id: string
+          p_result_bytes?: number
+          p_succeeded: boolean
+        }
         Returns: undefined
       }
       compose_organization_charges: {
@@ -12344,6 +12724,10 @@ export type Database = {
           time_zone: string
         }[]
       }
+      decide_integration_execution: {
+        Args: { p_approve: boolean; p_execution_id: string }
+        Returns: Json
+      }
       decline_commercial_proposal: {
         Args: { p_proposal_id: string }
         Returns: undefined
@@ -12425,6 +12809,19 @@ export type Database = {
         Args: { p_organization_id: string; p_submission_id: string }
         Returns: Json
       }
+      grant_integration_tool: {
+        Args: {
+          p_assistant_id: string
+          p_automation_rule_id: string
+          p_capability_key: string
+          p_connection_id: string
+          p_mcp_tool_id: string
+          p_organization_id: string
+          p_requires_approval?: boolean
+          p_resource_id?: string
+        }
+        Returns: string
+      }
       grant_plan_module: {
         Args: { p_module_id: string; p_plan_id: string }
         Returns: undefined
@@ -12432,6 +12829,40 @@ export type Database = {
       grant_plan_product: {
         Args: { p_plan_id: string; p_product_key: string }
         Returns: undefined
+      }
+      granted_tools_for_assistant: {
+        Args: { p_assistant_id: string; p_organization_id: string }
+        Returns: {
+          capability_key: string
+          connection_id: string
+          connector_key: string
+          grant_id: string
+          mcp_description: string
+          mcp_input_schema: Json
+          mcp_tool_name: string
+          requires_approval: boolean
+          resource_external_id: string
+          resource_id: string
+          resource_type: string
+          target_kind: string
+        }[]
+      }
+      granted_tools_for_automation: {
+        Args: { p_rule_id: string }
+        Returns: {
+          capability_key: string
+          connection_id: string
+          connector_key: string
+          grant_id: string
+          mcp_description: string
+          mcp_input_schema: Json
+          mcp_tool_name: string
+          requires_approval: boolean
+          resource_external_id: string
+          resource_id: string
+          resource_type: string
+          target_kind: string
+        }[]
       }
       hand_off_accepted_proposal: {
         Args: { p_proposal_id: string }
@@ -13055,6 +13486,10 @@ export type Database = {
         Returns: Json
       }
       published_hostname_site: { Args: { p_hostname: string }; Returns: Json }
+      purge_integration_executions: {
+        Args: { p_older_than?: string }
+        Returns: number
+      }
       queue_outbound_email: {
         Args: {
           p_attachments: Json
@@ -13396,6 +13831,17 @@ export type Database = {
           p_resource_type: string
         }
         Returns: string
+      }
+      record_mcp_discovery: {
+        Args: {
+          p_error: string
+          p_ok: boolean
+          p_protocol_version: string
+          p_server_id: string
+          p_server_name: string
+          p_tools: Json
+        }
+        Returns: number
       }
       record_message_delivery: {
         Args: { p_detail: string; p_id: string; p_sent: boolean }
@@ -13836,6 +14282,19 @@ export type Database = {
           resource_id: string
         }[]
       }
+      review_mcp_tool: {
+        Args: {
+          p_classification: string
+          p_enabled: boolean
+          p_organization_id: string
+          p_tool_id: string
+        }
+        Returns: undefined
+      }
+      revoke_integration_tool_grant: {
+        Args: { p_grant_id: string; p_organization_id: string }
+        Returns: undefined
+      }
       revoke_invitation: { Args: { p_id: string }; Returns: undefined }
       revoke_plan_module: {
         Args: { p_module_id: string; p_plan_id: string }
@@ -14007,6 +14466,14 @@ export type Database = {
           p_archived: boolean
           p_form_id: string
           p_organization_id: string
+        }
+        Returns: undefined
+      }
+      set_mcp_server_enabled: {
+        Args: {
+          p_enabled: boolean
+          p_organization_id: string
+          p_server_id: string
         }
         Returns: undefined
       }
@@ -14293,6 +14760,14 @@ export type Database = {
         Args: { p_filters?: Json; p_organization_id: string; p_view: string }
         Returns: Json
       }
+      swap_integration_credential: {
+        Args: {
+          p_connection_id: string
+          p_expected_refresh: string
+          p_secret: string
+        }
+        Returns: boolean
+      }
       sync_phone_number: {
         Args: {
           p_e164: string
@@ -14474,6 +14949,15 @@ export type Database = {
           p_releases_resource: boolean
         }
         Returns: undefined
+      }
+      upsert_mcp_server: {
+        Args: {
+          p_connection_id: string
+          p_endpoint: string
+          p_name: string
+          p_organization_id: string
+        }
+        Returns: string
       }
       upsert_platform_connector: {
         Args: {

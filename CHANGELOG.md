@@ -34,6 +34,14 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Connected tools can be governed and used — 2026-10-10
+
+- A business can add an MCP server (Settings → Connections → MCP servers), see the tools it offers, review and enable each one, and give the operator agent access to a tool. An MCP tool always waits for a person's approval, and a tool the server later changes comes back unreviewed and off.
+- The eight connected apps now offer read operations (calendar events, files, contacts, deals, channels, zones and so on) that an administrator can give the operator agent one at a time, optionally limited to one item. Nothing is available until it is given; none of them changes anything in the app.
+- Every use is recorded as who asked, which tool, the decision and the outcome. What was asked and what came back are not kept, and withdrawing access stops the next use immediately.
+- Custom MCP addresses stay off on a deployment until it declares network egress controls (`GILDOPS_MCP_CUSTOM_ENDPOINTS`).
+- Known limits: MCP servers use a bearer token only (no OAuth); automations hold grants in the database but no automation action can run a tool yet; an approved request runs when approved and is not returned to the conversation that asked; the retention job is not scheduled.
+
 ### Configuration and readiness convergence — 2026-10-10
 
 - Each workspace's Configure control now reads its destinations from the configuration registry with the same entitlement and permission gate as Settings: one named link or a menu, never a button that opens an unrelated collection, and nothing for a member who may not configure. Communications, Support, Work, Finance, Automations, AI, Marketing and Studio offer their real configuration doors; CRM keeps its rail.

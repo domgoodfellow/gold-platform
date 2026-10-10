@@ -3,6 +3,7 @@ import { requireOrganization } from "@/lib/route/organization";
 import { loadAiWorkspace } from "@/lib/application/ai/workspace";
 import { AgentWorkbench } from "@/features/ai/workbench";
 import { requireActor } from "@/lib/domain/tenancy/actor";
+import { listAgentTools } from "@/lib/domain/integrations/tool-access";
 export const dynamic = "force-dynamic";
 export default async function AgentPage({
   params,
@@ -21,6 +22,10 @@ export default async function AgentPage({
     .maybeSingle();
   if (result.error) throw result.error;
   if (!result.data) notFound();
+  // Only people who manage integrations can read grants; for anyone else the list is simply empty.
+  const connectedTools = organization.capabilities.includes("integration.manage")
+    ? await listAgentTools(db, { organizationId, agentId }).catch(() => [])
+    : [];
   return (
     <AgentWorkbench
       key={agentId}
@@ -28,6 +33,7 @@ export default async function AgentPage({
       userId={actor.id}
       agent={result.data}
       data={data}
+      connectedTools={connectedTools}
       canManage={organization.capabilities.includes("organization.manage")}
     />
   );
