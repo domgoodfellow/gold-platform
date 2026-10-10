@@ -19,7 +19,8 @@ describe('operational CRM dashboard',()=>{
     expect(screen.getByRole('link',{name:/Forecast this month/})).toHaveAttribute('href','/organizations/org/opportunities?kind=open&closeFrom=2026-10-01&closeBefore=2026-11-01');
     expect(screen.getByText('CA$1,250.50')).toBeInTheDocument();expect(screen.getByText('US$500.00')).toBeInTheDocument();
     expect(screen.getByText('No closed opportunities')).toBeInTheDocument();
-    expect(screen.getByRole('search')).toHaveAttribute('action','/organizations/org/sales/search');
+    expect(screen.queryByRole('search')).toBeNull();
+    expect(screen.getByLabelText('Reporting month')).toBeInTheDocument();
     expect(screen.getByRole('link',{name:'View pipeline'})).toHaveAttribute('href','/organizations/org/opportunities/pipeline');
     expect(screen.getByRole('link',{name:'View calendar'})).toHaveAttribute('href','/organizations/org/follow-ups/calendar');
   });
