@@ -166,6 +166,10 @@
       "category": "unit",
       "concerns": ["settings", "configuration", "permissions"]
     },
+    "apps/web/tests/unit/readiness-evidence.test.ts": {
+      "category": "unit",
+      "concerns": ["readiness", "setup"]
+    },
     "apps/web/tests/unit/brand-theme.test.ts": {
       "category": "unit",
       "concerns": ["settings", "branding"]

@@ -20,24 +20,28 @@ function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
 }
 
-/** Areas finished out of areas listed — a semantic count first; the bar only echoes it. */
+/**
+ * Two different questions, answered separately: what still *blocks* setup (required items only),
+ * and how many of the listed areas are finished (which includes recommended and optional ones, so
+ * it is never read as a launch score).
+ */
 export function SetupProgressCard({ overview }: { overview: SetupOverview }) {
   if (overview.total === 0) return null;
   const percent = Math.round((overview.ready / overview.total) * 100);
+  const required = overview.blockers.length;
+  const requiredLine = required === 0 ? 'No required items outstanding' : `${plural(required, 'required item', 'required items')} outstanding`;
 
   return (
     <Card as="section" aria-labelledby="setup-progress-heading">
       <SectionHeading id="setup-progress-heading">Progress</SectionHeading>
-      <p className="mt-1 text-sm">
-        <span className="font-medium tabular-nums">
-          {overview.ready} of {overview.total}
-        </span>{' '}
-        setup areas ready
+      <p className="mt-1 text-sm font-medium tabular-nums">{requiredLine}</p>
+      <p className="mt-2 text-sm text-muted">
+        <span className="tabular-nums">{overview.ready} of {overview.total}</span> setup areas ready, including recommended and optional ones
       </p>
       <Progress
         value={percent}
         className="mt-3"
-        aria-label={`${overview.ready} of ${overview.total} setup areas ready`}
+        aria-label={`${overview.ready} of ${overview.total} setup areas ready, including optional areas`}
       />
     </Card>
   );

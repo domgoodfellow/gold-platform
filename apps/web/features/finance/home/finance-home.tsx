@@ -28,7 +28,7 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
   const tabs = [{ key: 'overdue', label: 'Overdue invoices', count: overdue.total }, { key: 'outstanding', label: 'Outstanding invoices', count: open.total }, { key: 'quoted', label: 'Quoted, not invoiced', count: quotes.total }, { key: 'setup', label: 'Payment setup', count: setup.length }];
   const attentionHref = attention === 'quoted' ? `${finance}/quotes?status=not-invoiced` : attention === 'setup' ? `${base}/settings/pricing#getting-paid` : `${finance}/invoices?status=${attention}`;
   const periodQuery = `from=${period.from}&to=${period.to}`;
-  const readiness = setup.length ? 'Setup needed' : data.cardPaymentsEnabled ? 'Account connected' : 'Manual payments';
+  const readiness = setup.length ? 'Needs configuration' : data.cardPaymentsEnabled ? 'Account connected' : 'Manual payments';
   const kpis = [
     { label: 'Payments received', icon: TrendingUp, value: <Amounts values={summary?.received} empty="No payments recorded" />, context: `${period.month} · net of corrections`, href: `${finance}/payments?${periodQuery}` },
     { label: 'Outstanding invoices', icon: FileText, value: <Amounts values={summary?.outstanding} empty="Nothing outstanding" />, context: `${open.total} invoices · ${overdue.total} overdue · current`, href: `${finance}/invoices?status=outstanding` },

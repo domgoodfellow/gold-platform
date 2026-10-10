@@ -116,10 +116,10 @@ export function OrganizationReadiness({
         <div className="space-y-6">
           <section aria-label="Setup progress">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-medium">Progress</span>
-              <span className="tabular-nums text-muted">{overview.ready} of {overview.total} ready</span>
+              <span className="font-medium">{overview.blockers.length === 0 ? 'No required items outstanding' : countLabel(overview.blockers.length, 'required item') + ' outstanding'}</span>
             </div>
-            <Progress value={percent} className="mt-2" aria-label={`${overview.ready} of ${overview.total} setup areas ready`} />
+            <p className="mt-1 text-sm tabular-nums text-muted">{overview.ready} of {overview.total} setup areas ready, including recommended and optional ones</p>
+            <Progress value={percent} className="mt-2" aria-label={`${overview.ready} of ${overview.total} setup areas ready, including optional areas`} />
           </section>
           <ReadinessGroup importance="required" areas={overview.areas} />
           <ReadinessGroup importance="recommended" areas={overview.areas} />

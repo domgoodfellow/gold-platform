@@ -17,7 +17,7 @@ const HUBS = [
   ['studio', 'studio'],
 ] as const;
 
-async function doors(page: import('@playwright/test').Page, base: string): Promise<string[]> {
+async function doors(page: import('@playwright/test').Page): Promise<string[]> {
   const header = page.locator('main h1').first().locator('xpath=ancestor::header[1]');
   const link = header.getByRole('link', { name: /configure|queues|forms|service levels|resources|rules|agents|website|call setup|numbers/i });
   const trigger = header.getByRole('button', { name: 'Configure' });
@@ -40,7 +40,7 @@ test.describe('owner', () => {
       const base = `/organizations/${ctx.organizationId}`;
       await page.goto(`${base}/${segment}`);
       await expect(page.locator('main h1').first()).toBeVisible();
-      const found = await doors(page, base);
+      const found = await doors(page);
       if (found.length === 0) {
         // Not entitled: the hub must then agree with the Settings directory, which hides the same door.
         const listed = name === 'ai' ? 'Agent deployments' : name === 'automations' ? 'Automation rules' : null;
