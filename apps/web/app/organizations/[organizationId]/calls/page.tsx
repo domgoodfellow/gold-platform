@@ -19,7 +19,7 @@ import { callingNumber } from '@/lib/domain/reception/telephony';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
-import { callbackBase, telephonyProvider } from '@/lib/adapters/telephony';
+import { callingRuntimeConfigured } from '@/lib/application/communications/calling-runtime';
 import { communicationsProviderReadiness } from '@/lib/domain/reception/provider-readiness';
 import { availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { requireOrganization } from '@/lib/route/organization';
@@ -39,7 +39,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
   const mayCall = organization.capabilities.includes('call.place');
   const base = `/organizations/${organizationId}/calls`;
 
-  const [page, counts, todays, outcomes, number, routes, numbers, members, usual, provider, readiness, featureStates] = await Promise.all([
+  const [page, counts, todays, outcomes, number, routes, numbers, members, usual, runtimeConfigured, readiness, featureStates] = await Promise.all([
     listCallPage(db, { organizationId, filter: callFilterFromParams(callParams, organization.timezone), cursor }),
     getCallCounts(db, { organizationId, dayStart: day.startsAt, dayEnd: day.endsAt }),
     listCallPage(db, { organizationId, filter: { since: day.startsAt, until: day.endsAt }, limit: 100 }),
@@ -49,14 +49,14 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
     listPhoneNumbers(db, { organizationId }),
     listMembers(db, { organizationId }),
     mayCall ? resolveOutboundNumber(db, { organizationId }) : Promise.resolve(null),
-    mayCall ? telephonyProvider() : null,
+    callingRuntimeConfigured(mayCall),
     communicationsProviderReadiness(db, { organizationId }),
     organizationResolvedFeatureStates(db, { organizationId }),
   ]);
 
   const numberById = new Map(numbers.map((entry) => [entry.id, { e164: entry.e164, label: entry.label }]));
   const canCall = mayCall && availableFeatureKeys(featureStates).has('outbound_calling');
-  const runtimeReady = canCall && !!provider && !!callbackBase() && readiness === 'ready';
+  const runtimeReady = canCall && runtimeConfigured && readiness === 'ready';
   const dialable = (runtimeReady ? numbers : [])
     .filter((entry) => entry.voiceOutboundEnabled && entry.readiness === 'ready' && entry.lifecycle === 'active' && (entry.origin === 'provisioned' || entry.origin === 'external'))
     .map((entry) => ({ id: entry.id, e164: entry.e164, label: entry.label }));

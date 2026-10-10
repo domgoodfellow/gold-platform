@@ -66,7 +66,7 @@ describe('canonical Settings route contract', () => {
       { label: 'Settings', href: `/organizations/${ORG}/settings` },
       { label: 'Account', href: `/settings/account?org=${ORG}` },
     ]);
-    expect(read('app/organizations/[organizationId]/settings/pricing/page.tsx')).toContain("label: 'Settings'");
+    expect(read('app/organizations/[organizationId]/settings/pricing/page.tsx')).toMatch(/label:\s*'Settings'/);
     expect(read('app/organizations/[organizationId]/settings/access/access-page.tsx')).toContain("label: 'Access'");
     expect(read('app/organizations/[organizationId]/settings/connections/[connectionId]/page.tsx')).toContain("label: 'Connections'");
     // Phase C (Slice 9) moved this route's identity into the Screen its thin page delegates to.
@@ -106,7 +106,7 @@ describe('Settings is a landing page, not a persistent tab bar (IA correction)',
 
   it('the landing chooser exposes all five destinations, and only there', () => {
     expect(readFileSync(`${ROOT}/features/settings/settings-landing.tsx`, 'utf8')).toContain('settingsScopesFor(organizationId)');
-    expect(landing).toContain('<SettingsLanding organizationId={organizationId} />');
+    expect(landing).toContain('<SettingsLanding organizationId={organizationId}');
   });
 
   it('no detail page under Settings renders the retired global scope tab bar', () => {
@@ -144,7 +144,7 @@ describe('Settings is a landing page, not a persistent tab bar (IA correction)',
     ]) {
       const source = read(page);
       expect(source, page).toContain('settingsLandingHref(organizationId)');
-      expect(source, page).toContain("label: 'Organization'");
+      expect(source, page).toMatch(/label:\s*'Organization'/);
     }
   });
 

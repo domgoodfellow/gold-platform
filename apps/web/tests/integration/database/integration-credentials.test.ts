@@ -159,10 +159,11 @@ describe('the machine role records what happened', () => {
     expect(read.rows[0]?.secret).toBe(ROTATED);
   });
 
-  it('shows the business a failure in the provider’s words, and never a credential', async () => {
+  it('shows the business that verification failed without echoing the provider’s raw text, and never a credential', async () => {
     await asOperator(() => pg.query("select public.record_integration_health($1, false, 'Token has been expired or revoked.')", [connectionId]));
     const [failed] = (await listConnections(alice.db, { organizationId: alice.organizationId })).filter((c) => c.id === connectionId);
-    expect(failed).toMatchObject({ status: 'needs_attention', lastError: 'Token has been expired or revoked.' });
+    expect(failed).toMatchObject({ status: 'needs_attention', lastError: 'Connection verification failed. Reconnect the application.' });
+    expect(JSON.stringify(failed)).not.toContain('Token has been expired');
     expect(JSON.stringify(failed)).not.toContain('refresh-');
 
     await asOperator(() => pg.query("select public.record_integration_health($1, true, null, 'alice@work.test', array['a','b'])", [connectionId]));

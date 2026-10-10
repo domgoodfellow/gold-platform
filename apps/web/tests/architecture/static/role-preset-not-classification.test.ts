@@ -43,7 +43,8 @@ describe('role presets are templates, never runtime classifications', () => {
     // a preset's key/label, against a literal string to decide behaviour, instead of checking
     // the capability list every role and preset already carries.
     const suspectPatterns = [
-      /role\.name\s*===/,
+      // `typeof role.name === 'string'` is a shape check on an untrusted document, not a comparison of identity.
+      /(?<!typeof\s)role\.name\s*===/,
       /roleName\s*===/,
       /preset\.key\s*===/,
       /presetKey\s*===/,

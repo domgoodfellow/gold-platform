@@ -61,13 +61,16 @@ async function freshOrganization(): Promise<{ db: SupabaseClient; organizationId
   return { db, organizationId };
 }
 
+const HOME_LOAD = fileURLToPath(new URL('../../../lib/application/home/load.ts', import.meta.url));
+const HOME_READS = fileURLToPath(new URL('../../../lib/application/home/reads.ts', import.meta.url));
+
 describe('Home, with nothing recorded yet', () => {
-  it('renders one intentional state rather than silent zeroes', () => {
-    const source = `${readFileSync(TODAY, 'utf8')}
-${readFileSync(TODAY_FEATURE, 'utf8')}`;
-    expect(source).toContain('const operationalEmpty');
-    expect(source).toContain('kpis.length > 0');
-    expect(source).toContain('Nothing is scheduled today.');
+  it('renders an intentional state for each region rather than silent zeroes', () => {
+    const source = readFileSync(TODAY_FEATURE, 'utf8');
+    expect(source).toContain('No items requiring attention in this authorized view.');
+    expect(source).toContain('No authorized performance projection is available for this period.');
+    // A source that failed is unknown, never presented as an empty queue.
+    expect(source).toContain('Other queues are unknown.');
   });
 });
 
@@ -89,20 +92,22 @@ ${readFileSync(TODAY_FEATURE, 'utf8')}`;
     expect(source).not.toMatch(/setup is (complete|finished|done)/i);
   });
 
-  it('preserves the existing schedule and work reads', () => {
-    // The day is read through `listScheduleDays`, which carries scheduled work nobody is on.
-    expect(source).toContain("import { listScheduleDays } from '@/lib/domain/scheduling/availability'");
-    expect(source).toContain("import { listWorkItems } from '@/lib/domain/work-items/work-items'");
-    expect(source).toContain('listScheduleDays(db, {');
+  it('reads Work through the canonical Work read and computes no availability of its own', () => {
+    const reads = readFileSync(HOME_READS, 'utf8');
+    expect(reads).toContain("import { listWorkItems, type WorkItem } from '@/lib/domain/work-items/work-items'");
+    expect(reads).not.toMatch(/freeWindows|openWindows|groupBookedByResource/);
   });
 
-  it('gates optional blocks on the workspace being available, never on their current count', () => {
-    expect(source).toMatch(/hasAutomation \? listAutomationRuns/);
-    expect(source).toMatch(/hasCommunications \? listCalls/);
+  it('gates each workspace source on the workspace being available, never on its current count', () => {
+    const load = readFileSync(HOME_LOAD, 'utf8');
+    expect(load).toContain("if (available('automations')) jobs.push(['Automations'");
+    expect(load).toContain("if (available('comms')) jobs.push(['Communications'");
   });
 
-  it('counts only today’s calls when naming calls that still need a write-up', () => {
-    expect(source).toContain('todaysCalls.filter((call) => call.outcome === null).length');
+  it('names calls awaiting a write-up from the call read, not from a page-local count', () => {
+    const reads = readFileSync(HOME_READS, 'utf8');
+    expect(reads).toContain('needsWrapUp: true');
+    expect(reads).toContain("'call-wrap-up'");
   });
 });
 

@@ -66,6 +66,7 @@ export function NewAgent({
           </PageDrawerDescription>
         </PageDrawerHeader>
         <form
+          id="new-agent-form"
           onSubmit={(event) => {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
@@ -92,7 +93,7 @@ export function NewAgent({
             });
           }}
         >
-          <PageDrawerBody className="space-y-5">
+          <div className="space-y-5">
             <Field label="Name">
               <TextInput
                 name="name"
@@ -130,7 +131,8 @@ export function NewAgent({
                 {error}
               </p>
             )}
-          </PageDrawerBody>
+          </div>
+        </form>
           <PageDrawerFooter>
             <Button
               type="button"
@@ -139,11 +141,10 @@ export function NewAgent({
             >
               Cancel
             </Button>
-            <Button disabled={pending}>
+            <Button type="submit" form="new-agent-form" disabled={pending}>
               {pending ? "Creating…" : "Create draft"}
             </Button>
           </PageDrawerFooter>
-        </form>
       </PageDrawerContent>
     </PageDrawer>
   );

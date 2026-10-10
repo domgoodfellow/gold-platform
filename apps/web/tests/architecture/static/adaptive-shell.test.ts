@@ -181,10 +181,12 @@ describe('Setup is kernel and drafting is an optional accelerator inside it', ()
 
   it('keeps the drafting workflow, drawn inside Setup only when its module is on', () => {
     const page = read('app/organizations/[organizationId]/setup/page.tsx');
-    expect(page).toContain("usableModules.has('drafting')");
+    // Drafting is drawn when the member may ask for a proposal or one already exists — never
+    // because a module is on or off, since Setup itself is kernel.
+    expect(page).toContain('const draftingOn = mayPropose || proposal !== null;');
     expect(page).toContain('{draftingOn ? (');
-    // The lifecycle above it — readiness, areas, launch — is not inside that condition.
-    expect(page.indexOf('<SetupAreaList')).toBeLessThan(page.indexOf('{draftingOn ? ('));
+    // The lifecycle above it — readiness, steps, launch — is not inside that condition.
+    expect(page.indexOf('<GuidedSetup')).toBeLessThan(page.indexOf('{draftingOn ? ('));
   });
 });
 

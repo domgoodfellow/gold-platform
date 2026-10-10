@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 /**
- * The neutral interaction vocabulary (`docs/ui-spec.md` §3): hover, selected, focus-visible,
+ * The neutral interaction vocabulary (`docs/ui-system.md` §3): hover, selected, focus-visible,
  * primary, destructive, disabled. Source guards, like `workspace-shell.test.ts` — jsdom computes
  * no styles, so what can be pinned is where the states are written and what they must not use.
  * The rendered values were checked in a browser: neutral hover is the sidebar's own
@@ -103,7 +103,7 @@ describe('Badge: tenant statuses are neutral; GOLD-owned facts may carry a tone'
   });
 
   it('the spec states the rule the code follows', () => {
-    const spec = read(`${fileURLToPath(new URL('../../../../../docs/ui-spec.md', import.meta.url))}`);
+    const spec = read(`${fileURLToPath(new URL('../../../../../docs/ui-system.md', import.meta.url))}`);
     expect(spec).toContain('GildOps-owned facts');
     expect(spec).toContain('Tenant-authored statuses stay neutral');
   });

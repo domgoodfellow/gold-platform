@@ -200,7 +200,7 @@ describe('a lost or withdrawn authorization stops offering its repositories', ()
 
     const connection = (await listConnections(alice.db, { organizationId: alice.organizationId }))[0]!;
     expect(connection.status).toBe('needs_attention');
-    expect(connection.lastError).toMatch(/no longer recognizes/);
+    expect(connection.lastError).toBe('Connection verification failed. Reconnect the application.');
     expect(await listSourceRepositories(alice.db, { organizationId: alice.organizationId })).toEqual([]);
 
     await health(true);

@@ -113,7 +113,7 @@ const EVIDENCE: readonly [string, readonly string[]][] = [
   ['field.scheduling', ['apps/web/lib/domain/scheduling/availability.ts', 'apps/web/app/organizations/[organizationId]/schedule/page.tsx', 'apps/web/tests/integration/database/scheduling.test.ts']],
   ['field.resources', ['apps/web/lib/domain/resources/resources.ts', 'apps/web/app/organizations/[organizationId]/resources/page.tsx', 'apps/web/tests/integration/database/resources.test.ts']],
   ['field.assets_locations', ['apps/web/lib/domain/assets/assets.ts', 'apps/web/app/organizations/[organizationId]/assets/page.tsx', 'apps/web/tests/integration/database/location-asset-timeline.test.ts']],
-  ['field.dispatch', ['apps/web/lib/domain/automation/rules.ts', 'apps/web/features/automations/rules/action-list.tsx', 'apps/web/tests/integration/database/automations.test.ts']],
+  ['field.dispatch', ['apps/web/lib/domain/automation/rules.ts', 'apps/web/features/automations/rules/add-action-sheet.tsx', 'apps/web/tests/integration/database/automations.test.ts']],
   ['finance', ['apps/web/lib/domain/billing/invoices.ts', 'apps/web/features/work/billing-forms.tsx', 'apps/web/app/organizations/[organizationId]/pricing/page.tsx', 'apps/web/tests/integration/database/invoices.test.ts']],
   ['automations', ['apps/web/lib/domain/automation/rules.ts', 'apps/web/app/organizations/[organizationId]/automations/[ruleId]/page.tsx', 'apps/web/app/organizations/[organizationId]/automations/page.tsx', 'apps/web/tests/integration/database/automations.test.ts']],
   ['agents', ['apps/web/lib/domain/assistant/questions.ts', 'apps/web/features/agent/tenant-agent-rail.tsx', 'apps/web/features/agent/actions.ts']],

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { AppPage } from '@/components/layout/app-page';
 import { CollectionHeader } from '@/components/patterns/collection-header';
-import { ButtonLink } from '@/components/controls/button';
+import { Button, ButtonLink } from '@/components/controls/button';
 import { Hint, TextInput, SelectInput } from '@/components/controls/inputs';
 import { EmptyState } from '@/components/surfaces/section';
 import { NewFormDrawer } from '@/features/studio/forms/new-form-drawer';
@@ -71,7 +71,7 @@ export default async function StudioFormsPage({ params, searchParams }: PageProp
               <option value="all">All active</option><option value="draft">Draft</option><option value="published">Published</option><option value="changes">Published with changes</option><option value="archived">Archived</option>
             </SelectInput>
             <SelectInput name="sort" aria-label="Sort forms" defaultValue={sort}><option value="updated">Recently updated</option><option value="name">Name</option><option value="responses">Most responses</option></SelectInput>
-            <button className="rounded-md border border-border px-3 py-2 text-sm hover:bg-hover">Apply</button>
+            <Button type="submit" tone="secondary">Apply</Button>
           </form>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm [&_td]:px-4 [&_td]:py-3 [&_th]:whitespace-nowrap [&_th]:px-4 [&_th]:py-2 [&_th]:text-xs [&_th]:font-medium [&_th]:text-muted">

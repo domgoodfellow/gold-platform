@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
  * The Python deployable handlers, held to one another so their count cannot drift again.
  *
  * Four things describe the same set and had come to disagree: the files in `apps/api/api/`, the
- * rewrites in `apps/api/vercel.json`, the route table in `apps/api/README.md`, and the handler wiring
+ * rewrites in `apps/api/vercel.json`, the route authority named in `apps/api/README.md`, and the handler wiring
  * test. Two handlers had no rewrite (so their documented route did not exist), the README listed seven
  * of thirteen, and one handler had no wiring test. The table below is the single explicit inventory;
  * each of the four is checked against it, so adding, removing or forgetting a handler fails here.
@@ -95,18 +95,15 @@ describe('vercel.json', () => {
   });
 });
 
-describe('the README route table', () => {
-  const rows = [...read('README.md').matchAll(/^\|\s*`(?:GET|POST)(?:, (?:GET|POST))* (\/[^`]+)`\s*\|\s*`api\/([a-z_]+)\.py`/gm)].map((match) => ({
-    route: match[1],
-    file: match[2],
-  }));
+describe('the README names the one route authority and keeps no second table', () => {
+  const readme = read('README.md');
 
-  it('lists every handler at its route, and no handler that is gone', () => {
-    expect(rows.map((row) => `${row.route} ${row.file}`).sort()).toEqual(INVENTORY.map((entry) => `${entry.route} ${entry.file}`).sort());
+  it('points at vercel.json as the executable route mapping', () => {
+    expect(readme).toContain('apps/api/vercel.json');
   });
 
-  it('states the count it has', () => {
-    expect(read('README.md')).toContain(`${INVENTORY.length} deployable handlers`);
+  it('does not restate the routes as a table that could drift from it', () => {
+    expect(readme).not.toMatch(/^\|\s*`(?:GET|POST)[^`]* \/[^`]+`\s*\|\s*`api\//m);
   });
 });
 

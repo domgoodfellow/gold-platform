@@ -88,7 +88,10 @@ describe('the public address names the form; a caller never supplies an id', () 
 
   it('reads and writes only through the anonymous doors, and writes through exactly one', () => {
     const source = read('lib/domain/forms/public-forms.ts');
-    expect([...source.matchAll(/\.rpc\('([a-z_]+)'/g)].map((match) => match[1]).sort()).toEqual(['published_form', 'published_form_by_key', 'published_hostname_form', 'submit_public_form_by_key']);
+    const doors = [...source.matchAll(/\.rpc\('([a-z_]+)'/g)].map((match) => match[1]).sort();
+    // One submission is one write: attributed (Marketing) and plain submissions are two doors, chosen once by `input.attribution`.
+    expect(doors).toEqual(['published_form', 'published_form_by_key', 'published_hostname_form', 'submit_marketing_form', 'submit_public_form_by_key']);
+    expect(source.match(/input\.attribution \? await db\.rpc\('submit_marketing_form'/g)).toHaveLength(1);
     expect(source).not.toMatch(/\.from\(/);
   });
 
@@ -122,7 +125,7 @@ describe('every Studio forms action checks the caller before doing anything', ()
       // The body starts after the line that closes the signature: `}): Promise<...> {`.
       const signatureEnd = /\): Promise<[^\n]*> \{\r?\n/.exec(action);
       const body = action.slice((signatureEnd?.index ?? 0) + (signatureEnd?.[0].length ?? 0));
-      expect(body.trimStart().startsWith('await requireOrganization('), action.split('(')[0]).toBe(true);
+      expect(/^(?:const \{[^}]*\} = )?await requireOrganization\(/.test(body.trimStart()), action.split('(')[0]).toBe(true);
     }
   });
 });
@@ -179,7 +182,8 @@ describe('a public write ends only the session it began', () => {
     // The portal's exchange is the second helper. It ends a session only on a client that holds
     // the portal's own cookie (below), so it can never end a Studio or a booking visitor's.
     // The proposal's exchange is the third, on the same terms, in the proposal's own cookie.
-    expect(offenders.sort()).toEqual(['lib/domain/customers/proposal-access.ts', 'lib/domain/identity/anonymous-session.ts', 'lib/domain/identity/credentials.ts', 'lib/domain/portal/portal.ts']);
+    // Email change proves the code on a throwaway verifier client and ends only that client's local session, never the actor's.
+    expect(offenders.sort()).toEqual(['lib/domain/customers/proposal-access.ts', 'lib/domain/identity/anonymous-session.ts', 'lib/domain/identity/credentials.ts', 'lib/domain/identity/profile.ts', 'lib/domain/portal/portal.ts']);
   });
 
   it('keeps the portal session in a cookie of its own, so it can neither replace nor end another', () => {

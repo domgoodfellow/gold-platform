@@ -159,8 +159,8 @@ describe('the shell asks one question — is this business in SETUP — and runs
 
   it('the Setup page still computes and renders the real progress, and launch stays a domain guard', () => {
     const page = read(`${WEB}/app/organizations/[organizationId]/setup/page.tsx`);
-    expect(page).toContain('computeSetupOverview(db, { organizationId })');
-    expect(page).toContain('<SetupProgressCard overview={overview} />');
+    expect(page).toContain('computeSetupOverview(db, { organizationId }, states)');
+    expect(read(`${WEB}/features/setup/guided-setup.tsx`)).toContain('<SetupProgressCard overview={overview} />');
     expect(read(`${WEB}/features/setup/setup-cockpit.tsx`)).toContain('{overview.ready} of {overview.total}');
     expect(read(`${WEB}/lib/domain/tenancy/lifecycle.ts`)).toContain('export async function launchOrganization(');
   });

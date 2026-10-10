@@ -105,14 +105,6 @@ describe('M11 — a destructive action with nothing between it and the write', (
     },
     {
       actions: `${APP_ROOT}/organizations/[organizationId]/automations/actions.ts`,
-      forms: `${FEATURES_ROOT}/automations/rules/condition-list.tsx`,
-    },
-    {
-      actions: `${APP_ROOT}/organizations/[organizationId]/automations/actions.ts`,
-      forms: `${FEATURES_ROOT}/automations/rules/action-list.tsx`,
-    },
-    {
-      actions: `${APP_ROOT}/organizations/[organizationId]/automations/actions.ts`,
       forms: `${FEATURES_ROOT}/automations/templates/delete-message-dialog.tsx`,
     },
     {
@@ -125,7 +117,7 @@ describe('M11 — a destructive action with nothing between it and the write', (
     },
     {
       actions: `${APP_ROOT}/organizations/[organizationId]/settings/actions.ts`,
-      forms: `${FEATURES_ROOT}/branding/brand-forms.tsx`,
+      forms: `${FEATURES_ROOT}/branding/logo-controls.tsx`,
     },
     {
       actions: `${APP_ROOT}/organizations/[organizationId]/work/actions.ts`,
@@ -142,6 +134,13 @@ describe('M11 — a destructive action with nothing between it and the write', (
     const matches = source.matchAll(/export async function ((?:delete|remove|revoke|cancel)\w*Action)/g);
     return [...matches].map((match) => match[1]);
   }
+
+  it('confirms removing a condition or an action: one dialog, both destructive actions behind it', () => {
+    const removeNode = readFileSync(`${FEATURES_ROOT}/automations/rules/remove-node.tsx`, 'utf8');
+    expect(removeNode).toContain('removeConditionAction');
+    expect(removeNode).toContain('removeActionAction');
+    expect(removeNode).toContain('<ConfirmSubmit');
+  });
 
   it('confirms every delete/remove/revoke/cancel action the operator shell exposes', () => {
     for (const { actions, forms } of PAIRS) {

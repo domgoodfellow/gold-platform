@@ -155,7 +155,10 @@ describe('listSchedule still works for its existing callers, and Week reuses the
     expect(availability).toMatch(/export async function listSchedule\(/);
     expect(read(`${ROUTES}/field/page.tsx`)).toContain('workOperations(db,');
     expect(read(`${WEB}/lib/application/work/operations.ts`)).toContain('listScheduleDays(db, {');
-    expect(read(`${ROUTES}/home/page.tsx`)).toContain('listScheduleDays(db, {');
+    // Home counts scheduled Work through the canonical Work read and computes no availability of its own.
+    const home = read(`${WEB}/lib/application/home/reads.ts`);
+    expect(home).toContain('listWorkItems(');
+    expect(home).not.toMatch(/freeWindows|openWindows|groupBookedByResource/);
   });
 
   it('exports listScheduleDays for several tenant calendar days at once', () => {

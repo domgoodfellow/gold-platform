@@ -20,10 +20,9 @@ describe('Today → Work → Work item operator flow', () => {
   });
 
   it('makes creation the board’s one leading disclosure instead of a permanent trailing form', () => {
-    expect(workList).toMatch(
-      /<Disclosure[\s\S]{0,160}summary="Add work"[\s\S]{0,160}tone="primary"/,
-    );
-    expect(workList).toContain('defaultOpen={workItems.length === 0}');
+    expect(workList).toContain('<WorkCreateDrawer');
+    expect(workList).toContain('defaultOpen={createOpen}');
+    expect(readFileSync(`${WEB}/features/work/work-create-drawer.tsx`, 'utf8')).toContain('<PageDrawerTrigger asChild><Button size="small">');
   });
 
   it('leaves no duplicate catch-all work form behind', () => {

@@ -8,6 +8,10 @@ const rows = (value: unknown, check: (item: Record<string, unknown>) => boolean)
 
 /** Structural boundary for untrusted documents. Values remain each canonical owner's rules. */
 export function readBusinessShape(value: unknown): BusinessShape {
+  // The one structural gap with its own explanation: whether the work is scheduled is the business's to state.
+  if (record(value) && typeof value.schedulable !== 'boolean') {
+    throw new DomainError('This setup does not say whether the work is scheduled.', 'configuration.schedulable_missing');
+  }
   const valid = record(value)
     && typeof value.typeName === 'string' && typeof value.schedulable === 'boolean'
     && strings(value.statuses)

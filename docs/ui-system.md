@@ -1427,6 +1427,15 @@ Use loading indicators that preserve page structure where possible.
 
 Avoid full-page spinners for local mutations.
 
+### Status colour
+
+Colour on a status states a fact, never a label's wording.
+
+- GildOps-owned facts may carry a semantic tone: a verified connection, a failed execution, a setup area that is ready. They use `success`, `warning` or `danger`.
+- Tenant-authored statuses stay neutral. A stage, case status or custom label the organization wrote has no platform meaning, so it is never coloured by comparing its text. Where a domain keeps an authoritative classification (an opportunity stage's Open, Won or Lost; a case's open or resolved state), that classification may supply a tone, separately from the label.
+- Brand and interaction colour (`accent`, `accent-text`) never carries operational meaning.
+- State is never conveyed by colour alone: pair it with text or an icon.
+
 ---
 
 ### Success

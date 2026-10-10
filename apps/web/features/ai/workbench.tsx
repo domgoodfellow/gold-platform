@@ -984,6 +984,7 @@ function DeploymentEditor({
           </PageDrawerDescription>
         </PageDrawerHeader>
         <form
+          id="deployment-form"
           onChange={() => setDirty(true)}
           onSubmit={(e) => {
             e.preventDefault();
@@ -1026,7 +1027,7 @@ function DeploymentEditor({
             });
           }}
         >
-          <PageDrawerBody className="space-y-5">
+          <div className="space-y-5">
             <Field label="Channel">
               <SelectInput
                 disabled={Boolean(deployment) || !canManage}
@@ -1253,7 +1254,8 @@ function DeploymentEditor({
                 {error}
               </p>
             )}
-          </PageDrawerBody>
+          </div>
+        </form>
           <PageDrawerFooter>
             {deployment && !deployment.enabled && canManage && (
               <Button type="button" tone="secondary" disabled={pending} onClick={() => {
@@ -1268,7 +1270,7 @@ function DeploymentEditor({
             <Button type="button" tone="secondary" onClick={dismiss}>
               Cancel
             </Button>
-            <Button
+            <Button type="submit" form="deployment-form"
               disabled={
                 pending ||
                 !canManage ||
@@ -1279,7 +1281,6 @@ function DeploymentEditor({
               {pending ? "Saving…" : "Save deployment"}
             </Button>
           </PageDrawerFooter>
-        </form>
       </PageDrawerContent>
     </PageDrawer>
   );
