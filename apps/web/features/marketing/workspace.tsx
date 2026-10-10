@@ -53,7 +53,6 @@ export function MarketingWorkspace({ organizationId, timezone, data, view, mayMa
   </form>;
   return <AppPage className="@container/marketing space-y-4 pb-8">
     <PageHeader
-      className="mb-0"
       crumbs={view === 'home' ? [] : [{ label: 'Marketing', href: base }, ...(view === 'detail' ? [{ label: 'Campaigns', href: `${base}/campaigns` }] : [])]}
       title={({home:'Marketing',campaigns:'Campaigns',audiences:'Audiences',leads:'Leads',performance:'Performance',detail:campaign?.name??'Campaign'})[view]}
       meta={view==='detail'&&campaign?OBJECTIVES[campaign.objective]:undefined}

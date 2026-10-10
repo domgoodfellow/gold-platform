@@ -647,7 +647,6 @@ export function SupportWorkspace({
   return (
     <AppPage className={view === "home" ? "space-y-3" : "space-y-4"}>
       <PageHeader
-        className="mb-0"
         crumbs={view === "home" ? [] : [{ label: "Support", href: base }]}
         title={view === "detail" ? `${c?.case_number} · ${c?.title}` : titles[view]}
         meta={

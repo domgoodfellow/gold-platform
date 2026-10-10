@@ -53,7 +53,6 @@ export function CommunicationsHome({ organizationId, timezone, data }: { organiz
   ];
   return <AppPage data-communications-dashboard className="@container/comms space-y-3 pb-14 md:pb-0">
     <PageHeader
-      className="mb-0"
       title="Communications"
       actions={<>
         {mayMessage ? <ButtonLink tone="primary" href={inbox}><MessageSquare aria-hidden /> Open inbox</ButtonLink> : null}

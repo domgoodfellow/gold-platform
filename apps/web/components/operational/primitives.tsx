@@ -239,7 +239,7 @@ export function ViewNavigation({
   className?: string;
 }) {
   return (
-    <nav aria-label={label} className={cx("flex gap-5 overflow-x-auto border-b border-border text-sm", className)}>
+    <nav aria-label={label} className={cx("flex gap-5 overflow-x-auto overflow-y-hidden border-b border-border text-sm", className)}>
       {items.map((item) => (
         <Link
           key={item.key}
@@ -247,7 +247,7 @@ export function ViewNavigation({
           scroll={scroll}
           aria-current={item.current ? "page" : undefined}
           className={cx(
-            "-mb-px whitespace-nowrap border-b-2 py-2",
+            "whitespace-nowrap border-b-2 py-2",
             item.current
               ? "border-accent font-semibold text-foreground"
               : "border-transparent text-muted hover:text-foreground",

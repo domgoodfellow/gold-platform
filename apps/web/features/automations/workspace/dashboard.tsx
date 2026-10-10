@@ -146,7 +146,6 @@ export function AutomationDashboard({
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <PageHeader
-        className="mb-0"
         title="Automations"
         meta={<span className="text-xs">Execution period {data.period.dates[0]} – {data.period.dates.at(-1)} · {timezone}. Rule counts reflect current configuration.</span>}
         actions={<>

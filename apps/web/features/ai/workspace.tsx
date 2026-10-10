@@ -440,7 +440,6 @@ export function AiWorkspace({
   return (
     <AppPage className="space-y-4">
       <PageHeader
-        className="mb-0"
         title={title}
         actions={<>
           <NewAgent organizationId={organizationId} canManage={canManage} />

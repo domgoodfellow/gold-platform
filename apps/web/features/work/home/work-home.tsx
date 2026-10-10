@@ -33,7 +33,7 @@ export function WorkHome({ organizationId, timezone, data: d, createOptions, may
   ];
   const time = (instant: string) => new Intl.DateTimeFormat('en-CA', { timeZone: timezone, hour: 'numeric', minute: '2-digit' }).format(new Date(instant));
   return <AppPage className="space-y-3">
-    <PageHeader title="Work" className="mb-0" meta={<span>{d.date} · {timezone}</span>} actions={<>
+    <PageHeader title="Work" meta={<span>{d.date} · {timezone}</span>} actions={<>
       {createOptions ? <WorkCreateDrawer options={createOptions}/> : null}<ButtonLink tone="secondary" href={dispatch}>Dispatch board</ButtonLink>
       {mayConfigure ? <ConfigureLink href={`${base}/work/configuration`} /> : null}
     </>}/>

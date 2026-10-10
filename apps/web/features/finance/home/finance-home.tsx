@@ -38,7 +38,7 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
     { label: 'Payment readiness', icon: Settings2, value: <span className="text-lg">{readiness}</span>, context: setup.length ? `${setup.length} configuration items` : 'Services, currency & payment acceptance', href: `${base}/settings/pricing#getting-paid` },
   ];
   return <AppPage className="@container/finance space-y-3 pb-16 md:pb-0">
-    <PageHeader className="mb-0" title="Finance" actions={<>
+    <PageHeader title="Finance" actions={<>
       {may('invoice.issue') ? <FinanceWorkflow organizationId={organizationId} kind="invoice" /> : null}{may('work_item.price') ? <FinanceWorkflow organizationId={organizationId} kind="quote" mayCreateWork={may('work_item.create')} /> : null}{may('payment.record') ? <FinanceWorkflow organizationId={organizationId} kind="payment" /> : null}
       <DropdownMenu><DropdownMenuTrigger asChild><Button tone="secondary"><Settings2 aria-hidden /> Configure</Button></DropdownMenuTrigger><DropdownMenuContent align="end">{[['Services & Pricing',''],['Trading currency','#currency'],['Payment configuration','#getting-paid']].map(([label,hash]) => <DropdownMenuItem key={label} asChild><Link href={`${base}/settings/pricing${hash}`}>{label}</Link></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
     </>} />
