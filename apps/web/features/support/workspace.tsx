@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -17,7 +18,6 @@ import {
 } from "@gold/ui/components/popover";
 import { AppPage } from "@/components/layout/app-page";
 import { Button, ButtonLink } from "@/components/controls/button";
-import { ConfigureLink } from "@/components/controls/configure-link";
 import { DateRangeFilter } from "@/components/operational/date-range-filter";
 import { PageHeader } from "@/components/headers/page-header";
 import { useWorkspaceRail } from "@/components/panels/workspace-right-rail";
@@ -72,12 +72,14 @@ export function SupportWorkspace({
   capabilities,
   view,
   data,
+  configure,
 }: {
   organizationId: string;
   timezone: string;
   capabilities: string[];
   view: SupportView;
   data: SupportData;
+  configure?: ReactNode;
 }) {
   const base = `/organizations/${organizationId}/support`,
     router = useRouter(),
@@ -675,7 +677,7 @@ export function SupportWorkspace({
           {view === "home" && (
             <>
               <SupportViews href={href} />
-              <ConfigureLink href={`${base}/service-levels`} />
+              {configure}
             </>
           )}
           {view === "queues" && can("support.configure") && (

@@ -1,3 +1,4 @@
+import { WorkspaceConfigure } from "@/features/settings/workspace-configure";
 import { notFound } from "next/navigation";
 import { requireOrganization } from "@/lib/route/organization";
 import { readSupport } from "@/lib/domain/support/support";
@@ -35,6 +36,7 @@ export async function SupportPage({
       capabilities={organization.capabilities}
       view={view}
       data={data}
+      configure={<WorkspaceConfigure organizationId={organizationId} workspace="support" />}
     />
   );
 }

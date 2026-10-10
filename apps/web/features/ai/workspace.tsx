@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { AppPage } from "@/components/layout/app-page";
 import { PageHeader } from "@/components/headers/page-header";
-import { ConfigureLink } from "@/components/controls/configure-link";
 import { Button, ButtonLink } from "@/components/controls/button";
 import { TextInput, TextArea, SelectInput } from "@/components/controls/inputs";
 import {
@@ -157,11 +156,13 @@ export function AiWorkspace({
   data,
   view = "",
   canManage,
+  configure,
 }: {
   organizationId: string;
   data: AiWorkspaceData;
   view?: string;
   canManage: boolean;
+  configure?: ReactNode;
 }) {
   const base = `/organizations/${organizationId}/ai`,
     router = useRouter(),
@@ -455,7 +456,7 @@ export function AiWorkspace({
             <Play aria-hidden />
             Test agent
           </ButtonLink>
-          <ConfigureLink href={`${base}/deployments`} />
+          {configure}
         </>}
       />
       {!view && (

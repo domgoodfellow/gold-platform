@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { ArrowUpRight, ClipboardList, FileText, Globe, Layers, ShieldCheck } from 'lucide-react';
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
-import { ConfigureLink } from '@/components/controls/configure-link';
 import { MetricTile, OperationalPanel, PanelState } from '@/components/operational/primitives';
 import { ButtonLink } from '@/components/controls/button';
 import { PreviewFrame } from '@/components/display/preview-frame';
@@ -14,7 +13,7 @@ function State({ children }: { children: ReactNode }) {
   return <span className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">{children}</span>;
 }
 
-export function StudioHome({ organizationId, timezone, mayManage, overview: data }: { organizationId: string; timezone: string; mayManage: boolean; overview: StudioOverview }) {
+export function StudioHome({ organizationId, timezone, mayManage, overview: data, configure }: { organizationId: string; timezone: string; mayManage: boolean; overview: StudioOverview; configure?: ReactNode }) {
   const base = `/organizations/${organizationId}`, studio = `${base}/studio`;
   const website = `${studio}/website`, forms = `${studio}/forms`, templates = `${studio}/templates`;
   const preview = data.website?.preview;
@@ -32,7 +31,7 @@ export function StudioHome({ organizationId, timezone, mayManage, overview: data
       {mayManage ? <><NewFormDrawer organizationId={organizationId} /><ButtonLink tone="secondary" href={website}>Edit website</ButtonLink></> : null}
       {preview ? <ButtonLink tone="secondary" href={`/preview/${organizationId}/${preview.id}`} target="_blank">Preview</ButtonLink> : null}
       {data.publicUrl ? <ButtonLink tone="secondary" href={data.publicUrl} target="_blank" rel="noreferrer">View site <ArrowUpRight aria-hidden className="size-4" /></ButtonLink> : null}
-      {mayManage ? <ConfigureLink href={`${base}/settings/organization`} /> : null}
+      {configure}
     </>} />
     <nav aria-label="Studio destinations" className="flex flex-wrap gap-4 text-xs font-medium text-accent-text underline decoration-border underline-offset-4">
       {[[website, 'Website'], [forms, 'Forms'], [templates, 'Templates']].map(([href, label]) => <Link key={href} href={href} className="hover:underline">{label}</Link>)}

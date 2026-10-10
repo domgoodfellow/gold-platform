@@ -162,6 +162,10 @@
       "category": "component",
       "concerns": ["settings", "branding"]
     },
+    "apps/web/tests/unit/workspace-configure.test.ts": {
+      "category": "unit",
+      "concerns": ["settings", "configuration", "permissions"]
+    },
     "apps/web/tests/unit/brand-theme.test.ts": {
       "category": "unit",
       "concerns": ["settings", "branding"]
@@ -527,6 +531,10 @@
     "apps/web/e2e/workspace-convergence.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": ["design-system", "responsive", "dark-mode", "workspaces"]
+    },
+    "apps/web/e2e/configure.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": ["settings", "configuration", "permissions", "workspaces"]
     },
     "apps/web/e2e/public-presence.spec.ts": {
       "category": "playwright-acceptance",

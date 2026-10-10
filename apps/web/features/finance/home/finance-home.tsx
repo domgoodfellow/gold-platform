@@ -1,14 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Banknote, FileText, Settings2, TrendingUp, Clock } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@gold/ui/components/dropdown-menu';
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
 import { MetricTile, OperationalPanel, PanelState } from '@/components/operational/primitives';
-import { Button } from '@/components/controls/button';
 import { TextInput } from '@/components/controls/inputs';
 import { InvoicesTable, PaymentsTable, QuotesTable } from '@/features/finance/collections/finance-tables';
 import { FinanceWorkflow } from '../finance-workflow';
@@ -19,7 +17,7 @@ import { formatMoney } from '@/lib/domain/work-items/consumption';
 function Amounts({ values, empty = 'No activity' }: { values: CurrencyAmount[] | undefined; empty?: string }) {
   return values === undefined ? <span className="text-sm font-normal leading-5 text-muted">Reporting restricted</span> : values.length ? values.map(v => <span key={v.currency} className="block tabular-nums">{formatMoney(Number(v.amount), v.currency)}</span>) : <span className="text-sm font-normal leading-5 text-muted">{empty}</span>;
 }
-export function FinanceHome({ organizationId, timezone, today, data, capabilities }: { organizationId: string; timezone: string; today: string; data: FinanceOperating; capabilities: string[] }) {
+export function FinanceHome({ organizationId, timezone, today, data, capabilities, configure }: { organizationId: string; timezone: string; today: string; data: FinanceOperating; capabilities: string[]; configure?: ReactNode }) {
   const router = useRouter();
   const [attention, setAttention] = useState('overdue');
   const [invoiceTab, setInvoiceTab] = useState('outstanding');
@@ -41,7 +39,7 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
     <PageHeader title="Finance" actions={<>
       <TextInput type="month" aria-label="Reporting month" value={period.month} onChange={e => { if (e.target.value) router.push(`${finance}?month=${e.target.value}`); }} className="h-9 w-44 sm:w-40" />
       {may('invoice.issue') ? <FinanceWorkflow organizationId={organizationId} kind="invoice" /> : null}{may('work_item.price') ? <FinanceWorkflow organizationId={organizationId} kind="quote" mayCreateWork={may('work_item.create')} /> : null}{may('payment.record') ? <FinanceWorkflow organizationId={organizationId} kind="payment" /> : null}
-      <DropdownMenu><DropdownMenuTrigger asChild><Button tone="secondary"><Settings2 aria-hidden /> Configure</Button></DropdownMenuTrigger><DropdownMenuContent align="end">{[['Services & Pricing',''],['Trading currency','#currency'],['Payment configuration','#getting-paid']].map(([label,hash]) => <DropdownMenuItem key={label} asChild><Link href={`${base}/settings/pricing${hash}`}>{label}</Link></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
+      {configure}
     </>} />
 
     <nav aria-label="Finance destinations" className="flex flex-wrap gap-4 text-xs font-medium text-accent-text underline decoration-border underline-offset-4">{[['Quotes','quotes'],['Invoices','invoices'],['Payments','payments']].map(([label,path]) => <Link key={path} className="hover:underline" href={`${finance}/${path}`}>{label}</Link>)}<Link className="hover:underline" href={`${base}/settings/pricing`}>Services &amp; Pricing</Link>{may('report.read') ? <Link className="hover:underline" href={`${finance}/reports`}>Financial reports</Link> : null}</nav>

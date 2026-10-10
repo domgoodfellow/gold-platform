@@ -1,3 +1,4 @@
+import { WorkspaceConfigure } from "@/features/settings/workspace-configure";
 import { requireOrganization } from "@/lib/route/organization";
 import { loadAiWorkspace } from "@/lib/application/ai/workspace";
 import { AiWorkspace } from "@/features/ai/workspace";
@@ -20,6 +21,7 @@ export default async function AiPage({
     <AiWorkspace
       organizationId={organizationId}
       data={data}
+      configure={<WorkspaceConfigure organizationId={organizationId} workspace="ai" />}
       canManage={organization.capabilities.includes("organization.manage")}
     />
   );

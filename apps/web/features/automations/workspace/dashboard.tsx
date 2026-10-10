@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
   Activity,
@@ -11,7 +11,6 @@ import {
   Zap,
 } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/controls/button';
-import { ConfigureLink } from '@/components/controls/configure-link';
 import { PageHeader } from '@/components/headers/page-header';
 import { MetricTile, OperationalPanel, PanelState } from '@/components/operational/primitives';
 import { SelectInput } from '@/components/controls/inputs';
@@ -30,14 +29,14 @@ export function AutomationDashboard({
   timezone,
   data,
   mayManage,
-  mayConfigure,
+  configure,
   search,
 }: {
   organizationId: string;
   timezone: string;
   data: AutomationDashboardData;
   mayManage: boolean;
-  mayConfigure: boolean;
+  configure?: ReactNode;
   search: string;
 }) {
   const [attention, setAttention] = useState('runs');
@@ -161,7 +160,7 @@ export function AutomationDashboard({
             </SelectInput><Button size="small" tone="secondary" type="submit">Apply</Button></form>
           {mayManage && <NewAutomationSheet organizationId={organizationId} />}
           <ButtonLink href={activity} tone="secondary">View runs</ButtonLink>
-          {mayConfigure && <ConfigureLink href={`/organizations/${organizationId}/settings/features`} />}
+          {configure}
         </>}
       />
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">

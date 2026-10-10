@@ -7,11 +7,11 @@ import { Button, ButtonLink } from '@/components/controls/button';
 import { TextInput } from '@/components/controls/inputs';
 import { WorkCreateDrawer, type WorkCreateOptions } from '../work-create-drawer';
 import { MetricTile, OperationalPanel } from '@/components/operational/primitives';
-import { ConfigureLink } from '@/components/controls/configure-link';
 import { WorkAttention } from './attention';
 import type { WorkOperations } from '@/lib/application/work/operations';
 
-export function WorkHome({ organizationId, timezone, data: d, createOptions, mayConfigure, destinations, activity }: {
+export function WorkHome({ organizationId, timezone, data: d, createOptions, mayConfigure, destinations, activity, configure }: {
+  configure?: ReactNode;
   organizationId: string; timezone: string; data: WorkOperations; createOptions: WorkCreateOptions | null;
   mayConfigure: boolean; destinations: { resources: boolean; locations: boolean; assets: boolean; schedule: boolean }; activity: ReactNode;
 }) {
@@ -36,7 +36,7 @@ export function WorkHome({ organizationId, timezone, data: d, createOptions, may
     <PageHeader title="Work" meta={<span>{d.date} · {timezone}</span>} actions={<>
       <form method="get" className="flex items-center gap-1"><TextInput type="date" name="on" aria-label="Work date" defaultValue={d.date} className="w-36"/><Button size="small" tone="text">Apply</Button></form>
       {createOptions ? <WorkCreateDrawer options={createOptions}/> : null}<ButtonLink tone="secondary" href={dispatch}>Dispatch board</ButtonLink>
-      {mayConfigure ? <ConfigureLink href={`${base}/work/configuration`} /> : null}
+      {configure}
     </>}/>
 
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{kpis.map(k => <MetricTile key={k.label} label={k.label} value={k.value} detail={k.note} icon={k.icon} href={k.href}/>)}</div>

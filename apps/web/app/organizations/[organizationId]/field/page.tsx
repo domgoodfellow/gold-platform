@@ -1,3 +1,4 @@
+import { WorkspaceConfigure } from '@/features/settings/workspace-configure';
 import { requireOrganization } from '@/lib/route/organization';
 import { workOperations } from '@/lib/application/work/operations';
 import { workCreateOptions } from '@/lib/application/work/create-options';
@@ -22,6 +23,6 @@ export default async function FieldPage({ params, searchParams }: PageProps<'/or
     workOperations(db, organizationId, date, organization.timezone),
     organization.capabilities.includes('work_item.create') ? workCreateOptions(db, organizationId, destinations.assets) : Promise.resolve(null),
   ]);
-  return <WorkHome organizationId={organizationId} timezone={organization.timezone} data={data} createOptions={createOptions} mayConfigure={organization.capabilities.includes('field.manage')} destinations={destinations}
+  return <WorkHome organizationId={organizationId} timezone={organization.timezone} data={data} createOptions={createOptions} mayConfigure={organization.capabilities.includes('field.manage')} destinations={destinations} configure={<WorkspaceConfigure organizationId={organizationId} workspace="field" />}
     activity={<WorkspaceActivity db={db} organizationId={organizationId} timezone={organization.timezone} scope="work" emptyMessage="No work activity yet." limit={5} dense/>}/>;
 }

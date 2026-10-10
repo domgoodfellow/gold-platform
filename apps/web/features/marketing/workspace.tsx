@@ -7,7 +7,6 @@ import { Megaphone, Users, UserCheck, Target, Activity, FileText, ChartNoAxesCom
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
 import { Button, ButtonLink } from '@/components/controls/button';
-import { ConfigureLink } from '@/components/controls/configure-link';
 import { MetricTile, OperationalPanel, PanelState, StatePill, ViewNavigation } from '@/components/operational/primitives';
 import { TextInput, SelectInput } from '@/components/controls/inputs';
 import { OBJECTIVES, type MarketingData, type Campaign, type Inquiry } from '@/lib/domain/marketing/marketing';
@@ -22,7 +21,8 @@ function Table({ headings, children, hasRows, empty }: { headings: string[]; chi
 }
 const td='px-3 py-2.5 align-middle';
 
-export function MarketingWorkspace({ organizationId, timezone, data, view, mayManage, mayStudio, mayCreateCustomer, campaignId }: { organizationId: string; timezone: string; data: MarketingData; view: 'home' | 'campaigns' | 'audiences' | 'leads' | 'performance' | 'detail'; mayManage: boolean; mayStudio: boolean; mayCreateCustomer: boolean; campaignId?: string }) {
+export function MarketingWorkspace({ organizationId, timezone, data, view, mayManage, mayStudio, mayCreateCustomer, campaignId, configure }: {
+  configure?: ReactNode; organizationId: string; timezone: string; data: MarketingData; view: 'home' | 'campaigns' | 'audiences' | 'leads' | 'performance' | 'detail'; mayManage: boolean; mayStudio: boolean; mayCreateCustomer: boolean; campaignId?: string }) {
   const base=`/organizations/${organizationId}/marketing`, studio=`/organizations/${organizationId}/studio`;
   const router=useRouter(), pathname=usePathname(), query=useSearchParams();
   const [attention,setAttention]=useState('new'), [inquiry,setInquiry]=useState<string | null>(query.get('inquiry'));
@@ -56,7 +56,7 @@ export function MarketingWorkspace({ organizationId, timezone, data, view, mayMa
         {mayManage&&view!=='audiences'&&<CampaignEditor organizationId={organizationId} members={data.members} defaultOpen={view === 'campaigns' && query.get('create') === '1'}/>}
         {view==='audiences'&&mayManage&&<AudienceEditor organizationId={organizationId} stages={data.stages} mayManage={mayManage}/>}
         <ButtonLink tone="secondary" href={view==='leads'?base:href('leads')}>{view==='leads'?'Marketing Home':'View leads'}</ButtonLink>
-        {mayStudio && <ConfigureLink href={`${studio}/forms`} label="Configure sources" />}
+        {configure}
       </>}
     />
     <ViewNavigation label="Marketing destinations" items={[['','Home'],['campaigns','Campaigns'],['audiences','Audiences'],['leads','Leads'],['performance','Performance']].map(([path,label])=>({key:path||'home',label,href:path?`${base}/${path}`:base,current:view===(path||'home')}))} />

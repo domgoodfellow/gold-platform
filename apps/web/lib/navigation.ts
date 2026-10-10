@@ -467,6 +467,12 @@ export type ConfigTarget = {
   featureKeys?: readonly string[];
   /** Holding **any** of these lets a member configure it. Never empty — a target nobody may configure is a dead door. */
   permission: readonly Capability[];
+  /**
+   * `false` marks a door that belongs to its workspace and is reached from that workspace's
+   * Configure control (`WORKSPACE_CONFIGURE`), not listed in the Settings directory. It is still
+   * one registered destination: same path, same entitlement and permission gate.
+   */
+  directory?: false;
 };
 
 export const CONFIG_TARGETS: readonly ConfigTarget[] = [
@@ -501,6 +507,15 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'secrets', scope: 'connections', path: 'settings/secrets', permission: ['secret.manage'] },
   { key: 'features', scope: 'organization', path: 'settings/features', permission: ['feature.manage'] },
   { key: 'plan', scope: 'plan', path: 'settings/plan', permission: ['billing.manage'] },
+  // Workspace-owned doors: reached from their workspace's Configure control, not listed in the Settings directory.
+  { key: 'phone-numbers', scope: 'organization', workspace: 'communications', path: 'comms/numbers', entitledBy: 'calls', permission: ['organization.manage'], directory: false },
+  { key: 'forms', scope: 'organization', workspace: 'studio', path: 'studio/forms', permission: ['organization.manage'], directory: false },
+  { key: 'support-queues', scope: 'organization', workspace: 'support', path: 'support/queues', permission: ['support.configure'], directory: false },
+  { key: 'support-service-levels', scope: 'organization', workspace: 'support', path: 'support/service-levels', permission: ['support.configure'], directory: false },
+  { key: 'automation-messages', scope: 'organization', workspace: 'automations', path: 'automations/messages', entitledBy: 'automations', permission: ['automation.manage'], directory: false },
+  { key: 'ai-deployments', scope: 'organization', workspace: 'ai', path: 'ai/deployments', featureKeys: ['agent_tools'], permission: ['organization.manage'], directory: false },
+  { key: 'ai-knowledge', scope: 'organization', workspace: 'ai', path: 'ai/knowledge', featureKeys: ['agent_tools'], permission: ['organization.manage'], directory: false },
+  { key: 'ai-tools', scope: 'organization', workspace: 'ai', path: 'ai/tools', featureKeys: ['agent_tools'], permission: ['organization.manage'], directory: false },
   // Setup is kernel. Launching is `organization.manage`; asking for a drafted setup is
   // `configuration.propose`; either makes the lifecycle worth entering. No module gate: the
   // optional drafting section decides for itself whether to draw.
@@ -731,4 +746,72 @@ export function workspaceAncestry(organizationId: string, segment: string): { la
   if (!area?.workspace) return [];
   const owner = WORKSPACES.find((candidate) => candidate.key === area.workspace)!;
   return [{ label: owner.label, href: areaHref(organizationId, owner.home) }];
+}
+
+
+export type WorkspaceConfigureDoor = {
+  /** A `CONFIG_TARGETS` key — the path, entitlement and permission come from there. */
+  target: string;
+  label: string;
+  /** A section of the destination page, e.g. `#getting-paid`. */
+  hash?: string;
+};
+
+/**
+ * What each workspace's Configure control offers, by registered target. One door renders as a
+ * link, several as a menu (`ConfigureMenu`); a door the member may not configure, or the business
+ * is not entitled to, is omitted. CRM is absent because its configuration opens in the page rail.
+ * The order is the order of the concerns, most frequently changed first.
+ */
+export const WORKSPACE_CONFIGURE: Partial<Record<WorkspaceKey, readonly WorkspaceConfigureDoor[]>> = {
+  communications: [
+    { target: 'call-setup', label: 'Call setup' },
+    { target: 'communications', label: 'Phone and messaging' },
+    { target: 'phone-numbers', label: 'Numbers' },
+    { target: 'email', label: 'Email sending' },
+  ],
+  marketing: [{ target: 'forms', label: 'Forms & acquisition sources' }],
+  support: [
+    { target: 'support-queues', label: 'Queues' },
+    { target: 'support-service-levels', label: 'Service levels' },
+  ],
+  field: [
+    { target: 'work-configuration', label: 'Work types & workflow' },
+    { target: 'schedule-configuration', label: 'Scheduling & hours' },
+    { target: 'resources', label: 'Resources' },
+    { target: 'locations', label: 'Locations' },
+  ],
+  finance: [
+    { target: 'pricing', label: 'Services & pricing' },
+    { target: 'pricing', label: 'Trading currency', hash: '#currency' },
+    { target: 'pricing', label: 'Payment collection', hash: '#getting-paid' },
+  ],
+  automations: [
+    { target: 'automation-rules', label: 'Rules' },
+    { target: 'automation-messages', label: 'Message templates' },
+  ],
+  ai: [
+    { target: 'ai-agents', label: 'Agents' },
+    { target: 'ai-deployments', label: 'Channel deployments' },
+    { target: 'ai-knowledge', label: 'Knowledge' },
+    { target: 'ai-tools', label: 'Tools & permissions' },
+  ],
+  studio: [
+    { target: 'website', label: 'Website' },
+    { target: 'forms', label: 'Forms' },
+    { target: 'branding', label: 'Branding' },
+    { target: 'public-profile', label: 'Public profile' },
+    { target: 'domains', label: 'Domains' },
+  ],
+};
+
+export type ConfigureItem = { key: string; label: string; href: string };
+
+/** The doors a member may be offered from `workspace`'s Configure control, resolved to hrefs. */
+export function workspaceConfigureItems(organizationId: string, workspace: WorkspaceKey, gate: ConfigGate): ConfigureItem[] {
+  return (WORKSPACE_CONFIGURE[workspace] ?? []).flatMap((door) => {
+    const target = configTarget(door.target);
+    if (!configTargetOffered(target, gate)) return [];
+    return [{ key: `${door.target}${door.hash ?? ''}`, label: door.label, href: `/organizations/${organizationId}/${target.path}${door.hash ?? ''}` }];
+  });
 }

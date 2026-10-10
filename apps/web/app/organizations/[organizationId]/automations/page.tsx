@@ -1,3 +1,4 @@
+import { WorkspaceConfigure } from '@/features/settings/workspace-configure';
 import { redirect } from 'next/navigation';
 import { AppPage } from '@/components/layout/app-page';
 import { requireOrganization } from '@/lib/route/organization';
@@ -34,7 +35,7 @@ export default async function AutomationsPage({
         data={data}
         search={(first('q') ?? '').slice(0, 100)}
         mayManage={organization.capabilities.includes('automation.manage')}
-        mayConfigure={organization.capabilities.includes('feature.manage')}
+        configure={<WorkspaceConfigure organizationId={organizationId} workspace="automations" />}
       />
     </AppPage>
   );

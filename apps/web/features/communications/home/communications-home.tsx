@@ -1,10 +1,10 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { ChevronRight, Mail, MessageSquare, Phone, PhoneIncoming, Route, ShieldCheck } from 'lucide-react';
 import { AppPage } from '@/components/layout/app-page';
 import { Badge } from '@/components/display/data';
 import { SelectInput } from '@/components/controls/inputs';
 import { Button, ButtonLink } from '@/components/controls/button';
-import { ConfigureLink } from '@/components/controls/configure-link';
 import { PageHeader } from '@/components/headers/page-header';
 import { OperationalPanel, PanelState, ViewNavigation } from '@/components/operational/primitives';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@gold/ui/components/table';
@@ -23,7 +23,7 @@ function QueueTable({ items, organizationId, timezone, query = '' }: { items: In
   return <div className="overflow-x-auto"><Table className="w-full min-w-[38rem] table-fixed text-xs [&_td]:py-1"><colgroup>{[24,8,22,13,14,12,7].map((width,index) => <col key={index} style={{ width: `${width}%` }} />)}</colgroup><TableHeader><TableRow>{['Contact / Customer','Channel','Last message','Last activity','Assignee','Status','Actions'].map(label => <TableHead key={label} className="h-8 text-xs font-normal">{label}</TableHead>)}</TableRow></TableHeader><TableBody>{items.length ? items.map(item => <TableRow key={item.id}><TableCell><Link href={`/organizations/${organizationId}/comms/inbox/${item.id}${query}`} className="flex items-center gap-2 hover:underline"><Initials name={item.title} /><span className="min-w-0"><span className="block truncate font-medium">{item.title}</span><span className="block truncate text-muted">{item.externalAddress}</span></span></Link></TableCell><TableCell><span className="flex items-center gap-1.5"><ChannelIcon channel={item.channel} />{item.channel === 'sms' ? 'SMS' : 'Email'}</span></TableCell><TableCell><span className="block truncate">{item.unread ? <strong className="font-semibold">Unread: </strong> : null}{item.preview || item.subject || 'No message preview'}</span></TableCell><TableCell className="whitespace-nowrap text-muted"><time dateTime={item.lastActivityAt} title={formatTime(item.lastActivityAt, timezone)}>{new Intl.DateTimeFormat('en-CA',{timeZone:timezone,hour:'numeric',minute:'2-digit'}).format(new Date(item.lastActivityAt))}</time></TableCell><TableCell><span className="flex items-center gap-1.5 overflow-hidden">{item.assignee ? <Initials name={item.assignee.name} /> : null}<span className="truncate">{item.assignee?.name ?? 'Unassigned'}</span></span></TableCell><TableCell><Badge tone={item.unread ? 'accent' : 'neutral'}>{item.status === 'open' ? 'Open' : item.status === 'waiting' ? 'Waiting' : 'Closed'}</Badge></TableCell><TableCell><ConversationActions organizationId={organizationId} item={item} /></TableCell></TableRow>) : <TableRow><TableCell colSpan={7} className={emptyCell}>No conversations match this queue.</TableCell></TableRow>}</TableBody></Table></div>;
 }
 
-export function CommunicationsHome({ organizationId, timezone, data }: { organizationId: string; timezone: string; data: CommunicationsDashboard }) {
+export function CommunicationsHome({ organizationId, timezone, data, configure }: { organizationId: string; timezone: string; data: CommunicationsDashboard; configure?: ReactNode }) {
   const base = `/organizations/${organizationId}`, home = `${base}/comms`, inbox = `${home}/inbox`, calls = `${base}/calls`, config = `${base}/settings/calls`;
   const { params, mayCall, mayMessage } = data;
   const link = (change: Record<string,string>) => { const q = new URLSearchParams({ ...params, q: params.search, ...change }); q.delete('search'); return `${home}?${q}`; };
@@ -59,7 +59,7 @@ export function CommunicationsHome({ organizationId, timezone, data }: { organiz
         {mayMessage ? <ButtonLink tone="primary" href={inbox}><MessageSquare aria-hidden /> Open inbox</ButtonLink> : null}
         {data.canCall ? <NewCallButton organizationId={organizationId} number={number} /> : null}
         {data.canCompose ? <ButtonLink tone="secondary" href={`${inbox}/new?channel=${data.composeChannel}`}><Mail aria-hidden /> Compose message</ButtonLink> : null}
-        <ConfigureLink href={config} />
+        {configure}
       </>}
     />
     <nav aria-label="Communications destinations" className="flex flex-wrap gap-4 text-xs font-medium text-accent-text underline decoration-border underline-offset-4">{mayCall ? <Link href={calls}>Calls</Link> : null}{mayMessage ? <Link href={inbox}>Inbox</Link> : null}<Link href={`${home}/numbers`}>Numbers</Link><Link href={config}>Configuration</Link></nav>
