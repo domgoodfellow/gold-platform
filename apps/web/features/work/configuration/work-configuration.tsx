@@ -26,6 +26,8 @@ import {
 } from './work-config-forms';
 
 export type WorkConfigurationData = {
+  /** The tab a deep link asked for (`?tab=booking`). */
+  initialTab?: string;
   organizationId: string;
   role: string;
   mayConfigure: boolean;
@@ -73,7 +75,11 @@ export function WorkConfiguration({
   capabilities,
   intakeForms,
   typeHref,
+  initialTab,
 }: WorkConfigurationData) {
+  const tabs = ['types', 'requirements', 'workflow', 'checklists', ...(bookingEnabled ? ['booking'] : []), 'fields'];
+  // `?tab=` is a deep link, kept: an unknown or unavailable value falls back to the first tab.
+  const startTab = initialTab && tabs.includes(initialTab) ? initialTab : 'types';
   const statusName = new Map(statuses.map((status) => [status.id, status.name]));
 
   return (
@@ -100,7 +106,7 @@ export function WorkConfiguration({
         </nav>
       ) : null}
 
-      <Tabs defaultValue="types" className="min-w-0 rounded-lg border border-border p-4">
+      <Tabs defaultValue={startTab} className="min-w-0 rounded-lg border border-border p-4">
         <TabsList className="max-w-full justify-start overflow-x-auto">
           <TabsTrigger value="types">General</TabsTrigger>
           <TabsTrigger value="requirements">Requirements</TabsTrigger>

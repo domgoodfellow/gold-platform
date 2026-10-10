@@ -25,7 +25,7 @@ export default async function WorkConfigurationPage({
   searchParams,
 }: PageProps<'/organizations/[organizationId]/work/configuration'>) {
   const { organizationId } = await params;
-  const { type: requestedType } = await searchParams;
+  const { type: requestedType, tab: requestedTab } = await searchParams;
   const { db, organization } = await requireOrganization(organizationId);
 
   const types = await listWorkItemTypes(db, { organizationId });
@@ -70,6 +70,7 @@ export default async function WorkConfigurationPage({
 
       <div className="mt-6">
         <WorkConfiguration
+          initialTab={typeof requestedTab === 'string' ? requestedTab : undefined}
           organizationId={organizationId}
           role={organization.role}
           mayConfigure={mayConfigure}
