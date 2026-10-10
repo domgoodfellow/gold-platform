@@ -1807,6 +1807,10 @@
       "category": "database-integration",
       "concerns": ["booking", "work", "finance", "portal", "acceptance"]
     },
+    "apps/web/tests/integration/database/ai-customer-service-acceptance.test.ts": {
+      "category": "database-integration",
+      "concerns": ["ai", "communications", "support", "acceptance"]
+    },
     "apps/web/tests/integration/database/tenant-acceptance.test.ts": {
       "category": "database-integration",
       "concerns": ["tenancy", "entitlements", "permissions", "acceptance"]
