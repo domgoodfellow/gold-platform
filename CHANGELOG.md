@@ -34,6 +34,12 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Configuration and readiness convergence — 2026-10-10
+
+- Each workspace's Configure control now reads its destinations from the configuration registry with the same entitlement and permission gate as Settings: one named link or a menu, never a button that opens an unrelated collection, and nothing for a member who may not configure. Communications, Support, Work, Finance, Automations, AI, Marketing and Studio offer their real configuration doors; CRM keeps its rail.
+- Readiness has one vocabulary that keeps configuration, verification, provider state and the viewer's access apart. Setup progress separates required items from areas finished, and states that the latter includes optional ones. The Communications inbox is no longer "Available" merely because the member may open it, and an unpublished website is no longer "Setup needed".
+- Launch blockers remain the database's authority; no schema change. Provider-health and fixture tests that depend on a clean local database are recorded in the completion report.
+
 ### Workspace visual convergence — 2026-10-09
 
 - All nine workspaces and Home share one set of operational components for panels, metrics, status, empty states, view navigation, page headers and the Configure entry. Local panel, badge and tab implementations are removed, so an organization's brand and dark mode now reach every hub.

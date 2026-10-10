@@ -168,6 +168,17 @@ Page identity is `PageHeader` (or `WorkspaceHome`). Search and period filters si
 
 Empty states are one of four facts and must not be rendered alike: **empty** (a true zero), **not configured** (something required is missing; link to where), **unavailable** (the read failed or could not be verified; never shown as zero or healthy), **restricted** (about the viewer, not the data). Optional polish, such as a missing logo or introduction, is a suggestion, not an exception.
 
+### Configure and readiness
+
+Every configurable concern is one registered **configuration target** (`CONFIG_TARGETS` in `lib/navigation.ts`): a key, a path, the entitlement it needs and the configuration permission it needs. Settings, Setup, workspace Configure controls and Home all resolve destinations from it; none holds a path of its own. A target with `directory: false` is a workspace-owned door: still one registered destination, reached from its workspace and not listed in the Settings directory.
+
+A workspace Home has at most one Configure entry, and it is one of two things:
+
+- **Contextual Configure** — the page-support rail (`PageHeader configure` with a `ConfigureRegistrar`), used only when the rail holds real controls or links for the concern (CRM). A rail mode with nothing registered is not offered.
+- **Configuration destination** — `ConfigureMenu`, resolved on the server by `WorkspaceConfigure` from `WORKSPACE_CONFIGURE`. It applies the same entitlement-and-permission gate as the Settings directory, then renders nothing, one link named for what it opens, or a menu. It never opens a collection that merely relates to the workspace, and never offers a door the member may not configure or the business is not entitled to.
+
+Readiness states are separate facts and are worded once (`ReadinessState`, `ReadinessBadge`): operational (proven), configured (present; the domain has nothing to verify with), needs configuration, needs verification, unavailable, restricted, not measured, not applicable. Entitlement, activation, permission, configuration, provider verification and observed operation are never collapsed into one flag. Setup importance (required, recommended, optional) is independent of operational state: only a required gap blocks launch, and launch is decided by the database's blocker authority, not by this vocabulary. Setup progress states required items outstanding separately from areas finished, and says that the latter includes optional areas. Unknown is never shown as healthy or as zero.
+
 `interactive.tsx` holds the client-only pieces (`FilterMenu`, `RelativeTime`) so Server Component workspaces can use the rest.
 
 ---
