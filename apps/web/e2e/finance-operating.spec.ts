@@ -103,13 +103,14 @@ test.describe('Finance operating journey', () => {
       const invoice = await getInvoiceForWorkItem(owner,{organizationId,workItemId:workId});
       expect(invoice!.payments.length).toBe(amount==='1000'?1:2);
     }
+    // Invoices due today are due at the end of the local day, so they are not overdue whatever time the suite runs; the past-due ones are a day or more back.
     const names=['Vertex HVAC','Maple Dental','Aster Electric','Lumière Studio','Riverside Property','Cedar Tree Properties'];
     for (let i=0;i<names.length;i++) {
       const customerId = await createCustomer(owner,{organizationId,name:names[i]});
       const id = await createWorkItem(owner,{organizationId,statusId,title:`Inspection · ${names[i]}`,customerId});
       await addPricedLine(owner,{workItemId:id,priceBookItemId:price.id,quantity:i+1});
       if(i===5)continue;
-      const invoiceId=await issueInvoice(owner,{workItemId:id,issuedAt:zonedTimeToInstant(shiftDate(today,-10),'00:00','America/Toronto'),dueAt:zonedTimeToInstant(shiftDate(today,i<3?-i-1:0),'12:00','America/Toronto')});
+      const invoiceId=await issueInvoice(owner,{workItemId:id,issuedAt:zonedTimeToInstant(shiftDate(today,-10),'00:00','America/Toronto'),dueAt:zonedTimeToInstant(shiftDate(today,i<3?-i-1:0),i<3?'12:00':'23:59','America/Toronto')});
       if(i<3)await recordPayment(owner,{invoiceId,amountMinor:50000+i*10000});
     }
     await page.goto(finance);
@@ -134,8 +135,8 @@ test.describe('Finance operating journey', () => {
     await page.goto(`${finance}/invoices?status=overdue`);await expect(page.getByLabel('Status',{exact:true})).toHaveValue('overdue');await page.reload();await expect(page.getByLabel('Status',{exact:true})).toHaveValue('overdue');
     await page.getByRole('link',{name:'#2',exact:true}).filter({visible:true}).click();await expect(page.getByRole('tab',{name:'Financials',exact:true})).toHaveAttribute('data-state','active');
     await page.goto(finance);await page.getByLabel('Reporting month',{exact:true}).fill('2025-12');await expect(page).toHaveURL(/month=2025-12/);await expect(page.getByLabel('Reporting month',{exact:true})).toHaveValue('2025-12');await expect(page.getByRole('link',{name:/Payments received No payments recorded/})).toBeVisible();
-    await page.getByRole('searchbox',{name:'Search Finance',exact:true}).fill('Vertex');await page.getByRole('searchbox',{name:'Search Finance',exact:true}).press('Enter');await expect(page).toHaveURL(/finance\/search\?q=Vertex/);await expect(page.getByRole('link',{name:'Vertex HVAC',exact:true}).filter({visible:true}).first()).toBeVisible();
-    for(const width of [768,390]) { await page.setViewportSize({width,height:1000});await page.goto(finance);await expect(page.getByRole('heading',{name:'Finance',exact:true})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);await page.screenshot({path:testInfo.outputPath(`finance-populated-${width}.png`),fullPage:true,caret:'initial'});await page.getByRole('region',{name:'Insights',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath(`finance-populated-${width}-lower.png`),fullPage:true,caret:'initial'}); }
+    await expect(page.getByRole('searchbox',{name:'Search Finance',exact:true})).toHaveCount(0);await page.goto(`${finance}/search?q=Vertex`);await expect(page.getByRole('link',{name:'Vertex HVAC',exact:true}).filter({visible:true}).first()).toBeVisible();
+    for(const width of [768,390]) { await page.setViewportSize({width,height:1000});await page.goto(finance);await expect(page.getByRole('heading',{name:'Finance',exact:true})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);await page.screenshot({path:testInfo.outputPath(`finance-populated-${width}.png`),fullPage:true,caret:'initial'});await page.getByRole('region',{name:'Finance status',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath(`finance-populated-${width}-lower.png`),fullPage:true,caret:'initial'}); }
     await page.getByRole('button',{name:'Record payment',exact:true}).first().scrollIntoViewIfNeeded();
     await page.getByRole('button',{name:'Record payment',exact:true}).first().click();
     drawer = page.getByRole('dialog',{name:'Record payment',exact:true});

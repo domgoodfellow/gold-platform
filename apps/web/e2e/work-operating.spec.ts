@@ -53,7 +53,14 @@ test.describe('Work operating journey', () => {
       await capture(page, testInfo.outputPath(`work-empty-${width}.png`));
     }
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.getByRole('link', { name: 'Configure Work', exact: true }).click();
+    // A business with only one Work door (nothing scheduled yet is entitled) gets a named link; one with several gets a menu.
+    const configure = page.getByRole('button', { name: 'Configure' });
+    if (await configure.count()) {
+      await configure.click();
+      await page.getByRole('menuitem', { name: 'Work types & workflow' }).click();
+    } else {
+      await page.getByRole('link', { name: 'Work types & workflow' }).click();
+    }
     await page.getByLabel('Type name', { exact: true }).fill('Service visit');
     await page.getByRole('radio', { name: /^Scheduled/ }).check();
     await page.getByRole('button', { name: 'Add type', exact: true }).click();

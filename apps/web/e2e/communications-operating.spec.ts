@@ -91,11 +91,8 @@ test.describe('Communications operating hub', () => {
       attention = page.getByRole('region',{name:'Needs attention',exact:true});
       await attention.getByRole('button',{name:'Actions for North Shore Plumbing'}).click(); await page.getByRole('menuitem',{name:'Assign to me',exact:true}).click();
       await expect.poll(async () => (await listInbox(owner,{organizationId})).items.find(item=>item.id===conversationIds[0])?.assignee?.membershipId).toBe(membershipId);
-      await page.getByLabel('Search Communications').fill('Service request 4'); await page.getByLabel('Search Communications').press('Enter');
-      await expect(page.getByRole('region',{name:'Inbox queue',exact:true}).getByText('Lumiere Studio',{exact:true})).toBeVisible();
-      await expect(page.getByRole('region',{name:'Inbox queue',exact:true}).getByText('Maple Dental',{exact:true})).toHaveCount(0);
-      await page.getByRole('link',{name:'Clear search',exact:true}).click();
-      await expect(page).not.toHaveURL(/q=Service/);
+      // Hubs carry no search; the period control is in the header.
+      await expect(page.getByLabel('Search Communications')).toHaveCount(0);
       await page.getByLabel('Communication date range').filter({visible:true}).selectOption('week'); await page.getByRole('button',{name:'Apply',exact:true}).filter({visible:true}).click(); await expect(page).toHaveURL(/when=week/);
       await page.getByRole('button',{name:'New call',exact:true}).click(); await expect(page.getByRole('dialog',{name:'New call',exact:true})).toBeVisible(); await page.getByRole('dialog',{name:'New call',exact:true}).getByRole('button',{name:'Close',exact:true}).click();
       await page.getByRole('region',{name:'Inbox queue',exact:true}).getByRole('link',{name:/North Shore Plumbing/}).click();

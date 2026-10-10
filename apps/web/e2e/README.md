@@ -105,3 +105,18 @@ The source of truth for test classification is `test-manifest.json`.
 `support-workspace.spec.ts` provisions a local-only tenant and verifies queue/policy setup, shared Case creation, assignment, priority, escalation, private notes, related Work navigation, resolution, close/reopen and an Inbox-origin Case with its own queue, member and resolution target. Resolving the Case leaves the Conversation open. It checks read-only controls and exact overdue drilldowns, captures empty/populated/detail/drawer/list/board/workbench/configuration/report states at 1440, 768 and 390 pixels, and includes lower-panel captures under `test-results/support/`. Database tests independently prove tenant isolation, typed relationships, direct-write denial, immutable history, individual command authorities, concurrent Case numbers, bounded board previews and SLA snapshot retention. Call-origin availability is checked; live carrier delivery is not exercised.
 
 `work-operating.spec.ts` provisions a local-only tenant, configures types/workflow/resources/opening hours through the UI, creates Work in its drawer, assigns and schedules in Dispatch, checks feasibility and day/week/month consistency, reschedules, rejects an overlap, moves a configured status and checks Resource assignments. It captures empty/populated Work and responsive Dispatch and verifies reduced/read-only roles and tenant boundaries.
+
+## Running against a production build, with the API (reliable, no dev-server compile)
+
+The dev server compiles each route on first visit, which turns the first navigation of a long journey into a timeout. For a trustworthy run:
+
+```bash
+pnpm --filter @gold/web build
+# the Python runtime, with only the local Supabase keys (no provider credentials)
+set -a; . <(grep -E "^(SUPABASE_URL|SUPABASE_ANON_KEY)=" .env.test); set +a
+export SUPABASE_PUBLISHABLE_KEY="$SUPABASE_ANON_KEY"; python apps/api/dev.py &
+GOLD_API_URL=http://127.0.0.1:8787 pnpm --filter @gold/web exec next start -p 3100 &
+E2E_BASE_URL=http://localhost:3100 pnpm --filter @gold/web exec playwright test
+```
+
+Journeys that call `apps/api` (call wrap-up, Ask, drafting) need `GOLD_API_URL` and the API process; without them they fail with a server-action error, not a UI one. A run can still hit a transient `fetch failed` / "invalid response from the upstream server" when local Supabase resets a connection under load; rerun the single spec before treating it as a regression.

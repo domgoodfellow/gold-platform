@@ -42,9 +42,11 @@ test.describe('tenant Finance workspace', () => {
     await page.getByRole('link', { name: 'Finance', exact: true }).first().click();
     await expect(page).toHaveURL(`/organizations/${organizationId}/finance`);
 
-    await page.getByRole('link', { name: 'Pricing', exact: true }).first().click();
+    // Pricing is configured from Settings; Finance reaches it through its Configure menu.
+    await page.getByRole('button', { name: 'Configure' }).click();
+    await page.getByRole('menuitem', { name: 'Services & pricing' }).click();
     await expect(page).toHaveURL(`/organizations/${organizationId}/settings/pricing`);
-    await expect(page.getByRole('heading', { name: 'Pricing', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Pricing/, level: 1 })).toBeVisible();
   });
 
   test('Plan & usage stays outside Finance, under Settings', async ({ page }) => {
