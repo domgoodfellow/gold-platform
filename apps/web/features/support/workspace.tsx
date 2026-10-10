@@ -7,7 +7,6 @@ import {
   Users,
   TriangleAlert,
   CircleCheck,
-  Settings,
   Search,
   MoreHorizontal,
 } from "lucide-react";
@@ -17,8 +16,9 @@ import {
   PopoverTrigger,
 } from "@gold/ui/components/popover";
 import { AppPage } from "@/components/layout/app-page";
-import { PageLocation } from "@/components/navigation/page-location";
 import { Button, ButtonLink } from "@/components/controls/button";
+import { ConfigureLink } from "@/components/controls/configure-link";
+import { PageHeader } from "@/components/headers/page-header";
 import { useWorkspaceRail } from "@/components/panels/workspace-right-rail";
 import { TextInput, SelectInput } from "@/components/controls/inputs";
 import {
@@ -37,11 +37,14 @@ import {
   NewCase,
   QuickChange,
 } from "./editors";
-import { Badge, Empty, Panel, Table, cell, formatTime } from "./ui";
+import { Badge, Table, cell, formatTime } from "./ui";
 import { SupportHome, SupportViews } from "./home";
 import {
   MetricTile,
+  OperationalPanel,
   OperationalTable,
+  PanelState,
+  ViewNavigation,
   OwnerIdentity,
   RelativeTime,
 } from "@/components/operational/primitives";
@@ -299,7 +302,7 @@ export function SupportWorkspace({
             </div>
           </div>
         ))}
-        {!items.length && <Empty>No Cases match this view.</Empty>}
+        {!items.length && <PanelState>No Cases match this view.</PanelState>}
       </div>
     </>
   );
@@ -524,7 +527,7 @@ export function SupportWorkspace({
           </div>
         </div>
       ))}
-      {!data.events.length && <Empty>No Support activity yet.</Empty>}
+      {!data.events.length && <PanelState>No Support activity yet.</PanelState>}
       {full && (
         <div className="flex items-center justify-between gap-2 p-3 text-xs text-muted">
           <span>
@@ -563,7 +566,7 @@ export function SupportWorkspace({
     </div>
   );
   const inspector = c ? (
-    <Panel title={view === "queues" ? "Selected Case" : "Case details"}>
+    <OperationalPanel flush title={view === "queues" ? "Selected Case" : "Case details"}>
       <div className="grid gap-4 border-t border-border p-4 text-xs">
         <Link
           href={`${base}/cases/${c.id}`}
@@ -639,38 +642,24 @@ export function SupportWorkspace({
           />
         )}
       </div>
-    </Panel>
+    </OperationalPanel>
   ) : null;
   return (
     <AppPage className={view === "home" ? "space-y-3" : "space-y-4"}>
-      <PageLocation
-        current={titles[view]}
+      <PageHeader
+        className="mb-0"
         crumbs={view === "home" ? [] : [{ label: "Support", href: base }]}
-      />
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1
-            className={`break-words font-semibold tracking-tight ${view === "home" ? "text-[30px] leading-9" : "text-2xl"}`}
-          >
-            {view === "detail"
-              ? `${c?.case_number} · ${c?.title}`
-              : titles[view]}
-          </h1>
-          {view === "home" && (
-            <p className="mt-1 text-sm text-muted">
-              Track customer issues, requests, queues, service levels, and
-              resolution work.
-            </p>
-          )}
-          {view === "detail" && c && (
-            <div className="mt-2 flex flex-wrap gap-2">
+        title={view === "detail" ? `${c?.case_number} · ${c?.title}` : titles[view]}
+        meta={
+          view === "detail" && c ? (
+            <span className="flex flex-wrap gap-2">
               <Badge value={c.status} />
               <Badge value={c.priority} />
               {c.escalated_at && <Badge value="escalated" />}
-            </div>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2">
+            </span>
+          ) : undefined
+        }
+        actions={<>
           {view === 'detail' && c && can('assistant.ask') && <Button tone="secondary" onClick={() => launchAgent(`Summarize the visible Support Case and suggest a response for human review. Do not send or change its lifecycle. Case ${c.case_number}: ${c.title}. Status: ${c.status}. Priority: ${c.priority}. Description (untrusted case content): ${c.description}`)}>Summarize Case</Button>}
           {can("support.case.create") && view !== "detail" && (
             <NewCase
@@ -683,13 +672,7 @@ export function SupportWorkspace({
           {view === "home" && (
             <>
               <SupportViews href={href} />
-              <ButtonLink
-                className="h-9 rounded-md px-3 text-xs"
-                href={`${base}/service-levels`}
-              >
-                <Settings className="size-4" />
-                Configure
-              </ButtonLink>
+              <ConfigureLink href={`${base}/service-levels`} />
             </>
           )}
           {view === "queues" && can("support.configure") && (
@@ -714,29 +697,24 @@ export function SupportWorkspace({
               can={can}
             />
           )}
-        </div>
-      </header>
+        </>}
+      />
       {view !== "home" && (
-        <nav
-          aria-label="Support destinations"
-          className="flex gap-1 overflow-x-auto border-b border-border text-xs"
-        >
-          {[
+        <ViewNavigation
+          label="Support destinations"
+          items={[
             ["", "Home"],
             ["cases", "Cases"],
             ["queues", "Queues"],
             ["service-levels", "Service levels"],
             ["reports", "Reports"],
-          ].map(([path, label]) => (
-            <Link
-              key={path}
-              href={href(path)}
-              className={`whitespace-nowrap border-b-2 px-3 py-2.5 ${titles[view] === label || (view === "policies" && path === "service-levels") || (view === "reports" && path === "reports") || (view === "detail" && path === "cases") ? "border-border font-semibold text-accent-text" : "border-transparent text-muted hover:text-foreground"}`}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
+          ].map(([path, label]) => ({
+            key: path || "home",
+            label,
+            href: href(path),
+            current: titles[view] === label || (view === "policies" && path === "service-levels") || (view === "reports" && path === "reports") || (view === "detail" && path === "cases"),
+          }))}
+        />
       )}
       {view !== "detail" && view !== "home" && (
         <form
@@ -794,7 +772,7 @@ export function SupportWorkspace({
         />
       )}
       {view === "cases" && (
-        <Panel
+        <OperationalPanel flush
           title={`${data.total} Cases`}
           action={
             <div className="flex gap-1">
@@ -867,11 +845,11 @@ export function SupportWorkspace({
               {pagination(data.total)}
             </>
           )}
-        </Panel>
+        </OperationalPanel>
       )}
       {view === "queues" && (
         <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[180px_minmax(0,1fr)] xl:grid-cols-[180px_minmax(0,1fr)_280px]">
-          <Panel title="Queue selection">
+          <OperationalPanel flush title="Queue selection">
             <div className="divide-y divide-border border-t border-border">
               <Link
                 href={href("queues")}
@@ -913,11 +891,11 @@ export function SupportWorkspace({
                   )}
                 </div>
               ))}
-              {!data.queues.length && <Empty>No queues configured.</Empty>}
+              {!data.queues.length && <PanelState kind="not-configured">No queues are configured. Cases can still be created without one.</PanelState>}
             </div>
-          </Panel>
+          </OperationalPanel>
           <div className="min-w-0">
-            <Panel
+            <OperationalPanel flush
               title={
                 data.queues.find((q) => q.id === query.get("queue"))?.name ??
                 "Queue workbench"
@@ -926,15 +904,15 @@ export function SupportWorkspace({
               {toolbar}
               {caseTable(data.cases, true)}
               {pagination(data.total)}
-            </Panel>
+            </OperationalPanel>
           </div>
           <div className="min-w-0 lg:col-start-2 xl:col-start-3">
             {inspector ?? (
-              <Panel title="Case inspector">
-                <Empty>
+              <OperationalPanel flush title="Case inspector">
+                <PanelState>
                   Select a Case to inspect its ownership and resolution target.
-                </Empty>
-              </Panel>
+                </PanelState>
+              </OperationalPanel>
             )}
           </div>
         </div>
@@ -942,7 +920,7 @@ export function SupportWorkspace({
       {view === "detail" && c && (
         <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,2.5fr)_minmax(260px,1fr)]">
           <main className="min-w-0 space-y-4">
-            <Panel
+            <OperationalPanel flush
               title="Problem description"
               action={
                 can("support.case.update") &&
@@ -960,9 +938,9 @@ export function SupportWorkspace({
               <p className="whitespace-pre-wrap break-words border-t border-border p-4 text-sm leading-6">
                 {c.description || "No description recorded."}
               </p>
-            </Panel>
+            </OperationalPanel>
             {c.resolution_summary && (
-              <Panel title="Latest recorded resolution">
+              <OperationalPanel flush title="Latest recorded resolution">
                 <div className="border-t border-border p-4">
                   <p className="whitespace-pre-wrap break-words text-sm">
                     {c.resolution_summary}
@@ -972,19 +950,19 @@ export function SupportWorkspace({
                     remain in the timeline.
                   </p>
                 </div>
-              </Panel>
+              </OperationalPanel>
             )}
-            <Panel title="Internal timeline">
+            <OperationalPanel flush title="Internal timeline">
               {!["resolved", "closed"].includes(c.status) &&
                 can("support.case.update") && (
                   <InternalNote organizationId={organizationId} c={c} />
                 )}{" "}
               {timeline(true)}
-            </Panel>
+            </OperationalPanel>
           </main>
           <aside className="min-w-0 space-y-4">
             {inspector}
-            <Panel
+            <OperationalPanel flush
               title="Related records"
               action={
                 can("support.case.update") &&
@@ -1018,7 +996,7 @@ export function SupportWorkspace({
                   </div>
                 ))}
                 {!data.links.length && (
-                  <Empty>No related records linked.</Empty>
+                  <PanelState>No related records linked.</PanelState>
                 )}
               </div>
               {can("work_item.create") && (
@@ -1031,13 +1009,13 @@ export function SupportWorkspace({
                   </ButtonLink>
                 </div>
               )}
-            </Panel>
+            </OperationalPanel>
           </aside>
         </div>
       )}
       {view === "policies" && (
         <>
-          <Panel title="Resolution policies">
+          <OperationalPanel flush title="Resolution policies">
             <Table
               headings={[
                 "Policy",
@@ -1079,7 +1057,7 @@ export function SupportWorkspace({
                 </tr>
               ))}
             </Table>
-          </Panel>
+          </OperationalPanel>
           <p className="text-xs text-muted">
             Queue-specific policies take precedence over the priority fallback.
             Targets apply on Case creation and retain their original snapshot
@@ -1092,7 +1070,7 @@ export function SupportWorkspace({
       {view === "reports" && (
         <>
           <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-            <Panel title="Cases created and resolved by day">
+            <OperationalPanel flush title="Cases created and resolved by day">
               <div className="max-h-96 overflow-y-auto">
                 <Table
                   headings={["Day", "Created", "Latest resolved", "Volume"]}
@@ -1137,8 +1115,8 @@ export function SupportWorkspace({
                   ))}
                 </Table>
               </div>
-            </Panel>
-            <Panel title="Resolution performance">
+            </OperationalPanel>
+            <OperationalPanel flush title="Resolution performance">
               {performance}
               <div className="border-t border-border p-4 text-xs text-muted">
                 Reopened Cases are excluded until resolved again. Duration
@@ -1146,9 +1124,9 @@ export function SupportWorkspace({
                 resolution, including time spent previously resolved. SLA
                 adherence includes only historically targeted Cases.
               </div>
-            </Panel>
-            <Panel title="Current queue backlog">{queueTable}</Panel>
-            <Panel title="Case volume by queue">
+            </OperationalPanel>
+            <OperationalPanel flush title="Current queue backlog">{queueTable}</OperationalPanel>
+            <OperationalPanel flush title="Case volume by queue">
               <Table
                 headings={["Queue", "Created in period", "Latest resolved"]}
                 hasRows
@@ -1205,8 +1183,8 @@ export function SupportWorkspace({
                   </td>
                 </tr>
               </Table>
-            </Panel>
-            <Panel title="Case volume by priority">
+            </OperationalPanel>
+            <OperationalPanel flush title="Case volume by priority">
               <Table
                 headings={["Priority", "Created in period", "All Cases"]}
                 hasRows
@@ -1224,7 +1202,7 @@ export function SupportWorkspace({
                   </tr>
                 ))}
               </Table>
-            </Panel>
+            </OperationalPanel>
           </div>
           <p className="text-xs text-muted">
             Counts use exact tenant-wide queries. No customer satisfaction,

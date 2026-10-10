@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { cloneElement, isValidElement, type ReactNode } from "react";
-import { StatePill } from "@/components/operational/primitives";
+import { PanelState, StatePill } from "@/components/operational/primitives";
 
 export function Badge({ value }: { value: string }) {
   // Support's own vocabulary: priority and breach state are platform facts, so they may carry a tone. A case's queue or custom label never does.
@@ -12,43 +11,6 @@ export function Badge({ value }: { value: string }) {
         ? "success"
         : "neutral";
   return <StatePill tone={tone}>{value.replaceAll("_", " ")}</StatePill>;
-}
-export function Panel({
-  title,
-  children,
-  href,
-  action,
-}: {
-  title: string;
-  children: ReactNode;
-  href?: string;
-  action?: ReactNode;
-}) {
-  return (
-    <section className="min-w-0 overflow-hidden rounded-lg border border-border bg-background">
-      <div className="flex min-h-12 flex-wrap items-center justify-between gap-2 px-4 py-3">
-        <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
-        {href ? (
-          <Link
-            href={href}
-            className="text-xs font-medium text-accent-text hover:underline"
-          >
-            View all
-          </Link>
-        ) : (
-          action
-        )}
-      </div>
-      {children}
-    </section>
-  );
-}
-export function Empty({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-28 items-center justify-center border-t border-border p-5 text-center text-sm text-muted">
-      {children}
-    </div>
-  );
 }
 export const cell = "px-3 py-2.5 align-middle";
 export function Table({
@@ -66,7 +28,7 @@ export function Table({
     <>
       <div className="max-w-full overflow-x-auto">
         <table className="w-full text-left text-xs">
-          <thead className="border-y border-border bg-surface/60 text-[11px] text-muted">
+          <thead className="border-b border-border bg-secondary text-[11px] text-muted">
             <tr>
               {headings.map((h) => (
                 <th key={h} className="whitespace-nowrap px-3 py-2 font-medium">
@@ -78,7 +40,7 @@ export function Table({
           <tbody className="divide-y divide-border">{children}</tbody>
         </table>
       </div>
-      {!hasRows && <Empty>{empty}</Empty>}
+      {!hasRows && <PanelState>{empty}</PanelState>}
     </>
   );
 }

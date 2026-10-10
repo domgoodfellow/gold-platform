@@ -2,7 +2,8 @@ import Link from "next/link";
 import { requireOrganization } from "@/lib/route/organization";
 import { readSupport, type RecordKind } from "@/lib/domain/support/support";
 import { NewCase } from "./editors";
-import { Badge, Empty, Panel } from "./ui";
+import { Badge } from "./ui";
+import { OperationalPanel, PanelState } from "@/components/operational/primitives";
 
 export async function RelatedSupport({
   organizationId,
@@ -29,7 +30,7 @@ export async function RelatedSupport({
     ...(kind === "customer" ? { customerName } : {}),
   };
   return (
-    <Panel
+    <OperationalPanel flush
       title="Support Cases"
       href={`${base}?${new URLSearchParams(filters)}`}
     >
@@ -60,8 +61,8 @@ export async function RelatedSupport({
             <Badge value={c.status} />
           </Link>
         ))}
-        {!data.cases.length && <Empty>No linked Support Cases.</Empty>}
+        {!data.cases.length && <PanelState>No linked Support Cases.</PanelState>}
       </div>
-    </Panel>
+    </OperationalPanel>
   );
 }

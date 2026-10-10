@@ -39,7 +39,8 @@ import {
   deleteAgent,
   deleteDeployment,
 } from "./actions";
-import { AgentIcon, Badge, Empty, Field, Panel } from "./ui";
+import { AgentIcon, Badge, Field } from "./ui";
+import { OperationalPanel, PanelState } from "@/components/operational/primitives";
 
 const SECTIONS = [
   "overview",
@@ -321,7 +322,7 @@ export function AgentWorkbench({
             </SelectInput>
           </div>
           {section === "overview" && (
-            <Panel title="Agent identity">
+            <OperationalPanel title="Agent identity">
               <div className="space-y-5">
                 <Field label="Name">
                   <TextInput
@@ -381,10 +382,10 @@ export function AgentWorkbench({
                   </div>
                 </div>
               </div>
-            </Panel>
+            </OperationalPanel>
           )}
           {section === "instructions" && (
-            <Panel title="Instructions">
+            <OperationalPanel title="Instructions">
               <div className="space-y-5">
                 <p className="text-xs text-muted">
                   Tenant instructions shape behavior beneath platform rules.
@@ -427,10 +428,10 @@ export function AgentWorkbench({
                   />
                 </Field>
               </div>
-            </Panel>
+            </OperationalPanel>
           )}
           {section === "channels" && (
-            <Panel
+            <OperationalPanel
               title="Channel deployments"
               action={
                 <Button
@@ -477,17 +478,17 @@ export function AgentWorkbench({
                   </button>
                 ))}
                 {!deployments.length && (
-                  <Empty>
+                  <PanelState>
                     {versions.length
                       ? "No channels configured. Add a deployment."
                       : "Publish an agent version to configure channels."}
-                  </Empty>
+                  </PanelState>
                 )}
               </div>
-            </Panel>
+            </OperationalPanel>
           )}
           {section === "knowledge" && (
-            <Panel title="Knowledge sources">
+            <OperationalPanel title="Knowledge sources">
               <p className="mb-4 text-xs text-muted">
                 Published websites only. Source selections update the draft;
                 publish a new version to deploy them. Private Library ingestion
@@ -542,15 +543,15 @@ export function AgentWorkbench({
                   </p>
                 )}
                 {!data.sites.some((s) => s.current_published_revision_id) && (
-                  <Empty>
+                  <PanelState>
                     Publish a website in Studio before adding knowledge.
-                  </Empty>
+                  </PanelState>
                 )}
               </div>
-            </Panel>
+            </OperationalPanel>
           )}
           {section === "tools" && (
-            <Panel title="Tools & permissions">
+            <OperationalPanel title="Tools & permissions">
               <div className="space-y-4">
                 <Field label="Action policy">
                   <SelectInput
@@ -604,10 +605,10 @@ export function AgentWorkbench({
                   MCP execution is unavailable.
                 </p>
               </div>
-            </Panel>
+            </OperationalPanel>
           )}
           {section === "handoff" && (
-            <Panel title="Human handoff">
+            <OperationalPanel title="Human handoff">
               <div className="space-y-4">
                 <Field label="Escalation policy">
                   <TextArea
@@ -635,7 +636,7 @@ export function AgentWorkbench({
                   Configure channel handoff messages
                 </Button>
               </div>
-            </Panel>
+            </OperationalPanel>
           )}
           {section === "testing" && (
             <Testing
@@ -649,7 +650,7 @@ export function AgentWorkbench({
             />
           )}
           {section === "activity" && (
-            <Panel title="Agent activity">
+            <OperationalPanel title="Agent activity">
               <p className="mb-4 text-xs text-muted">
                 Agent-specific execution attribution is not yet available for
                 legacy runs. Your operator runs and public conversation metadata
@@ -675,10 +676,10 @@ export function AgentWorkbench({
                     </div>
                   ))}
               </div>
-            </Panel>
+            </OperationalPanel>
           )}
           {section === "versions" && (
-            <Panel title="Published versions">
+            <OperationalPanel title="Published versions">
               <p className="mb-4 text-xs text-muted">
                 Versions are immutable. Select a previous published version in a
                 deployment for deliberate rollback.
@@ -697,12 +698,12 @@ export function AgentWorkbench({
                   </span>
                 </button>
               ))}
-              {!versions.length && <Empty>No version published yet.</Empty>}
-            </Panel>
+              {!versions.length && <PanelState>No version published yet.</PanelState>}
+            </OperationalPanel>
           )}
         </div>
         <aside className={`${channelOpen ? "hidden" : ""} min-w-0 space-y-4 lg:col-start-2 xl:col-start-auto`}>
-          <Panel title="Readiness inspector">
+          <OperationalPanel title="Readiness inspector">
             <div className="space-y-4 text-xs">
               <div className="flex justify-between gap-2">
                 <span>Local changes</span>
@@ -725,8 +726,8 @@ export function AgentWorkbench({
                 test, then select the version in each channel.
               </p>
             </div>
-          </Panel>
-          <Panel title="Operator Copilot">
+          </OperationalPanel>
+          <OperationalPanel title="Operator Copilot">
             <ShieldCheck size={20} className="text-accent-text" />
             <p className="my-3 text-xs text-muted">
               Work with the assistant in the persistent global Agent rail.
@@ -740,7 +741,7 @@ export function AgentWorkbench({
             >
               Open Agent
             </Button>
-          </Panel>
+          </OperationalPanel>
         </aside>
       </div>
       {channelOpen && (
@@ -808,7 +809,7 @@ function Testing({
     [error, setError] = useState(""),
     [pending, start] = useTransition();
   return (
-    <Panel title="Agent testing playground">
+    <OperationalPanel title="Agent testing playground">
       <div className="space-y-4">
         <div className="rounded-md border border-border bg-secondary p-3 text-xs">
           <strong>Safe preview</strong>
@@ -930,7 +931,7 @@ function Testing({
           ))}
         </div>
       </div>
-    </Panel>
+    </OperationalPanel>
   );
 }
 

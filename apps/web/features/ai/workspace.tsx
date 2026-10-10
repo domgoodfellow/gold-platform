@@ -11,11 +11,12 @@ import {
   TriangleAlert,
   Plus,
   Play,
-  Settings,
   Wrench,
   ArrowUpRight,
 } from "lucide-react";
 import { AppPage } from "@/components/layout/app-page";
+import { PageHeader } from "@/components/headers/page-header";
+import { ConfigureLink } from "@/components/controls/configure-link";
 import { Button, ButtonLink } from "@/components/controls/button";
 import { TextInput, TextArea, SelectInput } from "@/components/controls/inputs";
 import {
@@ -37,7 +38,8 @@ import {
   type Channel,
 } from "@/lib/domain/ai/agents";
 import { saveAgent } from "./actions";
-import { AgentIcon, AiNav, Badge, Empty, Panel, Field, cell } from "./ui";
+import { AgentIcon, AiNav, Badge, Field, cell } from "./ui";
+import { MetricTile, OperationalPanel, PanelState } from "@/components/operational/primitives";
 
 export function NewAgent({
   organizationId,
@@ -196,7 +198,7 @@ export function AiWorkspace({
   const visibleDeployments = data.deployments.filter(d => (!selectedChannel || d.surface === selectedChannel) &&
     (!(search.get("q") || search.get("status")) || data.agents.some(a => a.id === d.assistant_id)));
   const agentTable = (
-    <Panel
+    <OperationalPanel
       title={view === "agents" ? "Agents" : "Active agents"}
       action={
         <Link className="text-xs text-accent-text" href={`${base}/agents`}>
@@ -216,7 +218,7 @@ export function AiWorkspace({
             <Badge>{a.status}</Badge>
           </Link>
         ))}
-        {!agents.length && <Empty>No agents yet. Create a draft to get started.</Empty>}
+        {!agents.length && <PanelState action={<NewAgent organizationId={organizationId} canManage={canManage} />}>No agents yet. Create a draft, test it, then publish a version to deploy it.</PanelState>}
       </div>
       <div className="hidden max-w-full overflow-x-auto sm:block">
         <table className="w-full min-w-[640px]">
@@ -293,18 +295,18 @@ export function AiWorkspace({
           </tbody>
         </table>
         {!agents.length && (
-          <Empty>
+          <PanelState>
             No agents yet. Create a draft to start configuring your first agent.
-          </Empty>
+          </PanelState>
         )}
       </div>
       <p className="mt-3 text-xs text-muted">
         {Math.min(agents.length, view === "agents" ? 100 : 8)} agents shown · bounded preview
       </p>
-    </Panel>
+    </OperationalPanel>
   );
   const deploymentPanel = (
-    <Panel
+    <OperationalPanel
       title="Channel deployments"
       action={
         <Link href={`${base}/deployments`} className="text-xs text-accent-text">
@@ -336,12 +338,12 @@ export function AiWorkspace({
               </Badge>
             </Link>
           ))}
-        {!visibleDeployments.length && <Empty>No matching deployments. Configure a channel in the agent workbench.</Empty>}
+        {!visibleDeployments.length && <PanelState>No matching deployments. Configure a channel in the agent workbench.</PanelState>}
       </div>
-    </Panel>
+    </OperationalPanel>
   );
   const activity = (
-    <Panel
+    <OperationalPanel
       title="Recent agent interactions"
       action={
         <Link href={`${base}/activity`} className="text-xs text-accent-text">
@@ -368,12 +370,12 @@ export function AiWorkspace({
             <Badge>{r.action_outcome ?? r.outcome}</Badge>
           </button>
         ))}
-        {!data.runs.length && <Empty>No operator runs in this period.</Empty>}
+        {!data.runs.length && <PanelState>No operator runs in this period.</PanelState>}
       </div>
-    </Panel>
+    </OperationalPanel>
   );
   const attention = (
-    <Panel
+    <OperationalPanel
       title="Needs attention"
       action={
         <Link
@@ -430,34 +432,27 @@ export function AiWorkspace({
         {!data.readiness.some((r) => r.state === "Unavailable") &&
           !summary.handoffs &&
           !summary.approvals && (
-            <Empty>No recorded issues requiring attention.</Empty>
+            <PanelState>No recorded issues requiring attention.</PanelState>
           )}
       </div>
-    </Panel>
+    </OperationalPanel>
   );
   return (
     <AppPage className="space-y-4">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          <p className="mt-1 text-sm text-muted">
-            Agents, deployments, knowledge, and operations.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <PageHeader
+        className="mb-0"
+        title={title}
+        actions={<>
           <NewAgent organizationId={organizationId} canManage={canManage} />
           <ButtonLink tone="secondary" href={`${base}/agents`}>
-            <Play size={14} />
+            <Play aria-hidden />
             Test agent
           </ButtonLink>
-          <ButtonLink tone="secondary" href={`${base}/deployments`}>
-            <Settings size={14} />
-            Configure
-          </ButtonLink>
-        </div>
-      </header>
+          <ConfigureLink href={`${base}/deployments`} />
+        </>}
+      />
       {!view && (
-        <div className="grid grid-cols-2 divide-x divide-border rounded-lg border border-border bg-card xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {[
             {
               label: "Active agents",
@@ -488,18 +483,7 @@ export function AiWorkspace({
               hint: `Last ${data.days} days`,
             },
           ].map((k) => (
-            <Link
-              key={k.label}
-              href={`${base}${k.href}`}
-              className="flex items-center gap-3 p-4"
-            >
-              <k.icon className="size-5 shrink-0 text-accent-text" />
-              <div>
-                <strong className="text-xl">{k.value}</strong>
-                <p className="mt-1 text-xs">{k.label}</p>
-                <p className="mt-1 text-[10px] text-muted">{k.hint}</p>
-              </div>
-            </Link>
+            <MetricTile key={k.label} label={k.label} value={k.value} detail={k.hint} icon={k.icon} href={`${base}${k.href}`} />
           ))}
         </div>
       )}
@@ -558,7 +542,7 @@ export function AiWorkspace({
               {agentTable}
               {deploymentPanel}
               {activity}
-              <Panel title="Performance">
+              <OperationalPanel title="Performance">
                 <dl className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <dt className="text-muted">Answered operator runs</dt>
@@ -583,11 +567,11 @@ export function AiWorkspace({
                     </dd>
                   </div>
                 </dl>
-              </Panel>
+              </OperationalPanel>
             </div>
             <aside className="min-w-0 space-y-4">
               {attention}
-              <Panel title="Agent readiness">
+              <OperationalPanel title="Agent readiness">
                 <dl className="space-y-3 text-sm">
                   <div className="flex justify-between gap-3">
                     <dt>Agent entitlement</dt>
@@ -618,8 +602,8 @@ export function AiWorkspace({
                     </dd>
                   </div>
                 </dl>
-              </Panel>
-              <Panel title="Approvals & handoffs">
+              </OperationalPanel>
+              <OperationalPanel title="Approvals & handoffs">
                 <p className="text-sm">
                   {summary.approvals} pending approvals in your conversations
                 </p>
@@ -632,8 +616,8 @@ export function AiWorkspace({
                 >
                   Open Communications →
                 </Link>
-              </Panel>
-              <Panel title="Usage & allowance">
+              </OperationalPanel>
+              <OperationalPanel title="Usage & allowance">
                 {data.usage.items.length ? <dl className="space-y-3 text-sm">{data.usage.items.map(item => <div key={item.allowanceKey}><dt className="font-medium">{item.label}</dt><dd className="mt-1 text-xs text-muted">{item.consumed ?? 'Unmeasured'} / {item.included ?? 'Unspecified'} {item.unit} · {item.period}</dd></div>)}</dl> : <p className="text-xl font-semibold">Unavailable</p>}
                 <p className="mt-2 text-xs text-muted">
                   Canonical allowance windows. Per-agent usage attribution is not yet available. Missing measurements are not zero usage.
@@ -644,8 +628,8 @@ export function AiWorkspace({
                 >
                   Plan & usage →
                 </Link>
-              </Panel>
-              <Panel title="Recent failures">
+              </OperationalPanel>
+              <OperationalPanel title="Recent failures">
                 {data.runs
                   .filter((r) => r.outcome === "failed")
                   .slice(0, 3)
@@ -659,16 +643,16 @@ export function AiWorkspace({
                     </button>
                   ))}
                 {!data.runs.some((r) => r.outcome === "failed") && (
-                  <Empty>No failures in your recent runs.</Empty>
+                  <PanelState>No failures in your recent runs.</PanelState>
                 )}
-              </Panel>
-              <Panel title="Insights">
+              </OperationalPanel>
+              <OperationalPanel title="Insights">
                 <p className="text-xs text-muted">
                   Operator metrics are personal. Website conversations and
                   handoffs are Communications-owned. Vendor costs remain in
                   Platform Administration.
                 </p>
-              </Panel>
+              </OperationalPanel>
             </aside>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -699,7 +683,7 @@ export function AiWorkspace({
       {view === "activity" && (
         <>
           {activity}
-          <Panel title="Public conversations">
+          <OperationalPanel title="Public conversations">
             {data.threads.map((t) => (
               <Link
                 key={t.id}
@@ -713,13 +697,13 @@ export function AiWorkspace({
               </Link>
             ))}
             {!data.threads.length && (
-              <Empty>No public conversations recorded.</Empty>
+              <PanelState>No public conversations recorded.</PanelState>
             )}
-          </Panel>
+          </OperationalPanel>
         </>
       )}
       {view === "knowledge" && (
-        <Panel title="Published website knowledge">
+        <OperationalPanel title="Published website knowledge">
           <p className="mb-4 text-sm text-muted">
             Select sources in an agent’s Knowledge section, then publish a
             version. Public retrieval uses only the current published website
@@ -737,15 +721,15 @@ export function AiWorkspace({
               </div>
             ))}
           {!data.sites.some((s) => s.current_published_revision_id) && (
-            <Empty>No published websites available.</Empty>
+            <PanelState>No published websites available.</PanelState>
           )}
           <ButtonLink tone="secondary" href={`${base}/agents`}>
             Choose an agent
           </ButtonLink>
-        </Panel>
+        </OperationalPanel>
       )}
       {view === "tools" && (
-        <Panel title="Governed tool catalogue">
+        <OperationalPanel title="Governed tool catalogue">
           <p className="mb-4 text-sm text-muted">
             Operator tools execute as the signed-in person, under existing
             domain RLS. Public chat and safe previews have no business tools.
@@ -779,10 +763,10 @@ export function AiWorkspace({
               </p>
             </div>
           </div>
-        </Panel>
+        </OperationalPanel>
       )}
       {view === "evaluations" && (
-        <Panel title="Your recent evaluations">
+        <OperationalPanel title="Your recent evaluations">
           <p className="mb-3 text-xs text-muted">
             Safe preview responses with human-assessed criteria. No fabricated
             quality score.
@@ -798,9 +782,9 @@ export function AiWorkspace({
             </Link>
           ))}
           {!data.evaluations.length && (
-            <Empty>Run a safe preview from an agent’s Testing section.</Empty>
+            <PanelState>Run a safe preview from an agent’s Testing section.</PanelState>
           )}
-        </Panel>
+        </OperationalPanel>
       )}
       <PageDrawer
         open={Boolean(inspected)}
@@ -816,7 +800,7 @@ export function AiWorkspace({
             </PageDrawerDescription>
           </PageDrawerHeader>
           <PageDrawerBody>
-            {!data.runs.some(r => r.id === inspected) && <Empty>This interaction is outside the current filter or is unavailable to you.</Empty>}
+            {!data.runs.some(r => r.id === inspected) && <PanelState kind="restricted">This interaction is outside the current filter or is unavailable to you.</PanelState>}
             {data.runs
               .filter((r) => r.id === inspected)
               .map((r) => (

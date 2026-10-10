@@ -496,12 +496,17 @@ describe('the page-header contract — the page, not the workspace header, owns 
       // A pure redirect renders nothing, and so does an unmatched-address catch-all that only
       // throws `notFound()` so the segment's own `not-found.tsx` renders inside its layout.
       if ((/^\s*redirect\(/m.test(source) || /^\s*notFound\(\);/m.test(source)) && !identity.test(source)) continue;
-      // A thin page may delegate to the feature screen that draws the header; that screen is one hop down.
-      const delegates = [...source.matchAll(/from ['"]@\/((?:features|lib\/application)\/[^'"]+)['"]/g)].map((match) => match[1]);
-      const oneHop = delegates.some((target) =>
-        ['.tsx', '/index.tsx'].some((ext) => {
-          try { return identity.test(readFileSync(`${WEB}/${target}${ext}`, 'utf8')); } catch { return false; }
-        }));
+      // A thin page may delegate to a loader and then the feature screen that draws the header; follow imports two files deep.
+      const draws = (text: string, depth: number): boolean => {
+        if (identity.test(text)) return true;
+        if (depth === 0) return false;
+        const targets = [...text.matchAll(/from ['"]@\/((?:features|lib\/application)\/[^'"]+)['"]/g)].map((match) => match[1]);
+        return targets.some((target) =>
+          ['.tsx', '/index.tsx'].some((ext) => {
+            try { return draws(readFileSync(`${WEB}/${target}${ext}`, 'utf8'), depth - 1); } catch { return false; }
+          }));
+      };
+      const oneHop = draws(source, 2);
       expect(identity.test(source) || oneHop, `${label} renders no page identity`).toBe(true);
       expect(source, `${label} would render two <h1> elements`).not.toMatch(/<h1\b|<PageHeading/);
     }
