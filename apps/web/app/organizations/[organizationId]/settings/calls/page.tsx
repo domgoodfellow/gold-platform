@@ -37,7 +37,7 @@ export default async function CallSetupSettingsPage({
         ]}
 
       />
-      <div className="grid min-w-0 gap-4 md:grid-cols-[12rem_minmax(0,1fr)]"><nav aria-label="Communications configuration sections" className="flex flex-wrap gap-3 text-sm md:flex-col"><Link href={`/organizations/${organizationId}/comms`} className="text-primary">Communications Home</Link><Link href="#channels">Channels and readiness</Link><Link href="#caller-identity">Caller identity</Link><Link href={`/organizations/${organizationId}/comms/numbers`}>Numbers and assignments</Link><Link href="#routing">Inbound routing</Link><Link href="#outcomes">Call outcomes</Link><Link href="#business-hours">Business hours</Link><Link href="#recording">Recording</Link><Link href="#compliance">Compliance</Link></nav><div className="min-w-0"><VoiceSettingsContent
+      <div className="grid min-w-0 gap-4 md:grid-cols-[12rem_minmax(0,1fr)]"><nav aria-label="Communications configuration sections" className="flex flex-wrap gap-3 text-sm md:flex-col"><Link href={`/organizations/${organizationId}/comms`} className="text-accent-text">Communications Home</Link><Link href="#channels">Channels and readiness</Link><Link href="#caller-identity">Caller identity</Link><Link href={`/organizations/${organizationId}/comms/numbers`}>Numbers and assignments</Link><Link href="#routing">Inbound routing</Link><Link href="#outcomes">Call outcomes</Link><Link href="#business-hours">Business hours</Link><Link href="#recording">Recording</Link><Link href="#compliance">Compliance</Link></nav><div className="min-w-0"><VoiceSettingsContent
             organizationId={organizationId}
             number={number}
             channelReadiness={{ sms: senders.numbers.length, email: senders.senders.length }}

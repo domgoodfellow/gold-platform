@@ -42,7 +42,7 @@ export function VoiceSettingsContent({ organizationId, number, outcomes, routes,
           <section id="channels" className="scroll-mt-20 rounded-lg border border-border bg-surface p-4">
             <GroupHeading>Messaging</GroupHeading>
             {channelReadiness ? <dl className="mt-2 grid gap-2 text-sm"><div className="flex justify-between gap-3"><dt>SMS sending</dt><dd>{channelReadiness.sms ? `${channelReadiness.sms} ready numbers` : 'Unavailable - setup required'}</dd></div><div className="flex justify-between gap-3"><dt>Email sending</dt><dd>{channelReadiness.email ? `${channelReadiness.email} ready addresses` : 'Unavailable - setup required'}</dd></div></dl> : null}
-            <Hint className="mt-2">SMS requires a ready outbound number and an active messaging connection. Email requires a ready sending address. Unavailable channels cannot be sent from.</Hint><div className="mt-2 flex flex-wrap gap-4 text-sm text-primary"><Link href={`/organizations/${organizationId}/comms/numbers`}>Numbers and assignments</Link><Link href={`/organizations/${organizationId}/settings/email`}>Email configuration</Link></div>
+            <Hint className="mt-2">SMS requires a ready outbound number and an active messaging connection. Email requires a ready sending address. Unavailable channels cannot be sent from.</Hint><div className="mt-2 flex flex-wrap gap-4 text-sm text-accent-text"><Link href={`/organizations/${organizationId}/comms/numbers`}>Numbers and assignments</Link><Link href={`/organizations/${organizationId}/settings/email`}>Email configuration</Link></div>
           </section>
           <section id="routing" className="scroll-mt-20 rounded-lg border border-border bg-surface p-4">
             <GroupHeading>Routing</GroupHeading>

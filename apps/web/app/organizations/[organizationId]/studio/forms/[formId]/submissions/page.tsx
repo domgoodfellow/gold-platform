@@ -40,7 +40,7 @@ export default async function FormSubmissionsPage({ params, searchParams }: Page
       <SubmissionsView key={page} organizationId={organizationId} formId={formId} formName={state.form.name} read={read} offset={offset} initialSelection={typeof query.submission === 'string' ? query.submission : undefined} />
       <nav aria-label="Response pages" className="flex items-center justify-between gap-3 text-sm">
         <span className="text-muted">Page {page} of {Math.max(1, Math.ceil(read.total / 50))}</span>
-        <div className="flex gap-4">{page > 1 ? <Link href={`?page=${page - 1}`} className="text-primary hover:underline">Previous</Link> : null}{offset + read.submissions.length < read.total ? <Link href={`?page=${page + 1}`} className="text-primary hover:underline">Next</Link> : null}</div>
+        <div className="flex gap-4">{page > 1 ? <Link href={`?page=${page - 1}`} className="text-accent-text hover:underline">Previous</Link> : null}{offset + read.submissions.length < read.total ? <Link href={`?page=${page + 1}`} className="text-accent-text hover:underline">Next</Link> : null}</div>
       </nav>
     </AppPage>
   );

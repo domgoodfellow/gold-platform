@@ -77,14 +77,14 @@ export default async function StudioFormsPage({ params, searchParams }: PageProp
             <table className="w-full text-left text-sm [&_td]:px-4 [&_td]:py-3 [&_th]:whitespace-nowrap [&_th]:px-4 [&_th]:py-2 [&_th]:text-xs [&_th]:font-medium [&_th]:text-muted">
               <thead className="border-b border-border bg-secondary"><tr><th>Form</th><th>Publication</th><th>Revision</th><th>Responses</th><th>Last response</th><th>Placement</th><th>Updated</th><th>Actions</th></tr></thead>
               <tbody className="divide-y divide-border">{rows.map((form) => <tr key={form.id} className="hover:bg-hover">
-                <td><Link href={`${base}/forms/${form.id}`} className="font-medium text-primary hover:underline">{form.name}</Link></td>
+                <td><Link href={`${base}/forms/${form.id}`} className="font-medium text-accent-text hover:underline">{form.name}</Link></td>
                 <td><span className="inline-flex whitespace-nowrap rounded-full bg-secondary px-2 py-0.5 text-xs">{statusOf(form)}</span></td>
                 <td className="whitespace-nowrap text-xs">{form.publishedRevisionNumber === null ? 'Draft' : `v${form.publishedRevisionNumber}`}</td>
-                <td><Link href={`${base}/forms/${form.id}/submissions`} className="text-primary hover:underline">{form.submissionCount}</Link></td>
+                <td><Link href={`${base}/forms/${form.id}/submissions`} className="text-accent-text hover:underline">{form.submissionCount}</Link></td>
                 <td className="whitespace-nowrap text-xs text-muted">{form.lastSubmittedAt ? new Date(form.lastSubmittedAt).toLocaleDateString('en-CA', { timeZone: organization.timezone }) : 'None yet'}</td>
                 <td className="text-xs text-muted">{placementLabels(form.placements).join(', ') || 'Not placed'}</td>
                 <td className="whitespace-nowrap text-xs text-muted">{new Date(form.updatedAt).toLocaleDateString('en-CA', { timeZone: organization.timezone })}</td>
-                <td><div className="flex gap-3 text-xs"><Link href={`${base}/forms/${form.id}`} className="text-primary hover:underline">Edit</Link>{form.publishedRevisionNumber !== null && !form.archived ? <Link href={stableFormPath(form.publicKey)} target="_blank" className="text-primary hover:underline">View</Link> : null}</div></td>
+                <td><div className="flex gap-3 text-xs"><Link href={`${base}/forms/${form.id}`} className="text-accent-text hover:underline">Edit</Link>{form.publishedRevisionNumber !== null && !form.archived ? <Link href={stableFormPath(form.publicKey)} target="_blank" className="text-accent-text hover:underline">View</Link> : null}</div></td>
               </tr>)}</tbody>
             </table>
           </div>

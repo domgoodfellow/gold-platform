@@ -1,9 +1,9 @@
-import Link from 'next/link';
 import { AppPage } from '@/components/layout/app-page';
 import { CollectionHeader } from '@/components/patterns/collection-header';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { TextInput, SelectInput } from '@/components/controls/inputs';
 import { FormField } from '@/components/controls/form';
+import { ViewNavigation } from '@/components/operational/primitives';
 import { FinanceWorkflow } from '../finance-workflow';
 import { InvoicesTable, QuotesTable, PaymentsTable } from './finance-tables';
 import { financeFilters } from '@/lib/application/finance/operating';
@@ -27,7 +27,7 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
   const page = filter.page ?? 1;
   const href = (next: number) => { const p = new URLSearchParams(); for (const [k,v] of Object.entries(query)) if (typeof v === 'string' && k !== 'page') p.set(k,v); p.set('page', String(next)); return `${base}/${kind}?${p}`; };
   return <AppPage><CollectionHeader title={title} crumbs={[{ label: 'Finance', href: base }]} actions={canCreate ? <FinanceWorkflow organizationId={organizationId} kind={workflow} mayCreateWork={may('work_item.create')} /> : undefined} />
-    <nav aria-label="Finance collections" className="mb-4 flex gap-4 text-sm text-primary">{['quotes','invoices','payments'].map(k => <Link key={k} aria-current={k === kind ? 'page' : undefined} href={`${base}/${k}`} className="capitalize hover:underline">{k}</Link>)}<Link href={`/organizations/${organizationId}/settings/pricing`}>Services &amp; Pricing</Link></nav>
+    <ViewNavigation label="Finance collections" className="mb-4" items={['quotes','invoices','payments'].map(k => ({ key: k, label: k[0].toUpperCase() + k.slice(1), href: `${base}/${k}`, current: k === kind }))} />
     <form className="mb-4 flex flex-wrap items-end gap-3">
       <FormField id="finance-search" label="Search">{field => <TextInput {...field} name="q" type="search" defaultValue={filter.q} placeholder="Customer, record or reference" />}</FormField>
       {kind !== 'payments' ? <FormField id="finance-status" label="Status">{field => <SelectInput {...field} name="status" defaultValue={filter.status}><option value="">All</option>{(kind === 'invoices' ? [['outstanding','Outstanding'],['overdue','Overdue'],['settled','Settled']] : [['not-invoiced','Not invoiced'],['invoiced','Invoiced']]).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</SelectInput>}</FormField> : null}
