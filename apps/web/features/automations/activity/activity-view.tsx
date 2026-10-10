@@ -130,7 +130,7 @@ export function ActivityView({
         </Button>
         <Link
           href={`${base}/activity?when=all`}
-          className="text-xs text-blue-600"
+          className="text-xs text-accent-text"
         >
           Clear filters
         </Link>
@@ -145,7 +145,7 @@ export function ActivityView({
         <p className="mb-3 text-xs">
           Filtered to one rule.{' '}
           {presentRuleIds.includes(filters.rule) && (
-            <Link className="text-blue-600" href={`${base}/${filters.rule}`}>
+            <Link className="text-accent-text" href={`${base}/${filters.rule}`}>
               Open Rule Builder
             </Link>
           )}
@@ -167,7 +167,7 @@ export function ActivityView({
               header: 'Automation',
               cell: (d) => (
                 <Link
-                  className="text-blue-600 hover:underline"
+                  className="text-accent-text hover:underline"
                   href={href({ delivery: d.id })}
                 >
                   {d.ruleName}
@@ -205,7 +205,7 @@ export function ActivityView({
               header: 'Automation',
               cell: (r) => (
                 <Link
-                  className="text-blue-600 hover:underline"
+                  className="text-accent-text hover:underline"
                   href={href({ run: r.id })}
                 >
                   {r.ruleName}
@@ -222,7 +222,7 @@ export function ActivityView({
               header: 'Related record',
               cell: (r) => (
                 <Link
-                  className="text-blue-600 hover:underline"
+                  className="text-accent-text hover:underline"
                   href={`/organizations/${organizationId}/${r.subjectType === 'asset' ? 'assets' : 'work'}/${r.subjectId}`}
                 >
                   {r.subjectType === 'asset' ? 'Asset' : 'Work'} ·{' '}
@@ -291,7 +291,7 @@ export function ActivityView({
                     <dt className="text-xs text-subtle">Related record</dt>
                     <dd>
                       <Link
-                        className="text-blue-600"
+                        className="text-accent-text"
                         href={`/organizations/${organizationId}/${selectedRun.subjectType === 'asset' ? 'assets' : 'work'}/${selectedRun.subjectId}`}
                       >
                         Open{' '}
@@ -304,7 +304,7 @@ export function ActivityView({
                 </dl>
                 {presentRuleIds.includes(selectedRun.ruleId) ? (
                   <Link
-                    className="block text-blue-600"
+                    className="block text-accent-text"
                     href={`${base}/${selectedRun.ruleId}`}
                   >
                     Open current Rule Builder
@@ -321,7 +321,7 @@ export function ActivityView({
                   per-action results. Current configuration may have changed.
                 </p>
                 <Link
-                  className="block text-blue-600"
+                  className="block text-accent-text"
                   href={href({
                     stream: 'deliveries',
                     q: selectedRun.ruleName,

@@ -497,7 +497,7 @@ export function SupportWorkspace({
       {data.events.map((e) => (
         <div key={e.id} className="flex gap-3 px-4 py-3">
           <span
-            className={`mt-1 size-2 shrink-0 rounded-full ${e.kind === "resolved" ? "bg-success" : e.kind === "escalated" ? "bg-danger" : "bg-muted"}`}
+            className={`mt-1 size-2 shrink-0 rounded-full ${e.kind === "resolved" ? "bg-success" : e.kind === "escalated" ? "bg-danger" : "bg-border"}`}
           />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap justify-between gap-1">

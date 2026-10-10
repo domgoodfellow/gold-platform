@@ -199,11 +199,11 @@ export function AutomationDashboard({
           <Link
             key={label}
             href={href}
-            className="flex min-w-0 items-center gap-3 rounded-lg border border-border px-3 py-3 transition-colors hover:bg-muted/5"
+            className="flex min-w-0 items-center gap-3 rounded-lg border border-border px-3 py-3 transition-colors hover:bg-hover"
           >
-            <span className="rounded-full bg-muted/10 p-2.5">
+            <span className="rounded-full bg-secondary p-2.5">
               <Icon
-                className={`size-5 ${label === 'Failed runs' ? 'text-orange-500' : label === 'Active automations' ? 'text-emerald-600' : ''}`}
+                className={`size-5 ${label === 'Failed runs' ? 'text-warning' : label === 'Active automations' ? 'text-success' : ''}`}
               />
             </span>
             <div className="min-w-0">
@@ -261,7 +261,7 @@ export function AutomationDashboard({
                     header: 'Automation',
                     cell: (r) => (
                       <Link
-                        className="text-blue-600 hover:underline"
+                        className="text-accent-text hover:underline"
                         href={r.href}
                       >
                         {r.name}
@@ -327,7 +327,7 @@ export function AutomationDashboard({
               </div>
               <Link
                 href={`${base}/messages`}
-                className="text-xs text-blue-600 hover:underline"
+                className="text-xs text-accent-text hover:underline"
               >
                 Message templates
               </Link>
@@ -373,7 +373,7 @@ export function AutomationDashboard({
                           </td>
                           <td className="py-2 pr-2">
                             <Link
-                              className="text-blue-600 hover:underline"
+                              className="text-accent-text hover:underline"
                               href={`${activity}&run=${r.id}`}
                             >
                               {r.ruleName}
@@ -416,7 +416,7 @@ export function AutomationDashboard({
                           min={0}
                           max={maxDay}
                           value={point?.total ?? 0}
-                          className="h-3 w-full accent-blue-500"
+                          className="h-3 w-full accent-[var(--accent)]"
                         />
                         <span className="text-right tabular-nums">
                           {point?.total ?? 0}
@@ -445,7 +445,7 @@ export function AutomationDashboard({
                   <li key={id}>
                     <Link
                       href={href}
-                      className="flex items-start gap-2 py-2 hover:bg-muted/5"
+                      className="flex items-start gap-2 py-2 hover:bg-hover"
                     >
                       <Icon className="mt-0.5 size-4 shrink-0 text-subtle" />
                       <div className="min-w-0 flex-1">
@@ -502,7 +502,7 @@ export function AutomationDashboard({
                   <li key={r.id} className="py-2">
                     <Link
                       href={`${activity}&run=${r.id}`}
-                      className="text-xs text-blue-600 hover:underline"
+                      className="text-xs text-accent-text hover:underline"
                     >
                       {r.ruleName}
                     </Link>

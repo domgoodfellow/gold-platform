@@ -53,7 +53,7 @@ export function NewAgent({
   return (
     <PageDrawer open={open} onOpenChange={setOpen}>
       <PageDrawerTrigger asChild>
-        <Button className="bg-blue-600 text-white hover:bg-blue-700" disabled={!canManage}>
+        <Button disabled={!canManage}>
           <Plus size={15} />
           New agent
         </Button>
@@ -199,7 +199,7 @@ export function AiWorkspace({
     <Panel
       title={view === "agents" ? "Agents" : "Active agents"}
       action={
-        <Link className="text-xs text-blue-600" href={`${base}/agents`}>
+        <Link className="text-xs text-accent-text" href={`${base}/agents`}>
           View all
         </Link>
       }
@@ -307,7 +307,7 @@ export function AiWorkspace({
     <Panel
       title="Channel deployments"
       action={
-        <Link href={`${base}/deployments`} className="text-xs text-blue-600">
+        <Link href={`${base}/deployments`} className="text-xs text-accent-text">
           View all
         </Link>
       }
@@ -344,7 +344,7 @@ export function AiWorkspace({
     <Panel
       title="Recent agent interactions"
       action={
-        <Link href={`${base}/activity`} className="text-xs text-blue-600">
+        <Link href={`${base}/activity`} className="text-xs text-accent-text">
           View all
         </Link>
       }
@@ -377,7 +377,7 @@ export function AiWorkspace({
       title="Needs attention"
       action={
         <Link
-          className="text-xs text-blue-600"
+          className="text-xs text-accent-text"
           href={`${base}/activity?outcome=failed`}
         >
           Review activity
@@ -398,7 +398,7 @@ export function AiWorkspace({
               >
                 <TriangleAlert
                   size={17}
-                  className="mt-1 shrink-0 text-amber-600"
+                  className="mt-1 shrink-0 text-warning"
                 />
                 <span className="min-w-0">
                   <strong className="block truncate text-sm">{d.display_name}</strong>
@@ -411,7 +411,7 @@ export function AiWorkspace({
           })}
         {summary.handoffs > 0 && (
           <Link
-            className="block py-3 text-sm text-blue-600"
+            className="block py-3 text-sm text-accent-text"
             href={`/organizations/${organizationId}/comms/inbox/website`}
           >
             {summary.handoffs} handoffs in Communications →
@@ -419,7 +419,7 @@ export function AiWorkspace({
         )}
         {summary.approvals > 0 && (
           <button
-            className="py-3 text-sm text-blue-600"
+            className="py-3 text-sm text-accent-text"
             onClick={() => {
               if (!agentOpen) toggleAgent();
             }}
@@ -493,7 +493,7 @@ export function AiWorkspace({
               href={`${base}${k.href}`}
               className="flex items-center gap-3 p-4"
             >
-              <k.icon className="size-5 shrink-0 text-blue-600" />
+              <k.icon className="size-5 shrink-0 text-accent-text" />
               <div>
                 <strong className="text-xl">{k.value}</strong>
                 <p className="mt-1 text-xs">{k.label}</p>
@@ -601,7 +601,7 @@ export function AiWorkspace({
                     <dt>Operator interface</dt>
                     <dd>
                       <button
-                        className="text-blue-600"
+                        className="text-accent-text"
                         onClick={() => {
                           if (!agentOpen) toggleAgent();
                         }}
@@ -627,7 +627,7 @@ export function AiWorkspace({
                   {summary.handoffs} website handoffs requested
                 </p>
                 <Link
-                  className="mt-3 inline-block text-xs text-blue-600"
+                  className="mt-3 inline-block text-xs text-accent-text"
                   href={`/organizations/${organizationId}/comms/inbox/website`}
                 >
                   Open Communications →
@@ -639,7 +639,7 @@ export function AiWorkspace({
                   Canonical allowance windows. Per-agent usage attribution is not yet available. Missing measurements are not zero usage.
                 </p>
                 <Link
-                  className="mt-3 inline-block text-xs text-blue-600"
+                  className="mt-3 inline-block text-xs text-accent-text"
                   href={`/organizations/${organizationId}/settings/plan`}
                 >
                   Plan & usage →
@@ -685,7 +685,7 @@ export function AiWorkspace({
                 className="flex items-center gap-3 rounded-lg border border-border p-4 text-sm font-medium"
               >
                 {typeof Icon !== "string" && (
-                  <Icon size={20} className="text-blue-600" />
+                  <Icon size={20} className="text-accent-text" />
                 )}
                 {String(label)}
                 <ArrowUpRight size={13} className="ml-auto" />

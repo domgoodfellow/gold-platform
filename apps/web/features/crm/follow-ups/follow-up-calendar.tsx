@@ -28,7 +28,7 @@ export function FollowUpCalendar({ items, dates, view, month, today, owner, ...o
   return <CalendarAgenda today={today} emptyLabel="No follow-ups due." days={dates.map(date => {
     const entries = byDate.get(date) ?? [];
     return { date, content: entries.length ? <ul className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
-      {entries.map(item => <li key={item.id} className={`rounded-md border-l-2 p-2 ${item.status === 'completed' ? 'border-emerald-500 bg-emerald-50/40' : item.status === 'cancelled' ? 'border-border bg-surface opacity-60' : 'border-foreground bg-surface'}`}>
+      {entries.map(item => <li key={item.id} className={`rounded-md border-l-2 p-2 ${item.status === 'completed' ? 'border-success/30 bg-success/10' : item.status === 'cancelled' ? 'border-border bg-surface opacity-60' : 'border-foreground bg-surface'}`}>
         <p className="mb-1 text-xs capitalize text-muted">{time.format(new Date(item.dueAt))} · {item.kind} · {item.status}</p>
         <FollowUpSheet {...options} item={item}>{item.title}</FollowUpSheet>
         <p className="mt-1 text-xs text-muted">{item.customerName}</p>

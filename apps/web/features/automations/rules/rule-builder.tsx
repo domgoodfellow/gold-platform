@@ -77,7 +77,7 @@ export function RuleBuilder({
   const conditionText = (c: AutomationRule['conditions'][number]) =>
     `${definitions.find((d) => `custom.${d.key}` === c.subjectField)?.label ?? c.subjectField.replace('_id', '')} ${c.operator.replaceAll('_', ' ')} ${statuses.find((s) => s.id === c.value)?.label ?? c.value ?? ''}`;
   const nodeClass = (id: string) =>
-    `w-full rounded-lg border bg-background p-4 text-left shadow-sm transition-colors hover:border-blue-400 focus-visible:outline-2 focus-visible:outline-blue-500 ${selected === id ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-border'}`;
+    `w-full rounded-lg border bg-background p-4 text-left shadow-sm transition-colors hover:border-border focus-visible:outline-2 focus-visible:outline-accent ${selected === id ? 'border-accent ring-2 ring-ring/30' : 'border-border'}`;
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
@@ -129,7 +129,7 @@ export function RuleBuilder({
       <div className="grid min-w-0 grid-cols-1 overflow-hidden rounded-xl border border-border lg:grid-cols-[minmax(0,1fr)_22rem]">
         <section
           aria-label="Workflow canvas"
-          className={`${mobileInspector ? 'hidden lg:block' : ''} min-w-0 bg-muted/5 p-4 sm:p-6`}
+          className={`${mobileInspector ? 'hidden lg:block' : ''} min-w-0 bg-secondary p-4 sm:p-6`}
         >
           <div className="mb-6 flex items-center justify-between">
             <div>
@@ -140,14 +140,14 @@ export function RuleBuilder({
             </div>
             <Workflow className="size-5 text-subtle" />
           </div>
-          <div className="mx-auto flex max-w-xl flex-col items-center">
+          <div className="mx-auto flex w-full max-w-xl flex-col items-center">
             <button
               type="button"
               className={nodeClass('trigger')}
               onClick={() => select('trigger')}
               aria-pressed={selected === 'trigger'}
             >
-              <span className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-blue-600">
+              <span className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-accent-text">
                 <Zap className="size-4" /> Trigger{' '}
                 <LockKeyhole className="ml-auto size-3" />
               </span>
@@ -208,7 +208,7 @@ export function RuleBuilder({
                     onClick={() => select(a.id)}
                     aria-pressed={selected === a.id}
                   >
-                    <span className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-wide text-emerald-600">
+                    <span className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-wide text-success">
                       <Workflow className="size-4" /> Action {index + 1}
                     </span>
                     <span className="block text-sm font-medium">
@@ -219,15 +219,14 @@ export function RuleBuilder({
                     </span>
                   </button>
                   {index < rule.actions.length - 1 && (
-                    <ArrowDown
-                      aria-hidden
-                      className="mx-auto mt-3 size-5 text-subtle"
-                    />
+                    <span className="mt-3 flex w-full justify-center">
+                      <ArrowDown aria-hidden className="size-5 text-subtle" />
+                    </span>
                   )}
                 </div>
               ))}
               {!rule.actions.length && (
-                <div className="rounded-lg border border-dashed border-amber-400 p-4 text-xs text-subtle">
+                <div className="rounded-lg border border-dashed border-warning/30 p-4 text-xs text-subtle">
                   No actions configured. This rule is incomplete and performs no
                   business operation.
                 </div>
@@ -277,8 +276,8 @@ export function RuleBuilder({
           <div className="space-y-5 p-4">
             {selected === 'trigger' && (
               <>
-                <div className="rounded-md bg-blue-500/5 p-3">
-                  <Zap className="mb-2 size-5 text-blue-600" />
+                <div className="rounded-md bg-accent p-3">
+                  <Zap className="mb-2 size-5 text-accent-text" />
                   <p className="text-sm font-medium">{describeTrigger(rule)}</p>
                 </div>
                 <p className="text-xs text-subtle">
@@ -292,7 +291,7 @@ export function RuleBuilder({
                 {(rule.triggerKind === 'external_reading' ||
                   rule.triggerKind === 'counter_threshold' ||
                   rule.triggerKind === 'schedule') && (
-                  <p className="rounded-md border border-amber-300 p-3 text-xs text-subtle">
+                  <p className="rounded-md border border-warning/30 p-3 text-xs text-subtle">
                     {rule.triggerKind === 'external_reading'
                       ? 'Requires matching incoming readings in exactly the configured unit. Provider monitoring is not verified by this definition.'
                       : rule.triggerKind === 'schedule'

@@ -153,7 +153,7 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
 
   return (
     <div className="flex h-[calc(100dvh-11rem)] min-h-[24rem] overflow-hidden rounded-lg border border-border md:h-[78vh]">
-      {pathname.endsWith('/website') ? <div className="flex min-w-0 flex-1 flex-col"><Link href={base} className="border-b border-border p-3 text-sm text-blue-600">← SMS & email conversations</Link>{children}</div> : <>
+      {pathname.endsWith('/website') ? <div className="flex min-w-0 flex-1 flex-col"><Link href={base} className="border-b border-border p-3 text-sm text-accent-text">← SMS & email conversations</Link>{children}</div> : <>
       <section aria-label="Conversations" className={`${detailOpen ? 'hidden md:flex' : 'flex'} w-full min-w-0 flex-col border-r border-border md:w-96 md:shrink-0`}>
         <div className="flex flex-col gap-2 border-b border-border p-2">
           <div className="flex items-center justify-between gap-2">

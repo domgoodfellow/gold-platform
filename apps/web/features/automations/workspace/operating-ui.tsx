@@ -20,7 +20,7 @@ export function AutomationPanel({
         {href ? (
           <Link
             href={href}
-            className="flex items-center text-xs text-blue-600 hover:underline"
+            className="flex items-center text-xs text-accent-text hover:underline"
           >
             View all <ChevronRight className="size-3" />
           </Link>
@@ -35,10 +35,10 @@ export function AutomationPanel({
 export function AutomationState({ value }: { value: string }) {
   const color =
     value === 'failed'
-      ? 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300'
+      ? 'bg-danger/10 text-danger'
       : value === 'done' || value === 'sent' || value === 'Enabled'
-        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-        : 'bg-muted/10 text-subtle';
+        ? 'bg-success/10 text-success'
+        : 'bg-secondary text-subtle';
   return (
     <span
       className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium ${color}`}

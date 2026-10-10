@@ -39,7 +39,7 @@ export function RulesTable({
             cell: (r) => (
               <Link
                 href={`${base}/${r.id}`}
-                className="block max-w-44 whitespace-normal text-xs font-medium text-blue-600 hover:underline"
+                className="block max-w-44 whitespace-normal text-xs font-medium text-accent-text hover:underline"
               >
                 {r.name}
               </Link>
@@ -88,7 +88,7 @@ export function RulesTable({
             cell: (r) => (
               <Link
                 href={`${base}/${r.id}?node=diagnostics`}
-                className={`text-xs hover:underline ${warnings.some((w) => w.ruleId === r.id) ? 'text-amber-600' : 'text-subtle'}`}
+                className={`text-xs hover:underline ${warnings.some((w) => w.ruleId === r.id) ? 'text-warning' : 'text-subtle'}`}
               >
                 {!r.actions.length
                   ? 'Incomplete'
@@ -108,7 +108,7 @@ export function RulesTable({
                     return last ? (
                       <Link
                         href={`${base}/activity?when=all&run=${last.last_id}`}
-                        className="text-xs text-blue-600 hover:underline"
+                        className="text-xs text-accent-text hover:underline"
                       >
                         {automationTime(last.last_at, timezone)}
                         <span className="ml-2">
@@ -131,7 +131,7 @@ export function RulesTable({
             : (r) => (
                 <div className="flex items-center gap-2">
                   <Link
-                    className="text-xs text-blue-600 hover:underline"
+                    className="text-xs text-accent-text hover:underline"
                     href={`${base}/${r.id}`}
                   >
                     Edit / inspect

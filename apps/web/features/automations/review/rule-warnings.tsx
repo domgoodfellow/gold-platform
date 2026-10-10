@@ -12,7 +12,7 @@ export function RuleWarnings({ warnings }: { warnings: string[] }) {
   if (warnings.length === 0) return null;
 
   return (
-    <ul className="mt-3 flex flex-col gap-1 border-l-2 border-amber-500 pl-3">
+    <ul className="mt-3 flex flex-col gap-1 border-l-2 border-warning/30 pl-3">
       {warnings.map((warning) => (
         <li key={warning} className="text-sm opacity-80">
           {warning}

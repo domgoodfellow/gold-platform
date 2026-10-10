@@ -287,7 +287,7 @@ export function AgentWorkbench({
         </p>
       )}
       {notice && (
-        <p role="status" className="text-sm text-blue-600">
+        <p role="status" className="text-sm text-accent-text">
           {notice}
         </p>
       )}
@@ -300,7 +300,7 @@ export function AgentWorkbench({
             <button
               key={s}
               onClick={() => selectSection(s)}
-              className={`w-full rounded-md px-3 py-2 text-left text-sm ${section === s ? "bg-blue-50 font-medium text-blue-600" : "text-muted hover:bg-secondary"}`}
+              className={`w-full rounded-md px-3 py-2 text-left text-sm ${section === s ? "bg-selected font-medium text-accent-text" : "text-muted hover:bg-secondary"}`}
             >
               {LABELS[s]}
             </button>
@@ -537,7 +537,7 @@ export function AgentWorkbench({
                     </label>
                   ))}
                 {dirty && (
-                  <p className="text-xs text-amber-700">
+                  <p className="text-xs text-warning">
                     Save your draft before changing source associations.
                   </p>
                 )}
@@ -727,7 +727,7 @@ export function AgentWorkbench({
             </div>
           </Panel>
           <Panel title="Operator Copilot">
-            <ShieldCheck size={20} className="text-blue-600" />
+            <ShieldCheck size={20} className="text-accent-text" />
             <p className="my-3 text-xs text-muted">
               Work with the assistant in the persistent global Agent rail.
               Conversations remain private to their operator.

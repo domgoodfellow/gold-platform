@@ -472,7 +472,7 @@ describe('the page-header contract — the page, not the workspace header, owns 
     // Phase C's loader+Screen route pairs (Slice 9) put the identity component one file down, in
     // the Screen the page delegates to, rather than inline in the page itself — the same shape
     // `CustomerDetail`/`HomeDashboard` already had: a feature component that renders the real one.
-    const identity = /<PageHeader|<CollectionHeader|<WorkspaceHome|<StatePage|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<CrmHome|<HomeDashboard|<TenantWorkspaceHeader|<PlatformOverview|<LibrarySectionPage|<AccessPage|<ConnectionsPage|<PlanDetailScreen|<OrganizationCommercialScreen|<CatalogFamilyScreen|<TwilioProviderScreen|<PlanUsageScreen|<WorkItemDetailScreen|<StudioHome|<MarketingPage|<AgentWorkbench/;
+    const identity = /<PageHeader|<CollectionHeader|<WorkspaceHome|<StatePage|<RecordHeader|<WorkRecordHeader|<CustomerDetail|<CrmHome|<HomeDashboard|<TenantWorkspaceHeader|<PlatformOverview|<LibrarySectionPage|<AccessPage|<ConnectionsPage|<PlanDetailScreen|<OrganizationCommercialScreen|<CatalogFamilyScreen|<TwilioProviderScreen|<PlanUsageScreen|<WorkItemDetailScreen|<StudioHome|<MarketingPage|<AgentWorkbench|<AiWorkspace/;
     // A master-detail screen (the Inbox: a persistent list beside whichever pane is selected) renders its one
     // identity in the layout that frames every pane, because a page-owned header would be torn down and drawn
     // again on every selection. Only a layout *below* the organization root counts — the root layout frames
@@ -496,7 +496,13 @@ describe('the page-header contract — the page, not the workspace header, owns 
       // A pure redirect renders nothing, and so does an unmatched-address catch-all that only
       // throws `notFound()` so the segment's own `not-found.tsx` renders inside its layout.
       if ((/^\s*redirect\(/m.test(source) || /^\s*notFound\(\);/m.test(source)) && !identity.test(source)) continue;
-      expect(source, `${label} renders no page identity`).toMatch(identity);
+      // A thin page may delegate to the feature screen that draws the header; that screen is one hop down.
+      const delegates = [...source.matchAll(/from ['"]@\/((?:features|lib\/application)\/[^'"]+)['"]/g)].map((match) => match[1]);
+      const oneHop = delegates.some((target) =>
+        ['.tsx', '/index.tsx'].some((ext) => {
+          try { return identity.test(readFileSync(`${WEB}/${target}${ext}`, 'utf8')); } catch { return false; }
+        }));
+      expect(identity.test(source) || oneHop, `${label} renders no page identity`).toBe(true);
       expect(source, `${label} would render two <h1> elements`).not.toMatch(/<h1\b|<PageHeading/);
     }
   });

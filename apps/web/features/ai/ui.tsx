@@ -1,7 +1,7 @@
 "use client";
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { Bot } from "lucide-react";
+import { ViewNavigation } from "@/components/operational/primitives";
 export function Panel({
   title,
   action,
@@ -24,13 +24,13 @@ export function Panel({
 export function Badge({ children }: { children: ReactNode }) {
   const value = String(children).toLowerCase();
   const color = ["active", "passed", "answered", "enabled"].includes(value)
-    ? "bg-emerald-50 text-emerald-700"
+    ? "bg-success/10 text-success"
     : ["unavailable", "pending", "handoff_requested"].includes(value)
-      ? "bg-amber-50 text-amber-700"
+      ? "bg-warning/10 text-warning"
       : ["failed"].includes(value)
-        ? "bg-red-50 text-red-700"
+        ? "bg-danger/10 text-danger"
         : ["draft", "configured"].includes(value)
-          ? "bg-blue-50 text-blue-700"
+          ? "bg-selected text-accent-text"
           : "bg-secondary text-foreground";
   return (
     <span className={`inline-flex shrink-0 rounded-md px-2 py-1 text-[11px] font-medium ${color}`}>
@@ -43,35 +43,31 @@ export function Empty({ children }: { children: ReactNode }) {
 }
 export function AgentIcon() {
   return (
-    <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+    <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-selected text-accent-text">
       <Bot size={18} />
     </span>
   );
 }
+const AI_VIEWS: [string, string][] = [
+  ["", "Overview"],
+  ["agents", "Agents"],
+  ["deployments", "Channels"],
+  ["knowledge", "Knowledge"],
+  ["tools", "Tools"],
+  ["activity", "Activity"],
+  ["evaluations", "Evaluations"],
+];
 export function AiNav({ base, active }: { base: string; active: string }) {
   return (
-    <nav
-      aria-label="AI workspace"
-      className="flex gap-5 overflow-x-auto border-b border-border text-sm"
-    >
-      {[
-        ["", "Overview"],
-        ["agents", "Agents"],
-        ["deployments", "Channels"],
-        ["knowledge", "Knowledge"],
-        ["tools", "Tools"],
-        ["activity", "Activity"],
-        ["evaluations", "Evaluations"],
-      ].map(([path, label]) => (
-        <Link
-          key={path}
-          href={`${base}${path ? `/${path}` : ""}`}
-          className={`shrink-0 border-b-2 py-3 ${active === path ? "border-blue-600 font-medium text-blue-600" : "border-transparent text-muted"}`}
-        >
-          {label}
-        </Link>
-      ))}
-    </nav>
+    <ViewNavigation
+      label="AI workspace"
+      items={AI_VIEWS.map(([path, label]) => ({
+        key: path || "overview",
+        label,
+        href: `${base}${path ? `/${path}` : ""}`,
+        current: active === path,
+      }))}
+    />
   );
 }
 export function Field({

@@ -520,6 +520,10 @@
       "category": "playwright-acceptance",
       "concerns": ["branding", "settings", "responsive", "permissions"]
     },
+    "apps/web/e2e/workspace-convergence.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": ["design-system", "responsive", "dark-mode", "workspaces"]
+    },
     "apps/web/e2e/public-presence.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": [
