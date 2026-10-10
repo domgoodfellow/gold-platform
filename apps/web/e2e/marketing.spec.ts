@@ -61,6 +61,6 @@ test('Empty Marketing keeps the complete operational dashboard',async({page})=>{
   await expect(page.getByRole('heading',{name:'Marketing',exact:true})).toBeVisible();
   await expect(page.getByRole('heading',{name:'Needs attention',exact:true})).toBeVisible();
   await expect(page.getByRole('heading',{name:'Marketing readiness / status',exact:true})).toBeVisible();
-  await expect(page.getByRole('link',{name:/^0 Active campaigns/})).toBeVisible();
+  await expect(page.getByRole('link',{name:/Active campaigns\s*0/})).toBeVisible();
   await page.screenshot({path:path.resolve(__dirname,'../test-results/marketing/home-empty.png'),fullPage:true});
 });
