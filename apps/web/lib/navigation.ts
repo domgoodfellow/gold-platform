@@ -815,3 +815,9 @@ export function workspaceConfigureItems(organizationId: string, workspace: Works
     return [{ key: `${door.target}${door.hash ?? ''}`, label: door.label, href: `/organizations/${organizationId}/${target.path}${door.hash ?? ''}` }];
   });
 }
+
+/** The registered configuration target a corrective link points at, found by its path — so a surface that only holds an href can still ask who may configure it. */
+export function configTargetForHref(href: string): ConfigTarget | undefined {
+  const path = href.split('#')[0].replace(/^\/organizations\/[^/]+\//, '');
+  return CONFIG_TARGETS.find((target) => target.path === path);
+}

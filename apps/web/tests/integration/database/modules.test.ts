@@ -27,7 +27,10 @@ import {
   setTypeBookable,
 } from '@/lib/domain/work-items/types';
 import { configureBusiness, type BusinessShape } from '@/lib/domain/configuration/configure';
-import { foundBusiness } from '@/tests/support/founding';
+import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
+import { listFeaturesByRuntimeMapping } from '@/lib/domain/catalogue/catalogue';
+import { activeModuleKeys, organizationResolvedFeatureStates, recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
+import { createPlan, setPlanFeatureOverride } from '@/lib/domain/catalogue/plans';
 
 /**
  * Module enablement, and the only claim worth testing about it.
@@ -661,33 +664,43 @@ describe('the modules a configuration asks for', () => {
       throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
     }
     business = await newBusiness('shape-mod');
+    // A shape can only switch on what the business is entitled to (configure.ts), so the modules
+    // this suite asks for are entitled the way a real business gets them: a plan that includes
+    // the features behind them, alongside the founding modules the plan assignment would otherwise replace.
+    const staff = await asPlatformStaff();
+    const planId = await createPlan(staff, { key: `shape_${randomUUID().slice(0, 8)}`, kind: 'plan', label: 'Shape modules fixture', description: 'Controlled test', billable: false });
+    for (const key of ['billing', 'assets', 'automations', 'maintenance']) {
+      for (const feature of await listFeaturesByRuntimeMapping(staff, { mappingKind: 'module_key', mappingValue: key })) {
+        await setPlanFeatureOverride(staff, { planId, featureId: feature.id, included: true });
+      }
+    }
+    await recordPlanAssignment(staff, { organizationId: business.organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
   });
 
   it('switches on what it names, and leaves what it does not name alone', async () => {
     await configureBusiness(business.db, business.organizationId, minimal(['assets']));
 
     // `listEnabledModules` is the wanted axis — organization_modules itself, unaffected by D41.
-    const wanted = await listEnabledModules(business.db, {
-      organizationId: business.organizationId,
-    });
+    // Modules are switched on as feature activations now (configure.ts), so the wanted axis is
+    // read from the resolved feature states, not from the retired module toggle.
+    const wanted = new Set(activeModuleKeys(await organizationResolvedFeatureStates(business.db, { organizationId: business.organizationId })));
 
     expect(wanted.has('assets')).toBe(true);
     // **Applying never switches anything off.** A proposal describes a business; it is not an
     // inventory of one, so a module founding gave this business survives a shape that is silent
     // about it.
     expect(wanted.has('billing')).toBe(true);
-    expect(wanted.has('drafting')).toBe(true);
+    // (Drafting has no catalogue feature, so under plan authority it is not a module this plan can hold.)
     // Named by nobody, and still off.
     expect(wanted.has('portal')).toBe(false);
 
-    // And usable (D41's wanted∩paid), since founding granted billing and drafting a term but
-    // nothing granted assets one — the other half, proven on the same business.
+    // Founding's modules stay usable; whether the newly wanted one is usable is the commercial
+    // state's business (commercial-terms tests), not this suite's.
     const usable = await listUsableModules(business.db, {
       organizationId: business.organizationId,
     });
     expect(usable.has('billing')).toBe(true);
     expect(usable.has('drafting')).toBe(true);
-    expect(usable.has('assets')).toBe(false);
   });
 
   it('refuses a module this platform does not have, before writing anything', async () => {
@@ -724,20 +737,18 @@ describe('the modules a configuration asks for', () => {
     });
     expect(after.length).toBe(before.length);
 
-    // And the dependency named alongside it is fine — wanted, which is what this test is
-    // actually about (D41 keeps `maintenance` unpaid and so unusable either way, since it is
-    // not one of the founding modules a term was ever granted for).
-    await configureBusiness(
-      business.db,
-      business.organizationId,
-      minimal(['automations', 'maintenance']),
-    );
-    const settings = await listModuleSettings(business.db, {
-      organizationId: business.organizationId,
-    });
-    const wanted = new Set(
-      settings.filter((entry) => entry.enabledAt !== null).map((entry) => entry.module.key),
-    );
-    expect(wanted.has('maintenance')).toBe(true);
+    // The dependency named alongside it satisfies the dependency rule, but a shape may only name
+    // what the business is entitled to and the platform has available: maintenance has no
+    // available feature, so the shape is refused whole rather than half applied.
+    await expect(
+      configureBusiness(business.db, business.organizationId, minimal(['automations', 'maintenance'])),
+    ).rejects.toThrow(/outside this business/i);
+    const afterRefusal = await listWorkItemTypes(business.db, { organizationId: business.organizationId });
+    expect(afterRefusal.length).toBe(before.length);
+
+    // An entitled, available module on its own is applied.
+    await configureBusiness(business.db, business.organizationId, minimal(['automations']));
+    const wanted = new Set(activeModuleKeys(await organizationResolvedFeatureStates(business.db, { organizationId: business.organizationId })));
+    expect(wanted.has('automations')).toBe(true);
   });
 });

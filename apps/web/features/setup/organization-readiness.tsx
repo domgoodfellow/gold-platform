@@ -46,7 +46,7 @@ const IMPORTANCE_LABEL: Record<SetupImportance, string> = {
   optional: 'Optional',
 };
 
-function ReadinessGroup({ importance, areas }: { importance: SetupImportance; areas: SetupArea[] }) {
+function ReadinessGroup({ importance, areas, allowedDestinations }: { importance: SetupImportance; areas: SetupArea[]; allowedDestinations?: readonly string[] }) {
   const rows = areas.filter((area) => area.state === 'incomplete' && area.importance === importance);
   if (rows.length === 0) return null;
 
@@ -60,9 +60,13 @@ function ReadinessGroup({ importance, areas }: { importance: SetupImportance; ar
               <p className="font-medium">{area.label}</p>
               <p className="mt-0.5 text-sm text-muted">{area.message}</p>
             </div>
-            <ButtonLink href={area.area.href} size="small" className="shrink-0">
-              Configure
-            </ButtonLink>
+            {!allowedDestinations || allowedDestinations.includes(area.area.href.split('#')[0]) ? (
+              <ButtonLink href={area.area.href} size="small" className="shrink-0">
+                Configure
+              </ButtonLink>
+            ) : (
+              <span className="shrink-0 text-xs text-muted">Your role cannot configure this</span>
+            )}
           </li>
         ))}
       </DividedList>
@@ -76,12 +80,15 @@ export function OrganizationReadiness({
   overview,
   agentAvailable,
   finishAction,
+  allowedDestinations,
 }: {
   organizationId: string;
   organizationName: string;
   overview: SetupOverview;
   agentAvailable: boolean;
   finishAction?: ReactNode;
+  /** Corrective destinations this member may configure; absent means all. */
+  allowedDestinations?: readonly string[];
 }) {
   const state = summary(overview);
   const percent = overview.total === 0 ? 100 : Math.round((overview.ready / overview.total) * 100);
@@ -121,9 +128,9 @@ export function OrganizationReadiness({
             <p className="mt-1 text-sm tabular-nums text-muted">{overview.ready} of {overview.total} setup areas ready, including recommended and optional ones</p>
             <Progress value={percent} className="mt-2" aria-label={`${overview.ready} of ${overview.total} setup areas ready, including optional areas`} />
           </section>
-          <ReadinessGroup importance="required" areas={overview.areas} />
-          <ReadinessGroup importance="recommended" areas={overview.areas} />
-          <ReadinessGroup importance="optional" areas={overview.areas} />
+          <ReadinessGroup importance="required" areas={overview.areas} allowedDestinations={allowedDestinations} />
+          <ReadinessGroup importance="recommended" areas={overview.areas} allowedDestinations={allowedDestinations} />
+          <ReadinessGroup importance="optional" areas={overview.areas} allowedDestinations={allowedDestinations} />
           {overview.areas.every((area) => area.state === 'complete') ? (
             <p className="text-sm text-muted">Every setup area is ready. Configuration remains available in Settings and each workspace.</p>
           ) : null}
