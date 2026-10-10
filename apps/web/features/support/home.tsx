@@ -33,7 +33,7 @@ import {
   RelativeTime,
   ResourceTile,
   RiskBar,
-  type OperationalTone,
+  type StatusTone,
 } from "@/components/operational/primitives";
 import {
   PRIORITIES,
@@ -72,7 +72,7 @@ export function SupportViews({
                   ? href("cases", { view: "board" })
                   : href(path)
               }
-              className="rounded px-3 py-2 text-xs hover:bg-blue-50 hover:text-blue-600"
+              className="rounded px-3 py-2 text-xs hover:bg-hover hover:text-accent-text"
             >
               {label}
             </Link>
@@ -126,7 +126,7 @@ export function SupportHome({
     value: number;
     detail: string;
     icon: typeof ClipboardList;
-    tone: OperationalTone;
+    emphasis?: "warning" | "danger";
     filters: Record<string, string>;
   }[] = [
     {
@@ -134,7 +134,6 @@ export function SupportHome({
       value: summary.open,
       detail: `${summary.urgent} urgent · ${summary.due_today} due today`,
       icon: ClipboardList,
-      tone: "blue",
       filters: { status: "active" },
     },
     {
@@ -142,7 +141,7 @@ export function SupportHome({
       value: summary.unassigned,
       detail: "Awaiting an owner",
       icon: Users,
-      tone: "amber",
+      emphasis: summary.unassigned > 0 ? "warning" : undefined,
       filters: { attention: "unassigned" },
     },
     {
@@ -150,7 +149,7 @@ export function SupportHome({
       value: summary.overdue,
       detail: `${summary.near_due} due within 4 hours`,
       icon: TriangleAlert,
-      tone: "rose",
+      emphasis: summary.overdue > 0 ? "danger" : undefined,
       filters: { attention: "overdue" },
     },
     {
@@ -158,7 +157,6 @@ export function SupportHome({
       value: summary.resolved,
       detail: "In selected reporting period",
       icon: CircleCheck,
-      tone: "green",
       filters: { period: "resolved" },
     },
   ];
@@ -209,20 +207,20 @@ export function SupportHome({
           ))}
         </div>
         {summary.overdue > 0 && !dismissed && (
-          <div className="flex items-center gap-3 rounded-md border border-rose-200 bg-rose-50/70 px-3.5 py-2.5">
-            <TriangleAlert className="size-5 shrink-0 text-rose-600" />
+          <div className="flex items-center gap-3 rounded-md border border-danger/30 bg-danger/10 px-3.5 py-2.5">
+            <TriangleAlert className="size-5 shrink-0 text-danger" />
             <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-semibold text-rose-950">
+              <p className="text-[13px] font-semibold text-foreground">
                 {summary.overdue} cases have breached SLA
               </p>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-muted">
                 These cases are past their resolution target.
               </p>
             </div>
             <ButtonLink
               size="small"
               href={href("cases", { attention: "overdue" })}
-              className="h-8 shrink-0 border-rose-200 bg-rose-50 text-xs text-rose-600"
+              className="h-8 shrink-0 border-danger/30 bg-danger/10 text-xs text-danger"
             >
               Review now
             </ButtonLink>
@@ -232,17 +230,17 @@ export function SupportHome({
               aria-label="Dismiss SLA alert"
               onClick={() => setDismissed(true)}
             >
-              <X className="size-3.5 text-slate-500" />
+              <X className="size-3.5 text-muted" />
             </Button>
           </div>
         )}
         <section
           aria-label="Case workbench"
-          className="min-w-0 overflow-hidden rounded-md border border-slate-200/80 bg-background"
+          className="min-w-0 overflow-hidden rounded-md border border-border bg-background"
         >
           <h2 className="sr-only">Active Cases</h2>
           <div
-            className="flex overflow-x-auto border-b border-slate-200 px-1"
+            className="flex overflow-x-auto border-b border-border px-1"
             aria-label="Case views"
           >
             {tabs.map((tab) => (
@@ -251,7 +249,7 @@ export function SupportHome({
                 type="button"
                 onClick={() => change(tab.filters)}
                 aria-pressed={tab.selected}
-                className={`relative shrink-0 px-3 py-3 text-xs transition-colors ${tab.selected ? "font-medium text-blue-600 after:absolute after:inset-x-1 after:bottom-0 after:h-0.5 after:bg-blue-600" : "text-slate-500 hover:text-slate-900"}`}
+                className={`relative shrink-0 px-3 py-3 text-xs transition-colors ${tab.selected ? "font-medium text-accent-text after:absolute after:inset-x-1 after:bottom-0 after:h-0.5 after:bg-accent" : "text-muted hover:text-foreground"}`}
               >
                 {tab.label}
                 {tab.count !== undefined && (
@@ -261,7 +259,7 @@ export function SupportHome({
             ))}
           </div>
           <form
-            className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-2.5 py-2.5"
+            className="flex flex-wrap items-center gap-2 border-b border-border px-2.5 py-2.5"
             onSubmit={(e) => {
               e.preventDefault();
               change({
@@ -270,14 +268,14 @@ export function SupportHome({
             }}
           >
             <div className="relative min-w-40 flex-1">
-              <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-slate-400" />
+              <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-subtle" />
               <TextInput
                 key={query.get("q")}
                 name="q"
                 aria-label="Search Cases"
                 placeholder="Search cases, customers, or keywords…"
                 defaultValue={query.get("q") ?? ""}
-                className="h-9 rounded-md border-slate-200 pl-8 text-xs shadow-none"
+                className="h-9 rounded-md border-border pl-8 text-xs shadow-none"
               />
             </div>
             <FilterMenu
@@ -343,7 +341,7 @@ export function SupportHome({
                   className="size-9 rounded-md p-0"
                   aria-label="More case filters"
                 >
-                  <SlidersHorizontal className="size-4 text-slate-500" />
+                  <SlidersHorizontal className="size-4 text-muted" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-64 space-y-3 p-3">
@@ -384,13 +382,13 @@ export function SupportHome({
             </button>
           </form>
           {caseTable(activeCases)}
-          <div className="flex items-center justify-between border-t border-slate-200 px-3 py-2 text-[11px] text-slate-500">
+          <div className="flex items-center justify-between border-t border-border px-3 py-2 text-[11px] text-muted">
             <span>
               Showing {activeCases.length} of {data.total} matching cases
             </span>
             <Link
               href={href("cases", Object.fromEntries(query))}
-              className="font-medium text-blue-600 hover:underline"
+              className="font-medium text-accent-text hover:underline"
             >
               View all cases →
             </Link>
@@ -401,9 +399,9 @@ export function SupportHome({
             title="Resolution performance"
             href={href("reports")}
           >
-            <div className="grid grid-cols-2 gap-3 border-t border-slate-100 px-3.5 py-3">
+            <div className="grid grid-cols-2 gap-3 border-t border-border px-3.5 py-3">
               <div>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-muted">
                   Latest resolution duration
                 </p>
                 <p className="mt-1 text-xl font-semibold tracking-tight">
@@ -411,12 +409,12 @@ export function SupportHome({
                     ? "—"
                     : `${Number(summary.resolution_hours).toFixed(1)}h`}
                 </p>
-                <p className="mt-1 text-[10px] text-slate-500">
+                <p className="mt-1 text-[10px] text-muted">
                   Creation to latest resolution
                 </p>
               </div>
               <div>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-muted">
                   Resolution targets met
                 </p>
                 <p className="mt-1 text-xl font-semibold tracking-tight">
@@ -424,7 +422,7 @@ export function SupportHome({
                     ? `${Math.round((summary.met_target / summary.targeted_resolved) * 100)}%`
                     : "—"}
                 </p>
-                <p className="mt-1 text-[10px] text-slate-500">
+                <p className="mt-1 text-[10px] text-muted">
                   {summary.met_target} of {summary.targeted_resolved} targeted
                   cases
                 </p>
@@ -435,7 +433,7 @@ export function SupportHome({
             title="Today"
             href={href("cases", { period: "due_today" })}
           >
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-slate-100 px-3.5 py-3">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border px-3.5 py-3">
               {[
                 ["Due today", summary.due_today, { period: "due_today" }],
                 [
@@ -457,10 +455,10 @@ export function SupportHome({
                 <Link
                   key={String(label)}
                   href={href("cases", f as Record<string, string>)}
-                  className="flex justify-between gap-2 text-xs text-slate-500"
+                  className="flex justify-between gap-2 text-xs text-muted"
                 >
                   <span>{String(label)}</span>
-                  <strong className="font-semibold text-slate-900">
+                  <strong className="font-semibold text-foreground">
                     {String(value)}
                   </strong>
                 </Link>
@@ -484,7 +482,6 @@ export function SupportHome({
               title="Queues"
               description="Organize team responsibility"
               icon={Layers}
-              tone="violet"
             />
             <ResourceTile
               href={href("service-levels")}
@@ -509,7 +506,7 @@ export function SupportHome({
             attention: summary.overdue ? "overdue" : "urgent",
           })}
         >
-          <div className="divide-y divide-slate-100 px-3.5">
+          <div className="divide-y divide-border px-3.5">
             {attention.map((c) => {
               const overdue = data.attention.overdue.some(
                 (item) => item.id === c.id,
@@ -517,19 +514,19 @@ export function SupportHome({
               return (
                 <div key={c.id} className="flex items-center gap-2.5 py-2.5">
                   {overdue ? (
-                    <TriangleAlert className="size-[18px] shrink-0 text-rose-600" />
+                    <TriangleAlert className="size-[18px] shrink-0 text-danger" />
                   ) : (
-                    <Clock className="size-[18px] shrink-0 text-amber-500" />
+                    <Clock className="size-[18px] shrink-0 text-warning" />
                   )}
                   <div className="min-w-0 flex-1">
                     <Link
                       href={href(`cases/${c.id}`)}
-                      className="block truncate text-xs hover:text-blue-600"
+                      className="block truncate text-xs hover:text-accent-text"
                     >
                       <strong className="font-semibold">{c.case_number}</strong>
                       <span className="ml-1.5">{c.title}</span>
                     </Link>
-                    <p className="mt-1 truncate text-[11px] text-slate-500">
+                    <p className="mt-1 truncate text-[11px] text-muted">
                       {c.customer_name ?? "Internal request"} ·{" "}
                       <RelativeTime
                         value={c.resolution_due_at}
@@ -541,7 +538,7 @@ export function SupportHome({
                   <ButtonLink
                     size="tiny"
                     href={href(`cases/${c.id}`)}
-                    className={`h-7 border-0 px-2.5 text-[11px] shadow-none ${overdue ? "bg-rose-50 text-rose-600 hover:bg-rose-100" : "bg-blue-50 text-blue-600 hover:bg-blue-100"}`}
+                    className={`h-7 border-0 px-2.5 text-[11px] shadow-none ${overdue ? "bg-danger/10 text-danger hover:bg-danger/20" : "bg-selected text-accent-text hover:bg-hover"}`}
                   >
                     {overdue ? "Review" : "View"}
                   </ButtonLink>
@@ -549,8 +546,8 @@ export function SupportHome({
               );
             })}
             {!attention.length && (
-              <div className="flex min-h-36 flex-col items-center justify-center gap-2 text-xs text-slate-500">
-                <CircleCheck className="size-6 text-emerald-500" />
+              <div className="flex min-h-36 flex-col items-center justify-center gap-2 text-xs text-muted">
+                <CircleCheck className="size-6 text-success" />
                 No cases need attention.
               </div>
             )}
@@ -558,7 +555,7 @@ export function SupportHome({
         </OperationalPanel>
         <OperationalPanel title="Queue health" href={href("queues")}>
           <div className="px-3.5 pb-2">
-            <div className="grid grid-cols-[minmax(0,1fr)_32px_110px] gap-2 rounded bg-slate-50 px-1 py-2 text-[10px] text-slate-500">
+            <div className="grid grid-cols-[minmax(0,1fr)_32px_110px] gap-2 rounded bg-secondary px-1 py-2 text-[10px] text-muted">
               <span>Queue</span>
               <span>Open</span>
               <span>SLA risk</span>
@@ -567,10 +564,10 @@ export function SupportHome({
               <Link
                 key={q.id}
                 href={href("queues", { queue: q.id })}
-                className="grid grid-cols-[minmax(0,1fr)_32px_110px] items-center gap-2 border-b border-slate-100 py-2.5 text-[11px] last:border-0"
+                className="grid grid-cols-[minmax(0,1fr)_32px_110px] items-center gap-2 border-b border-border py-2.5 text-[11px] last:border-0"
               >
                 <span className="flex min-w-0 items-center gap-2">
-                  <Headset className="size-3.5 shrink-0 text-blue-600" />
+                  <Headset className="size-3.5 shrink-0 text-accent-text" />
                   <span className="truncate">{q.name}</span>
                 </span>
                 <strong className="font-semibold">{q.open_count}</strong>
@@ -583,7 +580,7 @@ export function SupportHome({
               </Link>
             ))}
             {!data.queues.length && (
-              <div className="py-5 text-center text-xs text-slate-500">
+              <div className="py-5 text-center text-xs text-muted">
                 No queues configured.
               </div>
             )}
@@ -612,35 +609,34 @@ export function SupportHome({
                       closed: "Case closed",
                     } as Record<string, string>
                   )[e.kind] ?? e.kind}
-                  <span className="ml-1.5 font-normal text-slate-500">
+                  <span className="ml-1.5 font-normal text-muted">
                     {e.case_number}
                   </span>
                 </>
               ),
               description: e.body || `${e.actor_name} · ${e.title}`,
               time: <RelativeTime value={e.occurred_at} timezone={timezone} />,
-              tone:
+              tone: (
                 e.kind === "resolved"
-                  ? "green"
+                  ? "success"
                   : e.kind === "escalated"
-                    ? "rose"
-                    : e.kind === "status"
-                      ? "violet"
-                      : "blue",
+                    ? "danger"
+                    : "neutral"
+              ) satisfies StatusTone,
               href: href(`cases/${e.case_id}`),
             }))}
           />
           {!data.events.length && (
-            <p className="px-3.5 pb-5 text-xs text-slate-500">
+            <p className="px-3.5 pb-5 text-xs text-muted">
               No Support activity yet.
             </p>
           )}
         </OperationalPanel>
-        <div className="flex items-center gap-2 px-1 text-[11px] text-slate-500">
-          <Check className="size-3.5 text-emerald-600" />
+        <div className="flex items-center gap-2 px-1 text-[11px] text-muted">
+          <Check className="size-3.5 text-success" />
           {data.policies.filter((p) => p.active).length} active resolution
           policies
-          <Link href={href("service-levels")} className="ml-auto text-blue-600">
+          <Link href={href("service-levels")} className="ml-auto text-accent-text">
             Manage
           </Link>
         </div>

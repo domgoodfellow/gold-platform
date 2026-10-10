@@ -3,17 +3,14 @@ import { cloneElement, isValidElement, type ReactNode } from "react";
 import { StatePill } from "@/components/operational/primitives";
 
 export function Badge({ value }: { value: string }) {
-  const tone = ["urgent", "overdue", "open"].includes(value)
-    ? "rose"
-    : ["high", "normal", "escalated"].includes(value)
-      ? "amber"
-      : value === "waiting"
-        ? "violet"
-        : ["resolved", "active"].includes(value)
-          ? "green"
-          : value === "new"
-            ? "blue"
-            : "neutral";
+  // Support's own vocabulary: priority and breach state are platform facts, so they may carry a tone. A case's queue or custom label never does.
+  const tone = ["urgent", "overdue"].includes(value)
+    ? "danger"
+    : ["high", "escalated"].includes(value)
+      ? "warning"
+      : value === "resolved"
+        ? "success"
+        : "neutral";
   return <StatePill tone={tone}>{value.replaceAll("_", " ")}</StatePill>;
 }
 export function Panel({
@@ -34,7 +31,7 @@ export function Panel({
         {href ? (
           <Link
             href={href}
-            className="text-xs font-medium text-blue-600 hover:underline"
+            className="text-xs font-medium text-accent-text hover:underline"
           >
             View all
           </Link>

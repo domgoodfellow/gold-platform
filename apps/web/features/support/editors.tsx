@@ -136,7 +136,7 @@ export function DrawerForm({
           tone={primary ? "primary" : "secondary"}
           className={
             primary
-              ? "h-9 rounded-md bg-blue-600 px-4 text-xs text-white hover:bg-blue-700"
+              ? "h-9 rounded-md px-4 text-xs"
               : undefined
           }
         >
@@ -187,7 +187,6 @@ export function DrawerForm({
             form={id}
             type="submit"
             disabled={pending}
-            className="bg-blue-600 text-white hover:bg-blue-700"
           >
             {pending ? "Saving…" : submit}
           </Button>

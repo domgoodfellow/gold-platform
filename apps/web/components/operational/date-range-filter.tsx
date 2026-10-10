@@ -53,13 +53,13 @@ export function DateRangeFilter({
           className="h-9 gap-2 rounded-md px-2.5 text-xs font-normal"
           aria-label={label}
         >
-          <CalendarDays className="size-4 text-slate-500" aria-hidden="true" />
+          <CalendarDays className="size-4 text-muted" aria-hidden="true" />
           {format(from)} – {format(to)}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 space-y-3 p-4">
         <p className="text-xs font-semibold">{label}</p>
-        <p className="text-[11px] text-slate-500">{timezone}</p>
+        <p className="text-[11px] text-muted">{timezone}</p>
         <label className="grid gap-1 text-xs">
           From date
           <TextInput
@@ -81,7 +81,7 @@ export function DateRangeFilter({
           />
         </label>
         {!valid && (
-          <p id={id} className="text-xs text-rose-600">
+          <p id={id} className="text-xs text-danger">
             Choose an end date on or after the start date.
           </p>
         )}

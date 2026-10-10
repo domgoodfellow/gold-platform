@@ -40,6 +40,7 @@ import {
 import { Badge, Empty, Panel, Table, cell, formatTime } from "./ui";
 import { SupportHome, SupportViews } from "./home";
 import {
+  MetricTile,
   OperationalTable,
   OwnerIdentity,
   RelativeTime,
@@ -203,7 +204,7 @@ export function SupportWorkspace({
                       ? `${pathname}?${new URLSearchParams({ ...Object.fromEntries(query), selected: item.id })}`
                       : `${base}/cases/${item.id}`
                   }
-                  className="font-semibold hover:text-blue-600"
+                  className="font-semibold hover:text-accent-text"
                 >
                   {item.case_number}
                 </Link>
@@ -217,7 +218,7 @@ export function SupportWorkspace({
               <td className={cell}>
                 {item.customer_id ? (
                   <Link
-                    className="hover:text-blue-600"
+                    className="hover:text-accent-text"
                     href={recordHref(
                       organizationId,
                       "customer",
@@ -285,7 +286,7 @@ export function SupportWorkspace({
             <div className="flex gap-2">
               <Link
                 href={`${base}/cases/${item.id}`}
-                className="text-xs text-blue-600"
+                className="text-xs text-accent-text"
               >
                 Open Case
               </Link>
@@ -433,7 +434,7 @@ export function SupportWorkspace({
         <tr key={q.id}>
           <td className={cell}>
             <Link
-              className="font-medium hover:text-blue-600"
+              className="font-medium hover:text-accent-text"
               href={href("queues", { queue: q.id })}
             >
               {q.name}
@@ -496,13 +497,13 @@ export function SupportWorkspace({
       {data.events.map((e) => (
         <div key={e.id} className="flex gap-3 px-4 py-3">
           <span
-            className={`mt-1 size-2 shrink-0 rounded-full ${e.kind === "resolved" ? "bg-emerald-500" : e.kind === "escalated" ? "bg-rose-500" : "bg-blue-500"}`}
+            className={`mt-1 size-2 shrink-0 rounded-full ${e.kind === "resolved" ? "bg-success" : e.kind === "escalated" ? "bg-danger" : "bg-muted"}`}
           />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap justify-between gap-1">
               <Link
                 href={`${base}/cases/${e.case_id}`}
-                className="text-xs font-semibold hover:text-blue-600"
+                className="text-xs font-semibold hover:text-accent-text"
               >
                 {eventTitle(e)}{" "}
                 <span className="font-normal text-muted">{e.case_number}</span>
@@ -566,7 +567,7 @@ export function SupportWorkspace({
       <div className="grid gap-4 border-t border-border p-4 text-xs">
         <Link
           href={`${base}/cases/${c.id}`}
-          className="text-sm font-semibold text-blue-600"
+          className="text-sm font-semibold text-accent-text"
         >
           {c.case_number} · {c.title}
         </Link>
@@ -575,7 +576,7 @@ export function SupportWorkspace({
           <dd>
             {c.customer_id ? (
               <Link
-                className="text-blue-600"
+                className="text-accent-text"
                 href={recordHref(organizationId, "customer", c.customer_id)}
               >
                 {c.customer_name ?? "Customer"}
@@ -618,7 +619,7 @@ export function SupportWorkspace({
           <dd>{due(c)}</dd>
         </dl>
         {c.target_snapshot ? (
-          <p className="rounded border border-blue-100 bg-blue-50/50 p-3 text-xs text-slate-600">
+          <p className="rounded border border-border bg-selected p-3 text-xs text-muted">
             {c.target_snapshot.name} · {c.target_snapshot.minutes} elapsed
             minutes. Applied on creation; retained after policy, priority and
             queue changes and reopening.
@@ -730,7 +731,7 @@ export function SupportWorkspace({
             <Link
               key={path}
               href={href(path)}
-              className={`whitespace-nowrap border-b-2 px-3 py-2.5 ${titles[view] === label || (view === "policies" && path === "service-levels") || (view === "reports" && path === "reports") || (view === "detail" && path === "cases") ? "border-blue-600 font-semibold text-blue-600" : "border-transparent text-muted hover:text-foreground"}`}
+              className={`whitespace-nowrap border-b-2 px-3 py-2.5 ${titles[view] === label || (view === "policies" && path === "service-levels") || (view === "reports" && path === "reports") || (view === "detail" && path === "cases") ? "border-border font-semibold text-accent-text" : "border-transparent text-muted hover:text-foreground"}`}
             >
               {label}
             </Link>
@@ -770,26 +771,15 @@ export function SupportWorkspace({
       {view === "reports" && (
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {kpis.map(([label, value, Icon, filters, color]) => (
-            <Link
+            <MetricTile
               key={label}
+              label={label}
+              value={value}
+              icon={Icon}
               href={href("cases", filters)}
-              className="flex min-w-0 items-start gap-3 rounded-lg border border-border bg-background px-4 py-4 hover:border-blue-300"
-            >
-              <span
-                className={`rounded-full p-2.5 ${color === "rose" ? "bg-rose-50 text-rose-600" : color === "amber" ? "bg-amber-50 text-amber-600" : color === "emerald" ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"}`}
-              >
-                <Icon className="size-5" />
-              </span>
-              <div>
-                <div className="text-xl font-semibold">{value}</div>
-                <div className="mt-1 text-xs text-muted">{label}</div>
-                <div className="mt-2 text-[10px] text-muted">
-                  {label === "Resolved Cases"
-                    ? "Selected period"
-                    : "Current backlog"}
-                </div>
-              </div>
-            </Link>
+              emphasis={value > 0 ? (color === "rose" ? "danger" : color === "amber" ? "warning" : undefined) : undefined}
+              detail={label === "Resolved Cases" ? "Selected period" : "Current backlog"}
+            />
           ))}
         </div>
       )}
@@ -842,7 +832,7 @@ export function SupportWorkspace({
                       <Link
                         key={item.id}
                         href={`${base}/cases/${item.id}`}
-                        className="rounded-md border border-border bg-background p-3 text-xs hover:border-blue-300"
+                        className="rounded-md border border-border bg-background p-3 text-xs hover:border-border"
                       >
                         <span className="text-[10px] text-muted">
                           {item.case_number}
@@ -898,7 +888,7 @@ export function SupportWorkspace({
               {data.queues.map((q) => (
                 <div
                   key={q.id}
-                  className={`p-3 ${query.get("queue") === q.id ? "bg-blue-50" : ""}`}
+                  className={`p-3 ${query.get("queue") === q.id ? "bg-selected" : ""}`}
                 >
                   <Link
                     href={href("queues", { queue: q.id, status: "active" })}
@@ -1013,7 +1003,7 @@ export function SupportWorkspace({
                 {data.links.map((l) => (
                   <div key={l.id} className="p-3">
                     <Link
-                      className="text-xs text-blue-600 hover:underline"
+                      className="text-xs text-accent-text hover:underline"
                       href={
                         l.kind === "invoice" && l.invoice_work_item_id
                           ? `/organizations/${organizationId}/work/${l.invoice_work_item_id}?tab=financials`

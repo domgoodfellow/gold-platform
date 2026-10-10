@@ -5,6 +5,10 @@ import Link from "next/link";
 import {
   ChevronDown,
   ChevronRight,
+  CircleAlert,
+  Inbox,
+  Lock,
+  Settings2,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -22,36 +26,38 @@ import {
   TooltipTrigger,
 } from "@gold/ui/components/tooltip";
 import { Button } from "@/components/controls/button";
-import { cx } from "@/components/class-names";
+import { cx, FOCUS_RING } from "@/components/class-names";
 
-export type OperationalTone =
-  | "blue"
-  | "amber"
-  | "rose"
-  | "green"
-  | "violet"
-  | "neutral";
-const tones: Record<OperationalTone, string> = {
-  blue: "bg-blue-50 text-blue-600",
-  amber: "bg-amber-50 text-amber-600",
-  rose: "bg-rose-50 text-rose-600",
-  green: "bg-emerald-50 text-emerald-600",
-  violet: "bg-violet-50 text-violet-600",
-  neutral: "bg-slate-100 text-slate-600",
+/**
+ * Colour on an operational surface states a fact, never decoration (ui-system, "Status colour").
+ * `accent` is the organization's own colour and means "this one"; `success`, `warning` and
+ * `danger` are platform-controlled and mean what they say whatever the brand is.
+ */
+export type StatusTone = "neutral" | "accent" | "success" | "warning" | "danger";
+const statusTones: Record<StatusTone, string> = {
+  neutral: "border-border bg-secondary text-muted",
+  accent: "border-transparent bg-accent text-on-accent",
+  success: "border-success/30 bg-success/10 text-success",
+  warning: "border-warning/30 bg-warning/10 text-warning",
+  danger: "border-danger/30 bg-danger/10 text-danger",
+};
+const toneText: Record<"warning" | "danger", string> = {
+  warning: "text-warning",
+  danger: "text-danger",
 };
 
 export function StatePill({
   tone = "neutral",
   children,
 }: {
-  tone?: OperationalTone;
+  tone?: StatusTone;
   children: ReactNode;
 }) {
   return (
     <span
       className={cx(
-        "inline-flex whitespace-nowrap rounded px-2 py-0.5 text-[11px] font-medium capitalize leading-4",
-        tones[tone],
+        "inline-flex whitespace-nowrap rounded border px-2 py-0.5 text-[11px] font-medium capitalize leading-4",
+        statusTones[tone],
       )}
     >
       {children}
@@ -59,21 +65,19 @@ export function StatePill({
   );
 }
 
+/** A passive icon on a neutral well. Icons carry no colour of their own: a colour here would have to mean something. */
 export function IconWell({
   icon: Icon,
-  tone = "blue",
   round = false,
 }: {
   icon: LucideIcon;
-  tone?: OperationalTone;
   round?: boolean;
 }) {
   return (
     <span
       className={cx(
-        "inline-flex size-9 shrink-0 items-center justify-center",
+        "inline-flex size-9 shrink-0 items-center justify-center bg-secondary text-muted",
         round ? "rounded-full" : "rounded-lg",
-        tones[tone],
       )}
     >
       <Icon className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
@@ -81,85 +85,190 @@ export function IconWell({
   );
 }
 
+/**
+ * One figure: label, value, scope. Linked when it has a destination, plain otherwise. `emphasis`
+ * colours the value only when the figure itself is a platform-reported exception.
+ */
 export function MetricTile({
   label,
   value,
   detail,
   icon,
-  tone,
   href,
+  emphasis,
 }: {
   label: string;
   value: ReactNode;
-  detail: ReactNode;
-  icon: LucideIcon;
-  tone: OperationalTone;
-  href: string;
+  detail?: ReactNode;
+  icon?: LucideIcon;
+  href?: string;
+  emphasis?: "warning" | "danger";
 }) {
-  return (
-    <Link
-      href={href}
-      className="flex min-w-0 items-start gap-3 rounded-md border border-slate-200/80 bg-background px-3.5 py-3 transition-colors hover:border-blue-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-    >
-      <IconWell icon={icon} tone={tone} round />
+  const body = (
+    <>
+      {icon ? <IconWell icon={icon} round /> : null}
       <div className="min-w-0">
-        <div className="text-[23px] font-semibold leading-7 tracking-tight tabular-nums">
+        <div className="text-xs text-muted">{label}</div>
+        <div
+          className={cx(
+            "text-2xl font-semibold leading-8 tracking-tight tabular-nums",
+            emphasis && toneText[emphasis],
+          )}
+        >
           {value}
         </div>
-        <div className="text-xs text-slate-500">{label}</div>
-        <div className="mt-1 text-[11px] text-slate-500">{detail}</div>
+        {detail ? <div className="mt-0.5 text-xs text-muted">{detail}</div> : null}
       </div>
+    </>
+  );
+  const shell = "flex min-w-0 items-start gap-3 rounded-lg border border-border bg-surface px-4 py-3";
+  return href ? (
+    <Link href={href} className={cx(shell, "transition-colors hover:bg-hover", FOCUS_RING)}>
+      {body}
     </Link>
+  ) : (
+    <div className={shell}>{body}</div>
   );
 }
 
+export type PanelStateKind = "empty" | "not-configured" | "unavailable" | "restricted";
+
+/**
+ * Why a region has nothing to show, said once. The kinds are different facts and are never
+ * rendered alike: an empty region is a true zero; unavailable is a failed or unverified read, not
+ * a zero; not-configured points at what is missing; restricted is about the viewer, not the data.
+ */
+export function PanelState({
+  kind = "empty",
+  children,
+  action,
+}: {
+  kind?: PanelStateKind;
+  children: ReactNode;
+  action?: ReactNode;
+}) {
+  const Icon = { empty: Inbox, "not-configured": Settings2, unavailable: CircleAlert, restricted: Lock }[kind];
+  return (
+    <div
+      role={kind === "unavailable" ? "status" : undefined}
+      data-state={kind}
+      className="flex min-h-24 flex-col items-center justify-center gap-2 px-5 py-6 text-center text-sm text-muted"
+    >
+      <Icon aria-hidden className="size-4" />
+      <p className="max-w-prose">{children}</p>
+      {action}
+    </div>
+  );
+}
+
+/**
+ * The standard section: a titled container with an optional count, destination link and action.
+ * `flush` lets a table or list run edge to edge; otherwise the body is padded. `density` changes
+ * spacing only, never the heading size, so adjacent panels read as one family.
+ */
 export function OperationalPanel({
   title,
+  icon: Icon,
   count,
+  countTone = "neutral",
+  meta,
   href,
+  hrefLabel = "View all",
   action,
+  flush = false,
+  density = "standard",
   children,
   className,
 }: {
   title: string;
+  icon?: LucideIcon;
   count?: number;
+  countTone?: "neutral" | "danger";
+  meta?: ReactNode;
   href?: string;
+  hrefLabel?: string;
   action?: ReactNode;
+  flush?: boolean;
+  density?: "compact" | "standard";
   children: ReactNode;
   className?: string;
 }) {
+  const compact = density === "compact";
   return (
     <section
-      className={cx(
-        "min-w-0 overflow-hidden rounded-md border border-slate-200/80 bg-background",
-        className,
-      )}
+      aria-label={title}
+      className={cx("min-w-0 overflow-hidden rounded-lg border border-border bg-surface", className)}
     >
-      <div className="flex h-11 items-center justify-between gap-2 px-3.5">
-        <h2
-          aria-label={title}
-          className="flex items-center gap-2 text-sm font-semibold tracking-tight"
-        >
-          {title}
+      <div
+        className={cx(
+          "flex flex-wrap items-center justify-between gap-2 border-b border-border",
+          compact ? "min-h-10 px-3 py-1.5" : "min-h-12 px-4 py-2.5",
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          {Icon ? <Icon aria-hidden className="size-4 shrink-0 text-muted" /> : null}
+          <h2 className="truncate text-sm font-semibold tracking-tight">{title}</h2>
           {count !== undefined && (
-            <span className="rounded-md bg-rose-100 px-1.5 py-0.5 text-[11px] font-medium text-rose-600">
+            <span
+              className={cx(
+                "rounded-full px-2 py-0.5 text-xs font-medium tabular-nums",
+                countTone === "danger" ? "bg-danger/10 text-danger" : "bg-secondary text-muted",
+              )}
+            >
               {count}
             </span>
           )}
-        </h2>
-        {href ? (
-          <Link
-            href={href}
-            className="text-xs font-medium text-blue-600 hover:underline"
-          >
-            View all
-          </Link>
-        ) : (
-          action
-        )}
+          {meta}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {action}
+          {href ? (
+            <Link
+              href={href}
+              className={cx("text-xs font-medium text-accent-text hover:underline", FOCUS_RING)}
+            >
+              {hrefLabel} <span aria-hidden>›</span>
+            </Link>
+          ) : null}
+        </div>
       </div>
-      {children}
+      <div className={flush ? undefined : compact ? "p-3" : "p-4"}>{children}</div>
     </section>
+  );
+}
+
+/**
+ * Sibling views of one workspace, as links. The current view is marked by `aria-current`, a heavier
+ * weight and an underline as well as colour, so selection never depends on colour alone.
+ */
+export function ViewNavigation({
+  label,
+  items,
+  className,
+}: {
+  label: string;
+  items: { key: string; label: string; href: string; current: boolean }[];
+  className?: string;
+}) {
+  return (
+    <nav aria-label={label} className={cx("flex gap-5 overflow-x-auto border-b border-border text-sm", className)}>
+      {items.map((item) => (
+        <Link
+          key={item.key}
+          href={item.href}
+          aria-current={item.current ? "page" : undefined}
+          className={cx(
+            "-mb-px whitespace-nowrap border-b-2 py-2",
+            item.current
+              ? "border-accent font-semibold text-foreground"
+              : "border-transparent text-muted hover:text-foreground",
+            FOCUS_RING,
+          )}
+        >
+          {item.label}
+        </Link>
+      ))}
+    </nav>
   );
 }
 
@@ -190,30 +299,30 @@ export function FilterMenu({
           type="button"
           tone="secondary"
           className={cx(
-            "h-9 min-w-20 max-w-28 justify-between gap-2 rounded-md border-slate-200 px-3 text-xs font-normal shadow-none",
+            "h-9 min-w-20 max-w-28 justify-between gap-2 rounded-md px-3 text-xs font-normal shadow-none",
             className,
           )}
           aria-label={`${label}: ${options.find((o) => o.value === value)?.label ?? label}`}
         >
-          {Icon && <Icon className="size-4 shrink-0 text-slate-500" />}
+          {Icon && <Icon className="size-4 shrink-0 text-muted" />}
           <span className="truncate">
             {options.find((o) => o.value === value)?.label ?? label}
           </span>
-          <ChevronDown className="size-3 shrink-0 text-slate-500" />
+          <ChevronDown className="size-3 shrink-0 text-muted" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-56 rounded-md p-1.5">
         <fieldset>
-          <legend className="px-2 py-1.5 text-xs font-semibold text-slate-500">
+          <legend className="px-2 py-1.5 text-xs font-semibold text-muted">
             {label}
           </legend>
           {options.map((o) => (
             <label
               key={o.value}
-              className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-xs hover:bg-slate-50 focus-within:bg-blue-50"
+              className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-xs hover:bg-hover focus-within:bg-selected"
             >
               <input
-                className="size-3.5 accent-blue-600"
+                className="size-3.5 accent-[var(--accent)]"
                 type="radio"
                 name={id}
                 checked={value === o.value}
@@ -241,7 +350,7 @@ export function OwnerIdentity({
   return (
     <span className="inline-flex max-w-full items-center gap-2 whitespace-nowrap text-xs">
       <Avatar className="size-6 shrink-0">
-        <AvatarFallback className="bg-slate-200/80 text-[10px] font-semibold text-slate-600">
+        <AvatarFallback className="bg-secondary text-[10px] font-semibold text-muted">
           {name ? (
             name
               .trim()
@@ -251,12 +360,12 @@ export function OwnerIdentity({
               .join("")
               .toUpperCase()
           ) : (
-            <UserRound className="size-3 text-slate-400" />
+            <UserRound className="size-3 text-subtle" />
           )}
         </AvatarFallback>
       </Avatar>
       {!compact && (
-        <span className={cx("truncate", !name && "text-slate-500")}>
+        <span className={cx("truncate", !name && "text-muted")}>
           {name ?? "Unassigned"}
         </span>
       )}
@@ -288,7 +397,7 @@ export function RelativeTime({
     minuteSnapshot,
     serverSnapshot,
   );
-  if (!value) return <span className="text-slate-400">No target</span>;
+  if (!value) return <span className="text-subtle">No target</span>;
   const date = new Date(value);
   const exact = new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,
@@ -320,12 +429,12 @@ export function RelativeTime({
             dateTime={value}
             tabIndex={0}
             className={cx(
-              "inline-block whitespace-nowrap text-xs tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+              "inline-block whitespace-nowrap text-xs tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
               overdue
-                ? "text-rose-600"
+                ? "text-danger"
                 : deadline && active
-                  ? "text-amber-600"
-                  : "text-slate-500",
+                  ? "text-warning"
+                  : "text-muted",
             )}
           >
             {stacked && deadline && active && now !== null ? (
@@ -356,20 +465,20 @@ export function RiskBar({ value, label }: { value: number; label: string }) {
         value={percent}
         aria-label={label}
         className={cx(
-          "h-1.5 w-20 bg-slate-200",
+          "h-1.5 w-20 bg-secondary",
           percent >= 30
-            ? "[&_[data-slot=progress-indicator]]:bg-rose-500"
+            ? "[&_[data-slot=progress-indicator]]:bg-danger"
             : percent >= 15
-              ? "[&_[data-slot=progress-indicator]]:bg-orange-500"
+              ? "[&_[data-slot=progress-indicator]]:bg-warning"
               : percent > 0
-                ? "[&_[data-slot=progress-indicator]]:bg-amber-500"
-                : "[&_[data-slot=progress-indicator]]:bg-emerald-500",
+                ? "[&_[data-slot=progress-indicator]]:bg-warning"
+                : "[&_[data-slot=progress-indicator]]:bg-success",
         )}
       />
       <span
         className={cx(
           "w-7 text-right text-[11px] tabular-nums",
-          percent >= 30 ? "text-rose-600" : "text-slate-500",
+          percent >= 30 ? "text-danger" : "text-muted",
         )}
       >
         {percent}%
@@ -386,7 +495,7 @@ export function ActivityList({
     title: ReactNode;
     description: ReactNode;
     time: ReactNode;
-    tone: OperationalTone;
+    tone: StatusTone;
     href: string;
   }[];
 }) {
@@ -396,36 +505,36 @@ export function ActivityList({
         <li key={item.id} className="relative flex gap-3 py-2.5">
           {i < items.length - 1 && (
             <span
-              className="absolute bottom-0 left-[5px] top-6 w-px bg-slate-200"
+              className="absolute bottom-0 left-[5px] top-6 w-px bg-border"
               aria-hidden="true"
             />
           )}
           <span
             className={cx(
               "relative mt-1 size-[11px] shrink-0 rounded-full border-2 bg-background",
-              item.tone === "green"
-                ? "border-emerald-500"
-                : item.tone === "rose"
-                  ? "border-rose-500"
-                  : item.tone === "violet"
-                    ? "border-violet-500"
-                    : "border-blue-500",
+              item.tone === "success"
+                ? "border-success"
+                : item.tone === "danger"
+                  ? "border-danger"
+                  : item.tone === "warning"
+                    ? "border-warning"
+                    : "border-muted",
             )}
             aria-hidden="true"
           />
-          <div className="min-w-0 flex-1 border-b border-slate-100 pb-2">
+          <div className="min-w-0 flex-1 border-b border-border pb-2">
             <div className="flex items-baseline justify-between gap-2">
               <Link
                 href={item.href}
-                className="truncate text-xs font-semibold hover:text-blue-600"
+                className={cx("truncate text-xs font-semibold hover:underline", FOCUS_RING)}
               >
                 {item.title}
               </Link>
-              <span className="shrink-0 text-[10px] text-slate-500">
+              <span className="shrink-0 text-[10px] text-muted">
                 {item.time}
               </span>
             </div>
-            <div className="mt-1 line-clamp-2 text-xs leading-4 text-slate-500">
+            <div className="mt-1 line-clamp-2 text-xs leading-4 text-muted">
               {item.description}
             </div>
           </div>
@@ -440,27 +549,25 @@ export function ResourceTile({
   description,
   icon,
   href,
-  tone = "blue",
 }: {
   title: string;
   description: string;
   icon: LucideIcon;
   href: string;
-  tone?: OperationalTone;
 }) {
   return (
     <Link
       href={href}
-      className="flex min-w-0 items-start gap-2.5 rounded-md border border-slate-200/80 bg-background p-3 transition-colors hover:border-blue-300"
+      className="flex min-w-0 items-start gap-2.5 rounded-lg border border-border bg-surface p-3 transition-colors hover:bg-hover"
     >
-      <IconWell icon={icon} tone={tone} />
+      <IconWell icon={icon} />
       <div className="min-w-0 flex-1">
         <div className="text-xs font-semibold">{title}</div>
-        <p className="mt-1 text-[11px] leading-4 text-slate-500">
+        <p className="mt-1 text-[11px] leading-4 text-muted">
           {description}
         </p>
       </div>
-      <ChevronRight className="mt-3 size-3.5 shrink-0 text-slate-400" />
+      <ChevronRight className="mt-3 size-3.5 shrink-0 text-subtle" />
     </Link>
   );
 }
@@ -489,7 +596,7 @@ export function OperationalTable({
             />
           ))}
         </colgroup>
-        <thead className="border-y border-slate-200/80 bg-slate-50/80 text-[10px] text-slate-500">
+        <thead className="border-y border-border bg-secondary text-[11px] text-muted">
           <tr>
             {headings.map((h) => (
               <th key={h} className="h-8 whitespace-nowrap px-2.5 font-medium">
@@ -498,13 +605,13 @@ export function OperationalTable({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 [&_td]:h-11 [&_td]:px-2.5 [&_td]:py-1.5 [&_td]:align-middle">
+        <tbody className="divide-y divide-border [&_td]:h-11 [&_td]:px-2.5 [&_td]:py-1.5 [&_td]:align-middle">
           {hasRows ? (
             children
           ) : (
             <tr>
               <td colSpan={headings.length}>
-                <div className="flex min-h-64 items-center justify-center text-sm text-slate-500">
+                <div className="flex min-h-64 items-center justify-center text-sm text-muted">
                   {empty}
                 </div>
               </td>
