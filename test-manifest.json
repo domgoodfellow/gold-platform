@@ -1803,6 +1803,10 @@
       ],
       "note": "Stubs the drafting adapter. Also contains source scans."
     },
+    "apps/web/tests/integration/database/tenant-acceptance.test.ts": {
+      "category": "database-integration",
+      "concerns": ["tenancy", "entitlements", "permissions", "acceptance"]
+    },
     "apps/web/tests/integration/database/modules.test.ts": {
       "category": "database-integration",
       "concerns": [
