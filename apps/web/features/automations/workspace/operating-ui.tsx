@@ -1,37 +1,4 @@
-import Link from 'next/link';
-import type { ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
 
-export function AutomationPanel({
-  title,
-  href,
-  children,
-  note,
-}: {
-  title: string;
-  href?: string;
-  children: ReactNode;
-  note?: ReactNode;
-}) {
-  return (
-    <section className="min-w-0 rounded-lg border border-border bg-background">
-      <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-        <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
-        {href ? (
-          <Link
-            href={href}
-            className="flex items-center text-xs text-accent-text hover:underline"
-          >
-            View all <ChevronRight className="size-3" />
-          </Link>
-        ) : (
-          note
-        )}
-      </div>
-      <div className="px-3 pb-3">{children}</div>
-    </section>
-  );
-}
 export function AutomationState({ value }: { value: string }) {
   const color =
     value === 'failed'
@@ -65,11 +32,4 @@ export function automationDiagnostic(detail: string | null) {
   if (/customer.*(missing|no|not)|no customer/i.test(detail))
     return 'Customer context is missing. Attach a Customer or add a Customer condition.';
   return detail;
-}
-export function PanelEmpty({ children }: { children: ReactNode }) {
-  return (
-    <p className="flex min-h-20 items-center justify-center rounded-md border border-dashed border-border px-4 py-5 text-center text-xs text-subtle">
-      {children}
-    </p>
-  );
 }

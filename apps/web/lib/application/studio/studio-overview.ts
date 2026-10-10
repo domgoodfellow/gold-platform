@@ -47,6 +47,7 @@ export type StudioOverview = {
   formPreview: FormListEntry[];
   recentResponses: Awaited<ReturnType<typeof studioResponses>>['recent'];
   recentPublishing: Array<{ id: string; number: number; status: string }>;
+  suggestions: Array<{ key: string; label: string }>;
   brand: { logoConfigured: boolean; accentConfigured: boolean };
   booking: { bookableTypeCount: number; available: boolean };
   portal: { activeInviteCount: number };
@@ -106,13 +107,16 @@ export async function studioOverview(
       }
     : null;
   if (liveForms.some((form) => form.publishedRevisionNumber === null)) attention.push({ key: 'form-unpublished', label: 'A form has never been published.' });
-  if (!brand.logoPath) attention.push({ key: 'brand-logo', label: 'Brand logo is missing.' });
   if (modules.has('booking') && bookableTypes.length === 0) attention.push({ key: 'no-bookable-type', label: 'No bookable type exists.' });
   if (liveForms.some((form) => form.hasDraft && form.publishedRevisionNumber !== null)) attention.push({ key: 'form-draft', label: 'A published form has unpublished changes.' });
-  if (!profile.intro) attention.push({ key: 'profile-incomplete', label: 'Public profile is incomplete.' });
+  // Optional polish, not an exception: a business may publish with no logo and no introduction.
+  const suggestions: Array<{ key: string; label: string }> = [];
+  if (!brand.logoPath) suggestions.push({ key: 'brand-logo', label: 'Add a logo to appear on your website and booking page.' });
+  if (!profile.intro) suggestions.push({ key: 'profile-incomplete', label: 'Add a short introduction to your public profile.' });
 
   return {
     website,
+    suggestions,
     forms: formsSummary,
     formPreview: (forms ?? []).slice(0, 6),
     recentResponses: responses?.recent ?? [],

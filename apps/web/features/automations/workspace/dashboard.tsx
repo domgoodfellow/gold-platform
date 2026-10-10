@@ -7,22 +7,22 @@ import {
   AlertTriangle,
   CheckCircle2,
   Play,
-  Settings,
   Mail,
   Zap,
 } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/controls/button';
+import { ConfigureLink } from '@/components/controls/configure-link';
+import { PageHeader } from '@/components/headers/page-header';
+import { MetricTile, OperationalPanel, PanelState } from '@/components/operational/primitives';
 import { SelectInput, TextInput } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import type { AutomationDashboardData } from '@/lib/application/automations/dashboard';
 import { NewAutomationSheet } from '../rules/new-automation-sheet';
 import { RulesTable } from '../rules/rules-table';
 import {
-  AutomationPanel,
   AutomationState,
   automationDiagnostic,
   automationTime,
-  PanelEmpty,
 } from './operating-ui';
 
 export function AutomationDashboard({
@@ -145,15 +145,17 @@ export function AutomationDashboard({
   const maxDay = Math.max(1, ...data.summary.days.map((d) => d.total));
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Automations</h1>
-          <p className="mt-0.5 text-xs text-subtle">
-            Rules, workflows, execution, and monitoring.
-          </p>
-        </div>
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <form className="flex min-w-0 flex-wrap items-center gap-2">
+      <PageHeader
+        className="mb-0"
+        title="Automations"
+        meta={<span className="text-xs">Execution period {data.period.dates[0]} – {data.period.dates.at(-1)} · {timezone}. Rule counts reflect current configuration.</span>}
+        actions={<>
+          {mayManage && <NewAutomationSheet organizationId={organizationId} />}
+          <ButtonLink href={activity} tone="secondary">View runs</ButtonLink>
+          {mayConfigure && <ConfigureLink href={`/organizations/${organizationId}/settings/features`} />}
+        </>}
+      />
+      <div className="flex flex-wrap items-center gap-2"><form className="flex min-w-0 flex-wrap items-center gap-2">
             <TextInput
               name="q"
               aria-label="Search automations"
@@ -175,48 +177,23 @@ export function AutomationDashboard({
             <Button size="tiny" tone="secondary">
               Apply
             </Button>
-          </form>
-          {mayManage && <NewAutomationSheet organizationId={organizationId} />}
-          <ButtonLink href={activity} size="small">
-            View runs
-          </ButtonLink>
-          {mayConfigure && (
-            <ButtonLink
-              href={`/organizations/${organizationId}/settings/features`}
-              size="small"
-            >
-              <Settings className="size-3.5" /> Configure
-            </ButtonLink>
-          )}
-        </div>
-      </header>
-      <p className="text-[11px] text-subtle">
-        Execution period: {data.period.dates[0]} – {data.period.dates.at(-1)} ·{' '}
-        {timezone}. Rule counts reflect current configuration.
-      </p>
+          </form></div>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {metrics.map(({ label, value, note, href, Icon }) => (
-          <Link
+          <MetricTile
             key={label}
+            label={label}
+            value={value}
+            detail={note}
+            icon={Icon}
             href={href}
-            className="flex min-w-0 items-center gap-3 rounded-lg border border-border px-3 py-3 transition-colors hover:bg-hover"
-          >
-            <span className="rounded-full bg-secondary p-2.5">
-              <Icon
-                className={`size-5 ${label === 'Failed runs' ? 'text-warning' : label === 'Active automations' ? 'text-success' : ''}`}
-              />
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs text-subtle">{label}</p>
-              <p className="text-xl font-semibold tabular-nums">{value}</p>
-              <p className="text-[10px] text-subtle">{note}</p>
-            </div>
-          </Link>
+            emphasis={label === 'Failed runs' && Number(value) > 0 ? 'danger' : undefined}
+          />
         ))}
       </div>
       <div className="grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,7fr)_minmax(16rem,3fr)]">
         <div className="flex min-w-0 flex-col gap-3">
-          <AutomationPanel
+          <OperationalPanel density="compact"
             title="Needs attention"
             href={
               attention === 'runs'
@@ -297,13 +274,13 @@ export function AutomationDashboard({
                 ]}
               />
             ) : (
-              <PanelEmpty>
+              <PanelState>
                 No issues recorded in this category. Provider availability is
                 verified separately.
-              </PanelEmpty>
+              </PanelState>
             )}
-          </AutomationPanel>
-          <AutomationPanel
+          </OperationalPanel>
+          <OperationalPanel density="compact"
             title="Automation library"
             href={`${base}/rules${search ? `?q=${encodeURIComponent(search)}` : ''}`}
           >
@@ -346,9 +323,9 @@ export function AutomationDashboard({
                 Showing 6 of {filteredRules.length} matching rules.
               </p>
             )}
-          </AutomationPanel>
+          </OperationalPanel>
           <div className="grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-2">
-            <AutomationPanel title="Recent executions" href={activity}>
+            <OperationalPanel density="compact" title="Recent executions" href={activity}>
               {data.runs.length ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-[11px]">
@@ -388,14 +365,14 @@ export function AutomationDashboard({
                   </table>
                 </div>
               ) : (
-                <PanelEmpty>
+                <PanelState>
                   No execution attempts recorded in this period.
-                </PanelEmpty>
+                </PanelState>
               )}
-            </AutomationPanel>
-            <AutomationPanel
+            </OperationalPanel>
+            <OperationalPanel density="compact"
               title="Execution performance"
-              note={
+              action={
                 <span className="text-[10px] text-subtle">
                   Runs by local date
                 </span>
@@ -430,15 +407,15 @@ export function AutomationDashboard({
                   </p>
                 </div>
               ) : (
-                <PanelEmpty>
+                <PanelState>
                   Execution trends will appear after the first recorded run.
-                </PanelEmpty>
+                </PanelState>
               )}
-            </AutomationPanel>
+            </OperationalPanel>
           </div>
         </div>
         <aside className="flex min-w-0 flex-col gap-3">
-          <AutomationPanel title="Recent activity" href={activity}>
+          <OperationalPanel density="compact" title="Recent activity" href={activity}>
             {events.length ? (
               <ul className="divide-y divide-border">
                 {events.map(({ id, name, state, at, href, Icon }) => (
@@ -460,10 +437,10 @@ export function AutomationDashboard({
                 ))}
               </ul>
             ) : (
-              <PanelEmpty>No activity recorded in this period.</PanelEmpty>
+              <PanelState>No activity recorded in this period.</PanelState>
             )}
-          </AutomationPanel>
-          <AutomationPanel title="Automation health">
+          </OperationalPanel>
+          <OperationalPanel density="compact" title="Automation health">
             <dl className="divide-y divide-border text-xs">
               {[
                 ['Enabled rules', active],
@@ -491,8 +468,8 @@ export function AutomationDashboard({
               No history may mean no matching trigger. Configuration checks do
               not verify external providers.
             </p>
-          </AutomationPanel>
-          <AutomationPanel
+          </OperationalPanel>
+          <OperationalPanel density="compact"
             title="Recent failures"
             href={`${activity}&outcome=failed`}
           >
@@ -513,10 +490,10 @@ export function AutomationDashboard({
                 ))}
               </ul>
             ) : (
-              <PanelEmpty>No failed runs in this period.</PanelEmpty>
+              <PanelState>No failed runs in this period.</PanelState>
             )}
-          </AutomationPanel>
-          <AutomationPanel title="Insights">
+          </OperationalPanel>
+          <OperationalPanel density="compact" title="Insights">
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-md border border-border p-2">
                 <p className="text-[10px] text-subtle">Messages sent</p>
@@ -554,7 +531,7 @@ export function AutomationDashboard({
                   </Link>
                 ))}
             </div>
-          </AutomationPanel>
+          </OperationalPanel>
         </aside>
       </div>
     </div>
