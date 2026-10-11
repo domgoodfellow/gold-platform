@@ -4,14 +4,11 @@
   "installCommand": "npx --yes pnpm@11.4.0 install --filter @gold/integration-library --ignore-scripts --frozen-lockfile",
   "functions": {
     "api/**/*.py": {
-      "excludeFiles": "{tests/**,dev.py,node_modules/**,library/*.mjs}"
+      "excludeFiles": "{tests/**,dev.py,node_modules/**,library/*.mjs}",
+      "maxDuration": 300
     },
     "api/library_runtime.mjs": {
       "maxDuration": 60
-    },
-    "api/integration_sync_tick.py": {
-      "maxDuration": 300,
-      "excludeFiles": "{tests/**,dev.py,node_modules/**,library/*.mjs}"
     }
   },
   "rewrites": [
