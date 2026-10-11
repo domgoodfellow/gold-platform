@@ -1,7 +1,7 @@
+import { workspaceConfigCrumbs } from '@/lib/settings-nav';
 import { areaLabel } from '@/lib/navigation';
 import { PageHeader } from '@/components/headers/page-header';
 import { requireOrganization } from '@/lib/route/organization';
-import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { EntityFieldsConfiguration } from '@/features/custom-fields/configuration/entity-fields-configuration';
 import { FieldEntityNav } from '@/features/custom-fields/configuration/field-entity-nav';
@@ -28,8 +28,7 @@ export default async function FieldsPage({
       <PageHeader
         title={areaLabel('fields')}
         crumbs={[
-          { label: 'Settings', href: settingsLandingHref(organizationId) },
-          { label: 'Organization', href: settingsScopeHref('organization', organizationId) },
+          ...workspaceConfigCrumbs(organizationId, 'custom-fields'),
         ]}
       />
       <FieldEntityNav organizationId={organizationId} entityType={entityType} />

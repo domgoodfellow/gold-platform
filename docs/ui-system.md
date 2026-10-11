@@ -1034,41 +1034,29 @@ Avoid:
 
 ---
 
-### A5 — Settings Landing
+### A5 — Settings Context
 
 Purpose:
 
-> Choose the configuration scope.
+> Move between the cross-workspace administrative concerns of a person and an organization.
 
-For GildOps, the five canonical choices are:
+Settings has no landing page and no directory page. Entering it swaps the shell's sidebar content, inside the same `Sidebar`, for Back to app, a settings search, and three groups:
 
 ```text
-Organization
-Account
-Access
-Connections
-Plan & usage
+Personal        Profile, Security & sign-in
+Organization    General, Branding, Domains, Features
+Administration  Team & access, Connections, Plan & usage
 ```
 
-Use a strong navigation-list grammar.
+Opening Settings lands on the first destination the member may use. Every destination is a deep link and receives the Settings sidebar whether or not the person came through the menu. Back to app returns to the last page of the same business that was not Settings, validated as a path inside that business, otherwise Home.
 
-Do not render a permanent global Settings tab bar.
+Search covers these destinations and the configuration workspaces own (from `CONFIG_TARGETS`) and routes each to its canonical owner. Settings does not list workspace configuration.
 
 ---
 
-### A6 — Settings Directory
+### A6 — Settings Page Identity
 
-Purpose:
-
-> Navigate configuration concerns owned by one Settings scope.
-
-Example: Organization Settings directory.
-
-This is primarily navigation, not a content gallery.
-
-Prefer a disciplined list as the baseline.
-
-A grid/card representation should exist only if it materially improves comprehension and remains equally clear, not simply because cards are available.
+The global bar names the section once (`PageHeader section="Settings"`; Help uses `section="Help"`); the title beneath is the page. A page does not publish its own title as a breadcrumb and print it again as a heading. Forms use the bounded `form` width; pages with tables or catalogues use `fluid`.
 
 ---
 
@@ -1530,42 +1518,13 @@ Do not collapse these into “Disabled.”
 
 ## Settings UI
 
-Settings must visually reinforce ownership.
+Settings reinforces ownership through its grouping, not through a landing page. See A5 and A6.
 
-Canonical landing:
+### Organization → General
 
-```text
-Settings
-├── Organization
-├── Account
-├── Access
-├── Connections
-└── Plan & usage
-```
+General is the business profile, one form with four sections: business identity (name, optional legal name, optional industry), primary business address, business contact, and the regional defaults the location implies. The same form is rendered in Setup and writes through the same action.
 
-Each scope owns its own page identity and local navigation.
-
----
-
-### Settings navigation rows
-
-Settings directory/landing rows should share one row pattern:
-
-- full-row link;
-- clear title;
-- concise supporting explanation only where helpful;
-- consistent horizontal/vertical rhythm;
-- hover/focus feedback;
-- no tiny text-only click target.
-
----
-
-### Organization Settings
-
-The landing adds searchable, permission-filtered configuration destinations and compact observed
-status on the five scope rows. Search accepts equivalent spacing such as `timezone` and `time zone`.
-The Organization directory includes workspace-owned configuration links; access, personal identity,
-connections and platform subscription remain peer scopes.
+The address is private to members (`organization_identity`) and is never copied to the public profile; publishing an address is the public profile's own field. A location change proposes a time zone and currency and applies neither until the person accepts it.
 
 Organization setup uses an adaptive step navigation, a focused current-step panel and observed
 readiness/launch support panel. Desktop supports three columns, tablet stacks readiness below the
@@ -1579,16 +1538,13 @@ unsaved changes disable Apply and protect browser unload. Apply and launch use d
 dialogs. A failed application reports partial state; an interrupted application asks for inspection
 before any new remainder draft. Roles use a scrolling capability body with a fixed action footer.
 
-Organization Settings is a directory of organization-owned configuration.
-
-Do not put:
+Organization Settings does not contain:
 
 - Team/Members;
 - personal Profile;
 - Connections;
 - Plan & usage;
-
-inside the Organization directory.
+- workspace-owned configuration (work types, working hours, price book, stages, call routing, agents, automation rules, website).
 
 ---
 

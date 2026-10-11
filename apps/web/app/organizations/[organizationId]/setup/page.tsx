@@ -17,6 +17,7 @@ import {
 import { describeDiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
 import { getFoundingHandoff } from '@/lib/domain/customers/proposal-handoff';
 import { computeSetupOverview } from '@/lib/domain/tenancy/lifecycle';
+import { getOrganizationIdentity } from '@/lib/domain/tenancy/identity';
 import { requireOrganization } from '@/lib/route/organization';
 import { DescribeForm } from '@/features/setup/describe-form';
 import { FoundingHandoff } from '@/features/setup/founding-handoff';
@@ -51,6 +52,7 @@ export default async function SetupPage({
 }: PageProps<'/organizations/[organizationId]/setup'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
+  const identity = await getOrganizationIdentity(db, organizationId);
   const inSetup = organization.operationalState === 'setup';
 
   const states = await organizationResolvedFeatureStates(db, { organizationId });
@@ -101,7 +103,7 @@ export default async function SetupPage({
 
       <div className="space-y-4">
         <GuidedSetup organizationId={organizationId} steps={steps} selected={selected} overview={overview} live={!inSetup}
-          business={mayLaunch ? <OrganizationSettingsForm organizationId={organizationId} name={organization.name} timezone={organization.timezone} currency={organization.currency} /> : <Hint>Your role cannot change business information.</Hint>}
+          business={mayLaunch ? <OrganizationSettingsForm organizationId={organizationId} name={organization.name} timezone={organization.timezone} currency={organization.currency} identity={identity} /> : <Hint>Your role cannot change business information.</Hint>}
           handoff={foundingHandoff ? <FoundingHandoff handoff={foundingHandoff} /> : null}
           launch={mayLaunch ? <LaunchForm organizationId={organizationId} /> : <Hint>Your role, {organization.role}, cannot launch this business.</Hint>} />
 

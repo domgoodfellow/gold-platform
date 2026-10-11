@@ -1,3 +1,4 @@
+import { workspaceConfigCrumbs } from '@/lib/settings-nav';
 import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
 import { PageHeader } from '@/components/headers/page-header';
 import { Hint } from '@/components/controls/inputs';
@@ -6,7 +7,6 @@ import { ButtonLink } from '@/components/controls/button';
 import { listProviderBindings, listProviderResources } from '@/lib/domain/providers/bindings';
 import { callingNumber } from '@/lib/domain/reception/telephony';
 import { requireOrganization } from '@/lib/route/organization';
-import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 import { configTarget } from '@/lib/navigation';
 import { CommunicationProfileForm } from '@/features/communications/communication-profile-form';
 import { siteEditorState } from '@/lib/domain/public-site/public-site';
@@ -57,8 +57,7 @@ export default async function CommunicationsPage({
       <PageHeader
         title="Communications"
         crumbs={[
-          { label: 'Settings', href: settingsLandingHref(organizationId) },
-          { label: 'Organization', href: settingsScopeHref('organization', organizationId) },
+          ...workspaceConfigCrumbs(organizationId, 'communications'),
         ]}
       />
       <Hint className="mt-1">

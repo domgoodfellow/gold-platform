@@ -200,14 +200,13 @@ describe('Personal settings says it once', () => {
   it('draws no crumb naming a business by hand — its ancestry is built from the verified Settings scope, never a hand-read business name', () => {
     for (const page of ['app/settings/account/page.tsx', 'app/settings/account/security/page.tsx']) {
       const source = read(page);
-      expect(source, page).toContain('crumbs={personalSettingsAncestry(organizationId)}');
+      // The title is the page's one identity; the global bar already says "Settings".
+      expect(source, page).toContain('<SettingsPageHeader title=');
+      expect(source, page).not.toContain('crumbs=');
       // The id comes from the shell's own verified origin, through the render-prop — never read
       // from `origin.name` or rebuilt from the raw, unverified `org` query param a second time.
       expect(source, page).not.toMatch(/origin\.name/);
     }
-    expect(read('lib/route/personal-settings.ts')).toContain(
-      'export function personalSettingsAncestry(organizationId?: string | null): { label: string; href?: string }[]',
-    );
   });
 
   it('keeps its sections presentation-free, named once for its own Profile/Security local nav (D71)', () => {

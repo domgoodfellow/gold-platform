@@ -650,7 +650,7 @@ describe('Personal settings shares the authenticated shell — no standalone isl
 
   it('every page names itself with one PageHeader, not a title in the global header', () => {
     for (const page of [profile, security]) {
-      expect(page).toContain('<PageHeader');
+      expect(page).toContain('<SettingsPageHeader');
       expect(page).toContain('<PersonalSettingsShell');
       expect(page).not.toContain('primary=');
     }
@@ -761,7 +761,7 @@ describe('the breadcrumb contract — every page publishes a location, ancestors
     // The historical guard this slice removes: rendering the location only when ancestors exist.
     expect(source).not.toMatch(/crumbs\s*&&\s*crumbs\.length/);
     expect(source).not.toMatch(/crumbs\.length === 0\s*\?\s*null/);
-    expect(source).toContain('<PageLocation crumbs={crumbs} current={breadcrumbLabel ?? title} />');
+    expect(source).toContain('<PageLocation crumbs={section ? [] : crumbs} current={section ?? breadcrumbLabel ?? title} />');
   });
 
   it('PageLocation composes PageCrumbs and nothing else — no visible chrome of its own', () => {

@@ -226,27 +226,19 @@ Settings configures the environment in which work happens.
 
 It is not a workspace and is not a second application shell.
 
-Settings begins with five independent scopes:
+Settings is one contextual navigation of the shell, grouped as **Personal** (Profile, Security & sign-in), **Organization** (General, Branding, Domains, Features) and **Administration** (Team & access, Connections, Plan & usage). Opening Settings lands on the first destination the member may use. The five scopes below keep their separate owners.
 
-1. **Organization**
-2. **Account**
-3. **Access**
-4. **Connections**
-5. **Plan & usage**
-
-These scopes have different owners.
+Configuration that controls how one workspace performs its work is configured in that workspace, never in Settings. Settings search reaches it and routes to its owner.
 
 #### Organization
 
-Organization owns business configuration such as:
+Organization owns business-wide configuration:
 
-- general business identity;
-- locale, time zone and currency;
-- work and scheduling configuration;
-- pricing configuration;
-- customer-data configuration;
-- brand and public-presence configuration;
-- communications configuration;
+- business identity: name, legal name, industry;
+- the primary business address, which is private;
+- general business contact details;
+- regional defaults: time zone and trading currency, suggested from the business location;
+- brand and domains;
 - enabled product features.
 
 #### Account

@@ -14,6 +14,12 @@ export const HEADER_HEIGHT_STYLE = { '--header-height': HEADER_HEIGHT } as CSSPr
 /** The canvas inset every page sits in. */
 export const PAGE_PADDING = 'p-4 sm:p-6 lg:p-8';
 
+/** The space after a page's last element: the canvas inset's bottom edge, as a real child so it scrolls with the page. */
+export const PAGE_BOTTOM_CLEARANCE = 'h-4 sm:h-6 lg:h-8';
+
+/** Phone only: also clears the persistent navigation bar, which sits over the bottom of the scroller. */
+export const PAGE_BOTTOM_CLEARANCE_WITH_NAV = 'max-md:h-[calc(var(--mobile-nav-height,0px)+1.5rem)]';
+
 /**
  * A drawer's own chrome: one compact band, deliberately thinner than the workspace header, so the
  * form beneath it gets the height. Every drawer and Configure rail reads these and nothing else.

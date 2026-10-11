@@ -3,6 +3,9 @@
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
 import { WorkspaceShell } from '@/components/layout/workspace-shell';
 import { AccountMenu } from '@/components/navigation/account-menu';
+import { SettingsNav } from '@/components/navigation/settings-nav';
+import { inSettingsContext, type SettingsSearchItem } from '@/lib/settings-nav';
+import { lastAppPathKey } from '@/lib/route/app-return';
 import { ContextIdentity, ContextSwitcher, CompactContextSwitcher, GOLD_MARK, type SwitchableOrganization, type SwitcherContext, type PlatformContext } from '@/components/navigation/context-switcher';
 import {
   Sidebar,
@@ -395,6 +398,7 @@ export function OrgSidebar({
   current,
   platform,
   sections,
+  settings,
   email,
   signOutAction,
   ...props
@@ -406,6 +410,8 @@ export function OrgSidebar({
   current: SwitcherContext;
   platform?: PlatformContext | null;
   sections: ShellSection[];
+  /** Present while the person is inside Settings: the destinations that replace the workspaces. */
+  settings?: { organizationId: string; sections: ShellSection[]; search: SettingsSearchItem[] } | null;
   /** True only while the business is in SETUP — the layout decides, from `operationalState`. */
   email: string;
   signOutAction: () => Promise<void>;
@@ -428,7 +434,11 @@ export function OrgSidebar({
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <OrgNav sections={sections} />
+        {settings ? (
+          <SettingsNav organizationId={settings.organizationId} organizationName={name} sections={settings.sections} search={settings.search} />
+        ) : (
+          <OrgNav sections={sections} />
+        )}
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border">
         <AccountMenu email={email} signOutAction={signOutAction} />
@@ -508,7 +518,7 @@ export function LockedOrgSidebar({
 
 /** Layouts persist across client navigation: select the already authorized context on each path. */
 export function OrganizationFrame({
-  organizationId, name, role, mark, organizations, sections: businessSections, utilities, platform,
+  organizationId, name, role, mark, organizations, sections: businessSections, utilities, settings, settingsSearch, platform,
   locked, email, signOutAction, agent, children,
 }: {
   organizationId: string;
@@ -518,6 +528,8 @@ export function OrganizationFrame({
   organizations: SwitchableOrganization[];
   sections: ShellSection[];
   utilities: HeaderUtility[];
+  settings: ShellSection[];
+  settingsSearch: SettingsSearchItem[];
   platform: (PlatformContext & { sections: ShellSection[] }) | null;
   locked: boolean;
   email: string;
@@ -525,7 +537,20 @@ export function OrganizationFrame({
   agent: ReactNode;
   children: ReactNode;
 }) {
-  const selected = selectShellContext(organizationId, usePathname(), platform);
+  const pathname = usePathname();
+  const selected = selectShellContext(organizationId, pathname, platform);
+  const settingsContext = inSettingsContext(pathname, organizationId) && settings.length > 0;
+
+  // The last page of this business that was not Settings, so "Back to app" can return to it. Kept
+  // per tab and validated again when read; losing it only means Back goes to Home.
+  useEffect(() => {
+    if (inSettingsContext(pathname, organizationId) || !pathname.startsWith(`/organizations/${organizationId}/`)) return;
+    try {
+      window.sessionStorage.setItem(lastAppPathKey(organizationId), pathname);
+    } catch {
+      /* storage can be unavailable; Back falls back to Home */
+    }
+  }, [pathname, organizationId]);
   const system = selected === 'platform';
   const current: SwitcherContext = system
     ? { kind: 'platform', organizationId }
@@ -539,7 +564,7 @@ export function OrganizationFrame({
 
   return (
     <WorkspaceShell
-      sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} {...shared} /> : <OrgSidebar {...shared} current={current} sections={sections} />}
+      sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} {...shared} /> : <OrgSidebar {...shared} current={current} sections={sections} settings={settingsContext && !system ? { organizationId, sections: settings, search: settingsSearch } : null} />}
       header={
         <WorkspaceHeader
           navigationTrigger={recovery ? 'always' : 'md'}

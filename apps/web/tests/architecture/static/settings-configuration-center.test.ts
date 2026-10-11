@@ -20,10 +20,10 @@ const WEB_FEATURES = fileURLToPath(new URL('../../../features', import.meta.url)
 const WEB_ROOT = fileURLToPath(new URL('../../..', import.meta.url));
 
 describe('Settings, as the Configuration Center (source scan)', () => {
-  // The Configuration Center is `/settings/organization` — the organization directory
-  // `SettingsIndex` renders. `/settings` itself is the landing page, a chooser between five
-  // destinations (Organization among them), not the configuration map.
-  const settings = readFileSync(`${ROUTES}/settings/organization/page.tsx`, 'utf8');
+  // There is no Organization directory page any more: the Settings sidebar lists cross-workspace
+  // administration, and search reaches the configuration workspaces own through the shell's search
+  // index, built from the same configuration map by the shell that mounts the sidebar.
+  const settings = readFileSync(fileURLToPath(new URL('../../../features/shell/organization-shell.tsx', import.meta.url)), 'utf8');
   const frame = readFileSync(
     fileURLToPath(new URL('../../../features/settings/settings-page-frame.tsx', import.meta.url)),
     'utf8',
@@ -41,6 +41,7 @@ describe('Settings, as the Configuration Center (source scan)', () => {
       'utf8',
     );
     expect(settings).toContain('offeredSections');
+    expect(settings).toContain('projectSettingsNav');
     for (const path of [
       'settings/general',
       'settings/branding',
@@ -53,9 +54,9 @@ describe('Settings, as the Configuration Center (source scan)', () => {
   });
 
   it('does not claim Account, Work configuration, or Schedule configuration as Settings destinations', () => {
-    expect(settings).not.toContain('/account');
-    expect(settings).not.toContain('/settings/work');
-    expect(settings).not.toContain('/settings/schedule');
+    const nav = readFileSync(fileURLToPath(new URL('../../../lib/settings-nav.ts', import.meta.url)), 'utf8');
+    expect(nav).not.toContain('/settings/work');
+    expect(nav).not.toContain('/settings/schedule');
   });
 
   it('keeps Branding as Settings-owned while moving Work and Schedule configuration to their owners', () => {
@@ -75,8 +76,8 @@ describe('configuration fields stay with their owning surfaces', () => {
   it('keeps General limited to organization identity and regional settings', () => {
     const general = readFileSync(`${WEB_FEATURES}/tenancy/organization-settings-form.tsx`, 'utf8');
     expect(general).toContain('name="name"');
-    expect(general).toContain('TimeZoneField');
-    expect(general).toContain('CurrencyField');
+    expect(general).toContain('BusinessLocationFields');
+    expect(general).toContain('name="legalName"');
     expect(general).not.toContain('bufferMinutes');
     expect(general).not.toContain('slug');
     expect(general).not.toContain('Public booking address');

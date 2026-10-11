@@ -8,6 +8,8 @@ import { signOut } from '@/lib/domain/identity/credentials';
 import { requireOrganizationForBillingRecovery } from '@/lib/route/organization';
 import { loadOrganizationShellModel } from '@/lib/application/shell/organization-shell';
 import { TenantAgentRail } from '@/features/agent/tenant-agent-rail';
+import { offeredSections } from '@/features/settings/settings-map';
+import { projectSettingsNav, settingsSearchItems } from '@/lib/settings-nav';
 
 /** Shared frame for business and system contexts, with canonical server authority resolution.
  * Each page still enforces its own access; layouts persist across client navigations.
@@ -23,7 +25,7 @@ export async function OrganizationShell({
   const locked = !access.permitted;
   // A locked business runs none of the workspace reads below — no feature resolution and no
   // Agent transcript — because none of it is drawn.
-  const { brand, email, switchable, sections, utilities, platform } = await loadOrganizationShellModel(db, {
+  const { brand, email, switchable, sections, utilities, platform, configGate } = await loadOrganizationShellModel(db, {
     organizationId,
     capabilities: organization.capabilities,
     locked,
@@ -41,6 +43,11 @@ export async function OrganizationShell({
   // `Actor` shape carries only an id).
   // Read here rather than per-screen, since a brand belongs to the shell — every page inside
   // inherits these roles and never has to know whose colour it's rendering.
+
+  // Settings is a context of this same shell: its destinations replace the workspaces in the
+  // sidebar while a person is inside it, and search reaches the configuration workspaces own.
+  const settings = locked ? [] : projectSettingsNav(organizationId, configGate);
+  const settingsSearch = locked ? [] : settingsSearchItems(organizationId, settings, offeredSections(configGate).flatMap((section) => section.entries));
 
   async function signOutAction() {
     'use server';
@@ -87,6 +94,8 @@ export async function OrganizationShell({
         organizations={switchable}
         sections={sections}
         utilities={utilities}
+        settings={settings}
+        settingsSearch={settingsSearch}
         platform={platform}
         locked={locked}
         email={email}

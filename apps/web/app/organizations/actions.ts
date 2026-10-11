@@ -27,7 +27,15 @@ export async function createBusinessAction(
       name: String(formData.get('name') ?? ''),
       displayName: String(formData.get('displayName') ?? ''),
       timezone: String(formData.get('timezone') ?? ''),
-      // No currency: the form doesn't ask. The pricing screen asks when an amount is first written.
+      // The currency the form showed for confirmation. Empty when the founder chose to decide later; the pricing screen asks when an amount is first written.
+      currency: String(formData.get('currency') ?? '') || undefined,
+      location: {
+        countryCode: String(formData.get('countryCode') ?? ''),
+        region: String(formData.get('region') ?? ''),
+        city: String(formData.get('city') ?? ''),
+        postalCode: String(formData.get('postalCode') ?? ''),
+        industry: String(formData.get('industry') ?? ''),
+      },
     });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };

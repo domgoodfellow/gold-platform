@@ -11,7 +11,7 @@ export type SetupStep = {
 };
 
 const GROUPS = [
-  { key: 'business', label: 'Business information', description: 'Confirm the business name, timezone and trading currency.', targets: ['general'] },
+  { key: 'business', label: 'Business information', description: 'Confirm who the business is, where it is, and the time zone and currency it runs on.', targets: ['general'] },
   { key: 'operations', label: 'Operations', description: 'Define the work you perform and configure scheduling when needed.', targets: ['work-configuration', 'schedule-configuration'] },
   { key: 'people', label: 'People and resources', description: 'Invite your team, assign permissions and configure capacity separately.', targets: ['team', 'resources', 'locations'] },
   { key: 'customers', label: 'Customers and data', description: 'Choose relationship stages, opportunity stages and the information you collect.', targets: ['sales-stages', 'opportunity-stages', 'custom-fields'] },

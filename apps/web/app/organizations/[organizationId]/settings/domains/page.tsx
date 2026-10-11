@@ -1,16 +1,14 @@
 import { Hint } from '@/components/controls/inputs';
-import { PageHeader } from '@/components/headers/page-header';
 import { ConnectDomainDialog } from '@/features/domains/connect-domain-dialog';
 import { DomainsList } from '@/features/domains/domains-list';
 import { PublicBookingAddressForm } from '@/features/public-profile/public-booking-address-form';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { listBookableTypes } from '@/lib/domain/booking/booking';
 import { ManagedAddress } from '@/features/domains/managed-address';
-import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/settings-page-frame';
 import { getManagedHostname, listDomains, platformPublicDomain } from '@/lib/domain/domains/domains';
 import { listConnectedDnsZones } from '@/lib/domain/domains/dns-zones';
 import { requireOrganization } from '@/lib/route/organization';
-import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,12 +27,8 @@ export default async function DomainsSettingsPage({ params }: PageProps<'/organi
 
   return (
     <SettingsPageFrame>
-      <PageHeader
+      <SettingsPageHeader
         title="Domains"
-        crumbs={[
-          { label: 'Settings', href: settingsLandingHref(organizationId) },
-          { label: 'Organization', href: settingsScopeHref('organization', organizationId) },
-        ]}
         actions={
           mayManage ? (
             <ConnectDomainDialog organizationId={organizationId} platformZone={zone} />

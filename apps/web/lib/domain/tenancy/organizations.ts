@@ -1,6 +1,7 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from './actor';
+import { isCountryCode, postalCodeValid } from './regional-defaults';
 import {
   ALL_CAPABILITIES,
   isCapability,
@@ -193,6 +194,8 @@ export async function createOrganization(
     timezone: string;
     /** Optional — signup doesn't ask (the first screen is about who they are, not money). Leaving it out records that this business hasn't said (`20260904000001`); the pricing screen asks when it's first needed. `provisionOrganization` passes one because staff already know the answer. */
     currency?: string;
+    /** Where the founder says the business is, written in the same transaction as the business so a retry cannot leave one without the other. */
+    location?: { countryCode: string; region?: string; city?: string; postalCode?: string; industry?: string };
   },
 ): Promise<string> {
   await requireActor(db);
@@ -207,6 +210,24 @@ export async function createOrganization(
 
   const displayName = (input.displayName ?? '').trim();
 
+  let identity: Record<string, string> | undefined;
+  if (input.location) {
+    const countryCode = input.location.countryCode.trim().toUpperCase();
+    if (!isCountryCode(countryCode)) {
+      throw new DomainError('Choose a country from the list.', 'identity.country_invalid');
+    }
+    if (input.location.postalCode?.trim() && !postalCodeValid(countryCode, input.location.postalCode)) {
+      throw new DomainError('That postal code does not look right for the selected country.', 'identity.postal_invalid');
+    }
+    identity = {
+      countryCode,
+      region: input.location.region?.trim() ?? '',
+      city: input.location.city?.trim() ?? '',
+      postalCode: input.location.postalCode?.trim() ?? '',
+      industry: input.location.industry?.trim() ?? '',
+    };
+  }
+
   const { data, error } = await db.rpc('create_organization', {
     p_name: name,
     p_role: (input.role ?? FOUNDING_ROLE).trim() || FOUNDING_ROLE,
@@ -215,6 +236,7 @@ export async function createOrganization(
     p_timezone: timezone,
     // Omitted rather than sent as null when nothing was asked, so the function's own default applies — keeps the argument type honest as optional, not nullable.
     ...(currency === null ? {} : { p_currency: currency }),
+    ...(identity ? { p_identity: identity } : {}),
   });
 
   if (error) {

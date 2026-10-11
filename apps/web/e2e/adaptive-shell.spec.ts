@@ -137,9 +137,10 @@ test.describe('a tenant owner', () => {
     await expect(sheet.getByText('Platform', { exact: true })).toHaveCount(0);
     await sheet.getByRole('button', { name: /sanne@grachtwerk.test/ }).click();
     await expect(page.getByRole('menuitem', { name: 'Settings' })).toBeVisible();
-    await expect(page.getByRole('menuitem', { name: /Plan & usage/ })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Help & documentation' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Contact GildOps Support' })).toBeVisible();
     await page.getByRole('menuitem', { name: 'Settings', exact: true }).click();
-    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page).toHaveURL(/\/settings\/general$/);
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 

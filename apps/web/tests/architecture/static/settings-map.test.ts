@@ -71,13 +71,14 @@ describe('the Settings configuration map', () => {
     // contextually from each workspace's Home and from PageHeader's Insights support mode
     // (`areaAvailable('insights', ...)`), and Website, Forms and Templates are Studio's own operating pages, reached from
     // Studio Home (D68) — none of them is a Settings *configuration* door.
+    // `help` is product help opened from the account menu: not configuration, so not a door on the map.
     const settingsOwned: Record<string, string> = {
       pricing: 'pricing',
       fields: 'custom-fields',
       roles: 'team',
       integrations: 'integrations',
     };
-    for (const area of AREAS.filter((candidate) => candidate.group === 'settings' && candidate.sidebar === false && candidate.segment !== 'setup')) {
+    for (const area of AREAS.filter((candidate) => candidate.group === 'settings' && candidate.sidebar === false && candidate.segment !== 'setup' && candidate.segment !== 'help')) {
       expect(
         CONFIG_TARGETS.some((target) => target.key === settingsOwned[area.segment] || target.path.split(/[/#]/)[0] === area.segment),
         `${area.segment} left the sidebar and is not on the Settings map`,

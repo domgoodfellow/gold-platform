@@ -8,7 +8,7 @@ import { getConnection } from '@/lib/domain/integrations/connections';
 import { connectorLogoUrl, getConnector, isConnectable, usesSignIn } from '@/lib/domain/integrations/connectors';
 import { listResources } from '@/lib/domain/integrations/resources';
 import { requireOrganization } from '@/lib/route/organization';
-import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
+import { settingsScopeHref } from '@/lib/route/settings';
 import { loadConnectorReadiness } from '@/lib/domain/integrations/readiness';
 import { sourceControlReader, type SourceRepository } from '@/lib/adapters/source-control';
 import { listGrantedResourceIds } from '@/lib/domain/integrations/assistant-grants';
@@ -67,13 +67,10 @@ export default async function ConnectionDetailPage({
   const needsReconnect = connector !== null && connector.authMethod !== 'none' && connectable && connection.status !== 'active';
 
   return (
-    <SettingsPageFrame>
+    <SettingsPageFrame width="fluid">
       <PageHeader
         title={name}
-        crumbs={[
-          { label: 'Settings', href: settingsLandingHref(organizationId) },
-          { label: 'Connections', href: settingsScopeHref('connections', organizationId) },
-        ]}
+        crumbs={[{ label: 'Connections', href: settingsScopeHref('connections', organizationId) }]}
         meta={
           <Badge tone={connection.status === 'active' || connection.status === 'connecting' ? 'success' : 'neutral'}>
             {connection.status.replace(/_/g, ' ')}

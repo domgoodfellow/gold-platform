@@ -25,7 +25,7 @@ import type { Capability } from '@/lib/domain/tenancy/capabilities';
  * Work owns concrete execution. Platform is a separate system context, never a tenant workspace.
  * Visibility is courtesy: each destination continues enforcing its own authority.
  */
-export type ShellSectionKey = 'home' | 'library' | 'workspaces' | 'platform';
+export type ShellSectionKey = 'home' | 'library' | 'workspaces' | 'platform' | 'settings-personal' | 'settings-organization' | 'settings-administration';
 
 export type NavItem = {
   /** Unique across the whole projection; also the icon key. */
@@ -74,6 +74,9 @@ const SECTION_LABELS: Record<ShellSectionKey, string | null> = {
   library: null,
   workspaces: 'Workspaces',
   platform: null,
+  'settings-personal': 'Personal',
+  'settings-organization': 'Organization',
+  'settings-administration': 'Administration',
 };
 
 export const SHELL_SECTION_ORDER: readonly ShellSectionKey[] = ['home', 'library', 'workspaces'];

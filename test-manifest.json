@@ -164,6 +164,10 @@
       "category": "unit",
       "concerns": ["identity", "security"]
     },
+    "apps/web/tests/unit/business-location.test.ts": {
+      "category": "unit",
+      "concerns": ["identity", "tenancy"]
+    },
     "apps/web/tests/unit/account-identity.test.ts": {
       "category": "unit",
       "concerns": ["identity", "security"]
@@ -463,6 +467,10 @@
         "automation",
         "communications"
       ]
+    },
+    "apps/web/e2e/business-profile.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": ["identity", "navigation", "tenancy"]
     },
     "apps/web/e2e/account.spec.ts": {
       "category": "playwright-acceptance",
@@ -1441,6 +1449,10 @@
         "booking",
         "security"
       ]
+    },
+    "apps/web/tests/integration/database/business-identity.test.ts": {
+      "category": "database-integration",
+      "concerns": ["identity", "tenancy", "security"]
     },
     "apps/web/tests/integration/database/branding.test.ts": {
       "category": "database-integration",

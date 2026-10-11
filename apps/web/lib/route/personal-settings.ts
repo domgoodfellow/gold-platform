@@ -1,5 +1,3 @@
-import { settingsLandingHref } from './settings';
-
 /**
  * Personal settings: the signed-in person's identity and sign-in, owned by the user and never by
  * whichever business is selected (D45). This is the one place its addresses are written, so the
@@ -13,18 +11,6 @@ export const PERSONAL_SECTIONS = [
 ] as const;
 
 export type PersonalSection = (typeof PERSONAL_SECTIONS)[number]['key'];
-
-/**
- * The breadcrumb ancestors for every Personal settings page: Settings (the landing chooser,
- * honouring the `?org=` hint the same way the rest of Settings does) and Account (this scope's
- * own root, Profile). `PageHeader` appends the current page.
- */
-export function personalSettingsAncestry(organizationId?: string | null): { label: string; href?: string }[] {
-  return [
-    { label: 'Settings', href: settingsLandingHref(organizationId ?? null) },
-    { label: 'Account', href: personalSettingsHref('profile', organizationId) },
-  ];
-}
 
 /**
  * `organizationId` is the business the person came from, carried only so Personal settings can

@@ -1,3 +1,4 @@
+import { workspaceConfigCrumbs } from '@/lib/settings-nav';
 import { Hint } from '@/components/controls/inputs';
 import { PageHeader } from '@/components/headers/page-header';
 import { Section, SectionHeading } from '@/components/surfaces/section';
@@ -9,7 +10,6 @@ import { isDnsAutomated, listConnectedDnsZones } from '@/lib/domain/domains/dns-
 import { listEmailIdentities } from '@/lib/domain/email/identities';
 import { listSendingDomains, MANAGED_SENDING } from '@/lib/domain/email/sending-domains';
 import { requireOrganization } from '@/lib/route/organization';
-import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,8 +41,7 @@ export default async function EmailSettingsPage({ params }: PageProps<'/organiza
     <PageHeader
       title="Email"
       crumbs={[
-        { label: 'Settings', href: settingsLandingHref(organizationId) },
-        { label: 'Organization', href: settingsScopeHref('organization', organizationId) },
+        ...workspaceConfigCrumbs(organizationId, 'email'),
       ]}
     />
   );

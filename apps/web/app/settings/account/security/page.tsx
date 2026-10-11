@@ -1,10 +1,9 @@
-import { PageHeader } from '@/components/headers/page-header';
+import { SettingsPageHeader } from '@/features/settings/settings-page-frame';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
 import { ChangePasswordForm } from '@/features/account/change-password-form';
 import { AccountSectionNav } from '@/features/account/account-section-nav';
 import { PersonalSettingsShell } from '@/features/account/personal-settings-shell';
-import { personalSettingsAncestry } from '@/lib/route/personal-settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,8 +15,8 @@ export default async function SecurityPage({ searchParams }: PageProps<'/setting
     <PersonalSettingsShell returnOrganizationId={typeof org === 'string' ? org : undefined}>
       {({ hasPassword, signInMethods, organizationId }) => (
         <>
-          <PageHeader title="Security & sign-in" crumbs={personalSettingsAncestry(organizationId)} />
-          <AccountSectionNav organizationId={organizationId} />
+          <SettingsPageHeader title="Security & sign-in" />
+          {organizationId ? null : <AccountSectionNav organizationId={organizationId} />}
           <Section>
             <SectionHeading>Sign-in methods</SectionHeading>
             <ul className="mt-3 space-y-2">

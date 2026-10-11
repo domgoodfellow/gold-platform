@@ -1,16 +1,18 @@
 import { configTarget, configTargetOffered, type ConfigGate } from '@/lib/navigation';
 
 /**
- * The configuration map: every place a business is configured, grouped by the concern it answers
- * rather than by the table behind it. One list, so the Settings page renders it and a test reads
- * it, and so anything that later needs to point at "where is X configured" (guided setup, the
- * Agent) targets a `key` here instead of a hand-typed URL.
+ * The configuration map: every place a business is configured, with the words a person searches by.
+ * It is not a page. Settings has no directory; the Settings sidebar lists cross-workspace
+ * administration, and this map feeds Settings search (`settingsSearchItems`) so that configuration a
+ * workspace owns — working hours, prices, stages, call routing — is found from Settings and opens in
+ * its owner. A test reads it, and guided setup and the Agent target a `key` here rather than a
+ * hand-typed URL.
  *
  * **An entry carries only words.** Where it goes and who may be offered it are a `ConfigTarget`
  * (`lib/navigation.ts`), found by the entry's `key`: its path, the entitlement it needs and the
  * *configuration* permission it needs. Configuring is not operating — a role may configure call
  * outcomes without being allowed to place a call — so the map never inherits a workspace's own
- * `relevantCapabilities`. The Business navigation reads the same targets, so the two cannot
+ * `relevantCapabilities`. Search reads the same targets as the Business navigation, so the two cannot
  * offer different doors.
  */
 export type SettingsEntry = {

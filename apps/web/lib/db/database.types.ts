@@ -5877,6 +5877,72 @@ export type Database = {
           },
         ]
       }
+      organization_identity: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          city: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          country_code: string | null
+          industry: string | null
+          legal_name: string | null
+          organization_id: string
+          postal_code: string | null
+          region: string | null
+          updated_at: string
+          updated_by: string
+          website_url: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          country_code?: string | null
+          industry?: string | null
+          legal_name?: string | null
+          organization_id: string
+          postal_code?: string | null
+          region?: string | null
+          updated_at?: string
+          updated_by: string
+          website_url?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          country_code?: string | null
+          industry?: string | null
+          legal_name?: string | null
+          organization_id?: string
+          postal_code?: string | null
+          region?: string | null
+          updated_at?: string
+          updated_by?: string
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_identity_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_identity_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_invitations: {
         Row: {
           accepted_at: string | null
@@ -8911,6 +8977,54 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      platform_support_requests: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          organization_id: string
+          page: string | null
+          requested_by: string
+          status: string
+          subject: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          organization_id: string
+          page?: string | null
+          requested_by: string
+          status?: string
+          subject: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          organization_id?: string
+          page?: string | null
+          requested_by?: string
+          status?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_support_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_support_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       platform_support_sessions: {
         Row: {
@@ -12438,6 +12552,15 @@ export type Database = {
           retry_after: number
         }[]
       }
+      contact_gildops_support: {
+        Args: {
+          p_message: string
+          p_organization_id: string
+          p_page?: string
+          p_subject: string
+        }
+        Returns: string
+      }
       conversation_customer_candidates: {
         Args: { p_conversation_id: string; p_organization_id: string }
         Returns: {
@@ -12534,6 +12657,7 @@ export type Database = {
           p_capabilities: string[]
           p_currency?: string
           p_display_name: string
+          p_identity?: Json
           p_name: string
           p_role: string
           p_timezone: string
@@ -14491,6 +14615,23 @@ export type Database = {
           p_resource_type?: string
         }
         Returns: string
+      }
+      set_organization_identity: {
+        Args: {
+          p_address_line1: string
+          p_address_line2: string
+          p_city: string
+          p_contact_email: string
+          p_contact_phone: string
+          p_country_code: string
+          p_industry: string
+          p_legal_name: string
+          p_organization_id: string
+          p_postal_code: string
+          p_region: string
+          p_website_url: string
+        }
+        Returns: undefined
       }
       set_organization_profile: {
         Args: {

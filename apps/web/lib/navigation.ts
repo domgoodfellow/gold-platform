@@ -431,6 +431,8 @@ export const AREAS: readonly Area[] = [
   { segment: 'pricing', label: 'Pricing', group: 'settings', workspace: 'finance', module: 'billing', sidebar: false, relevantCapabilities: ['price.manage'], featureKeys: ['price_book', 'quote_creation', 'invoices'] },
   { segment: 'fields', label: 'Custom fields', group: 'settings', sidebar: false, relevantCapabilities: ['field.manage'] },
   { segment: 'roles', label: 'Team', group: 'settings', sidebar: false, relevantCapabilities: ['role.manage'] },
+  // Product help for operators, opened from the account menu. Not a workspace and not the Support workspace.
+  { segment: 'help', label: 'Help & documentation', group: 'settings', sidebar: false },
   // Setup is a lifecycle, not a permanent area: while SETUP lasts it is the one row `SetupEntry`
   // draws above the areas, and once LIVE it recedes to the Settings map's "Setup & launch". It is
   // **kernel** — readiness, areas, launch and review exist for every business. Agent-assisted

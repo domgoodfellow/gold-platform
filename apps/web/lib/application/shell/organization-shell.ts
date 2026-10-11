@@ -27,6 +27,7 @@ export async function loadOrganizationShellModel(db: Db, input: { organizationId
       id: organization.id, name: organization.name, role: organization.role, operationalState: organization.operationalState,
     })),
     sections: projectShell({ organizationId, enabledModules, featureAvailability, capabilities, schedulableWork }),
+    configGate: { enabledModules, featureAvailability, capabilities, schedulableWork },
     utilities: locked ? [] : projectHeaderUtilities({ organizationId, enabledModules, featureAvailability, capabilities, schedulableWork }),
   };
 }

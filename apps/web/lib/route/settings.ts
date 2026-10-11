@@ -33,7 +33,7 @@ export function settingsScopeHref(key: SettingsScopeKey, organizationId: string 
   if (key === 'account') return organizationId ? `/settings/account?org=${encodeURIComponent(organizationId)}` : '/settings/account';
   if (!organizationId) return '/settings/account';
   switch (key) {
-    case 'organization': return `/organizations/${organizationId}/settings/organization`;
+    case 'organization': return `/organizations/${organizationId}/settings/general`;
     case 'access': return `/organizations/${organizationId}/settings/access`;
     case 'connections': return `/organizations/${organizationId}/settings/connections`;
     case 'plan': return `/organizations/${organizationId}/settings/plan`;

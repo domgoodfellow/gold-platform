@@ -2,7 +2,6 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { CONFIG_TARGETS } from '@/lib/navigation';
-import { personalSettingsAncestry } from '@/lib/route/personal-settings';
 import { SETTINGS_SCOPES, settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 
 const ORG = 'org-1';
@@ -19,13 +18,13 @@ describe('canonical Settings route contract', () => {
       { key: 'connections', label: 'Connections' },
       { key: 'plan', label: 'Plan & usage' },
     ]);
-    expect(settingsScopeHref('organization', ORG)).toBe(`/organizations/${ORG}/settings/organization`);
+    expect(settingsScopeHref('organization', ORG)).toBe(`/organizations/${ORG}/settings/general`);
     expect(settingsScopeHref('account', ORG)).toBe(`/settings/account?org=${ORG}`);
     expect(settingsScopeHref('access', ORG)).toBe(`/organizations/${ORG}/settings/access`);
     expect(settingsScopeHref('connections', ORG)).toBe(`/organizations/${ORG}/settings/connections`);
     expect(settingsScopeHref('plan', ORG)).toBe(`/organizations/${ORG}/settings/plan`);
     expect(settingsScopeHref('organization', null)).toBe('/settings/account');
-    // The landing page itself — the root every scope's breadcrumb climbs back to.
+    // The Settings root has no page of its own: it redirects to the first destination the member may use.
     expect(settingsLandingHref(ORG)).toBe(`/organizations/${ORG}/settings`);
     expect(settingsLandingHref(null)).toBe('/settings/account');
   });
@@ -44,6 +43,7 @@ describe('canonical Settings route contract', () => {
   it('provides real path-backed Access and Connections destinations', () => {
     for (const path of [
       'settings/organization/page.tsx',
+      'settings/general/page.tsx',
       'settings/access/page.tsx',
       'settings/access/members/page.tsx',
       'settings/access/invitations/page.tsx',
@@ -56,21 +56,22 @@ describe('canonical Settings route contract', () => {
     ]) expect(existsSync(route(path)), path).toBe(true);
   });
 
-  it('publishes Settings > Account ancestry and canonical organization breadcrumbs', () => {
-    // No organization hint: Settings and Account both fall back to the one personal address.
-    expect(personalSettingsAncestry()).toEqual([
-      { label: 'Settings', href: '/settings/account' },
-      { label: 'Account', href: '/settings/account' },
-    ]);
-    expect(personalSettingsAncestry(ORG)).toEqual([
-      { label: 'Settings', href: `/organizations/${ORG}/settings` },
-      { label: 'Account', href: `/settings/account?org=${ORG}` },
-    ]);
-    expect(read('app/organizations/[organizationId]/settings/pricing/page.tsx')).toMatch(/label:\s*'Settings'/);
-    expect(read('app/organizations/[organizationId]/settings/access/access-page.tsx')).toContain("label: 'Access'");
+  it('names Settings once in the global bar and gives each destination its own title', () => {
+    for (const [file, title] of [
+      ['app/organizations/[organizationId]/settings/general/page.tsx', 'title="General"'],
+      ['app/organizations/[organizationId]/settings/branding/page.tsx', 'title="Branding"'],
+      ['app/organizations/[organizationId]/settings/domains/page.tsx', 'title="Domains"'],
+      ['app/organizations/[organizationId]/settings/features/page.tsx', 'title="Features"'],
+      ['features/settings/plan-usage-screen.tsx', 'title="Plan & usage"'],
+    ]) {
+      const source = read(file);
+      expect(source, file).toContain('<SettingsPageHeader');
+      expect(source, file).toContain(title);
+      expect(source, file).not.toContain('crumbs=');
+    }
+    // A sub-page keeps the one ancestor it belongs under.
     expect(read('app/organizations/[organizationId]/settings/connections/[connectionId]/page.tsx')).toContain("label: 'Connections'");
-    // Phase C (Slice 9) moved this route's identity into the Screen its thin page delegates to.
-    expect(read('features/settings/plan-usage-screen.tsx')).toContain('title="Plan & usage"');
+    expect(read('app/organizations/[organizationId]/settings/pricing/page.tsx')).toContain("workspaceConfigCrumbs(organizationId, 'pricing')");
   });
 
   it('keeps legacy routes as direct redirects to final canonical destinations', () => {
@@ -81,32 +82,29 @@ describe('canonical Settings route contract', () => {
   });
 });
 
-describe('Settings is a landing page, not a persistent tab bar (IA correction)', () => {
+describe('Settings is one contextual sidebar, not a landing page or a directory', () => {
   const landing = read('app/organizations/[organizationId]/settings/page.tsx');
   const organization = read('app/organizations/[organizationId]/settings/organization/page.tsx');
 
-  it('the account menu enters Settings through the landing page', () => {
+  it('the account menu enters Settings through the root, which redirects to a destination', () => {
     const menu = read('components/navigation/account-menu.tsx');
     expect(menu).toContain('const settingsHref = settingsLandingHref(from);');
-    expect(menu).not.toContain("settingsScopeHref('organization', from)");
+    expect(landing).toContain('redirect(defaultSettingsHref(');
+    expect(landing).not.toContain('<PageHeader');
   });
 
-  it('/settings renders the Settings identity, never the Organization identity', () => {
-    expect(landing).toContain("title={areaLabel('settings')}");
-    expect(landing).not.toContain('title="Organization"');
-    expect(landing).toContain('<SettingsLanding');
-    expect(landing).not.toContain('<SettingsIndex');
+  it('/settings/organization is only a redirect to General, and renders no directory', () => {
+    expect(organization).toContain('redirect(`/organizations/${organizationId}/settings/general`)');
+    expect(organization).not.toContain('SettingsIndex');
+    expect(existsSync(`${ROOT}/features/settings/settings-index.tsx`)).toBe(false);
+    expect(existsSync(`${ROOT}/features/settings/settings-landing.tsx`)).toBe(false);
   });
 
-  it('/settings/organization renders the organization configuration directory (SettingsIndex)', () => {
-    expect(organization).toContain('title="Organization"');
-    expect(organization).toContain('<SettingsIndex');
-    expect(organization).toContain('offeredSections(');
-  });
-
-  it('the landing chooser exposes all five destinations, and only there', () => {
-    expect(readFileSync(`${ROOT}/features/settings/settings-landing.tsx`, 'utf8')).toContain('settingsScopesFor(organizationId)');
-    expect(landing).toContain('<SettingsLanding organizationId={organizationId}');
+  it('the shell swaps its workspaces for Settings destinations inside the same Sidebar', () => {
+    const shell = read('app/organizations/[organizationId]/org-shell.tsx');
+    expect(shell).toContain('<SettingsNav');
+    expect(shell).toContain('inSettingsContext(pathname, organizationId)');
+    expect(shell.match(/<Sidebar /g)).toHaveLength(2);
   });
 
   it('no detail page under Settings renders the retired global scope tab bar', () => {
@@ -135,16 +133,15 @@ describe('Settings is a landing page, not a persistent tab bar (IA correction)',
     expect(existsSync(`${ROOT}/components/patterns/settings-header.tsx`)).toBe(false);
   });
 
-  it('Branding, General, Pricing and Custom fields each carry Settings > Organization ancestry', () => {
+  it('workspace-owned configuration carries its workspace as ancestry, not Settings', () => {
     for (const page of [
-      'app/organizations/[organizationId]/settings/branding/page.tsx',
-      'app/organizations/[organizationId]/settings/general/page.tsx',
       'app/organizations/[organizationId]/settings/pricing/page.tsx',
-      'app/organizations/[organizationId]/settings/custom-fields/page.tsx',
+      'app/organizations/[organizationId]/settings/calls/page.tsx',
+      'app/organizations/[organizationId]/settings/sales-stages/page.tsx',
     ]) {
       const source = read(page);
-      expect(source, page).toContain('settingsLandingHref(organizationId)');
-      expect(source, page).toMatch(/label:\s*'Organization'/);
+      expect(source, page).toContain('workspaceConfigCrumbs(');
+      expect(source, page).not.toMatch(/label:\s*'Organization'/);
     }
   });
 
@@ -157,6 +154,7 @@ describe('Settings is a landing page, not a persistent tab bar (IA correction)',
 
     const profile = read('app/settings/account/page.tsx');
     const security = read('app/settings/account/security/page.tsx');
+    // Inside a business the Settings sidebar carries Profile/Security; the page-level tabs are for the account-only frame.
     for (const page of [profile, security]) expect(page).toContain('<AccountSectionNav');
   });
 

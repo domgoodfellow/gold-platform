@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronUp, CreditCard, LogOut, Settings } from 'lucide-react';
+import { BookOpen, ChevronRight, ChevronUp, LifeBuoy, LogOut, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
 import {
   DropdownMenu,
@@ -15,16 +15,17 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@gold/ui/components/sidebar';
 import { cx } from '@/components/class-names';
 import { organizationIdFromPath } from '@/lib/route/platform-context';
-import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
+import { settingsLandingHref } from '@/lib/route/settings';
 
 /**
  * The truthful, shared person/session menu, one implementation for every shell's sidebar footer.
  * Represents the PERSON, not where they are operating — cross-context navigation (switching
- * business, entering Platform Administration) is `ContextSwitcher`'s job alone. Settings is one
- * landing page with five destinations chosen from it (Organization, Account, Access, Connections
- * and Plan & usage), so this menu offers exactly one Settings entry rather than a Business/Account
- * split. Settings opens the canonical Settings landing page when an organization is in context,
- * and Account when there is no organization context.
+ * business, entering Platform Administration) is `ContextSwitcher`'s job alone. The menu has four
+ * separated destinations: Settings (which opens the contextual Settings sidebar, so there is no
+ * second Account or Profile entry), Help & documentation (how to use GildOps), Contact GildOps
+ * Support (a request to the platform provider, not the business's own Support workspace), and
+ * Sign out. Help and Contact are business-scoped pages, so they appear only where a business is in
+ * context.
  */
 
 type AccountMenuProps = {
@@ -34,21 +35,34 @@ type AccountMenuProps = {
 };
 
 function AccountMenuContent({ email, signOutAction }: AccountMenuProps) {
-  // The business being left, so Settings can open its canonical landing page and Plan & usage can
-  // offer a shortcut. Read from the path rather than passed in: this menu is shared by shells that
-  // have no organization at all.
-  const from = organizationIdFromPath(usePathname());
+  // The business being left, so Settings, Help and Contact open for the right one. Read from the path
+  // rather than passed in: this menu is shared by shells that have no organization at all.
+  const pathname = usePathname();
+  const from = organizationIdFromPath(pathname);
   const settingsHref = settingsLandingHref(from);
 
   return (
     <>
-      <DropdownMenuLabel className="truncate">{email}</DropdownMenuLabel>
+      <DropdownMenuLabel className="flex items-center gap-3 font-normal">
+        <Avatar className="size-8 rounded-lg">
+          <AvatarFallback className="rounded-lg">{email.charAt(0).toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <div className="grid min-w-0 flex-1 text-sm leading-tight">
+          <span className="truncate font-medium">Signed in</span>
+          <span className="truncate text-xs text-muted-foreground">{email}</span>
+        </div>
+      </DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuItem asChild><Link href={settingsHref}><Settings />Settings</Link></DropdownMenuItem>
       {from ? (
-        <DropdownMenuItem asChild>
-          <Link href={settingsScopeHref('plan', from)}><CreditCard />Plan &amp; usage</Link>
-        </DropdownMenuItem>
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild><Link href={`/organizations/${from}/help`}><BookOpen />Help &amp; documentation</Link></DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link href={`/organizations/${from}/help/contact?from=${encodeURIComponent(pathname)}`}><LifeBuoy />Contact GildOps Support</Link>
+          </DropdownMenuItem>
+        </>
       ) : null}
       <DropdownMenuSeparator />
       <DropdownMenuItem variant="destructive" onClick={() => { void signOutAction(); }}><LogOut />Sign out</DropdownMenuItem>
@@ -84,7 +98,12 @@ export function AccountMenu({ email, signOutAction }: AccountMenuProps) {
                 <span className="truncate font-medium">{email}</span>
                 <span className="truncate text-xs text-sidebar-foreground/70">Signed in</span>
               </div>
-              <ChevronUp aria-hidden className="ml-auto size-4 transition-transform group-data-[state=open]/account-menu:rotate-180" />
+              {/* Points the way the menu opens, and turns over while it is open. */}
+              {side === 'right' ? (
+                <ChevronRight aria-hidden className="ml-auto size-4" />
+              ) : (
+                <ChevronUp aria-hidden className={cx('ml-auto size-4 transition-transform', side === 'bottom' ? 'rotate-180 group-data-[state=open]/account-menu:rotate-0' : 'group-data-[state=open]/account-menu:rotate-180')} />
+              )}
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent

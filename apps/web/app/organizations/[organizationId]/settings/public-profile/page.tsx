@@ -1,10 +1,10 @@
+import { workspaceConfigCrumbs } from '@/lib/settings-nav';
 import { Hint } from '@/components/controls/inputs';
 import { PageHeader } from '@/components/headers/page-header';
 import { ProfileForm } from '@/features/public-profile/profile-form';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { publicProfile } from '@/lib/domain/tenancy/profile';
 import { requireOrganization } from '@/lib/route/organization';
-import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 import { updateProfileAction } from '../actions';
 
 export const dynamic = 'force-dynamic';
@@ -22,8 +22,7 @@ export default async function PublicProfileSettingsPage({
       <PageHeader
         title="Public profile"
         crumbs={[
-          { label: 'Settings', href: settingsLandingHref(organizationId) },
-          { label: 'Organization', href: settingsScopeHref('organization', organizationId) },
+          ...workspaceConfigCrumbs(organizationId, 'public-profile'),
         ]}
       />
       <Hint className="mt-1 max-w-prose">

@@ -34,6 +34,15 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Settings as one sidebar, a real business profile, and Help — 2026-10-10
+
+- Settings no longer has a landing page or an Organization directory. Entering it swaps the sidebar for Back to app, a search box and three groups: Personal (Profile, Security & sign-in), Organization (General, Branding, Domains, Features) and Administration (Team & access, Connections, Plan & usage). Configuration a workspace owns, such as working hours, prices, stages and call routing, is configured in that workspace and found through Settings search. Old Settings addresses still work.
+- Organization → General is now the business profile: name, optional legal name, industry, a structured primary address, general contact details, and the time zone and currency the location implies. The address is private to members and is never copied to the public profile. Setup shows the same form.
+- Founding a business asks for its location and suggests the time zone and currency from it, for the founder to confirm or change. The location is stored in the same transaction as the business. A later change of location proposes new defaults and never applies them silently.
+- The account menu now offers Settings, Help & documentation, Contact GildOps Support and Sign out. Help is a small searchable set of guides. Contact GildOps Support records a request from the operator to GildOps; it is not a Support case and gives GildOps no access to the business.
+- Page titles are no longer printed twice (once in the top bar, once as a heading) on Settings and Help pages, and the last control on a long page now scrolls clear of the bottom edge.
+- Known limits: suggestions come from a country and region table, not a geocoder, and cover Canada, the United States and Australia by region and about thirty other countries by country; there is no staff screen for reading support requests yet; Help and Contact appear only inside a business; a business accepted through Sales is not yet prefilled; existing businesses show an incomplete profile until it is filled in.
+
 ### Connected tools can be governed and used — 2026-10-10
 
 - A business can add an MCP server (Settings → Connections → MCP servers), see the tools it offers, review and enable each one, and give the operator agent access to a tool. An MCP tool always waits for a person's approval, and a tool the server later changes comes back unreviewed and off.

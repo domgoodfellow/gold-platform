@@ -10,6 +10,7 @@ import {
 } from '@/lib/domain/catalogue/organization-plans';
 import { removeLogo, setBrand, uploadLogo } from '@/lib/domain/branding/brand';
 import { updateOrganization } from '@/lib/domain/tenancy/organizations';
+import { setOrganizationIdentity } from '@/lib/domain/tenancy/identity';
 import { setPublicProfile } from '@/lib/domain/tenancy/profile';
 import { invalidateGoldHomepageIfReferenced } from '@/lib/domain/public-site/cached';
 import { requireOrganization } from '@/lib/route/organization';
@@ -29,9 +30,24 @@ export async function updateOrganizationGeneralAction(
       id: organizationId,
       name: String(formData.get('name') ?? ''),
       timezone: String(formData.get('timezone') ?? ''),
-      currency: String(formData.get('currency') ?? ''),
+      // Empty only while the business has not chosen one; the form stops offering "decide later" once it has.
+      currency: String(formData.get('currency') ?? '') || organization.currency,
       bufferMinutes: organization.bufferMinutes,
       slug: organization.slug,
+    });
+    await setOrganizationIdentity(db, {
+      organizationId,
+      legalName: String(formData.get('legalName') ?? ''),
+      industry: String(formData.get('industry') ?? ''),
+      countryCode: String(formData.get('countryCode') ?? ''),
+      region: String(formData.get('region') ?? ''),
+      city: String(formData.get('city') ?? ''),
+      postalCode: String(formData.get('postalCode') ?? ''),
+      addressLine1: String(formData.get('addressLine1') ?? ''),
+      addressLine2: String(formData.get('addressLine2') ?? ''),
+      contactEmail: String(formData.get('contactEmail') ?? ''),
+      contactPhone: String(formData.get('contactPhone') ?? ''),
+      websiteUrl: String(formData.get('websiteUrl') ?? ''),
     });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };

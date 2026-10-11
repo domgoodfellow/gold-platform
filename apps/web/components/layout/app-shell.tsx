@@ -3,7 +3,7 @@
 import { Fragment, type ReactNode } from 'react';
 import { SidebarInset, SidebarProvider } from '@gold/ui/components/sidebar';
 import { cx } from '../class-names';
-import { PAGE_PADDING } from './workspace-geometry';
+import { PAGE_BOTTOM_CLEARANCE, PAGE_BOTTOM_CLEARANCE_WITH_NAV, PAGE_PADDING } from './workspace-geometry';
 import { PagePanel } from '../panels/workspace-right-rail';
 
 /**
@@ -45,8 +45,13 @@ export function AppShell({
         {/* Beneath the workspace header, beside the page: the page drawer lives here, so it starts
             under the header and the page stays visible next to it. */}
         <div className="flex min-h-0 min-w-0 flex-1">
-          <div className={cx('flex min-h-0 min-w-0 flex-1 flex-col', PAGE_PADDING, bottomBar ? 'pb-[calc(var(--mobile-nav-height,0px)+1.5rem)] md:pb-6' : undefined)}>
+          {/* This column is `min-h-0` so a page can fill it, which also means a long page overflows it
+              instead of growing it — and a flex container's own bottom padding is not part of that
+              overflow, so the last control sat flush against the scroll edge. The clearance is a real
+              trailing child instead, which is always part of what scrolls. */}
+          <div className={cx('flex min-h-0 min-w-0 flex-1 flex-col', PAGE_PADDING, 'pb-0 sm:pb-0 lg:pb-0')}>
             {children}
+            <div aria-hidden className={cx('shrink-0', PAGE_BOTTOM_CLEARANCE, bottomBar ? PAGE_BOTTOM_CLEARANCE_WITH_NAV : undefined)} />
           </div>
           <PagePanel />
         </div>

@@ -8,7 +8,7 @@ import { listMcpServers } from '@/lib/domain/integrations/mcp';
 import { loadConnectorReadiness } from '@/lib/domain/integrations/readiness';
 import { listActiveGrants, listExecutions, listGrantableAgents } from '@/lib/domain/integrations/tool-access';
 import { requireOrganization } from '@/lib/route/organization';
-import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
+import { settingsScopeHref } from '@/lib/route/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,13 +33,10 @@ export default async function McpServersPage({ params }: PageProps<'/organizatio
     : [[], [], [], [], []];
 
   return (
-    <SettingsPageFrame>
+    <SettingsPageFrame width="fluid">
       <PageHeader
         title="MCP servers"
-        crumbs={[
-          { label: 'Settings', href: settingsLandingHref(organizationId) },
-          { label: 'Connections', href: settingsScopeHref('connections', organizationId) },
-        ]}
+        crumbs={[{ label: 'Connections', href: settingsScopeHref('connections', organizationId) }]}
       />
       <IntegrationsNav organizationId={organizationId} current="mcp" />
       {!mayManage ? (

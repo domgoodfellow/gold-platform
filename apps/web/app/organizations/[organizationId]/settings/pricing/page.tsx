@@ -1,3 +1,4 @@
+import { workspaceConfigCrumbs } from '@/lib/settings-nav';
 import Link from 'next/link';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { PageHeader } from '@/components/headers/page-header';
@@ -8,7 +9,6 @@ import { getPaymentAccount } from '@/lib/domain/billing/payment-accounts';
 import { organizationResolvedFeatureStates, availableFeatureKeys } from '@/lib/domain/catalogue/organization-plans';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { requireOrganization } from '@/lib/route/organization';
-import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 import { ChooseCurrencyForm } from '@/features/pricing/price-forms';
 import { PricingManagement } from '@/features/pricing/pricing-management';
 import { PaymentAccountRow } from '@/features/pricing/payment-account-row';
@@ -27,7 +27,7 @@ export default async function PricingPage({ params }: PageProps<'/organizations/
   const mayManage = organization.capabilities.includes('price.manage');
   const mayManagePayments = organization.capabilities.includes('organization.manage');
   return <SettingsPageFrame>
-    <PageHeader title="Services & Pricing" crumbs={[{label:'Settings',href:settingsLandingHref(organizationId)},{label:'Organization',href:settingsScopeHref('organization',organizationId)}]} />
+    <PageHeader title="Services & Pricing" crumbs={[...workspaceConfigCrumbs(organizationId, 'pricing'),]} />
     <Link href={`/organizations/${organizationId}/finance`} className="text-sm text-accent-text hover:underline">Back to Finance</Link>
     <Section><Hint>Manage what your business charges. Existing quotes and issued invoices keep their original prices.</Hint>
       <PricingManagement organizationId={organizationId} items={items} currency={organization.currency} mayManage={mayManage} />

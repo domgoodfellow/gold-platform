@@ -1,3 +1,4 @@
+import { workspaceConfigCrumbs } from '@/lib/settings-nav';
 import { PageHeader } from '@/components/headers/page-header';
 import Link from 'next/link';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
@@ -9,7 +10,6 @@ import { messagingSenders } from '@/lib/domain/reception/channel-readiness';
 import { callingNumber } from '@/lib/domain/reception/telephony';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { requireOrganization } from '@/lib/route/organization';
-import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,8 +32,7 @@ export default async function CallSetupSettingsPage({
       <PageHeader
         title="Communications configuration"
         crumbs={[
-          { label: 'Settings', href: settingsLandingHref(organizationId) },
-          { label: 'Organization', href: settingsScopeHref('organization', organizationId) },
+          ...workspaceConfigCrumbs(organizationId, 'call-setup'),
         ]}
 
       />

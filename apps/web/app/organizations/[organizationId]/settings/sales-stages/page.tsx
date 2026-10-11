@@ -1,3 +1,4 @@
+import { workspaceConfigCrumbs } from '@/lib/settings-nav';
 import { PageHeader } from '@/components/headers/page-header';
 import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
@@ -5,7 +6,6 @@ import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { StageSettingsSheet } from '@/features/crm/sales/stage-settings-sheet';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { requireOrganization } from '@/lib/route/organization';
-import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,8 +28,7 @@ export default async function SalesStagesSettingsPage({
       <PageHeader
         title="Relationship stages"
         crumbs={[
-          { label: 'Settings', href: settingsLandingHref(organizationId) },
-          { label: 'Organization', href: settingsScopeHref('organization', organizationId) },
+          ...workspaceConfigCrumbs(organizationId, 'sales-stages'),
         ]}
         actions={<StageSettingsSheet organizationId={organizationId} stages={stages} mayConfigure={mayConfigure} role={organization.role} />}
       />

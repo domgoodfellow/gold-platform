@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@gold/ui/components/tooltip';
 import { SidebarProvider } from '@gold/ui/components/sidebar';
 import { AccountMenu } from '@/components/navigation/account-menu';
-import { SettingsNavigationRow } from '@/features/settings/settings-navigation-row';
 import { PersonalProfileForm, ChangeEmailForm } from '@/features/account/profile-form';
 import { updateProfileAction } from '@/app/settings/account/actions';
 import { ChangePasswordForm } from '@/features/account/change-password-form';
@@ -32,15 +31,6 @@ beforeEach(() => {
 });
 
 describe('Settings interactions', () => {
-  it('makes the complete navigation row one keyboard-focusable link', async () => {
-    const user = userEvent.setup();
-    render(<ul><SettingsNavigationRow href="/settings/account" title="Account" description="Your own identity" /></ul>);
-    const link = screen.getByRole('link', { name: 'Account Your own identity' });
-    expect(screen.getAllByRole('link')).toHaveLength(1);
-    await user.tab();
-    expect(link).toHaveFocus();
-    expect(link).toHaveClass('px-4', 'py-3.5');
-  });
   it('opens and closes the account menu with pressed state, and returns focus on Escape', async () => {
     const user = userEvent.setup();
     render(<TooltipProvider><SidebarProvider><AccountMenu email="person@example.test" signOutAction={vi.fn()} /></SidebarProvider></TooltipProvider>);

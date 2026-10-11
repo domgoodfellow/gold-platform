@@ -85,13 +85,12 @@ test.describe('Platform breadcrumbs', () => {
 test.describe('Account breadcrumbs', () => {
   test.use({ storageState: OWNER_STORAGE_STATE });
 
-  test('an Account page reads Settings / Account / Page, with scope ancestors unlinked', async ({ page }) => {
+  test('an Account page names Settings once in the bar and its own title beneath', async ({ page }) => {
     await page.goto('/settings/account/security');
     const trail = page.getByRole('navigation', { name: 'breadcrumb' });
     await expect(trail.getByText('Settings', { exact: true })).toBeVisible();
-    await expect(trail.getByText('Account', { exact: true })).toBeVisible();
-    await expect(trail.getByRole('link', { name: 'Account' })).toHaveCount(0);
-    await expect(trail.getByText('Security & sign-in', { exact: true })).toBeVisible();
+    await expect(trail.getByText('Security & sign-in', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('heading', { level: 1, name: 'Security & sign-in' })).toBeVisible();
   });
 });
 

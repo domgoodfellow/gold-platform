@@ -1,9 +1,7 @@
-import { PageHeader } from '@/components/headers/page-header';
 import { BrandEditor } from '@/features/branding/brand-editor';
-import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/settings-page-frame';
 import { getBrand, logoUrl } from '@/lib/domain/branding/brand';
 import { requireOrganization } from '@/lib/route/organization';
-import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,12 +19,8 @@ export default async function BrandingSettingsPage({
 
   return (
     <SettingsPageFrame>
-      <PageHeader
+      <SettingsPageHeader
         title="Branding"
-        crumbs={[
-          { label: 'Settings', href: settingsLandingHref(organizationId) },
-          { label: 'Organization', href: settingsScopeHref('organization', organizationId) },
-        ]}
       />
       <BrandEditor
         organizationId={organizationId}

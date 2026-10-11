@@ -71,9 +71,11 @@ describe('the menu', () => {
     expect(menu).not.toContain("settingsScopeHref('organization', from)");
   });
 
-  it('offers a Plan & usage shortcut only when a business is in play', () => {
-    expect(menu).toContain('Plan &amp; usage');
-    expect(menu).toContain("settingsScopeHref('plan', from)");
+  it('offers Help and Contact support only when a business is in play, and keeps Settings as the one place for Account and Plan', () => {
+    expect(menu).toContain('Help &amp; documentation');
+    expect(menu).toContain('Contact GildOps Support');
+    expect(menu).toContain('{from ? (');
+    expect(menu).not.toContain('Plan &amp; usage');
   });
 });
 
@@ -87,12 +89,13 @@ describe('scope stays honest in both directions', () => {
     }
   });
 
-  it('Account is a Settings landing destination, not a section duplicated inside the Organization index (D71)', () => {
+  it('Settings has no landing chooser: the sidebar is the directory, and Account is one of its destinations (D71)', () => {
     const landing = read('app/organizations/[organizationId]/settings/page.tsx');
-    expect(landing).toContain('<SettingsLanding');
+    expect(landing).toContain('redirect(defaultSettingsHref(');
     expect(landing).not.toContain('PersonalSettingsEntries');
     const organizationDirectory = read('app/organizations/[organizationId]/settings/organization/page.tsx');
-    expect(organizationDirectory).not.toContain('PersonalSettingsEntries');
+    expect(organizationDirectory).toContain('/settings/general');
+    expect(organizationDirectory).not.toContain('SettingsIndex');
     // The retired global tab bar is gone outright, not merely unused.
     expect(() => read('features/settings/settings-scope-nav.tsx')).toThrow();
   });
@@ -106,11 +109,9 @@ describe('scope stays honest in both directions', () => {
     expect(shell).toContain('myOrganizations.find((organization) => organization.id === returnOrganizationId)');
   });
 
-  it('personal ownership is explicit, and Organization is its own Settings landing destination', () => {
+  it('personal ownership is explicit, and the retired Organization directory only redirects to General', () => {
     expect(read('app/settings/account/page.tsx')).toContain('belongs to you, not to any business');
-    const landing = read('app/organizations/[organizationId]/settings/page.tsx');
-    expect(landing).toContain("title={areaLabel('settings')}");
-    const organization = read('app/organizations/[organizationId]/settings/organization/page.tsx');
-    expect(organization).toContain('title="Organization"');
+    const general = read('app/organizations/[organizationId]/settings/general/page.tsx');
+    expect(general).toContain('<SettingsPageHeader title="General"');
   });
 });

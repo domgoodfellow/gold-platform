@@ -17,11 +17,11 @@ import { isSourceControlConnector } from '@/lib/adapters/source-control';
 import { listResources } from '@/lib/domain/integrations/resources';
 import { listImportRuns } from '@/lib/domain/integrations/import-runs';
 import { requireOrganization } from '@/lib/route/organization';
-import { settingsLandingHref, settingsScopeHref } from '@/lib/route/settings';
+import { settingsScopeHref } from '@/lib/route/settings';
 import { ConnectorCatalogue } from '@/features/integrations/catalogue/connector-catalogue';
 import { ConnectedApps } from '@/features/integrations/connections/connected-apps';
 import { IntegrationsNav } from '@/features/integrations/integrations-nav';
-import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
+import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/settings-page-frame';
 
 export const dynamic = 'force-dynamic';
 
@@ -94,16 +94,12 @@ export async function ConnectionsPage({
   };
 
   return (
-    <SettingsPageFrame>
-      <PageHeader
-        title={view === 'connected' ? 'Connections' : 'Browse apps'}
-        crumbs={view === 'connected'
-          ? [{ label: 'Settings', href: settingsLandingHref(organizationId) }]
-          : [
-              { label: 'Settings', href: settingsLandingHref(organizationId) },
-              { label: 'Connections', href: settingsScopeHref('connections', organizationId) },
-            ]}
-      />
+    <SettingsPageFrame width="fluid">
+      {view === 'connected' ? (
+        <SettingsPageHeader title="Connections" />
+      ) : (
+        <PageHeader title="Browse apps" crumbs={[{ label: 'Connections', href: settingsScopeHref('connections', organizationId) }]} />
+      )}
       <IntegrationsNav organizationId={organizationId} current={view} />
       {oauthError ? (
         <Hint className="mt-4 block" role="alert">

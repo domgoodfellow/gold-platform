@@ -1,9 +1,7 @@
 import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
 import { ButtonLink } from '@/components/controls/button';
 import { Hint } from '@/components/controls/inputs';
-import { PageHeader } from '@/components/headers/page-header';
-import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
-import { settingsLandingHref } from '@/lib/route/settings';
+import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/settings-page-frame';
 import type { PlanUsageModel } from '@/lib/application/settings/plan-usage';
 import { ManageBillingButton, SubscribeButton } from '@/features/settings/platform-billing-forms';
 import { AllowanceMeter } from '@/features/catalogue/allowance-meter';
@@ -128,10 +126,9 @@ export function PlanUsageScreen({
     billingProvider, subscription, subscriptionPackage, quote, canSubscribe, canManageBilling } = model;
 
   return (
-    <SettingsPageFrame>
-      <PageHeader
+    <SettingsPageFrame width="fluid">
+      <SettingsPageHeader
         title="Plan & usage"
-        crumbs={[{ label: 'Settings', href: settingsLandingHref(organizationId) }]}
         actions={<ButtonLink href={`/organizations/${organizationId}/settings/features`}>Manage features</ButtonLink>}
       />
 

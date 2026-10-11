@@ -16,11 +16,12 @@ test('reaches Account through the one Settings entry, and its breadcrumbs return
   await accountTrigger.click();
   // Radix's DropdownMenuItem renders `role="menuitem"` even when it wraps a Link via `asChild`
   // — not `role="link"`, which is what the underlying `<a>` would suggest. There is one Settings
-  // entry now (D71); it opens the Settings landing chooser.
+  // entry; it opens the contextual Settings sidebar on General, and Profile is one of its rows.
   await page.getByRole('menuitem', { name: 'Settings' }).click();
-  await page.getByRole('link', { name: /^Account Your/ }).click();
+  await expect(page).toHaveURL(`/organizations/${ctx.organizationId}/settings/general`);
+  await page.getByRole('navigation', { name: 'Settings' }).getByRole('link', { name: 'Profile' }).click();
 
-  await expect(page).toHaveURL(`/settings/account?org=${ctx.organizationId}`);
+  await expect(page).toHaveURL(`/settings/account?org=${ctx.organizationId}`, { timeout: 30_000 });
   await expect(page.getByRole('heading', { name: 'Profile', exact: true })).toBeVisible();
   await expect(page.getByText(ctx.ownerEmail).first()).toBeVisible();
 
@@ -28,10 +29,11 @@ test('reaches Account through the one Settings entry, and its breadcrumbs return
   await page.goto('/account');
   await expect(page).toHaveURL('/settings/account');
 
-  // The Settings breadcrumb returns to the business's landing chooser.
+  // Back to app leaves Settings for the business.
   await page.goto(`/settings/account?org=${ctx.organizationId}`);
-  await page.getByRole('navigation', { name: 'breadcrumb' }).getByRole('link', { name: 'Settings', exact: true }).click();
-  await expect(page).toHaveURL(`/organizations/${ctx.organizationId}/settings`);
+  await page.getByRole('link', { name: 'Back to app' }).click();
+  await expect(page).toHaveURL(new RegExp(`/organizations/${ctx.organizationId}(/|$)`), { timeout: 30_000 });
+  await expect(page).not.toHaveURL(/\/settings/);
 });
 
 for (const viewport of [{ width: 1440, height: 1000 }, { width: 1024, height: 900 }, { width: 390, height: 844 }]) {

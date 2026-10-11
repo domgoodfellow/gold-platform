@@ -41,6 +41,7 @@ export type PageHeaderCrumb = PageLocationCrumb;
 export function PageHeader({
   title,
   crumbs,
+  section,
   breadcrumbLabel,
   meta,
   actions,
@@ -51,6 +52,13 @@ export function PageHeader({
 }: {
   title: ReactNode;
   crumbs?: PageHeaderCrumb[];
+  /**
+   * For a page that belongs to a section the global bar can name once — Settings, Help — and whose
+   * title is the page itself. The bar shows the section; the title beneath is the single visible
+   * statement of the page, so the same words are not printed twice. Replaces `crumbs` and
+   * `breadcrumbLabel`; the `<h1>` is unchanged.
+   */
+  section?: string;
   /** Overrides the current-page breadcrumb label; defaults to `title`. */
   breadcrumbLabel?: ReactNode;
   /** Short, secondary facts about the record — a schedule window, a status — under the title. */
@@ -69,7 +77,7 @@ export function PageHeader({
   return (
     <header className={cx('flex flex-wrap items-start justify-between gap-x-4 gap-y-3', className ?? 'mb-6')}>
       <div className="min-w-0 flex-1 basis-64">
-        <PageLocation crumbs={crumbs} current={breadcrumbLabel ?? title} />
+        <PageLocation crumbs={section ? [] : crumbs} current={section ?? breadcrumbLabel ?? title} />
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
         {meta ? <div className="mt-1 text-sm text-muted">{meta}</div> : null}
       </div>
