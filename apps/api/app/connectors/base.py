@@ -60,6 +60,10 @@ class UnsupportedCapability(RuntimeError):
     """The connector does not declare this capability, so nothing was sent to the vendor."""
 
 
+class SourceCursorExpired(UpstreamRefused):
+    """The provider requires a new source snapshot, rather than retrying its expired cursor."""
+
+
 @dataclass(frozen=True)
 class Capability:
     """One operation a connector declares, and the only way a caller reaches a vendor beyond sign-in.
@@ -223,6 +227,8 @@ class OAuthProvider:
         except httpx.HTTPError as failure:
             raise UpstreamRefused(f"{self.key} could not be reached: {type(failure).__name__}") from failure
         payload = _json(response)
+        if response.status_code == 410:
+            raise SourceCursorExpired('The source synchronization cursor expired.')
         if response.status_code >= 400:
             error = payload.get("error")
             words = error.get("message") if isinstance(error, dict) else (error or payload.get("message") or f"status {response.status_code}")

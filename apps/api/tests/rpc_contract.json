@@ -582,7 +582,8 @@
     "record_integration_connection": {
       "role": "authenticated",
       "callers": [
-        "app/services/integrations/operations.py"
+        "app/services/integrations/operations.py",
+        "app/services/integrations/library_operations.py"
       ],
       "sends": [
         "p_account_label",
@@ -762,24 +763,49 @@
     },
     "resolve_public_agent_turn": {
       "role": "provider_operator",
-      "callers": ["app/core/db.py"],
-      "sends": ["p_deployment_id", "p_visitor_key"]
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_deployment_id",
+        "p_visitor_key"
+      ]
     },
     "resolve_operator_agent_turn": {
       "role": "authenticated",
-      "callers": ["app/ai/configuration.py"],
-      "sends": ["p_organization_id", "p_conversation_id"],
-      "optional": ["p_conversation_id"]
+      "callers": [
+        "app/ai/configuration.py"
+      ],
+      "sends": [
+        "p_organization_id",
+        "p_conversation_id"
+      ],
+      "optional": [
+        "p_conversation_id"
+      ]
     },
     "ai_preview_configuration": {
       "role": "authenticated",
-      "callers": ["app/ai/configuration.py"],
-      "sends": ["p_organization_id", "p_assistant_id", "p_version_id"]
+      "callers": [
+        "app/ai/configuration.py"
+      ],
+      "sends": [
+        "p_organization_id",
+        "p_assistant_id",
+        "p_version_id"
+      ]
     },
     "record_public_communication_reply": {
       "role": "provider_operator",
-      "callers": ["app/ai/public_reply.py"],
-      "sends": ["p_site_id", "p_visitor_key", "p_body", "p_handoff"]
+      "callers": [
+        "app/ai/public_reply.py"
+      ],
+      "sends": [
+        "p_site_id",
+        "p_visitor_key",
+        "p_body",
+        "p_handoff"
+      ]
     },
     "resolve_secret_reference": {
       "role": "secret_operator",
@@ -874,6 +900,66 @@
         "p_from",
         "p_to"
       ]
+    },
+    "queue_granted_integration_library_read": {
+      "callers": [
+        "app/services/integrations/executor.py"
+      ],
+      "sends": [
+        "p_execution_id",
+        "p_arguments"
+      ],
+      "role": "integration_operator"
+    },
+    "queue_integration_library_read": {
+      "callers": [
+        "app/services/integrations/library_operations.py"
+      ],
+      "sends": [
+        "p_connection_id",
+        "p_capability_key",
+        "p_arguments"
+      ],
+      "role": "authenticated"
+    },
+    "claim_integration_resource_sync": {
+      "callers": [
+        "app/services/integrations/synchronization.py"
+      ],
+      "sends": [
+        "p_resource_id"
+      ],
+      "role": "integration_operator"
+    },
+    "commit_integration_resource_sync": {
+      "callers": [
+        "app/services/integrations/synchronization.py"
+      ],
+      "sends": [
+        "p_resource_id",
+        "p_lease_id",
+        "p_records",
+        "p_cursor",
+        "p_complete",
+        "p_snapshot",
+        "p_error",
+        "p_restart"
+      ],
+      "role": "integration_operator",
+      "optional": [
+        "p_restart"
+      ]
+    },
+    "configure_integration_resource_sync": {
+      "callers": [
+        "app/services/integrations/synchronization.py"
+      ],
+      "sends": [
+        "p_resource_id",
+        "p_enabled",
+        "p_parameters"
+      ],
+      "role": "authenticated"
     }
   }
 }

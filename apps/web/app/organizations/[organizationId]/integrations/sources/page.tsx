@@ -26,7 +26,7 @@ export default async function IntegrationSourcesPage({
   return (
     <>
       <CollectionHeader
-        title="Data sources"
+        title="Resource Library"
         crumbs={[{ label: areaLabel('integrations'), href: `/organizations/${organizationId}/settings/connections` }]}
       />
       <IntegrationsNav organizationId={organizationId} current="sources" />

@@ -35,7 +35,7 @@ export type ToolGrant = {
 export type Execution = {
   id: string;
   requestedAt: string;
-  principalKind: 'assistant' | 'automation';
+  principalKind: 'assistant' | 'automation' | 'member';
   principalId: string;
   targetKind: 'native' | 'mcp' | null;
   connectorKey: string | null;

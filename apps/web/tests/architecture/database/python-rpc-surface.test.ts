@@ -49,7 +49,7 @@ function calledFromPython(): string[] {
   const names = new Set<string>();
   const patterns = [
     /rpc\/([a-z_0-9]+)/g, //                           "rpc/record_call_event" in a URL or path
-    /_integration_rpc\(\s*settings,\s*"([a-z_0-9]+)"/g, // the integration door helper
+    /_integration_rpc\(\s*settings,\s*["']([a-z_0-9]+)["']/g, // the integration door helper
     /_post\(\s*settings,\s*"([a-z_0-9]+)"/g, //          the automation runner's helper
     /function="([a-z_0-9]+)"/g, //                        a tool or a domain command's declaration
     /\b_rpc\(\s*settings,\s*token,\s*"([a-z_0-9]+)"/g, // communications/routing.py's own RPC helper

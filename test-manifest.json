@@ -1,6 +1,13 @@
 {
   "version": 1,
   "categories": {
+    "node-contract": {
+      "runner": "node",
+      "dir": "apps/api/library",
+      "requires": "none",
+      "gate": true,
+      "description": "Imported connector runtime authorization and safety contracts."
+    },
     "unit": {
       "runner": "vitest",
       "dir": "apps/web/tests/unit",
@@ -95,6 +102,7 @@
   },
   "tiers": {
     "fast": [
+      "node-contract",
       "unit",
       "component",
       "architecture-static",
@@ -121,6 +129,35 @@
     ]
   },
   "files": {
+    "apps/web/e2e/app-library.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": [
+        "integrations",
+        "responsive"
+      ]
+    },
+    "apps/api/library/runtime.test.mjs": {
+      "category": "node-contract",
+      "concerns": [
+        "integrations",
+        "security"
+      ]
+    },
+    "apps/api/tests/contract/test_resource_sync.py": {
+      "category": "python-contract",
+      "concerns": [
+        "integrations",
+        "synchronization"
+      ]
+    },
+    "apps/web/tests/integration/database/integration-library-sync.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "integrations",
+        "security",
+        "synchronization"
+      ]
+    },
     "apps/web/e2e/global-home.spec.ts": { "category": "playwright-acceptance", "concerns": ["home", "permissions", "canonical-actions", "responsive", "agent"] },
     "apps/web/tests/unit/public-catalog-pages.test.ts": {
       "category": "unit",

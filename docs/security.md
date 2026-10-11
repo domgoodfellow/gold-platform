@@ -2,6 +2,12 @@
 
 ## Purpose
 
+### Imported connector execution boundary
+
+Imported connector packages execute only whitelisted read/search operations. The Node worker accepts timestamped HMAC requests from the Python command layer; public callers cannot supply a usable credential or choose an arbitrary module. Normal requests reference an expiring single-use database job. Claiming rechecks connection state, tenant membership, permissions or assistant/automation grants before retrieving Vault credentials. Verification requests carry a candidate API key only after caller membership and `integration.manage` have been checked. Raw upstream diagnostics are not returned.
+
+Synchronization configuration is tenant and workspace permission checked. Machine functions claim short leases and compare the lease on commit, refusing inactive connections and concurrent configuration changes. Tenant sessions cannot write synchronized records or read cursor/lease columns. Graph source cursors are constrained to HTTPS, the Microsoft Graph host and the selected source path. Results are bounded and known credential strings are redacted before returning them. Imported triggers and writes are disabled.
+
 This document defines the **canonical security, identity, authorization, tenant-isolation and trust-boundary rules for GildOps**.
 
 It answers:

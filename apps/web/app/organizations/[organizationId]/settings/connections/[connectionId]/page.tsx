@@ -15,6 +15,8 @@ import { listGrantedResourceIds } from '@/lib/domain/integrations/assistant-gran
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { ConnectionCapabilities } from '@/features/integrations/connections/connection-capabilities';
 import { listActiveGrants, listGrantableAgents, listNativeCapabilities } from '@/lib/domain/integrations/tool-access';
+import { LibraryReads } from '@/features/integrations/connections/library-controls';
+import { importedApplications } from '@/lib/domain/integrations/app-library';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,7 +99,7 @@ export default async function ConnectionDetailPage({
             ) : null}
             {mayManage && needsReconnect ? (
               <ButtonLink
-                href={`/organizations/${organizationId}/settings/connections/connect/${connection.connectorKey}?connection=${connectionId}`}
+                href={connector?.authMethod==='api_key'?`/organizations/${organizationId}/settings/connections/apps/${importedApplications.find(a=>a.connector_key===connection.connectorKey)?.key}?connection=${connectionId}`:`/organizations/${organizationId}/settings/connections/connect/${connection.connectorKey}?connection=${connectionId}`}
                 tone="primary"
                 size="small"
               >
@@ -137,6 +139,8 @@ export default async function ConnectionDetailPage({
           resources={resources}
         />
       ) : null}
+      {mayManage && connection.status==='active' ? <LibraryReads organizationId={organizationId} connectionId={connectionId}
+        applications={importedApplications.filter(a=>a.connector_key===connection.connectorKey)}/> : null}
     </SettingsPageFrame>
   );
 }

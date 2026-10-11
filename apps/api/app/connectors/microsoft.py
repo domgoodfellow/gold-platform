@@ -7,6 +7,9 @@ files and calendars through Graph.
 
 from __future__ import annotations
 
+from urllib.parse import urlparse
+from app.providers.providers import UpstreamRefused
+
 from app.connectors.base import Account, Capability, OAuthProvider, bounded, limit, segment, text
 
 GRAPH = "https://graph.microsoft.com/v1.0"
@@ -16,7 +19,8 @@ class Microsoft365(OAuthProvider):
     key = "microsoft_365"
     authorize_endpoint = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
     token_endpoint = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-    scopes = ("offline_access", "User.Read", "Calendars.Read", "Files.Read")
+    # Graph requires Files.ReadWrite even for Excel range reads; execution remains read-only.
+    scopes = ("offline_access", "User.Read", "Calendars.Read", "Files.ReadWrite", "Mail.Read")
     authorize_extra = {"response_mode": "query", "prompt": "select_account"}
 
     capabilities = (
@@ -71,22 +75,25 @@ class Microsoft365(OAuthProvider):
         return Account(label=str(me.get("mail") or me.get("userPrincipalName") or me.get("displayName") or "Microsoft account"))
 
     def resources(self, access_token: str) -> list[dict]:
-        found: list[dict] = []
-
-        for item in self._get(f"{GRAPH}/me/calendars", access_token).get("value", []):
-            found.append(
-                {
-                    "resource_type": "microsoft_calendar",
-                    "external_id": item["id"],
-                    "display_name": item.get("name") or item["id"],
-                    "metadata": {"default": bool(item.get("isDefaultCalendar"))},
-                }
-            )
-
-        workbooks = self._get(f"{GRAPH}/me/drive/root/search(q='.xlsx')", access_token, {"$top": "50", "$select": "id,name"})
-        for item in workbooks.get("value", []):
-            found.append(
-                {"resource_type": "microsoft_workbook", "external_id": item["id"], "display_name": item.get("name") or item["id"], "metadata": {}}
-            )
-
+        def pages(url,params=None):
+            result=[]
+            for _ in range(20):
+                parsed=urlparse(url)
+                if parsed.scheme!='https' or parsed.netloc!='graph.microsoft.com':
+                    raise UpstreamRefused('The source returned an invalid discovery cursor.')
+                page=self._get(url,access_token,params)
+                result.extend(page.get('value',[]))
+                url=page.get('@odata.nextLink');params=None
+                if not url:return result
+            raise UpstreamRefused('Resource discovery exceeds the supported page limit. No selections were replaced.')
+        found=[]
+        for item in pages(f'{GRAPH}/me/calendars'):
+            found.append({'resource_type':'microsoft_calendar','external_id':item['id'],
+                'display_name':item.get('name') or item['id'],'metadata':{'default':bool(item.get('isDefaultCalendar'))}})
+        root=self._get(f'{GRAPH}/me/drive/root',access_token,{'$select':'id,name,webUrl'})
+        found.append({'resource_type':'microsoft_drive_folder','external_id':root['id'],'display_name':root.get('name') or 'OneDrive','metadata':{'web_url':root.get('webUrl')}})
+        for item in pages(f"{GRAPH}/me/drive/root/search(q='')",{'$top':'100','$select':'id,name,folder,file,webUrl'}):
+            if 'folder' in item or str(item.get('name','')).lower().endswith('.xlsx'):
+                found.append({'resource_type':'microsoft_drive_folder' if 'folder' in item else 'microsoft_workbook',
+                    'external_id':item['id'],'display_name':item.get('name') or item['id'],'metadata':{'web_url':item.get('webUrl')}})
         return found

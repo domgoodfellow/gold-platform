@@ -20,8 +20,10 @@ class GoogleWorkspace(OAuthProvider):
         "openid",
         "email",
         "https://www.googleapis.com/auth/calendar.readonly",
-        "https://www.googleapis.com/auth/drive.metadata.readonly",
+        "https://www.googleapis.com/auth/drive.readonly",
         "https://www.googleapis.com/auth/spreadsheets.readonly",
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/contacts.readonly",
     )
     # Offline access is what yields a refresh token; consent is what makes Google return one again on a reconnect.
     authorize_extra = {"access_type": "offline", "prompt": "consent", "include_granted_scopes": "true"}
@@ -73,30 +75,22 @@ class GoogleWorkspace(OAuthProvider):
 
     def resources(self, access_token: str) -> list[dict]:
         found: list[dict] = []
-
-        calendars = self._get("https://www.googleapis.com/calendar/v3/users/me/calendarList", access_token)
-        for item in calendars.get("items", []):
-            found.append(
-                {
-                    "resource_type": "google_calendar",
-                    "external_id": item["id"],
-                    "display_name": item.get("summary") or item["id"],
-                    "metadata": {"primary": bool(item.get("primary"))},
-                }
-            )
-
-        sheets = self._get(
-            "https://www.googleapis.com/drive/v3/files",
-            access_token,
-            {
-                "q": "mimeType='application/vnd.google-apps.spreadsheet' and trashed=false",
-                "pageSize": "50",
-                "fields": "files(id,name)",
-            },
-        )
-        for item in sheets.get("files", []):
-            found.append(
-                {"resource_type": "google_sheet", "external_id": item["id"], "display_name": item.get("name") or item["id"], "metadata": {}}
-            )
-
+        def pages(url, params, collection):
+            result=[]
+            for _ in range(20):
+                page=self._get(url,access_token,params)
+                result.extend(page.get(collection,[]))
+                if not page.get('nextPageToken'):return result
+                params={**params,'pageToken':page['nextPageToken']}
+            raise UpstreamRefused('Resource discovery exceeds the supported page limit. No selections were replaced.')
+        for item in pages('https://www.googleapis.com/calendar/v3/users/me/calendarList',{'maxResults':'100'},'items'):
+            found.append({'resource_type':'google_calendar','external_id':item['id'],
+                'display_name':item.get('summary') or item['id'],'metadata':{'primary':bool(item.get('primary'))}})
+        found.append({'resource_type':'google_drive_folder','external_id':'root','display_name':'My Drive','metadata':{}})
+        files=pages('https://www.googleapis.com/drive/v3/files',{
+            'q':"(mimeType='application/vnd.google-apps.spreadsheet' or mimeType='application/vnd.google-apps.folder') and trashed=false",
+            'pageSize':'100','fields':'nextPageToken,files(id,name,mimeType,webViewLink)'},'files')
+        for item in files:
+            found.append({'resource_type':'google_sheet' if item.get('mimeType')=='application/vnd.google-apps.spreadsheet' else 'google_drive_folder',
+                'external_id':item['id'],'display_name':item.get('name') or item['id'],'metadata':{'web_url':item.get('webViewLink')}})
         return found

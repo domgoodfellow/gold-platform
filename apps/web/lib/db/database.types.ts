@@ -4003,6 +4003,93 @@ export type Database = {
           },
         ]
       }
+      integration_library_actions: {
+        Row: {
+          application_key: string
+          capability_key: string
+          connector_key: string
+          input_schema: Json
+          required_permission: string
+        }
+        Insert: {
+          application_key: string
+          capability_key: string
+          connector_key: string
+          input_schema: Json
+          required_permission: string
+        }
+        Update: {
+          application_key?: string
+          capability_key?: string
+          connector_key?: string
+          input_schema?: Json
+          required_permission?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_library_actions_connector_key_fkey"
+            columns: ["connector_key"]
+            isOneToOne: false
+            referencedRelation: "platform_connectors"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      integration_library_jobs: {
+        Row: {
+          arguments: Json
+          capability_key: string
+          claimed_at: string | null
+          connection_id: string
+          execution_id: string
+          expires_at: string
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          arguments: Json
+          capability_key: string
+          claimed_at?: string | null
+          connection_id: string
+          execution_id: string
+          expires_at?: string
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          arguments?: Json
+          capability_key?: string
+          claimed_at?: string | null
+          connection_id?: string
+          execution_id?: string
+          expires_at?: string
+          id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_library_jobs_capability_key_fkey"
+            columns: ["capability_key"]
+            isOneToOne: false
+            referencedRelation: "integration_library_actions"
+            referencedColumns: ["capability_key"]
+          },
+          {
+            foreignKeyName: "integration_library_jobs_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: true
+            referencedRelation: "integration_executions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_library_jobs_organization_id_connection_id_fkey"
+            columns: ["organization_id", "connection_id"]
+            isOneToOne: false
+            referencedRelation: "integration_connections"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       integration_mappings: {
         Row: {
           created_at: string
@@ -4195,6 +4282,103 @@ export type Database = {
             columns: ["organization_id", "server_id"]
             isOneToOne: false
             referencedRelation: "integration_mcp_servers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      integration_resource_records: {
+        Row: {
+          content_hash: string
+          deleted: boolean
+          display_name: string
+          external_id: string
+          generation: number
+          metadata: Json
+          organization_id: string
+          resource_id: string
+          source_updated_at: string
+        }
+        Insert: {
+          content_hash: string
+          deleted?: boolean
+          display_name: string
+          external_id: string
+          generation: number
+          metadata: Json
+          organization_id: string
+          resource_id: string
+          source_updated_at?: string
+        }
+        Update: {
+          content_hash?: string
+          deleted?: boolean
+          display_name?: string
+          external_id?: string
+          generation?: number
+          metadata?: Json
+          organization_id?: string
+          resource_id?: string
+          source_updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_resource_records_organization_id_resource_id_fkey"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "integration_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      integration_resource_syncs: {
+        Row: {
+          cursor: Json
+          enabled: boolean
+          generation: number
+          last_error: string | null
+          last_success_at: string | null
+          lease_id: string | null
+          lease_until: string | null
+          next_run_at: string
+          organization_id: string
+          parameters: Json
+          resource_id: string
+          state: string
+        }
+        Insert: {
+          cursor?: Json
+          enabled?: boolean
+          generation?: number
+          last_error?: string | null
+          last_success_at?: string | null
+          lease_id?: string | null
+          lease_until?: string | null
+          next_run_at?: string
+          organization_id: string
+          parameters?: Json
+          resource_id: string
+          state?: string
+        }
+        Update: {
+          cursor?: Json
+          enabled?: boolean
+          generation?: number
+          last_error?: string | null
+          last_success_at?: string | null
+          lease_id?: string | null
+          lease_until?: string | null
+          next_run_at?: string
+          organization_id?: string
+          parameters?: Json
+          resource_id?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_resource_syncs_organization_id_resource_id_fkey"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "integration_resources"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -12629,6 +12813,14 @@ export type Database = {
           rule_id: string
         }[]
       }
+      claim_integration_library_job: {
+        Args: { p_job_id: string }
+        Returns: Json
+      }
+      claim_integration_resource_sync: {
+        Args: { p_resource_id: string }
+        Returns: Json
+      }
       claim_portal_invite: { Args: { p_token: string }; Returns: string }
       claim_proposal_invite: { Args: { p_token: string }; Returns: string }
       clear_integration_credential: {
@@ -12637,6 +12829,19 @@ export type Database = {
       }
       clear_plan_feature_override: {
         Args: { p_feature_id: string; p_plan_id: string }
+        Returns: undefined
+      }
+      commit_integration_resource_sync: {
+        Args: {
+          p_complete: boolean
+          p_cursor: Json
+          p_error: string
+          p_lease_id: string
+          p_records: Json
+          p_resource_id: string
+          p_restart?: boolean
+          p_snapshot: boolean
+        }
         Returns: undefined
       }
       complete_integration_execution: {
@@ -12660,6 +12865,10 @@ export type Database = {
           proration_required: boolean
           written: boolean
         }[]
+      }
+      configure_integration_resource_sync: {
+        Args: { p_enabled: boolean; p_parameters: Json; p_resource_id: string }
+        Returns: undefined
       }
       configure_phone_number: {
         Args: {
@@ -13020,6 +13229,12 @@ export type Database = {
       disconnect_integration: {
         Args: { p_connection_id: string; p_organization_id: string }
         Returns: undefined
+      }
+      due_integration_resource_syncs: {
+        Args: never
+        Returns: {
+          resource_id: string
+        }[]
       }
       effective_retail_rates: {
         Args: { p_at?: string; p_currency: string; p_organization_id: string }
@@ -13755,6 +13970,18 @@ export type Database = {
       purge_integration_executions: {
         Args: { p_older_than?: string }
         Returns: number
+      }
+      queue_granted_integration_library_read: {
+        Args: { p_arguments: Json; p_execution_id: string }
+        Returns: string
+      }
+      queue_integration_library_read: {
+        Args: {
+          p_arguments: Json
+          p_capability_key: string
+          p_connection_id: string
+        }
+        Returns: string
       }
       queue_outbound_email: {
         Args: {

@@ -39,7 +39,8 @@ _REGISTRY: dict[str, tuple[str, str, str, tuple[str, ...]]] = {
 def oauth_provider_for(connector_key: str) -> OAuthProvider | None:
     entry = _REGISTRY.get(connector_key)
     if entry is None:
-        return None
+        from app.connectors.library import provider_for
+        return provider_for(connector_key)
     import importlib
 
     module, cls = entry[0], entry[1]
@@ -67,7 +68,8 @@ class Readiness:
 
 
 def registered_connector_keys() -> list[str]:
-    return sorted(_REGISTRY)
+    from app.connectors.library import APPLICATIONS
+    return sorted(set(_REGISTRY) | {a['connector_key'] for a in APPLICATIONS})
 
 
 MCP_CONNECTOR_KEY = "mcp_server"
@@ -92,7 +94,15 @@ def readiness_of(connector_key: str) -> Readiness:
         )
     entry = _REGISTRY.get(connector_key)
     if entry is None:
-        return Readiness(connector_key, implemented=False, configured=False, reason="adapter_missing", required_configuration=())
+        from app.connectors.library import application_for, configured, oauth_app
+        app = application_for(connector_key)
+        if app is None:
+            return Readiness(connector_key, implemented=False, configured=False, reason="adapter_missing", required_configuration=())
+        auth = app['auth']['type']
+        usable = configured() and ((auth == 'api_key' and app['auth'].get('verifiable')) or (auth == 'oauth2' and oauth_app(connector_key) is not None))
+        required = ('GILDOPS_LIBRARY_URL','GILDOPS_LIBRARY_SECRET')
+        if auth=='oauth2': required += (f'{connector_key.upper()}_OAUTH_CLIENT_ID',f'{connector_key.upper()}_OAUTH_CLIENT_SECRET')
+        return Readiness(connector_key,auth!='custom',usable,None if usable else 'adapter_missing' if auth=='custom' else 'oauth_client_missing',required)
     prefix, further = entry[2], entry[3]
     required = (f"{prefix}_CLIENT_ID", f"{prefix}_CLIENT_SECRET", *further)
     configured = oauth_app_for(connector_key) is not None
@@ -109,7 +119,8 @@ def oauth_app_for(connector_key: str) -> OAuthApp | None:
     """GOLD's client id and secret for this vendor, or `None` when this deployment has none."""
     entry = _REGISTRY.get(connector_key)
     if entry is None:
-        return None
+        from app.connectors.library import oauth_app
+        return oauth_app(connector_key)
     prefix, further = entry[2], entry[3]
     client_id = os.environ.get(f"{prefix}_CLIENT_ID")
     client_secret = os.environ.get(f"{prefix}_CLIENT_SECRET")
@@ -119,3 +130,13 @@ def oauth_app_for(connector_key: str) -> OAuthApp | None:
     if not all(extra.values()):
         return None
     return OAuthApp(client_id=client_id, client_secret=client_secret, extra=extra)
+
+
+def library_runtime_configuration() -> tuple[str | None,str | None]:
+    return os.environ.get('GILDOPS_LIBRARY_URL'),os.environ.get('GILDOPS_LIBRARY_SECRET')
+
+
+def library_oauth_app(key: str) -> OAuthApp | None:
+    prefix=f'{key.upper()}_OAUTH'
+    client,secret=os.environ.get(f'{prefix}_CLIENT_ID'),os.environ.get(f'{prefix}_CLIENT_SECRET')
+    return OAuthApp(client,secret) if client and secret else None

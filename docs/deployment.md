@@ -2,6 +2,38 @@
 
 ## Purpose
 
+### Imported connector runtime configuration
+
+The API deployment now installs the pnpm workspace package `@gold/integration-library` alongside Python requirements. The Vercel API project has Root Directory `apps/api`: upload the repository root (prefer a clean tracked release snapshot), not the API subdirectory; `api/library_runtime.mjs` is a Node function and Python functions exclude its node_modules. Run `pnpm --filter @gold/integration-library check` before deployment. Apply `20261212000001_open_source_integration_library.sql` after its existing predecessor migrations, then regenerate database types and deploy API and web.
+
+The runtime requires `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (or `SUPABASE_ANON_KEY`), `SUPABASE_JWT_SECRET`, `GILDOPS_LIBRARY_SECRET`, and `GILDOPS_LIBRARY_URL` pointing to the API project's HTTPS `/integrations/library-runtime`. Python and Node must share the signing secret. Set `CRON_SECRET` for scheduled resource synchronization. Existing integration commands also require `GOLD_OAUTH_STATE_SECRET` and `GOLD_OAUTH_REDIRECT_URI`; supported generic OAuth apps use `<CONNECTOR_KEY>_OAUTH_CLIENT_ID` and `<CONNECTOR_KEY>_OAUTH_CLIENT_SECRET`. Google/Microsoft retain their existing prefixes. The web requires server-only `GOLD_API_URL`.
+
+
+#### Where to get the first connection credentials
+
+In Vercel, open **Goodfellow Studio ? gold-api ? Settings ? Environment Variables**, choose **Production**, and keep these server-only. Redeploy after saving changes. Existing `SUPABASE_URL` and `SUPABASE_ANON_KEY` can remain in place.
+
+| Variable | Where its value comes from |
+| --- | --- |
+| `SUPABASE_JWT_SECRET` | Linked Supabase project ? Project Settings ? JWT Keys ? existing legacy JWT secret. This backend currently signs narrowly scoped machine tokens with HS256. It is neither an API key nor a new random value. If the legacy secret has been revoked or cannot be retrieved, stop and migrate machine authentication; do not rotate project signing keys for this setup. |
+| `GILDOPS_LIBRARY_SECRET` | Generate an independent 32-byte random secret; Python and Node use the same value in this API project. |
+| `GOLD_OAUTH_STATE_SECRET` | Generate a separate 32-byte random secret for OAuth state. |
+| `CRON_SECRET` | Generate a separate 32-byte random secret, preserving any existing value. |
+| `GILDOPS_LIBRARY_URL` | `https://api-eta-three-81.vercel.app/integrations/library-runtime` |
+| `GOLD_OAUTH_REDIRECT_URI` | `https://app.gildops.com/connect/oauth/callback` |
+| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | Google Cloud project ? Google Auth Platform ? Clients ? create **Web application**, with the exact redirect URI above. Configure consent and add your own account as a test user. Enable Calendar, Drive, Sheets, Gmail and People APIs. |
+| `MICROSOFT_OAUTH_CLIENT_ID`, `MICROSOFT_OAUTH_CLIENT_SECRET` | Microsoft Entra admin center ? App registrations ? register a web app with the same redirect URI. Use Application (client) ID and a client-secret **value**, not its secret ID. Enable delegated `User.Read`, `Calendars.Read`, `Files.ReadWrite`, `Mail.Read`, and offline access. |
+
+In **gold-web**, set server-only `GOLD_API_URL` to `https://api-eta-three-81.vercel.app`. It does not receive the API signing secrets or vendor client secrets.
+
+Google requests read-only Calendar, Drive, Sheets, Gmail and Contacts scopes. Microsoft Graph requires `Files.ReadWrite` even for reading Excel ranges; this deployment still rejects connector writes. Existing connections must reconnect to authorize the expanded read surface. Provider consent/verification requirements still apply to external users.
+
+For the first API-key test, use Stripe Dashboard ? sandbox ? API keys ? create a restricted test key with **Customers: Read** (used by connection verification), plus read access for any Invoices, PaymentIntents, Payouts or Charges you plan to query. Enter the `rk_test_?` value in **GildOps ? App Library ? Stripe ? Verify and connect**. It belongs to the organization's Vault-backed connection, not `STRIPE_WEBHOOK_SECRET` or a web environment variable. No Activepieces account is needed.
+
+Provider references: [Supabase signing keys](https://supabase.com/docs/guides/auth/signing-keys), [Google OAuth credentials](https://developers.google.com/workspace/guides/create-credentials), [Microsoft Excel range permissions](https://learn.microsoft.com/en-us/graph/api/range-get?view=graph-rest-1.0), [Stripe keys](https://docs.stripe.com/keys).
+
+An App Library deployment without these inputs displays the installed catalogue with setup blockers. It must not claim operational connections or successful vendor verification. Do not create provider accounts or publish secrets in setup documentation. Custom authentication products remain blocked even when their packages are installed.
+
 This document defines the **canonical deployment and release process for GildOps**.
 
 It answers:

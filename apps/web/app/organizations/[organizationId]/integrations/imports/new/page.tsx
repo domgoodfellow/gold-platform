@@ -9,6 +9,7 @@ import { downloadImportFile } from '@/lib/domain/integrations/resources';
 import { requireOrganization } from '@/lib/route/organization';
 import { UploadSourceForm } from '@/features/integrations/imports/upload-source-form';
 import { MappingEditor } from '@/features/integrations/imports/mapping-editor';
+import {DomainError} from '@/lib/domain/errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,9 +48,11 @@ export default async function NewImportPage({
     );
   }
 
-  const source = await downloadImportFile(db, { organizationId, resourceId });
+  let source;
+  try{source=await downloadImportFile(db,{organizationId,resourceId});}
+  catch(failure){if(failure instanceof DomainError)return <Hint className="mt-6" role="alert">{failure.message}</Hint>;throw failure;}
   if (!source) {
-    return <Hint className="mt-6">That file is no longer available. Upload it again.</Hint>;
+    return <Hint className="mt-6">No importable rows are available. Synchronize the worksheet or upload a CSV file.</Hint>;
   }
 
   const definitions = await listFieldDefinitions(db, { organizationId, entityType: 'customer' });

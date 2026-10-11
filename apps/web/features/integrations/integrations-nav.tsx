@@ -18,7 +18,8 @@ export function IntegrationsNav({ organizationId, current }: { organizationId: s
       current={current}
       views={[
         { key: 'connected', label: 'Connected', href: base },
-        { key: 'browse', label: 'Browse apps', href: `${base}/apps` },
+        { key: 'browse', label: 'App Library', href: `${base}/apps` },
+        { key: 'sources', label: 'Resource Library', href: `/organizations/${organizationId}/integrations/sources` },
         { key: 'mcp', label: 'MCP servers', href: `${base}/mcp` },
         { key: 'secrets', label: 'Secrets & credentials', href: `/organizations/${organizationId}/settings/secrets` },
       ]}

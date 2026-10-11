@@ -53,6 +53,23 @@ export async function listResources(
   }));
 }
 
+/** Tenant and workspace permission checks remain in RLS; cursors and leases are never selected. */
+export async function getResourceSync(db: Db, organizationId: string, resourceId: string) {
+  const {data,error}=await db.from('integration_resource_syncs')
+    .select('enabled,parameters,state,last_success_at,last_error,next_run_at')
+    .eq('organization_id',organizationId).eq('resource_id',resourceId).maybeSingle();
+  if(error)throw new DomainError(error.message,'integrations.sync_read_failed');
+  return data;
+}
+
+export async function listResourceRecords(db: Db, organizationId: string, resourceId: string) {
+  const {data,error}=await db.from('integration_resource_records')
+    .select('external_id,display_name,metadata,source_updated_at').eq('organization_id',organizationId)
+    .eq('resource_id',resourceId).eq('deleted',false).order('display_name').limit(100);
+  if(error)throw new DomainError(error.message,'integrations.records_read_failed');
+  return data??[];
+}
+
 /**
  * A file handed to the CRM import, stored and read once. It is an artifact, not a connection: the
  * resource has no `connection_id`, and what may come in is `files/`'s question — the format
@@ -143,7 +160,23 @@ export async function downloadImportFile(
   input: { organizationId: string; resourceId: string },
 ): Promise<ParsedCsv | null> {
   const path = await getResourceStoragePath(db, input);
-  if (!path) return null;
+  if (!path) {
+    const {data:resource,error:resourceError}=await db.from('integration_resources').select('resource_type,status')
+      .eq('organization_id',input.organizationId).eq('id',input.resourceId).maybeSingle();
+    if(resourceError)throw new DomainError(resourceError.message,'integrations.resource_get_failed');
+    if(!resource||resource.status!=='active'||!['google_sheet','microsoft_workbook'].includes(resource.resource_type))return null;
+    const sync=await getResourceSync(db,input.organizationId,input.resourceId);
+    if(!sync?.last_success_at||sync.state!=='idle')throw new DomainError('Complete synchronization before mapping this worksheet.','integrations.sync_incomplete');
+    const {data,error}=await db.from('integration_resource_records').select('metadata').eq('organization_id',input.organizationId)
+      .eq('resource_id',input.resourceId).eq('deleted',false).order('external_id').limit(501);
+    if(error)throw new DomainError(error.message,'integrations.rows_read_failed');
+    if(!data?.length)return null;
+    const values=data.map(record=>record.metadata as {headers:string[];values:unknown[]});
+    const headers=values[0].headers;
+    if(!headers?.length||values.some(record=>JSON.stringify(record.headers)!==JSON.stringify(headers)))throw new DomainError('Worksheet columns changed. Synchronize again before mapping.','integrations.headers_changed');
+    const rows=values.map(record=>Object.fromEntries(headers.map((header,index)=>[header,String(record.values[index]??'')])));
+    return {headers,rows,sample:rows.slice(0,5),totalRows:rows.length,truncated:rows.length>500};
+  }
 
   const { data: blob, error } = await db.storage.from(DOCUMENTS_BUCKET).download(path);
   if (error || !blob) return null;

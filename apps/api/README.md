@@ -1,6 +1,6 @@
 # GildOps API
 
-`apps/api` is the Python serverless runtime for provider ingress, scheduled execution, AI/model work, provider operations, integration operations and a small number of cross-runtime domain commands.
+`apps/api` hosts Python serverless domain/provider handlers and a Node function for imported open-source connectors (ADR-041). Tenant connections, grants, Vault credentials and execution auditing remain canonical.
 
 It is **not** a general-purpose REST resource API.
 
@@ -33,6 +33,8 @@ Local development:
 ```bash
 python apps/api/dev.py
 ```
+
+Run the connector worker separately with `pnpm --filter @gold/integration-library library:dev`. It binds to loopback port 5322; set `GILDOPS_LIBRARY_URL=http://127.0.0.1:5322` and the same `GILDOPS_LIBRARY_SECRET` in both processes. The Node worker also needs the existing integration database settings. No Activepieces account is required. See `docs/integrations.md` and `docs/deployment.md` for configuration and supported operations.
 
 The local router reads `apps/api/vercel.json`.
 

@@ -1,12 +1,32 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
+  "installCommand": "npx --yes pnpm@11.4.0 install --filter @gold/integration-library --ignore-scripts --frozen-lockfile",
   "functions": {
     "api/**/*.py": {
-      "excludeFiles": "{tests/**,dev.py}"
+      "excludeFiles": "{tests/**,dev.py,node_modules/**,library/*.mjs}"
+    },
+    "api/library_runtime.mjs": {
+      "maxDuration": 60
+    },
+    "api/integration_sync_tick.py": {
+      "maxDuration": 300,
+      "excludeFiles": "{tests/**,dev.py,node_modules/**,library/*.mjs}"
     }
   },
   "rewrites": [
+    {
+      "source": "/integrations/library",
+      "destination": "/api/app_library"
+    },
+    {
+      "source": "/integrations/library-runtime",
+      "destination": "/api/library_runtime"
+    },
+    {
+      "source": "/tasks/integration-sync",
+      "destination": "/api/integration_sync_tick"
+    },
     {
       "source": "/webhooks/stripe",
       "destination": "/api/stripe_webhook"
@@ -105,6 +125,10 @@
     }
   ],
   "crons": [
+    {
+      "path": "/tasks/integration-sync",
+      "schedule": "*/15 * * * *"
+    },
     {
       "path": "/tasks/automation-tick",
       "schedule": "*/15 * * * *"

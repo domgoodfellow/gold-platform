@@ -2,15 +2,9 @@ import { Hint } from '@/components/controls/inputs';
 import { PageHeader } from '@/components/headers/page-header';
 import { listConnections } from '@/lib/domain/integrations/connections';
 import {
-  BROWSE_FILTERS,
-  browseFilterFrom,
   connectorAvailability,
-  connectorCategories,
   connectorLogoUrl,
-  connectorsForFilter,
-  filterConnectors,
   listConnectors,
-  type BrowseFilter,
 } from '@/lib/domain/integrations/connectors';
 import { loadConnectorReadiness } from '@/lib/domain/integrations/readiness';
 import { isSourceControlConnector } from '@/lib/adapters/source-control';
@@ -18,10 +12,11 @@ import { listResources } from '@/lib/domain/integrations/resources';
 import { listImportRuns } from '@/lib/domain/integrations/import-runs';
 import { requireOrganization } from '@/lib/route/organization';
 import { settingsScopeHref } from '@/lib/route/settings';
-import { ConnectorCatalogue } from '@/features/integrations/catalogue/connector-catalogue';
 import { ConnectedApps } from '@/features/integrations/connections/connected-apps';
 import { IntegrationsNav } from '@/features/integrations/integrations-nav';
 import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/settings-page-frame';
+import { AppLibrary } from '@/features/integrations/catalogue/app-library';
+import { buildAppLibrary, filterAppLibrary } from '@/lib/domain/integrations/app-library';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,23 +63,21 @@ export async function ConnectionsPage({
   const connectedKeys = new Set(active.map((connection) => connection.connectorKey));
   const logoUrlByKey = new Map(connectors.map((connector) => [connector.key, connector.iconRef ? connectorLogoUrl(db, connector.iconRef) : null]));
 
-  // Only a connector the catalogue has promoted is worth asking the API about; a planned one is
-  // upcoming whatever the deployment holds.
+  // Deployment readiness is independent of catalogue discovery.
   const readiness = await loadConnectorReadiness(
     db,
-    connectors.filter((connector) => connector.status !== 'planned').map((connector) => connector.key),
+    connectors.map((connector) => connector.key),
   );
   const connectable = connectors.filter((connector) => connectorAvailability(connector, readiness.get(connector.key)) === 'connectable');
 
-  const filter = browseFilterFrom(first(query.filter));
-  const counts = Object.fromEntries(
-    BROWSE_FILTERS.map((name) => [name, connectorsForFilter(connectors, { filter: name, readiness, connectedKeys }).length]),
-  ) as Record<BrowseFilter, number>;
-  const inFilter = connectorsForFilter(connectors, { filter, readiness, connectedKeys });
-  // A category pill exists only if the set on screen has something under it.
-  const categories = connectorCategories(inFilter);
-  const shown = filterConnectors(inFilter, { query: q, category });
-  const browseHref = (next: { filter?: BrowseFilter; q?: string; category?: string }) => {
+  const workspace = first(query.workspace) ?? '';
+  const page = Math.max(0, Math.min(100, Number(first(query.page)) || 0));
+  const library = filterAppLibrary(buildAppLibrary(connectors,readiness), { q, category, workspace,
+    connectedOnly:first(query.filter)==='connected',connectedKeys });
+  const accounts = new Map<string,{id:string;label:string}[]>();
+  for (const connection of active) accounts.set(connection.connectorKey,[...(accounts.get(connection.connectorKey)??[]),
+    {id:connection.id,label:connection.accountLabel??'Connected account'}]);
+  const browseHref = (next: { filter?: string; q?: string; category?: string }) => {
     const params = new URLSearchParams();
     if (next.filter && next.filter !== 'available') params.set('filter', next.filter);
     if (next.q) params.set('q', next.q);
@@ -98,7 +91,7 @@ export async function ConnectionsPage({
       {view === 'connected' ? (
         <SettingsPageHeader title="Connections" />
       ) : (
-        <PageHeader title="Browse apps" crumbs={[{ label: 'Connections', href: settingsScopeHref('connections', organizationId) }]} />
+        <PageHeader title="App Library" crumbs={[{ label: 'Connections', href: settingsScopeHref('connections', organizationId) }]} />
       )}
       <IntegrationsNav organizationId={organizationId} current={view} />
       {oauthError ? (
@@ -123,19 +116,8 @@ export async function ConnectionsPage({
           mcpServerCount={mcpServerCount}
         />
       ) : (
-        <ConnectorCatalogue
-          organizationId={organizationId}
-          connectors={shown}
-          logoUrlByKey={logoUrlByKey}
-          connectedKeys={connectedKeys}
-          mayManage={mayManage}
-          filter={filter}
-          counts={counts}
-          categories={categories}
-          query={q}
-          category={category}
-          hrefFor={browseHref}
-        />
+        <AppLibrary organizationId={organizationId} entries={library.slice(page*24,(page+1)*24)} connected={accounts}
+          mayManage={mayManage} q={q} category={category} workspace={workspace} connectedOnly={first(query.filter)==='connected'} page={page} total={library.length} />
       )}
     </SettingsPageFrame>
   );

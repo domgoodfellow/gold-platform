@@ -21,7 +21,7 @@ const COMMANDS = {
   architecture: ['architecture-static'],
   'architecture:db': ['architecture-db'],
   db: ['database-integration'],
-  contract: ['offline-contract', 'python-contract'],
+  contract: ['offline-contract', 'python-contract', 'node-contract'],
   api: ['python-unit', 'python-component', 'python-contract'],
   e2e: ['playwright-acceptance'],
   smoke: ['playwright-smoke'],
@@ -48,6 +48,12 @@ function run(label, cmd, args, env = {}) {
 }
 
 let ran = 0;
+
+const nodeFiles = filesFor('node');
+if (nodeFiles.length) {
+  run(`node: connector contracts (${nodeFiles.length} files)`, 'node', ['--test', ...nodeFiles, ...extra]);
+  ran++;
+}
 
 const vitestCategories = categories.filter((c) => manifest.categories[c].runner === 'vitest');
 if (filesFor('vitest').length > 0) {

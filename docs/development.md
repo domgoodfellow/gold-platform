@@ -801,3 +801,10 @@ It does not own:
 - provider architecture.
 
 Those belong to the respective canonical documents.
+
+
+## Imported connector worker
+
+Install workspace dependencies with `pnpm install --frozen-lockfile`. Put development-only `GILDOPS_LIBRARY_SECRET` and `SUPABASE_JWT_SECRET` in `apps/api/.env`, with the existing local Supabase URL and publishable/anon key. Set `GILDOPS_LIBRARY_URL=http://127.0.0.1:5322`; start `pnpm --filter @gold/integration-library library:dev` in a separate terminal alongside the existing Python API and web servers. Python and Node must read the same worker signing secret. Never copy hosted credentials into these local files.
+
+Run `pnpm --filter @gold/integration-library library:generate` after intentionally changing pinned packages or reviewed action policy, review the generated API/web catalogue and SQL seed, then run `pnpm --filter @gold/integration-library check`. Supported API keys are entered through the App Library and verified before Vault storage. OAuth registrations use deployment-specific callbacks; hosted setup belongs in `docs/deployment.md`.

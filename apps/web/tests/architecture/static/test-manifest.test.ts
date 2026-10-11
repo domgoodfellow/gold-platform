@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest';
 
 const ROOT = fileURLToPath(new URL('../../../../../', import.meta.url));
 
-type Category = { runner: 'vitest' | 'pytest' | 'playwright'; dir: string; requires: string; gate: boolean; description: string };
+type Category = { runner: 'vitest' | 'pytest' | 'playwright' | 'node'; dir: string; requires: string; gate: boolean; description: string };
 type Entry = { category: string; concerns: string[]; note?: string };
 const manifest = JSON.parse(readFileSync(join(ROOT, 'test-manifest.json'), 'utf8')) as {
   categories: Record<string, Category>;
@@ -38,12 +38,13 @@ const read = (path: string) => readFileSync(join(ROOT, path), 'utf8');
 const onDisk = [
   ...walk(join(ROOT, 'apps/web/tests')).filter((f) => /\.test\.tsx?$/.test(f)),
   ...walk(join(ROOT, 'apps/web/e2e')).filter((f) => /\.spec\.ts$/.test(f)),
+  ...walk(join(ROOT, 'apps/api/library')).filter((f) => /\.test\.mjs$/.test(f)),
   ...walk(join(ROOT, 'apps/api/tests')).filter((f) => /[/\\]test_[^/\\]+\.py$/.test(f)),
 ]
   .map(rel)
   .sort();
 
-const runnerOf = (path: string) => (path.endsWith('.py') ? 'pytest' : path.includes('/e2e/') ? 'playwright' : 'vitest');
+const runnerOf = (path: string) => (path.endsWith('.mjs') ? 'node' : path.endsWith('.py') ? 'pytest' : path.includes('/e2e/') ? 'playwright' : 'vitest');
 
 describe('every test file is classified exactly once', () => {
   it('has an entry for each test file on disk', () => {

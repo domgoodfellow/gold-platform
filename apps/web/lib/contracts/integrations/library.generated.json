@@ -1,0 +1,2970 @@
+{
+  "applications": [
+    {
+      "key": "airtable",
+      "connector_key": "airtable",
+      "package": "@activepieces/piece-airtable",
+      "version": "0.9.2",
+      "name": "Airtable",
+      "description": "Low‒code platform to build apps.",
+      "icon": "https://cdn.activepieces.com/pieces/airtable.png",
+      "category": "CRM & Sales",
+      "workspace": "crm",
+      "auth": {
+        "type": "api_key",
+        "label": "Personal Access Token",
+        "description": "\n    To obtain your personal token, follow these steps:\n\n    1. Log in to your Airtable account.\n    2. Visit https://airtable.com/create/tokens/ to create one\n    3. Click on \"+ Add a base\" and select the base you want to use or all bases. To create new bases, also add the workspace under \"+ Add a workspace\".\n    4. Click on \"+ Add a scope\" and select \"data.records:read\", \"data.records:write\", \"data.recordComments:read\", \"data.recordComments:write\", \"schema.bases:read\" and \"schema.bases:write\" for full functionality.\n    5. Click on \"Create token\" and copy the token.\n    ",
+        "verifiable": true
+      },
+      "actions": [
+        {
+          "key": "get_record",
+          "capability": "piece.airtable.get_record",
+          "name": "Get Record (Agent)",
+          "description": "Retrieve a single Airtable record by its ID.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "base_id": {
+                "type": "string",
+                "description": "Base ID",
+                "maxLength": 2000
+              },
+              "table_id_or_name": {
+                "type": "string",
+                "description": "Table ID or Name",
+                "maxLength": 2000
+              },
+              "record_id": {
+                "type": "string",
+                "description": "Record ID",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "base_id",
+              "table_id_or_name",
+              "record_id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "list_records",
+          "capability": "piece.airtable.list_records",
+          "name": "List Records (Agent)",
+          "description": "List or query records in an Airtable table.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "base_id": {
+                "type": "string",
+                "description": "Base ID",
+                "maxLength": 2000
+              },
+              "table_id_or_name": {
+                "type": "string",
+                "description": "Table ID or Name",
+                "maxLength": 2000
+              },
+              "filter_by_formula": {
+                "type": "string",
+                "description": "Filter By Formula",
+                "maxLength": 2000
+              },
+              "view": {
+                "type": "string",
+                "description": "View",
+                "maxLength": 2000
+              },
+              "max_records": {
+                "type": "number",
+                "description": "Max Records"
+              },
+              "page_size": {
+                "type": "number",
+                "description": "Page Size"
+              },
+              "sort": {
+                "type": "object",
+                "description": "Sort"
+              },
+              "fields": {
+                "type": "array",
+                "description": "Fields"
+              }
+            },
+            "required": [
+              "base_id",
+              "table_id_or_name"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "list_bases",
+          "capability": "piece.airtable.list_bases",
+          "name": "List Bases (Agent)",
+          "description": "List all Airtable bases the token can access.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "get_current_user",
+          "capability": "piece.airtable.get_current_user",
+          "name": "Get Current User (Agent)",
+          "description": "Get the connected token identity and its scopes.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 2
+    },
+    {
+      "key": "asana",
+      "connector_key": "asana",
+      "package": "@activepieces/piece-asana",
+      "version": "0.7.2",
+      "name": "Asana",
+      "description": "Work management platform designed to help teams organize, track, and manage their work.",
+      "icon": "https://cdn.activepieces.com/pieces/asana.png",
+      "category": "Project Management",
+      "workspace": "automations",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://app.asana.com/-/oauth_authorize",
+        "token_url": "https://app.asana.com/-/oauth_token",
+        "scopes": [
+          "default"
+        ],
+        "authorization_method": "BODY"
+      },
+      "actions": [
+        {
+          "key": "get_current_user",
+          "capability": "piece.asana.get_current_user",
+          "name": "Get Current User",
+          "description": "Get the Asana user behind this connection.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "get_task",
+          "capability": "piece.asana.get_task",
+          "name": "Get Task",
+          "description": "Get the details of an Asana task.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "description": "Task GID",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "task"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "list_projects",
+          "capability": "piece.asana.list_projects",
+          "name": "List Projects",
+          "description": "List the projects in an Asana workspace.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "workspace": {
+                "type": "string",
+                "description": "Workspace GID",
+                "maxLength": 2000
+              },
+              "archived": {
+                "type": "string",
+                "description": "Archived",
+                "maxLength": 2000
+              },
+              "limit": {
+                "type": "number",
+                "description": "Limit"
+              },
+              "offset": {
+                "type": "string",
+                "description": "Offset",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "workspace"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 0
+    },
+    {
+      "key": "clickup",
+      "connector_key": "clickup",
+      "package": "@activepieces/piece-clickup",
+      "version": "0.9.1",
+      "name": "ClickUp",
+      "description": "All-in-one productivity platform",
+      "icon": "https://cdn.activepieces.com/pieces/clickup.png",
+      "category": "Project Management",
+      "workspace": "automations",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://app.clickup.com/api",
+        "token_url": "https://api.clickup.com/api/v2/oauth/token",
+        "scopes": [],
+        "authorization_method": "BODY"
+      },
+      "actions": [],
+      "triggers": [],
+      "trigger_count": 30
+    },
+    {
+      "key": "discord",
+      "connector_key": "discord",
+      "package": "@activepieces/piece-discord",
+      "version": "0.7.2",
+      "name": "Discord",
+      "description": "Instant messaging and VoIP social platform",
+      "icon": "https://cdn.activepieces.com/pieces/discord.png",
+      "category": "Communications",
+      "workspace": "communications",
+      "auth": {
+        "type": "api_key",
+        "label": "Bot Token",
+        "description": "\n1. Open https://discord.com/developers/applications and select or create an application.\n2. In **Bot**, click **Reset Token** and copy the token.\n3. Still in **Bot**, enable **Server Members Intent** and **Message Content Intent**.\n4. In **OAuth2 → URL Generator**, pick the **bot** scope and the permissions you need, open the URL and add the bot to your server.\n",
+        "verifiable": false
+      },
+      "actions": [],
+      "triggers": [],
+      "trigger_count": 2
+    },
+    {
+      "key": "dropbox",
+      "connector_key": "dropbox",
+      "package": "@activepieces/piece-dropbox",
+      "version": "0.9.2",
+      "name": "Dropbox",
+      "description": "Cloud storage and file synchronization",
+      "icon": "https://cdn.activepieces.com/pieces/dropbox.png",
+      "category": "Files & Cloud Storage",
+      "workspace": "library",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://www.dropbox.com/oauth2/authorize",
+        "token_url": "https://api.dropboxapi.com/oauth2/token",
+        "scopes": [
+          "files.metadata.write",
+          "files.metadata.read",
+          "files.content.write",
+          "files.content.read"
+        ],
+        "authorization_method": "BODY"
+      },
+      "actions": [],
+      "triggers": [],
+      "trigger_count": 1
+    },
+    {
+      "key": "github",
+      "connector_key": "github",
+      "package": "@activepieces/piece-github",
+      "version": "0.9.3",
+      "name": "GitHub",
+      "description": "Developer platform that allows developers to create, store, manage and share their code",
+      "icon": "https://cdn.activepieces.com/pieces/github.png",
+      "category": "Developer Tools",
+      "workspace": "studio",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://github.com/login/oauth/authorize",
+        "token_url": "https://github.com/login/oauth/access_token",
+        "scopes": [
+          "admin:repo_hook",
+          "admin:org",
+          "repo",
+          "gist"
+        ],
+        "authorization_method": "BODY"
+      },
+      "actions": [
+        {
+          "key": "list_my_repositories",
+          "capability": "piece.github.list_my_repositories",
+          "name": "List My Repositories (Agent)",
+          "description": "Lists repositories the connected account can access.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "visibility": {
+                "type": "string",
+                "description": "Visibility",
+                "maxLength": 2000
+              },
+              "affiliation": {
+                "type": "string",
+                "description": "Affiliation",
+                "maxLength": 2000
+              },
+              "sort": {
+                "type": "string",
+                "description": "Sort",
+                "maxLength": 2000
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "get_file_content",
+          "capability": "piece.github.get_file_content",
+          "name": "Get File Content (Agent)",
+          "description": "Reads a file (or directory listing) from a repository.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "owner": {
+                "type": "string",
+                "description": "Owner",
+                "maxLength": 2000
+              },
+              "repo": {
+                "type": "string",
+                "description": "Repository",
+                "maxLength": 2000
+              },
+              "path": {
+                "type": "string",
+                "description": "Path",
+                "maxLength": 2000
+              },
+              "ref": {
+                "type": "string",
+                "description": "Ref",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "owner",
+              "repo",
+              "path"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 14
+    },
+    {
+      "key": "gitlab",
+      "connector_key": "gitlab",
+      "package": "@activepieces/piece-gitlab",
+      "version": "0.2.1",
+      "name": "GitLab",
+      "description": "Collaboration tool for developers",
+      "icon": "https://cdn.activepieces.com/pieces/gitlab.png",
+      "category": "Developer Tools",
+      "workspace": "studio",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://gitlab.com/oauth/authorize",
+        "token_url": "https://gitlab.com/oauth/token",
+        "scopes": [
+          "api",
+          "read_user"
+        ],
+        "authorization_method": "BODY"
+      },
+      "actions": [],
+      "triggers": [],
+      "trigger_count": 1
+    },
+    {
+      "key": "gmail",
+      "connector_key": "google_workspace",
+      "package": "@activepieces/piece-gmail",
+      "version": "0.17.5",
+      "name": "Gmail",
+      "description": "Email service by Google",
+      "icon": "https://cdn.activepieces.com/pieces/gmail.png",
+      "category": "Communications",
+      "workspace": "communications",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://accounts.google.com/o/oauth2/auth",
+        "token_url": "https://oauth2.googleapis.com/token",
+        "scopes": [
+          "https://www.googleapis.com/auth/gmail.send",
+          "https://www.googleapis.com/auth/gmail.readonly",
+          "https://www.googleapis.com/auth/gmail.compose",
+          "https://www.googleapis.com/auth/gmail.modify",
+          "email"
+        ],
+        "authorization_method": "BODY"
+      },
+      "actions": [],
+      "triggers": [],
+      "trigger_count": 4
+    },
+    {
+      "key": "google-calendar",
+      "connector_key": "google_workspace",
+      "package": "@activepieces/piece-google-calendar",
+      "version": "0.12.3",
+      "name": "Google Calendar",
+      "description": "Get organized and stay on schedule",
+      "icon": "https://cdn.activepieces.com/pieces/google-calendar.png",
+      "category": "Scheduling & Calendars",
+      "workspace": "field",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://accounts.google.com/o/oauth2/auth",
+        "token_url": "https://oauth2.googleapis.com/token",
+        "scopes": [
+          "https://www.googleapis.com/auth/calendar.events",
+          "https://www.googleapis.com/auth/calendar.readonly",
+          "email"
+        ],
+        "authorization_method": "BODY"
+      },
+      "actions": [
+        {
+          "key": "google_calendar_get_event",
+          "capability": "piece.google_calendar.google_calendar_get_event",
+          "name": "Get Event",
+          "description": "Fetch the full details of a single Google Calendar event by its event ID.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "calendar_id": {
+                "type": "string",
+                "description": "Calendar",
+                "maxLength": 2000
+              },
+              "event_id": {
+                "type": "string",
+                "description": "Event ID",
+                "maxLength": 2000
+              },
+              "max_attendees": {
+                "type": "number",
+                "description": "Max Attendees"
+              },
+              "time_zone": {
+                "type": "string",
+                "description": "Time Zone",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "calendar_id",
+              "event_id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "google_calendar_list_events",
+          "capability": "piece.google_calendar.google_calendar_list_events",
+          "name": "List Events",
+          "description": "List events from one Google Calendar, optionally filtered by date range, free-text search, and event types.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "calendar_id": {
+                "type": "string",
+                "description": "Calendar",
+                "maxLength": 2000
+              },
+              "event_types": {
+                "type": "array",
+                "description": "Event Types",
+                "default": [
+                  "default",
+                  "focusTime",
+                  "outOfOffice"
+                ]
+              },
+              "search": {
+                "type": "string",
+                "description": "Search Term",
+                "maxLength": 2000
+              },
+              "start_date": {
+                "type": "string",
+                "description": "Start Time",
+                "maxLength": 2000
+              },
+              "end_date": {
+                "type": "string",
+                "description": "End Time",
+                "maxLength": 2000
+              },
+              "singleEvents": {
+                "type": "boolean",
+                "description": "Expand Recurring Events",
+                "default": false
+              }
+            },
+            "required": [
+              "calendar_id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "google_calendar_list_calendars",
+          "capability": "piece.google_calendar.google_calendar_list_calendars",
+          "name": "List Calendars",
+          "description": "List every calendar in the user's calendar list, returning each calendar's id, summary, access role, time zone, and whether it is primary.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 7
+    },
+    {
+      "key": "google-contacts",
+      "connector_key": "google_workspace",
+      "package": "@activepieces/piece-google-contacts",
+      "version": "0.5.4",
+      "name": "Google Contacts",
+      "description": "Stay connected and organized",
+      "icon": "https://cdn.activepieces.com/pieces/google-contacts.png",
+      "category": "CRM & Sales",
+      "workspace": "crm",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://accounts.google.com/o/oauth2/auth",
+        "token_url": "https://oauth2.googleapis.com/token",
+        "scopes": [
+          "https://www.googleapis.com/auth/contacts",
+          "email"
+        ],
+        "authorization_method": "BODY"
+      },
+      "actions": [
+        {
+          "key": "search_contacts",
+          "capability": "piece.google_contacts.search_contacts",
+          "name": "Search Contacts",
+          "description": "Search the connected account contacts by a plain-text query.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "Query",
+                "maxLength": 2000
+              },
+              "pageSize": {
+                "type": "number",
+                "description": "Page Size"
+              }
+            },
+            "required": [
+              "query"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 1
+    },
+    {
+      "key": "google-drive",
+      "connector_key": "google_workspace",
+      "package": "@activepieces/piece-google-drive",
+      "version": "0.11.3",
+      "name": "Google Drive",
+      "description": "Cloud storage and file backup",
+      "icon": "https://cdn.activepieces.com/pieces/google-drive.png",
+      "category": "Files & Cloud Storage",
+      "workspace": "library",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://accounts.google.com/o/oauth2/auth",
+        "token_url": "https://oauth2.googleapis.com/token",
+        "scopes": [
+          "https://www.googleapis.com/auth/drive",
+          "email"
+        ],
+        "authorization_method": "BODY"
+      },
+      "actions": [
+        {
+          "key": "drive_get_file",
+          "capability": "piece.google_drive.drive_get_file",
+          "name": "Get File or Folder",
+          "description": "Get a file folder for files/sub-folders",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "file_id": {
+                "type": "string",
+                "description": "File / Folder ID",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "file_id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "drive_list_files",
+          "capability": "piece.google_drive.drive_list_files",
+          "name": "List Folder Contents",
+          "description": "List files from a Google Drive folder",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "folder_id": {
+                "type": "string",
+                "description": "Folder ID",
+                "maxLength": 2000
+              },
+              "include_trashed": {
+                "type": "boolean",
+                "description": "Include Trashed",
+                "default": false
+              },
+              "depth_level": {
+                "type": "number",
+                "description": "Depth Level",
+                "default": 1
+              },
+              "download_files": {
+                "type": "boolean",
+                "description": "Download Files",
+                "default": false
+              },
+              "include_team_drives": {
+                "type": "boolean",
+                "description": "Include Team Drives",
+                "default": false
+              }
+            },
+            "required": [
+              "folder_id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "drive_search_files",
+          "capability": "piece.google_drive.drive_search_files",
+          "name": "Search Files and Folders",
+          "description": "Search a Google Drive folder for files/sub-folders",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "query_term": {
+                "type": "string",
+                "description": "Query Term",
+                "maxLength": 2000,
+                "default": "name"
+              },
+              "operator": {
+                "type": "string",
+                "description": "Operator",
+                "maxLength": 2000,
+                "default": "contains"
+              },
+              "value": {
+                "type": "string",
+                "description": "Value",
+                "maxLength": 2000
+              },
+              "type": {
+                "type": "string",
+                "description": "File Type",
+                "maxLength": 2000,
+                "default": "all"
+              },
+              "parent_folder_id": {
+                "type": "string",
+                "description": "Parent Folder ID",
+                "maxLength": 2000
+              },
+              "include_team_drives": {
+                "type": "boolean",
+                "description": "Include Team Drives",
+                "default": false
+              }
+            },
+            "required": [
+              "value"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "drive_list_shared_drives",
+          "capability": "piece.google_drive.drive_list_shared_drives",
+          "name": "List Shared Drives",
+          "description": "List the shared drives the account can access.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "Query",
+                "maxLength": 2000
+              },
+              "page_size": {
+                "type": "number",
+                "description": "Page Size"
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 3
+    },
+    {
+      "key": "google-sheets",
+      "connector_key": "google_workspace",
+      "package": "@activepieces/piece-google-sheets",
+      "version": "0.17.2",
+      "name": "Google Sheets",
+      "description": "Create, edit, and collaborate on spreadsheets online",
+      "icon": "https://cdn.activepieces.com/pieces/google-sheets.png",
+      "category": "Documents & Productivity",
+      "workspace": "library",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://accounts.google.com/o/oauth2/auth",
+        "token_url": "https://oauth2.googleapis.com/token",
+        "scopes": [
+          "https://www.googleapis.com/auth/spreadsheets",
+          "https://www.googleapis.com/auth/drive.readonly",
+          "https://www.googleapis.com/auth/drive",
+          "email"
+        ],
+        "authorization_method": "BODY"
+      },
+      "actions": [
+        {
+          "key": "sheets_get_all_rows",
+          "capability": "piece.google_sheets.sheets_get_all_rows",
+          "name": "Get All Rows",
+          "description": "Read every row from a worksheet in a single call.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "spreadsheet_id": {
+                "type": "string",
+                "description": "Spreadsheet ID",
+                "maxLength": 2000
+              },
+              "sheet_id": {
+                "type": "number",
+                "description": "Worksheet ID"
+              },
+              "first_row_headers": {
+                "type": "boolean",
+                "description": "First Row Headers",
+                "default": true
+              }
+            },
+            "required": [
+              "spreadsheet_id",
+              "sheet_id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "sheets_get_row",
+          "capability": "piece.google_sheets.sheets_get_row",
+          "name": "Get Row by Number",
+          "description": "Retrieve a single row by its row number.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "spreadsheet_id": {
+                "type": "string",
+                "description": "Spreadsheet ID",
+                "maxLength": 2000
+              },
+              "sheet_id": {
+                "type": "number",
+                "description": "Worksheet ID"
+              },
+              "row_number": {
+                "type": "number",
+                "description": "Row Number"
+              },
+              "header_row": {
+                "type": "number",
+                "description": "Header Row Number",
+                "default": 1
+              },
+              "use_header_names": {
+                "type": "boolean",
+                "description": "Use Column Names",
+                "default": true
+              }
+            },
+            "required": [
+              "spreadsheet_id",
+              "sheet_id",
+              "row_number"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "sheets_get_spreadsheet",
+          "capability": "piece.google_sheets.sheets_get_spreadsheet",
+          "name": "Get Spreadsheet Info",
+          "description": "Fetch a spreadsheet's title and the list of its worksheets (tabs).",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "spreadsheet_id": {
+                "type": "string",
+                "description": "Spreadsheet ID",
+                "maxLength": 2000
+              },
+              "include_grid_data": {
+                "type": "boolean",
+                "description": "Include Grid Data",
+                "default": false
+              }
+            },
+            "required": [
+              "spreadsheet_id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "sheets_get_values",
+          "capability": "piece.google_sheets.sheets_get_values",
+          "name": "Read Cell Range",
+          "description": "Read cell values from a worksheet using A1 notation.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "spreadsheet_id": {
+                "type": "string",
+                "description": "Spreadsheet ID",
+                "maxLength": 2000
+              },
+              "worksheet_title": {
+                "type": "string",
+                "description": "Worksheet Title",
+                "maxLength": 2000
+              },
+              "range": {
+                "type": "string",
+                "description": "Range (A1 Notation)",
+                "maxLength": 2000
+              },
+              "major_dimension": {
+                "type": "string",
+                "description": "Major Dimension",
+                "maxLength": 2000,
+                "default": "ROWS"
+              },
+              "value_render_option": {
+                "type": "string",
+                "description": "Value Render Option",
+                "maxLength": 2000,
+                "default": "FORMATTED_VALUE"
+              }
+            },
+            "required": [
+              "spreadsheet_id",
+              "worksheet_title"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "sheets_search_spreadsheets",
+          "capability": "piece.google_sheets.sheets_search_spreadsheets",
+          "name": "Find Spreadsheets",
+          "description": "Find spreadsheet(s) by name.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "spreadsheet_name": {
+                "type": "string",
+                "description": "Spreadsheet Name",
+                "maxLength": 2000
+              },
+              "exact_match": {
+                "type": "boolean",
+                "description": "Exact Match",
+                "default": false
+              }
+            },
+            "required": [
+              "spreadsheet_name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 4
+    },
+    {
+      "key": "hubspot",
+      "connector_key": "hubspot",
+      "package": "@activepieces/piece-hubspot",
+      "version": "0.12.1",
+      "name": "HubSpot",
+      "description": "Powerful CRM that offers tools for sales, customer service, and marketing automation.",
+      "icon": "https://cdn.activepieces.com/pieces/hubspot.png",
+      "category": "CRM & Sales",
+      "workspace": "crm",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://app.hubspot.com/oauth/authorize",
+        "token_url": "https://api.hubapi.com/oauth/v1/token",
+        "scopes": [
+          "crm.lists.read",
+          "crm.lists.write",
+          "crm.objects.companies.read",
+          "crm.objects.companies.write",
+          "crm.objects.contacts.read",
+          "crm.objects.contacts.write",
+          "crm.objects.custom.read",
+          "crm.objects.custom.write",
+          "crm.objects.deals.read",
+          "crm.objects.deals.write",
+          "crm.objects.line_items.read",
+          "crm.objects.owners.read",
+          "crm.objects.leads.read",
+          "crm.objects.leads.write",
+          "crm.schemas.companies.read",
+          "crm.schemas.contacts.read",
+          "crm.schemas.custom.read",
+          "crm.schemas.deals.read",
+          "crm.schemas.line_items.read",
+          "automation",
+          "e-commerce",
+          "tickets",
+          "content",
+          "settings.currencies.read",
+          "settings.users.read",
+          "settings.users.teams.read",
+          "files",
+          "forms",
+          "scheduler.meetings.meeting-link.read"
+        ],
+        "authorization_method": "BODY"
+      },
+      "actions": [
+        {
+          "key": "get-company",
+          "capability": "piece.hubspot.get-company",
+          "name": "Get Company",
+          "description": "Gets a company by its ID.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "companyId": {
+                "type": "string",
+                "description": "Company ID",
+                "maxLength": 2000
+              },
+              "additionalPropertiesToRetrieve": {
+                "type": "array",
+                "description": "Additional Properties to Retrieve"
+              }
+            },
+            "required": [
+              "companyId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "get-contact",
+          "capability": "piece.hubspot.get-contact",
+          "name": "Get Contact",
+          "description": "Gets a contact by its ID.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "contactId": {
+                "type": "string",
+                "description": "Contact ID",
+                "maxLength": 2000
+              },
+              "additionalPropertiesToRetrieve": {
+                "type": "array",
+                "description": "Additional Properties to Retrieve"
+              }
+            },
+            "required": [
+              "contactId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "find-company",
+          "capability": "piece.hubspot.find-company",
+          "name": "Find Company",
+          "description": "Finds up to 200 companies matching one or two property values.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "firstSearchPropertyName": {
+                "type": "string",
+                "description": "Search Property",
+                "maxLength": 2000
+              },
+              "firstSearchPropertyValue": {
+                "type": "string",
+                "description": "Search Value",
+                "maxLength": 2000
+              },
+              "secondSearchPropertyName": {
+                "type": "string",
+                "description": "Second Search Property",
+                "maxLength": 2000
+              },
+              "secondSearchPropertyValue": {
+                "type": "string",
+                "description": "Second Search Value",
+                "maxLength": 2000
+              },
+              "additionalPropertiesToRetrieve": {
+                "type": "array",
+                "description": "Additional Properties to Retrieve"
+              }
+            },
+            "required": [
+              "firstSearchPropertyName",
+              "firstSearchPropertyValue"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "find-contact",
+          "capability": "piece.hubspot.find-contact",
+          "name": "Find Contact",
+          "description": "Finds up to 200 contacts matching one or two property values.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "firstSearchPropertyName": {
+                "type": "string",
+                "description": "Search Property",
+                "maxLength": 2000
+              },
+              "firstSearchPropertyValue": {
+                "type": "string",
+                "description": "Search Value",
+                "maxLength": 2000
+              },
+              "secondSearchPropertyName": {
+                "type": "string",
+                "description": "Second Search Property",
+                "maxLength": 2000
+              },
+              "secondSearchPropertyValue": {
+                "type": "string",
+                "description": "Second Search Value",
+                "maxLength": 2000
+              },
+              "additionalPropertiesToRetrieve": {
+                "type": "array",
+                "description": "Additional Properties to Retrieve"
+              }
+            },
+            "required": [
+              "firstSearchPropertyName",
+              "firstSearchPropertyValue"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 24
+    },
+    {
+      "key": "intercom",
+      "connector_key": "intercom",
+      "package": "@activepieces/piece-intercom",
+      "version": "0.8.3",
+      "name": "Intercom",
+      "description": "Customer messaging platform for sales, marketing, and support",
+      "icon": "https://cdn.activepieces.com/pieces/intercom.png",
+      "category": "Customer Support",
+      "workspace": "support",
+      "auth": {
+        "type": "custom",
+        "description": "This connector requires an application-specific authentication configuration."
+      },
+      "actions": [],
+      "triggers": [],
+      "trigger_count": 22
+    },
+    {
+      "key": "linear",
+      "connector_key": "linear",
+      "package": "@activepieces/piece-linear",
+      "version": "0.9.1",
+      "name": "Linear",
+      "description": "Issue tracking for modern software teams",
+      "icon": "https://cdn.activepieces.com/pieces/linear.png",
+      "category": "Customer Support",
+      "workspace": "support",
+      "auth": {
+        "type": "api_key",
+        "label": "API Key",
+        "description": "\nTo get your API key:\n\n1. In Linear, open **Settings** from the workspace menu at the top left.\n2. Go to **Security & access**.\n3. Under **Personal API keys**, enter a label and click **Create key**.\n4. Copy the key (it starts with `lin_api_`) and paste it here.\n\nTriggers need a key created by a workspace admin.",
+        "verifiable": true
+      },
+      "actions": [],
+      "triggers": [],
+      "trigger_count": 8
+    },
+    {
+      "key": "mailchimp",
+      "connector_key": "mailchimp",
+      "package": "@activepieces/piece-mailchimp",
+      "version": "0.5.10",
+      "name": "Mailchimp",
+      "description": "All-in-One integrated marketing platform for managing audiences, sending campaigns, tracking engagement, and automating lifecycle communications.",
+      "icon": "https://cdn.activepieces.com/pieces/mailchimp.png",
+      "category": "Marketing & Advertising",
+      "workspace": "marketing",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://login.mailchimp.com/oauth2/authorize",
+        "token_url": "https://login.mailchimp.com/oauth2/token",
+        "scopes": [],
+        "authorization_method": "BODY"
+      },
+      "actions": [],
+      "triggers": [],
+      "trigger_count": 9
+    },
+    {
+      "key": "microsoft-excel-365",
+      "connector_key": "microsoft_365",
+      "package": "@activepieces/piece-microsoft-excel-365",
+      "version": "0.8.2",
+      "name": "Microsoft Excel 365",
+      "description": "Spreadsheet software by Microsoft",
+      "icon": "https://cdn.activepieces.com/pieces/microsoft-excel-365.png",
+      "category": "Documents & Productivity",
+      "workspace": "library",
+      "auth": {
+        "type": "custom",
+        "description": "This connector requires an application-specific authentication configuration."
+      },
+      "actions": [
+        {
+          "key": "get_worksheets",
+          "capability": "piece.microsoft_excel_365.get_worksheets",
+          "name": "Get Worksheets",
+          "description": "Retrieve worksheets from a workbook",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "storageSource": {
+                "type": "string",
+                "description": "Excel File Source",
+                "maxLength": 2000,
+                "default": "onedrive"
+              },
+              "siteId": {
+                "type": "string",
+                "description": "Sharepoint Site",
+                "maxLength": 2000
+              },
+              "documentId": {
+                "type": "string",
+                "description": "Sharepoint Document Library",
+                "maxLength": 2000
+              },
+              "workbookId": {
+                "type": "string",
+                "description": "Workbook",
+                "maxLength": 2000
+              },
+              "returnAll": {
+                "type": "boolean",
+                "description": "Return All",
+                "default": false
+              },
+              "limit": {
+                "type": "number",
+                "description": "Limit",
+                "default": 10
+              }
+            },
+            "required": [
+              "workbookId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "get_worksheet_rows",
+          "capability": "piece.microsoft_excel_365.get_worksheet_rows",
+          "name": "Get Worksheet Rows",
+          "description": "Retrieve rows from a worksheet",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "storageSource": {
+                "type": "string",
+                "description": "Excel File Source",
+                "maxLength": 2000,
+                "default": "onedrive"
+              },
+              "siteId": {
+                "type": "string",
+                "description": "Sharepoint Site",
+                "maxLength": 2000
+              },
+              "documentId": {
+                "type": "string",
+                "description": "Sharepoint Document Library",
+                "maxLength": 2000
+              },
+              "workbookId": {
+                "type": "string",
+                "description": "Workbook",
+                "maxLength": 2000
+              },
+              "worksheetId": {
+                "type": "string",
+                "description": "Worksheet",
+                "maxLength": 2000
+              },
+              "range": {
+                "type": "string",
+                "description": "Range",
+                "maxLength": 2000
+              },
+              "headerRow": {
+                "type": "number",
+                "description": "Header Row"
+              },
+              "firstDataRow": {
+                "type": "number",
+                "description": "First Data Row"
+              },
+              "useFilter": {
+                "type": "boolean",
+                "description": "Use Filters ?",
+                "default": false
+              },
+              "filterList": {
+                "type": "string",
+                "description": "Filter",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "workbookId",
+              "worksheetId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "get_workbooks",
+          "capability": "piece.microsoft_excel_365.get_workbooks",
+          "name": "Get Workbooks",
+          "description": "Retrieve a list of workbooks",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "storageSource": {
+                "type": "string",
+                "description": "Excel File Source",
+                "maxLength": 2000,
+                "default": "onedrive"
+              },
+              "siteId": {
+                "type": "string",
+                "description": "Sharepoint Site",
+                "maxLength": 2000
+              },
+              "documentId": {
+                "type": "string",
+                "description": "Sharepoint Document Library",
+                "maxLength": 2000
+              },
+              "limit": {
+                "type": "number",
+                "description": "Limit"
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "get_range",
+          "capability": "piece.microsoft_excel_365.get_range",
+          "name": "Get Cells in Range",
+          "description": "Retrieve the values in a given cell range (e.g., “A1:C10”).",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "storageSource": {
+                "type": "string",
+                "description": "Excel File Source",
+                "maxLength": 2000,
+                "default": "onedrive"
+              },
+              "siteId": {
+                "type": "string",
+                "description": "Sharepoint Site",
+                "maxLength": 2000
+              },
+              "documentId": {
+                "type": "string",
+                "description": "Sharepoint Document Library",
+                "maxLength": 2000
+              },
+              "workbookId": {
+                "type": "string",
+                "description": "Workbook",
+                "maxLength": 2000
+              },
+              "worksheetId": {
+                "type": "string",
+                "description": "Worksheet",
+                "maxLength": 2000
+              },
+              "range": {
+                "type": "string",
+                "description": "Range",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "workbookId",
+              "worksheetId",
+              "range"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 4
+    },
+    {
+      "key": "microsoft-onedrive",
+      "connector_key": "microsoft_365",
+      "package": "@activepieces/piece-microsoft-onedrive",
+      "version": "0.6.1",
+      "name": "Microsoft OneDrive",
+      "description": "Cloud storage by Microsoft",
+      "icon": "https://cdn.activepieces.com/pieces/oneDrive.png",
+      "category": "Files & Cloud Storage",
+      "workspace": "library",
+      "auth": {
+        "type": "custom",
+        "description": "This connector requires an application-specific authentication configuration."
+      },
+      "actions": [
+        {
+          "key": "onedrive_get_item",
+          "capability": "piece.microsoft_onedrive.onedrive_get_item",
+          "name": "Get File or Folder",
+          "description": "Get the metadata of a file or folder by its ID or path.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "itemId": {
+                "type": "string",
+                "description": "Item ID",
+                "maxLength": 2000
+              },
+              "path": {
+                "type": "string",
+                "description": "Path",
+                "maxLength": 2000
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "onedrive_list_drives",
+          "capability": "piece.microsoft_onedrive.onedrive_list_drives",
+          "name": "List My Drives",
+          "description": "List the drives available to the signed-in user.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "pageToken": {
+                "type": "string",
+                "description": "Page Token",
+                "maxLength": 2000
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "onedrive_list_folder_children",
+          "capability": "piece.microsoft_onedrive.onedrive_list_folder_children",
+          "name": "List Folder Contents",
+          "description": "List the files and folders inside a folder, one page at a time.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "folderId": {
+                "type": "string",
+                "description": "Folder ID",
+                "maxLength": 2000
+              },
+              "folderPath": {
+                "type": "string",
+                "description": "Folder Path",
+                "maxLength": 2000
+              },
+              "itemType": {
+                "type": "string",
+                "description": "Item Type",
+                "maxLength": 2000,
+                "default": "all"
+              },
+              "pageSize": {
+                "type": "number",
+                "description": "Page Size"
+              },
+              "pageToken": {
+                "type": "string",
+                "description": "Page Token",
+                "maxLength": 2000
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 1
+    },
+    {
+      "key": "microsoft-outlook",
+      "connector_key": "microsoft_365",
+      "package": "@activepieces/piece-microsoft-outlook",
+      "version": "0.7.2",
+      "name": "Microsoft Outlook",
+      "description": "",
+      "icon": "https://cdn.activepieces.com/pieces/microsoft-outlook.png",
+      "category": "Communications",
+      "workspace": "communications",
+      "auth": {
+        "type": "custom",
+        "description": "This connector requires an application-specific authentication configuration."
+      },
+      "actions": [],
+      "triggers": [],
+      "trigger_count": 3
+    },
+    {
+      "key": "microsoft-outlook-calendar",
+      "connector_key": "microsoft_365",
+      "package": "@activepieces/piece-microsoft-outlook-calendar",
+      "version": "0.3.1",
+      "name": "Microsoft Outlook Calendar",
+      "description": "Calendar software by Microsoft",
+      "icon": "https://cdn.activepieces.com/pieces/microsoft-outlook.png",
+      "category": "Scheduling & Calendars",
+      "workspace": "field",
+      "auth": {
+        "type": "custom",
+        "description": "This connector requires an application-specific authentication configuration."
+      },
+      "actions": [
+        {
+          "key": "list_events",
+          "capability": "piece.microsoft_outlook_calendar.list_events",
+          "name": "List events in a calendar",
+          "description": "List events in a calendar",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "calendarId": {
+                "type": "string",
+                "description": "Calendar",
+                "maxLength": 2000
+              },
+              "filter": {
+                "type": "string",
+                "description": "Filter",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "calendarId"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 0
+    },
+    {
+      "key": "microsoft-teams",
+      "connector_key": "microsoft_365",
+      "package": "@activepieces/piece-microsoft-teams",
+      "version": "0.7.2",
+      "name": "Microsoft Teams",
+      "description": "",
+      "icon": "https://cdn.activepieces.com/pieces/microsoft-teams.png",
+      "category": "Communications",
+      "workspace": "communications",
+      "auth": {
+        "type": "custom",
+        "description": "This connector requires an application-specific authentication configuration."
+      },
+      "actions": [],
+      "triggers": [],
+      "trigger_count": 4
+    },
+    {
+      "key": "notion",
+      "connector_key": "notion",
+      "package": "@activepieces/piece-notion",
+      "version": "0.7.5",
+      "name": "Notion",
+      "description": "The all-in-one workspace",
+      "icon": "https://cdn.activepieces.com/pieces/notion.png",
+      "category": "Documents & Productivity",
+      "workspace": "library",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://api.notion.com/v1/oauth/authorize",
+        "token_url": "https://api.notion.com/v1/oauth/token",
+        "scopes": [],
+        "authorization_method": "HEADER"
+      },
+      "actions": [],
+      "triggers": [],
+      "trigger_count": 4
+    },
+    {
+      "key": "openai",
+      "connector_key": "openai",
+      "package": "@activepieces/piece-openai",
+      "version": "0.12.2",
+      "name": "OpenAI",
+      "description": "Chat, images, audio and embeddings from OpenAI models.",
+      "icon": "https://cdn.activepieces.com/pieces/openai.png",
+      "category": "AI & Agents",
+      "workspace": "ai",
+      "auth": {
+        "type": "api_key",
+        "label": "API Key",
+        "description": "To get your API key:\n\n1. Go to https://platform.openai.com/api-keys\n2. Click **Create new secret key** and copy it.\n\nAdd credit to your OpenAI account first, or every request fails with a 429 quota error.\n",
+        "verifiable": true
+      },
+      "actions": [],
+      "triggers": [],
+      "trigger_count": 0
+    },
+    {
+      "key": "pipedrive",
+      "connector_key": "pipedrive",
+      "package": "@activepieces/piece-pipedrive",
+      "version": "0.10.2",
+      "name": "Pipedrive",
+      "description": "Sales CRM and pipeline management software",
+      "icon": "https://cdn.activepieces.com/pieces/pipedrive.png",
+      "category": "CRM & Sales",
+      "workspace": "crm",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://oauth.pipedrive.com/oauth/authorize",
+        "token_url": "https://oauth.pipedrive.com/oauth/token",
+        "scopes": [
+          "base",
+          "admin",
+          "contacts:full",
+          "users:read",
+          "deals:full",
+          "activities:full",
+          "leads:full",
+          "products:full",
+          "webhooks:full"
+        ],
+        "authorization_method": "BODY"
+      },
+      "actions": [
+        {
+          "key": "get-deal",
+          "capability": "piece.pipedrive.get-deal",
+          "name": "Get Deal",
+          "description": "Retrieves a deal by its ID.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "dealId": {
+                "type": "number",
+                "description": "Deal ID"
+              }
+            },
+            "required": [
+              "dealId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "list-deals",
+          "capability": "piece.pipedrive.list-deals",
+          "name": "List Deals",
+          "description": "Lists one page of deals, optionally filtered.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "ownerId": {
+                "type": "number",
+                "description": "Owner ID"
+              },
+              "personId": {
+                "type": "number",
+                "description": "Person ID"
+              },
+              "organizationId": {
+                "type": "number",
+                "description": "Organization ID"
+              },
+              "pipelineId": {
+                "type": "number",
+                "description": "Pipeline ID"
+              },
+              "stageId": {
+                "type": "number",
+                "description": "Stage ID"
+              },
+              "status": {
+                "type": "string",
+                "description": "Status",
+                "maxLength": 2000
+              },
+              "updatedSince": {
+                "type": "string",
+                "description": "Updated Since",
+                "maxLength": 2000
+              },
+              "updatedUntil": {
+                "type": "string",
+                "description": "Updated Until",
+                "maxLength": 2000
+              },
+              "sortBy": {
+                "type": "string",
+                "description": "Sort By",
+                "maxLength": 2000
+              },
+              "sortDirection": {
+                "type": "string",
+                "description": "Sort Direction",
+                "maxLength": 2000
+              },
+              "limit": {
+                "type": "number",
+                "description": "Limit",
+                "default": 50
+              },
+              "cursor": {
+                "type": "string",
+                "description": "Cursor",
+                "maxLength": 2000
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "get-person",
+          "capability": "piece.pipedrive.get-person",
+          "name": "Get Person",
+          "description": "Retrieves a person by their ID.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "personId": {
+                "type": "number",
+                "description": "Person ID"
+              }
+            },
+            "required": [
+              "personId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "list-persons",
+          "capability": "piece.pipedrive.list-persons",
+          "name": "List Persons",
+          "description": "Lists one page of persons, optionally filtered.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "ownerId": {
+                "type": "number",
+                "description": "Owner ID"
+              },
+              "organizationId": {
+                "type": "number",
+                "description": "Organization ID"
+              },
+              "dealId": {
+                "type": "number",
+                "description": "Deal ID"
+              },
+              "updatedSince": {
+                "type": "string",
+                "description": "Updated Since",
+                "maxLength": 2000
+              },
+              "updatedUntil": {
+                "type": "string",
+                "description": "Updated Until",
+                "maxLength": 2000
+              },
+              "sortBy": {
+                "type": "string",
+                "description": "Sort By",
+                "maxLength": 2000
+              },
+              "sortDirection": {
+                "type": "string",
+                "description": "Sort Direction",
+                "maxLength": 2000
+              },
+              "limit": {
+                "type": "number",
+                "description": "Limit",
+                "default": 50
+              },
+              "cursor": {
+                "type": "string",
+                "description": "Cursor",
+                "maxLength": 2000
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 14
+    },
+    {
+      "key": "quickbooks",
+      "connector_key": "quickbooks",
+      "package": "@activepieces/piece-quickbooks",
+      "version": "0.3.3",
+      "name": "Quickbooks Online",
+      "description": "",
+      "icon": "https://cdn.activepieces.com/pieces/quickbooks.png",
+      "category": "Accounting & Finance",
+      "workspace": "finance",
+      "auth": {
+        "type": "custom",
+        "description": "This connector requires an application-specific authentication configuration."
+      },
+      "actions": [
+        {
+          "key": "find_invoice",
+          "capability": "piece.quickbooks.find_invoice",
+          "name": "Find Invoice",
+          "description": "Search for an invoice by its number in QuickBooks.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "invoice_number": {
+                "type": "string",
+                "description": "Invoice Number",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "invoice_number"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "find_customer",
+          "capability": "piece.quickbooks.find_customer",
+          "name": "Find Customer",
+          "description": "Search for a customer by display name in QuickBooks.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "search_term": {
+                "type": "string",
+                "description": "Customer Name",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "search_term"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 8
+    },
+    {
+      "key": "salesforce",
+      "connector_key": "salesforce",
+      "package": "@activepieces/piece-salesforce",
+      "version": "0.9.3",
+      "name": "Salesforce",
+      "description": "CRM software solutions and enterprise cloud computing",
+      "icon": "https://cdn.activepieces.com/pieces/salesforce.png",
+      "category": "CRM & Sales",
+      "workspace": "crm",
+      "auth": {
+        "type": "custom",
+        "description": "This connector requires an application-specific authentication configuration."
+      },
+      "actions": [
+        {
+          "key": "find_record",
+          "capability": "piece.salesforce.find_record",
+          "name": "Find Record",
+          "description": "Finds a record by a field value.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "object": {
+                "type": "string",
+                "description": "Object",
+                "maxLength": 2000
+              },
+              "field": {
+                "type": "string",
+                "description": "Field",
+                "maxLength": 2000
+              },
+              "search_value": {
+                "type": "string",
+                "description": "Search Value",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "object",
+              "field",
+              "search_value"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "run_query",
+          "capability": "piece.salesforce.run_query",
+          "name": "Run Query (Advanced)",
+          "description": "Run a salesforce query",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "Query",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "query"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 9
+    },
+    {
+      "key": "shopify",
+      "connector_key": "shopify",
+      "package": "@activepieces/piece-shopify",
+      "version": "0.9.1",
+      "name": "Shopify",
+      "description": "Ecommerce platform for online stores",
+      "icon": "https://cdn.activepieces.com/pieces/shopify.png",
+      "category": "Commerce",
+      "workspace": "finance",
+      "auth": {
+        "type": "custom",
+        "description": "This connector requires an application-specific authentication configuration."
+      },
+      "actions": [
+        {
+          "key": "get_customer",
+          "capability": "piece.shopify.get_customer",
+          "name": "Get Customer",
+          "description": "Get an existing customer's information.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "customerId": {
+                "type": "string",
+                "description": "Customer ID",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "customerId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "get_customers",
+          "capability": "piece.shopify.get_customers",
+          "name": "Get Customers",
+          "description": "Get an existing customers.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "get_order",
+          "capability": "piece.shopify.get_order",
+          "name": "Get Order",
+          "description": "Get one order with its totals, addresses and line items.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "order_id": {
+                "type": "string",
+                "description": "Order ID",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "order_id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "get_shop",
+          "capability": "piece.shopify.get_shop",
+          "name": "Get Shop",
+          "description": "Get the store name, domain, currency, timezone and plan.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "search_orders",
+          "capability": "piece.shopify.search_orders",
+          "name": "Search Orders",
+          "description": "Search orders with Shopify search syntax, one page at a time.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "Search Query",
+                "maxLength": 2000
+              },
+              "sort_key": {
+                "type": "string",
+                "description": "Sort By",
+                "maxLength": 2000
+              },
+              "reverse": {
+                "type": "boolean",
+                "description": "Reverse Order",
+                "default": false
+              },
+              "first": {
+                "type": "number",
+                "description": "Page Size",
+                "default": 40
+              },
+              "after": {
+                "type": "string",
+                "description": "Cursor",
+                "maxLength": 2000
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 6
+    },
+    {
+      "key": "slack",
+      "connector_key": "slack",
+      "package": "@activepieces/piece-slack",
+      "version": "0.21.1",
+      "name": "Slack",
+      "description": "Channel-based messaging platform",
+      "icon": "https://cdn.activepieces.com/pieces/slack.png",
+      "category": "Communications",
+      "workspace": "communications",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://slack.com/oauth/v2/authorize?user_scope=search:read,users.profile:write,reactions:read,reactions:write,im:history,stars:read,channels:write,groups:write,im:write,mpim:write,channels:write.invites,groups:write.invites,channels:history,groups:history,chat:write,users:read,usergroups:write",
+        "token_url": "https://slack.com/api/oauth.v2.access",
+        "scopes": [
+          "channels:read",
+          "channels:manage",
+          "channels:history",
+          "chat:write",
+          "groups:read",
+          "groups:write",
+          "groups:history",
+          "reactions:read",
+          "mpim:read",
+          "mpim:write",
+          "mpim:history",
+          "im:write",
+          "im:read",
+          "im:history",
+          "users:read",
+          "files:write",
+          "files:read",
+          "users:read.email",
+          "reactions:write",
+          "usergroups:read",
+          "usergroups:write",
+          "chat:write.customize",
+          "links:read",
+          "links:write",
+          "emoji:read",
+          "users.profile:read",
+          "channels:write.invites",
+          "groups:write.invites",
+          "channels:join",
+          "conversations.connect:write"
+        ],
+        "authorization_method": "BODY"
+      },
+      "actions": [],
+      "triggers": [],
+      "trigger_count": 14
+    },
+    {
+      "key": "square",
+      "connector_key": "square",
+      "package": "@activepieces/piece-square",
+      "version": "1.0.1",
+      "name": "Square",
+      "description": "Payment solutions for every business",
+      "icon": "https://cdn.activepieces.com/pieces/square.png",
+      "category": "Payments",
+      "workspace": "finance",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://connect.squareup.com/oauth2/authorize",
+        "token_url": "https://connect.squareup.com/oauth2/token",
+        "scopes": [
+          "MERCHANT_PROFILE_READ",
+          "CUSTOMERS_READ",
+          "CUSTOMERS_WRITE",
+          "ITEMS_READ",
+          "ITEMS_WRITE",
+          "ORDERS_READ",
+          "ORDERS_WRITE",
+          "PAYMENTS_READ",
+          "PAYMENTS_WRITE",
+          "INVENTORY_READ",
+          "INVENTORY_WRITE",
+          "EMPLOYEES_READ"
+        ],
+        "authorization_method": "BODY"
+      },
+      "actions": [
+        {
+          "key": "get_merchant",
+          "capability": "piece.square.get_merchant",
+          "name": "Get Business Profile",
+          "description": "Gets the connected Square business: name, country, currency and main location.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "list_payments",
+          "capability": "piece.square.list_payments",
+          "name": "List Payments",
+          "description": "Lists payments in a time range, newest first.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "location_id": {
+                "type": "string",
+                "description": "Location ID",
+                "maxLength": 2000
+              },
+              "begin_time": {
+                "type": "string",
+                "description": "Created After",
+                "maxLength": 2000
+              },
+              "end_time": {
+                "type": "string",
+                "description": "Created Before",
+                "maxLength": 2000
+              },
+              "limit": {
+                "type": "number",
+                "description": "Limit",
+                "default": 50
+              },
+              "cursor": {
+                "type": "string",
+                "description": "Cursor",
+                "maxLength": 2000
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 5
+    },
+    {
+      "key": "stripe",
+      "connector_key": "stripe",
+      "package": "@activepieces/piece-stripe",
+      "version": "0.8.1",
+      "name": "Stripe",
+      "description": "Online payment processing for internet businesses",
+      "icon": "https://cdn.activepieces.com/pieces/stripe.png",
+      "category": "Payments",
+      "workspace": "finance",
+      "auth": {
+        "type": "api_key",
+        "label": "Secret API Key",
+        "description": "Paste a secret key (sk_live_ or sk_test_) or a restricted key (rk_).\n\n1. In the Stripe Dashboard, open Developers > API keys.\n2. Copy the Secret key, or create a restricted key.\n3. A restricted key needs read access to Customers to connect, and access to everything your flows use.\n4. Paste it here.",
+        "verifiable": true
+      },
+      "actions": [
+        {
+          "key": "get_customer",
+          "capability": "piece.stripe.get_customer",
+          "name": "Get Customer (Agent)",
+          "description": "Retrieve a Stripe customer by its ID.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Customer ID",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "get_invoice",
+          "capability": "piece.stripe.get_invoice",
+          "name": "Get Invoice (Agent)",
+          "description": "Retrieve a Stripe invoice by its ID.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "invoice_id": {
+                "type": "string",
+                "description": "Invoice ID",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "invoice_id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "list_customers",
+          "capability": "piece.stripe.list_customers",
+          "name": "List Customers (Agent)",
+          "description": "List Stripe customers, optionally filtered by email.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "description": "Email",
+                "maxLength": 2000
+              },
+              "limit": {
+                "type": "number",
+                "description": "Limit"
+              },
+              "starting_after": {
+                "type": "string",
+                "description": "Starting After",
+                "maxLength": 2000
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "list_payment_intents",
+          "capability": "piece.stripe.list_payment_intents",
+          "name": "List Payment Intents (Agent)",
+          "description": "List Stripe PaymentIntents.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "customer": {
+                "type": "string",
+                "description": "Customer ID",
+                "maxLength": 2000
+              },
+              "created_after": {
+                "type": "string",
+                "description": "Created After",
+                "maxLength": 2000
+              },
+              "created_before": {
+                "type": "string",
+                "description": "Created Before",
+                "maxLength": 2000
+              },
+              "limit": {
+                "type": "number",
+                "description": "Limit"
+              },
+              "starting_after": {
+                "type": "string",
+                "description": "Starting After",
+                "maxLength": 2000
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "list_charges",
+          "capability": "piece.stripe.list_charges",
+          "name": "List Charges (Agent)",
+          "description": "List Stripe charges.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "customer": {
+                "type": "string",
+                "description": "Customer ID",
+                "maxLength": 2000
+              },
+              "payment_intent": {
+                "type": "string",
+                "description": "Payment Intent ID",
+                "maxLength": 2000
+              },
+              "created_after": {
+                "type": "string",
+                "description": "Created After",
+                "maxLength": 2000
+              },
+              "created_before": {
+                "type": "string",
+                "description": "Created Before",
+                "maxLength": 2000
+              },
+              "limit": {
+                "type": "number",
+                "description": "Limit"
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "list_invoices",
+          "capability": "piece.stripe.list_invoices",
+          "name": "List Invoices (Agent)",
+          "description": "List Stripe invoices.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "customer": {
+                "type": "string",
+                "description": "Customer ID",
+                "maxLength": 2000
+              },
+              "status": {
+                "type": "string",
+                "description": "Status",
+                "maxLength": 2000
+              },
+              "subscription": {
+                "type": "string",
+                "description": "Subscription ID",
+                "maxLength": 2000
+              },
+              "limit": {
+                "type": "number",
+                "description": "Limit"
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "list_payouts",
+          "capability": "piece.stripe.list_payouts",
+          "name": "List Payouts (Agent)",
+          "description": "List payouts to the bank account.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "description": "Status",
+                "maxLength": 2000
+              },
+              "arrival_date_after": {
+                "type": "string",
+                "description": "Arrival Date After",
+                "maxLength": 2000
+              },
+              "arrival_date_before": {
+                "type": "string",
+                "description": "Arrival Date Before",
+                "maxLength": 2000
+              },
+              "limit": {
+                "type": "number",
+                "description": "Limit"
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 13
+    },
+    {
+      "key": "telegram-bot",
+      "connector_key": "telegram_bot",
+      "package": "@activepieces/piece-telegram-bot",
+      "version": "0.8.1",
+      "name": "Telegram Bot",
+      "description": "Build chatbots for Telegram",
+      "icon": "https://cdn.activepieces.com/pieces/telegram_bot.png",
+      "category": "Communications",
+      "workspace": "communications",
+      "auth": {
+        "type": "api_key",
+        "label": "Bot Token",
+        "description": "\n**Authentication**:\n\n1. Begin a conversation with the [Botfather](https://telegram.me/BotFather).\n2. Type in \"/newbot\"\n3. Choose a name for your bot\n4. Choose a username for your bot.\n5. Copy the token BotFather sends and paste it here.\n",
+        "verifiable": false
+      },
+      "actions": [],
+      "triggers": [],
+      "trigger_count": 1
+    },
+    {
+      "key": "trello",
+      "connector_key": "trello",
+      "package": "@activepieces/piece-trello",
+      "version": "0.7.1",
+      "name": "Trello",
+      "description": "Project management tool for teams",
+      "icon": "https://cdn.activepieces.com/pieces/trello.png",
+      "category": "Project Management",
+      "workspace": "automations",
+      "auth": {
+        "type": "custom",
+        "description": "This connector requires an application-specific authentication configuration."
+      },
+      "actions": [
+        {
+          "key": "get_card",
+          "capability": "piece.trello.get_card",
+          "name": "Get Card",
+          "description": "Gets a card by ID.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "cardId": {
+                "type": "string",
+                "description": "Card ID",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "cardId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "get_board",
+          "capability": "piece.trello.get_board",
+          "name": "Get Board (Agent)",
+          "description": "Get the details of a Trello board by ID.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "board_id": {
+                "type": "string",
+                "description": "Board ID",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "board_id"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 3
+    },
+    {
+      "key": "woocommerce",
+      "connector_key": "woocommerce",
+      "package": "@activepieces/piece-woocommerce",
+      "version": "0.4.1",
+      "name": "WooCommerce",
+      "description": "E-commerce platform built on WordPress",
+      "icon": "https://cdn.activepieces.com/pieces/woocommerce.png",
+      "category": "Commerce",
+      "workspace": "finance",
+      "auth": {
+        "type": "custom",
+        "description": "This connector requires an application-specific authentication configuration."
+      },
+      "actions": [
+        {
+          "key": "list_customers",
+          "capability": "piece.woocommerce.list_customers",
+          "name": "List Customers",
+          "description": "List customers, filtered by email, text or role.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "description": "Email",
+                "maxLength": 2000
+              },
+              "search": {
+                "type": "string",
+                "description": "Search",
+                "maxLength": 2000
+              },
+              "role": {
+                "type": "string",
+                "description": "Role",
+                "maxLength": 2000,
+                "default": "all"
+              },
+              "orderby": {
+                "type": "string",
+                "description": "Sort By",
+                "maxLength": 2000
+              },
+              "order": {
+                "type": "string",
+                "description": "Sort Direction",
+                "maxLength": 2000
+              },
+              "page": {
+                "type": "number",
+                "description": "Page",
+                "default": 1
+              },
+              "per_page": {
+                "type": "number",
+                "description": "Per Page",
+                "default": 10
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "list_orders",
+          "capability": "piece.woocommerce.list_orders",
+          "name": "List Orders",
+          "description": "List orders, filtered by status, customer, product, text or date range.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "description": "Status",
+                "maxLength": 2000
+              },
+              "customer_id": {
+                "type": "number",
+                "description": "Customer ID"
+              },
+              "product_id": {
+                "type": "number",
+                "description": "Product ID"
+              },
+              "search": {
+                "type": "string",
+                "description": "Search",
+                "maxLength": 2000
+              },
+              "after": {
+                "type": "string",
+                "description": "Created After",
+                "maxLength": 2000
+              },
+              "before": {
+                "type": "string",
+                "description": "Created Before",
+                "maxLength": 2000
+              },
+              "orderby": {
+                "type": "string",
+                "description": "Sort By",
+                "maxLength": 2000
+              },
+              "order": {
+                "type": "string",
+                "description": "Sort Direction",
+                "maxLength": 2000
+              },
+              "page": {
+                "type": "number",
+                "description": "Page",
+                "default": 1
+              },
+              "per_page": {
+                "type": "number",
+                "description": "Per Page",
+                "default": 10
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 12
+    },
+    {
+      "key": "wordpress",
+      "connector_key": "wordpress",
+      "package": "@activepieces/piece-wordpress",
+      "version": "0.7.1",
+      "name": "WordPress",
+      "description": "Open-source website creation software",
+      "icon": "https://cdn.activepieces.com/pieces/wordpress.png",
+      "category": "Website & Content Management",
+      "workspace": "studio",
+      "auth": {
+        "type": "custom",
+        "description": "This connector requires an application-specific authentication configuration."
+      },
+      "actions": [],
+      "triggers": [],
+      "trigger_count": 1
+    },
+    {
+      "key": "xero",
+      "connector_key": "xero",
+      "package": "@activepieces/piece-xero",
+      "version": "0.8.1",
+      "name": "Xero",
+      "description": "Beautiful accounting software",
+      "icon": "https://cdn.activepieces.com/pieces/xero.png",
+      "category": "Accounting & Finance",
+      "workspace": "finance",
+      "auth": {
+        "type": "oauth2",
+        "authorize_url": "https://login.xero.com/identity/connect/authorize",
+        "token_url": "https://identity.xero.com/connect/token",
+        "scopes": [
+          "openid",
+          "profile",
+          "email",
+          "offline_access",
+          "accounting.contacts",
+          "accounting.invoices",
+          "accounting.payments",
+          "accounting.banktransactions",
+          "accounting.manualjournals",
+          "accounting.reports.aged.read",
+          "accounting.reports.balancesheet.read",
+          "accounting.reports.banksummary.read",
+          "accounting.reports.executivesummary.read",
+          "accounting.reports.profitandloss.read",
+          "accounting.reports.taxreports.read",
+          "accounting.reports.trialbalance.read",
+          "accounting.budgets.read",
+          "accounting.attachments",
+          "accounting.settings",
+          "projects"
+        ],
+        "authorization_method": "BODY"
+      },
+      "actions": [
+        {
+          "key": "xero_find_contact",
+          "capability": "piece.xero.xero_find_contact",
+          "name": "Find Contact",
+          "description": "Finds a contact by name or account number (or SearchTerm).",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "tenant_id": {
+                "type": "string",
+                "description": "Organization",
+                "maxLength": 2000
+              },
+              "search_by": {
+                "type": "string",
+                "description": "Search By",
+                "maxLength": 2000,
+                "default": "NAME"
+              },
+              "value": {
+                "type": "string",
+                "description": "Value",
+                "maxLength": 2000
+              },
+              "include_archived": {
+                "type": "boolean",
+                "description": "Include Archived",
+                "default": false
+              },
+              "summary_only": {
+                "type": "boolean",
+                "description": "Summary Only (faster, lighter)",
+                "default": true
+              },
+              "page": {
+                "type": "number",
+                "description": "Page"
+              }
+            },
+            "required": [
+              "tenant_id",
+              "value"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "xero_find_invoice",
+          "capability": "piece.xero.xero_find_invoice",
+          "name": "Find Invoice",
+          "description": "Finds an invoice by number or reference.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "tenant_id": {
+                "type": "string",
+                "description": "Organization",
+                "maxLength": 2000
+              },
+              "search_by": {
+                "type": "string",
+                "description": "Search By",
+                "maxLength": 2000,
+                "default": "INVOICE_NUMBER"
+              },
+              "value": {
+                "type": "string",
+                "description": "Value",
+                "maxLength": 2000
+              },
+              "type_filter": {
+                "type": "string",
+                "description": "Type Filter",
+                "maxLength": 2000
+              },
+              "summary_only": {
+                "type": "boolean",
+                "description": "Summary Only (faster, lighter)",
+                "default": true
+              },
+              "page": {
+                "type": "number",
+                "description": "Page"
+              }
+            },
+            "required": [
+              "tenant_id",
+              "value"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "xero_list_organisations",
+          "capability": "piece.xero.xero_list_organisations",
+          "name": "List Organisations",
+          "description": "Lists the Xero organisations this connection can access.",
+          "classification": "SEARCH",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "key": "xero_get_invoice",
+          "capability": "piece.xero.xero_get_invoice",
+          "name": "Get Invoice",
+          "description": "Gets one invoice or bill by its ID or invoice number, including line items.",
+          "classification": "READ",
+          "executable": true,
+          "inputs": {
+            "type": "object",
+            "properties": {
+              "tenant_id": {
+                "type": "string",
+                "description": "Organization",
+                "maxLength": 2000
+              },
+              "invoice_id": {
+                "type": "string",
+                "description": "Invoice ID or Number",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "tenant_id",
+              "invoice_id"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "triggers": [],
+      "trigger_count": 13
+    },
+    {
+      "key": "zendesk",
+      "connector_key": "zendesk",
+      "package": "@activepieces/piece-zendesk",
+      "version": "0.5.1",
+      "name": "Zendesk",
+      "description": "Customer service software and support ticket system",
+      "icon": "https://cdn.activepieces.com/pieces/zendesk.png",
+      "category": "Customer Support",
+      "workspace": "support",
+      "auth": {
+        "type": "custom",
+        "description": "This connector requires an application-specific authentication configuration."
+      },
+      "actions": [],
+      "triggers": [],
+      "trigger_count": 10
+    }
+  ]
+}

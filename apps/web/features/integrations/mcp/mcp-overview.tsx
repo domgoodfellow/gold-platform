@@ -121,7 +121,7 @@ export function McpOverview({
                 header: 'Who',
                 emphasis: 'primary',
                 cell: (execution) =>
-                  execution.principalKind === 'assistant' ? (agentName.get(execution.principalId) ?? 'An agent') : 'An automation',
+                  execution.principalKind === 'assistant' ? (agentName.get(execution.principalId) ?? 'An agent') : execution.principalKind==='member'?'An organization member':'An automation',
               },
               {
                 key: 'what',

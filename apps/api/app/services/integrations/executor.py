@@ -134,6 +134,9 @@ class ToolOutcome:
 
 
 def _capability(connector_key: str, key: str | None) -> Capability | None:
+    if str(key or '').startswith('piece.'):
+        from app.connectors.library import capabilities_for
+        return next((c for c in capabilities_for(connector_key) if c.key==key),None)
     provider = oauth_provider_for(connector_key)
     if provider is None:
         return None
@@ -292,7 +295,7 @@ def _run(settings: IntegrationSettings, execution_id: str, target: dict, argumen
             if data.get("is_error"):
                 return _finish(settings, execution_id, deliver, ToolOutcome("failed", execution_id, "tool_error", "The tool reported an error.", _redact(data, secrets)))
         else:
-            data = _run_native(settings, target, arguments, secrets)
+            data = _run_native(settings, target, arguments, secrets, execution_id=execution_id)
     except CapabilityInputError as failure:
         return _finish(settings, execution_id, deliver, ToolOutcome("failed", execution_id, "invalid_input", str(failure)))
     except UnsupportedCapability:
@@ -323,7 +326,7 @@ class _Disabled(RuntimeError):
     pass
 
 
-def _run_native(settings: IntegrationSettings, target: dict, arguments: dict, secrets: list[str]) -> dict:
+def _run_native(settings: IntegrationSettings, target: dict, arguments: dict, secrets: list[str], *, execution_id: str | None = None) -> dict:
     connector_key = str(target.get("connector_key") or "")
     capability = _capability(connector_key, target.get("capability_key"))
     if capability is None or capability.writes:
@@ -331,6 +334,14 @@ def _run_native(settings: IntegrationSettings, target: dict, arguments: dict, se
     found = schema.problems(capability.input_schema(), arguments)
     if found:
         raise CapabilityInputError("; ".join(found))
+
+    if capability.key.startswith('piece.'):
+        from app.connectors.library import call_worker
+        from app.services.integrations.library_operations import prepare
+        prepare(settings,str(target['connection_id']),connector_key)
+        job = db._integration_rpc(settings,'queue_granted_integration_library_read',{
+            'p_execution_id':execution_id,'p_arguments':arguments})
+        return call_worker({'job_id':job})['data']
 
     provider, app = oauth_provider_for(connector_key), oauth_app_for(connector_key)
     if provider is None or app is None:

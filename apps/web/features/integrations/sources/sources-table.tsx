@@ -1,6 +1,7 @@
 import { ButtonLink } from '@/components/controls/button';
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
+import Link from 'next/link';
 import type { IntegrationResource } from '@/lib/domain/integrations/resources';
 
 /**
@@ -24,7 +25,7 @@ export function SourcesTable({
       rowKey={(resource) => resource.id}
       empty="No data sources yet. Connect an app or upload a file to add one."
       columns={[
-        { key: 'name', header: 'Resource', emphasis: 'primary', cell: (r) => r.displayName },
+        { key: 'name', header: 'Resource', emphasis: 'primary', cell: (r) => <Link className="underline underline-offset-4" href={`/organizations/${organizationId}/integrations/sources/${r.id}`}>{r.displayName}</Link> },
         { key: 'type', header: 'Type', cell: (r) => r.resourceType.replace(/_/g, ' ') },
         { key: 'connection', header: 'From', cell: (r) => (r.connectionId ? (connectionLabel.get(r.connectionId) ?? '—') : 'Uploaded file') },
         {
@@ -36,11 +37,11 @@ export function SourcesTable({
           key: 'actions',
           header: 'Import',
           emphasis: 'secondary',
-          cell: (r) => (
+          cell: (r) => ['file_upload','google_sheet','microsoft_workbook'].includes(r.resourceType) ? (
             <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new?resourceId=${r.id}`} tone="text" size="small">
               Import →
             </ButtonLink>
-          ),
+          ) : null,
         },
       ]}
     />

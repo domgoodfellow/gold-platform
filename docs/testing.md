@@ -2,6 +2,12 @@
 
 ## Purpose
 
+### Imported connector checks
+
+`node-contract` runs `apps/api/library/runtime.test.mjs` in the fast tier and is included by `pnpm test:contract`. The API package's `check` runs metadata drift checks and these runtime tests. They verify signed request integrity, expiry, reviewed reads, connector matching, input refusal and secret redaction without contacting a vendor.
+
+`test_resource_sync.py` checks provider paging, deletion markers, stable keys and Graph cursor egress offline. `integration-library-sync.test.ts` checks live local Postgres tenant isolation, machine-only admission, synchronization leases and snapshot reconciliation. These checks do not prove a live OAuth flow, source synchronization, accounting connection or deployment configuration. Authorized vendor sandbox accounts are required for that acceptance evidence.
+
 This document defines the **canonical testing and verification strategy for GildOps**.
 
 It answers:

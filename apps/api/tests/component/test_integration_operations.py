@@ -62,9 +62,9 @@ VENDORS = {
         "account": {"email": "owner@example.test"},
         "resources": {
             "https://www.googleapis.com/calendar/v3/users/me/calendarList": {"items": [{"id": "cal-1", "summary": "Team", "primary": True}]},
-            "https://www.googleapis.com/drive/v3/files": {"files": [{"id": "sheet-1", "name": "Leads"}]},
+            "https://www.googleapis.com/drive/v3/files": {"files": [{"id": "sheet-1", "name": "Leads", "mimeType": "application/vnd.google-apps.spreadsheet"}]},
         },
-        "types": {"google_calendar", "google_sheet"},
+        "types": {"google_calendar", "google_sheet", "google_drive_folder"},
         "revokes": True,
     },
     "microsoft_365": {
@@ -74,10 +74,11 @@ VENDORS = {
         "account_url": "https://graph.microsoft.com/v1.0/me",
         "account": {"userPrincipalName": "owner@example.test"},
         "resources": {
+            "https://graph.microsoft.com/v1.0/me/drive/root": {"id":"drive-root","name":"OneDrive"},
             "https://graph.microsoft.com/v1.0/me/calendars": {"value": [{"id": "cal-1", "name": "Calendar", "isDefaultCalendar": True}]},
-            "https://graph.microsoft.com/v1.0/me/drive/root/search(q='.xlsx')": {"value": [{"id": "wb-1", "name": "Leads.xlsx"}]},
+            "https://graph.microsoft.com/v1.0/me/drive/root/search(q='')": {"value": [{"id": "wb-1", "name": "Leads.xlsx"}]},
         },
-        "types": {"microsoft_calendar", "microsoft_workbook"},
+        "types": {"microsoft_calendar", "microsoft_workbook", "microsoft_drive_folder"},
         "revokes": False,
     },
 }

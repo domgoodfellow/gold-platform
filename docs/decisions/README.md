@@ -133,6 +133,7 @@ It is not a duplicate specification.
 | ADR-038 | Platform provider credentials are private control-plane state | [`ADR-038-provider-credentials.md`](ADR-038-provider-credentials.md) |
 | ADR-039 | Setup is a lifecycle over canonical configuration | [`ADR-039-setup-lifecycle.md`](ADR-039-setup-lifecycle.md) |
 | ADR-040 | Opportunities close independently of Customer relationships | [`ADR-040-independent-opportunities.md`](ADR-040-independent-opportunities.md) |
+| ADR-041 | Import open-source connector packages | [`ADR-041-imported-open-source-connectors.md`](ADR-041-imported-open-source-connectors.md) |
 
 ---
 

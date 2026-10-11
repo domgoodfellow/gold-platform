@@ -30,6 +30,24 @@ Implementation status belongs in `docs/roadmap.md`.
 
 ## Core principle
 
+### Imported application library
+
+GildOps imports pinned Activepieces community npm packages without an Activepieces account or hosted integration service (ADR-041). The installed catalogue currently contains 36 products and 64 reviewed read/search actions. Google and Microsoft products share their respective canonical connections. Metadata comes from the installed packages, including names, icons, schemas and authentication declarations; the web uses a generated projection and the API exposes authenticated, filtered, paginated discovery at `/integrations/library`.
+
+The customer App Library supports search, category, workspace, connected-account filtering and pagination. Catalogue visibility is independent of deployment readiness. Connect is offered only when the runtime and supported authentication are configured. Custom authentication and unreviewed actions remain blocked. Native and MCP connection authorities are preserved.
+
+API keys are verified against the vendor before storage in Supabase Vault. Supported OAuth uses the existing signed-state connection lifecycle and credential refresh. Imported read operations pass through canonical capability permissions and execution auditing; assistants and automations require existing grants. Neither action outputs nor catalogue metadata expose credentials. Imported triggers are discovered but are not subscribed or executed.
+
+### Resource synchronization
+
+The Resource Library retains `integration_resources` as the source-selection authority. `integration_resource_syncs` stores configuration, scheduling, source cursors and short leases. `integration_resource_records` stores tenant-scoped metadata or rows keyed by stable source identifiers. Only the integration machine role writes synchronization results; tenant RLS also checks the relevant workspace permission for record reads. Cursor and lease columns are unavailable to tenant sessions.
+
+Google Drive and Calendar use change/sync tokens; OneDrive and Microsoft Calendar use Graph delta links. Initial discovery follows bounded pagination and fails rather than replacing selections with an incomplete result. Drive synchronization stores file metadata; calendar synchronization stores event metadata. Sheets and Excel reconcile a selected range of at most 500 data rows, using its first row as headers and a configured unique key column. Missing keys and duplicate keys fail the page. Snapshot completion tombstones removed rows; incremental feeds apply source deletion markers. Unchanged rows retain their source update time.
+
+`resource_sync` configures or manually runs a selected resource. `/tasks/integration-sync` reconciles due selections every 15 minutes under `CRON_SECRET`; concurrent claims are refused and parameter changes are blocked during a live lease. Failures retain the cursor and expose a bounded error. A provider HTTP 410 starts a new snapshot with a fresh generation before reconciling removals. Source webhooks are not implemented.
+
+Completed worksheet snapshots feed the existing customer import mapping, preview, staging and commit flow; no CRM data is written by synchronization itself. Library Sources consumes the same canonical resource list. Ledger, booking and document ingestion are not automatic. Calendar write-back, file-byte import, worksheet export, accounting writes and subscribed event triggers require additional reviewed contracts and live acceptance tests.
+
 External systems are dependencies, not owners of the GildOps domain model.
 
 Use:

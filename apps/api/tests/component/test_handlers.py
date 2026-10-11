@@ -31,6 +31,8 @@ import api.ai_draft_configuration as ai_draft_configuration
 import api.automation_tick as automation_tick
 import api.crm_change_customer_stage as crm_change_customer_stage
 import api.integration_operations as integration_operations
+import api.app_library as app_library
+import api.integration_sync_tick as integration_sync_tick
 import api.invitation_email as invitation_email
 import api.invitation_email_webhook as invitation_email_webhook
 import api.organization_domains as organization_domains
@@ -62,6 +64,29 @@ SETTINGS = SimpleNamespace(
     signing_secret="whsec_platform",
     cron_secret="the-cron-secret",
 )
+
+
+def test_application_discovery_requires_a_caller_before_reading_metadata(monkeypatch):
+    sink=Sink()
+    monkeypatch.setattr(app_library,'catalogue',sink)
+    status,_=call(app_library,'POST',body=b'{}')
+    assert status==401 and sink.calls==[]
+
+
+def test_application_discovery_filters_real_imported_metadata(monkeypatch):
+    monkeypatch.setattr(app_library,'require_caller',lambda *args,**kwargs:SimpleNamespace())
+    status,body=call(app_library,'POST',body=b'{"q":"stripe"}')
+    assert status==200
+    answer=json.loads(body)
+    assert answer['total']==1 and answer['applications'][0]['package']=='@activepieces/piece-stripe'
+
+
+def test_resource_cron_requires_its_secret_before_database_access(monkeypatch):
+    monkeypatch.setenv('CRON_SECRET','private-cron-secret')
+    sink=Sink()
+    monkeypatch.setattr(integration_sync_tick.db,'_integration_rpc',sink)
+    status,_=call(integration_sync_tick,'GET',headers={'authorization':'Bearer incorrect'})
+    assert status==401 and sink.calls==[]
 
 
 def call(module, method: str, *, path: str = "/x", headers: dict[str, str] | None = None, body: bytes = b""):

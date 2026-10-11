@@ -63,6 +63,8 @@ def _routes() -> dict[str, type[BaseHTTPRequestHandler]]:
     found: dict[str, type[BaseHTTPRequestHandler]] = {}
     for rewrite in config.get("rewrites", []):
         module = rewrite["destination"].strip("/").replace("/", ".")
+        if (ROOT / (module.replace('.', '/') + '.mjs')).exists():
+            continue
         found[rewrite["source"]] = importlib.import_module(module).handler
 
     return found

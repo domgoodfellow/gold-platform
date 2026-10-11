@@ -34,6 +34,13 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Imported application library and resource synchronization — 2026-10-11
+
+- Connections now shows searchable, filtered application metadata from 36 imported open-source connector packages, with 64 reviewed reads and explicit deployment/authentication blockers. No integration-service account is required.
+- API-key verification, Vault storage, single-use read jobs and existing agent/automation grants share the canonical connection and execution authorities.
+- Selected Google/Microsoft folders, calendars and worksheets support persistent reconciliation, cursor recovery, synchronization controls and record previews. Completed worksheet snapshots feed the existing customer mapping/import flow; Library Sources uses the canonical resource list.
+- Live vendor acceptance remains unverified without configured deployment secrets and authorized test accounts. Custom authentication, subscribed triggers, financial writes, calendar write-back, file-byte import and worksheet export remain unavailable.
+
 ### Connected tools: the asker's rights, approvals that finish, automations — 2026-10-11
 
 - A native connected-app read now needs two things: the agent's grant and the asking member's own permission for that kind of data, so the agent cannot read more than its asker could. Approving a waiting request checks everything again at that moment, including the agent's reading limit and the requester's permission.

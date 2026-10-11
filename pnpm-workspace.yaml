@@ -1,7 +1,8 @@
 packages:
   # Named, not globbed: apps/ means "a deployable this repo ships" (D3), and apps/api is
-  # Python -- pnpm must not try to manage it. A new pnpm package adds itself here by name.
+  # apps/api combines Python handlers with the imported Node connector runtime.
   - "apps/web"
+  - "apps/api"
   # Each one exists because it now has a real, immediate consumer inside apps/web -- not ahead
   # of one. See constraints.md's "Decided, not yet built" table: a direct instruction to build
   # is itself a trigger, and each of these four is genuinely used starting in the same change
@@ -23,3 +24,6 @@ allowBuilds:
   esbuild: true
   sharp: false
   unrs-resolver: false
+
+minimumReleaseAgeExclude:
+  - '@activepieces/piece-asana@0.7.2'

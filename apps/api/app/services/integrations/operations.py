@@ -224,7 +224,9 @@ def capabilities(settings: IntegrationSettings, caller: CallerContext, arguments
     listed = []
     for key in _keys_asked(arguments):
         provider = oauth_provider_for(key)
-        if provider is not None:
+        from app.connectors.library import capabilities_for
+        available = (*(provider.capabilities if provider else ()), *capabilities_for(key))
+        if available:
             listed.append(
                 {
                     "connector_key": key,
@@ -237,7 +239,7 @@ def capabilities(settings: IntegrationSettings, caller: CallerContext, arguments
                             "inputs": c.input_schema(),
                             "resource_type": c.resource_type,
                         }
-                        for c in provider.capabilities
+                        for c in available
                     ],
                 }
             )
@@ -251,6 +253,9 @@ def invoke(settings: IntegrationSettings, caller: CallerContext, arguments: dict
     one that writes is refused here until a grant model exists to authorize it. It never records a
     connection as healthy: a call that worked proves one operation, not the connection.
     """
+    if str(arguments.get('capability') or '').startswith('piece.'):
+        from app.services.integrations.library_operations import invoke as invoke_library
+        return invoke_library(settings,caller,arguments)
     connection = _connection(settings, caller, str(arguments.get("connection_id") or ""))
     connection_id = connection["id"]
     if connection["status"] != "active":
@@ -509,6 +514,10 @@ OPERATIONS = {
     "readiness": readiness,
     "readiness_detail": readiness_detail,
 }
+from app.services.integrations.library_operations import connect_key
+OPERATIONS['library_connect_key'] = connect_key
+from app.services.integrations.synchronization import operate as synchronize_resource
+OPERATIONS['resource_sync'] = synchronize_resource
 
 
 def operate(settings: IntegrationSettings, caller: CallerContext, *, operation: str, arguments: dict) -> dict:

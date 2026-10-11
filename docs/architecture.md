@@ -205,7 +205,7 @@ Server/client boundaries should follow the interaction requirement.
 
 ### `apps/api`
 
-`apps/api` is the Python service boundary for work that is better represented as explicit API/provider/machine execution.
+`apps/api` is the API service boundary for work that is better represented as explicit API/provider/machine execution. Its domain commands remain Python. ADR-041 adds a Node function in the same deployment to execute imported open-source connector packages, using fixed loaders, signed internal requests and database-authorized single-use jobs. Connector packages never own tenant/domain authorization or persistence.
 
 Current categories include:
 

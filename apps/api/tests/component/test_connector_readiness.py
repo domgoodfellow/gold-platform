@@ -14,6 +14,7 @@ import pytest
 
 from app.auth import CallerContext
 from app.connectors import readiness_of, registered_connector_keys
+from app.connectors.library import APPLICATIONS
 from app.core.config import IntegrationSettings
 from app.errors import NotFoundError
 from app.services.integrations.operations import operate
@@ -73,7 +74,7 @@ def staff(monkeypatch, *, is_staff: bool) -> None:
 
 
 def test_the_registry_and_this_test_name_the_same_connectors():
-    assert registered_connector_keys() == sorted(PREFIXES)
+    assert registered_connector_keys() == sorted(set(PREFIXES) | {a["connector_key"] for a in APPLICATIONS})
 
 
 @pytest.mark.parametrize("key", sorted(PREFIXES))
@@ -98,9 +99,9 @@ def test_a_registered_connector_is_unconfigured_until_both_halves_of_its_registr
 
 
 def test_a_connector_with_no_adapter_is_not_implemented_whatever_the_environment_holds(monkeypatch):
-    monkeypatch.setenv("SALESFORCE_OAUTH_CLIENT_ID", "id")
-    monkeypatch.setenv("SALESFORCE_OAUTH_CLIENT_SECRET", "secret")
-    found = readiness_of("salesforce")
+    monkeypatch.setenv("UNKNOWN_APP_OAUTH_CLIENT_ID", "id")
+    monkeypatch.setenv("UNKNOWN_APP_OAUTH_CLIENT_SECRET", "secret")
+    found = readiness_of("unknown_app")
     assert (found.implemented, found.configured, found.reason) == (False, False, "adapter_missing")
 
 
@@ -108,12 +109,12 @@ def test_any_signed_in_caller_gets_a_yes_or_a_reason_and_no_input_names_and_no_v
     monkeypatch.setenv("SLACK_OAUTH_CLIENT_ID", "slack-client-id-value")
     monkeypatch.setenv("SLACK_OAUTH_CLIENT_SECRET", "slack-client-secret-value")
 
-    answer = operate(SETTINGS, CALLER, operation="readiness", arguments={"connector_keys": ["slack", "hubspot", "salesforce"]})
+    answer = operate(SETTINGS, CALLER, operation="readiness", arguments={"connector_keys": ["slack", "hubspot", "unknown_app"]})
 
     assert answer["connectors"] == [
         {"connector_key": "slack", "implemented": True, "configured": True, "reason": None},
         {"connector_key": "hubspot", "implemented": True, "configured": False, "reason": "oauth_client_missing"},
-        {"connector_key": "salesforce", "implemented": False, "configured": False, "reason": "adapter_missing"},
+        {"connector_key": "unknown_app", "implemented": False, "configured": False, "reason": "adapter_missing"},
     ]
     rendered = json.dumps(answer)
     assert "slack-client" not in rendered and "SLACK_OAUTH" not in rendered and "app.test" not in rendered
@@ -121,7 +122,7 @@ def test_any_signed_in_caller_gets_a_yes_or_a_reason_and_no_input_names_and_no_v
 
 def test_with_no_keys_asked_it_answers_for_every_registered_connector():
     answer = operate(SETTINGS, CALLER, operation="readiness", arguments={})
-    assert sorted(item["connector_key"] for item in answer["connectors"]) == sorted(PREFIXES)
+    assert sorted(item["connector_key"] for item in answer["connectors"]) == registered_connector_keys()
 
 
 def test_platform_staff_alone_learns_what_is_missing_and_never_a_value(monkeypatch):

@@ -24,12 +24,16 @@ const read = (path: string) => readFileSync(join(API, path), 'utf8');
 const TRUST = {
   'stripe-signature': /stripe-signature/i,
   'twilio-signature': /verify_signature\(/,
-  'cron-secret': /cron_secret/,
+  'cron-secret': /cron_secret/i,
   'bearer-token': /require_caller\(/,
   'shared-key': /x-gold-public-chat-key/,
+  'runtime-signature': /verifyRequest\(/,
 } as const;
 
-const INVENTORY: { file: string; route: string; trust: keyof typeof TRUST }[] = [
+const INVENTORY: { file: string; route: string; trust: keyof typeof TRUST; runtime?: 'node' }[] = [
+  {file:'app_library',route:'/integrations/library',trust:'bearer-token'},
+  {file:'integration_sync_tick',route:'/tasks/integration-sync',trust:'cron-secret'},
+  {file:'library_runtime',route:'/integrations/library-runtime',trust:'runtime-signature',runtime:'node'},
   { file: 'stripe_webhook', route: '/webhooks/stripe', trust: 'stripe-signature' },
   { file: 'stripe_platform_billing_webhook', route: '/webhooks/stripe-platform-billing', trust: 'stripe-signature' },
   { file: 'automation_tick', route: '/tasks/automation-tick', trust: 'cron-secret' },
@@ -62,7 +66,8 @@ const byFile = new Map(INVENTORY.map((entry) => [entry.file, entry]));
 
 describe('the deployable handlers in apps/api/api', () => {
   it('are exactly the inventory, so a new one must be declared and an old one removed from it', () => {
-    expect([...handlers].sort()).toEqual(INVENTORY.map((entry) => entry.file).sort());
+    expect([...handlers].sort()).toEqual(INVENTORY.filter(entry=>entry.runtime!=='node').map((entry) => entry.file).sort());
+    expect(readdirSync(join(API,'api')).filter(name=>name.endsWith('.mjs')).sort()).toEqual(INVENTORY.filter(entry=>entry.runtime==='node').map(entry=>`${entry.file}.mjs`).sort());
   });
 
   it('leave nothing else in the directory but the package file', () => {
@@ -71,7 +76,7 @@ describe('the deployable handlers in apps/api/api', () => {
 
   it('each still calls the check its row says it trusts its caller by', () => {
     for (const entry of INVENTORY) {
-      expect(TRUST[entry.trust].test(read(`api/${entry.file}.py`)), `${entry.file} no longer shows its ${entry.trust} check`).toBe(true);
+      expect(TRUST[entry.trust].test(read(`api/${entry.file}.${entry.runtime==='node'?'mjs':'py'}`)), `${entry.file} no longer shows its ${entry.trust} check`).toBe(true);
     }
   });
 });
@@ -112,7 +117,8 @@ describe('the handler wiring test', () => {
   const imported = [...wiring.matchAll(/^import api\.([a-z_]+) as /gm)].map((match) => match[1]);
 
   it('drives every handler, because every one takes input from outside a trust boundary', () => {
-    expect(INVENTORY.map((entry) => entry.file).filter((file) => !imported.includes(file))).toEqual([]);
+    expect(INVENTORY.filter(entry=>entry.runtime!=='node').map((entry) => entry.file).filter((file) => !imported.includes(file))).toEqual([]);
+    expect(read('library/runtime.test.mjs')).toContain("../api/library_runtime.mjs");
   });
 
   it('drives no handler that no longer exists', () => {

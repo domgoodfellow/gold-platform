@@ -1,7 +1,7 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
-import { getConnector, usesSignIn } from './connectors';
+import { getConnector } from './connectors';
 import { disconnectOAuth } from './oauth';
 
 /**
@@ -130,7 +130,7 @@ export async function disconnectConnection(
   // retires the connection.
   const connection = await getConnection(db, input);
   const connector = connection ? await getConnector(db, connection.connectorKey) : null;
-  if (connector && (usesSignIn(connector) || connector.connectionMethod === 'mcp')) {
+  if (connector && (connector.authMethod !== 'none' || connector.connectionMethod === 'mcp')) {
     await disconnectOAuth(db, { connectionId: input.connectionId });
     return;
   }
