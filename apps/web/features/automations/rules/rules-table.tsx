@@ -68,6 +68,7 @@ export function RulesTable({
                             notify: 'Notify Customer',
                             shift_schedule: 'Shift schedule',
                             create_work_item: 'Create Work',
+                            run_tool: 'Read from an app',
                           })[a.kind],
                       )
                       .join(' + ')

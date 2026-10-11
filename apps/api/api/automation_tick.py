@@ -26,7 +26,7 @@ from http.server import BaseHTTPRequestHandler
 from app.channels import Message
 from app.channels.registry import sender_for, unconfigured_reason
 from app.conditions.registry import conditions_provider
-from app.core.config import load_runner_settings
+from app.core.config import load_integration_settings, load_runner_settings
 from app.core.runner import (
     QueuedMessage,
     places_to_watch,
@@ -76,12 +76,13 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
         readings = self._fetch(settings)
         ran = run_due_automations(settings)
         sent, failed, held = self._drain(settings)
+        tools = self._tools()
 
         # A count of each, and no tenant's name anywhere. This response goes into a hosting
         # provider's log, which is outside every boundary this platform draws.
         self._reply(
             200,
-            {"read": readings, "ran": ran, "sent": sent, "failed": failed, "held": held},
+            {"read": readings, "ran": ran, "sent": sent, "failed": failed, "held": held, "tools": tools},
         )
 
     def _fetch(self, settings) -> int:
@@ -139,6 +140,24 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             )
 
         return written
+
+    def _tools(self) -> dict:
+        """Tool calls automations have queued, and the execution record's upkeep.
+
+        Run by the integration runtime (its own settings and role), through the executor an agent's tool
+        calls use. A deployment without those settings simply has none, and says so.
+        """
+        from app.services.integrations.actions import run_queued_actions, tidy
+
+        integration = load_integration_settings()
+        if integration is None:
+            return {"configured": False}
+        try:
+            run = run_queued_actions(integration)
+            tidy(integration)
+        except Exception:  # noqa: BLE001 - one failing runtime must not take the clock down with it
+            return {"configured": True, "error": True}
+        return {"configured": True, "ran": run.ran, "failed": run.failed, "retried": run.retried}
 
     def _drain(self, settings) -> tuple[int, int, int]:
         sent = 0

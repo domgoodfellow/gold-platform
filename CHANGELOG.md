@@ -34,6 +34,14 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Connected tools: the asker's rights, approvals that finish, automations — 2026-10-11
+
+- A native connected-app read now needs two things: the agent's grant and the asking member's own permission for that kind of data, so the agent cannot read more than its asker could. Approving a waiting request checks everything again at that moment, including the agent's reading limit and the requester's permission.
+- A request a person approves later now reaches the conversation that asked: the agent receives the result (or the fact it was declined) at the start of its next turn, once, and nothing is kept afterwards.
+- A rule can now "use a connected tool". It reads from a connected app under its own grant, through the same checks an agent meets; a refusal is recorded and not repeated, and only an unreachable app is retried. The rule records that the read worked; nothing yet uses what it read.
+- The execution record's upkeep runs on the automation schedule, and the public plans list is read in pages so a large list can no longer hide plans.
+- Still open: MCP tools are not offered to automations, MCP servers use a bearer token only, and an approved result arrives on the next turn rather than resuming the one that asked.
+
 ### Settings as one sidebar, a real business profile, and Help — 2026-10-10
 
 - Settings no longer has a landing page or an Organization directory. Entering it swaps the sidebar for Back to app, a search box and three groups: Personal (Profile, Security & sign-in), Organization (General, Branding, Domains, Features) and Administration (Team & access, Connections, Plan & usage). Configuration a workspace owns, such as working hours, prices, stages and call routing, is configured in that workspace and found through Settings search. Old Settings addresses still work.

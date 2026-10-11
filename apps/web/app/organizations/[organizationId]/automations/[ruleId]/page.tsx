@@ -7,6 +7,7 @@ import { listMessageTemplates } from '@/lib/domain/automation/templates';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { RuleBuilder } from '@/features/automations/rules/rule-builder';
+import { listToolChoices } from '@/lib/domain/integrations/tool-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,6 +63,11 @@ export default async function AutomationRulePage({
     statuses: everyStatus,
   });
   const mayManage = organization.capabilities.includes('automation.manage');
+  // Wiring a connected app into a rule also creates a grant, so it is offered only to someone who may do both.
+  const toolChoices =
+    mayManage && organization.capabilities.includes('integration.manage')
+      ? await listToolChoices(db, { organizationId }).catch(() => [])
+      : [];
 
   return (
     <RuleBuilder
@@ -76,6 +82,7 @@ export default async function AutomationRulePage({
         .map((w) => w.message)}
       mayManage={mayManage}
       initialNode={initialNode}
+      toolChoices={toolChoices}
     />
   );
 }

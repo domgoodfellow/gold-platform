@@ -47,10 +47,24 @@ export type PublicPlan = {
   quotas: PublicPlanQuota[];
 };
 
+/**
+ * The API caps one answer at a fixed number of rows, so a catalogue read in one call silently loses
+ * whatever lies beyond the cap -- and with it the plans a Pricing page exists to show. The function
+ * orders by a unique key, so reading it in pages is exact; a short page ends it.
+ */
+const PAGE_SIZE = 500;
+const MAX_PAGES = 40;
+
 export async function publicPlanCatalog(db: Db): Promise<PublicPlan[]> {
-  const { data, error } = await db.rpc('public_plan_catalog');
-  if (error) throw new DomainError(error.message, 'public_catalog.plans_failed');
-  return (data ?? []).map((row) => ({
+  const rows = [];
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    const from = page * PAGE_SIZE;
+    const { data, error } = await db.rpc('public_plan_catalog').range(from, from + PAGE_SIZE - 1);
+    if (error) throw new DomainError(error.message, 'public_catalog.plans_failed');
+    rows.push(...(data ?? []));
+    if ((data?.length ?? 0) < PAGE_SIZE) break;
+  }
+  return rows.map((row) => ({
     key: row.plan_key,
     kind: row.kind as PublicPlan['kind'],
     label: row.label,

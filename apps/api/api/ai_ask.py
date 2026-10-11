@@ -38,6 +38,7 @@ from app.ai.metering import meter
 from app.ai.registry import unconfigured_reason
 from app.ai.runtime import OPERATOR_ASSISTANT, resolve_provider
 from app.auth import AuthError, require_caller
+from app.ai import delivered
 from app.ai.external import external_tools_for
 from app.core.config import load_assistant_settings, load_integration_settings, load_provider_operations_settings
 from app.services.integrations.executor import ExecutionContext
@@ -164,11 +165,26 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
                 external = external_tools_for(
                     integrations,
                     ExecutionContext.for_assistant(
-                        organization_id=organization_id, assistant_id=str(assistant_id), caller_token=caller.token
+                        organization_id=organization_id,
+                        assistant_id=str(assistant_id),
+                        caller_token=caller.token,
+                        conversation_id=body.get("conversation_id") or None,
                     ),
                 )
             except Exception:  # noqa: BLE001 - granted tools are an addition; without them the agent still answers
                 external = None
+
+        # What a person decided since this conversation last asked, handed over once and as quoted data.
+        decided = ""
+        if integrations is not None and assistant_id:
+            decided = delivered.render(
+                delivered.take(
+                    integrations,
+                    token=caller.token,
+                    organization_id=organization_id,
+                    conversation_id=body.get("conversation_id") or None,
+                )
+            )
 
         given = answer(
             settings,
@@ -184,7 +200,7 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             # What the application knows and a model cannot. Sent by `apps/web`, which is
             # holding the organization already; asking Postgres for it here would be this
             # runtime reading business state outside a tool.
-            context=(body.get("context") or "").strip(),
+            context="\n\n".join(part for part in ((body.get("context") or "").strip(), decided) if part),
             # Earlier turns of the one conversation `apps/web` read for this caller. Text only;
             # the loop bounds it again rather than trusting how carefully it was built.
             prior_turns=_prior_turns(body.get("history")),

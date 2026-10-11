@@ -3,6 +3,7 @@ import { CHANNELS } from '@/lib/domain/automation/templates';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
+import { listNativeCapabilities } from '@/lib/domain/integrations/tool-access';
 
 /**
  * Rules a business writes, as data.
@@ -121,6 +122,9 @@ export const ACTION_KINDS = [
   // use — a counter fires before there is a job. The new job is titled with the rule's own name,
   // which is the business's sentence about why the work exists.
   { kind: 'create_work_item', label: 'raise a job' },
+  // Reads from a connected app, under a grant the rule owns. The call is queued and made by the
+  // integration runtime, so a rule never waits on an outside system.
+  { kind: 'run_tool', label: 'use a connected tool' },
 ] as const;
 
 export type ActionKind = (typeof ACTION_KINDS)[number]['kind'];
@@ -140,6 +144,9 @@ export type AutomationAction = {
   channel: string | null;
   shiftMinutes: number | null;
   typeId: string | null;
+  /** For `run_tool`: what it reads and from where, in words, and what it was told. */
+  toolLabel: string | null;
+  toolArguments: Record<string, unknown> | null;
 };
 
 export type AutomationRule = {
@@ -217,7 +224,7 @@ export async function listAutomationRules(
       db
         .from('automation_actions')
         .select(
-          'id, rule_id, action_kind, status_id, template_id, channel, shift_minutes, work_item_type_id, position',
+          'id, rule_id, action_kind, status_id, template_id, channel, shift_minutes, work_item_type_id, tool_label, tool_arguments, position',
         )
         .eq('organization_id', input.organizationId)
         .order('position')
@@ -259,6 +266,11 @@ export async function listAutomationRules(
         channel: row.channel,
         shiftMinutes: row.shift_minutes,
         typeId: row.work_item_type_id,
+        toolLabel: row.tool_label,
+        toolArguments:
+          row.tool_arguments && typeof row.tool_arguments === 'object' && !Array.isArray(row.tool_arguments)
+            ? (row.tool_arguments as Record<string, unknown>)
+            : null,
       })),
     createdAt: rule.created_at,
   }));
@@ -714,6 +726,13 @@ export async function addAutomationAction(
     );
   }
 
+  if (input.kind === 'run_tool') {
+    throw new DomainError(
+      'A connected tool is added with its own form, because it also gives the rule the right to use it.',
+      'automations.action_unknown',
+    );
+  }
+
   if (input.kind === 'change_status' && !input.statusId) {
     throw new DomainError(
       'Moving a job needs a status to move it to.',
@@ -898,4 +917,74 @@ export async function listAutomationRuns(
     detail: row.detail,
     occurredAt: row.occurred_at,
   }));
+}
+
+/**
+ * Wire a connected app's read into a rule. One act that creates the rule's own grant and the action
+ * that uses it, and needs both the right to manage automations and the right to manage integrations.
+ * What the tool is told comes from the person's answers to its inputs, checked here against what the
+ * connector declares; the database and the executor check again.
+ */
+export async function addAutomationToolAction(
+  db: Db,
+  input: {
+    organizationId: string;
+    ruleId: string;
+    connectionId: string;
+    connectorName: string;
+    capabilityKey: string;
+    answers: Record<string, string>;
+    resourceId?: string | null;
+  },
+): Promise<void> {
+  await requireActor(db);
+
+  const capability = (await listNativeCapabilities(db, { connectorKey: await connectorKeyOf(db, input) })).find((entry) => entry.key === input.capabilityKey);
+  if (!capability) {
+    throw new DomainError('That connected tool is not available right now.', 'automations.tool_unavailable');
+  }
+
+  const args: Record<string, string | number> = {};
+  for (const field of capability.fields) {
+    const raw = (input.answers[field.name] ?? '').trim();
+    if (raw === '') {
+      if (field.required) throw new DomainError(`${field.label} is needed.`, 'automations.tool_input');
+      continue;
+    }
+    if (field.kind === 'whole number') {
+      const number = Number(raw);
+      if (!Number.isInteger(number)) throw new DomainError(`${field.label} must be a whole number.`, 'automations.tool_input');
+      args[field.name] = number;
+    } else {
+      args[field.name] = raw;
+    }
+  }
+
+  const { error } = await db.rpc('add_automation_tool_action', {
+    p_organization_id: input.organizationId,
+    p_rule_id: input.ruleId,
+    p_connection_id: input.connectionId,
+    p_capability_key: input.capabilityKey,
+    p_arguments: args,
+    p_label: `${capability.summary} · ${input.connectorName}`,
+    p_resource_id: (input.resourceId ?? null) as string,
+  });
+  if (error) {
+    if (error.code === '42501') {
+      throw new DomainError('Adding a connected tool needs the right to manage both automations and integrations.', 'automations.forbidden');
+    }
+    if (error.code === '22023') throw new DomainError(error.message, 'automations.tool_invalid');
+    throw new DomainError('That could not be completed.', 'automations.tool_failed');
+  }
+}
+
+async function connectorKeyOf(db: Db, input: { organizationId: string; connectionId: string }): Promise<string> {
+  const { data, error } = await db
+    .from('integration_connections')
+    .select('connector_key')
+    .eq('organization_id', input.organizationId)
+    .eq('id', input.connectionId)
+    .maybeSingle();
+  if (error || !data) throw new DomainError('No such connection here.', 'automations.tool_unavailable');
+  return data.connector_key;
 }

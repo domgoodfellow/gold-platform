@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { createAsset } from '@/lib/domain/assets/assets';
+import { createAutomationRule } from '@/lib/domain/automation/rules';
 import { recordConnection } from '@/lib/domain/integrations/connections';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import { foundBusiness } from '@/tests/support/founding';
@@ -147,7 +149,7 @@ async function grantNative(t: Tenant, principal: { assistant?: string; rule?: st
     p_assistant_id: principal.assistant ?? null,
     p_automation_rule_id: principal.rule ?? null,
     p_connection_id: t.nativeConnection,
-    p_capability_key: 'sheets.read',
+    p_capability_key: 'crm.contacts.list',
     p_mcp_tool_id: null,
     p_resource_id: null,
     p_requires_approval: false,
@@ -337,7 +339,7 @@ describe('an assistant runs only what it was granted', () => {
 
     const asked = await authorizeAs(alice, grant, { range: 'A1:B2' });
     expect(asked.error).toBeNull();
-    expect(asked.data).toMatchObject({ decision: 'allowed', target_kind: 'native', connection_id: alice.nativeConnection, capability_key: 'sheets.read' });
+    expect(asked.data).toMatchObject({ decision: 'allowed', target_kind: 'native', connection_id: alice.nativeConnection, capability_key: 'crm.contacts.list' });
 
     const row = await execution(asked.data.execution_id);
     expect(row).toMatchObject({
@@ -414,7 +416,7 @@ describe('an assistant runs only what it was granted', () => {
   });
 
   it('refuses while the connection is disconnected or needs reconnecting', async () => {
-    const live = (await grantNative(alice, { assistant: alice.assistantId, }, { p_capability_key: 'sheets.list' })).data as string;
+    const live = (await grantNative(alice, { assistant: alice.assistantId, }, { p_capability_key: 'crm.companies.list' })).data as string;
     await pg.query("update public.integration_connections set status = 'disconnected' where id = $1", [alice.nativeConnection]);
     expect((await authorizeAs(alice, live)).data).toMatchObject({ decision: 'refused', reason: 'connection_inactive' });
     await pg.query("update public.integration_connections set status = 'active' where id = $1", [alice.nativeConnection]);
@@ -422,7 +424,7 @@ describe('an assistant runs only what it was granted', () => {
   });
 
   it('refuses a disabled assistant', async () => {
-    const live = (await grantNative(alice, { assistant: alice.assistantId }, { p_capability_key: 'sheets.disabled' })).data as string;
+    const live = (await grantNative(alice, { assistant: alice.assistantId }, { p_capability_key: 'crm.deals.list' })).data as string;
     await pg.query("update public.ai_assistants set status = 'disabled' where id = $1", [alice.assistantId]);
     const refused = await authorizeAs(alice, live);
     expect(refused.error?.code).toBe('42501');
@@ -432,7 +434,7 @@ describe('an assistant runs only what it was granted', () => {
 
 describe('a grant can be limited to one resource', () => {
   it('runs only against the resource it names, and the assistant must be allowed to read it', async () => {
-    const restricted = (await grantNative(alice, { assistant: alice.assistantId }, { p_capability_key: 'sheets.values', p_resource_id: alice.sheetOne })).data as string;
+    const restricted = (await grantNative(alice, { assistant: alice.assistantId }, { p_capability_key: 'sheets.values.get', p_resource_id: alice.sheetOne })).data as string;
 
     expect((await authorizeAs(alice, restricted, {}, { resource: 'sheet-2' })).data).toMatchObject({ decision: 'refused', reason: 'resource_not_granted' });
     expect((await authorizeAs(alice, restricted, {}, { resource: null })).data).toMatchObject({ decision: 'refused', reason: 'resource_not_granted' });
@@ -586,7 +588,7 @@ describe('an automation runs as itself and nothing else', () => {
 
   it('cannot use another rule’s, another business’s or an assistant’s grant', async () => {
     expect(await authorizeRule(bob.ruleId, grant)).toMatchObject({ decision: 'refused', reason: 'not_granted' });
-    const assistantGrant = (await grantNative(alice, { assistant: alice.assistantId }, { p_capability_key: 'sheets.assistant_only' })).data as string;
+    const assistantGrant = (await grantNative(alice, { assistant: alice.assistantId }, { p_capability_key: 'dropbox.files.list' })).data as string;
     expect(await authorizeRule(alice.ruleId, assistantGrant)).toMatchObject({ decision: 'refused', reason: 'not_granted' });
     const listed = await asOperator(() => pg.query('select grant_id from public.granted_tools_for_automation($1)', [alice.ruleId]));
     expect(listed.rows.map((row) => row.grant_id)).toEqual([grant]);
@@ -622,7 +624,7 @@ describe('the runtime’s doors', () => {
   });
 
   it('keep a stuck call and an old record in check', async () => {
-    const stuck = await authorizeAs(alice, (await grantNative(alice, { assistant: alice.assistantId }, { p_capability_key: 'sheets.stuck' })).data as string);
+    const stuck = await authorizeAs(alice, (await grantNative(alice, { assistant: alice.assistantId }, { p_capability_key: 'crm.pipelines.list' })).data as string);
     await pg.query("update public.integration_executions set started_at = now() - interval '1 hour' where id = $1", [stuck.data.execution_id]);
     const old = await authorizeAs(alice, randomUUID());
     await pg.query("update public.integration_executions set requested_at = now() - interval '200 days' where id = $1", [old.data.execution_id]);
@@ -668,5 +670,282 @@ describe('rotating a credential never overwrites a newer one', () => {
     const held = await asOperator(() => pg.query('select secret from public.read_integration_credential($1)', [alice.nativeConnection]));
     const winner = results.findIndex(Boolean);
     expect(held.rows[0].secret).toBe(pair(20 + winner));
+  });
+});
+
+describe('the person asking must hold the permission too', () => {
+  it('refuses a member who lacks the permission for that kind of data, even under a live grant', async () => {
+    const grant = (
+      await pg.query(
+        `insert into public.integration_tool_grants (organization_id, assistant_id, target_kind, connection_id, capability_key, granted_by)
+         values ($1, $2, 'native', $3, 'crm.contacts.list', $4) returning id`,
+        [limited.organizationId, limited.assistantId, limited.nativeConnection, limited.userId],
+      )
+    ).rows[0].id as string;
+    expect((await authorizeAs(limited, grant, {}, { assistant: limited.assistantId })).data).toMatchObject({
+      decision: 'refused', reason: 'actor_not_permitted',
+    });
+    // The owner of the other business holds it, under the same kind of grant.
+    const owned = (await grantNative(alice, { assistant: alice.assistantId }, { p_capability_key: 'notion.search' })).data as string;
+    expect((await authorizeAs(alice, owned)).data.decision).toBe('allowed');
+  });
+
+  it('refuses a capability nobody has said a permission for', async () => {
+    const grant = (await grantNative(alice, { assistant: alice.assistantId }, { p_capability_key: 'nothing.mapped' })).data as string;
+    expect((await authorizeAs(alice, grant)).data).toMatchObject({ decision: 'refused', reason: 'permission_unmapped' });
+  });
+
+  it('asks again at approval, and a requester who has lost the permission since is refused', async () => {
+    const grant = (
+      await grantNative(alice, { assistant: alice.assistantId }, { p_capability_key: 'slack.channels.list', p_requires_approval: true })
+    ).data as string;
+    const asked = await authorizeAs(alice, grant);
+    expect(asked.data.decision).toBe('approval_required');
+
+    const membership = (await pg.query('select id, role_id from public.memberships where organization_id = $1 and user_id = $2', [alice.organizationId, alice.userId])).rows[0];
+    const reduced = await createRole(alice.db, { organizationId: alice.organizationId, name: `Manages only ${SUFFIX}`, capabilities: ['integration.manage', 'assistant.ask', 'role.manage'] });
+    await pg.query('update public.memberships set role_id = $1 where id = $2', [reduced, membership.id]);
+    try {
+      const decided = await alice.db.rpc('decide_integration_execution', { p_execution_id: asked.data.execution_id, p_approve: true });
+      expect(decided.data).toMatchObject({ decision: 'refused', reason: 'actor_not_permitted' });
+      expect(await execution(asked.data.execution_id)).toMatchObject({ status: 'refused', pending_arguments: null });
+    } finally {
+      await pg.query('update public.memberships set role_id = $1 where id = $2', [membership.role_id, membership.id]);
+    }
+  });
+});
+
+describe('approval repeats the whole authorization', () => {
+  it('refuses to run a request whose resource the assistant may no longer read', async () => {
+    await pg.query('insert into public.assistant_resource_grants (organization_id, resource_id, granted_by) values ($1, $2, $3) on conflict do nothing', [alice.organizationId, alice.sheetTwo, alice.userId]);
+    const grant = (
+      await grantNative(alice, { assistant: alice.assistantId }, { p_capability_key: 'excel.range.get', p_resource_id: alice.sheetTwo, p_requires_approval: true })
+    ).data as string;
+    const asked = await authorizeAs(alice, grant, {}, { resource: 'sheet-2' });
+    expect(asked.data.decision).toBe('approval_required');
+    expect((await execution(asked.data.execution_id)).resource_value).toBe('sheet-2');
+
+    await pg.query('delete from public.assistant_resource_grants where organization_id = $1 and resource_id = $2', [alice.organizationId, alice.sheetTwo]);
+    const decided = await alice.db.rpc('decide_integration_execution', { p_execution_id: asked.data.execution_id, p_approve: true });
+    expect(decided.data).toMatchObject({ decision: 'refused', reason: 'resource_not_readable_by_assistant' });
+    expect(await execution(asked.data.execution_id)).toMatchObject({ status: 'refused', pending_arguments: null });
+  });
+
+  it('still runs when nothing has changed', async () => {
+    await pg.query('insert into public.assistant_resource_grants (organization_id, resource_id, granted_by) values ($1, $2, $3) on conflict do nothing', [alice.organizationId, alice.sheetTwo, alice.userId]);
+    const held = await pg.query("select id from public.integration_tool_grants where organization_id = $1 and capability_key = 'excel.range.get' and status = 'active'", [alice.organizationId]);
+    const asked = await authorizeAs(alice, held.rows[0].id, {}, { resource: 'sheet-2' });
+    const decided = await alice.db.rpc('decide_integration_execution', { p_execution_id: asked.data.execution_id, p_approve: true });
+    expect(decided.data).toMatchObject({ decision: 'approved', target_kind: 'native' });
+  });
+});
+
+describe('what was decided reaches the conversation that asked, once', () => {
+  let conversation: string;
+  let grant: string;
+
+  beforeAll(async () => {
+    conversation = (await pg.query("insert into public.agent_conversations (organization_id, created_by, title) values ($1, $2, 'Deliveries') returning id", [alice.organizationId, alice.userId])).rows[0].id;
+    await pg.query("update public.integration_tool_grants set status = 'revoked', revoked_by = $2, revoked_at = now() where organization_id = $1 and target_kind = 'mcp' and status = 'active'", [alice.organizationId, alice.userId]);
+    await enable(alice, 'search');
+    grant = (await grantMcp(alice, (await tool(alice, 'search')).id, { assistant: alice.assistantId })).data as string;
+  });
+
+  const ask = (args: Record<string, unknown>, conversationId: string | null = conversation) =>
+    alice.db.rpc('authorize_assistant_tool_call', {
+      p_organization_id: alice.organizationId, p_assistant_id: alice.assistantId, p_grant_id: grant, p_arguments: args,
+      p_resource_value: null, p_correlation: 'test', p_conversation_id: conversationId,
+    });
+  const complete = (id: string, ok: boolean, result: unknown) =>
+    asOperator(() => pg.query('select public.complete_integration_execution($1, $2, $3, $4, $5::jsonb)', [id, ok, ok ? null : 'tool_error', 12, JSON.stringify(result)]));
+
+  it('holds the result of an approved request for the member who asked, and hands it over once', async () => {
+    const asked = await ask({ q: 'unpaid' });
+    expect(asked.data.decision).toBe('approval_required');
+    expect((await execution(asked.data.execution_id)).conversation_id).toBe(conversation);
+    await alice.db.rpc('decide_integration_execution', { p_execution_id: asked.data.execution_id, p_approve: true });
+    await complete(asked.data.execution_id, true, { source: 'mcp_server', content: [{ type: 'text', text: 'two invoices' }] });
+
+    const hidden = await alice.db.from('integration_executions').select('result_payload').eq('id', asked.data.execution_id);
+    expect(hidden.error?.code).toBe('42501'); // not even the person who manages integrations reads a result directly
+
+    const first = await alice.db.rpc('take_integration_results', { p_organization_id: alice.organizationId, p_conversation_id: conversation });
+    expect(first.error).toBeNull();
+    expect(first.data).toHaveLength(1);
+    expect(first.data[0]).toMatchObject({ execution_id: asked.data.execution_id, tool_label: 'search', status: 'succeeded' });
+    expect(first.data[0].result.content[0].text).toBe('two invoices');
+
+    const second = await alice.db.rpc('take_integration_results', { p_organization_id: alice.organizationId, p_conversation_id: conversation });
+    expect(second.data).toEqual([]);
+    const stored = await execution(asked.data.execution_id);
+    expect(stored.result_payload).toBeNull();
+    expect(stored.delivered_at).not.toBeNull();
+  });
+
+  it('tells the conversation when a request was declined, with no result', async () => {
+    const asked = await ask({ q: 'declined' });
+    await alice.db.rpc('decide_integration_execution', { p_execution_id: asked.data.execution_id, p_approve: false });
+    const taken = await alice.db.rpc('take_integration_results', { p_organization_id: alice.organizationId, p_conversation_id: conversation });
+    expect(taken.data).toHaveLength(1);
+    expect(taken.data[0]).toMatchObject({ status: 'rejected', result: null });
+  });
+
+  it('delivers nothing while the request is still waiting', async () => {
+    await ask({ q: 'waiting' });
+    const taken = await alice.db.rpc('take_integration_results', { p_organization_id: alice.organizationId, p_conversation_id: conversation });
+    expect(taken.data).toEqual([]);
+  });
+
+  it('refuses someone who is not in the business, and ignores a conversation that is not the member’s own', async () => {
+    const outsider = await bob.db.rpc('take_integration_results', { p_organization_id: alice.organizationId, p_conversation_id: conversation });
+    expect(outsider.error?.code).toBe('42501');
+
+    const others = (await pg.query("insert into public.agent_conversations (organization_id, created_by, title) values ($1, $2, 'Not mine') returning id", [alice.organizationId, bob.userId])).rows[0].id;
+    const asked = await ask({ q: 'borrowed' }, others);
+    expect((await execution(asked.data.execution_id)).conversation_id).toBeNull();
+    const none = await ask({ q: 'nowhere' }, randomUUID());
+    expect((await execution(none.data.execution_id)).conversation_id).toBeNull();
+  });
+
+  it('holds nothing for a call that ran straight away, even inside a conversation', async () => {
+    const direct = (await grantNative(alice, { assistant: alice.assistantId }, { p_capability_key: 'github.commits.list' })).data as string;
+    const asked = await authorizeAs(alice, direct, {});
+    expect(asked.data.decision).toBe('allowed');
+    await pg.query("update public.integration_executions set conversation_id = $2 where id = $1", [asked.data.execution_id, conversation]);
+    await complete(asked.data.execution_id, true, { rows: [1, 2, 3] });
+    expect((await execution(asked.data.execution_id)).result_payload).toBeNull();
+  });
+
+  it('lets an undelivered result lapse after a day', async () => {
+    const asked = await ask({ q: 'old' });
+    await alice.db.rpc('decide_integration_execution', { p_execution_id: asked.data.execution_id, p_approve: true });
+    await complete(asked.data.execution_id, true, { stale: true });
+    expect((await execution(asked.data.execution_id)).result_payload).not.toBeNull();
+    await pg.query("update public.integration_executions set completed_at = now() - interval '2 days' where id = $1", [asked.data.execution_id]);
+    await asOperator(() => pg.query('select public.purge_integration_executions()'));
+    expect((await execution(asked.data.execution_id)).result_payload).toBeNull();
+  });
+});
+
+describe('an automation can run a granted tool', () => {
+  let ruleId: string;
+  let assetId: string;
+  let actionId: string;
+  let queued: string;
+
+  beforeAll(async () => {
+    ruleId = await createAutomationRule(alice.db, { organizationId: alice.organizationId, name: 'Read contacts', triggerKind: 'counter_threshold', counterStep: 100 } as never).catch(async () => {
+      return (
+        await pg.query(
+          `insert into public.automation_rules (organization_id, name, trigger_kind, trigger_event_action, created_by)
+           values ($1, 'Read contacts', 'event', 'work_item.created', $2) returning id`,
+          [alice.organizationId, alice.userId],
+        )
+      ).rows[0].id;
+    });
+    assetId = await createAsset(alice.db, { organizationId: alice.organizationId, name: 'Compressor' });
+  });
+
+  const add = (t: Tenant, args: Record<string, unknown> = { limit: 5 }, extra: Record<string, unknown> = {}) =>
+    t.db.rpc('add_automation_tool_action', {
+      p_organization_id: t.organizationId, p_rule_id: ruleId, p_connection_id: t.nativeConnection,
+      p_capability_key: 'crm.contacts.list', p_arguments: args, p_label: 'Contacts, from HubSpot', p_resource_id: null, ...extra,
+    });
+
+  it('needs both the right to manage the automation and the right to manage the connection', async () => {
+    const refused = await limited.db.rpc('add_automation_tool_action', {
+      p_organization_id: limited.organizationId, p_rule_id: ruleId, p_connection_id: limited.nativeConnection,
+      p_capability_key: 'crm.contacts.list', p_arguments: {}, p_label: 'x', p_resource_id: null,
+    });
+    expect(refused.error?.code).toBe('42501');
+    const foreign = await bob.db.rpc('add_automation_tool_action', {
+      p_organization_id: bob.organizationId, p_rule_id: ruleId, p_connection_id: bob.nativeConnection,
+      p_capability_key: 'crm.contacts.list', p_arguments: {}, p_label: 'x', p_resource_id: null,
+    });
+    expect(foreign.error?.code).toBe('22023'); // another business's rule is simply not there
+    const unmapped = await add(alice, {}, { p_capability_key: 'nothing.mapped' });
+    expect(unmapped.error?.code).toBe('22023');
+  });
+
+  it('creates the automation’s own grant and the action that uses it, together', async () => {
+    const made = await add(alice);
+    expect(made.error).toBeNull();
+    actionId = made.data as string;
+    const action = await alice.db.from('automation_actions').select('action_kind, grant_id, tool_arguments, tool_label').eq('id', actionId).single();
+    expect(action.data).toMatchObject({ action_kind: 'run_tool', tool_arguments: { limit: 5 }, tool_label: 'Contacts, from HubSpot' });
+    const grant = await pg.query('select automation_rule_id, assistant_id, status, requires_approval from public.integration_tool_grants where id = $1', [action.data!.grant_id]);
+    expect(grant.rows[0]).toMatchObject({ automation_rule_id: ruleId, assistant_id: null, status: 'active', requires_approval: false });
+  });
+
+  it('cannot be set up by an ordinary insert or update, which could point an action at any grant', async () => {
+    const grant = (await pg.query('select grant_id from public.automation_actions where id = $1', [actionId])).rows[0].grant_id;
+    const insert = await alice.db.from('automation_actions').insert({
+      organization_id: alice.organizationId, rule_id: ruleId, action_kind: 'run_tool', grant_id: grant, tool_arguments: {}, created_by: alice.userId,
+    } as never);
+    expect(insert.error?.code).toBe('42501');
+    const update = await alice.db.from('automation_actions').update({ grant_id: grant } as never).eq('id', actionId);
+    expect(update.error?.code).toBe('42501');
+  });
+
+  it('queues one call per subject when the rule fires, however often it fires', async () => {
+    const first = await pg.query("select app.run_automation($1, 'asset', $2) as acted", [ruleId, assetId]);
+    expect(first.rows[0].acted).toBe(true);
+    const again = await pg.query("select app.run_automation($1, 'asset', $2) as acted", [ruleId, assetId]);
+    expect(again.rows[0].acted).toBe(false);
+    const rows = await pg.query('select id, state, attempts, arguments from public.integration_action_queue where rule_id = $1', [ruleId]);
+    expect(rows.rows).toHaveLength(1);
+    expect(rows.rows[0]).toMatchObject({ state: 'queued', attempts: 0, arguments: { limit: 5 } });
+    queued = rows.rows[0].id;
+  });
+
+  it('is claimed once by the integration runtime and by nobody signed in', async () => {
+    const mine = await asOperator(() => pg.query('select * from public.claim_integration_actions(10)'));
+    expect(mine.rows.map((r) => r.id)).toContain(queued);
+    expect(mine.rows.find((r) => r.id === queued)).toMatchObject({ rule_id: ruleId, attempts: 1 });
+    const second = await asOperator(() => pg.query('select * from public.claim_integration_actions(10)'));
+    expect(second.rows.map((r) => r.id)).not.toContain(queued); // held for ten minutes
+
+    for (const attempt of [
+      alice.db.rpc('claim_integration_actions', { p_limit: 5 }),
+      alice.db.rpc('finish_integration_action', { p_id: queued, p_outcome: 'done' }),
+    ]) expect((await attempt).error?.code).toBe('42501');
+    expect((await alice.db.from('integration_action_queue').select('id')).error?.code).toBe('42501');
+  });
+
+  it('puts a failure worth another try back in the queue without writing history, and records every final outcome', async () => {
+    await asOperator(() => pg.query("select public.finish_integration_action($1, 'failed', 'The app could not be reached', true)", [queued]));
+    expect((await pg.query('select state, attempts from public.integration_action_queue where id = $1', [queued])).rows[0]).toMatchObject({ state: 'queued', attempts: 1 });
+    const runs = () => pg.query("select outcome, detail from public.automation_runs where rule_id = $1 and trigger_kind = 'tool' order by occurred_at", [ruleId]);
+    expect((await runs()).rows).toHaveLength(0);
+
+    await asOperator(() => pg.query('select * from public.claim_integration_actions(10)'));
+    await asOperator(() => pg.query("select public.finish_integration_action($1, 'done')", [queued]));
+    expect((await runs()).rows).toEqual([{ outcome: 'done', detail: null }]);
+    expect((await pg.query('select state from public.integration_action_queue where id = $1', [queued])).rows[0].state).toBe('done');
+  });
+
+  it('gives up after three attempts and says why', async () => {
+    const other = await pg.query("insert into public.integration_action_queue (organization_id, rule_id, action_id, grant_id, subject_type, subject_id, arguments, state, attempts) select organization_id, rule_id, action_id, grant_id, 'asset', gen_random_uuid(), arguments, 'claimed', 3 from public.integration_action_queue where id = $1 returning id", [queued]);
+    await asOperator(() => pg.query("select public.finish_integration_action($1, 'failed', 'still unreachable', true)", [other.rows[0].id]));
+    expect((await pg.query('select state from public.integration_action_queue where id = $1', [other.rows[0].id])).rows[0].state).toBe('failed');
+    const failed = await pg.query("select outcome, detail from public.automation_runs where rule_id = $1 and outcome = 'failed'", [ruleId]);
+    expect(failed.rows[0]).toMatchObject({ detail: 'still unreachable' });
+  });
+
+  it('ends the automation’s right when the action is removed', async () => {
+    const grant = (await pg.query('select grant_id from public.automation_actions where id = $1', [actionId])).rows[0].grant_id;
+    const removed = await alice.db.from('automation_actions').delete().eq('id', actionId);
+    expect(removed.error).toBeNull();
+    expect((await pg.query('select status from public.integration_tool_grants where id = $1', [grant])).rows[0].status).toBe('revoked');
+  });
+});
+
+describe('the public catalogue can be read in pages', () => {
+  it('has the same order every time, and a stable tie-break', async () => {
+    const visitor = createClient(SUPABASE_URL, ANON_KEY);
+    const one = await visitor.rpc('public_plan_catalog').range(0, 49);
+    const two = await visitor.rpc('public_plan_catalog').range(0, 49);
+    expect(one.error).toBeNull();
+    expect(one.data!.map((row: { plan_key: string }) => row.plan_key)).toEqual(two.data!.map((row: { plan_key: string }) => row.plan_key));
   });
 });

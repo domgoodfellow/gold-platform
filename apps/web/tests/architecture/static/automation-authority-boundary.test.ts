@@ -27,9 +27,11 @@ describe('authoring a rule is not the same authority as executing one', () => {
     }
   });
 
-  it('the fixed action vocabulary is exactly four kinds, and adding one is a same-change decision, not silent drift', () => {
+  it('the fixed action vocabulary is exactly five kinds, and adding one is a same-change decision, not silent drift', () => {
+    // `run_tool` is the fifth: it reads from a connected app under a grant the rule owns, queued for the
+    // integration runtime rather than performed inside the rule's own write (docs/integrations.md).
     const kinds = ACTION_KINDS.map((action) => action.kind);
-    expect(kinds.sort()).toEqual(['change_status', 'create_work_item', 'notify', 'shift_schedule'].sort());
+    expect(kinds.sort()).toEqual(['change_status', 'create_work_item', 'notify', 'run_tool', 'shift_schedule'].sort());
   });
 
   it('app.acting_automation() is set only inside app.run_automation, and revoked from every client role', () => {

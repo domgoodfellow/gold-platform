@@ -57,6 +57,8 @@ REFUSALS = {
     "arguments_too_large": "The arguments were too large.",
     "too_many_pending": "Too many requests are waiting for approval.",
     "access_denied": "Access was denied.",
+    "actor_not_permitted": "You do not have access to that kind of information.",
+    "permission_unmapped": "This tool has no access rule yet, so it is not available.",
 }
 
 
@@ -69,6 +71,8 @@ class ExecutionContext:
     principal_id: str
     correlation_id: str
     caller_token: str | None = field(default=None, repr=False)
+    # The conversation a request is made in, if any: where an approved request's result is delivered.
+    conversation_id: str | None = None
     _seal: object = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
@@ -77,13 +81,21 @@ class ExecutionContext:
 
     @classmethod
     def for_assistant(
-        cls, *, organization_id: str, assistant_id: str, caller_token: str, correlation_id: str | None = None
+        cls,
+        *,
+        organization_id: str,
+        assistant_id: str,
+        caller_token: str,
+        correlation_id: str | None = None,
+        conversation_id: str | None = None,
     ) -> "ExecutionContext":
-        return cls(organization_id, "assistant", assistant_id, correlation_id or uuid.uuid4().hex, caller_token, _SEAL)
+        return cls(
+            organization_id, "assistant", assistant_id, correlation_id or uuid.uuid4().hex, caller_token, conversation_id, _SEAL
+        )
 
     @classmethod
     def for_automation(cls, *, rule_id: str, correlation_id: str | None = None) -> "ExecutionContext":
-        return cls(None, "automation", rule_id, correlation_id or uuid.uuid4().hex, None, _SEAL)
+        return cls(None, "automation", rule_id, correlation_id or uuid.uuid4().hex, None, None, _SEAL)
 
 
 @dataclass(frozen=True)
@@ -227,7 +239,7 @@ def execute_granted_tool(settings: IntegrationSettings, ctx: ExecutionContext, *
     if tool is None:
         # Authorized, yet absent from this principal's live list a moment ago: nothing to validate
         # the arguments against, so nothing is sent.
-        return _finish(settings, execution_id, ToolOutcome("failed", execution_id, "invalid_input", "That tool changed; try again."))
+        return _finish(settings, execution_id, False, ToolOutcome("failed", execution_id, "invalid_input", "That tool changed; try again."))
     return _run(settings, execution_id, decision, arguments)
 
 
@@ -246,6 +258,7 @@ def _authorize(settings: IntegrationSettings, ctx: ExecutionContext, grant_id: s
                 "p_arguments": arguments,
                 "p_resource_value": resource_value,
                 "p_correlation": ctx.correlation_id,
+                "p_conversation_id": ctx.conversation_id,
             },
         ).json()
     else:
@@ -265,40 +278,41 @@ def _authorize(settings: IntegrationSettings, ctx: ExecutionContext, grant_id: s
 def run_approved(settings: IntegrationSettings, decision: dict) -> ToolOutcome:
     """Execute a request a person approved. The arguments are the ones stored with the request."""
     arguments = decision.get("arguments")
-    return _run(settings, str(decision["execution_id"]), decision, arguments if isinstance(arguments, dict) else {})
+    return _run(settings, str(decision["execution_id"]), decision, arguments if isinstance(arguments, dict) else {}, deliver=True)
 
 
 # --- the run ----------------------------------------------------------------------------------
 
 
-def _run(settings: IntegrationSettings, execution_id: str, target: dict, arguments: dict) -> ToolOutcome:
+def _run(settings: IntegrationSettings, execution_id: str, target: dict, arguments: dict, *, deliver: bool = False) -> ToolOutcome:
     secrets: list[str] = []
     try:
         if target.get("target_kind") == "mcp":
             data = _run_mcp(settings, target, arguments, secrets)
             if data.get("is_error"):
-                return _finish(settings, execution_id, ToolOutcome("failed", execution_id, "tool_error", "The tool reported an error.", _redact(data, secrets)))
+                return _finish(settings, execution_id, deliver, ToolOutcome("failed", execution_id, "tool_error", "The tool reported an error.", _redact(data, secrets)))
         else:
             data = _run_native(settings, target, arguments, secrets)
     except CapabilityInputError as failure:
-        return _finish(settings, execution_id, ToolOutcome("failed", execution_id, "invalid_input", str(failure)))
+        return _finish(settings, execution_id, deliver, ToolOutcome("failed", execution_id, "invalid_input", str(failure)))
     except UnsupportedCapability:
-        return _finish(settings, execution_id, ToolOutcome("failed", execution_id, "unsupported", "That operation is not available."))
+        return _finish(settings, execution_id, deliver, ToolOutcome("failed", execution_id, "unsupported", "That operation is not available."))
     except _Disabled as failure:
-        return _finish(settings, execution_id, ToolOutcome("failed", execution_id, "unsupported", str(failure)))
+        return _finish(settings, execution_id, deliver, ToolOutcome("failed", execution_id, "unsupported", str(failure)))
     except _CredentialUnavailable as failure:
-        return _finish(settings, execution_id, ToolOutcome("failed", execution_id, "credential_unavailable", str(failure)))
+        return _finish(settings, execution_id, deliver, ToolOutcome("failed", execution_id, "credential_unavailable", str(failure)))
     except (EndpointRefused, UpstreamRefused, MalformedAnswer) as failure:
         reached = "could not be reached" in str(failure)
         return _finish(
             settings,
             execution_id,
+            deliver,
             ToolOutcome("failed", execution_id, "unreachable" if reached else "provider_refused", _words(failure, secrets)),
         )
     except Exception:  # noqa: BLE001 - nothing of the failure may reach a model or a log line
-        return _finish(settings, execution_id, ToolOutcome("failed", execution_id, "internal", "The operation failed."))
+        return _finish(settings, execution_id, deliver, ToolOutcome("failed", execution_id, "internal", "The operation failed."))
 
-    return _finish(settings, execution_id, ToolOutcome("succeeded", execution_id, data=_bounded(_redact(data, secrets))))
+    return _finish(settings, execution_id, deliver, ToolOutcome("succeeded", execution_id, data=_bounded(_redact(data, secrets))))
 
 
 class _CredentialUnavailable(RuntimeError):
@@ -400,7 +414,7 @@ def _bounded(data: Any) -> Any:
     return {"truncated": True, "note": "The result was too large to return; narrow the request."}
 
 
-def _finish(settings: IntegrationSettings, execution_id: str | None, outcome: ToolOutcome) -> ToolOutcome:
+def _finish(settings: IntegrationSettings, execution_id: str | None, deliver: bool, outcome: ToolOutcome) -> ToolOutcome:
     """Write down how it ended. A failure to record never changes what the caller is told."""
     if execution_id:
         try:
@@ -411,6 +425,9 @@ def _finish(settings: IntegrationSettings, execution_id: str | None, outcome: To
                 succeeded=outcome.status == "succeeded",
                 error_class=None if outcome.status == "succeeded" else outcome.reason,
                 result_bytes=size,
+                # Handed over only for a request a person approved, and held by the database only if it
+                # was made inside a conversation that can take it.
+                result=outcome.data if deliver and outcome.status == "succeeded" else None,
             )
         except RuntimeError:
             pass

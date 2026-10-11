@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import {
   addAutomationAction,
   addAutomationCondition,
+  addAutomationToolAction,
   createAutomationRule,
   deleteAutomationRule,
   removeAutomationAction,
@@ -192,6 +193,32 @@ export async function addActionAction(
       channel: String(formData.get('channel') ?? '') || null,
       shiftMinutes: Number(formData.get('shiftMinutes') ?? Number.NaN),
       typeId: String(formData.get('typeId') ?? '') || null,
+    }),
+  );
+}
+
+export async function addToolActionAction(
+  _previous: AutomationActionState,
+  formData: FormData,
+): Promise<AutomationActionState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  const ruleId = String(formData.get('ruleId') ?? '');
+  const [connectionId, capabilityKey] = String(formData.get('choice') ?? '').split('|');
+  const answers: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (key.startsWith('arg_') && typeof value === 'string') answers[key.slice(4)] = value;
+  }
+
+  return run([rootPath(organizationId), rulePath(organizationId, ruleId)], () =>
+    addAutomationToolAction(db, {
+      organizationId,
+      ruleId,
+      connectionId: connectionId ?? '',
+      connectorName: String(formData.get('connectorName') ?? '').slice(0, 80),
+      capabilityKey: capabilityKey ?? '',
+      answers,
     }),
   );
 }

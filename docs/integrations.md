@@ -695,6 +695,15 @@ Five concepts stay apart, each in its own place:
 - **An MCP tool always needs a person's approval in this slice.** A server's `readOnlyHint` is its own claim.
   The platform cannot enforce that a remote tool is read-only, so the reviewer's classification is recorded
   but never removes the approval step. The table refuses an MCP grant that does not require approval.
+- **Both the agent's grant and the asking member's own permission must hold.** A grant is the agent's right.
+  For a native capability, the member who asked the agent must also hold the permission that already says
+  they work with that kind of data (`integration_capability_permissions`: customers, the diary,
+  documents and files, messaging, the business's technical setup). A capability with no row is refused. An
+  MCP tool has no such mapping, because what it does is unknown; a person approves each use instead.
+  Automations have no asking member, so the grant and the rule being on are what hold.
+- **Approval repeats the whole authorization.** A request and its approval ask the same function
+  (`app.integration_execution_blocker`): grant, target, agent, resource limit, the agent's reading gate and
+  the requester's permission, all as they stand at that moment.
 - **Native capabilities only read.** No native capability that writes is declared, and the executor refuses
   one if it appears. A write needs its own permission and approval design.
 - **The principal and the Organization come from the runtime, never from arguments.** The execution context is
@@ -722,6 +731,12 @@ waiting → a person approves or rejects; approval re-checks everything, then ru
 outcome recorded (status, error class, duration, size)
 ```
 
+A request made inside a conversation that a person later approves has its result held for that member,
+bounded and for at most a day, until the conversation's next turn takes it once (`take_integration_results`).
+The agent then reads it as quoted data at the start of that turn; a request that was declined or lapsed is
+stated plainly. Taking it deletes it. A call that ran straight away returns its result to the caller and
+nothing is held.
+
 Authorization is asked before a credential is read. Approval is tied to one request: this principal, this
 target, these arguments, an expiry; a client-supplied `approved` flag does not exist.
 
@@ -729,26 +744,44 @@ target, these arguments, an expiry; a client-supplied `approved` flag does not e
 
 Facts, not content: principal, target, decision and reason, approval state, outcome, error class, duration,
 result size and a hash of the arguments. Arguments are held only while a request waits for a decision or is
-running, and are cleared afterwards. Results are never stored. `purge_integration_executions` fails calls
-that never reported back and deletes terminal history past the retention window; **no scheduler calls it yet**.
+running, and are cleared afterwards. A result is never part of this record; the one exception is the bounded
+result of an approved request made inside a conversation, held in a column no signed-in role can read, until
+the conversation takes it or a day passes. `purge_integration_executions` runs from the automation tick: it
+fails calls that never reported back, expires requests nobody decided, drops undelivered results and deletes
+terminal history past the retention window.
 
 ### Who can be granted
 
-The operator agent (the assistant with an enabled `operator_copilot` deployment) is wired. Public and
-website assistants are never given external tools. The database also holds automation grants and an
-authorization path for them, and the executor accepts an automation context, but no automation action runs a
-capability yet, so the interface offers only agents.
+The operator agent (the assistant with an enabled `operator_copilot` deployment) is granted tools in
+Connections. Public and website assistants are never given external tools.
+
+An automation is granted a tool by adding a **"use a connected tool"** action to its rule
+(`add_automation_tool_action`), which creates the rule's own grant and the action together and needs both
+`automation.manage` and `integration.manage`. Removing the action ends the grant. Native read capabilities
+only: an MCP tool needs a person to approve each use, and a rule has nobody to ask.
+
+### Automations running tools
+
+A rule carrying a `run_tool` action does not call anything itself. `app.run_automation` queues one call per
+action and subject (`integration_action_queue`); the automation tick claims the queue through the integration
+runtime's doors (the scheduler's own role gains nothing) and runs each call through the same executor under
+the rule's identity. Outcomes are kept apart: a success is one row of the rule's history; a refusal or a
+request that was never valid is recorded once and not repeated; only an app that could not be reached is tried
+again, up to three attempts. Every attempt is its own execution record. What a call read is not stored, and
+nothing downstream in a rule reads it yet, so today a tool action records that a read worked or why it did
+not.
 
 ### Known limits
 
-- **A grant is the administrator's decision about everyone who may ask the agent.** The grant and the
-  agent's own state are checked at each call; the *asking operator's* own rights to the app's data are not.
-  A member with `assistant.ask` can therefore have the agent read through a tool even if that member could
-  not use the app directly. Mapping each capability to the actor permission it should also require is
-  follow-up work; until then grant only what everyone who may ask the agent may see.
-- An approved request runs at the moment of approval and its result is not returned to the conversation that
-  asked; agent runs are not resumable.
-- The person who triggered a request may approve it, and a business with one administrator will.
+- Capability permissions use the nearest existing permission (for example `customer.update` for CRM data);
+  there is no read-only permission in the role vocabulary today. The mapping is a platform-owned table and can
+  be refined without touching any grant.
+- An MCP tool's effect is unknown, so the asking member's permission is not checked for it; a person's
+  approval of each use is the control. The person who triggered a request may approve it, and a business with
+  one administrator will.
+- An approved request runs when it is approved. Its result reaches the conversation's next turn, not the turn
+  that asked; agent runs are not resumable.
+- Automations read but do not yet use what they read; MCP tools are not offered to automations.
 - MCP servers authenticate with a bearer token only.
 
 ### Health

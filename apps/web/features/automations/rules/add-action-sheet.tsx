@@ -21,7 +21,8 @@ import {
   type MessageTemplate,
 } from '@/lib/domain/automation/templates';
 import type { StatusChoice } from './rule-detail-types';
-import { addActionAction } from '@/app/organizations/[organizationId]/automations/actions';
+import { addActionAction, addToolActionAction } from '@/app/organizations/[organizationId]/automations/actions';
+import type { ToolChoice } from '@/lib/domain/integrations/tool-access';
 import {
   ActionError,
   INITIAL_AUTOMATION_ACTION_STATE as INITIAL,
@@ -34,6 +35,7 @@ export function AddActionSheet({
   templates,
   types,
   action,
+  toolChoices = [],
 }: {
   action?: AutomationRule['actions'][number];
   organizationId: string;
@@ -41,6 +43,8 @@ export function AddActionSheet({
   statuses: StatusChoice[];
   templates: MessageTemplate[];
   types: { id: string; name: string }[];
+  /** What a connected app can be asked to read. Empty for someone who may not wire one in. */
+  toolChoices?: ToolChoice[];
 }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState(
@@ -49,9 +53,17 @@ export function AddActionSheet({
         ? 'create_work_item'
         : 'change_status'),
   );
+  const [choice, setChoice] = useState('');
+  const chosen = (() => {
+    const [connectionId, capabilityKey] = choice.split('|');
+    const connection = toolChoices.find((entry) => entry.connectionId === connectionId);
+    return connection
+      ? { connection, capability: connection.capabilities.find((entry) => entry.key === capabilityKey) ?? null }
+      : null;
+  })();
   const [state, formAction, pending] = useActionState(
     async (previous: typeof INITIAL, data: FormData) => {
-      const result = await addActionAction(previous, data);
+      const result = kind === 'run_tool' ? await addToolActionAction(previous, data) : await addActionAction(previous, data);
       if (!result.error) setOpen(false);
       return result;
     },
@@ -90,14 +102,58 @@ export function AddActionSheet({
           >
             {ACTION_KINDS.filter(
               (entry) =>
-                rule.triggerKind !== 'counter_threshold' ||
-                entry.kind === 'create_work_item',
+                (rule.triggerKind !== 'counter_threshold' ||
+                  entry.kind === 'create_work_item') &&
+                (entry.kind !== 'run_tool' || (toolChoices.length > 0 && !action)),
             ).map((entry) => (
               <option key={entry.kind} value={entry.kind}>
                 {entry.label}
               </option>
             ))}
           </SelectInput>
+
+          {kind === 'run_tool' && (
+            <>
+              <SelectInput
+                name="choice"
+                aria-label="What to read"
+                value={choice}
+                onChange={(e) => setChoice(e.target.value)}
+                required
+              >
+                <option value="">Choose what to read</option>
+                {toolChoices.map((connection) => (
+                  <optgroup
+                    key={connection.connectionId}
+                    label={`${connection.connectorName}${connection.accountLabel ? ` — ${connection.accountLabel}` : ''}`}
+                  >
+                    {connection.capabilities.map((capability) => (
+                      <option key={capability.key} value={`${connection.connectionId}|${capability.key}`}>
+                        {capability.summary}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </SelectInput>
+              <input type="hidden" name="connectorName" value={chosen?.connection.connectorName ?? ''} />
+              {chosen?.capability?.fields.map((field) => (
+                <label key={field.name} className="flex flex-col gap-1 text-sm">
+                  {field.label}
+                  {field.required ? '' : ' (optional)'}
+                  <TextInput
+                    name={`arg_${field.name}`}
+                    type={field.kind === 'whole number' ? 'number' : 'text'}
+                    required={field.required}
+                    autoComplete="off"
+                  />
+                </label>
+              ))}
+              <p className="text-xs text-subtle">
+                The rule reads this when it runs and records whether it worked. It only reads; it changes nothing in the app, and what it read is
+                not kept. Adding it gives this rule the right to use that connection. Withdraw that by removing the action.
+              </p>
+            </>
+          )}
 
           {(kind === 'change_status' || kind === 'create_work_item') && (
             <SelectInput
@@ -184,14 +240,14 @@ export function AddActionSheet({
             </>
           )}
 
-          {statuses.length === 0 ? (
+          {statuses.length === 0 && (kind === 'change_status' || kind === 'create_work_item') ? (
             <span className="text-xs text-muted">
               This business has no statuses yet, so there is nowhere for a rule
               to move a job.
             </span>
           ) : null}
 
-          {templates.length === 0 ? (
+          {templates.length === 0 && kind === 'notify' ? (
             <span className="text-xs text-muted">
               No messages written yet, so there is nothing to send.
             </span>

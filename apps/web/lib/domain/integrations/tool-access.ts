@@ -91,10 +91,14 @@ export async function listActiveGrants(db: Db, input: { organizationId: string }
   }));
 }
 
+// Named, because a stored result is the one column a signed-in role may not read.
+const EXECUTION_COLUMNS =
+  'id, requested_at, principal_kind, principal_id, target_kind, connector_key, capability_key, tool_name, decision, refusal_reason, approval_state, status, error_class, duration_ms, pending_arguments, expires_at';
+
 export async function listExecutions(db: Db, input: { organizationId: string; limit?: number }): Promise<Execution[]> {
   const { data, error } = await db
     .from('integration_executions')
-    .select('*')
+    .select(EXECUTION_COLUMNS)
     .eq('organization_id', input.organizationId)
     .order('requested_at', { ascending: false })
     .limit(input.limit ?? 25);
@@ -169,6 +173,8 @@ export async function decideExecution(
   });
 }
 
+export type ToolField = { name: string; label: string; kind: 'text' | 'whole number'; required: boolean };
+
 export type NativeCapability = {
   key: string;
   summary: string;
@@ -176,13 +182,15 @@ export type NativeCapability = {
   writes: boolean;
   resourceType: string | null;
   inputs: string[];
+  /** What it can be asked, in words a person can fill in. */
+  fields: ToolField[];
 };
 
 /** What a connector declares it can do. A fact about the deployed code, so it reads no business. */
 export async function listNativeCapabilities(db: Db, input: { connectorKey: string }): Promise<NativeCapability[]> {
   try {
     const answer = await callDomainCommand<{
-      connectors: { connector_key: string; capabilities: { key: string; summary: string; workspace: string; writes: boolean; resource_type: string | null; inputs: { properties?: Record<string, unknown> } }[] }[];
+      connectors: { connector_key: string; capabilities: { key: string; summary: string; workspace: string; writes: boolean; resource_type: string | null; inputs: { properties?: Record<string, { type?: string; description?: string }>; required?: string[] } }[] }[];
     }>('/integrations/operate', {
       token: await requireAccessToken(db),
       body: { operation: 'capabilities', arguments: { connector_keys: [input.connectorKey] } },
@@ -197,6 +205,13 @@ export async function listNativeCapabilities(db: Db, input: { connectorKey: stri
         writes: capability.writes,
         resourceType: capability.resource_type,
         inputs: Object.keys(capability.inputs?.properties ?? {}),
+        // A page marker means nothing to a person filling in a form, and a rule has no earlier page to continue.
+        fields: Object.entries(capability.inputs?.properties ?? {}).filter(([name]) => name !== 'after').map(([name, spec]) => ({
+          name,
+          label: (spec.description ?? name).replace(/\.$/, ''),
+          kind: spec.type === 'integer' ? ('whole number' as const) : ('text' as const),
+          required: (capability.inputs?.required ?? []).includes(name),
+        })),
       }));
   } catch (error) {
     if (error instanceof DomainError) return []; // the API is not reachable: offer nothing rather than guess
@@ -243,4 +258,31 @@ export async function listAgentTools(db: Db, input: { organizationId: string; ag
       needsApproval: grant.requiresApproval,
     };
   });
+}
+
+export type ToolChoice = { connectionId: string; connectorName: string; accountLabel: string | null; capabilities: NativeCapability[] };
+
+/**
+ * What an automation could be told to read: the capabilities of this business's active connections to
+ * connected apps. Offered only to someone who manages both automations and integrations, because wiring
+ * one in creates a grant.
+ */
+export async function listToolChoices(db: Db, input: { organizationId: string }): Promise<ToolChoice[]> {
+  const [connections, connectors] = await Promise.all([
+    listConnections(db, { organizationId: input.organizationId }),
+    listConnectors(db),
+  ]);
+  const native = new Map(connectors.filter((connector) => connector.connectionMethod === 'native').map((connector) => [connector.key, connector]));
+  const choices: ToolChoice[] = [];
+  const known = new Map<string, NativeCapability[]>();
+  for (const connection of connections) {
+    const connector = native.get(connection.connectorKey);
+    if (!connector || connection.status !== 'active') continue;
+    if (!known.has(connector.key)) known.set(connector.key, await listNativeCapabilities(db, { connectorKey: connector.key }));
+    const capabilities = known.get(connector.key) ?? [];
+    if (capabilities.length > 0) {
+      choices.push({ connectionId: connection.id, connectorName: connector.name, accountLabel: connection.accountLabel, capabilities });
+    }
+  }
+  return choices;
 }

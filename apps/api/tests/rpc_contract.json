@@ -1,15 +1,24 @@
 {
   "_about": "The named arguments apps/api sends to each database function, and the role it sends them as. `sends` is every name Python may send; `optional` is the subset it may leave out. Checked against Python by tests/contract/test_rpc_contract.py and against pg_proc by apps/web/tests/architecture/database/python-rpc-surface.test.ts. Change a database function's parameters, or a Python payload, and update this file with it. A function with `naming: bare` is called by a domain command that names its arguments without the `p_` prefix; app/core/caller.py adds it.",
   "functions": {
-    "swap_integration_credential": {
-      "role": "integration_operator",
+    "authorize_assistant_tool_call": {
+      "role": "authenticated",
       "callers": [
-        "app/core/db.py"
+        "app/services/integrations/executor.py"
       ],
       "sends": [
-        "p_connection_id",
-        "p_expected_refresh",
-        "p_secret"
+        "p_arguments",
+        "p_assistant_id",
+        "p_conversation_id",
+        "p_correlation",
+        "p_grant_id",
+        "p_organization_id",
+        "p_resource_value"
+      ],
+      "optional": [
+        "p_conversation_id",
+        "p_correlation",
+        "p_resource_value"
       ]
     },
     "complete_integration_execution": {
@@ -20,8 +29,70 @@
       "sends": [
         "p_error_class",
         "p_execution_id",
+        "p_result",
         "p_result_bytes",
         "p_succeeded"
+      ],
+      "optional": [
+        "p_error_class",
+        "p_result",
+        "p_result_bytes"
+      ]
+    },
+    "take_integration_results": {
+      "role": "authenticated",
+      "callers": [
+        "app/ai/delivered.py"
+      ],
+      "sends": [
+        "p_conversation_id",
+        "p_organization_id"
+      ]
+    },
+    "claim_integration_actions": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_limit"
+      ],
+      "optional": [
+        "p_limit"
+      ]
+    },
+    "finish_integration_action": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_detail",
+        "p_id",
+        "p_outcome",
+        "p_retry"
+      ],
+      "optional": [
+        "p_detail",
+        "p_retry"
+      ]
+    },
+    "purge_integration_executions": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": []
+    },
+    "swap_integration_credential": {
+      "role": "integration_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_connection_id",
+        "p_expected_refresh",
+        "p_secret"
       ]
     },
     "upsert_mcp_server": {
@@ -74,24 +145,6 @@
       ],
       "sends": [
         "p_rule_id"
-      ]
-    },
-    "authorize_assistant_tool_call": {
-      "role": "authenticated",
-      "callers": [
-        "app/services/integrations/executor.py"
-      ],
-      "sends": [
-        "p_arguments",
-        "p_assistant_id",
-        "p_correlation",
-        "p_grant_id",
-        "p_organization_id",
-        "p_resource_value"
-      ],
-      "optional": [
-        "p_correlation",
-        "p_resource_value"
       ]
     },
     "granted_tools_for_assistant": {

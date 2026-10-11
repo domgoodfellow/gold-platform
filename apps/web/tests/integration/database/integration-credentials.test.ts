@@ -139,8 +139,10 @@ describe('nothing signed in can read a credential', () => {
     // through -- each a door only the runtime that did the work may use (`integration-tool-grants.test.ts` proves every one is closed to a signed-in session).
     expect(routines.rows.map((row) => row.routine_name)).toEqual([
       'authorize_automation_tool_call',
+      'claim_integration_actions',
       'clear_integration_credential',
       'complete_integration_execution',
+      'finish_integration_action',
       'granted_tools_for_automation',
       'purge_integration_executions',
       'read_integration_credential',

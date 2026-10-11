@@ -128,8 +128,8 @@ describe('MCP servers', () => {
 
 describe('what an agent can do with a connected app', () => {
   const capabilities = [
-    { key: 'crm.contacts.list', summary: 'Contacts', workspace: 'crm', writes: false, resourceType: null, inputs: ['limit'] },
-    { key: 'slack.messages.history', summary: 'Recent messages in one channel', workspace: 'communications', writes: false, resourceType: 'slack_channel', inputs: ['channel_id'] },
+    { key: 'crm.contacts.list', summary: 'Contacts', workspace: 'crm', writes: false, resourceType: null, inputs: ['limit'], fields: [] },
+    { key: 'slack.messages.history', summary: 'Recent messages in one channel', workspace: 'communications', writes: false, resourceType: 'slack_channel', inputs: ['channel_id'], fields: [] },
   ];
 
   it('offers each read use, off until given, and says nothing here changes data', () => {

@@ -941,7 +941,9 @@ Do not allow retrieved prose to redefine:
 An agent may use a connected app's capability or an MCP tool only through a grant that names that agent and
 that target. A grant is created by someone with `integration.manage`, is revocable, and stops working when
 its connection, server, tool, resource or the agent itself is no longer live. An MCP tool always needs a
-person's approval. The identity and Organization of an execution come from the runtime and the database,
+person's approval. For a native capability the member who asked the agent must also hold the permission for that
+kind of data, so the agent cannot read more through a grant than its asker could. Approval repeats the whole
+authorization at the moment it is given. The identity and Organization of an execution come from the runtime and the database,
 never from model-supplied arguments. A third party's tool description, schema and result are untrusted data.
 Outbound requests to a customer-chosen MCP address are limited by address checks and a pinned connection, and
 by network egress controls the deployment must declare; see `docs/integrations.md`.

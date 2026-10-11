@@ -18,6 +18,7 @@ import { Button, ButtonLink } from '@/components/controls/button';
 import type { AutomationRule } from '@/lib/domain/automation/rules';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { MessageTemplate } from '@/lib/domain/automation/templates';
+import type { ToolChoice } from '@/lib/domain/integrations/tool-access';
 import type { StatusChoice } from './rule-detail-types';
 import { describeTrigger } from './trigger';
 import { RuleHeading } from './rule-heading';
@@ -33,6 +34,7 @@ const actionNames = {
   notify: 'Notify Customer',
   shift_schedule: 'Shift scheduled Work',
   create_work_item: 'Create Work item',
+  run_tool: 'Use a connected tool',
 };
 
 export function RuleBuilder({
@@ -45,6 +47,7 @@ export function RuleBuilder({
   warnings,
   mayManage,
   initialNode,
+  toolChoices = [],
 }: {
   organizationId: string;
   rule: AutomationRule;
@@ -55,6 +58,7 @@ export function RuleBuilder({
   warnings: string[];
   mayManage: boolean;
   initialNode?: string;
+  toolChoices?: ToolChoice[];
 }) {
   const [selected, setSelected] = useState(initialNode ?? 'trigger');
   const [mobileInspector, setMobileInspector] = useState(false);
@@ -69,7 +73,9 @@ export function RuleBuilder({
   const condition = rule.conditions.find((c) => c.id === selected);
   const action = rule.actions.find((a) => a.id === selected);
   const summary = (a: AutomationRule['actions'][number]) =>
-    a.kind === 'notify'
+    a.kind === 'run_tool'
+      ? `${a.toolLabel ?? 'A connected tool'} · reads only`
+      : a.kind === 'notify'
       ? `${templates.find((t) => t.id === a.templateId)?.name ?? 'Missing template'} · ${a.channel} · Work Customer`
       : a.kind === 'shift_schedule'
         ? `${Math.abs(a.shiftMinutes ?? 0)} minutes ${(a.shiftMinutes ?? 0) < 0 ? 'earlier' : 'later'}`
@@ -238,6 +244,7 @@ export function RuleBuilder({
                   statuses={statuses}
                   templates={templates}
                   types={types}
+                  toolChoices={toolChoices}
                 />
               )}
             </div>
@@ -335,7 +342,7 @@ export function RuleBuilder({
                   {actionNames[action.kind]}
                 </p>
                 <p className="text-xs text-subtle">{summary(action)}</p>
-                {mayManage && (
+                {mayManage && action.kind !== 'run_tool' && (
                   <AddActionSheet
                     key={action.id}
                     organizationId={organizationId}

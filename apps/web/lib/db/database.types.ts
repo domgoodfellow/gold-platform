@@ -730,6 +730,7 @@ export type Database = {
           channel: string | null
           created_at: string
           created_by: string
+          grant_id: string | null
           id: string
           organization_id: string
           position: number
@@ -737,6 +738,8 @@ export type Database = {
           shift_minutes: number | null
           status_id: string | null
           template_id: string | null
+          tool_arguments: Json | null
+          tool_label: string | null
           work_item_type_id: string | null
         }
         Insert: {
@@ -744,6 +747,7 @@ export type Database = {
           channel?: string | null
           created_at?: string
           created_by: string
+          grant_id?: string | null
           id?: string
           organization_id: string
           position?: number
@@ -751,6 +755,8 @@ export type Database = {
           shift_minutes?: number | null
           status_id?: string | null
           template_id?: string | null
+          tool_arguments?: Json | null
+          tool_label?: string | null
           work_item_type_id?: string | null
         }
         Update: {
@@ -758,6 +764,7 @@ export type Database = {
           channel?: string | null
           created_at?: string
           created_by?: string
+          grant_id?: string | null
           id?: string
           organization_id?: string
           position?: number
@@ -765,9 +772,18 @@ export type Database = {
           shift_minutes?: number | null
           status_id?: string | null
           template_id?: string | null
+          tool_arguments?: Json | null
+          tool_label?: string | null
           work_item_type_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "automation_actions_grant_same_org"
+            columns: ["organization_id", "grant_id"]
+            isOneToOne: false
+            referencedRelation: "integration_tool_grants"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "automation_actions_new_status_same_type"
             columns: ["organization_id", "work_item_type_id", "status_id"]
@@ -3716,6 +3732,87 @@ export type Database = {
           },
         ]
       }
+      integration_action_queue: {
+        Row: {
+          action_id: string
+          arguments: Json
+          attempts: number
+          claimed_at: string | null
+          detail: string | null
+          finished_at: string | null
+          grant_id: string
+          id: string
+          organization_id: string
+          queued_at: string
+          rule_id: string
+          state: string
+          subject_id: string
+          subject_type: string
+        }
+        Insert: {
+          action_id: string
+          arguments: Json
+          attempts?: number
+          claimed_at?: string | null
+          detail?: string | null
+          finished_at?: string | null
+          grant_id: string
+          id?: string
+          organization_id: string
+          queued_at?: string
+          rule_id: string
+          state?: string
+          subject_id: string
+          subject_type: string
+        }
+        Update: {
+          action_id?: string
+          arguments?: Json
+          attempts?: number
+          claimed_at?: string | null
+          detail?: string | null
+          finished_at?: string | null
+          grant_id?: string
+          id?: string
+          organization_id?: string
+          queued_at?: string
+          rule_id?: string
+          state?: string
+          subject_id?: string
+          subject_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_action_queue_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_action_queue_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_capability_permissions: {
+        Row: {
+          capability_key: string
+          required_permission: string
+        }
+        Insert: {
+          capability_key: string
+          required_permission: string
+        }
+        Update: {
+          capability_key?: string
+          required_permission?: string
+        }
+        Relationships: []
+      }
       integration_connections: {
         Row: {
           account_label: string | null
@@ -3793,8 +3890,10 @@ export type Database = {
           completed_at: string | null
           connection_id: string | null
           connector_key: string | null
+          conversation_id: string | null
           correlation_id: string | null
           decision: string
+          delivered_at: string | null
           duration_ms: number | null
           error_class: string | null
           expires_at: string | null
@@ -3809,7 +3908,9 @@ export type Database = {
           principal_kind: string
           refusal_reason: string | null
           requested_at: string
+          resource_value: string | null
           result_bytes: number | null
+          result_payload: Json | null
           started_at: string | null
           status: string
           target_kind: string | null
@@ -3824,8 +3925,10 @@ export type Database = {
           completed_at?: string | null
           connection_id?: string | null
           connector_key?: string | null
+          conversation_id?: string | null
           correlation_id?: string | null
           decision: string
+          delivered_at?: string | null
           duration_ms?: number | null
           error_class?: string | null
           expires_at?: string | null
@@ -3840,7 +3943,9 @@ export type Database = {
           principal_kind: string
           refusal_reason?: string | null
           requested_at?: string
+          resource_value?: string | null
           result_bytes?: number | null
+          result_payload?: Json | null
           started_at?: string | null
           status: string
           target_kind?: string | null
@@ -3855,8 +3960,10 @@ export type Database = {
           completed_at?: string | null
           connection_id?: string | null
           connector_key?: string | null
+          conversation_id?: string | null
           correlation_id?: string | null
           decision?: string
+          delivered_at?: string | null
           duration_ms?: number | null
           error_class?: string | null
           expires_at?: string | null
@@ -3871,7 +3978,9 @@ export type Database = {
           principal_kind?: string
           refusal_reason?: string | null
           requested_at?: string
+          resource_value?: string | null
           result_bytes?: number | null
+          result_payload?: Json | null
           started_at?: string | null
           status?: string
           target_kind?: string | null
@@ -12196,6 +12305,18 @@ export type Database = {
         Args: { p_display_name: string; p_token: string }
         Returns: string
       }
+      add_automation_tool_action: {
+        Args: {
+          p_arguments: Json
+          p_capability_key: string
+          p_connection_id: string
+          p_label: string
+          p_organization_id: string
+          p_resource_id?: string
+          p_rule_id: string
+        }
+        Returns: string
+      }
       add_call_participant: {
         Args: {
           p_call_id: string
@@ -12360,6 +12481,7 @@ export type Database = {
         Args: {
           p_arguments: Json
           p_assistant_id: string
+          p_conversation_id?: string
           p_correlation?: string
           p_grant_id: string
           p_organization_id: string
@@ -12497,6 +12619,16 @@ export type Database = {
         Args: { p_message_id: string; p_organization_id: string }
         Returns: boolean
       }
+      claim_integration_actions: {
+        Args: { p_limit?: number }
+        Returns: {
+          arguments: Json
+          attempts: number
+          grant_id: string
+          id: string
+          rule_id: string
+        }[]
+      }
       claim_portal_invite: { Args: { p_token: string }; Returns: string }
       claim_proposal_invite: { Args: { p_token: string }; Returns: string }
       clear_integration_credential: {
@@ -12511,6 +12643,7 @@ export type Database = {
         Args: {
           p_error_class?: string
           p_execution_id: string
+          p_result?: Json
           p_result_bytes?: number
           p_succeeded: boolean
         }
@@ -12924,6 +13057,15 @@ export type Database = {
       finance_dashboard_summary: {
         Args: { p_from: string; p_organization_id: string; p_to: string }
         Returns: Json
+      }
+      finish_integration_action: {
+        Args: {
+          p_detail?: string
+          p_id: string
+          p_outcome: string
+          p_retry?: boolean
+        }
+        Returns: undefined
       }
       form_editor_state: {
         Args: { p_form_id: string; p_organization_id: string }
@@ -14918,6 +15060,16 @@ export type Database = {
           p_status?: string
         }
         Returns: string
+      }
+      take_integration_results: {
+        Args: { p_conversation_id: string; p_organization_id: string }
+        Returns: {
+          error_class: string
+          execution_id: string
+          result: Json
+          status: string
+          tool_label: string
+        }[]
       }
       time_committed: {
         Args: {

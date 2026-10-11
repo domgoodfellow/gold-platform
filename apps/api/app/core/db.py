@@ -887,12 +887,16 @@ def complete_integration_execution(
     succeeded: bool,
     error_class: str | None = None,
     result_bytes: int | None = None,
+    result: object = None,
 ) -> None:
-    _integration_rpc(
-        settings,
-        "complete_integration_execution",
-        {"p_execution_id": execution_id, "p_succeeded": succeeded, "p_error_class": error_class, "p_result_bytes": result_bytes},
-    )
+    payload = {
+        "p_execution_id": execution_id,
+        "p_succeeded": succeeded,
+        "p_error_class": error_class,
+        "p_result_bytes": result_bytes,
+        "p_result": result,
+    }
+    _integration_rpc(settings, "complete_integration_execution", payload)
 
 
 def upsert_mcp_server(settings: IntegrationSettings, *, organization_id: str, connection_id: str, name: str, endpoint: str) -> str:
@@ -924,6 +928,21 @@ def record_mcp_discovery(
         "p_tools": tools or [],
     }
     return int(_integration_rpc(settings, "record_mcp_discovery", payload) or 0)  # type: ignore[call-overload]
+
+
+def claim_integration_actions(settings: IntegrationSettings, *, limit: int = 20) -> list[dict]:
+    return _integration_rpc(settings, "claim_integration_actions", {"p_limit": limit}) or []  # type: ignore[return-value]
+
+
+def finish_integration_action(
+    settings: IntegrationSettings, *, queue_id: str, outcome: str, detail: str | None = None, retry: bool = False
+) -> None:
+    payload = {"p_id": queue_id, "p_outcome": outcome, "p_detail": detail, "p_retry": retry}
+    _integration_rpc(settings, "finish_integration_action", payload)
+
+
+def purge_integration_executions(settings: IntegrationSettings) -> int:
+    return int(_integration_rpc(settings, "purge_integration_executions", {}) or 0)  # type: ignore[call-overload]
 
 
 def authorize_automation_tool_call(

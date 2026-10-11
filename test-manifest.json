@@ -122,6 +122,13 @@
   },
   "files": {
     "apps/web/e2e/global-home.spec.ts": { "category": "playwright-acceptance", "concerns": ["home", "permissions", "canonical-actions", "responsive", "agent"] },
+    "apps/web/tests/unit/public-catalog-pages.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "commercial"
+      ],
+      "note": "The public plan catalogue is read in pages so the API row cap cannot hide plans."
+    },
     "apps/web/tests/unit/tool-labels.test.ts": {
       "category": "unit",
       "concerns": [
@@ -131,6 +138,14 @@
     },
     "apps/web/tests/unit/home-projection.test.ts": { "category": "unit", "concerns": ["home", "time", "projections"] },
     "apps/web/tests/integration/database/home-dashboard.test.ts": { "category": "database-integration", "concerns": ["home", "authorization", "tenant-isolation", "counts", "currencies"] },
+    "apps/web/tests/component/automation-tool-action.test.tsx": {
+      "category": "component",
+      "concerns": [
+        "automations",
+        "integrations"
+      ],
+      "note": "The rule editor offers a connected tool only where there is one, asks only what it needs, and does not edit it in place."
+    },
     "apps/web/tests/component/mcp-overview.test.tsx": {
       "category": "component",
       "concerns": [
@@ -689,6 +704,14 @@
         "work",
         "records"
       ]
+    },
+    "apps/web/tests/architecture/database/capability-permissions.test.ts": {
+      "category": "architecture-db",
+      "concerns": [
+        "integrations",
+        "security"
+      ],
+      "note": "Every capability a connector declares has a permission row, and every mapped permission exists."
     },
     "apps/web/tests/architecture/database/function-surface.test.ts": {
       "category": "architecture-db",
