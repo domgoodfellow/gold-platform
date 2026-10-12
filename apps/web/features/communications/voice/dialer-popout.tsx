@@ -73,12 +73,22 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
       }
       child.document.documentElement.className = document.documentElement.className;
       child.document.documentElement.style.cssText = document.documentElement.style.cssText;
+      const appearance = document.querySelector('[data-account-appearance]');
+      if (appearance) {
+        for (const attribute of ['data-visual-system', 'data-visual-preset', 'data-appearance', 'data-density', 'data-motion', 'style']) {
+          const value = appearance.getAttribute(attribute);
+          if (value === null) child.document.body.removeAttribute(attribute);
+          else child.document.body.setAttribute(attribute, value);
+        }
+      }
     };
     syncStyles();
     const observer = new MutationObserver(syncStyles);
     observer.observe(document.head, { childList: true, subtree: true, characterData: true, attributes: true });
     const brand = document.querySelector('[data-brand]');
-    if (brand) observer.observe(brand, { childList: true });
+    if (brand) observer.observe(brand, { childList: true, attributes: true });
+    const appearance = document.querySelector('[data-account-appearance]');
+    if (appearance && appearance !== brand) observer.observe(appearance, { attributes: true });
     const themeObserver = new MutationObserver(syncStyles);
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] });
     child.addEventListener('pagehide', close);

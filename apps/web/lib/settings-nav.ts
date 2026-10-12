@@ -1,6 +1,6 @@
 import { configTarget, configTargetOffered, WORKSPACES, areaHref, AREAS, type ConfigGate } from '@/lib/navigation';
 import type { NavItem, ShellSection } from '@/lib/shell';
-import { personalSettingsHref } from '@/lib/route/personal-settings';
+import { PERSONAL_SECTIONS, personalSettingsHref } from '@/lib/route/personal-settings';
 
 /**
  * Settings as a context of the one shell: the sidebar swaps its workspaces for these destinations
@@ -26,10 +26,10 @@ function item(organizationId: string, spec: { key: string; label: string; target
 }
 
 export function projectSettingsNav(organizationId: string, gate: ConfigGate): ShellSection[] {
-  const personal: NavItem[] = [
-    { key: 'settings-profile', label: 'Profile', href: personalSettingsHref('profile', organizationId), section: 'settings-personal', exact: true, activeHrefs: ['/settings/account'] },
-    { key: 'settings-security', label: 'Security & sign-in', href: personalSettingsHref('security', organizationId), section: 'settings-personal', activeHrefs: ['/settings/account/security'] },
-  ];
+  const personal: NavItem[] = PERSONAL_SECTIONS.map(spec => ({
+    key: `settings-${spec.key}`, label: spec.label, href: personalSettingsHref(spec.key, organizationId),
+    section: 'settings-personal', exact: spec.key === 'profile', activeHrefs: [spec.path],
+  }));
   const organization = ORGANIZATION.map((spec) => item(organizationId, spec, 'settings-organization', gate)).filter((entry): entry is NavItem => entry !== null);
   const connections = configTargetOffered(configTarget('integrations'), gate) || configTargetOffered(configTarget('secrets'), gate)
     ? [{ key: 'settings-connections', label: 'Connections', href: `/organizations/${organizationId}/${configTarget('integrations').path}`, section: 'settings-administration' as const }]

@@ -352,7 +352,6 @@ export function OrgSidebar({
 }: {
   mark: ReactNode;
   name: string;
-  role: string;
   organizations: SwitchableOrganization[];
   current: SwitcherContext;
   platform?: PlatformContext | null;
@@ -495,12 +494,12 @@ export function OrganizationFrame({
   const identityRole = system ? 'System control plane' : role;
   const identityMark = system ? GOLD_MARK : mark;
   const recovery = locked && !system;
-  const shared = { mark: identityMark, name: identityName, role: identityRole, organizations, platform, email, signOutAction };
+  const shared = { mark: identityMark, name: identityName, organizations, platform, email, signOutAction };
 
   return (
     <WorkspaceShell
       locationNavigation={{ organizationId, sections: recovery ? [] : settingsContext && !system ? settings : sections, configurationHrefs: recovery || system ? [] : settingsSearch.map((item) => item.href) }}
-      sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} {...shared} /> : <OrgSidebar {...shared} current={current} sections={sections} settings={settingsContext && !system ? { organizationId, sections: settings, search: settingsSearch } : null} />}
+      sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} role={identityRole} {...shared} /> : <OrgSidebar {...shared} current={current} sections={sections} settings={settingsContext && !system ? { organizationId, sections: settings, search: settingsSearch } : null} />}
       header={
         <WorkspaceHeader
           navigationTrigger="always"

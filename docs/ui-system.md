@@ -127,12 +127,12 @@ motion durations/easing. Minimal is flat, Layered adds restrained hierarchy, Exp
 larger shapes, richer accent surfaces and longer feedback. None changes status colors or brand
 contrast derivation. Color always accompanies a label, icon, border or selection state.
 
-`VisualScope` is an explicit opt-in boundary. No operational shell selects a preset in Slice A;
-existing consumers keep their default classes and behavior. `designProperties` admits only
+`VisualScope` is an explicit opt-in boundary. Account shells apply only saved personal choices;
+an absent preference row selects no preset and retains existing classes and behavior. `designProperties` admits only
 closed registry values, never arbitrary properties, CSS strings or tenant styles. Appearance
 uses existing forced light/dark roles; system appearance inherits the host scheme. Brand
 accent, on-accent and readable link colors remain owned by `brandPalette`/`BrandStyle`.
-`VisualScope` supplies its DOM container to shared Radix dialog, dropdown and popover portals
+`VisualScope` supplies its DOM container to shared Radix dialog, dropdown, popover, tooltip, sheet and drawer portals
 so their scheme, density and tokens survive portaling. Consumers outside a scope continue
 portaling to the body. Do not clip the scope or apply transforms that change fixed positioning.
 
@@ -161,10 +161,10 @@ on recessed/tinted surfaces; this is independent of every preset and tenant bran
 appearance re-resolves destructive and neutral accent aliases in its own scope. Brand previews
 continue applying their explicit derived brand properties over those neutral defaults.
 
-Configuration contracts (types only; no new persistence or publishing behavior):
+Configuration contracts:
 
 - `PersonalAppearancePreferences`: Account/person-owned appearance, preset, density, shape,
-  motion. Future Appearance UI applies this to an operational scope.
+  motion. Account Appearance persists this contract as described below.
 - `OrganizationDesignDefaults`: Organization-owned operational preset, density, shape,
   motion defaults. Future authorized configuration must have one domain owner; it is not a
   second brand_settings authority. No migration, write action or persisted defaults yet.
@@ -178,8 +178,54 @@ density override their preset roles. OS reduced motion remains an unconditional 
 identity remains orthogonal and its status exclusions/contrast rules cannot be overridden.
 Public design precedence: public defaults → organization brand identity → website design →
 section overrides. Personal operator preferences never enter public snapshots. Studio's editor
-chrome may consume operational tokens; its public canvas must receive a separate public scope
-when Slice B integrates these contracts. Never put website overrides on the app shell.
+chrome consumes operational tokens; rendered website sections and form previews use the
+`data-public-design` boundary. Never put website overrides on the app shell.
+
+#### Personal appearance (Slice B)
+
+`/settings/account/appearance` is a personal Settings destination in `PERSONAL_SECTIONS`.
+`projectSettingsNav` derives personal entries from that registry; `AccountSectionNav` uses it
+for accounts with no organization shell. The `org` query is only a return hint validated against
+the caller's memberships by `PersonalSettingsShell`. Profile remains the default destination.
+
+`lib/domain/identity/appearance.ts` owns validation, verified permanent-account identity, reads,
+saves and resets. `account_appearance_preferences` owns persisted selections, independently of
+profiles, memberships, brands and public website revisions. There is no automatic row creation.
+A successful missing-row read means legacy defaults; failed reads are errors, never defaults.
+Reset deletes the row. Save stores only closed choices; blank preset/density/shape values inherit.
+Theme is system/light/dark; motion is system/reduced. Last successful account save wins.
+
+`AppearanceEditor` owns a local draft and previews real shared components. Changing controls
+does not persist or change the shell. Save and Reset are explicit server actions; Discard restores
+the saved selection. Independent light/dark preview controls never become saved preferences.
+Pending, unsaved, saved and refused-write states remain distinct, and rejected drafts survive.
+The action revalidates the root layout and the editor refreshes server components without a
+document reload. No cookies, localStorage or runtime CSS are preference authorities.
+
+`AccountAppearance` reads under the caller's JWT and renders the semantic attributes during SSR.
+It wraps OrganizationShell (including nested Platform), personal Settings' organization/fallback
+frames, no-business onboarding and the signed-in invitation surface. The active-call dock sits
+inside the same scope while telephone providers remain above the shell. Dialer popouts copy the
+validated account scope and observe saved updates. PageDrawer portals remain inside the existing
+workspace rail host; they require no second theme provider. Scoped Sonner reads `VisualScope`;
+`PublicFeedback` preserves the root system-themed toast surface outside account shells.
+
+Forced appearance re-resolves sidebar and other aliases; the Tailwind dark variant uses a
+container style query over the closed `--appearance-scheme` token, inheriting the nearest
+explicit appearance or public boundary. `BrandStyle` uses its canonical palette's `light-dark`
+link colors against the actual scope's color-scheme, including preferences opposite to the OS.
+Platform-owned status colors and the OS reduced-motion cap remain independent of preference.
+
+The production section renderer in Studio's WebsiteCanvas and FormRenderer previews reset to the
+same public defaults in `globals.css`, while inheriting only validated brand identity aliases.
+CSS scopes stop personal variants, density and motion overrides at `data-public-design`. Public
+routes, private website previews, booking, forms and portal do not load account appearance.
+No website schema, revision, publishing or organization-default persistence changes are included.
+
+Slice C may persist organization operational defaults through one authorized domain owner and
+resolve defaults before explicit personal fields. Slice D may persist validated website design
+inside the existing revision/publication boundary. Both must preserve the separate public scope,
+closed token registry, semantic status roles and unconditional OS reduced-motion cap.
 
 The development-only `/dev/design-system` gallery renders real components in all six
 preset/scheme combinations with a density selector, field error/disabled/loading states,

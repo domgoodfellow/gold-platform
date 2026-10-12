@@ -58,7 +58,7 @@ export function WebsiteCanvas({ page, selected, onSelect, viewport, formNames }:
                 isSelected && 'border-foreground',
               )}
             >
-              <div inert className="pointer-events-none">
+              <div inert data-public-design className="pointer-events-none">
                 <SectionView section={section} anchored={false} context={{ mode: 'canvas', forms: {}, formNames }} />
               </div>
             </div>

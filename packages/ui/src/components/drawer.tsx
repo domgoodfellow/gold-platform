@@ -3,6 +3,7 @@
 import * as React from "react"
 import { cn } from "cn"
 import { Drawer as DrawerPrimitive } from "vaul"
+import { useVisualPortalContainer } from './visual-scope'
 
 function Drawer({
   ...props
@@ -19,7 +20,8 @@ function DrawerTrigger({
 function DrawerPortal({
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Portal>) {
-  return <DrawerPrimitive.Portal data-slot="drawer-portal" {...props} />
+  const container = useVisualPortalContainer();
+  return <DrawerPrimitive.Portal data-slot="drawer-portal" container={container} {...props} />
 }
 
 function DrawerClose({

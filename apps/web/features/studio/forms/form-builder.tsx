@@ -124,7 +124,7 @@ export function FormBuilder({ organizationId, state, distribution }: {
         </div>
         {message ? (message.tone === 'error' ? <ErrorText role="alert">{message.text}</ErrorText> : <Hint role="status">{message.text}</Hint>) : null}
         {published ? (
-          <div className="mx-auto w-full max-w-xl rounded-lg border border-border bg-surface p-6">
+          <div data-public-design className="mx-auto w-full max-w-xl rounded-lg border border-border bg-surface p-6">
             <FormRenderer definition={published.definition} values={previewValues} onChange={(id, value) => setPreviewValues((current) => ({ ...current, [id]: value }))} />
           </div>
         ) : null}
@@ -232,7 +232,7 @@ export function FormBuilder({ organizationId, state, distribution }: {
       {published ? <Hint>Visitors keep seeing Revision {published.number} until you publish this draft.</Hint> : null}
 
       <EditorLayout structure={structure} inspector={inspector} structureLabel="Questions" canvasLabel="Live preview">
-        <div className="mx-auto w-full max-w-xl rounded-lg border border-border bg-surface p-4 sm:p-6">
+        <div data-public-design className="mx-auto w-full max-w-xl rounded-lg border border-border bg-surface p-4 sm:p-6">
           <p className="mb-4 text-xs text-muted">Test inputs here without sending a response.</p>
           {previewSent ? <div className="space-y-3" role="status"><h3 className="text-xl font-semibold">{definition.confirmation.title}</h3><p className="text-sm text-muted">{definition.confirmation.message}</p><p className="text-xs text-muted">Preview only. No response was sent.</p><Button tone="secondary" size="small" onClick={() => { setPreviewSent(false); setPreviewValues({}); }}>Test again</Button></div> : <FormRenderer
             definition={definition} values={previewValues} errors={previewErrors}

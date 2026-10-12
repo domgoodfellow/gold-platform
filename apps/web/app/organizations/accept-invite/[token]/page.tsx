@@ -6,6 +6,7 @@ import { resolveSessionIdentity } from '@/lib/domain/identity/session';
 import { AcceptInvitationForm } from './accept-form';
 import { continueToLoginAction, continueToSignUpAction } from './actions';
 import type { Metadata } from 'next';
+import { AccountAppearance } from '@/features/appearance/account-appearance';
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false, noarchive: true },
@@ -51,12 +52,12 @@ export default async function AcceptInvitePage({
   }
 
   return (
-    <>
+    <AccountAppearance>
       <PageHeading>You&rsquo;ve been invited</PageHeading>
       <Hint className="mt-2">
         Accepting will add you to the business that invited you, with the role they chose.
       </Hint>
       <AcceptInvitationForm token={token} />
-    </>
+    </AccountAppearance>
   );
 }

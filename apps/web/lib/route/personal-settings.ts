@@ -8,6 +8,7 @@ export const PERSONAL_SETTINGS_ROOT = '/settings/account';
 export const PERSONAL_SECTIONS = [
   { key: 'profile', label: 'Profile', description: 'Your personal display name and verified email address.', path: PERSONAL_SETTINGS_ROOT },
   { key: 'security', label: 'Security & sign-in', description: 'Your password and how you sign in.', path: `${PERSONAL_SETTINGS_ROOT}/security` },
+  { key: 'appearance', label: 'Appearance', description: 'Your theme, visual style and interaction preferences.', path: `${PERSONAL_SETTINGS_ROOT}/appearance` },
 ] as const;
 
 export type PersonalSection = (typeof PERSONAL_SECTIONS)[number]['key'];

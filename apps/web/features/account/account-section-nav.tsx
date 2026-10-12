@@ -14,7 +14,7 @@ export function AccountSectionNav({ organizationId }: { organizationId: string |
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Account" className="mb-6 flex gap-1 border-b border-border">
+    <nav aria-label="Account" className="mb-6 flex gap-1 overflow-x-auto border-b border-border [&_a]:shrink-0 [&_a]:whitespace-nowrap">
       {PERSONAL_SECTIONS.map((section) => {
         const current = pathname === section.path;
         return (

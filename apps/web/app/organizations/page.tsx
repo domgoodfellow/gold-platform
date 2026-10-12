@@ -12,6 +12,7 @@ import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal
 import { organizationHomeHref } from '@/lib/navigation';
 import { readLastOrganizationId, resolveOrganizationsLanding } from '@/lib/route/landing';
 import { CreateBusinessForm } from './create-business-form';
+import { AccountAppearance } from '@/features/appearance/account-appearance';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,7 +72,7 @@ export default async function OrganizationsPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl p-8">
+    <AccountAppearance><main className="mx-auto w-full max-w-2xl p-8">
       <div className="flex items-baseline justify-between">
         <PageHeading>Set up your business</PageHeading>
         <form action={signOutAction}>
@@ -101,6 +102,6 @@ export default async function OrganizationsPage() {
           — there is no need to make a second one.
         </Hint>
       </div>
-    </main>
+    </main></AccountAppearance>
   );
 }

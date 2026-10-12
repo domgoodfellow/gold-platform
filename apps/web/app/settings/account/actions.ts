@@ -6,6 +6,20 @@ import { DomainError } from '@/lib/domain/errors';
 import { changePassword } from '@/lib/domain/identity/credentials';
 import { requestEmailChange, requestEmailChangeProof, updatePersonalProfile } from '@/lib/domain/identity/profile';
 import { requireActor } from '@/lib/domain/tenancy/actor';
+import { saveAppearance, resetAppearance } from '@/lib/domain/identity/appearance';
+import type { PersonalAppearancePreferences } from '@gold/ui/design-system';
+
+export async function updateAppearanceAction(input: unknown, reset = false): Promise<{ selection?: PersonalAppearancePreferences; error?: string }> {
+  try {
+    const db = await getDb();
+    const selection = reset ? await resetAppearance(db) : await saveAppearance(db, input);
+    revalidatePath('/', 'layout');
+    return { selection };
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message };
+    throw error;
+  }
+}
 import { requestOrigin } from '@/lib/route/origin';
 import type { AccountFormState } from '@/features/account/account-form-state';
 

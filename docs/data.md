@@ -26,6 +26,15 @@ Implementation status belongs in `docs/roadmap.md`.
 
 ## Data objective
 
+Personal appearance is an account-owned exception to organization-owned operating records.
+`account_appearance_preferences.user_id` references `auth.users(id)` with cascade deletion;
+it has no organization column and is not part of `account_profiles` or `brand_settings`.
+Migration `20261012173928_account_appearance_preferences.sql` adds closed text checks for
+appearance, preset, density, shape and motion, plus `updated_at`. Nullable overrides inherit;
+absence is the established platform default. Reads never manufacture rows, Save upserts the
+verified account, and Reset deletes its overrides. Organization defaults and Studio design
+remain typed future contracts without persistence changes in Slice B.
+
 The data model should:
 
 > **Represent reality accurately, preserve important history, make invalid states difficult, and keep authoritative ownership explicit.**

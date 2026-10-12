@@ -391,6 +391,14 @@ User-editable profile metadata must not authorize the change.
 
 ## Personal profile
 
+Personal appearance follows the same cosmetic ownership boundary. The dedicated
+`account_appearance_preferences` table enables and forces RLS. SELECT/INSERT/UPDATE/DELETE
+require `user_id = (select auth.uid())` and a JWT explicitly reporting a non-anonymous account;
+missing or anonymous claims fail closed. `anon` receives no privileges. Ownership cannot be
+reassigned to another account. Domain actions derive the account from verified `getUser`, accept
+no caller-supplied user ID, and use the session client rather than service authority. Appearance
+never decides membership, permissions, billing, branding or published website design.
+
 Personal display-name/profile metadata is cosmetic.
 
 It may improve UI presentation.

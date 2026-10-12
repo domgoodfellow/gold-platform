@@ -36,6 +36,16 @@ A developer often already has the app running.
 
 ## Global setup
 
+Personal Appearance has a focused local harness using the same acceptance test category:
+`pnpm test:e2e -- --config playwright.appearance.config.ts appearance.spec.ts`.
+It needs the local database, `.env.test` and a running app, and provisions its own confirmed
+account, two organizations and a published test form through the existing fixture/domain paths. Account fixtures are
+deleted afterward. Service credentials are used only for test identity setup and cleanup;
+appearance reads/writes use the account JWT. The harness checks desktop (1440), tablet (768)
+and phone (390), saves/discards/resets, persistence, account/organization boundaries, opposite-OS
+themes, scoped feedback, accessibility and Studio/public separation. Screenshots and traces
+stay in ignored `.next/appearance-test-results`. Use `E2E_BASE_URL` for a separate built-app port.
+
 `e2e/global-setup.ts` prepares the small amount of browser-specific demo state that the general demo does not create.
 
 It uses the real domain/application paths rather than a service-role database shortcut.

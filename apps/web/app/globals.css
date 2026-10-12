@@ -1,4 +1,8 @@
 @import "tailwindcss";
+/* Scoped dark mode also covers explicit preferences opposite to the operating system. */
+@custom-variant dark {
+  @container style(--appearance-scheme: dark) { @slot; }
+}
 
 /* Tailwind v4's automatic content detection walks this file's own directory tree and does not
    follow the pnpm symlink to a workspace package's real source, so a class that appears only
@@ -27,7 +31,9 @@
 
    Two muted levels rather than one: the screens already used `opacity-70` and `opacity-60` as
    distinct weights, so the roles record a distinction that was being made by hand. */
-:root {
+:root, [data-public-design] {
+  --appearance-scheme: light;
+  color-scheme: light dark;
   --background: #ffffff;
   --foreground: #171717;
 
@@ -149,7 +155,8 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root, [data-public-design] {
+    --appearance-scheme: dark;
     --background: #0a0a0a;
     --foreground: #ededed;
     --surface: #141414;
@@ -197,11 +204,19 @@
   --input: var(--border);
   --hover: var(--sidebar-accent);
   --selected: color-mix(in srgb, var(--foreground) 12%, transparent);
+  --sidebar-primary: var(--foreground);
+  --sidebar-primary-foreground: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
   background: var(--background);
   color: var(--foreground);
 }
 
 [data-appearance="light"] {
+  --appearance-scheme: light;
+  --sidebar: #fafafa;
   color-scheme: light;
   --background: #ffffff;
   --foreground: #171717;
@@ -218,6 +233,8 @@
 }
 
 [data-appearance="dark"] {
+  --appearance-scheme: dark;
+  --sidebar: #111111;
   color-scheme: dark;
   --background: #0a0a0a;
   --foreground: #ededed;
@@ -279,7 +296,7 @@ h1, h2, h3, h4 {
 
 /* Slice A: opt-in visual grammar. Existing routes retain their established defaults.
    Preset values come only from @gold/ui/design-system's closed registry. */
-:root {
+:root, [data-public-design], [data-visual-scope]:not([data-visual-system]) {
   --visual-radius: 0.625rem;
   --visual-elevation: 0 2px 8px rgb(0 0 0 / .08);
   --visual-overlay-shadow: 0 8px 24px rgb(0 0 0 / .18);
@@ -334,35 +351,44 @@ h1, h2, h3, h4 {
   }
 }
 
-[data-visual-system] :where([data-slot]) {
+@scope ([data-visual-system]) to ([data-visual-scope], [data-public-design]) {
+:scope :where([data-slot]) {
   transition-duration: var(--motion-fast);
   transition-timing-function: var(--motion-ease);
 }
-[data-visual-system] [data-slot=card-title] { font-size: var(--type-title); }
-[data-visual-system] :where([data-slot=card], [data-slot=operational-panel]) {
+:scope [data-slot=card-title] { font-size: var(--type-title); }
+:scope :where([data-slot=card], [data-slot=operational-panel]) {
   border-radius: var(--visual-radius);
 }
-[data-visual-system] :where([data-slot=card], [data-slot=operational-panel])[data-surface-variant=default] {
+:scope :where([data-slot=card], [data-slot=operational-panel])[data-surface-variant=default] {
   box-shadow: var(--visual-elevation);
 }
-[data-visual-system] :where([data-slot=button], [data-slot=input], [data-slot=native-select], [data-slot=selectable-card], [data-slot=toolbar], [data-slot=field-group]) {
+:scope :where([data-slot=button], [data-slot=input], [data-slot=native-select], [data-slot=selectable-card], [data-slot=toolbar], [data-slot=field-group]) {
   border-radius: var(--visual-radius);
 }
-[data-visual-system][data-density] :where([data-slot=button][data-size=default], [data-slot=input], [data-slot=native-select]) {
+:scope[data-density] :where([data-slot=button][data-size=default], [data-slot=input], [data-slot=native-select]) {
   min-height: var(--control-height);
 }
-[data-visual-system][data-density] :where([data-slot=card], [data-slot=field-group]) {
+:scope[data-density] :where([data-slot=card], [data-slot=field-group]) {
   --card-spacing: var(--visual-spacing);
   gap: var(--visual-spacing);
 }
-[data-visual-system] :where([data-slot=button], [data-slot=selectable-card]):active:not(:disabled) {
+:scope :where([data-slot=button], [data-slot=selectable-card]):active:not(:disabled) {
   box-shadow: inset 0 0 0 100vmax var(--pressed);
 }
-[data-visual-system] :where(button, input, select, textarea, a):focus-visible {
+/* Tinted destructive controls must meet text contrast in both actual schemes. */
+:scope :where([data-slot=button][data-variant=destructive]) {
+  background-color: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  color: var(--danger);
+}
+:scope :where([data-slot=button][data-variant=destructive]):hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--danger) 16%, var(--surface));
+}
+:scope :where(button, input, select, textarea, a):focus-visible {
   outline: 2px solid var(--focus-color);
   outline-offset: 3px;
 }
-[data-visual-system] :where([data-slot=popover-content], [data-slot=dropdown-menu-content], [data-slot=dialog-content]) {
+:scope :where([data-slot=popover-content], [data-slot=dropdown-menu-content], [data-slot=dialog-content]) {
   border-radius: var(--visual-radius);
   box-shadow: var(--visual-overlay-shadow);
 }
@@ -370,17 +396,47 @@ h1, h2, h3, h4 {
   min-height: 2.75rem;
   padding-inline: .75rem;
 }
-[data-visual-system] :where([aria-busy=true]) { cursor: progress; }
-[data-motion=reduced], [data-motion=reduced] * {
+:scope :where([aria-busy=true]) { cursor: progress; }
+}
+@scope ([data-motion=reduced]) to ([data-visual-scope], [data-public-design]) {
+:scope, :scope * {
   animation-duration: .001ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: .001ms !important;
   scroll-behavior: auto !important;
+}
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; }
 }
 /* Comfortable touch targets take priority over compact density on small screens. */
 @media (max-width: 40rem) {
-  :is([data-visual-system], [data-visual-system][data-density]) :where([data-slot=button], [data-slot=selectable-card], [data-slot=input], [data-slot=native-select], [data-slot=tabs-trigger]) { min-height: 2.75rem; }
+  @scope ([data-visual-system]) to ([data-visual-scope], [data-public-design]) {
+  :is(:scope, :scope[data-density]) :where([data-slot=button], [data-slot=selectable-card], [data-slot=input], [data-slot=native-select], [data-slot=tabs-trigger]) { min-height: 2.75rem; }
+  }
+}
+
+/* The production renderer in Studio keeps the public site's system appearance and brand.
+   Reset inherited account overrides through the same canonical defaults declared above. */
+[data-visual-scope]:not([data-visual-system]) {
+  --radius-md: .375rem;
+  --radius-lg: .5rem;
+  --radius-xl: .75rem;
+  font-size: 1rem;
+}
+[data-public-design] {
+  --accent: var(--brand-accent, var(--foreground));
+  --on-accent: var(--brand-on-accent, var(--background));
+  --accent-text: light-dark(var(--brand-link-light, var(--foreground)), var(--brand-link-dark, var(--foreground)));
+  --accent-foreground: var(--on-accent);
+  --font-heading: var(--brand-font-heading, var(--font-geist-sans)), system-ui, sans-serif;
+  --font-body: var(--brand-font-body, var(--font-geist-sans)), system-ui, sans-serif;
+  --visual-accent-mix: 4%;
+  --radius-md: .375rem;
+  --radius-lg: .5rem;
+  --radius-xl: .75rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--foreground);
+  background: var(--background);
 }

@@ -25,6 +25,7 @@ describe('the one address', () => {
     expect(PERSONAL_SECTIONS.map((section) => section.path)).toEqual([
       '/settings/account',
       '/settings/account/security',
+      '/settings/account/appearance',
     ]);
   });
 

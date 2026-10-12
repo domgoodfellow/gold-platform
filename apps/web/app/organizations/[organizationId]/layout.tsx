@@ -21,8 +21,7 @@ export default async function OrganizationLayout({
   return (
     <TelephoneDeviceProvider organizationId={organizationId}>
       <DialerPopoutProvider key={organizationId} organizationId={organizationId}>
-        <OrganizationShell organizationId={organizationId}>{children}</OrganizationShell>
-        <ActiveCallDock organizationId={organizationId} />
+        <OrganizationShell organizationId={organizationId} feedback={<ActiveCallDock organizationId={organizationId} />}>{children}</OrganizationShell>
       </DialerPopoutProvider>
     </TelephoneDeviceProvider>
   );

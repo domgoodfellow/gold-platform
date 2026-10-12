@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { OrganizationFrame } from '@/app/organizations/[organizationId]/org-shell';
-import { BrandStyle } from '@/features/branding/brand-style';
 import { logoUrl } from '@/lib/domain/branding/brand';
 import { getDb } from '@/lib/db/server';
 import { signOut } from '@/lib/domain/identity/credentials';
@@ -10,6 +9,7 @@ import { loadOrganizationShellModel } from '@/lib/application/shell/organization
 import { TenantAgentRail } from '@/features/agent/tenant-agent-rail';
 import { offeredSections } from '@/features/settings/settings-map';
 import { projectSettingsNav, settingsSearchItems } from '@/lib/settings-nav';
+import { AccountAppearance } from '@/features/appearance/account-appearance';
 
 /** Shared frame for business and system contexts, with canonical server authority resolution.
  * Each page still enforces its own access; layouts persist across client navigations.
@@ -17,9 +17,11 @@ import { projectSettingsNav, settingsSearchItems } from '@/lib/settings-nav';
 export async function OrganizationShell({
   organizationId,
   children,
+  feedback,
 }: {
   organizationId: string;
   children: ReactNode;
+  feedback?: ReactNode;
 }) {
   const { db, organization, access } = await requireOrganizationForBillingRecovery(organizationId);
   const locked = !access.permitted;
@@ -84,8 +86,7 @@ export async function OrganizationShell({
 
   return (
     // `data-brand` sits here rather than on `<html>` — a brand belongs to one business, and this shell is the only thing that knows which.
-    <div data-brand className="min-h-full">
-      <BrandStyle brand={brand} />
+    <AccountAppearance brand={brand}>
       <OrganizationFrame
         organizationId={organizationId}
         name={organization.name}
@@ -114,6 +115,7 @@ export async function OrganizationShell({
       >
         {children}
       </OrganizationFrame>
-    </div>
+      {feedback}
+    </AccountAppearance>
   );
 }

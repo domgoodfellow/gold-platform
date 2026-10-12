@@ -50,17 +50,17 @@ export function BrandStyle({ brand }: { brand: Brand }) {
   });
 
   const rules = [
+    `--brand-font-heading:${palette.headingFont};`,
+    `--brand-font-body:${palette.bodyFont};`,
     `--font-heading:${palette.headingFont};`,
     `--font-body:${palette.bodyFont};`,
   ];
-  let dark = '';
 
   if (brand.accent) {
     const roles = brandRoles(palette);
     if (!roles) return null;
-    rules.unshift(`--accent:${roles.accent};`, `--on-accent:${roles.onAccent};`, `--accent-text:${roles.light};`);
-    dark = `@media (prefers-color-scheme:dark){[data-brand]{--accent-text:${roles.dark};}}`;
+    rules.unshift(`--brand-accent:${roles.accent};`, `--brand-on-accent:${roles.onAccent};`, `--brand-link-light:${roles.light};`, `--brand-link-dark:${roles.dark};`, `--accent:${roles.accent};`, `--on-accent:${roles.onAccent};`, `--accent-text:light-dark(${roles.light},${roles.dark});`);
   }
 
-  return <style>{`[data-brand]{${rules.join('')}}${dark}`}</style>;
+  return <style>{`[data-brand]{${rules.join('')}}`}</style>;
 }

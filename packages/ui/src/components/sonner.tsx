@@ -1,18 +1,19 @@
 'use client';
 
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
+import { useVisualAppearance } from './visual-scope';
 
 /**
  * The one toast surface, for ephemeral feedback only — "Saved", "Copied", "Sent" — never a
  * persistent condition, which is `Alert`'s job instead.
  *
- * `theme="system"` rather than a `next-themes` read: this repository has no theme toggle, only
- * `prefers-color-scheme`, and sonner already reads that itself under `"system"`.
+ * Reads the enclosing semantic scope. With no explicit theme Sonner follows the system.
  */
 export function Toaster(props: ToasterProps) {
+  const selection = useVisualAppearance();
   return (
     <Sonner
-      theme="system"
+      theme={selection.appearance ?? 'system'}
       className="toaster group"
       style={
         {

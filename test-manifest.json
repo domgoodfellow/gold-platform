@@ -2820,6 +2820,10 @@
     "apps/web/tests/unit/platform-context.test.ts": {
       "category": "unit",
       "concerns": ["navigation", "security"]
-    }
+    },
+    "apps/web/tests/unit/appearance.test.ts": {"category":"unit","concerns":["personal appearance","account ownership"]},
+    "apps/web/tests/component/appearance-editor.test.tsx": {"category":"component","concerns":["personal appearance","account ownership"]},
+    "apps/web/tests/integration/database/appearance.test.ts": {"category":"database-integration","concerns":["personal appearance","account ownership"]},
+    "apps/web/e2e/appearance.spec.ts": {"category":"playwright-acceptance","concerns":["personal appearance","account ownership"]}
   }
 }

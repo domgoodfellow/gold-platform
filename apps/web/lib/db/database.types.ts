@@ -34,6 +34,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_appearance_preferences: {
+        Row: {
+          appearance: string
+          density: string | null
+          motion: string | null
+          preset: string | null
+          shape: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          appearance?: string
+          density?: string | null
+          motion?: string | null
+          preset?: string | null
+          shape?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          appearance?: string
+          density?: string | null
+          motion?: string | null
+          preset?: string | null
+          shape?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       account_profiles: {
         Row: {
           address_line_1: string | null
