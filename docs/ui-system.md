@@ -116,6 +116,85 @@ Routes do not invent new token values for local convenience.
 
 ### Brand and theme
 
+#### Semantic visual foundation (Slice A)
+
+`packages/ui/src/design-system.ts` owns the closed Minimal, Layered and Expressive preset
+registry, typed selections, safe token resolution and shared surface variants. All presets
+resolve to the same roles in `apps/web/app/globals.css`: existing page/surface/text/brand/status
+colors plus raised/recessed/accent surfaces, strong border, focus, pressed feedback, radius,
+elevation/overlay shadows, caption/body/title/display typography, control height/spacing and
+motion durations/easing. Minimal is flat, Layered adds restrained hierarchy, Expressive adds
+larger shapes, richer accent surfaces and longer feedback. None changes status colors or brand
+contrast derivation. Color always accompanies a label, icon, border or selection state.
+
+`VisualScope` is an explicit opt-in boundary. No operational shell selects a preset in Slice A;
+existing consumers keep their default classes and behavior. `designProperties` admits only
+closed registry values, never arbitrary properties, CSS strings or tenant styles. Appearance
+uses existing forced light/dark roles; system appearance inherits the host scheme. Brand
+accent, on-accent and readable link colors remain owned by `brandPalette`/`BrandStyle`.
+`VisualScope` supplies its DOM container to shared Radix dialog, dropdown and popover portals
+so their scheme, density and tokens survive portaling. Consumers outside a scope continue
+portaling to the body. Do not clip the scope or apply transforms that change fixed positioning.
+
+Canonical variant ownership:
+
+| Concern | Owner and supported API |
+| --- | --- |
+| Card | `@gold/ui/components/card`: default, quiet, outlined, elevated, accent; web `surfaces/card` forwards the variant |
+| Operational panel | `components/operational/primitives`: same surface variant map, existing density and composition retained |
+| Button | `@gold/ui/components/button`: existing variants plus soft and loading; web `controls/button` maps soft/ghost tones and forwards loading |
+| Selectable card | `components/controls/selectable-card`: native button over shared Button; aria-pressed, visible ring, caller-owned selection policy; no nested actions |
+| Tabs / segmented content | shared Radix Tabs; `TabsList` line (default) or segmented; route navigation retains its existing link grammar |
+| Menu / popover | shared Radix content: menu default/comfortable density, popover default/compact; scoped tokens preserve keyboard behavior |
+| Toolbar | existing `components/display/data` Toolbar: default, quiet, outlined; layout container, not an ARIA toolbar with unimplemented arrow-key behavior |
+| Input / field group | shared Input default/filled (forwarded by TextInput), shared FieldGroup default/inset; web FormField owns label/hint/error association |
+| Feedback | shared Alert adds success/warning alongside default/destructive; operational StatePill remains the status vocabulary |
+
+Loading buttons retain their accessible label, expose aria-busy and disable native activation.
+Callers supply a meaningful loading label. Pressed and selected states retain non-color cues;
+error states use aria-invalid and associated messages. Focus stays visible independent of brand
+color. Compact density cannot reduce scoped phone controls below 44px. System reduced motion
+always wins; personal reduced motion may additionally remove motion, but never force it on.
+
+Scoped light-mode status values use darker platform-owned shades to maintain text contrast
+on recessed/tinted surfaces; this is independent of every preset and tenant brand. Forced
+appearance re-resolves destructive and neutral accent aliases in its own scope. Brand previews
+continue applying their explicit derived brand properties over those neutral defaults.
+
+Configuration contracts (types only; no new persistence or publishing behavior):
+
+- `PersonalAppearancePreferences`: Account/person-owned appearance, preset, density, shape,
+  motion. Future Appearance UI applies this to an operational scope.
+- `OrganizationDesignDefaults`: Organization-owned operational preset, density, shape,
+  motion defaults. Future authorized configuration must have one domain owner; it is not a
+  second brand_settings authority. No migration, write action or persisted defaults yet.
+- `StudioWebsiteDesignOverrides`: Studio-owned public website design and section overrides,
+  scoped to section IDs. Future values must be validated, revisioned and snapshotted by the
+  existing publication boundary. No public schema, renderer or publisher changes in Slice A.
+
+Operational precedence: established platform defaults → organization defaults → explicit
+personal preferences; undefined personal fields inherit (`resolveDesignSelection`). Shape and
+density override their preset roles. OS reduced motion remains an unconditional cap. Brand
+identity remains orthogonal and its status exclusions/contrast rules cannot be overridden.
+Public design precedence: public defaults → organization brand identity → website design →
+section overrides. Personal operator preferences never enter public snapshots. Studio's editor
+chrome may consume operational tokens; its public canvas must receive a separate public scope
+when Slice B integrates these contracts. Never put website overrides on the app shell.
+
+The development-only `/dev/design-system` gallery renders real components in all six
+preset/scheme combinations with a density selector, field error/disabled/loading states,
+surface selection, schedule tabs/filter, truthful empty KPI and interactive modal/menu/popover.
+It reads no tenant data. The exact route is anonymous only in development; the page rejects
+production access. Production builds do not expose the gallery as an operational feature.
+Use desktop, tablet and phone widths; inspect hover/pressed/focus, overlay focus restoration,
+scheme inheritance, errors and reduced motion. This gallery is a test surface, not a new
+Settings destination or another design system.
+
+Slice B must add validated preference storage/readers and authorized organization defaults,
+integrate Appearance with explicit precedence, and introduce Studio design persistence and
+publication snapshots only after its own schema/security review. Expand operational scope
+usage deliberately, with route-level visual regressions; do not bulk redesign routes.
+
 An Organization's visual identity is one accent colour, a heading and body typeface from a closed list, and an optional logo. Authority is `brand_settings`, read by `getBrand` and written by `setBrand`, `uploadLogo` and `removeLogo`. Nothing else stores brand state.
 
 Resolution path:

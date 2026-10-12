@@ -106,6 +106,7 @@ const ACCEPT_INVITE_PREFIX = '/organizations/accept-invite/';
 
 export function isPublic(pathname: string): boolean {
   return (
+    (process.env.NODE_ENV === 'development' && pathname === '/dev/design-system') ||
     PUBLIC_PATHS.includes(pathname) ||
     pathname.startsWith(BOOKING_PREFIX) ||
     pathname === PORTAL_HOME ||

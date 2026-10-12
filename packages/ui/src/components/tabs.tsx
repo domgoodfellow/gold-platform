@@ -21,12 +21,14 @@ function Tabs({
 
 function TabsList({
   className,
+  variant = 'line',
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.List>) {
+}: React.ComponentProps<typeof TabsPrimitive.List> & { variant?: 'line' | 'segmented' }) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
-      className={cn(tabsListClassName, className)}
+      data-variant={variant}
+      className={cn(tabsListClassName, variant === 'segmented' && 'rounded-lg border-0 bg-secondary p-1 [&_[data-slot=tabs-trigger]]:rounded-md [&_[data-slot=tabs-trigger]]:border-0 [&_[data-state=active]]:bg-surface [&_[data-state=active]]:shadow-sm', className)}
       {...props}
     />
   )

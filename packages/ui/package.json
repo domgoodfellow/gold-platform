@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./design-system": "./src/design-system.ts",
+    "./components/visual-scope": "./src/components/visual-scope.tsx",
     "./components/accordion": "./src/components/accordion.tsx",
     "./components/alert": "./src/components/alert.tsx",
     "./components/attachment": "./src/components/attachment.tsx",

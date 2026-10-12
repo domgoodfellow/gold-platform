@@ -1,6 +1,13 @@
 {
   "version": 1,
   "categories": {
+    "playwright-design": {
+      "runner": "playwright",
+      "dir": "apps/web/e2e/design",
+      "requires": "running-app",
+      "gate": false,
+      "description": "Development-only semantic gallery interactions, accessibility and responsive captures; no seeded data."
+    },
     "node-contract": {
       "runner": "node",
       "dir": "apps/api/library",
@@ -101,6 +108,7 @@
     }
   },
   "tiers": {
+    "design": ["playwright-design"],
     "fast": [
       "node-contract",
       "unit",
@@ -129,6 +137,10 @@
     ]
   },
   "files": {
+    "apps/web/e2e/design/foundation.spec.ts": {
+      "category": "playwright-design",
+      "concerns": ["ui", "accessibility", "responsive"]
+    },
     "apps/web/e2e/app-library.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": [
@@ -251,6 +263,14 @@
     "apps/web/tests/unit/brand-theme.test.ts": {
       "category": "unit",
       "concerns": ["settings", "branding"]
+    },
+    "apps/web/tests/unit/design-system.test.ts": {
+      "category": "unit",
+      "concerns": ["ui", "settings", "branding"]
+    },
+    "apps/web/tests/component/visual-foundation.test.tsx": {
+      "category": "component",
+      "concerns": ["ui", "accessibility"]
     },
     "apps/web/tests/component/account-settings.test.tsx": {
       "category": "component",

@@ -1244,4 +1244,15 @@ fields; the invitation capture waits for the newly created invitation to render.
 
 ## Global Home verification
 
+The development design gallery has a separate no-fixture browser tier: start the web dev
+server and run `pnpm test:design` (optional `E2E_BASE_URL`). `playwright.design.config.ts` runs
+the manifest-classified `e2e/design` tests at 1440, 768 and 390 pixels. It checks all six
+preset/scheme scopes, selection, disabled/loading/errors, keyboard tabs, modal focus
+restoration, filter/menu portals, real-browser axe including contrast, overflow and reduced
+motion. Captures go to ignored Playwright test results and require visual inspection. These
+tests are excluded from the seeded acceptance config and cannot run against a production
+gallery, which is unavailable. Unit/component checks cover closed token admission, precedence,
+legacy defaults and label/error relationships. No database integration is required for these
+typed, non-persisted contracts; Slice B must add it with preference storage and publication.
+
 Global Home verification combines `home-projection.test.ts` for local date/DST, normalization, exact-count evidence and deterministic identity/priority semantics; `home-dashboard.test.ts` for canonical local records, exact counts beyond previews, scheduling exceptions, currency separation, actor scope, private Agent approval/failure metadata, restricted RPC access and real source-failure isolation; and `global-home.spec.ts` for owning creation workflows, filters, persistent browser preferences, Agent rail, narrow-container containment and the 16 requested captures. Fixtures require loopback Supabase, use canonical provisioning and domain commands, and simulate carrier ingress only in the local database. Screenshot inspection is required in addition to passing browser assertions. Hosted migrations and live voice, payment and AI providers are outside these local checks.

@@ -17,6 +17,7 @@
 @source "../features/team";
 @source "../features/catalogue";
 @source "../features/locale";
+@source "../features/appearance";
 @source "../components/operational";
 
 /* The colour roles. `docs/ui-spec.md` §3 says why each one exists; this file is where the
@@ -180,6 +181,10 @@
    frame, whatever the viewer's system is set to. Every role that is an alias is declared again
    because an alias is resolved where it is written, not where it is read. */
 [data-appearance] {
+  --accent: var(--foreground);
+  --on-accent: var(--background);
+  --accent-text: var(--foreground);
+  --destructive: var(--danger);
   --card: var(--surface);
   --card-foreground: var(--foreground);
   --popover: var(--surface);
@@ -265,9 +270,117 @@ h1, h2, h3, h4 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *, *::before, *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/* Slice A: opt-in visual grammar. Existing routes retain their established defaults.
+   Preset values come only from @gold/ui/design-system's closed registry. */
+:root {
+  --visual-radius: 0.625rem;
+  --visual-elevation: 0 2px 8px rgb(0 0 0 / .08);
+  --visual-overlay-shadow: 0 8px 24px rgb(0 0 0 / .18);
+  --visual-spacing: 1rem;
+  --control-height: 2rem;
+  --motion-fast: 150ms;
+  --motion-normal: 200ms;
+  --motion-ease: cubic-bezier(.2, .8, .2, 1);
+  --type-caption: .75rem;
+  --type-body: .875rem;
+  --type-title: 1.125rem;
+  --type-display: 1.875rem;
+  --surface-accent: color-mix(in srgb, var(--accent) 4%, var(--surface));
+}
+
+[data-visual-system] {
+  --danger: #b91c1c;
+  --warning: #92400e;
+  --success: #065f46;
+  --destructive: var(--danger);
+  --surface-raised: var(--surface);
+  --surface-recessed: var(--secondary);
+  --surface-accent: color-mix(in srgb, var(--accent) var(--visual-accent-mix, 4%), var(--surface));
+  --pressed: color-mix(in srgb, var(--foreground) 18%, transparent);
+  --border-strong: color-mix(in srgb, var(--foreground) 30%, transparent);
+  --focus-color: var(--foreground);
+  --radius-md: var(--visual-radius);
+  --radius-lg: var(--visual-radius);
+  --radius-xl: calc(var(--visual-radius) + .125rem);
+  font-size: var(--type-body);
+}
+
+/* Platform-owned status roles must contrast on tinted/recessed surfaces as well as white.
+   Independent of presets and brand; legacy routes retain their existing values. */
+[data-visual-system][data-appearance=light] {
+  --danger: #b91c1c;
+  --warning: #92400e;
+  --success: #065f46;
+  --destructive: var(--danger);
+}
+[data-visual-system][data-appearance=dark] {
+  --danger: #f87171;
+  --warning: #fbbf24;
+  --success: #6ee7b7;
+  --destructive: var(--danger);
+}
+@media (prefers-color-scheme: dark) {
+  [data-visual-system]:not([data-appearance=light]) {
+    --danger: #f87171;
+    --warning: #fbbf24;
+    --success: #6ee7b7;
+  }
+}
+
+[data-visual-system] :where([data-slot]) {
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--motion-ease);
+}
+[data-visual-system] [data-slot=card-title] { font-size: var(--type-title); }
+[data-visual-system] :where([data-slot=card], [data-slot=operational-panel]) {
+  border-radius: var(--visual-radius);
+}
+[data-visual-system] :where([data-slot=card], [data-slot=operational-panel])[data-surface-variant=default] {
+  box-shadow: var(--visual-elevation);
+}
+[data-visual-system] :where([data-slot=button], [data-slot=input], [data-slot=native-select], [data-slot=selectable-card], [data-slot=toolbar], [data-slot=field-group]) {
+  border-radius: var(--visual-radius);
+}
+[data-visual-system][data-density] :where([data-slot=button][data-size=default], [data-slot=input], [data-slot=native-select]) {
+  min-height: var(--control-height);
+}
+[data-visual-system][data-density] :where([data-slot=card], [data-slot=field-group]) {
+  --card-spacing: var(--visual-spacing);
+  gap: var(--visual-spacing);
+}
+[data-visual-system] :where([data-slot=button], [data-slot=selectable-card]):active:not(:disabled) {
+  box-shadow: inset 0 0 0 100vmax var(--pressed);
+}
+[data-visual-system] :where(button, input, select, textarea, a):focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 3px;
+}
+[data-visual-system] :where([data-slot=popover-content], [data-slot=dropdown-menu-content], [data-slot=dialog-content]) {
+  border-radius: var(--visual-radius);
+  box-shadow: var(--visual-overlay-shadow);
+}
+[data-slot=dropdown-menu-content][data-density=comfortable] [role=menuitem] {
+  min-height: 2.75rem;
+  padding-inline: .75rem;
+}
+[data-visual-system] :where([aria-busy=true]) { cursor: progress; }
+[data-motion=reduced], [data-motion=reduced] * {
+  animation-duration: .001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .001ms !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}
+/* Comfortable touch targets take priority over compact density on small screens. */
+@media (max-width: 40rem) {
+  :is([data-visual-system], [data-visual-system][data-density]) :where([data-slot=button], [data-slot=selectable-card], [data-slot=input], [data-slot=native-select], [data-slot=tabs-trigger]) { min-height: 2.75rem; }
 }

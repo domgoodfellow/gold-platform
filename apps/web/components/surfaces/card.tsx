@@ -8,17 +8,19 @@ import {
   AccordionTrigger,
 } from '@gold/ui/components/accordion';
 import { Card as ShadcnCard } from '@gold/ui/components/card';
+import type { SurfaceVariant } from '@gold/ui/design-system';
 import { cx, FOCUS_RING } from '../class-names';
 
 /** A semantic application card over the source-owned shadcn primitive. */
 export function Card<T extends ElementType = 'div'>({
   as,
   className,
+  variant = 'default',
   ...props
-}: { as?: T } & Omit<ComponentProps<'div'>, 'ref'>) {
+}: { as?: T; variant?: SurfaceVariant } & Omit<ComponentProps<'div'>, 'ref'>) {
   const Element = (as ?? 'div') as ElementType;
   return (
-    <ShadcnCard asChild className={cx('gap-0 p-4 py-4', className)}>
+    <ShadcnCard asChild variant={variant} className={cx('gap-0 p-4 py-4', className)}>
       <Element {...props} />
     </ShadcnCard>
   );

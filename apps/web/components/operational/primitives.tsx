@@ -12,6 +12,7 @@ import {
 import { Avatar, AvatarFallback } from "@gold/ui/components/avatar";
 import { Progress } from "@gold/ui/components/progress";
 import { cx, FOCUS_RING } from "@/components/class-names";
+import { surfaceVariants, type SurfaceVariant } from '@gold/ui/design-system';
 
 /**
  * Colour on an operational surface states a fact, never decoration (ui-system, "Status colour").
@@ -152,6 +153,7 @@ export function PanelState({
  * spacing only, never the heading size, so adjacent panels read as one family.
  */
 export function OperationalPanel({
+  variant = 'default',
   title,
   icon: Icon,
   count,
@@ -165,6 +167,7 @@ export function OperationalPanel({
   children,
   className,
 }: {
+  variant?: SurfaceVariant;
   title: string;
   icon?: LucideIcon;
   count?: number;
@@ -182,7 +185,9 @@ export function OperationalPanel({
   return (
     <section
       aria-label={title}
-      className={cx("min-w-0 overflow-hidden rounded-lg border border-border bg-surface", className)}
+      data-slot="operational-panel"
+      data-surface-variant={variant}
+      className={cx("min-w-0 overflow-hidden rounded-lg border border-border bg-surface", surfaceVariants[variant], className)}
     >
       <div
         className={cx(

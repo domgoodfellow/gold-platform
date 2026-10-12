@@ -68,11 +68,12 @@ export function Detail({ label, children }: { label: ReactNode; children: ReactN
 */
 
 /** One primary action per screen (ui-spec §6). */
-export function Toolbar({ className, ...props }: ComponentProps<'div'>) {
+export function Toolbar({ className, variant = 'default', ...props }: ComponentProps<'div'> & { variant?: 'default' | 'quiet' | 'outlined' }) {
   return (
     <div
       {...props}
-      className={cx('flex flex-wrap items-center justify-between gap-3', className)}
+      data-slot="toolbar"
+      className={cx('flex flex-wrap items-center justify-between gap-3', variant === 'quiet' && 'rounded-lg bg-secondary p-3', variant === 'outlined' && 'rounded-lg border border-border p-3', className)}
     />
   );
 }

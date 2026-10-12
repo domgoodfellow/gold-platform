@@ -10,10 +10,11 @@ export type ControlSize = 'default' | 'small';
 
 export function TextInput({
   size = 'default',
+  variant = 'default',
   className,
   ...props
-}: Omit<ComponentProps<'input'>, 'size'> & { size?: ControlSize }) {
-  return <Input {...props} className={cx(FOCUS_RING, size === 'small' && 'h-7 px-2 text-sm', className)} />;
+}: Omit<ComponentProps<'input'>, 'size'> & { size?: ControlSize; variant?: 'default' | 'filled' }) {
+  return <Input {...props} variant={variant} className={cx(FOCUS_RING, size === 'small' && 'h-7 px-2 text-sm', className)} />;
 }
 
 export function SelectInput({

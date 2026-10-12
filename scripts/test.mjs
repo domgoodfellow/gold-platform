@@ -81,6 +81,7 @@ if (playwrightFiles.length > 0) {
   const config =
     command === 'smoke' ? ['--config', 'playwright.smoke.config.ts']
     : command === 'visual' ? ['--config', 'playwright.visual.config.ts']
+    : command === 'design' ? ['--config', 'playwright.design.config.ts']
     : [];
   run(`playwright: ${categories.join(', ')} (${web.length} files)`, 'pnpm', ['--filter', '@gold/web', 'exec', 'playwright', 'test', ...config, ...web, ...extra]);
   ran++;

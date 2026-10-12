@@ -4,6 +4,7 @@ import * as React from "react"
 import { cn } from "cn"
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui"
 import { CheckIcon, ChevronRightIcon } from "lucide-react"
+import { useVisualPortalContainer } from './visual-scope'
 
 function DropdownMenu({
   ...props
@@ -34,12 +35,15 @@ function DropdownMenuContent({
   className,
   align = "start",
   sideOffset = 4,
+  density = 'default',
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+}: React.ComponentProps<typeof DropdownMenuPrimitive.Content> & { density?: 'default' | 'comfortable' }) {
+  const container = useVisualPortalContainer();
   return (
-    <DropdownMenuPrimitive.Portal>
+    <DropdownMenuPrimitive.Portal container={container}>
       <DropdownMenuPrimitive.Content
         data-slot="dropdown-menu-content"
+        data-density={density}
         sideOffset={sideOffset}
         align={align}
         className={cn("z-50 max-h-(--radix-dropdown-menu-content-available-height) w-(--radix-dropdown-menu-trigger-width) min-w-32 overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10", className )}

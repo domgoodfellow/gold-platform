@@ -30,11 +30,11 @@ function FieldLegend({
   )
 }
 
-function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
+function FieldGroup({ className, variant = 'default', ...props }: React.ComponentProps<"div"> & { variant?: 'default' | 'inset' }) {
   return (
     <div
       data-slot="field-group"
-      className={cn("flex flex-col gap-4", className)}
+      className={cn("flex flex-col gap-4", variant === 'inset' && 'rounded-lg border border-border bg-secondary p-4', className)}
       {...props}
     />
   )
