@@ -3,7 +3,7 @@
 import { useActionState, useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { usePathname } from 'next/navigation';
 import { Checkbox } from '@gold/ui/components/checkbox';
-import { SlidersHorizontal, Info } from 'lucide-react';
+import { Brain, Settings } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { useAgentContent, useWorkspaceRail } from '@/components/panels/workspace-right-rail';
 import {
@@ -74,7 +74,6 @@ function TenantAgentPanel({
   canManageConnections,
   conversations,
   initialConversation,
-  identity,
   bootstrapError,
   bootstrapLoading,
   onRetry,
@@ -87,7 +86,6 @@ function TenantAgentPanel({
   canManageConnections: boolean;
   conversations: AgentConversationSummary[];
   initialConversation: InitialConversation | null;
-  identity?: string;
   bootstrapError: string | null;
   bootstrapLoading: boolean;
   onRetry: () => void;
@@ -268,7 +266,6 @@ function TenantAgentPanel({
   return (
     <AgentPanelFrame>
       {bootstrapError ? <BootstrapError message={bootstrapError} loading={bootstrapLoading} onRetry={onRetry} /> : null}
-      <div className="border-b border-border px-4 py-2 text-xs text-muted">{identity ?? 'Built-in Operator Copilot'} · signed-in operator scope</div>
       <AgentConversationHeader
         title={title}
         conversations={conversationList}
@@ -339,12 +336,12 @@ function TenantAgentPanel({
         }
         tools={
           <>
-            <AgentToolPopover label="Context" icon={<Info aria-hidden size={14} />} title="What the Agent sees next">
+            <AgentToolPopover label="Context" icon={<Brain aria-hidden size={14} />} title="What the Agent sees next">
               <AgentContextFacts facts={facts} />
               <p className="text-xs text-muted">This follows the page you are on. To change what it may use, see Configure.</p>
             </AgentToolPopover>
 
-            <AgentToolPopover label="Configure" icon={<SlidersHorizontal aria-hidden size={14} />} title="This conversation">
+            <AgentToolPopover label="Configure" icon={<Settings aria-hidden size={14} />} title="This conversation">
               <div className="flex items-start gap-2">
                 <Checkbox
                   id="agent-include-record"
@@ -481,7 +478,6 @@ function TenantAgentBootstrap(props: TenantAgentRailProps) {
         canManageConnections={canManageConnections}
         conversations={bootstrap.data.conversations}
         initialConversation={bootstrap.data.initialConversation}
-        identity={bootstrap.data.identity}
         bootstrapError={bootstrap.error}
         bootstrapLoading={bootstrap.status === 'loading'}
         onRetry={retry}

@@ -5,17 +5,21 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
   type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
+  type RefObject,
 } from 'react';
 import { BarChart3, Bot, History, Settings, X, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@gold/ui/components/tooltip';
+import { VisualPortalScope } from '@gold/ui/components/visual-scope';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { HEADER_HEIGHT_STYLE, MOBILE_NAV_HEIGHT_STYLE } from '../layout/workspace-geometry';
 
@@ -32,7 +36,7 @@ import { HEADER_HEIGHT_STYLE, MOBILE_NAV_HEIGHT_STYLE } from '../layout/workspac
  *   `supportMode` is a single value, so choosing another mode replaces the open one in the same
  *   footprint instead of stacking a second drawer.
  *
- * Neither is modal: nothing dims, blurs or blocks the page behind them.
+ * Agent is modal only on phones. Page-support panels remain nonmodal.
  */
 
 const AGENT_MIN_WIDTH = 320;
@@ -45,7 +49,7 @@ const RESIZE_STEP = 24;
 /**
  * Four layouts by viewport width. `wide` docks both panels beside the page; `docked` docks one
  * (the one opened last, when both are open); `overlay` floats one over the page from the right;
- * `phone` floats one from the bottom.
+ * `phone` makes Agent fullscreen while page-support panels float from the bottom.
  */
 const WIDE_BREAKPOINT = 1720;
 const DOCK_BREAKPOINT = 1280;
@@ -102,6 +106,8 @@ type RailContextValue = {
   layout: RailLayout;
   agentOpen: boolean;
   toggleAgent: () => void;
+  openAgent: (returnFocus?: HTMLElement | null) => void;
+  agentReturnFocus: RefObject<HTMLElement | null>;
   launchAgent: (prompt: string) => void;
   agentLaunch: { id: number; prompt: string } | null;
   closeAgent: () => void;
@@ -134,11 +140,16 @@ export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
   const [pageSlot, setPageSlot] = useState<HTMLElement | null>(null);
   const [pageStack, setPageStack] = useState<string[]>([]);
   const [latest, setLatest] = useState<Panel>('page');
-  const launchAgent = useCallback((prompt: string) => {
-    setAgentLaunch({ id: Date.now(), prompt: prompt.slice(0, 1900) });
+  const agentReturnFocus = useRef<HTMLElement | null>(null);
+  const openAgent = useCallback((returnFocus?: HTMLElement | null) => {
+    agentReturnFocus.current = returnFocus ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     setAgentOpen(true);
     setLatest('agent');
   }, []);
+  const launchAgent = useCallback((prompt: string) => {
+    setAgentLaunch({ id: Date.now(), prompt: prompt.slice(0, 1900) });
+    openAgent();
+  }, [openAgent]);
 
   const setAgentWidth = useCallback((next: number) => {
     const clamped = Math.min(AGENT_MAX_WIDTH, Math.max(AGENT_MIN_WIDTH, next));
@@ -153,9 +164,9 @@ export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
   const registerAgent = useCallback((content: ReactNode | null) => setAgent(content), []);
 
   const toggleAgent = useCallback(() => {
-    setAgentOpen((open) => !open);
-    setLatest('agent');
-  }, []);
+    if (agentOpen) setAgentOpen(false);
+    else openAgent();
+  }, [agentOpen, openAgent]);
   const closeAgent = useCallback(() => setAgentOpen(false), []);
   const toggleSupport = useCallback(
     (mode: SupportMode) => setSupportMode((current) => (current === mode ? null : mode)),
@@ -183,6 +194,8 @@ export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
       layout,
       agentOpen,
       toggleAgent,
+      openAgent,
+      agentReturnFocus,
       launchAgent,
       agentLaunch,
       closeAgent,
@@ -205,6 +218,7 @@ export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
       layout,
       agentOpen,
       toggleAgent,
+      openAgent,
       closeAgent,
       supportMode,
       toggleSupport,
@@ -314,16 +328,14 @@ function panelClass(panel: Panel, layout: RailLayout, shown: boolean): string {
     return cx(
       base,
       'fixed right-0 bottom-0 z-40 w-full max-w-md border-l border-border shadow-lg',
-      global ? 'top-0' : 'top-(--header-height)',
+      global ? 'top-0 left-auto h-dvh' : 'top-(--header-height)',
     );
   }
+  if (global) return cx(base, 'fixed inset-x-0 top-0 z-50 h-dvh w-full overscroll-none');
   return cx(
     base,
-    // Stops above the persistent bottom bar (`--mobile-nav-height`, unset when the shell has none) so it stays reachable.
     'fixed inset-x-0 bottom-[var(--mobile-nav-height,0px)] z-40 rounded-t-xl border-t border-border shadow-lg',
-    global
-      ? 'h-[85dvh] max-h-[calc(100dvh-var(--mobile-nav-height,0px))]'
-      : 'h-[min(85dvh,calc(100dvh-var(--header-height)))] max-h-[calc(100dvh-var(--header-height)-var(--mobile-nav-height,0px))]',
+    'h-[min(85dvh,calc(100dvh-var(--header-height)))] max-h-[calc(100dvh-var(--header-height)-var(--mobile-nav-height,0px))]',
   );
 }
 
@@ -369,16 +381,57 @@ function AgentResizeHandle() {
   );
 }
 
+function subscribeToVisualViewport(onChange: () => void) {
+  const viewport = window.visualViewport;
+  viewport?.addEventListener('resize', onChange);
+  viewport?.addEventListener('scroll', onChange);
+  window.addEventListener('resize', onChange);
+  return () => {
+    viewport?.removeEventListener('resize', onChange);
+    viewport?.removeEventListener('scroll', onChange);
+    window.removeEventListener('resize', onChange);
+  };
+}
+
+function visualViewportSnapshot() {
+  const viewport = window.visualViewport;
+  return `${viewport?.height ?? window.innerHeight}:${viewport?.offsetTop ?? 0}`;
+}
+
 function AgentPanel() {
-  const { layout, agent, agentOpen, showAgent, closeAgent, agentWidth } = useWorkspaceRail();
+  const { layout, agent, agentOpen, showAgent, closeAgent, agentWidth, agentReturnFocus } = useWorkspaceRail();
+  const [dialog, setDialog] = useState<HTMLDialogElement | null>(null);
+  const wasModal = useRef(false);
+  const phone = layout === 'phone';
+  const viewport = useSyncExternalStore(subscribeToVisualViewport, visualViewportSnapshot, () => '0:0');
+  const [viewportHeight, viewportTop] = viewport.split(':').map(Number);
   // Mounted from first open and kept, so a conversation survives closing the panel.
   const [everOpened, setEverOpened] = useState(false);
   if (agentOpen && !everOpened) setEverOpened(true);
 
-  const style: CSSProperties | undefined = docked(layout) ? { width: agentWidth } : undefined;
+  const style: CSSProperties | undefined = docked(layout) ? { width: agentWidth }
+    : phone && viewportHeight ? { height: viewportHeight, top: viewportTop } : undefined;
+
+  useLayoutEffect(() => {
+    if (!dialog) return;
+    const modal = phone && showAgent;
+    const focused = dialog.contains(document.activeElement) ? document.activeElement as HTMLElement : null;
+    if (dialog.open && (!showAgent || wasModal.current !== modal)) dialog.close();
+    if (showAgent && !dialog.open) {
+      if (modal) dialog.showModal();
+      else dialog.setAttribute('open', '');
+      if (focused) focused.focus();
+    }
+    if (wasModal.current && !showAgent) agentReturnFocus.current?.focus();
+    wasModal.current = modal;
+  }, [dialog, phone, showAgent, agentReturnFocus]);
 
   return (
-    <aside aria-label="Agent" className={panelClass('agent', layout, showAgent)} style={style}>
+    <dialog ref={setDialog} role={phone ? 'dialog' : 'complementary'} aria-label="Agent" aria-modal={phone && showAgent ? true : undefined}
+      onCancel={(event) => { event.preventDefault(); closeAgent(); }}
+      className={cx('m-0 max-h-none border-0 p-0 text-foreground outline-none', layout !== 'overlay' && 'max-w-none', panelClass('agent', layout, showAgent), phone && 'pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]')}
+      style={style}>
+      <VisualPortalScope container={dialog}>
       {docked(layout) ? <AgentResizeHandle /> : null}
       <div className="flex h-(--header-height) shrink-0 items-center gap-3 border-b border-border px-4">
         <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">Agent</h2>
@@ -386,14 +439,15 @@ function AgentPanel() {
           type="button"
           onClick={closeAgent}
           aria-label="Close Agent"
-          className={cx('rounded p-1 text-muted hover:bg-hover hover:text-foreground', FOCUS_RING)}
+          className={cx('flex size-10 shrink-0 items-center justify-center rounded text-muted hover:bg-hover hover:text-foreground', FOCUS_RING)}
         >
           <X aria-hidden size={16} />
         </button>
       </div>
       {/* Not a scroll container: the transcript's `MessageScroller` is the one thing in Agent that scrolls. */}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{everOpened ? agent : null}</div>
-    </aside>
+      </VisualPortalScope>
+    </dialog>
   );
 }
 

@@ -200,6 +200,10 @@ function Sidebar({
           }
           side={mobileSide}
           onCloseAutoFocus={(event) => {
+            if (document.activeElement?.closest('dialog[aria-modal="true"][open]')) {
+              event.preventDefault()
+              return
+            }
             if (mobileTriggerRef.current) {
               event.preventDefault()
               mobileTriggerRef.current.focus()

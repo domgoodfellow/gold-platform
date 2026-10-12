@@ -295,7 +295,7 @@ describe('AccountMenu — one trigger, in the sidebar footer', () => {
   });
 });
 
-describe('the right rail — Agent and the page drawer are two independent, non-modal panels', () => {
+describe('the right rail — Agent and the page drawer are independent panels', () => {
   const pageDrawer = readFileSync(`${WEB}/components/panels/page-drawer.tsx`, 'utf8');
   const appShell = readFileSync(`${WEB}/components/layout/app-shell.tsx`, 'utf8');
   const workspaceGeometry = readFileSync(`${WEB}/components/layout/workspace-geometry.ts`, 'utf8');
@@ -310,9 +310,11 @@ describe('the right rail — Agent and the page drawer are two independent, non-
     expect(workspaceRightRail).toMatch(/const \[supportMode, setSupportMode\]/);
   });
 
-  it('is never modal: no overlay, blur or focus trap, and the same two elements serve every layout', () => {
+  it('keeps one Agent across layouts, with phone-only native modal behavior and nonmodal page panels', () => {
     const source = code(workspaceRightRail);
-    expect(source).not.toMatch(/<Sheet|<Drawer|backdrop|Overlay/);
+    expect(source).not.toMatch(/<Sheet|<Drawer|<DialogContent/);
+    expect(source).toContain('dialog.showModal()');
+    expect(source).toContain('phone && showAgent');
     expect(source).toContain('<AgentPanel />');
     expect(source).not.toContain('<PagePanel />');
     expect(source).toContain('<div className="min-w-0 flex-1">{main}</div>');
@@ -333,7 +335,7 @@ describe('the right rail — Agent and the page drawer are two independent, non-
     expect(code(appShell)).toContain('<PagePanel />');
     expect(appShell.indexOf('{header}')).toBeLessThan(appShell.indexOf('<PagePanel />'));
     expect(workspaceRightRail).toContain("sticky top-(--header-height) h-[calc(100svh-var(--header-height))]");
-    expect(workspaceRightRail).toContain("global ? 'top-0' : 'top-(--header-height)'");
+    expect(workspaceRightRail).toContain("global ? 'top-0 left-auto h-dvh' : 'top-(--header-height)'");
     expect(workspaceRightRail).toContain('calc(100dvh-var(--header-height))');
   });
 

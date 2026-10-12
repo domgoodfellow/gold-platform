@@ -155,14 +155,14 @@ test.describe('a tenant owner', () => {
       await expect(trigger).toBeFocused();
     }
     await trigger.click();
-    const sheet = page.getByRole('dialog');
+    const sheet = page.getByRole('dialog', { name: 'Sidebar', exact: true });
     await expect(sheet.locator('[data-sidebar="header"]')).toContainText('Grachtwerk Verhuur');
     await expect(sheet.getByText('Platform', { exact: true })).toHaveCount(0);
     await expect(sheet.getByRole('link', { name: 'Home', exact: true })).toBeVisible();
     await sheet.getByRole('button', { name: 'Agent', exact: true }).click();
     await expect(sheet).toHaveCount(0);
-    await expect(page.getByRole('complementary', { name: 'Agent' })).toBeVisible();
-    await page.getByRole('complementary', { name: 'Agent' }).getByRole('button', { name: /Close/ }).click();
+    await expect(page.getByRole('dialog', { name: 'Agent' })).toBeVisible();
+    await page.getByRole('dialog', { name: 'Agent' }).getByRole('button', { name: /Close/ }).click();
     await trigger.click();
     await sheet.getByRole('button', { name: /sanne@grachtwerk.test/ }).click();
     await expect(page.getByRole('menuitem', { name: 'Sign out', exact: true })).toBeVisible();

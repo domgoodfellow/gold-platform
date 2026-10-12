@@ -8,6 +8,11 @@ const AppearanceContext = createContext<PersonalAppearancePreferences>({});
 export function useVisualPortalContainer() { return useContext(PortalContainer); }
 export function useVisualAppearance() { return useContext(AppearanceContext); }
 
+/** Keeps nested overlays within an existing modal or visual boundary without reparenting content. */
+export function VisualPortalScope({ container, children }: { container: HTMLElement | null; children: React.ReactNode }) {
+  return <PortalContainer.Provider value={container}>{children}</PortalContainer.Provider>;
+}
+
 /** Opt-in boundary; portal children inherit the same tokens and forced color scheme. */
 export function VisualScope({ selection, children, ...props }: Omit<ComponentProps<'div'>, 'style'> & { selection: PersonalAppearancePreferences }) {
   const [container, setContainer] = useState<HTMLDivElement | null>(null);

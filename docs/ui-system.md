@@ -871,19 +871,7 @@ Canonical behavior:
 
 ### Phone
 
-Persistent bottom navigation:
-
-```text
-Home | AI | Menu
-```
-
-Three equal controls.
-
-The bar does not scroll.
-
-- **Home** navigates to the projected organization Home.
-- **AI** toggles the workspace-global Agent.
-- **Menu** opens the full organization navigation in a right-side sheet.
+The header shows contextual page location on the left and Menu on the right. There is no persistent bottom navigation. Home and workspace destinations use the existing navigation projection inside the sidebar Sheet; organization switching stays in its header. Agent is an explicit open action in the footer beside account access.
 
 The Menu renders the same projected hierarchy used by desktop navigation.
 
@@ -1033,6 +1021,10 @@ It is workspace-global assistance.
 Agent and page-support rail are independent panels.
 
 They may share shell behavior but not conceptual ownership.
+
+Below 768 px, Agent is a fullscreen native modal dialog, with the shared header-height band, safe-area padding and visual-viewport height/offset so its composer follows the visible viewport. The browser isolates background focus and interaction; nested Radix History, Context and Configure popovers portal inside the dialog. Menu closes before handing focus to Agent; closing Agent restores the visible Menu trigger. Escape dismisses a nested popup first, then Agent. Tablet (768–1279 px) keeps the right overlay; desktop (1280 px and above) keeps docking, resizing and persisted width, including the wide layout at 1720 px.
+
+One dialog element and conversation subtree remain in place across layout changes and stay mounted after first opening. Native modal activation changes browser presentation without reparenting React content; lazy organization-keyed bootstrap, drafts, uploads, selections and pending actions remain with the existing controller. Page-support panels retain their separate nonmodal geometry. The permanent operator identity/scope banner is omitted; recoverable errors remain. Context uses Brain and Configure uses Settings, without changing runtime permissions or conversation options.
 
 ---
 

@@ -513,7 +513,7 @@ export function AgentComposer({
         size="small"
         placeholder={placeholder}
         aria-label="Message to the Agent"
-        className="w-full resize-none"
+        className="w-full resize-none text-base md:text-sm"
         style={{ maxHeight: COMPOSER_MAX_HEIGHT }}
         onInput={(event: FormEvent<HTMLTextAreaElement>) => grow(event.currentTarget)}
         onKeyDown={(event) => {
@@ -586,7 +586,7 @@ export function AgentToolPopover({
         side="top"
         align="start"
         collisionPadding={8}
-        className="flex w-72 max-w-(--radix-popover-content-available-width) flex-col gap-3 p-3"
+        className="flex max-h-(--radix-popover-content-available-height) w-72 max-w-(--radix-popover-content-available-width) flex-col gap-3 overflow-y-auto p-3"
       >
         <p className="text-sm font-medium">{title}</p>
         {children}

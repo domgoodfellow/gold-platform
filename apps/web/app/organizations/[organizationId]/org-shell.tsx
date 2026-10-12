@@ -315,14 +315,14 @@ export function OrgNav({ sections }: { sections: ShellSection[] }) {
 export type { SwitchableOrganization };
 
 function MobileAgentEntry() {
-  const { agentOpen, toggleAgent } = useWorkspaceRail();
-  const { setOpenMobile } = useSidebar();
+  const { agentOpen, openAgent } = useWorkspaceRail();
+  const { setOpenMobile, mobileTriggerRef } = useSidebar();
   return (
     <SidebarMenu className="md:hidden">
       <SidebarMenuItem>
         <SidebarMenuButton aria-pressed={agentOpen} onClick={() => {
           setOpenMobile(false);
-          toggleAgent();
+          openAgent(mobileTriggerRef.current);
         }}>
           <Bot aria-hidden /><span>Agent</span>
         </SidebarMenuButton>

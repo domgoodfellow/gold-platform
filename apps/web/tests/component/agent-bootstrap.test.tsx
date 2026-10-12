@@ -8,9 +8,11 @@ import { TenantAgentRail } from '@/features/agent/tenant-agent-rail';
 import type { AgentBootstrapState } from '@/features/agent/actions';
 
 const bootstrap = vi.hoisted(() => vi.fn());
+const upload = vi.hoisted(() => vi.fn());
+const openConversation = vi.hoisted(() => vi.fn());
 vi.mock('@/features/agent/actions', () => ({
   loadAgentBootstrapAction: bootstrap, askAction: vi.fn(), decideAction: vi.fn(),
-  openConversationAction: vi.fn(), removeAttachmentAction: vi.fn(), uploadAttachmentAction: vi.fn(),
+  openConversationAction: openConversation, removeAttachmentAction: vi.fn(), uploadAttachmentAction: upload,
 }));
 vi.mock('next/navigation', () => ({ usePathname: () => '/organizations/org/crm' }));
 
@@ -26,6 +28,8 @@ function Harness({ organizationId = 'org' }: { organizationId?: string }) {
 }
 beforeEach(() => {
   bootstrap.mockReset();
+  upload.mockReset();
+  openConversation.mockReset();
   vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
   window.matchMedia = vi.fn().mockImplementation((media: string) => ({ matches: false, media, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
   Element.prototype.scrollIntoView = vi.fn();
@@ -47,7 +51,9 @@ describe('Agent bootstrap recovery', () => {
     await user.click(screen.getByRole('button', { name: 'Retry' }));
     expect(screen.getByRole('status')).toHaveTextContent('Loading…');
     await act(async () => complete(success));
-    expect(await screen.findByText(/Built-in Operator Copilot/)).toBeInTheDocument();
+    expect(await screen.findByRole('textbox', { name: 'Message to the Agent' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'History' })).toBeInTheDocument();
+    expect(screen.queryByText(/signed-in operator scope/)).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(bootstrap).toHaveBeenCalledTimes(2);
     await user.click(screen.getByRole('button', { name: 'Agent' }));
@@ -80,13 +86,42 @@ describe('Agent bootstrap recovery', () => {
     const user = userEvent.setup();
     let complete!: (result: AgentBootstrapState) => void;
     bootstrap.mockReturnValueOnce(new Promise<AgentBootstrapState>((resolve) => { complete = resolve; }));
-    bootstrap.mockResolvedValueOnce({ ...success, identity: 'Current organization Agent' });
+    bootstrap.mockResolvedValueOnce({ ...success, conversations: [{ id: 'other-chat', title: 'Current organization conversation', createdAt: '2026-10-09T12:00:00Z', lastActivityAt: '2026-10-09T12:00:00Z' }], initialConversation: { id: 'other-chat', runs: [] } });
     const { rerender } = render(<Harness />);
     await user.click(screen.getByRole('button', { name: 'Agent' }));
     rerender(<Harness organizationId="other-org" />);
-    await screen.findByText(/Current organization Agent/);
-    await act(async () => complete({ ...success, identity: 'Previous organization Agent' }));
-    expect(screen.queryByText(/Previous organization Agent/)).not.toBeInTheDocument();
+    await screen.findByText('Current organization conversation');
+    await act(async () => complete({ ...success, conversations: [{ id: 'previous-chat', title: 'Previous organization conversation', createdAt: '2026-10-09T12:00:00Z', lastActivityAt: '2026-10-09T12:00:00Z' }], initialConversation: { id: 'previous-chat', runs: [] } }));
+    expect(screen.queryByText('Previous organization conversation')).not.toBeInTheDocument();
     expect(bootstrap).toHaveBeenLastCalledWith('other-org');
+  });
+
+  it('keeps uploading and uploaded attachments and selected History across close/reopen', async () => {
+    const conversation = { id: 'saved-chat', title: 'Saved conversation', createdAt: '2026-10-09T12:00:00Z', lastActivityAt: '2026-10-09T12:00:00Z' };
+    bootstrap.mockResolvedValueOnce({ ...success, conversations: [conversation] });
+    openConversation.mockResolvedValueOnce({ error: null, conversationId: conversation.id, runs: [] });
+    let complete!: (result: { error: null; attachment: { id: string; fileName: string; mimeType: string; sizeBytes: number } }) => void;
+    upload.mockReturnValueOnce(new Promise((resolve) => { complete = resolve; }));
+    render(<Harness />);
+    await userEvent.click(screen.getByRole('button', { name: 'Agent' }));
+    await screen.findByRole('textbox');
+    await userEvent.type(screen.getByRole('textbox'), 'Draft with attachment');
+    await userEvent.upload(document.querySelector<HTMLInputElement>('input[type="file"]')!, new File(['hello'], 'notes.txt', { type: 'text/plain' }));
+    expect(screen.getByRole('button', { name: 'Cancel notes.txt' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Agent' }));
+    await act(async () => complete({ error: null, attachment: { id: 'document-id', fileName: 'notes.txt', mimeType: 'text/plain', sizeBytes: 5 } }));
+    await userEvent.click(screen.getByRole('button', { name: 'Agent' }));
+    expect(screen.getByRole('textbox')).toHaveValue('Draft with attachment');
+    expect(screen.getByRole('button', { name: 'Remove notes.txt' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'History' }));
+    await userEvent.click(screen.getByRole('button', { name: /Saved conversation/ }));
+    expect(screen.getByRole('heading', { name: 'Saved conversation' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Agent' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Agent' }));
+    expect(screen.getByRole('heading', { name: 'Saved conversation' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove notes.txt' })).toBeInTheDocument();
+    expect(bootstrap).toHaveBeenCalledTimes(1);
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(openConversation).toHaveBeenCalledWith('org', 'saved-chat');
   });
 });
