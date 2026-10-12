@@ -22,7 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "./tooltip"
-import { PanelLeftIcon } from "lucide-react"
+import { MenuIcon, PanelLeftIcon } from "lucide-react"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -38,6 +38,7 @@ type SidebarContextProps = {
   openMobile: boolean
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
+  mobileTriggerRef: React.RefObject<HTMLButtonElement | null>
   toggleSidebar: () => void
 }
 
@@ -67,6 +68,7 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
+  const mobileTriggerRef = React.useRef<HTMLButtonElement>(null)
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -121,6 +123,7 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      mobileTriggerRef,
     }),
     [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
   )
@@ -164,7 +167,7 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  const { isMobile, state, openMobile, setOpenMobile, mobileTriggerRef } = useSidebar()
 
   if (collapsible === "none") {
     return (
@@ -189,13 +192,19 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+          className="w-(--sidebar-width) max-w-[calc(100vw-2rem)] bg-sidebar p-0 text-sidebar-foreground"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
             } as React.CSSProperties
           }
           side={mobileSide}
+          onCloseAutoFocus={(event) => {
+            if (mobileTriggerRef.current) {
+              event.preventDefault()
+              mobileTriggerRef.current.focus()
+            }
+          }}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>
@@ -262,10 +271,13 @@ function SidebarTrigger({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, isMobile, openMobile, mobileTriggerRef } = useSidebar()
 
   return (
     <Button
+      ref={mobileTriggerRef}
+      aria-expanded={isMobile ? openMobile : undefined}
+      aria-haspopup={isMobile ? "dialog" : undefined}
       data-sidebar="trigger"
       data-slot="sidebar-trigger"
       variant="ghost"
@@ -277,8 +289,8 @@ function SidebarTrigger({
       }}
       {...props}
     >
-      <PanelLeftIcon />
-      <span className="sr-only">Toggle Sidebar</span>
+      {isMobile ? <MenuIcon aria-hidden /> : <PanelLeftIcon aria-hidden />}
+      <span className="sr-only">{isMobile ? "Menu" : "Toggle Sidebar"}</span>
     </Button>
   )
 }
@@ -521,7 +533,7 @@ function SidebarMenuButton({
     />
   )
 
-  if (!tooltip) {
+  if (!tooltip || isMobile) {
     return button
   }
 

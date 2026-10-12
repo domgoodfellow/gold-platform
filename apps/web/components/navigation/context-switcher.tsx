@@ -187,11 +187,7 @@ export function ContextSwitcher({ mark, current, organizations, platform }: Swit
   );
 }
 
-/**
- * Who this is, and nothing more: the mark, the name and the role, as plain text. The phone Menu's
- * header, where switching businesses is deliberately not offered a second time — the header's compact
- * switcher is the one phone control for that. No routing, no menu, no button.
- */
+/** Noninteractive identity for restricted shells. */
 export function ContextIdentity({ mark, name, role }: { mark: ReactNode; name: string; role: string }) {
   return (
     <div className="flex min-w-0 items-center gap-3 px-2">

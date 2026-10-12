@@ -140,18 +140,18 @@ describe('who owns which failure', () => {
   });
 });
 
-describe('the phone bar is Home, AI and Menu over the one projection', () => {
+describe('phone navigation uses the one projected sidebar', () => {
   const shell = read('app/organizations/[organizationId]/org-shell.tsx');
-  const bar = shell.slice(shell.indexOf('export function OrgNavBar('), shell.indexOf('export function OrgSidebar('));
+  const bar = shell.slice(shell.indexOf('export function OrgSidebar('), shell.indexOf('export function LockedOrgSidebar('));
 
   it('a business’s bar renders the projection it is given — it decides no eligibility of its own', () => {
-    expect(bar).toContain("shellHomeItem(sections)");
+    expect(bar).toContain('<OrgNav sections={sections} />');
     expect(bar).not.toMatch(/visibleAreas\(|areasIn\(|PlatformPhoneNavMenu|PLATFORM_NAV|inPlatformContext|capabilit/);
   });
 
   it('reaches Business and Platform through Menu rather than crowding the bar', () => {
-    expect(bar).toContain('aria-label="Menu"');
-    expect(bar).toContain('useSidebar()');
+    expect(bar).toContain('<ContextSwitcher');
+    expect(shell).toContain('navigationTrigger="always"');
   });
 
   it('Platform is offered only from server-resolved facts, inside the one shell', () => {
@@ -181,18 +181,15 @@ describe('the phone bar is Home, AI and Menu over the one projection', () => {
   });
 });
 
-describe('the mobile sidebar trigger says what the layouts do', () => {
-  it('Platform Context uses the unlocked trigger rule (md), and the header comment agrees', () => {
-    // Platform renders inside the one organization shell, which asks for the trigger from md up.
-    expect(read('app/organizations/[organizationId]/org-shell.tsx')).toContain("navigationTrigger={recovery ? 'always' : 'md'}");
-    const header = read('components/headers/workspace-header.tsx');
-    expect(header).toContain('Business *and*');
-    expect(header).not.toMatch(/Platform, whose\s*\n\s*\*\s*`Sidebar` renders an off-canvas Sheet/);
+describe('the shared mobile sidebar trigger', () => {
+  it('organization and platform use the header trigger without a bottom bar', () => {
+    const shell = read('app/organizations/[organizationId]/org-shell.tsx');
+    expect(shell).toContain('navigationTrigger="always"');
+    expect(shell).not.toContain('bottomBar=');
+    expect(read('components/headers/workspace-header.tsx')).toContain('order-last md:order-none');
   });
-
-  it('only shells with no bottom bar ask for the trigger at every width', () => {
+  it('personal and fallback frames retain their shared navigation trigger', () => {
     expect(read('features/account/global-fallback-shell.tsx')).toContain('navigationTrigger="always"');
-    expect(read('app/organizations/[organizationId]/org-shell.tsx')).toContain("navigationTrigger={recovery ? 'always' : 'md'}");
   });
 });
 

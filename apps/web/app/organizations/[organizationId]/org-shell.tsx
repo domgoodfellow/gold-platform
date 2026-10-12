@@ -1,12 +1,13 @@
 'use client';
 
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
+import { SIDEBAR_HEADER_HEIGHT } from '@/components/layout/workspace-geometry';
 import { WorkspaceShell } from '@/components/layout/workspace-shell';
 import { AccountMenu } from '@/components/navigation/account-menu';
 import { SettingsNav } from '@/components/navigation/settings-nav';
 import { inSettingsContext, type SettingsSearchItem } from '@/lib/settings-nav';
 import { lastAppPathKey } from '@/lib/route/app-return';
-import { ContextIdentity, ContextSwitcher, CompactContextSwitcher, GOLD_MARK, type SwitchableOrganization, type SwitcherContext, type PlatformContext } from '@/components/navigation/context-switcher';
+import { ContextIdentity, ContextSwitcher, GOLD_MARK, type SwitchableOrganization, type SwitcherContext, type PlatformContext } from '@/components/navigation/context-switcher';
 import {
   Sidebar,
   SidebarContent,
@@ -26,7 +27,6 @@ import {
   useSidebar,
 } from '@gold/ui/components/sidebar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@gold/ui/components/collapsible';
-import { Button } from '@/components/controls/button';
 import { useWorkspaceRail } from '@/components/panels/workspace-right-rail';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import Link from 'next/link';
@@ -59,7 +59,6 @@ import {
   Library,
   MapPin,
   Megaphone,
-  Menu,
   Inbox,
   LayoutTemplate,
   ListChecks,
@@ -84,7 +83,6 @@ import {
   workspaceNavigation,
   selectShellContext,
   type HeaderUtility,
-  shellHomeItem,
   inPlatformScope,
   itemContains,
   type NavItem,
@@ -316,83 +314,20 @@ export function OrgNav({ sections }: { sections: ShellSection[] }) {
 
 export type { SwitchableOrganization };
 
-const BAR_CELL =
-  'h-full w-full flex-col gap-0.5 rounded border-0 px-0 text-xs font-medium shadow-none';
-
-/** AI and Menu are buttons whose state is `aria-pressed` / `aria-expanded`; the shared Button styles those, so the bar restates them to match Home's current state. */
-const BAR_TOGGLE =
-  'bg-transparent hover:bg-hover aria-pressed:bg-foreground aria-pressed:text-background aria-pressed:hover:bg-foreground aria-expanded:bg-foreground aria-expanded:text-background aria-expanded:hover:bg-foreground';
-
-/**
- * The phone's persistent bar: exactly three equal cells and nothing that scrolls.
- *
- * - **Home** is the projected Home item, whatever address `projectShell` gave it.
- * - **AI** toggles the one workspace-global Agent (`useWorkspaceRail`), the same call the header's
- *   `AgentTrigger` makes; its pressed state is `agentOpen`.
- * - **Menu** opens the sidebar's own phone Sheet (`useSidebar`), which renders `OrgSidebar` — the
- *   same `sections` the desktop sidebar draws, workspace rows and Platform included. The bar holds no
- *   destination of its own, so it decides no eligibility.
- *
- * It renders outside `Sidebar`, as a sibling inside `SidebarProvider`, so it can read both contexts.
- * Its height is `--mobile-nav-height` (`workspace-geometry.ts`), which the page inset and the phone
- * Agent panel read too.
- */
-export function OrgNavBar({ sections }: { sections: ShellSection[] }) {
-  const pathname = usePathname();
-  const active = activeItemKey(sections, pathname);
-  const home = shellHomeItem(sections);
+function MobileAgentEntry() {
   const { agentOpen, toggleAgent } = useWorkspaceRail();
-  const { openMobile, setOpenMobile } = useSidebar();
-
-  // The Sheet does not close itself when a link inside it is followed.
-  useEffect(() => setOpenMobile(false), [pathname, setOpenMobile]);
-
+  const { setOpenMobile } = useSidebar();
   return (
-    <nav
-      aria-label="This business"
-      className="fixed inset-x-0 bottom-0 z-20 h-(--mobile-nav-height) border-t border-border bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
-    >
-      <ul className="grid h-full grid-cols-3 gap-1 p-1">
-        <li className="min-w-0">
-          {home ? (
-            <Link
-              href={home.href}
-              aria-current={home.key === active ? 'page' : undefined}
-              className={cx(FOCUS_RING, 'flex items-center justify-center', BAR_CELL, home.key === active ? 'bg-foreground text-background' : 'hover:bg-hover')}
-            >
-              <Home aria-hidden size={20} />
-              Home
-            </Link>
-          ) : null}
-        </li>
-        <li className="min-w-0">
-          <Button
-            type="button"
-            tone="secondary"
-            aria-label="AI"
-            aria-pressed={agentOpen}
-            onClick={toggleAgent}
-            className={cx(BAR_CELL, BAR_TOGGLE)}
-          >
-            <Bot aria-hidden size={20} />
-            AI
-          </Button>
-        </li>
-        <li className="min-w-0">
-          <Button
-            type="button"
-            tone="secondary"
-            aria-label="Menu"
-            aria-expanded={openMobile}
-            onClick={() => setOpenMobile(!openMobile)}
-            className={cx(BAR_CELL, BAR_TOGGLE)}
-          >
-            <Menu aria-hidden size={20} />
-            Menu
-          </Button>
-        </li>
-      </ul>
-    </nav>
+    <SidebarMenu className="md:hidden">
+      <SidebarMenuItem>
+        <SidebarMenuButton aria-pressed={agentOpen} onClick={() => {
+          setOpenMobile(false);
+          toggleAgent();
+        }}>
+          <Bot aria-hidden /><span>Agent</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
   );
 }
 
@@ -406,7 +341,6 @@ export function OrgNavBar({ sections }: { sections: ShellSection[] }) {
 export function OrgSidebar({
   mark,
   name,
-  role,
   organizations,
   current,
   platform,
@@ -431,20 +365,8 @@ export function OrgSidebar({
 } & React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" mobileSide="right" {...props}>
-      <SidebarHeader className="h-14 justify-center border-b border-sidebar-border">
-        {/* On a phone this sidebar is the Menu sheet: it names the business and does not offer a second
-            switcher, because the header's compact switcher is the one phone control for that. */}
-        <div className="md:hidden">
-          <ContextIdentity mark={mark} name={name} role={role} />
-        </div>
-        <div className="hidden md:block">
-          <ContextSwitcher
-            mark={mark}
-            current={current}
-            platform={platform}
-            organizations={organizations}
-          />
-        </div>
+      <SidebarHeader className={cx(SIDEBAR_HEADER_HEIGHT, 'justify-center border-b border-sidebar-border pr-12 md:pr-2')}>
+        <ContextSwitcher mark={mark} current={current} platform={platform} organizations={organizations} />
       </SidebarHeader>
       <SidebarContent>
         {settings ? (
@@ -454,6 +376,7 @@ export function OrgSidebar({
         )}
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border">
+        <MobileAgentEntry />
         <AccountMenu email={email} signOutAction={signOutAction} />
       </SidebarFooter>
       <SidebarRail />
@@ -491,9 +414,8 @@ export function LockedOrgSidebar({
 
   return (
     <Sidebar collapsible="icon" mobileSide="right" {...props}>
-      <SidebarHeader className="h-14 justify-center border-b border-sidebar-border">
-        {/* On a phone this sidebar is the Menu sheet: it names the business and does not offer a second
-            switcher, because the header's compact switcher is the one phone control for that. */}
+      <SidebarHeader className={cx(SIDEBAR_HEADER_HEIGHT, 'justify-center border-b border-sidebar-border pr-12 md:pr-2')}>
+        {/* Recovery keeps the phone identity noninteractive. */}
         <div className="md:hidden">
           <ContextIdentity mark={mark} name={name} role={role} />
         </div>
@@ -577,20 +499,15 @@ export function OrganizationFrame({
 
   return (
     <WorkspaceShell
+      locationNavigation={{ organizationId, sections: recovery ? [] : settingsContext && !system ? settings : sections, configurationHrefs: recovery || system ? [] : settingsSearch.map((item) => item.href) }}
       sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} {...shared} /> : <OrgSidebar {...shared} current={current} sections={sections} settings={settingsContext && !system ? { organizationId, sections: settings, search: settingsSearch } : null} />}
       header={
         <WorkspaceHeader
-          navigationTrigger={recovery ? 'always' : 'md'}
+          navigationTrigger="always"
           agentTrigger="md"
           utilities={system ? [] : utilities}
-          context={
-            <div className="flex min-w-0 items-center gap-3 md:hidden">
-              <CompactContextSwitcher mark={identityMark} current={current} organizations={organizations} platform={platform} />
-            </div>
-          }
         />
       }
-      bottomBar={recovery ? undefined : <OrgNavBar sections={sections} />}
       agent={agent}
     >
       {children}

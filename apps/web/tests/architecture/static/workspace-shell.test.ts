@@ -201,41 +201,18 @@ describe('Agent is workspace-global and the support modes are page-level', () =>
   });
 });
 
-describe('the Business phone header — compact controls wired to the right slots', () => {
-  it('gives the context slot the compact context switcher and nothing else', () => {
-    const contextBlock = organizationLayout.slice(
-      organizationLayout.indexOf('context={'),
-      organizationLayout.indexOf('/>', organizationLayout.indexOf('context={')),
-    );
-    expect(contextBlock).toContain('CompactContextSwitcher');
-    expect(contextBlock).not.toContain('CompactAccountMenu');
-    // The header carries no Setup treatment at any width: a phone reaches Setup through the
-    // bottom bar's own lifecycle-aware first item (`SetupNavLink`), the sidebar through `SetupEntry`.
-    expect(contextBlock).not.toMatch(/Setup/);
-    expect(contextBlock).toContain('md:hidden');
-  });
-
-  it("has no Account control in the header: the phone Account is the Menu sheet's footer", () => {
+describe('the Business mobile navigation', () => {
+  it('uses the header trigger and no bottom bar or compact header switcher', () => {
+    expect(organizationLayout).toContain('navigationTrigger="always"');
+    expect(organizationLayout).not.toContain('CompactContextSwitcher');
+    expect(organizationLayout).not.toContain('bottomBar=');
     expect(organizationLayout).not.toContain('beforeActions=');
-    expect(organizationLayout).not.toContain('CompactAccountMenu');
   });
-
-  it('shows the sidebar trigger from md up while a bottom bar exists, and at every width while locked', () => {
-    expect(organizationLayout).toContain("navigationTrigger={recovery ? 'always' : 'md'}");
-    expect(organizationLayout).toMatch(/bottomBar=\{\s*recovery \? undefined/);
-  });
-
-  it('hands the mark, current business and this identity’s other businesses to the compact switcher, same shape the sidebar’s own switcher gets', () => {
-    const contextBlock = organizationLayout.slice(
-      organizationLayout.indexOf('<CompactContextSwitcher'),
-      organizationLayout.indexOf('/>', organizationLayout.indexOf('<CompactContextSwitcher')),
-    );
-    expect(contextBlock).toContain('mark={identityMark}');
-    expect(contextBlock).toContain('current={current}');
-    expect(contextBlock).toContain('organizations={organizations}');
-    expect(contextBlock).toContain('platform={platform}');
+  it('reuses authorized switcher choices and keeps recovery mobile identity inert', () => {
     expect(organizationShellModel).toMatch(/myOrganizations\.map/);
-    expect(contextBlock).not.toContain('platformStaff=');
+    const restricted = orgShell.slice(orgShell.indexOf('export function LockedOrgSidebar'), orgShell.indexOf('export function OrganizationFrame'));
+    expect(restricted).toContain('<ContextIdentity');
+    expect(restricted).toContain('hidden md:block');
   });
 });
 
@@ -269,10 +246,10 @@ describe('the Platform route renders inside the one organization shell', () => {
     expect(legacyPlatformEntry).not.toContain('<form');
   });
 
-  it('gets its trigger, switcher and bottom bar from the one shell, at every width', () => {
-    expect(organizationLayout).toContain("navigationTrigger={recovery ? 'always' : 'md'}");
-    expect(organizationLayout).toContain('CompactContextSwitcher');
-    expect(organizationLayout).toMatch(/bottomBar=\{/);
+  it('gets its trigger and switcher from the one shell, at every width', () => {
+    expect(organizationLayout).toContain('navigationTrigger="always"');
+    expect(organizationLayout).toContain('<ContextSwitcher');
+    expect(organizationLayout).not.toContain('bottomBar=');
   });
 
   it('keeps platform navigation out of the area registry — one projection combines them', () => {
@@ -777,7 +754,7 @@ describe('the breadcrumb contract — every page publishes a location, ancestors
 
   it('the current page renders as the non-linked BreadcrumbPage primitive, never a link', () => {
     expect(workspaceCrumbs).toContain('import {');
-    expect(workspaceCrumbs).toMatch(/BreadcrumbPage,?\n/);
+    expect(workspaceCrumbs).toMatch(/BreadcrumbPage,?\r?\n/);
     expect(workspaceCrumbs).toContain('<BreadcrumbPage className="block truncate">{current}</BreadcrumbPage>');
     // Ancestors alone go through BreadcrumbLink/Link; the current item is never wrapped in one.
     const currentBlock = workspaceCrumbs.slice(workspaceCrumbs.indexOf('<BreadcrumbItem className="min-w-0 flex-1">'));

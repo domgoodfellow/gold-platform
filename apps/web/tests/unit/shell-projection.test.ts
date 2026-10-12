@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { AREAS, WORKSPACES, configTarget, configTargetOffered, workspaceAncestry, areaLabel } from '@/lib/navigation';
-import { SHELL_SECTION_ORDER, workspaceNavigation, activeItemKey, inPlatformScope, itemContains, projectedItems, projectShell, projectPlatformShell, projectHeaderUtilities, selectShellContext, shellHomeItem, type ShellInput, type ShellSection } from '@/lib/shell';
+import { SHELL_SECTION_ORDER, pageNavigation, workspaceNavigation, activeItemKey, inPlatformScope, itemContains, projectedItems, projectShell, projectPlatformShell, projectHeaderUtilities, selectShellContext, shellHomeItem, type ShellInput, type ShellSection } from '@/lib/shell';
 import { PLATFORM_CAPABILITIES } from '@/lib/domain/platform/permissions';
 import { platformDestinationsFor, platformHref, platformRouteRequires } from '@/lib/platform-navigation';
 import { ALL_CAPABILITIES, type Capability } from '@/lib/domain/tenancy/capabilities';
 import { ROLE_PRESETS } from '@/lib/domain/tenancy/role-presets';
+import { projectSettingsNav } from '@/lib/settings-nav';
 
 const ORG = '11111111-1111-4111-8111-111111111111';
 const allPlatform = new Set(PLATFORM_CAPABILITIES);
@@ -278,5 +279,70 @@ describe('contextual workspace navigation', () => {
     const switched = project(ALL_CAPABILITIES, { organizationId: '22222222-2222-4222-8222-222222222222' });
     expect(workspaceNavigation(switched, '/organizations/22222222-2222-4222-8222-222222222222/customers/123')!.backHref).toBe('/organizations/22222222-2222-4222-8222-222222222222/home');
     expect(workspaceNavigation(switched, '/organizations/other/home')).toBeNull();
+  });
+});
+
+
+describe('responsive page-location projection', () => {
+  const base = `/organizations/${ORG}`;
+  const navigation = { organizationId: ORG, sections: project() };
+  it('uses organization Home for workspace overview and no parent at organization Home', () => {
+    expect(pageNavigation(navigation, `${base}/field`, []).parentHref).toBe(`${base}/home`);
+    expect(pageNavigation(navigation, `${base}/home`, []).parentHref).toBeUndefined();
+  });
+  it('resolves Work independently of its internal field key and uses registered hrefs', () => {
+    const location = pageNavigation(navigation, `${base}/schedule`, []);
+    expect(location.parentHref).toBe(`${base}/field`);
+    expect(location.groups[0].label).toBe('Work');
+    expect(location.groups[0].items[0].href).toBe(`${base}/field`);
+    expect(location.groups[0].items.some((item) => item.href === `${base}/work`)).toBe(true);
+    expect(location.activeKey).toBe('schedule');
+  });
+  it('uses the Work Items collection for a direct detail and retains explicit filtered ancestors', () => {
+    expect(pageNavigation(navigation, `${base}/work/record-id`, []).parentHref).toBe(`${base}/work`);
+    expect(pageNavigation(navigation, `${base}/work/record-id`, [`${base}/field`, `${base}/work?status=open`]).parentHref).toBe(`${base}/work?status=open`);
+  });
+  it('keeps dynamic records out of the destination model', () => {
+    const location = pageNavigation(navigation, `${base}/assets/record-id`, []);
+    expect(location.parentHref).toBe(`${base}/assets`);
+    expect(location.groups.flatMap((group) => group.items).some((item) => item.href.endsWith('/record-id'))).toBe(false);
+  });
+  it('uses only authorized ancestors and rejects foreign context and external URLs', () => {
+    const foreign = '/organizations/22222222-2222-4222-8222-222222222222/home';
+    expect(pageNavigation(navigation, `${base}/field`, [foreign, 'https://example.test', '//example.test']).parentHref).toBe(`${base}/home`);
+    expect(pageNavigation(navigation, foreign, [])).toEqual({ activeKey: null, groups: [] });
+  });
+  it('restricted and unresolved locations never fabricate workspace destinations', () => {
+    expect(pageNavigation({ organizationId: ORG, sections: [] }, `${base}/settings/plan`, [])).toEqual({ activeKey: null, groups: [] });
+    expect(pageNavigation(navigation, `${base}/unknown`, []).groups).toEqual([]);
+    expect(pageNavigation(navigation, `${base}/unknown`, []).parentHref).toBe(`${base}/home`);
+  });
+  it('keeps entitlement-hidden Areas out of the menu and does not infer their workspace', () => {
+    const limited = { organizationId: ORG, sections: project(ALL_CAPABILITIES, { enabledModules: new Set(), featureAvailability: new Set() }) };
+    expect(pageNavigation(limited, `${base}/assets`, []).groups).toEqual([]);
+    expect(pageNavigation(limited, `${base}/field`, []).groups.flatMap((group) => group.items).some((item) => item.key === 'assets')).toBe(false);
+  });
+  it('a single-destination workspace has only its real overview', () => {
+    expect(pageNavigation(navigation, `${base}/marketing`, []).groups.flatMap((group) => group.items)).toHaveLength(1);
+  });
+  it('uses the restricted Settings projection without adding tenant workspaces', () => {
+    const settings = { organizationId: ORG, sections: projectSettingsNav(ORG, gate([])) };
+    const location = pageNavigation(settings, '/settings/account/security', []);
+    expect(location.activeKey).toBe('settings-security');
+    expect(location.groups.flatMap((group) => group.items).map((item) => item.key)).toEqual(['settings-profile', 'settings-security']);
+    expect(location.groups.flatMap((group) => group.items).every((item) => item.href.includes(ORG))).toBe(true);
+    expect(location.parentHref).toBeUndefined();
+  });
+  it('uses the authorized configuration registry for nested parents and workspace ownership', () => {
+    const configuration = { ...navigation, configurationHrefs: [`${base}/work/configuration`] };
+    expect(pageNavigation(configuration, `${base}/work/configuration/type-id`, []).parentHref).toBe(`${base}/work/configuration`);
+    expect(pageNavigation(configuration, `${base}/work/configuration`, []).groups[0].label).toBe('Work');
+  });
+  it('adapts Platform grouping without exposing tenant workspaces', () => {
+    const platformNavigation = { organizationId: ORG, sections: projectPlatformShell(ORG, new Set(['platform.providers'])) };
+    const location = pageNavigation(platformNavigation, platformHref(ORG, 'providers/twilio'), []);
+    expect(location.parentHref).toBe(platformHref(ORG, 'providers'));
+    expect(location.groups.flatMap((group) => group.items).every((item) => item.href.startsWith(platformHref(ORG)))).toBe(true);
+    expect(location.groups.flatMap((group) => group.items).some((item) => item.key === 'workspace-field')).toBe(false);
   });
 });

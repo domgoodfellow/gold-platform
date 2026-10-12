@@ -3,6 +3,12 @@
 import { createContext, Fragment, useContext, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { ArrowLeft, Check, ChevronDown } from 'lucide-react';
+import { useIsMobile } from '@gold/ui/hooks/use-mobile';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@gold/ui/components/dropdown-menu';
+import { Button, ButtonLink } from '../controls/button';
+import { pageNavigation, type LocationNavigation, type PageNavigation } from '@/lib/shell';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -14,36 +20,61 @@ import { cx, FOCUS_RING } from '../class-names';
 
 export type Crumb = { label: ReactNode; href?: string };
 
-type SlotContext = { slot: HTMLElement | null; setSlot: (element: HTMLElement | null) => void };
+type SlotContext = { slot: HTMLElement | null; setSlot: (element: HTMLElement | null) => void; navigation?: LocationNavigation };
 
 const CrumbSlotContext = createContext<SlotContext | null>(null);
 
 /** Hosts the slot the workspace bar exposes; the page still owns what is written into it. */
-export function WorkspaceCrumbsProvider({ children }: { children: ReactNode }) {
+export function WorkspaceCrumbsProvider({ children, navigation }: { children: ReactNode; navigation?: LocationNavigation }) {
   const [slot, setSlot] = useState<HTMLElement | null>(null);
-  return <CrumbSlotContext.Provider value={{ slot, setSlot }}>{children}</CrumbSlotContext.Provider>;
+  return <CrumbSlotContext.Provider value={{ slot, setSlot, navigation }}>{children}</CrumbSlotContext.Provider>;
 }
 
 /** The place in the workspace bar where the current page's trail appears. */
 export function WorkspaceCrumbSlot() {
   const context = useContext(CrumbSlotContext);
-  return <div ref={context?.setSlot} className="min-w-0 flex-1 sm:flex-none" />;
+  return <div ref={context?.setSlot} className="min-w-0 flex-1 md:flex-none" />;
 }
 
-/**
- * A page's full trail, rendered into the workspace bar: `ancestors + current`. Always renders —
- * there is no page with nothing to say here, since `current` is required and every `PageHeader`
- * supplies one. The current page is the final, non-linked segment (`BreadcrumbPage`); an ancestor
- * is a link only where it names a real destination, and plain text otherwise (a heading with no
- * page of its own, such as a Platform sidebar group). The current segment carries the flexible,
- * truncating space first, so a long record title yields before an ancestor does and never pushes
- * the header's other controls out of view.
- */
+function MobilePageLocation({ current, navigation }: { current: ReactNode; navigation: PageNavigation }) {
+  const [open, setOpen] = useState(false);
+  const interactive = navigation.groups.reduce((count, group) => count + group.items.length, 0) > 1;
+  return <nav aria-label="Page location" className="flex min-w-0 items-center gap-1 md:hidden">
+    {navigation.parentHref ? <ButtonLink href={navigation.parentHref} tone="ghost" aria-label="Back to parent" className="size-10 shrink-0 p-0"><ArrowLeft aria-hidden size={18} /></ButtonLink> : null}
+    {interactive ? <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button tone="ghost" className="h-10 min-w-0 shrink justify-start gap-1 px-2" aria-label="Navigate within current section">
+          <span aria-current="page" className="truncate">{current}</span><ChevronDown aria-hidden size={16} className="shrink-0" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-h-[min(70dvh,28rem)] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto">
+        {navigation.groups.map((group, index) => <Fragment key={index}>
+          {index > 0 ? <DropdownMenuSeparator /> : null}
+          {group.label ? <DropdownMenuLabel>{group.label}</DropdownMenuLabel> : null}
+          {group.items.map((item) => <DropdownMenuItem key={item.key} asChild>
+            <Link href={item.href} aria-current={item.key === navigation.activeKey ? 'page' : undefined} className={cx('min-h-10 min-w-0', item.key === navigation.activeKey && 'bg-selected text-foreground font-medium')}>
+              <span className="min-w-0 flex-1 whitespace-normal break-words">{item.label}</span>
+              {item.key === navigation.activeKey ? <Check aria-hidden size={16} /> : null}
+            </Link>
+          </DropdownMenuItem>)}
+        </Fragment>)}
+      </DropdownMenuContent>
+    </DropdownMenu> : <span aria-current="page" className="min-w-0 truncate px-2 text-sm">{current}</span>}
+  </nav>;
+}
+
+/** Desktop and mobile share the page's published current label and ancestors. */
 export function PageCrumbs({ crumbs, current }: { crumbs: Crumb[]; current: ReactNode }) {
-  const slot = useContext(CrumbSlotContext)?.slot;
+  const context = useContext(CrumbSlotContext);
+  const slot = context?.slot;
+  const pathname = usePathname();
+  const isMobile = useIsMobile();
+  const navigation = pageNavigation(context?.navigation, pathname, crumbs.map((crumb) => crumb.href));
   if (!slot) return null;
   return createPortal(
-    <Breadcrumb>
+    <>
+    <MobilePageLocation key={`${pathname}:${isMobile}`} current={current} navigation={navigation} />
+    <Breadcrumb className="hidden md:block">
       <BreadcrumbList className="flex-nowrap gap-1 text-sm">
         {crumbs.map((crumb, index) => (
           <Fragment key={index}>
@@ -66,7 +97,8 @@ export function PageCrumbs({ crumbs, current }: { crumbs: Crumb[]; current: Reac
           <BreadcrumbPage className="block truncate">{current}</BreadcrumbPage>
         </BreadcrumbItem>
       </BreadcrumbList>
-    </Breadcrumb>,
+    </Breadcrumb>
+    </>,
     slot,
   );
 }

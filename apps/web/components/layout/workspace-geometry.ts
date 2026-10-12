@@ -9,6 +9,7 @@ import type { CSSProperties } from 'react';
 
 /** The workspace header's height — the top band Agent's own header shares. */
 export const HEADER_HEIGHT = '3.5rem';
+export const SIDEBAR_HEADER_HEIGHT = 'h-(--header-height)';
 export const HEADER_HEIGHT_STYLE = { '--header-height': HEADER_HEIGHT } as CSSProperties;
 
 /** The canvas inset every page sits in. */

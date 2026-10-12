@@ -11,16 +11,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@gold/ui/components/too
 import { ButtonLink } from '../controls/button';
 import type { HeaderUtility } from '@/lib/shell';
 
-/**
- * The sticky GLOBAL workspace bar, shared by Organization Context, Platform Context and Account:
- * it answers *where am I* (the breadcrumb trail) and holds global utilities. It carries no page
- * title and no page actions — those are `PageHeader`, inside the page. The trail is written by
- * the page (`PageHeader`'s `crumbs`) into the slot here. It holds no business identifier, no
- * platform routing, no authorization, no Agent data.
- *
- * Left to right: the sidebar trigger, a mobile-only context control, the breadcrumb slot, a
- * spacer, an optional `beforeActions` control, and Agent — always the furthest-right control.
- */
+/** Shared page-location bar; phone navigation sits at the far right. */
 export function WorkspaceHeader({
   navigationTrigger,
   context,
@@ -28,30 +19,14 @@ export function WorkspaceHeader({
   utilities = [],
   agentTrigger = 'always',
 }: {
-  /**
-   * 'md' — the sidebar trigger and its separator appear only from `md` up. Business *and*
-   * Platform Context use this: Platform shares the application frame, so a phone gets the
-   * bottom bar (`OrgNavBar`: Home, AI, Menu), whose Menu opens the sidebar's own phone Sheet, and the
-   * header carries no sidebar trigger below that width.
-   * 'always' — the trigger shows at every width, for a shell with no bottom bar whose only phone
-   * navigation *is* the sidebar's off-canvas Sheet (Personal settings and the fallback frame).
-   * Omit where no sidebar sits behind this header.
-   */
   navigationTrigger?: 'always' | 'md';
-  /**
-   * A mobile-only identity/context control — a compact context switcher — for a shell whose own
-   * sidebar (and therefore its own switcher) is not reachable at this width. Absent where it is.
-   */
   context?: ReactNode;
   /** Rendered immediately before Agent. A generic slot: the organization shell leaves it empty, since its
    * phone Account lives in the Menu sheet's footer. */
   beforeActions?: ReactNode;
   /** Already authorized organization-wide utility destinations. */
   utilities?: HeaderUtility[];
-  /**
-   * 'md' — the Agent trigger shows only from `md` up, for a shell whose phone bottom bar carries its own
-   * AI control. Default 'always', for shells with no bottom bar.
-   */
+  /** Use 'md' when mobile navigation carries Agent. */
   agentTrigger?: 'always' | 'md';
 }) {
   return (
@@ -59,20 +34,20 @@ export function WorkspaceHeader({
       {navigationTrigger ? (
         <>
           <SidebarTrigger
-            className={cx(navigationTrigger === 'md' ? 'hidden -ml-2 md:flex' : '-ml-1')}
+            className={cx('shrink-0 order-last md:order-none', navigationTrigger === 'md' ? 'hidden -ml-2 md:flex' : 'md:-ml-2')}
           />
           <Separator
             orientation="vertical"
             className={cx(
               'data-[orientation=vertical]:h-4',
-              navigationTrigger === 'md' ? 'hidden md:block' : undefined,
+              'hidden md:block',
             )}
           />
         </>
       ) : null}
       {context}
       <WorkspaceCrumbSlot />
-      <span className="flex-1" />
+      <span className="hidden flex-1 md:block" />
       {beforeActions}
       <div className={cx('items-center gap-2', agentTrigger === 'md' ? 'hidden md:flex' : 'flex')}>
         <div className="hidden items-center gap-2 md:flex">

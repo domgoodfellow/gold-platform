@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, type ReactNode } from 'react';
+import type { LocationNavigation } from '@/lib/shell';
 import { AppShell } from './app-shell';
 import { WorkspaceCrumbsProvider } from '../navigation/workspace-crumbs';
 import { WorkspaceRailProvider, WorkspaceRightRail } from '../panels/workspace-right-rail';
@@ -12,12 +13,14 @@ import { WorkspaceRailProvider, WorkspaceRightRail } from '../panels/workspace-r
  */
 export function WorkspaceShell({
   sidebar,
+  locationNavigation,
   header,
   bottomBar,
   agent,
   children,
 }: {
   sidebar: ReactNode;
+  locationNavigation?: LocationNavigation;
   header: ReactNode;
   bottomBar?: ReactNode;
   agent: ReactNode;
@@ -25,7 +28,7 @@ export function WorkspaceShell({
 }) {
   return (
     <WorkspaceRailProvider>
-      <WorkspaceCrumbsProvider>
+      <WorkspaceCrumbsProvider navigation={locationNavigation}>
         <WorkspaceRightRail
           bottomInset={bottomBar != null}
           main={

@@ -3,10 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ContextIdentity } from '@/components/navigation/context-switcher';
 
-/**
- * The phone Menu's identity header: who the business is, with no way to switch. Switching stays the
- * header's compact switcher, so this must stay inert text rather than grow a trigger.
- */
+/** Restricted mobile identity stays noninteractive. */
 afterEach(cleanup);
 
 describe('ContextIdentity', () => {

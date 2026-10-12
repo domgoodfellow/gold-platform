@@ -14,6 +14,7 @@ import {
   SheetClose,
   SheetContent,
   SheetHeader,
+  SheetFooter,
   SheetTitle,
   SheetTrigger,
 } from '@gold/ui/components/sheet';
@@ -121,14 +122,16 @@ export function MarketingActions() {
                   <Link href={link.href} className={cx('rounded px-1 py-2 hover:bg-secondary', FOCUS_RING)}>{link.label}</Link>
                 </SheetClose>
               ))}
-              <SheetClose asChild>
-                <Link href="/login" className={cx('rounded px-1 py-2 hover:bg-secondary', FOCUS_RING)}>Log in</Link>
-              </SheetClose>
             </div>
           </nav>
-          <SheetClose asChild>
-            <ButtonLink href="/demo" tone="primary" className="w-full">Request a demo</ButtonLink>
-          </SheetClose>
+          <SheetFooter className="p-0">
+            <SheetClose asChild>
+              <ButtonLink href="/login" tone="secondary" className="w-full">Log in</ButtonLink>
+            </SheetClose>
+            <SheetClose asChild>
+              <ButtonLink href="/demo" tone="primary" className="w-full">Request a demo</ButtonLink>
+            </SheetClose>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
     </div>

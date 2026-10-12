@@ -1,104 +1,104 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SidebarProvider } from '@gold/ui/components/sidebar';
 import { WorkspaceRailProvider, useWorkspaceRail } from '@/components/panels/workspace-right-rail';
-import { OrgNavBar } from '@/app/organizations/[organizationId]/org-shell';
+import { OrgSidebar, LockedOrgSidebar } from '@/app/organizations/[organizationId]/org-shell';
+import { AppShell } from '@/components/layout/app-shell';
+import { WorkspaceHeader } from '@/components/headers/workspace-header';
+import { TooltipProvider } from '@gold/ui/components/tooltip';
 import type { ShellSection } from '@/lib/shell';
 
-vi.mock('next/navigation', () => ({
-  usePathname: () => '/organizations/org-1/home',
-}));
-
-/**
- * The phone bar's rendered behavior: exactly Home, AI and Menu, over the real Agent rail state and the
- * real `SidebarProvider`. Which items exist is `projectShell`'s answer and is held by
- * `shell-projection.test.ts`; this proves only what the bar does with them. Layout (equal cells, no
- * scrolling, sitting above the Agent panel) is not computed by jsdom and is checked in the browser.
- */
-
+const route = vi.hoisted(() => ({ pathname: '/organizations/org-1/home' }));
+vi.mock('next/navigation', () => ({ usePathname: () => route.pathname }));
 const sections: ShellSection[] = [
   { key: 'home', label: null, items: [{ key: 'home', label: 'Home', href: '/organizations/org-1/home', section: 'home' }] },
-  {
-    key: 'workspaces',
-    label: 'Workspaces',
-    items: [
-      { key: 'customers', label: 'Customers', href: '/organizations/org-1/customers', section: 'workspaces' },
-      { key: 'work', label: 'Work', href: '/organizations/org-1/work', section: 'workspaces' },
-      { key: 'schedule', label: 'Schedule', href: '/organizations/org-1/schedule', section: 'workspaces' },
-    ],
-  },
 ];
-
+const organizations = [
+  { id: 'org-1', name: 'Current business', role: 'Owner', operationalState: 'live' as const },
+  { id: 'org-2', name: 'Authorized business', role: 'Member', operationalState: 'setup' as const },
+];
 beforeEach(() => {
+  route.pathname = '/organizations/org-1/home';
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  })) as unknown as typeof window.matchMedia;
+    matches: true, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+  }));
+  vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
+  Element.prototype.scrollIntoView = vi.fn();
 });
-
-afterEach(cleanup);
-
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 function AgentState() {
   const { agentOpen } = useWorkspaceRail();
   return <output data-testid="agent-open">{String(agentOpen)}</output>;
 }
-
-function Harness() {
-  return (
-    <WorkspaceRailProvider>
-      <SidebarProvider>
-        <OrgNavBar sections={sections} />
-        <AgentState />
-      </SidebarProvider>
-    </WorkspaceRailProvider>
-  );
+function Harness({ locked = false, choices = organizations }) {
+  const shared = { mark: null, name: 'Current business', role: 'Owner', organizations: choices, email: 'owner@example.test', signOutAction: vi.fn() };
+  return <TooltipProvider><WorkspaceRailProvider>
+    <AppShell header={<WorkspaceHeader navigationTrigger="always" agentTrigger="md" />}
+      sidebar={locked
+        ? <LockedOrgSidebar {...shared} organizationId="org-1" />
+        : <OrgSidebar {...shared} current={{ kind: 'business', organizationId: 'org-1', name: shared.name, role: shared.role }} sections={sections} />}>
+      <AgentState />
+    </AppShell>
+  </WorkspaceRailProvider></TooltipProvider>;
 }
-
-describe('the organization phone bar', () => {
-  it('has exactly Home, AI and Menu, and no workspace page as a persistent control', () => {
+async function open() {
+  await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+  return screen.getByRole('dialog');
+}
+describe('the organization mobile menu', () => {
+  it('opens from the header, dismisses with Escape, and restores focus', async () => {
     render(<Harness />);
-    const bar = screen.getByRole('navigation', { name: 'This business' });
-
-    expect(within(bar).getAllByRole('link').map((link) => link.textContent)).toEqual(['Home']);
-    expect(within(bar).getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual(['AI', 'Menu']);
-    for (const name of ['Customers', 'Work', 'Schedule']) {
-      expect(within(bar).queryByText(name)).not.toBeInTheDocument();
-    }
+    const trigger = screen.getByRole('button', { name: 'Menu' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await open();
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
-
-  it('Home links to the projected Home item', () => {
+  it('opens the existing Agent controller and closes navigation', async () => {
     render(<Harness />);
-    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/organizations/org-1/home');
-    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
-  });
-
-  it('AI toggles the existing Agent state and shows it as pressed', async () => {
-    const user = userEvent.setup();
-    render(<Harness />);
-    const ai = screen.getByRole('button', { name: 'AI' });
-
-    expect(ai).toHaveAttribute('aria-pressed', 'false');
-    await user.click(ai);
-    expect(ai).toHaveAttribute('aria-pressed', 'true');
+    const sheet = await open();
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Agent' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByTestId('agent-open')).toHaveTextContent('true');
-    await user.click(ai);
-    expect(ai).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByTestId('agent-open')).toHaveTextContent('false');
   });
-
-  it('Menu toggles the sidebar’s mobile Sheet state', async () => {
-    const user = userEvent.setup();
+  it('closes on an already current navigation destination and history changes', async () => {
+    const view = render(<Harness />);
+    await open();
+    await userEvent.click(screen.getByRole('link', { name: 'Home' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await open();
+    route.pathname = '/organizations/org-1/sales';
+    view.rerender(<Harness />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+  it('lists only supplied memberships and closes on authorized context selection', async () => {
     render(<Harness />);
-    const menu = screen.getByRole('button', { name: 'Menu' });
-
-    expect(menu).toHaveAttribute('aria-expanded', 'false');
-    await user.click(menu);
-    expect(menu).toHaveAttribute('aria-expanded', 'true');
-    await user.click(menu);
-    expect(menu).toHaveAttribute('aria-expanded', 'false');
+    const sheet = await open();
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Current business' }));
+    const destination = screen.getByRole('menuitem', { name: /Authorized business/ });
+    expect(destination).toHaveAttribute('href', '/organizations/org-2/home');
+    expect(screen.queryByRole('menuitem', { name: 'Platform' })).not.toBeInTheDocument();
+    await userEvent.click(destination);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+  it('offers no interactive mobile switcher in a locked shell', async () => {
+    render(<Harness locked />);
+    const sheet = await open();
+    const identity = sheet.querySelector('[data-sidebar="header"]') as HTMLElement;
+    expect(identity).toHaveTextContent('Current business');
+    // jsdom has no responsive CSS; only the desktop switcher may exist in the hidden desktop region.
+    expect(identity.querySelector('.md\\:hidden button')).toBeNull();
+    expect(identity.querySelector('.hidden.md\\:block')).not.toBeNull();
+    expect(within(sheet).queryByRole('button', { name: 'Agent' })).not.toBeInTheDocument();
+    expect(within(sheet).getByRole('link', { name: 'Plan & usage' })).toBeInTheDocument();
+  });
+  it('keeps a single organization without alternatives noninteractive', async () => {
+    render(<Harness choices={[organizations[0]]} />);
+    const sheet = await open();
+    expect(within(sheet).queryByRole('button', { name: 'Current business' })).not.toBeInTheDocument();
   });
 });

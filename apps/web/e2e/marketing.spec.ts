@@ -64,3 +64,30 @@ test('Empty Marketing keeps the complete operational dashboard',async({page})=>{
   await expect(page.getByRole('link',{name:/Active campaigns\s*0/})).toBeVisible();
   await page.screenshot({path:path.resolve(__dirname,'../test-results/marketing/home-empty.png'),fullPage:true});
 });
+
+
+test('public marketing menu groups authentication and demo in its footer', async ({ browser }, testInfo) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    for (const width of [320, 375, 390, 768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/pricing');
+      if (width < 640) {
+        await page.getByRole('button', { name: 'Open menu' }).click();
+        const sheet = page.getByRole('dialog');
+        const footer = sheet.locator('[data-slot="sheet-footer"]');
+        await expect(footer.getByRole('link', { name: 'Log in' })).toHaveAttribute('href', '/login');
+        await expect(footer.getByRole('link', { name: 'Request a demo' })).toHaveAttribute('href', '/demo');
+        await expect(sheet.getByRole('navigation').getByRole('link', { name: 'Log in' })).toHaveCount(0);
+        await page.screenshot({ path: testInfo.outputPath(`marketing-menu-${width}.png`) });
+        await page.keyboard.press('Escape');
+      } else {
+        await expect(page.locator('header').getByRole('link', { name: 'Log in' })).toBeVisible();
+        await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
+        await page.screenshot({ path: testInfo.outputPath(`marketing-${width}.png`) });
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+  } finally { await context.close(); }
+});

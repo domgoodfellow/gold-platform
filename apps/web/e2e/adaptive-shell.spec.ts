@@ -47,7 +47,7 @@ test.describe('a tenant owner', () => {
       await page.setViewportSize(viewport);
       await page.goto(`/organizations/${organizationId}/home`);
       const mobile = viewport.width < 768;
-      const open = async () => { if (mobile) await page.locator('nav.fixed').getByRole('button', { name: 'Menu' }).click(); };
+      const open = async () => { if (mobile) await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click(); };
       const nav = () => mobile ? page.getByRole('dialog').getByRole('navigation', { name: 'This business' }) : sidebar(page);
       await open();
       await nav().getByRole('link', { name: 'Communications', exact: true }).click();
@@ -138,60 +138,60 @@ test.describe('a tenant owner', () => {
     await expect(sidebar(page).getByText('Platform', { exact: true })).toHaveCount(0);
   });
 
-  test('on a phone has Home, AI and Menu in the bar, and reaches Settings through the account footer', async ({ page }) => {
+  test('phone navigation dismisses, restores focus, and retains account and Agent access', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/organizations/${organizationId}/home`);
-    const bar = page.locator('nav[aria-label="This business"].fixed');
-    await expect(bar.getByRole('link', { name: 'Home', exact: true })).toBeVisible();
-    await expect(bar.getByRole('button', { name: 'AI', exact: true })).toBeVisible();
-    await expect(bar.getByRole('button', { name: 'Menu', exact: true })).toBeVisible();
-    // Workspace pages are not bar destinations, and nothing in the bar scrolls sideways.
-    for (const name of ['Customers', 'Work', 'Schedule', 'Team']) {
-      await expect(bar.getByRole('link', { name, exact: true })).toHaveCount(0);
+    const trigger = page.locator('header').getByRole('button', { name: 'Menu', exact: true });
+    await expect(trigger).toBeVisible();
+    await expect(page.locator('nav.fixed')).toHaveCount(0);
+    for (const dismissal of ['escape', 'outside', 'close']) {
+      await trigger.click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      if (dismissal === 'escape') await page.keyboard.press('Escape');
+      else if (dismissal === 'outside') await page.mouse.click(5, 400);
+      else await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(trigger).toBeFocused();
     }
-    const scrolls = await bar.locator('ul').evaluate((list) => list.scrollWidth > list.clientWidth);
-    expect(scrolls).toBe(false);
-
-    // The header is the organization context and the page location, and nothing else: no Account, no Agent.
-    const header = page.locator('header');
-    await expect(header.locator('[aria-label^="Switch context"], span[aria-label]').first()).toBeVisible();
-    await expect(header.getByRole('button', { name: /^Account/ })).toHaveCount(0);
-    await expect(header.getByRole('button', { name: 'Agent' })).toBeHidden();
-    await expect(header.getByRole('link', { name: 'Team', exact: true })).toBeHidden();
-    await expect(header.getByRole('link', { name: 'Connections', exact: true })).toBeHidden();
-
-    await bar.getByRole('button', { name: 'Menu', exact: true }).click();
+    await trigger.click();
     const sheet = page.getByRole('dialog');
-    // The sheet names the business and offers no second switcher; Account is its footer.
-    await expect(sheet.getByText('Grachtwerk Verhuur', { exact: true }).filter({ visible: true })).toHaveCount(1);
-    await expect(sheet.getByRole('button', { name: /Switch context/ })).toHaveCount(0);
-    await expect(sheet.getByText('Workspaces', { exact: true })).toBeVisible();
+    await expect(sheet.locator('[data-sidebar="header"]')).toContainText('Grachtwerk Verhuur');
     await expect(sheet.getByText('Platform', { exact: true })).toHaveCount(0);
+    await expect(sheet.getByRole('link', { name: 'Home', exact: true })).toBeVisible();
+    await sheet.getByRole('button', { name: 'Agent', exact: true }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect(page.getByRole('complementary', { name: 'Agent' })).toBeVisible();
+    await page.getByRole('complementary', { name: 'Agent' }).getByRole('button', { name: /Close/ }).click();
+    await trigger.click();
     await sheet.getByRole('button', { name: /sanne@grachtwerk.test/ }).click();
-    await expect(page.getByRole('menuitem', { name: 'Settings' })).toBeVisible();
-    await expect(page.getByRole('menuitem', { name: 'Help & documentation' })).toBeVisible();
-    await expect(page.getByRole('menuitem', { name: 'Contact GildOps Support' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Sign out', exact: true })).toBeVisible();
     await page.getByRole('menuitem', { name: 'Settings', exact: true }).click();
     await expect(page).toHaveURL(/\/settings\/general$/);
-    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(sheet).toHaveCount(0);
+    await trigger.click();
+    await page.goBack();
+    await expect(sheet).toHaveCount(0);
   });
 
-  test('on a phone, AI opens the Agent above the bar and the same control closes it', async ({ page }) => {
+  test('responsive shell keeps location left and navigation reachable without overflow', async ({ page }, testInfo) => {
     const { organizationId } = loadDemoContext();
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(`/organizations/${organizationId}/home`);
-    const bar = page.locator('nav[aria-label="This business"].fixed');
-    const ai = bar.getByRole('button', { name: 'AI', exact: true });
-    await ai.click();
-    const agent = page.getByRole('complementary', { name: 'Agent' });
-    await expect(agent).toBeVisible();
-    await expect(ai).toHaveAttribute('aria-pressed', 'true');
-    const barBox = (await bar.boundingBox())!;
-    const agentBox = (await agent.boundingBox())!;
-    expect(agentBox.y + agentBox.height).toBeLessThanOrEqual(barBox.y + 1);
-    await ai.click();
-    await expect(agent).toBeHidden();
+    for (const width of [320, 375, 390, 768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`/organizations/${organizationId}/home`);
+      await expect(page.getByRole('navigation', { name: width < 768 ? 'Page location' : 'breadcrumb', exact: true })).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.screenshot({ path: testInfo.outputPath(`shell-${width}.png`) });
+      if (width < 768) {
+        const trigger = page.locator('header').getByRole('button', { name: 'Menu', exact: true });
+        const location = await page.getByRole('navigation', { name: 'Page location', exact: true }).boundingBox();
+        const button = await trigger.boundingBox();
+        expect(location!.x).toBeLessThan(button!.x);
+        await trigger.click();
+        await page.screenshot({ path: testInfo.outputPath(`menu-${width}.png`) });
+        await page.keyboard.press('Escape');
+      }
+    }
   });
 });
 
@@ -253,23 +253,21 @@ test.describe('GOLD platform staff', () => {
     await expect(container.getByText('System control plane', { exact: true }).filter({ visible: true }).first()).toBeVisible();
   });
 
-  test('on a phone, keep Home, AI and Menu in the bar inside Platform, and find Platform in Menu', async ({ page }) => {
+  test('on a phone switches authorized context from the menu and closes it', async ({ page }) => {
+    const { goldOrganizationId } = loadDemoContext();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(platformUrl());
-    const bar = page.locator('nav[aria-label="This business"].fixed');
-    await expect(bar.getByRole('link', { name: 'Home', exact: true })).toBeVisible();
-    await expect(bar.getByRole('button', { name: 'AI', exact: true })).toBeVisible();
-    await expect(bar.getByRole('button', { name: 'Menu', exact: true })).toBeVisible();
-    await expect(bar.getByRole('link', { name: 'Organizations', exact: true })).toHaveCount(0);
-    await expect(page.locator('header').getByRole('button', { name: /^Account/ })).toHaveCount(0);
-    await bar.getByRole('button', { name: 'Menu', exact: true }).click();
+    await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();
     const sheet = page.getByRole('dialog');
-    // The phone Menu names the system scope; Account stays reachable.
-    const identity = sheet.locator('[data-sidebar="header"]');
-    await expect(identity.getByText('GildOps Platform', { exact: true }).filter({ visible: true })).toHaveCount(1);
-    await expect(identity).toContainText('System control plane');
-    await expect(sheet.getByRole('button', { name: /staff@gold.test/ })).toBeVisible();
-    await expect(sheet.getByRole('link', { name: 'Organizations', exact: true })).toBeVisible();
     await expect(sheet.getByRole('link', { name: 'Providers', exact: true })).toBeVisible();
+    await sheet.locator('[data-sidebar="header"]').getByRole('button', { name: /GildOps Platform/ }).click();
+    await page.locator(`[role="menuitem"][href="/organizations/${goldOrganizationId}/home"]`).click();
+    await expect(page).toHaveURL(`/organizations/${goldOrganizationId}/home`);
+    await expect(sheet).toHaveCount(0);
+    await page.goto(`/organizations/${goldOrganizationId}/field`);
+    await page.getByRole('button', { name: 'Navigate within current section' }).click();
+    const destinations = await page.getByRole('menuitem').evaluateAll((items) => items.map((item) => item.getAttribute('href')));
+    expect(destinations.every((href) => href?.startsWith(`/organizations/${goldOrganizationId}/`))).toBe(true);
+
   });
 });

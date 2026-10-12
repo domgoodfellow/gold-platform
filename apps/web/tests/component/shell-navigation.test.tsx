@@ -11,6 +11,7 @@ import { AREAS } from '@/lib/navigation';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { TooltipProvider } from '@gold/ui/components/tooltip';
 import { CompactContextSwitcher } from '@/components/navigation/context-switcher';
+import { WorkspaceCrumbsProvider, WorkspaceCrumbSlot, PageCrumbs } from '@/components/navigation/workspace-crumbs';
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
 import { WorkspaceRailProvider } from '@/components/panels/workspace-right-rail';
 
@@ -142,5 +143,42 @@ describe('contextual sidebar rendering', () => {
     expect(runtime).toHaveTextContent('ready');
     expect(telephone.created).toHaveBeenCalledTimes(1);
     expect(telephone.destroyed).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('responsive breadcrumb interaction', () => {
+  const org = '11111111-1111-4111-8111-111111111111';
+  const base = `/organizations/${org}`;
+  const navigation = { organizationId: org, sections: projectShell({ organizationId: org, enabledModules: new Set(['assets']), featureAvailability: new Set(AREAS.flatMap((area) => area.featureKeys ?? [])), capabilities: new Set(ALL_CAPABILITIES) }) };
+  function Location({ current = 'Schedule' }: { current?: string }) {
+    return <WorkspaceCrumbsProvider navigation={navigation}><WorkspaceCrumbSlot /><PageCrumbs crumbs={[{ label: 'Work', href: `${base}/field` }]} current={current} /></WorkspaceCrumbsProvider>;
+  }
+  it('shares page labels, links to a semantic parent, and marks the active destination', async () => {
+    route.pathname = `${base}/schedule`;
+    render(<Location />);
+    expect(screen.getByRole('link', { name: 'Back to parent' })).toHaveAttribute('href', `${base}/field`);
+    const trigger = screen.getByRole('button', { name: 'Navigate within current section' });
+    await userEvent.click(trigger);
+    expect(screen.getByRole('menuitem', { name: 'Schedule' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('menuitem', { name: 'Overview' })).toHaveAttribute('href', `${base}/field`);
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+  it('closes the dropdown on route changes and does not add records to the menu', async () => {
+    route.pathname = `${base}/assets/123`;
+    const view = render(<Location current="A very long actual asset name" />);
+    await userEvent.click(screen.getByRole('button', { name: 'Navigate within current section' }));
+    expect(screen.queryByRole('menuitem', { name: 'A very long actual asset name' })).not.toBeInTheDocument();
+    route.pathname = `${base}/resources`;
+    view.rerender(<Location current="Resources" />);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+  it('does not render an empty dropdown or back arrow at organization Home', () => {
+    route.pathname = `${base}/home`;
+    render(<WorkspaceCrumbsProvider navigation={navigation}><WorkspaceCrumbSlot /><PageCrumbs crumbs={[]} current="Home" /></WorkspaceCrumbsProvider>);
+    expect(screen.queryByRole('button', { name: 'Navigate within current section' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Back to parent' })).not.toBeInTheDocument();
   });
 });

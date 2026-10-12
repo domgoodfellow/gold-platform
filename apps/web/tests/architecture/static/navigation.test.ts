@@ -817,7 +817,7 @@ describe('the roles Area reads as Team', () => {
 describe('an area hidden from the sidebar', () => {
   it('is absent from the sidebar, the tablet rail and the phone Menu alike — one shared predicate, not two', () => {
     // `projectShell` is the one eligibility rule; `OrgNav` draws its result for desktop, tablet and the
-    // phone Menu (the sidebar's own Sheet), and `OrgNavBar` carries no destination list, so a change to
+    // phone Menu (the sidebar's own Sheet), so a change to
     // the module gate, the Feature gate or the capability layer cannot reach one renderer and miss another.
     const shell = readFileSync(`${ROUTES}/org-shell.tsx`, 'utf8');
     const projection = readFileSync(fileURLToPath(new URL('../../../lib/shell.ts', import.meta.url)), 'utf8');
@@ -826,7 +826,7 @@ describe('an area hidden from the sidebar', () => {
     // capability layer, the configuration targets, platform authority) is decided in `projectShell`.
     expect(projection, 'projectShell should filter on the sidebar flag').toContain('area.sidebar !== false');
     expect(shell, 'the desktop rendering should take the projection, not filter AREAS itself').toContain('sections: ShellSection[]');
-    expect(shell, 'the phone bar should take the same projection').toContain('export function OrgNavBar({ sections }');
+    expect(shell, 'the phone menu takes the same sidebar projection').toContain('<OrgNav sections={sections} />');
     expect(shell, 'no renderer keeps its own eligibility filter').not.toMatch(/AREAS[.]filter|visibleAreas[(]|areasIn[(]/);
     expect(shell).toContain("from '@/lib/shell'");
   });
@@ -872,7 +872,7 @@ describe('Guided Setup is no longer a permanent sidebar destination', () => {
     // equal-weight row this patch exists to remove. Extracted by name rather than grepping the
     // whole file, since `SetupEntry`/`SetupNavLink` legitimately mention 'setup' right beside it.
     const shell = readFileSync(`${ROUTES}/org-shell.tsx`, 'utf8');
-    const orgNavBody = shell.slice(shell.indexOf('export function OrgNav('), shell.indexOf('export function OrgNavBar('));
+    const orgNavBody = shell.slice(shell.indexOf('export function OrgNav('), shell.indexOf('function MobileAgentEntry('));
     expect(orgNavBody, 'OrgNav should not hardcode a setup-specific row').not.toContain("'setup'");
   });
 

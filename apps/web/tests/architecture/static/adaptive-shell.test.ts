@@ -136,7 +136,7 @@ describe('the projection is the only eligibility rule', () => {
   it('is called once, by the shell, and its result is handed to every renderer', () => {
     expect(shellModel.match(/projectShell\(/g)).toHaveLength(1);
     expect(shell).toContain('sections={sections}');
-    expect(shell).toMatch(/<OrgNavBar[^>]*sections=\{sections\}/);
+    expect(shell).not.toContain("<OrgNavBar");
   });
 
   it('no renderer names a capability, an entitlement or a platform permission', () => {
@@ -164,8 +164,8 @@ describe('the projection is the only eligibility rule', () => {
   it('draws every section from the same list on desktop, tablet and phone', () => {
     expect(renderers).toContain('export function OrgNav({ sections }');
     // The phone Menu is the sidebar's own Sheet: the one `OrgSidebar` receives `sections` and draws `OrgNav`
-    // for both breakpoints, and the phone bar carries no destination list of its own.
-    expect(renderers).toContain('export function OrgNavBar({ sections }');
+    // for both breakpoints, without a separate phone navigation list.
+    expect(renderers).not.toContain('export function OrgNavBar');
     expect(renderers).toContain('<OrgNav sections={sections} />');
     expect(renderers).not.toMatch(/projectPhone|MoreMenu|overflow-x/);
   });

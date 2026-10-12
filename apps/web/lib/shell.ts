@@ -8,6 +8,7 @@ import {
   areaRelevantToShape,
   areaVisibleTo,
   configTarget,
+  configTargetForHref,
   configTargetOffered,
   type Area,
 } from '@/lib/navigation';
@@ -265,4 +266,66 @@ export function selectShellContext(organizationId: string, pathname: string, pla
 export function shellHomeItem(sections: readonly ShellSection[]): NavItem | undefined {
   return sections.find((section) => section.key === 'home')?.items[0]
     ?? sections.find((section) => section.key === 'platform')?.items[0];
+}
+
+
+export type LocationNavigation = {
+  organizationId: string;
+  sections: readonly ShellSection[];
+  /** Authorized configuration destinations already projected by the server. */
+  configurationHrefs?: readonly string[];
+};
+
+export type PageNavigation = {
+  parentHref?: string;
+  activeKey: string | null;
+  groups: { label: string | null; items: NavItem[] }[];
+};
+
+/** Page-published ancestors and the authorized shell projection share one semantic location. */
+export function pageNavigation(navigation: LocationNavigation | undefined, pathname: string, ancestorHrefs: readonly (string | undefined)[]): PageNavigation {
+  const empty: PageNavigation = { activeKey: null, groups: [] };
+  if (!navigation) return empty;
+  const path = pathname.split(/[?#]/)[0].replace(/\/$/, '');
+  const pathOrganization = organizationIdFromPath(path);
+  // Personal Settings may be composed inside this organization's verified shell.
+  if (pathOrganization !== navigation.organizationId && !(path === '/settings/account' || path.startsWith('/settings/account/'))) return empty;
+  const { sections } = navigation;
+  const cleanPath = (href: string) => href.split(/[?#]/)[0].replace(/\/$/, '');
+  const inScope = (href: string) => organizationIdFromPath(href) === navigation.organizationId || cleanPath(href) === '/settings/account' || cleanPath(href).startsWith('/settings/account/');
+  const configurationRoot = navigation.configurationHrefs?.filter((href) => inScope(href) && (path === href || path.startsWith(`${href}/`))).sort((a, b) => b.length - a.length)[0];
+  const configuredWorkspace = configurationRoot ? configTargetForHref(configurationRoot)?.workspace : undefined;
+  const configurationWorkspace = configuredWorkspace ? projectedItems(sections).find((item) => item.key === `workspace-${configuredWorkspace}`) : undefined;
+  const workspace = workspaceNavigation(sections, path) ?? (configurationWorkspace ? workspaceNavigation(sections, configurationWorkspace.href) : null);
+  const scoped = workspace?.sections ?? sections;
+  const scopeItems = projectedItems(scoped);
+  const activeKey = activeItemKey(scoped, path);
+  const active = scopeItems.find((item) => item.key === activeKey);
+  const allowed = new Set([
+    ...projectedItems(sections).flatMap((item) => [item.href, ...(item.activeHrefs ?? []), ...(item.destinations ?? []).map((destination) => destination.href)]),
+    ...(navigation.configurationHrefs ?? []),
+  ].filter(inScope).map(cleanPath));
+  const validAncestor = (href: string | undefined): href is string => {
+    if (!href || !href.startsWith('/') || href.startsWith('//')) return false;
+    const base = href.split(/[?#]/)[0].replace(/\/$/, '');
+    return base !== path && allowed.has(base);
+  };
+  const ancestor = [...ancestorHrefs].reverse().find(validAncestor);
+  const home = shellHomeItem(sections);
+  const registeredParent = active && active.href !== path && path.startsWith(`${active.href}/`) ? active.href : undefined;
+  const parentHref = ancestor ?? (configurationRoot && configurationRoot !== path ? configurationRoot : undefined) ?? registeredParent
+    ?? (workspace && workspace.workspace.href !== path ? workspace.workspace.href : undefined)
+    ?? (home && inScope(home.href) && home.href !== path ? home.href : undefined);
+
+  const groups: PageNavigation['groups'] = [];
+  // Tenant dropdowns stay in the owning workspace; Settings and Platform use their own supplied projection.
+  if (workspace || sections.some((section) => section.key === 'platform' || section.key.startsWith('settings-'))) {
+    const append = (items: NavItem[], label: string | null) => {
+      const leaves = items.filter((item) => inScope(item.href) && (!item.children || item.key === 'platform')).map((item) => ({ ...item, children: undefined }));
+      if (leaves.length) groups.push({ label, items: leaves });
+      for (const item of items) if (item.children) append(item.children, item.label);
+    };
+    for (const section of scoped) append(section.items, section.label);
+  }
+  return { parentHref, activeKey, groups };
 }
