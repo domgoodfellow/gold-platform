@@ -729,7 +729,7 @@ describe('the sidebar draws the selected application context', () => {
 
   it('removes the Administration block entirely', () => {
     expect(orgShell).not.toContain('ADMINISTRATION_SECTIONS');
-    expect(orgShell).toContain('sections.map((section) => group(section, false))');
+    expect(orgShell).toContain('navigation.map((section) => group(section, false))');
     expect(orgShell).not.toMatch(/absolute|fixed bottom|top-\[/);
   });
 

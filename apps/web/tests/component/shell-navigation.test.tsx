@@ -1,13 +1,32 @@
 // @vitest-environment jsdom
-import type { ReactNode } from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { useEffect, type ReactNode } from 'react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SidebarProvider } from '@gold/ui/components/sidebar';
+import { OrgNav } from '@/app/organizations/[organizationId]/org-shell';
+import { TelephoneDeviceProvider, useTelephoneDevice } from '@/features/communications/voice/telephone-device';
+import { projectShell } from '@/lib/shell';
+import { AREAS } from '@/lib/navigation';
+import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { TooltipProvider } from '@gold/ui/components/tooltip';
 import { CompactContextSwitcher } from '@/components/navigation/context-switcher';
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
 import { WorkspaceRailProvider } from '@/components/panels/workspace-right-rail';
 
+const route = vi.hoisted(() => ({ pathname: '/organizations/11111111-1111-4111-8111-111111111111/home' }));
+const telephone = vi.hoisted(() => ({ created: vi.fn(), destroyed: vi.fn() }));
+vi.mock('@/app/organizations/[organizationId]/calls/conference-actions', () => ({
+  mintBrowserTokenAction: vi.fn().mockResolvedValue({ ok: true, data: { token: 'offline-test-token' } }),
+}));
+vi.mock('@twilio/voice-sdk', () => ({ Device: class {
+  handlers = new Map<string, () => void>();
+  constructor() { telephone.created(); }
+  on(event: string, handler: () => void) { this.handlers.set(event, handler); }
+  async register() { this.handlers.get('registered')?.(); }
+  destroy() { telephone.destroyed(); }
+} }));
+vi.mock('next/navigation', () => ({ usePathname: () => route.pathname }));
 vi.mock('next/link', () => ({ default: ({ children, ...props }: { children: ReactNode }) => <a {...props}>{children}</a> }));
 beforeEach(() => {
   vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
@@ -80,5 +99,48 @@ describe('workspace header icon utilities', () => {
     expect(agent).toHaveAttribute('aria-pressed', 'false');
     expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Settings' })).not.toBeInTheDocument();
+  });
+});
+
+
+describe('contextual sidebar rendering', () => {
+  it('changes navigation on route updates while retaining the registered telephone runtime', async () => {
+    const org = '11111111-1111-4111-8111-111111111111';
+    const sections = projectShell({ organizationId: org, enabledModules: new Set(['reception']), featureAvailability: new Set(AREAS.flatMap((area) => area.featureKeys ?? [])), capabilities: new Set(ALL_CAPABILITIES) });
+    const mounted = vi.fn();
+    const unmounted = vi.fn();
+    function RuntimeProbe() {
+      const device = useTelephoneDevice();
+      useEffect(() => { mounted(); return unmounted; }, []);
+      return <button data-testid="runtime" onClick={() => void device.register()}>{device.status}</button>;
+    }
+    const view = () => <TelephoneDeviceProvider organizationId={org}><TooltipProvider><SidebarProvider><RuntimeProbe /><OrgNav sections={sections} /></SidebarProvider></TooltipProvider></TelephoneDeviceProvider>;
+    route.pathname = `/organizations/${org}/home`;
+    const { rerender } = render(view());
+    telephone.created.mockClear();
+    telephone.destroyed.mockClear();
+    const runtime = screen.getByTestId('runtime');
+    await userEvent.click(runtime);
+    await waitFor(() => expect(runtime).toHaveTextContent('ready'));
+    expect(screen.getByRole('link', { name: 'CRM' })).toHaveAttribute('href', `/organizations/${org}/sales`);
+    expect(screen.queryByRole('link', { name: 'Customers' })).not.toBeInTheDocument();
+    route.pathname = `/organizations/${org}/customers/123`;
+    rerender(view());
+    expect(screen.getByRole('link', { name: 'Customers' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Overview' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Back to Workspaces' })).toHaveAttribute('href', `/organizations/${org}/home`);
+    route.pathname = `/organizations/${org}/calls`;
+    rerender(view());
+    expect(screen.getByRole('link', { name: 'Calls' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('link', { name: 'Customers' })).not.toBeInTheDocument();
+    route.pathname = `/organizations/${org}/home`;
+    rerender(view());
+    expect(screen.getByRole('link', { name: 'Library' })).toBeInTheDocument();
+    expect(screen.getByTestId('runtime')).toBe(runtime);
+    expect(mounted).toHaveBeenCalledTimes(1);
+    expect(unmounted).not.toHaveBeenCalled();
+    expect(runtime).toHaveTextContent('ready');
+    expect(telephone.created).toHaveBeenCalledTimes(1);
+    expect(telephone.destroyed).not.toHaveBeenCalled();
   });
 });

@@ -14,38 +14,71 @@ const sidebar = (page: import('@playwright/test').Page) => page.locator('[data-s
 test.describe('a tenant owner', () => {
   test.use({ storageState: OWNER_STORAGE_STATE });
 
-  test('keeps Marketing, Support and AI stable across workspace navigation', async ({ page }) => {
+  test('enters and leaves each available workspace using URL context and browser history', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     const homes = [
-      { segment: 'marketing', label: 'Marketing', empty: null },
-      { segment: 'support', label: 'Support', empty: null },
-      { segment: 'ai', label: 'AI', empty: 'No AI workspace activity yet.' },
+      ['sales', 'CRM'], ['comms', 'Communications'], ['marketing', 'Marketing'],
+      ['support', 'Support'], ['field', 'Work'], ['finance', 'Finance'],
+      ['automations', 'Automations'], ['ai', 'AI'], ['studio', 'Studio'],
     ];
-    for (const segment of ['home', 'comms', 'field', 'finance', ...homes.map((home) => home.segment)]) {
-      await page.goto(`/organizations/${organizationId}/${segment}`);
+    await page.goto(`/organizations/${organizationId}/home`);
+    await page.locator('[data-slot="sidebar-container"]').evaluate((element) => { element.setAttribute('data-persistence-probe', 'retained'); });
+    const available = await sidebar(page).getByRole('link').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
+    for (const [segment, label] of homes.filter(([segment]) => available.includes(`/organizations/${organizationId}/${segment}`))) {
       const nav = sidebar(page);
-      for (const home of homes) {
-        await expect(nav.getByRole('link', { name: home.label, exact: true })).toHaveAttribute('href', `/organizations/${organizationId}/${home.segment}`);
-      }
-      await expect(nav.getByRole('button', { name: /Expand|Collapse/ })).toHaveCount(0);
-      const home = homes.find((candidate) => candidate.segment === segment);
-      if (home) {
-        await expect(page.getByRole('heading', { name: home.label, exact: true })).toBeVisible();
-        if (home.empty) await expect(page.getByRole('main').getByText(home.empty, { exact: true })).toBeVisible();
-        await expect(nav.getByRole('link', { name: home.label, exact: true })).toHaveAttribute('aria-current', 'page');
-      }
-      for (const destination of homes) {
-        await nav.getByRole('link', { name: destination.label, exact: true }).click();
-        await expect(page).toHaveURL(`/organizations/${organizationId}/${destination.segment}`);
-        await expect(page.getByRole('heading', { name: destination.label, exact: true })).toBeVisible();
-        if (destination.empty) await expect(page.getByRole('main').getByText(destination.empty, { exact: true })).toBeVisible();
-        await expect(nav.getByRole('link', { name: destination.label, exact: true })).toHaveAttribute('aria-current', 'page');
-        for (const peer of homes) await expect(nav.getByRole('link', { name: peer.label, exact: true })).toBeVisible();
-      }
+      await nav.getByRole('link', { name: label, exact: true }).click();
+      await expect(page).toHaveURL(`/organizations/${organizationId}/${segment}`);
+      await expect(nav.getByRole('link', { name: 'Overview', exact: true })).toHaveAttribute('aria-current', 'page');
+      await expect(nav.getByText(label, { exact: true })).toBeVisible();
+      await expect(nav.getByRole('link', { name: 'Library', exact: true })).toHaveCount(0);
+      await expect(page.locator('[data-persistence-probe="retained"]')).toHaveCount(1);
+      await nav.getByRole('link', { name: 'Back to Workspaces' }).click();
+      await expect(page).toHaveURL(`/organizations/${organizationId}/home`);
+      await page.goBack();
+      await expect(nav.getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page');
+      await page.goForward();
+      await expect(nav.getByRole('link', { name: label, exact: true })).toBeVisible();
     }
-    await page.locator('header').first().getByRole('button', { name: 'Agent', exact: true }).click();
-    await expect(page.locator('header').first().getByRole('button', { name: 'Agent', exact: true })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page).toHaveURL(`/organizations/${organizationId}/ai`);
+  });
+
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 820, height: 1180 }, { width: 390, height: 844 }]) {
+    test(`contextual sidebar at ${viewport.width}px`, async ({ page }, testInfo) => {
+      const { organizationId } = loadDemoContext();
+      await page.setViewportSize(viewport);
+      await page.goto(`/organizations/${organizationId}/home`);
+      const mobile = viewport.width < 768;
+      const open = async () => { if (mobile) await page.locator('nav.fixed').getByRole('button', { name: 'Menu' }).click(); };
+      const nav = () => mobile ? page.getByRole('dialog').getByRole('navigation', { name: 'This business' }) : sidebar(page);
+      await open();
+      await nav().getByRole('link', { name: 'Communications', exact: true }).click();
+      await expect(page).toHaveURL(`/organizations/${organizationId}/comms`);
+      if (mobile) await expect(page.getByRole('dialog')).toHaveCount(0);
+      await open();
+      await nav().getByRole('link', { name: 'Calls', exact: true }).click();
+      await expect(page).toHaveURL(`/organizations/${organizationId}/calls`);
+      await expect(page.getByRole('button', { name: 'New call', exact: true })).toBeVisible();
+      await open();
+      await expect(nav().getByRole('link', { name: 'Calls', exact: true })).toHaveAttribute('aria-current', 'page');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      await page.screenshot({ path: testInfo.outputPath(`workspace-${viewport.width}.png`) });
+      await nav().getByRole('link', { name: 'Back to Workspaces' }).click();
+      await expect(page).toHaveURL(`/organizations/${organizationId}/home`);
+      if (mobile) await expect(page.getByRole('dialog')).toHaveCount(0);
+    });
+  }
+
+  test('Settings returns to the same workspace context after a direct refresh', async ({ page }) => {
+    const { organizationId } = loadDemoContext();
+    await page.goto(`/organizations/${organizationId}/customers`);
+    await page.reload();
+    await expect(sidebar(page).getByRole('link', { name: 'Customers', exact: true })).toHaveAttribute('aria-current', 'page');
+    await page.locator('[data-slot="sidebar-container"]').getByRole('button', { name: /sanne@grachtwerk.test/ }).click();
+    await page.getByRole('menuitem', { name: 'Settings', exact: true }).click();
+    const settings = page.getByRole('navigation', { name: 'Settings', exact: true });
+    await expect(settings).toBeVisible();
+    await settings.getByRole('link', { name: 'Back to app' }).click();
+    await expect(page).toHaveURL(`/organizations/${organizationId}/customers`);
+    await expect(sidebar(page).getByRole('link', { name: 'Customers', exact: true })).toHaveAttribute('aria-current', 'page');
   });
 
   test('sees flat workspaces and header utilities with no Platform context', async ({ page }) => {
@@ -69,13 +102,13 @@ test.describe('a tenant owner', () => {
 
   test('keeps workspace ownership on nested routes', async ({ page }) => {
     const { organizationId } = loadDemoContext();
-    for (const [route, owner] of [['customers', 'CRM'], ['customers/pipeline', 'CRM'], ['work', 'Work'], ['schedule', 'Work'], ['finance/invoices', 'Finance'], ['studio/forms', 'Studio']]) {
+    for (const [route, owner] of [['customers', 'Customers'], ['customers/pipeline', 'Relationship pipeline'], ['work', 'Work items'], ['schedule', 'Schedule'], ['finance/invoices', 'Invoices'], ['studio/forms', 'Forms']]) {
       await page.goto(`/organizations/${organizationId}/${route}`);
       await expect(sidebar(page).getByRole('link', { name: owner, exact: true })).toHaveAttribute('aria-current', 'page');
     }
   });
 
-  test('the collapsed rail keeps the same flat workspace destinations', async ({ page }) => {
+  test('the collapsed rail keeps the same contextual destinations', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     await page.goto(`/organizations/${organizationId}/customers`);
     const nav = sidebar(page);
@@ -83,7 +116,7 @@ test.describe('a tenant owner', () => {
     await page.locator('header').first().getByRole('button', { name: 'Toggle Sidebar', exact: true }).click();
     await expect(page.locator('[data-slot="sidebar"][data-state="collapsed"]')).toBeVisible();
     expect(await nav.getByRole('link').evaluateAll((items) => items.map((item) => item.getAttribute('href')))).toEqual(links);
-    await expect(nav.getByRole('link', { name: 'CRM', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(nav.getByRole('link', { name: 'Customers', exact: true })).toHaveAttribute('aria-current', 'page');
     await expect(nav.getByRole('button', { name: /Expand|Collapse/ })).toHaveCount(0);
   });
 

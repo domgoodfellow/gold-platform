@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AREAS, WORKSPACES, configTarget, configTargetOffered, workspaceAncestry, areaLabel } from '@/lib/navigation';
-import { SHELL_SECTION_ORDER, activeItemKey, inPlatformScope, itemContains, projectedItems, projectShell, projectPlatformShell, projectHeaderUtilities, selectShellContext, shellHomeItem, type ShellInput, type ShellSection } from '@/lib/shell';
+import { SHELL_SECTION_ORDER, workspaceNavigation, activeItemKey, inPlatformScope, itemContains, projectedItems, projectShell, projectPlatformShell, projectHeaderUtilities, selectShellContext, shellHomeItem, type ShellInput, type ShellSection } from '@/lib/shell';
 import { PLATFORM_CAPABILITIES } from '@/lib/domain/platform/permissions';
 import { platformDestinationsFor, platformHref, platformRouteRequires } from '@/lib/platform-navigation';
 import { ALL_CAPABILITIES, type Capability } from '@/lib/domain/tenancy/capabilities';
@@ -232,5 +232,51 @@ describe('role presets are templates, not personas', () => {
 
   it('carry no reference a saved role could keep: keys are unique and nothing branches on them', () => {
     expect(new Set(ROLE_PRESETS.map((candidate) => candidate.key)).size).toBe(ROLE_PRESETS.length);
+  });
+});
+
+
+describe('contextual workspace navigation', () => {
+  it.each(WORKSPACES)('enters $label through its canonical Home and returns to organization Home', (workspace) => {
+    const context = workspaceNavigation(project(), `/organizations/${ORG}/${workspace.home}`)!;
+    expect(context.workspace.key).toBe(`workspace-${workspace.key}`);
+    expect(context.backHref).toBe(`/organizations/${ORG}/home`);
+    expect(context.sections[0].label).toBe(workspace.label);
+    expect(context.sections[0].items[0]).toMatchObject({ label: 'Overview', href: `/organizations/${ORG}/${workspace.home}`, exact: true });
+    expect(activeItemKey(context.sections, `/organizations/${ORG}/${workspace.home}`)).toBe('workspace-overview');
+    const expected = AREAS.filter((area) => area.workspace === workspace.key && area.sidebar !== false && area.segment !== workspace.home);
+    expect(context.sections[0].items.slice(1).map((item) => item.key)).toEqual(expected.map((area) => area.segment));
+  });
+  it.each([
+    ['customers/123', 'crm', 'customers'], ['customers/pipeline', 'crm', 'pipeline'],
+    ['calls/123', 'communications', 'calls'], ['comms/inbox/123', 'communications', 'comms-inbox'],
+    ['finance/invoices/123', 'finance', 'finance-invoices'], ['automations/rules/123', 'automations', 'automation-rules'],
+    ['work/dispatch', 'field', 'work'], ['studio/forms/123', 'studio', 'studio-forms'],
+  ])('resolves %s with a single active destination', (path, owner, active) => {
+    const href = `/organizations/${ORG}/${path}/?tab=x#top`;
+    const context = workspaceNavigation(project(), href)!;
+    expect(context.workspace.key).toBe(`workspace-${owner}`);
+    expect(activeItemKey(context.sections, href)).toBe(active);
+  });
+  it('retains hidden operating ownership without exposing hidden or configuration destinations', () => {
+    const context = workspaceNavigation(project(), `/organizations/${ORG}/opportunities/123`)!;
+    expect(context.workspace.key).toBe('workspace-crm');
+    expect(context.sections[0].items.map((item) => item.key)).not.toContain('opportunities');
+    for (const path of ['home', 'library', 'settings/calls', 'pricing', 'platform/providers', 'customers-other']) {
+      expect(workspaceNavigation(project(), `/organizations/${ORG}/${path}`)).toBeNull();
+    }
+  });
+  it('filters entitlement, role, readiness and shape before rendering destinations or entering context', () => {
+    const reduced = project([], { enabledModules: new Set(), featureAvailability: new Set(), schedulableWork: false });
+    for (const path of ['comms', 'calls/123', 'customers/pipeline', 'finance/invoices/123', 'schedule', 'studio/forms', 'support', 'automations/rules']) {
+      expect(workspaceNavigation(reduced, `/organizations/${ORG}/${path}`), path).toBeNull();
+    }
+    expect(workspaceNavigation(reduced, `/organizations/${ORG}/field`)!.sections[0].items.map((item) => item.key)).toEqual(['workspace-overview', 'work']);
+  });
+  it('does not carry workspace selection into another organization or organization Home', () => {
+    expect(workspaceNavigation(project(), '/organizations/other/customers/123')).toBeNull();
+    const switched = project(ALL_CAPABILITIES, { organizationId: '22222222-2222-4222-8222-222222222222' });
+    expect(workspaceNavigation(switched, '/organizations/22222222-2222-4222-8222-222222222222/customers/123')!.backHref).toBe('/organizations/22222222-2222-4222-8222-222222222222/home');
+    expect(workspaceNavigation(switched, '/organizations/other/home')).toBeNull();
   });
 });

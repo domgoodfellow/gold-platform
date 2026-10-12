@@ -2,7 +2,7 @@ import path from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import { COLLEAGUE_STORAGE_STATE, loadDemoContext, OWNER_STORAGE_STATE } from './helpers';
 
-/** Studio stays flat in the sidebar; Home launches the operating destinations. */
+/** Studio enters a contextual sidebar; Home also launches its operating destinations. */
 
 const SHOTS = process.env.E2E_SHOTS ?? '';
 const sidebar = (page: Page) => page.locator('[data-slot="sidebar-container"] nav[aria-label="This business"]');
@@ -27,7 +27,7 @@ test.describe('an owner', () => {
     await destinations.getByRole('link', { name: 'Forms', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/studio/forms$`));
 
-    await nav.getByRole('link', { name: 'Studio', exact: true }).click();
+    await nav.getByRole('link', { name: 'Overview', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/studio$`));
   });
 

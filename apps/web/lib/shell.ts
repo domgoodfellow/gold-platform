@@ -35,9 +35,11 @@ export type NavItem = {
   section: ShellSectionKey;
   /** Operable Area addresses that activate this flat workspace row. */
   activeHrefs?: string[];
+  /** Eligible operating destinations, rendered only after entering this workspace. */
+  destinations?: NavItem[];
   /**
    * The destinations grouped under a Platform heading. A parent is
-   * itself a destination (a workspace has an overview; a Platform group opens its first page), so
+   * itself a destination (a Platform group opens its first page), so
    * a renderer without room for children — the collapsed rail — can still link to it.
    */
   children?: NavItem[];
@@ -158,11 +160,11 @@ export function projectHeaderUtilities(input: ShellInput): HeaderUtility[] {
 export function projectShell(input: ShellInput): ShellSection[] {
   const { organizationId, enabledModules, featureAvailability, capabilities, schedulableWork } = input;
 
-  const operable = (area: Area) =>
-    area.sidebar !== false &&
+  const eligible = (area: Area) =>
     areaEntitled(area, enabledModules, featureAvailability) &&
     areaVisibleTo(area, capabilities) &&
     areaRelevantToShape(area, schedulableWork);
+  const operable = (area: Area) => area.sidebar !== false && eligible(area);
 
   const inGroup = (group: Area['group']) => AREAS.filter((area) => area.group === group && operable(area));
 
@@ -176,7 +178,8 @@ export function projectShell(input: ShellInput): ShellSection[] {
       label: workspace.label,
       href: areaHref(organizationId, home.segment),
       section: 'workspaces',
-      activeHrefs: areas.map((area) => areaHref(organizationId, area.segment)),
+      activeHrefs: AREAS.filter((area) => area.workspace === workspace.key && area.group === 'workspaces' && eligible(area)).map((area) => areaHref(organizationId, area.segment)),
+      destinations: areas.filter((area) => area.segment !== home.segment).map((area) => areaItem(organizationId, area, 'workspaces')),
     }];
   });
 
@@ -189,6 +192,28 @@ export function projectShell(input: ShellInput): ShellSection[] {
   // A section with nothing in it is not drawn: naming a part of the product that is not there for
   // this person is worse than the gap.
   return sections.filter((section) => section.items.length > 0);
+}
+
+/** Resolve ownership before visibility, so an unavailable nested Area cannot fall back to its Home. */
+export function workspaceNavigation(sections: readonly ShellSection[], pathname: string): { workspace: NavItem; sections: ShellSection[]; backHref: string } | null {
+  const organizationId = organizationIdFromPath(pathname);
+  if (!organizationId) return null;
+  const path = pathname.split(/[?#]/)[0].replace(/\/$/, '');
+  const owner = AREAS.filter((area) => {
+    const href = areaHref(organizationId, area.segment);
+    return path === href || path.startsWith(`${href}/`);
+  }).sort((a, b) => areaHref(organizationId, b.segment).length - areaHref(organizationId, a.segment).length)[0];
+  if (!owner?.workspace || owner.group !== 'workspaces') return null;
+  const workspace = projectedItems(sections).find((item) => item.key === `workspace-${owner.workspace}`);
+  if (!workspace?.destinations || !workspace.activeHrefs?.includes(areaHref(organizationId, owner.segment))) return null;
+  return {
+    workspace,
+    backHref: areaHref(organizationId, 'home'),
+    sections: [{ key: 'workspaces', label: workspace.label, items: [
+      { key: 'workspace-overview', label: 'Overview', href: workspace.href, section: 'workspaces', exact: true },
+      ...workspace.destinations,
+    ] }],
+  };
 }
 
 /** Every item, flat, in the order it is drawn: a parent, then its pages. */

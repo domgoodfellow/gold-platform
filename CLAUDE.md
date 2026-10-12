@@ -548,9 +548,9 @@ Key rules:
 - do not create route-local width systems;
 - do not duplicate Settings ownership;
 - navigation and actions are different;
-- workspace row body navigates;
-- workspace chevron discloses;
-- Home is not duplicated as a child;
+- organization workspace rows enter their canonical Home;
+- entered workspaces use contextual sidebar destinations without dropdown trees;
+- Overview links to the workspace Home;
 - responsive design is intentional re-composition.
 
 For any user-visible change, inspect the actual rendered result.

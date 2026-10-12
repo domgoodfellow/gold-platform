@@ -87,7 +87,7 @@ export const AREA_GROUPS = [
   // same reason Home draws none.
   { key: 'library', label: null },
   // Where an operator does a kind of work: each row is a workspace, and a workspace with several
-  // pages opens those pages contextually; the sidebar stays flat (`Area.workspace`).
+  // pages opens a dedicated sidebar context derived from `Area.workspace`.
   { key: 'workspaces', label: 'Workspaces' },
   { key: 'settings', label: null },
 ] as const satisfies readonly { key: AreaGroup; label: string | null }[];

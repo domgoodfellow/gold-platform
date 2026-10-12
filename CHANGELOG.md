@@ -34,6 +34,8 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+- Workspace navigation now enters a contextual sidebar with Overview, eligible operating destinations and Back to Workspaces, preserving canonical URLs and the persistent Organization shell.
+
 ### Imported application library and resource synchronization — 2026-10-11
 
 - Connections now shows searchable, filtered application metadata from 36 imported open-source connector packages, with 64 reviewed reads and explicit deployment/authentication blockers. No integration-service account is required.
@@ -468,6 +470,8 @@ For work not yet shipped:
 
 ```markdown
 ## [Unreleased]
+
+- Workspace navigation now enters a contextual sidebar with Overview, eligible operating destinations and Back to Workspaces, preserving canonical URLs and the persistent Organization shell.
 ```
 
 When it ships, move the entry under the actual date.

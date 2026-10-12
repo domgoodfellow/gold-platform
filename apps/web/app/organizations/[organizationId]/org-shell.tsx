@@ -34,6 +34,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   BarChart3,
+  ArrowLeft,
   Bot,
   Blocks,
   Building2,
@@ -80,6 +81,7 @@ import {
 } from 'lucide-react';
 import {
   activeItemKey,
+  workspaceNavigation,
   selectShellContext,
   type HeaderUtility,
   shellHomeItem,
@@ -135,6 +137,7 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
 /** Every item the projection can produce: the areas and the platform destinations. */
 export const NAV_ICONS: Record<string, LucideIcon> = {
   ...AREA_ICONS,
+  'workspace-overview': LayoutDashboard,
   // Workspace destinations share their icons across sidebar, rail and phone Menu.
   'workspace-crm': Users,
   'workspace-communications': Phone,
@@ -219,12 +222,8 @@ function NavSubRow({ item, active, expanded }: { item: NavItem; active: string |
 }
 
 /**
- * One row of the sidebar. A leaf is a link. A row with pages is a link **and** a disclosure: the
- * row goes to the workspace's own overview (or, for Platform, to its own root) so the collapsed
- * icon rail — which cannot show children — still reaches somewhere real, and the chevron beside it
- * opens the pages. The branch a person is inside is open, and opens itself when they navigate into
- * it from elsewhere; otherwise it stays as they left it. Platform is the exception that opens every
- * group at once, down through `NavSubRow`, while somebody is inside it.
+ * A leaf is a link. Platform rows retain their existing link and disclosure behavior,
+ * including expanding every group while the person is inside Platform.
  */
 function NavRow({ item, active, expanded }: { item: NavItem; active: string | null; expanded: boolean }) {
   const Icon = NAV_ICONS[item.key];
@@ -279,8 +278,11 @@ function NavRow({ item, active, expanded }: { item: NavItem; active: string | nu
 /** Every breakpoint draws the selected context's already resolved sections. */
 export function OrgNav({ sections }: { sections: ShellSection[] }) {
   const pathname = usePathname();
-  const active = activeItemKey(sections, pathname);
+  const context = workspaceNavigation(sections, pathname);
+  const navigation = context?.sections ?? sections;
+  const active = activeItemKey(navigation, pathname);
   const platformActive = inPlatformScope(pathname);
+  const { setOpenMobile } = useSidebar();
 
   const group = (section: ShellSection, ruled: boolean) => (
     <SidebarGroup key={section.key} className={ruled ? 'border-t border-sidebar-border' : undefined}>
@@ -295,8 +297,19 @@ export function OrgNav({ sections }: { sections: ShellSection[] }) {
     </SidebarGroup>
   );
   return (
-    <nav aria-label="This business" className="flex flex-1 flex-col">
-      {sections.map((section) => group(section, false))}
+    <nav aria-label="This business" className="flex flex-1 flex-col" onClick={(event) => {
+      if ((event.target as Element).closest('a[href]')) setOpenMobile(false);
+    }}>
+      {context ? <SidebarGroup>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip="Back to Workspaces">
+              <Link href={context.backHref}><ArrowLeft aria-hidden /><span>Back to Workspaces</span></Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarGroup> : null}
+      {navigation.map((section) => group(section, false))}
     </nav>
   );
 }

@@ -19,10 +19,16 @@ test('compact dialer preserves its draft across workspace navigation and window 
   await page.locator(`a[href="/organizations/${organizationId}/comms"]`).first().click();
   await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/comms$`));
   await expect(popup.getByLabel('Number to call')).toHaveValue('+15145550123');
+  await page.getByRole('navigation', { name: 'This business' }).first().getByRole('link', { name: 'Back to Workspaces' }).click();
+  await page.getByRole('navigation', { name: 'This business' }).first().getByRole('link', { name: 'CRM', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/sales$`));
+  await expect(popup.getByLabel('Number to call')).toHaveValue('+15145550123');
   await popup.setViewportSize({ width: 390, height: 844 });
   expect(await popup.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await popup.screenshot({ path: testInfo.outputPath('dialer-popout-mobile.png') });
 
+  await page.goBack();
+  await page.goBack();
   await page.goBack();
   await page.getByRole('button', { name: 'New call', exact: true }).click();
   await expect(page.getByText('The dialer is open in a separate window.')).toBeVisible();
