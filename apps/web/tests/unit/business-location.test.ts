@@ -87,7 +87,7 @@ describe('the Settings context', () => {
   it('groups cross-workspace administration under Personal, Organization and Administration', () => {
     const sections = projectSettingsNav(ORG, everything);
     expect(sections.map((section) => [section.label, section.items.map((item) => item.label)])).toEqual([
-      ['Personal', ['Profile', 'Security & sign-in']],
+      ['Personal', ['Profile', 'Security & sign-in', 'Appearance']],
       ['Organization', ['General', 'Branding', 'Domains', 'Features']],
       ['Administration', ['Team & access', 'Connections', 'Plan & usage']],
     ]);
@@ -95,7 +95,7 @@ describe('the Settings context', () => {
 
   it('offers workspace configuration nowhere in the navigation', () => {
     const hrefs = projectSettingsNav(ORG, everything).flatMap((section) => section.items.map((item) => item.href)).join(' ');
-    for (const owned of ['pricing', 'work/configuration', 'schedule/configuration', 'settings/calls', 'sales-stages', 'ai/agents', 'automations/rules']) {
+    for (const owned of ['pricing', 'work/configuration', 'schedule/configuration', 'comms/configuration/calling', 'sales-stages', 'ai/agents', 'automations/rules']) {
       expect(hrefs).not.toContain(owned);
     }
   });
@@ -113,7 +113,7 @@ describe('the Settings context', () => {
   it('knows Settings pages from workspace-owned configuration pages', () => {
     for (const path of ['settings', 'settings/general', 'settings/access/roles', 'settings/connections/mcp', 'settings/plan']) expect(inSettingsContext(`/organizations/${ORG}/${path}`, ORG), path).toBe(true);
     expect(inSettingsContext('/settings/account/security', ORG)).toBe(true);
-    for (const path of ['settings/pricing', 'settings/calls', 'work/configuration', 'finance', 'settings/public-profile']) expect(inSettingsContext(`/organizations/${ORG}/${path}`, ORG), path).toBe(false);
+    for (const path of ['finance/configuration/pricing', 'comms/configuration/calling', 'work/configuration', 'finance', 'settings/public-profile']) expect(inSettingsContext(`/organizations/${ORG}/${path}`, ORG), path).toBe(false);
   });
 
   it('searches both Settings destinations and the configuration workspaces own, each routed to its owner', () => {
@@ -128,12 +128,17 @@ describe('the Settings context', () => {
   });
 
   it('points workspace configuration pages back at their workspace', () => {
-    expect(workspaceConfigCrumbs(ORG, 'pricing')).toEqual([{ label: 'Finance', href: `/organizations/${ORG}/finance` }]);
+    expect(workspaceConfigCrumbs(ORG, 'pricing')).toEqual([{ label: 'Finance', href: `/organizations/${ORG}/finance` }, { label: 'Configuration', href: `/organizations/${ORG}/finance/configuration` }]);
     expect(workspaceConfigCrumbs(ORG, 'custom-fields')).toEqual([]);
   });
 });
 
 describe('Back to app only returns somewhere safe', () => {
+  it('does not let an authorized workspace root authorize a restricted nested configuration or operating area', () => {
+    expect(safeAppReturnPath(`/organizations/${ORG}/comms/configuration/email`, ORG, [`/organizations/${ORG}/comms/configuration`, `/organizations/${ORG}/comms/configuration/calling`])).toBeNull();
+    expect(safeAppReturnPath(`/organizations/${ORG}/finance/invoices`, ORG, [`/organizations/${ORG}/finance`])).toBeNull();
+    expect(safeAppReturnPath(`/organizations/${ORG}/comms/configuration`, ORG, [`/organizations/${ORG}/comms/configuration`])).toBe(`/organizations/${ORG}/comms/configuration`);
+  });
   it('accepts a page of this business', () => {
     expect(safeAppReturnPath(`/organizations/${ORG}/finance/invoices`, ORG)).toBe(`/organizations/${ORG}/finance/invoices`);
   });

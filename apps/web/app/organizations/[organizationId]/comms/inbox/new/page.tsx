@@ -1,6 +1,6 @@
 import { NewConversation } from '@/features/communications/inbox/new-conversation';
 import { messagingSenders } from '@/lib/domain/reception/channel-readiness';
-import { requireOrganization } from '@/lib/route/organization';
+import { requireOperatingArea } from '@/lib/route/workspace-configuration';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +15,7 @@ export default async function NewConversationPage({
 }: PageProps<'/organizations/[organizationId]/comms/inbox/new'>) {
   const { organizationId } = await params;
   const { channel } = await searchParams;
-  const { db, organization } = await requireOrganization(organizationId);
+  const { db, organization } = await requireOperatingArea(organizationId, 'comms-inbox');
 
   if (!organization.capabilities.includes('message.send')) {
     return <div className="p-4 text-sm text-muted">Your role cannot start conversations here.</div>;

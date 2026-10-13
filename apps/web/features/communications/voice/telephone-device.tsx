@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { NavigationActivityContext } from '@/components/navigation/activity-context';
 import { Device, type Call } from '@twilio/voice-sdk';
 import { mintBrowserTokenAction } from '@/app/organizations/[organizationId]/calls/conference-actions';
 
@@ -210,7 +211,7 @@ export function TelephoneDeviceProvider({ organizationId, children }: { organiza
     <TelephoneDeviceContext.Provider
       value={{ status, error, activeCall, incoming, register, unregister, connectToRoom, hangUp, toggleMute, sendDigits }}
     >
-      {children}
+      <NavigationActivityContext.Provider value={!!activeCall || !!incomingCall}>{children}</NavigationActivityContext.Provider>
     </TelephoneDeviceContext.Provider>
   );
 }

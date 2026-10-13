@@ -45,7 +45,7 @@ test.describe('tenant Finance workspace', () => {
     // Pricing is configured from Settings; Finance reaches it through its Configure menu.
     await page.getByRole('button', { name: 'Configure' }).click();
     await page.getByRole('menuitem', { name: 'Services & pricing' }).click();
-    await expect(page).toHaveURL(`/organizations/${organizationId}/settings/pricing`);
+    await expect(page).toHaveURL(`/organizations/${organizationId}/finance/configuration/pricing`);
     await expect(page.getByRole('heading', { name: /Pricing/, level: 1 })).toBeVisible();
   });
 

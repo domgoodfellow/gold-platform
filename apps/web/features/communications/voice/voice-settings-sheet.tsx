@@ -1,11 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Settings2 } from 'lucide-react';
-import { Button } from '@/components/controls/button';
 import { DividedList, EmptyState, GroupHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
-import { PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
 import { configTarget } from '@/lib/navigation';
 import type { CallOutcome } from '@/lib/domain/reception/outcomes';
 import type { Route } from '@/lib/domain/reception/routing';
@@ -23,13 +20,9 @@ type VoiceSettingsProps = {
   mayManageIdentity: boolean;
   mayConfigureOutcomes: boolean;
   role: string;
-  channelReadiness?: { sms: number; email: number };
 };
 
-export function VoiceSettingsSheet(props: VoiceSettingsProps) {
-  return <PageDrawer><PageDrawerTrigger asChild><Button type="button" tone="secondary"><Settings2 aria-hidden /> Communications settings</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>Communications settings</PageDrawerTitle><PageDrawerDescription>Calling, channels, routing and outcomes.</PageDrawerDescription></PageDrawerHeader><div><VoiceSettingsContent {...props} /></div></PageDrawerContent></PageDrawer>;
-}
-export function VoiceSettingsContent({ organizationId, number, outcomes, routes, numbers, members, mayManageIdentity, mayConfigureOutcomes, role, channelReadiness }: VoiceSettingsProps) {
+export function VoiceSettingsContent({ organizationId, number, outcomes, routes, numbers, members, mayManageIdentity, mayConfigureOutcomes, role }: VoiceSettingsProps) {
  return (
         <div className="space-y-4">
           <section id="outcomes" className="scroll-mt-20 rounded-lg border border-border bg-surface p-4">
@@ -38,11 +31,6 @@ export function VoiceSettingsContent({ organizationId, number, outcomes, routes,
               <DividedList className="mt-2">{outcomes.map((outcome) => <li key={outcome.id} className="flex items-center justify-between gap-3 py-2"><span>{outcome.name}</span><span className="text-xs text-muted">{outcome.reached ? 'Reached' : 'Not reached'}</span></li>)}</DividedList>
             )}
             {mayConfigureOutcomes ? <div className="mt-4"><CreateOutcomeForm organizationId={organizationId} /></div> : <Hint className="mt-3">Your role, {role}, cannot change these words.</Hint>}
-          </section>
-          <section id="channels" className="scroll-mt-20 rounded-lg border border-border bg-surface p-4">
-            <GroupHeading>Messaging</GroupHeading>
-            {channelReadiness ? <dl className="mt-2 grid gap-2 text-sm"><div className="flex justify-between gap-3"><dt>SMS sending</dt><dd>{channelReadiness.sms ? `${channelReadiness.sms} ready numbers` : 'Unavailable - setup required'}</dd></div><div className="flex justify-between gap-3"><dt>Email sending</dt><dd>{channelReadiness.email ? `${channelReadiness.email} ready addresses` : 'Unavailable - setup required'}</dd></div></dl> : null}
-            <Hint className="mt-2">SMS requires a ready outbound number and an active messaging connection. Email requires a ready sending address. Unavailable channels cannot be sent from.</Hint><div className="mt-2 flex flex-wrap gap-4 text-sm text-accent-text"><Link href={`/organizations/${organizationId}/comms/numbers`}>Numbers and assignments</Link><Link href={`/organizations/${organizationId}/settings/email`}>Email configuration</Link></div>
           </section>
           <section id="routing" className="scroll-mt-20 rounded-lg border border-border bg-surface p-4">
             <GroupHeading>Routing</GroupHeading>
@@ -65,11 +53,11 @@ export function VoiceSettingsContent({ organizationId, number, outcomes, routes,
             </Hint>
           </section>
           <section id="recording" className="scroll-mt-20 rounded-lg border border-border bg-surface p-4">
-            <GroupHeading>Recording</GroupHeading>
+            <GroupHeading>Recording & compliance (information)</GroupHeading>
             <Hint className="mt-2">Provider calls request recording. A recording appears on call detail only after the provider confirms it is available. Manually recorded calls may have no audio. Recording cannot be turned off here.</Hint>
           </section>
           <section id="compliance" className="scroll-mt-20 rounded-lg border border-border bg-surface p-4">
-            <GroupHeading>Compliance</GroupHeading>
+            <GroupHeading>Compliance (information)</GroupHeading>
             <Hint className="mt-2">No compliance controls are configurable here yet.</Hint>
           </section>
         </div>

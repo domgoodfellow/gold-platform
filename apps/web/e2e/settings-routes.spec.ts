@@ -68,7 +68,7 @@ test.describe('canonical Settings routes', () => {
   test('legacy organization URLs redirect directly to canonical Settings destinations', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     for (const [legacy, canonical] of [
-      ['pricing', 'settings/pricing'],
+      ['pricing', 'finance/configuration/pricing'],
       ['fields', 'settings/custom-fields'],
       ['roles?view=roles', 'settings/access/roles'],
       ['integrations?view=browse', 'settings/connections/apps'],

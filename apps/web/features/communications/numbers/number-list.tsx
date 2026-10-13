@@ -21,7 +21,7 @@ export function NumberList({ organizationId, numbers, assignedCount }: {
           header: 'Number',
           emphasis: 'primary',
           cell: (number) => (
-            <Link href={`/organizations/${organizationId}/comms/numbers/${number.id}`} className="underline underline-offset-4">
+            <Link href={`/organizations/${organizationId}/comms/configuration/numbers/${number.id}`} className="underline underline-offset-4">
               {number.label ? `${number.label} (${number.e164})` : number.e164}
             </Link>
           ),

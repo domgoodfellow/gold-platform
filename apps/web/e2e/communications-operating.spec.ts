@@ -7,6 +7,8 @@ import { loadDemoContext, OWNER_STORAGE_STATE, COLLEAGUE_STORAGE_STATE } from '.
 import { BUSINESSES, DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { provisionOrganization } from '../lib/domain/platform/provision';
 import { setModuleEnabled } from '../lib/domain/tenancy/modules';
+import { createPlan, grantPlanProduct } from '../lib/domain/catalogue/plans';
+import { recordPlanAssignment } from '../lib/domain/catalogue/organization-plans';
 import { recordCommercialTerm } from '../lib/domain/commercial/terms';
 import { createCustomer } from '../lib/domain/customers/customers';
 import { createRoute, setRouteTargets, listRouteTargets } from '../lib/domain/reception/routing';
@@ -43,6 +45,10 @@ test.describe('Communications operating hub', () => {
     const organizationId = await provisionOrganization(staff, { ownerEmail: ctx.ownerEmail, name: `Communications acceptance ${Date.now()}`, displayName: 'Communications operator', currency: 'CAD', timezone: 'America/Toronto' });
     await setModuleEnabled(owner, { organizationId, key: 'reception', enabled: true });
     await recordCommercialTerm(staff, { organizationId, productKey: 'module:reception', periodStart: todayInZone('America/Toronto'), periodEnd: '9999-12-31', priceMinor: 0, note: 'Local Communications acceptance fixture' });
+    // Inbox has its own channel entitlement; voice permission is insufficient.
+    const planId = await createPlan(staff, { key: `comms_acceptance_${Date.now()}`, kind: 'plan', label: 'Local Communications acceptance', description: 'Local browser fixture only', billable: false });
+    await grantPlanProduct(staff, { planId, productKey: 'comms' });
+    await recordPlanAssignment(staff, { organizationId, planId, periodStart: todayInZone('America/Toronto'), periodEnd: '9999-12-31' });
     const base = `/organizations/${organizationId}`, home = `${base}/comms`;
     const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
     await page.setViewportSize({ width: 1440, height: 1000 });
@@ -114,7 +120,7 @@ test.describe('Communications operating hub', () => {
       await page.goto(home);
       await page.getByRole('link',{name:/Outbound number/}).click(); await expect(page.getByRole('heading',{name:'Numbers',exact:true})).toBeVisible(); await capture(page, testInfo.outputPath('communications-numbers.png'));
       await page.goto(`${home}/numbers/${number}`); await expect(page.getByRole('heading',{name:/Main line/})).toBeVisible();
-      await page.goto(`${base}/settings/calls#routing`); await expect(page.getByRole('heading',{name:'Communications configuration',exact:true})).toBeVisible();
+      await page.goto(`${base}/comms/configuration/calling#routing`); await expect(page.getByRole('heading',{name:'Calling & routing',exact:true})).toBeVisible();
       await page.locator('#routing').getByRole('button',{name:'Edit',exact:true}).click();
       await expect(page.locator('#routing').getByRole('button',{name:'Save',exact:true})).toBeEnabled();
       await page.getByRole('button',{name:'Test route',exact:true}).click();
@@ -130,12 +136,12 @@ test.describe('Communications operating hub', () => {
       const restrictedContext = await browser.newContext({storageState:COLLEAGUE_STORAGE_STATE});
       try {
         const restricted = await restrictedContext.newPage(); await restricted.goto(`${testInfo.project.use.baseURL ?? process.env.E2E_BASE_URL ?? 'http://localhost:3000'}${home}`);
-        await expect(restricted.getByRole('heading',{name:'Communications',exact:true})).toBeVisible();
+        await expect(restricted.getByRole('heading',{name:'This page does not exist',exact:true})).toBeVisible();
         await expect(restricted.getByRole('button',{name:'New call',exact:true})).toHaveCount(0);
         await expect(restricted.getByRole('link',{name:'Compose message',exact:true})).toHaveCount(0);
         await expect(restricted.getByRole('button',{name:/Actions for/})).toHaveCount(0);
-        await restricted.goto(`${process.env.E2E_BASE_URL ?? 'http://localhost:3000'}${base}/settings/calls`);
-        await expect(restricted.locator('#routing')).toContainText('cannot change routing');
+        await restricted.goto(`${process.env.E2E_BASE_URL ?? 'http://localhost:3000'}${base}/comms/configuration/calling`);
+        await expect(restricted.getByRole('heading', { name: 'This page does not exist' })).toBeVisible();
         await expect(restricted.locator('#routing').getByRole('button',{name:'Edit',exact:true})).toHaveCount(0);
       } finally { await restrictedContext.close(); }
       expect(errors).toEqual([]);

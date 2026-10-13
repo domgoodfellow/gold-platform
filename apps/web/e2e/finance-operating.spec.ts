@@ -148,7 +148,7 @@ test.describe('Finance operating journey', () => {
     await page.screenshot({path:testInfo.outputPath('finance-payment-mobile.png'),fullPage:true,caret:'initial'});
     await drawer.getByRole('button',{name:'Close',exact:true}).click();
     await page.setViewportSize({width:1440,height:1000});
-    await page.goto(`/organizations/${organizationId}/settings/pricing`);
+    await page.goto(`/organizations/${organizationId}/finance/configuration/pricing`);
     await page.getByText('Change trading currency',{exact:true}).click();
     await page.getByLabel('Currency',{exact:true}).selectOption('USD');
     await page.getByRole('button',{name:'Save currency',exact:true}).click();

@@ -28,8 +28,8 @@ async function attempt(organizationId: string, phoneNumberId: string, run: () =>
     if (error instanceof DomainError) return { error: error.message };
     throw error;
   }
-  revalidatePath(`/organizations/${organizationId}/comms/numbers`);
-  revalidatePath(`/organizations/${organizationId}/comms/numbers/${phoneNumberId}`);
+  revalidatePath(`/organizations/${organizationId}/comms/configuration/numbers`);
+  revalidatePath(`/organizations/${organizationId}/comms/configuration/numbers/${phoneNumberId}`);
   return { error: null };
 }
 

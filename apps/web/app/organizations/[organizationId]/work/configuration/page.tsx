@@ -15,7 +15,7 @@ import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { listWorkItemTransitions } from '@/lib/domain/work-items/transitions';
 import { listBookingIntakeForms } from '@/lib/domain/booking/intake';
 import { getTypeBooking, listWorkItemTypes } from '@/lib/domain/work-items/types';
-import { requireOrganization } from '@/lib/route/organization';
+import { requireConfigurationTarget } from '@/lib/route/workspace-configuration';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +26,7 @@ export default async function WorkConfigurationPage({
 }: PageProps<'/organizations/[organizationId]/work/configuration'>) {
   const { organizationId } = await params;
   const { type: requestedType, tab: requestedTab } = await searchParams;
-  const { db, organization } = await requireOrganization(organizationId);
+  const { db, organization } = await requireConfigurationTarget(organizationId, 'work-configuration');
 
   const types = await listWorkItemTypes(db, { organizationId });
   const selectedType = types.find((type) => type.id === requestedType) ?? types[0] ?? null;

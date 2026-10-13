@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
+import { NavigationActivityContext } from './activity-context';
 import { PLATFORM_NAME } from '@/lib/brand';
 import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
 import {
@@ -13,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@gold/ui/components/dropdown-menu';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@gold/ui/components/sidebar';
-import { Building2, ChevronsUpDown, LayoutDashboard } from 'lucide-react';
+import { Building2, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 import { organizationHomeHref } from '@/lib/navigation';
@@ -47,7 +48,8 @@ type SwitcherProps = {
 };
 
 /** Businesses and the separately authorized system control plane share one switcher. */
-export function deriveSwitcherView(current: SwitcherContext, organizations: SwitchableOrganization[], platform?: PlatformContext | null) {
+export function deriveSwitcherView(current: SwitcherContext, organizations: SwitchableOrganization[], _platform?: PlatformContext | null) {
+  void _platform; // Backward-compatible prop; authority is presented by the footer.
   const triggerName =
     current.kind === 'business' ? current.name : current.kind === 'platform' ? `${PLATFORM_NAME} Platform` : PLATFORM_NAME;
   const triggerRole =
@@ -59,7 +61,7 @@ export function deriveSwitcherView(current: SwitcherContext, organizations: Swit
       ? organizations.filter((organization) => organization.id !== current.organizationId)
       : organizations;
 
-  return { triggerName, triggerRole, avatarInitial, businesses, hasChoices: businesses.length > 0 || !!platform };
+  return { triggerName, triggerRole, avatarInitial, businesses, hasChoices: businesses.length > 0 };
 }
 
 function ContextSwitcherMenuContent({
@@ -67,9 +69,9 @@ function ContextSwitcherMenuContent({
   triggerRole,
   avatarInitial,
   businesses,
-  platform,
   current,
 }: SwitcherProps & ReturnType<typeof deriveSwitcherView>) {
+  const preserveActivity = useContext(NavigationActivityContext);
   return (
     <DropdownMenuContent side="bottom" align="start" className="w-64 min-w-64">
       <DropdownMenuLabel className="flex items-center gap-3 px-2 py-2">
@@ -90,7 +92,7 @@ function ContextSwitcherMenuContent({
           </DropdownMenuLabel>
           {businesses.map((organization) => (
             <DropdownMenuItem key={organization.id} asChild>
-              <Link href={organizationHomeHref(organization.id, organization.operationalState)} className="flex items-center gap-2">
+              <Link target={preserveActivity && current.kind !== 'global' && current.organizationId !== organization.id ? "_blank" : undefined} rel={preserveActivity ? "noopener noreferrer" : undefined} href={organizationHomeHref(organization.id, organization.operationalState)} className="flex items-center gap-2">
                 <Building2 className="shrink-0" />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate">{organization.name}</span>
@@ -99,18 +101,6 @@ function ContextSwitcherMenuContent({
               </Link>
             </DropdownMenuItem>
           ))}
-        </>
-      ) : null}
-      {platform ? (
-        <>
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel className="px-2 text-xs uppercase tracking-wide text-subtle">System</DropdownMenuLabel>
-          <DropdownMenuItem asChild>
-            <Link href={platform.href} aria-current={current.kind === 'platform' ? 'page' : undefined} className="flex items-center gap-2">
-              <LayoutDashboard aria-hidden className="shrink-0" />
-              <span>Platform</span>
-            </Link>
-          </DropdownMenuItem>
         </>
       ) : null}
     </DropdownMenuContent>

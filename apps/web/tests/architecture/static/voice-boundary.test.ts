@@ -43,7 +43,7 @@ const SETUP_DRAWER = [
   'features/communications/voice/outbound-identity.tsx',
   'features/communications/voice/voice-settings-sheet.tsx',
 ];
-const CALLS_AND_NUMBERS_ROUTES = [...sources(`${ROUTES}/calls`), ...sources(`${ROUTES}/comms/numbers`)];
+const CALLS_AND_NUMBERS_ROUTES = [...sources(`${ROUTES}/calls`), ...sources(`${ROUTES}/comms/configuration/numbers`)];
 
 describe('the call domain speaks only the capability', () => {
   it('imports the telephony capability and never an implementation', () => {
@@ -145,7 +145,7 @@ describe('numbers are configured, never provisioned, from the screen', () => {
   });
 
   it('offers no purchase or porting control', () => {
-    for (const path of [...VOICE_UI, ...sources(`${ROUTES}/comms/numbers`)]) {
+    for (const path of [...VOICE_UI, ...sources(`${ROUTES}/comms/configuration/numbers`)]) {
       expect(readFileSync(path, 'utf8'), rel(path)).not.toMatch(/buy a number|buy number|port (a )?number/i);
     }
   });

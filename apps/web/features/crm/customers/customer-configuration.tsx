@@ -1,7 +1,6 @@
-import { FieldSet, FieldLegend, FieldGroup } from '@gold/ui/components/field';
+import { ButtonLink } from '@/components/controls/button';
+import { configTarget } from '@/lib/navigation';
 import { Hint } from '@/components/controls/inputs';
-import { EntityFieldsConfiguration } from '@/features/custom-fields/configuration/entity-fields-configuration';
-import { StageSettingsSheet } from '@/features/crm/sales/stage-settings-sheet';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 
@@ -14,51 +13,7 @@ export type CustomerConfigurationData = {
   salesEnabled: boolean;
 };
 
-/**
- * What a customer carries beyond its name, and — when Communications/Voice is on — the pipeline
- * a relationship moves through. Rendered in the Customers page's own Configure rail. Its two
- * concerns are stacked sections, not tabs: Configure is one surface's contextual configuration,
- * and a stack needs no nested navigation. Pipeline reuses `StageSettingsSheet`, the same trigger
- * the Pipeline board's own header and the dedicated "Sales stages" Settings page both open,
- * rather than a second stage-editing surface.
- */
-export function CustomerConfiguration({
-  organizationId,
-  role,
-  mayConfigure,
-  definitions,
-  stages,
-  salesEnabled,
-}: CustomerConfigurationData) {
-  return (
-    <div className="flex flex-col gap-8">
-      <FieldSet>
-        <FieldLegend>Custom fields on a customer</FieldLegend>
-        <FieldGroup>
-          <EntityFieldsConfiguration
-            organizationId={organizationId}
-            entityType="customer"
-            role={role}
-            mayConfigure={mayConfigure}
-            definitions={definitions}
-          />
-        </FieldGroup>
-      </FieldSet>
-
-      {salesEnabled ? (
-        <FieldSet>
-          <FieldLegend>Relationship stages</FieldLegend>
-          <FieldGroup>
-            <Hint>The stages a relationship moves through, in order.</Hint>
-            <StageSettingsSheet
-              organizationId={organizationId}
-              stages={stages}
-              mayConfigure={mayConfigure}
-              role={role}
-            />
-          </FieldGroup>
-        </FieldSet>
-      ) : null}
-    </div>
-  );
+/** Operating pages link to CRM's canonical configuration editors. */
+export function CustomerConfiguration({ organizationId, mayConfigure, salesEnabled }: CustomerConfigurationData) {
+ return <div className="space-y-4">{mayConfigure ? <><ButtonLink tone="text" href={`/organizations/${organizationId}/${configTarget('customer-fields').path}`}>Customer fields</ButtonLink>{salesEnabled ? <ButtonLink tone="text" href={`/organizations/${organizationId}/${configTarget('sales-stages').path}`}>Relationship stages</ButtonLink> : null}</> : <Hint>Your role cannot configure CRM fields or stages.</Hint>}</div>;
 }

@@ -17,8 +17,8 @@ const TENANT_COMMS_SOURCE = [
   'comms/inbox/page.tsx',
   'comms/inbox/[conversationId]/page.tsx',
   'comms/inbox/new/page.tsx',
-  'comms/numbers/page.tsx',
-  'comms/numbers/[phoneNumberId]/page.tsx',
+  'comms/configuration/numbers/page.tsx',
+  'comms/configuration/numbers/[phoneNumberId]/page.tsx',
   'calls/page.tsx',
 ].map((route) => readFileSync(`${ROUTES}/${route}`, 'utf8'));
 

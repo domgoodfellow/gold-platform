@@ -296,7 +296,7 @@ describe('the published catalogue', () => {
 
 describe('the tenant communications settings', () => {
   it('offers no wholesale AI or speech vendor to a business', () => {
-    const page = readFileSync(join(__dirname, '..', '..', '..', 'app/organizations/[organizationId]/settings/communications/page.tsx'), 'utf8');
+    const page = readFileSync(join(__dirname, '..', '..', '..', 'app/organizations/[organizationId]/comms/configuration/messaging/page.tsx'), 'utf8');
     for (const vendor of ['anthropic', 'openai_compatible', 'deepgram', 'elevenlabs']) expect(page, vendor).not.toContain(vendor);
     expect(page).toContain('title="Communications"');
   });

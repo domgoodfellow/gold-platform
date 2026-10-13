@@ -28,7 +28,7 @@ function words(error: unknown): string {
 }
 
 function refresh(organizationId: string) {
-  revalidatePath(`/organizations/${organizationId}/settings/email`);
+  revalidatePath(`/organizations/${organizationId}/comms/configuration/email`);
 }
 
 /**

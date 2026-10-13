@@ -1,3 +1,4 @@
+import { ConfigurationSections } from '@/components/navigation/configuration-sections';
 import Link from 'next/link';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/settings-page-frame';
@@ -18,7 +19,11 @@ export default async function GeneralSettingsPage({
   const missing = missingIdentity(identity);
 
   return (
-    <SettingsPageFrame>
+    <ConfigurationSections sections={[
+      { key: 'identity', label: 'Identity', href: `/organizations/${organizationId}/settings/general#identity-heading` },
+      { key: 'address', label: 'Address & regional defaults', href: `/organizations/${organizationId}/settings/general#address-heading` },
+      { key: 'contact', label: 'Contact', href: `/organizations/${organizationId}/settings/general#contact-heading` },
+    ]}><SettingsPageFrame>
       <SettingsPageHeader title="General" meta={organization.name} />
 
       {mayManage ? (
@@ -43,6 +48,6 @@ export default async function GeneralSettingsPage({
           <Link href={`/organizations/${organizationId}/settings/access`} className="text-accent-text hover:underline">who has access</Link>.
         </Hint>
       )}
-    </SettingsPageFrame>
+    </SettingsPageFrame></ConfigurationSections>
   );
 }

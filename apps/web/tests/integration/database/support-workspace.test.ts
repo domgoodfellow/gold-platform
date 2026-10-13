@@ -7,6 +7,7 @@ import type { Db } from "@/lib/db/types";
 import {
   commandSupport,
   readSupport,
+  readSupportConfiguration,
   type RecordOption,
 } from "@/lib/domain/support/support";
 import { createCustomer } from "@/lib/domain/customers/customers";
@@ -114,6 +115,15 @@ describe("Support operating workspace", () => {
     await pg.end();
     await a?.db.auth.signOut();
     await b?.db.auth.signOut();
+  });
+  it("reads configuration definitions without loading operational case data", async () => {
+    const data = await readSupportConfiguration(a.db, a.org);
+    expect(data.queues).toContainEqual(expect.objectContaining({ id: queue }));
+    expect(data.policies).toContainEqual(expect.objectContaining({ id: policy }));
+    expect(data).not.toHaveProperty('cases');
+    expect(data.queues[0]).not.toHaveProperty('open_count');
+    const other = await readSupportConfiguration(b.db, a.org);
+    expect(other).toEqual({ queues: [], policies: [] });
   });
   it("persists configuration, applies a queue-specific policy and preserves canonical links", async () => {
     const data = await readSupport(a.db, a.org, "detail", { selected: caseId });

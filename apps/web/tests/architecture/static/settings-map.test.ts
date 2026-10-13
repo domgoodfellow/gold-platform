@@ -144,11 +144,11 @@ describe('configuring is not operating', () => {
 
   // "Calls and sales stages" used to be one combined Settings entry that pointed at Communications
   // and never actually reached stage configuration. Split: `call-setup` stays Communications' own
-  // door (now a real `/settings/calls` route, never `calls#setup`); `sales-stages` is CRM's.
+  // door (now a real `/comms/configuration/calling` route, never `calls#setup`); `sales-stages` is CRM's.
   it('splits sales stages out as its own CRM-owned target, never routed through Communications', () => {
     const salesStages = configTarget('sales-stages');
     expect(salesStages.workspace).toBe('crm');
-    expect(salesStages.path).toBe('settings/sales-stages');
+    expect(salesStages.path).toBe('sales/configuration/relationship-stages');
     expect(salesStages.entitledBy).toBe('pipeline');
     expect(AREAS.some((area) => area.segment === 'pipeline')).toBe(true);
 
@@ -162,7 +162,7 @@ describe('configuring is not operating', () => {
   });
 
   it('keeps Call setup a real Settings route, not an operational page plus a URL fragment', () => {
-    expect(callSetup.path).toBe('settings/calls');
+    expect(callSetup.path).toBe('comms/configuration/calling');
     expect(callSetup.path).not.toContain('#');
   });
 });

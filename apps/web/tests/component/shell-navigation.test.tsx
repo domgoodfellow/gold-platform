@@ -4,6 +4,10 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SidebarProvider } from '@gold/ui/components/sidebar';
+import { NavigationActivityContext } from '@/components/navigation/activity-context';
+import { SidebarFooterNavigation } from '@/components/navigation/sidebar-footer-navigation';
+import { SettingsNav } from '@/components/navigation/settings-nav';
+import { projectSettingsNav } from '@/lib/settings-nav';
 import { OrgNav } from '@/app/organizations/[organizationId]/org-shell';
 import { TelephoneDeviceProvider, useTelephoneDevice } from '@/features/communications/voice/telephone-device';
 import { projectShell } from '@/lib/shell';
@@ -25,6 +29,7 @@ vi.mock('@twilio/voice-sdk', () => ({ Device: class {
   constructor() { telephone.created(); }
   on(event: string, handler: () => void) { this.handlers.set(event, handler); }
   async register() { this.handlers.get('registered')?.(); }
+  async connect() { return { on: vi.fn(), disconnect: vi.fn() }; }
   destroy() { telephone.destroyed(); }
 } }));
 vi.mock('next/navigation', () => ({ usePathname: () => route.pathname }));
@@ -41,14 +46,14 @@ const pneu = { id: 'pneu', name: 'Pneu3L', role: 'Admin', operationalState: 'liv
 const platform = { organizationId: 'gold', href: '/organizations/gold/platform' };
 
 describe('business and system context menu', () => {
-  it('groups businesses and the authorized Platform separately with canonical destinations', async () => {
+  it('keeps the business switcher free of the footer-owned Platform entry', async () => {
     const user = userEvent.setup();
     render(<CompactContextSwitcher mark={<span>G</span>} current={{ kind: 'business', organizationId: 'gold', name: 'GildOps', role: 'Owner' }} organizations={[gold, pneu]} platform={platform} />);
     await user.click(screen.getByRole('button', { name: /Switch context/ }));
     expect(screen.getByText('Businesses')).toBeInTheDocument();
-    expect(screen.getByText('System')).toBeInTheDocument();
+    expect(screen.queryByText('System')).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /Pneu3L/ })).toHaveAttribute('href', '/organizations/pneu/home');
-    expect(screen.getByRole('menuitem', { name: 'Platform' })).toHaveAttribute('href', platform.href);
+    expect(screen.queryByRole('menuitem', { name: 'Platform' })).not.toBeInTheDocument();
   });
   it('shows system scope and offers the GildOps operating business when Platform is active', async () => {
     const user = userEvent.setup();
@@ -56,7 +61,7 @@ describe('business and system context menu', () => {
     await user.click(screen.getByRole('button', { name: /GildOps Platform/ }));
     expect(screen.getByText('System control plane')).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /GildOps.*Owner/ })).toHaveAttribute('href', '/organizations/gold/home');
-    expect(screen.getByRole('menuitem', { name: 'Platform' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('menuitem', { name: 'Platform' })).not.toBeInTheDocument();
   });
   it('an Owner with no resolved platform authority sees no System category', async () => {
     const user = userEvent.setup();
@@ -113,7 +118,7 @@ describe('contextual sidebar rendering', () => {
     function RuntimeProbe() {
       const device = useTelephoneDevice();
       useEffect(() => { mounted(); return unmounted; }, []);
-      return <button data-testid="runtime" onClick={() => void device.register()}>{device.status}</button>;
+      return <button data-testid="runtime" onClick={() => void device.connectToRoom('test-room', { callId: 'call-1', contactLabel: 'Local SDK fixture' })}>{device.status} {device.activeCall?.callId}</button>;
     }
     const view = () => <TelephoneDeviceProvider organizationId={org}><TooltipProvider><SidebarProvider><RuntimeProbe /><OrgNav sections={sections} /></SidebarProvider></TooltipProvider></TelephoneDeviceProvider>;
     route.pathname = `/organizations/${org}/home`;
@@ -134,13 +139,14 @@ describe('contextual sidebar rendering', () => {
     rerender(view());
     expect(screen.getByRole('link', { name: 'Calls' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByRole('link', { name: 'Customers' })).not.toBeInTheDocument();
+    for (const path of ['comms/configuration/calling', 'settings/general']) { route.pathname = `/organizations/${org}/${path}`; rerender(view()); expect(runtime).toHaveTextContent('call-1'); }
     route.pathname = `/organizations/${org}/home`;
     rerender(view());
     expect(screen.getByRole('link', { name: 'Library' })).toBeInTheDocument();
     expect(screen.getByTestId('runtime')).toBe(runtime);
     expect(mounted).toHaveBeenCalledTimes(1);
     expect(unmounted).not.toHaveBeenCalled();
-    expect(runtime).toHaveTextContent('ready');
+    expect(runtime).toHaveTextContent('ready call-1');
     expect(telephone.created).toHaveBeenCalledTimes(1);
     expect(telephone.destroyed).not.toHaveBeenCalled();
   });
@@ -180,5 +186,47 @@ describe('responsive breadcrumb interaction', () => {
     render(<WorkspaceCrumbsProvider navigation={navigation}><WorkspaceCrumbSlot /><PageCrumbs crumbs={[]} current="Home" /></WorkspaceCrumbsProvider>);
     expect(screen.queryByRole('button', { name: 'Navigate within current section' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Back to parent' })).not.toBeInTheDocument();
+  });
+});
+
+
+describe('persistent application controls and Settings', () => {
+  const org = '11111111-1111-4111-8111-111111111111';
+  const wrap = (children: ReactNode) => <TooltipProvider><SidebarProvider defaultOpen={false}>{children}</SidebarProvider></TooltipProvider>;
+  it('keeps a live business activity in its tab when entering another organization Platform or personal Settings', () => {
+    route.pathname = `/organizations/${org}/calls`;
+    const platformOrganization = '22222222-2222-4222-8222-222222222222';
+    render(wrap(<NavigationActivityContext.Provider value={true}><SidebarFooterNavigation platform={{organizationId: platformOrganization, href: `/organizations/${platformOrganization}/platform`}} /><SettingsNav organizationId={org} organizationName="Business" sections={projectSettingsNav(org, { capabilities: new Set(ALL_CAPABILITIES) })} search={[]} returnHrefs={[]} /></NavigationActivityContext.Provider>));
+    expect(screen.getByRole('link', { name: 'Platform' })).toHaveAttribute('target', '_blank');
+    expect(screen.getByRole('link', { name: 'Appearance' })).toHaveAttribute('target', '_blank');
+    expect(screen.getByRole('link', { name: 'General' })).not.toHaveAttribute('target');
+    expect(screen.getByRole('link', { name: 'Settings' })).not.toHaveAttribute('target');
+  });
+  it('offers Settings and product help outside the account menu without granting Platform to an owner', () => {
+    route.pathname = `/organizations/${org}/calls`;
+    const { rerender } = render(wrap(<SidebarFooterNavigation />));
+    expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', `/organizations/${org}/settings`);
+    expect(screen.getByRole('link', { name: 'Help & Support' })).toHaveAttribute('href', `/organizations/${org}/help`);
+    expect(screen.queryByRole('link', { name: 'Platform' })).not.toBeInTheDocument();
+    rerender(wrap(<SidebarFooterNavigation platform={platform} />));
+    expect(screen.getByRole('link', { name: 'Platform' })).toHaveAttribute('href', platform.href);
+    rerender(wrap(<SidebarFooterNavigation organizationId={org} locked />));
+    expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', `/organizations/${org}/settings/plan`);
+  });
+  it('renders every authorized Settings destination with a real icon and validates return paths', () => {
+    route.pathname = `/settings/account/appearance`;
+    const sections = projectSettingsNav(org, { capabilities: new Set(ALL_CAPABILITIES) });
+    sessionStorage.setItem(`gildops.lastAppPath.${org}`, `/organizations/${org}/platform/providers`);
+    const { rerender } = render(wrap(<SettingsNav organizationId={org} organizationName="Test" sections={sections} search={[]} returnHrefs={[`/organizations/${org}/calls`]} />));
+    for (const item of sections.flatMap(section => section.items)) {
+      const link = screen.getByRole('link', { name: item.label });
+      expect(link).toHaveAttribute('href', item.href);
+      expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    }
+    expect(screen.getByRole('link', { name: 'Appearance' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Back to app' })).toHaveAttribute('href', `/organizations/${org}`);
+    sessionStorage.setItem(`gildops.lastAppPath.${org}`, `/organizations/${org}/calls/record`);
+    rerender(wrap(<SettingsNav organizationId={org} organizationName="Test" sections={sections} search={[]} returnHrefs={[`/organizations/${org}/calls`]} />));
+    expect(screen.getByRole('link', { name: 'Back to app' })).toHaveAttribute('href', `/organizations/${org}/calls/record`);
   });
 });

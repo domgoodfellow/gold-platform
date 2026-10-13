@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireOrganization } from "@/lib/route/organization";
+import { requireConfigurationTarget } from "@/lib/route/workspace-configuration";
 import { loadAiWorkspace } from "@/lib/application/ai/workspace";
 import { AgentWorkbench } from "@/features/ai/workbench";
 import { requireActor } from "@/lib/domain/tenancy/actor";
@@ -11,7 +11,7 @@ export default async function AgentPage({
   params: Promise<{ organizationId: string; agentId: string }>;
 }) {
   const { organizationId, agentId } = await params;
-  const { db, organization } = await requireOrganization(organizationId);
+  const { db, organization } = await requireConfigurationTarget(organizationId, "ai-agents");
   const actor = await requireActor(db);
   const data = await loadAiWorkspace(db, organizationId, { agentId });
   const result = await db

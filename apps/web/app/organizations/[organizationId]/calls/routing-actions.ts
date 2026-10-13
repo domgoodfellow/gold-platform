@@ -22,8 +22,9 @@ async function attempt<T>(organizationId: string, run: () => Promise<T>, revalid
     const data = await run();
     if (revalidate) {
       revalidatePath(`/organizations/${organizationId}/calls`);
+  revalidatePath(`/organizations/${organizationId}/comms/configuration/calling`);
       revalidatePath(`/organizations/${organizationId}/comms`);
-      revalidatePath(`/organizations/${organizationId}/settings/calls`);
+      revalidatePath(`/organizations/${organizationId}/comms/configuration/calling`);
     }
     return { ok: true, data };
   } catch (error) {

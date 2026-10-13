@@ -10,6 +10,10 @@ import {
   configTarget,
   configTargetForHref,
   configTargetOffered,
+  workspaceConfigureItems,
+  workspaceConfigurationHref,
+  workspaceConfigurationOwner,
+  workspaceConfigurationTarget,
   type Area,
 } from '@/lib/navigation';
 import {
@@ -38,6 +42,8 @@ export type NavItem = {
   activeHrefs?: string[];
   /** Eligible operating destinations, rendered only after entering this workspace. */
   destinations?: NavItem[];
+  configuration?: NavItem;
+  configurationOnly?: boolean;
   /**
    * The destinations grouped under a Platform heading. A parent is
    * itself a destination (a Platform group opens its first page), so
@@ -173,14 +179,19 @@ export function projectShell(input: ShellInput): ShellSection[] {
   const workspaceItems = (): NavItem[] => WORKSPACES.flatMap((workspace) => {
     const areas = AREAS.filter((area) => area.workspace === workspace.key && operable(area));
     const home = workspace.home ? areas.find((area) => area.segment === workspace.home) : undefined;
-    if (!home) return [];
+    const concerns = workspaceConfigureItems(organizationId, workspace.key, { enabledModules, featureAvailability, capabilities, schedulableWork });
+    if (!home && concerns.length === 0) return [];
+    const configurationHref = workspaceConfigurationHref(organizationId, workspace.key);
+    const configuration: NavItem | undefined = concerns.length ? { key: 'workspace-configuration', label: 'Configuration', href: configurationHref, activeHrefs: concerns.filter(concern => { const target = configTargetForHref(concern.href); return target?.workspace === workspace.key && !target.treatment; }).map(concern => concern.href.split('#')[0]), section: 'workspaces' } : undefined;
     return [{
       key: `workspace-${workspace.key}`,
       label: workspace.label,
-      href: areaHref(organizationId, home.segment),
+      href: home ? areaHref(organizationId, home.segment) : configurationHref,
       section: 'workspaces',
-      activeHrefs: AREAS.filter((area) => area.workspace === workspace.key && area.group === 'workspaces' && eligible(area)).map((area) => areaHref(organizationId, area.segment)),
-      destinations: areas.filter((area) => area.segment !== home.segment).map((area) => areaItem(organizationId, area, 'workspaces')),
+      activeHrefs: [...AREAS.filter((area) => area.workspace === workspace.key && area.group === 'workspaces' && eligible(area)).map((area) => areaHref(organizationId, area.segment)), ...(configuration ? [configurationHref, ...(configuration.activeHrefs ?? [])] : [])],
+      configuration,
+      configurationOnly: !home,
+      destinations: areas.filter((area) => area.segment !== home?.segment).map((area) => areaItem(organizationId, area, 'workspaces')),
     }];
   });
 
@@ -204,15 +215,24 @@ export function workspaceNavigation(sections: readonly ShellSection[], pathname:
     const href = areaHref(organizationId, area.segment);
     return path === href || path.startsWith(`${href}/`);
   }).sort((a, b) => areaHref(organizationId, b.segment).length - areaHref(organizationId, a.segment).length)[0];
-  if (!owner?.workspace || owner.group !== 'workspaces') return null;
-  const workspace = projectedItems(sections).find((item) => item.key === `workspace-${owner.workspace}`);
-  if (!workspace?.destinations || !workspace.activeHrefs?.includes(areaHref(organizationId, owner.segment))) return null;
+  const configurationOwner = workspaceConfigurationOwner(path);
+  if (!configurationOwner && (!owner?.workspace || owner.group !== 'workspaces')) return null;
+  const workspace = projectedItems(sections).find((item) => item.key === `workspace-${configurationOwner ?? owner?.workspace}`);
+  if (!workspace?.destinations) return null;
+  if (configurationOwner && workspace.configuration) {
+    const target = workspaceConfigurationTarget(path);
+    const registered = target ? `/organizations/${organizationId}/${target.path}` : workspace.configuration.href;
+    const allowed = target ? workspace.configuration.activeHrefs?.includes(registered) : path === registered;
+    const numberRead = owner?.segment === 'comms-numbers' && workspace.activeHrefs?.includes(areaHref(organizationId, owner.segment));
+    if (!allowed && !numberRead) return null;
+  } else if ((configurationOwner && owner?.segment !== 'comms-numbers') || !owner || !workspace.activeHrefs?.includes(areaHref(organizationId, owner.segment))) return null;
   return {
     workspace,
     backHref: areaHref(organizationId, 'home'),
     sections: [{ key: 'workspaces', label: workspace.label, items: [
-      { key: 'workspace-overview', label: 'Overview', href: workspace.href, section: 'workspaces', exact: true },
+      ...(!workspace.configurationOnly ? [{ key: 'workspace-overview', label: 'Overview', href: workspace.href, section: 'workspaces' as const, exact: true }] : []),
       ...workspace.destinations,
+      ...(workspace.configuration ? [workspace.configuration] : []),
     ] }],
   };
 }

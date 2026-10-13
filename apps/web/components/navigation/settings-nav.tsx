@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useSyncExternalStore } from 'react';
-import { ArrowLeft, Search } from 'lucide-react';
+import { useContext, useState, useSyncExternalStore } from 'react';
+import { ArrowLeft, Search, Settings2 } from 'lucide-react';
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -11,15 +11,19 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '@gold/ui/components/sidebar';
 import { activeItemKey, type ShellSection } from '@/lib/shell';
 import type { SettingsSearchItem } from '@/lib/settings-nav';
 import { safeAppReturnPath, lastAppPathKey } from '@/lib/route/app-return';
 
+import { NavigationActivityContext } from './activity-context';
+import { SETTINGS_ICONS } from './settings-icons';
+
 const subscribeNothing = () => () => {};
 
 /** Where "Back to app" goes: the last workspace page seen in this tab, if it is still a valid page of this business, else Home. */
-function useBackHref(organizationId: string): string {
+function useBackHref(organizationId: string, allowedHrefs: readonly string[]): string {
   const stored = useSyncExternalStore(
     subscribeNothing,
     () => {
@@ -31,7 +35,7 @@ function useBackHref(organizationId: string): string {
     },
     () => null,
   );
-  return safeAppReturnPath(stored, organizationId) ?? `/organizations/${organizationId}`;
+  return safeAppReturnPath(stored, organizationId, allowedHrefs) ?? `/organizations/${organizationId}`;
 }
 
 /**
@@ -44,15 +48,20 @@ export function SettingsNav({
   organizationName,
   sections,
   search,
+  returnHrefs,
 }: {
   organizationId: string;
   organizationName: string;
   sections: ShellSection[];
   search: SettingsSearchItem[];
+  returnHrefs: readonly string[];
 }) {
   const pathname = usePathname();
+  const preserveActivity = useContext(NavigationActivityContext);
+  const retainInSeparateTab = (href: string) => preserveActivity && !href.startsWith(`/organizations/${organizationId}/`);
+  const { setOpenMobile } = useSidebar();
   const active = activeItemKey(sections, pathname);
-  const backHref = useBackHref(organizationId);
+  const backHref = useBackHref(organizationId, returnHrefs);
   const [query, setQuery] = useState('');
   // Spacing is ignored on both sides, so "timezone" finds "time zone".
   const squash = (value: string) => value.toLocaleLowerCase().replace(/\s+/g, '');
@@ -60,7 +69,7 @@ export function SettingsNav({
   const results = normalised ? search.filter((entry) => squash(`${entry.label} ${entry.description} ${entry.keywords ?? ''}`).includes(normalised)) : [];
 
   return (
-    <nav aria-label="Settings" className="flex flex-1 flex-col">
+    <nav aria-label="Settings" className="flex flex-1 flex-col" onClick={(event) => { if ((event.target as Element).closest('a[href]')) setOpenMobile(false); }}>
       <SidebarGroup>
         <SidebarGroupContent>
           <SidebarMenu>
@@ -103,7 +112,7 @@ export function SettingsNav({
                 {results.map((entry) => (
                   <SidebarMenuItem key={entry.key}>
                     <SidebarMenuButton asChild className="h-auto py-1.5">
-                      <Link href={entry.href} onClick={() => setQuery('')}>
+                      <Link target={retainInSeparateTab(entry.href) ? "_blank" : undefined} rel={retainInSeparateTab(entry.href) ? "noopener noreferrer" : undefined} title={retainInSeparateTab(entry.href) ? "Opens in a new tab to retain the active call" : undefined} href={entry.href} aria-label={entry.label} onClick={() => setQuery('')}><Settings2 aria-hidden />
                         <span className="flex min-w-0 flex-col">
                           <span className="truncate">{entry.label}</span>
                           {entry.description ? <span className="truncate text-xs text-sidebar-foreground/60">{entry.description}</span> : null}
@@ -122,15 +131,18 @@ export function SettingsNav({
             <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {section.items.map((item) => (
+                {section.items.map((item) => {
+                  const Icon = SETTINGS_ICONS[item.key];
+                  return (
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton asChild isActive={item.key === active} tooltip={item.label}>
-                      <Link href={item.href} aria-current={item.key === active ? 'page' : undefined}>
+                      <Link target={retainInSeparateTab(item.href) ? "_blank" : undefined} rel={retainInSeparateTab(item.href) ? "noopener noreferrer" : undefined} title={retainInSeparateTab(item.href) ? "Opens in a new tab to retain the active call" : undefined} href={item.href} aria-label={item.label} aria-current={item.key === active ? 'page' : undefined}>
+                        <Icon aria-hidden />
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                ))}
+                ); })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

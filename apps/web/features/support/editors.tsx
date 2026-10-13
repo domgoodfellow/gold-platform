@@ -25,11 +25,12 @@ import {
   PRIORITIES,
   TRANSITIONS,
   type Policy,
-  type Queue,
   type RecordKind,
   type RecordOption,
   type SupportCase,
   type SupportData,
+  type SupportConfiguration,
+  type QueueConfiguration,
 } from "@/lib/domain/support/support";
 import type { Json } from "@/lib/db/database.types";
 import { Field } from "./ui";
@@ -366,9 +367,9 @@ export function ConfigurationEditor({
   policy,
 }: {
   organizationId: string;
-  data: SupportData;
+  data: SupportConfiguration;
   kind: "queue" | "policy";
-  queue?: Queue;
+  queue?: QueueConfiguration;
   policy?: Policy;
 }) {
   const record = queue ?? policy;

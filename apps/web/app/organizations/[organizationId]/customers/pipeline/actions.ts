@@ -37,7 +37,7 @@ async function attempt(organizationId: string, run: () => Promise<unknown>): Pro
   revalidatePath(`/organizations/${organizationId}/customers/pipeline`);
   revalidatePath(`/organizations/${organizationId}/customers`);
   revalidatePath(`/organizations/${organizationId}/sales`);
-  revalidatePath(`/organizations/${organizationId}/settings/sales-stages`);
+  revalidatePath(`/organizations/${organizationId}/sales/configuration/relationship-stages`);
   return { error: null };
 }
 

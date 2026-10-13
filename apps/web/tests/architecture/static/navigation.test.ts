@@ -287,13 +287,13 @@ describe('the operator shell navigation', () => {
     expect(MODULES.some((sold) => sold.key === 'assistant')).toBe(true);
   });
 
-  it('keeps only places somebody works in the sidebar, and configuration behind Settings', () => {
+  it('keeps only places somebody works in the sidebar, and configuration behind canonical owners', () => {
     const inSidebar = AREAS.filter((area) => area.sidebar !== false).map((area) => area.segment);
     expect(inSidebar).toEqual([
       'home',
       'library',
       'sales', 'customers', 'pipeline',
-      'comms', 'calls', 'comms-inbox', 'comms-numbers',
+      'comms', 'calls', 'comms-inbox',
       'marketing', 'support', 'ai',
       'finance', 'finance-quotes', 'finance-invoices', 'finance-payments',
       'automations', 'automation-rules', 'automation-messages', 'automation-activity',
@@ -303,7 +303,7 @@ describe('the operator shell navigation', () => {
     ]);
     for (const segment of ['pricing', 'fields', 'roles', 'integrations', 'setup']) {
       const area = AREAS.find((entry) => entry.segment === segment)!;
-      expect(area.sidebar, `${segment} is configuration and belongs behind Settings`).toBe(false);
+      expect(area.sidebar, `${segment} is configuration and belongs outside operating navigation`).toBe(false);
       expect(area.group).toBe('settings');
     }
   });
@@ -729,7 +729,7 @@ describe('a switch leads to its inputs', () => {
     const where = moduleConfiguration('org-1', payments);
 
     // Getting paid lives on Pricing, the same workspace as the price book it charges through.
-    expect(where.href).toBe('/organizations/org-1/settings/pricing#getting-paid');
+    expect(where.href).toBe('/organizations/org-1/finance/configuration/pricing#getting-paid');
     // The area's own word, which is the platform noun this file owns. A link labelled
     // "configure" would be the one place in the shell where a screen invents a name.
     expect(where.label).toBe('Pricing');
@@ -740,7 +740,7 @@ describe('a switch leads to its inputs', () => {
     );
 
     const billing = MODULES.find((sold) => sold.key === 'billing')!;
-    expect(moduleConfiguration('org-1', billing).href).toBe('/organizations/org-1/settings/pricing');
+    expect(moduleConfiguration('org-1', billing).href).toBe('/organizations/org-1/finance/configuration/pricing');
     expect(moduleConfiguration('org-1', billing).label).toBe('Pricing');
   });
 
@@ -748,7 +748,7 @@ describe('a switch leads to its inputs', () => {
     // Billing and Automations both configure at their own canonical workspace's segment.
     const billing = MODULES.find((sold) => sold.key === 'billing')!;
     expect(moduleConfiguration('org-1', billing)).toEqual({
-      href: '/organizations/org-1/settings/pricing',
+      href: '/organizations/org-1/finance/configuration/pricing',
       label: 'Pricing',
     });
 

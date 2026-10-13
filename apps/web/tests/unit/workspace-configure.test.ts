@@ -32,15 +32,14 @@ describe('workspace Configure doors', () => {
   it('resolves each door to its registered path inside the organization, and keeps a section hash', () => {
     const items = workspaceConfigureItems('org-1', 'finance', { ...everythingEntitled, capabilities: everyPermission });
     expect(items.map((item) => item.href)).toEqual([
-      '/organizations/org-1/settings/pricing',
-      '/organizations/org-1/settings/pricing#currency',
-      '/organizations/org-1/settings/pricing#getting-paid',
+      '/organizations/org-1/finance/configuration/pricing',
+      '/organizations/org-1/finance/configuration/pricing#getting-paid',
     ]);
   });
 
   it('is gated by the configuration permission, never the permission to operate', () => {
     const operateOnly = new Set<Capability>(['support.read', 'support.case.create'] as Capability[]);
     expect(workspaceConfigureItems('org', 'support', { ...everythingEntitled, capabilities: operateOnly })).toEqual([]);
-    expect(workspaceConfigureItems('org', 'support', { ...everythingEntitled, capabilities: new Set(['support.configure'] as Capability[]) }).map((item) => item.label)).toEqual(['Queues', 'Service levels']);
+    expect(workspaceConfigureItems('org', 'support', { ...everythingEntitled, capabilities: new Set(['support.configure', 'support.read'] as Capability[]) }).map((item) => item.label)).toEqual(['Queues', 'Service levels']);
   });
 });

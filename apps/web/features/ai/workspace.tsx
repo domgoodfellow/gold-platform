@@ -495,7 +495,7 @@ export function AiWorkspace({
           ))}
         </div>
       )}
-      <AiNav base={base} active={view} />
+      {!["agents", "deployments", "knowledge", "tools"].includes(view) && <AiNav base={base} active={view} />}
       {["", "agents", "deployments", "activity"].includes(view) && <form
         className="flex flex-wrap gap-2"
               >

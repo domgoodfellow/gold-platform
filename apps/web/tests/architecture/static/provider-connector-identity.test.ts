@@ -147,7 +147,7 @@ describe('ProviderIcon is distinct from ConnectorIcon (section 1, 56)', () => {
   });
 
   it('no tenant Integrations screen renders ProviderIcon or a Provider-only service', () => {
-    const catalogue = read('features/integrations/catalogue/connector-catalogue.tsx');
+    const catalogue = read('features/integrations/catalogue/app-library.tsx');
     const connected = read('features/integrations/connections/connected-apps.tsx');
     for (const source of [catalogue, connected]) {
       expect(source).not.toContain('ProviderIcon');
@@ -212,7 +212,7 @@ describe('the MapLibre / Google Maps Provider Service boundary is untouched by t
 
     for (const uiFile of [
       'features/platform/providers/provider-detail.tsx',
-      'features/integrations/catalogue/connector-catalogue.tsx',
+      'features/integrations/catalogue/app-library.tsx',
     ]) {
       expect(read(uiFile), uiFile).not.toMatch(/attribution|display restriction/i);
     }

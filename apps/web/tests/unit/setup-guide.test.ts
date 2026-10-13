@@ -16,7 +16,7 @@ describe('guided configuration destinations', () => {
     expect(keys).not.toContain('team');
   });
   it('resumes a required gap and does not invent completion from navigation', () => {
-    const area = { key: 'billing', label: 'Pricing', area: { href: '/organizations/org/settings/pricing', label: 'Pricing' }, message: 'No prices', state: 'incomplete' as const, importance: 'required' as const };
+    const area = { key: 'billing', label: 'Pricing', area: { href: '/organizations/org/finance/configuration/pricing', label: 'Pricing' }, message: 'No prices', state: 'incomplete' as const, importance: 'required' as const };
     const overview = { ...empty, areas: [area], blockers: [area], total: 1 };
     const steps = setupGuide('org', overview, { capabilities: new Set<Capability>(['price.manage']), enabledModules: new Set(['billing']) });
     expect(resumeSetupStep(steps).key).toBe('finance');

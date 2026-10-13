@@ -706,8 +706,8 @@ Workspaces
   Studio
 
 Team / Connections / Agent are workspace-header utilities.
-Settings is reached through the account menu.
-Platform Administration is a separate context in the context switcher for authorized platform staff.
+Help & Support and Settings are persistent footer entries. Account owns identity and Sign out.
+Platform Administration has an independently authorized footer entry and its own central navigation context.
 ```
 
 Only real, reachable and authorized destinations render.
@@ -739,11 +739,11 @@ Dispatch at `/work/dispatch` is a queue, assignment board and selected-Work insp
 
 Communications Home at `/comms` uses a compact search/date/action toolbar, four readiness summaries, a 70/30 desktop grid with attention categories, an Inbox queue and canonical CallHistory preview, and a Today/status/activity/insights rail. Previews are bounded; exact counts and selected-period call rates come from tenant-scoped database reads. Inbox filters and search survive destination links. Outstanding conversations and wrap-up are current work, while missed/recent calls use the selected organization-timezone period. Empty states retain every panel. Today shows recorded communication activity, not an invented schedule; unsupported presence, callbacks, compliance controls and response-time trends are not simulated.
 
-Calls remains `/calls`; Inbox list/detail remains `/comms/inbox`; number inventory/detail remains `/comms/numbers`. Configuration remains `/settings/calls`, with shared visible sections for outcomes, messaging readiness, routing, identity, business hours and recording/compliance information. New call uses the canonical dialer drawer; compose/reply requires a runtime-ready sender. Calling and message handling keep their existing independent capabilities. The routing editor loads saved ordered primary/fallback members before enabling Save; a failed load cannot overwrite them with empty targets. Calls, Inbox and Numbers are destinations in the Communications contextual sidebar.
+Calls remains `/calls`; Inbox list/detail remains `/comms/inbox`; number inventory/detail belongs to `/comms/configuration/numbers`. Communications Configuration uses `/comms/configuration`, with addressable Calling, Messaging, Numbers and Email sections, a link to canonical Work scheduling hours, and recording/compliance information. New call uses the canonical dialer drawer; compose/reply requires a runtime-ready sender. Calling and message handling keep their existing independent capabilities. The routing editor loads saved ordered primary/fallback members before enabling Save; a failed load cannot overwrite them with empty targets. Overview, Calls, Inbox and one Configuration destination form the Communications contextual sidebar; operator number reads remain directly addressable.
 
 Finance Home uses a contained operational dashboard with four financial-state summaries, inline Needs attention categories, open invoices, recent payments, collections/performance, and a due/status/activity/insights rail. Selected-month received payments and reporting are separate from current receivables and uninvoiced priced Work. Empty organizations keep the complete composition. Quotes, Invoices and Payments use URL-backed search, status, Customer, date and pagination controls; dashboard previews are deliberately bounded, while totals come from complete database aggregates. Finance search and financial reporting have contextual routes under `/finance/search` and `/finance/reports`, while contextual support pages remain absent from the sidebar.
 
-Finance creation uses the shared PageDrawer: quotes add snapshotted price-book lines to canonical Work, invoices review eligible priced Work before canonical issuance, and payments select or preselect an invoice before append-only recording. Corrections use signed entries; manual source never implies a payment method. Invoice and quote links open `/work/[workItemId]?tab=financials`. Services & Pricing remains owned by `/settings/pricing`, with a scannable catalogue and contextual create/edit drawers, trading currency and payment configuration. Aggregate financial values require `report.read`; pricing, issuance, payment and organization configuration permissions remain independent.
+Finance creation uses the shared PageDrawer: quotes add snapshotted price-book lines to canonical Work, invoices review eligible priced Work before canonical issuance, and payments select or preselect an invoice before append-only recording. Corrections use signed entries; manual source never implies a payment method. Invoice and quote links open `/work/[workItemId]?tab=financials`. Services & Pricing belongs to `/finance/configuration/pricing`, with a scannable catalogue and existing create/edit drawers. Payment configuration remains permission-gated, and trading currency links to its sole General Settings editor. Aggregate financial values require `report.read`; pricing, issuance, payment and organization configuration permissions remain independent.
 
 Marketing and Support use domain operating Homes at `/marketing` and `/support`; tenant AI uses an agent-management operating Home at `/ai`. Support has a dense Home with four exact KPI drilldowns, attention lists, active Cases, queue workload, resolution performance and a desktop context rail. Local navigation reaches Cases list/board, queue workbench, Case detail, service levels and reports. Shared drawers own Case creation and editing; narrow screens use Case summaries and stacked inspectors. Empty views retain usable panel structure and real configuration actions. Support uses Headset, Marketing uses Megaphone, AI uses Bot, and Work retains Wrench. Organization workspace selection stays flat; entered workspaces use contextual navigation. The global Agent utility retains Bot and opens the Agent rail; tenant AI exposes neither Platform AI Runtime nor provider credentials. Support's visual and interaction references live in `docs/design/support/`.
 
@@ -2020,3 +2020,34 @@ Those belong to their respective canonical documents.
 ## Marketing workspace
 
 Marketing Home is a compact operational dashboard: four evidence-backed KPIs, a contained attention panel with inline categories, campaign performance and active-campaign tables, recent inquiries and acquisition/source results, plus a supporting activity/readiness/insights rail. Empty organizations retain all panel geometry. Local Home/Campaigns/Audiences/Leads/Performance navigation preserves the flat organization workspace chooser and contextual workspace sidebar. Campaign detail is deep-linkable; campaign and audience editors and inquiry review use shared PageDrawer primitives. Collection search, review/status/objective/owner/source filters, date bounds and pagination persist in the URL. Table overflow is contained within its panel at narrow widths. Activation expresses Marketing lifecycle, not delivery success; unestablished consent and unavailable promotional delivery are shown explicitly.
+
+
+## Persistent application controls
+
+The existing sidebar footer presents Platform (only with server-resolved platform authority),
+Help & Support, Settings, then the distinct Account/session menu. Mobile Agent remains a Sheet
+control. Locked organizations keep the Plan & usage recovery destination. The no-organization
+fallback offers personal Settings without inventing an organization Help or Platform context.
+`SidebarFooterNavigation` owns the shared footer presentation; `AccountMenu` owns identity and
+Sign out. `settings-icons.ts` owns recognizable Settings destination icons, used with accessible
+labels and rail tooltips. The existing `SettingsNav` retains search and closes the mobile Sheet
+on navigation. Back to app validates its per-tab hint against current authorized destinations
+and falls back to organization Home. Stored navigation is never an authorization authority.
+
+
+## Workspace Configuration navigation
+
+A workspace's operating destinations and its single Configuration row are visually separated.
+`projectShell` supplies only authorized concerns from the existing registries. Configuration-only
+entry does not expose an operating Overview. `workspaceNavigation` resolves configuration targets
+before operating ancestors and keeps Configuration selected on authorized section URLs.
+The page-content `ConfigurationSections` navigation wraps at phone/tablet widths and becomes
+sticky beside the editor on desktop; it remains independent of application-sidebar collapse.
+`WorkspaceConfigure` is a shortcut to that root, rather than a competing dropdown hierarchy.
+
+
+Configuration section ownership is declared by `CONFIG_TARGETS` and `WORKSPACE_CONFIGURE`; `ConfigurationSections` renders those resolved links using hover, selected and focus roles. Small concerns use URL fragments; resources use routes. General Settings applies the same layout to Identity, Address/regional defaults and Contact anchors. Sections remain visible at phone/tablet widths and beside the editor on desktop, with 44px minimum link height and an explicit selected section. Page loading uses the existing organization loading boundary; missing or unauthorized concerns resolve to the existing not-found boundary before data reads. No empty configuration root is offered.
+
+Platform navigation flattens the existing authorized projection for presentation so every destination retains an icon and tooltip in the collapsed sidebar. The business switcher changes business context; it does not duplicate the Platform entry. `NavigationActivityContext` carries only a retention hint from the persistent telephone owner. During an active call, cross-business, cross-business Platform, and global personal Settings links open a separate tab. Ordinary same-organization configuration, General Settings and workspace navigation reuse the existing telephone runtime. This does not provide call continuation after reload or browser termination.
+
+Channel diagnostics reuse `messagingSenders` and the existing sender/provider facts. The UI distinguishes planned/unentitled/disabled features, missing provider/callback/relay configuration, inactive or non-SMS numbers, missing active identities, and unverified sending domains. Sender configuration does not grant `message.send`; configuration checks passing never asserts provider acceptance or delivery. Outbound email and mailbox synchronization remain separate capabilities.

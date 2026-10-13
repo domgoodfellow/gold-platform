@@ -6,6 +6,7 @@ import { bindingForRequestHost } from '@/lib/route/hostname';
 import { LAST_ORGANIZATION_COOKIE, LAST_ORGANIZATION_COOKIE_OPTIONS } from '@/lib/route/last-organization';
 import { organizationIdFromPath } from '@/lib/route/platform-context';
 import { isServablePageSlug } from '@/lib/domain/public-site/paths';
+import { legacyConfigurationPath } from '@/lib/route/configuration-redirect';
 
 /**
  * The routing rules themselves — the closed public-path set and `decideRedirect` — live in
@@ -54,6 +55,16 @@ export async function proxy(request: NextRequest) {
     url.pathname = target;
     url.search = '';
     return NextResponse.redirect(url);
+  }
+
+  // Compatibility redirects read no business data and preserve search and browser fragments.
+  const canonicalConfiguration = legacyConfigurationPath(pathname);
+  if (canonicalConfiguration) {
+    const url = request.nextUrl.clone();
+    url.pathname = canonicalConfiguration;
+    const redirected = NextResponse.redirect(url);
+    for (const cookie of response.cookies.getAll()) redirected.cookies.set(cookie);
+    return redirected;
   }
 
   // Remember the business being worked in, so a later sign-in lands there. Only a hint: the

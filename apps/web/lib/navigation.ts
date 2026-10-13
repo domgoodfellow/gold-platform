@@ -27,8 +27,9 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
  * a sidebar stops making sense.
  *
  * The test for a permanent row: would somebody enter this area to do ongoing work, or are they
- * configuring how another workspace behaves? The second kind lives under `settings` and is
- * reached from the Settings map (`Area.sidebar: false`).
+ * configuring how another workspace behaves? Workspace concerns live under their canonical
+ * Configuration owner; shared organization concerns retain Settings ownership. `Area.sidebar:
+ * false` hides record/compatibility destinations without creating a second editor.
  *
  * D23 still governs the part that matters: work comes first and Settings last, and an operator
  * must never reach today's work by going through settings.
@@ -149,7 +150,7 @@ export const MODULES = [
     label: 'Billing',
     description:
       'A price book, quotes, invoices and payments. A business that invoices somewhere else runs without this and keeps every job it recorded.',
-    configuredAt: { segment: 'settings', path: 'pricing', label: 'Pricing' },
+    configuredAt: { segment: 'finance', path: 'configuration/pricing', label: 'Pricing' },
   },
   {
     key: 'assets',
@@ -235,7 +236,7 @@ export const MODULES = [
     // Configured inside Pricing's own "Getting paid" section — a card collects against an
     // invoice Billing produced, so this declares the dependency rather than leaving a link
     // pointing at an area a second switch could hide without saying so.
-    configuredAt: { segment: 'settings', path: 'pricing', section: 'getting-paid', label: 'Pricing' },
+    configuredAt: { segment: 'finance', path: 'configuration/pricing', section: 'getting-paid', label: 'Pricing' },
     requires: 'billing',
   },
   {
@@ -248,7 +249,7 @@ export const MODULES = [
     // `call-setup` and CRM's `sales-stages`, split from the single combined Settings entry they
     // used to share). Pointed at the larger of the two rather than widened to carry both — a
     // follow-up architecture issue, not solved here.
-    configuredAt: { segment: 'settings', path: 'calls', label: 'Call setup' },
+    configuredAt: { segment: 'comms', path: 'configuration/calling', label: 'Call setup' },
   },
   {
     key: 'integrations',
@@ -374,7 +375,7 @@ export const AREAS: readonly Area[] = [
   // the separate Text messages and Email pages (their old addresses redirect here, filtered). Gated by the sending authority (`message.send`)
   // and by either channel's Features: a business with only one of the two channels still has its Inbox.
   { segment: 'comms-inbox', label: 'Inbox', group: 'workspaces', workspace: 'communications', route: 'comms/inbox', module: 'reception', relevantCapabilities: ['message.send'], featureKeys: ['inbound_sms', 'outbound_sms', 'sending'] },
-  { segment: 'comms-numbers', label: 'Numbers', group: 'workspaces', workspace: 'communications', route: 'comms/numbers', module: 'reception', relevantCapabilities: ['call.place', 'message.send'], featureKeys: ['number_inventory', 'caller_id'] },
+  { segment: 'comms-numbers', label: 'Numbers', group: 'workspaces', workspace: 'communications', route: 'comms/configuration/numbers', sidebar: false, module: 'reception', relevantCapabilities: ['call.place', 'message.send'], featureKeys: ['number_inventory', 'caller_id'] },
   { segment: 'marketing', label: 'Marketing', group: 'workspaces', workspace: 'marketing', relevantCapabilities: ['marketing.read', 'marketing.manage'] },
   { segment: 'support', label: 'Support', group: 'workspaces', workspace: 'support', relevantCapabilities: ['support.read'] },
   { segment: 'ai', label: 'AI', group: 'workspaces', workspace: 'ai' },
@@ -459,6 +460,8 @@ export const AREAS: readonly Area[] = [
 export type ConfigTarget = {
   /** Settings scope that owns this configuration, independent of workspace entitlement. */
   scope: SettingsScopeKey;
+  /** Operating editors and shared organization owners may be linked, never relocated by configuration. */
+  treatment?: 'operating' | 'shared';
   key: string;
   /** The workspace whose behaviour this configures, when it is one workspace's (`WORKSPACES`); absent for the organization as a whole. */
   workspace?: WorkspaceKey;
@@ -469,6 +472,8 @@ export type ConfigTarget = {
   featureKeys?: readonly string[];
   /** Holding **any** of these lets a member configure it. Never empty — a target nobody may configure is a dead door. */
   permission: readonly Capability[];
+  /** Additional capabilities required by an existing domain read or command. */
+  requiresAll?: readonly Capability[];
   /**
    * `false` marks a door that belongs to its workspace and is reached from that workspace's
    * Configure control (`WORKSPACE_CONFIGURE`), not listed in the Settings directory. It is still
@@ -479,42 +484,43 @@ export type ConfigTarget = {
 
 export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'general', scope: 'organization', path: 'settings/general', permission: ['organization.manage'] },
-  { key: 'resources', scope: 'organization', workspace: 'field', path: 'resources', entitledBy: 'resources', permission: ['resource.create', 'resource.update'] },
-  { key: 'locations', scope: 'organization', workspace: 'field', path: 'locations', entitledBy: 'locations', permission: ['location.create'] },
-  { key: 'website', scope: 'organization', workspace: 'studio', path: 'studio/website', permission: ['organization.manage'] },
-  { key: 'automation-rules', scope: 'organization', workspace: 'automations', path: 'automations/rules', entitledBy: 'automations', permission: ['automation.manage'] },
+  { key: 'resources', treatment: 'operating', scope: 'organization', workspace: 'field', path: 'resources', entitledBy: 'resources', permission: ['resource.create', 'resource.update'] },
+  { key: 'locations', treatment: 'operating', scope: 'organization', workspace: 'field', path: 'locations', entitledBy: 'locations', permission: ['location.create'] },
+  { key: 'website', treatment: 'operating', scope: 'organization', workspace: 'studio', path: 'studio/website', permission: ['organization.manage'] },
+  { key: 'automation-rules', treatment: 'operating', scope: 'organization', workspace: 'automations', path: 'automations/rules', entitledBy: 'automations', permission: ['automation.manage'] },
   { key: 'ai-agents', scope: 'organization', workspace: 'ai', path: 'ai/agents', featureKeys: ['agent_tools'], permission: ['organization.manage'] },
   { key: 'work-configuration', scope: 'organization', workspace: 'field', path: 'work/configuration', permission: ['field.manage'] },
   { key: 'schedule-configuration', scope: 'organization', workspace: 'field', path: 'schedule/configuration', entitledBy: 'schedule', permission: ['field.manage'] },
-  { key: 'pricing', scope: 'organization', workspace: 'finance', path: 'settings/pricing', entitledBy: 'pricing', permission: ['price.manage'] },
-  { key: 'custom-fields', scope: 'organization', path: 'settings/custom-fields', permission: ['field.manage'] },
+  { key: 'pricing', scope: 'organization', workspace: 'finance', path: 'finance/configuration/pricing', entitledBy: 'pricing', permission: ['price.manage', 'organization.manage'] },
+  { key: 'customer-fields', scope: 'organization', workspace: 'crm', path: 'sales/configuration/fields', permission: ['field.manage'], directory: false },
+  { key: 'custom-fields', treatment: 'shared', scope: 'organization', path: 'settings/custom-fields', permission: ['field.manage'] },
   // Entitled through Pipeline, permitted through field.manage: naming stages is not moving a customer between them.
-  { key: 'sales-stages', scope: 'organization', workspace: 'crm', path: 'settings/sales-stages', entitledBy: 'pipeline', permission: ['field.manage'] },
-  { key: 'opportunity-stages', scope: 'organization', workspace: 'crm', path: 'settings/opportunity-stages', entitledBy: 'opportunity-pipeline', permission: ['field.manage'] },
+  { key: 'sales-stages', scope: 'organization', workspace: 'crm', path: 'sales/configuration/relationship-stages', entitledBy: 'pipeline', permission: ['field.manage'] },
+  { key: 'opportunity-stages', scope: 'organization', workspace: 'crm', path: 'sales/configuration/opportunity-stages', entitledBy: 'opportunity-pipeline', permission: ['field.manage'] },
   // Entitled through Calls, permitted through field.manage: configuring outcomes and routing is not making calls.
   // A dedicated settings route, never `calls#setup` — a fragment into an operational page is not a canonical destination.
-  { key: 'call-setup', scope: 'organization', workspace: 'communications', path: 'settings/calls', entitledBy: 'calls', permission: ['field.manage'] },
+  { key: 'call-setup', scope: 'organization', workspace: 'communications', path: 'comms/configuration/calling', entitledBy: 'calls', permission: ['field.manage', 'organization.manage'] },
   { key: 'team', scope: 'access', path: 'settings/access', permission: ['role.manage'] },
-  { key: 'branding', scope: 'organization', workspace: 'studio', path: 'settings/branding', permission: ['organization.manage'] },
-  { key: 'public-profile', scope: 'organization', workspace: 'studio', path: 'settings/public-profile', permission: ['organization.manage'] },
-  { key: 'domains', scope: 'organization', workspace: 'studio', path: 'settings/domains', permission: ['organization.manage'] },
-  { key: 'communications', scope: 'organization', workspace: 'communications', path: 'settings/communications', permission: ['organization.manage'] },
+  { key: 'branding', treatment: 'shared', scope: 'organization', workspace: 'studio', path: 'settings/branding', permission: ['organization.manage'] },
+  { key: 'public-profile', treatment: 'shared', scope: 'organization', workspace: 'studio', path: 'settings/public-profile', permission: ['organization.manage'] },
+  { key: 'domains', treatment: 'shared', scope: 'organization', workspace: 'studio', path: 'settings/domains', permission: ['organization.manage'] },
+  { key: 'communications', scope: 'organization', workspace: 'communications', path: 'comms/configuration/messaging', permission: ['organization.manage'] },
   // Proving a sending domain is infrastructure readiness, not a Communications operating act, so
   // it is `organization.manage` like Domains rather than a messaging capability — and it is its
   // own destination rather than a block inside Communications, because a lifecycle with DNS
   // records, a review step and a verification check is not a field on somebody else's page.
-  { key: 'email', scope: 'organization', workspace: 'communications', path: 'settings/email', permission: ['organization.manage'] },
+  { key: 'email', scope: 'organization', workspace: 'communications', path: 'comms/configuration/email', permission: ['organization.manage'] },
   { key: 'integrations', scope: 'connections', path: 'settings/connections', entitledBy: 'integrations', permission: ['integration.manage'] },
   // Its own permission and no entitlement: handing over a private value is not connecting an app, and a business that has switched integrations off still owns what it stored.
   { key: 'secrets', scope: 'connections', path: 'settings/secrets', permission: ['secret.manage'] },
   { key: 'features', scope: 'organization', path: 'settings/features', permission: ['feature.manage'] },
   { key: 'plan', scope: 'plan', path: 'settings/plan', permission: ['billing.manage'] },
   // Workspace-owned doors: reached from their workspace's Configure control, not listed in the Settings directory.
-  { key: 'phone-numbers', scope: 'organization', workspace: 'communications', path: 'comms/numbers', entitledBy: 'calls', permission: ['organization.manage'], directory: false },
-  { key: 'forms', scope: 'organization', workspace: 'studio', path: 'studio/forms', permission: ['organization.manage'], directory: false },
-  { key: 'support-queues', scope: 'organization', workspace: 'support', path: 'support/queues', permission: ['support.configure'], directory: false },
-  { key: 'support-service-levels', scope: 'organization', workspace: 'support', path: 'support/service-levels', permission: ['support.configure'], directory: false },
-  { key: 'automation-messages', scope: 'organization', workspace: 'automations', path: 'automations/messages', entitledBy: 'automations', permission: ['automation.manage'], directory: false },
+  { key: 'phone-numbers', scope: 'organization', workspace: 'communications', path: 'comms/configuration/numbers', entitledBy: 'calls', permission: ['organization.manage'], directory: false },
+  { key: 'forms', treatment: 'operating', scope: 'organization', workspace: 'studio', path: 'studio/forms', permission: ['organization.manage'], directory: false },
+  { key: 'support-queues', scope: 'organization', workspace: 'support', path: 'support/configuration/queues', permission: ['support.configure'], requiresAll: ['support.read'], directory: false },
+  { key: 'support-service-levels', scope: 'organization', workspace: 'support', path: 'support/configuration/service-levels', permission: ['support.configure'], requiresAll: ['support.read'], directory: false },
+  { key: 'automation-messages', treatment: 'operating', scope: 'organization', workspace: 'automations', path: 'automations/messages', entitledBy: 'automations', permission: ['automation.manage'], directory: false },
   { key: 'ai-deployments', scope: 'organization', workspace: 'ai', path: 'ai/deployments', featureKeys: ['agent_tools'], permission: ['organization.manage'], directory: false },
   { key: 'ai-knowledge', scope: 'organization', workspace: 'ai', path: 'ai/knowledge', featureKeys: ['agent_tools'], permission: ['organization.manage'], directory: false },
   { key: 'ai-tools', scope: 'organization', workspace: 'ai', path: 'ai/tools', featureKeys: ['agent_tools'], permission: ['organization.manage'], directory: false },
@@ -566,7 +572,7 @@ export function configTargetOffered(target: ConfigTarget, gate: ConfigGate): boo
     if (!area || !areaEntitled(area, gate.enabledModules, gate.featureAvailability)) return false;
     if (!areaRelevantToShape(area, gate.schedulableWork)) return false;
   }
-  return !gate.capabilities || target.permission.some((capability) => gate.capabilities!.has(capability));
+  return !gate.capabilities || (target.permission.some((capability) => gate.capabilities!.has(capability)) && (target.requiresAll ?? []).every(capability => gate.capabilities!.has(capability)));
 }
 
 /** Whether `area` should appear in navigation for a caller with `capabilities` — the layer `areasIn`/`OrgNavBar` both apply on top of the module gate. Absent `relevantCapabilities` always passes; absent `capabilities` always passes (no gate to apply). */
@@ -766,11 +772,14 @@ export type WorkspaceConfigureDoor = {
  * The order is the order of the concerns, most frequently changed first.
  */
 export const WORKSPACE_CONFIGURE: Partial<Record<WorkspaceKey, readonly WorkspaceConfigureDoor[]>> = {
+  crm: [{ target: 'sales-stages', label: 'Relationship stages' }, { target: 'opportunity-stages', label: 'Opportunity stages' }, { target: 'customer-fields', label: 'Customer fields' }],
   communications: [
-    { target: 'call-setup', label: 'Call setup' },
-    { target: 'communications', label: 'Phone and messaging' },
-    { target: 'phone-numbers', label: 'Numbers' },
-    { target: 'email', label: 'Email sending' },
+    { target: 'call-setup', label: 'Calling & routing' },
+    { target: 'communications', label: 'Messaging' },
+    { target: 'phone-numbers', label: 'Numbers & assignments' },
+    { target: 'email', label: 'Email' },
+    { target: 'schedule-configuration', label: 'Business hours' },
+    { target: 'call-setup', label: 'Recording & compliance (information)', hash: '#recording' },
   ],
   marketing: [{ target: 'forms', label: 'Forms & acquisition sources' }],
   support: [
@@ -785,7 +794,6 @@ export const WORKSPACE_CONFIGURE: Partial<Record<WorkspaceKey, readonly Workspac
   ],
   finance: [
     { target: 'pricing', label: 'Services & pricing' },
-    { target: 'pricing', label: 'Trading currency', hash: '#currency' },
     { target: 'pricing', label: 'Payment collection', hash: '#getting-paid' },
   ],
   automations: [
@@ -811,15 +819,41 @@ export type ConfigureItem = { key: string; label: string; href: string };
 
 /** The doors a member may be offered from `workspace`'s Configure control, resolved to hrefs. */
 export function workspaceConfigureItems(organizationId: string, workspace: WorkspaceKey, gate: ConfigGate): ConfigureItem[] {
-  return (WORKSPACE_CONFIGURE[workspace] ?? []).flatMap((door) => {
+  const doors = WORKSPACE_CONFIGURE[workspace] ?? [];
+  if (!doors.some(door => { const target = configTarget(door.target); return target.workspace === workspace && target.treatment !== 'operating' && configTargetOffered(target, gate); })) return [];
+  return doors.flatMap((door) => {
     const target = configTarget(door.target);
-    if (!configTargetOffered(target, gate)) return [];
+    if (target.treatment === 'operating' || !configTargetOffered(target, gate)) return [];
     return [{ key: `${door.target}${door.hash ?? ''}`, label: door.label, href: `/organizations/${organizationId}/${target.path}${door.hash ?? ''}` }];
   });
 }
 
 /** The registered configuration target a corrective link points at, found by its path — so a surface that only holds an href can still ask who may configure it. */
 export function configTargetForHref(href: string): ConfigTarget | undefined {
-  const path = href.split('#')[0].replace(/^\/organizations\/[^/]+\//, '');
+  const path = href.split(/[?#]/)[0].replace(/^\/organizations\/[^/]+\//, '');
   return CONFIG_TARGETS.find((target) => target.path === path);
+}
+
+/** Most specific registered workspace configuration resource, including a record beneath it. */
+export function workspaceConfigurationTarget(pathname: string): ConfigTarget | undefined {
+  const path = pathname.split(/[?#]/)[0].replace(/^\/organizations\/[^/]+\//, '').replace(/\/$/, '');
+  return CONFIG_TARGETS.filter(target => target.workspace && !target.treatment && (path === target.path || path.startsWith(`${target.path}/`))).sort((a, b) => b.path.length - a.path.length)[0];
+}
+
+
+/** One root per registered workspace; absent when it has no real configuration concerns. */
+export function workspaceConfigurationHref(organizationId: string, workspace: WorkspaceKey): string {
+  const owner = WORKSPACES.find(candidate => candidate.key === workspace)!;
+  return `/organizations/${organizationId}/${owner.home}/configuration`;
+}
+
+export function workspaceConfigurationOwner(pathname: string): WorkspaceKey | undefined {
+  const path = pathname.split(/[?#]/)[0].replace(/\/$/, '');
+  const organization = path.match(/^\/organizations\/([^/]+)\//)?.[1];
+  if (!organization) return undefined;
+  const root = WORKSPACES.find(workspace => path === workspaceConfigurationHref(organization, workspace.key) || path.startsWith(`${workspaceConfigurationHref(organization, workspace.key)}/`));
+  if (root) return root.key;
+  const target = CONFIG_TARGETS.filter(target => target.workspace && !target.treatment && (path === `/organizations/${organization}/${target.path}` || path.startsWith(`/organizations/${organization}/${target.path}/`)))
+    .sort((a, b) => b.path.length - a.path.length)[0];
+  return target?.workspace;
 }

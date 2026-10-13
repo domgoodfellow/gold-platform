@@ -1,3 +1,5 @@
+import { ConfigureLink } from '@/components/controls/configure-link';
+import { workspaceConfigurationHref } from '@/lib/navigation';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Users, CircleDollarSign, CalendarClock, TrendingUp } from 'lucide-react';
@@ -34,7 +36,7 @@ export function CrmHome({organizationId,timezone,month,summary,customers,custome
     {label:'Open opportunities',value:summary.open,context:'In stages classified Open',href:`${base}/opportunities?kind=open`,icon:CircleDollarSign},
     {label:'Follow-ups due today',value:followUpsEnabled?summary.today:'Unavailable',context:timezone,href:followUpsEnabled?`${base}/follow-ups?status=open&due=today`:undefined,icon:CalendarClock},
     {label:'Forecast this month',value:<CurrencyValues values={summary.forecast}/>,context:'Open · unweighted expected close',href:`${base}/opportunities?kind=open&closeFrom=${month}&closeBefore=${nextMonth.toISOString().slice(0,10)}`,icon:TrendingUp}];
-  return <WorkspaceHome title="CRM" configure={mayConfigure} actions={<>
+  return <WorkspaceHome title="CRM" actions={<>{mayConfigure ? <ConfigureLink href={workspaceConfigurationHref(organizationId, 'crm')} label="Configuration" /> : null}
     <form method="get" className="flex items-center gap-1"><TextInput aria-label="Reporting month" name="month" type="month" defaultValue={month.slice(0,7)} className="w-40"/><Button type="submit" tone="text" size="small">Apply</Button></form>
     {mayCreate?<CreateCustomerTrigger/>:null}{mayCreateOpportunity?<OpportunitySheet {...opportunityOptions}/>:null}
   </>}>
@@ -43,7 +45,7 @@ export function CrmHome({organizationId,timezone,month,summary,customers,custome
       <div className="order-1 min-w-0 space-y-6 xl:order-none">
         <OperationalPanel title="Needs attention" action={followUpsEnabled && followUpOptions.mayManage?<FollowUpSheet {...followUpOptions}/>:null}><NeedsAttention summary={summary} overdue={overdue} today={today} noNext={noNext} unassigned={unassigned} options={followUpOptions} followUpsEnabled={followUpsEnabled}/></OperationalPanel>
         <OperationalPanel title="Pipeline" href={`${base}/opportunities/pipeline`} hrefLabel="View pipeline"><div className="space-y-4">
-          {opportunitySummary.filter(s=>s.stageId).length?<div className="flex gap-2 overflow-x-auto pb-2">{opportunitySummary.filter(s=>s.stageId).map(stage=><Link key={stage.stageId} href={`${base}/opportunities?stage=${stage.stageId}`} className="min-w-36 flex-1 rounded-md border-t-2 border-foreground bg-surface p-3"><div className="flex justify-between gap-3 text-sm font-medium"><span>{stage.name}</span><span>{stage.count}</span></div><p className="my-1 text-xs capitalize text-muted">{stage.kind}</p>{stage.values.map(v=><p key={v.currency} className="text-xs tabular-nums">{formatOpportunityValue(v.amountMinor,v.currency)}</p>)}</Link>)}</div>:<PanelState kind="not-configured" action={mayConfigure?<ButtonLink tone="secondary" href={`${base}/settings/opportunity-stages`}>Configure opportunity stages</ButtonLink>:undefined}>No opportunity stages are configured, so there is no pipeline to show yet.</PanelState>}
+          {opportunitySummary.filter(s=>s.stageId).length?<div className="flex gap-2 overflow-x-auto pb-2">{opportunitySummary.filter(s=>s.stageId).map(stage=><Link key={stage.stageId} href={`${base}/opportunities?stage=${stage.stageId}`} className="min-w-36 flex-1 rounded-md border-t-2 border-foreground bg-surface p-3"><div className="flex justify-between gap-3 text-sm font-medium"><span>{stage.name}</span><span>{stage.count}</span></div><p className="my-1 text-xs capitalize text-muted">{stage.kind}</p>{stage.values.map(v=><p key={v.currency} className="text-xs tabular-nums">{formatOpportunityValue(v.amountMinor,v.currency)}</p>)}</Link>)}</div>:<PanelState kind="not-configured" action={mayConfigure?<ButtonLink tone="secondary" href={`${base}/sales/configuration/opportunity-stages`}>Configure opportunity stages</ButtonLink>:undefined}>No opportunity stages are configured, so there is no pipeline to show yet.</PanelState>}
           {opportunitySummary.find(s=>s.stageId===null)?.count?<Link href={`${base}/opportunities?stage=unstaged`} className="text-xs text-muted underline">{opportunitySummary.find(s=>s.stageId===null)?.count} unstaged opportunities</Link>:null}
           <OpportunityTable organizationId={organizationId} opportunities={opportunities} timezone={timezone} followUpOptions={followUpsEnabled?followUpOptions:undefined}/>
         </div></OperationalPanel>

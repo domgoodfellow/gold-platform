@@ -31,7 +31,7 @@ describe('canonical Settings route contract', () => {
 
   it('registers canonical Settings-owned configuration while retaining workspace-owned routes', () => {
     const byKey = new Map(CONFIG_TARGETS.map((target) => [target.key, target.path]));
-    expect(byKey.get('pricing')).toBe('settings/pricing');
+    expect(byKey.get('pricing')).toBe('finance/configuration/pricing');
     expect(byKey.get('custom-fields')).toBe('settings/custom-fields');
     expect(byKey.get('team')).toBe('settings/access');
     expect(byKey.get('integrations')).toBe('settings/connections');
@@ -51,7 +51,7 @@ describe('canonical Settings route contract', () => {
       'settings/connections/page.tsx',
       'settings/connections/apps/page.tsx',
       'settings/connections/[connectionId]/page.tsx',
-      'settings/pricing/page.tsx',
+      'finance/configuration/pricing/page.tsx',
       'settings/custom-fields/page.tsx',
     ]) expect(existsSync(route(path)), path).toBe(true);
   });
@@ -71,11 +71,11 @@ describe('canonical Settings route contract', () => {
     }
     // A sub-page keeps the one ancestor it belongs under.
     expect(read('app/organizations/[organizationId]/settings/connections/[connectionId]/page.tsx')).toContain("label: 'Connections'");
-    expect(read('app/organizations/[organizationId]/settings/pricing/page.tsx')).toContain("workspaceConfigCrumbs(organizationId, 'pricing')");
+    expect(read('app/organizations/[organizationId]/finance/configuration/pricing/page.tsx')).toContain("workspaceConfigCrumbs(organizationId, 'pricing', gate)");
   });
 
   it('keeps legacy routes as direct redirects to final canonical destinations', () => {
-    expect(read('app/organizations/[organizationId]/pricing/page.tsx')).toContain('/settings/pricing');
+    expect(read('app/organizations/[organizationId]/pricing/page.tsx')).toContain('/finance/configuration/pricing');
     expect(read('app/organizations/[organizationId]/fields/page.tsx')).toContain('/settings/custom-fields');
     expect(read('app/organizations/[organizationId]/roles/page.tsx')).toContain('/settings/access/');
     expect(read('app/organizations/[organizationId]/integrations/page.tsx')).toContain('/settings/connections');
@@ -86,9 +86,9 @@ describe('Settings is one contextual sidebar, not a landing page or a directory'
   const landing = read('app/organizations/[organizationId]/settings/page.tsx');
   const organization = read('app/organizations/[organizationId]/settings/organization/page.tsx');
 
-  it('the account menu enters Settings through the root, which redirects to a destination', () => {
-    const menu = read('components/navigation/account-menu.tsx');
-    expect(menu).toContain('const settingsHref = settingsLandingHref(from);');
+  it('the persistent footer enters Settings through the root, which redirects to a destination', () => {
+    const menu = read('components/navigation/sidebar-footer-navigation.tsx');
+    expect(menu).toContain('settingsLandingHref(from)');
     expect(landing).toContain('redirect(defaultSettingsHref(');
     expect(landing).not.toContain('<PageHeader');
   });
@@ -111,10 +111,10 @@ describe('Settings is one contextual sidebar, not a landing page or a directory'
     const pages = [
       'app/organizations/[organizationId]/settings/branding/page.tsx',
       'app/organizations/[organizationId]/settings/general/page.tsx',
-      'app/organizations/[organizationId]/settings/pricing/page.tsx',
+      'app/organizations/[organizationId]/finance/configuration/pricing/page.tsx',
       'app/organizations/[organizationId]/settings/custom-fields/page.tsx',
       'app/organizations/[organizationId]/settings/features/page.tsx',
-      'app/organizations/[organizationId]/settings/communications/page.tsx',
+      'app/organizations/[organizationId]/comms/configuration/messaging/page.tsx',
       'app/organizations/[organizationId]/settings/domains/page.tsx',
       'app/organizations/[organizationId]/settings/access/access-page.tsx',
       'app/organizations/[organizationId]/settings/connections/connections-page.tsx',
@@ -135,9 +135,9 @@ describe('Settings is one contextual sidebar, not a landing page or a directory'
 
   it('workspace-owned configuration carries its workspace as ancestry, not Settings', () => {
     for (const page of [
-      'app/organizations/[organizationId]/settings/pricing/page.tsx',
-      'app/organizations/[organizationId]/settings/calls/page.tsx',
-      'app/organizations/[organizationId]/settings/sales-stages/page.tsx',
+      'app/organizations/[organizationId]/finance/configuration/pricing/page.tsx',
+      'app/organizations/[organizationId]/comms/configuration/calling/page.tsx',
+      'app/organizations/[organizationId]/sales/configuration/relationship-stages/page.tsx',
     ]) {
       const source = read(page);
       expect(source, page).toContain('workspaceConfigCrumbs(');

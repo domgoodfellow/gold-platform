@@ -1,3 +1,4 @@
+import { WORKSPACES, workspaceConfigureItems, configTarget } from '@/lib/navigation';
 import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { OrganizationFrame } from '@/app/organizations/[organizationId]/org-shell';
@@ -49,7 +50,10 @@ export async function OrganizationShell({
   // Settings is a context of this same shell: its destinations replace the workspaces in the
   // sidebar while a person is inside it, and search reaches the configuration workspaces own.
   const settings = locked ? [] : projectSettingsNav(organizationId, configGate);
-  const settingsSearch = locked ? [] : settingsSearchItems(organizationId, settings, offeredSections(configGate).flatMap((section) => section.entries));
+  const settingsSearch = locked ? [] : settingsSearchItems(organizationId, settings, [
+    ...offeredSections(configGate).flatMap(section => section.entries),
+    ...WORKSPACES.flatMap(workspace => workspaceConfigureItems(organizationId, workspace.key, configGate)).map(section => ({ key: section.key.split('#')[0], title: section.label, description: 'Workspace configuration', path: configTarget(section.key.split('#')[0]).path })),
+  ].filter((entry, index, entries) => entries.findIndex(candidate => candidate.path === entry.path) === index));
 
   async function signOutAction() {
     'use server';

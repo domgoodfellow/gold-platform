@@ -35,6 +35,6 @@ export async function saveCommunicationProfileAction(_state: CommunicationProfil
     if (error instanceof DomainError) return { error: error.message };
     return { error: error instanceof Error ? error.message : 'Website messaging could not be saved.' };
   }
-  revalidatePath(`/organizations/${organizationId}/settings/communications`);
+  revalidatePath(`/organizations/${organizationId}/comms/configuration/messaging`);
   return { error: null, success: 'Website messaging saved.' };
 }

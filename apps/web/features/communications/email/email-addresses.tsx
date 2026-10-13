@@ -8,7 +8,7 @@ import {
   addEmailAddressAction,
   setEmailReceivingAction,
   type EmailDomainState,
-} from '@/app/organizations/[organizationId]/settings/email/actions';
+} from '@/app/organizations/[organizationId]/comms/configuration/email/actions';
 import type { EmailIdentityView } from '@/lib/domain/email/identities';
 
 const INITIAL: EmailDomainState = { error: null, notice: null, done: false };

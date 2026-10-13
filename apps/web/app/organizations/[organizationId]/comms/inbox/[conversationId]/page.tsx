@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { ConversationDetailView } from '@/features/communications/inbox/conversation-detail';
 import { currentMembershipId, getConversationDetail, listAssignableMembers } from '@/lib/domain/reception/inbox';
-import { requireOrganization } from '@/lib/route/organization';
+import { requireOperatingArea } from '@/lib/route/workspace-configuration';
 import { messagingSenders } from '@/lib/domain/reception/channel-readiness';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function ConversationPage({ params }: PageProps<'/organizations/[organizationId]/comms/inbox/[conversationId]'>) {
   const { organizationId, conversationId } = await params;
-  const { db, organization } = await requireOrganization(organizationId);
+  const { db, organization } = await requireOperatingArea(organizationId, 'comms-inbox');
 
   const [detail, members, myMembershipId] = await Promise.all([
     getConversationDetail(db, { organizationId, conversationId }),

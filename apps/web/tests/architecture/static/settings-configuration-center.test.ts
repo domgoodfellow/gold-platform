@@ -45,7 +45,7 @@ describe('Settings, as the Configuration Center (source scan)', () => {
     for (const path of [
       'settings/general',
       'settings/branding',
-      'settings/communications',
+      'comms/configuration/messaging',
       'settings/features',
       'settings/plan',
     ]) {
@@ -119,7 +119,7 @@ describe('configuration fields stay with their owning surfaces', () => {
  */
 describe('Pricing, Automations, Custom fields and Team are canonical, not Settings sub-routes', () => {
   it('/pricing is canonical and renders both the price book and, when connected, Getting paid', () => {
-    const page = readFileSync(`${ROUTES}/settings/pricing/page.tsx`, 'utf8');
+    const page = readFileSync(`${ROUTES}/finance/configuration/pricing/page.tsx`, 'utf8');
     expect(page).toContain('PricingManagement');
     expect(page).toContain('PaymentAccountRow');
     expect(page).not.toContain('redirect(');
@@ -157,7 +157,7 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
   it('/fields is canonical and renders the shared, entity-scoped fields component', () => {
     const page = readFileSync(`${ROUTES}/settings/custom-fields/page.tsx`, 'utf8');
     expect(page).toContain('EntityFieldsConfiguration');
-    expect(page).not.toContain('redirect(');
+    expect(page).toContain("'sales/configuration/fields'");
     expect(
       readFileSync(
         fileURLToPath(new URL('../../../features/custom-fields/configuration/entity-fields-configuration.tsx', import.meta.url)),
@@ -193,7 +193,7 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
     for (const [segment, destination] of [
       ['settings/people', 'settings/access'],
       ['settings/data-automation', 'settings/custom-fields'],
-      ['settings/commerce', 'settings/pricing'],
+      ['settings/commerce', 'finance/configuration/pricing'],
     ] as const) {
       const page = readFileSync(`${ROUTES}/${segment}/page.tsx`, 'utf8');
       expect(page, `${segment} no longer redirects to ${destination}`).toContain(`/${destination}`);
@@ -290,7 +290,6 @@ describe('contextual Configure, generalized from Work â€” the same componen
       registrants.resources,
       registrants.locations,
       registrants.assets,
-      registrants.customers,
     ]) {
       const source = readFileSync(
         fileURLToPath(new URL(`../../../${spec.component}`, import.meta.url)),
@@ -299,6 +298,8 @@ describe('contextual Configure, generalized from Work â€” the same componen
       expect(source).toContain('EntityFieldsConfiguration');
       expect(source).not.toContain('CreateFieldForm');
     }
+    expect(readFileSync(`${ROUTES}/sales/configuration/fields/page.tsx`, 'utf8')).toContain('EntityFieldsConfiguration');
+    expect(readFileSync(`${WEB_FEATURES}/crm/customers/customer-configuration.tsx`, 'utf8')).toContain("configTarget('customer-fields')");
   });
 
   it('Schedule swapped the raw date input for the shared Calendar/Popover DatePicker', () => {

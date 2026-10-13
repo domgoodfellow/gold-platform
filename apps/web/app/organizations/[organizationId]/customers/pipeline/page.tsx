@@ -3,7 +3,7 @@ import { CollectionHeader } from '@/components/patterns/collection-header';
 import { EmptyState } from '@/components/surfaces/section';
 import { buildPipelineColumns, PipelineBoard } from '@/features/crm/sales/pipeline-board';
 import { CustomerStageControl } from '@/features/crm/sales/stage-control';
-import { StageSettingsSheet } from '@/features/crm/sales/stage-settings-sheet';
+import { WorkspaceConfigure } from '@/features/settings/workspace-configure';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
@@ -33,7 +33,7 @@ export default async function PipelinePage({ params }: PageProps<'/organizations
         crumbs={workspaceAncestry(organizationId, 'pipeline')}
         actions={
           reception ? (
-            <StageSettingsSheet organizationId={organizationId} stages={stages} mayConfigure={organization.capabilities.includes('field.manage')} role={organization.role} />
+            <WorkspaceConfigure organizationId={organizationId} workspace="crm" />
           ) : null
         }
       />

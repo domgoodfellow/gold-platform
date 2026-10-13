@@ -5,5 +5,5 @@ export default async function CommerceSettingsRedirect({
   params,
 }: PageProps<'/organizations/[organizationId]/settings/commerce'>) {
   const { organizationId } = await params;
-  redirect(`/organizations/${organizationId}/settings/pricing`);
+  redirect(`/organizations/${organizationId}/finance/configuration/pricing`);
 }

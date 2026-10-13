@@ -84,7 +84,7 @@ describe('hiding a navigation item is never the security boundary', () => {
     expect(existsSync(`${WEB}/app/(platform)`)).toBe(false);
   });
 
-  it('no application source spells a /platform address by hand: the registry is the one way to write one', () => {
+  it('only legacy entry handling and namespace filtering name /platform directly', () => {
     const offenders: string[] = [];
     const walk = (dir: string) => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -97,12 +97,18 @@ describe('hiding a navigation item is never the security boundary', () => {
     for (const root of ['app', 'features', 'lib', 'components']) walk(`${WEB}/${root}`);
     // The legacy entry and the three places that name it: the redirect itself, where staff with no
     // GOLD membership are sent, and the crawler policy that keeps the old address out of an index.
+    // Public feedback classifies the legacy namespace; it must never navigate to it.
     expect(offenders.sort()).toEqual([
       '/app/organizations/page.tsx',
       '/app/platform/[[...path]]/page.tsx',
       '/app/robots.ts',
+      '/features/appearance/public-feedback.tsx',
       '/lib/route/landing.ts',
     ]);
+    const feedback = read('features/appearance/public-feedback.tsx');
+    expect(feedback).toContain("['/organizations', '/settings', '/platform']");
+    expect(feedback).toContain('return accountShell ? null : <Toaster />');
+    expect(feedback).not.toMatch(/href\s*=|<Link\b|router\.(?:push|replace)\s*\(/);
   });
 
   it('every organization page still calls requireOrganization for itself — a layout is never the guard', () => {
@@ -118,7 +124,7 @@ describe('hiding a navigation item is never the security boundary', () => {
     const unguarded = pages.filter((page) => {
       const source = readFileSync(page, 'utf8');
       // A page may delegate to a guard, redirect, or answer notFound(); what it may not do is read data unguarded.
-      return !/require(Organization|OrganizationForBillingRecovery|PlatformArea)\(|redirect\(|notFound\(\)/.test(source);
+      return !/require(Organization|OrganizationForBillingRecovery|PlatformArea|ConfigurationTarget|WorkspaceConfiguration|OperatingArea)\(|redirect\(|notFound\(\)/.test(source);
     });
     expect(unguarded.map((page) => page.slice(WEB.length))).toEqual([]);
   });

@@ -33,7 +33,6 @@ import {
 import {
   CaseActions,
   CaseDrawer,
-  ConfigurationEditor,
   InternalNote,
   NewCase,
   QuickChange,
@@ -680,20 +679,8 @@ export function SupportWorkspace({
               {configure}
             </>
           )}
-          {view === "queues" && can("support.configure") && (
-            <ConfigurationEditor
-              organizationId={organizationId}
-              data={data}
-              kind="queue"
-            />
-          )}
-          {view === "policies" && can("support.configure") && (
-            <ConfigurationEditor
-              organizationId={organizationId}
-              data={data}
-              kind="policy"
-            />
-          )}
+          {view === "queues" && can("support.configure") && <ButtonLink tone="secondary" href={`${base}/configuration/queues`}>Configure queues</ButtonLink>}
+          {view === "policies" && can("support.configure") && <ButtonLink tone="secondary" href={`${base}/configuration/service-levels`}>Configure service levels</ButtonLink>}
           {view === "detail" && c && (
             <CaseActions
               organizationId={organizationId}
@@ -711,7 +698,7 @@ export function SupportWorkspace({
             ["", "Home"],
             ["cases", "Cases"],
             ["queues", "Queues"],
-            ["service-levels", "Service levels"],
+            ["configuration/service-levels", "Service levels"],
             ["reports", "Reports"],
           ].map(([path, label]) => ({
             key: path || "home",
@@ -887,12 +874,7 @@ export function SupportWorkspace({
                     {q.description || "No description"}
                   </p>
                   {can("support.configure") && (
-                    <ConfigurationEditor
-                      organizationId={organizationId}
-                      data={data}
-                      kind="queue"
-                      queue={q}
-                    />
+                    <ButtonLink tone="text" href={`${base}/configuration/queues#queue-${q.id}`}>Edit queue</ButtonLink>
                   )}
                 </div>
               ))}
@@ -1051,12 +1033,7 @@ export function SupportWorkspace({
                   </td>
                   <td className={cell}>
                     {can("support.configure") && (
-                      <ConfigurationEditor
-                        organizationId={organizationId}
-                        data={data}
-                        kind="policy"
-                        policy={p}
-                      />
+                      <ButtonLink tone="text" href={`${base}/configuration/service-levels#policy-${p.id}`}>Edit service level</ButtonLink>
                     )}
                   </td>
                 </tr>

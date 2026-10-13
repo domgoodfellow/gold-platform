@@ -10,7 +10,7 @@ import {
   releaseAssignmentAction,
   useNumberAsMineAction,
   type NumberFormState,
-} from '@/app/organizations/[organizationId]/comms/numbers/actions';
+} from '@/app/organizations/[organizationId]/comms/configuration/numbers/actions';
 import { NUMBER_PURPOSES, type PhoneNumber } from '@/lib/domain/reception/numbers';
 import { PURPOSE_LABEL } from './labels';
 

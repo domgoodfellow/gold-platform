@@ -1,4 +1,4 @@
-import { configTarget, configTargetOffered, WORKSPACES, areaHref, AREAS, type ConfigGate } from '@/lib/navigation';
+import { configTarget, configTargetOffered, workspaceConfigurationHref, WORKSPACES, areaHref, AREAS, areaAvailable, workspaceConfigureItems, type ConfigGate } from '@/lib/navigation';
 import type { NavItem, ShellSection } from '@/lib/shell';
 import { PERSONAL_SECTIONS, personalSettingsHref } from '@/lib/route/personal-settings';
 
@@ -86,10 +86,10 @@ export function settingsSearchItems(organizationId: string, sections: readonly S
 }
 
 /** Breadcrumb ancestors for a configuration page that belongs to a workspace: that workspace's Home. */
-export function workspaceConfigCrumbs(organizationId: string, targetKey: string): { label: string; href: string }[] {
+export function workspaceConfigCrumbs(organizationId: string, targetKey: string, gate?: ConfigGate): { label: string; href?: string }[] {
   const workspaceKey = configTarget(targetKey).workspace;
   const workspace = WORKSPACES.find((candidate) => candidate.key === workspaceKey);
   if (!workspace) return [];
   const home = AREAS.find((area) => area.segment === workspace.home);
-  return home ? [{ label: workspace.label, href: areaHref(organizationId, home.segment) }] : [];
+  return home ? [{ label: workspace.label, href: !gate || areaAvailable(home.segment, { ...gate, enabled: gate.enabledModules }) ? areaHref(organizationId, home.segment) : undefined }, ...(!configTarget(targetKey).treatment ? [{ label: 'Configuration', href: !gate || workspaceConfigureItems(organizationId, workspace.key, gate).length ? workspaceConfigurationHref(organizationId, workspace.key) : undefined }] : [])] : [];
 }

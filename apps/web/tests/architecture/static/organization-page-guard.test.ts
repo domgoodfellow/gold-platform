@@ -48,7 +48,7 @@ describe('every page inside a business asks for the membership itself', () => {
     const unguarded = all
       .filter((file) => {
         const source = readFileSync(file, 'utf8');
-        if (source.includes('requireOrganization') || source.includes('requirePlatformArea(')) return false;
+        if (source.includes('requireOrganization') || source.includes('requirePlatformArea(') || source.includes('requireWorkspaceConfiguration(') || source.includes('requireConfigurationTarget(') || source.includes('requireOperatingArea(')) return false;
         const pureRedirect = /\bredirect\(/.test(source) && !READS_DATA.test(source);
         // The unmatched-address catch-all only throws notFound(), so the segment's own boundary renders.
         const catchAll = /^\s*notFound\(\);/m.test(source) && !READS_DATA.test(source);

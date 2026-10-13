@@ -1,7 +1,7 @@
-import { ConfigureMenu } from '@/components/controls/configure-menu';
+import { ConfigureLink } from '@/components/controls/configure-link';
 import { activeModuleKeys, availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { hasSchedulableWork } from '@/lib/domain/work-items/types';
-import { workspaceConfigureItems, type WorkspaceKey } from '@/lib/navigation';
+import { workspaceConfigureItems, workspaceConfigurationHref, type WorkspaceKey } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
 /**
@@ -21,5 +21,5 @@ export async function WorkspaceConfigure({ organizationId, workspace }: { organi
     capabilities: new Set(organization.capabilities),
     schedulableWork,
   });
-  return <ConfigureMenu items={items} />;
+  return items.length ? <ConfigureLink href={workspaceConfigurationHref(organizationId, workspace)} label="Configuration" title="Configuration" /> : null;
 }

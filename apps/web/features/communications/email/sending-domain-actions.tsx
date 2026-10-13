@@ -11,7 +11,7 @@ import {
   releaseSendingDomainAction,
   requestSendingDomainAction,
   type EmailDomainState,
-} from '@/app/organizations/[organizationId]/settings/email/actions';
+} from '@/app/organizations/[organizationId]/comms/configuration/email/actions';
 
 const INITIAL: EmailDomainState = { error: null, notice: null, done: false };
 

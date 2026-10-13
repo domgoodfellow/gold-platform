@@ -37,8 +37,8 @@ describe('the switcher', () => {
     expect(switcher).toContain('organizationHomeHref(organization.id, organization.operationalState)');
     expect(switcher).not.toMatch(/\/organizations\?|All businesses|all=1/);
     const executable = switcher.replace(/\/\*[\s\S]*?\*\//g, '');
-    expect(executable).toContain('href={platform.href}');
-    expect(executable).toContain('System');
+    expect(executable).not.toContain('href={platform.href}');
+    expect(executable).not.toContain('<span>Platform</span>');
     expect(executable).not.toMatch(/Platform Administration|platformAdministration|inPlatformContext|Global tools/);
     // The current context is the organization the shell was built for, never something read off the path.
     expect(executable).not.toMatch(/usePathname|inPlatformScope|platformSubpath/);
@@ -55,7 +55,7 @@ describe('the switcher', () => {
 
   it('is a plain label, not an empty menu, when there is nowhere else to go', () => {
     expect(switcher).toContain('!view.hasChoices');
-    expect(switcher).toContain('hasChoices: businesses.length > 0 || !!platform');
+    expect(switcher).toContain('hasChoices: businesses.length > 0');
   });
 
   it('the server resolves platform context before the shared frame renders it', () => {
@@ -129,8 +129,8 @@ describe('moving between organizations', () => {
     expect(view.businesses.map((org) => org.id)).toEqual(['gold', 'nf']);
   });
 
-  it('an authorized operator with one business can still switch to Platform', () => {
-    expect(deriveSwitcherView(current, [gold], { organizationId: 'gold', href: platformHref('gold') }).hasChoices).toBe(true);
+  it('a sole-business operator uses the footer for Platform instead of an empty context menu', () => {
+    expect(deriveSwitcherView(current, [gold], { organizationId: 'gold', href: platformHref('gold') }).hasChoices).toBe(false);
   });
 
   it('has nowhere to go for a person with one organization', () => {

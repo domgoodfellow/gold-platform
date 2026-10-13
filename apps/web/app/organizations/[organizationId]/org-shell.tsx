@@ -3,6 +3,7 @@
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
 import { SIDEBAR_HEADER_HEIGHT } from '@/components/layout/workspace-geometry';
 import { WorkspaceShell } from '@/components/layout/workspace-shell';
+import { SidebarFooterNavigation } from '@/components/navigation/sidebar-footer-navigation';
 import { AccountMenu } from '@/components/navigation/account-menu';
 import { SettingsNav } from '@/components/navigation/settings-nav';
 import { inSettingsContext, type SettingsSearchItem } from '@/lib/settings-nav';
@@ -136,6 +137,7 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
 export const NAV_ICONS: Record<string, LucideIcon> = {
   ...AREA_ICONS,
   'workspace-overview': LayoutDashboard,
+  'workspace-configuration': Settings,
   // Workspace destinations share their icons across sidebar, rail and phone Menu.
   'workspace-crm': Users,
   'workspace-communications': Phone,
@@ -247,7 +249,7 @@ function NavRow({ item, active, expanded }: { item: NavItem; active: string | nu
     </SidebarMenuButton>
   );
 
-  if (!item.children) return <SidebarMenuItem>{link}</SidebarMenuItem>;
+  if (!item.children) return <SidebarMenuItem className={item.key === 'workspace-configuration' ? 'mt-2 border-t border-sidebar-border pt-2' : undefined}>{link}</SidebarMenuItem>;
 
   return (
     <Collapsible asChild open={open} onOpenChange={setOpen}>
@@ -277,7 +279,8 @@ function NavRow({ item, active, expanded }: { item: NavItem; active: string | nu
 export function OrgNav({ sections }: { sections: ShellSection[] }) {
   const pathname = usePathname();
   const context = workspaceNavigation(sections, pathname);
-  const navigation = context?.sections ?? sections;
+  const flatten = (items: readonly NavItem[]): NavItem[] => items.flatMap(item => item.children?.length ? [ ...(item.href ? [{ ...item, children: undefined }] : []), ...flatten(item.children) ] : [item]);
+  const navigation = inPlatformScope(pathname) ? sections.map(section => ({ ...section, items: flatten(section.items) })) : context?.sections ?? sections;
   const active = activeItemKey(navigation, pathname);
   const platformActive = inPlatformScope(pathname);
   const { setOpenMobile } = useSidebar();
@@ -369,12 +372,13 @@ export function OrgSidebar({
       </SidebarHeader>
       <SidebarContent>
         {settings ? (
-          <SettingsNav organizationId={settings.organizationId} organizationName={name} sections={settings.sections} search={settings.search} />
+          <SettingsNav organizationId={settings.organizationId} organizationName={name} sections={settings.sections} search={settings.search} returnHrefs={sections.flatMap((section) => section.items.flatMap((item) => [item.href, ...(item.activeHrefs ?? []), ...(item.destinations ?? []).map((destination) => destination.href)]))} />
         ) : (
           <OrgNav sections={sections} />
         )}
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border">
+        <SidebarFooterNavigation organizationId={current.kind === 'global' ? undefined : current.organizationId} platform={platform} />
         <MobileAgentEntry />
         <AccountMenu email={email} signOutAction={signOutAction} />
       </SidebarFooter>
@@ -444,7 +448,7 @@ export function LockedOrgSidebar({
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border"><AccountMenu email={email} signOutAction={signOutAction} /></SidebarFooter>
+      <SidebarFooter className="border-t border-sidebar-border"><SidebarFooterNavigation organizationId={organizationId} platform={platform} locked /><AccountMenu email={email} signOutAction={signOutAction} /></SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

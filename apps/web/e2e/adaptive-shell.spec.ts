@@ -1,3 +1,10 @@
+import './appearance-env';
+import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'node:crypto';
+import { Client } from 'pg';
+import { createRole } from '../lib/domain/tenancy/roles';
+import { addMember } from '../lib/domain/tenancy/members';
+import { DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { test, expect } from '@playwright/test';
 import { COLLEAGUE_STORAGE_STATE, loadDemoContext, OWNER_STORAGE_STATE, platformUrl, STAFF_STORAGE_STATE } from './helpers';
 
@@ -72,8 +79,7 @@ test.describe('a tenant owner', () => {
     await page.goto(`/organizations/${organizationId}/customers`);
     await page.reload();
     await expect(sidebar(page).getByRole('link', { name: 'Customers', exact: true })).toHaveAttribute('aria-current', 'page');
-    await page.locator('[data-slot="sidebar-container"]').getByRole('button', { name: /sanne@grachtwerk.test/ }).click();
-    await page.getByRole('menuitem', { name: 'Settings', exact: true }).click();
+    await page.getByRole('navigation', { name: 'Application controls' }).getByRole('link', { name: 'Settings', exact: true }).click();
     const settings = page.getByRole('navigation', { name: 'Settings', exact: true });
     await expect(settings).toBeVisible();
     await settings.getByRole('link', { name: 'Back to app' }).click();
@@ -166,7 +172,8 @@ test.describe('a tenant owner', () => {
     await trigger.click();
     await sheet.getByRole('button', { name: /sanne@grachtwerk.test/ }).click();
     await expect(page.getByRole('menuitem', { name: 'Sign out', exact: true })).toBeVisible();
-    await page.getByRole('menuitem', { name: 'Settings', exact: true }).click();
+    await page.keyboard.press('Escape');
+    await sheet.getByRole('link', { name: 'Settings', exact: true }).click();
     await expect(page).toHaveURL(/\/settings\/general$/);
     await expect(sheet).toHaveCount(0);
     await trigger.click();
@@ -240,15 +247,14 @@ test.describe('GOLD platform staff', () => {
     const container = page.locator('[data-slot="sidebar-container"]');
     await container.getByRole('button', { name: /GildOps Platform/ }).click();
     await expect(page.getByText('Businesses', { exact: true })).toBeVisible();
-    await expect(page.getByText('System', { exact: true })).toBeVisible();
+    await expect(page.getByText('System', { exact: true })).toHaveCount(0);
     // MenuItem uses asChild, so the item itself is the link.
     const goldLink = page.locator(`[role="menuitem"][href="/organizations/${goldOrganizationId}/home"]`);
     await goldLink.click();
     await expect(page).toHaveURL(`/organizations/${goldOrganizationId}/home`);
     await expect(sidebar(page).getByRole('link', { name: 'CRM', exact: true })).toBeVisible();
     await expect(sidebar(page).getByText('Platform', { exact: true })).toHaveCount(0);
-    await container.locator('[data-sidebar="header"] button').click();
-    await page.getByRole('menuitem', { name: 'Platform', exact: true }).click();
+    await container.getByRole('navigation', { name: 'Application controls' }).getByRole('link', { name: 'Platform', exact: true }).click();
     await expect(page).toHaveURL(platformUrl());
     await expect(container.getByText('System control plane', { exact: true }).filter({ visible: true }).first()).toBeVisible();
   });
@@ -269,5 +275,139 @@ test.describe('GOLD platform staff', () => {
     const destinations = await page.getByRole('menuitem').evaluateAll((items) => items.map((item) => item.getAttribute('href')));
     expect(destinations.every((href) => href?.startsWith(`/organizations/${goldOrganizationId}/`))).toBe(true);
 
+  });
+});
+
+
+test.describe('persistent footer and icon-bearing Settings', () => {
+  test.use({ storageState: OWNER_STORAGE_STATE });
+  for (const width of [1440, 768, 390]) test(`Settings navigation and footer at ${width}px`, async ({ page }, info) => {
+    const { organizationId } = loadDemoContext();
+    await page.setViewportSize({ width, height: 1000 });
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme });
+      await page.goto(`/organizations/${organizationId}/customers`);
+      const open = async () => { if (width < 768) await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click(); };
+      await open();
+      const controls = page.getByRole('navigation', { name: 'Application controls' });
+      await expect(controls.getByRole('link', { name: 'Platform' })).toHaveCount(0);
+      await expect(controls.getByRole('link', { name: 'Help & Support' })).toBeVisible();
+      await controls.getByRole('link', { name: 'Settings', exact: true }).click();
+      if (width < 768) await expect(page.getByRole('dialog', { name: 'Sidebar' })).toHaveCount(0);
+      await expect(page.getByRole('heading', { name: 'General', exact: true })).toBeVisible();
+      await open();
+      const settings = page.getByRole('navigation', { name: 'Settings', exact: true });
+      await expect(settings).toBeVisible();
+      if (width >= 768) await page.locator('header').getByRole('button', { name: 'Toggle Sidebar', exact: true }).click();
+      for (const label of ['Profile', 'Security & sign-in', 'Appearance', 'General', 'Branding', 'Domains', 'Features', 'Team & access', 'Connections', 'Plan & usage']) {
+        const link = settings.getByRole('link', { name: label, exact: true });
+        await expect(link).toBeVisible();
+        await expect(link.locator('svg')).toHaveCount(1);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.screenshot({ path: info.outputPath(`settings-${width}-${colorScheme}.png`) });
+      await settings.getByRole('link', { name: 'Appearance', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Appearance', exact: true })).toBeVisible();
+      await open();
+      await settings.getByRole('link', { name: 'Back to app', exact: true }).click();
+      await expect(page).toHaveURL(`/organizations/${organizationId}/customers`);
+      if (width >= 768) await page.locator('header').getByRole('button', { name: 'Toggle Sidebar', exact: true }).click();
+      await page.goto(`/organizations/${organizationId}/comms`);
+      await open();
+      const business = page.getByRole('navigation', { name: 'This business' });
+      await business.getByRole('link', { name: 'Configuration', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Calling & routing', exact: true })).toBeVisible();
+      const sections = page.getByRole('navigation', { name: 'Configuration sections' });
+      await expect(sections).toBeVisible();
+      if (width >= 768) await page.locator('header').getByRole('button', { name: 'Toggle Sidebar', exact: true }).click();
+      await expect(sections.getByRole('link', { name: 'Calling & routing', exact: true })).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.screenshot({ path: info.outputPath(`configuration-${width}-${colorScheme}.png`) });
+      await sections.getByRole('link', { name: 'Numbers & assignments', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Numbers', exact: true })).toBeVisible();
+      await expect(sections.getByRole('link', { name: 'Numbers & assignments', exact: true })).toHaveAttribute('aria-current', 'page');
+      await open();
+      await expect(business.getByRole('link', { name: 'Numbers', exact: true })).toHaveCount(0);
+      await expect(business.getByRole('link', { name: 'Configuration', exact: true })).toHaveAttribute('aria-current', 'page');
+      await business.getByRole('link', { name: 'Calls', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Calls', exact: true })).toBeVisible();
+
+      if (width >= 768) await page.locator('header').getByRole('button', { name: 'Toggle Sidebar', exact: true }).click();
+    }
+  });
+});
+
+
+test.describe('legacy Communications configuration compatibility', () => {
+  test.use({ storageState: OWNER_STORAGE_STATE });
+  test('preserves query values and fragments and resolves each canonical owner', async ({ page }) => {
+    const { organizationId } = loadDemoContext();
+    for (const [legacy, canonical] of [['settings/calls', 'comms/configuration/calling'], ['settings/communications', 'comms/configuration/messaging'], ['settings/email', 'comms/configuration/email'], ['comms/numbers', 'comms/configuration/numbers'], ['settings/sales-stages', 'sales/configuration/relationship-stages'], ['settings/opportunity-stages', 'sales/configuration/opportunity-stages'], ['settings/pricing', 'finance/configuration/pricing'], ['support/service-levels', 'support/configuration/service-levels']]) {
+      await page.goto(`/organizations/${organizationId}/${legacy}?filter=a&filter=b#recording`);
+      await expect(page).toHaveURL(`/organizations/${organizationId}/${canonical}?filter=a&filter=b#recording`);
+      await expect(page.getByRole('navigation', { name: 'Configuration sections' })).toBeVisible();
+      await expect(sidebar(page).getByRole('link', { name: 'Configuration', exact: true })).toHaveAttribute('aria-current', 'page');
+    }
+  });
+});
+
+
+test.describe('configuration-only permissions in the rendered application', () => {
+  const email = `navigation-config-${randomUUID()}@example.test`;
+  const password = randomUUID();
+  let accountId: string, roleId: string;
+  const url = process.env.SUPABASE_URL!;
+  const admin = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+  const owner = createClient(url, process.env.SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
+  const cleanup = async (sql: string, values: string[]) => {
+    const connectionString = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+    if (!['localhost', '127.0.0.1'].includes(new URL(connectionString).hostname)) throw new Error('Fixture cleanup is local-only.');
+    const pg = new Client({ connectionString });
+    await pg.connect();
+    try { await pg.query(sql, values); } finally { await pg.end(); }
+  };
+  test.beforeAll(async () => {
+    if (!['localhost', '127.0.0.1'].includes(new URL(url).hostname)) throw new Error('Navigation fixtures are local-only.');
+    const { organizationId, ownerEmail } = loadDemoContext();
+    const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+    if (created.error) throw created.error;
+    accountId = created.data.user.id;
+    const signed = await owner.auth.signInWithPassword({ email: ownerEmail, password: DEMO_PASSWORD });
+    if (signed.error) throw signed.error;
+    roleId = await createRole(owner, { organizationId, name: `Navigation configure ${randomUUID().slice(0, 8)}`, capabilities: ['field.manage'] });
+    await addMember(owner, { organizationId, email, roleId, displayName: 'Configuration member' });
+  });
+  test.afterAll(async () => {
+    if (accountId) await admin.auth.admin.deleteUser(accountId);
+    if (roleId) await cleanup('delete from public.roles where id=$1', [roleId]);
+  });
+  test('enters configuration, writes through its canonical owner, and cannot read operating calls or Inbox', async ({ page }) => {
+    const { organizationId } = loadDemoContext();
+    await page.goto('/login');
+    await page.getByLabel('Email', { exact: true }).fill(email);
+    await page.getByLabel('Password', { exact: true }).fill(password);
+    await page.getByRole('button', { name: 'Log in', exact: true }).click();
+    await expect(page).toHaveURL(/organizations/);
+    await page.goto(`/organizations/${organizationId}/home`);
+    await sidebar(page).getByRole('link', { name: 'Communications', exact: true }).click();
+    await expect(page).toHaveURL(`/organizations/${organizationId}/comms/configuration/calling`);
+    const nav = sidebar(page);
+    for (const label of ['Overview', 'Calls', 'Inbox', 'Numbers']) await expect(nav.getByRole('link', { name: label, exact: true })).toHaveCount(0);
+    await expect(nav.getByRole('link', { name: 'Configuration', exact: true })).toHaveAttribute('aria-current', 'page');
+    const name = `Configuration acceptance ${randomUUID()}`;
+    try {
+      await page.getByLabel('Outcome name', { exact: true }).fill(name);
+      await page.getByRole('button', { name: 'Add outcome', exact: true }).click();
+      await expect(page.getByText(name, { exact: true })).toBeVisible();
+      const saved = await owner.from('call_outcomes').select('name').eq('organization_id', organizationId).eq('name', name).single();
+      expect(saved.error).toBeNull();
+      expect(saved.data?.name).toBe(name);
+      for (const path of ['calls', 'comms/inbox', 'comms/configuration/email']) {
+        await page.goto(`/organizations/${organizationId}/${path}`);
+        await expect(page.getByRole('heading', { name: 'This page does not exist' })).toBeVisible();
+      }
+    } finally {
+      await cleanup('delete from public.call_outcomes where organization_id=$1 and name=$2', [organizationId, name]);
+    }
   });
 });

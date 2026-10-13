@@ -6,7 +6,7 @@ import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { ScheduleConfiguration } from '@/features/scheduling/configuration/schedule-configuration';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
-import { requireOrganization } from '@/lib/route/organization';
+import { requireConfigurationTarget } from '@/lib/route/workspace-configuration';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +15,7 @@ export default async function ScheduleConfigurationPage({
   params,
 }: PageProps<'/organizations/[organizationId]/schedule/configuration'>) {
   const { organizationId } = await params;
-  const { db, organization } = await requireOrganization(organizationId);
+  const { db, organization } = await requireConfigurationTarget(organizationId, 'schedule-configuration');
 
   const hours = await listOperatingHours(db, { organizationId });
   const mayConfigure = organization.capabilities.includes('field.manage');

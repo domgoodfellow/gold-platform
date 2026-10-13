@@ -92,15 +92,15 @@ describe('calling and messaging are separate authorities in navigation', () => {
   });
 
   it('shows everything to a person who can both call and text', () => {
-    expect(visible(['call.place', 'message.send'])).toEqual(['comms', 'calls', 'comms-inbox', 'comms-numbers']);
+    expect(visible(['call.place', 'message.send'])).toEqual(['comms', 'calls', 'comms-inbox']);
   });
 
   it('shows a texting-only person Communications and the Inbox, and no Calls', () => {
-    expect(visible(['message.send'])).toEqual(['comms', 'comms-inbox', 'comms-numbers']);
+    expect(visible(['message.send'])).toEqual(['comms', 'comms-inbox']);
   });
 
   it('shows a calling-only person Communications and Calls, and neither text nor email', () => {
-    expect(visible(['call.place'])).toEqual(['comms', 'calls', 'comms-numbers']);
+    expect(visible(['call.place'])).toEqual(['comms', 'calls']);
   });
 
   it('gates the Inbox by the sending authority, never by configuration', () => {

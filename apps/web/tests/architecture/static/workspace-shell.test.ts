@@ -720,8 +720,11 @@ describe('the sidebar draws the selected application context', () => {
     expect(operating).not.toMatch(/BUSINESS_ITEMS|section.key === 'business'/);
   });
 
-  it('offers the authorized Platform context under System', () => {
-    expect(readFileSync(`${WEB}/components/navigation/context-switcher.tsx`, 'utf8')).toContain('href={platform.href}');
+  it('presents independently resolved Platform authority in the persistent footer', () => {
+    const footer = readFileSync(`${WEB}/components/navigation/sidebar-footer-navigation.tsx`, 'utf8');
+    expect(footer).toContain("label: 'Platform', href: platform.href");
+    expect(footer).not.toMatch(/isOwner|isAdmin|platformPermissions|email\s*===/);
+    expect(contextSwitcher).not.toContain('<span>Platform</span>');
   });
 });
 

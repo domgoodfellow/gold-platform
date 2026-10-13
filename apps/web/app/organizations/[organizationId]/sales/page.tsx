@@ -1,6 +1,3 @@
-import { configTarget } from '@/lib/navigation';
-import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
-import { ButtonLink } from '@/components/controls/button';
 import { CreateCustomerSheetProvider } from '@/features/crm/customers/create-customer-sheet';
 import { CrmHome } from '@/features/crm/home/crm-home';
 import { WorkspaceActivity } from '@/features/timeline/workspace-activity';
@@ -32,7 +29,6 @@ export default async function SalesPage({params,searchParams}:{params:Promise<{o
   const home=<><CrmHome organizationId={organizationId} timezone={organization.timezone} month={month} summary={summary} customers={customers} customerContext={Object.fromEntries(contextEntries)} opportunitySummary={opportunitySummary} opportunities={opportunities} today={today} overdue={overdue} noNext={noNext} unassigned={unassigned} followUpsEnabled={followUpsEnabled} conversionEnabled={conversionEnabled}
     followUpOptions={{organizationId,timezone:organization.timezone,members,mayManage:followUpsEnabled && organization.capabilities.includes('follow_up.manage')}} opportunityOptions={{organizationId,stages:opportunityStages,members,defaultCurrency:organization.currency??''}} mayCreate={mayCreate} mayCreateOpportunity={organization.capabilities.includes('opportunity.create')} mayConfigure={mayConfigure}
     activity={<WorkspaceActivity db={db} organizationId={organizationId} timezone={organization.timezone} scope="crm" limit={6} emptyMessage="No CRM activity yet."/>}/>
-    {mayConfigure?<ConfigureRegistrar title="CRM configuration" settingsHref={`/organizations/${organizationId}/${configTarget('opportunity-stages').path}`}><div className="flex flex-col items-start gap-3"><ButtonLink href={`/organizations/${organizationId}/${configTarget('opportunity-stages').path}`}>Opportunity stages</ButtonLink><ButtonLink href={`/organizations/${organizationId}/${configTarget('sales-stages').path}`}>Relationship stages</ButtonLink><ButtonLink href={`/organizations/${organizationId}/${configTarget('custom-fields').path}`}>Custom fields</ButtonLink></div></ConfigureRegistrar>:null}
   </>;
   return mayCreate?<CreateCustomerSheetProvider organizationId={organizationId} definitions={definitions}>{home}</CreateCustomerSheetProvider>:home;
 }

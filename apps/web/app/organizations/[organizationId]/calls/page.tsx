@@ -9,20 +9,18 @@ import { CallFilters, callFilterFromParams, callsHref, parseCallParams } from '@
 import { CallHistory } from '@/features/communications/voice/call-history';
 import { NewCallForm } from '@/features/communications/voice/new-call-form';
 import { VoiceCounters } from '@/features/communications/voice/voice-overview';
-import { VoiceSettingsSheet } from '@/features/communications/voice/voice-settings-sheet';
+import { WorkspaceConfigure } from '@/features/settings/workspace-configure';
 import { WrapUpCallSheet } from '@/features/communications/voice/wrap-up-sheet';
 import { getCallCounts, listCallPage } from '@/lib/domain/reception/calls';
 import { listPhoneNumbers, resolveOutboundNumber } from '@/lib/domain/reception/numbers';
 import { listCallOutcomes } from '@/lib/domain/reception/outcomes';
-import { listRoutes } from '@/lib/domain/reception/routing';
-import { callingNumber } from '@/lib/domain/reception/telephony';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { callingRuntimeConfigured } from '@/lib/application/communications/calling-runtime';
 import { communicationsProviderReadiness } from '@/lib/domain/reception/provider-readiness';
 import { availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
-import { requireOrganization } from '@/lib/route/organization';
+import { requireOperatingArea } from '@/lib/route/workspace-configuration';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,19 +31,17 @@ export const dynamic = 'force-dynamic';
  */
 export default async function CallsPage({ params, searchParams }: PageProps<'/organizations/[organizationId]/calls'>) {
   const { organizationId } = await params;
-  const { db, organization } = await requireOrganization(organizationId);
+  const { db, organization } = await requireOperatingArea(organizationId, 'calls');
   const { params: callParams, cursor } = parseCallParams(await searchParams);
   const day = zonedDayRange(todayInZone(organization.timezone), organization.timezone);
   const mayCall = organization.capabilities.includes('call.place');
   const base = `/organizations/${organizationId}/calls`;
 
-  const [page, counts, todays, outcomes, number, routes, numbers, members, usual, runtimeConfigured, readiness, featureStates] = await Promise.all([
+  const [page, counts, todays, outcomes, numbers, members, usual, runtimeConfigured, readiness, featureStates] = await Promise.all([
     listCallPage(db, { organizationId, filter: callFilterFromParams(callParams, organization.timezone), cursor }),
     getCallCounts(db, { organizationId, dayStart: day.startsAt, dayEnd: day.endsAt }),
     listCallPage(db, { organizationId, filter: { since: day.startsAt, until: day.endsAt }, limit: 100 }),
     listCallOutcomes(db, { organizationId }),
-    callingNumber(db, { organizationId }),
-    listRoutes(db, { organizationId }),
     listPhoneNumbers(db, { organizationId }),
     listMembers(db, { organizationId }),
     mayCall ? resolveOutboundNumber(db, { organizationId }) : Promise.resolve(null),
@@ -82,19 +78,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
               </PageDrawerContent>
             </PageDrawer>
           ) : null}
-          <div id="setup" className="scroll-mt-20">
-            <VoiceSettingsSheet
-              organizationId={organizationId}
-              number={number}
-              outcomes={outcomes}
-              routes={routes}
-              numbers={numbers}
-              members={members.map((member) => ({ id: member.id, displayName: member.displayName }))}
-              mayManageIdentity={organization.capabilities.includes('organization.manage')}
-              mayConfigureOutcomes={organization.capabilities.includes('field.manage')}
-              role={organization.role}
-            />
-          </div>
+          <WorkspaceConfigure organizationId={organizationId} workspace="communications" />
         </>
       }
     />

@@ -602,7 +602,7 @@ Library
 Workspaces
 ```
 
-Settings is reached from the account menu. Team, Connections and Agent are workspace-header utilities. Platform is a separate privileged context in the context switcher for authorized platform staff, with its own nested projection.
+The persistent sidebar footer offers independently authorized Platform, Help & Support and Settings, followed by the distinct Account/session menu. The Account menu owns identity and Sign out. Team, Connections and Agent remain workspace-header utilities; mobile Agent stays in the navigation Sheet. Platform remains a separate privileged context with its own authorized projection.
 
 ---
 
@@ -612,7 +612,7 @@ The workspace registry contains all canonical workspace identities.
 
 Visibility is derived from real reachable operating pages plus the relevant entitlement/permission projection.
 
-All nine workspaces have canonical Homes. Marketing, Support and tenant AI register matching Areas and authenticated pages at `/organizations/[organizationId]/marketing`, `/organizations/[organizationId]/support` and `/organizations/[organizationId]/ai`. Marketing and Support compose domain operating read models; tenant AI composes the agent-management read model. Support requires organization membership, service access and `support.read`. Its server actions delegate to transactional capability-checked database commands, while exact aggregate queries bound collection and board previews independently. Support keeps its private immutable Case evidence separate from the general tenant event feed, whose broader read and append permissions are unsuitable for internal notes. Organization workspace selection remains flat. The persistent sidebar switches its central navigation to the current workspace identity, Overview, eligible operating destinations and Back to Workspaces. `projectShell` derives both chooser entries and destinations from `WORKSPACES` and `AREAS` with the existing gates; `workspaceNavigation` resolves the longest canonical Area route before checking eligibility. Hidden Areas preserve deep-link ownership without becoming rows, and unavailable registered Areas cannot fall back to an eligible ancestor. URL-derived context survives refresh, history and organization changes without mutable workspace selection. Settings takes precedence with its existing contextual navigation. Only navigation content changes; the Organization layout, telephone runtime, account controls and responsive sidebar state persist. Tenant AI is separate from Platform AI Runtime and the global Agent rail.
+All nine workspaces have canonical Homes. Marketing, Support and tenant AI register matching Areas and authenticated pages at `/organizations/[organizationId]/marketing`, `/organizations/[organizationId]/support` and `/organizations/[organizationId]/ai`. Marketing and Support compose domain operating read models; tenant AI composes the agent-management read model. Support requires organization membership, service access and `support.read`. Its server actions delegate to transactional capability-checked database commands, while exact aggregate queries bound collection and board previews independently. Support keeps its private immutable Case evidence separate from the general tenant event feed, whose broader read and append permissions are unsuitable for internal notes. Organization workspace selection remains flat. The persistent sidebar switches its central navigation to the current workspace identity, Overview, eligible operating destinations and Back to Workspaces. `projectShell` derives both chooser entries and destinations from `WORKSPACES` and `AREAS` with the existing gates; `workspaceNavigation` resolves the most specific canonical configuration resource or Area before checking eligibility; an authorized workspace root cannot authorize a restricted child. Hidden Areas preserve deep-link ownership without becoming rows, and unavailable registered Areas cannot fall back to an eligible ancestor. URL-derived context survives refresh, history and organization changes without mutable workspace selection. Settings takes precedence with its existing contextual navigation. Only navigation content changes; the Organization layout, telephone runtime, account controls and responsive sidebar state persist. Tenant AI is separate from Platform AI Runtime and the global Agent rail.
 
 Do not create a separate “visible workspaces” hard-coded list.
 
@@ -1405,3 +1405,72 @@ It does not own:
 - test commands;
 - roadmap status;
 - historical implementation narrative.
+
+
+### Workspace configuration ownership and entry
+
+`CONFIG_TARGETS` classifies operating editors and shared organization owners explicitly;
+`WORKSPACE_CONFIGURE` references those same targets. `workspaceConfigureItems` excludes operating
+editors, applies independent configuration capabilities and resolved entitlements/shape, and
+allows shared-owner links without copying their editors. The workspace Home shortcut and one
+icon-bearing sidebar Configuration row open the workspace's canonical `{home}/configuration`.
+Marketing and Automations have no registered execution/acquisition policies today; their
+operating form and rule/template editors do not earn empty Configuration pages.
+A configuration-only member enters that root directly, without an operating Overview or
+restricted destinations. `requireWorkspaceConfiguration` and `requireConfigurationTarget`
+enforce membership, service access, capabilities and availability before page reads. The
+persistent layout is never the sole page authorization boundary.
+
+`ConfigurationSections` owns responsive content-level navigation, separately from the main
+sidebar. Sections use canonical URLs or real page anchors and retain accessible labels and
+selected state when the sidebar is collapsed. Existing domain operations and data owners
+remain unchanged. Shared Branding, Domains and Public profile remain organization Settings;
+Studio links to them. Business hours remain Scheduling-owned; currency remains General-owned.
+
+
+### Configuration migration inventory
+
+Classification precedes route migration. A legacy URL is compatibility only, never another editor.
+
+| Concern | Classification and canonical owner | Current route before consolidation | Destination |
+| --- | --- | --- | --- |
+| Calling, routing, outcomes | Communications configuration; existing identity/routing/outcome permissions | settings/calls | comms/configuration/calling |
+| Number inventory and assignments | Communications configuration; operator record reads remain distinct from management | comms/numbers and number records | comms/configuration/numbers and number records |
+| Messaging/visitor communication profile | Communications configuration | settings/communications | comms/configuration/messaging |
+| Sending domains and identities | Communications configuration; organization.manage | settings/email | comms/configuration/email |
+| Relationship/opportunity stages | CRM configuration; field.manage | settings/sales-stages, settings/opportunity-stages | sales/configuration/relationship-stages and opportunity-stages |
+| Customer-specific fields | CRM configuration over the shared field engine | settings/custom-fields?entity=customer | sales/configuration/fields, retaining the single field engine |
+| Work types/stages/checklists/fields | Work configuration; field.manage | work/configuration | retain owner and integrate section navigation |
+| Business hours and scheduling buffer | Scheduling configuration; field.manage and work shape | schedule/configuration | retain owner and integrate Work section navigation |
+| Queues and service levels | Support configuration; existing support.read and support.configure | support/queues, support/service-levels | support/configuration/queues and service-levels; operating queue triage stays support/queues |
+| Prices and payment collection | Finance configuration; price.manage/organization.manage per control | settings/pricing | finance/configuration/pricing |
+| Trading currency | Shared organization configuration; organization.manage | General and duplicated Pricing editor | settings/general, with Finance linking to that owner |
+| Agents/deployments/knowledge/tools | AI configuration; existing organization/manage/feature gates | ai/agents, ai/deployments, ai/knowledge, ai/tools | retain domain views and integrate configuration sections |
+| Rule authoring, templates, activity | Automations operations | automations/rules, messages, activity | retain operating surfaces; no invented execution policy |
+| Campaigns/acquisition | Marketing operations; no separate implemented policy editor | marketing | retain; shared form assets remain Studio-owned |
+| Website/forms/templates editing | Studio operations | studio/website, studio/forms, studio/templates | retain operating surfaces |
+| Branding/public profile/domains/publication boundary | Shared organization configuration | settings/branding, public-profile, domains | retain Settings owners; Studio links out |
+| Profile/security/appearance | Personal configuration | settings/account and subroutes | retain user-owned routes |
+| Providers/catalogue/runtime/commercial authority | Platform configuration | GildOps organization/platform | retain independent platform guards |
+
+
+The migration inventory above is implemented through the existing registries. CRM stages and customer fields live under `sales/configuration`; legacy customer-field URLs redirect to CRM, while work-item field URLs redirect to the existing Work field tab. Other entity definitions retain the shared field engine and their existing entity-specific controls. Operating Customers and Pipeline link to CRM editors rather than maintaining inline configuration copies. Finance owns price-book/payment configuration; General remains the sole currency editor. Work and Scheduling retain their existing route owners and share the Work configuration section projection.
+
+Support configuration reads only `support_queues` and `support_service_levels` through existing RLS. It does not call `support_read` or fetch Cases/metrics. Its existing command contract still requires both `support.read` and `support.configure`; `ConfigTarget.requiresAll` records that prerequisite without changing database permissions. Operating queue triage stays at `/support/queues` and links to its canonical editor. AI keeps its agent/deployment/knowledge/tool routes and existing feature/management authority, with a shared configuration layout. Marketing and Automations expose no invented policy/configuration root; their currently implemented campaigns, rules, templates and activity remain operating surfaces. Studio Configuration links to shared Branding/Public profile/Domains owners while website/forms/templates remain Studio operations.
+
+`legacyConfigurationPath` resolves compatibility URLs through `CONFIG_TARGETS`. The request proxy returns HTTP redirects, preserving the request's query string and allowing browser fragment inheritance; fallback legacy pages redirect without reading protected data. Canonical pages independently call `requireConfigurationTarget`, `requireWorkspaceConfiguration`, or `requireOperatingArea` before reads. Layouts never grant page authority. Operator number-record access retains its existing independent gate and does not grant number management or call-history access.
+
+Settings search combines offered Settings metadata with accessible `WORKSPACE_CONFIGURE` concerns, including targets omitted from the Settings directory, and deduplicates canonical paths. Stored Back to app paths must match current projected destinations and the most specific registered owner. Platform footer visibility uses only `loadPlatformContext`/`platformPermissions`; server Platform guards remain unchanged. Navigation receives a boolean activity-retention context from the organization telephone provider, never a device, credentials or tenant data. A link leaving the active call's organization or entering global personal Settings opens separately instead of replacing that layout.
+
+Communications channel diagnostics are presentation over the existing `messagingSenders` calculation and sender/provider readiness owners. They add no sender, provider, entitlement, schema or publication authority. SMS catalog status remains unchanged; a planned feature is a blocker regardless of provider credentials or number state. Controlled local database/adapter tests establish command behavior, retries, event processing and tenant isolation. Live provider acceptance, actual delivery, incoming messages and threaded replies require separately configured sandbox providers and authorized recipients; absent those prerequisites they remain unverified.
+
+### Consolidation verification and remaining acceptance
+
+Local verification uses the repository fast suite, focused database and provider/API checks, and Playwright against an isolated production build with the existing local API and local Supabase database. No schema or permission migration is introduced.
+
+- Production build and TypeScript checks passed; ESLint checked 91 changed TypeScript files without errors or warnings. The final focused diagnostic/navigation run passed 71 tests.
+- The complete fast suite passed 1,689 tests and failed five existing contracts: the Appearance public-feedback namespace triggers the literal Platform-address guard; four Integration/Provider assertions reference the absent `features/integrations/catalogue/connector-catalogue.tsx`. Those source files are unchanged by consolidation. These failures remain unresolved, so the complete fast suite is not green.
+- Controlled database verification passed 81 tests across messaging, sender eligibility, email send/channel/sending domains and Support. Mocked Python provider/API verification passed 118 tests across tenant email, SMS status, email provisioning and Resend contracts. These checks establish local behavior, not live provider delivery.
+- All 28 final Playwright checks passed against the production build and local API. Browser checks cover authorized/restricted Platform entry, configuration-only entry and mutation, denied operating/direct routes, legacy query/fragment redirects, Settings return/search, personal Appearance, the operating Communications/routing workflow, and pop-out dialer draft persistence. Rendered workspace configuration screenshots were inspected at 1440, 768 and 390 pixels in light and dark modes, with reduced motion. AI Agent tools remain planned and their configuration entry is correctly denied; no catalogue state was changed for testing.
+- A component check holds one mocked telephone SDK device and active call across ordinary same-organization navigation. Actual carrier call continuity remains unverified. Cross-organization and global personal Settings links preserve the current call tab; reload/browser termination continuation is not implemented.
+- Live outbound SMS/email, provider acceptance/status callbacks, incoming messages and threaded replies remain pending authorized sandbox recipients and a configured sandbox provider environment. Configuration diagnostics and fixture records must never be described as successful delivery.

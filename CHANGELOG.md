@@ -34,6 +34,13 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+### Changed
+
+- Added persistent Help & Support, Settings, and independently authorized Platform controls; Account now owns identity and Sign out.
+- Consolidated workspace configuration behind one contextual entry with responsive page sections. Communications, CRM, and Finance retain compatibility redirects; Work, Support, AI, and Studio retain their canonical domain ownership.
+- Communications configuration reports channel-specific readiness blockers without treating provider configuration as proof of delivery.
+
+
 - Workspace navigation now enters a contextual sidebar with Overview, eligible operating destinations and Back to Workspaces, preserving canonical URLs and the persistent Organization shell.
 
 ### Imported application library and resource synchronization — 2026-10-11

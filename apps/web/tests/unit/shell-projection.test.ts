@@ -49,7 +49,7 @@ describe('flat business navigation', () => {
   });
   it('does not conjure module or feature gated destinations', () => {
     const none = project(ALL_CAPABILITIES, { enabledModules: new Set(), featureAvailability: new Set() });
-    expect(keys(none)).toEqual(['home', 'library', 'workspace-crm', 'workspace-marketing', 'workspace-support', 'workspace-field', 'workspace-finance', 'workspace-ai', 'workspace-studio']);
+    expect(keys(none)).toEqual(['home', 'library', 'workspace-crm', 'workspace-communications', 'workspace-marketing', 'workspace-support', 'workspace-field', 'workspace-finance', 'workspace-ai', 'workspace-studio']);
     const aliases = projectedItems(none).flatMap((item) => item.activeHrefs ?? []);
     expect(aliases).not.toContain(`/organizations/${ORG}/assets`);
     expect(aliases).not.toContain(`/organizations/${ORG}/customers/pipeline`);
@@ -83,7 +83,7 @@ describe('owning workspace stays active on contextual and detail routes', () => 
   it.each([
     ['home', 'home'], ['library/files', 'library'],
     ['sales', 'workspace-crm'], ['customers', 'workspace-crm'], ['customers/customer-1', 'workspace-crm'], ['customers/pipeline', 'workspace-crm'],
-    ['comms', 'workspace-communications'], ['calls/call-1', 'workspace-communications'], ['comms/inbox/conversation-1', 'workspace-communications'], ['comms/numbers/number-1', 'workspace-communications'],
+    ['comms', 'workspace-communications'], ['calls/call-1', 'workspace-communications'], ['comms/inbox/conversation-1', 'workspace-communications'], ['comms/configuration/numbers/number-1', 'workspace-communications'],
     ['marketing', 'workspace-marketing'], ['support', 'workspace-support'], ['ai', 'workspace-ai'],
     ['finance/invoices/invoice-1', 'workspace-finance'], ['finance/payments/payment-1', 'workspace-finance'],
     ['automations/activity', 'workspace-automations'], ['automations/rule-1', 'workspace-automations'],
@@ -112,11 +112,11 @@ describe('owning workspace stays active on contextual and detail routes', () => 
 describe('Work follows the declared shape and entitlement', () => {
   const field = (schedulableWork?: boolean, overrides: Partial<ShellInput> = {}) => projectedItems(project(['field.manage'], { schedulableWork, ...overrides })).find((item) => item.key === 'workspace-field')!;
   it('keeps schedule-dependent aliases only where the work shape allows them', () => {
-    const paths = (scheduled?: boolean) => field(scheduled).activeHrefs!.map((href) => href.split('/').at(-1));
+    const paths = (scheduled?: boolean) => field(scheduled).activeHrefs!.filter(href => !href.includes('configuration')).map((href) => href.split('/').at(-1));
     expect(paths(true)).toEqual(['field', 'work', 'schedule', 'resources', 'locations', 'assets']);
     expect(paths(false)).toEqual(['field', 'work', 'assets']);
     expect(paths(undefined)).toEqual(paths(true));
-    expect(field(false, { enabledModules: new Set(), featureAvailability: new Set() }).activeHrefs).toEqual([`/organizations/${ORG}/field`, `/organizations/${ORG}/work`]);
+    expect(field(false, { enabledModules: new Set(), featureAvailability: new Set() }).activeHrefs?.filter(href => !href.includes('configuration'))).toEqual([`/organizations/${ORG}/field`, `/organizations/${ORG}/work`]);
   });
   it('configuration eligibility keeps the same shape gate', () => {
     expect(configTargetOffered(configTarget('schedule-configuration'), gate(['field.manage'], { schedulableWork: false }))).toBe(false);
@@ -246,7 +246,7 @@ describe('contextual workspace navigation', () => {
     expect(context.sections[0].items[0]).toMatchObject({ label: 'Overview', href: `/organizations/${ORG}/${workspace.home}`, exact: true });
     expect(activeItemKey(context.sections, `/organizations/${ORG}/${workspace.home}`)).toBe('workspace-overview');
     const expected = AREAS.filter((area) => area.workspace === workspace.key && area.sidebar !== false && area.segment !== workspace.home);
-    expect(context.sections[0].items.slice(1).map((item) => item.key)).toEqual(expected.map((area) => area.segment));
+    expect(context.sections[0].items.slice(1).filter(item => item.key !== 'workspace-configuration').map((item) => item.key)).toEqual(expected.map((area) => area.segment));
   });
   it.each([
     ['customers/123', 'crm', 'customers'], ['customers/pipeline', 'crm', 'pipeline'],
@@ -263,7 +263,7 @@ describe('contextual workspace navigation', () => {
     const context = workspaceNavigation(project(), `/organizations/${ORG}/opportunities/123`)!;
     expect(context.workspace.key).toBe('workspace-crm');
     expect(context.sections[0].items.map((item) => item.key)).not.toContain('opportunities');
-    for (const path of ['home', 'library', 'settings/calls', 'pricing', 'platform/providers', 'customers-other']) {
+    for (const path of ['home', 'library', 'pricing', 'platform/providers', 'customers-other']) {
       expect(workspaceNavigation(project(), `/organizations/${ORG}/${path}`)).toBeNull();
     }
   });
@@ -329,7 +329,7 @@ describe('responsive page-location projection', () => {
     const settings = { organizationId: ORG, sections: projectSettingsNav(ORG, gate([])) };
     const location = pageNavigation(settings, '/settings/account/security', []);
     expect(location.activeKey).toBe('settings-security');
-    expect(location.groups.flatMap((group) => group.items).map((item) => item.key)).toEqual(['settings-profile', 'settings-security']);
+    expect(location.groups.flatMap((group) => group.items).map((item) => item.key)).toEqual(['settings-profile', 'settings-security', 'settings-appearance']);
     expect(location.groups.flatMap((group) => group.items).every((item) => item.href.includes(ORG))).toBe(true);
     expect(location.parentHref).toBeUndefined();
   });
@@ -344,5 +344,43 @@ describe('responsive page-location projection', () => {
     expect(location.parentHref).toBe(platformHref(ORG, 'providers'));
     expect(location.groups.flatMap((group) => group.items).every((item) => item.href.startsWith(platformHref(ORG)))).toBe(true);
     expect(location.groups.flatMap((group) => group.items).some((item) => item.key === 'workspace-field')).toBe(false);
+  });
+});
+
+
+describe('workspace Configuration authority', () => {
+  it('lets a configuration-only member enter without Overview, Calls or Inbox', () => {
+    const sections = project(['field.manage']);
+    const row = projectedItems(sections).find(item => item.key === 'workspace-communications')!;
+    expect(row.href).toBe(`/organizations/${ORG}/comms/configuration`);
+    expect(row.configurationOnly).toBe(true);
+    const context = workspaceNavigation(sections, row.href)!;
+    expect(context.sections[0].items.map(item => item.key)).toEqual(['workspace-configuration']);
+    expect(workspaceNavigation(sections, `/organizations/${ORG}/calls`)).toBeNull();
+    expect(workspaceNavigation(sections, `/organizations/${ORG}/comms/inbox`)).toBeNull();
+    expect(activeItemKey(context.sections, `/organizations/${ORG}/comms/configuration/calling`)).toBe('workspace-configuration');
+  });
+  it('does not offer Configuration to a calling-only member or without an accessible concern', () => {
+    const row = projectedItems(project(['call.place'])).find(item => item.key === 'workspace-communications')!;
+    expect(row.configuration).toBeUndefined();
+    expect(workspaceNavigation(project(['call.place']), `/organizations/${ORG}/comms/configuration`)).toBeNull();
+    const none = project(['field.manage'], { enabledModules: new Set(), featureAvailability: new Set() });
+    expect(projectedItems(none).find(item => item.key === 'workspace-communications')).toBeUndefined();
+    for (const key of ['marketing', 'automations']) expect(projectedItems(project()).find(item => item.key === `workspace-${key}`)?.configuration).toBeUndefined();
+  });
+  it('cannot infer a restricted configuration section from an authorized configuration root', () => {
+    const sections = project(['field.manage']);
+    expect(workspaceNavigation(sections, `/organizations/${ORG}/comms/configuration/calling`)).not.toBeNull();
+    expect(workspaceNavigation(sections, `/organizations/${ORG}/comms/configuration/email`)).toBeNull();
+    expect(workspaceNavigation(sections, `/organizations/${ORG}/comms/configuration/numbers`)).toBeNull();
+  });
+  it('keeps Configuration active on its authorized legacy and canonical section addresses', () => {
+    for (const suffix of ['comms/configuration', 'comms/configuration/calling', 'comms/configuration/email']) {
+      const path = `/organizations/${ORG}/${suffix}`;
+      const context = workspaceNavigation(project(), path)!;
+      expect(context.workspace.key).toBe('workspace-communications');
+      expect(activeItemKey(context.sections, path)).toBe('workspace-configuration');
+      expect(context.sections[0].items.filter(item => item.key === 'workspace-configuration')).toHaveLength(1);
+    }
   });
 });

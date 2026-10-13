@@ -36,7 +36,7 @@ describe('CRM and Voice feature boundaries', () => {
     expect(routeSource('features/crm/home/crm-home.tsx')).toContain('<WorkspaceHome');
 
     expect(calls).toContain("@/features/communications/voice/voice-overview");
-    expect(calls).toContain("@/features/communications/voice/voice-settings-sheet");
+    expect(calls).toContain("@/features/settings/workspace-configure");
     expect(customers).toContain("@/features/crm/customers/customer-table");
     expect(customers).toContain("@/features/crm/customers/create-customer-sheet");
     expect(customers).toContain("@/features/crm/customers/customer-configuration");

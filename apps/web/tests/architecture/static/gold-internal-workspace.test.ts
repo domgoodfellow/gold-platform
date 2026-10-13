@@ -49,6 +49,6 @@ describe('GOLD Internal operating context composition', () => {
     expect(renderers).not.toMatch(/PLATFORM_NAV|PlatformPhoneNavMenu|GoldPlatformNav|isGoldInternal|platformStaff|isPlatformStaff|isOwner|isAdmin/);
     expect(shell).not.toMatch(/isOwner|isAdmin|role ===|role !==/);
     const projection = read('lib/shell.ts').replace(/\/\*[\s\S]*?\*\//g, '');
-    expect(projection).not.toMatch(/\.role\b|isOwner|isAdmin|isGold\b|isPlatformStaff|Owner|Admin['"]/);
+    expect(projection).not.toMatch(/\.role\b|isOwner|isAdmin|isGold\b|isPlatformStaff|\bOwner\b|Admin['"]/);
   });
 });

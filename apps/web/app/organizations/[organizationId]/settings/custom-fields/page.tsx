@@ -1,3 +1,5 @@
+import { redirect } from 'next/navigation';
+import { configurationRedirectHref } from '@/lib/route/configuration-redirect';
 import { workspaceConfigCrumbs } from '@/lib/settings-nav';
 import { areaLabel } from '@/lib/navigation';
 import { PageHeader } from '@/components/headers/page-header';
@@ -19,6 +21,8 @@ export default async function FieldsPage({
   const query = await searchParams;
   const rawEntity = Array.isArray(query.entity) ? query.entity[0] : query.entity;
   const entityType = resolveFieldEntity(rawEntity);
+  if (entityType === 'customer') redirect(configurationRedirectHref(organizationId, 'sales/configuration/fields', query));
+  if (entityType === 'work_item') redirect(configurationRedirectHref(organizationId, 'work/configuration', { ...query, tab: 'fields' }));
   const { db, organization } = await requireOrganization(organizationId);
   const definitions = await listFieldDefinitions(db, { organizationId, entityType });
   const mayManage = organization.capabilities.includes('field.manage');

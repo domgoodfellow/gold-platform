@@ -137,6 +137,9 @@
     ]
   },
   "files": {
+    "apps/web/e2e/workspace-configuration.spec.ts": { "category": "playwright-acceptance", "concerns": ["configuration", "navigation", "responsive", "permissions"] },
+    "apps/web/tests/unit/channel-diagnostics.test.ts": { "category": "unit", "concerns": ["communications", "readiness", "permissions"] },
+    "apps/web/tests/unit/configuration-redirect.test.ts": { "category": "unit", "concerns": ["navigation", "configuration", "compatibility"] },
     "apps/web/e2e/design/foundation.spec.ts": {
       "category": "playwright-design",
       "concerns": ["ui", "accessibility", "responsive"]

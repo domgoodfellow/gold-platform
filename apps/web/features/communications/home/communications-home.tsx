@@ -26,7 +26,7 @@ function QueueTable({ items, organizationId, timezone, query = '' }: { items: In
 }
 
 export function CommunicationsHome({ organizationId, timezone, data, configure }: { organizationId: string; timezone: string; data: CommunicationsDashboard; configure?: ReactNode }) {
-  const base = `/organizations/${organizationId}`, home = `${base}/comms`, inbox = `${home}/inbox`, calls = `${base}/calls`, config = `${base}/settings/calls`;
+  const base = `/organizations/${organizationId}`, home = `${base}/comms`, inbox = `${home}/inbox`, calls = `${base}/calls`, config = `${base}/comms/configuration/calling`;
   const { params, mayCall, mayMessage } = data;
   const link = (change: Record<string,string>) => { const q = new URLSearchParams({ ...params, q: params.search, ...change }); q.delete('search'); return `${home}?${q}`; };
   const number = data.callingReady && data.outbound ? { id: data.outbound.phoneNumberId, e164: data.outbound.e164, label: data.numbers.find(n => n.id === data.outbound?.phoneNumberId)?.label ?? null } : null;

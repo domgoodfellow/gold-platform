@@ -126,7 +126,7 @@ describe('the tenant Integrations screen owns no connector list', () => {
 
   it('draws no control for what is not available, and no OAuth client detail for a business', () => {
     const card = read('features/integrations/catalogue/connector-card.tsx');
-    const catalogue = read('features/integrations/catalogue/connector-catalogue.tsx');
+    const catalogue = read('features/integrations/catalogue/app-library.tsx');
     for (const file of [card, catalogue]) {
       expect(file).not.toMatch(/Coming soon|Not available yet/);
       expect(file).not.toMatch(/_OAUTH_|requiredConfiguration|client secret/i);
@@ -141,7 +141,7 @@ describe('the tenant Integrations screen owns no connector list', () => {
   });
 
   it('keeps the card grid and the section nav from forcing a horizontal page scroll', () => {
-    const catalogue = read('features/integrations/catalogue/connector-catalogue.tsx');
+    const catalogue = read('features/integrations/catalogue/app-library.tsx');
     const nav = read('features/integrations/integrations-nav.tsx');
     expect(catalogue).toContain('sm:grid-cols-2'); // one column at phone width
     expect(catalogue).toContain('flex-wrap'); // chips wrap

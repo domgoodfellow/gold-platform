@@ -60,7 +60,7 @@ test.describe('CRM reference vertical', () => {
     await page.getByRole('button', { name: 'Configure', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'CRM configuration', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Custom field settings' })).toHaveAttribute('href', `/organizations/${ctx.organizationId}/settings/custom-fields`);
-    await expect(page.getByRole('link', { name: 'Relationship-stage settings' })).toHaveAttribute('href', `/organizations/${ctx.organizationId}/settings/sales-stages`);
+    await expect(page.getByRole('link', { name: 'Relationship-stage settings' })).toHaveAttribute('href', `/organizations/${ctx.organizationId}/sales/configuration/relationship-stages`);
   });
 });
 

@@ -21,7 +21,7 @@ import { callStatusLabel, getCall } from '@/lib/domain/reception/calls';
 import { getPhoneNumber } from '@/lib/domain/reception/numbers';
 import { listCallOutcomes } from '@/lib/domain/reception/outcomes';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
-import { requireOrganization } from '@/lib/route/organization';
+import { requireOperatingArea } from '@/lib/route/workspace-configuration';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,7 +35,7 @@ export default async function CallDetailPage({
   params,
 }: PageProps<'/organizations/[organizationId]/calls/[callId]'>) {
   const { organizationId, callId } = await params;
-  const { db, organization } = await requireOrganization(organizationId);
+  const { db, organization } = await requireOperatingArea(organizationId, 'calls');
 
   const call = await getCall(db, { organizationId, callId });
   if (!call) notFound();
@@ -88,7 +88,7 @@ export default async function CallDetailPage({
           <Detail label="Their number">{call.externalNumber ?? 'Withheld'}</Detail>
           <Detail label="Our number">
             {number ? (
-              <Link href={`/organizations/${organizationId}/comms/numbers/${number.id}`} className="underline underline-offset-4">
+              <Link href={`/organizations/${organizationId}/comms/configuration/numbers/${number.id}`} className="underline underline-offset-4">
                 {number.label ? `${number.label} (${number.e164})` : number.e164}
               </Link>
             ) : (

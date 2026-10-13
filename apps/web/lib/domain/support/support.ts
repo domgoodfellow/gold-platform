@@ -175,3 +175,14 @@ export function recordHref(
   };
   return `/organizations/${organizationId}/${paths[kind]}/${id}`;
 }
+
+export type QueueConfiguration = Pick<Queue, 'id' | 'name' | 'description' | 'active'>;
+export type SupportConfiguration = { queues: QueueConfiguration[]; policies: Policy[] };
+export async function readSupportConfiguration(db: Db, organizationId: string): Promise<SupportConfiguration> {
+ const [queues, policies] = await Promise.all([
+  db.from('support_queues').select('id,name,description,active').eq('organization_id', organizationId).order('name'),
+  db.from('support_service_levels').select('id,name,priority,queue_id,target_minutes,active,clock_basis').eq('organization_id', organizationId).order('name'),
+ ]);
+ if (queues.error || policies.error) throw new DomainError((queues.error ?? policies.error)!.message, 'support.configuration_read_failed');
+ return { queues: queues.data ?? [], policies: (policies.data ?? []) as Policy[] };
+}
