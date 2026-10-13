@@ -1,8 +1,6 @@
-import Link from 'next/link';
 import { PageHeader } from '@/components/headers/page-header';
 import { areaLabel } from '@/lib/navigation';
 
-import { Hint } from '@/components/controls/inputs';
 import { AppPage } from '@/components/layout/app-page';
 import { WorkConfiguration } from '@/features/work/configuration/work-configuration';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
@@ -25,7 +23,7 @@ export default async function WorkConfigurationPage({
   searchParams,
 }: PageProps<'/organizations/[organizationId]/work/configuration'>) {
   const { organizationId } = await params;
-  const { type: requestedType, tab: requestedTab } = await searchParams;
+  const { type: requestedType, tab: requestedTab, new: requestedNew } = await searchParams;
   const { db, organization } = await requireConfigurationTarget(organizationId, 'work-configuration');
 
   const types = await listWorkItemTypes(db, { organizationId });
@@ -58,37 +56,36 @@ export default async function WorkConfigurationPage({
 
   return (
     <AppPage>
-      <PageHeader title="Work configuration" crumbs={[{ label: areaLabel('work'), href: `/organizations/${organizationId}/work` }]} />
-      <Hint className="mt-1">
-        The kinds of work this business does, the stages a job moves through, and the steps every
-        job of a kind involves.{' '}
-        <Link href={`/organizations/${organizationId}/work`} className="underline underline-offset-4">
-          Doing today&rsquo;s work
-        </Link>{' '}
-        stays on the Work screen.
-      </Hint>
-
-      <div className="mt-6">
-        <WorkConfiguration
-          initialTab={typeof requestedTab === 'string' ? requestedTab : undefined}
-          organizationId={organizationId}
-          role={organization.role}
-          mayConfigure={mayConfigure}
-          types={types}
-          selectedType={selectedType}
-          statuses={statuses}
-          transitions={transitions}
-          templateSteps={templateSteps}
-          fieldDefinitions={fieldDefinitions}
-          prices={prices}
-          booking={booking}
-          bookingEnabled={enabledModules.has('booking')}
-          requirements={requirements}
-          capabilities={capabilities}
-          intakeForms={intakeForms}
-          typeHref={(typeId) => `/organizations/${organizationId}/work/configuration?type=${typeId}`}
-        />
-      </div>
+      {/* The configuration layout's section navigation and the workspace bar already name this place. */}
+      <PageHeader
+        title={<span className="sr-only">Work configuration</span>}
+        breadcrumbLabel="Work configuration"
+        crumbs={[{ label: areaLabel('work'), href: `/organizations/${organizationId}/work` }]}
+        className="mb-0"
+      />
+      <WorkConfiguration
+        variant="page"
+        typeRequested={typeof requestedType === 'string' && types.some((type) => type.id === requestedType)}
+        listHref={`/organizations/${organizationId}/work/configuration`}
+        createOpen={requestedNew === '1'}
+        initialTab={typeof requestedTab === 'string' ? requestedTab : undefined}
+        organizationId={organizationId}
+        role={organization.role}
+        mayConfigure={mayConfigure}
+        types={types}
+        selectedType={selectedType}
+        statuses={statuses}
+        transitions={transitions}
+        templateSteps={templateSteps}
+        fieldDefinitions={fieldDefinitions}
+        prices={prices}
+        booking={booking}
+        bookingEnabled={enabledModules.has('booking')}
+        requirements={requirements}
+        capabilities={capabilities}
+        intakeForms={intakeForms}
+        typeHref={(typeId) => `/organizations/${organizationId}/work/configuration?type=${typeId}`}
+      />
     </AppPage>
   );
 }

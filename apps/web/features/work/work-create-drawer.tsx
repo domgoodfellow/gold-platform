@@ -20,13 +20,13 @@ export function WorkCreateDrawer({ options, defaultOpen = false, initialTypeId, 
       {options.types.length ? <>
         <div className="flex flex-wrap items-end gap-2">
           <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">Work type<SelectInput value={typeId} onChange={e => setTypeId(e.target.value)}>{options.types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</SelectInput></label>
-          {configureHref ? <ButtonLink size="small" tone="secondary" href={configureHref}>Create work type</ButtonLink> : null}
+          {configureHref ? <ButtonLink size="small" tone="secondary" href={`${configureHref}?new=1`}>Create work type</ButtonLink> : null}
         </div>
         <CreateWorkItemForm key={typeId} {...options} statuses={statuses} />
         {!statuses.length && configureHref ? <ButtonLink size="small" tone="secondary" href={`${configureHref}?type=${typeId}&tab=workflow`}>Add a stage</ButtonLink> : null}
       </> : <>
         <p className="text-sm text-muted">Configure a work type and its starting status before creating work.</p>
-        {configureHref ? <ButtonLink size="small" href={configureHref}>Create work type</ButtonLink> : null}
+        {configureHref ? <ButtonLink size="small" href={`${configureHref}?new=1`}>Create work type</ButtonLink> : null}
       </>}
     </PageDrawerContent>
   </PageDrawer>;

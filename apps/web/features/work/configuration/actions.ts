@@ -29,7 +29,7 @@ import {
 } from '@/lib/domain/work-items/types';
 import { requireOrganization } from '@/lib/route/organization';
 
-export type WorkConfigActionState = { error: string | null };
+export type WorkConfigActionState = { error: string | null; createdTypeId?: string };
 
 /**
  * Both surfaces read what these writes change — the operational board groups jobs by these same
@@ -82,6 +82,7 @@ export async function createTypeAction(
   const organizationId = String(formData.get('organizationId') ?? '');
   await requireOrganization(organizationId);
 
+  let createdTypeId: string;
   try {
     // Anything but "yes" or "no" is refused rather than read as false: the form leaves neither
     // selected, so a missing answer is a question not yet answered.
@@ -89,7 +90,7 @@ export async function createTypeAction(
     if (answer !== 'yes' && answer !== 'no') {
       return { error: 'Say whether this work is scheduled.' };
     }
-    await createWorkItemType(db, {
+    createdTypeId = await createWorkItemType(db, {
       organizationId,
       name: String(formData.get('name') ?? ''),
       schedulable: answer === 'yes',
@@ -102,7 +103,7 @@ export async function createTypeAction(
   }
 
   revalidateWork(organizationId);
-  return { error: null };
+  return { error: null, createdTypeId };
 }
 
 export async function createTransitionAction(

@@ -119,6 +119,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
           settingsHref={`/organizations/${organizationId}/work/configuration${selectedType ? `?type=${selectedType.id}` : ''}`}
         >
           <WorkConfiguration
+            variant="rail"
             organizationId={organizationId}
             role={organization.role}
             mayConfigure={mayConfigure}

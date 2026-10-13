@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { DividedList, EmptyState } from '@/components/surfaces/section';
-import { Hint } from '@/components/controls/inputs';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { cx } from '@/components/class-names';
+import { DividedList, EmptyState, GroupHeading } from '@/components/surfaces/section';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
-import { FieldSet, FieldLegend, FieldGroup } from '@gold/ui/components/field';
 import { EntityFieldsConfiguration } from '@/features/custom-fields/configuration/entity-fields-configuration';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
@@ -12,12 +12,12 @@ import type { TypeBooking, WorkItemType } from '@/lib/domain/work-items/types';
 import type { TypeChecklistItem } from '@/lib/domain/work-items/checklists';
 import type { ResourceCapability } from '@/lib/domain/resources/resource-capabilities';
 import type { ResourceRequirement } from '@/lib/domain/work-items/requirements';
+import { NewTypeDrawer } from './new-type-drawer';
 import { ResourceRequirementsEditor } from './resource-requirements';
 import {
   AddTypeChecklistItemForm,
   CreateStatusForm,
   CreateTransitionForm,
-  CreateTypeForm,
   EditStatusForm,
   PublishTypeForm,
   RenameTypeForm,
@@ -46,23 +46,126 @@ export type WorkConfigurationData = {
   capabilities: ResourceCapability[];
   /** The forms a public booking of the selected type may ask: published, not archived. */
   intakeForms: Array<{ id: string; name: string }>;
-  /** Where a chip/type link should point — differs between the Work page (`?type=`) and Settings (`?type=` too, but a different base path). */
+  /** Where a type link should point — the Work page's Configure rail and the configuration route use different base paths. */
   typeHref: (typeId: string) => string;
+  /**
+   * `page` is the routed screen: a list beside the selected type on wide screens, one level at a
+   * time on narrow ones. `rail` is the narrow Configure panel: a compact type strip above the type.
+   */
+  variant?: 'page' | 'rail';
+  /** Page variant only: whether the URL named a type. On a narrow screen that opens the type; otherwise the list shows. */
+  typeRequested?: boolean;
+  /** Page variant only: the list of types, where a narrow screen's back link returns. */
+  listHref?: string;
+  /** Opens the New type drawer on load (`?new=1`). */
+  createOpen?: boolean;
 };
 
 /**
- * Kinds of work, workflow, checklists and fields — the shape of Work, apart from doing it. One
- * component so a business configuring from the Work page's Configure rail and one editing from
- * Work configuration sees, and changes, the exact same thing as the Work Configure rail.
+ * Kinds of work, workflow, requirements, checklists and fields — the shape of Work, apart from
+ * doing it. One component behind both the routed configuration page and the Work page's Configure
+ * rail, so both read and change the same thing; only the arrangement differs by `variant`.
  *
  * Deliberately excludes operating hours: those describe Schedule, not Work, and stay on the
  * owner route directly rather than in this shared, rail-hosted component.
  */
-export function WorkConfiguration({
+export function WorkConfiguration(props: WorkConfigurationData) {
+  const { organizationId, mayConfigure, types, selectedType, typeHref, createOpen, variant = 'page' } = props;
+  const newType = mayConfigure ? (
+    <NewTypeDrawer organizationId={organizationId} typeHrefPrefix={typeHref('')} defaultOpen={createOpen} />
+  ) : null;
+
+  if (types.length === 0) {
+    return (
+      <EmptyState title="No work types yet" action={newType}>
+        {mayConfigure ? null : `Your role, ${props.role}, cannot create work types.`}
+      </EmptyState>
+    );
+  }
+
+  if (variant === 'rail') {
+    return (
+      <div className="flex min-w-0 flex-col gap-4">
+        <nav aria-label="Work types" className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1">
+            {types.map((type) => {
+              const current = type.id === selectedType?.id;
+              return (
+                <Link
+                  key={type.id}
+                  href={typeHref(type.id)}
+                  aria-current={current ? 'page' : undefined}
+                  className={cx(
+                    'shrink-0 rounded-md border px-3 py-1.5 text-sm',
+                    current ? 'border-foreground bg-foreground text-background' : 'border-border hover:bg-hover',
+                  )}
+                >
+                  {type.name}
+                </Link>
+              );
+            })}
+          </div>
+          {newType}
+        </nav>
+        <TypeDetail {...props} />
+      </div>
+    );
+  }
+
+  const showDetail = Boolean(props.typeRequested);
+  return (
+    <div className="@container min-w-0">
+    <div className="grid min-w-0 gap-6 @3xl:grid-cols-[15rem_minmax(0,1fr)] @3xl:items-start">
+      <nav aria-label="Work types" className={cx('min-w-0', showDetail && 'hidden @3xl:block')}>
+        <div className="mb-1 flex min-h-9 items-center justify-between gap-2">
+          <h2 className="text-sm font-medium">Work types</h2>
+          {newType}
+        </div>
+        <ul className="flex flex-col gap-0.5">
+          {types.map((type) => {
+            const current = type.id === selectedType?.id;
+            return (
+              <li key={type.id}>
+                <Link
+                  href={typeHref(type.id)}
+                  aria-current={current ? 'page' : undefined}
+                  title={type.name}
+                  className={cx(
+                    'flex min-h-11 items-center justify-between gap-2 rounded-md border-l-2 px-3 text-sm hover:bg-hover',
+                    current ? 'border-accent bg-hover font-medium' : 'border-transparent',
+                  )}
+                >
+                  <span className="min-w-0 truncate">{type.name}</span>
+                  <span className="flex shrink-0 items-center gap-1 text-xs font-normal text-muted">
+                    {type.schedulable ? 'Scheduled' : null}
+                    <ChevronRight aria-hidden className="size-4 @3xl:hidden" />
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      <div className={cx('min-w-0', !showDetail && 'hidden @3xl:block')}>
+        {props.listHref ? (
+          <Link href={props.listHref} className="mb-3 inline-flex min-h-11 items-center gap-1 text-sm text-muted hover:text-foreground @3xl:hidden">
+            <ChevronLeft aria-hidden className="size-4" />
+            Work types
+          </Link>
+        ) : null}
+        <TypeDetail {...props} />
+      </div>
+    </div>
+    </div>
+  );
+}
+
+/** One type's configuration. Everything here belongs to `selectedType` — nothing reaches another type. */
+function TypeDetail({
   organizationId,
   role,
   mayConfigure,
-  types,
   selectedType,
   statuses,
   transitions,
@@ -74,219 +177,139 @@ export function WorkConfiguration({
   requirements,
   capabilities,
   intakeForms,
-  typeHref,
   initialTab,
 }: WorkConfigurationData) {
-  const tabs = ['types', 'requirements', 'workflow', 'checklists', ...(bookingEnabled ? ['booking'] : []), 'fields'];
-  // `?tab=` is a deep link, kept: an unknown or unavailable value falls back to the first tab.
-  const startTab = initialTab && tabs.includes(initialTab) ? initialTab : 'types';
+  if (!selectedType) return null;
+
+  const tabs = ['general', 'workflow', ...(selectedType.schedulable ? ['requirements'] : []), 'checklists', ...(bookingEnabled ? ['booking'] : []), 'fields'];
+  // `?tab=` is a deep link, kept: the earlier name `types` still means General, and an unknown or unavailable value falls back to it.
+  const requested = initialTab === 'types' ? 'general' : initialTab;
+  const startTab = requested && tabs.includes(requested) ? requested : 'general';
   const statusName = new Map(statuses.map((status) => [status.id, status.name]));
 
   return (
-    <div className={types.length ? "grid min-w-0 gap-4 lg:grid-cols-[13rem_minmax(0,1fr)]" : "min-w-0"}>
-      {types.length > 0 ? (
-        <nav className="flex gap-2 overflow-x-auto rounded-lg border border-border p-2 lg:flex-col lg:self-start" aria-label="Kind of work">
-          {types.map((type) => {
-            const current = type.id === selectedType?.id;
-            return (
-              <Link
-                key={type.id}
-                href={typeHref(type.id)}
-                aria-current={current ? 'page' : undefined}
-                className={
-                  current
-                    ? 'shrink-0 rounded bg-foreground px-3 py-2 text-sm text-background'
-                    : 'shrink-0 rounded px-3 py-2 text-sm hover:bg-surface'
-                }
-              >
-                {type.name}
-              </Link>
-            );
-          })}
-        </nav>
-      ) : null}
+    <div className="flex min-w-0 flex-col gap-4">
+      <div className="min-w-0">
+        <h2 className="wrap-break-word text-lg font-semibold">{selectedType.name}</h2>
+        {!mayConfigure ? <p className="mt-1 text-sm text-muted">Your role, {role}, can view this configuration but not change it.</p> : null}
+      </div>
 
-      <Tabs defaultValue={startTab} className="min-w-0 rounded-lg border border-border p-4">
-        <TabsList className="max-w-full justify-start overflow-x-auto">
-          <TabsTrigger value="types">General</TabsTrigger>
-          <TabsTrigger value="requirements">Requirements</TabsTrigger>
+      <Tabs key={`${selectedType.id}:${startTab}`} defaultValue={startTab} className="min-w-0 gap-5">
+        <TabsList className="flex-wrap overflow-visible">
+          <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="workflow">Workflow</TabsTrigger>
-          <TabsTrigger value="checklists">Checklist</TabsTrigger>
+          {selectedType.schedulable ? <TabsTrigger value="requirements">Requirements</TabsTrigger> : null}
+          <TabsTrigger value="checklists">Checklists</TabsTrigger>
           {bookingEnabled ? <TabsTrigger value="booking">Booking</TabsTrigger> : null}
           <TabsTrigger value="fields">Fields</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="types" className="mt-4 flex flex-col gap-8">
-          <FieldSet>
-            <FieldLegend>Kinds of work</FieldLegend>
-            <Hint>{selectedType ? `Manage ${selectedType.name}, or create another work type.` : 'Create a work type, then configure its statuses and allowed transitions.'}</Hint>
-            {mayConfigure ? (
-              <CreateTypeForm organizationId={organizationId} />
-            ) : (
-              <Hint>Your role, {role}, cannot configure work item types here.</Hint>
-            )}
-          </FieldSet>
-
-          {selectedType ? (
-            <FieldSet>
-              <FieldLegend variant="label">Rename {selectedType.name}</FieldLegend>
-              {mayConfigure ? (
-                <RenameTypeForm organizationId={organizationId} typeId={selectedType.id} name={selectedType.name} />
-              ) : (
-                <Hint>Your role, {role}, cannot rename work item types here.</Hint>
-              )}
-            </FieldSet>
-          ) : null}
-
-          {selectedType ? (
-            <FieldSet>
-              <FieldLegend variant="label">Scheduling for {selectedType.name}</FieldLegend>
+        <TabsContent value="general" className="flex max-w-xl flex-col gap-6">
+          {mayConfigure ? (
+            <>
+              <RenameTypeForm organizationId={organizationId} typeId={selectedType.id} name={selectedType.name} />
               <SchedulingTypeForm
                 organizationId={organizationId}
                 typeId={selectedType.id}
                 typeName={selectedType.name}
                 schedulable={selectedType.schedulable}
                 published={booking !== null}
-                disabled={!mayConfigure}
+                disabled={false}
               />
-              {!mayConfigure ? <Hint>Your role, {role}, cannot change whether work is scheduled.</Hint> : null}
-            </FieldSet>
-          ) : null}
-
-        </TabsContent>
-
-        <TabsContent value="requirements" className="mt-4">
-          {selectedType && selectedType.schedulable ? (
-            <FieldSet>
-              <FieldLegend variant="label">Resources needed for {selectedType.name}</FieldLegend>
-              <ResourceRequirementsEditor
-                organizationId={organizationId}
-                typeId={selectedType.id}
-                typeName={selectedType.name}
-                requirements={requirements}
-                capabilities={capabilities}
-                mayConfigure={mayConfigure}
-              />
-            </FieldSet>
-          ) : null}
-
-          {selectedType && !selectedType.schedulable ? <Hint>Resource requirements apply to scheduled work. Enable scheduling in General first.</Hint> : null}
-        </TabsContent>
-        <TabsContent value="booking" className="mt-4">
-          {selectedType && bookingEnabled ? (
-            <FieldSet>
-              <FieldLegend variant="label">Publish {selectedType.name} to the public booking page</FieldLegend>
-              <PublishTypeForm
-                organizationId={organizationId}
-                typeId={selectedType.id}
-                typeName={selectedType.name}
-                statuses={statuses}
-                prices={prices}
-                booking={booking}
-                intakeForms={intakeForms}
-                schedulable={selectedType.schedulable}
-                disabled={!mayConfigure}
-              />
-              {!mayConfigure ? <Hint>Your role, {role}, cannot change what this business publishes.</Hint> : null}
-            </FieldSet>
-          ) : null}
-        </TabsContent>
-
-        <TabsContent value="workflow" className="mt-4 flex flex-col gap-8">
-          {selectedType === null ? (
-            <EmptyState>No kinds of work defined yet — add one under Types first.</EmptyState>
-          ) : (
-            <>
-              <FieldSet>
-                <FieldLegend>{selectedType.name} statuses</FieldLegend>
-                <FieldGroup>
-                  <Hint>
-                    {statuses.length === 0
-                      ? 'None yet. These are yours to name — the platform has no opinion.'
-                      : statuses.map((status) => status.name).join(' → ')}
-                  </Hint>
-                  {mayConfigure && statuses.length > 0 ? (
-                    <DividedList as="div">
-                      {statuses.map((status) => (
-                        <EditStatusForm key={status.id} organizationId={organizationId} status={status} />
-                      ))}
-                    </DividedList>
-                  ) : null}
-                  {mayConfigure ? (
-                    <CreateStatusForm organizationId={organizationId} typeId={selectedType.id} />
-                  ) : (
-                    <Hint>Your role, {role}, cannot configure statuses here.</Hint>
-                  )}
-                </FieldGroup>
-              </FieldSet>
-
-              <FieldSet>
-                <FieldLegend>Allowed moves</FieldLegend>
-                <FieldGroup>
-                  {/* An unconfigured type is frozen, not unconstrained (I13). */}
-                  <Hint>
-                    {transitions.length === 0
-                      ? 'None yet, so nothing on this board can move. Wire the moves this business actually makes.'
-                      : transitions
-                          .map((t) => `${statusName.get(t.fromStatusId) ?? '?'} → ${statusName.get(t.toStatusId) ?? '?'}`)
-                          .join(' · ')}
-                  </Hint>
-                  {mayConfigure ? (
-                    <CreateTransitionForm organizationId={organizationId} typeId={selectedType.id} statuses={statuses} />
-                  ) : (
-                    <Hint>Your role, {role}, cannot configure transitions here.</Hint>
-                  )}
-                </FieldGroup>
-              </FieldSet>
             </>
-          )}
-        </TabsContent>
-
-        <TabsContent value="checklists" className="mt-4">
-          {selectedType === null ? (
-            <EmptyState>No kinds of work defined yet — add one under Types first.</EmptyState>
           ) : (
-            <FieldSet>
-              <FieldLegend>Steps every {selectedType.name} involves</FieldLegend>
-              <FieldGroup>
-                {/* Copied onto each job at creation, never joined (I8) — editing this list never reaches a job that already exists. */}
-                <Hint>
-                  {templateSteps.length === 0
-                    ? 'None. Work items of this kind start with an empty checklist.'
-                    : 'Copied onto each new work item. Changing them leaves existing work alone.'}
-                </Hint>
-                {templateSteps.length > 0 ? (
-                  <DividedList as="div">
-                    {templateSteps.map((item) =>
-                      mayConfigure ? (
-                        <TypeChecklistItemRow key={item.id} organizationId={organizationId} item={item} />
-                      ) : (
-                        <Hint key={item.id} className="py-1">{item.label}</Hint>
-                      ),
-                    )}
-                  </DividedList>
-                ) : null}
-                {mayConfigure ? (
-                  <AddTypeChecklistItemForm organizationId={organizationId} typeId={selectedType.id} />
-                ) : null}
-              </FieldGroup>
-            </FieldSet>
+            <p className="text-sm">{selectedType.schedulable ? 'Scheduled work.' : 'Not scheduled.'}</p>
           )}
         </TabsContent>
 
-        <TabsContent value="fields" className="mt-4">
-          <FieldSet>
-            <FieldLegend>Custom fields on a work item</FieldLegend>
-            <FieldGroup>
-              <EntityFieldsConfiguration
-                organizationId={organizationId}
-                entityType="work_item"
-                role={role}
-                mayConfigure={mayConfigure}
-                definitions={fieldDefinitions}
-              />
-            </FieldGroup>
-          </FieldSet>
+        <TabsContent value="workflow" className="flex flex-col gap-8">
+          <section className="flex max-w-2xl flex-col gap-3" aria-label="Stages">
+            <GroupHeading>Stages</GroupHeading>
+            {statuses.length === 0 ? <p className="text-sm text-muted">No stages yet. Add the stage new work starts in.</p> : null}
+            {statuses.length > 0 && mayConfigure ? (
+              <DividedList as="div">
+                {statuses.map((status) => (
+                  <EditStatusForm key={status.id} organizationId={organizationId} status={status} />
+                ))}
+              </DividedList>
+            ) : null}
+            {statuses.length > 0 && !mayConfigure ? <p className="text-sm">{statuses.map((status) => status.name).join(' → ')}</p> : null}
+            {mayConfigure ? <CreateStatusForm organizationId={organizationId} typeId={selectedType.id} /> : null}
+          </section>
+
+          {statuses.length >= 2 ? (
+            <section className="flex max-w-2xl flex-col gap-3" aria-label="Allowed moves">
+              <GroupHeading>Allowed moves</GroupHeading>
+              {/* An unconfigured type is frozen, not unconstrained (I13). */}
+              <p className="text-sm text-muted">
+                {transitions.length === 0
+                  ? 'None yet, so work of this type cannot change stage.'
+                  : transitions
+                      .map((t) => `${statusName.get(t.fromStatusId) ?? '?'} → ${statusName.get(t.toStatusId) ?? '?'}`)
+                      .join(' · ')}
+              </p>
+              {mayConfigure ? <CreateTransitionForm organizationId={organizationId} typeId={selectedType.id} statuses={statuses} /> : null}
+            </section>
+          ) : null}
+        </TabsContent>
+
+        {selectedType.schedulable ? (
+          <TabsContent value="requirements" className="max-w-2xl">
+            <ResourceRequirementsEditor
+              organizationId={organizationId}
+              typeId={selectedType.id}
+              typeName={selectedType.name}
+              requirements={requirements}
+              capabilities={capabilities}
+              mayConfigure={mayConfigure}
+            />
+          </TabsContent>
+        ) : null}
+
+        <TabsContent value="checklists" className="flex max-w-2xl flex-col gap-3">
+          {/* Copied onto each job at creation, never joined (I8) — editing this list never reaches a job that already exists. */}
+          <p className="text-sm text-muted">
+            {templateSteps.length === 0 ? 'No steps yet.' : 'Steps are copied onto new work. Existing work is unchanged.'}
+          </p>
+          {templateSteps.length > 0 ? (
+            <DividedList as="div">
+              {templateSteps.map((item) =>
+                mayConfigure ? (
+                  <TypeChecklistItemRow key={item.id} organizationId={organizationId} item={item} />
+                ) : (
+                  <p key={item.id} className="py-1 text-sm">{item.label}</p>
+                ),
+              )}
+            </DividedList>
+          ) : null}
+          {mayConfigure ? <AddTypeChecklistItemForm organizationId={organizationId} typeId={selectedType.id} /> : null}
+        </TabsContent>
+
+        {bookingEnabled ? (
+          <TabsContent value="booking" className="max-w-2xl">
+            <PublishTypeForm
+              organizationId={organizationId}
+              typeId={selectedType.id}
+              typeName={selectedType.name}
+              statuses={statuses}
+              prices={prices}
+              booking={booking}
+              intakeForms={intakeForms}
+              schedulable={selectedType.schedulable}
+              disabled={!mayConfigure}
+            />
+          </TabsContent>
+        ) : null}
+
+        <TabsContent value="fields" className="flex max-w-2xl flex-col gap-3">
+          <p className="text-sm text-muted">Custom fields apply to every work type.</p>
+          <EntityFieldsConfiguration
+            organizationId={organizationId}
+            entityType="work_item"
+            role={role}
+            mayConfigure={mayConfigure}
+            definitions={fieldDefinitions}
+          />
         </TabsContent>
       </Tabs>
     </div>

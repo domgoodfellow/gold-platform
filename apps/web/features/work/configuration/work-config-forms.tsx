@@ -36,7 +36,7 @@ export function CreateStatusForm({
   const [state, formAction, pending] = useActionState(createStatusAction, INITIAL);
 
   return (
-    <form action={formAction} className="mt-4 flex flex-col gap-2">
+    <form action={formAction} className="flex flex-col gap-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="typeId" value={typeId} />
 
@@ -60,36 +60,57 @@ export function CreateStatusForm({
   );
 }
 
-export function CreateTypeForm({ organizationId }: { organizationId: string }) {
-  const [state, formAction, pending] = useActionState(createTypeAction, INITIAL);
+export function CreateTypeForm({
+  organizationId,
+  onCreated,
+}: {
+  organizationId: string;
+  /** Called with the new type's id once it exists, so the host can take the person to it. */
+  onCreated?: (typeId: string) => void;
+}) {
+  const [state, formAction, pending] = useActionState(
+    async (previous: WorkConfigActionState, formData: FormData) => {
+      const result = await createTypeAction(previous, formData);
+      if (!result.error && result.createdTypeId) onCreated?.(result.createdTypeId);
+      return result;
+    },
+    INITIAL,
+  );
+  // Controlled so a refused submission keeps what was typed — React clears an uncontrolled form after its action.
+  const [name, setName] = useState('');
+  const [answer, setAnswer] = useState<'yes' | 'no' | null>(null);
 
   return (
-    <form action={formAction} className="mt-4 flex flex-col gap-3">
+    <form action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="organizationId" value={organizationId} />
 
-      <TextInput
-        name="name"
-        type="text"
-        required
-        maxLength={64}
-        placeholder="Type name, e.g. Installation"
-        aria-label="Type name"
-        className="w-full"
-      />
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
+        Name
+        <TextInput
+          name="name"
+          type="text"
+          required
+          maxLength={64}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="e.g. Installation"
+          className="w-full font-normal"
+        />
+      </label>
 
       {/* Neither answer is preselected: whether a business schedules this work is its to say, and a
           default would be the platform answering for it. */}
       <fieldset className="flex flex-col gap-2">
         <legend className="text-sm font-medium">Scheduling</legend>
         <label className="flex items-start gap-2 text-sm">
-          <input type="radio" name="schedulable" value="yes" required className="mt-1" />
+          <input type="radio" name="schedulable" value="yes" required checked={answer === 'yes'} onChange={() => setAnswer('yes')} className="mt-1" />
           <span>
             Scheduled
             <span className="block text-muted">This work happens at a time and can appear in Schedule.</span>
           </span>
         </label>
         <label className="flex items-start gap-2 text-sm">
-          <input type="radio" name="schedulable" value="no" required className="mt-1" />
+          <input type="radio" name="schedulable" value="no" required checked={answer === 'no'} onChange={() => setAnswer('no')} className="mt-1" />
           <span>
             Not scheduled
             <span className="block text-muted">This work has no set time, like a sales opportunity.</span>
@@ -98,7 +119,7 @@ export function CreateTypeForm({ organizationId }: { organizationId: string }) {
       </fieldset>
 
       <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
-        {pending ? 'Adding…' : 'Add type'}
+        {pending ? 'Creating…' : 'Create type'}
       </Button>
 
       <ErrorText role="alert">{state.error}</ErrorText>
@@ -129,7 +150,7 @@ export function SchedulingTypeForm({
   const [state, formAction, pending] = useActionState(setTypeSchedulableAction, INITIAL);
 
   return (
-    <form action={formAction} className="mt-4 flex flex-col gap-2">
+    <form action={formAction} className="flex flex-col gap-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="typeId" value={typeId} />
 
@@ -173,14 +194,14 @@ export function CreateTransitionForm({
 
   if (statuses.length < 2) {
     return (
-      <Hint className="mt-2">
+      <Hint>
         Add a second status before wiring moves between them.
       </Hint>
     );
   }
 
   return (
-    <form action={formAction} className="mt-4 flex flex-col gap-2">
+    <form action={formAction} className="flex flex-col gap-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="typeId" value={typeId} />
 
@@ -224,23 +245,20 @@ export function RenameTypeForm({
   const [state, formAction, pending] = useActionState(renameTypeAction, INITIAL);
 
   return (
-    <form action={formAction} className="mt-4 flex flex-col gap-2">
+    <form action={formAction} className="flex flex-col gap-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="typeId" value={typeId} />
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <TextInput
-          name="name"
-          type="text"
-          required
-          maxLength={64}
-          defaultValue={name}
-          aria-label="Type name"
-          className="flex-1"
-        />
-        <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
-          {pending ? 'Renaming…' : 'Rename'}
-        </Button>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor={`type-name-${typeId}`} className="text-sm font-medium">
+          Name
+        </label>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <TextInput id={`type-name-${typeId}`} name="name" type="text" required maxLength={64} defaultValue={name} className="flex-1" />
+          <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
+            {pending ? 'Saving…' : 'Rename'}
+          </Button>
+        </div>
       </div>
 
       <ErrorText role="alert">{state.error}</ErrorText>
@@ -259,7 +277,7 @@ export function EditStatusForm({
   const [state, formAction, pending] = useActionState(updateStatusAction, INITIAL);
 
   return (
-    <form action={formAction} className="flex flex-wrap items-center gap-2 py-1">
+    <form action={formAction} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="statusId" value={status.id} />
 
@@ -271,6 +289,7 @@ export function EditStatusForm({
         defaultValue={status.name}
         aria-label={`Name of status ${status.name}`}
         size="small"
+        className="min-w-40 flex-1"
       />
       <TextInput
         name="position"
@@ -427,7 +446,7 @@ export function PublishTypeForm({
   if (!schedulable) {
     return (
       <Hint className="mt-4">
-        {typeName} is not scheduled, so it cannot be booked. Turn scheduling on for it above first.
+        {typeName} is not scheduled, so it cannot be booked. Turn scheduling on for it in General first.
       </Hint>
     );
   }
@@ -435,7 +454,7 @@ export function PublishTypeForm({
   if (statuses.length === 0) {
     return (
       <Hint className="mt-4">
-        {typeName} has no stages yet, so a booking would have nowhere to arrive. Add one above
+        {typeName} has no stages yet, so a booking would have nowhere to arrive. Add one in Workflow
         and this becomes publishable.
       </Hint>
     );

@@ -39,6 +39,7 @@ Entries describe the product or operational change, not every file touched.
 - Added persistent Help & Support, Settings, and independently authorized Platform controls; Account now owns identity and Sign out.
 - Consolidated workspace configuration behind one contextual entry with responsive page sections. Communications, CRM, and Finance retain compatibility redirects; Work, Support, AI, and Studio retain their canonical domain ownership.
 - Communications configuration reports channel-specific readiness blockers without treating provider configuration as proof of delivery.
+- Work configuration separates choosing a work type, creating one, and editing one. Types list beside the selected type's tabs when there is room and drill in one level at a time when there is not; New type opens a focused drawer that asks only for a name and whether the work is scheduled, then lands on the new type's Workflow tab. Deep links (`?type=`, `?tab=`, `?new=1`) and the Work Configure rail keep working; the earlier `?tab=types` now opens General.
 
 
 - Workspace navigation now enters a contextual sidebar with Overview, eligible operating destinations and Back to Workspaces, preserving canonical URLs and the persistent Organization shell.

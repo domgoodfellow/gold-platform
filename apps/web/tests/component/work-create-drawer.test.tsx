@@ -52,7 +52,7 @@ describe('New work drawer', () => {
 
   it('links to work configuration for people who may configure', async () => {
     await open(<WorkCreateDrawer options={options()} initialTypeId="t3" configureHref="/organizations/org/work/configuration" />);
-    expect(screen.getByRole('link', { name: 'Create work type' })).toHaveAttribute('href', '/organizations/org/work/configuration');
+    expect(screen.getByRole('link', { name: 'Create work type' })).toHaveAttribute('href', '/organizations/org/work/configuration?new=1');
     expect(screen.getByRole('link', { name: 'Add a stage' })).toHaveAttribute('href', '/organizations/org/work/configuration?type=t3&tab=workflow');
   });
 
@@ -62,6 +62,6 @@ describe('New work drawer', () => {
     expect(screen.queryByRole('link', { name: 'Create work type' })).toBeNull();
     cleanup();
     await open(<WorkCreateDrawer options={none} configureHref="/c" />);
-    expect(screen.getByRole('link', { name: 'Create work type' })).toHaveAttribute('href', '/c');
+    expect(screen.getByRole('link', { name: 'Create work type' })).toHaveAttribute('href', '/c?new=1');
   });
 });
