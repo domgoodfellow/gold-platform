@@ -761,6 +761,28 @@ Other scheduling improvements such as closures/holidays, service areas, traffic 
 
 **Status: PLANNED**
 
+### Batch A: commercial-to-operational foundations
+
+The repository now implements contextual Client/Tenant relationships and Service Engagements in Customer detail's Commercial section, with attributable operations projected in the existing Customer Activity timeline. Atomic accepted-proposal provisioning, handoff evidence and entitlement assignment are reused. Historical handoffs establish attributable ongoing relationships; existing-tenant association requires platform staff, selling-Organization `customer.update` and independently granted receiving-tenant `organization.manage` approval. No implicit tenant Membership is created.
+
+Implementation map:
+
+| Concern | Canonical authority reused | Batch A integration |
+| --- | --- | --- |
+| CRM Customer / Opportunity | `customers`, `opportunities`; `lib/domain/customers`, `lib/domain/opportunities` | Same-Customer validated references |
+| Tenancy | `organizations`, `memberships`; `lib/domain/tenancy` | Independent tenant identity and Membership |
+| Accepted proposal / provisioning | `customer_commercial_proposals`, `customer_proposal_handoffs`, `hand_off_accepted_proposal`, `provision_organization` | Transactional trigger plus deterministic backfill |
+| Platform package | `organization_plan_assignments`; `lib/domain/catalogue/organization-plans.ts` | Existing handoff assignment retained, no duplicate billing |
+| Client/Tenant relationship | `client_tenant_relationships`; `lib/domain/customers/client-tenants.ts` | Active/Ended periods and scoped identity projection |
+| Service commitment | `service_engagements`; `lib/domain/customers/service-engagements.ts` | Planned/Active/Completed/Cancelled; accepted terms snapshot |
+| Work | `work_items`; `lib/domain/work-items` | Customer-bound `engagement_work_items`, independent lifecycle |
+| Studio | `public_sites`, `forms`; `lib/domain/public-site`, `lib/domain/forms` | Typed stable-identity deliverables |
+| AI | `ai_assistant_deployments`; `lib/domain/ai` | Deployment identity, configuration status only |
+| Automations | `automation_rules`; `lib/domain/automation` | Rule identity and canonical Enabled/Disabled state |
+| Support / Finance / Connections / Domains | Existing domain records and operations | No duplicate ownership, billing, access or offboarding |
+
+Batch B may consume the relationship, engagement and authorized summaries. Portal runtime and Website composition remain their existing authorities. This batch does not build, compose, publish or deploy a Portal. Broader R5 readiness still depends on its original acceptance criteria below.
+
 ### Outcome
 
 GildOps operates its own business through the same product boundaries a customer uses.

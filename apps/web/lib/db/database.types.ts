@@ -1427,6 +1427,94 @@ export type Database = {
           },
         ]
       }
+      client_tenant_relationships: {
+        Row: {
+          authority_basis: string
+          created_at: string
+          created_by: string
+          customer_id: string
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          organization_id: string
+          origin: string
+          originating_handoff_id: string | null
+          status: string
+          tenant_organization_id: string
+        }
+        Insert: {
+          authority_basis: string
+          created_at?: string
+          created_by: string
+          customer_id: string
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          organization_id: string
+          origin: string
+          originating_handoff_id?: string | null
+          status?: string
+          tenant_organization_id: string
+        }
+        Update: {
+          authority_basis?: string
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          organization_id?: string
+          origin?: string
+          originating_handoff_id?: string | null
+          status?: string
+          tenant_organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_tenant_relationships_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "client_tenant_relationships_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_tenant_relationships_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_tenant_relationships_organization_id_originating_ha_fkey"
+            columns: ["organization_id", "originating_handoff_id"]
+            isOneToOne: false
+            referencedRelation: "customer_proposal_handoffs"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "client_tenant_relationships_tenant_organization_id_fkey"
+            columns: ["tenant_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_tenant_relationships_tenant_organization_id_fkey"
+            columns: ["tenant_organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commercial_draft_scenario_addons: {
         Row: {
           addon_plan_id: string
@@ -3078,6 +3166,135 @@ export type Database = {
           },
         ]
       }
+      engagement_deliverables: {
+        Row: {
+          ai_deployment_id: string | null
+          automation_rule_id: string | null
+          created_at: string
+          created_by: string
+          engagement_id: string
+          form_id: string | null
+          id: string
+          organization_id: string
+          site_id: string | null
+          tenant_organization_id: string
+        }
+        Insert: {
+          ai_deployment_id?: string | null
+          automation_rule_id?: string | null
+          created_at?: string
+          created_by: string
+          engagement_id: string
+          form_id?: string | null
+          id?: string
+          organization_id: string
+          site_id?: string | null
+          tenant_organization_id: string
+        }
+        Update: {
+          ai_deployment_id?: string | null
+          automation_rule_id?: string | null
+          created_at?: string
+          created_by?: string
+          engagement_id?: string
+          form_id?: string | null
+          id?: string
+          organization_id?: string
+          site_id?: string | null
+          tenant_organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engagement_deliverables_organization_id_engagement_id_tena_fkey"
+            columns: [
+              "organization_id",
+              "engagement_id",
+              "tenant_organization_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "service_engagements"
+            referencedColumns: [
+              "organization_id",
+              "id",
+              "tenant_organization_id",
+            ]
+          },
+          {
+            foreignKeyName: "engagement_deliverables_tenant_organization_id_ai_deployme_fkey"
+            columns: ["tenant_organization_id", "ai_deployment_id"]
+            isOneToOne: false
+            referencedRelation: "ai_assistant_deployments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "engagement_deliverables_tenant_organization_id_automation__fkey"
+            columns: ["tenant_organization_id", "automation_rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "engagement_deliverables_tenant_organization_id_form_id_fkey"
+            columns: ["tenant_organization_id", "form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "engagement_deliverables_tenant_organization_id_site_id_fkey"
+            columns: ["tenant_organization_id", "site_id"]
+            isOneToOne: false
+            referencedRelation: "public_sites"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      engagement_work_items: {
+        Row: {
+          created_at: string
+          created_by: string
+          engagement_id: string
+          organization_id: string
+          work_item_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          engagement_id: string
+          organization_id: string
+          work_item_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          engagement_id?: string
+          organization_id?: string
+          work_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engagement_work_items_organization_id_engagement_id_fkey"
+            columns: ["organization_id", "engagement_id"]
+            isOneToOne: false
+            referencedRelation: "service_engagements"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "engagement_work_items_organization_id_work_item_id_fkey"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "finance_quote_records"
+            referencedColumns: ["organization_id", "work_item_id"]
+          },
+          {
+            foreignKeyName: "engagement_work_items_organization_id_work_item_id_fkey"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       events: {
         Row: {
           action: string
@@ -4105,11 +4322,11 @@ export type Database = {
             referencedColumns: ["capability_key"]
           },
           {
-            foreignKeyName: "integration_library_jobs_execution_id_fkey"
-            columns: ["execution_id"]
-            isOneToOne: true
+            foreignKeyName: "integration_library_jobs_execution_same_org"
+            columns: ["organization_id", "execution_id"]
+            isOneToOne: false
             referencedRelation: "integration_executions"
-            referencedColumns: ["id"]
+            referencedColumns: ["organization_id", "id"]
           },
           {
             foreignKeyName: "integration_library_jobs_organization_id_connection_id_fkey"
@@ -10274,6 +10491,129 @@ export type Database = {
           },
         ]
       }
+      service_engagements: {
+        Row: {
+          accepted_terms: Json | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          customer_id: string
+          ended_at: string | null
+          id: string
+          name: string
+          opportunity_id: string | null
+          organization_id: string
+          proposal_id: string | null
+          relationship_id: string | null
+          service_kind: string
+          started_at: string | null
+          status: string
+          tenant_organization_id: string | null
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          accepted_terms?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          customer_id: string
+          ended_at?: string | null
+          id?: string
+          name: string
+          opportunity_id?: string | null
+          organization_id: string
+          proposal_id?: string | null
+          relationship_id?: string | null
+          service_kind: string
+          started_at?: string | null
+          status?: string
+          tenant_organization_id?: string | null
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          accepted_terms?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          ended_at?: string | null
+          id?: string
+          name?: string
+          opportunity_id?: string | null
+          organization_id?: string
+          proposal_id?: string | null
+          relationship_id?: string | null
+          service_kind?: string
+          started_at?: string | null
+          status?: string
+          tenant_organization_id?: string | null
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_engagements_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "service_engagements_organization_id_customer_id_opportunit_fkey"
+            columns: ["organization_id", "customer_id", "opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["organization_id", "customer_id", "id"]
+          },
+          {
+            foreignKeyName: "service_engagements_organization_id_customer_id_opportunit_fkey"
+            columns: ["organization_id", "customer_id", "opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunity_worklist"
+            referencedColumns: ["organization_id", "customer_id", "id"]
+          },
+          {
+            foreignKeyName: "service_engagements_organization_id_customer_id_relationsh_fkey"
+            columns: [
+              "organization_id",
+              "customer_id",
+              "relationship_id",
+              "tenant_organization_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "client_tenant_relationships"
+            referencedColumns: [
+              "organization_id",
+              "customer_id",
+              "id",
+              "tenant_organization_id",
+            ]
+          },
+          {
+            foreignKeyName: "service_engagements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_engagements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_engagements_organization_id_proposal_id_fkey"
+            columns: ["organization_id", "proposal_id"]
+            isOneToOne: false
+            referencedRelation: "customer_commercial_proposals"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       support_case_counters: {
         Row: {
           last_number: number
@@ -12683,6 +13023,23 @@ export type Database = {
         Args: { p_organization_id: string; p_resource_id: string }
         Returns: boolean
       }
+      attach_engagement_deliverable: {
+        Args: {
+          p_artifact_id: string
+          p_engagement_id: string
+          p_kind: string
+          p_organization_id: string
+        }
+        Returns: string
+      }
+      attach_engagement_work: {
+        Args: {
+          p_engagement_id: string
+          p_organization_id: string
+          p_work_item_id: string
+        }
+        Returns: undefined
+      }
       attach_plan_addon: {
         Args: {
           p_addon_plan_id: string
@@ -12749,6 +13106,14 @@ export type Database = {
           p_provider_key: string
         }
         Returns: string
+      }
+      bind_service_engagement_tenant: {
+        Args: {
+          p_engagement_id: string
+          p_organization_id: string
+          p_relationship_id: string
+        }
+        Returns: undefined
       }
       bookable_candidates: {
         Args: { p_type_id: string }
@@ -12860,6 +13225,21 @@ export type Database = {
       clear_plan_feature_override: {
         Args: { p_feature_id: string; p_plan_id: string }
         Returns: undefined
+      }
+      client_tenant_summaries: {
+        Args: { p_customer_id: string; p_organization_id: string }
+        Returns: {
+          created_at: string
+          customer_id: string
+          ended_at: string
+          id: string
+          may_open: boolean
+          operational_state: string
+          origin: string
+          status: string
+          tenant_name: string
+          tenant_organization_id: string
+        }[]
       }
       commit_integration_resource_sync: {
         Args: {
@@ -13121,6 +13501,18 @@ export type Database = {
         }
         Returns: string
       }
+      create_service_engagement: {
+        Args: {
+          p_customer_id: string
+          p_name: string
+          p_opportunity_id?: string
+          p_organization_id: string
+          p_proposal_id?: string
+          p_relationship_id?: string
+          p_service_kind: string
+        }
+        Returns: string
+      }
       create_work_item: {
         Args: {
           p_asset_id: string
@@ -13278,7 +13670,34 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: string
       }
+      end_client_tenant_relationship: {
+        Args: { p_organization_id: string; p_relationship_id: string }
+        Returns: undefined
+      }
       end_support_session: { Args: { p_id: string }; Returns: undefined }
+      engagement_deliverable_summaries: {
+        Args: { p_engagement_id: string; p_organization_id: string }
+        Returns: {
+          artifact_id: string
+          artifact_status: string
+          available: boolean
+          id: string
+          kind: string
+          label: string
+          tenant_organization_id: string
+        }[]
+      }
+      existing_client_tenant_options: {
+        Args: {
+          p_customer_id: string
+          p_organization_id: string
+          p_search?: string
+        }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       external_card_payment_availability: {
         Args: { p_invoice_id: string; p_provider: string }
         Returns: {
@@ -13459,6 +13878,15 @@ export type Database = {
           p_organization_id: string
         }
         Returns: undefined
+      }
+      link_existing_client_tenant: {
+        Args: {
+          p_authority_basis: string
+          p_customer_id: string
+          p_organization_id: string
+          p_tenant_id: string
+        }
+        Returns: string
       }
       link_form_submission_customer: {
         Args: {
@@ -14912,6 +15340,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      service_deliverable_options: {
+        Args: {
+          p_engagement_id: string
+          p_organization_id: string
+          p_search?: string
+        }
+        Returns: {
+          artifact_status: string
+          id: string
+          kind: string
+          label: string
+        }[]
+      }
       set_ai_knowledge: {
         Args: {
           p_assistant_id: string
@@ -15343,6 +15784,14 @@ export type Database = {
           group_label: string
           minutes: number
         }[]
+      }
+      transition_service_engagement: {
+        Args: {
+          p_engagement_id: string
+          p_organization_id: string
+          p_status: string
+        }
+        Returns: undefined
       }
       unschedule_work_item: {
         Args: { p_work_item_id: string }

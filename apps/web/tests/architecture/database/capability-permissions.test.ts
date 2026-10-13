@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
+import library from '@/lib/contracts/integrations/library.generated.json';
 
 /**
  * Every read a connected app offers an agent must say which permission the person asking needs.
@@ -21,6 +22,9 @@ function declaredCapabilities(): string[] {
   for (const file of readdirSync(CONNECTORS)) {
     if (!file.endsWith('.py') || file === 'base.py') continue;
     for (const match of readFileSync(join(CONNECTORS, file), 'utf8').matchAll(/Capability\(\s*"([a-z_.0-9]+)"/g)) keys.add(match[1]);
+  }
+  for (const app of library.applications) {
+    for (const action of app.actions) if (action.executable) keys.add(action.capability);
   }
   return [...keys].sort();
 }

@@ -27,6 +27,10 @@ import { requireOrganization } from '@/lib/route/organization';
 import { requestOrigin } from '@/lib/route/origin';
 import { followUpsAvailable, relatedFollowUps } from '@/lib/application/crm/follow-ups';
 import { RelatedFollowUps } from '@/features/crm/follow-ups/related-follow-ups';
+import { ClientTenantSection } from '@/features/crm/customers/client-tenant-section';
+import { getClientTenantRelationships, listExistingTenantOptions } from '@/lib/domain/customers/client-tenants';
+import { ServiceEngagementSection } from '@/features/crm/customers/service-engagement-section';
+import { listServiceEngagements } from '@/lib/domain/customers/service-engagements';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,6 +68,10 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
   const voice = modules.has('reception');
 
   const mayHandoff = await isPlatformStaff(db);
+  const [relationships, engagements] = await Promise.all([getClientTenantRelationships(db, organizationId, customerId), listServiceEngagements(db, organizationId, customerId)]);
+  const mayManageServices = organization.capabilities.includes('customer.update');
+  const tenantOptions = mayHandoff && mayManageServices ? await listExistingTenantOptions(db, organizationId, customerId) : [];
+  const mayLink = mayHandoff && mayManageServices && tenantOptions.length > 0;
   const acceptedProposals = commercialProposals.filter((proposal) => proposal.status === 'accepted');
   const handoffEntries = await Promise.all(
     acceptedProposals.map(async (proposal) => [
@@ -81,6 +89,8 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
       <CustomerDetail
         organizationId={organizationId}
         customer={customer}
+        accessibleTenantIds={relationships.filter(r => r.may_open).map(r => r.tenant_organization_id)}
+        services={<div className="mb-6 space-y-6"><ClientTenantSection organizationId={organizationId} customerId={customerId} timezone={organization.timezone} relationships={relationships} tenants={tenantOptions} mayManage={mayManageServices} mayLink={mayLink}/><ServiceEngagementSection organizationId={organizationId} customerId={customerId} relationships={relationships} items={engagements.items} total={engagements.total} mayManage={mayManageServices} opportunities={opportunities} proposals={commercialProposals} work={work}/></div>}
         support={<RelatedSupport organizationId={organizationId} kind="customer" recordId={customerId} customerName={customer.name}/>}
         followUps={followUps ? <RelatedFollowUps organizationId={organizationId} timezone={organization.timezone} members={members} mayManage={organization.capabilities.includes('follow_up.manage')} customer={customer} {...followUps}/> : undefined}
         opportunities={<CustomerOpportunities organizationId={organizationId} customer={customer} items={opportunities} total={opportunities.total} stages={opportunityStages} members={members} defaultCurrency={organization.currency ?? ''} mayCreate={organization.capabilities.includes('opportunity.create')} />}

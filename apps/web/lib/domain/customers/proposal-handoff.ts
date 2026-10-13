@@ -20,6 +20,8 @@ import {
  * `hand_off_accepted_proposal` (C1 closeout) is one atomic, idempotent SQL door: provisioning and
  * recording the handoff either both happen or neither does, and a repeat call for a proposal
  * already handed off returns the business already created rather than erroring or duplicating it.
+ * The handoff insert also establishes its Client/Tenant relationship in that transaction;
+ * retries preserve that original relationship period even if it has subsequently ended.
  */
 export type AcceptedProposalHandoff = {
   id: string;

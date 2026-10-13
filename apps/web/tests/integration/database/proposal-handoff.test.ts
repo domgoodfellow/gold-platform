@@ -29,8 +29,8 @@ vi.mock('@/lib/db/server', () => ({ getDb: async () => currentDb }));
 /**
  * Slice 10: "Create this business in GildOps," from an accepted proposal. Proves the terminal
  * boundary this repo's own D29 already drew: only platform staff may provision, the original
- * GildOps customer record is untouched, and a second handoff attempt is refused rather than
- * creating a second business for one acceptance.
+ * GildOps customer record is untouched, and a second handoff attempt returns the original
+ * business and relationship period rather than creating a second business for one acceptance.
  *
  * The reads this function makes (the proposal, the customer, the discovery snapshot) need
  * ordinary GildOps organization membership; the provisioning write needs genuine platform staff
@@ -147,6 +147,11 @@ describe('handing off an accepted proposal', () => {
     const second = await handoffAcceptedProposal(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId });
 
     expect(second.createdOrganizationId).toBe(first!.createdOrganizationId);
+    const relationships = await repDb.from('client_tenant_relationships').select('id,originating_handoff_id,tenant_organization_id')
+      .eq('organization_id', gildOpsOrgId).eq('originating_handoff_id', first!.id);
+    expect(relationships.error).toBeNull();
+    expect(relationships.data).toHaveLength(1);
+    expect(relationships.data![0].tenant_organization_id).toBe(first!.createdOrganizationId);
     expect(second.id).toBe(first!.id);
 
     const { count } = await repDb
@@ -161,6 +166,45 @@ describe('handing off an accepted proposal', () => {
     const handoff = await getProposalHandoff(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId });
     expect(handoff).not.toBeNull();
     expect(handoff!.proposalId).toBe(acceptedProposalId);
+  });
+
+  it('snapshots accepted terms and validates the Customer of commercial origins', async () => {
+    const result = await repDb.rpc('create_service_engagement', { p_organization_id: gildOpsOrgId, p_customer_id: customerId, p_name: 'Accepted implementation', p_service_kind: 'implementation', p_proposal_id: acceptedProposalId });
+    expect(result.error).toBeNull();
+    const row = await repDb.from('service_engagements').select('accepted_terms,proposal_id').eq('organization_id', gildOpsOrgId).eq('id', result.data).single();
+    expect(row.data?.accepted_terms).toMatchObject({ currency: 'CAD', planId, version: 1 });
+    const otherCustomer = await createCustomer(repDb, { organizationId: gildOpsOrgId, name: 'Unrelated service customer' });
+    expect((await repDb.rpc('create_service_engagement', { p_organization_id: gildOpsOrgId, p_customer_id: otherCustomer, p_name: 'Forged origin', p_service_kind: 'implementation', p_proposal_id: acceptedProposalId })).error?.code).toBe('42501');
+  });
+
+  it('backfills authoritative legacy handoffs with provenance and safely repeats', async () => {
+    const handoff = await getProposalHandoff(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId });
+    const pg = new Client(CONNECTION);
+    await pg.connect();
+    try {
+      await pg.query('delete from public.client_tenant_relationships where organization_id=$1 and originating_handoff_id=$2', [gildOpsOrgId, handoff!.id]);
+      await pg.query('select app.backfill_handoff_relationships()');
+      await pg.query('select app.backfill_handoff_relationships()');
+      const result = await pg.query('select * from public.client_tenant_relationships where organization_id=$1 and originating_handoff_id=$2', [gildOpsOrgId, handoff!.id]);
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0]).toMatchObject({ id: handoff!.id, customer_id: customerId, tenant_organization_id: handoff!.createdOrganizationId, created_by: handoff!.createdBy, origin: 'proposal_handoff' });
+      expect(result.rows[0].created_at.toISOString()).toBe(new Date(handoff!.createdAt).toISOString());
+      const conflictingCustomer = await createCustomer(repDb, { organizationId: gildOpsOrgId, name: 'Conflicting legacy customer' });
+      await pg.query('begin');
+      await pg.query('update client_tenant_relationships set customer_id=$1 where organization_id=$2 and originating_handoff_id=$3', [conflictingCustomer, gildOpsOrgId, handoff!.id]);
+      await expect(pg.query('select app.backfill_handoff_relationships()')).rejects.toMatchObject({ code: '23514' });
+      await pg.query('rollback');
+    } finally { await pg.end(); }
+  });
+
+  it('a repeated handoff never reactivates an ended relationship or deletes its founding history', async () => {
+    const handoff = await getProposalHandoff(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId });
+    const result = await repDb.from('client_tenant_relationships').select('id').eq('organization_id', gildOpsOrgId).eq('originating_handoff_id', handoff!.id).single();
+    expect((await repDb.rpc('end_client_tenant_relationship', { p_organization_id: gildOpsOrgId, p_relationship_id: result.data!.id })).error).toBeNull();
+    await handoffAcceptedProposal(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId });
+    const rows = await repDb.from('client_tenant_relationships').select('status').eq('organization_id', gildOpsOrgId).eq('originating_handoff_id', handoff!.id);
+    expect(rows.data).toEqual([{ status: 'ended' }]);
+    expect((await getProposalHandoff(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId }))!.id).toBe(handoff!.id);
   });
 
   it('entitles the created business to the accepted Plan, at the accepted price', async () => {

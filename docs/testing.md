@@ -68,6 +68,12 @@ When a test file is added, moved or reclassified, update `test-manifest.json`.
 
 ## Testing principles
 
+### Managed-service acceptance
+
+`apps/web/e2e/service-engagements.spec.ts` creates its own local accounts and tenant fixtures through the isolated `playwright.batch-a.config.ts`, without the normal demo global setup. It refuses non-loopback database/API URLs. Run `pnpm --filter @gold/web exec playwright test --config playwright.batch-a.config.ts` against the local web server; `E2E_BASE_URL` selects its address. The journey covers verified tenant-manager linking, accepted-proposal handoff/retry, Website/AI/Automation references, foreign artifact refusal, historical lifecycle and desktop/tablet/phone keyboard/touch behavior. Configuration status is not evidence of a live AI/provider deployment.
+
+Baseline reconciliation keeps the assertions authoritative: capability mapping includes native adapters and reviewed imported-library metadata; machine grants name the existing sync/library functions explicitly; planned-connector refusal uses a genuinely planned fixture. Provider and Connector may share a vendor key while their foreign keys remain attached to their separate canonical authorities. Palette checks cover grouped public/root selectors and forced appearance scopes without changing theme colors.
+
 ### 1. Test behavior, not implementation trivia
 
 Prefer assertions about observable behavior and durable contracts.

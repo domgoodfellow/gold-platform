@@ -36,6 +36,7 @@ const BETA = `beta_${SUFFIX}`;
 // Stays connectable for the whole file; BETA is demoted to planned partway through.
 const LIVE = `live_${SUFFIX}`;
 const PRIVATE = `private_${SUFFIX}`;
+const PLANNED = `planned_${SUFFIX}`;
 const EDITED = `edited_${SUFFIX}`;
 
 let pg: Client;
@@ -66,14 +67,15 @@ beforeAll(async () => {
     `insert into public.platform_connectors (key, name, category, status, auth_method, connection_method, is_public) values
        ($1, 'Beta app', 'Testing', 'beta', 'none', 'custom', true),
        ($2, 'Private app', 'Testing', 'live', 'none', 'custom', false),
-       ($3, 'Live app', 'Testing', 'live', 'none', 'custom', true)`,
-    [BETA, PRIVATE, LIVE],
+       ($3, 'Live app', 'Testing', 'live', 'none', 'custom', true),
+       ($4, 'Planned app', 'Testing', 'planned', 'none', 'custom', true)`,
+    [BETA, PRIVATE, LIVE, PLANNED],
   );
 }, 60_000);
 
 afterAll(async () => {
-  await pg.query('delete from public.integration_connections where connector_key = any($1)', [[BETA, PRIVATE, EDITED, LIVE]]);
-  await pg.query('delete from public.platform_connectors where key = any($1)', [[BETA, PRIVATE, EDITED, LIVE]]);
+  await pg.query('delete from public.integration_connections where connector_key = any($1)', [[BETA, PRIVATE, EDITED, LIVE, PLANNED]]);
+  await pg.query('delete from public.platform_connectors where key = any($1)', [[BETA, PRIVATE, EDITED, LIVE, PLANNED]]);
   await pg.end();
 });
 
@@ -87,10 +89,9 @@ describe('the connector catalogue', () => {
     }
     // A file is an artifact, not a connection (20261005000001): no format is ever a connector.
     for (const key of ['csv', 'spreadsheet', 'xlsx', 'pdf', 'markdown']) expect(byKey.has(key), key).toBe(false);
-    // Status is product maturity. The six with an adapter and a vendor contract test are beta; the
-    // rest of the roadmap stays planned until an adapter exists.
-    for (const key of ['google_workspace', 'microsoft_365', 'hubspot', 'notion', 'slack', 'dropbox', 'cloudflare']) expect(byKey.get(key), key).toBe('beta');
-    for (const key of ['salesforce', 'quickbooks', 'shopify']) expect(byKey.get(key), key).toBe('planned');
+    // Imported reviewed adapters are beta catalogue entries, not evidence of live authorization.
+    for (const key of ['google_workspace', 'microsoft_365', 'hubspot', 'notion', 'slack', 'dropbox', 'cloudflare', 'salesforce', 'quickbooks', 'shopify']) expect(byKey.get(key), key).toBe('beta');
+    expect(byKey.get(PLANNED)).toBe('planned');
   });
 
   it('shows a business only public connectors, and staff every one', async () => {
@@ -114,12 +115,12 @@ describe('the connector catalogue', () => {
 
   it('refuses a connection to a planned connector, at the table', async () => {
     await expect(
-      recordConnection(tenant.db, { organizationId: tenant.organizationId, connectorKey: 'shopify' }),
+      recordConnection(tenant.db, { organizationId: tenant.organizationId, connectorKey: PLANNED }),
     ).rejects.toThrow();
 
     const direct = await tenant.db.from('integration_connections').insert({
       organization_id: tenant.organizationId,
-      connector_key: 'shopify',
+      connector_key: PLANNED,
       connected_by: (await tenant.db.auth.getUser()).data.user!.id,
     });
     expect(direct.error?.code).toBe('42501');
@@ -146,11 +147,17 @@ describe('the connector catalogue', () => {
     expect(kept.data).toMatchObject({ connector_key: BETA });
   });
 
-  it('keeps a connector distinct from a provider', async () => {
+  it('keeps provider and connector authority separate when a vendor supplies both', async () => {
     const providers = await staff.from('platform_providers').select('key');
     const connectors = await staff.from('platform_connectors').select('key');
+    expect(providers.error).toBeNull(); expect(connectors.error).toBeNull();
     const providerKeys = new Set((providers.data ?? []).map((row) => row.key));
-    for (const row of connectors.data ?? []) expect(providerKeys.has(row.key), row.key).toBe(false);
+    const shared = (connectors.data ?? []).filter(row => providerKeys.has(row.key));
+    expect(shared.map(row => row.key)).toContain('openai');
+    const owner = await pg.query("select c.confrelid::regclass::text as target from pg_constraint c join pg_attribute a on a.attrelid=c.conrelid and a.attnum=any(c.conkey) where c.conrelid='public.integration_connections'::regclass and c.contype='f' and a.attname='connector_key'");
+    expect(owner.rows).toEqual([{ target: 'platform_connectors' }]);
+    const infrastructure = await pg.query("select c.confrelid::regclass::text as target from pg_constraint c join pg_attribute a on a.attrelid=c.conrelid and a.attnum=any(c.conkey) where c.conrelid='public.organization_provider_bindings'::regclass and c.contype='f' and a.attname='provider_key'");
+    expect(infrastructure.rows).toEqual([{ target: 'platform_providers' }]);
   });
 });
 
@@ -298,6 +305,6 @@ describe('the tenant communications settings', () => {
   it('offers no wholesale AI or speech vendor to a business', () => {
     const page = readFileSync(join(__dirname, '..', '..', '..', 'app/organizations/[organizationId]/comms/configuration/messaging/page.tsx'), 'utf8');
     for (const vendor of ['anthropic', 'openai_compatible', 'deepgram', 'elevenlabs']) expect(page, vendor).not.toContain(vendor);
-    expect(page).toContain('title="Communications"');
+    expect(page).toContain('title="Messaging"');
   });
 });

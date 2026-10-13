@@ -69,11 +69,15 @@ export function CustomerDetail({
   opportunities,
   followUps,
   support,
+  services,
+  accessibleTenantIds,
 }: {
   organizationId: string;
   opportunities?: ReactNode;
   followUps?: ReactNode;
   support?: ReactNode;
+  services?: ReactNode;
+  accessibleTenantIds?: string[];
   customer: Customer;
   stage: CustomerStage | null;
   stages: CustomerStage[];
@@ -151,7 +155,9 @@ export function CustomerDetail({
           <ConfigurationRecommendationSection recommendation={configurationRecommendation} />
         </TabsContent>
         <TabsContent value="commercial" className="mt-6">
+          {services}
           <CommercialProposalSection
+            accessibleTenantIds={accessibleTenantIds}
             organizationId={organizationId}
             customerId={customer.id}
             proposals={commercialProposals}

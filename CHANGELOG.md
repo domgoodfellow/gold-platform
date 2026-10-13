@@ -34,6 +34,8 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+- CRM Customer detail now manages durable Client/Tenant relationships and service engagements, with atomic proposal-handoff linkage, verified existing-tenant association, preserved lifecycle history, typed Website/Form/AI deployment/Automation deliverables and canonical Work references. Artifact selectors require independent tenant access; linking grants no Membership or implicit operational authority.
+
 ### Changed
 
 - Added persistent Help & Support, Settings, and independently authorized Platform controls; Account now owns identity and Sign out.

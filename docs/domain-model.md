@@ -366,6 +366,24 @@ Unless a later accepted domain decision introduces a separate canonical Lead ent
 
 ---
 
+### Client/Tenant relationship
+
+CRM's `client_tenant_relationships` connects one service Organization's Customer to an independently provisioned Organization. GildOps Internal uses this ordinary organization-owned model. A relationship is commercial provenance, never Membership, impersonation, or authority over tenant records.
+
+One Customer may have multiple tenants, and different service Organizations may serve the same tenant. At most one active relationship exists per service Organization/Customer/tenant tuple. Ending preserves history; relinking creates a new period. Proposal-handoff relationships retain their originating immutable handoff. Retrying that handoff returns its original tenant and never reactivates an ended period.
+
+Existing-tenant linking through `link_existing_client_tenant` requires selling-Organization `customer.update`, live `platform_staff` authority, and independent receiving-tenant `organization.manage` permission. The authenticated tenant manager explicitly approves the association through that signed action; a free-text approval note cannot replace tenant authority. Existing Membership/invitation operations establish that authority before linking. The operator records the verified agreement basis, and the row retains approving actor/time. Selectors expose only eligible managed tenants. No name, email, domain or slug matching infers the association. Ending requires selling-Organization `customer.update` and changes only the relationship.
+
+### Service Engagement
+
+`service_engagements` is CRM's durable service commitment to one Customer, optionally tied to one active Client/Tenant relationship. Kinds are Website, AI, Automation, Integration, Implementation and Managed operations. Planned may become Active, Completed or Cancelled; Active may become Completed or Cancelled. Completed and Cancelled are terminal. An engagement can precede tenant provisioning; an open unbound engagement can subsequently associate with an active relationship for that same Customer. Binding is one-time so historical references cannot be reassigned to another tenant. An engagement can optionally reference its Customer's Opportunity and accepted Commercial Proposal. Accepted terms are snapshotted at creation, including accepted add-on terms.
+
+`engagement_deliverables` holds explicit tenant-bound references to Studio `public_sites` and `forms`, AI `ai_assistant_deployments`, and Automations `automation_rules`. These identify stable artifacts, not revisions. Each kind has its own composite foreign key; one reference holds exactly one supported artifact, and duplicates within an engagement are refused. No artifact content, instructions, secrets or credentials are copied. Live summaries require independent tenant Membership and owning-domain permissions. Without access, the reference remains visible as restricted; ending the relationship removes its status projection immediately.
+
+`engagement_work_items` references selling-Organization Work Items for the same Customer. Work owns tasks, assignment, scheduling and execution lifecycle. Engagement status never changes an artifact or Work status. Service engagements create no subscription, entitlement, invoice, payment or hosting operation. Platform subscription billing, service-Organization Finance and tenant Finance remain separate.
+
+---
+
 ### Opportunity
 
 **Definition:** One organization-owned potential piece of business with a Customer, with an independently closing lifecycle.

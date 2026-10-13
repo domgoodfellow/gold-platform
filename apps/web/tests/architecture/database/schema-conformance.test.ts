@@ -322,7 +322,19 @@ describe('schema conformance', () => {
             select 1 from pg_attribute a
              where a.attrelid = t.oid and a.attname = 'organization_id'
                and a.attnum = any (c.conkey)
-          )`,
+          )
+          -- Service-owned references carry the independently linked tenant's key.
+          -- Check the exact paired columns; this does not exempt other cross-tenant FKs.
+          and not (t.relname = 'engagement_deliverables'
+            and r.relname in ('public_sites','forms','ai_assistant_deployments','automation_rules')
+            and (select array_agg(a.attname::text order by k.ordinality)
+              from unnest(c.conkey) with ordinality k(attnum,ordinality)
+              join pg_attribute a on a.attrelid=t.oid and a.attnum=k.attnum)
+              = array['tenant_organization_id',case r.relname when 'public_sites' then 'site_id'
+                when 'forms' then 'form_id' when 'ai_assistant_deployments' then 'ai_deployment_id' else 'automation_rule_id' end]
+            and (select array_agg(a.attname::text order by k.ordinality)
+              from unnest(c.confkey) with ordinality k(attnum,ordinality)
+              join pg_attribute a on a.attrelid=r.oid and a.attnum=k.attnum)=array['organization_id','id'])`,
     );
 
     // **One exception, for the reason `platform_retail_rates_id_meter_currency_unique` is named

@@ -128,11 +128,15 @@ describe('the palette', () => {
     // stylesheet, so it repeats `globals.css`'s two page colours — and a comment saying "keep
     // these in step" is a weaker link than a test that fails when they are not.
     const css = readFileSync(new URL('../../../app/globals.css', import.meta.url), 'utf8');
-    const light = /:root\s*\{[^}]*?--background:\s*(#[0-9a-f]{6})/i.exec(css);
-    const dark = /prefers-color-scheme:\s*dark[^{]*\{\s*:root\s*\{[^}]*?--background:\s*(#[0-9a-f]{6})/i.exec(css);
+    const light = /:root\s*(?:,\s*\[data-public-design\])?\s*\{[^}]*?--background:\s*(#[0-9a-f]{6})/i.exec(css);
+    const dark = /prefers-color-scheme:\s*dark[^{]*\{\s*:root\s*(?:,\s*\[data-public-design\])?\s*\{[^}]*?--background:\s*(#[0-9a-f]{6})/i.exec(css);
 
     expect(light?.[1].toLowerCase()).toBe(PAGE_LIGHT);
     expect(dark?.[1].toLowerCase()).toBe(PAGE_DARK);
+    const scopedDark = /\[data-appearance="dark"\]\s*\{[^}]*?--background:\s*(#[0-9a-f]{6})/i.exec(css);
+    const scopedLight = /\[data-appearance="light"\]\s*\{[^}]*?--background:\s*(#[0-9a-f]{6})/i.exec(css);
+    expect(scopedDark?.[1].toLowerCase()).toBe(PAGE_DARK);
+    expect(scopedLight?.[1].toLowerCase()).toBe(PAGE_LIGHT);
   });
 
   it('hands the renderer a font stack rather than a key', () => {

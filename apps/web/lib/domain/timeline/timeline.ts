@@ -69,7 +69,8 @@ const ASSET_WORK_ITEM_ACTIONS = ['work_item.created', 'work_item.updated'] as co
 /** Actions a customer's history is made of. Anything else is noise on this screen. */
 const OPPORTUNITY_ACTIONS = ['opportunity.created', 'opportunity.updated', 'opportunity.stage_changed'] as const;
 const FOLLOW_UP_ACTIONS = ['follow_up.created', 'follow_up.updated', 'follow_up.completed', 'follow_up.cancelled'] as const;
-const CRM_ACTIONS = ['customer.created', 'customer.updated', 'customer.stage_changed', 'customer.imported', 'customer.import_matched', ...OPPORTUNITY_ACTIONS, ...FOLLOW_UP_ACTIONS] as const;
+const SERVICE_ACTIONS = ['client_tenant.linked', 'client_tenant.ended', 'service_engagement.created', 'service_engagement.status_changed', 'service_engagement.tenant_bound', 'service_engagement.deliverable_attached', 'service_engagement.work_attached'] as const;
+const CRM_ACTIONS = ['customer.created', 'customer.updated', 'customer.stage_changed', 'customer.imported', 'customer.import_matched', ...OPPORTUNITY_ACTIONS, ...FOLLOW_UP_ACTIONS, ...SERVICE_ACTIONS] as const;
 const CUSTOMER_ACTIONS = [
   'customer.created',
   'customer.updated',
@@ -83,6 +84,7 @@ const CUSTOMER_ACTIONS = [
   ...WORK_ITEM_ACTIONS,
   ...OPPORTUNITY_ACTIONS,
   ...FOLLOW_UP_ACTIONS,
+  ...SERVICE_ACTIONS,
 ] as const;
 
 /**
@@ -147,6 +149,20 @@ function describe(row: EventRow, words: Vocabulary, perspective?: 'location'): s
   const on = job ? ` on ${job}` : '';
 
   switch (row.action) {
+    case 'client_tenant.linked':
+      return 'Tenant relationship linked';
+    case 'client_tenant.ended':
+      return 'Tenant relationship ended';
+    case 'service_engagement.created':
+      return 'Service engagement created';
+    case 'service_engagement.status_changed':
+      return `Service engagement ${text(row.payload, 'to') ?? 'status changed'}`;
+    case 'service_engagement.tenant_bound':
+      return 'Tenant associated with a service engagement';
+    case 'service_engagement.deliverable_attached':
+      return 'Deliverable attached to a service engagement';
+    case 'service_engagement.work_attached':
+      return 'Work Item attached to a service engagement';
     case 'follow_up.created':
     case 'follow_up.updated':
     case 'follow_up.completed':

@@ -56,6 +56,18 @@ Application code should not repeatedly compensate for ambiguity that the data mo
 
 ## Sources of truth
 
+### Client/Tenant and engagement persistence
+
+`20261213000001_client_tenant_relationships.sql` adds organization-leading relationship keys, partial active-tuple and originating-handoff uniqueness, explicit Active/Ended lifecycle, actor attribution and immutable provenance. An `AFTER INSERT` handoff trigger creates the relationship in the existing provisioning transaction. `app.backfill_handoff_relationships` uses only authoritative handoff rows, preserves actor/time, deterministically uses the handoff UUID for the initial relationship period, safely repeats and refuses conflicting provenance. No second application write follows provisioning.
+
+`20261213000002_service_engagements.sql` adds engagements, typed deliverable references and Work references. The relationship composite key binds engagement Organization, Customer and target tenant; the deliverable's engagement key binds its target tenant before artifact-specific composite keys verify ownership. This deliberately crosses to the linked tenant's `organization_id`, rather than pretending that artifacts belong to the selling Organization. The schema-conformance test checks the exact supported source/target column pairs. Artifact deletion is restricted while referenced, preserving historical identities; archiving remains in the owning domain.
+
+All four tables force RLS and grant authenticated actors only SELECT. Narrow RPCs own mutations; direct INSERT/UPDATE/DELETE is unavailable. Relationship-ending and reference-attachment commands lock the relationship row, preventing a concurrent attach after ending. Engagement commands lock their row, preserve terminal history and record existing canonical Customer Events. Accepted commercial terms are stored once and never recomputed for display from mutable proposals. No copied operational status is persisted.
+
+Generated types come from `pnpm db:types`. The CLI-generated migration filenames were moved after the repository's existing December migration sequence so a fresh reset applies their dependencies first; historical migrations are unchanged.
+
+`20261213000003_tenant_reference_baseline_alignment.sql` reconciles an existing clean-gate violation: library jobs now reference execution through `(organization_id, execution_id)` and use organization-leading execution uniqueness. It preserves execution lookup and cascading cleanup; inconsistent legacy jobs fail the new foreign key rather than being reassigned. This changes no provider operation or connector credential authority.
+
 ### CRM Follow-up persistence and operating reads
 
 `crm_follow_ups` stores future/actionable CRM work. Organization-leading foreign keys enforce Customer and owner scope; `(organization_id, customer_id, opportunity_id)` also enforces the Opportunity's Customer. RLS requires tenant membership and `follow_up.manage` for writes. Column grants protect identity, creator and completion evidence. An invoker trigger stamps completion and records created/updated/completed/cancelled Events in the existing log atomically. Completed/cancelled records cannot be edited or deleted. Customer activity uses snapshotted Customer attribution.

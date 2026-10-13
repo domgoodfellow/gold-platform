@@ -37,13 +37,14 @@ const STATUS_TONE: Record<CommercialProposalStatus, 'neutral' | 'accent' | 'succ
   declined: 'neutral',
 };
 
-function ProposalRow({ proposal, organizationId, customerId, mayEdit, mayHandoff, handoff }: {
+function ProposalRow({ proposal, organizationId, customerId, mayEdit, mayHandoff, handoff, accessibleTenantIds }: {
   proposal: CommercialProposal;
   organizationId: string;
   customerId: string;
   mayEdit: boolean;
   mayHandoff: boolean;
   handoff: AcceptedProposalHandoff | undefined;
+  accessibleTenantIds: string[];
 }) {
   const [state, formAction, pending] = useActionState(sendCommercialProposalAction, SEND_INITIAL);
   const [handoffState, handoffFormAction, handoffPending] = useActionState(handoffProposalAction, HANDOFF_INITIAL);
@@ -93,10 +94,9 @@ function ProposalRow({ proposal, organizationId, customerId, mayEdit, mayHandoff
         createdOrganizationId ? (
           <Hint className="mt-3">
             Business created.{' '}
-            <a href={`/organizations/${createdOrganizationId}`} className="underline underline-offset-4">
+            {accessibleTenantIds.includes(createdOrganizationId) ? <a href={`/organizations/${createdOrganizationId}`} className="underline underline-offset-4">
               Open it
-            </a>
-            .
+            </a> : null}
           </Hint>
         ) : (
           <form action={handoffFormAction} className="mt-3">
@@ -148,6 +148,7 @@ export function CommercialProposalSection({
   mayEdit,
   role,
   currency,
+  accessibleTenantIds = [],
 }: {
   organizationId: string;
   customerId: string;
@@ -161,6 +162,7 @@ export function CommercialProposalSection({
   mayEdit: boolean;
   role: string;
   currency: string;
+  accessibleTenantIds?: string[];
 }) {
   const [buildState, buildFormAction, buildPending] = useActionState(buildCommercialProposalAction, BUILD_INITIAL);
   const [inviteState, inviteFormAction, invitePending] = useActionState(sendProposalInviteAction, INVITE_INITIAL);
@@ -183,6 +185,7 @@ export function CommercialProposalSection({
               customerId={customerId}
               mayEdit={mayEdit}
               mayHandoff={mayHandoff}
+              accessibleTenantIds={accessibleTenantIds}
               handoff={handoffsByProposalId[proposal.id]}
             />
           ))

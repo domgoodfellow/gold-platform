@@ -58,6 +58,14 @@ Security is a property of the entire system.
 
 ## Core security principles
 
+### Managed-service boundaries
+
+Selling-Organization Membership admits relationship and engagement history, not the receiving tenant's private content. Commercial management uses `customer.update`. Linking an existing tenant additionally requires a live `platform_staff` row and independently granted receiving-tenant `organization.manage`. The signed action is tenant-manager approval; its agreement note is audit context, not authorization. Platform staff with no receiving-tenant management authority cannot forge consent through a note or a tenant UUID. Platform staff without selling-Organization management authority cannot link on that Organization's behalf. `existing_client_tenant_options` repeats those checks and lists only eligible tenants. Ending/relinking never grants or revokes Membership or cancels a subscription.
+
+`client_tenant_summaries` exposes only already-linked tenant identity and Setup/Live state to selling-Organization members. Operational artifact selectors and summaries separately require target Membership, `organization.manage` for Studio/AI manager summaries, and canonical Automations module access for rule summaries. Platform staff is not an alternative to Membership at this boundary. Reference attachment rechecks ownership, permission, active relationship and non-terminal engagement inside the database transaction. The API uses the caller's authenticated database client; no service-role reader or generic cross-tenant data API is introduced.
+
+Restricted references expose no tenant artifact names/content/status. Relationship ending immediately disables managed-service status projections and new artifact attachment while retaining references. Portal, proposal-session and public identities do not change. The browser never asserts ownership: typed foreign keys and RPC authorization refuse forged Customer, relationship, Opportunity and artifact identifiers independently.
+
 ### 1. Identity, membership, authorization and entitlement are different
 
 The following questions are independent:
