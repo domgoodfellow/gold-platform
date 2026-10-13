@@ -553,7 +553,19 @@ Key rules:
 - Overview links to the workspace Home;
 - responsive design is intentional re-composition.
 
-For any user-visible change, inspect the actual rendered result.
+### Content-priority gate
+
+Before building or changing a user-facing surface, apply the content-priority, progressive-disclosure, colour, typography, ethical-interaction and accessibility rules in `docs/ui-system.md`.
+
+- Do not render every description, status or metadata field merely because the data provides it.
+- Default to a concise label, the operative state or control, and a direct action.
+- Show helper text only for instructions or blockers the current task needs. Put the rest behind a disclosure the person chooses to open.
+- Never leave critical information only in a toast, a hover-only tooltip or a colour.
+- Keep entitlement, permission, activation and readiness distinct without repeating all of them on every row.
+- Use the existing semantic tokens and shared components. Tenant accent never recolours status.
+- Do not use dark patterns.
+
+For any user-visible change, inspect the actual rendered result: desktop, tablet and phone, keyboard and touch use of any new interaction, and the relevant states (empty, error, locked, permission). Passing tests and a successful build are not visual verification.
 
 ---
 

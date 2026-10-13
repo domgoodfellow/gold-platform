@@ -389,6 +389,75 @@ The canonical archetypes are defined later in this document.
 
 ---
 
+## Content priority and progressive disclosure
+
+The interface shows what the person needs to decide or do now. It does not print the data model.
+
+Do not render a title, description, status, readiness, entitlement or metadata field merely because the data provides it.
+
+Design in this order:
+
+```text
+Actor and task
+↓
+Information priority (now / on request / never)
+↓
+Surface archetype and page geometry
+↓
+Visual hierarchy
+↓
+Interaction and state
+↓
+Rendered verification
+```
+
+### Content test
+
+For every visible supporting sentence, ask:
+
+> What decision would be worse without this text?
+
+If none, remove it or move it to a disclosure the person chooses to open.
+
+A familiar destination needs a page title and nothing more. A route-level description needs a demonstrated orientation or decision purpose. A self-evident label needs neither an icon nor a subtitle.
+
+Defaults:
+
+- Settings row: label plus the operative value, state or control. An explanation is added only where an option is unfamiliar.
+- Record row: primary data plus the key state or action. Metadata and history appear on request.
+- Feature row: name, current state, and the one action allowed. Setup blockers and upgrade detail appear when they apply.
+- Section: heading and content. A section heading earns its place by separating meaningful groups, not by adding a layer.
+
+### Disclosure patterns
+
+Choose the lightest pattern that still lets the person finish the task.
+
+| Pattern | Use for | Never for |
+| --- | --- | --- |
+| Tooltip | A short, nonessential clarification, such as an icon-only control's name, on hover and focus | Guidance the person must read, or anything interactive |
+| Info popover | Supplemental explanation that must also work by touch; opens on click, tap or keyboard | Instructions required before an action |
+| Collapsible region | Optional advanced detail, or a long configuration group | Hiding a required step or an active blocker |
+| Inline helper or validation | An instruction needed before acting, error recovery, or an actionable blocker | Describing a feature or restating the label |
+| Toast | Brief feedback after an action the person just took | The only place a critical message appears, or feature promotion |
+| Persistent alert | Safety-critical, account-affecting or unresolved conditions that need sustained visibility | Routine confirmation |
+
+Requirements for every disclosure:
+
+- it opens and closes by keyboard, with visible focus and a way to dismiss it (Escape for floating content);
+- its trigger has an accessible name and exposes expanded state;
+- it works by touch, with a target large enough to use on a phone;
+- critical information is never held only in a tooltip, a toast or a colour.
+
+Do not add an info icon to every row.
+
+### Locked and unavailable capabilities
+
+- A capability the organization is not entitled to may be listed once, in an aggregated and clearly labelled group, with one route to the plan view. Do not repeat a purchase action on every row.
+- Unentitled, not permitted, setup required and unavailable remain distinct (see Locked / unavailable). Aggregating them for scanning does not merge their meaning.
+- A capability that is not yet available is stated as unavailable. It is never presented as a production-ready paid upgrade, and an internal implementation gap is never written as a customer-facing feature description.
+
+---
+
 ## Visual hierarchy
 
 Visual hierarchy communicates:
@@ -419,6 +488,29 @@ Do not compensate for weak information architecture by adding headings to every 
 
 Whitespace and proximity should carry grouping before decorative containers are introduced.
 
+The person's eye should land on the current task, then the next action, then supporting detail.
+
+- One unmistakable page identity, and one visually primary action where a primary action exists.
+- Reserve accent and strong contrast for selected, active, high-priority or exceptional elements. Large or saturated does not mean important.
+- Use fewer alignment edges. Peer controls and values share consistent edges, and one-off margins are not used to fix this.
+- Use whitespace to clarify relationships, not to shrink the working area. Wide screens use their width for tables, split views, controls and previews.
+- Replace repeated separators and nested cards with spacing and typography when they convey the same structure.
+- Do not use decorative arrows, oversized icons or colour weight that implies a priority the content does not have.
+- Where many equivalent choices exist, give scan aids: search, group labels, filters, counts and concise state.
+
+F-shaped and Z-shaped reading paths are heuristics. Real workflow, content type, writing direction and viewport decide the layout.
+
+### Colour roles and contrast
+
+Colour is chosen by semantic role (page and surface, text, border, accent, selected, success, warning, danger, focus), using the tokens in Brand and theme. Do not hard-code a colour in a component because of what it is said to feel like.
+
+- Common colour associations (red for urgency, green for success, blue for trust) are suggestive and vary by culture. They never replace measured contrast.
+- A tenant accent never recolours success, warning or danger.
+- Keep surface and accent palettes cohesive. Use a contrasting accent selectively. Do not build a control plane from several saturated accents.
+- Contrast baseline is WCAG 2.2 AA: 4.5:1 for ordinary text, 3:1 for large text and for essential non-text indicators such as control boundaries, focus and selection. Check light and dark, and a representative alternative tenant accent. Do not assume a hue pairing passes.
+- Colour is never the only carrier of status, selection or required attention.
+- White space is not a white background. Light and dark surfaces both keep a readable spatial hierarchy.
+
 ---
 
 ## Typography
@@ -445,6 +537,19 @@ A page title should look like a page title everywhere.
 A section heading should not become visually equivalent to a page title merely because a route wants emphasis.
 
 Supporting text is not automatically a subtitle.
+
+Use the typefaces the brand system already supplies (heading, body, and a monospaced role for code and tabular figures). Do not add a font family for a section or a route. Two families is a sensible default for a coherent page, not a quota.
+
+Choose type for legibility and function before character. Serif or sans-serif tone is a secondary consideration.
+
+Keep an ordered scale and consistent weights and vertical rhythm. Prefer these over extra size variants.
+
+Line length follows content role:
+
+- sustained prose uses a narrow measure; about 45–75 characters is a starting point to test, not a limit;
+- tables, forms, dashboards and operational settings do not inherit an article width.
+
+Labels and short status text should scan without wrapping where practical. Long names wrap or truncate with their full text still reachable. Check mixed-case labels, numerals, localized text, font scaling and phone width for clipping.
 
 ---
 
@@ -1552,6 +1657,20 @@ Do not require ceremonial confirmation for harmless reversible actions.
 
 ---
 
+## Ethical interaction
+
+Similar controls look and behave alike. Navigation, setting changes, disclosure and destructive actions are visibly different.
+
+- Do not use dark patterns: deceptive defaults, trick questions, disguised advertising, surprise charges, false urgency, misleading hierarchy or manipulated consent.
+- Prevent errors rather than explain them afterwards. Offer undo or confirmation in proportion to the risk of the change.
+- Turning a feature off must not imply its data was deleted. Confirmation and recovery text state exactly what is kept.
+- Do not invent a switch for a capability that is structurally required, and do not show a disabled control whose purpose the person cannot discover.
+- Keep entitled, on or off, ready, setup required, unavailable, and permitted distinct. The backend owns these facts. The UI may simplify how they are shown but does not merge or recompute them.
+- Feedback is truthful and separates pending, success and failure. Results are announced accessibly.
+- A person should not have to learn internal domain or provider terms to finish an ordinary task.
+
+---
+
 ## Status and feedback
 
 Every asynchronous action should have an understandable state:
@@ -1566,6 +1685,8 @@ error / refused
 Use loading indicators that preserve page structure where possible.
 
 Avoid full-page spinners for local mutations.
+
+Which channel carries a message (toast, inline, persistent alert) follows the disclosure patterns in Content priority and progressive disclosure.
 
 ### Status colour
 
@@ -1632,6 +1753,8 @@ feature not implemented
 ```
 
 Do not collapse these into “Disabled.”
+
+A group of unentitled capabilities may be gathered into one labelled area with a single route to the plan view, while each row keeps its own accurate state.
 
 ---
 
@@ -1752,6 +1875,13 @@ At minimum, verify:
 
 A surface with a meaningful custom transition may require an additional viewport.
 
+Responsive parity means equivalent task access, not identical layout.
+
+- Desktop places controls beside their labels and uses available width. Do not reduce a desktop workspace to a phone-width column.
+- Phone stacks deliberately and puts controls first. It does not shrink desktop components.
+- Preserve functional density. A settings list must not grow to several screens through repeated descriptions and repeated calls to action.
+- Check touch target size and where menus, popovers and sheets open.
+
 ---
 
 ## Accessibility
@@ -1767,7 +1897,8 @@ At minimum:
 - dialogs/sheets manage focus correctly;
 - semantic elements match their purpose;
 - status is not communicated by color alone;
-- contrast is sufficient;
+- contrast meets the WCAG 2.2 AA baseline in Colour roles and contrast;
+- tooltips, popovers, menus and sheets work by keyboard and touch, can be dismissed, and have accessible names;
 - motion respects reduced-motion preference;
 - table/board alternatives remain operable;
 - touch targets remain usable on phone;
@@ -1892,6 +2023,16 @@ Inspect:
 - empty/loading/error states;
 - major viewport classes.
 
+Also check, where the change touches them:
+
+- every visible descriptive sentence has a reason under the content test;
+- contrast and semantic colour in light, dark and a representative alternative tenant accent;
+- every relevant combination of entitlement, activation, readiness and permission, without changing backend authority;
+- disclosure controls by keyboard, touch, dismissal and accessible name;
+- no critical information exists only in a toast, a hover-only tooltip or a colour.
+
+For a substantial visual change, keep before and after evidence and record any intentional deviation from this document.
+
 ---
 
 ### Visual regression vs exhaustive audit
@@ -1938,10 +2079,11 @@ Before implementation:
 1. identify the user's primary task;
 2. identify the owning domain/workspace/scope;
 3. select the primary archetype;
-4. inspect existing shared components/patterns;
-5. identify states and permissions;
-6. identify responsive transitions;
-7. identify support modes, if any.
+4. decide what must be visible now, what is on request, and what is omitted (content priority);
+5. inspect existing shared components/patterns;
+6. identify states and permissions;
+7. identify responsive transitions;
+8. identify support modes, if any.
 
 During implementation:
 
@@ -1986,6 +2128,12 @@ Do not introduce:
 - hard-coded platform/tenant scope differences inside generic primitives;
 - UI-only permission checks;
 - generic “Disabled” state for entitlement, permission and configuration failures;
+- a description, status line or metadata field shown only because the data has it;
+- a repeated purchase or upgrade action on every locked row;
+- an info icon on every row;
+- critical guidance held only in a tooltip, a toast or a colour;
+- an unavailable capability presented as a paid upgrade;
+- dark patterns (see Ethical interaction);
 - fake dashboards composed of arbitrary cards;
 - visual changes reported as verified without opening the application.
 
@@ -1996,6 +2144,7 @@ Do not introduce:
 This document owns:
 
 - UI hierarchy;
+- content priority and progressive disclosure;
 - navigation behavior;
 - page identity;
 - page geometry;
