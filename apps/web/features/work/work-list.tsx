@@ -13,7 +13,7 @@ import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
 import type { WorkItemType } from '@/lib/domain/work-items/types';
 import type { WorkItem } from '@/lib/domain/work-items/work-items';
 import type { CoverageView, ResourceNeedsView } from '@/lib/domain/work-items/requirements';
-export function WorkList({ organizationId, role, timezone, types, selectedType, statuses, transitions, workItems, customers, locations, resources, assets, definitions, assetsEnabled, coverage, mayAdd, mayConfigure, mayMove, maySchedule, createOpen = false, view = 'list', page = 1, q = '', sort = 'newest', statusId = '', stages = {} }: {
+export function WorkList({ organizationId, role, timezone, types, selectedType, statuses, statusesByType, transitions, workItems, customers, locations, resources, assets, definitions, assetsEnabled, coverage, mayAdd, mayConfigure, mayMove, maySchedule, createOpen = false, view = 'list', page = 1, q = '', sort = 'newest', statusId = '', stages = {} }: {
   createOpen?: boolean;
   view?: 'list' | 'board'; page?: number; q?: string; sort?: string; statusId?: string; stages?: Record<string, Counted<WorkItem>>;
   organizationId: string;
@@ -22,6 +22,8 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
   types: WorkItemType[];
   selectedType: WorkItemType | null;
   statuses: WorkItemStatus[];
+  /** Stages for every type, so New work can switch type without showing another type's stages. */
+  statusesByType: Record<string, WorkItemStatus[]>;
   transitions: WorkItemTransition[];
   workItems: Counted<WorkItem>;
   customers: { id: string; label: string }[];
@@ -45,7 +47,7 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
   return <div className="space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <nav aria-label="Work view" className="flex gap-1"><ButtonLink size="small" tone={view === 'list' ? 'primary' : 'secondary'} href={href({ view: 'list' })}>List</ButtonLink><ButtonLink size="small" tone={view === 'board' ? 'primary' : 'secondary'} href={href({ view: 'board', status: '' })}>Board</ButtonLink><ButtonLink size="small" tone="secondary" href={`${base}/work/dispatch`}>Dispatch board</ButtonLink></nav>
-      {mayAdd && selectedType ? <WorkCreateDrawer defaultOpen={createOpen} options={{ organizationId, types: [selectedType], statusesByType: { [selectedType.id]: statuses }, customers, locations, resources, assets, assetsEnabled, definitions }}/> : null}
+      {mayAdd && selectedType ? <WorkCreateDrawer key={selectedType.id} defaultOpen={createOpen} initialTypeId={selectedType.id} configureHref={mayConfigure ? `${base}/work/configuration` : undefined} options={{ organizationId, types, statusesByType, customers, locations, resources, assets, assetsEnabled, definitions }}/> : null}
     </div>
     <form method="get" className="flex flex-wrap items-end gap-2 rounded-lg border border-border p-3">
       <input type="hidden" name="view" value={view}/>

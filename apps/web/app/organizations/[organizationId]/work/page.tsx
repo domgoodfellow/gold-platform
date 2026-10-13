@@ -50,6 +50,8 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
   const types = await listWorkItemTypes(db, { organizationId });
   const selectedType = types.find((type) => type.id === requestedType) ?? types[0] ?? null;
   const statuses = selectedType ? await listWorkItemStatuses(db, { organizationId, typeId: selectedType.id }) : [];
+  const otherStatuses = await Promise.all(types.map(type => type.id === selectedType?.id ? Promise.resolve(statuses) : listWorkItemStatuses(db, { organizationId, typeId: type.id })));
+  const statusesByType = Object.fromEntries(types.map((type, i) => [type.id, otherStatuses[i]]));
   const statusId = statuses.find(s => s.id === text('status'))?.id;
   const [transitions, workItems, customers, locations, resources, assets, definitions, enabledModules, templateSteps, prices, booking, requirements, capabilities, intakeForms] = await Promise.all([
     selectedType ? listWorkItemTransitions(db, { organizationId, typeId: selectedType.id }) : Promise.resolve([]),
@@ -157,6 +159,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
         types={types}
         selectedType={selectedType}
         statuses={statuses}
+        statusesByType={statusesByType}
         transitions={transitions}
         workItems={workItems}
         customers={customers.map((item) => ({ id: item.id, label: item.name }))}
