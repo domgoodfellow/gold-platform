@@ -86,8 +86,8 @@ describe('Settings is one contextual sidebar, not a landing page or a directory'
   const landing = read('app/organizations/[organizationId]/settings/page.tsx');
   const organization = read('app/organizations/[organizationId]/settings/organization/page.tsx');
 
-  it('the persistent footer enters Settings through the root, which redirects to a destination', () => {
-    const menu = read('components/navigation/sidebar-footer-navigation.tsx');
+  it('the account menu enters Settings through the root, which redirects to a destination', () => {
+    const menu = read('components/navigation/account-menu.tsx');
     expect(menu).toContain('settingsLandingHref(from)');
     expect(landing).toContain('redirect(defaultSettingsHref(');
     expect(landing).not.toContain('<PageHeader');

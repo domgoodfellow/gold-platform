@@ -1,6 +1,8 @@
 'use client';
 
-import { ChevronRight, ChevronUp, LogOut } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { BookOpen, ChevronRight, ChevronUp, LifeBuoy, LogOut, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
 import {
   DropdownMenu,
@@ -12,15 +14,35 @@ import {
 } from '@gold/ui/components/dropdown-menu';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@gold/ui/components/sidebar';
 import { cx } from '@/components/class-names';
+import { organizationIdFromPath } from '@/lib/route/platform-context';
+import { settingsLandingHref } from '@/lib/route/settings';
 
-/** The shared person/session menu. Application destinations live in the sidebar footer. */
+/**
+ * The truthful, shared person/session menu, one implementation for every shell's sidebar footer.
+ * Represents the PERSON, not where they are operating — cross-context navigation (switching
+ * business, entering Platform Administration) is `ContextSwitcher`'s job alone. The menu has four
+ * separated destinations: Settings (which opens the contextual Settings sidebar, so there is no
+ * second Account or Profile entry), Help & documentation (how to use GildOps), Contact GildOps
+ * Support (a request to the platform provider, not the business's own Support workspace), and
+ * Sign out. Help and Contact are business-scoped pages, so they appear only where a business is in
+ * context.
+ */
+
 type AccountMenuProps = {
   /** The signed-in Supabase Auth email. Every caller resolves it the same way: `db.auth.getUser()`. */
   email: string;
   signOutAction: () => Promise<void>;
+  /** A locked organization keeps one Settings destination, Plan & usage, as its recovery route. */
+  locked?: boolean;
 };
 
-function AccountMenuContent({ email, signOutAction }: AccountMenuProps) {
+function AccountMenuContent({ email, signOutAction, locked = false }: AccountMenuProps) {
+  // The business being left, so Settings, Help and Contact open for the right one. Read from the path
+  // rather than passed in: this menu is shared by shells that have no organization at all.
+  const pathname = usePathname();
+  const from = organizationIdFromPath(pathname);
+  const settingsHref = locked && from ? `/organizations/${from}/settings/plan` : settingsLandingHref(from);
+
   return (
     <>
       <DropdownMenuLabel className="flex items-center gap-3 font-normal">
@@ -33,6 +55,18 @@ function AccountMenuContent({ email, signOutAction }: AccountMenuProps) {
         </div>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
+      <DropdownMenuItem asChild><Link href={settingsHref}><Settings />Settings</Link></DropdownMenuItem>
+      {from ? (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild><Link href={`/organizations/${from}/help`}><BookOpen />Help &amp; documentation</Link></DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link href={`/organizations/${from}/help/contact?from=${encodeURIComponent(pathname)}`}><LifeBuoy />Contact GildOps Support</Link>
+          </DropdownMenuItem>
+        </>
+      ) : null}
+      <DropdownMenuSeparator />
       <DropdownMenuItem variant="destructive" onClick={() => { void signOutAction(); }}><LogOut />Sign out</DropdownMenuItem>
     </>
   );
@@ -43,7 +77,7 @@ function AccountMenuContent({ email, signOutAction }: AccountMenuProps) {
  * to the right, beside the icon rail; expanded, it opens above its own trigger, attached to the
  * footer it sits in, rather than floating off to the side of a full-width row.
  */
-export function AccountMenu({ email, signOutAction }: AccountMenuProps) {
+export function AccountMenu({ email, signOutAction, locked }: AccountMenuProps) {
   const { isMobile, state } = useSidebar();
   const side = isMobile ? 'bottom' : state === 'collapsed' ? 'right' : 'top';
 
@@ -55,7 +89,7 @@ export function AccountMenu({ email, signOutAction }: AccountMenuProps) {
             <SidebarMenuButton
               size="lg"
               tooltip={email}
-              className="group/account-menu border-t border-sidebar-border data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="group/account-menu data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="size-8 rounded-lg">
                 <AvatarFallback className="rounded-lg">
@@ -80,7 +114,7 @@ export function AccountMenu({ email, signOutAction }: AccountMenuProps) {
             sideOffset={8}
             className={cx('min-w-56', side === 'top' && 'w-(--radix-dropdown-menu-trigger-width)')}
           >
-            <AccountMenuContent email={email} signOutAction={signOutAction} />
+            <AccountMenuContent email={email} signOutAction={signOutAction} locked={locked} />
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

@@ -811,8 +811,8 @@ Workspaces
   Studio
 
 Team / Connections / Agent are workspace-header utilities.
-Help & Support and Settings are persistent footer entries. Account owns identity and Sign out.
-Platform Administration has an independently authorized footer entry and its own central navigation context.
+Settings, Help & documentation and Contact GildOps Support are Account menu entries, with Sign out. Account owns identity and Sign out.
+Platform Administration is entered from the context switcher's System entry (independently authorized) and has its own central navigation context.
 ```
 
 Only real, reachable and authorized destinations render.
@@ -2173,12 +2173,14 @@ Marketing Home is a compact operational dashboard: four evidence-backed KPIs, a 
 
 ## Persistent application controls
 
-The existing sidebar footer presents Platform (only with server-resolved platform authority),
-Help & Support, Settings, then the distinct Account/session menu. Mobile Agent remains a Sheet
-control. Locked organizations keep the Plan & usage recovery destination. The no-organization
+The sidebar footer holds the Account/session menu, which represents the signed-in person: Settings,
+Help & documentation, Contact GildOps Support, then Sign out. Help and Contact are organization-scoped
+and appear only where an organization is in context. Mobile Agent remains a Sheet control. Locked
+organizations keep the Plan & usage recovery destination as their Settings entry. The no-organization
 fallback offers personal Settings without inventing an organization Help or Platform context.
-`SidebarFooterNavigation` owns the shared footer presentation; `AccountMenu` owns identity and
-Sign out. `settings-icons.ts` owns recognizable Settings destination icons, used with accessible
+Platform Administration is a context, not an account action: the context switcher lists it once under
+System, only with server-resolved platform authority, and the account menu never links to it.
+`AccountMenu` owns the footer presentation, identity and Sign out. `settings-icons.ts` owns recognizable Settings destination icons, used with accessible
 labels and rail tooltips. The existing `SettingsNav` retains search and closes the mobile Sheet
 on navigation. Back to app validates its per-tab hint against current authorized destinations
 and falls back to organization Home. Stored navigation is never an authorization authority.

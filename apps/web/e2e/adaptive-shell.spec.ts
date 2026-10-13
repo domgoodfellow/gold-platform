@@ -16,6 +16,10 @@ import { COLLEAGUE_STORAGE_STATE, loadDemoContext, OWNER_STORAGE_STATE, platform
  * destination is still refused when the URL is typed.
  */
 
+const accountMenu = async (page: import('@playwright/test').Page) => {
+  await page.getByRole('button', { name: /Signed in/ }).filter({ visible: true }).click();
+  return page.getByRole('menu');
+};
 const sidebar = (page: import('@playwright/test').Page) => page.locator('[data-slot="sidebar-container"] nav[aria-label="This business"]');
 
 test.describe('a tenant owner', () => {
@@ -79,7 +83,7 @@ test.describe('a tenant owner', () => {
     await page.goto(`/organizations/${organizationId}/customers`);
     await page.reload();
     await expect(sidebar(page).getByRole('link', { name: 'Customers', exact: true })).toHaveAttribute('aria-current', 'page');
-    await page.getByRole('navigation', { name: 'Application controls' }).getByRole('link', { name: 'Settings', exact: true }).click();
+    await (await accountMenu(page)).getByRole('menuitem', { name: 'Settings', exact: true }).click();
     const settings = page.getByRole('navigation', { name: 'Settings', exact: true });
     await expect(settings).toBeVisible();
     await settings.getByRole('link', { name: 'Back to app' }).click();
@@ -247,14 +251,15 @@ test.describe('GOLD platform staff', () => {
     const container = page.locator('[data-slot="sidebar-container"]');
     await container.getByRole('button', { name: /GildOps Platform/ }).click();
     await expect(page.getByText('Businesses', { exact: true })).toBeVisible();
-    await expect(page.getByText('System', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('System', { exact: true })).toBeVisible();
     // MenuItem uses asChild, so the item itself is the link.
     const goldLink = page.locator(`[role="menuitem"][href="/organizations/${goldOrganizationId}/home"]`);
     await goldLink.click();
     await expect(page).toHaveURL(`/organizations/${goldOrganizationId}/home`);
     await expect(sidebar(page).getByRole('link', { name: 'CRM', exact: true })).toBeVisible();
     await expect(sidebar(page).getByText('Platform', { exact: true })).toHaveCount(0);
-    await container.getByRole('navigation', { name: 'Application controls' }).getByRole('link', { name: 'Platform', exact: true }).click();
+    await container.getByRole('button', { name: /GildOps/ }).first().click();
+    await page.getByRole('menuitem', { name: 'Platform', exact: true }).click();
     await expect(page).toHaveURL(platformUrl());
     await expect(container.getByText('System control plane', { exact: true }).filter({ visible: true }).first()).toBeVisible();
   });
@@ -279,9 +284,9 @@ test.describe('GOLD platform staff', () => {
 });
 
 
-test.describe('persistent footer and icon-bearing Settings', () => {
+test.describe('account menu and icon-bearing Settings', () => {
   test.use({ storageState: OWNER_STORAGE_STATE });
-  for (const width of [1440, 768, 390]) test(`Settings navigation and footer at ${width}px`, async ({ page }, info) => {
+  for (const width of [1440, 768, 390]) test(`Settings navigation and account menu at ${width}px`, async ({ page }, info) => {
     const { organizationId } = loadDemoContext();
     await page.setViewportSize({ width, height: 1000 });
     for (const colorScheme of ['light', 'dark'] as const) {
@@ -289,10 +294,13 @@ test.describe('persistent footer and icon-bearing Settings', () => {
       await page.goto(`/organizations/${organizationId}/customers`);
       const open = async () => { if (width < 768) await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click(); };
       await open();
-      const controls = page.getByRole('navigation', { name: 'Application controls' });
-      await expect(controls.getByRole('link', { name: 'Platform' })).toHaveCount(0);
-      await expect(controls.getByRole('link', { name: 'Help & Support' })).toBeVisible();
-      await controls.getByRole('link', { name: 'Settings', exact: true }).click();
+      await expect(page.getByRole('navigation', { name: 'Application controls' })).toHaveCount(0);
+      const menu = await accountMenu(page);
+      await expect(menu.getByRole('menuitem', { name: 'Platform' })).toHaveCount(0);
+      await expect(menu.getByRole('menuitem', { name: 'Help & documentation' })).toBeVisible();
+      await expect(menu.getByRole('menuitem', { name: 'Contact GildOps Support' })).toBeVisible();
+      await page.screenshot({ path: info.outputPath(`account-menu-${width}-${colorScheme}.png`) });
+      await menu.getByRole('menuitem', { name: 'Settings', exact: true }).click();
       if (width < 768) await expect(page.getByRole('dialog', { name: 'Sidebar' })).toHaveCount(0);
       await expect(page.getByRole('heading', { name: 'General', exact: true })).toBeVisible();
       await open();

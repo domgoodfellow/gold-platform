@@ -41,8 +41,7 @@ describe('Settings interactions', () => {
     await user.click(trigger);
     expect(trigger).toHaveAttribute('data-state', 'open');
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.queryByRole('menuitem', { name: 'Settings' })).not.toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Sign out' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Settings' })).toHaveAttribute('href', '/organizations/8b1f0a1e-5d4c-4b7e-9a3f-1c2d3e4f5a6b/settings');
     await user.keyboard('{Escape}');
     expect(trigger).toHaveAttribute('data-state', 'closed');
     expect(trigger).toHaveFocus();

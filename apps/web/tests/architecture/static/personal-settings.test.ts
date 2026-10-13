@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { decideRedirect } from '@/lib/route/access';
@@ -59,8 +59,8 @@ describe('the menu', () => {
   const menu = read('components/navigation/account-menu.tsx');
 
   it('offers one Settings entry and Sign out, and leaves switching context to the switcher (D71)', () => {
-    expect(menu).not.toContain('>Settings</Link>');
-    expect(read('components/navigation/sidebar-footer-navigation.tsx')).toContain("label: 'Settings'");
+    expect(menu).toContain('>Settings</Link>');
+    expect(existsSync(`${WEB}/components/navigation/sidebar-footer-navigation.tsx`)).toBe(false);
     expect(menu).not.toContain('Business settings');
     expect(menu).not.toContain('Account settings');
     expect(menu).toContain('Sign out');
@@ -69,15 +69,14 @@ describe('the menu', () => {
   });
 
   it('opens the canonical Settings landing page instead of bypassing it', () => {
-    expect(read('components/navigation/sidebar-footer-navigation.tsx')).toContain('settingsLandingHref(from)');
+    expect(menu).toContain('settingsLandingHref(from)');
     expect(menu).not.toContain("settingsScopeHref('organization', from)");
   });
 
   it('offers Help and Contact support only when a business is in play, and keeps Settings as the one place for Account and Plan', () => {
-    expect(menu).not.toContain('Contact GildOps Support');
-    const footer = read('components/navigation/sidebar-footer-navigation.tsx');
-    expect(footer).toContain("label: 'Help & Support'");
-    expect(footer).toContain('...(from ?');
+    expect(menu).toContain('Help &amp; documentation');
+    expect(menu).toContain('Contact GildOps Support');
+    expect(menu).toContain('{from ? (');
     expect(menu).not.toContain('Plan &amp; usage');
   });
 });

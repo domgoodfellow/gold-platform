@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@gold/ui/components/dropdown-menu';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@gold/ui/components/sidebar';
-import { Building2, ChevronsUpDown } from 'lucide-react';
+import { Building2, ChevronsUpDown, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 import { organizationHomeHref } from '@/lib/navigation';
@@ -48,8 +48,7 @@ type SwitcherProps = {
 };
 
 /** Businesses and the separately authorized system control plane share one switcher. */
-export function deriveSwitcherView(current: SwitcherContext, organizations: SwitchableOrganization[], _platform?: PlatformContext | null) {
-  void _platform; // Backward-compatible prop; authority is presented by the footer.
+export function deriveSwitcherView(current: SwitcherContext, organizations: SwitchableOrganization[], platform?: PlatformContext | null) {
   const triggerName =
     current.kind === 'business' ? current.name : current.kind === 'platform' ? `${PLATFORM_NAME} Platform` : PLATFORM_NAME;
   const triggerRole =
@@ -61,7 +60,7 @@ export function deriveSwitcherView(current: SwitcherContext, organizations: Swit
       ? organizations.filter((organization) => organization.id !== current.organizationId)
       : organizations;
 
-  return { triggerName, triggerRole, avatarInitial, businesses, hasChoices: businesses.length > 0 };
+  return { triggerName, triggerRole, avatarInitial, businesses, hasChoices: businesses.length > 0 || !!platform };
 }
 
 function ContextSwitcherMenuContent({
@@ -69,6 +68,7 @@ function ContextSwitcherMenuContent({
   triggerRole,
   avatarInitial,
   businesses,
+  platform,
   current,
 }: SwitcherProps & ReturnType<typeof deriveSwitcherView>) {
   const preserveActivity = useContext(NavigationActivityContext);
@@ -101,6 +101,24 @@ function ContextSwitcherMenuContent({
               </Link>
             </DropdownMenuItem>
           ))}
+        </>
+      ) : null}
+      {platform ? (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="px-2 text-xs uppercase tracking-wide text-subtle">System</DropdownMenuLabel>
+          <DropdownMenuItem asChild>
+            <Link
+              href={platform.href}
+              target={preserveActivity && current.kind !== 'platform' && platform.organizationId !== (current.kind === 'global' ? undefined : current.organizationId) ? '_blank' : undefined}
+              rel={preserveActivity ? 'noopener noreferrer' : undefined}
+              aria-current={current.kind === 'platform' ? 'page' : undefined}
+              className="flex items-center gap-2"
+            >
+              <LayoutDashboard aria-hidden className="shrink-0" />
+              <span>Platform</span>
+            </Link>
+          </DropdownMenuItem>
         </>
       ) : null}
     </DropdownMenuContent>

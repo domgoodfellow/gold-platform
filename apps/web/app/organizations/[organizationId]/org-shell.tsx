@@ -3,7 +3,6 @@
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
 import { SIDEBAR_HEADER_HEIGHT } from '@/components/layout/workspace-geometry';
 import { WorkspaceShell } from '@/components/layout/workspace-shell';
-import { SidebarFooterNavigation } from '@/components/navigation/sidebar-footer-navigation';
 import { AccountMenu } from '@/components/navigation/account-menu';
 import { SettingsNav } from '@/components/navigation/settings-nav';
 import { inSettingsContext, type SettingsSearchItem } from '@/lib/settings-nav';
@@ -378,7 +377,6 @@ export function OrgSidebar({
         )}
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border">
-        <SidebarFooterNavigation organizationId={current.kind === 'global' ? undefined : current.organizationId} platform={platform} />
         <MobileAgentEntry />
         <AccountMenu email={email} signOutAction={signOutAction} />
       </SidebarFooter>
@@ -448,7 +446,7 @@ export function LockedOrgSidebar({
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border"><SidebarFooterNavigation organizationId={organizationId} platform={platform} locked /><AccountMenu email={email} signOutAction={signOutAction} /></SidebarFooter>
+      <SidebarFooter className="border-t border-sidebar-border"><AccountMenu email={email} signOutAction={signOutAction} locked /></SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

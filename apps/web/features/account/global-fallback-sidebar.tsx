@@ -1,6 +1,5 @@
 'use client';
 
-import { SidebarFooterNavigation } from '@/components/navigation/sidebar-footer-navigation';
 import { AccountMenu } from '@/components/navigation/account-menu';
 import { ContextSwitcher, GOLD_MARK, type SwitchableOrganization } from '@/components/navigation/context-switcher';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from '@gold/ui/components/sidebar';
@@ -31,7 +30,6 @@ export function GlobalFallbackSidebar({
       </SidebarHeader>
       <SidebarContent />
       <SidebarFooter className="border-t border-sidebar-border">
-        <SidebarFooterNavigation />
         <AccountMenu email={email} signOutAction={signOutAction} />
       </SidebarFooter>
       <SidebarRail />

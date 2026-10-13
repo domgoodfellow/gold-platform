@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SidebarProvider } from '@gold/ui/components/sidebar';
 import { NavigationActivityContext } from '@/components/navigation/activity-context';
-import { SidebarFooterNavigation } from '@/components/navigation/sidebar-footer-navigation';
+import { AccountMenu } from '@/components/navigation/account-menu';
 import { SettingsNav } from '@/components/navigation/settings-nav';
 import { projectSettingsNav } from '@/lib/settings-nav';
 import { OrgNav } from '@/app/organizations/[organizationId]/org-shell';
@@ -46,14 +46,14 @@ const pneu = { id: 'pneu', name: 'Pneu3L', role: 'Admin', operationalState: 'liv
 const platform = { organizationId: 'gold', href: '/organizations/gold/platform' };
 
 describe('business and system context menu', () => {
-  it('keeps the business switcher free of the footer-owned Platform entry', async () => {
+  it('groups businesses and the authorized Platform separately with canonical destinations', async () => {
     const user = userEvent.setup();
     render(<CompactContextSwitcher mark={<span>G</span>} current={{ kind: 'business', organizationId: 'gold', name: 'GildOps', role: 'Owner' }} organizations={[gold, pneu]} platform={platform} />);
     await user.click(screen.getByRole('button', { name: /Switch context/ }));
     expect(screen.getByText('Businesses')).toBeInTheDocument();
-    expect(screen.queryByText('System')).not.toBeInTheDocument();
+    expect(screen.getByText('System')).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /Pneu3L/ })).toHaveAttribute('href', '/organizations/pneu/home');
-    expect(screen.queryByRole('menuitem', { name: 'Platform' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Platform' })).toHaveAttribute('href', platform.href);
   });
   it('shows system scope and offers the GildOps operating business when Platform is active', async () => {
     const user = userEvent.setup();
@@ -61,7 +61,7 @@ describe('business and system context menu', () => {
     await user.click(screen.getByRole('button', { name: /GildOps Platform/ }));
     expect(screen.getByText('System control plane')).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /GildOps.*Owner/ })).toHaveAttribute('href', '/organizations/gold/home');
-    expect(screen.queryByRole('menuitem', { name: 'Platform' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Platform' })).toHaveAttribute('aria-current', 'page');
   });
   it('an Owner with no resolved platform authority sees no System category', async () => {
     const user = userEvent.setup();
@@ -193,25 +193,41 @@ describe('responsive breadcrumb interaction', () => {
 describe('persistent application controls and Settings', () => {
   const org = '11111111-1111-4111-8111-111111111111';
   const wrap = (children: ReactNode) => <TooltipProvider><SidebarProvider defaultOpen={false}>{children}</SidebarProvider></TooltipProvider>;
-  it('keeps a live business activity in its tab when entering another organization Platform or personal Settings', () => {
+  it('keeps a live business activity in its tab when entering another organization Platform or personal Settings', async () => {
+    const user = userEvent.setup();
     route.pathname = `/organizations/${org}/calls`;
     const platformOrganization = '22222222-2222-4222-8222-222222222222';
-    render(wrap(<NavigationActivityContext.Provider value={true}><SidebarFooterNavigation platform={{organizationId: platformOrganization, href: `/organizations/${platformOrganization}/platform`}} /><SettingsNav organizationId={org} organizationName="Business" sections={projectSettingsNav(org, { capabilities: new Set(ALL_CAPABILITIES) })} search={[]} returnHrefs={[]} /></NavigationActivityContext.Provider>));
-    expect(screen.getByRole('link', { name: 'Platform' })).toHaveAttribute('target', '_blank');
+    render(wrap(<NavigationActivityContext.Provider value={true}><CompactContextSwitcher mark={<span>G</span>} current={{ kind: 'business', organizationId: org, name: 'Business', role: 'Owner' }} organizations={[]} platform={{organizationId: platformOrganization, href: `/organizations/${platformOrganization}/platform`}} /><SettingsNav organizationId={org} organizationName="Business" sections={projectSettingsNav(org, { capabilities: new Set(ALL_CAPABILITIES) })} search={[]} returnHrefs={[]} /></NavigationActivityContext.Provider>));
+    await user.click(screen.getByRole('button', { name: /Switch context/ }));
+    expect(screen.getByRole('menuitem', { name: 'Platform' })).toHaveAttribute('target', '_blank');
+    await user.keyboard('{Escape}');
     expect(screen.getByRole('link', { name: 'Appearance' })).toHaveAttribute('target', '_blank');
     expect(screen.getByRole('link', { name: 'General' })).not.toHaveAttribute('target');
-    expect(screen.getByRole('link', { name: 'Settings' })).not.toHaveAttribute('target');
   });
-  it('offers Settings and product help outside the account menu without granting Platform to an owner', () => {
+  it('keeps Settings, Help, Contact Support and Sign out in the account menu, closed until opened', async () => {
+    const user = userEvent.setup();
     route.pathname = `/organizations/${org}/calls`;
-    const { rerender } = render(wrap(<SidebarFooterNavigation />));
-    expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', `/organizations/${org}/settings`);
-    expect(screen.getByRole('link', { name: 'Help & Support' })).toHaveAttribute('href', `/organizations/${org}/help`);
-    expect(screen.queryByRole('link', { name: 'Platform' })).not.toBeInTheDocument();
-    rerender(wrap(<SidebarFooterNavigation platform={platform} />));
-    expect(screen.getByRole('link', { name: 'Platform' })).toHaveAttribute('href', platform.href);
-    rerender(wrap(<SidebarFooterNavigation organizationId={org} locked />));
-    expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', `/organizations/${org}/settings/plan`);
+    const { rerender } = render(wrap(<AccountMenu email="person@example.test" signOutAction={vi.fn()} />));
+    expect(screen.queryByRole('menuitem', { name: 'Settings' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Platform|Help/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /person@example.test/ }));
+    expect(screen.getByRole('menuitem', { name: 'Settings' })).toHaveAttribute('href', `/organizations/${org}/settings`);
+    expect(screen.getByRole('menuitem', { name: 'Help & documentation' })).toHaveAttribute('href', `/organizations/${org}/help`);
+    expect(screen.getByRole('menuitem', { name: 'Contact GildOps Support' })).toHaveAttribute('href', expect.stringContaining(`/organizations/${org}/help/contact`));
+    expect(screen.getByRole('menuitem', { name: 'Sign out' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Platform' })).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    rerender(wrap(<AccountMenu email="person@example.test" signOutAction={vi.fn()} locked />));
+    await user.click(screen.getByRole('button', { name: /person@example.test/ }));
+    expect(screen.getByRole('menuitem', { name: 'Settings' })).toHaveAttribute('href', `/organizations/${org}/settings/plan`);
+  });
+  it('offers only Settings and Sign out where no organization is in context', async () => {
+    const user = userEvent.setup();
+    route.pathname = '/settings/account';
+    render(wrap(<AccountMenu email="person@example.test" signOutAction={vi.fn()} />));
+    await user.click(screen.getByRole('button', { name: /person@example.test/ }));
+    expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /Help|Contact/ })).not.toBeInTheDocument();
   });
   it('renders every authorized Settings destination with a real icon and validates return paths', () => {
     route.pathname = `/settings/account/appearance`;
