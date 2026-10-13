@@ -2804,6 +2804,10 @@
       ],
       "note": "The Website workbench: creation, pages, sections, reordering, unsaved state and read-only review."
     },
+    "apps/web/tests/component/work-create-drawer.test.tsx": {
+      "category": "component",
+      "concerns": ["work", "configuration", "security"]
+    },
     "apps/web/tests/component/shell-navigation.test.tsx": {
       "category": "component",
       "concerns": ["navigation", "security"]
