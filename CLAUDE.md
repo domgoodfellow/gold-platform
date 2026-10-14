@@ -1128,6 +1128,21 @@ NextFund is not assumed to already be a tenant.
 
 ---
 
+## Documentation discipline
+
+Update existing canonical documents when the product truth changes. An instruction to update
+documentation does not authorize new documentation files or directories.
+
+Do not create documentation directories without an explicit user request. Do not create standalone
+verification reports, completion reports, implementation diaries, audit reports or work logs unless
+the user explicitly requests a repository file. Return requested completion reports and test results
+in chat. Keep generated test output in existing ignored artifact locations.
+
+Architecture decisions may use the established `docs/decisions/` ADR convention. That does not
+authorize another documentation category or directory.
+
+---
+
 ## Changelog discipline
 
 `CHANGELOG.md` records meaningful shipped changes by actual date.
