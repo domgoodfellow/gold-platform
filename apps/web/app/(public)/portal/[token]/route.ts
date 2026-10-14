@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createPortalClient } from '@/lib/db/portal';
 import { DomainError } from '@/lib/domain/errors';
 import { exchangePortalLink } from '@/lib/domain/portal/portal';
+import { normalizeRequestHost } from '@/lib/domain/domains/resolve';
+import { isDeploymentHost } from '@/lib/route/hostname';
 
 /**
  * The link a business sends, exchanged once for a session and then left behind.
@@ -17,7 +19,11 @@ import { exchangePortalLink } from '@/lib/domain/portal/portal';
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const origin = request.nextUrl.origin;
+  const rawHost = request.headers.get('host');
+  const hostname = normalizeRequestHost(rawHost);
+  if (!hostname) return new NextResponse('Portal unavailable.', { status: 400 });
+  const protocol = request.headers.get('x-forwarded-proto') === 'https' ? 'https' : request.nextUrl.protocol.replace(':','');
+  const origin = `${protocol}://${rawHost}`;
   const response = NextResponse.redirect(new URL('/portal', origin));
   response.headers.set('Referrer-Policy', 'no-referrer');
   response.headers.set('Cache-Control', 'no-store');
@@ -30,7 +36,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   });
 
   try {
-    await exchangePortalLink(db, { token });
+    await exchangePortalLink(db, { token, ...(isDeploymentHost(hostname) ? {} : { hostname }) });
   } catch (error) {
     if (!(error instanceof DomainError)) throw error;
     const refused = NextResponse.redirect(new URL('/portal/unavailable', origin));

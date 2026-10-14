@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { getPortalDb } from '@/lib/db/portal-server';
 import { requestPortalCardPayment } from '@/lib/domain/billing/card-payments';
 import { DomainError } from '@/lib/domain/errors';
-import { requirePortalContext } from '@/lib/domain/portal/context';
+import { requirePortalRequestContext } from '@/lib/domain/portal/request-context';
 import { submitPortalForm } from '@/lib/domain/portal/portal-forms';
 import type { PublicFormActionState } from '@/app/(public)/forms/actions';
 import { requestOrigin } from '@/lib/route/origin';
@@ -33,7 +33,7 @@ export async function payInvoiceAction(
 
   let requested;
   try {
-    await requirePortalContext(db);
+    await requirePortalRequestContext(db);
     requested = await requestPortalCardPayment(db, {
       invoiceId,
       returnUrl: `${await requestOrigin()}/portal/payment-return`,
@@ -56,22 +56,24 @@ export async function payInvoiceAction(
 }
 
 /**
- * A portal customer's form response. `formId` is the only identity-shaped value, and it only chooses
- * among the forms this customer's own portal session is offered — which business, and which
+ * A portal customer's form response. `formId` chooses an offered Form and `revisionId` identifies
+ * the published version the customer opened. Which business, and which
  * customer the response is about, are read from that session by the database.
  */
 export async function submitPortalFormAction(input: {
   formId: string;
+  revisionId: string;
   answers: Record<string, unknown>;
 }): Promise<PublicFormActionState> {
   const db = await getPortalDb();
   try {
-    await requirePortalContext(db);
+    await requirePortalRequestContext(db);
   } catch (error) {
     if (error instanceof DomainError) return { status: 'error', message: error.message, fieldErrors: {}, stale: false };
     throw error;
   }
-  const result = await submitPortalForm(db, { formId: input.formId, answers: input.answers });
+  if (typeof input.revisionId !== 'string') return { status: 'error', message: 'Reload this Form before submitting.', fieldErrors: {}, stale: true };
+  const result = await submitPortalForm(db, { formId: input.formId, revisionId: input.revisionId, answers: input.answers });
   if (result.ok) return { status: 'sent' };
   return { status: 'error', message: result.message, fieldErrors: result.fieldErrors, stale: result.stale };
 }

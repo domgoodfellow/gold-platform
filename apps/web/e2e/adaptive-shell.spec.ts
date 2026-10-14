@@ -176,8 +176,7 @@ test.describe('a tenant owner', () => {
     await trigger.click();
     await sheet.getByRole('button', { name: /sanne@grachtwerk.test/ }).click();
     await expect(page.getByRole('menuitem', { name: 'Sign out', exact: true })).toBeVisible();
-    await page.keyboard.press('Escape');
-    await sheet.getByRole('link', { name: 'Settings', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Settings', exact: true }).click();
     await expect(page).toHaveURL(/\/settings\/general$/);
     await expect(sheet).toHaveCount(0);
     await trigger.click();
@@ -258,7 +257,7 @@ test.describe('GOLD platform staff', () => {
     await expect(page).toHaveURL(`/organizations/${goldOrganizationId}/home`);
     await expect(sidebar(page).getByRole('link', { name: 'CRM', exact: true })).toBeVisible();
     await expect(sidebar(page).getByText('Platform', { exact: true })).toHaveCount(0);
-    await container.getByRole('button', { name: /GildOps/ }).first().click();
+    await container.locator('[data-sidebar="header"]').getByRole('button').click();
     await page.getByRole('menuitem', { name: 'Platform', exact: true }).click();
     await expect(page).toHaveURL(platformUrl());
     await expect(container.getByText('System control plane', { exact: true }).filter({ visible: true }).first()).toBeVisible();

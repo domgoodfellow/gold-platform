@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { FormError } from '@/components/controls/form';
-import { payInvoiceAction, type PayInvoiceActionState } from './actions';
+import { payInvoiceAction, type PayInvoiceActionState } from '@/app/(public)/portal/actions';
 
 const INITIAL: PayInvoiceActionState = { error: null };
 

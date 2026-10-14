@@ -783,6 +783,10 @@ Implementation map:
 
 Batch B may consume the relationship, engagement and authorized summaries. Portal runtime and Website composition remain their existing authorities. This batch does not build, compose, publish or deploy a Portal. Broader R5 readiness still depends on its original acceptance criteria below.
 
+### Batch B: Studio customer Portal composition and publishing
+
+Studio now manages pages, navigation, typed module instances and settings with saved draft → review → immutable publication, revision inspection and restore. Work, invoice/payment and offered Form flows retain their canonical owners. Templates and labelled preview use shared live presenters. Verified custom Portal origins and managed organization origins at `/portal` bind every exchange, page and action to the live PortalContext organization; managed Website roots remain Website. Legacy app-origin links and default-before-first-publication remain compatible. The work is local implementation and verification; no DNS, TLS or provider deployment was provisioned. Services and managed-services workflows remain Batch C. See [ADR-042](decisions/ADR-042-studio-customer-portal-publication.md) and the [Batch B verification report](verification/batch-b-studio-customer-portal.md).
+
 ### Outcome
 
 GildOps operates its own business through the same product boundaries a customer uses.

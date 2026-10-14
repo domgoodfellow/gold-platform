@@ -96,6 +96,19 @@ Purpose:
 
 The Portal does not own Customers, Work Items, Invoices or Payments.
 
+Studio → Customer portal owns a typed, organization-scoped definition with pages, stable module instances, navigation and settings. Work, Invoices (including authorized Payments) and offered Forms share presenters between the live Portal, editor, templates and labelled-example preview. The Structure | Canvas | Inspector editor supports narrow-screen drawers. Managers save, send the exact saved version for review, publish immutable revisions, inspect history and restore into a draft. Publication requires current Portal entitlement and activation.
+
+Existing invitations retain the default until first publication; private edits do not strand customers. Unpublishing pauses access without revoking links or deleting records. The legacy activation-only default is retained only for organizations without Plan or Portal commercial history; expiry, activation overrides and custom publication always use authoritative entitlement facts. Published navigation determines accessible pages at `/portal/p/{path}`; unknown or excluded pages are not found. Form placement remains `portal_forms`, with the exact published Form revision. Direct Form submissions and payment initiation require published module exposure in addition to their domain guards.
+
+Portal Form submissions carry the revision actually opened by the customer. A newer publication
+refuses the stale response even when its answer shape still fits, and offers the existing Form
+reload flow. The Portal does not define a separate Forms module activation: canonical placement,
+current Form publication, Portal entitlement/exposure and customer authorization are the guards.
+
+The deliberate default retains the predecessor's full authorized record lists, subject to the
+existing source-query bounds. Configured module record limits apply after custom publication;
+creating a draft does not silently truncate an existing customer's history.
+
 ---
 
 ## Public shell boundary

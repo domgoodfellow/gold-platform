@@ -10,8 +10,8 @@ export default function PortalUnavailablePage() {
       <Section>
         <SectionHeading>This link no longer works</SectionHeading>
         <p className="mt-2 text-sm text-muted">
-          It may have been replaced, withdrawn, or your session may have ended. Ask the business
-          for a new link.
+          Your access may have ended, the link may have been withdrawn, or the business may
+          have paused its portal. Contact the business for help.
         </p>
       </Section>
     </main>

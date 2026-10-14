@@ -126,7 +126,7 @@ export async function revokePortalInvite(db: Db, input: { id: string }): Promise
  * privileged function, since the caller has no binding yet for RLS to key on. A browser already
  * bound to a different business is refused rather than moved — a binding is exactly one tenant.
  */
-export async function claimPortalInvite(db: Db, input: { token: string }): Promise<string> {
+export async function claimPortalInvite(db: Db, input: { token: string; hostname?: string }): Promise<string> {
   const { data: existing } = await db.auth.getUser();
 
   if (!existing.user) {
@@ -136,7 +136,9 @@ export async function claimPortalInvite(db: Db, input: { token: string }): Promi
     }
   }
 
-  const { data, error } = await db.rpc('claim_portal_invite', { p_token: input.token });
+  const { data, error } = input.hostname
+    ? await db.rpc('claim_portal_invite_at_hostname', { p_token: input.token, p_hostname: input.hostname })
+    : await db.rpc('claim_portal_invite', { p_token: input.token });
 
   if (error) {
     if (error.code === '42501') {
@@ -163,7 +165,7 @@ export async function claimPortalInvite(db: Db, input: { token: string }): Promi
  * One portal session per browser: opening a second business's link replaces the first. Reopening
  * the same link renews the exchange (`portal_expires_at`).
  */
-export async function exchangePortalLink(db: Db, input: { token: string }): Promise<string> {
+export async function exchangePortalLink(db: Db, input: { token: string; hostname?: string }): Promise<string> {
   await db.auth.signOut({ scope: 'local' });
   try {
     return await claimPortalInvite(db, input);

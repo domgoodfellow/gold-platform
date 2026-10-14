@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { Hint } from '@/components/controls/inputs';
-import { PublicHeader } from '@/features/public-profile/public-header';
+import { notFound, redirect } from 'next/navigation';
 import { getPublicDb } from '@/lib/db/public';
 import { logoUrl } from '@/lib/domain/branding/brand';
 import { publishedHostnameSite } from '@/lib/domain/domains/resolve';
@@ -16,9 +14,8 @@ import { PublicSiteCommunication } from '@/features/communications/public-site-c
  * the same revision. A path that names no published page is the canonical public 404, never a
  * fall-through into GildOps' own routes.
  *
- * **The portal surface is a note, not a portal.** The portal is reached by the access link a
- * business sends (`/portal/{token}`); a portal hostname gets the business's own header and one
- * sentence of application state at its root, and nothing at any other path.
+ * A Portal hostname enters its dedicated /portal runtime. That runtime freshly verifies the
+ * actual request hostname against PortalContext; a path parameter never supplies its authority.
  */
 
 async function hosted(hostname: string) {
@@ -44,12 +41,7 @@ export async function HostedPage({ hostname, slug }: { hostname: string; slug: s
 
   if (found.surface === 'portal') {
     if (slug !== null) notFound();
-    return (
-      <main className="mx-auto w-full max-w-xl p-6 sm:p-8">
-        <PublicHeader profile={found.profile} />
-        <Hint className="mt-8">Your history with this business opens from the access link it sent you.</Hint>
-      </main>
-    );
+    redirect('/portal');
   }
 
   // A business with nothing published has nothing to show at its address yet.

@@ -36,7 +36,7 @@ function NewEngagement({ options, onSaved }: { options: Options; onSaved: () => 
 }
 
 function artifactHref(organizationId: string, kind: string, artifactId: string) {
-  const paths: Record<string, string> = { website: '/studio/website', form: `/studio/forms/${artifactId}`, ai_deployment: '/ai', automation: `/automations/${artifactId}` };
+  const paths: Record<string, string> = { website: '/studio/website', form: `/studio/forms/${artifactId}`, ai_deployment: '/ai', automation: `/automations/${artifactId}`, portal: '/studio/portal' };
   return paths[kind] ? `/organizations/${organizationId}${paths[kind]}` : null;
 }
 

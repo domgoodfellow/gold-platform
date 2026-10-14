@@ -12,7 +12,7 @@ const WEB = fileURLToPath(new URL('../../..', import.meta.url));
 const read = (path: string) => readFileSync(`${WEB}/${path}`, 'utf8');
 
 const ACTIONS = read('app/(public)/portal/actions.ts');
-const PAGE = read('app/(public)/portal/page.tsx');
+const PAGE = read('features/portal-access/portal-page.tsx');
 const ROUTE = read('app/(public)/portal/[token]/route.ts');
 
 describe('the link is exchanged once, where a cookie can be kept', () => {
@@ -53,11 +53,11 @@ describe('a portal operation takes its identity from the session', () => {
   it('proves a portal session before every action does anything', () => {
     const actions = ACTIONS.split(/export async function /).slice(1);
     expect(actions.length).toBeGreaterThanOrEqual(2);
-    for (const action of actions) expect(action, action.slice(0, 40)).toContain('requirePortalContext(db)');
+    for (const action of actions) expect(action, action.slice(0, 40)).toContain('requirePortalRequestContext(db)');
   });
 
   it('shows a page only to a live portal session, with one answer for every way of not having one', () => {
-    expect(PAGE).toContain('portalContext(db)');
+    expect(PAGE).toContain('requirePortalRequestContext(db)');
     expect(PAGE).toContain("redirect('/portal/unavailable')");
   });
 

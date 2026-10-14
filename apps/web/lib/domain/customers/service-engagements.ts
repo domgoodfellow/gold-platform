@@ -6,7 +6,7 @@ export type ServiceKind = keyof typeof SERVICE_KINDS;
 export type Engagement = Database['public']['Tables']['service_engagements']['Row'];
 export type Deliverable = Database['public']['Functions']['engagement_deliverable_summaries']['Returns'][number];
 export type DeliverableOption = Database['public']['Functions']['service_deliverable_options']['Returns'][number];
-export const ARTIFACT_KINDS = { website: 'Website', form: 'Form', ai_deployment: 'AI deployment', automation: 'Automation' } as const;
+export const ARTIFACT_KINDS = { website: 'Website', form: 'Form', ai_deployment: 'AI deployment', automation: 'Automation', portal: 'Customer portal' } as const;
 export type ArtifactKind = keyof typeof ARTIFACT_KINDS;
 
 export async function listServiceEngagements(db: Db, organizationId: string, customerId: string) {

@@ -1262,3 +1262,20 @@ legacy defaults and label/error relationships. No database integration is requir
 typed, non-persisted contracts; Slice B must add it with preference storage and publication.
 
 Global Home verification combines `home-projection.test.ts` for local date/DST, normalization, exact-count evidence and deterministic identity/priority semantics; `home-dashboard.test.ts` for canonical local records, exact counts beyond previews, scheduling exceptions, currency separation, actor scope, private Agent approval/failure metadata, restricted RPC access and real source-failure isolation; and `global-home.spec.ts` for owning creation workflows, filters, persistent browser preferences, Agent rail, narrow-container containment and the 16 requested captures. Fixtures require loopback Supabase, use canonical provisioning and domain commands, and simulate carrier ingress only in the local database. Screenshot inspection is required in addition to passing browser assertions. Hosted migrations and live voice, payment and AI providers are outside these local checks.
+
+### Batch B Portal verification
+
+Custom-host browser verification uses a disposable loopback HTTPS reverse proxy so production
+`Secure` Portal cookies remain enabled. Start a loopback-configured app, then run
+`node apps/web/e2e/portal-tls-fixture.mjs` in a second terminal with OpenSSL available.
+`E2E_BASE_URL` selects the upstream (default `http://localhost:3140`),
+`E2E_PORTAL_TLS_URL` selects the local TLS listener (default `https://localhost:3141`).
+`E2E_OPENSSL` and `E2E_OPENSSL_CONFIG` may identify a Windows executable/configuration.
+The helper generates a two-day test certificate under ignored `.artifacts/portal-tls`, binds
+only loopback, and forwards the actual Host and HTTPS protocol. The isolated Playwright config
+maps `*.example.test` to loopback and accepts that test certificate. This is application-origin
+evidence, not provider DNS/TLS provisioning. Never use a hosted database for this fixture.
+
+`portal-composition.test.ts` exercises private drafts, immutable attributed releases, review and current entitlement requirements, stale/concurrent saves, restore/unpublish/default compatibility, hidden Form/payment command refusal, managed and provider-verified custom Portal origin binding, revocation and typed deliverable tenant authority. Unit tests validate bounded pages/modules/navigation, template independence and historical normalization; component tests verify review readiness, safe text, page paths/navigation, permitted duplication and truthful availability.
+
+Run isolated `e2e/portal-composition.spec.ts` with `pnpm --filter @gold/web exec playwright test --config playwright.batch-b.config.ts` against a loopback-configured local app (`E2E_BASE_URL` selects its port). Canonically provisioned local accounts exercise legacy/default transition, review/publication, Work/invoices, exact customer/Form revision attribution, refusal of shape-compatible stale Form revisions, same-context operator/Portal/proposal/public Form sessions, draft isolation, unpublish/restore, custom-origin root/exchange/action/reload, copied-cookie hostname rejection and release/revocation. Browser DNS mapping and local provider-record fixtures prove application behavior, not real DNS/TLS/provider readiness. Inspect 1440×900, 1024×900 and 390×844 screenshots and overflow/focus assertions. Component/database checks additionally preserve full legacy record lists and history paging beyond 50 revisions. Release gate: disposable-local `pnpm db:reset`, `pnpm db:types`, `pnpm check`, followed by selected existing Website/Form/distribution/hostname/proposal/navigation regressions.

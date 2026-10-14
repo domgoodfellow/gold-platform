@@ -6,6 +6,7 @@ import { listFormTemplates } from '@/lib/domain/forms/forms';
 import { listPageTemplates, listSectionPatterns, listSiteTemplates, siteEditorState } from '@/lib/domain/public-site/public-site';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
+import { portalEditorState } from '@/lib/domain/portal/definitions';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +20,7 @@ export default async function StudioTemplatesPage({ params }: PageProps<'/organi
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
   const mayManage = organization.capabilities.includes('organization.manage');
+  const portal = mayManage ? await portalEditorState(db, organizationId) : null;
   const [formTemplates, siteTemplates, pageTemplates, sectionPatterns, site] = mayManage
     ? await Promise.all([listFormTemplates(db), listSiteTemplates(db), listPageTemplates(db), listSectionPatterns(db), siteEditorState(db, organizationId)])
     : [[], [], [], [], null];
@@ -32,6 +34,7 @@ export default async function StudioTemplatesPage({ params }: PageProps<'/organi
         <TemplatesBrowser
           organizationId={organizationId}
           hasWebsite={site !== null}
+          hasPortal={!!portal?.definition}
           siteTemplates={siteTemplates}
           pageTemplates={pageTemplates}
           sectionPatterns={sectionPatterns}

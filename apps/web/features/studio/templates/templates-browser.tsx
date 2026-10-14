@@ -8,14 +8,17 @@ import { cx, FOCUS_RING } from '@/components/class-names';
 import { TemplateList } from '@/features/studio/forms/template-list';
 import type { FormTemplate } from '@/lib/domain/forms/forms';
 import { PageTemplateList, SectionPatternList, SiteTemplateList } from './website-templates';
+import { PORTAL_TEMPLATES } from '@/lib/domain/portal/composition';
+import { ButtonLink } from '@/components/controls/button';
+import { PortalTemplatePreview } from '@/features/studio/portal/portal-template-preview';
 
-type Filter = 'all' | 'website' | 'pages' | 'sections' | 'forms';
+type Filter = 'all' | 'website' | 'pages' | 'sections' | 'forms' | 'portal';
 type TemplateMetadata = { name: string; description: string; category?: string; kind?: string };
 const categoryOf = (item: TemplateMetadata) => item.category ?? item.kind ?? 'general';
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'All' }, { key: 'website', label: 'Website' }, { key: 'pages', label: 'Pages' },
-  { key: 'sections', label: 'Sections' }, { key: 'forms', label: 'Forms' },
+  { key: 'sections', label: 'Sections' }, { key: 'forms', label: 'Forms' }, { key: 'portal', label: 'Portal' },
 ];
 
 /**
@@ -23,9 +26,10 @@ const FILTERS: { key: Filter; label: string }[] = [
  * its own typed templates — one catalogue to browse, never one table of untyped payloads — and the
  * filter says which kind of thing each row would create.
  */
-export function TemplatesBrowser({ organizationId, hasWebsite, siteTemplates, pageTemplates, sectionPatterns, formTemplates }: {
+export function TemplatesBrowser({ organizationId, hasWebsite, hasPortal = false, siteTemplates, pageTemplates, sectionPatterns, formTemplates }: {
   organizationId: string;
   hasWebsite: boolean;
+  hasPortal?: boolean;
   siteTemplates: SiteTemplate[];
   pageTemplates: PageTemplate[];
   sectionPatterns: SectionPattern[];
@@ -38,7 +42,7 @@ export function TemplatesBrowser({ organizationId, hasWebsite, siteTemplates, pa
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [sort, setSort] = useState('recommended');
-  const categories = [...new Set([...siteTemplates, ...pageTemplates, ...sectionPatterns, ...formTemplates].map(categoryOf))].sort();
+  const categories = [...new Set([...siteTemplates, ...pageTemplates, ...sectionPatterns, ...formTemplates, ...PORTAL_TEMPLATES].map(categoryOf))].sort();
   const matches = (item: TemplateMetadata) => (category === 'all' || categoryOf(item) === category) && `${item.name} ${item.description}`.toLowerCase().includes(search.trim().toLowerCase());
   const visible = <T extends TemplateMetadata,>(items: T[]) => {
     const result = items.filter(matches);
@@ -63,10 +67,11 @@ export function TemplatesBrowser({ organizationId, hasWebsite, siteTemplates, pa
         ))}
       </div>
       {show('website') ? <section aria-label="Website templates" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Website</h2><SiteTemplateList organizationId={organizationId} templates={visible(siteTemplates)} hasWebsite={hasWebsite} /></section> : null}
+      {show('portal') ? <section aria-label="Portal templates" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Portal</h2>{visible([...PORTAL_TEMPLATES]).map(item => <article key={item.key} className="rounded-md border border-border p-3"><h3 className="font-medium">{item.name}</h3><p className="mt-2 text-sm text-muted">{item.description}</p>{hasPortal ? <p className="mt-2 text-sm text-muted">Your organization already owns a Portal. <ButtonLink href={`/organizations/${organizationId}/studio/portal`} tone="text">Open Portal draft</ButtonLink></p> : <ButtonLink href={`/organizations/${organizationId}/studio/portal?template=${item.key}`} tone="secondary">Start with {item.name}</ButtonLink>}<details className="mt-3"><summary>Preview template</summary><PortalTemplatePreview content={item.definition}/></details></article>)}</section> : null}
       {show('pages') ? <section aria-label="Page templates" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Pages</h2><PageTemplateList organizationId={organizationId} templates={visible(pageTemplates)} /></section> : null}
       {show('sections') ? <section aria-label="Section patterns" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Sections</h2><SectionPatternList organizationId={organizationId} patterns={visible(sectionPatterns)} /></section> : null}
       {show('forms') ? <section aria-label="Form templates" className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface p-4"><h2 className="text-base font-semibold">Forms</h2><TemplateList organizationId={organizationId} templates={visible(formTemplates)} /></section> : null}
-      {![...(show('website') ? siteTemplates : []), ...(show('pages') ? pageTemplates : []), ...(show('sections') ? sectionPatterns : []), ...(show('forms') ? formTemplates : [])].some(matches) ? <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted">No templates match these filters.</p> : null}
+      {![...(show('website') ? siteTemplates : []), ...(show('pages') ? pageTemplates : []), ...(show('sections') ? sectionPatterns : []), ...(show('forms') ? formTemplates : []), ...(show('portal') ? PORTAL_TEMPLATES : [])].some(matches) ? <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted">No templates match these filters.</p> : null}
     </div>
   );
 }

@@ -119,6 +119,7 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
   'automation-activity': History,
   'studio-website': PanelTop,
   'studio-forms': ListChecks,
+  'studio-portal': Users,
   'studio-templates': LayoutTemplate,
   schedule: CalendarDays,
   customers: Users,

@@ -38,7 +38,7 @@ export function PortalForms({ forms }: { forms: FormPublication[] }) {
                 <PublicForm
                   definition={form.definition}
                   revisionId={form.revisionId}
-                  submit={({ answers }) => submitPortalFormAction({ formId: form.formId, answers })}
+                  submit={({ answers, revisionId }) => submitPortalFormAction({ formId: form.formId, revisionId, answers })}
                 />
               </div>
             ) : null}

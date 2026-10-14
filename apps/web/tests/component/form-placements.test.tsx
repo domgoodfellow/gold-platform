@@ -98,7 +98,7 @@ describe('the public form\'s keyboard behaviour', () => {
 });
 
 describe('the portal list', () => {
-  it('opens a form in place and submits it as the portal, with only the form\'s own id', async () => {
+  it('opens a published revision in place and submits without customer identity', async () => {
     const user = userEvent.setup();
     render(<PortalForms forms={[PUBLICATION]} />);
     await user.click(screen.getByRole('button', { name: 'Open' }));
@@ -106,6 +106,6 @@ describe('the portal list', () => {
     await user.click(screen.getByLabelText('Small'));
     await user.click(screen.getByRole('button', { name: 'Send' }));
     await waitFor(() => expect(actions.submitPortalFormAction).toHaveBeenCalledTimes(1));
-    expect(actions.submitPortalFormAction).toHaveBeenCalledWith({ formId: PUBLICATION.formId, answers: { name: 'Ada', size: 's' } });
+    expect(actions.submitPortalFormAction).toHaveBeenCalledWith({ formId: PUBLICATION.formId, revisionId: PUBLICATION.revisionId, answers: { name: 'Ada', size: 's' } });
   });
 });

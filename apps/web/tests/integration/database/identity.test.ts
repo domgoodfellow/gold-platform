@@ -1,7 +1,7 @@
 import { Client } from 'pg';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getPersonalProfile, requestEmailChange, updatePersonalProfile } from '@/lib/domain/identity/profile';
 import { verifySignupEmail, requestSignupVerification } from '@/lib/domain/identity/verification';
 import { DomainError } from '@/lib/domain/errors';
@@ -224,6 +224,13 @@ describe('recovery never accepts an ordinary active session', () => {
     const recovered = anonClient();
     const verified = await recovered.auth.verifyOtp({ token_hash: data.properties?.hashed_token ?? '', type: 'recovery' });
     expect(verified.error).toBeNull();
+    // Auth and the test runner can straddle a clock-second boundary. Wait for the signed
+    // proof's timestamp; retain the production rejection of future or stale recovery proof.
+    await vi.waitFor(async () => {
+      const { data: claims, error: claimsError } = await recovered.auth.getClaims();
+      expect(claimsError).toBeNull();
+      expect(claims?.claims.amr?.some(method => typeof method === 'object' && method !== null && ['recovery','otp'].includes(method.method) && method.timestamp <= Math.floor(Date.now()/1000))).toBe(true);
+    }, { timeout: 5_000, interval: 50 });
     await setNewPassword(recovered, { password: 'a fresh recovered password', passwordConfirmation: 'a fresh recovered password' });
     await signInWithPassword(anonClient(), { email: address, password: 'a fresh recovered password' });
   });

@@ -21,7 +21,7 @@ test.describe('an owner', () => {
     await nav.getByRole('link', { name: 'Studio', exact: true }).click();
     await expect(nav.getByRole('button', { name: 'Expand Studio' })).toHaveCount(0);
     const destinations = page.getByRole('navigation', { name: 'Studio destinations' });
-    for (const label of ['Website', 'Forms', 'Templates']) await expect(destinations.getByRole('link', { name: label, exact: true })).toBeVisible();
+    for (const label of ['Website', 'Customer portal', 'Forms', 'Templates']) await expect(destinations.getByRole('link', { name: label, exact: true })).toBeVisible();
     await shot(page, 'studio-nav-desktop');
 
     await destinations.getByRole('link', { name: 'Forms', exact: true }).click();
@@ -35,7 +35,7 @@ test.describe('an owner', () => {
     const { organizationId } = loadDemoContext();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/organizations/${organizationId}/home`);
-    await page.locator('nav[aria-label="This business"].fixed').getByRole('button', { name: 'Menu', exact: true }).click();
+    await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await shot(page, 'studio-nav-phone');
     await expect(page.getByRole('button', { name: 'Expand Studio' })).toHaveCount(0);

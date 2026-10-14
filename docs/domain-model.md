@@ -1291,6 +1291,11 @@ The Portal does not become owner of:
 
 It reads/acts through those domains.
 
+Studio owns one stable `portal_definitions` identity per Organization. Typed version-2 definitions contain settings, pages with stable IDs and unique paths, ordered configured module instances, navigation referencing page IDs and a default-page identity. Work, Invoices/Payments and offered Forms are the initial registry; Services remain Batch C. `portal_revisions` records immutable coherent releases with publisher and review attribution. Drafts and history are private; publishing changes presentation, never identity or source-domain ownership. A Portal remains a typed Engagement deliverable by stable identity, with independent tenant authority checks.
+
+History uses bounded descending pages, with authorized reads of older revisions. A fifty-row
+editor preview is not a retention limit; older publications remain inspectable and restorable.
+
 ---
 
 ### Proposal Review Session

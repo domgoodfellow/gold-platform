@@ -34,6 +34,8 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+- Studio Portal now supports typed pages/navigation/module configuration, templates, shared branded previews, saved draft review, immutable publication/history/restore and entitlement-aware customer delivery. Published exposure guards Form/payment commands; managed and verified custom origins bind exchanges/pages/actions to PortalContext while preserving legacy links and separate session cookies. Services remain Batch C; typed Portal deliverables retain independent tenant authority.
+
 - CRM Customer detail now manages durable Client/Tenant relationships and service engagements, with atomic proposal-handoff linkage, verified existing-tenant association, preserved lifecycle history, typed Website/Form/AI deployment/Automation deliverables and canonical Work references. Artifact selectors require independent tenant access; linking grants no Membership or implicit operational authority.
 
 ### Changed

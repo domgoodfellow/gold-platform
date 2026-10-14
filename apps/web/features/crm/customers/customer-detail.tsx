@@ -61,6 +61,7 @@ export function CustomerDetail({
   plans,
   addonPlans,
   origin,
+  portalOrigin = origin,
   timezone,
   currency,
   role,
@@ -100,6 +101,7 @@ export function CustomerDetail({
   plans: Plan[];
   addonPlans: Plan[];
   origin: string;
+  portalOrigin?: string;
   timezone: string;
   currency: string;
   role: string;
@@ -189,7 +191,7 @@ export function CustomerDetail({
         {features.portal ? (
           <TabsContent value="portal" className="mt-6">
             <Hint>A link this customer can open to see their own work and invoices. Anyone holding it is them.</Hint>
-            {permissions.portal ? <><PortalLinkForm organizationId={organizationId} customerId={customer.id} origin={origin} createAction={createPortalInviteAction} /><PortalInviteList organizationId={organizationId} customerId={customer.id} invites={invites} origin={origin} revokeAction={revokePortalInviteAction} /></> : <Hint className="mt-3">Your role, {role}, cannot manage this customer&apos;s portal access.</Hint>}
+            {permissions.portal ? <><PortalLinkForm organizationId={organizationId} customerId={customer.id} origin={portalOrigin} createAction={createPortalInviteAction} /><PortalInviteList organizationId={organizationId} customerId={customer.id} invites={invites} origin={portalOrigin} revokeAction={revokePortalInviteAction} /></> : <Hint className="mt-3">Your role, {role}, cannot manage this customer&apos;s portal access.</Hint>}
           </TabsContent>
         ) : null}
       </Tabs>

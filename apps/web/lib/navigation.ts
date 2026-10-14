@@ -172,8 +172,8 @@ export const MODULES = [
     label: 'Customer portal',
     description: 'A customer signs in by invitation and sees their own work and invoices.',
     outside: 'the customer portal, reached by an invitation this business sends',
-    // No business-wide setting — an invitation is sent to one customer from their own page.
-    configuredAt: { segment: 'customers' },
+    // Studio owns business-wide composition; Customer detail owns per-customer invitations.
+    configuredAt: { segment: 'studio-portal' },
   },
   {
     key: 'automations',
@@ -417,6 +417,7 @@ export const AREAS: readonly Area[] = [
   // the sidebar; Pages, Navigation or Theme join only once the Website composition work decides
   // whether each is a route or a view inside the editor.
   { segment: 'studio-website', label: 'Website', group: 'workspaces', workspace: 'studio', route: 'studio/website', relevantCapabilities: ['organization.manage'] },
+  { segment: 'studio-portal', label: 'Customer portal', group: 'workspaces', workspace: 'studio', route: 'studio/portal', relevantCapabilities: ['organization.manage'] },
   { segment: 'studio-forms', label: 'Forms', group: 'workspaces', workspace: 'studio', route: 'studio/forms', relevantCapabilities: ['organization.manage'] },
   { segment: 'studio-templates', label: 'Templates', group: 'workspaces', workspace: 'studio', route: 'studio/templates', relevantCapabilities: ['organization.manage'] },
 

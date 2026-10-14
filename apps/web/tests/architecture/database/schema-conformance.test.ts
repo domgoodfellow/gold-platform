@@ -326,12 +326,12 @@ describe('schema conformance', () => {
           -- Service-owned references carry the independently linked tenant's key.
           -- Check the exact paired columns; this does not exempt other cross-tenant FKs.
           and not (t.relname = 'engagement_deliverables'
-            and r.relname in ('public_sites','forms','ai_assistant_deployments','automation_rules')
+            and r.relname in ('public_sites','forms','ai_assistant_deployments','automation_rules','portal_definitions')
             and (select array_agg(a.attname::text order by k.ordinality)
               from unnest(c.conkey) with ordinality k(attnum,ordinality)
               join pg_attribute a on a.attrelid=t.oid and a.attnum=k.attnum)
               = array['tenant_organization_id',case r.relname when 'public_sites' then 'site_id'
-                when 'forms' then 'form_id' when 'ai_assistant_deployments' then 'ai_deployment_id' else 'automation_rule_id' end]
+                when 'forms' then 'form_id' when 'ai_assistant_deployments' then 'ai_deployment_id' when 'portal_definitions' then 'portal_id' else 'automation_rule_id' end]
             and (select array_agg(a.attname::text order by k.ordinality)
               from unnest(c.confkey) with ordinality k(attnum,ordinality)
               join pg_attribute a on a.attrelid=r.oid and a.attnum=k.attnum)=array['organization_id','id'])`,

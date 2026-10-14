@@ -3176,6 +3176,7 @@ export type Database = {
           form_id: string | null
           id: string
           organization_id: string
+          portal_id: string | null
           site_id: string | null
           tenant_organization_id: string
         }
@@ -3188,6 +3189,7 @@ export type Database = {
           form_id?: string | null
           id?: string
           organization_id: string
+          portal_id?: string | null
           site_id?: string | null
           tenant_organization_id: string
         }
@@ -3200,6 +3202,7 @@ export type Database = {
           form_id?: string | null
           id?: string
           organization_id?: string
+          portal_id?: string | null
           site_id?: string | null
           tenant_organization_id?: string
         }
@@ -3238,6 +3241,13 @@ export type Database = {
             columns: ["tenant_organization_id", "form_id"]
             isOneToOne: false
             referencedRelation: "forms"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "engagement_deliverables_tenant_organization_id_portal_id_fkey"
+            columns: ["tenant_organization_id", "portal_id"]
+            isOneToOne: false
+            referencedRelation: "portal_definitions"
             referencedColumns: ["organization_id", "id"]
           },
           {
@@ -9611,6 +9621,76 @@ export type Database = {
           },
         ]
       }
+      portal_definitions: {
+        Row: {
+          created_at: string
+          created_by: string
+          draft_content: Json
+          draft_status: string
+          draft_version: number
+          id: string
+          organization_id: string
+          published_revision_id: string | null
+          revision_number: number
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          draft_content: Json
+          draft_status?: string
+          draft_version?: number
+          id?: string
+          organization_id: string
+          published_revision_id?: string | null
+          revision_number?: number
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          draft_content?: Json
+          draft_status?: string
+          draft_version?: number
+          id?: string
+          organization_id?: string
+          published_revision_id?: string | null
+          revision_number?: number
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_definitions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_definitions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_definitions_organization_id_published_revision_id_fkey"
+            columns: ["organization_id", "published_revision_id"]
+            isOneToOne: false
+            referencedRelation: "portal_revisions"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       portal_forms: {
         Row: {
           created_at: string
@@ -9636,6 +9716,50 @@ export type Database = {
             columns: ["organization_id", "form_id"]
             isOneToOne: true
             referencedRelation: "forms"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      portal_revisions: {
+        Row: {
+          content: Json
+          id: string
+          number: number
+          organization_id: string
+          portal_id: string
+          published_at: string
+          published_by: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+        }
+        Insert: {
+          content: Json
+          id?: string
+          number: number
+          organization_id: string
+          portal_id: string
+          published_at?: string
+          published_by: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+        Update: {
+          content?: Json
+          id?: string
+          number?: number
+          organization_id?: string
+          portal_id?: string
+          published_at?: string
+          published_by?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_revisions_organization_id_portal_id_fkey"
+            columns: ["organization_id", "portal_id"]
+            isOneToOne: false
+            referencedRelation: "portal_definitions"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -13217,6 +13341,10 @@ export type Database = {
         Returns: Json
       }
       claim_portal_invite: { Args: { p_token: string }; Returns: string }
+      claim_portal_invite_at_hostname: {
+        Args: { p_hostname: string; p_token: string }
+        Returns: string
+      }
       claim_proposal_invite: { Args: { p_token: string }; Returns: string }
       clear_integration_credential: {
         Args: { p_connection_id: string }
@@ -14331,7 +14459,21 @@ export type Database = {
           portal_invite_id: string
         }[]
       }
+      portal_context_at_hostname: {
+        Args: { p_hostname: string }
+        Returns: {
+          customer_id: string
+          expires_at: string
+          organization_id: string
+          portal_invite_id: string
+        }[]
+      }
       portal_forms_available: { Args: never; Returns: Json }
+      portal_module_availability: {
+        Args: { p_organization_id?: string }
+        Returns: Json
+      }
+      portal_published_composition: { Args: never; Returns: Json }
       proposal_context: {
         Args: never
         Returns: {
@@ -14394,6 +14536,10 @@ export type Database = {
       publish_form_revision: {
         Args: { p_organization_id: string; p_revision_id: string }
         Returns: undefined
+      }
+      publish_portal_draft: {
+        Args: { p_expected_version: number; p_organization_id: string }
+        Returns: string
       }
       publish_public_site_revision: {
         Args: { p_organization_id: string; p_revision_id: string }
@@ -15317,6 +15463,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      save_portal_draft: {
+        Args: {
+          p_content: Json
+          p_expected_version: number
+          p_organization_id: string
+        }
+        Returns: string
+      }
       schedule_ahead: {
         Args: { p_days?: number; p_organization_id: string }
         Returns: {
@@ -15702,6 +15856,10 @@ export type Database = {
         }
         Returns: string
       }
+      submit_portal_draft: {
+        Args: { p_expected_version: number; p_organization_id: string }
+        Returns: undefined
+      }
       submit_portal_form: {
         Args: { p_answers: Json; p_form_id: string; p_revision_id: string }
         Returns: string
@@ -15791,6 +15949,10 @@ export type Database = {
           p_organization_id: string
           p_status: string
         }
+        Returns: undefined
+      }
+      unpublish_portal: {
+        Args: { p_expected_version: number; p_organization_id: string }
         Returns: undefined
       }
       unschedule_work_item: {

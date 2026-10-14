@@ -19,6 +19,7 @@ import { listLocationsForCustomer } from '@/lib/domain/locations/locations';
 import { mapConfig } from '@/lib/adapters/maps/config';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listPortalInvites } from '@/lib/domain/portal/portal';
+import { portalOrigin } from '@/lib/domain/portal/address';
 import { listCustomerCalls } from '@/lib/domain/reception/calls';
 import { activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { listCustomerTimeline } from '@/lib/domain/timeline/timeline';
@@ -41,6 +42,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
   if (!customer) notFound();
 
   const origin = await requestOrigin();
+  const customerPortalOrigin = await portalOrigin(db, organizationId, origin);
   const [opportunities, opportunityStages, members] = await Promise.all([listOpportunities(db, { organizationId, customerId, limit: 20 }), listOpportunityStages(db, { organizationId }), listMembers(db, { organizationId })]);
   const [documents, definitions, timeline, invites, resolvedFeatures, stages, calls, invoices, work, locations, discoverySnapshot, commercialProposals, proposalInvites, plans, addonPlans] = await Promise.all([
     listDocuments(db, { organizationId, attachedTo: { entity: 'customer', id: customerId } }),
@@ -114,6 +116,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
         plans={plans.filter((plan) => plan.saleStatus === 'active')}
         addonPlans={addonPlans.filter((plan) => plan.saleStatus === 'active')}
         origin={origin}
+        portalOrigin={customerPortalOrigin}
         timezone={organization.timezone}
         currency={organization.currency ?? ''}
         role={organization.role}

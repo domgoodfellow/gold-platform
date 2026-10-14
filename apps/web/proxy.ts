@@ -20,6 +20,11 @@ export async function proxy(request: NextRequest) {
     proposal: request.nextUrl.pathname === '/proposal' || request.nextUrl.pathname.startsWith('/proposal/'),
   });
   const { pathname } = request.nextUrl;
+  if (pathname === '/portal' || pathname.startsWith('/portal/')) {
+    response.headers.set('Cache-Control', 'private, no-store');
+    response.headers.set('Referrer-Policy', 'no-referrer');
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  }
 
   // A business's own hostname opens its public surface at the root, and its published forms. The rewrite carries the hostname, never an organization id: the page resolves it again
   // itself (D17). A hostname that resolves to nothing falls through unchanged — to exactly what an
@@ -34,6 +39,15 @@ export async function proxy(request: NextRequest) {
     const host = request.headers.get('host');
     const binding = await bindingForRequestHost(host);
     if (binding && host) {
+      if (binding.surface === 'portal') {
+        const target = request.nextUrl.clone();
+        target.host = host;
+        target.pathname = '/portal';
+        target.search = '';
+        const redirected = NextResponse.redirect(target);
+        for (const cookie of response.cookies.getAll()) redirected.cookies.set(cookie);
+        return redirected;
+      }
       const url = request.nextUrl.clone();
       const hostname = encodeURIComponent(host.toLowerCase().replace(/:\d+$/, ''));
       url.pathname = hostedForm

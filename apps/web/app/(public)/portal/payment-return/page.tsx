@@ -1,4 +1,9 @@
 import { Section, SectionHeading } from '@/components/surfaces/section';
+import { getPortalDb } from '@/lib/db/portal-server';
+import { requirePortalRequestContext } from '@/lib/domain/portal/request-context';
+import { DomainError } from '@/lib/domain/errors';
+import { redirect } from 'next/navigation';
+export const dynamic = 'force-dynamic';
 
 /**
  * Where a processor sends a payer back — deliberately named with no token in its path.
@@ -10,13 +15,15 @@ import { Section, SectionHeading } from '@/components/surfaces/section';
  * third party for no reason this page needs to. A customer who wants to see their invoice's
  * actual standing reopens the link the business sent them, the same one they used to get here.
  */
-export default function PortalPaymentReturnPage() {
+export default async function PortalPaymentReturnPage() {
+  try { await requirePortalRequestContext(await getPortalDb()); }
+  catch (error) { if (error instanceof DomainError) redirect('/portal/unavailable'); throw error; }
   return (
     <main className="mx-auto w-full max-w-xl p-6 sm:p-8">
       <Section>
-        <SectionHeading>Payment submitted</SectionHeading>
+        <SectionHeading>Payment status</SectionHeading>
         <p className="mt-2 text-sm text-muted">
-          This will show as paid once the processor confirms it. Reopen the link the business
+          Your invoice will show as paid once the processor confirms a payment. Reopen the link the business
           sent you to see your invoice&rsquo;s current standing.
         </p>
       </Section>

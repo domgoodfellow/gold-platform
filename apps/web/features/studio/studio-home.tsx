@@ -34,7 +34,7 @@ export function StudioHome({ organizationId, timezone, mayManage, overview: data
       {configure}
     </>} />
     <nav aria-label="Studio destinations" className="flex flex-wrap gap-4 text-xs font-medium text-accent-text underline decoration-border underline-offset-4">
-      {[[website, 'Website'], [forms, 'Forms'], [templates, 'Templates']].map(([href, label]) => <Link key={href} href={href} className="hover:underline">{label}</Link>)}
+      {[[website, 'Website'], [`${studio}/portal`, 'Customer portal'], [forms, 'Forms'], [templates, 'Templates']].map(([href, label]) => <Link key={href} href={href} className="hover:underline">{label}</Link>)}
     </nav>
     <div className="grid gap-3 sm:grid-cols-2 @min-[64rem]/studio:grid-cols-4">
       {cards.map(({ title, value, note, icon, href }) => <MetricTile key={title} label={title} value={value} detail={note} icon={icon} href={href} />)}
@@ -65,7 +65,7 @@ export function StudioHome({ organizationId, timezone, mayManage, overview: data
           ['Branding', data.brand.logoConfigured ? 'Logo configured' : 'No logo (optional)', `${base}/settings/branding`],
           ['Public address', data.hostname ?? 'Not configured', `${base}/settings/domains`],
           ['Booking', data.booking.available ? `${data.booking.bookableTypeCount} published types` : 'Needs configuration', `${base}/work/configuration`],
-          ['Customer portal', data.portal.activeInviteCount ? `${data.portal.activeInviteCount} customers invited` : 'No active invitations', `${base}/customers`],
+          ['Customer portal', data.portal.activeInviteCount ? `${data.portal.activeInviteCount} customers invited` : 'No active invitations', `${studio}/portal`],
         ].map(([label, value, href]) => <li key={label}><Link href={href} className="block py-2.5 hover:underline"><span className="font-medium">{label}</span><p className="mt-0.5 break-all text-xs text-muted">{value}</p></Link></li>)}</ul><p className="mt-2 text-xs text-muted">Invite customers to their portal from their Customer page.</p></OperationalPanel>
         <OperationalPanel title="Recent activity"><ul className="divide-y divide-border">{data.recentPublishing.length ? data.recentPublishing.map((revision) => <li key={revision.id}><Link href={`/preview/${organizationId}/${revision.id}`} target="_blank" className="flex justify-between gap-2 py-2.5 text-sm hover:text-accent-text"><span>Website revision {revision.number}</span><State>{revision.status.replace('_', ' ')}</State></Link></li>) : <li><PanelState>No website revisions yet.</PanelState></li>}</ul></OperationalPanel>
       </aside>

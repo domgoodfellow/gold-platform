@@ -298,7 +298,7 @@ describe('the operator shell navigation', () => {
       'finance', 'finance-quotes', 'finance-invoices', 'finance-payments',
       'automations', 'automation-rules', 'automation-messages', 'automation-activity',
       'field', 'work', 'schedule', 'resources', 'locations', 'assets',
-      'studio', 'studio-website', 'studio-forms', 'studio-templates',
+      'studio', 'studio-website', 'studio-portal', 'studio-forms', 'studio-templates',
       'settings',
     ]);
     for (const segment of ['pricing', 'fields', 'roles', 'integrations', 'setup']) {

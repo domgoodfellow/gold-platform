@@ -69,7 +69,7 @@ async function publishForm(page: Page, name: string) {
   await page.getByRole('textbox', { name: 'Question', exact: true }).fill('Your name');
   await page.getByRole('checkbox', { name: 'Required' }).check();
   await page.getByRole('button', { name: 'Publish' }).click();
-  await expect(page.getByText('Published. Visitors now see this version.')).toBeVisible();
+  await expect(page.getByText('Published · Revision 1', { exact: true })).toBeVisible();
   const key = (await page.getByRole('link', { name: 'Open public form' }).getAttribute('href'))!.split('/').pop()!;
   const formSlug = (await pg.query('select slug from public.forms where id = $1', [formId])).rows[0].slug as string;
   return { formId, key, formSlug };

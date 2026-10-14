@@ -30,10 +30,11 @@ export async function portalFormsAvailable(db: Db): Promise<FormPublication[]> {
 
 export async function submitPortalForm(
   db: Db,
-  input: { formId: string; answers: Record<string, unknown> },
+  input: { formId: string; revisionId?: string; answers: Record<string, unknown> },
 ): Promise<SubmitFormResult> {
   const offered = (await portalFormsAvailable(db)).find((form) => form.formId === input.formId);
   if (!offered) return { ok: false, message: 'This form is not available.', fieldErrors: {}, stale: false };
+  if (input.revisionId !== undefined && input.revisionId !== offered.revisionId) return { ok: false, message: 'This form has changed since it was opened. Reload it before submitting.', fieldErrors: {}, stale: true };
 
   const checked = checkAgainst(offered.definition, input.answers);
   if (!checked.ok) return checked.result;
