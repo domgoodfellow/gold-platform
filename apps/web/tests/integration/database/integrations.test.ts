@@ -18,6 +18,7 @@ import {
   getImportRun,
   listStagingRows,
   stageRows,
+  sourceRowsForImport,
 } from '@/lib/domain/integrations/import-runs';
 import { parseCsv } from '@/lib/domain/files/parsers/csv';
 import { foundBusiness } from '@/tests/support/founding';
@@ -279,10 +280,8 @@ describe('integrations: CSV import', () => {
     expect(annRows).toHaveLength(1);
     expect(annRows![0].name).toBe('Ann Baker');
 
-    // Applying the same run twice is refused rather than replaying it.
-    await expect(
-      applyImportRun(alice.db, { organizationId: alice.organizationId, runId }),
-    ).rejects.toMatchObject({ code: 'integrations.already_applied' });
+    await applyImportRun(alice.db, { organizationId: alice.organizationId, runId });
+    expect(await getImportRun(alice.db, { organizationId: alice.organizationId, runId })).toEqual(run);
   });
 
   it('is idempotent: re-importing the same file never duplicates a customer', async () => {
@@ -351,6 +350,32 @@ describe('integrations: CSV import', () => {
     await expect(
       uploadImportFile(bob.db, { organizationId: bob.organizationId, file: csvFile('name\nAnn\n') }),
     ).rejects.toMatchObject({ code: 'integrations.forbidden' });
+  });
+
+  it('resumes staging and committed batches without emails or duplicate Customers', async () => {
+    const text = ['source_record_id,name,email,phone', ...Array.from({ length: 205 }, (_, i) => `${i},Batch business ${i},null,+1416555${String(i).padStart(4, '0')}`)].join('\n');
+    const upload = await uploadImportFile(alice.db, { organizationId: alice.organizationId, file: csvFile(text, 'source-id-batches.csv') });
+    const definitions = await listFieldDefinitions(alice.db, { organizationId: alice.organizationId, entityType: 'customer' });
+    const mapping = suggestMapping(upload.parsed.headers, definitions);
+    const mappingId = await createMapping(alice.db, { organizationId: alice.organizationId, resourceId: upload.resourceId, fields: mapping });
+    const runId = await beginImportRun(alice.db, { organizationId: alice.organizationId, mappingId });
+    const sourceRows = sourceRowsForImport(upload.parsed.rows, 'source-id-batches.csv');
+    const stageInput = { organizationId: alice.organizationId, runId, mapping, fieldDefinitions: definitions };
+    await stageRows(alice.db, { ...stageInput, sourceRows: sourceRows.slice(0, 100) });
+    await expect(applyImportRun(alice.db, { organizationId: alice.organizationId, runId })).rejects.toMatchObject({ code: 'integrations.apply_failed' });
+    expect((await getImportRun(alice.db, { organizationId: alice.organizationId, runId }))?.rowsCreated).toBe(0);
+    expect(await stageRows(alice.db, { ...stageInput, sourceRows })).toBe(205);
+    expect((await listStagingRows(alice.db, { organizationId: alice.organizationId, runId })).every(row => row.status === 'ready')).toBe(true);
+    await expect(applyImportRun(bob.db, { organizationId: alice.organizationId, runId })).rejects.toMatchObject({ code: 'integrations.forbidden' });
+    await applyImportRun(alice.db, { organizationId: alice.organizationId, runId });
+    expect(await getImportRun(alice.db, { organizationId: alice.organizationId, runId })).toMatchObject({ status: 'running', rowsCreated: 100 });
+    await applyImportRun(alice.db, { organizationId: alice.organizationId, runId });
+    await applyImportRun(alice.db, { organizationId: alice.organizationId, runId });
+    expect(await getImportRun(alice.db, { organizationId: alice.organizationId, runId })).toMatchObject({ status: 'completed', rowsCreated: 205, rowsFailed: 0 });
+    const secondRunId = await beginImportRun(alice.db, { organizationId: alice.organizationId, mappingId });
+    await stageRows(alice.db, { ...stageInput, runId: secondRunId, sourceRows });
+    for (let i = 0; i < 3; i++) await applyImportRun(alice.db, { organizationId: alice.organizationId, runId: secondRunId });
+    expect(await getImportRun(alice.db, { organizationId: alice.organizationId, runId: secondRunId })).toMatchObject({ status: 'completed', rowsCreated: 0, rowsUpdated: 205 });
   });
 
   it('disconnecting a connection never touches the customers it already imported (I1/I8)', async () => {

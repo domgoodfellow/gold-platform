@@ -13955,6 +13955,7 @@ export type Database = {
           surface: string
         }[]
       }
+      import_pipeline_version: { Args: never; Returns: number }
       invite_member: {
         Args: { p_email: string; p_organization_id: string; p_role_id: string }
         Returns: string

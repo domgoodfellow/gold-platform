@@ -3,15 +3,15 @@
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
-import { downloadImportFile, uploadImportFile } from '@/lib/domain/integrations/resources';
-import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
+import { uploadImportFile } from '@/lib/domain/integrations/resources';
 import {
   createMapping,
+  prepareImportFields,
   type MappingField,
   type MappingFieldTransform,
   type MappingTarget,
 } from '@/lib/domain/integrations/mappings';
-import { beginImportRun, stageRows } from '@/lib/domain/integrations/import-runs';
+import { beginImportRun, requireImportPipeline, resumeImportStaging } from '@/lib/domain/integrations/import-runs';
 import { requireOrganization } from '@/lib/route/organization';
 
 export type UploadState = { error: string | null };
@@ -31,8 +31,10 @@ export async function uploadSourceAction(
 
   let resourceId: string;
   try {
+    await requireImportPipeline(db);
     const uploaded = await uploadImportFile(db, { organizationId, file });
     resourceId = uploaded.resourceId;
+    await prepareImportFields(db, organizationId, uploaded.parsed.headers);
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
     throw error;
@@ -47,6 +49,9 @@ function parseTarget(value: string): MappingTarget {
   }
   if (value.startsWith('custom:')) {
     return { kind: 'custom', key: value.slice(7) };
+  }
+  if (value.startsWith('location:') && ['address', 'city', 'province'].includes(value.slice(9))) {
+    return { kind: 'location', field: value.slice(9) as 'address' | 'city' | 'province' };
   }
   return { kind: 'ignore' };
 }
@@ -66,33 +71,21 @@ export async function createMappingAndStageAction(formData: FormData): Promise<v
 
   const backTo = `/organizations/${organizationId}/integrations/imports/new?resourceId=${resourceId}`;
 
-  let runId: string;
+  let runId: string | undefined;
   try {
     const mappingId = await createMapping(db, {
       organizationId,
       resourceId,
       fields,
-      dedupeKey: 'email',
+      dedupeKey: null,
     });
 
     runId = await beginImportRun(db, { organizationId, mappingId });
 
-    const parsed = await downloadImportFile(db, { organizationId, resourceId });
-    if (!parsed) {
-      throw new DomainError('That file is no longer available. Upload it again.', 'integrations.file_missing');
-    }
-
-    const definitions = await listFieldDefinitions(db, { organizationId, entityType: 'customer' });
-
-    await stageRows(db, {
-      organizationId,
-      runId,
-      mapping: fields,
-      fieldDefinitions: definitions,
-      sourceRows: parsed.rows.map((raw, index) => ({ key: `row-${index}`, raw })),
-    });
+    await resumeImportStaging(db, { organizationId, runId });
   } catch (error) {
     if (error instanceof DomainError) {
+      if (runId) redirect(`/organizations/${organizationId}/integrations/imports/${runId}?stageError=${encodeURIComponent(error.message)}`);
       redirect(`${backTo}&error=${encodeURIComponent(error.message)}`);
     }
     throw error;

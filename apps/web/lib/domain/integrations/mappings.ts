@@ -3,10 +3,28 @@ import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import {
   parseCustom,
+  createFieldDefinition,
+  listFieldDefinitions,
   type CustomInput,
   type CustomValues,
   type FieldDefinition,
 } from '@/lib/domain/fields/field-definitions';
+
+/** Optional company facts use the existing tenant field registry, not new Customer columns. */
+export async function prepareImportFields(db: Db, organizationId: string, headers: string[]): Promise<void> {
+  const definitions = await listFieldDefinitions(db, { organizationId, entityType: 'customer' });
+  const fields = [
+    ['owner_name', 'Contact name', 'text'], ['website', 'Website', 'text'],
+    ['industry', 'Industry', 'text'], ['sic_code', 'SIC code', 'text'],
+    ['estimated_revenue_band', 'Estimated revenue band', 'text'],
+    ['team_size_band', 'Team size band', 'text'], ['do_not_call', 'Do not call', 'boolean'],
+    ['lead_status', 'Source lead status', 'text'],
+  ] as const;
+  for (const [key, label, kind] of fields) {
+    if (!headers.includes(key) || definitions.some((definition) => definition.key === key)) continue;
+    await createFieldDefinition(db, { organizationId, entityType: 'customer', key, label, kind, required: false });
+  }
+}
 
 /**
  * What a source column becomes. `ignore` and `custom` cover an open-ended source; `core` is the
@@ -15,6 +33,7 @@ import {
 export type MappingTarget =
   | { kind: 'ignore' }
   | { kind: 'core'; field: 'name' | 'email' | 'phone' }
+  | { kind: 'location'; field: 'address' | 'city' | 'province' }
   | { kind: 'custom'; key: string };
 
 /**
@@ -156,6 +175,11 @@ export function suggestMapping(headers: string[], definitions: FieldDefinition[]
 
   return headers.map((header) => {
     const normalized = normalizeHeader(header);
+    const locationField = normalized === 'address' || normalized === 'streetaddress' ? 'address'
+      : normalized === 'city' ? 'city' : normalized === 'province' || normalized === 'region' ? 'province' : null;
+    if (locationField) {
+      return { sourceColumn: header, target: { kind: 'location', field: locationField }, transform: 'none' } satisfies MappingField;
+    }
 
     for (const [coreField, synonyms] of Object.entries(CORE_SYNONYMS) as [
       'name' | 'email' | 'phone',
@@ -197,14 +221,20 @@ export type NormalizedCustomerRow = {
   email: string | null;
   phone: string | null;
   custom: CustomValues;
+  location: { address: string | null; city: string | null; province: string | null };
 };
+
+export function importValue(raw: string | null | undefined): string {
+  const value = (raw ?? '').trim();
+  return /^(null|none|nan)$/i.test(value) ? '' : value;
+}
 
 function applyTransform(
   transform: MappingFieldTransform,
   raw: string,
   sourceColumn: string,
 ): { value: string; warning: string | null } {
-  const trimmed = raw.trim();
+  const trimmed = importValue(raw);
   if (trimmed.length === 0) return { value: '', warning: null };
 
   switch (transform) {
@@ -212,7 +242,7 @@ function applyTransform(
       return { value: trimmed.toLowerCase(), warning: null };
     case 'e164': {
       const cleaned = trimmed.replace(/(?!^\+)[^\d]/g, '');
-      return { value: cleaned, warning: null };
+      return { value: /^1\d{10}$/.test(cleaned) ? `+${cleaned}` : cleaned, warning: null };
     }
     case 'url': {
       const looksLikeUrl = /^(https?:\/\/)?[a-z0-9-]+(\.[a-z0-9-]+)+([/?#].*)?$/i.test(trimmed);
@@ -250,6 +280,7 @@ export function normalizeImportRow(
   let email: string | null = null;
   let phone: string | null = null;
   const customInput: CustomInput = {};
+  const location: NormalizedCustomerRow['location'] = { address: null, city: null, province: null };
 
   for (const field of fields) {
     if (field.target.kind === 'ignore') continue;
@@ -261,6 +292,8 @@ export function normalizeImportRow(
       if (field.target.field === 'name') name = value;
       else if (field.target.field === 'email') email = value || null;
       else if (field.target.field === 'phone') phone = value || null;
+    } else if (field.target.kind === 'location') {
+      location[field.target.field] = value || null;
     } else if (value.length > 0) {
       customInput[field.target.key] = value;
     }
@@ -285,7 +318,7 @@ export function normalizeImportRow(
   }
 
   return {
-    normalized: { name, email, phone, custom },
+    normalized: { name, email, phone, custom, location },
     validationErrors: errors,
   };
 }

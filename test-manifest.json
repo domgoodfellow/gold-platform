@@ -137,6 +137,7 @@
     ]
   },
   "files": {
+    "apps/web/tests/unit/prospect-import.test.ts": { "category": "unit", "concerns": ["crm", "imports", "data integrity"] },
     "apps/web/e2e/workspace-configuration.spec.ts": { "category": "playwright-acceptance", "concerns": ["configuration", "navigation", "responsive", "permissions"] },
     "apps/web/tests/unit/channel-diagnostics.test.ts": { "category": "unit", "concerns": ["communications", "readiness", "permissions"] },
     "apps/web/tests/unit/configuration-redirect.test.ts": { "category": "unit", "concerns": ["navigation", "configuration", "compatibility"] },

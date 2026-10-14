@@ -561,6 +561,17 @@ This command mutates the linked hosted database.
 
 It is not part of the ordinary test gate.
 
+When approval covers one migration and the ordinary dry run includes unrelated
+pending files, do not push that full set. Prepare a temporary workspace containing
+the current config and required templates, copies of migrations already recorded
+on the target, and only the approved pending file. Preserve the repository's
+unrelated migrations. Use an explicit `--project-ref`, run `db push --dry-run`
+with `--skip-vault`, and apply only after it lists exactly the approved file with
+no seeds or role changes. Retain prior function definitions outside Git when
+replacing functions. Verify the target migration's statement count, actual
+objects, grants and authenticated behavior afterwards; an isolated clean dry run
+does not mean unrelated repository migrations have been applied.
+
 ---
 
 ### Recover a recorded migration whose schema is absent

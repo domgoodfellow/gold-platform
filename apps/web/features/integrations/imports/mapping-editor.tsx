@@ -8,6 +8,7 @@ import { createMappingAndStageAction } from '@/app/organizations/[organizationId
 function targetValue(target: MappingTarget): string {
   if (target.kind === 'core') return `core:${target.field}`;
   if (target.kind === 'custom') return `custom:${target.key}`;
+  if (target.kind === 'location') return `location:${target.field}`;
   return 'ignore';
 }
 
@@ -77,6 +78,9 @@ export function MappingEditor({
                           <option value="core:name">Customer → Name</option>
                           <option value="core:email">Customer → Email</option>
                           <option value="core:phone">Customer → Phone</option>
+                          <option value="location:address">Location → Address</option>
+                          <option value="location:city">Location → City</option>
+                          <option value="location:province">Location → Province</option>
                           {definitions.length > 0 ? (
                             <optgroup label="Custom fields">
                               {definitions.map((definition) => (
@@ -105,8 +109,9 @@ export function MappingEditor({
           </div>
 
           <Hint className="mt-4">
-            Rows are matched to an existing customer by email — a row whose email is already a
-            customer here updates that customer instead of creating a second one.
+            Repeat imports match by source ID within the same source filename, or by row
+            content when no ID is available. Email is optional. Unmapped source metadata stays
+            with the import; historical contact dates do not create call activity.
           </Hint>
 
           <Button type="submit" tone="primary" className="mt-4">

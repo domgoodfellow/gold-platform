@@ -189,6 +189,14 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## [2026-10-13]
+
+- Applied the approved Customer-import database repair with append-only staging,
+  source-link matching, repeat-safe completion, 100-row commits and explicit
+  readiness checks. Hosted verification confirmed field preservation, tenant
+  authorization and prospect search in both the local and deployed CRM. No web
+  or API deployment accompanied this database change.
+
 ## [2026-10-06]
 
 ### Settings and identity

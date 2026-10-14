@@ -9,22 +9,15 @@ import { DomainError } from '@/lib/domain/errors';
 
 export type ParsedCsv = {
   headers: string[];
-  /** Every row, each keyed by header. Small files only — see `PARSE_ROW_LIMIT`. */
+  /** Every row, each keyed by header. */
   rows: Record<string, string>[];
-  /** The first few rows, for a preview — always populated even when `rows` is truncated. */
+  /** The first few rows, for a preview. */
   sample: Record<string, string>[];
   totalRows: number;
   truncated: boolean;
 };
 
 const SAMPLE_SIZE = 5;
-
-/**
- * Rows this build parses whole. Not a claim about what the platform can eventually import — a
- * file larger than this needs streaming and chunked staging, which nothing has asked for yet.
- * Named here so the limit is one number, not a guess repeated at every call site.
- */
-export const PARSE_ROW_LIMIT = 5000;
 
 export function parseCsv(text: string): ParsedCsv {
   const result = Papa.parse<Record<string, string>>(text, {
@@ -36,16 +29,17 @@ export function parseCsv(text: string): ParsedCsv {
   if (headers.length === 0) {
     throw new DomainError('That file has no header row GildOps could read.', 'integrations.csv_no_headers');
   }
+  if (result.errors.some((error) => error.code !== 'UndetectableDelimiter')) {
+    throw new DomainError('The CSV has malformed rows. Correct its columns or quoting before importing.', 'integrations.csv_invalid');
+  }
 
   const totalRows = result.data.length;
-  const truncated = totalRows > PARSE_ROW_LIMIT;
-  const rows = truncated ? result.data.slice(0, PARSE_ROW_LIMIT) : result.data;
 
   return {
     headers,
-    rows,
+    rows: result.data,
     sample: result.data.slice(0, SAMPLE_SIZE),
     totalRows,
-    truncated,
+    truncated: false,
   };
 }

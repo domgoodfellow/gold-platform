@@ -30,6 +30,38 @@ Implementation status belongs in `docs/roadmap.md`.
 
 ## Core principle
 
+### Prospect CSV imports
+
+Uploaded CSVs use the existing Customer import mapping, staging, source links and
+commit functions. CSV intake retains every row within the file-size policy and
+refuses malformed columns or quoting. Empty values and literal `null`, `none` and
+`nan` normalize to missing values; email is optional. A missing business name stays
+invalid for review instead of becoming an invented Customer.
+
+The upload prepares optional tenant Customer fields for recognized contact,
+website, industry, classification and company-size columns through the existing
+field registry; this requires `field.manage` in addition to import authority.
+Existing definitions and their kinds are preserved. Location mappings use the
+existing Locations and Customer-location links; a province alone creates no site.
+Unmapped source columns remain in raw staging metadata. Historical contact dates
+do not create Calls, and a source do-not-call value is not permission to call.
+
+Staging appends 100-row batches under a locked run and can replay identical batches.
+Resume uses the frozen mapping and stored source. Application refuses incomplete
+staging and commits at most 100 ready rows per invocation; a Running run can resume.
+Completed runs are repeat-safe. Source IDs are scoped by the source filename; when
+no ID exists, the canonicalized raw row supplies the key. Reordering records with
+source IDs does not change identity. Renaming the source file changes its namespace;
+keep the filename stable for repeat imports. Conflicting duplicate source keys are
+refused rather than silently dropping rows. The source-link check is repeated at
+commit under a tenant/source lock so concurrent runs cannot create duplicate Customers.
+
+`20261215000001_prospect_import_batches.sql` replaces only the two existing import
+functions and adds a read-only pipeline-version check. The app refuses imports
+until that check confirms the repaired database contract. Hosted application
+requires explicit migration approval; importing data
+through a local web server connected to hosted Supabase still writes hosted data.
+
 ### Imported application library
 
 GildOps imports pinned Activepieces community npm packages without an Activepieces account or hosted integration service (ADR-041). The installed catalogue currently contains 36 products and 64 reviewed read/search actions. Google and Microsoft products share their respective canonical connections. Metadata comes from the installed packages, including names, icons, schemas and authentication declarations; the web uses a generated projection and the API exposes authenticated, filtered, paginated discovery at `/integrations/library`.

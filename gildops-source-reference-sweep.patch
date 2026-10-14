@@ -1,0 +1,245 @@
+diff --git a/apps/web/e2e/global-setup.ts b/apps/web/e2e/global-setup.ts
+--- a/apps/web/e2e/global-setup.ts
++++ b/apps/web/e2e/global-setup.ts
+@@
+-  // The demo shapes (`scripts/demo/businesses.ts`) don't enable `portal` — this stack's own
+-  // operator-path specs are what needs it. D41: wanted and paid are two rows, so switching the
+-  // module on is not enough by itself; the module-owning term is what `run.ts` also records for
+-  // everything a demo shape switches on beyond its zero-price founding set, done here the same
+-  // way for the one module none of the shapes ask for.
++  // The demo shapes (`scripts/demo/businesses.ts`) don't enable `portal` — this stack's own
++  // operator-path specs need it. Module activation and commercial entitlement are separate,
++  // so switching the module on is not enough by itself; the module-owning term is what `run.ts`
++  // also records for everything a demo shape switches on beyond its zero-price founding set,
++  // done here the same way for the one module none of the shapes ask for.
+diff --git a/apps/api/app/domains/crm/stages.py b/apps/api/app/domains/crm/stages.py
+--- a/apps/api/app/domains/crm/stages.py
++++ b/apps/api/app/domains/crm/stages.py
+@@
+ **What this module decides, and what it does not.** Nothing here checks a role or a capability --
+ `change_customer_stage` is `security invoker`, so `customers_update` (capability
+ `customer.update`) is what actually authorizes the write, under the caller's own forwarded token
+-(D17, D34). A caller this function could not authorize gets the database's own ambiguous refusal,
+-translated by `app.domains.errors`, not a second and weaker check performed here.
++through the same RLS/domain boundary used by every caller. A caller this function could not
++authorize gets the database's own ambiguous refusal, translated by `app.domains.errors`, not a
++second and weaker check performed here.
+@@
+-    Callable independently of any web request -- an AI tool or a worker reaches the same pipeline
+-    move this function performs, under whichever token it is holding, with no React or HTTP
+-    concept anywhere in the call (D34's reasoning, extended to a second axis).
++    Callable independently of any web request -- an AI tool or a worker reaches the same pipeline
++    move this function performs, under whichever token it is holding, with no React or HTTP
++    concept anywhere in the call.
+diff --git a/apps/api/app/ai/loop.py b/apps/api/app/ai/loop.py
+--- a/apps/api/app/ai/loop.py
++++ b/apps/api/app/ai/loop.py
+@@
+ **One loop, above every provider.** Iteration, dispatch, the cap and what gets recorded all live
+ here, and a provider only ever answers *what is the next turn*. Building on a vendor SDK's own
+ tool-runner would have been less code and would have meant a second loop the first time a
+ business ran a local model -- two dispatch paths and an `agent_runs` row whose meaning depended
+-on who answered it (D34).
++on who answered it.
+@@
+ class ProposedAction:
+@@
+     **Reported, never performed.** Nothing in this runtime can perform one: an action carries no
+     Postgres function, and the only thing that turns this into a write is somebody in `apps/web`
+-    pressing a button, at which point the domain layer does it under their own session (D34).
++    pressing a button, at which point the domain layer does it under their own session.
+@@
+-    # overridden rather than obeyed. RLS decides what any of it can see regardless (D34); this is
++    # overridden rather than obeyed. RLS decides what any of it can see regardless; this is
+     # what keeps the tool from being handed an id nobody ever told it.
+diff --git a/apps/api/app/core/db.py b/apps/api/app/core/db.py
+--- a/apps/api/app/core/db.py
++++ b/apps/api/app/core/db.py
+@@
+ **TEMPORARY LEGACY COMPATIBILITY.** `machine_token` signs with `SUPABASE_JWT_SECRET`, Supabase's
+ legacy shared HS256 secret — never used for a human caller (see `app/auth`, which verifies
+ people's tokens through JWKS and holds no signing key at all). This module is scoped to a
+ handful of machine Postgres roles, each with a small set of `execute` grants and no table grant,
+-which is the property worth keeping through the migration named in `SETUP.md`'s
+-"SUPABASE_JWT_SECRET pre-flight" and the docstring of `machine_token` below. Do not extend this
+-module's reach while that migration is open — narrow the machine identity further, never
+-generalise it. `platform_billing_webhook` is the third such role, added alongside
++which is the property worth keeping through the migration away from the legacy machine-auth
++dependency described in `docs/deployment.md`. Do not extend this module's reach while that
++migration remains open — narrow the machine identity further, never generalise it.
++`platform_billing_webhook` is the third such role, added alongside
+ `payment_webhook` and `voice_webhook` rather than folding into either — its own Stripe account,
+ its own signing secret, its own actor.
+
+ **This is the half of the Stripe slice that was never about which language.**
+-`docs/constraints.md` D26: what is distinctive about a webhook is that it arrives with no
+-human session, which is an authorization problem, and the answer is the same either way — its
+-own Postgres role, its own policies, and emphatically not service-role.
++What is distinctive about a webhook is that it arrives with no human session, which is an
++authorization problem. The answer is its own narrow Postgres role and grants, emphatically not
++service-role.
+
+-**Identity still arrives as a JWT** (D17); it simply is not a person's. The token names the
++**Identity still arrives as a JWT**; it simply is not a person's. The token names the
+ role PostgREST switches into and a `sub` that is a real `auth.users` row, so `auth.uid()`
+-answers and `events.actor_id` is satisfiable. That is what let I11 keep a single shape rather
+-than growing a nullable actor for machines.
++answers and `events.actor_id` is satisfiable without growing a nullable actor path for machines.
+@@
+     Organization and conversation are both derived *inside* `record_inbound_message` from
+     `to_number`, the carrier's own -- never from an organization id this handler could otherwise
+-    have been asked to trust (D17): a callback that could name a business could name somebody
+-    else's.
++    have been asked to trust: a callback that could name a business could name somebody else's.
+@@
+     Uses the same `provider_operator` role and token `read_provider_account_credential` does --
+-    resolving an assignment is one step in the same trusted path, not a second axis (D45's
+-    reasoning: a narrow role does one small job well, not several unrelated ones cheaply).
++    resolving an assignment is one step in the same trusted path, not a second authority axis.
++    The role stays narrow: one small provider-operations job rather than several unrelated ones.
+@@
+     **How the public chat endpoint learns which business it is answering for.** The request names
+     a deployment and nothing else: an organization id or a block of instructions that arrived in
+     the body would be values the caller chose, and the shared secret proves who the caller is, not
+-    that what it sent is true (D17, D22).
++    that tenant/resource assertions supplied in the request are true.
+diff --git a/apps/api/app/core/runner.py b/apps/api/app/core/runner.py
+--- a/apps/api/app/core/runner.py
++++ b/apps/api/app/core/runner.py
+@@
+ **The second writer with no human caller**, and it is deliberately built the same way as the
+-first (D26): its own Postgres role, its own three `execute` grants, and emphatically not
++first: its own Postgres role, its own three `execute` grants, and emphatically not
+ service-role. `automation_runner` holds no grant on any table at all, so nothing here can read a
+ customer or a job even by accident — what it gets back from `queued_messages` is an address and
+ the finished words, and what it can say back is whether the sending worked.
+
+-Identity still arrives as a JWT (D17). The `sub` is the automation actor from
++Identity still arrives as a JWT. The `sub` is the automation actor from
+ `20260831000002_automations.sql` — a real `auth.users` row with no password and no address — so
+-`events.actor_id` stays satisfiable and I11 keeps one shape.
++`events.actor_id` stays satisfiable without a second machine-only actor shape.
+@@
+-    The whole scheduler is a query on the other side of this call (D24): there is no queue to
++    The whole scheduler is a query on the other side of this call: there is no queue to
+     drain and nothing held between invocations. A tick that runs twice is a tick that ran once,
+     because every action this platform has is one a repeat leaves alone.
+diff --git a/apps/web/lib/navigation.ts b/apps/web/lib/navigation.ts
+--- a/apps/web/lib/navigation.ts
++++ b/apps/web/lib/navigation.ts
+@@
+  * The areas of one business, and the only place the platform's own nouns are written down.
+  * Concentrated here so a future per-tenant terminology override is a lookup on `label`, not an
+- * excavation across nine page headings (M3). These are the platform's words, not a tenant's —
++ * excavation across page headings. These are the platform's words, not a tenant's —
+  * a business's own vocabulary is rows, read from the database wherever it appears.
+  *
+- * **Most of this list is still not capability-gated, and that stays deliberate (I12):** a kernel
++ * **Most of this list is still not capability-gated, and that stays deliberate:** a kernel
+  * or general-purpose area shows itself to any member and explains what their role can't do,
+@@
+  * Which section of the shell an area belongs to.
+  *
+  * **Named for what an operator does, never for what we bill.** *Module* is the billing axis
+- * (D25): Reports, Assets, Automations and Reception are all modules, so a section by that name
++ * while these groups are the navigation axis. Reports, Assets, Automations and Reception are all
++ * modules, so a section named for billing/module structure
+  * would have to hold areas belonging to every other section. Two axes crossed in one list is how
+  * a sidebar stops making sense.
+@@
+- * D23 still governs the part that matters: work comes first and Settings last, and an operator
+- * must never reach today's work by going through settings.
++ * Work comes before Settings: an operator must never reach today's work by going through
++ * configuration first.
+@@
+  * The nine canonical operator workspaces, whether or not each has an operating surface yet. A
+  * workspace is where an operator does a kind of work — never a Product, Plan, Module, Feature or
+- * permission (D68). Registered is not visible. A workspace draws a row in the sidebar only
++ * permission.Registered is not visible. A workspace draws a row in the sidebar only
+@@
+- * `label` is what an operator reads; it carries no `Gild ` prefix (that is the catalogue's own
+- * naming, kept there deliberately — D67 restated: operator vocabulary and catalogue identity are
+- * separate concerns). `home` names the Area that is this workspace's landing page — the parent
++ * `label` is what an operator reads; it carries no catalogue prefix because operator vocabulary
++ * and catalogue identity are separate concerns. `home` names the Area that is this workspace's
++ * landing page — the parent
+  * row's own destination — and is absent only for a workspace with no page yet. Insights is not a
+  * workspace here: it is cross-cutting, surfaced from each workspace's own Home and from a page's
+- * Insights support mode, not a ninth row (D66 restated for this slice). Home the cross-workspace
+- * cockpit is not a workspace either, and neither is Platform Administration — a scope of GOLD's
+- * own organization, never a workspace of a business (D45, D60).
++ * Insights support mode, not another workspace row. Home the cross-workspace cockpit is not a
++ * workspace either, and neither is Platform Administration — a separate privileged scope,
++ * never a workspace of a business.
+@@
+- * The sections, in the order the sidebar draws them. One list, so the ordering rule D23 states
+- * is a value the test can read rather than a sentence it has to trust. `label: null` draws no
++ * The sections, in the order the sidebar draws them. One list makes the ordering rule a value
++ * the test can read rather than a sentence it has to trust. `label: null` draws no
+@@
+-  // Shared organization infrastructure — never a workspace, and ruled apart from where an
+-  // operator does a kind of work (docs/ui-spec.md). One row today, like Home; no heading for the
++  // Shared organization infrastructure — never a workspace, and separate from where an
++  // operator does a kind of work. One row today, like Home; no heading for the
+@@
+- * The modules this platform sells, and the only list of them — a row in `organization_modules`,
+- * never a directory (D25), and never read by an RLS policy. The kernel (work, schedule,
++ * The modules this platform sells, and the only list of them — a row in `organization_modules`,
++ * never a navigation directory and never read by an RLS policy. The kernel (work, schedule,
+  * customers, locations, resources, fields, roles, settings) is not a module and names none
+- * below; `Area.module` is optional for that reason. Every key here has a screen behind it —
+- * `starting_conversation.txt` names future modules that don't yet exist, and this list is only
+- * the subset that does; `navigation.test.ts` keeps the two from drifting.
++ * below; `Area.module` is optional for that reason. Every key here has a real product surface;
++ * `navigation.test.ts` keeps the declared destinations from drifting from the application.
+@@
+-   * Where this module is configured — required of every module (D31). Answers a different
++   * Where this module is configured — required of every module. Answers a different
+@@
+-  /** Which sidebar section (D23). */
++  /** Which sidebar section. */
+@@
+-   * `area.module` alone. One legacy `ModuleKey` can back several canonical Features (D46's
+-   * many-to-many seam via `platform_catalog_runtime_mappings`), so gating on `module` alone
++   * `area.module` alone. One legacy `ModuleKey` can back several canonical Features through
++   * `platform_catalog_runtime_mappings`, so gating on `module` alone
+@@
+  * Home first, Settings last — a claim about what an operator does all day, not an alphabetisation.
+  *
+  * **Operator workspaces are not the commercial catalogue.** A row here is a place somebody works;
+  * a Plan grants Features that may compose into several rows, and one row may compose Features from
+- * several catalogue Modules. Nothing here is one-to-one with a Product (D25, D46).
++ * several catalogue Modules. Nothing here is one-to-one with a Product.
+@@
+-  // Leads because D23 says the action an operator's phone is designed around is "what do I do next".
++  // Home leads because the operator should reach current work before configuration.
+@@
+-  // Library: shared organization infrastructure, never a workspace (docs/domain-model.md,
+-  // constraints.md D60/D68). Kernel, like Home — every business has it, so it names no module.
++  // Library: shared organization infrastructure, never a workspace. Kernel, like Home — every
++  // business has it, so it names no module.
+@@
+-  // is offered to either. Not the pipeline features that share the `reception` module key (D46's
+-  // many-to-many seam, and the reason `featureKeys` exists rather than gating on `module` alone). Messages and Numbers
++  // is offered to either. Not the pipeline features that share the `reception` module key; that
++  // many-to-many relationship is why `featureKeys` exists rather than gating on `module` alone. Messages and Numbers
+@@
+   // Studio: what is public for this business, and what needs attention. Home is a real page —
+   // kernel, like Sales and Field's own Home, so a member sees it regardless of role. Website, Forms
+   // and Templates have each earned an operating page, listed beneath it; Brand and Portal remain
+-  // configuration reached from Settings (`CONFIG_TARGETS`) until each earns one too (D68).
++  // configuration reached from Settings (`CONFIG_TARGETS`) until each earns an operating page.
+@@
+   // Insights: dashboards and reports over the one reporting aggregate every workspace reads. Not a
+-  // workspace of its own (D66) — no permanent sidebar row — but still a real, directly addressable
++  // workspace of its own — no permanent sidebar row — but still a real, directly addressable
+@@
+  * Every area visible in navigation for the given state — one predicate, so `OrgNav` (grouped)
+  * and the phone Menu (the same sidebar) can never diverge on eligibility even though they render
+- * differently (D4 of this slice). `enabled` is legacy module keys, `featureAvailability` is the
++ * differently. `enabled` is legacy module keys, `featureAvailability` is the
+  * canonical resolver's available-and-entitled-and-active Feature keys
+  * (`availableFeatureKeys(organizationResolvedFeatureStates(...))`), and `capabilities` is the
+- * role-relevance layer (I12, evolved) — all three optional, and passing none shows everything a
++ * role-relevance layer — all three optional, and passing none shows everything a
+  * business has switched on, exactly as before either of the latter two existed.

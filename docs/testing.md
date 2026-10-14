@@ -658,6 +658,17 @@ pnpm test:smoke
 
 Against localhost, the suite may use the demo account.
 
+For local verification with an existing hosted account, fill `SMOKE_EMAIL` and
+`SMOKE_PASSWORD` in the ignored `apps/web/.env.local`. The smoke configuration
+loads that file quietly without overriding existing process variables. These
+credentials are optional verification inputs, never browser-public variables or
+deployment configuration. Smoke traces are disabled to avoid capturing real
+credentials during sign-in. Do not print credential values or save authenticated
+browser state as a repository artifact.
+
+Keep each credential variable exactly once in the file: a later blank duplicate
+overrides an earlier populated value when the file is parsed.
+
 Against a deployment, provide:
 
 ```text

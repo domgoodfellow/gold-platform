@@ -394,6 +394,33 @@ Do not merge environment variables merely because they currently point to the sa
 
 Separate variables can represent separately configurable capability boundaries.
 
+### Authorized hosted-data operating session with Ollama
+
+When an operating task explicitly authorizes local access to a hosted project, use
+that project's URL and low-privilege publishable key in both runtimes:
+
+- Web: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+- API: `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `apps/api/.env`.
+- Web: `ASSISTANT_API_URL=http://127.0.0.1:8787` and
+  `GOLD_API_URL=http://127.0.0.1:8787`.
+- API: `ASSISTANT_BASE_URL=http://127.0.0.1:11434/v1` and
+  `ASSISTANT_MODEL=llama3.1:8b`, after confirming that exact tag with `ollama list`.
+
+Preserve unrelated environment entries and existing secrets. A local Supabase key
+does not authenticate against the hosted project. Ollama needs no paid-model API
+key. Start the existing API and web commands above; confirm which process owns
+port 3000 before attempting another server. Next.js reloads `.env.local` changes.
+
+Inspect hosted `platform_ai_runtime_assignments` read-only before testing: explicit
+assignments take precedence when the provider-operations resolver is configured.
+Do not clear assignments or add a hosted JWT signing secret to force local routing.
+
+Use an existing hosted account to verify sign-in, GildOps Membership, authorized
+database reads and a completed assistant run. An Ollama completion or a rendered
+login page alone does not verify that authenticated flow. Do not run demo seeds,
+database resets, migrations or provider configuration changes against the hosted
+project as part of startup.
+
 ---
 
 ## Optional providers

@@ -1,4 +1,5 @@
-import { ButtonLink } from '@/components/controls/button';
+import { Button, ButtonLink } from '@/components/controls/button';
+import { resumeImportStagingAction } from '@/app/organizations/[organizationId]/integrations/imports/[runId]/actions';
 import { Hint } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { DataTable } from '@/components/display/table';
@@ -61,7 +62,7 @@ export function ImportRunDetail({
             </ButtonLink>
           </div>
         </Section>
-      ) : run.status === 'pending' ? (
+      ) : run.status === 'pending' || run.status === 'running' ? (
         <Section className="mt-6">
           <SectionHeading>Review</SectionHeading>
           <Hint className="mt-1">
@@ -70,6 +71,13 @@ export function ImportRunDetail({
           </Hint>
           <div className="mt-4">
             <ApplyImportForm organizationId={organizationId} runId={runId} readyCount={readyCount} />
+            {run.status === 'pending' ? (
+              <form action={resumeImportStagingAction} className="mt-2">
+                <input type="hidden" name="organizationId" value={organizationId} />
+                <input type="hidden" name="runId" value={runId} />
+                <Button type="submit" tone="secondary">Resume staging</Button>
+              </form>
+            ) : null}
           </div>
         </Section>
       ) : (

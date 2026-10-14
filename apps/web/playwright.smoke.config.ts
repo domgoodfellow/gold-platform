@@ -1,4 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
+import { config } from 'dotenv';
+import { resolve } from 'node:path';
+
+config({ path: resolve(__dirname, '.env.local'), quiet: true });
 
 /**
  * The smoke suite: the smallest check that a running GOLD is alive (docs/testing.md).
@@ -22,7 +26,7 @@ export default defineConfig({
   timeout: 30_000,
   use: {
     baseURL: process.env.SMOKE_BASE_URL || process.env.E2E_BASE_URL || 'http://localhost:3000',
-    trace: 'retain-on-failure',
+    trace: 'off',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 });
