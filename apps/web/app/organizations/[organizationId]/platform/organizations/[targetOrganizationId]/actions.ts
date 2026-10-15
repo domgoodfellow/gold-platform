@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { recordPlanAgreement, recordPlanAssignment, recordPlanQuotaOverride } from '@/lib/domain/catalogue/organization-plans';
-import { bootstrapGoldInternalWorkspace } from '@/lib/domain/tenancy/gold-internal';
+import { bootstrapOperatingOrganization } from '@/lib/domain/platform/operating-organization';
 import { requirePlatformCapability, revalidatePlatform } from '@/lib/route/platform';
 import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
 import { recordProviderResource, setProviderResourceStatus } from '@/lib/domain/providers/bindings';
@@ -32,9 +32,9 @@ export async function recordPlanAssignmentAction(_: RecordPlanAssignmentState, f
 export async function recordPlanAgreementAction(_: RecordPlanAgreementState, f: FormData): Promise<RecordPlanAgreementState> { const id = String(f.get('organizationId') ?? ''); const effectiveTo = String(f.get('effectiveTo') ?? '').trim(); return attempt<RecordPlanAgreementState>(async () => { await requirePlatformCapability('platform.commercial'); const db = await getDb(); await recordPlanAgreement(db, { organizationId: id, planId: String(f.get('planId') ?? ''), currency: String(f.get('currency') ?? ''), amountMinor: Math.round(Number(f.get('amount') ?? 0) * 100), effectiveFrom: new Date(String(f.get('effectiveFrom') ?? '')).toISOString(), effectiveTo: effectiveTo ? new Date(effectiveTo).toISOString() : null, note: String(f.get('note') ?? '') }); }, { recorded: true }); }
 export async function recordPlanQuotaOverrideAction(_: RecordQuotaOverrideState, f: FormData): Promise<RecordQuotaOverrideState> { const id = String(f.get('organizationId') ?? ''); const hard = String(f.get('hardLimit') ?? '').trim(); return attempt<RecordQuotaOverrideState>(async () => { await requirePlatformCapability('platform.commercial'); const db = await getDb(); await recordPlanQuotaOverride(db, { organizationId: id, planId: String(f.get('planId') ?? ''), allowanceKey: String(f.get('allowanceKey') ?? ''), includedQuantity: Number(f.get('includedQuantity') ?? 0), hardLimit: hard ? Number(hard) : null, effectiveFrom: new Date(String(f.get('effectiveFrom') ?? '')).toISOString(), note: String(f.get('note') ?? '') }); }, { recorded: true }); }
 
-/** Explicit operator bootstrap: membership + no current plan + no existing GOLD workspace. */
+/** Explicit operator bootstrap: membership + no current plan + no designated operating organization. */
 export async function initializeGoldWorkspaceAction(organizationId: string) {
   const db = await getDb();
-  await bootstrapGoldInternalWorkspace(db, { organizationId });
+  await bootstrapOperatingOrganization(db, { organizationId });
   redirect(`/organizations/${organizationId}`);
 }

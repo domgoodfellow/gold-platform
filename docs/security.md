@@ -621,6 +621,23 @@ presentation, never a database authorization credential. Direct RPCs and privile
 require the caller's live, granular platform capability independently of the URL, tenant Membership,
 JWT profile metadata or whether a control was rendered.
 
+### GildOps' operating organization
+
+GildOps' own organization is identified by one platform-controlled value,
+`platform_settings.operating_organization_id`. A Plan (including `gold_internal`), an organization's
+name and platform authority never establish it; the Plan decides only that organization's
+entitlements.
+
+A Platform route requires three independent facts: the requested organization is the operating
+organization, the caller holds an actual Membership of it, and the caller holds the required live
+platform capability. Platform authority grants no Membership, and Membership grants no Platform
+authority.
+
+Clients can neither read nor write the setting. `caller_operating_organization_id()` returns it
+only to a member of that organization. When it is unset, Platform is unreachable. The bootstrap
+designates it once and then refuses any other organization; the stored value cannot move to another
+organization in a single write, and the organization cannot be deleted while it is designated.
+
 ---
 
 ### Platform staff permissions
@@ -660,7 +677,9 @@ An accepted-proposal handoff requires `platform.organizations`, seller `customer
 and accepted proposal state. It uses ungranted internal plan-writing cores, so provisioning the
 accepted terms does not require the salesperson to hold `platform.commercial`. Direct
 handoff-table INSERT is revoked. The internal GildOps bootstrap requires both organization and
-commercial authority because it grants Membership and the internal package.
+commercial authority because it designates the operating organization and grants Membership and the
+internal package. Once the organization is designated, the bootstrap leaves its current base Plan
+unchanged.
 
 Human commands retain explicit execution grants, pinned empty search paths and command-level
 checks before privileged reads/writes. Internal cores have no client execution grants.

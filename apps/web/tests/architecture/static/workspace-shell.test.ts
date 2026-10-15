@@ -237,10 +237,10 @@ describe('the Platform route renders inside the one organization shell', () => {
     expect(platformLayout).not.toContain('Initialize GOLD workspace');
   });
 
-  it('fails a missing GOLD invariant as server configuration, without a UUID form', () => {
-    // Nested Platform routes refuse a non-GOLD organization with notFound(); the one place that can
-    // say GOLD's own workspace is missing is the legacy entry, which resolves it from memberships.
-    expect(legacyPlatformEntry).toContain('gold_internal.configuration_required');
+  it('fails a missing operating organization as server configuration, without a UUID form', () => {
+    // Nested Platform routes refuse any other organization with notFound(); the one place that can
+    // say the operating organization is missing is the legacy entry, which has no route parameter.
+    expect(legacyPlatformEntry).toContain('operating_organization.configuration_required');
     expect(legacyPlatformEntry).toContain('console.error');
     expect(legacyPlatformEntry).toContain('membershipOrganizationIds');
     expect(legacyPlatformEntry).not.toContain('<form');

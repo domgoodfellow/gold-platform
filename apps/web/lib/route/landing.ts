@@ -1,6 +1,6 @@
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
-import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
+import { callerOperatingOrganization } from '@/lib/domain/platform/operating-organization';
 import { organizationHomeHref } from '@/lib/navigation';
 import { cookies } from 'next/headers';
 import { LAST_ORGANIZATION_COOKIE } from '@/lib/route/last-organization';
@@ -59,7 +59,7 @@ export function resolveOrganizationsLanding(input: {
 export function destinationFor(landing: OrganizationsLanding): string {
   switch (landing.kind) {
     case 'platform':
-      // Staff with no GOLD Internal membership: there is no canonical address to compute, so this is
+      // Staff with no membership of GildOps' operating organization: there is no canonical address to compute, so this is
       // the legacy entry, which explains what is missing rather than 404ing.
       return '/platform';
     case 'enter':
@@ -79,7 +79,7 @@ export async function resolvePostAuthDestination(db: Db): Promise<string> {
   if (invite) return invite;
 
   const [staff, organizations] = await Promise.all([isPlatformStaff(db), listMyOrganizations(db)]);
-  const preferredOrganization = await findGoldInternalOrganization(db, organizations);
+  const preferredOrganization = await callerOperatingOrganization(db);
   return destinationFor(
     resolveOrganizationsLanding({
       organizations,

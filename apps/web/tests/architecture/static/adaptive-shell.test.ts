@@ -62,23 +62,23 @@ describe('hiding a navigation item is never the security boundary', () => {
     expect(guard).toContain('platformDestinationsFor(permissions)[0]');
   });
 
-  it('the platform scope proves GOLD’s own organization, membership and a live platform row — never a claim or the URL alone', () => {
+  it('the platform scope proves GildOps’ operating organization, membership and a live platform row — never a claim or the URL alone', () => {
     const layout = code(read('app/organizations/[organizationId]/platform/layout.tsx'));
     expect(layout).toContain('requirePlatformScope(organizationId)');
     const guard = code(read('lib/route/platform.ts'));
     // The three facts, in the order a refusal is cheapest: membership, identity, authority.
     expect(guard).toContain('requireOrganizationForBillingRecovery(organizationId)');
-    expect(guard).toContain('isGoldInternalOrganization(db, { organizationId })');
+    expect(guard).toContain('isOperatingOrganization(db, { organizationId })');
     expect(guard).toContain('platformPermissions(db)');
-    expect(guard.indexOf('requireOrganizationForBillingRecovery(')).toBeLessThan(guard.indexOf('isGoldInternalOrganization('));
-    expect(guard.indexOf('isGoldInternalOrganization(')).toBeLessThan(guard.indexOf('platformPermissions(db)'));
+    expect(guard.indexOf('requireOrganizationForBillingRecovery(')).toBeLessThan(guard.indexOf('isOperatingOrganization('));
+    expect(guard.indexOf('isOperatingOrganization(')).toBeLessThan(guard.indexOf('platformPermissions(db)'));
     expect(guard).not.toMatch(/user_metadata|app_metadata|jwt|role\s*===/);
   });
 
-  it('the old /platform address is a redirect that owns no page and reads its target from GOLD’s Plan, not the URL', () => {
+  it('the old /platform address is a redirect that owns no page and reads its target from the configured operating organization, not the URL', () => {
     const legacy = code(read('app/platform/[[...path]]/page.tsx'));
-    expect(legacy).toContain('findGoldInternalOrganization(');
-    expect(legacy).toContain('platformHref(goldInternal.id');
+    expect(legacy).toContain('callerOperatingOrganization(db)');
+    expect(legacy).toContain('platformHref(operating.id');
     expect(legacy).not.toMatch(/<[A-Z]/);
     expect(readdirSync(`${WEB}/app/platform`)).toEqual(['[[...path]]']);
     expect(existsSync(`${WEB}/app/(platform)`)).toBe(false);
@@ -160,11 +160,11 @@ describe('the projection is the only eligibility rule', () => {
   });
 
   it('gives Platform to the shell only where the organization is GOLD’s own and the person is staff', () => {
-    expect(shellModel).toContain('loadPlatformContext(db, myOrganizations)');
+    expect(shellModel).toContain('loadPlatformContext(db)');
     const platformModel = code(read('lib/application/shell/platform-context.ts'));
     expect(platformModel).toContain('platformPermissions(db)');
     expect(platformModel).toContain('permissions.size === 0');
-    expect(platformModel).toContain('findGoldInternalOrganization(db, organizations)');
+    expect(platformModel).toContain('callerOperatingOrganization(db)');
   });
 
   it('draws every section from the same list on desktop, tablet and phone', () => {

@@ -6,33 +6,40 @@ const WEB = fileURLToPath(new URL('../../..', import.meta.url));
 const ORG = `${WEB}/app/organizations/[organizationId]`;
 const read = (path: string) => readFileSync(`${WEB}/${path}`, 'utf8');
 
-describe('GOLD Internal operating context composition', () => {
-  const helper = read('lib/domain/tenancy/gold-internal.ts');
+describe('GildOps operating context composition', () => {
+  const helper = read('lib/domain/platform/operating-organization.ts');
   const shell = read('features/shell/organization-shell.tsx');
   // Phase C (Slice 12) moved this read, with the rest of the shell's coordinating reads, out of
   // the layout component into one application-layer function the layout calls once.
   const shellModel = read('lib/application/shell/organization-shell.ts');
   const renderers = readFileSync(`${ORG}/org-shell.tsx`, 'utf8');
 
-  it('identifies only current base-plan assignments for actual memberships, never a business name', () => {
-    expect(helper).toContain('currentPlanAssignment');
-    expect(helper).toContain("plan?.key === 'gold_internal'");
-    expect(helper).not.toContain('organization.name');
-    expect(helper).toContain('multiple_organizations');
+  it('reads the operating identity from platform configuration, never a Plan or a business name', () => {
+    expect(helper).toContain("db.rpc('caller_operating_organization_id')");
+    const code = helper.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    expect(code).not.toMatch(/currentPlanAssignment|getPlanById|gold_internal'|organization\.name|platformPermissions/);
   });
 
-  it('resolves GOLD only from the caller membership list and the gold_internal plan key', () => {
-    expect(helper).toContain('findGoldInternalOrganization');
-    expect(helper).toContain('for (const organization of organizations)');
-    expect(helper).not.toContain("organization.name === 'GOLD'");
+  it('has one identity resolver: the plan-based one is gone and nothing else asks a Plan who GildOps is', () => {
+    expect(() => read('lib/domain/tenancy/gold-internal.ts')).toThrow();
+    for (const path of [
+      'lib/route/platform.ts',
+      'lib/route/landing.ts',
+      'lib/route/person-context.ts',
+      'app/organizations/page.tsx',
+      'app/platform/[[...path]]/page.tsx',
+      'lib/application/shell/platform-context.ts',
+    ]) {
+      expect(read(path)).not.toMatch(/findGoldInternalOrganization|isGoldInternalOrganization|gold_internal'/);
+    }
   });
 
   it('resolves the canonical Platform destination independently of the current business', () => {
-    expect(helper).toContain('export async function isGoldInternalOrganization');
-    expect(shellModel).toContain('loadPlatformContext(db, myOrganizations)');
+    expect(helper).toContain('export async function isOperatingOrganization');
+    expect(shellModel).toContain('loadPlatformContext(db)');
     const platformContext = read('lib/application/shell/platform-context.ts');
     expect(platformContext).toContain('platformPermissions(db)');
-    expect(platformContext).toContain('findGoldInternalOrganization(db, organizations)');
+    expect(platformContext).toContain('callerOperatingOrganization(db)');
     expect(platformContext).toContain('permissions.size === 0');
   });
 

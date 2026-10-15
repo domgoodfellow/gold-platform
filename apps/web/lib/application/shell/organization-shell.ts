@@ -15,7 +15,7 @@ export async function loadOrganizationShellModel(db: Db, input: { organizationId
     locked ? Promise.resolve(undefined) : hasSchedulableWork(db, { organizationId }),
     listMyOrganizations(db), db.auth.getUser(), getBrand(db, { organizationId }),
   ]);
-  const platform = await loadPlatformContext(db, myOrganizations);
+  const platform = await loadPlatformContext(db);
   const enabledModules = activeModuleKeys(featureStates);
   const featureAvailability = availableFeatureKeys(featureStates);
   const capabilities = new Set(input.capabilities);

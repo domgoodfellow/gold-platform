@@ -4,7 +4,7 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { requireActor } from '@/lib/domain/tenancy/actor';
-import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
+import { callerOperatingOrganization } from '@/lib/domain/platform/operating-organization';
 import { listMyOrganizations, type Organization } from '@/lib/domain/tenancy/organizations';
 
 /**
@@ -24,7 +24,7 @@ export type PersonContext = {
   signInMethods: string[];
   organizations: Organization[];
   staff: boolean;
-  goldInternal: { id: string } | null;
+  operatingOrganization: { id: string } | null;
 };
 
 export async function loadPersonContext(): Promise<PersonContext> {
@@ -56,7 +56,7 @@ export async function loadPersonContext(): Promise<PersonContext> {
   }
 
   const organizations = await listMyOrganizations(db);
-  const [staff, goldInternal] = await Promise.all([isPlatformStaff(db), findGoldInternalOrganization(db, organizations)]);
+  const [staff, operatingOrganization] = await Promise.all([isPlatformStaff(db), callerOperatingOrganization(db)]);
 
   return {
     email,
@@ -67,6 +67,6 @@ export async function loadPersonContext(): Promise<PersonContext> {
     signInMethods,
     organizations,
     staff,
-    goldInternal,
+    operatingOrganization,
   };
 }

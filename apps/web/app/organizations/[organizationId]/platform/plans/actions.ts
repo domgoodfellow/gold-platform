@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { callerGoldInternalOrganizationId, revalidatePlatform } from '@/lib/route/platform';
+import { callerOperatingOrganizationId, revalidatePlatform } from '@/lib/route/platform';
 import { getDb } from '@/lib/db/server';
 import { createPlan, type PlanKind } from '@/lib/domain/catalogue/plans';
 import { DomainError } from '@/lib/domain/errors';
@@ -23,6 +23,6 @@ export async function createPlanAction(_: CreatePlanState, formData: FormData): 
     throw error;
   }
   revalidatePlatform();
-  const organizationId = await callerGoldInternalOrganizationId();
+  const organizationId = await callerOperatingOrganizationId();
   redirect(organizationId ? `/organizations/${organizationId}/platform/plans/${key}` : '/organizations');
 }

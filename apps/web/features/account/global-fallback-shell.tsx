@@ -31,7 +31,7 @@ export async function GlobalFallbackShell({ children }: { children: (recovery: R
   const landing = resolveOrganizationsLanding({
     organizations: person.organizations,
     staff: person.staff,
-    preferredOrganizationId: person.goldInternal?.id,
+    preferredOrganizationId: person.operatingOrganization?.id,
     lastOrganizationId: await readLastOrganizationId(),
   });
   const recovery: Recovery = {

@@ -8,7 +8,7 @@ import { signOut } from '@/lib/domain/identity/credentials';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
-import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
+import { callerOperatingOrganization } from '@/lib/domain/platform/operating-organization';
 import { organizationHomeHref } from '@/lib/navigation';
 import { readLastOrganizationId, resolveOrganizationsLanding } from '@/lib/route/landing';
 import { CreateBusinessForm } from './create-business-form';
@@ -47,12 +47,12 @@ export default async function OrganizationsPage() {
   // Platform authority and organization membership are two independent facts about one
   // identity (D45) — a staff member's memberships are never taken away, held elsewhere, or
   // hidden by this read. What this page decides is only which of an identity's true contexts it
-  // lands in *by default*: a real GOLD Internal membership becomes the operating workspace; staff
+  // lands in *by default*: a real membership of GildOps' operating organization is preferred; staff
   // without it still default to the bootstrap-required Platform route; everyone else enters the
   // business they last worked in, else their first. `resolveOrganizationsLanding` remains pure so
   // `landing.test.ts` can exercise every combination with no session and no database.
   const [staff, organizations] = await Promise.all([isPlatformStaff(db), listMyOrganizations(db)]);
-  const preferredOrganization = await findGoldInternalOrganization(db, organizations);
+  const preferredOrganization = await callerOperatingOrganization(db);
   const landing = resolveOrganizationsLanding({
     organizations,
     staff,
@@ -60,8 +60,8 @@ export default async function OrganizationsPage() {
     lastOrganizationId: await readLastOrganizationId(),
   });
 
-  // Staff who hold no GOLD Internal membership have no canonical Platform address to be sent to, so
-  // they meet the legacy entry, which says why. It cannot loop with that entry, which sends a
+  // Staff who hold no membership of GildOps' operating organization have no canonical Platform
+  // address to be sent to, so they meet the legacy entry, which says why. It cannot loop with that entry, which sends a
   // non-staff caller here: that fires on `!staff`, this only on `staff`, and one answer cannot
   // satisfy both.
   if (landing.kind === 'platform') {

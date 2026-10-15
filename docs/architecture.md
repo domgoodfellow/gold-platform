@@ -580,6 +580,11 @@ The path expresses:
 - current organization context = GildOps;
 - current sub-scope = Platform Administration.
 
+`gildOpsOrganizationId` must be the configured operating organization
+(`platform_settings.operating_organization_id`), resolved in the web runtime only by
+`lib/domain/platform/operating-organization.ts`. It is never inferred from a Plan. The URL names it;
+the URL does not prove it.
+
 Authorization still depends on explicit platform authority.
 
 Platform pages must not enter tenant workspace registries.

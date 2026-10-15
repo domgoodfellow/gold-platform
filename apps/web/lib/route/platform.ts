@@ -9,8 +9,8 @@ import {
   platformPermissions,
   type PlatformCapability,
 } from '@/lib/domain/platform/permissions';
-import { findGoldInternalOrganization, isGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
-import { listMyOrganizations, type Organization } from '@/lib/domain/tenancy/organizations';
+import { callerOperatingOrganization, isOperatingOrganization } from '@/lib/domain/platform/operating-organization';
+import type { Organization } from '@/lib/domain/tenancy/organizations';
 import { platformDestinationsFor, platformHref } from '@/lib/platform-navigation';
 import { requireOrganizationForBillingRecovery } from '@/lib/route/organization';
 
@@ -18,14 +18,15 @@ import { requireOrganizationForBillingRecovery } from '@/lib/route/organization'
  * The guard for the whole `/organizations/{id}/platform/**` namespace, proving three facts and
  * refusing with `notFound()` unless all three hold:
  *
- *   the requested organization is GOLD's own operating workspace (its current base Plan says so);
- *   the caller is a member of it (the membership guard — a non-member and a missing organization
- *     are indistinguishable);
+ *   the caller is a member of the requested organization (the membership guard — a non-member and
+ *     a missing organization are indistinguishable);
+ *   that organization is GildOps' operating organization, as `platform_settings` designates it —
+ *     never its Plan, its name or the caller's platform authority;
  *   the caller holds at least one platform permission on their own `platform_staff` row.
  *
  * Platform being nested under an organization is application context, not ownership: nothing
  * below this filters platform data by that organization. It uses the billing-recovery membership
- * guard because the platform console must stay reachable while GOLD's own service access is locked.
+ * guard because the platform console must stay reachable while GildOps' own service access is locked.
  * A route naming another organization — even for platform staff — is a 404, the same answer as for
  * anybody else.
  */
@@ -34,7 +35,7 @@ export const requirePlatformScope = cache(
     organizationId: string,
   ): Promise<{ db: Db; organization: Organization; permissions: ReadonlySet<PlatformCapability> }> => {
     const { db, organization } = await requireOrganizationForBillingRecovery(organizationId);
-    if (!(await isGoldInternalOrganization(db, { organizationId }))) notFound();
+    if (!(await isOperatingOrganization(db, { organizationId }))) notFound();
 
     const permissions = await platformPermissions(db);
     if (permissions.size === 0) notFound();
@@ -66,20 +67,18 @@ export async function requirePlatformArea(
 }
 
 /**
- * GOLD's own organization id, for the callers that have no route parameter to read it from (a
- * server action redirecting after a write, the legacy `/platform` redirect). Resolved from the
- * caller's memberships and GOLD's current Plan, never from anything the caller sent.
+ * GildOps' operating organization id, for the callers that have no route parameter to read it from
+ * (a server action redirecting after a write). Null unless the caller is a member of it; never read
+ * from anything the caller sent.
  */
-export async function callerGoldInternalOrganizationId(): Promise<string | null> {
-  const db = await getDb();
-  const gold = await findGoldInternalOrganization(db, await listMyOrganizations(db));
-  return gold ? gold.id : null;
+export async function callerOperatingOrganizationId(): Promise<string | null> {
+  return (await callerOperatingOrganization(await getDb()))?.id ?? null;
 }
 
-/** The caller's own Platform address. See `callerGoldInternalOrganizationId`. */
+/** The caller's own Platform address. See `callerOperatingOrganizationId`. */
 export async function callerPlatformHref(path = ''): Promise<string | null> {
-  const goldId = await callerGoldInternalOrganizationId();
-  return goldId ? platformHref(goldId, path) : null;
+  const operatingId = await callerOperatingOrganizationId();
+  return operatingId ? platformHref(operatingId, path) : null;
 }
 
 /**
@@ -98,9 +97,9 @@ export function revalidatePlatform(): void {
  * server action that wraps its work in a try/catch would swallow into an error message. This one
  * proves the same three facts and throws a `DomainError` an action can report:
  *
- *   GildOps' own organization, resolved from the caller's own memberships and GildOps' current
- *     Plan — never from a `goldId` a form supplied, which is a parameter the caller chose (D17);
- *   membership of it, which is what resolving it from those memberships establishes;
+ *   GildOps' operating organization with the caller's membership of it, both answered by
+ *     `callerOperatingOrganization` — never from a `goldId` a form supplied, which is a parameter
+ *     the caller chose (D17);
  *   the permission, read live from the caller's own `platform_staff` row (D45).
  *
  * **UI visibility is not an authorization boundary.** Every canonical commercial mutation calls
@@ -108,7 +107,7 @@ export function revalidatePlatform(): void {
  * again — the screen hiding a control is courtesy, these two are the boundary.
  */
 export async function requirePlatformCapability(required: PlatformCapability): Promise<string> {
-  const goldId = await callerGoldInternalOrganizationId();
+  const goldId = await callerOperatingOrganizationId();
   if (!goldId) {
     throw new DomainError('Only GildOps platform staff may do this.', 'platform.capability_denied');
   }

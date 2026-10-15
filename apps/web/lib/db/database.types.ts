@@ -9604,6 +9604,7 @@ export type Database = {
         Row: {
           gold_public_organization_id: string | null
           gold_public_site_id: string | null
+          operating_organization_id: string | null
           platform_public_domain: string | null
           singleton: boolean
           workflow_review_organization_id: string | null
@@ -9611,6 +9612,7 @@ export type Database = {
         Insert: {
           gold_public_organization_id?: string | null
           gold_public_site_id?: string | null
+          operating_organization_id?: string | null
           platform_public_domain?: string | null
           singleton?: boolean
           workflow_review_organization_id?: string | null
@@ -9618,6 +9620,7 @@ export type Database = {
         Update: {
           gold_public_organization_id?: string | null
           gold_public_site_id?: string | null
+          operating_organization_id?: string | null
           platform_public_domain?: string | null
           singleton?: boolean
           workflow_review_organization_id?: string | null
@@ -9629,6 +9632,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_sites"
             referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "platform_settings_operating_organization_fk"
+            columns: ["operating_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_settings_operating_organization_fk"
+            columns: ["operating_organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "platform_settings_workflow_review_organization_id_fkey"
@@ -13849,6 +13866,7 @@ export type Database = {
         Args: { p_call_id: string; p_organization_id: string }
         Returns: string
       }
+      caller_operating_organization_id: { Args: never; Returns: string }
       can_manage_custom_domains: {
         Args: { p_organization_id: string }
         Returns: boolean

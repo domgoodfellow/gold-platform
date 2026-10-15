@@ -1768,6 +1768,13 @@
         "tenancy"
       ]
     },
+    "apps/web/tests/integration/database/operating-organization.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "platform",
+        "security"
+      ]
+    },
     "apps/web/tests/integration/database/identity.test.ts": {
       "category": "database-integration",
       "concerns": [

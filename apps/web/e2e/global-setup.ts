@@ -17,7 +17,7 @@ import { setTypeBookable } from '../lib/domain/work-items/types';
 import { listUsableModules, setModuleEnabled } from '../lib/domain/tenancy/modules';
 import { recordCommercialTerm } from '../lib/domain/commercial/terms';
 import { provisionOrganization } from '../lib/domain/platform/provision';
-import { bootstrapGoldInternalWorkspace, findGoldInternalOrganization } from '../lib/domain/tenancy/gold-internal';
+import { bootstrapOperatingOrganization, callerOperatingOrganization } from '../lib/domain/platform/operating-organization';
 import { listCalls, recordCall } from '../lib/domain/reception/calls';
 import { createCallOutcome, listCallOutcomes } from '../lib/domain/reception/outcomes';
 
@@ -252,8 +252,8 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     });
   }
 
-  // GOLD's own operating workspace, for the specs that sign in as platform staff. Platform
-  // (`/organizations/{goldId}/platform/**`) renders inside it, so staff with no GOLD Internal membership have nowhere to render. Idempotent:
+  // GildOps' operating organization, for the specs that sign in as platform staff. Platform
+  // (`/organizations/{goldId}/platform/**`) renders inside it, so staff with no membership of it have nowhere to render. Idempotent:
   // provisioned once, by the same two acts an operator uses (a staff-provisioned business, then the
   // staff-only bootstrap door), and left alone when the fixture from a previous run is there.
   const goldStaffDb = createClient(SUPABASE_URL, ANON_KEY, {
@@ -263,8 +263,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   if (goldStaffSignIn.error) {
     throw new Error(`e2e/global-setup: could not sign in as platform staff (${goldStaffSignIn.error.message})`);
   }
-  const staffOrganizations = await listMyOrganizations(goldStaffDb);
-  let goldOrganizationId = (await findGoldInternalOrganization(goldStaffDb, staffOrganizations))?.id ?? null;
+  let goldOrganizationId = (await callerOperatingOrganization(goldStaffDb))?.id ?? null;
   if (!goldOrganizationId) {
     goldOrganizationId = await provisionOrganization(goldStaffDb, {
       ownerEmail: 'staff@gold.test',
@@ -273,7 +272,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
       timezone: 'Europe/Amsterdam',
       currency: 'EUR',
     });
-    await bootstrapGoldInternalWorkspace(goldStaffDb, { organizationId: goldOrganizationId });
+    await bootstrapOperatingOrganization(goldStaffDb, { organizationId: goldOrganizationId });
   }
 
   const context: DemoContext = {

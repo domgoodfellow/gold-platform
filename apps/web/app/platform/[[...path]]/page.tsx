@@ -3,7 +3,7 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { platformPermissions } from '@/lib/domain/platform/permissions';
 import { requireActor } from '@/lib/domain/tenancy/actor';
-import { findGoldInternalOrganization } from '@/lib/domain/tenancy/gold-internal';
+import { callerOperatingOrganization } from '@/lib/domain/platform/operating-organization';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { platformHref } from '@/lib/platform-navigation';
 
@@ -15,9 +15,9 @@ export const dynamic = 'force-dynamic';
  * It renders nothing and owns no Platform page — the canonical tree is the nested one, and nothing
  * in the application generates a `/platform/**` link any more.
  *
- * It redirects only an operator who holds a platform permission *and* a real membership of GOLD's
- * own organization. The target is resolved from the caller's memberships and GOLD's current Plan,
- * never from the URL, and the canonical route then runs its own guards: this redirect proves
+ * It redirects only an operator who holds a platform permission *and* a real membership of GildOps'
+ * operating organization. The target is the organization `platform_settings` designates, never the
+ * URL, and the canonical route then runs its own guards: this redirect proves
  * nothing and is not the boundary. Somebody with no platform permission is sent where they
  * would have been sent before, which does not confirm that a Platform exists.
  */
@@ -33,16 +33,15 @@ export default async function LegacyPlatformRoute({ params, searchParams }: Page
   const permissions = await platformPermissions(db);
   if (permissions.size === 0) redirect('/organizations');
 
-  const myOrganizations = await listMyOrganizations(db);
-  const goldInternal = await findGoldInternalOrganization(db, myOrganizations);
-  if (!goldInternal) {
-    console.error('The GildOps internal workspace invariant is not satisfied for platform route.', {
+  const operating = await callerOperatingOrganization(db);
+  if (!operating) {
+    console.error('The GildOps operating organization is not configured, or this platform operator is not a member of it.', {
       permissions: [...permissions],
-      membershipOrganizationIds: myOrganizations.map((organization) => organization.id),
+      membershipOrganizationIds: (await listMyOrganizations(db)).map((organization) => organization.id),
     });
     throw new DomainError(
-      'The GildOps internal workspace is not configured for this platform operator.',
-      'gold_internal.configuration_required',
+      'The GildOps operating organization is not configured for this platform operator.',
+      'operating_organization.configuration_required',
     );
   }
 
@@ -53,5 +52,5 @@ export default async function LegacyPlatformRoute({ params, searchParams }: Page
   }
   const search = query.size > 0 ? `?${query.toString()}` : '';
 
-  redirect(`${platformHref(goldInternal.id, path.map(encodeURIComponent).join('/'))}${search}`);
+  redirect(`${platformHref(operating.id, path.map(encodeURIComponent).join('/'))}${search}`);
 }

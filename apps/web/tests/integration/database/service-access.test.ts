@@ -241,8 +241,8 @@ describe('an organization with a billable Plan', () => {
 
 describe('an organization with a non-billable Plan (GOLD Internal is one)', () => {
   it('needs no subscription and is never locked', async () => {
-    // A dedicated non-billable Plan rather than the singleton `gold_internal`, which
-    // `gold-bootstrap.test.ts` owns; the policy reads `platform_plans.billable`, never the key.
+    // A dedicated non-billable Plan rather than `gold_internal`: the policy reads
+    // `platform_plans.billable`, never the key.
     const tenant = await newTenant('access-internal');
     await assignPlan(tenant, false);
 

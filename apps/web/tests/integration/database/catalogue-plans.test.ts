@@ -58,10 +58,9 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const CONNECTION =
   process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
-// **GOLD Internal may have exactly one current holder**, and `gold-bootstrap.test.ts` proves the
-// bootstrap door refuses a second. The two tests below give it to a throwaway organization to
-// prove it resolves like any other Plan; an assignment running to 9999-12-31 that nobody removes
-// would be the "second holder" every later run of that file trips over, so they are removed here.
+// The two tests below give GOLD Internal to a throwaway organization to prove it resolves like any
+// other Plan. Holding it does not make an organization GildOps (`operating-organization.test.ts`),
+// but assignments running to 9999-12-31 would pile up across runs, so they are removed here.
 // Written over a direct connection because no role holds a delete grant on assignments — the
 // same reason `communications.test.ts` writes its rate table that way.
 const goldInternalHolders: string[] = [];
