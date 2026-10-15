@@ -203,7 +203,7 @@ function NavSubRow({ item, active, expanded }: { item: NavItem; active: string |
             aria-label={`${open ? 'Collapse' : 'Expand'} ${item.label}`}
             className={cx(
               FOCUS_RING,
-              'flex size-6 shrink-0 items-center justify-center rounded text-sidebar-foreground transition-transform hover:bg-sidebar-accent data-[state=open]:rotate-90',
+              'flex size-11 shrink-0 items-center justify-center rounded text-sidebar-foreground md:size-6 transition-transform hover:bg-sidebar-accent data-[state=open]:rotate-90',
             )}
           >
             <ChevronRight aria-hidden size={14} />
@@ -241,7 +241,7 @@ function NavRow({ item, active, expanded }: { item: NavItem; active: string | nu
   }
 
   const link = (
-    <SidebarMenuButton asChild isActive={current} tooltip={item.label}>
+    <SidebarMenuButton asChild isActive={current} tooltip={item.label} className={item.children ? 'max-md:min-h-11' : undefined}>
       <Link href={item.href} aria-current={current ? 'page' : undefined}>
         {Icon ? <Icon aria-hidden /> : null}
         <span>{item.label}</span>
@@ -258,7 +258,7 @@ function NavRow({ item, active, expanded }: { item: NavItem; active: string | nu
         <CollapsibleTrigger asChild>
           <SidebarMenuAction
             aria-label={`${open ? 'Collapse' : 'Expand'} ${item.label}`}
-            className="data-[state=open]:rotate-90"
+            className="data-[state=open]:rotate-90 max-md:top-0! max-md:right-0! max-md:h-11! max-md:w-11!"
           >
             <ChevronRight aria-hidden />
           </SidebarMenuAction>

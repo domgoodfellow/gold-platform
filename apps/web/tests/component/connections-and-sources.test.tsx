@@ -26,7 +26,7 @@ const connector = (key: string, name: string): Connector => ({ key, name, descri
 const connection = { id: 'c1', connectorKey: 'dropbox', accountLabel: 'Ops Dropbox', status: 'active' } as IntegrationConnection;
 const renderApps = (active: IntegrationConnection[], connectable: Connector[], mayManage = true) => render(
   <ConnectedApps organizationId="org" active={active} connectorByKey={new Map([['dropbox', connector('dropbox', 'Dropbox')]])} logoUrlByKey={new Map()}
-    resourceCount={2} importCount={1} needsAttentionCount={0} mayManage={mayManage} browseHref="/organizations/org/settings/connections/apps"
+    resourceCount={2} importCount={1} needsAttentionCount={0} mayManage={mayManage} catalogOpen={false} catalogHref="/organizations/org/settings/connections?catalog=open#app-library"
     connectable={connectable} organizationName="Acme" mcpServerCount={0} />,
 );
 
@@ -39,8 +39,15 @@ describe('Settings → Connections is the operating page', () => {
     expect(screen.getByRole('link', { name: 'Dropbox' })).toHaveAttribute('href', '/organizations/org/settings/connections/c1');
     expect(screen.getAllByRole('link', { name: 'Connect' })).toHaveLength(1);
     expect(screen.getByRole('link', { name: 'Connect' })).toHaveAttribute('href', '/organizations/org/settings/connections/connect/slack');
-    expect(screen.getByRole('link', { name: 'Browse the App Library' })).toHaveAttribute('href', '/organizations/org/settings/connections/apps');
+    expect(screen.getByRole('link', { name: 'Browse the App Library' })).toHaveAttribute('href', '/organizations/org/settings/connections?catalog=open#app-library');
     expect(screen.getByRole('button', { name: 'Disconnect' })).toBeInTheDocument();
+  });
+  it('offers to hide an open catalog from the same page', () => {
+    render(<ConnectedApps organizationId="org" active={[connection]} connectorByKey={new Map()} logoUrlByKey={new Map()} resourceCount={0} importCount={0}
+      needsAttentionCount={0} mayManage catalogOpen catalogHref="/organizations/org/settings/connections" connectable={[]} organizationName="Acme" mcpServerCount={0} />);
+    const toggle = screen.getByRole('link', { name: 'Hide the App Library' });
+    expect(toggle).toHaveAttribute('href', '/organizations/org/settings/connections');
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
   });
   it('advertises nothing when nothing is connectable, and offers no Connect without permission', () => {
     renderApps([], []);

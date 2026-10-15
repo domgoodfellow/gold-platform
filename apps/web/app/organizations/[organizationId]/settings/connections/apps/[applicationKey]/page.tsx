@@ -15,6 +15,6 @@ export default async function ConnectLibraryApp({params,searchParams}:PageProps<
     const connection=await getConnection(db,{organizationId,connectionId});
     if(!connection||connection.connectorKey!==app.connector_key)notFound();
   }
-  return <SettingsPageFrame><PageHeader title={`Connect ${app.name}`} crumbs={[{label:'App Library',href:`/organizations/${organizationId}/settings/connections/apps`}]}/>
+  return <SettingsPageFrame><PageHeader title={`Connect ${app.name}`} crumbs={[{label:'App Library',href:`/organizations/${organizationId}/settings/connections?catalog=open`}]}/>
     <LibraryKeyForm organizationId={organizationId} application={app.key} connectionId={typeof connectionId==='string'?connectionId:undefined}/></SettingsPageFrame>;
 }

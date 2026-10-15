@@ -1,5 +1,4 @@
 import { Hint } from '@/components/controls/inputs';
-import { PageHeader } from '@/components/headers/page-header';
 import { listConnections } from '@/lib/domain/integrations/connections';
 import {
   connectorAvailability,
@@ -11,7 +10,6 @@ import { isSourceControlConnector } from '@/lib/adapters/source-control';
 import { listResources } from '@/lib/domain/integrations/resources';
 import { listImportRuns } from '@/lib/domain/integrations/import-runs';
 import { requireOrganization } from '@/lib/route/organization';
-import { settingsScopeHref } from '@/lib/route/settings';
 import { ConnectedApps } from '@/features/integrations/connections/connected-apps';
 import { IntegrationsNav } from '@/features/integrations/integrations-nav';
 import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/settings-page-frame';
@@ -26,12 +24,10 @@ function first(value: string | string[] | undefined): string | undefined {
 
 export async function ConnectionsPage({
   organizationId,
-  view,
   query,
   context,
 }: {
   organizationId: string;
-  view: 'connected' | 'browse';
   query: Record<string, string | string[] | undefined>;
   context: Awaited<ReturnType<typeof requireOrganization>>;
 }) {
@@ -70,38 +66,27 @@ export async function ConnectionsPage({
   );
   const connectable = connectors.filter((connector) => connectorAvailability(connector, readiness.get(connector.key)) === 'connectable');
 
+  const catalogOpen = first(query.catalog) === 'open';
   const workspace = first(query.workspace) ?? '';
   const page = Math.max(0, Math.min(100, Number(first(query.page)) || 0));
-  const library = filterAppLibrary(buildAppLibrary(connectors,readiness), { q, category, workspace,
-    connectedOnly:first(query.filter)==='connected',connectedKeys });
+  const library = catalogOpen ? filterAppLibrary(buildAppLibrary(connectors,readiness), { q, category, workspace,
+    connectedOnly:first(query.filter)==='connected',connectedKeys }) : [];
   const accounts = new Map<string,{id:string;label:string}[]>();
   for (const connection of active) accounts.set(connection.connectorKey,[...(accounts.get(connection.connectorKey)??[]),
     {id:connection.id,label:connection.accountLabel??'Connected account'}]);
-  const browseHref = (next: { filter?: string; q?: string; category?: string }) => {
-    const params = new URLSearchParams();
-    if (next.filter && next.filter !== 'available') params.set('filter', next.filter);
-    if (next.q) params.set('q', next.q);
-    if (next.category) params.set('category', next.category);
-    const suffix = params.size ? `?${params}` : '';
-    return `/organizations/${organizationId}/settings/connections/apps${suffix}`;
-  };
+  const connectionsHref = `/organizations/${organizationId}/settings/connections`;
 
   return (
     <SettingsPageFrame width="fluid">
-      {view === 'connected' ? (
-        <SettingsPageHeader title="Connections" />
-      ) : (
-        <PageHeader title="App Library" crumbs={[{ label: 'Connections', href: settingsScopeHref('connections', organizationId) }]} />
-      )}
-      {view === 'connected' ? <IntegrationsNav organizationId={organizationId} current="connected" /> : null}
+      <SettingsPageHeader title="Connections" />
+      <IntegrationsNav organizationId={organizationId} current="connected" />
       {oauthError ? (
         <Hint className="mt-4 block" role="alert">
           {oauthError}
         </Hint>
       ) : null}
 
-      {view === 'connected' ? (
-        <ConnectedApps
+      <ConnectedApps
           organizationId={organizationId}
           active={active}
           connectorByKey={connectorByKey}
@@ -110,15 +95,16 @@ export async function ConnectionsPage({
           importCount={runs.length}
           needsAttentionCount={needsAttention.length}
           mayManage={mayManage}
-          browseHref={browseHref({})}
+          catalogOpen={catalogOpen}
+          catalogHref={catalogOpen ? connectionsHref : `${connectionsHref}?catalog=open#app-library`}
           connectable={connectable}
           organizationName={organization.name}
           mcpServerCount={mcpServerCount}
         />
-      ) : (
+      {catalogOpen ? (
         <AppLibrary organizationId={organizationId} entries={library.slice(page*24,(page+1)*24)} connected={accounts}
           mayManage={mayManage} q={q} category={category} workspace={workspace} connectedOnly={first(query.filter)==='connected'} page={page} total={library.length} />
-      )}
+      ) : null}
     </SettingsPageFrame>
   );
 }

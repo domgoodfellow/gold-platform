@@ -259,6 +259,11 @@ body {
   font-family: var(--font-body);
 }
 
+/* The canvas behind the account appearance scope (overscroll, page edges, scrollbars). A forced
+   appearance sets the same two roles its scope declares; system and public pages are untouched. */
+html:has([data-account-appearance][data-appearance="dark"]) { color-scheme: dark; background-color: #0a0a0a; }
+html:has([data-account-appearance][data-appearance="light"]) { color-scheme: light; background-color: #ffffff; }
+
 /* Headings take the other half of the pair. An element selector rather than a class, because
    the alternative is remembering to put one on all 52 `SectionHeading`s and every `<h1>` a
    detail route renders -- and a brand that applies to most headings is worse than none. */

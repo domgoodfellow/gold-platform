@@ -33,7 +33,8 @@ export function ConnectedApps({
   importCount,
   needsAttentionCount,
   mayManage,
-  browseHref,
+  catalogOpen,
+  catalogHref,
   connectable,
   organizationName,
   mcpServerCount,
@@ -46,7 +47,8 @@ export function ConnectedApps({
   importCount: number;
   needsAttentionCount: number;
   mayManage: boolean;
-  browseHref: string;
+  catalogOpen: boolean;
+  catalogHref: string;
   /** Only what this deployment can connect right now — never the roadmap. */
   connectable: Connector[];
   organizationName: string;
@@ -77,7 +79,7 @@ export function ConnectedApps({
       ) : (
         <p className="mt-1 max-w-2xl text-sm text-muted">Nothing else is available to connect right now.</p>
       )}
-      <ButtonLink href={browseHref} tone="secondary" className="mt-4">Browse the App Library</ButtonLink>
+      <ButtonLink href={catalogHref} tone="secondary" className="mt-4" aria-expanded={catalogOpen} aria-controls="app-library">{catalogOpen ? 'Hide the App Library' : 'Browse the App Library'}</ButtonLink>
     </Section>
   );
 

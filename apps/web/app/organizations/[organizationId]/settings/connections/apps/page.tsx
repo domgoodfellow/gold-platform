@@ -1,13 +1,10 @@
-import { ConnectionsPage } from '../connections-page';
-import { requireOrganization } from '@/lib/route/organization';
-
-export const dynamic = 'force-dynamic';
+import { redirect } from 'next/navigation';
+import { configurationRedirectHref } from '@/lib/route/configuration-redirect';
 
 export default async function BrowseAppsPage({
   params,
   searchParams,
 }: PageProps<'/organizations/[organizationId]/settings/connections/apps'>) {
   const { organizationId } = await params;
-  const context = await requireOrganization(organizationId);
-  return <ConnectionsPage organizationId={organizationId} view="browse" query={await searchParams} context={context} />;
+  redirect(configurationRedirectHref(organizationId, 'settings/connections', { ...(await searchParams), catalog: 'open' }));
 }

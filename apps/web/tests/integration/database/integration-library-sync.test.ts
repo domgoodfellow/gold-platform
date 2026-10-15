@@ -4,7 +4,8 @@ import {Client} from 'pg';
 import {beforeAll,afterAll,describe,it,expect} from 'vitest';
 import {recordConnection} from '@/lib/domain/integrations/connections';
 import {foundBusiness} from '@/tests/support/founding';
-import {downloadImportFile} from '@/lib/domain/integrations/resources';
+import {downloadImportFile,listResourceRecords} from '@/lib/domain/integrations/resources';
+import {assignRole,createRole} from '@/lib/domain/tenancy/roles';
 
 let pg:Client,alice:SupabaseClient,bob:SupabaseClient,org:string,connection:string,resource:string;
 async function tenant(label:string) {
@@ -69,5 +70,15 @@ describe('imported reads and synchronized records retain database authority',()=
     await commit(await claim(),[{external_id:'42',display_name:'42',metadata:{headers:['id','name'],values:['42','Alice']},deleted:false}]);
     const parsed=await downloadImportFile(alice,{organizationId:org,resourceId:resource});
     expect(parsed?.headers).toEqual(['id','name']);expect(parsed?.rows).toEqual([{id:'42',name:'Alice'}]);
+  });
+  it('keeps the page reader tenant-scoped and refuses sync changes and record reads to a member without integration.manage',async()=>{
+    expect(await listResourceRecords(bob,org,resource)).toEqual([]);
+    expect((await listResourceRecords(alice,org,resource)).length).toBeGreaterThan(0);
+    const limited=await createRole(alice,{organizationId:org,name:'No Integrations',capabilities:['role.manage','customer.create']});
+    const membership=await alice.from('memberships').select('id').eq('organization_id',org).single();
+    await assignRole(alice,{membershipId:membership.data!.id,roleId:limited});
+    const refused=await alice.rpc('configure_integration_resource_sync',{p_resource_id:resource,p_enabled:false,p_parameters:{}});
+    expect(refused.error?.code).toBe('42501');
+    expect((await alice.from('integration_resource_records').select('external_id').eq('resource_id',resource)).data).toEqual([]);
   });
 });

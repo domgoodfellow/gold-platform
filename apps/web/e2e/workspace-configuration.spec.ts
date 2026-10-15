@@ -74,3 +74,59 @@ test('CRM Configuration is a navigable disclosure with canonical child routes an
   await expect(page).toHaveURL(root);
  }
 });
+
+
+test.describe('Configuration disclosure input methods', () => {
+ for (const [name, width, touch] of [['desktop', 1440, false], ['phone touch', 390, true]] as const) {
+  test.describe(name, () => {
+   test.use({ hasTouch: touch, viewport: { width, height: width === 390 ? 844 : 1000 } });
+   test(`Finance Configuration expands and collapses by pointer, Enter and Space (${name})`, async ({ page }) => {
+    const { organizationId } = loadDemoContext();
+    await page.goto(`/organizations/${organizationId}/finance/configuration/pricing`);
+    if (width < 768) await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();
+    const nav = (width < 768 ? page.getByRole('dialog', { name: 'Sidebar', exact: true }) : page.locator('[data-slot="sidebar-container"]')).getByRole('navigation', { name: 'This business' });
+    const child = nav.getByRole('link', { name: 'Services & pricing', exact: true });
+    await expect(child).toBeVisible();
+    await expect(child).toHaveAttribute('aria-current', 'page');
+    const collapse = nav.getByRole('button', { name: 'Collapse Configuration' });
+    if (touch) {
+     const box = await collapse.boundingBox();
+     expect(box!.width).toBeGreaterThanOrEqual(44); expect(box!.height).toBeGreaterThanOrEqual(44);
+    }
+    if (touch) await collapse.tap(); else await collapse.click();
+    await expect(child).toHaveCount(0);
+    const expand = nav.getByRole('button', { name: 'Expand Configuration' });
+    await expand.focus(); await page.keyboard.press('Enter');
+    await expect(child).toBeVisible();
+    await nav.getByRole('button', { name: 'Collapse Configuration' }).focus(); await page.keyboard.press('Space');
+    await expect(child).toHaveCount(0);
+    await nav.getByRole('button', { name: 'Expand Configuration' }).focus(); await page.keyboard.press('Space');
+    await expect(child).toBeVisible();
+    await expect(page).toHaveURL(`/organizations/${organizationId}/finance/configuration/pricing`);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+   });
+  });
+ }
+});
+
+test.describe('Configuration landing', () => {
+ test.use({ storageState: OWNER_STORAGE_STATE });
+ test('a workspace with several destinations opens an overview of its own destinations, and the chevron does not navigate', async ({ page }) => {
+  const { organizationId } = loadDemoContext();
+  const root = `/organizations/${organizationId}`;
+  await page.goto(`${root}/finance/configuration`);
+  await expect(page).toHaveURL(`${root}/finance/configuration`);
+  await expect(page.getByRole('heading', { level: 1, name: 'Configuration', exact: true })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('link', { name: 'Services & pricing' })).toHaveAttribute('href', `${root}/finance/configuration/pricing`);
+  await expect(page.getByRole('main').getByRole('link', { name: 'Payment collection' })).toBeVisible();
+  await expect(page.getByRole('main').getByText(/Branding|Website/)).toHaveCount(0);
+  const nav = page.locator('[data-slot="sidebar-container"]').getByRole('navigation', { name: 'This business' });
+  await nav.getByRole('button', { name: 'Collapse Configuration' }).click();
+  await expect(page).toHaveURL(`${root}/finance/configuration`);
+  await nav.getByRole('button', { name: 'Expand Configuration' }).click();
+  await nav.getByRole('link', { name: 'Payment collection', exact: true }).click();
+  await expect(page).toHaveURL(`${root}/finance/configuration/pricing#getting-paid`);
+  await page.goBack();
+  await expect(page).toHaveURL(`${root}/finance/configuration`);
+ });
+});

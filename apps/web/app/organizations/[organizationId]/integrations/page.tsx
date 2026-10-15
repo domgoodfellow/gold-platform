@@ -8,9 +8,10 @@ export default async function LegacyIntegrationsPage({
   const query = await searchParams;
   const view = Array.isArray(query.view) ? query.view[0] : query.view;
   const target = new URL(
-    `/organizations/${organizationId}/settings/connections${view === 'browse' ? '/apps' : ''}`,
+    `/organizations/${organizationId}/settings/connections`,
     'http://local',
   );
+  if (view === 'browse') target.searchParams.set('catalog', 'open');
   for (const [key, value] of Object.entries(query)) {
     if (key === 'view' || value === undefined) continue;
     for (const item of Array.isArray(value) ? value : [value]) target.searchParams.append(key, item);

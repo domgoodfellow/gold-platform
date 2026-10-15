@@ -50,7 +50,7 @@ export async function GET(request: Request) {
       organizationHint ? `/organizations/${organizationHint}/settings/connections` : '/organizations',
       request.url,
     );
-    target.searchParams.set('view', 'browse');
+    target.searchParams.set('catalog', 'open');
     target.searchParams.set('oauth_error', message);
     const response = NextResponse.redirect(target);
     response.cookies.delete({ name: OAUTH_NONCE_COOKIE, path: '/connect/oauth' });

@@ -18,7 +18,7 @@ export async function GET(
 ) {
   const { organizationId, connectorKey } = await params;
   await requireOrganization(organizationId);
-  const home = new URL(`/organizations/${organizationId}/settings/connections/apps`, request.url);
+  const home = new URL(`/organizations/${organizationId}/settings/connections?catalog=open`, request.url);
   const connectionId = new URL(request.url).searchParams.get('connection') ?? undefined;
 
   try {

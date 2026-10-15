@@ -1,7 +1,8 @@
-import { redirect } from 'next/navigation';
+import { WorkspaceConfigurationHome } from '@/features/settings/workspace-configuration';
 import { requireWorkspaceConfiguration } from '@/lib/route/workspace-configuration';
+
 export default async function ConfigurationPage({ params }: PageProps<'/organizations/[organizationId]/support/configuration'>) {
- const { organizationId } = await params;
- const { sections } = await requireWorkspaceConfiguration(organizationId, 'support');
- redirect(sections[0].href);
+  const { organizationId } = await params;
+  const configuration = await requireWorkspaceConfiguration(organizationId, 'support');
+  return <WorkspaceConfigurationHome organizationId={organizationId} workspace="support" configuration={configuration} />;
 }

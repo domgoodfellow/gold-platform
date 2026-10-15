@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import ConfigurationPage from '@/app/organizations/[organizationId]/sales/configuration/page';
+import { WorkspaceConfigurationHome } from '@/features/settings/workspace-configuration';
+import { requireWorkspaceConfiguration } from '@/lib/route/workspace-configuration';
 import ConfigurationLayout from '@/app/organizations/[organizationId]/sales/configuration/layout';
-import { workspaceConfigureItems, AREAS } from '@/lib/navigation';
+import { workspaceConfigureItems, AREAS, type WorkspaceKey } from '@/lib/navigation';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import GeneralPage from '@/app/organizations/[organizationId]/settings/general/page';
 import { EMPTY_IDENTITY } from '@/lib/domain/tenancy/identity';
@@ -17,15 +18,16 @@ vi.mock('@/lib/domain/tenancy/identity', async importOriginal => ({
   getOrganizationIdentity: vi.fn(async () => EMPTY_IDENTITY),
 }));
 vi.mock('@/app/organizations/[organizationId]/settings/actions', () => ({ updateOrganizationGeneralAction: vi.fn(async () => ({ error: null })) }));
-vi.mock('next/navigation', () => ({ usePathname: () => '/organizations/org/settings/general' }));
+vi.mock('next/navigation', () => ({ usePathname: () => '/organizations/org/settings/general', redirect: (target: string) => { throw new Error(`REDIRECT:${target}`); } }));
 vi.mock('@/components/headers/page-header', () => ({ PageHeader: ({ title, meta }: { title: string; meta?: string }) => <header><h1>{title}</h1>{meta}</header> }));
 vi.mock('@/lib/route/workspace-configuration', () => ({
-  requireWorkspaceConfiguration: vi.fn(async (organizationId: string) => {
+  requireWorkspaceConfiguration: vi.fn(async (organizationId: string, workspace: WorkspaceKey) => {
     const gate = { enabledModules: new Set(['reception']), featureAvailability: new Set(AREAS.flatMap(area => area.featureKeys ?? [])), capabilities: new Set(ALL_CAPABILITIES) };
-    return { gate, sections: workspaceConfigureItems(organizationId, 'crm', gate) };
+    return { gate, sections: workspaceConfigureItems(organizationId, workspace, gate).slice(0, only.count ?? undefined) };
   }),
 }));
-afterEach(cleanup);
+const only: { count?: number } = {};
+afterEach(() => { cleanup(); only.count = undefined; });
 
 describe('General is one continuous form', () => {
   it('renders ordinary headings and all field groups without section navigation or repeated organization metadata', async () => {
@@ -66,10 +68,23 @@ describe('CRM configuration pages', () => {
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
   });
   it('renders a real landing page from the canonical eligible destinations', async () => {
-    render(await ConfigurationPage({ params: Promise.resolve({ organizationId: 'org' }) } as Parameters<typeof ConfigurationPage>[0]));
+    render(await WorkspaceConfigurationHome({ organizationId: 'org', workspace: 'crm', configuration: await requireWorkspaceConfiguration('org', 'crm') }));
     expect(screen.getByRole('heading', { name: 'Configuration' })).toBeVisible();
     for (const [label, path] of [['Relationship stages', 'relationship-stages'], ['Opportunity stages', 'opportunity-stages'], ['Customer fields', 'fields']]) {
       expect(screen.getByRole('link', { name: label })).toHaveAttribute('href', `/organizations/org/sales/configuration/${path}`);
     }
+  });
+});
+
+describe('Configuration landing rule', () => {
+  it('lists the eligible destinations of any workspace with several, and no other workspace content', async () => {
+    render(await WorkspaceConfigurationHome({ organizationId: 'org', workspace: 'support', configuration: await requireWorkspaceConfiguration('org', 'support') }));
+    expect(screen.getByRole('link', { name: 'Queues' })).toHaveAttribute('href', '/organizations/org/support/configuration/queues');
+    expect(screen.getByRole('link', { name: 'Service levels' })).toBeVisible();
+    expect(screen.queryByText(/Studio|Website|Branding/)).not.toBeInTheDocument();
+  });
+  it('goes straight to the only destination', async () => {
+    only.count = 1;
+    await expect((async () => WorkspaceConfigurationHome({ organizationId: 'org', workspace: 'support', configuration: await requireWorkspaceConfiguration('org', 'support') }))()).rejects.toThrow('REDIRECT:/organizations/org/support/configuration/queues');
   });
 });

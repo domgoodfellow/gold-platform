@@ -3,6 +3,7 @@ import {CollectionHeader} from '@/components/patterns/collection-header';
 import {libraryHref} from '@/lib/route/library';
 import {requireOrganization} from '@/lib/route/organization';
 import {getResourceSync,listResourceRecords,listResources} from '@/lib/domain/integrations/resources';
+import {SourceRecordPreview} from '@/features/integrations/sources/record-preview';
 import {ResourceSyncControl} from '@/features/integrations/sources/resource-sync-control';
 
 export default async function SourcePage({params}:{params:Promise<{organizationId:string;resourceId:string}>}) {
@@ -23,7 +24,7 @@ export default async function SourcePage({params}:{params:Promise<{organizationI
       {supported&&resource.status==='active'&&organization.capabilities.includes('integration.manage')?<ResourceSyncControl organizationId={organizationId} resourceId={resourceId} type={resource.resourceType} parameters={(sync?.parameters??{}) as Record<string,unknown>} enabled={sync?.enabled??false}/>:null}
     </section>
     <section className="mt-8"><h2 className="font-medium">Synchronized records</h2><p className="text-sm text-muted">Showing up to 100 records you have permission to read.</p>
-      {records.length?<ul className="mt-3 divide-y divide-border">{records.map(record=><li key={record.external_id} className="py-3"><details><summary className="cursor-pointer text-sm">{record.display_name}</summary><pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify(record.metadata,null,2)}</pre></details></li>)}</ul>:<p className="mt-3 text-sm text-muted">No synchronized records are available.</p>}
+      {records.length?<ul className="mt-3 divide-y divide-border">{records.map(record=><li key={record.external_id} className="py-1"><SourceRecordPreview record={record}/></li>)}</ul>:<p className="mt-3 text-sm text-muted">No synchronized records are available.</p>}
     </section>
   </>;
 }

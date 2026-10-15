@@ -71,7 +71,7 @@ test.describe('canonical Settings routes', () => {
       ['pricing', 'finance/configuration/pricing'],
       ['fields', 'settings/custom-fields'],
       ['roles?view=roles', 'settings/access/roles'],
-      ['integrations?view=browse', 'settings/connections/apps'],
+      ['integrations?view=browse', 'settings/connections?catalog=open'],
     ] as const) {
       await page.goto(`/organizations/${organizationId}/${legacy}`);
       await expect(page).toHaveURL(`/organizations/${organizationId}/${canonical}`);

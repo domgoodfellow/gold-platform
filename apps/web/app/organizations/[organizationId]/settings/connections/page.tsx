@@ -9,5 +9,5 @@ export default async function ConnectedAppsPage({
 }: PageProps<'/organizations/[organizationId]/settings/connections'>) {
   const { organizationId } = await params;
   const context = await requireOrganization(organizationId);
-  return <ConnectionsPage organizationId={organizationId} view="connected" query={await searchParams} context={context} />;
+  return <ConnectionsPage organizationId={organizationId} query={await searchParams} context={context} />;
 }
