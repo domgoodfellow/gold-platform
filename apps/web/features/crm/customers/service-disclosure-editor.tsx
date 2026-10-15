@@ -10,12 +10,15 @@ import { SERVICE_KINDS, type Deliverable, type Engagement } from '@/lib/domain/c
 import { parseDisclosureContent, type ApprovedDeliverable, type DisclosureContent, type DisclosureRevision, type ServiceDisclosure } from '@/lib/domain/customers/service-disclosures';
 import { ServicePresentation } from '@/features/portal-access/service-presenter';
 import { useUnsavedChanges } from '@/features/studio/use-unsaved-changes';
+import { NotificationChoice } from './service-notification-section';
+import type { readEngagementDetails } from '@/app/organizations/[organizationId]/customers/[customerId]/service-actions';
 
 type Props = {
   organizationId: string; customerId: string; customerName: string; organizationName: string; timezone?: string;
   engagement: Engagement; mayManage: boolean; relationshipEnded: boolean;
   disclosure: ServiceDisclosure | null; history: DisclosureRevision[];
   deliverables: Deliverable[]; approvedDeliverables: ApprovedDeliverable[]; onSaved: () => void;
+  notificationDetails?: Awaited<ReturnType<typeof readEngagementDetails>>;
 };
 export function ServiceDisclosureEditor(props: Props) {
   const initial: DisclosureContent = props.disclosure ? parseDisclosureContent(props.disclosure.draft_content) : { title: '', serviceKind: props.engagement.service_kind as DisclosureContent['serviceKind'], summary: '', status: '', deliverables: [] };
@@ -76,6 +79,7 @@ export function ServiceDisclosureEditor(props: Props) {
     </form> : null}
     {confirm ? <form action={action} className="mt-4 space-y-3 rounded-md border border-border p-3"><Context props={props}/><input type="hidden" name="operation" value={confirm}/>
       <p>{confirm === 'publish' ? 'Release the saved customer update? Review the preview before publishing.' : 'Withdraw this update from the customer Portal? History will be retained.'}</p>
+      {confirm === 'publish' ? <NotificationChoice configuration={props.notificationDetails?.notificationConfig} identities={props.notificationDetails?.emailIdentities} maySend={props.notificationDetails?.maySend} purpose="service_update_published"/> : null}
       <div className="flex flex-wrap gap-2"><Button type="submit" disabled={pending}>{confirm === 'publish' ? 'Confirm publication' : 'Confirm withdrawal'}</Button><Button type="button" tone="secondary" disabled={pending} onClick={() => { setConfirm(null); confirmationTrigger.current?.focus(); }}>Cancel</Button></div>
     </form> : null}
     {preview ? <div role="region" aria-label="Customer update preview" className="mt-4 space-y-3 rounded-md border border-border p-3">

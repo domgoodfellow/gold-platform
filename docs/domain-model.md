@@ -607,6 +607,24 @@ The organization must not forge provider-observed facts.
 
 ---
 
+### Customer delivery notifications
+
+CRM owns notification purpose and its exact service review/publication target. Customer identity
+does not establish inbox ownership. One independently verified notification address per Customer
+may consent to service_review_requested, service_update_published and service_review_status_changed.
+PortalContext scopes preference operations; mailbox confirmation establishes consent separately.
+Communications owns the sender identity, message, queue, suppression and provider observations.
+Portal owns access; notifications never grant Membership or carry Portal bearer credentials.
+Canonical Events provide bounded Customer Activity references rather than copies of email bodies.
+
+Release/publication/optional withdrawal records intent even when email was not requested or is
+ineligible. Failed sender setup can be retried after remediation without recreating the review.
+Provider acceptance comes from the send response; Sent and Delivered require correlated signed
+provider observations. Delayed, Bounced, Rejected, Failed and Suppressed remain distinguishable.
+Delivery and open/click events establish neither human reading nor an operational review decision.
+Consent changes preserve prior challenge/event attribution and delivery history. Reconfirmation
+invalidates notices from the prior consent; opting in again never revives those notices.
+
 ### Email Identity
 
 **Definition:** An organization-facing email sending identity.

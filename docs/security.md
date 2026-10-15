@@ -40,6 +40,27 @@ Security history belongs in `docs/decisions/`.
 
 ## Security objective
 
+Customer service email requires mailbox confirmation and purpose-specific consent independently
+of CRM identity and Portal bearer access. Confirmation codes are random, hashed for comparison,
+session/customer bound, single-use, expire after 20 minutes and allow five guesses. Requests are
+limited to one per minute and five per customer/hour. Restrictive message/detail read policies
+hide confirmation bodies from tenant operators and Portal sessions; private challenge/job tables
+have no human grants. Only a leased notification worker receives server-authored content.
+
+Recipient operations derive organization/customer from live PortalContext; web actions also check
+the request hostname. A different Portal session must confirm the mailbox again before modifying
+preferences. Withdrawal records its actor and time, cancels queued notices and blocks pre-send
+authorization of leased notices. Already accepted sends cannot be recalled. Concurrent withdrawal
+after final send authorization may race an in-flight provider request; delivery history is retained.
+
+Notification worker identity has no table grants and only claim, pre-send authorization and fenced
+finish RPCs. Sender choice requires customer.update plus message.send; all sender/recipient/target
+relationships carry organization scope. Canonical email suppression applies across sender identities
+within the selling organization. Bounce, complaint and provider suppression observations block that
+address; a generic synchronous API refusal does not. None of these observations becomes consent.
+Provider callbacks continue to require the existing signed tenant-email webhook; clients cannot
+write provider observations. No customer notification uses the platform invitation sender/key fallback.
+
 Every meaningful operation must be performed:
 
 ```text

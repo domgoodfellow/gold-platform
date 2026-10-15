@@ -50,6 +50,8 @@ describe('SECURITY DEFINER functions in app', () => {
     expect(rows.map((row) => row.proname)).toEqual(
       [
         // The authorization vocabulary: policies and invoker functions call these as the caller.
+        // Restrictive message policies hide mailbox confirmation codes from operators.
+        'notification_verification_message',
         'current_external_customer',
         'current_external_tenant',
         'current_role_id',

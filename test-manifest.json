@@ -137,6 +137,11 @@
     ]
   },
   "files": {
+    "apps/web/tests/component/notification-preferences.test.tsx": {"category":"component","concerns":["portal","communications","security","accessibility"]},
+    "apps/web/e2e/service-notifications.spec.ts": {"category":"playwright-acceptance","concerns":["crm","portal","communications","security","accessibility"]},
+    "apps/web/tests/integration/database/service-notifications.test.ts": {"category": "database-integration", "concerns": ["crm", "portal", "communications", "security"]},
+    "apps/api/tests/component/test_customer_notifications.py": {"category": "python-component", "concerns": ["communications", "providers", "security"]},
+
     "apps/web/tests/unit/prospect-import.test.ts": { "category": "unit", "concerns": ["crm", "imports", "data integrity"] },
     "apps/web/e2e/workspace-configuration.spec.ts": { "category": "playwright-acceptance", "concerns": ["configuration", "navigation", "responsive", "permissions"] },
     "apps/web/tests/unit/channel-diagnostics.test.ts": { "category": "unit", "concerns": ["communications", "readiness", "permissions"] },

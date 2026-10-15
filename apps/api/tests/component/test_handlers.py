@@ -29,6 +29,7 @@ import pytest
 import api.ai_ask as ai_ask
 import api.ai_draft_configuration as ai_draft_configuration
 import api.automation_tick as automation_tick
+import api.customer_notification_tick as customer_notification_tick
 import api.crm_change_customer_stage as crm_change_customer_stage
 import api.integration_operations as integration_operations
 import api.app_library as app_library
@@ -490,6 +491,26 @@ class TestTenantEmailSend:
 
 
 # --- the scheduler's tick: a shared secret, or nothing runs --------------------------------------
+
+
+class TestCustomerNotificationTick:
+    @pytest.mark.parametrize('authorization', [None, '', 'Bearer wrong'])
+    def test_rejects_before_any_queue_or_provider_access(self, monkeypatch, authorization):
+        monkeypatch.setattr(customer_notification_tick, 'load_provider_operations_settings', lambda: SETTINGS)
+        monkeypatch.setenv('CRON_SECRET', 'notification-cron-fixture')
+        drained = Sink(result={})
+        monkeypatch.setattr(customer_notification_tick, 'drain_notifications', drained)
+        status, _ = call(customer_notification_tick, 'GET', headers={} if authorization is None else {'authorization': authorization})
+        assert status == 401
+        assert drained.calls == []
+
+    def test_authorized_tick_returns_only_operational_counts(self, monkeypatch):
+        monkeypatch.setattr(customer_notification_tick, 'load_provider_operations_settings', lambda: SETTINGS)
+        monkeypatch.setenv('CRON_SECRET', 'notification-cron-fixture')
+        monkeypatch.setattr(customer_notification_tick, 'drain_notifications', lambda *args, **kwargs: {'accepted': 1, 'retry': 0, 'failed': 0, 'held': 0})
+        status, body = call(customer_notification_tick, 'GET', headers={'authorization': 'Bearer notification-cron-fixture'})
+        assert status == 200
+        assert json.loads(body) == {'accepted': 1, 'retry': 0, 'failed': 0, 'held': 0}
 
 
 class TestAutomationTick:

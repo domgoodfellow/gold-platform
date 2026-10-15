@@ -13,6 +13,10 @@
   },
   "rewrites": [
     {
+      "source": "/tasks/customer-notifications",
+      "destination": "/api/customer_notification_tick"
+    },
+    {
       "source": "/integrations/library",
       "destination": "/api/app_library"
     },
@@ -122,6 +126,10 @@
     }
   ],
   "crons": [
+    {
+      "path": "/tasks/customer-notifications",
+      "schedule": "* * * * *"
+    },
     {
       "path": "/tasks/integration-sync",
       "schedule": "*/15 * * * *"

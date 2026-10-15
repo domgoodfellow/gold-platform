@@ -37,8 +37,9 @@ export async function saveServiceDisclosure(db: Db, organizationId: string, cust
   if (error) throw new DomainError(error.message, 'disclosure.save_failed');
   return data;
 }
-export async function releaseServiceDisclosure(db: Db, organizationId: string, customerId: string, engagementId: string, version: number, operation: 'publish' | 'withdraw') {
-  const { error } = await db.rpc(operation === 'publish' ? 'publish_service_disclosure' : 'withdraw_service_disclosure', { p_organization_id: organizationId, p_customer_id: customerId, p_engagement_id: engagementId, p_expected_version: version });
+export async function releaseServiceDisclosure(db: Db, organizationId: string, customerId: string, engagementId: string, version: number, operation: 'publish' | 'withdraw', notify?: boolean) {
+  const args = { p_organization_id: organizationId, p_customer_id: customerId, p_engagement_id: engagementId, p_expected_version: version };
+  const { error } = operation === 'publish' && notify !== undefined ? await db.rpc('publish_service_disclosure_notification', { ...args, p_notify: notify }) : await db.rpc(operation === 'publish' ? 'publish_service_disclosure' : 'withdraw_service_disclosure', args);
   if (error) throw new DomainError(error.message, `disclosure.${operation}_failed`);
 }
 export async function portalServiceDisclosures(db: Db, disclosureId?: string, limit = 100): Promise<ApprovedService[]> {

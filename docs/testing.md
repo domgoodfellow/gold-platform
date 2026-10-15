@@ -70,6 +70,20 @@ When a test file is added, moved or reclassified, update `test-manifest.json`.
 
 ### Managed-service acceptance
 
+Batch E uses `service-notifications.test.ts` for real local consent/RLS, atomic intent, message
+idempotency, leased claims, pre-send cancellation, suppression and provider-event ordering.
+`test_customer_notifications.py` covers claimed server content, tenant account selection, missing
+credentials and last-moment authorization refusal offline. Existing tenant-email webhook/signature
+and invitation suites remain the provider regression authority. Simulated callbacks prove local
+correlation, never live delivery.
+
+`playwright.batch-e.config.ts` runs isolated `service-notifications.spec.ts` fixtures with the
+existing local HTTPS Portal proxy. It exercises mailbox confirmation, unchecked consent, optional
+review delivery, provider-fixture acceptance/delivery, retry, withdrawal, another Customer and
+1440/768/390px layouts. Tracing is off for this journey so confirmation codes and bearer links
+are not recorded in traces. Screenshots remain in ignored test output. Run Batches A–D separately
+with their existing isolated configurations for service/Portal/form/payment/hostname compatibility.
+
 `apps/web/e2e/service-engagements.spec.ts` creates its own local accounts and tenant fixtures through the isolated `playwright.batch-a.config.ts`, without the normal demo global setup. It refuses non-loopback database/API URLs. Run `pnpm --filter @gold/web exec playwright test --config playwright.batch-a.config.ts` against the local web server; `E2E_BASE_URL` selects its address. The journey covers verified tenant-manager linking, accepted-proposal handoff/retry, Website/AI/Automation references, foreign artifact refusal, historical lifecycle and desktop/tablet/phone keyboard/touch behavior. Configuration status is not evidence of a live AI/provider deployment.
 
 Baseline reconciliation keeps the assertions authoritative: capability mapping includes native adapters and reviewed imported-library metadata; machine grants name the existing sync/library functions explicitly; planned-connector refusal uses a genuinely planned fixture. Provider and Connector may share a vendor key while their foreign keys remain attached to their separate canonical authorities. Palette checks cover grouped public/root selectors and forced appearance scopes without changing theme colors.

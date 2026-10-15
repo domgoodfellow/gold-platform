@@ -2,6 +2,23 @@
 
 ## Purpose
 
+Customer delivery notifications reuse Communications messages, email details, conversations,
+message events, tenant provider adapters and signed webhook ingress. CRM records an explicit
+service notification intent in the same transaction as review release, disclosure publication or
+an optionally notified review withdrawal. A narrowly scoped SQL queue interface creates only
+fixed version-1 transactional templates and resolves recipient/sender from persisted policy;
+it does not widen the authenticated operator compose-email interface.
+
+The API customer-notification tick follows the existing scheduled-runtime convention. Private jobs
+reference canonical messages; attempt rows store leases/outcomes, not duplicate bodies or provider
+events. Claim uses SKIP LOCKED and five-minute fenced leases. Immediately before each provider send,
+authorization rechecks consent, address, sender and current domain target. Transient errors use
+bounded exponential retry with the same message/provider idempotency key, at most five claims and
+within 23 hours of the first attempt. Operators may accelerate an eligible queued retry or retry
+a safe failed attempt inside those bounds; accepted, suppressed and exhausted notices cannot retry.
+Provider accounts resolve beneath the organization's selected identity, without platform invitation
+credentials. The scheduled endpoint requires CRON_SECRET and the existing provider runtime settings.
+
 This document defines the **current target architecture and dependency boundaries** for GildOps.
 
 It answers:

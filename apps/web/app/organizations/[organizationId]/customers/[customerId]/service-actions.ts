@@ -6,12 +6,14 @@ import { endClientTenantRelationship, linkExistingTenant, listExistingTenantOpti
 import { DomainError } from '@/lib/domain/errors';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { getCustomer } from '@/lib/domain/customers/customers';
+import { notificationConfiguration, notificationHistory } from '@/lib/domain/customers/service-notifications';
+import { listSendableEmailIdentities } from '@/lib/domain/email/messages';
 import { listServiceReviews, releaseServiceReview, withdrawServiceReview } from '@/lib/domain/customers/service-reviews';
 import { disclosureEditorState, parseDisclosureContent, releaseServiceDisclosure, saveServiceDisclosure } from '@/lib/domain/customers/service-disclosures';
 import type { ApprovedDeliverable } from '@/lib/domain/customers/service-disclosures';
 import { SERVICE_KINDS, ARTIFACT_KINDS, createServiceEngagement, getServiceEngagement, transitionServiceEngagement, bindServiceEngagementTenant, attachEngagementDeliverable, attachEngagementWork, listDeliverableOptions, listEngagementDeliverables, type ServiceKind, type ArtifactKind } from '@/lib/domain/customers/service-engagements';
 
-export type ServiceActionState = { error: string | null; saved: boolean };
+export type ServiceActionState = { error: string | null; saved: boolean; notice?: string };
 
 export async function searchExistingClientTenants(organizationId: string, customerId: string, search: string) {
   const { db, organization } = await requireOrganization(organizationId);
@@ -81,7 +83,10 @@ export async function readEngagementDetails(organizationId: string, customerId: 
       return { ...item, url: !bindingError && binding?.some(host => host.organization_id === engagement.tenant_organization_id) ? item.url : null };
     }));
   }
-  return { deliverables, options, workIds: (work.data ?? []).map(item => item.work_item_id), ...updates, reviews, approvedDeliverables, customerName: customer?.name ?? 'Customer', organizationName: organization.name, timezone: organization.timezone, mayReadSupport: organization.capabilities.includes('support.read') };
+  const notifications = organization.capabilities.includes('customer.update') ? await notificationHistory(db, organizationId, customerId, engagementId) : [];
+  const notificationConfig = organization.capabilities.includes('customer.update') ? await notificationConfiguration(db, organizationId, customerId) : null;
+  const emailIdentities = organization.capabilities.includes('message.send') ? await listSendableEmailIdentities(db, { organizationId }) : [];
+  return { deliverables, options, workIds: (work.data ?? []).map(item => item.work_item_id), ...updates, reviews, notifications, notificationConfig, emailIdentities, maySend: organization.capabilities.includes('message.send'), approvedDeliverables, customerName: customer?.name ?? 'Customer', organizationName: organization.name, timezone: organization.timezone, mayReadSupport: organization.capabilities.includes('support.read') };
 }
 
 export async function serviceReviewAction(_previous: ServiceActionState, form: FormData): Promise<ServiceActionState> {
@@ -90,8 +95,8 @@ export async function serviceReviewAction(_previous: ServiceActionState, form: F
   const engagementId = String(form.get('engagementId') ?? '');
   const { db } = await requireOrganization(organizationId);
   try {
-    if (form.get('operation') === 'release') await releaseServiceReview(db, organizationId, customerId, engagementId, String(form.get('revisionId') ?? ''), String(form.get('deliverableId') ?? '') || undefined);
-    else if (form.get('operation') === 'withdraw') await withdrawServiceReview(db, organizationId, customerId, engagementId, String(form.get('reviewId') ?? ''), Number(form.get('version')));
+    if (form.get('operation') === 'release') await releaseServiceReview(db, organizationId, customerId, engagementId, String(form.get('revisionId') ?? ''), String(form.get('deliverableId') ?? '') || undefined, form.get('notify') === 'on');
+    else if (form.get('operation') === 'withdraw') await withdrawServiceReview(db, organizationId, customerId, engagementId, String(form.get('reviewId') ?? ''), Number(form.get('version')), form.get('notify') === 'on');
     else throw new DomainError('Unsupported review operation.', 'service_review.invalid_operation');
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message, saved: false };
@@ -116,7 +121,7 @@ export async function disclosureAction(_previous: ServiceActionState, form: Form
       try { value = JSON.parse(String(form.get('content') ?? '')); } catch { throw new DomainError('Invalid customer update.', 'disclosure.invalid_content'); }
       await saveServiceDisclosure(db, organizationId, customerId, engagementId, version, parseDisclosureContent(value));
     } else if (operation === 'publish' || operation === 'withdraw') {
-      await releaseServiceDisclosure(db, organizationId, customerId, engagementId, version, operation);
+      await releaseServiceDisclosure(db, organizationId, customerId, engagementId, version, operation, form.get('notify') === 'on');
     } else throw new DomainError('Unsupported customer update operation.', 'disclosure.invalid_operation');
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message, saved: false };
@@ -125,6 +130,20 @@ export async function disclosureAction(_previous: ServiceActionState, form: Form
   revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
   revalidatePath('/portal', 'layout');
   return { error: null, saved: true };
+}
+
+export async function notificationAction(_previous: ServiceActionState, form: FormData): Promise<ServiceActionState> {
+  const organizationId = String(form.get('organizationId') ?? '');
+  const customerId = String(form.get('customerId') ?? '');
+  const { db } = await requireOrganization(organizationId);
+  const result = form.get('operation') === 'sender'
+    ? await db.rpc('set_customer_notification_sender', { p_organization_id: organizationId, p_customer_id: customerId, p_email_identity_id: String(form.get('emailIdentityId') ?? '') })
+    : form.get('operation') === 'retry'
+      ? await db.rpc('retry_service_notification', { p_organization_id: organizationId, p_intent_id: String(form.get('intentId') ?? '') })
+      : { error: { message: 'Unsupported notification operation.' } };
+  if (result.error) return { saved: false, error: result.error.message };
+  revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
+  return { saved: true, error: null };
 }
 
 export async function relationshipAction(_previous: ServiceActionState, form: FormData): Promise<ServiceActionState> {

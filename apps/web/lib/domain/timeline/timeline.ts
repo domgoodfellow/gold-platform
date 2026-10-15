@@ -70,7 +70,8 @@ const ASSET_WORK_ITEM_ACTIONS = ['work_item.created', 'work_item.updated'] as co
 const OPPORTUNITY_ACTIONS = ['opportunity.created', 'opportunity.updated', 'opportunity.stage_changed'] as const;
 const FOLLOW_UP_ACTIONS = ['follow_up.created', 'follow_up.updated', 'follow_up.completed', 'follow_up.cancelled'] as const;
 const SERVICE_ACTIONS = ['client_tenant.linked', 'client_tenant.ended', 'service_engagement.created', 'service_engagement.status_changed', 'service_engagement.tenant_bound', 'service_engagement.deliverable_attached', 'service_engagement.work_attached', 'service_disclosure.saved', 'service_disclosure.published', 'service_disclosure.withdrawn', 'service_review.released', 'service_review.withdrawn', 'service_review.approved', 'service_review.changes_requested'] as const;
-const CRM_ACTIONS = ['customer.created', 'customer.updated', 'customer.stage_changed', 'customer.imported', 'customer.import_matched', ...OPPORTUNITY_ACTIONS, ...FOLLOW_UP_ACTIONS, ...SERVICE_ACTIONS] as const;
+const NOTIFICATION_ACTIONS = ['notification.intent_created', 'notification.delivery_requested', 'notification.accepted', 'notification.delivered', 'notification.bounced', 'notification.failed', 'notification.rejected', 'notification.consent_recorded', 'notification.consent_withdrawn'] as const;
+const CRM_ACTIONS = ['customer.created', 'customer.updated', 'customer.stage_changed', 'customer.imported', 'customer.import_matched', ...OPPORTUNITY_ACTIONS, ...FOLLOW_UP_ACTIONS, ...SERVICE_ACTIONS, ...NOTIFICATION_ACTIONS] as const;
 const CUSTOMER_ACTIONS = [
   'customer.created',
   'customer.updated',
@@ -85,6 +86,7 @@ const CUSTOMER_ACTIONS = [
   ...OPPORTUNITY_ACTIONS,
   ...FOLLOW_UP_ACTIONS,
   ...SERVICE_ACTIONS,
+  ...NOTIFICATION_ACTIONS,
 ] as const;
 
 /**
@@ -104,6 +106,12 @@ type EventRow = {
   entity_id: string;
   entity_type?: string;
 };
+
+function eventActorName(row: EventRow, names: Map<string, string>): string | null {
+  if (row.actor_id === '00000000-0000-4000-8000-0000000000b1') return 'Email delivery';
+  if (row.action === 'notification.consent_recorded' || row.action === 'notification.consent_withdrawn') return 'Verified notification recipient';
+  return names.get(row.actor_id) ?? null;
+}
 
 /** Names this tenant currently uses, for resolving the ids an event carries. */
 type Vocabulary = {
@@ -149,6 +157,24 @@ function describe(row: EventRow, words: Vocabulary, perspective?: 'location'): s
   const on = job ? ` on ${job}` : '';
 
   switch (row.action) {
+    case 'notification.intent_created':
+      return `Customer notification recorded: ${text(row.payload, 'state') === 'queued' ? 'queued' : text(row.payload, 'state') === 'failed' ? 'delivery unavailable' : text(row.payload, 'state') === 'suppressed' ? 'ineligible' : 'not requested'}`;
+    case 'notification.delivery_requested':
+      return 'Customer notification queued for email delivery';
+    case 'notification.accepted':
+      return 'Customer notification accepted by email provider';
+    case 'notification.delivered':
+      return 'Email provider reported customer notification delivered';
+    case 'notification.bounced':
+      return 'Customer notification bounced; recipient suppressed';
+    case 'notification.failed':
+      return 'Customer notification delivery failed';
+    case 'notification.rejected':
+      return 'Email provider rejected customer notification';
+    case 'notification.consent_recorded':
+      return 'Notification address verified and selected email preferences recorded';
+    case 'notification.consent_withdrawn':
+      return 'Customer email notification consent withdrawn';
     case 'client_tenant.linked':
       return 'Tenant relationship linked';
     case 'client_tenant.ended':
@@ -347,7 +373,7 @@ export async function listCustomerTimeline(
     occurredAt: row.occurred_at,
     action: row.action,
     description: describe(row, words),
-    actorName: names.get(row.actor_id) ?? null,
+    actorName: eventActorName(row, names),
   }));
 }
 
@@ -440,7 +466,7 @@ export async function listRecentActivity(
     occurredAt: row.occurred_at,
     action: row.action,
     description: describe(row, words),
-    actorName: names.get(row.actor_id) ?? null,
+    actorName: eventActorName(row, names),
   }));
 }
 
@@ -514,7 +540,7 @@ export async function listWorkItemTimeline(
     occurredAt: row.occurred_at,
     action: row.action,
     description: describe(row, words),
-    actorName: names.get(row.actor_id) ?? null,
+    actorName: eventActorName(row, names),
   }));
 }
 
@@ -636,7 +662,7 @@ export async function listLocationTimeline(
     occurredAt: row.occurred_at,
     action: row.action,
     description: describe(row, words, 'location'),
-    actorName: names.get(row.actor_id) ?? null,
+    actorName: eventActorName(row, names),
   }));
 }
 
@@ -742,6 +768,6 @@ export async function listAssetTimeline(
     occurredAt: row.occurred_at,
     action: row.action,
     description: describe(row, words),
-    actorName: names.get(row.actor_id) ?? null,
+    actorName: eventActorName(row, names),
   }));
 }

@@ -2,6 +2,17 @@
 
 ## Purpose
 
+Service notification preferences are a contextual disclosure in the authenticated customer Portal.
+Mailbox confirmation establishes notification consent, never Portal authorization. Confirmation
+codes are entered in the same host-scoped Portal session that requested them. Notices contain no
+invitation bearer token, session token or automatic cross-origin login link. The minimum re-entry
+contract links to a currently resolved verified custom Portal hostname, otherwise the existing
+managed hostname where available. The link has no credential: an existing session works only on
+its own host. The email explains that a customer whose session has ended must use the existing
+invitation, or ask the service organization to resend it. If no hostname resolves, only that
+explanation is included. A public Portal hostname alone does not authenticate a customer. Forms, payments, review
+decisions and their hostname/session enforcement retain their existing contracts.
+
 This document defines the **canonical architecture for GildOps-owned and organization-owned public web experiences**.
 
 It owns the rules for:

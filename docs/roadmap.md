@@ -802,6 +802,16 @@ operations and authoritative runtime-health projections remain separate future c
 
 CRM now releases review requests pinned to approved disclosure revisions and optional typed deliverable presentations. Portal customers can confirm an operational acknowledgement or request changes. Final decisions retain attribution and original targets; replacement/withdrawal blocks stale responses. Change requests enter canonical Support Cases for resolution, with Work retaining implementation ownership. Customer review grants no legal signing, deployment or underlying tenant authority. This completes the first customer delivery feedback loop; threaded messaging, legal acceptance and automated artifact operations remain separate work.
 
+### Batch E: Consent-based service delivery notifications
+
+The local implementation adds independently verified customer email preferences, explicit review,
+publication and optional withdrawal notification intent, canonical Communications delivery and
+engagement evidence. Provider acceptance, sent and delivered remain separate facts. Notifications
+grant no Portal access or review approval. Live acceptance requires an authorized tenant sender,
+its provider-account credential, scheduled worker and signed delivery callbacks; local fixtures
+do not establish provider readiness. Automated supersession notices, staff email and additional
+channels remain outside the initial explicit customer-email flow.
+
 ### Outcome
 
 GildOps operates its own business through the same product boundaries a customer uses.

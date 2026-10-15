@@ -71,6 +71,7 @@ The current Vercel configuration includes logical routes for:
 - Stripe tenant-payment webhook;
 - Stripe platform-billing webhook;
 - automation scheduler tick;
+- consent-based customer service email delivery tick;
 - operator AI ask;
 - AI configuration drafting;
 - CRM stage command;
@@ -89,6 +90,13 @@ The current Vercel configuration includes logical routes for:
 - tenant email webhook.
 
 Check `vercel.json` before adding or documenting a route.
+
+Customer notification delivery uses the existing tenant-email provider adapter and sender's
+provider account, with no invitation-sender or environment-key fallback. Its scheduled GET is
+protected by `CRON_SECRET` and uses the existing provider runtime settings to mint the narrow
+notification-worker identity. Database claims, pre-send authorization and fenced results own
+eligibility, leases, retry bounds and canonical message evidence. Deploying code alone does not
+prove that a tenant sender, provider account credential or signed delivery webhook is ready.
 
 ## HTTP methods
 

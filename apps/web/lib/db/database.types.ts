@@ -2540,6 +2540,99 @@ export type Database = {
           },
         ]
       }
+      customer_notification_recipients: {
+        Row: {
+          consent_at: string
+          customer_id: string
+          email_address: string
+          established_by: string
+          id: string
+          organization_id: string
+          portal_invite_id: string
+          purposes: string[]
+          verification_method: string
+          verified_at: string
+          withdrawn_at: string | null
+          withdrawn_by: string | null
+        }
+        Insert: {
+          consent_at: string
+          customer_id: string
+          email_address: string
+          established_by: string
+          id?: string
+          organization_id: string
+          portal_invite_id: string
+          purposes: string[]
+          verification_method?: string
+          verified_at: string
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
+        }
+        Update: {
+          consent_at?: string
+          customer_id?: string
+          email_address?: string
+          established_by?: string
+          id?: string
+          organization_id?: string
+          portal_invite_id?: string
+          purposes?: string[]
+          verification_method?: string
+          verified_at?: string
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_notification_recipie_organization_id_portal_invit_fkey"
+            columns: ["organization_id", "portal_invite_id"]
+            isOneToOne: false
+            referencedRelation: "customer_portal_invites"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_notification_recipien_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      customer_notification_settings: {
+        Row: {
+          customer_id: string
+          email_identity_id: string
+          organization_id: string
+        }
+        Insert: {
+          customer_id: string
+          email_identity_id: string
+          organization_id: string
+        }
+        Update: {
+          customer_id?: string
+          email_identity_id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_notification_setting_organization_id_email_identi_fkey"
+            columns: ["organization_id", "email_identity_id"]
+            isOneToOne: false
+            referencedRelation: "email_identities"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_notification_settings_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       customer_portal_invites: {
         Row: {
           created_at: string
@@ -3161,6 +3254,52 @@ export type Database = {
             foreignKeyName: "email_message_details_organization_id_message_id_fkey"
             columns: ["organization_id", "message_id"]
             isOneToOne: true
+            referencedRelation: "messages"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      email_recipient_suppressions: {
+        Row: {
+          created_at: string
+          email_address: string
+          message_id: string
+          organization_id: string
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          email_address: string
+          message_id: string
+          organization_id: string
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          email_address?: string
+          message_id?: string
+          organization_id?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_recipient_suppressions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_recipient_suppressions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_recipient_suppressions_organization_id_message_id_fkey"
+            columns: ["organization_id", "message_id"]
+            isOneToOne: false
             referencedRelation: "messages"
             referencedColumns: ["organization_id", "id"]
           },
@@ -10909,6 +11048,155 @@ export type Database = {
           },
         ]
       }
+      service_notification_attempts: {
+        Row: {
+          detail: string | null
+          finished_at: string | null
+          id: string
+          intent_id: string
+          message_id: string
+          organization_id: string
+          outcome: string | null
+          started_at: string
+        }
+        Insert: {
+          detail?: string | null
+          finished_at?: string | null
+          id: string
+          intent_id: string
+          message_id: string
+          organization_id: string
+          outcome?: string | null
+          started_at?: string
+        }
+        Update: {
+          detail?: string | null
+          finished_at?: string | null
+          id?: string
+          intent_id?: string
+          message_id?: string
+          organization_id?: string
+          outcome?: string | null
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_notification_attempts_organization_id_intent_id_fkey"
+            columns: ["organization_id", "intent_id"]
+            isOneToOne: false
+            referencedRelation: "service_notification_intents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "service_notification_attempts_organization_id_message_id_fkey"
+            columns: ["organization_id", "message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      service_notification_intents: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_id: string
+          disclosure_id: string
+          email_address: string | null
+          email_identity_id: string | null
+          engagement_id: string
+          id: string
+          organization_id: string
+          purpose: string
+          reason: string | null
+          recipient_id: string | null
+          requested: boolean
+          review_id: string | null
+          revision_id: string
+          state: string
+          template_version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_id: string
+          disclosure_id: string
+          email_address?: string | null
+          email_identity_id?: string | null
+          engagement_id: string
+          id?: string
+          organization_id: string
+          purpose: string
+          reason?: string | null
+          recipient_id?: string | null
+          requested: boolean
+          review_id?: string | null
+          revision_id: string
+          state: string
+          template_version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          disclosure_id?: string
+          email_address?: string | null
+          email_identity_id?: string | null
+          engagement_id?: string
+          id?: string
+          organization_id?: string
+          purpose?: string
+          reason?: string | null
+          recipient_id?: string | null
+          requested?: boolean
+          review_id?: string | null
+          revision_id?: string
+          state?: string
+          template_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_notification_intents_organization_id_customer_id_e_fkey"
+            columns: [
+              "organization_id",
+              "customer_id",
+              "engagement_id",
+              "disclosure_id",
+              "revision_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "service_disclosure_revisions"
+            referencedColumns: [
+              "organization_id",
+              "customer_id",
+              "engagement_id",
+              "disclosure_id",
+              "id",
+            ]
+          },
+          {
+            foreignKeyName: "service_notification_intents_organization_id_customer_id_r_fkey"
+            columns: ["organization_id", "customer_id", "recipient_id"]
+            isOneToOne: false
+            referencedRelation: "customer_notification_recipients"
+            referencedColumns: ["organization_id", "customer_id", "id"]
+          },
+          {
+            foreignKeyName: "service_notification_intents_organization_id_email_identit_fkey"
+            columns: ["organization_id", "email_identity_id"]
+            isOneToOne: false
+            referencedRelation: "email_identities"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "service_notification_intents_organization_id_review_id_fkey"
+            columns: ["organization_id", "review_id"]
+            isOneToOne: false
+            referencedRelation: "service_reviews"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       service_reviews: {
         Row: {
           change_description: string | null
@@ -13477,6 +13765,10 @@ export type Database = {
         }
         Returns: Json
       }
+      authorize_customer_notification_send: {
+        Args: { p_job_id: string; p_lease_id: string }
+        Returns: boolean
+      }
       automation_operating_summary: {
         Args: { p_organization_id: string; p_since: string; p_until: string }
         Returns: Json
@@ -13601,6 +13893,10 @@ export type Database = {
         Args: { p_conversation_id: string; p_organization_id: string }
         Returns: boolean
       }
+      claim_customer_notification: {
+        Args: { p_job_id?: string }
+        Returns: Json
+      }
       claim_email_for_send: {
         Args: { p_message_id: string; p_organization_id: string }
         Returns: boolean
@@ -13622,6 +13918,10 @@ export type Database = {
       claim_integration_resource_sync: {
         Args: { p_resource_id: string }
         Returns: Json
+      }
+      claim_operator_email_for_send: {
+        Args: { p_message_id: string; p_organization_id: string }
+        Returns: boolean
       }
       claim_portal_invite: { Args: { p_token: string }; Returns: string }
       claim_portal_invite_at_hostname: {
@@ -13707,6 +14007,10 @@ export type Database = {
       confirm_external_card_payment: {
         Args: { p_provider_reference: string; p_request_id: string }
         Returns: undefined
+      }
+      confirm_notification_recipient: {
+        Args: { p_challenge_id: string; p_code: string }
+        Returns: boolean
       }
       consume_public_communication_rate_limit: {
         Args: { p_site_id: string; p_visitor_key: string }
@@ -14132,6 +14436,15 @@ export type Database = {
       finance_dashboard_summary: {
         Args: { p_from: string; p_organization_id: string; p_to: string }
         Returns: Json
+      }
+      finish_customer_notification: {
+        Args: {
+          p_external_id?: string
+          p_job_id: string
+          p_lease_id: string
+          p_outcome: string
+        }
+        Returns: boolean
       }
       finish_integration_action: {
         Args: {
@@ -14757,6 +15070,7 @@ export type Database = {
         Args: { p_organization_id?: string }
         Returns: Json
       }
+      portal_notification_preferences: { Args: never; Returns: Json }
       portal_published_composition: { Args: never; Returns: Json }
       portal_service_disclosures: {
         Args: { p_disclosure_id?: string; p_limit?: number }
@@ -14774,6 +15088,10 @@ export type Database = {
           organization_id: string
           proposal_invite_id: string
         }[]
+      }
+      propose_notification_recipient: {
+        Args: { p_email_address: string; p_purposes: string[] }
+        Returns: string
       }
       provision_organization: {
         Args: {
@@ -14842,6 +15160,16 @@ export type Database = {
           p_customer_id: string
           p_engagement_id: string
           p_expected_version: number
+          p_organization_id: string
+        }
+        Returns: string
+      }
+      publish_service_disclosure_notification: {
+        Args: {
+          p_customer_id: string
+          p_engagement_id: string
+          p_expected_version: number
+          p_notify?: boolean
           p_organization_id: string
         }
         Returns: string
@@ -15568,6 +15896,17 @@ export type Database = {
         }
         Returns: string
       }
+      release_service_review_notification: {
+        Args: {
+          p_customer_id: string
+          p_deliverable_id?: string
+          p_engagement_id: string
+          p_notify?: boolean
+          p_organization_id: string
+          p_revision_id: string
+        }
+        Returns: string
+      }
       remove_call_participant: {
         Args: { p_organization_id: string; p_participant_id: string }
         Returns: undefined
@@ -15697,6 +16036,10 @@ export type Database = {
           p_expected_version: number
           p_review_id: string
         }
+        Returns: undefined
+      }
+      retry_service_notification: {
+        Args: { p_intent_id: string; p_organization_id: string }
         Returns: undefined
       }
       review_mcp_tool: {
@@ -15837,6 +16180,14 @@ export type Database = {
           label: string
         }[]
       }
+      service_notification_history: {
+        Args: {
+          p_customer_id: string
+          p_engagement_id: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
       set_ai_knowledge: {
         Args: {
           p_assistant_id: string
@@ -15902,6 +16253,14 @@ export type Database = {
           p_organization_id: string
           p_ssl_state?: string
           p_verification_state: string
+        }
+        Returns: undefined
+      }
+      set_customer_notification_sender: {
+        Args: {
+          p_customer_id: string
+          p_email_identity_id: string
+          p_organization_id: string
         }
         Returns: undefined
       }
@@ -16496,6 +16855,7 @@ export type Database = {
         Args: { p_resource_id: string }
         Returns: undefined
       }
+      withdraw_notification_consent: { Args: never; Returns: undefined }
       withdraw_service_disclosure: {
         Args: {
           p_customer_id: string
@@ -16510,6 +16870,17 @@ export type Database = {
           p_customer_id: string
           p_engagement_id: string
           p_expected_version: number
+          p_organization_id: string
+          p_review_id: string
+        }
+        Returns: undefined
+      }
+      withdraw_service_review_notification: {
+        Args: {
+          p_customer_id: string
+          p_engagement_id: string
+          p_expected_version: number
+          p_notify?: boolean
           p_organization_id: string
           p_review_id: string
         }

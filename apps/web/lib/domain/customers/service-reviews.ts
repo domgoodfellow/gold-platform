@@ -14,13 +14,15 @@ export async function listServiceReviews(db: Db, organizationId: string, custome
   if (error) throw new DomainError('Customer reviews could not be loaded.', 'service_review.read_failed');
   return data ?? [];
 }
-export async function releaseServiceReview(db: Db, organizationId: string, customerId: string, engagementId: string, revisionId: string, deliverableId?: string) {
-  const { data, error } = await db.rpc('release_service_review', { p_organization_id: organizationId, p_customer_id: customerId, p_engagement_id: engagementId, p_revision_id: revisionId, p_deliverable_id: deliverableId });
+export async function releaseServiceReview(db: Db, organizationId: string, customerId: string, engagementId: string, revisionId: string, deliverableId?: string, notify?: boolean) {
+  const args = { p_organization_id: organizationId, p_customer_id: customerId, p_engagement_id: engagementId, p_revision_id: revisionId, p_deliverable_id: deliverableId };
+  const { data, error } = notify === undefined ? await db.rpc('release_service_review', args) : await db.rpc('release_service_review_notification', { ...args, p_notify: notify });
   if (error) throw new DomainError(error.message, 'service_review.release_failed');
   return data;
 }
-export async function withdrawServiceReview(db: Db, organizationId: string, customerId: string, engagementId: string, reviewId: string, version: number) {
-  const { error } = await db.rpc('withdraw_service_review', { p_organization_id: organizationId, p_customer_id: customerId, p_engagement_id: engagementId, p_review_id: reviewId, p_expected_version: version });
+export async function withdrawServiceReview(db: Db, organizationId: string, customerId: string, engagementId: string, reviewId: string, version: number, notify?: boolean) {
+  const args = { p_organization_id: organizationId, p_customer_id: customerId, p_engagement_id: engagementId, p_review_id: reviewId, p_expected_version: version };
+  const { error } = notify === undefined ? await db.rpc('withdraw_service_review', args) : await db.rpc('withdraw_service_review_notification', { ...args, p_notify: notify });
   if (error) throw new DomainError(error.message, 'service_review.withdraw_failed');
 }
 export async function portalServiceReviews(db: Db, disclosureId: string): Promise<PortalServiceReview[]> {

@@ -1,6 +1,10 @@
 {
   "_about": "The named arguments apps/api sends to each database function, and the role it sends them as. `sends` is every name Python may send; `optional` is the subset it may leave out. Checked against Python by tests/contract/test_rpc_contract.py and against pg_proc by apps/web/tests/architecture/database/python-rpc-surface.test.ts. Change a database function's parameters, or a Python payload, and update this file with it. A function with `naming: bare` is called by a domain command that names its arguments without the `p_` prefix; app/core/caller.py adds it.",
   "functions": {
+    "claim_customer_notification": {"role": "customer_notification_worker", "callers": ["app/services/tenant_email/notifications.py"], "sends": []},
+    "authorize_customer_notification_send": {"role": "customer_notification_worker", "callers": ["app/services/tenant_email/notifications.py"], "sends": ["p_job_id", "p_lease_id"]},
+    "finish_customer_notification": {"role": "customer_notification_worker", "callers": ["app/services/tenant_email/notifications.py"], "sends": ["p_job_id", "p_lease_id", "p_outcome", "p_external_id"]},
+
     "authorize_assistant_tool_call": {
       "role": "authenticated",
       "callers": [
