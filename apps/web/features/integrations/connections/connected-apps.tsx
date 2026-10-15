@@ -6,6 +6,7 @@ import { Widget, WidgetGrid } from '@/components/display/widget';
 import type { IntegrationConnection } from '@/lib/domain/integrations/connections';
 import type { Connector } from '@/lib/domain/integrations/connectors';
 import { ConnectorIcon } from '../catalogue/connector-icon';
+import { libraryHref } from '@/lib/route/library';
 import { DisconnectForm } from './connection-controls';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -51,52 +52,43 @@ export function ConnectedApps({
   organizationName: string;
   mcpServerCount: number;
 }) {
-  if (active.length === 0) {
-    const offered = connectable.slice(0, 4);
-    return (
-      <section className="mt-6 rounded-lg border border-border bg-surface p-5" aria-labelledby="integrations-empty-heading">
-        <SectionHeading id="integrations-empty-heading">Connect systems to {organizationName}</SectionHeading>
-        {offered.length > 0 ? (
-          <>
-            <DividedList className="mt-4 border-y border-border">
-              {offered.map((connector) => (
-                <li key={connector.key} className="flex items-center gap-3 py-3">
-                  <ConnectorIcon connector={connector} logoUrl={logoUrlByKey.get(connector.key) ?? null} />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{connector.name}</p>
-                    <p className="text-sm text-muted">{connector.description}</p>
-                  </div>
-                  {mayManage ? (
-                    <ButtonLink
-                      href={`/organizations/${organizationId}/settings/connections/connect/${connector.key}`}
-                      tone="primary"
-                      size="small"
-                    >
-                      Connect
-                    </ButtonLink>
-                  ) : null}
-                </li>
-              ))}
-            </DividedList>
-            {connectable.length > offered.length ? (
-              <ButtonLink href={browseHref} tone="secondary" className="mt-4">
-                Browse all available connections
-              </ButtonLink>
-            ) : null}
-          </>
-        ) : (
-          <p className="mt-1 max-w-2xl text-sm text-muted">Nothing is available to connect right now.</p>
-        )}
-      </section>
-    );
-  }
+  const connectedKeys = new Set(active.map((connection) => connection.connectorKey));
+  const offered = connectable.filter((connector) => !connectedKeys.has(connector.key)).slice(0, 6);
+  const addConnections = (
+    <Section className="mt-8" aria-labelledby="add-connections-heading">
+      <SectionHeading id="add-connections-heading">{active.length === 0 ? `Connect systems to ${organizationName}` : 'Add connections'}</SectionHeading>
+      {offered.length > 0 ? (
+        <DividedList className="mt-2">
+          {offered.map((connector) => (
+            <li key={connector.key} className="flex items-center gap-3 py-3">
+              <ConnectorIcon connector={connector} logoUrl={logoUrlByKey.get(connector.key) ?? null} />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">{connector.name}</p>
+                <p className="text-sm text-muted">{connector.description}</p>
+              </div>
+              {mayManage ? (
+                <ButtonLink href={`/organizations/${organizationId}/settings/connections/connect/${connector.key}`} tone="primary" size="small">
+                  Connect
+                </ButtonLink>
+              ) : null}
+            </li>
+          ))}
+        </DividedList>
+      ) : (
+        <p className="mt-1 max-w-2xl text-sm text-muted">Nothing else is available to connect right now.</p>
+      )}
+      <ButtonLink href={browseHref} tone="secondary" className="mt-4">Browse the App Library</ButtonLink>
+    </Section>
+  );
+
+  if (active.length === 0) return <div className="mt-6">{addConnections}</div>;
 
   return (
     <>
       <WidgetGrid className="mt-6">
         <Widget title="Connected apps" value={active.length} />
-        <Widget title="Data sources" value={resourceCount} href={`/organizations/${organizationId}/integrations/sources`} />
-        <Widget title="Imports" value={importCount} href={`/organizations/${organizationId}/integrations/imports`} />
+        <Widget title="Data sources" value={resourceCount} href={libraryHref(organizationId, 'sources')} />
+        <Widget title="Imports" value={importCount} href={libraryHref(organizationId, 'imports')} />
         <Widget title="MCP servers" value={mcpServerCount} href={`/organizations/${organizationId}/settings/connections/mcp`} />
         <Widget
           title="Needs attention"
@@ -137,6 +129,7 @@ export function ConnectedApps({
             })}
           </DividedList>
       </Section>
+      {addConnections}
     </>
   );
 }

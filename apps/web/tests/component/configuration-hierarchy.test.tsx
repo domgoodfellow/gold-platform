@@ -38,6 +38,15 @@ describe('General is one continuous form', () => {
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
     expect(screen.getByText(/This address is private/)).toBeVisible();
   });
+  it('draws each group as its own shared surface inside one form, so one save persists all of them', async () => {
+    const { container } = render(await GeneralPage({ params: Promise.resolve({ organizationId: 'org' }) } as Parameters<typeof GeneralPage>[0]));
+    const forms = container.querySelectorAll('form');
+    expect(forms).toHaveLength(1);
+    const cards = forms[0].querySelectorAll('[data-slot="card"]');
+    expect(cards).toHaveLength(3);
+    expect([...cards].map(card => card.getAttribute('aria-labelledby'))).toEqual(['identity-heading', 'address-heading', 'contact-heading']);
+    expect(forms[0].querySelectorAll('button[type="submit"]')).toHaveLength(1);
+  });
   it('preserves the permission state without offering an editable form', async () => {
     const saved = context.organization.capabilities;
     context.organization.capabilities = [];

@@ -1,6 +1,7 @@
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
 import type { ImportRun } from '@/lib/domain/integrations/import-runs';
+import { libraryImportHref } from '@/lib/route/library';
 
 const STATUS_TONE: Record<string, 'success' | 'neutral'> = {
   completed: 'success',
@@ -33,7 +34,7 @@ export function ImportRunsTable({
           header: 'Source',
           emphasis: 'primary',
           cell: (run) => (
-            <a href={`/organizations/${organizationId}/integrations/imports/${run.id}`} className="underline-offset-4 hover:underline">
+            <a href={libraryImportHref(organizationId, run.id)} className="underline-offset-4 hover:underline">
               {(run.resourceId && resourceName.get(run.resourceId)) ?? connectorLabel.get(run.connectorKey) ?? run.connectorKey}
             </a>
           ),

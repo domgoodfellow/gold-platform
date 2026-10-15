@@ -324,18 +324,15 @@ test.describe('account menu and icon-bearing Settings', () => {
       const business = page.getByRole('navigation', { name: 'This business' });
       await business.getByRole('link', { name: 'Configuration', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Calling & routing', exact: true })).toBeVisible();
-      const sections = page.getByRole('navigation', { name: 'Configuration sections' });
-      await expect(sections).toBeVisible();
-      if (width >= 768) await page.locator('header').getByRole('button', { name: 'Toggle Sidebar', exact: true }).click();
-      await expect(sections.getByRole('link', { name: 'Calling & routing', exact: true })).toBeVisible();
+      await expect(page.getByRole('navigation', { name: 'Configuration sections' })).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.screenshot({ path: info.outputPath(`configuration-${width}-${colorScheme}.png`) });
-      await sections.getByRole('link', { name: 'Numbers & assignments', exact: true }).click();
+      await expect(business.getByRole('link', { name: 'Calling & routing', exact: true })).toHaveAttribute('aria-current', 'page');
+      await business.getByRole('link', { name: 'Numbers & assignments', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Numbers', exact: true })).toBeVisible();
-      await expect(sections.getByRole('link', { name: 'Numbers & assignments', exact: true })).toHaveAttribute('aria-current', 'page');
       await open();
+      await expect(business.getByRole('link', { name: 'Numbers & assignments', exact: true })).toHaveAttribute('aria-current', 'page');
       await expect(business.getByRole('link', { name: 'Numbers', exact: true })).toHaveCount(0);
-      await expect(business.getByRole('link', { name: 'Configuration', exact: true })).toHaveAttribute('aria-current', 'page');
       await business.getByRole('link', { name: 'Calls', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Calls', exact: true })).toBeVisible();
 

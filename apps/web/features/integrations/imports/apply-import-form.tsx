@@ -7,7 +7,7 @@ import { IMPORT_BATCH_SIZE } from '@/lib/domain/integrations/import-policy';
 import {
   applyImportRunAction,
   type ApplyState,
-} from '@/app/organizations/[organizationId]/integrations/imports/[runId]/actions';
+} from '@/app/organizations/[organizationId]/library/imports/[runId]/actions';
 
 const APPLY_INITIAL: ApplyState = { error: null };
 

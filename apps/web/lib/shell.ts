@@ -189,7 +189,7 @@ export function projectShell(input: ShellInput): ShellSection[] {
         return target?.workspace === workspace.key && !target.treatment;
       }).map(concern => concern.href.split('#')[0]),
       section: 'workspaces',
-      ...(workspace.key === 'crm' ? { children: concerns.map(concern => ({ ...concern, section: 'workspaces' as const })) } : {}),
+      children: concerns.map(concern => ({ ...concern, section: 'workspaces' as const })),
     } : undefined;
     return [{
       key: `workspace-${workspace.key}`,

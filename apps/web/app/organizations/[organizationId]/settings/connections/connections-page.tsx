@@ -93,7 +93,7 @@ export async function ConnectionsPage({
       ) : (
         <PageHeader title="App Library" crumbs={[{ label: 'Connections', href: settingsScopeHref('connections', organizationId) }]} />
       )}
-      <IntegrationsNav organizationId={organizationId} current={view} />
+      {view === 'connected' ? <IntegrationsNav organizationId={organizationId} current="connected" /> : null}
       {oauthError ? (
         <Hint className="mt-4 block" role="alert">
           {oauthError}

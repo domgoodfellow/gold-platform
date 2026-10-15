@@ -106,6 +106,8 @@ test('draft, durable save, opposite-system theme, account scope, public regressi
   await page.goto(`/organizations/${second}/settings/general`);
   await expect(shell).toHaveAttribute('data-appearance', 'light');
   await expect(shell).toHaveAttribute('data-visual-preset', 'layered');
+  // Settings groups are shared cards, so the chosen shape reaches them without a page-local override.
+  expect(await page.locator('main [data-slot="card"]').first().evaluate(el => getComputedStyle(el).borderTopLeftRadius)).toBe('4px');
   const palette = brandPalette({ accent: '#ffffcc', headingFont: 'sans', bodyFont: 'sans' });
   expect(await shell.evaluate(el => getComputedStyle(el).getPropertyValue('--accent-text').trim())).toBe(`light-dark(${palette.accentTextLight},${palette.accentTextDark})`);
   await page.goto(`/organizations/${second}/studio/website`);

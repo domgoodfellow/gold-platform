@@ -358,7 +358,7 @@ describe('workspace Configuration authority', () => {
     expect(context.sections[0].items.map(item => item.key)).toEqual(['workspace-configuration']);
     expect(workspaceNavigation(sections, `/organizations/${ORG}/calls`)).toBeNull();
     expect(workspaceNavigation(sections, `/organizations/${ORG}/comms/inbox`)).toBeNull();
-    expect(activeItemKey(context.sections, `/organizations/${ORG}/comms/configuration/calling`)).toBe('workspace-configuration');
+    expect(activeItemKey(context.sections, `/organizations/${ORG}/comms/configuration/calling`)).toBe('call-setup');
   });
   it('does not offer Configuration to a calling-only member or without an accessible concern', () => {
     const row = projectedItems(project(['call.place'])).find(item => item.key === 'workspace-communications')!;
@@ -375,11 +375,11 @@ describe('workspace Configuration authority', () => {
     expect(workspaceNavigation(sections, `/organizations/${ORG}/comms/configuration/numbers`)).toBeNull();
   });
   it('keeps Configuration active on its authorized legacy and canonical section addresses', () => {
-    for (const suffix of ['comms/configuration', 'comms/configuration/calling', 'comms/configuration/email']) {
+    for (const [suffix, active] of [['comms/configuration', 'workspace-configuration'], ['comms/configuration/calling', 'call-setup'], ['comms/configuration/email', 'email']]) {
       const path = `/organizations/${ORG}/${suffix}`;
       const context = workspaceNavigation(project(), path)!;
       expect(context.workspace.key).toBe('workspace-communications');
-      expect(activeItemKey(context.sections, path)).toBe('workspace-configuration');
+      expect(activeItemKey(context.sections, path)).toBe(active);
       expect(context.sections[0].items.filter(item => item.key === 'workspace-configuration')).toHaveLength(1);
     }
   });
@@ -402,5 +402,23 @@ describe('CRM Configuration children', () => {
     const limited = projectedItems(project(['field.manage'], { enabledModules: new Set(), featureAvailability: new Set() })).find(item => item.key === 'workspace-crm')!.configuration!;
     expect(limited.children?.map(item => item.key)).toEqual(['opportunity-stages', 'customer-fields']);
     expect(projectedItems(project(['customer.create'])).find(item => item.key === 'workspace-crm')?.configuration).toBeUndefined();
+  });
+});
+
+
+describe('every workspace Configuration is a sidebar group', () => {
+  it('lists its destinations as children, and the group is the parent of exactly its own routes', () => {
+    const rows = projectedItems(project()).filter(item => item.configuration);
+    expect(rows.length).toBeGreaterThan(1);
+    for (const row of rows) {
+      const parent = row.configuration!;
+      expect(parent.children?.length, row.key).toBeGreaterThan(0);
+      for (const child of parent.children!) {
+        expect(child.href.startsWith(`/organizations/${ORG}/`), child.key).toBe(true);
+        const context = workspaceNavigation(project(), child.href);
+        if (!context) { expect(child.href, `${child.key} is a shared Settings page`).toContain('/settings/'); continue; }
+        expect(activeItemKey(context.sections, child.href.split('#')[0]), child.key).toMatch(new RegExp(`^(${parent.children!.map(item => item.key.replace(/#.*/, '')).join('|')}|workspace-configuration)$`));
+      }
+    }
   });
 });

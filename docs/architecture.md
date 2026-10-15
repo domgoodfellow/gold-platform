@@ -1438,9 +1438,10 @@ restricted destinations. `requireWorkspaceConfiguration` and `requireConfigurati
 enforce membership, service access, capabilities and availability before page reads. The
 persistent layout is never the sole page authorization boundary.
 
-`ConfigurationSections` owns responsive content-level navigation, separately from the main
-sidebar. Sections use canonical URLs or real page anchors and retain accessible labels and
-selected state when the sidebar is collapsed. Existing domain operations and data owners
+Every workspace with configuration routes exposes them as one expandable Configuration group in
+the persistent workspace sidebar; configuration pages render no second navigation column. Sections
+use canonical URLs or real page anchors, and the group containing the active route is open.
+Existing domain operations and data owners
 remain unchanged. Shared Branding, Domains and Public profile remain organization Settings;
 Studio links to them. Business hours remain Scheduling-owned; currency remains General-owned.
 

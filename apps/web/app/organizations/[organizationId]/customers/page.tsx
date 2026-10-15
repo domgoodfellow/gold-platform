@@ -19,6 +19,7 @@ import { areaAvailable, areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { CustomersInsights } from '@/features/insights/workspace-insights';
 import { WorkspaceActivity } from '@/features/timeline/workspace-activity';
 import { requireOrganization } from '@/lib/route/organization';
+import { libraryNewImportHref } from '@/lib/route/library';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,7 +66,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
           actions={!emptyCollection ? (
             <>
               {mayImport ? (
-                <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="secondary">
+                <ButtonLink href={libraryNewImportHref(organizationId)} tone="secondary">
                   Import
                 </ButtonLink>
               ) : null}
@@ -122,7 +123,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               <CreateCustomerTrigger />
               {mayImport ? (
-                <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="secondary">
+                <ButtonLink href={libraryNewImportHref(organizationId)} tone="secondary">
                   Import customers
                 </ButtonLink>
               ) : null}

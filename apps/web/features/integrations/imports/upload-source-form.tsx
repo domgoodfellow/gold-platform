@@ -7,7 +7,7 @@ import { ErrorText } from '@/components/controls/inputs';
 import {
   uploadSourceAction,
   type UploadState,
-} from '@/app/organizations/[organizationId]/integrations/imports/new/actions';
+} from '@/app/organizations/[organizationId]/library/imports/new/actions';
 
 const UPLOAD_INITIAL: UploadState = { error: null };
 

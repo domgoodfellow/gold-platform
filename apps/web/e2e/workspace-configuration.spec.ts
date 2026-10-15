@@ -30,11 +30,7 @@ for (const width of [1440, 768, 390]) test(`canonical workspace configuration at
    await page.goto(`${root}/${path}`);
    await expect(page.getByRole('heading', { level: 1, name: title, exact: true })).toBeVisible();
    await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toHaveCount(1);
-   const sections = page.getByRole('navigation', { name: 'Configuration sections' });
-   if (path === 'settings/general' || path.startsWith('sales/configuration')) {
-    await expect(sections).toHaveCount(0);
-   } else await expect(sections).toBeVisible();
-   if (path !== 'studio/configuration' && path !== 'settings/general' && !path.startsWith('sales/configuration')) await expect(sections.locator('[aria-current="page"]')).toHaveCount(1);
+   await expect(page.getByRole('navigation', { name: 'Configuration sections' })).toHaveCount(0);
    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
    await page.screenshot({ path: info.outputPath(`${path.replaceAll('/', '-')}-${colorScheme}.png`) });
   }

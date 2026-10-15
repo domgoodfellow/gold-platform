@@ -3,7 +3,7 @@ import { ErrorText, Hint, SelectInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { MappingField, MappingTarget } from '@/lib/domain/integrations/mappings';
-import { createMappingAndStageAction } from '@/app/organizations/[organizationId]/integrations/imports/new/actions';
+import { createMappingAndStageAction } from '@/app/organizations/[organizationId]/library/imports/new/actions';
 
 function targetValue(target: MappingTarget): string {
   if (target.kind === 'core') return `core:${target.field}`;

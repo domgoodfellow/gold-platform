@@ -17,6 +17,7 @@ import { ConnectionCapabilities } from '@/features/integrations/connections/conn
 import { listActiveGrants, listGrantableAgents, listNativeCapabilities } from '@/lib/domain/integrations/tool-access';
 import { LibraryReads } from '@/features/integrations/connections/library-controls';
 import { importedApplications } from '@/lib/domain/integrations/app-library';
+import { libraryNewImportHref } from '@/lib/route/library';
 
 export const dynamic = 'force-dynamic';
 
@@ -110,7 +111,7 @@ export default async function ConnectionDetailPage({
               <DisconnectForm organizationId={organizationId} connectionId={connectionId} />
             ) : null}
             {mayManage && connection.status !== 'disconnected' && !repositories ? (
-              <ButtonLink href={`/organizations/${organizationId}/integrations/imports/new`} tone="primary" size="small">
+              <ButtonLink href={libraryNewImportHref(organizationId)} tone="primary" size="small">
                 Add data source
               </ButtonLink>
             ) : null}

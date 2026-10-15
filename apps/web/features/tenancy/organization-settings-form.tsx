@@ -5,6 +5,7 @@ import { useActionState, useState } from 'react';
 import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
 import { FormField } from '@/components/controls/form';
 import { Button } from '@/components/controls/button';
+import { Card } from '@/components/surfaces/card';
 import { SectionHeading } from '@/components/surfaces/section';
 import { BusinessLocationFields } from '@/features/locale/location-fields';
 import { updateOrganizationGeneralAction, type SettingsActionState } from '@/app/organizations/[organizationId]/settings/actions';
@@ -41,10 +42,11 @@ export function OrganizationSettingsForm({
   }, INITIAL);
 
   return (
-    <form action={formAction} onChange={() => setDirty(true)} className="flex flex-col gap-10">
+    <form action={formAction} onChange={() => setDirty(true)} className="flex flex-col gap-6">
       <input type="hidden" name="organizationId" value={organizationId} />
 
-      <section aria-labelledby="identity-heading" className="flex flex-col gap-4">
+      <Card as="section" aria-labelledby="identity-heading">
+        <div className="flex flex-col gap-4">
         <SectionHeading id="identity-heading">Business identity</SectionHeading>
         <FormField id="org-name" label="Business name">
           {(field) => <TextInput {...field} name="name" type="text" required maxLength={200} defaultValue={name} />}
@@ -62,9 +64,11 @@ export function OrganizationSettingsForm({
             </>
           )}
         </FormField>
-      </section>
+        </div>
+      </Card>
 
-      <section aria-labelledby="address-heading" className="flex flex-col gap-4">
+      <Card as="section" aria-labelledby="address-heading">
+        <div className="flex flex-col gap-4">
         <div>
           <SectionHeading id="address-heading">Primary business address</SectionHeading>
           <Hint className="mt-1">
@@ -89,9 +93,11 @@ export function OrganizationSettingsForm({
             </div>
           }
         />
-      </section>
+        </div>
+      </Card>
 
-      <section aria-labelledby="contact-heading" className="flex flex-col gap-4">
+      <Card as="section" aria-labelledby="contact-heading">
+        <div className="flex flex-col gap-4">
         <div>
           <SectionHeading id="contact-heading">Business contact</SectionHeading>
         </div>
@@ -110,7 +116,8 @@ export function OrganizationSettingsForm({
           <summary className="min-h-11 cursor-pointer content-center rounded-md focus-visible:outline-2 focus-visible:outline-ring">About business contact details</summary>
           <p className="mt-2">These details are separate from your sign-in email and the phone numbers Communications runs. You can use an existing website address.</p>
         </details>
-      </section>
+        </div>
+      </Card>
 
       <div className="flex flex-col items-start gap-3">
         <Button type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save changes'}</Button>

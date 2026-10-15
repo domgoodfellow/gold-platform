@@ -6,6 +6,7 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { applyImportRun, resumeImportStaging } from '@/lib/domain/integrations/import-runs';
 import { requireOrganization } from '@/lib/route/organization';
+import { libraryHref, libraryImportHref } from '@/lib/route/library';
 
 export type ApplyState = { error: string | null };
 
@@ -13,7 +14,7 @@ export async function resumeImportStagingAction(formData: FormData): Promise<voi
   const organizationId = String(formData.get('organizationId') ?? '');
   const runId = String(formData.get('runId') ?? '');
   const { db } = await requireOrganization(organizationId);
-  const path = `/organizations/${organizationId}/integrations/imports/${runId}`;
+  const path = libraryImportHref(organizationId, runId);
   try {
     await resumeImportStaging(db, { organizationId, runId });
   } catch (error) {
@@ -40,9 +41,9 @@ export async function applyImportRunAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/integrations/imports/${runId}`);
-  revalidatePath(`/organizations/${organizationId}/integrations/imports`);
+  revalidatePath(libraryImportHref(organizationId, runId));
+  revalidatePath(libraryHref(organizationId, 'imports'));
   revalidatePath(`/organizations/${organizationId}/crm`);
   revalidatePath(`/organizations/${organizationId}/customers`);
-  redirect(`/organizations/${organizationId}/integrations/imports/${runId}`);
+  redirect(libraryImportHref(organizationId, runId));
 }

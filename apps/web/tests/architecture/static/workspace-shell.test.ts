@@ -696,7 +696,7 @@ describe('organization page composition', () => {
     expect(customers).toContain("organization.capabilities.includes('integration.manage')");
     expect(customers).not.toMatch(/staff/i);
     const newImport = read(
-      `${WEB}/app/organizations/[organizationId]/integrations/imports/new/page.tsx`,
+      `${WEB}/app/organizations/[organizationId]/library/imports/new/page.tsx`,
     );
     expect(newImport).toContain("organization.capabilities.includes('integration.manage')");
     expect(newImport.indexOf('integration.manage')).toBeLessThan(newImport.indexOf('await downloadImportFile'));

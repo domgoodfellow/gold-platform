@@ -285,6 +285,10 @@
       "category": "component",
       "concerns": ["settings", "navigation"]
     },
+    "apps/web/tests/component/connections-and-sources.test.tsx": {
+      "category": "component",
+      "concerns": ["settings", "navigation", "integrations"]
+    },
     "apps/web/tests/component/account-settings.test.tsx": {
       "category": "component",
       "concerns": ["settings", "navigation", "security"]

@@ -5,6 +5,7 @@ import { requireOrganization } from '@/lib/route/organization';
 import { callDomainCommand, requireAccessToken } from '@/lib/api/client';
 import { DomainError } from '@/lib/domain/errors';
 import {importedApplications} from '@/lib/domain/integrations/app-library';
+import { librarySourceHref } from '@/lib/route/library';
 
 export async function connectLibraryKey(_state: {error:string|null}, form: FormData): Promise<{error:string|null}> {
   const org=String(form.get('organizationId')??'');
@@ -53,7 +54,7 @@ export async function syncLibraryResource(_state:{error:string|null;message:stri
     const answer=await callDomainCommand<{error?:string;complete?:boolean;message?:string}>('/integrations/operate',{
       token:await requireAccessToken(db),timeoutMs:60000,body:{operation:'resource_sync',arguments:{
         resource_id:resourceId,configure:true,enabled:form.get('intent')!=='disable',parameters}}});
-    revalidatePath(`/organizations/${org}/integrations/sources/${resourceId}`);
+    revalidatePath(librarySourceHref(org, resourceId));
     return {error:answer.error??null,message:answer.error?null:answer.message??(answer.complete?'Synchronization completed.':'Next page is scheduled for synchronization.')};
   }catch(error){if(error instanceof DomainError)return {error:error.message,message:null};throw error;}
 }

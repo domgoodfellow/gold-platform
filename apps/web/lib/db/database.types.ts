@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -14949,6 +14949,10 @@ export type Database = {
           connector_key: string
           organizations: number
         }[]
+      }
+      platform_health_summary: {
+        Args: { p_recent_limit?: number }
+        Returns: Json
       }
       platform_meter_observations: {
         Args: never

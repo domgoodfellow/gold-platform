@@ -1,5 +1,5 @@
 import { Button, ButtonLink } from '@/components/controls/button';
-import { resumeImportStagingAction } from '@/app/organizations/[organizationId]/integrations/imports/[runId]/actions';
+import { resumeImportStagingAction } from '@/app/organizations/[organizationId]/library/imports/[runId]/actions';
 import { Hint } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { DataTable } from '@/components/display/table';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/display/data';
 import { WidgetGrid, Widget } from '@/components/display/widget';
 import type { ImportRun, StagingRow, StagingRowStatus } from '@/lib/domain/integrations/import-runs';
 import { ApplyImportForm } from './apply-import-form';
+import { libraryImportHref } from '@/lib/route/library';
 
 const STATUS_LABEL: Record<StagingRowStatus, string> = {
   ready: 'Ready',
@@ -57,7 +58,7 @@ export function ImportRunDetail({
             <ButtonLink href={`/organizations/${organizationId}/customers`} tone="primary" size="small">
               View customers
             </ButtonLink>
-            <ButtonLink href={`/organizations/${organizationId}/integrations/imports/${runId}?status=failed`} tone="secondary" size="small">
+            <ButtonLink href={libraryImportHref(organizationId, runId, `?status=failed`)} tone="secondary" size="small">
               Review problems
             </ButtonLink>
           </div>
@@ -91,8 +92,8 @@ export function ImportRunDetail({
               key={filter.key}
               href={
                 filter.key === 'all'
-                  ? `/organizations/${organizationId}/integrations/imports/${runId}`
-                  : `/organizations/${organizationId}/integrations/imports/${runId}?status=${filter.key}`
+                  ? libraryImportHref(organizationId, runId)
+                  : libraryImportHref(organizationId, runId, `?status=${filter.key}`)
               }
               tone={status === filter.key || (filter.key === 'all' && !status) ? 'primary' : 'secondary'}
               size="small"

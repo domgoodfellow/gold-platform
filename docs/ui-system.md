@@ -2205,16 +2205,16 @@ do not earn navigation. Avoid duplicate titles, context, destinations and generi
 `projectShell` supplies authorized concerns from `CONFIG_TARGETS` and `WORKSPACE_CONFIGURE`.
 Configuration-only entry does not expose an operating Overview. `workspaceNavigation` resolves
 configuration targets before operating ancestors. CRM's persistent workspace sidebar owns one
-navigable, expandable Configuration parent and text-only Relationship stages, Opportunity stages
-and Customer fields children, filtered by existing permissions and entitlements. The active child
-is selected on direct links; the parent opens a compact registry-driven landing page. CRM pages
-have no additional configuration navigation column. Operational shortcuts retain canonical editors.
-General Settings is one continuous form with ordinary Business identity, Primary business address
-and Business contact headings, beneath the existing Settings sidebar; it has no section navigation.
-
-Other workspace layouts currently retain `ConfigurationSections`, which wraps at phone/tablet widths
-and is sticky beside editors on desktop. This is existing behavior, not a requirement to add another
-sidebar. Evaluate each surface against the principle above before changing it. Resolved links use
+navigable, expandable Configuration parent whose text-only children are that workspace's
+configuration destinations, filtered by existing permissions and entitlements. Every workspace
+with configuration routes follows the same rule. The active child is selected on direct links and
+its group is open; the parent opens a landing page (CRM's lists its destinations, others open
+their first destination). Configuration pages have no additional navigation column. Operational
+shortcuts retain canonical editors.
+General Settings is one form, saved once, whose Business identity, Primary business address and
+Business contact groups are separate shared cards beneath the existing Settings sidebar; it has no
+section navigation. Settings groups use shared surfaces so Appearance shape, density and
+elevation reach them. Resolved links use
 text labels, hover, selected and focus roles without a repeated generic icon. Page loading uses the
 existing organization boundary; missing or unauthorized concerns resolve to not-found before data
 reads. No empty configuration root is offered. `WorkspaceConfigure` remains a shortcut to each root.

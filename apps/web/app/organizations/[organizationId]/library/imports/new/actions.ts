@@ -13,6 +13,7 @@ import {
 } from '@/lib/domain/integrations/mappings';
 import { beginImportRun, requireImportPipeline, resumeImportStaging } from '@/lib/domain/integrations/import-runs';
 import { requireOrganization } from '@/lib/route/organization';
+import { libraryImportHref, libraryNewImportHref } from '@/lib/route/library';
 
 export type UploadState = { error: string | null };
 
@@ -40,7 +41,7 @@ export async function uploadSourceAction(
     throw error;
   }
 
-  redirect(`/organizations/${organizationId}/integrations/imports/new?resourceId=${resourceId}`);
+  redirect(libraryNewImportHref(organizationId, resourceId));
 }
 
 function parseTarget(value: string): MappingTarget {
@@ -69,7 +70,7 @@ export async function createMappingAndStageAction(formData: FormData): Promise<v
     transform: (String(formData.get(`transform_${index}`) ?? 'none') as MappingFieldTransform),
   }));
 
-  const backTo = `/organizations/${organizationId}/integrations/imports/new?resourceId=${resourceId}`;
+  const backTo = libraryNewImportHref(organizationId, resourceId);
 
   let runId: string | undefined;
   try {
@@ -85,11 +86,11 @@ export async function createMappingAndStageAction(formData: FormData): Promise<v
     await resumeImportStaging(db, { organizationId, runId });
   } catch (error) {
     if (error instanceof DomainError) {
-      if (runId) redirect(`/organizations/${organizationId}/integrations/imports/${runId}?stageError=${encodeURIComponent(error.message)}`);
+      if (runId) redirect(libraryImportHref(organizationId, runId, `?stageError=${encodeURIComponent(error.message)}`));
       redirect(`${backTo}&error=${encodeURIComponent(error.message)}`);
     }
     throw error;
   }
 
-  redirect(`/organizations/${organizationId}/integrations/imports/${runId}`);
+  redirect(libraryImportHref(organizationId, runId));
 }

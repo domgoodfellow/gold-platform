@@ -17,6 +17,7 @@ const DESTINATION_STATE: Record<string, string> = {
   knowledge: 'No knowledge sources yet',
   collections: 'No collections yet',
   sources: 'No connected sources yet',
+  imports: 'No imports yet',
   trash: 'Nothing archived',
 };
 
