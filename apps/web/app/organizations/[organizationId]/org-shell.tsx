@@ -7,7 +7,7 @@ import { AccountMenu } from '@/components/navigation/account-menu';
 import { SettingsNav } from '@/components/navigation/settings-nav';
 import { inSettingsContext, type SettingsSearchItem } from '@/lib/settings-nav';
 import { lastAppPathKey } from '@/lib/route/app-return';
-import { ContextIdentity, ContextSwitcher, GOLD_MARK, type SwitchableOrganization, type SwitcherContext, type PlatformContext } from '@/components/navigation/context-switcher';
+import { ContextIdentity, ContextSwitcher, type SwitchableOrganization, type SwitcherContext } from '@/components/navigation/context-switcher';
 import {
   Sidebar,
   SidebarContent,
@@ -47,13 +47,11 @@ import {
   Coins,
   CreditCard,
   Filter,
-  Gauge,
   Globe,
   Hash,
   History,
   Home,
   Headset,
-  Landmark,
   Layers,
   LayoutDashboard,
   Library,
@@ -66,6 +64,7 @@ import {
   PanelTop,
   Package,
   Phone,
+  ShieldCheck,
   Plug,
   Receipt,
   Server,
@@ -80,8 +79,8 @@ import {
 } from 'lucide-react';
 import {
   activeItemKey,
+  topLevelSections,
   workspaceNavigation,
-  selectShellContext,
   type HeaderUtility,
   inPlatformScope,
   itemContains,
@@ -133,7 +132,7 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
   settings: Settings,
 };
 
-/** Every item the projection can produce: the areas and the platform destinations. */
+/** Every item the projection can produce: the areas and the Administration destinations. */
 export const NAV_ICONS: Record<string, LucideIcon> = {
   ...AREA_ICONS,
   'workspace-overview': LayoutDashboard,
@@ -151,32 +150,26 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   team: UserCog,
   connections: Plug,
   plan: CreditCard,
-  platform: LayoutDashboard,
+  administration: ShieldCheck,
+  'platform-overview': LayoutDashboard,
   'platform-organizations': Building2,
-  'platform-products': Package,
-  'platform-group-catalog': Blocks,
-  'platform-plans': Landmark,
-  'platform-meters': Gauge,
-  'platform-connectors': Blocks,
-  'platform-pricing': CircleDollarSign,
-  'platform-portfolio-economics': CircleDollarSign,
-  'platform-billing': CreditCard,
-  'platform-providers': Plug,
-  'platform-failures': TriangleAlert,
-  'platform-group-commercial': Coins,
+  'platform-group-product-registry': Package,
+  'platform-group-integration-registry': Blocks,
   'platform-group-infrastructure': Server,
+  'platform-group-reliability': TriangleAlert,
+  'platform-group-commercial': Coins,
+  'platform-link-commercial': Coins,
+  'platform-link-ai-runtime': Server,
 };
 
 /**
- * A page nested inside a row that is itself nested inside a row — Platform's Catalog, Commercial
- * and Infrastructure, one level beneath the Platform row itself. The same link-and-disclosure
+ * A page nested inside a row that is itself nested inside a row. The same link-and-disclosure
  * shape as `NavRow`, in `SidebarMenuSub`'s vocabulary instead of `SidebarMenu`'s, and recursive
- * through `NavItem.children` rather than a case built for these three groups by name — a fourth
- * nested group needs nothing new here.
+ * through `NavItem.children` rather than a case built for particular groups by name.
  */
-function NavSubRow({ item, active, expanded }: { item: NavItem; active: string | null; expanded: boolean }) {
+function NavSubRow({ item, active }: { item: NavItem; active: string | null }) {
   const current = item.key === active;
-  const inside = itemContains(item, active) || expanded;
+  const inside = itemContains(item, active);
   const [open, setOpen] = useState(inside);
   const [wasInside, setWasInside] = useState(inside);
   if (inside !== wasInside) {
@@ -185,7 +178,7 @@ function NavSubRow({ item, active, expanded }: { item: NavItem; active: string |
   }
 
   const link = (
-    <SidebarMenuSubButton asChild isActive={current} className={cx(item.children && 'flex-1', item.section === 'workspaces' && 'h-auto min-h-11 md:min-h-7')}>
+    <SidebarMenuSubButton asChild isActive={current} className={cx(item.children && 'flex-1', (item.section === 'workspaces' || item.section === 'administration') && 'h-auto min-h-11 md:min-h-7')}>
       <Link href={item.href} aria-current={current ? 'page' : undefined}>
         <span>{item.label}</span>
       </Link>
@@ -212,7 +205,7 @@ function NavSubRow({ item, active, expanded }: { item: NavItem; active: string |
         <CollapsibleContent>
           <SidebarMenuSub className="mx-2 mt-1">
             {item.children.map((child) => (
-              <NavSubRow key={child.key} item={child} active={active} expanded={expanded} />
+              <NavSubRow key={child.key} item={child} active={active} />
             ))}
           </SidebarMenuSub>
         </CollapsibleContent>
@@ -222,15 +215,12 @@ function NavSubRow({ item, active, expanded }: { item: NavItem; active: string |
 }
 
 /**
- * A leaf is a link. Platform rows retain their existing link and disclosure behavior,
- * including expanding every group while the person is inside Platform.
+ * A leaf is a link. A row with pages is a link and a disclosure, open while the person is inside it.
  */
-function NavRow({ item, active, expanded }: { item: NavItem; active: string | null; expanded: boolean }) {
+function NavRow({ item, active }: { item: NavItem; active: string | null }) {
   const Icon = NAV_ICONS[item.key];
   const current = item.key === active;
-  // `expanded` is Platform's own rule: while somebody is working inside it, every Platform group is
-  // open, so the whole control plane is in view rather than one group of it.
-  const inside = itemContains(item, active) || expanded;
+  const inside = itemContains(item, active);
   const [open, setOpen] = useState(inside);
   // Opens on the render that moves the person inside, not in an effect after it: the branch is
   // never drawn closed for a frame first. Leaving does not close it — that is theirs to do.
@@ -249,7 +239,7 @@ function NavRow({ item, active, expanded }: { item: NavItem; active: string | nu
     </SidebarMenuButton>
   );
 
-  if (!item.children) return <SidebarMenuItem className={item.key === 'workspace-configuration' ? 'mt-2 border-t border-sidebar-border pt-2' : undefined}>{link}</SidebarMenuItem>;
+  if (!item.children) return <SidebarMenuItem className={item.key === 'workspace-configuration' || item.key.startsWith('platform-link-') ? 'mt-2 border-t border-sidebar-border pt-2' : undefined}>{link}</SidebarMenuItem>;
 
   return (
     <Collapsible asChild open={open} onOpenChange={setOpen}>
@@ -266,7 +256,7 @@ function NavRow({ item, active, expanded }: { item: NavItem; active: string | nu
         <CollapsibleContent>
           <SidebarMenuSub>
             {item.children.map((child) => (
-              <NavSubRow key={child.key} item={child} active={active} expanded={expanded} />
+              <NavSubRow key={child.key} item={child} active={active} />
             ))}
           </SidebarMenuSub>
         </CollapsibleContent>
@@ -275,23 +265,24 @@ function NavRow({ item, active, expanded }: { item: NavItem; active: string | nu
   );
 }
 
-/** Every breakpoint draws the selected context's already resolved sections. */
+/**
+ * Every breakpoint draws the same resolved sections: the business's rows, or — once somebody has
+ * entered a workspace or Administration — that context with a way back.
+ */
 export function OrgNav({ sections }: { sections: ShellSection[] }) {
   const pathname = usePathname();
   const context = workspaceNavigation(sections, pathname);
-  const flatten = (items: readonly NavItem[]): NavItem[] => items.flatMap(item => item.children?.length ? [ ...(item.href ? [{ ...item, children: undefined }] : []), ...flatten(item.children) ] : [item]);
-  const navigation = inPlatformScope(pathname) ? sections.map(section => ({ ...section, items: flatten(section.items) })) : context?.sections ?? sections;
+  const navigation = context?.sections ?? topLevelSections(sections);
   const active = activeItemKey(navigation, pathname);
-  const platformActive = inPlatformScope(pathname);
   const { setOpenMobile } = useSidebar();
 
-  const group = (section: ShellSection, ruled: boolean) => (
-    <SidebarGroup key={section.key} className={ruled ? 'border-t border-sidebar-border' : undefined}>
+  const group = (section: ShellSection) => (
+    <SidebarGroup key={section.key} className={!context && section.key === 'administration' ? 'border-t border-sidebar-border' : undefined}>
       {section.label ? <SidebarGroupLabel>{section.label}</SidebarGroupLabel> : null}
       <SidebarGroupContent>
         <SidebarMenu>
           {section.items.map((item) => (
-            <NavRow key={item.key} item={item} active={active} expanded={section.key === 'platform' && platformActive} />
+            <NavRow key={item.key} item={item} active={active} />
           ))}
         </SidebarMenu>
       </SidebarGroupContent>
@@ -310,7 +301,7 @@ export function OrgNav({ sections }: { sections: ShellSection[] }) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarGroup> : null}
-      {navigation.map((section) => group(section, false))}
+      {navigation.map((section) => group(section))}
     </nav>
   );
 }
@@ -346,7 +337,6 @@ export function OrgSidebar({
   name,
   organizations,
   current,
-  platform,
   sections,
   settings,
   email,
@@ -357,7 +347,6 @@ export function OrgSidebar({
   name: string;
   organizations: SwitchableOrganization[];
   current: SwitcherContext;
-  platform?: PlatformContext | null;
   sections: ShellSection[];
   /** Present while the person is inside Settings: the destinations that replace the workspaces. */
   settings?: { organizationId: string; sections: ShellSection[]; search: SettingsSearchItem[] } | null;
@@ -368,7 +357,7 @@ export function OrgSidebar({
   return (
     <Sidebar collapsible="icon" mobileSide="right" {...props}>
       <SidebarHeader className={cx(SIDEBAR_HEADER_HEIGHT, 'justify-center border-b border-sidebar-border pr-12 md:pr-2')}>
-        <ContextSwitcher mark={mark} current={current} platform={platform} organizations={organizations} />
+        <ContextSwitcher mark={mark} current={current} organizations={organizations} />
       </SidebarHeader>
       <SidebarContent>
         {settings ? (
@@ -388,9 +377,10 @@ export function OrgSidebar({
 
 /**
  * The sidebar while the business's commercial service access is locked: identity and context
- * switching, one row to where recovery lives, and the account menu. Not the enforcement — every
- * page and action refuses on its own — only the shell agreeing with them, so a locked person is
- * not offered twelve doors that all lead to the same locked screen.
+ * switching, one row to where recovery lives, GildOps staff's Administration entry (which stays
+ * reachable while GildOps' own service is locked), and the account menu. Not the enforcement —
+ * every page and action refuses on its own — only the shell agreeing with them, so a locked person
+ * is not offered twelve doors that all lead to the same locked screen.
  */
 export function LockedOrgSidebar({
   organizationId,
@@ -398,7 +388,7 @@ export function LockedOrgSidebar({
   name,
   role,
   organizations,
-  platform,
+  administration,
   email,
   signOutAction,
   ...props
@@ -408,7 +398,7 @@ export function LockedOrgSidebar({
   name: string;
   role: string;
   organizations: SwitchableOrganization[];
-  platform?: PlatformContext | null;
+  administration?: NavItem;
   email: string;
   signOutAction: () => Promise<void>;
 } & React.ComponentProps<typeof Sidebar>) {
@@ -425,7 +415,6 @@ export function LockedOrgSidebar({
           <ContextSwitcher
             mark={mark}
             current={{ kind: 'business', organizationId, name, role }}
-            platform={platform}
             organizations={organizations}
           />
         </div>
@@ -446,6 +435,13 @@ export function LockedOrgSidebar({
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
+        {administration ? (
+          <SidebarGroup className="border-t border-sidebar-border">
+            <SidebarMenu>
+              <NavRow item={{ ...administration, destinations: undefined }} active={null} />
+            </SidebarMenu>
+          </SidebarGroup>
+        ) : null}
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border"><AccountMenu email={email} signOutAction={signOutAction} locked /></SidebarFooter>
       <SidebarRail />
@@ -453,9 +449,12 @@ export function LockedOrgSidebar({
   );
 }
 
-/** Layouts persist across client navigation: select the already authorized context on each path. */
+/**
+ * Layouts persist across client navigation. The identity is always this organization's own —
+ * Administration inside GildOps changes the navigation, never who the person is working as.
+ */
 export function OrganizationFrame({
-  organizationId, name, role, mark, organizations, sections: businessSections, utilities, settings, settingsSearch, platform,
+  organizationId, name, role, mark, organizations, sections, utilities, settings, settingsSearch,
   locked, email, signOutAction, agent, children,
 }: {
   organizationId: string;
@@ -467,7 +466,6 @@ export function OrganizationFrame({
   utilities: HeaderUtility[];
   settings: ShellSection[];
   settingsSearch: SettingsSearchItem[];
-  platform: (PlatformContext & { sections: ShellSection[] }) | null;
   locked: boolean;
   email: string;
   signOutAction: () => Promise<void>;
@@ -475,7 +473,6 @@ export function OrganizationFrame({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  const selected = selectShellContext(organizationId, pathname, platform);
   const settingsContext = inSettingsContext(pathname, organizationId) && settings.length > 0;
 
   // The last page of this business that was not Settings, so "Back to app" can return to it. Kept
@@ -488,26 +485,21 @@ export function OrganizationFrame({
       /* storage can be unavailable; Back falls back to Home */
     }
   }, [pathname, organizationId]);
-  const system = selected === 'platform';
-  const current: SwitcherContext = system
-    ? { kind: 'platform', organizationId }
-    : { kind: 'business', organizationId, name, role };
-  const sections = system ? platform!.sections : businessSections;
-  const identityName = system ? 'GildOps Platform' : name;
-  const identityRole = system ? 'System control plane' : role;
-  const identityMark = system ? GOLD_MARK : mark;
-  const recovery = locked && !system;
-  const shared = { mark: identityMark, name: identityName, organizations, platform, email, signOutAction };
+  const current: SwitcherContext = { kind: 'business', organizationId, name, role };
+  // A locked GildOps keeps Administration working: recovery replaces the sidebar everywhere else.
+  const recovery = locked && !inPlatformScope(pathname);
+  const administration = sections.find((section) => section.key === 'administration')?.items[0];
+  const shared = { mark, name, organizations, email, signOutAction };
 
   return (
     <WorkspaceShell
-      locationNavigation={{ organizationId, sections: recovery ? [] : settingsContext && !system ? settings : sections, configurationHrefs: recovery || system ? [] : settingsSearch.map((item) => item.href) }}
-      sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} role={identityRole} {...shared} /> : <OrgSidebar {...shared} current={current} sections={sections} settings={settingsContext && !system ? { organizationId, sections: settings, search: settingsSearch } : null} />}
+      locationNavigation={{ organizationId, sections: recovery ? [] : settingsContext ? settings : sections, configurationHrefs: recovery ? [] : settingsSearch.map((item) => item.href) }}
+      sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} role={role} administration={administration} {...shared} /> : <OrgSidebar {...shared} current={current} sections={sections} settings={settingsContext ? { organizationId, sections: settings, search: settingsSearch } : null} />}
       header={
         <WorkspaceHeader
           navigationTrigger="always"
           agentTrigger="md"
-          utilities={system ? [] : utilities}
+          utilities={utilities}
         />
       }
       agent={agent}

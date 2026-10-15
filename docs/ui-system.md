@@ -815,7 +815,7 @@ Workspaces
 
 Team / Connections / Agent are workspace-header utilities.
 Settings, Help & documentation and Contact GildOps Support are Account menu entries, with Sign out. Account owns identity and Sign out.
-Platform Administration is entered from the context switcher's System entry (independently authorized) and has its own central navigation context.
+Administration (Platform Administration) is one private row after the workspaces, in GildOps' own organization only, for its members who hold a platform permission. It opens a contextual navigation like a workspace's.
 ```
 
 Only real, reachable and authorized destinations render.
@@ -932,40 +932,49 @@ Navigation requires a real surface.
 
 ---
 
-## Platform navigation
+## Administration navigation
 
-Platform Administration is a privileged scope within GildOps' own organization context.
+Platform Administration is a privileged scope within GildOps' own organization context. It is not a
+second identity: the context switcher keeps showing GildOps and the person's real role on every
+Administration page, and lists organizations only.
 
-Its navigation is separate from tenant workspace registration.
+Its navigation is separate from tenant workspace registration. `lib/platform-navigation.ts` is the
+one registry for the sidebar, the phone Menu, breadcrumbs and the route guard.
 
-Platform may group control-plane destinations such as:
+The Administration row appears after the workspaces only when the organization is the configured
+operating organization, the person is a member and they hold at least one platform permission.
+Entering it replaces the workspaces with Back to Workspaces and:
 
 ```text
 Overview
-
 Organizations
-
-Catalog
-  Products / families
-  Modules / Features
+Product Registry
+  Products
   Meters
+Integration Registry
   Connectors
-
-Commercial
-  Plans & Add-ons
-  Pricing
-  Economics
-  Billing
-
 Infrastructure
   Providers
-  AI runtime
+  AI Runtime
+Reliability
   Failures
+Commercial administration
+  Plans & Add-ons / Pricing / Usage & economics / Vendor rates /
+  Package economics / Portfolio economics / Billing
 ```
 
-The exact child set follows real implementation.
+Each destination is offered only to its own permission. Groups are disclosures that open while the
+person is inside them and toggle by keyboard or touch.
 
-Platform is not listed beside CRM/Finance/etc. for customer organizations.
+Two workspaces link in, staff-only, after their Configuration: Finance to Commercial administration
+and AI to AI Runtime. These are ways in, not second homes: the pages stay in Administration, their
+breadcrumbs lead with Administration, and GildOps' commercial control is never drawn as tenant
+Finance. When every part of Administration a person holds is already linked that way (commercial
+authority alone), the Administration row is omitted and its context is drawn only once they enter
+it. While GildOps' own service access is locked, the recovery sidebar keeps the Administration row
+and Administration pages keep their navigation.
+
+Administration is never listed in a customer organization's navigation.
 
 ---
 
@@ -2181,8 +2190,9 @@ Help & documentation, Contact GildOps Support, then Sign out. Help and Contact a
 and appear only where an organization is in context. Mobile Agent remains a Sheet control. Locked
 organizations keep the Plan & usage recovery destination as their Settings entry. The no-organization
 fallback offers personal Settings without inventing an organization Help or Platform context.
-Platform Administration is a context, not an account action: the context switcher lists it once under
-System, only with server-resolved platform authority, and the account menu never links to it.
+Platform Administration is neither an account action nor a switcher context: it is reached from
+GildOps' own navigation, only with server-resolved platform authority, and the account menu never
+links to it.
 `AccountMenu` owns the footer presentation, identity and Sign out. `settings-icons.ts` owns recognizable Settings destination icons, used with accessible
 labels and rail tooltips. The existing `SettingsNav` retains search and closes the mobile Sheet
 on navigation. Back to app validates its per-tab hint against current authorized destinations
@@ -2223,6 +2233,6 @@ existing organization boundary; missing or unauthorized concerns resolve to not-
 reads. No empty configuration root is offered. `WorkspaceConfigure` remains a shortcut to each root.
 
 
-Platform navigation flattens the existing authorized projection for presentation so every destination retains an icon and tooltip in the collapsed sidebar. The business switcher changes business context; it does not duplicate the Platform entry. `NavigationActivityContext` carries only a retention hint from the persistent telephone owner. During an active call, cross-business, cross-business Platform, and global personal Settings links open a separate tab. Ordinary same-organization configuration, General Settings and workspace navigation reuse the existing telephone runtime. This does not provide call continuation after reload or browser termination.
+Administration groups keep an icon and tooltip in the collapsed sidebar, linking to their first page. The business switcher changes business context only. `NavigationActivityContext` carries only a retention hint from the persistent telephone owner. During an active call, cross-business and global personal Settings links open a separate tab. Ordinary same-organization configuration, General Settings and workspace navigation reuse the existing telephone runtime. This does not provide call continuation after reload or browser termination.
 
 Channel diagnostics reuse `messagingSenders` and the existing sender/provider facts. The UI distinguishes planned/unentitled/disabled features, missing provider/callback/relay configuration, inactive or non-SMS numbers, missing active identities, and unverified sending domains. Sender configuration does not grant `message.send`; configuration checks passing never asserts provider acceptance or delivery. Outbound email and mailbox synchronization remain separate capabilities.

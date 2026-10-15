@@ -12,8 +12,9 @@ import { offeredSections } from '@/features/settings/settings-map';
 import { projectSettingsNav, settingsSearchItems } from '@/lib/settings-nav';
 import { AccountAppearance } from '@/features/appearance/account-appearance';
 
-/** Shared frame for business and system contexts, with canonical server authority resolution.
- * Each page still enforces its own access; layouts persist across client navigations.
+/** The one frame for every organization, GildOps' own Administration included, with canonical
+ * server authority resolution. Each page still enforces its own access; layouts persist across
+ * client navigations.
  */
 export async function OrganizationShell({
   organizationId,
@@ -28,7 +29,7 @@ export async function OrganizationShell({
   const locked = !access.permitted;
   // A locked business runs none of the workspace reads below — no feature resolution and no
   // Agent transcript — because none of it is drawn.
-  const { brand, email, switchable, sections, utilities, platform, configGate } = await loadOrganizationShellModel(db, {
+  const { brand, email, switchable, sections, utilities, configGate } = await loadOrganizationShellModel(db, {
     organizationId,
     capabilities: organization.capabilities,
     locked,
@@ -101,7 +102,6 @@ export async function OrganizationShell({
         utilities={utilities}
         settings={settings}
         settingsSearch={settingsSearch}
-        platform={platform}
         locked={locked}
         email={email}
         signOutAction={signOutAction}

@@ -6,11 +6,11 @@ import { createRole } from '../lib/domain/tenancy/roles';
 import { addMember } from '../lib/domain/tenancy/members';
 import { DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { test, expect } from '@playwright/test';
-import { COLLEAGUE_STORAGE_STATE, loadDemoContext, OWNER_STORAGE_STATE, platformUrl, STAFF_STORAGE_STATE } from './helpers';
+import { COLLEAGUE_STORAGE_STATE, financeUrl, loadDemoContext, OWNER_STORAGE_STATE, platformUrl, STAFF_STORAGE_STATE } from './helpers';
 
 /**
  * The one adaptive shell, in a browser. What each person sees is a projection of the
- * organization's entitlements, their own permissions and — in GOLD's own organization — their
+ * organization's entitlements, their own permissions and — in GildOps' own organization — their
  * platform permissions. `shell-projection.test.ts` proves the matrix on the pure function; these
  * prove the projection is what actually renders, on desktop and on a phone, and that a hidden
  * destination is still refused when the URL is typed.
@@ -107,6 +107,7 @@ test.describe('a tenant owner', () => {
     }
     await expect(header.getByRole('button', { name: 'Agent', exact: true })).toHaveText('');
     await expect(nav.getByText('Platform', { exact: true })).toHaveCount(0);
+    await expect(nav.getByRole('link', { name: 'Administration', exact: true })).toHaveCount(0);
     await expect(nav.getByRole('link', { name: 'Organizations', exact: true })).toHaveCount(0);
   });
 
@@ -226,17 +227,78 @@ test.describe('a tenant colleague with a reduced role', () => {
   });
 });
 
-test.describe('GOLD platform staff', () => {
+test.describe('GildOps platform staff', () => {
   test.use({ storageState: STAFF_STORAGE_STATE });
+  const identity = (page: import('@playwright/test').Page) => page.locator('[data-slot="sidebar-container"] [data-sidebar="header"]');
+  const goldName = async (page: import('@playwright/test').Page) => {
+    await page.goto(`/organizations/${loadDemoContext().goldOrganizationId}/home`);
+    return (await identity(page).innerText()).trim();
+  };
 
-  test('reach the platform through GOLD’s own shell, in the one sidebar', async ({ page }) => {
-    await page.goto(platformUrl());
+  test('enter Administration from GildOps’ own sidebar and keep GildOps selected', async ({ page }) => {
+    const { goldOrganizationId } = loadDemoContext();
+    const name = await goldName(page);
     const nav = sidebar(page);
-    await expect(nav.getByText('Platform', { exact: true })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Administration', exact: true })).toHaveCount(1);
+    await expect(nav.getByRole('link', { name: 'CRM', exact: true })).toBeVisible();
+    await nav.getByRole('link', { name: 'Administration', exact: true }).click();
+    await expect(page).toHaveURL(platformUrl());
+    await expect(identity(page)).toHaveText(name);
+    await expect(identity(page)).not.toContainText(/Platform|System control plane/);
+    await expect(nav.getByRole('link', { name: 'Back to Workspaces', exact: true })).toHaveAttribute('href', `/organizations/${goldOrganizationId}/home`);
     await expect(nav.getByRole('link', { name: 'Organizations', exact: true })).toBeVisible();
-    await expect(nav.getByRole('link', { name: 'Providers', exact: true })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Product Registry', exact: true })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'CRM', exact: true })).toHaveCount(0);
-    await expect(page.locator('[data-slot="sidebar-container"]').getByRole('button', { name: /GildOps Platform/ })).toBeVisible();
+    await expect(page.locator('[data-sidebar="sidebar"] nav[aria-label="This business"]').filter({ visible: true })).toHaveCount(1);
+  });
+
+  test('opens Administration groups with the keyboard, marks the page, and keeps browser history', async ({ page }) => {
+    await page.goto(platformUrl('providers'));
+    const nav = sidebar(page);
+    await expect(nav.getByRole('link', { name: 'Providers', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(nav.getByRole('link', { name: 'Meters', exact: true })).toHaveCount(0);
+    await nav.getByRole('button', { name: 'Expand Product Registry' }).focus();
+    await page.keyboard.press('Enter');
+    await nav.getByRole('link', { name: 'Meters', exact: true }).click();
+    await expect(page).toHaveURL(platformUrl('catalog/meters'));
+    await expect(nav.getByRole('link', { name: 'Meters', exact: true })).toHaveAttribute('aria-current', 'page');
+    await page.goBack();
+    await expect(page).toHaveURL(platformUrl('providers'));
+    await nav.getByRole('link', { name: 'Back to Workspaces', exact: true }).click();
+    await expect(nav.getByRole('link', { name: 'Administration', exact: true })).toBeVisible();
+    await page.goBack();
+    await expect(page).toHaveURL(platformUrl('providers'));
+  });
+
+  test('offers no Platform identity in the switcher', async ({ page }) => {
+    await page.goto(platformUrl('providers'));
+    const trigger = identity(page).getByRole('button');
+    if (await trigger.count()) {
+      await trigger.click();
+      await expect(page.getByText('System', { exact: true })).toHaveCount(0);
+      await expect(page.getByRole('menuitem', { name: /Platform|Administration/ })).toHaveCount(0);
+      await page.keyboard.press('Escape');
+    }
+    await expect(identity(page)).not.toContainText(/GildOps Platform|System control plane/);
+  });
+
+  test('reach Commercial administration from Finance and AI Runtime from AI', async ({ page }) => {
+    await page.goto(financeUrl());
+    const nav = sidebar(page);
+    await nav.getByRole('link', { name: 'Commercial administration', exact: true }).click();
+    await expect(page).toHaveURL(platformUrl('plans'));
+    await expect(nav.getByRole('link', { name: 'Plans & Add-ons', exact: true })).toHaveAttribute('aria-current', 'page');
+    await page.goto(`/organizations/${loadDemoContext().goldOrganizationId}/ai`);
+    await nav.getByRole('link', { name: 'AI Runtime', exact: true }).click();
+    await expect(page).toHaveURL(platformUrl('ai-runtime'));
+    await expect(nav.getByRole('link', { name: 'Back to Workspaces', exact: true })).toBeVisible();
+  });
+
+  test('a Platform address under a customer organization is refused', async ({ page }) => {
+    const { organizationId } = loadDemoContext();
+    const response = await page.goto(`/organizations/${organizationId}/platform/providers`);
+    expect(response?.status()).toBe(404);
+    await expect(sidebar(page).getByRole('link', { name: 'Administration', exact: true })).toHaveCount(0);
   });
 
   test('the old /platform address lands on the canonical one, path and query kept', async ({ page }) => {
@@ -244,41 +306,27 @@ test.describe('GOLD platform staff', () => {
     await expect(page).toHaveURL(new RegExp(`/organizations/${loadDemoContext().goldOrganizationId}/platform/providers/twilio\\?tab=accounts`));
   });
 
-  test('switches between the system control plane and the GildOps operating business', async ({ page }) => {
+  for (const width of [768, 390]) test(`on a ${width}px screen, Administration works from the one Menu`, async ({ page }, info) => {
     const { goldOrganizationId } = loadDemoContext();
+    await page.setViewportSize({ width, height: 900 });
     await page.goto(platformUrl('providers'));
-    const container = page.locator('[data-slot="sidebar-container"]');
-    await container.getByRole('button', { name: /GildOps Platform/ }).click();
-    await expect(page.getByText('Businesses', { exact: true })).toBeVisible();
-    await expect(page.getByText('System', { exact: true })).toBeVisible();
-    // MenuItem uses asChild, so the item itself is the link.
-    const goldLink = page.locator(`[role="menuitem"][href="/organizations/${goldOrganizationId}/home"]`);
-    await goldLink.click();
-    await expect(page).toHaveURL(`/organizations/${goldOrganizationId}/home`);
-    await expect(sidebar(page).getByRole('link', { name: 'CRM', exact: true })).toBeVisible();
-    await expect(sidebar(page).getByText('Platform', { exact: true })).toHaveCount(0);
-    await container.locator('[data-sidebar="header"]').getByRole('button').click();
-    await page.getByRole('menuitem', { name: 'Platform', exact: true }).click();
-    await expect(page).toHaveURL(platformUrl());
-    await expect(container.getByText('System control plane', { exact: true }).filter({ visible: true }).first()).toBeVisible();
-  });
-
-  test('on a phone switches authorized context from the menu and closes it', async ({ page }) => {
-    const { goldOrganizationId } = loadDemoContext();
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(platformUrl());
     await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();
     const sheet = page.getByRole('dialog');
-    await expect(sheet.getByRole('link', { name: 'Providers', exact: true })).toBeVisible();
-    await sheet.locator('[data-sidebar="header"]').getByRole('button', { name: /GildOps Platform/ }).click();
-    await page.locator(`[role="menuitem"][href="/organizations/${goldOrganizationId}/home"]`).click();
+    await expect(sheet.getByRole('link', { name: 'Providers', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(sheet.locator('[data-sidebar="header"]')).not.toContainText(/Platform|System control plane/);
+    const expand = sheet.getByRole('button', { name: 'Expand Reliability' });
+    const box = await expand.boundingBox();
+    expect(box && box.height >= 44 && box.width >= 44).toBe(true);
+    await expand.click();
+    await expect(sheet.getByRole('link', { name: 'Failures', exact: true })).toBeVisible();
+    await page.screenshot({ path: info.outputPath(`administration-menu-${width}.png`) });
+    await sheet.getByRole('link', { name: 'Back to Workspaces', exact: true }).click();
     await expect(page).toHaveURL(`/organizations/${goldOrganizationId}/home`);
     await expect(sheet).toHaveCount(0);
     await page.goto(`/organizations/${goldOrganizationId}/field`);
     await page.getByRole('button', { name: 'Navigate within current section' }).click();
     const destinations = await page.getByRole('menuitem').evaluateAll((items) => items.map((item) => item.getAttribute('href')));
     expect(destinations.every((href) => href?.startsWith(`/organizations/${goldOrganizationId}/`))).toBe(true);
-
   });
 });
 

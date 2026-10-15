@@ -282,8 +282,8 @@ describe('ContextSwitcher — content is about context only', () => {
   });
 
   it('does not render a role beneath the business name in either trigger — role stays inside the opened menu', () => {
-    const triggers = contextSwitcher.slice(contextSwitcher.indexOf('export function ContextSwitcher('));
-    expect(triggers).toContain("current.kind === 'platform'");
+    const triggers = contextSwitcher.slice(contextSwitcher.indexOf('export function ContextSwitcher('), contextSwitcher.indexOf('export function ContextIdentity('));
+    expect(triggers).not.toMatch(/triggerRole/);
   });
 });
 
@@ -579,9 +579,9 @@ describe('Platform pages render their own page identity', () => {
 });
 
 describe('Platform navigation highlights the most specific matching item, never two at once', () => {
-  it('names the catalogue landing Products, under a Catalog heading — the legacy line-item list is one level in', () => {
+  it('names the catalogue landing Products, under the Product Registry heading — the legacy line-item list is one level in', () => {
     expect(platformNavigation).toContain("label: 'Products', path: 'catalog'");
-    expect(platformNavigation).toContain("{ key: 'catalog', label: 'Catalog' }");
+    expect(platformNavigation).toContain("{ key: 'product-registry', label: 'Product Registry' }");
   });
 
   it('picks the longest matching href so a Plan or Product detail route activates its own section', () => {
@@ -706,9 +706,9 @@ describe('organization page composition', () => {
 describe('the sidebar draws the selected application context', () => {
   const orgShell = readFileSync(`${WEB}/app/organizations/[organizationId]/org-shell.tsx`, 'utf8');
 
-  it('removes the Administration block entirely', () => {
+  it('draws Administration as projected sections, never a pinned block of its own', () => {
     expect(orgShell).not.toContain('ADMINISTRATION_SECTIONS');
-    expect(orgShell).toContain('navigation.map((section) => group(section, false))');
+    expect(orgShell).toContain('navigation.map((section) => group(section))');
     expect(orgShell).not.toMatch(/absolute|fixed bottom|top-\[/);
   });
 
@@ -720,10 +720,10 @@ describe('the sidebar draws the selected application context', () => {
     expect(operating).not.toMatch(/BUSINESS_ITEMS|section.key === 'business'/);
   });
 
-  it('offers the authorized Platform context under System, once, and never from the account menu', () => {
-    expect(contextSwitcher).toContain('href={platform.href}');
-    expect(contextSwitcher).not.toMatch(/isOwner|isAdmin|platformPermissions|email\s*===/);
-    expect(accountMenu).not.toMatch(/platform\.href|PlatformContext|<span>Platform/);
+  it('offers Administration from GildOps’ own navigation only — never the switcher or the account menu', () => {
+    expect(contextSwitcher).not.toMatch(/platform\.href|PlatformContext|kind: 'platform'|System control plane|isOwner|isAdmin|platformPermissions|email\s*===/);
+    expect(accountMenu.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/platform\.href|PlatformContext|<span>Platform|Administration/);
+    expect(orgShell).not.toMatch(/GildOps Platform|System control plane|selectShellContext|GOLD_MARK/);
     expect(existsSync(`${WEB}/components/navigation/sidebar-footer-navigation.tsx`)).toBe(false);
   });
 });

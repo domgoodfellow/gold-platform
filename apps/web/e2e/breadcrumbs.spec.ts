@@ -44,35 +44,35 @@ test.describe('workspace and record breadcrumbs', () => {
   });
 });
 
-test.describe('Platform breadcrumbs', () => {
+test.describe('Administration breadcrumbs', () => {
   test.use({ storageState: STAFF_STORAGE_STATE });
 
-  test('a grouped Platform destination reads Platform / Group / Page, Platform linking to the root', async ({ page }) => {
+  test('a grouped destination reads Administration / Group / Page, Administration linking to the root', async ({ page }) => {
     await page.goto(platformUrl('catalog/meters'));
     const trail = page.getByRole('navigation', { name: 'breadcrumb' });
-    const platformLink = trail.getByRole('link', { name: 'Platform' });
+    const platformLink = trail.getByRole('link', { name: 'Administration' });
     await expect(platformLink).toBeVisible();
-    await expect(trail.getByText('Catalog', { exact: true })).toBeVisible();
+    await expect(trail.getByText('Product Registry', { exact: true })).toBeVisible();
     await expect(trail.getByText('Meters', { exact: true })).toBeVisible();
     await platformLink.click();
     await expect(page).toHaveURL(new RegExp(`/platform$`));
   });
 
-  test('Plans & Add-ons reads Platform / Commercial / Plans & Add-ons, never Finance', async ({ page }) => {
+  test('Plans & Add-ons reads Administration / Commercial administration / Plans & Add-ons, never Finance', async ({ page }) => {
     await page.goto(platformUrl('plans'));
     const trail = page.getByRole('navigation', { name: 'breadcrumb' });
-    const platformLink = trail.getByRole('link', { name: 'Platform' });
+    const platformLink = trail.getByRole('link', { name: 'Administration' });
     await expect(platformLink).toBeVisible();
-    await expect(trail.getByText('Commercial', { exact: true })).toBeVisible();
+    await expect(trail.getByText('Commercial administration', { exact: true })).toBeVisible();
     await expect(trail.getByRole('link', { name: 'Finance' })).toHaveCount(0);
     await platformLink.click();
     await expect(page).toHaveURL(new RegExp(`/platform$`));
   });
 
-  test('a nested Platform record extends the trail one level further', async ({ page }) => {
+  test('a nested Administration record extends the trail one level further', async ({ page }) => {
     await page.goto(platformUrl('providers/twilio'));
     const trail = page.getByRole('navigation', { name: 'breadcrumb' });
-    await expect(trail.getByRole('link', { name: 'Platform' })).toBeVisible();
+    await expect(trail.getByRole('link', { name: 'Administration' })).toBeVisible();
     await expect(trail.getByText('Infrastructure', { exact: true })).toBeVisible();
     const providersLink = trail.getByRole('link', { name: 'Providers' });
     await expect(providersLink).toBeVisible();

@@ -34,6 +34,8 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+- Platform Administration now opens inside GildOps' own organization instead of switching to a separate "GildOps Platform" identity: the context switcher keeps showing GildOps and lists organizations only. Staff with a platform permission get one private Administration row after the workspaces (Organizations, Product Registry, Integration Registry, Infrastructure, Reliability and Commercial administration, each filtered by its own permission), plus staff-only links from Finance to Commercial administration and from AI to AI Runtime. Routes and server guards are unchanged.
+
 - GildOps' operating organization is now explicit platform configuration (`platform_settings.operating_organization_id`) instead of whichever organization holds the `gold_internal` Plan. Changing GildOps' Plan no longer changes which organization is GildOps, and giving the internal Plan to another organization no longer makes it GildOps. The migration backfills the one current internal-Plan holder and stops if there is more than one. Platform routes still require that organization, actual Membership and the live platform capability. The bootstrap designates the organization once and refuses any other; the `gold_internal` Plan remains as a non-billable entitlement.
 
 - Customer service reviews now pin approved disclosure revisions, record attributable Portal approvals or change requests, and preserve final decisions. Change requests create canonical Support Cases; replacement/withdrawn material blocks stale responses. Approval is an operational acknowledgement with no signature, deployment or tenant-access authority.

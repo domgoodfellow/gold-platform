@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { AREAS, WORKSPACES, configTarget, configTargetOffered, workspaceAncestry, areaLabel } from '@/lib/navigation';
-import { SHELL_SECTION_ORDER, pageNavigation, workspaceNavigation, activeItemKey, inPlatformScope, itemContains, projectedItems, projectShell, projectPlatformShell, projectHeaderUtilities, selectShellContext, shellHomeItem, type ShellInput, type ShellSection } from '@/lib/shell';
+import { SHELL_SECTION_ORDER, pageNavigation, workspaceNavigation, activeItemKey, inPlatformScope, itemContains, projectedItems, projectShell, projectHeaderUtilities, shellHomeItem, topLevelSections, withAdministration, type ShellInput, type ShellSection } from '@/lib/shell';
 import { PLATFORM_CAPABILITIES } from '@/lib/domain/platform/permissions';
-import { platformDestinationsFor, platformHref, platformRouteRequires } from '@/lib/platform-navigation';
+import { platformAncestry, platformDestinationsFor, platformHref, platformRouteRequires } from '@/lib/platform-navigation';
 import { ALL_CAPABILITIES, type Capability } from '@/lib/domain/tenancy/capabilities';
 import { ROLE_PRESETS } from '@/lib/domain/tenancy/role-presets';
 import { projectSettingsNav } from '@/lib/settings-nav';
@@ -105,7 +105,8 @@ describe('owning workspace stays active on contextual and detail routes', () => 
       { key: 'second', label: 'Second', href: '/second', section: 'workspaces', activeHrefs: ['/a'] },
     ] }];
     expect(activeItemKey(sections, '/a/b/detail')).toBe('first');
-    expect(activeItemKey(projectPlatformShell(ORG, allPlatform), platformHref(ORG, 'catalog'))).toBe('platform-products');
+    const administration = workspaceNavigation(withAdministration(project(), ORG, allPlatform), platformHref(ORG, 'catalog'))!.sections;
+    expect(activeItemKey(administration, platformHref(ORG, 'catalog'))).toBe('platform-products');
   });
 });
 
@@ -145,46 +146,93 @@ describe('persistent header utility authority', () => {
   });
 });
 
-describe('Platform is a separate system projection', () => {
-  const sections = projectPlatformShell(ORG, allPlatform);
-  it('keeps Platform AI Runtime unrelated to tenant AI', () => {
+describe('Administration inside GildOps', () => {
+  const gildops = withAdministration(project(), ORG, allPlatform);
+  const entry = (sections = gildops) => projectedItems(sections).find((item) => item.key === 'administration');
+  const row = (key: string, sections = gildops) => projectedItems(sections).find((item) => item.key === key);
+
+  it('adds one private entry after the workspaces and leaves every workspace row flat', () => {
+    expect(gildops.map((section) => section.key)).toEqual([...SHELL_SECTION_ORDER, 'administration']);
+    expect(gildops.at(-1)!.items.map((item) => item.key)).toEqual(['administration']);
+    expect(keys(gildops).filter((key) => key === 'administration')).toHaveLength(1);
+    expect(gildops.find((section) => section.key === 'workspaces')!.items.map((item) => item.key)).toEqual(workspaceKeys);
+    expect(entry()!.children).toBeUndefined();
+    expect(entry()!.contextOnly).toBeUndefined();
+    expect(entry()!.href).toBe(platformHref(ORG));
+    expect(topLevelSections(gildops)).toEqual(gildops);
+  });
+  it('opens the agreed Administration groups, with Commercial administration among them', () => {
+    expect(entry()!.destinations?.map((item) => item.label)).toEqual(['Overview', 'Organizations', 'Product Registry', 'Integration Registry', 'Infrastructure', 'Reliability', 'Commercial administration']);
+    const commercial = entry()!.destinations!.find((item) => item.key === 'platform-group-commercial')!;
+    expect(commercial.children?.map((item) => item.key)).toEqual(['platform-plans', 'platform-pricing', 'platform-usage-economics', 'platform-vendor-rates', 'platform-package-economics', 'platform-portfolio-economics', 'platform-billing']);
+  });
+  it('links Finance to Commercial administration and AI to AI Runtime, owning neither', () => {
+    expect(row('workspace-finance')?.administration).toEqual({ key: 'platform-link-commercial', label: 'Commercial administration', href: platformHref(ORG, 'plans'), section: 'workspaces' });
+    expect(row('workspace-ai')?.administration).toEqual({ key: 'platform-link-ai-runtime', label: 'AI Runtime', href: platformHref(ORG, 'ai-runtime'), section: 'workspaces' });
+    expect(projectedItems(workspaceNavigation(gildops, `/organizations/${ORG}/finance`)!.sections).map((item) => item.key)).toContain('platform-link-commercial');
+    expect(workspaceNavigation(gildops, platformHref(ORG, 'plans/base'))?.workspace.key).toBe('administration');
+    expect(workspaceNavigation(gildops, platformHref(ORG, 'ai-runtime'))?.workspace.key).toBe('administration');
+  });
+  it('adds nothing without a platform permission', () => {
+    expect(withAdministration(project(), ORG, new Set())).toEqual(project());
+  });
+  it('offers commercial-only staff their Finance link and no empty Administration row', () => {
+    const commercial = withAdministration(project(), ORG, new Set(['platform.commercial']));
+    expect(row('workspace-finance', commercial)?.administration?.label).toBe('Commercial administration');
+    expect(entry(commercial)?.contextOnly).toBe(true);
+    expect(projectedItems(topLevelSections(commercial)).map((item) => item.key)).not.toContain('administration');
+    const context = workspaceNavigation(commercial, platformHref(ORG, 'pricing'))!;
+    expect(context.workspace.key).toBe('administration');
+    expect(activeItemKey(context.sections, platformHref(ORG, 'pricing'))).toBe('platform-pricing');
+  });
+  it('offers provider-only staff Infrastructure and their AI link, never Commercial', () => {
+    const providers = withAdministration(project(), ORG, new Set(['platform.providers']));
+    expect(entry(providers)!.destinations?.map((item) => item.label)).toEqual(['Infrastructure']);
+    expect(entry(providers)!.contextOnly).toBeUndefined();
+    expect(entry(providers)!.href).toBe(platformHref(ORG, 'providers'));
+    expect(row('workspace-finance', providers)?.administration).toBeUndefined();
+    expect(row('workspace-ai', providers)?.administration?.key).toBe('platform-link-ai-runtime');
+  });
+  it('draws the Administration row for commercial authority when no Finance is in the shell to link from', () => {
+    const noFinance = withAdministration(project().map((section) => ({ ...section, items: section.items.filter((item) => item.key !== 'workspace-finance') })), ORG, new Set(['platform.commercial']));
+    expect(entry(noFinance)?.contextOnly).toBeUndefined();
+    expect(entry(noFinance)?.destinations?.map((item) => item.label)).toEqual(['Commercial administration']);
+  });
+  it.each(PLATFORM_CAPABILITIES)('partial %s authority offers only its own destinations', (permission) => {
+    const partial = withAdministration(project(), ORG, new Set([permission]));
+    const allowed = platformDestinationsFor(new Set([permission])).map((item) => platformHref(ORG, item.path));
+    const offered = projectedItems(partial).flatMap((item) => [item, ...(item.destinations ?? []), ...(item.administration ? [item.administration] : [])])
+      .flatMap(function walk(item): string[] { return [item.href, ...(item.children ?? []).flatMap(walk)]; })
+      .filter((href) => href.startsWith(platformHref(ORG)));
+    expect(new Set(offered)).toEqual(new Set(allowed));
+  });
+  it('enters Administration as a context with a way back, at any nested address', () => {
+    const context = workspaceNavigation(gildops, platformHref(ORG, 'providers/twilio'))!;
+    expect(context.workspace.key).toBe('administration');
+    expect(context.backHref).toBe(`/organizations/${ORG}/home`);
+    expect(context.sections.map((section) => section.label)).toEqual(['Administration']);
+    expect(activeItemKey(context.sections, platformHref(ORG, 'providers/twilio'))).toBe('platform-providers');
+    expect(itemContains(context.sections[0].items.find((item) => item.key === 'platform-group-infrastructure')!, 'platform-providers')).toBe(true);
+    expect(activeItemKey(context.sections, platformHref(ORG))).toBe('platform-overview');
+  });
+  it('keeps AI Runtime unrelated to the tenant AI workspace', () => {
     expect(activeItemKey(project(), platformHref(ORG, 'ai-runtime'))).toBeNull();
-    expect(activeItemKey(sections, `/organizations/${ORG}/ai`)).toBeNull();
-    expect(activeItemKey(sections, platformHref(ORG, 'ai-runtime'))).toBe('platform-ai-runtime');
-    expect(selectShellContext(ORG, `/organizations/${ORG}/ai`, { organizationId: ORG })).toBe('business');
+    expect(workspaceNavigation(gildops, `/organizations/${ORG}/ai`)?.workspace.key).toBe('workspace-ai');
   });
-  it('holds only the existing nested Platform IA', () => {
-    expect(sections.map((section) => section.key)).toEqual(['platform']);
-    expect(sections[0].label).toBeNull();
-    const root = sections[0].items[0];
-    expect(root.href).toBe(platformHref(ORG));
-    expect(root.children?.map((item) => item.key)).toEqual(['platform-organizations', 'platform-group-catalog', 'platform-group-commercial', 'platform-group-infrastructure']);
-    expect(keys(sections)).toContain('platform-providers');
-    expect(keys(sections)).toContain('platform-connectors');
-    expect(keys(sections)).not.toContain('platform-overview');
-    expect(keys(sections)).not.toContain('workspace-crm');
-    expect(shellHomeItem(sections)).toBe(root);
-    expect(shellHomeItem(project())?.key).toBe('home');
+  it('offers no Administration context to a projection without it, or at an address it does not offer', () => {
+    expect(workspaceNavigation(project(), platformHref(ORG, 'providers'))).toBeNull();
+    expect(workspaceNavigation(withAdministration(project(), ORG, new Set(['platform.providers'])), platformHref(ORG, 'organizations'))).toBeNull();
   });
-  it('an empty permission set has no system projection', () => {
-    expect(projectPlatformShell(ORG, new Set())).toEqual([]);
+  it('lands the phone Home control on the business Home, in Administration too', () => {
+    expect(shellHomeItem(gildops)?.key).toBe('home');
   });
-  it.each(PLATFORM_CAPABILITIES)('partial %s authority projects only permitted pages', (permission) => {
-    const partial = projectPlatformShell(ORG, new Set([permission]));
-    const allowed = platformDestinationsFor(new Set([permission])).filter((item) => item.path).map((item) => `platform-${item.key}`);
-    expect(keys(partial).filter((key) => key !== 'platform' && !key.startsWith('platform-group-'))).toEqual(allowed);
-  });
-  it('nested detail links retain their group ancestry', () => {
-    const active = activeItemKey(sections, platformHref(ORG, 'providers/twilio'));
-    expect(active).toBe('platform-providers');
-    expect(itemContains(sections[0].items[0], active)).toBe(true);
-  });
-  it('only the already authorized canonical route container selects system identity', () => {
-    expect(selectShellContext(ORG, platformHref(ORG, 'providers'), { organizationId: ORG })).toBe('platform');
-    expect(selectShellContext(ORG, platformHref(ORG, 'providers'), null)).toBe('business');
-    expect(selectShellContext('tenant', '/organizations/tenant/platform', { organizationId: ORG })).toBe('business');
-    expect(selectShellContext(ORG, '/organizations/22222222-2222-4222-8222-222222222222/platform', { organizationId: ORG })).toBe('business');
-    expect(selectShellContext(ORG, `/organizations/${ORG}/home`, { organizationId: ORG })).toBe('business');
+});
+
+describe('Administration breadcrumbs', () => {
+  it('lead with Administration, never the workspace that links in', () => {
+    expect(platformAncestry(ORG, 'providers')).toEqual([{ label: 'Administration', href: platformHref(ORG) }, { label: 'Infrastructure' }]);
+    expect(platformAncestry(ORG, 'organizations')).toEqual([{ label: 'Administration', href: platformHref(ORG) }]);
+    expect(platformAncestry(ORG, 'pricing')).toEqual([{ label: 'Administration', href: platformHref(ORG) }, { label: 'Commercial administration' }]);
   });
 });
 
@@ -338,12 +386,19 @@ describe('responsive page-location projection', () => {
     expect(pageNavigation(configuration, `${base}/work/configuration/type-id`, []).parentHref).toBe(`${base}/work/configuration`);
     expect(pageNavigation(configuration, `${base}/work/configuration`, []).groups[0].label).toBe('Work');
   });
-  it('adapts Platform grouping without exposing tenant workspaces', () => {
-    const platformNavigation = { organizationId: ORG, sections: projectPlatformShell(ORG, new Set(['platform.providers'])) };
-    const location = pageNavigation(platformNavigation, platformHref(ORG, 'providers/twilio'), []);
+  it('adapts Administration grouping without exposing tenant workspaces', () => {
+    const administration = { organizationId: ORG, sections: withAdministration(project(), ORG, new Set(['platform.providers'])) };
+    const location = pageNavigation(administration, platformHref(ORG, 'providers/twilio'), []);
     expect(location.parentHref).toBe(platformHref(ORG, 'providers'));
+    expect(location.groups.map((group) => group.label)).toEqual(['Infrastructure']);
     expect(location.groups.flatMap((group) => group.items).every((item) => item.href.startsWith(platformHref(ORG)))).toBe(true);
     expect(location.groups.flatMap((group) => group.items).some((item) => item.key === 'workspace-field')).toBe(false);
+  });
+  it('keeps commercial pages in an Administration dropdown, never Finance', () => {
+    const gildops = { organizationId: ORG, sections: withAdministration(project(), ORG, new Set(['platform.commercial'])) };
+    const location = pageNavigation(gildops, platformHref(ORG, 'pricing'), []);
+    expect(location.groups.map((group) => group.label)).toEqual(['Commercial administration']);
+    expect(location.activeKey).toBe('platform-pricing');
   });
 });
 

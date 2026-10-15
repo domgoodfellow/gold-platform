@@ -154,12 +154,12 @@ describe('phone navigation uses the one projected sidebar', () => {
     expect(shell).toContain('navigationTrigger="always"');
   });
 
-  it('Platform is offered only from server-resolved facts, inside the one shell', () => {
+  it('Administration is offered only from server-resolved facts, inside the one shell', () => {
     const org = read('features/shell/organization-shell.tsx');
     // Phase C (Slice 12) moved this read, with the rest of the shell's coordinating reads, out of
     // the layout component into one application-layer function the layout calls once.
     const orgShellModel = read('lib/application/shell/organization-shell.ts');
-    expect(orgShellModel).toContain('loadPlatformContext(db)');
+    expect(orgShellModel).toContain('loadPlatformContext(db, organizationId)');
     expect(read('lib/application/shell/platform-context.ts')).toContain('platformPermissions(db)');
     expect(org).not.toMatch(/platformStaff=|isGoldInternal=/);
   });

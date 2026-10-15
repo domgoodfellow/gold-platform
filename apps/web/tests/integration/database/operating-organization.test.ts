@@ -3,7 +3,10 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { loadOrganizationShellModel } from '@/lib/application/shell/organization-shell';
 import { loadPlatformContext } from '@/lib/application/shell/platform-context';
+import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
+import { projectedItems } from '@/lib/shell';
 import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { createPlan, getPlan } from '@/lib/domain/catalogue/plans';
 import {
@@ -125,12 +128,13 @@ describe('the operating organization and the Platform guards', () => {
     await expect(as(operator, () => requirePlatformArea(gildops, 'platform.health'))).resolves.toBeTruthy();
     await expect(as(operator, () => requirePlatformCapability('platform.commercial'))).resolves.toBe(gildops);
     expect(await callerOperatingOrganization(operator.db)).toEqual({ id: gildops });
-    expect((await loadPlatformContext(operator.db))?.organizationId).toBe(gildops);
+    expect((await loadPlatformContext(operator.db, gildops))?.organizationId).toBe(gildops);
   });
 
   it("refuses another organization's id in a Platform URL, even from that staff member", async () => {
     await expect(as(operator, () => requirePlatformScope(otherBusiness))).rejects.toThrow('NOT_FOUND');
     expect(await isOperatingOrganization(operator.db, { organizationId: otherBusiness })).toBe(false);
+    expect(await loadPlatformContext(operator.db, otherBusiness)).toBeNull();
   });
 
   it('refuses platform staff who are not members of the operating organization, and does not tell them which it is', async () => {
@@ -139,7 +143,7 @@ describe('the operating organization and the Platform guards', () => {
       code: 'platform.capability_denied',
     });
     expect(await callerOperatingOrganization(outsiderStaff.db)).toBeNull();
-    expect(await loadPlatformContext(outsiderStaff.db)).toBeNull();
+    expect(await loadPlatformContext(outsiderStaff.db, gildops)).toBeNull();
   });
 
   it('refuses a member of the operating organization who holds no platform permission', async () => {
@@ -148,14 +152,14 @@ describe('the operating organization and the Platform guards', () => {
     await expect(as(plainMember, () => requirePlatformCapability('platform.health'))).rejects.toMatchObject({
       code: 'platform.capability_denied',
     });
-    expect(await loadPlatformContext(plainMember.db)).toBeNull();
+    expect(await loadPlatformContext(plainMember.db, gildops)).toBeNull();
   });
 
   it('does not make another holder of the internal Plan GildOps', async () => {
     expect(await callerOperatingOrganization(otherOwner.db)).toBeNull();
     expect(await isOperatingOrganization(otherOwner.db, { organizationId: internalPlanHolder })).toBe(false);
     await expect(as(otherOwner, () => requirePlatformScope(internalPlanHolder))).rejects.toThrow('NOT_FOUND');
-    expect(await loadPlatformContext(otherOwner.db)).toBeNull();
+    expect(await loadPlatformContext(otherOwner.db, internalPlanHolder)).toBeNull();
   });
 
   it("keeps the identity when GildOps' commercial Plan changes", async () => {
@@ -185,10 +189,40 @@ describe('the operating organization and the Platform guards', () => {
       await expect(as(operator, () => requirePlatformCapability('platform.health'))).rejects.toMatchObject({
         code: 'platform.capability_denied',
       });
-      expect(await loadPlatformContext(operator.db)).toBeNull();
+      expect(await loadPlatformContext(operator.db, gildops)).toBeNull();
     } finally {
       await pg.query('update public.platform_settings set operating_organization_id = $1 where singleton', [gildops]);
     }
+  });
+});
+
+describe('Administration in the organization shell', () => {
+  const shellOf = (who: Person, organizationId: string, locked = false) =>
+    loadOrganizationShellModel(who.db, { organizationId, capabilities: ALL_CAPABILITIES, locked });
+  const administrationKeys = async (who: Person, organizationId: string, locked = false) =>
+    projectedItems((await shellOf(who, organizationId, locked)).sections)
+      .flatMap((item) => [item.key, ...(item.administration ? [item.administration.key] : [])])
+      .filter((key) => key === 'administration' || key.startsWith('platform-'))
+      .sort();
+
+  it("draws GildOps' Administration for its staff, with GildOps as the organization", async () => {
+    const model = await shellOf(operator, gildops);
+    expect(await administrationKeys(operator, gildops)).toEqual(['administration', 'platform-link-ai-runtime', 'platform-link-commercial']);
+    expect(model.switchable.map((organization) => organization.id)).toEqual(expect.arrayContaining([gildops, otherBusiness]));
+    expect(model).not.toHaveProperty('platform');
+  });
+
+  it("draws none of it in a customer's shell, even for that staff member", async () => {
+    expect(await administrationKeys(operator, otherBusiness)).toEqual([]);
+    expect(await administrationKeys(otherOwner, internalPlanHolder)).toEqual([]);
+  });
+
+  it('draws none of it for a member of GildOps without a platform permission', async () => {
+    expect(await administrationKeys(plainMember, gildops)).toEqual([]);
+  });
+
+  it('keeps the Administration entry while GildOps itself is locked', async () => {
+    expect(await administrationKeys(operator, gildops, true)).toContain('administration');
   });
 });
 

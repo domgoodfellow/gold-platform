@@ -34,12 +34,12 @@ describe('GildOps operating context composition', () => {
     }
   });
 
-  it('resolves the canonical Platform destination independently of the current business', () => {
+  it('resolves Administration for the organization being drawn, and only GildOps’ own', () => {
     expect(helper).toContain('export async function isOperatingOrganization');
-    expect(shellModel).toContain('loadPlatformContext(db)');
+    expect(shellModel).toContain('loadPlatformContext(db, organizationId)');
     const platformContext = read('lib/application/shell/platform-context.ts');
     expect(platformContext).toContain('platformPermissions(db)');
-    expect(platformContext).toContain('callerOperatingOrganization(db)');
+    expect(platformContext).toContain('isOperatingOrganization(db, { organizationId })');
     expect(platformContext).toContain('permissions.size === 0');
   });
 

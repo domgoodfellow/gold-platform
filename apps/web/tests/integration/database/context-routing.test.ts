@@ -22,9 +22,9 @@ import { foundBusiness } from '@/tests/support/founding';
  * The locked product decision: platform staff default into the GOLD operating workspace when initialized, regardless of
  * how many businesses they also belong to. Membership itself is untouched by this — `mixed one`
  * and `mixed multi` below both prove their real membership rows still exist and are still read —
- * only the *default landing* changed. Reaching a business or Platform later is the context
- * switcher's job (`context-switcher.tsx`), which links straight to each; no request shows a
- * directory instead.
+ * only the *default landing* changed. Reaching another business later is the context switcher's
+ * job (`context-switcher.tsx`), which links straight to each, and Administration is reached from
+ * GildOps' own navigation; no request shows a directory instead.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';

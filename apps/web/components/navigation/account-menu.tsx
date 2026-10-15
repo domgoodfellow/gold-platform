@@ -19,8 +19,8 @@ import { settingsLandingHref } from '@/lib/route/settings';
 
 /**
  * The truthful, shared person/session menu, one implementation for every shell's sidebar footer.
- * Represents the PERSON, not where they are operating — cross-context navigation (switching
- * business, entering Platform Administration) is `ContextSwitcher`'s job alone. The menu has four
+ * Represents the PERSON, not where they are operating — switching business is `ContextSwitcher`'s
+ * job, and GildOps staff reach Administration from GildOps' own navigation. The menu has four
  * separated destinations: Settings (which opens the contextual Settings sidebar, so there is no
  * second Account or Profile entry), Help & documentation (how to use GildOps), Contact GildOps
  * Support (a request to the platform provider, not the business's own Support workspace), and

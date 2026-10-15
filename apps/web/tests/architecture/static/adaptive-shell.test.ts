@@ -159,12 +159,13 @@ describe('the projection is the only eligibility rule', () => {
     }
   });
 
-  it('gives Platform to the shell only where the organization is GOLD’s own and the person is staff', () => {
-    expect(shellModel).toContain('loadPlatformContext(db)');
+  it('gives Administration to the shell only where the organization is GildOps’ own and the person is staff', () => {
+    expect(shellModel).toContain('loadPlatformContext(db, organizationId)');
+    expect(shellModel).toContain('withAdministration(business, organizationId, platform.permissions)');
     const platformModel = code(read('lib/application/shell/platform-context.ts'));
     expect(platformModel).toContain('platformPermissions(db)');
     expect(platformModel).toContain('permissions.size === 0');
-    expect(platformModel).toContain('callerOperatingOrganization(db)');
+    expect(platformModel).toContain('isOperatingOrganization(db, { organizationId })');
   });
 
   it('draws every section from the same list on desktop, tablet and phone', () => {

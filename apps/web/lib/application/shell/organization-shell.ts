@@ -5,28 +5,28 @@ import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 import { activeModuleKeys, availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { hasSchedulableWork } from '@/lib/domain/work-items/types';
-import { projectShell, projectHeaderUtilities } from '@/lib/shell';
+import { projectShell, projectHeaderUtilities, withAdministration } from '@/lib/shell';
 
 export async function loadOrganizationShellModel(db: Db, input: { organizationId: string; capabilities: readonly Capability[]; locked: boolean }) {
   const { organizationId, locked } = input;
-  const [featureStates, schedulableWork, myOrganizations, { data: userData }, brand] = await Promise.all([
+  const [featureStates, schedulableWork, myOrganizations, { data: userData }, brand, platform] = await Promise.all([
     locked ? Promise.resolve([]) : organizationResolvedFeatureStates(db, { organizationId }),
     // The one answer about the business's shape of work; a locked organization draws no workspaces at all, so it is not asked.
     locked ? Promise.resolve(undefined) : hasSchedulableWork(db, { organizationId }),
     listMyOrganizations(db), db.auth.getUser(), getBrand(db, { organizationId }),
+    loadPlatformContext(db, organizationId),
   ]);
-  const platform = await loadPlatformContext(db);
   const enabledModules = activeModuleKeys(featureStates);
   const featureAvailability = availableFeatureKeys(featureStates);
   const capabilities = new Set(input.capabilities);
+  const business = projectShell({ organizationId, enabledModules, featureAvailability, capabilities, schedulableWork });
   return {
-    platform,
     brand,
     email: userData.user?.email ?? '',
     switchable: myOrganizations.map((organization) => ({
       id: organization.id, name: organization.name, role: organization.role, operationalState: organization.operationalState,
     })),
-    sections: projectShell({ organizationId, enabledModules, featureAvailability, capabilities, schedulableWork }),
+    sections: platform ? withAdministration(business, organizationId, platform.permissions) : business,
     configGate: { enabledModules, featureAvailability, capabilities, schedulableWork },
     utilities: locked ? [] : projectHeaderUtilities({ organizationId, enabledModules, featureAvailability, capabilities, schedulableWork }),
   };

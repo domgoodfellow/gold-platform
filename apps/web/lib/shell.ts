@@ -17,6 +17,7 @@ import {
   type Area,
 } from '@/lib/navigation';
 import {
+  ADMINISTRATION_LABEL,
   PLATFORM_GROUPS,
   platformDestinationsFor,
   platformHref,
@@ -27,10 +28,11 @@ import type { PlatformCapability } from '@/lib/domain/platform/permissions';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 
 /** One eligibility projection for all breakpoints. Business Home is the operational cockpit;
- * Work owns concrete execution. Platform is a separate system context, never a tenant workspace.
- * Visibility is courtesy: each destination continues enforcing its own authority.
+ * Work owns concrete execution. Administration is a privileged scope of GildOps' own organization,
+ * never a tenant workspace. Visibility is courtesy: each destination continues enforcing its own
+ * authority.
  */
-export type ShellSectionKey = 'home' | 'library' | 'workspaces' | 'platform' | 'settings-personal' | 'settings-organization' | 'settings-administration';
+export type ShellSectionKey = 'home' | 'library' | 'workspaces' | 'administration' | 'settings-personal' | 'settings-organization' | 'settings-administration';
 
 export type NavItem = {
   /** Unique across the whole projection; also the icon key. */
@@ -43,6 +45,13 @@ export type NavItem = {
   /** Eligible operating destinations, rendered only after entering this workspace. */
   destinations?: NavItem[];
   configuration?: NavItem;
+  /** A staff-only link into Administration, drawn after this workspace's Configuration. */
+  administration?: NavItem;
+  /**
+   * Drawn only once somebody is inside it: everything in it is already linked from their
+   * workspaces, so a top-level row would offer nothing new.
+   */
+  contextOnly?: boolean;
   configurationOnly?: boolean;
   /**
    * The destinations grouped under a navigable parent. A parent is
@@ -50,7 +59,7 @@ export type NavItem = {
    * a renderer without room for children — the collapsed rail — can still link to it.
    */
   children?: NavItem[];
-  /** Matches only its own address, not everything beneath it: the Platform overview is the root of a whole tree. */
+  /** Matches only its own address, not everything beneath it: the Administration overview is the root of a whole tree. */
   exact?: boolean;
   /**
    * A heading that has no page of its own: its `href` is its first page's, so the collapsed rail has
@@ -82,7 +91,7 @@ const SECTION_LABELS: Record<ShellSectionKey, string | null> = {
   home: null,
   library: null,
   workspaces: 'Workspaces',
-  platform: null,
+  administration: null,
   'settings-personal': 'Personal',
   'settings-organization': 'Organization',
   'settings-administration': 'Administration',
@@ -99,56 +108,67 @@ function areaItem(organizationId: string, area: Area, section: ShellSectionKey):
   };
 }
 
-/** The existing nested system navigation, filtered by canonical Platform permissions. */
-function projectPlatform(organizationId: string, permissions: ReadonlySet<PlatformCapability>): NavItem[] {
+/**
+ * Adds Platform Administration to GildOps' own organization shell. The caller has already
+ * established that this organization is the operating organization, that the person is a member
+ * of it and which platform permissions they hold; nothing here widens that.
+ *
+ * Every destination is filtered by its own permission and forms one private Administration
+ * entry. A group or destination linked from a workspace (Commercial administration from Finance,
+ * AI Runtime from AI) also gets a link there when that workspace is in the shell. When every
+ * part of Administration is already linked that way — staff who hold only commercial authority —
+ * the entry is drawn only once they are inside it, so they are not offered an empty area.
+ */
+export function withAdministration(sections: readonly ShellSection[], organizationId: string, permissions: ReadonlySet<PlatformCapability>): ShellSection[] {
   const destinations = platformDestinationsFor(permissions);
-  if (destinations.length === 0) return [];
+  if (destinations.length === 0) return [...sections];
 
-  const item = (destination: PlatformDestination): NavItem => ({
+  const workspaceRows = new Set(sections.flatMap((section) => section.items.map((item) => item.key)));
+  const links = new Map<string, NavItem>();
+  const linked = new Set<string>();
+  const link = (workspace: string | undefined, item: NavItem) => {
+    const row = workspace ? `workspace-${workspace}` : null;
+    if (!row || !workspaceRows.has(row) || links.has(row)) return;
+    links.set(row, { key: item.key.replace(/^platform-(group-)?/, 'platform-link-'), label: item.label, href: item.href, section: 'workspaces' });
+    linked.add(item.key);
+  };
+  const page = (destination: PlatformDestination): NavItem => ({
     key: `platform-${destination.key}`,
     label: destination.label,
     href: platformHref(organizationId, destination.path),
-    section: 'platform',
+    section: 'administration',
+    ...(destination.path === '' ? { exact: true } : {}),
   });
 
-  const children: NavItem[] = [];
-  const groupsDrawn = new Set<string>();
+  const entry: NavItem[] = [];
   for (const destination of destinations) {
-    // The root is the parent row's own destination, represented by the row itself — never a
-    // second "Overview" child beneath it.
-    if (destination.path === '') continue;
-    if (destination.under) {
-      if (groupsDrawn.has(destination.under)) continue;
-      groupsDrawn.add(destination.under);
-      const group = PLATFORM_GROUPS.find((candidate) => candidate.key === destination.under)!;
-      const pages = destinations.filter((candidate) => candidate.under === group.key).map(item);
-      children.push({
-        key: `platform-group-${group.key}`,
-        label: group.label,
-        href: pages[0].href,
-        section: 'platform',
-        heading: true,
-        children: pages,
-      });
+    link(destination.linkedFrom, page(destination));
+    if (!destination.under) {
+      entry.push(page(destination));
       continue;
     }
-    children.push(item(destination));
+    if (entry.some((item) => item.key === `platform-group-${destination.under}`)) continue;
+    const group = PLATFORM_GROUPS.find((candidate) => candidate.key === destination.under)!;
+    const pages = destinations.filter((candidate) => candidate.under === group.key).map(page);
+    const node: NavItem = { key: `platform-group-${group.key}`, label: group.label, href: pages[0].href, section: 'administration', heading: true, children: pages };
+    entry.push(node);
+    link(group.linkedFrom, node);
   }
 
-  const root: NavItem = {
-    key: 'platform',
-    label: 'Platform',
-    href: platformHref(organizationId, ''),
-    section: 'platform',
-    exact: true,
-  };
-  return [children.length === 0 ? root : { ...root, heading: true, children }];
+  const projected = sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) => (links.has(item.key) ? { ...item, administration: links.get(item.key) } : item)),
+  }));
+  const administration: NavItem = { key: 'administration', label: ADMINISTRATION_LABEL, href: entry[0].href, section: 'administration', destinations: entry };
+  if (entry.every((item) => linked.has(item.key))) administration.contextOnly = true;
+  return [...projected, { key: 'administration', label: SECTION_LABELS.administration, items: [administration] }];
 }
 
-/** The existing nested Platform IA, projected only for the separate system context. */
-export function projectPlatformShell(organizationId: string, permissions: ReadonlySet<PlatformCapability>): ShellSection[] {
-  const items = projectPlatform(organizationId, permissions);
-  return items.length ? [{ key: 'platform', label: null, items }] : [];
+/** The sections drawn before anybody has entered a context: entries drawn only from inside are left out. */
+export function topLevelSections(sections: readonly ShellSection[]): ShellSection[] {
+  return sections
+    .map((section) => ({ ...section, items: section.items.filter((item) => !item.contextOnly) }))
+    .filter((section) => section.items.length > 0);
 }
 
 export type HeaderUtility = { key: 'team' | 'connections'; label: string; href: string };
@@ -214,11 +234,42 @@ export function projectShell(input: ShellInput): ShellSection[] {
   return sections.filter((section) => section.items.length > 0);
 }
 
+type ContextNavigation = { workspace: NavItem; sections: ShellSection[]; backHref: string };
+
+function workspaceContext(workspace: NavItem, organizationId: string): ContextNavigation {
+  return {
+    workspace,
+    backHref: areaHref(organizationId, 'home'),
+    sections: [{ key: 'workspaces', label: workspace.label, items: [
+      ...(!workspace.configurationOnly ? [{ key: 'workspace-overview', label: 'Overview', href: workspace.href, section: 'workspaces' as const, exact: true }] : []),
+      ...(workspace.destinations ?? []),
+      ...(workspace.configuration ? [workspace.configuration] : []),
+      ...(workspace.administration ? [workspace.administration] : []),
+    ] }],
+  };
+}
+
+/**
+ * The Administration context for an address beneath it. A workspace that links in owns nothing
+ * here. Null when the projection offers this person nothing at that address — the page then
+ * refuses on its own.
+ */
+function administrationNavigation(sections: readonly ShellSection[], organizationId: string, path: string): ContextNavigation | null {
+  const entry = projectedItems(sections).find((item) => item.key === 'administration');
+  if (!entry?.destinations || activeItemKey([{ key: 'administration', label: null, items: entry.destinations }], path) === null) return null;
+  return {
+    workspace: entry,
+    backHref: areaHref(organizationId, 'home'),
+    sections: [{ key: 'administration', label: entry.label, items: entry.destinations }],
+  };
+}
+
 /** Resolve ownership before visibility, so an unavailable nested Area cannot fall back to its Home. */
-export function workspaceNavigation(sections: readonly ShellSection[], pathname: string): { workspace: NavItem; sections: ShellSection[]; backHref: string } | null {
+export function workspaceNavigation(sections: readonly ShellSection[], pathname: string): ContextNavigation | null {
   const organizationId = organizationIdFromPath(pathname);
   if (!organizationId) return null;
   const path = pathname.split(/[?#]/)[0].replace(/\/$/, '');
+  if (platformSubpath(path) !== null) return administrationNavigation(sections, organizationId, path);
   const owner = AREAS.filter((area) => {
     const href = areaHref(organizationId, area.segment);
     return path === href || path.startsWith(`${href}/`);
@@ -234,21 +285,24 @@ export function workspaceNavigation(sections: readonly ShellSection[], pathname:
     const numberRead = owner?.segment === 'comms-numbers' && workspace.activeHrefs?.includes(areaHref(organizationId, owner.segment));
     if (!allowed && !numberRead) return null;
   } else if ((configurationOwner && owner?.segment !== 'comms-numbers') || !owner || !workspace.activeHrefs?.includes(areaHref(organizationId, owner.segment))) return null;
-  return {
-    workspace,
-    backHref: areaHref(organizationId, 'home'),
-    sections: [{ key: 'workspaces', label: workspace.label, items: [
-      ...(!workspace.configurationOnly ? [{ key: 'workspace-overview', label: 'Overview', href: workspace.href, section: 'workspaces' as const, exact: true }] : []),
-      ...workspace.destinations,
-      ...(workspace.configuration ? [workspace.configuration] : []),
-    ] }],
-  };
+  return workspaceContext(workspace, organizationId);
 }
 
 /** Every item, flat, in the order it is drawn: a parent, then its pages. */
 export function projectedItems(sections: readonly ShellSection[]): NavItem[] {
   const flatten = (item: NavItem): NavItem[] => [item, ...(item.children ?? []).flatMap(flatten)];
   return sections.flatMap((section) => section.items.flatMap(flatten));
+}
+
+/** Every item a person could be sent to from the projection, including entered-only destinations. */
+function reachableItems(sections: readonly ShellSection[]): NavItem[] {
+  const walk = (item: NavItem): NavItem[] => [item, ...[
+    ...(item.children ?? []),
+    ...(item.destinations ?? []),
+    ...(item.configuration ? [item.configuration] : []),
+    ...(item.administration ? [item.administration] : []),
+  ].flatMap(walk)];
+  return sections.flatMap((section) => section.items.flatMap(walk));
 }
 
 /** Whether `key` is this item or one of its pages — what keeps a branch open while somebody is inside it. */
@@ -280,20 +334,14 @@ export function activeItemKey(sections: readonly ShellSection[], pathname: strin
   return best?.key ?? null;
 }
 
-/** Whether a pathname is inside GOLD's Platform sub-scope — the one fact the sidebar disclosure follows. */
+/** Whether a pathname is a Platform Administration address beneath an organization. */
 export function inPlatformScope(pathname: string): boolean {
   return platformSubpath(pathname) !== null;
 }
 
-/** A URL selects a system identity only within the already resolved canonical Platform context. */
-export function selectShellContext(organizationId: string, pathname: string, platform: { organizationId: string } | null): 'business' | 'platform' {
-  return platform?.organizationId === organizationId && organizationIdFromPath(pathname) === organizationId && inPlatformScope(pathname) ? 'platform' : 'business';
-}
-
-/** The current context's landing item for the persistent phone Home control. */
+/** The business's landing item for the persistent phone Home control. */
 export function shellHomeItem(sections: readonly ShellSection[]): NavItem | undefined {
-  return sections.find((section) => section.key === 'home')?.items[0]
-    ?? sections.find((section) => section.key === 'platform')?.items[0];
+  return sections.find((section) => section.key === 'home')?.items[0];
 }
 
 
@@ -330,7 +378,7 @@ export function pageNavigation(navigation: LocationNavigation | undefined, pathn
   const activeKey = activeItemKey(scoped, path);
   const active = scopeItems.find((item) => item.key === activeKey);
   const allowed = new Set([
-    ...projectedItems(sections).flatMap((item) => [item.href, ...(item.activeHrefs ?? []), ...(item.destinations ?? []).map((destination) => destination.href)]),
+    ...reachableItems(sections).flatMap((item) => [item.href, ...(item.activeHrefs ?? [])]),
     ...(navigation.configurationHrefs ?? []),
   ].filter(inScope).map(cleanPath));
   const validAncestor = (href: string | undefined): href is string => {
@@ -346,10 +394,10 @@ export function pageNavigation(navigation: LocationNavigation | undefined, pathn
     ?? (home && inScope(home.href) && home.href !== path ? home.href : undefined);
 
   const groups: PageNavigation['groups'] = [];
-  // Tenant dropdowns stay in the owning workspace; Settings and Platform use their own supplied projection.
-  if (workspace || sections.some((section) => section.key === 'platform' || section.key.startsWith('settings-'))) {
+  // Dropdowns stay in the owning context (a workspace or Administration); Settings uses its own supplied projection.
+  if (workspace || sections.some((section) => section.key.startsWith('settings-'))) {
     const append = (items: NavItem[], label: string | null) => {
-      const leaves = items.filter((item) => inScope(item.href) && (!item.children || item.key === 'platform')).map((item) => ({ ...item, children: undefined }));
+      const leaves = items.filter((item) => inScope(item.href) && !item.children).map((item) => ({ ...item, children: undefined }));
       if (leaves.length) groups.push({ label, items: leaves });
       for (const item of items) if (item.children) append(item.children, item.label);
     };

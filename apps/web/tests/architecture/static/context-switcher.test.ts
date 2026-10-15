@@ -6,7 +6,7 @@ import { organizationIdFromPath } from '@/lib/route/platform-context';
 import { platformHref, platformSubpath } from '@/lib/platform-navigation';
 import { inPlatformScope } from '@/lib/shell';
 
-/** The context switcher distinguishes business tenants from the authorized system context. */
+/** The context switcher lists organizations only; Administration is a scope inside GildOps' own. */
 
 const WEB = fileURLToPath(new URL('../../..', import.meta.url));
 const read = (path: string) => readFileSync(`${WEB}/${path}`, 'utf8');
@@ -33,13 +33,11 @@ describe('the Platform sub-scope', () => {
 });
 
 describe('the switcher', () => {
-  it('links directly to businesses and the resolved Platform system destination', () => {
+  it('links directly to businesses and offers no Platform identity of its own', () => {
     expect(switcher).toContain('organizationHomeHref(organization.id, organization.operationalState)');
     expect(switcher).not.toMatch(/\/organizations\?|All businesses|all=1/);
     const executable = switcher.replace(/\/\*[\s\S]*?\*\//g, '');
-    expect(executable).toContain('href={platform.href}');
-    expect(executable).toContain('System');
-    expect(executable).not.toMatch(/Platform Administration|platformAdministration|inPlatformContext|Global tools/);
+    expect(executable).not.toMatch(/platform\.href|kind: 'platform'|'System'|>System<|System control plane|Platform Administration|platformAdministration|inPlatformContext|Global tools/);
     // The current context is the organization the shell was built for, never something read off the path.
     expect(executable).not.toMatch(/usePathname|inPlatformScope|platformSubpath/);
   });
@@ -55,12 +53,13 @@ describe('the switcher', () => {
 
   it('is a plain label, not an empty menu, when there is nowhere else to go', () => {
     expect(switcher).toContain('!view.hasChoices');
-    expect(switcher).toContain('hasChoices: businesses.length > 0 || !!platform');
+    expect(switcher).toContain('hasChoices: businesses.length > 0 }');
   });
 
-  it('the server resolves platform context before the shared frame renders it', () => {
+  it('the server resolves Administration into the projected sections before the shared frame renders them', () => {
     const shell = read('features/shell/organization-shell.tsx');
-    expect(shell).toContain('platform={platform}');
+    expect(shell).not.toContain('platform={platform}');
+    expect(shell).toContain('sections={sections}');
     expect(read('lib/application/shell/platform-context.ts')).toContain('platformPermissions(db)');
     expect(read('lib/route/person-context.ts')).not.toMatch(/platformAdministration/);
     expect(read('features/account/personal-settings-shell.tsx')).toContain('loadPersonContext()');
@@ -122,15 +121,11 @@ describe('moving between organizations', () => {
     expect(view.hasChoices).toBe(true);
   });
 
-  it('names the system scope and offers GildOps operating organization as a normal business', () => {
-    const view = deriveSwitcherView({ kind: 'platform', organizationId: 'gold' }, [gold, nextfund], { organizationId: 'gold', href: platformHref('gold') });
-    expect(view.triggerName).toBe('GildOps Platform');
-    expect(view.triggerRole).toBe('System control plane');
-    expect(view.businesses.map((org) => org.id)).toEqual(['gold', 'nf']);
-  });
-
-  it('an authorized operator with one business can still switch to Platform', () => {
-    expect(deriveSwitcherView(current, [gold], { organizationId: 'gold', href: platformHref('gold') }).hasChoices).toBe(true);
+  it('keeps GildOps itself as the current organization, with its real role, wherever its staff work in it', () => {
+    const view = deriveSwitcherView(current, [gold, nextfund]);
+    expect(view.triggerName).toBe('GOLD');
+    expect(view.triggerRole).toBe('Owner');
+    expect(view.businesses.map((org) => org.id)).toEqual(['nf']);
   });
 
   it('has nowhere to go for a person with one organization', () => {

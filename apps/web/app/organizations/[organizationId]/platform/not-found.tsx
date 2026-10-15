@@ -6,8 +6,8 @@ import { FallbackPage } from '@/components/feedback/fallback-page';
 import { ButtonLink } from '@/components/controls/button';
 
 /**
- * Inside the Platform layout, so an unknown address or a missing catalogue record keeps Platform
- * context (sidebar, phone bar, switcher) rather than falling to the public 404.
+ * Inside the Platform layout, so an unknown address or a missing catalogue record keeps the
+ * Administration context (sidebar, phone bar, switcher) rather than falling to the public 404.
  */
 export default function PlatformNotFound() {
   const { organizationId: goldId } = useParams<{ organizationId: string }>();
@@ -15,7 +15,7 @@ export default function PlatformNotFound() {
     <FallbackPage
       title="This page does not exist"
       description="The address may have changed, or the record may no longer be available."
-      action={<ButtonLink href={platformHref(goldId, '')}>Back to Platform overview</ButtonLink>}
+      action={<ButtonLink href={platformHref(goldId, '')}>Back to Administration</ButtonLink>}
     />
   );
 }
