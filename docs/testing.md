@@ -1274,6 +1274,30 @@ typed, non-persisted contracts; Slice B must add it with preference storage and 
 
 Global Home verification combines `home-projection.test.ts` for local date/DST, normalization, exact-count evidence and deterministic identity/priority semantics; `home-dashboard.test.ts` for canonical local records, exact counts beyond previews, scheduling exceptions, currency separation, actor scope, private Agent approval/failure metadata, restricted RPC access and real source-failure isolation; and `global-home.spec.ts` for owning creation workflows, filters, persistent browser preferences, Agent rail, narrow-container containment and the 16 requested captures. Fixtures require loopback Supabase, use canonical provisioning and domain commands, and simulate carrier ingress only in the local database. Screenshot inspection is required in addition to passing browser assertions. Hosted migrations and live voice, payment and AI providers are outside these local checks.
 
+### Batch C managed-service verification
+
+`service-disclosures.test.ts` exercises real PostgreSQL ownership/RLS, default privacy, closed
+draft/Portal validators, attributable immutable releases, stale and concurrent edits/publication,
+independent tenant artifact authority, wrong-customer/organization refusal, ended relationships,
+unchanged lifecycle copy, module publication/removal, activation/entitlement, session expiry and
+invitation revocation. `service-disclosure-editor.test.tsx` covers draft/published preview, explicit confirmation,
+read-only controls, lifecycle review and shared List/Cards/Summary presentations with safe text.
+
+The isolated `playwright.batch-c.config.ts` runs `e2e/service-disclosures.spec.ts` against loopback
+Supabase and an explicitly loopback-configured app, without demo global setup. Run
+`pnpm --filter @gold/web exec playwright test --config playwright.batch-c.config.ts` with
+`E2E_BASE_URL` selecting the app. Separate browser contexts exercise seller approval, different
+customer and tenant Portal identities, draft isolation, withdrawal, direct RPC denial and Portal
+module removal. It captures engagement and Portal surfaces at 1440, 1024 and 390 pixels and checks
+keyboard focus return, phone touch gestures and overflow. Inspect screenshots separately; assertions alone are not visual
+evidence. Batch A/B and existing publication/payment/hostname regressions remain required. No hosted
+migration, provider DNS/TLS, private tenant operation or production delivery is proved by local tests.
+
+Batch C hostname acceptance uses the same loopback TLS fixture described below, with
+`E2E_PORTAL_TLS_URL` selecting its listener. Seller and receiving-tenant Portal hostnames, invitations
+and browser cookie stores remain independent; a seller context is refused on the tenant hostname.
+Run the hostname acceptance against a locally configured production build to verify Secure cookies.
+
 ### Batch B Portal verification
 
 Custom-host browser verification uses a disposable loopback HTTPS reverse proxy so production

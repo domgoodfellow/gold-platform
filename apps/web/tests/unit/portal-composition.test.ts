@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PORTAL_CONTENT, parsePortalContent, portalFromTemplate, removePortalPage, newPortalModule, portalPageForPath } from '@/lib/domain/portal/composition';
 describe('Portal pages, modules and navigation contract', () => {
- it('roundtrips typed templates and creates independent drafts',()=>{for(const key of ['basic','service-business']){const a=portalFromTemplate(key);expect(parsePortalContent(a)).toEqual(a);a.settings.title='Changed';expect(portalFromTemplate(key).settings.title).toBe('Customer portal');}});
+ it('roundtrips typed templates and creates independent drafts',()=>{for(const key of ['basic','service-business','managed-services']){const a=portalFromTemplate(key);expect(parsePortalContent(a)).toEqual(a);a.settings.title='Changed';expect(portalFromTemplate(key).settings.title).toBe('Customer portal');}});
  it('upgrades unpublished historical definitions without introducing Batch C Services',()=>{const value=parsePortalContent({title:' Portal ',introduction:'<b>literal</b>',modules:['services','invoices']});expect(value.settings.title).toBe(' Portal ');expect(value.pages[0].modules.map(item=>item.kind)).toEqual(['invoices']);});
  it('rejects forged data, duplicated identities, invalid paths and navigation references',()=>{
    const cases:unknown[]=[null,[],{}, {...DEFAULT_PORTAL_CONTENT,customerId:'forged'}];

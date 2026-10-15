@@ -15,8 +15,17 @@ beforeEach(()=>{window.matchMedia=vi.fn().mockImplementation((query:string)=>({m
 afterEach(cleanup);
 const definition:PortalDefinition={id:'portal',organization_id:'org',draft_version:2,draft_content:DEFAULT_PORTAL_CONTENT,published_revision_id:'revision',revision_number:1,created_at:'2026-10-13T12:00:00Z',updated_at:'2026-10-13T12:00:00Z',created_by:'owner',updated_by:'owner',draft_status:'draft',submitted_at:null,submitted_by:null};
 const revision:PortalRevision={id:'revision',organization_id:'org',portal_id:'portal',number:1,content:DEFAULT_PORTAL_CONTENT,published_at:'2026-10-13T12:00:00Z',published_by:'owner',reviewed_at:null,reviewed_by:null};
-const common={organizationId:'org',timezone:'America/Toronto',enabled:true,brand:DEFAULT_BRAND,logo:null,profile:{displayName:'Actual business',tagline:null,intro:null,contactEmail:null,contactPhone:null,address:null},availability:{defaultExperience:true,work:true,invoices:true,forms:true,payments:false,publish:true}};
+const common={organizationId:'org',timezone:'America/Toronto',enabled:true,brand:DEFAULT_BRAND,logo:null,profile:{displayName:'Actual business',tagline:null,intro:null,contactEmail:null,contactPhone:null,address:null},availability:{defaultExperience:true,work:true,invoices:true,forms:true,services:true,payments:false,publish:true}};
 describe('Portal workbench lifecycle and accessible composition',()=>{
+ it('adds Services through the canonical chooser and configures its presentation',async()=>{
+  const user=userEvent.setup();render(<PortalWorkbench {...common} definition={definition} history={[]}/>);
+  await user.click(screen.getByRole('button',{name:'Add Services'}));
+  expect(screen.getByLabelText('Module heading')).toHaveValue('Your services');
+  await user.selectOptions(screen.getByLabelText('Presentation'),'cards');
+  expect(screen.getByRole('region',{name:'Canvas'}).querySelector('[data-portal-module="services"]')).toHaveAttribute('data-portal-variant','cards');
+  expect(screen.getByText('Example website implementation')).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Save draft'})).toBeEnabled();
+ });
  it('keeps the full legacy record list while applying configured limits after custom publication',()=>{
   const records=Array.from({length:25},(_,index)=>({id:String(index),title:`Authorized historical item ${index}`,detail:''}));
   const instance=DEFAULT_PORTAL_CONTENT.pages[0].modules[0];

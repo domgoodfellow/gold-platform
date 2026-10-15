@@ -1241,8 +1241,28 @@ because an unauthorized RLS DELETE may return no rows without an error. Database
 consume canonical entitlement/activation and refuse direct launch past required domain setup.
 Connection projections do not send raw provider diagnostics to the browser.
 
+### Customer service disclosure authorization
+
+`service_disclosures`, `service_disclosure_revisions` and `service_disclosure_deliverables` force RLS.
+Authenticated actors have internal seller-membership SELECT only; direct mutations are denied.
+Composite keys bind Organization, Customer, Engagement, Disclosure, revision and typed deliverable.
+Version-checked save/publish/withdraw commands require live seller `customer.update`; platform staff
+alone is insufficient. Approval snapshots are immutable, including at the database trigger boundary.
+Draft saving and approval are independent operations. Customer Portal identities cannot read drafts,
+history, accepted terms, reference IDs, tenant configuration or staff attribution.
+
+The narrow `portal_service_disclosures` RPC uses current PortalContext, activation, entitlement,
+published navigation/module exposure, customer ownership and an explicit approved revision. Its
+closed projection returns at most 100 records with at most 20 deliverable presentations each. Detail
+IDs never override customer scope. No private tenant content is read to construct the live response.
+Publication requires independent current artifact authority and an active relationship; URLs are
+server-derived HTTPS public destinations with no query strings, fragments, tokens or credentials.
+The live response rechecks public hostname association. Termination suppresses tenant presentations;
+seller-approved summary history remains an explicit communication, never a tenant access grant.
+Internal previews use the operator's existing scope and never mint a customer session.
+
 ### Studio Portal publication and hostname authorization
 
 Portal draft/history reads require Organization membership and `organization.manage`; direct table writes are denied. Version-checked commands require independent management, and publication additionally requires current entitlement/activation and the reviewed draft. The no-argument published projection derives identity from live PortalContext. Revocation, expiry, unpublishing and disabled activation/entitlement fail closed. Form submissions and payment initiation also check published navigation/module exposure before delegating to canonical customer/placement/revision/payment authority. No service-role client is used by runtime or editor.
 
-Hosted Portal exchanges validate the verified hostname organization before binding; hosted pages and actions freshly resolve hostname/context agreement, without relying on the routing cache. Only verified custom Portal or the organization's managed origin can serve it; custom Website, foreign, unverified, released and unknown hosts fail closed. Application hosts come from deployment configuration. Exchanges remain same-origin, with host-only HttpOnly `gold-portal` cookies scoped to `/portal`, separate from operator/proposal/public Form sessions. Portal responses are private/no-store, no-referrer and noindex. Services remain Batch C; typed deliverables still require independent tenant management and an active Client/Tenant relationship.
+Hosted Portal exchanges validate the verified hostname organization before binding; hosted pages and actions freshly resolve hostname/context agreement, without relying on the routing cache. Only verified custom Portal or the organization's managed origin can serve it; custom Website, foreign, unverified, released and unknown hosts fail closed. Application hosts come from deployment configuration. Exchanges remain same-origin, with host-only HttpOnly `gold-portal` cookies scoped to `/portal`, separate from operator/proposal/public Form sessions. Portal responses are private/no-store, no-referrer and noindex. Services use the independent CRM disclosure approval boundary; typed deliverables still require independent tenant management and an active Client/Tenant relationship.

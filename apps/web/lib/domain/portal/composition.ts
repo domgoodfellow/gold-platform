@@ -8,6 +8,7 @@ function configurationSchema(variants: readonly string[], payments = false) {
   } };
 }
 export const PORTAL_MODULES = {
+  services: { kind: 'services', label: 'Services', description: 'Approved service updates for each customer.', heading: 'Your services', variants: ['list', 'cards', 'summary'], defaultVariant: 'list', defaultConfiguration: {heading:'Your services',variant:'list',limit:20}, configurationSchema: configurationSchema(['list','cards','summary']), feature: 'portal_auth', multiple: true, access: 'Approved disclosures belonging to the current Portal customer', presenter: 'services', preview: 'labelled_examples' },
   work: { kind: 'work', label: 'Work', description: 'Work history and appointments for each customer.', heading: 'Your work', variants: ['history', 'upcoming'], defaultVariant: 'history', defaultConfiguration: {heading:'Your work',variant:'history',limit:20}, configurationSchema: configurationSchema(['history','upcoming']), feature: 'portal_history', multiple: true, access: 'Work belonging to the current Portal customer', presenter: 'work', preview: 'labelled_examples' },
   invoices: { kind: 'invoices', label: 'Invoices & payments', description: 'Invoices, balances and available payment actions.', heading: 'Your invoices', variants: ['list', 'summary'], defaultVariant: 'list', defaultConfiguration: {heading:'Your invoices',variant:'list',limit:20,payments:true}, configurationSchema: configurationSchema(['list','summary'],true), feature: 'portal_history', multiple: true, access: 'Customer-owned invoices; Finance verifies payment availability', presenter: 'invoices', preview: 'labelled_examples' },
   forms: { kind: 'forms', label: 'Forms', description: 'Published Forms explicitly offered to customers.', heading: 'Forms', variants: ['list', 'cards'], defaultVariant: 'list', defaultConfiguration: {heading:'Forms',variant:'list',limit:20}, configurationSchema: configurationSchema(['list','cards']), feature: 'portal_auth', multiple: false, access: 'Canonical Portal placement and currently published Form revision', presenter: 'forms', preview: 'labelled_examples' },
@@ -80,6 +81,15 @@ export function removePortalPage(content: PortalContent, id: string): PortalCont
   return { ...content, pages, navigation, defaultPageId };
 }
 export const PORTAL_TEMPLATES = [
+  { key: 'managed-services', name: 'Managed Services Portal', description: 'Approved services, billing and offered Forms.', category: 'Customer portal', definition: {
+    version: 2, settings: { title: 'Customer portal', introduction: '', layout: 'comfortable' }, defaultPageId: 'home',
+    pages: [
+      { id: 'home', name: 'Home', path: 'home', modules: [{...newPortalModule('services','service-summary'), config:{heading:'Your services',variant:'summary',limit:5}}] },
+      { id: 'services', name: 'Services', path: 'services', modules: [newPortalModule('services','services-list')] },
+      { id: 'billing', name: 'Billing', path: 'billing', modules: [newPortalModule('invoices','service-invoices')] },
+      { id: 'forms', name: 'Forms', path: 'forms', modules: [newPortalModule('forms','service-forms')] },
+    ], navigation: [{pageId:'home',label:'Home'},{pageId:'services',label:'Services'},{pageId:'billing',label:'Billing'},{pageId:'forms',label:'Forms'}],
+  } satisfies PortalContent },
   { key: 'basic', name: 'Basic Customer Portal', description: 'Work, invoices and offered Forms on a welcoming home page.', category: 'Customer portal', definition: DEFAULT_PORTAL_CONTENT },
   { key: 'service-business', name: 'Service Business Portal', description: 'Upcoming appointments, history, billing and offered Forms on dedicated pages.', category: 'Customer portal', definition: {
     version: 2, settings: { title: 'Customer portal', introduction: '', layout: 'comfortable' }, defaultPageId: 'home',

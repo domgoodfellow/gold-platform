@@ -12,6 +12,7 @@ import { PortalRenderer, type PortalPresentation } from '@/features/studio/porta
 import { invoiceStanding, listInvoiceLines, listPayments } from '@/lib/domain/billing/invoices';
 import { portalCardPaymentAvailable } from '@/lib/domain/billing/card-payments';
 import { portalFormsAvailable } from '@/lib/domain/portal/portal-forms';
+import { portalServiceDisclosures } from '@/lib/domain/customers/service-disclosures';
 import { PortalForms } from '@/features/portal-access/portal-forms';
 import { formatWindow, parseWindow } from '@/lib/domain/scheduling/window';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
@@ -33,11 +34,12 @@ export async function CustomerPortalPage({ path }: { path?: string }) {
   if (!organization) notFound();
   const available = await portalModuleAvailability(db);
   const needs = new Set(page.modules.map(module => module.kind));
-  const [profile, brand, items, invoices, forms] = await Promise.all([
+  const [profile, brand, items, invoices, forms, services] = await Promise.all([
     publicProfile(db,{organizationId,fallbackName:organization.name}), getBrand(db,{organizationId}),
     needs.has('work') && available.work ? db.from('work_items').select('id,title,scheduled_during,status:work_item_statuses!work_items_status_same_org_and_type(name)').order('created_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
     needs.has('invoices') && available.invoices ? db.from('invoices').select('id,number,issued_at,currency').order('issued_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
     needs.has('forms') && available.forms ? portalFormsAvailable(db) : Promise.resolve([]),
+    needs.has('services') && available.services ? portalServiceDisclosures(db, undefined, Math.max(...page.modules.filter(module => module.kind === 'services').map(module => module.config.limit))) : Promise.resolve([]),
   ]);
   if (items.error || invoices.error) throw new Error('Customer records could not be loaded.');
   const records: PortalPresentation = { work: (items.data ?? []).map(item => {
@@ -52,6 +54,6 @@ export async function CustomerPortalPage({ path }: { path?: string }) {
     const amount=standing.total ? formatMoney(standing.total.totalMinor,standing.total.currency) : 'Total unavailable';
     const balance=standing.settled ? 'paid' : standing.outstandingMinor !== null && standing.total ? `${formatMoney(standing.outstandingMinor,standing.total.currency)} due` : 'Balance unavailable';
     return { id:invoice.id,title:`#${invoice.number}`,detail:`${date} · ${amount} · ${balance}`,action:payment ? <PayInvoiceForm invoiceId={invoice.id} amountLabel={formatMoney(payment.outstandingMinor,payment.currency)}/> : null };
-  })), forms: forms.map(form => ({id:form.formId,title:form.definition.title,detail:'',action:<PortalForms forms={[form]}/>})) };
+  })), forms: forms.map(form => ({id:form.formId,title:form.definition.title,detail:'',action:<PortalForms forms={[form]}/>})), services: services.map(service => ({id:service.id,title:service.title,detail:'',service,timezone:organization.timezone})) };
   return <main data-brand className="mx-auto w-full max-w-2xl p-3 sm:p-6"><BrandStyle brand={brand}/><PortalRenderer content={content} page={page} records={records} available={available} unbounded={available.defaultExperience} header={<PublicHeader profile={profile} logoUrl={brand.logoPath ? logoUrl(db,brand.logoPath) : null}/>}/></main>;
 }

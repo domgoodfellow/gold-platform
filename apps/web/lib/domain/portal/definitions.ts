@@ -4,7 +4,7 @@ import { parsePortalContent, type PortalContent } from './composition';
 
 export type PortalDefinition = Database['public']['Tables']['portal_definitions']['Row'];
 export type PortalRevision = Database['public']['Tables']['portal_revisions']['Row'];
-export type PortalAvailability = { work: boolean; invoices: boolean; forms: boolean; payments: boolean; publish: boolean; defaultExperience: boolean };
+export type PortalAvailability = { work: boolean; invoices: boolean; forms: boolean; services: boolean; payments: boolean; publish: boolean; defaultExperience: boolean };
 export async function portalHistoryBefore(db: Db, organizationId: string, beforeNumber: number): Promise<PortalRevision[]> {
   const {data,error}=await db.from('portal_revisions').select('*').eq('organization_id',organizationId).lt('number',beforeNumber).order('number',{ascending:false}).limit(50);
   if(error)throw new DomainError('Portal history could not be loaded.','portal.read_failed');

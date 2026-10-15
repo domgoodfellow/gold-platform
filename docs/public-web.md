@@ -109,6 +109,22 @@ The deliberate default retains the predecessor's full authorized record lists, s
 existing source-query bounds. Configured module record limits apply after custom publication;
 creating a draft does not silently truncate an existing customer's history.
 
+Services is an opt-in typed module in the canonical Portal registry, with heading, List/Cards/Summary
+presentation and a 1–100 record limit. The Managed Services Portal template creates independent Home,
+Services, Billing and Forms pages; the legacy default and existing templates do not add Services.
+`portal_service_disclosures` derives Organization and Customer solely from the live PortalContext,
+requires current Portal activation/entitlement and published navigable Services exposure, and returns
+only approved disclosure fields. No customer-supplied ownership IDs or raw engagement/artifact rows
+are accepted. An optional disclosure ID remains customer-scoped and fails after withdrawal.
+
+Saving seller disclosure drafts does not alter approved content or republish the Portal layout.
+Removing Services in a Portal draft retains live access until layout publication; publishing removal
+blocks direct service RPCs. Withdrawal takes effect on the next uncached request. Portal responses
+retain private/no-store headers. Approved descriptions and progress remain seller snapshots, rather
+than live tenant configuration reads. Relationship ending suppresses deliverables while retaining
+the deliberately published seller summary. Empty Services means no updates are currently shared,
+without making a claim about the customer's commercial relationship.
+
 ---
 
 ## Public shell boundary

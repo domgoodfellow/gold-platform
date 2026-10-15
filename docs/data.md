@@ -68,6 +68,18 @@ Generated types come from `pnpm db:types`. The CLI-generated migration filenames
 
 `20261213000003_tenant_reference_baseline_alignment.sql` reconciles an existing clean-gate violation: library jobs now reference execution through `(organization_id, execution_id)` and use organization-leading execution uniqueness. It preserves execution lookup and cascading cleanup; inconsistent legacy jobs fail the new foreign key rather than being reassigned. This changes no provider operation or connector credential authority.
 
+### Customer service disclosure persistence
+
+`20261217000001_customer_service_disclosures.sql` introduces private versioned drafts, immutable
+attributed approval revisions and typed-reference presentation snapshots. Organization-leading
+composite foreign keys bind each Customer/Engagement and revision/deliverable pair. No migration
+backfills or publishes existing engagements. Table mutations are unavailable to API roles; narrow
+RPCs lock rows, compare expected versions and record canonical Customer Events in the same transaction.
+Publish revalidates active relationship and independent artifact authority. Withdrawal changes only
+the live revision pointer. Termination and engagement transitions do not mutate historical copy,
+canonical artifacts, Work, subscription or Finance records. TypeScript and PostgreSQL enforce the
+same bounded draft and Services configuration contracts. Generated types use `pnpm db:types`.
+
 ### CRM Follow-up persistence and operating reads
 
 `crm_follow_ups` stores future/actionable CRM work. Organization-leading foreign keys enforce Customer and owner scope; `(organization_id, customer_id, opportunity_id)` also enforces the Opportunity's Customer. RLS requires tenant membership and `follow_up.manage` for writes. Column grants protect identity, creator and completion evidence. An invoker trigger stamps completion and records created/updated/completed/cancelled Events in the existing log atomically. Completed/cancelled records cannot be edited or deleted. Customer activity uses snapshotted Customer attribution.

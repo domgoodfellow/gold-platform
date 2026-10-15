@@ -382,6 +382,16 @@ Existing-tenant linking through `link_existing_client_tenant` requires selling-O
 
 `engagement_work_items` references selling-Organization Work Items for the same Customer. Work owns tasks, assignment, scheduling and execution lifecycle. Engagement status never changes an artifact or Work status. Service engagements create no subscription, entitlement, invoice, payment or hosting operation. Platform subscription billing, service-Organization Finance and tenant Finance remain separate.
 
+### Customer Service Disclosure
+
+CRM owns `service_disclosures`: a bounded customer-facing draft for one seller Organization, CRM Customer and Service Engagement. Existing engagements have no disclosure by default. Saving changes only the draft. An authorized `customer.update` operator explicitly approves and releases the saved version through `publish_service_disclosure`; immutable attributed `service_disclosure_revisions` preserve prior approvals. Withdrawal clears the live revision and retains history. Every command checks the customer/engagement tuple and expected version; concurrent edits/releases cannot silently overwrite one another.
+
+Save, publication and withdrawal also appear in the existing Customer Activity timeline with its canonical actor attribution. They do not create another communications or task lifecycle.
+
+Approved title, category, description and progress are deliberate seller communications. They do not inherit internal lifecycle, accepted terms, Work names, provider details or tenant configuration. `service_disclosure_deliverables` snapshots bounded presentations of existing typed references with composite engagement ownership keys. Selecting/publishing them requires an active relationship and independent artifact authority. Safe links are derived from published resources and verified, configured HTTPS custom origins; arbitrary URLs, credentials and editor destinations are unsupported. AI and Automation presentations have approved text, without inferred operating health or management actions.
+
+Ending a relationship suspends all associated deliverable presentations and links in the customer projection. The explicitly published seller summary remains visible until withdrawn; history, engagements and artifacts remain intact. A seller may release a new summary without tenant presentations after termination. Lifecycle changes flag the approved update for operator review rather than rewriting customer copy. Portal definition publication independently controls whether Services is exposed, under the existing Portal entitlement. The PortalContext identifies the customer; commercial relationships confer no tenant Membership or private read grant.
+
 ---
 
 ### Opportunity
@@ -1291,7 +1301,7 @@ The Portal does not become owner of:
 
 It reads/acts through those domains.
 
-Studio owns one stable `portal_definitions` identity per Organization. Typed version-2 definitions contain settings, pages with stable IDs and unique paths, ordered configured module instances, navigation referencing page IDs and a default-page identity. Work, Invoices/Payments and offered Forms are the initial registry; Services remain Batch C. `portal_revisions` records immutable coherent releases with publisher and review attribution. Drafts and history are private; publishing changes presentation, never identity or source-domain ownership. A Portal remains a typed Engagement deliverable by stable identity, with independent tenant authority checks.
+Studio owns one stable `portal_definitions` identity per Organization. Typed version-2 definitions contain settings, pages with stable IDs and unique paths, ordered configured module instances, navigation referencing page IDs and a default-page identity. Work, Invoices/Payments and offered Forms are the initial registry; Services use the independent CRM disclosure approval boundary. `portal_revisions` records immutable coherent releases with publisher and review attribution. Drafts and history are private; publishing changes presentation, never identity or source-domain ownership. A Portal remains a typed Engagement deliverable by stable identity, with independent tenant authority checks.
 
 History uses bounded descending pages, with authorized reads of older revisions. A fifty-row
 editor preview is not a retention limit; older publications remain inspectable and restorable.

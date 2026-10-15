@@ -69,7 +69,7 @@ const ASSET_WORK_ITEM_ACTIONS = ['work_item.created', 'work_item.updated'] as co
 /** Actions a customer's history is made of. Anything else is noise on this screen. */
 const OPPORTUNITY_ACTIONS = ['opportunity.created', 'opportunity.updated', 'opportunity.stage_changed'] as const;
 const FOLLOW_UP_ACTIONS = ['follow_up.created', 'follow_up.updated', 'follow_up.completed', 'follow_up.cancelled'] as const;
-const SERVICE_ACTIONS = ['client_tenant.linked', 'client_tenant.ended', 'service_engagement.created', 'service_engagement.status_changed', 'service_engagement.tenant_bound', 'service_engagement.deliverable_attached', 'service_engagement.work_attached'] as const;
+const SERVICE_ACTIONS = ['client_tenant.linked', 'client_tenant.ended', 'service_engagement.created', 'service_engagement.status_changed', 'service_engagement.tenant_bound', 'service_engagement.deliverable_attached', 'service_engagement.work_attached', 'service_disclosure.saved', 'service_disclosure.published', 'service_disclosure.withdrawn'] as const;
 const CRM_ACTIONS = ['customer.created', 'customer.updated', 'customer.stage_changed', 'customer.imported', 'customer.import_matched', ...OPPORTUNITY_ACTIONS, ...FOLLOW_UP_ACTIONS, ...SERVICE_ACTIONS] as const;
 const CUSTOMER_ACTIONS = [
   'customer.created',
@@ -163,6 +163,12 @@ function describe(row: EventRow, words: Vocabulary, perspective?: 'location'): s
       return 'Deliverable attached to a service engagement';
     case 'service_engagement.work_attached':
       return 'Work Item attached to a service engagement';
+    case 'service_disclosure.saved':
+      return 'Customer service update saved as draft';
+    case 'service_disclosure.published':
+      return 'Customer service update published';
+    case 'service_disclosure.withdrawn':
+      return 'Customer service update withdrawn';
     case 'follow_up.created':
     case 'follow_up.updated':
     case 'follow_up.completed':

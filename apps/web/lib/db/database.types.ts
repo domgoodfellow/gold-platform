@@ -10615,6 +10615,177 @@ export type Database = {
           },
         ]
       }
+      service_disclosure_deliverables: {
+        Row: {
+          deliverable_id: string
+          engagement_id: string
+          kind: string
+          organization_id: string
+          position: number
+          revision_id: string
+          status: string
+          summary: string
+          title: string
+          url: string | null
+        }
+        Insert: {
+          deliverable_id: string
+          engagement_id: string
+          kind: string
+          organization_id: string
+          position: number
+          revision_id: string
+          status: string
+          summary: string
+          title: string
+          url?: string | null
+        }
+        Update: {
+          deliverable_id?: string
+          engagement_id?: string
+          kind?: string
+          organization_id?: string
+          position?: number
+          revision_id?: string
+          status?: string
+          summary?: string
+          title?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_disclosure_deliverab_organization_id_engagement_i_fkey1"
+            columns: ["organization_id", "engagement_id", "deliverable_id"]
+            isOneToOne: false
+            referencedRelation: "engagement_deliverables"
+            referencedColumns: ["organization_id", "engagement_id", "id"]
+          },
+          {
+            foreignKeyName: "service_disclosure_deliverabl_organization_id_engagement_i_fkey"
+            columns: ["organization_id", "engagement_id", "revision_id"]
+            isOneToOne: false
+            referencedRelation: "service_disclosure_revisions"
+            referencedColumns: ["organization_id", "engagement_id", "id"]
+          },
+        ]
+      }
+      service_disclosure_revisions: {
+        Row: {
+          content: Json
+          customer_id: string
+          disclosure_id: string
+          engagement_id: string
+          engagement_status: string
+          id: string
+          number: number
+          organization_id: string
+          published_at: string
+          published_by: string
+        }
+        Insert: {
+          content: Json
+          customer_id: string
+          disclosure_id: string
+          engagement_id: string
+          engagement_status: string
+          id?: string
+          number: number
+          organization_id: string
+          published_at?: string
+          published_by: string
+        }
+        Update: {
+          content?: Json
+          customer_id?: string
+          disclosure_id?: string
+          engagement_id?: string
+          engagement_status?: string
+          id?: string
+          number?: number
+          organization_id?: string
+          published_at?: string
+          published_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_disclosure_revisions_organization_id_customer_id_e_fkey"
+            columns: [
+              "organization_id",
+              "customer_id",
+              "engagement_id",
+              "disclosure_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "service_disclosures"
+            referencedColumns: [
+              "organization_id",
+              "customer_id",
+              "engagement_id",
+              "id",
+            ]
+          },
+        ]
+      }
+      service_disclosures: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_id: string
+          draft_content: Json
+          engagement_id: string
+          id: string
+          organization_id: string
+          published_revision_id: string | null
+          revision_number: number
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_id: string
+          draft_content: Json
+          engagement_id: string
+          id?: string
+          organization_id: string
+          published_revision_id?: string | null
+          revision_number?: number
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          draft_content?: Json
+          engagement_id?: string
+          id?: string
+          organization_id?: string
+          published_revision_id?: string | null
+          revision_number?: number
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_disclosures_organization_id_customer_id_engagement_fkey"
+            columns: ["organization_id", "customer_id", "engagement_id"]
+            isOneToOne: false
+            referencedRelation: "service_engagements"
+            referencedColumns: ["organization_id", "customer_id", "id"]
+          },
+          {
+            foreignKeyName: "service_disclosures_organization_id_id_published_revision__fkey"
+            columns: ["organization_id", "id", "published_revision_id"]
+            isOneToOne: false
+            referencedRelation: "service_disclosure_revisions"
+            referencedColumns: ["organization_id", "disclosure_id", "id"]
+          },
+        ]
+      }
       service_engagements: {
         Row: {
           accepted_terms: Json | null
@@ -14475,6 +14646,10 @@ export type Database = {
         Returns: Json
       }
       portal_published_composition: { Args: never; Returns: Json }
+      portal_service_disclosures: {
+        Args: { p_disclosure_id?: string; p_limit?: number }
+        Returns: Json
+      }
       proposal_context: {
         Args: never
         Returns: {
@@ -14545,6 +14720,15 @@ export type Database = {
       publish_public_site_revision: {
         Args: { p_organization_id: string; p_revision_id: string }
         Returns: undefined
+      }
+      publish_service_disclosure: {
+        Args: {
+          p_customer_id: string
+          p_engagement_id: string
+          p_expected_version: number
+          p_organization_id: string
+        }
+        Returns: string
       }
       published_connectors: {
         Args: never
@@ -15472,6 +15656,16 @@ export type Database = {
         }
         Returns: string
       }
+      save_service_disclosure: {
+        Args: {
+          p_content: Json
+          p_customer_id: string
+          p_engagement_id: string
+          p_expected_version: number
+          p_organization_id: string
+        }
+        Returns: string
+      }
       schedule_ahead: {
         Args: { p_days?: number; p_organization_id: string }
         Returns: {
@@ -16161,6 +16355,15 @@ export type Database = {
       usable_modules: { Args: { p_organization_id: string }; Returns: string[] }
       use_organization_hours: {
         Args: { p_resource_id: string }
+        Returns: undefined
+      }
+      withdraw_service_disclosure: {
+        Args: {
+          p_customer_id: string
+          p_engagement_id: string
+          p_expected_version: number
+          p_organization_id: string
+        }
         Returns: undefined
       }
       work_at_risk: {

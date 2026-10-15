@@ -5,7 +5,7 @@
 **Supersedes:** None
 **Superseded by:** None
 
-Studio owns one Portal definition per organization. A coherent immutable revision contains typed settings, pages, navigation and stable module instances. Work, Invoices and offered Forms use their existing domain authorization and presenters. Services are deferred to Batch C. Saving or restoring changes the draft; sending for review records the exact draft version; publishing requires organization management and current Portal entitlement and activation.
+Studio owns one Portal definition per organization. A coherent immutable revision contains typed settings, pages, navigation and stable module instances. Work, Invoices and offered Forms use their existing domain authorization and presenters. Services use CRM-owned approved disclosures with independent resource publication. Saving or restoring changes the draft; sending for review records the exact draft version; publishing requires organization management and current Portal entitlement and activation.
 
 Existing invitations retain the legacy default until the first custom publication. Organizations without any Plan or Portal commercial history retain their existing activation-based default. Once commercial history exists it is authoritative, including expiry and revocation; published custom definitions always require current entitlement. Activation overrides remain authoritative. This compatibility exception does not authorize new publication.
 

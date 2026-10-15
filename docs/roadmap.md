@@ -785,7 +785,18 @@ Batch B may consume the relationship, engagement and authorized summaries. Porta
 
 ### Batch B: Studio customer Portal composition and publishing
 
-Studio now manages pages, navigation, typed module instances and settings with saved draft → review → immutable publication, revision inspection and restore. Work, invoice/payment and offered Form flows retain their canonical owners. Templates and labelled preview use shared live presenters. Verified custom Portal origins and managed organization origins at `/portal` bind every exchange, page and action to the live PortalContext organization; managed Website roots remain Website. Legacy app-origin links and default-before-first-publication remain compatible. The work is local implementation and verification; no DNS, TLS or provider deployment was provisioned. Services and managed-services workflows remain Batch C. See [ADR-042](decisions/ADR-042-studio-customer-portal-publication.md).
+Studio now manages pages, navigation, typed module instances and settings with saved draft → review → immutable publication, revision inspection and restore. Work, invoice/payment and offered Form flows retain their canonical owners. Templates and labelled preview use shared live presenters. Verified custom Portal origins and managed organization origins at `/portal` bind every exchange, page and action to the live PortalContext organization; managed Website roots remain Website. Legacy app-origin links and default-before-first-publication remain compatible. The work is local implementation and verification; no DNS, TLS or provider deployment was provisioned. Customer service disclosure operations are described in Batch C below. See [ADR-042](decisions/ADR-042-studio-customer-portal-publication.md).
+
+### Batch C: Customer service disclosures
+
+The managed-service surface uses CRM-owned versioned drafts and explicit attributed approval,
+typed deliverable presentations and an opt-in Studio Services module under the existing Portal
+entitlement. Customer-scoped disclosure reads supplement published module exposure; no commercial
+relationship grants tenant access. The Managed Services template composes the existing billing and
+Forms modules. GildOps Internal operates this workflow as an ordinary Organization. Tenant-derived
+presentations suspend when the relationship ends, while seller-approved summaries and history remain.
+Further work requires distinct contracts for customer approvals/change requests, delegated tenant
+operations and authoritative runtime-health projections; this slice does not implement those actions.
 
 ### Outcome
 

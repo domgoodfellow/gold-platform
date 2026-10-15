@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useId, useRef, useState } from 'react';
+import { useActionState, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { FormField } from '@/components/controls/form';
 import { ErrorText, SelectInput, TextInput } from '@/components/controls/inputs';
@@ -9,6 +9,7 @@ import { PageDrawer, PageDrawerContent, PageDrawerHeader, PageDrawerTitle, PageD
 import { engagementAction, readEngagementDetails } from '@/app/organizations/[organizationId]/customers/[customerId]/service-actions';
 import { ARTIFACT_KINDS, SERVICE_KINDS, type Engagement } from '@/lib/domain/customers/service-engagements';
 import type { ClientTenantRelationship } from '@/lib/domain/customers/client-tenants';
+import { ServiceDisclosureEditor } from './service-disclosure-editor';
 
 type Options = { organizationId: string; customerId: string; mayManage: boolean; relationships: ClientTenantRelationship[]; opportunities: { id: string; title: string }[]; proposals: { id: string; version: number; status: string }[]; work: { id: string; title: string }[] };
 
@@ -47,23 +48,27 @@ function EngagementDetails({ item, options }: { item: Engagement; options: Optio
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
+  const [refresh, setRefresh] = useState(0);
+  const refreshDisclosure = useCallback(() => setRefresh(value => value + 1), []);
   const id = useId();
   const open = item.status === 'planned' || item.status === 'active';
+  const relationship = options.relationships.find(r => r.id === item.relationship_id);
   useEffect(() => {
     if (contentRef.current && document.activeElement === document.body) {
       contentRef.current.closest<HTMLElement>('[data-page-drawer]')?.focus();
     }
-  }, [open, item.relationship_id, pending]);
+  }, [open, item.relationship_id, pending, details?.disclosure?.version, relationship?.status]);
   useEffect(() => {
     let current = true;
     readEngagementDetails(options.organizationId, options.customerId, item.id, query).then(result => { if (current) { setDetails(result); setError(null); } }).catch(() => { if (current) setError('Engagement details could not be loaded. Close and try again.'); });
     return () => { current = false; };
-  }, [options.organizationId, options.customerId, item.id, state, query]);
-  const relationship = options.relationships.find(r => r.id === item.relationship_id);
+  }, [options.organizationId, options.customerId, item.id, state, query, refresh, relationship?.status]);
   const terms = item.accepted_terms && typeof item.accepted_terms === 'object' && !Array.isArray(item.accepted_terms) ? item.accepted_terms : null;
   return <div ref={contentRef} className="min-h-0 flex-1 space-y-6 overflow-y-auto">
     <div><p className="text-sm capitalize">{item.status}</p><p className="text-sm text-muted">{relationship ? relationship.tenant_name : 'No tenant yet'}</p></div>
     <ErrorText role="alert">{state.error ?? error}</ErrorText>{state.saved ? <p role="status" className="text-sm">Saved.</p> : null}
+    {details ? <ServiceDisclosureEditor key={details.disclosure?.version ?? 0} organizationId={options.organizationId} customerId={options.customerId} customerName={details.customerName} organizationName={details.organizationName} timezone={details.timezone} engagement={item} mayManage={options.mayManage} relationshipEnded={relationship?.status === 'ended'} disclosure={details.disclosure} history={details.history} deliverables={details.deliverables} approvedDeliverables={details.approvedDeliverables} onSaved={refreshDisclosure}/> : null}
+    {details?.mayReadSupport ? <ButtonLink tone="text" href={`/organizations/${options.organizationId}/support/cases?customer=${options.customerId}`}>Customer Support Cases</ButtonLink> : null}
     {options.mayManage && open && !item.relationship_id ? <form action={action} className="space-y-3"><ContextInputs {...options} engagementId={item.id}/><input type="hidden" name="operation" value="bind"/>
       <FormField id={`${id}-tenant`} label="Linked organization">{props => <SelectInput {...props} name="relationshipId" required defaultValue=""><option value="" disabled>Select linked organization</option>{options.relationships.filter(r => r.status === 'active').map(r => <option key={r.id} value={r.id}>{r.tenant_name}</option>)}</SelectInput>}</FormField><Button type="submit" disabled={pending}>Associate tenant</Button>
     </form> : null}
