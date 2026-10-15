@@ -81,7 +81,7 @@ Security is a property of the entire system.
 
 ### Managed-service boundaries
 
-Selling-Organization Membership admits relationship and engagement history, not the receiving tenant's private content. Commercial management uses `customer.update`. Linking an existing tenant additionally requires a live `platform_staff` row and independently granted receiving-tenant `organization.manage`. The signed action is tenant-manager approval; its agreement note is audit context, not authorization. Platform staff with no receiving-tenant management authority cannot forge consent through a note or a tenant UUID. Platform staff without selling-Organization management authority cannot link on that Organization's behalf. `existing_client_tenant_options` repeats those checks and lists only eligible tenants. Ending/relinking never grants or revokes Membership or cancels a subscription.
+Selling-Organization Membership admits relationship and engagement history, not the receiving tenant's private content. Commercial management uses `customer.update`. Linking an existing tenant additionally requires live `platform.organizations` authority and independently granted receiving-tenant `organization.manage`. The signed action is tenant-manager approval; its agreement note is audit context, not authorization. Platform staff with no receiving-tenant management authority cannot forge consent through a note or a tenant UUID. Platform staff without selling-Organization management authority cannot link on that Organization's behalf. `existing_client_tenant_options` repeats those checks and lists only eligible tenants. Ending/relinking never grants or revokes Membership or cancels a subscription.
 
 `client_tenant_summaries` exposes only already-linked tenant identity and Setup/Live state to selling-Organization members. Operational artifact selectors and summaries separately require target Membership, `organization.manage` for Studio/AI manager summaries, and canonical Automations module access for rule summaries. Platform staff is not an alternative to Membership at this boundary. Reference attachment rechecks ownership, permission, active relationship and non-terminal engagement inside the database transaction. The API uses the caller's authenticated database client; no service-role reader or generic cross-tenant data API is introduced.
 
@@ -616,15 +616,10 @@ alone where a database-level composite relationship can prevent the invalid stat
 
 Platform is a distinct privileged scope.
 
-Access requires:
-
-```text
-GildOps organization context
-+
-explicit platform permission
-```
-
-Both conditions matter.
+The application presents Administration in GildOps' organization context. That route context is
+presentation, never a database authorization credential. Direct RPCs and privileged RLS branches
+require the caller's live, granular platform capability independently of the URL, tenant Membership,
+JWT profile metadata or whether a control was rendered.
 
 ---
 
@@ -643,6 +638,35 @@ Examples of control-plane areas include:
 - failures/operations.
 
 A person who can sell or operate GildOps' business should not automatically gain provider credentials or global tenant administration.
+
+The five existing capabilities are enforced at the database boundary:
+
+| Capability | Privileged operations |
+| --- | --- |
+| `platform.organizations` | Provisioning, audited support sessions, tenant connection diagnostics, resolved allowance/credit inspection, lifecycle inspection and existing-tenant association. Association also requires seller `customer.update` and receiving-tenant `organization.manage`. |
+| `platform.catalogue` | Product/module/feature metadata, connectors, connector logos and integration diagnostics. |
+| `platform.commercial` | Packages and their entitlement grants, pricing, allowances, cost/revenue reads, billing and commercial adjustments. |
+| `platform.providers` | Provider accounts, credential writes, bindings/resources, provider-service configuration and AI runtime assignments. |
+| `platform.health` | Operational failures and the bounded health summary, including counts and recent organization metadata. It does not grant raw rates or provider-account records. |
+
+`app.has_platform_capability` and `app.require_platform_capability` read the current staff row.
+Revocation applies on the next statement/request without signing in again; null/unknown
+capability requests cannot satisfy the raiser. Staff may read only their own staff row and have
+no grant to issue themselves capabilities. Organization identity/provider-definition reads
+explicitly admit the capabilities whose workflows need them; tenant Membership and public
+catalogue branches retain their independent scope.
+
+An accepted-proposal handoff requires `platform.organizations`, seller `customer.update`
+and accepted proposal state. It uses ungranted internal plan-writing cores, so provisioning the
+accepted terms does not require the salesperson to hold `platform.commercial`. Direct
+handoff-table INSERT is revoked. The internal GildOps bootstrap requires both organization and
+commercial authority because it grants Membership and the internal package.
+
+Human commands retain explicit execution grants, pinned empty search paths and command-level
+checks before privileged reads/writes. Internal cores have no client execution grants.
+Provider/webhook/worker identities retain their existing narrow doors; no new human credential
+readback or general machine bypass is introduced. Tenant policies remain scoped to Membership
+and tenant capabilities; a platform capability grants only its named control-plane projection.
 
 ---
 

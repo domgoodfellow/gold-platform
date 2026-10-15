@@ -133,7 +133,7 @@ const RPC_CAPABILITIES: Record<string, string> = {
   "set_platform_connector_app": "platform.catalogue",
   "platform_connector_usage": "platform.catalogue",
   "platform_meter_observations": "platform.catalogue",
-  "organization_integration_connections": "platform.catalogue",
+  "organization_integration_connections": "platform.organizations",
   "set_provider_binding_status": "platform.providers",
   "record_provider_resource": "platform.providers",
   "store_provider_secret": "platform.providers",
@@ -285,7 +285,7 @@ describe('granular platform authority at the database boundary', () => {
     expect(overview.organizations.recent).toHaveLength(1);
     expect(overview.rates.provider).toBe(rates.rows[0].count);
     for (const table of ['platform_provider_accounts', 'platform_provider_rates', 'organization_provider_bindings', 'organization_plan_assignments']) {
-      const result = await actor.db.from(table).select('*').limit(1);
+      const result = await actor.db.from(table).select('id').limit(1);
       expect(result.error, table).toBeNull();
       expect(result.data, table).toEqual([]);
     }
@@ -317,17 +317,28 @@ describe('granular platform authority at the database boundary', () => {
     expect(provisioned.data).toBeTruthy();
     const opened = await actor.db.rpc('start_support_session', { p_organization_id: organizationId, p_reason: 'P0 support authorization verification' });
     expect(opened.error).toBeNull();
+    expect((await actor.db.rpc('organization_integration_connections', { p_organization_id: organizationId })).error).toBeNull();
     expect((await actor.db.rpc('end_support_session', { p_id: opened.data })).error).toBeNull();
   });
 
   it('permits commercial-only package changes without catalogue authority', async () => {
     const db = actors.get('platform.commercial')!.db;
-    const plan = await db.rpc('create_plan', { p_key: 'p0-' + randomUUID(), p_kind: 'plan', p_label: 'P0 test package' });
+    const plan = await db.rpc('create_plan', {
+      p_key: 'p0_' + randomUUID().replaceAll('-', ''), p_kind: 'plan', p_label: 'P0 test package',
+      p_description: '', p_billable: false, p_sale_status: 'active', p_display_order: 0,
+    });
     expect(plan.error).toBeNull();
-    const module = await pg.query('select id from public.platform_catalog_modules limit 1');
-    expect(module.rows).toHaveLength(1);
-    const granted = await db.rpc('grant_plan_module', { p_plan_id: plan.data, p_module_id: module.rows[0].id });
+    const catalogModule = await pg.query('select id from public.platform_catalog_modules limit 1');
+    expect(catalogModule.rows).toHaveLength(1);
+    const granted = await db.rpc('grant_plan_module', { p_plan_id: plan.data, p_module_id: catalogModule.rows[0].id });
     expect(granted.error).toBeNull();
+  });
+
+  it('requires commercial authority in addition to organization authority for the internal bootstrap', async () => {
+    const result = await actors.get('platform.organizations')!.db.rpc('bootstrap_gold_internal_workspace', {
+      p_organization_id: organizationId, p_role: 'Admin', p_capabilities: ['organization.manage'],
+    });
+    expect(result.error?.code).toBe('42501');
   });
 
   it('denies direct handoff insertion and anonymous execution of platform commands', async () => {
@@ -337,5 +348,33 @@ describe('granular platform authority at the database boundary', () => {
       p_organization_id: organizationId, p_provider_resource_id: randomUUID(), p_e164: '+14165550000',
     });
     expect(result.error?.code).toBe('42501');
+  });
+
+  it('restricts connector-logo writes to catalogue authority', async () => {
+    for (const capability of PLATFORM_CAPABILITIES) {
+      await pg.query('begin');
+      try {
+        await pg.query("select set_config('request.jwt.claim.sub', $1, true)", [actors.get(capability)!.userId]);
+        await pg.query('set local role authenticated');
+        const write = pg.query('insert into storage.objects(bucket_id,name) values($1,$2)', [
+          'connector-logos', 'p0-' + randomUUID(),
+        ]);
+        if (capability === 'platform.catalogue') expect((await write).rowCount).toBe(1);
+        else await expect(write).rejects.toMatchObject({ code: '42501' });
+      } finally { await pg.query('rollback'); }
+    }
+  });
+
+  it('shows a provider account only to the provider operator, independent of staff membership', async () => {
+    const created = await actors.get('platform.providers')!.db.rpc('record_provider_account', {
+      p_provider_key: 'twilio', p_label: 'P0 local provider account ' + randomUUID(),
+      p_external_account_id: null, p_credential_kind: 'api_key', p_credential_identifier: null,
+    });
+    expect(created.error).toBeNull();
+    for (const capability of PLATFORM_CAPABILITIES) {
+      const read = await actors.get(capability)!.db.from('platform_provider_accounts').select('id').eq('id', created.data);
+      expect(read.error).toBeNull();
+      expect(read.data).toEqual(capability === 'platform.providers' ? [{ id: created.data }] : []);
+    }
   });
 });

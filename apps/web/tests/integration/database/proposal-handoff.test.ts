@@ -11,7 +11,7 @@ import { getFoundingHandoff, getProposalHandoff, handoffAcceptedProposal } from 
 import { currentPlanAssignment, listOrganizationPlanAgreements } from '@/lib/domain/catalogue/organization-plans';
 import { computeReadiness, launchOrganization } from '@/lib/domain/tenancy/lifecycle';
 import { requireOrganization, requireOrganizationForBillingRecovery, serviceLockedHref } from '@/lib/route/organization';
-import { foundBusiness } from '@/tests/support/founding';
+import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 import { applySubscriptionEvent } from '@/tests/support/subscription-events';
 
 // The route guards, observed as thrown values; `getDb` returns whichever signed-in client the test names.
@@ -117,12 +117,21 @@ describe('handing off an accepted proposal', () => {
     ).rejects.toMatchObject({ code: 'proposal_handoff.not_staff' });
   });
 
-  it('creates the business, records the handoff, and leaves the GildOps customer untouched', async () => {
+  it('refuses a direct RPC for a real accepted proposal without seller customer authority', async () => {
+    const staff = await asPlatformStaff();
+    const result = await staff.rpc('hand_off_accepted_proposal', { p_proposal_id: acceptedProposalId });
+    expect(result.error?.code).toBe('42501');
+    expect(await getProposalHandoff(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId })).toBeNull();
+  });
+
+  it('creates the business with organization authority alone and leaves the seller customer untouched', async () => {
     // Promote the same, already-signed-in rep to platform staff — live-checked (D45), so no
     // re-sign-in is needed for it to take effect on this session's next request.
     const pg = new Client(CONNECTION);
     await pg.connect();
-    await pg.query('insert into public.platform_staff (user_id, name) values ($1, $2)', [repUserId, 'Rep (test staff)']);
+    await pg.query('insert into public.platform_staff (user_id, name, capabilities) values ($1, $2, $3)', [
+      repUserId, 'Rep (test staff)', ['platform.organizations'],
+    ]);
     await pg.end();
 
     const handoff = await handoffAcceptedProposal(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId });
@@ -211,12 +220,16 @@ describe('handing off an accepted proposal', () => {
     const handoff = await getProposalHandoff(repDb, { organizationId: gildOpsOrgId, proposalId: acceptedProposalId });
     const createdOrganizationId = handoff!.createdOrganizationId;
 
-    const assignment = await currentPlanAssignment(repDb, { organizationId: createdOrganizationId });
+    expect(await currentPlanAssignment(repDb, { organizationId: createdOrganizationId })).toBeNull();
+    const ownerDb = anonClient();
+    const signedIn = await ownerDb.auth.signInWithPassword({ email: ownerEmail, password: ownerPassword });
+    expect(signedIn.error).toBeNull();
+    const assignment = await currentPlanAssignment(ownerDb, { organizationId: createdOrganizationId });
     expect(assignment).not.toBeNull();
     expect(assignment!.planId).toBe(planId);
     expect(assignment!.periodEnd).toBe('9999-12-31');
 
-    const agreements = await listOrganizationPlanAgreements(repDb, { organizationId: createdOrganizationId, planId });
+    const agreements = await listOrganizationPlanAgreements(ownerDb, { organizationId: createdOrganizationId, planId });
     expect(agreements).toHaveLength(1);
     expect(agreements[0].currency).toBe('CAD');
     expect(agreements[0].amountMinor).toBeGreaterThan(0);

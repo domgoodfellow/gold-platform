@@ -68,6 +68,25 @@ When a test file is added, moved or reclassified, update `test-manifest.json`.
 
 ## Testing principles
 
+### Platform authorization regression coverage
+
+`platform-permissions.test.ts` calls privileged functions directly through local PostgREST with
+each single-capability staff account, an empty-capability staff account and a non-staff account.
+It checks cross-capability refusal, live revocation, null/unknown helper inputs, self-only staff
+reads, provider-record isolation, connector-logo RLS, tenant reads, organization-only provisioning
+and support, commercial-only package grants, and exact health counts without raw rate access.
+`proposal-handoff.test.ts` uses organization-only staff for accepted terms and rejects a direct
+handoff without seller Customer authority. `function-surface.test.ts` checks effective PostgreSQL
+grants, search paths, internal-core isolation and the absence of membership-only privileged
+command/policy checks. The existing `allowances.test.ts` contract retains organization-only support reads while refusing
+commercial mutations. Existing provider, webhook, billing and tenant suites remain required.
+
+Before adding the P0 migrations, the inspected local ledger contained all 246 repository versions
+through `20261219000001`, with no extra/missing versions; stored SQL matched repository files after
+comment/format normalization. The P0 migrations deliberately follow that dependency baseline,
+rather than using a wall-clock timestamp that would sort before existing migrations.
+Local upgrade/test evidence does not establish a hosted baseline or authorize a hosted rollout.
+
 ### Provider-sandbox acceptance preparation (Batch F)
 
 The reviewed source baseline is `bbf4f1c`; repeat local checks rather than copying Batch E totals.

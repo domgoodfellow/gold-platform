@@ -54,6 +54,23 @@ describe('Client/Tenant relationship authority', () => {
     expect((await operator.rpc('link_existing_client_tenant', { p_organization_id: organizationId, p_customer_id: customerId, p_tenant_id: tenantId, p_authority_basis: 'Forged approval note from platform staff' })).error?.code).toBe('42501');
     expect((await operator.rpc('existing_client_tenant_options',{p_organization_id:organizationId,p_customer_id:customerId})).data).toEqual([]);
   });
+  it('requires organization authority even when a restricted staff member manages both tenants', async () => {
+    await pg.query('update platform_staff set capabilities=$2 where user_id=$1', [ownerId, ['platform.providers']]);
+    try {
+      const result = await outsider.rpc('link_existing_client_tenant', {
+        p_organization_id: organizationId, p_customer_id: customerId, p_tenant_id: tenantId,
+        p_authority_basis: 'Both tenant permissions held, platform authority missing',
+      });
+      expect(result.error?.code).toBe('42501');
+      const options = await outsider.rpc('existing_client_tenant_options', {
+        p_organization_id: organizationId, p_customer_id: customerId,
+      });
+      expect(options.error).toBeNull();
+      expect(options.data).toEqual([]);
+    } finally {
+      await pg.query('update platform_staff set capabilities=$2 where user_id=$1', [ownerId, ['platform.organizations']]);
+    }
+  });
   it('records authorized tenant-manager approval without granting seller membership and rejects duplicate or missing target', async () => {
     const result = await outsider.rpc('link_existing_client_tenant', { p_organization_id: organizationId, p_customer_id: customerId, p_tenant_id: tenantId, p_authority_basis: 'Verified signed service agreement ACME-42' });
     expect(result.error).toBeNull(); relationshipId = result.data;

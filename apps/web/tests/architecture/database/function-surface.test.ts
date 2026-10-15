@@ -149,6 +149,42 @@ describe('objects removed as dead surface stay removed', () => {
   });
 });
 
+describe('platform SQL enforcement', () => {
+  it('leaves no membership-only public command or privileged policy branch', async () => {
+    const commands = await pg.query(
+      "select proname from pg_proc where pronamespace = 'public'::regnamespace and prosrc like '%app.require_platform_staff()%'",
+    );
+    expect(commands.rows).toEqual([]);
+    const policies = await pg.query(
+      "select schemaname, tablename, policyname from pg_policies where schemaname in ('public','storage') and (coalesce(qual,'') || coalesce(with_check,'')) like '%app.is_platform_staff()%'",
+    );
+    expect(policies.rows).toEqual([]);
+  });
+
+  it('pins privileged platform search paths and removes public execution', async () => {
+    const { rows } = await pg.query(
+      `select proname from pg_proc
+        where pronamespace = 'public'::regnamespace
+          and prosrc like '%app.require_platform_capability(%'
+          and (not coalesce(proconfig @> array['search_path=""'], false)
+            or has_function_privilege('anon', oid, 'execute')
+            or has_function_privilege('public', oid, 'execute'))`,
+    );
+    expect(rows).toEqual([]);
+  });
+
+  it('keeps internal plan-writing cores inaccessible to clients', async () => {
+    const { rows } = await pg.query(
+      `select proname from pg_proc where pronamespace = 'app'::regnamespace
+        and proname in ('write_plan_assignment','write_plan_agreement')
+        and (has_function_privilege('authenticated', oid, 'execute')
+          or has_function_privilege('anon', oid, 'execute')
+          or has_function_privilege('public', oid, 'execute'))`,
+    );
+    expect(rows).toEqual([]);
+  });
+});
+
 describe('index and key hygiene', () => {
   it('has no two indexes on one table with the same key columns and predicate', async () => {
     const { rows } = await pg.query(
