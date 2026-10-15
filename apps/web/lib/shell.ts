@@ -45,7 +45,7 @@ export type NavItem = {
   configuration?: NavItem;
   configurationOnly?: boolean;
   /**
-   * The destinations grouped under a Platform heading. A parent is
+   * The destinations grouped under a navigable parent. A parent is
    * itself a destination (a Platform group opens its first page), so
    * a renderer without room for children — the collapsed rail — can still link to it.
    */
@@ -182,7 +182,15 @@ export function projectShell(input: ShellInput): ShellSection[] {
     const concerns = workspaceConfigureItems(organizationId, workspace.key, { enabledModules, featureAvailability, capabilities, schedulableWork });
     if (!home && concerns.length === 0) return [];
     const configurationHref = workspaceConfigurationHref(organizationId, workspace.key);
-    const configuration: NavItem | undefined = concerns.length ? { key: 'workspace-configuration', label: 'Configuration', href: configurationHref, activeHrefs: concerns.filter(concern => { const target = configTargetForHref(concern.href); return target?.workspace === workspace.key && !target.treatment; }).map(concern => concern.href.split('#')[0]), section: 'workspaces' } : undefined;
+    const configuration: NavItem | undefined = concerns.length ? {
+      key: 'workspace-configuration', label: 'Configuration', href: configurationHref,
+      activeHrefs: concerns.filter(concern => {
+        const target = configTargetForHref(concern.href);
+        return target?.workspace === workspace.key && !target.treatment;
+      }).map(concern => concern.href.split('#')[0]),
+      section: 'workspaces',
+      ...(workspace.key === 'crm' ? { children: concerns.map(concern => ({ ...concern, section: 'workspaces' as const })) } : {}),
+    } : undefined;
     return [{
       key: `workspace-${workspace.key}`,
       label: workspace.label,

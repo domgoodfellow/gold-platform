@@ -30,7 +30,7 @@ export default async function SalesStagesSettingsPage({
         crumbs={[
           ...workspaceConfigCrumbs(organizationId, 'sales-stages', gate),
         ]}
-        actions={<StageSettingsSheet organizationId={organizationId} stages={stages} mayConfigure={mayConfigure} role={organization.role} />}
+        actions={<StageSettingsSheet organizationId={organizationId} stages={stages} mayConfigure={mayConfigure} role={organization.role} triggerLabel="Add or edit stages" />}
       />
       <Hint>The stages a relationship moves through, in order.</Hint>
       {stages.length === 0 ? (

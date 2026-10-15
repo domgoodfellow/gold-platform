@@ -2188,16 +2188,37 @@ and falls back to organization Home. Stored navigation is never an authorization
 
 ## Workspace Configuration navigation
 
-A workspace's operating destinations and its single Configuration row are visually separated.
-`projectShell` supplies only authorized concerns from the existing registries. Configuration-only
-entry does not expose an operating Overview. `workspaceNavigation` resolves configuration targets
-before operating ancestors and keeps Configuration selected on authorized section URLs.
-The page-content `ConfigurationSections` navigation wraps at phone/tablet widths and becomes
-sticky beside the editor on desktop; it remains independent of application-sidebar collapse.
-`WorkspaceConfigure` is a shortcut to that root, rather than a competing dropdown hierarchy.
+**Navigation must represent meaningful destinations or alternate views, not ordinary content structure.**
+A page containing multiple sections does not automatically justify section navigation, tabs or a
+secondary sidebar. Before introducing navigation, establish:
 
+1. Whether the destinations have independent routes.
+2. Whether the content represents different tasks or one continuous workflow.
+3. Whether an existing navigation owner already provides the destination.
+4. Whether additional navigation improves usability enough to justify its complexity.
 
-Configuration section ownership is declared by `CONFIG_TARGETS` and `WORKSPACE_CONFIGURE`; `ConfigurationSections` renders those resolved links using hover, selected and focus roles. Small concerns use URL fragments; resources use routes. General Settings applies the same layout to Identity, Address/regional defaults and Contact anchors. Sections remain visible at phone/tablet widths and beside the editor on desktop, with 44px minimum link height and an explicit selected section. Page loading uses the existing organization loading boundary; missing or unauthorized concerns resolve to the existing not-found boundary before data reads. No empty configuration root is offered.
+Default to the simplest composition that preserves functionality. A page is an independently routed
+task; a section groups content within it; a tab switches necessary alternate views; an anchor marks
+a position in the same document; a drawer supports a focused temporary interaction. Headings alone
+do not earn navigation. Avoid duplicate titles, context, destinations and generic decorative icons.
+
+`projectShell` supplies authorized concerns from `CONFIG_TARGETS` and `WORKSPACE_CONFIGURE`.
+Configuration-only entry does not expose an operating Overview. `workspaceNavigation` resolves
+configuration targets before operating ancestors. CRM's persistent workspace sidebar owns one
+navigable, expandable Configuration parent and text-only Relationship stages, Opportunity stages
+and Customer fields children, filtered by existing permissions and entitlements. The active child
+is selected on direct links; the parent opens a compact registry-driven landing page. CRM pages
+have no additional configuration navigation column. Operational shortcuts retain canonical editors.
+General Settings is one continuous form with ordinary Business identity, Primary business address
+and Business contact headings, beneath the existing Settings sidebar; it has no section navigation.
+
+Other workspace layouts currently retain `ConfigurationSections`, which wraps at phone/tablet widths
+and is sticky beside editors on desktop. This is existing behavior, not a requirement to add another
+sidebar. Evaluate each surface against the principle above before changing it. Resolved links use
+text labels, hover, selected and focus roles without a repeated generic icon. Page loading uses the
+existing organization boundary; missing or unauthorized concerns resolve to not-found before data
+reads. No empty configuration root is offered. `WorkspaceConfigure` remains a shortcut to each root.
+
 
 Platform navigation flattens the existing authorized projection for presentation so every destination retains an icon and tooltip in the collapsed sidebar. The business switcher changes business context; it does not duplicate the Platform entry. `NavigationActivityContext` carries only a retention hint from the persistent telephone owner. During an active call, cross-business, cross-business Platform, and global personal Settings links open a separate tab. Ordinary same-organization configuration, General Settings and workspace navigation reuse the existing telephone runtime. This does not provide call continuation after reload or browser termination.
 

@@ -46,7 +46,7 @@ export function OrganizationSettingsForm({
 
       <section aria-labelledby="identity-heading" className="flex flex-col gap-4">
         <SectionHeading id="identity-heading">Business identity</SectionHeading>
-        <FormField id="org-name" label="Business name" hint="The name customers and your team see.">
+        <FormField id="org-name" label="Business name">
           {(field) => <TextInput {...field} name="name" type="text" required maxLength={200} defaultValue={name} />}
         </FormField>
         <FormField id="org-legal-name" label="Legal name" optional hint="Only if it differs from the business name. Sole traders can leave this empty.">
@@ -68,7 +68,7 @@ export function OrganizationSettingsForm({
         <div>
           <SectionHeading id="address-heading">Primary business address</SectionHeading>
           <Hint className="mt-1">
-            Where the business is based. This is not a job site, billing address or published address, and it is not shown to customers.
+            This address is private to your team.
             To show an address on your website, add it to the{' '}
             <Link href={`/organizations/${organizationId}/settings/public-profile`} className="text-accent-text hover:underline">public profile</Link>.
           </Hint>
@@ -94,7 +94,6 @@ export function OrganizationSettingsForm({
       <section aria-labelledby="contact-heading" className="flex flex-col gap-4">
         <div>
           <SectionHeading id="contact-heading">Business contact</SectionHeading>
-          <Hint className="mt-1">General contact details for the business. They are separate from your sign-in email and from the phone numbers Communications runs.</Hint>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField id="org-contact-email" label="Email" optional>
@@ -104,9 +103,13 @@ export function OrganizationSettingsForm({
             {(field) => <TextInput {...field} name="contactPhone" type="tel" maxLength={50} defaultValue={identity.contactPhone ?? ''} />}
           </FormField>
         </div>
-        <FormField id="org-website" label="Website" optional hint="Your existing website, if you have one. It does not have to be a GildOps address.">
+        <FormField id="org-website" label="Website" optional>
           {(field) => <TextInput {...field} name="websiteUrl" type="text" inputMode="url" maxLength={300} defaultValue={identity.websiteUrl ?? ''} />}
         </FormField>
+        <details className="text-sm text-muted">
+          <summary className="min-h-11 cursor-pointer content-center rounded-md focus-visible:outline-2 focus-visible:outline-ring">About business contact details</summary>
+          <p className="mt-2">These details are separate from your sign-in email and the phone numbers Communications runs. You can use an existing website address.</p>
+        </details>
       </section>
 
       <div className="flex flex-col items-start gap-3">

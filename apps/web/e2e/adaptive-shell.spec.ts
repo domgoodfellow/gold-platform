@@ -352,8 +352,14 @@ test.describe('legacy Communications configuration compatibility', () => {
     for (const [legacy, canonical] of [['settings/calls', 'comms/configuration/calling'], ['settings/communications', 'comms/configuration/messaging'], ['settings/email', 'comms/configuration/email'], ['comms/numbers', 'comms/configuration/numbers'], ['settings/sales-stages', 'sales/configuration/relationship-stages'], ['settings/opportunity-stages', 'sales/configuration/opportunity-stages'], ['settings/pricing', 'finance/configuration/pricing'], ['support/service-levels', 'support/configuration/service-levels']]) {
       await page.goto(`/organizations/${organizationId}/${legacy}?filter=a&filter=b#recording`);
       await expect(page).toHaveURL(`/organizations/${organizationId}/${canonical}?filter=a&filter=b#recording`);
-      await expect(page.getByRole('navigation', { name: 'Configuration sections' })).toBeVisible();
-      await expect(sidebar(page).getByRole('link', { name: 'Configuration', exact: true })).toHaveAttribute('aria-current', 'page');
+      if (canonical.startsWith('sales/configuration')) {
+        await expect(page.getByRole('navigation', { name: 'Configuration sections' })).toHaveCount(0);
+        const label = canonical.endsWith('relationship-stages') ? 'Relationship stages' : 'Opportunity stages';
+        await expect(sidebar(page).getByRole('link', { name: label, exact: true })).toHaveAttribute('aria-current', 'page');
+      } else {
+        await expect(page.getByRole('navigation', { name: 'Configuration sections' })).toBeVisible();
+        await expect(sidebar(page).getByRole('link', { name: 'Configuration', exact: true })).toHaveAttribute('aria-current', 'page');
+      }
     }
   });
 });

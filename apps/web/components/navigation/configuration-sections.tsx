@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Settings2 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import type { ConfigureItem } from '@/lib/navigation';
@@ -26,7 +25,7 @@ export function ConfigurationSections({ sections, children }: { sections: readon
         {sections.map(section => <li key={section.key} className="min-w-0">
           <Link href={section.href} onClick={() => setHash(section.href.includes('#') ? `#${section.href.split('#')[1]}` : '')} aria-current={section.key === active ? 'page' : undefined}
             className={cx(FOCUS_RING, 'flex min-h-11 items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-hover', section.key === active && 'bg-selected font-medium')}>
-            <Settings2 aria-hidden className="size-4 shrink-0" /><span>{section.label}</span>
+            <span>{section.label}</span>
           </Link>
         </li>)}
       </ul>

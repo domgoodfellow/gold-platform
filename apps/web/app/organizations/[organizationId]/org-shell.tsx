@@ -185,7 +185,7 @@ function NavSubRow({ item, active, expanded }: { item: NavItem; active: string |
   }
 
   const link = (
-    <SidebarMenuSubButton asChild isActive={current} className={item.children ? 'flex-1' : undefined}>
+    <SidebarMenuSubButton asChild isActive={current} className={cx(item.children && 'flex-1', item.section === 'workspaces' && 'h-auto min-h-11 md:min-h-7')}>
       <Link href={item.href} aria-current={current ? 'page' : undefined}>
         <span>{item.label}</span>
       </Link>

@@ -281,6 +281,10 @@
       "category": "component",
       "concerns": ["ui", "accessibility"]
     },
+    "apps/web/tests/component/configuration-hierarchy.test.tsx": {
+      "category": "component",
+      "concerns": ["settings", "navigation"]
+    },
     "apps/web/tests/component/account-settings.test.tsx": {
       "category": "component",
       "concerns": ["settings", "navigation", "security"]

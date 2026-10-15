@@ -1,4 +1,3 @@
-import { ConfigurationSections } from '@/components/navigation/configuration-sections';
 import Link from 'next/link';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/settings-page-frame';
@@ -19,19 +18,14 @@ export default async function GeneralSettingsPage({
   const missing = missingIdentity(identity);
 
   return (
-    <ConfigurationSections sections={[
-      { key: 'identity', label: 'Identity', href: `/organizations/${organizationId}/settings/general#identity-heading` },
-      { key: 'address', label: 'Address & regional defaults', href: `/organizations/${organizationId}/settings/general#address-heading` },
-      { key: 'contact', label: 'Contact', href: `/organizations/${organizationId}/settings/general#contact-heading` },
-    ]}><SettingsPageFrame>
-      <SettingsPageHeader title="General" meta={organization.name} />
+    <SettingsPageFrame>
+      <SettingsPageHeader title="General" />
 
       {mayManage ? (
         <>
           {missing.length > 0 ? (
             <p role="status" className="mb-8 rounded-lg border border-border bg-hover/40 p-4 text-sm">
-              This business profile is not complete yet. Add {missing.join(', ').replace(/, ([^,]*)$/, ' and $1')} to finish it.
-              Nothing here blocks you from using GildOps.
+              To complete your business profile, add {missing.join(', ').replace(/, ([^,]*)$/, ' and $1')}.
             </p>
           ) : null}
           <OrganizationSettingsForm
@@ -48,6 +42,6 @@ export default async function GeneralSettingsPage({
           <Link href={`/organizations/${organizationId}/settings/access`} className="text-accent-text hover:underline">who has access</Link>.
         </Hint>
       )}
-    </SettingsPageFrame></ConfigurationSections>
+    </SettingsPageFrame>
   );
 }

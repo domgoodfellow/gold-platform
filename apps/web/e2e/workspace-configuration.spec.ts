@@ -12,7 +12,10 @@ for (const width of [1440, 768, 390]) test(`canonical workspace configuration at
   ['comms/configuration/messaging', 'Messaging'],
   ['comms/configuration/email', 'Email'],
   ['comms/configuration/numbers', 'Numbers'],
+  ['settings/general', 'General'],
+  ['sales/configuration', 'Configuration'],
   ['sales/configuration/relationship-stages', 'Relationship stages'],
+  ['sales/configuration/opportunity-stages', 'Opportunity stages'],
   ['sales/configuration/fields', 'Customer fields'],
   ['finance/configuration/pricing', 'Services & Pricing'],
   ['support/configuration/queues', 'Queues & assignment'],
@@ -28,8 +31,10 @@ for (const width of [1440, 768, 390]) test(`canonical workspace configuration at
    await expect(page.getByRole('heading', { level: 1, name: title, exact: true })).toBeVisible();
    await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toHaveCount(1);
    const sections = page.getByRole('navigation', { name: 'Configuration sections' });
-   await expect(sections).toBeVisible();
-   if (path !== 'studio/configuration') await expect(sections.locator('[aria-current="page"]')).toHaveCount(1);
+   if (path === 'settings/general' || path.startsWith('sales/configuration')) {
+    await expect(sections).toHaveCount(0);
+   } else await expect(sections).toBeVisible();
+   if (path !== 'studio/configuration' && path !== 'settings/general' && !path.startsWith('sales/configuration')) await expect(sections.locator('[aria-current="page"]')).toHaveCount(1);
    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
    await page.screenshot({ path: info.outputPath(`${path.replaceAll('/', '-')}-${colorScheme}.png`) });
   }
@@ -46,4 +51,30 @@ for (const width of [1440, 768, 390]) test(`canonical workspace configuration at
  await expect(numbers).toHaveAttribute('href', `${root}/comms/configuration/numbers`);
  await numbers.click(); await expect(page.getByRole('heading', { name: 'Numbers', exact: true })).toBeVisible();
  expect(errors).toEqual([]);
+});
+
+
+test('CRM Configuration is a navigable disclosure with canonical child routes and browser history', async ({ page }) => {
+ const { organizationId } = loadDemoContext();
+ const root = `/organizations/${organizationId}/sales/configuration`;
+ await page.goto(root);
+ await expect(page).toHaveURL(root);
+ const nav = page.locator('[data-slot="sidebar-container"]').getByRole('navigation', { name: 'This business' });
+ const parent = nav.getByRole('link', { name: 'Configuration', exact: true });
+ await expect(parent).toHaveAttribute('aria-current', 'page');
+ await nav.getByRole('button', { name: 'Collapse Configuration' }).click();
+ await expect(nav.getByRole('link', { name: 'Customer fields' })).toHaveCount(0);
+ await nav.getByRole('button', { name: 'Expand Configuration' }).press('Enter');
+ for (const [name, segment] of [['Relationship stages', 'relationship-stages'], ['Opportunity stages', 'opportunity-stages'], ['Customer fields', 'fields']]) {
+  const link = nav.getByRole('link', { name, exact: true });
+  await link.click();
+  await expect(page).toHaveURL(`${root}/${segment}`);
+  await expect(link).toHaveAttribute('aria-current', 'page');
+  await expect(parent).not.toHaveAttribute('aria-current');
+  await expect(page.getByRole('navigation', { name: 'Configuration sections' })).toHaveCount(0);
+  await page.reload();
+  await expect(link).toHaveAttribute('aria-current', 'page');
+  await page.goBack();
+  await expect(page).toHaveURL(root);
+ }
 });

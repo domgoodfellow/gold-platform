@@ -8,10 +8,10 @@ import { PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader,
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 import { CreateStageForm, EditStageForm } from './stage-settings';
 
-export function StageSettingsSheet({ organizationId, stages, mayConfigure, role }: { organizationId: string; stages: CustomerStage[]; mayConfigure: boolean; role: string }) {
+export function StageSettingsSheet({ organizationId, stages, mayConfigure, role, triggerLabel = 'Stages' }: { organizationId: string; stages: CustomerStage[]; mayConfigure: boolean; role: string; triggerLabel?: string }) {
   return (
     <PageDrawer>
-      <PageDrawerTrigger asChild><Button type="button" tone="secondary"><Settings2 aria-hidden /> Stages</Button></PageDrawerTrigger>
+      <PageDrawerTrigger asChild><Button type="button" tone="secondary"><Settings2 aria-hidden /> {triggerLabel}</Button></PageDrawerTrigger>
       <PageDrawerContent>
         <PageDrawerHeader>
           <PageDrawerTitle>Relationship stages</PageDrawerTitle>

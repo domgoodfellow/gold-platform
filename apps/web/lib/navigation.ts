@@ -769,7 +769,7 @@ export type WorkspaceConfigureDoor = {
 /**
  * What each workspace's Configure control offers, by registered target. One door renders as a
  * link, several as a menu (`ConfigureMenu`); a door the member may not configure, or the business
- * is not entitled to, is omitted. CRM is absent because its configuration opens in the page rail.
+ * is not entitled to, is omitted. CRM concerns also populate its persistent Configuration sidebar branch.
  * The order is the order of the concerns, most frequently changed first.
  */
 export const WORKSPACE_CONFIGURE: Partial<Record<WorkspaceKey, readonly WorkspaceConfigureDoor[]>> = {

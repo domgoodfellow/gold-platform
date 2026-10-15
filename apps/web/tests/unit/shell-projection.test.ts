@@ -384,3 +384,23 @@ describe('workspace Configuration authority', () => {
     }
   });
 });
+
+
+describe('CRM Configuration children', () => {
+  it('uses eligible registry destinations and selects the deepest child on direct access', () => {
+    const sections = project();
+    const parent = projectedItems(sections).find(item => item.key === 'workspace-crm')!.configuration!;
+    expect(parent.children?.map(item => item.label)).toEqual(['Relationship stages', 'Opportunity stages', 'Customer fields']);
+    for (const child of parent.children!) {
+      const context = workspaceNavigation(sections, child.href)!;
+      expect(activeItemKey(context.sections, child.href)).toBe(child.key);
+      expect(activeItemKey(context.sections, `${child.href}/record`)).toBe(child.key);
+    }
+    expect(activeItemKey(workspaceNavigation(sections, parent.href)!.sections, parent.href)).toBe('workspace-configuration');
+  });
+  it('omits unentitled and unauthorized children independently of operating access', () => {
+    const limited = projectedItems(project(['field.manage'], { enabledModules: new Set(), featureAvailability: new Set() })).find(item => item.key === 'workspace-crm')!.configuration!;
+    expect(limited.children?.map(item => item.key)).toEqual(['opportunity-stages', 'customer-fields']);
+    expect(projectedItems(project(['customer.create'])).find(item => item.key === 'workspace-crm')?.configuration).toBeUndefined();
+  });
+});

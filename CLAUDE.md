@@ -549,7 +549,7 @@ Key rules:
 - do not duplicate Settings ownership;
 - navigation and actions are different;
 - organization workspace rows enter their canonical Home;
-- entered workspaces use contextual sidebar destinations without dropdown trees;
+- entered workspaces use contextual sidebar destinations; CRM Configuration groups its routed children in a navigable disclosure;
 - Overview links to the workspace Home;
 - responsive design is intentional re-composition.
 
