@@ -239,13 +239,19 @@ That is preferable to giving an unconfigured feature hidden broad credentials.
 
 The current serverless scheduler is Vercel Cron.
 
-`apps/api/vercel.json` currently schedules:
+`apps/api/vercel.json` is the executable authority for all schedules and logical rewrites.
+It schedules customer notifications every minute, integration synchronization every 15 minutes,
+and automation ticks every 15 minutes. The notification rewrite reaches
+`api/customer_notification_tick.py` by GET and requires `Authorization: Bearer <CRON_SECRET>`.
+The physical handler path requires the same authorization. Missing runtime configuration or
+secret returns 404, invalid authorization returns 401, and worker failure returns 503.
+The handler claims at most five jobs; the Python function limit is 300 seconds.
 
-```text
-/tasks/automation-tick
-```
-
-every 15 minutes.
+Vercel Cron invokes production deployments, not previews, and does not follow redirects.
+The minute schedule requires a plan supporting that interval; Hobby permits daily schedules only.
+Confirm the selected team's actual plan and endpoint accessibility before activating a sandbox.
+See [Vercel Cron](https://vercel.com/docs/cron-jobs) and
+[usage limits](https://vercel.com/docs/cron-jobs/usage-and-pricing).
 
 Scheduled work must remain:
 
@@ -257,6 +263,85 @@ Scheduled work must remain:
 Do not turn a serverless function into an assumed long-lived daemon.
 
 If future workloads require durable queues/workers, introduce them as an explicit architecture change.
+
+### Customer notification sandbox and release gate
+
+Batch F is inspection and acceptance preparation. Deployment, hosted migration, provider/DNS
+changes, real test emails and scheduled activation each require explicit authorization for the
+named environment and resources. Existing credentials and a Git push do not supply that approval.
+Never select a different customer's project/account because the intended one is inaccessible.
+
+Use a dedicated sandbox database containing only synthetic test data, a dedicated tenant and a
+separately approved Resend account/domain and tester-controlled mailbox. Keep notification claim
+and pre-send authorization disabled until that tenant is ready. A preview connected to a production
+database is not isolation. Resend testing addresses can exercise provider events separately; they
+cannot receive the mailbox code needed for the actual consent journey.
+
+| Contract | Required location and verification |
+| --- | --- |
+| Database | Web `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; API `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` (legacy `SUPABASE_ANON_KEY` accepted). Confirm both target the selected sandbox. |
+| Machine authentication | API `SUPABASE_JWT_SECRET`: existing accepted legacy HS256 signing secret, never a service-role key. Verify a narrow machine RPC; presence alone does not prove acceptance. No signing-key rotation for testing. |
+| Scheduler | API `CRON_SECRET`, shared with existing cron handlers. Do not remove or rotate it to disable just notifications. |
+| Tenant sender | Canonical active, sendable EmailIdentity backed by an active Resend domain resource, its Organization Provider Binding and correct Provider Account. Verify account lifecycle, credential and actual domain readiness separately from the identity's local readiness predicate. |
+| Provider credential | Vault-backed credential on that Provider Account; resolved server-side. `RESEND_API_KEY` and platform invitation sender variables are not a notification fallback. |
+| Callback | API `TENANT_EMAIL_WEBHOOK_SECRET` for the selected account's tenant-email destination; separate from invitation `RESEND_WEBHOOK_SECRET`. |
+| Web-to-API | Web server-only `GOLD_API_URL` targets the intended API origin. The notification cron itself runs directly in the API project. |
+| Portal destination | Verified/SSL-issued Portal domain or canonical managed hostname from `platform_settings`, resolved for the organization. Template links carry no bearer token. Existing Portal invitation/session remains necessary. |
+
+Record variable names, environment and presence/validity only. Enter secrets through protected
+deployment/provider systems; never paste them into reports, logs, commits or browser traces.
+
+### Compatibility and approved rollout sequence
+
+1. Pin the reviewed source commit and exact team, Web/API projects, database, Resend account/domain
+   and allowed recipients. Confirm backup/recovery, plan support and explicit authorization. Disable
+   notification cron in the selected project's Cron settings before any API release if it exists.
+2. Compare hosted migration history with repository order. Apply reviewed predecessors first:
+   `20261217000001_customer_service_disclosures.sql`,
+   `20261218000001_customer_service_reviews.sql`, then
+   `20261219000001_customer_delivery_notifications.sql`. Earlier email/Portal/provider migrations
+   must already exist. Review the exact pending migration set; never broad-push unrelated migrations.
+3. Before deploying the worker, use the notification-only hold described in `docs/operations.md`.
+   Verify grants, RLS, signatures and generated types. Test the previous Web/API versions against
+   the migrated database. Schema-first adds tables/functions and wraps the old compose-email claim;
+   existing non-notification mail should continue, but compatibility is a required check.
+4. Deploy API, then Web, with the hold retained. Verify exact deployment source hashes, configuration,
+   logical and physical routes, authorization and the existing signed webhook. A production API
+   deployment can register cron immediately; a skipped domain assignment is not a sending control.
+5. Through canonical operator/Portal operations create one Customer, Engagement, approved Disclosure
+   and Review. Configure the tenant sender. Authorize bounded worker activation only for this isolated
+   environment, deliver the ordinary confirmation email, enter its code in the originating Portal
+   session and explicitly select purposes. No SQL consent shortcut in provider acceptance.
+6. Release exactly one notified review, record the stable identifiers, and observe provider acceptance
+   separately from signed delivery and CRM status. Count the confirmation email separately from the
+   review notice. A genuine scheduled invocation must be observed in scheduler/runtime logs; a manual
+   GET proves routing only. Then exercise one bounded transient retry, duplicate callback, invalid
+   signature and consent withdrawal with the approved recipient and traffic budget.
+7. Observe queue/attempt/event diagnostics and other-tenant counts. Disable the sandbox worker after
+   the test unless continued operation was explicitly authorized. Normal production activation is
+   a separate decision requiring successful provider acceptance and resolution of review blockers.
+
+An older application rollback preserves notification data but may stop exposing controls; it does
+not cancel queued work. Hold the worker first. Use forward corrective migrations for database
+recovery, preserve review/disclosure/consent/evidence rows, and never replay uncertain provider calls
+with a new message ID or beyond the original idempotency window.
+
+### Batch F inventory snapshot (2026-10-15)
+
+Reviewed Batch E source: `bbf4f1c5585a8c9667187e3c847bdd06e868302a` (34 files), clean at intake.
+Local links name `goodfellow-studio/gold-web` and `gold-api`; they do not establish current ownership
+or sandbox suitability. The connector denied scoped project access; CLI project inspection found
+Web metadata but the scoped project listing did not include it, environment listing failed, and
+API lookup failed by both stored name and ID. Accessible listed Next-Fund projects are unrelated
+and must not be substituted. Billing/team scope, deployed revisions, plan and environment values
+remain unverified. Reconcile access with the intended owner before any release.
+
+Read-only Supabase inventory found active `Gold Platform` (`nuceqypuwrjavrwiloda`), latest migration
+`20261216000001`, no Batch E schema/claim RPC, zero email identities and zero Resend Provider
+Accounts. This is an existing hosted environment, not an approved sandbox. No dedicated hosted
+sandbox, Resend domain/account or controlled recipient has been designated. Hosted configuration
+and provider acceptance therefore remain blocked; no deployment/migration/provider change or
+email was performed by Batch F. See `docs/operations.md` for code-review blockers and recovery.
 
 ---
 

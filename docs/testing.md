@@ -68,6 +68,54 @@ When a test file is added, moved or reclassified, update `test-manifest.json`.
 
 ## Testing principles
 
+### Provider-sandbox acceptance preparation (Batch F)
+
+The reviewed source baseline is `bbf4f1c`; repeat local checks rather than copying Batch E totals.
+Confirm the Docker database identity and loopback test URLs before `pnpm db:reset`, then run
+`pnpm check` and the isolated Batch A–E Playwright configurations against the local production
+build. Database tests and simulated delivery callbacks are local evidence only. Manifest categories
+already register the notification database, component, API and browser suites.
+
+| Prepared case | Deterministic authority / remaining provider evidence |
+| --- | --- |
+| Verified opted-in / unverified | `service-notifications.test.ts`: ordinary local Portal RPC consent versus no consent. A real controlled mailbox is still required for provider acceptance. |
+| Consent withdrawal | Database pre-send authorization refusal and Batch E browser journey; final authorization can still race an already in-flight provider call. |
+| Sender not ready | Notification database suite refuses dispatch after disabling the identity; provider domain readiness must also be checked externally. |
+| Provider unavailable | `test_customer_notifications.py` retry result, tenant-email adapter transport/429/5xx tests, bounded SQL retry. |
+| Duplicate invocation | Database claim contention/wrong token and same canonical message retry; provider adapter asserts the Idempotency-Key. This does not itself prove a real provider deduplicated sends. |
+| Expired lease | Separate rollback-only local probe must expire a claimed lease, call authorization and finish before reclamation, then reclaim and refuse the old token. Batch E originally tests a wrong token only. Record any mismatch as a release blocker. |
+| Superseded review | Notification database suite and browser journey suppress obsolete queued requests. |
+| Delivered / bounced | Local canonical event projection and suppression tests; signed ingress/adapter fixtures; actual signed provider events remain gated. |
+| Invalid signature | Existing API handler/signature tests reject missing, invalid and stale Svix signatures before database mutation. |
+| Unknown provider ID | Existing tenant-email and notification database tests ignore unknown IDs and preserve tenant correlation. Also inspect callback-before-acceptance ordering as an independent gap. |
+| Wrong Customer / tenant | Notification database and browser fixtures refuse foreign Portal/engagement identifiers and direct worker access. |
+
+For real-provider acceptance, use the canonical sequence in `docs/deployment.md`, webhook and
+evidence contract in `docs/operations.md`, and one approved sandbox tenant. Never install fabricated
+delivery-success rows in hosted acceptance. Local tests may simulate provider observations, clearly
+labelled. Test results use `real provider`, `simulated provider`, `not tested` or `blocked`.
+
+No sandbox test is enabled by default in the local gate. `pnpm test:provider` with an empty provider
+category reports NOT CONFIGURED and must not be counted as provider acceptance. An inaccessible
+environment or unapproved mailbox remains an explicit gate, not a reason to use production.
+
+Batch F local evidence (2026-10-15): reset the inspected `supabase_db_infra` Docker database on
+loopback port 54322; generated types matched the tracked file. A fresh `pnpm check` exited 0:
+317 web files / 3,956 tests, 931 API tests, four Node contracts, typecheck, lint and production build.
+Lint retained three existing unused-variable warnings. Targeted notification database/preferences
+suites passed 15 tests; targeted notification/tenant-email/handler API suites passed 224 tests.
+Rollback-only probes confirmed the notification-specific execution hold, the three worker RPCs,
+replacement-token fencing, and the unreclaimed-expiry / early-callback gaps recorded in
+`docs/operations.md`. The read-only diagnostics snippet executed locally. These results do not
+establish hosted schedule, credentials, domain readiness or delivery. The provider tier reported
+NOT CONFIGURED.
+
+All five isolated Playwright configurations (`playwright.batch-a.config.ts` through
+`playwright.batch-e.config.ts`) then passed one journey each against the local production build
+and loopback HTTPS fixture: CRM relationships, Portal, disclosures, reviews/Support and
+notifications. The notification journey included desktop/tablet/phone controls, consent,
+withdrawal and simulated provider evidence. No real email or hosted mutation occurred.
+
 ### Managed-service acceptance
 
 Batch E uses `service-notifications.test.ts` for real local consent/RLS, atomic intent, message

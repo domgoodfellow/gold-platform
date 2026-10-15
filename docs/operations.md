@@ -127,17 +127,9 @@ Supabase availability affects most authenticated and domain-backed product behav
 
 Current recurring execution is initiated by Vercel Cron.
 
-Current scheduled route:
-
-```text
-/tasks/automation-tick
-```
-
-Current schedule:
-
-```text
-every 15 minutes
-```
+The schedules and rewrites are owned by `apps/api/vercel.json`: automation ticks and integration
+synchronization every 15 minutes, customer notifications every minute. Deployment prerequisites,
+plan compatibility and activation gates are in `docs/deployment.md`.
 
 Scheduled work must tolerate:
 
@@ -145,6 +137,140 @@ Scheduled work must tolerate:
 - duplicate invocation;
 - partial provider failure;
 - retry.
+
+### Customer notification hold and recovery
+
+These are procedures for a separately authorized environment, not permission to execute them.
+The smallest sandbox isolation is a dedicated database containing only synthetic customers, a
+dedicated tenant/provider scope and a worker held until the controlled recipient is ready.
+
+Disable the notification schedule in the selected API project's Cron settings first. To stop new
+claims and last-moment send authorization independently of shared cron authentication, an authorized
+database operator can apply the following notification-only hold after Batch E is installed:
+
+```sql
+revoke execute on function public.claim_customer_notification(uuid)
+  from customer_notification_worker;
+revoke execute on function public.authorize_customer_notification_send(uuid,uuid)
+  from customer_notification_worker;
+```
+
+Keep `finish_customer_notification` granted so a provider response already in flight can be recorded.
+Do not remove the shared `CRON_SECRET`, change provider credentials belonging to other workloads,
+delete queued jobs or roll back customer reviews/disclosures. A call already authorized or sent to
+the provider may still complete; disabling cannot recall it. Verify no new claims after the hold,
+inspect active leases and reconcile uncertain sends against provider evidence before resuming.
+
+The hold requires no schema downgrade and survives an API/Web rollback. Retain queued rows, consent,
+attempts and delivery evidence. Leases expire after five minutes; resumption can reclaim expired
+jobs using a fresh fencing token and the original canonical message/idempotency key. Five claims
+and the 23-hour first-attempt cutoff still apply. Do not move timestamps, reset attempts or create
+a replacement message to bypass those bounds. Expired or ambiguous jobs require investigation.
+
+After dependencies, recipient eligibility and provider reconciliation are confirmed, separately
+authorized resumption grants those same two exact function signatures to
+`customer_notification_worker`, verifies no additional table/function authority, then re-enables
+the selected notification schedule. A migration can re-grant execution; recheck the hold after
+every corrective migration and before deploying an automatically scheduled API release.
+
+### Notification diagnostics and intervention
+
+Use CRM Customer -> Service Engagement -> Customer notifications -> Delivery history for the
+operator projection. Intent state is not provider acceptance; `messages.external_id` and accepted
+events establish acceptance, signed `message_events` establish sent/delivered/bounce observations.
+Use `supabase/snippets/customer-notification-readiness.sql` with one explicitly selected organization
+for aggregate queue/attempt/callback evidence. It reads private job state under an authorized
+operational connection, grants nothing and returns no email addresses, message bodies or secrets.
+Vercel Cron/runtime logs establish whether scheduled execution actually occurred. A successful
+HTTP invocation with all-zero counters cannot distinguish an empty queue from a broken schedule.
+There is no persisted worker heartbeat; correlate invocation logs with due-job age.
+
+| Symptom | Evidence and initial intervention threshold |
+| --- | --- |
+| No intents | CRM/history and scoped intent count. Check whether the domain action explicitly requested notification. |
+| No eligible recipients | Intent reasons, consent/suppression and sender configuration. Do not infer an outage from intentional suppression. |
+| Worker absent / queued | Due jobs older than 10 minutes, or no scheduled invocation for 3 expected minutes while due work exists: inspect hold, route, auth, plan and runtime logs. |
+| Repeated failures | 3 or more claims on one job, or any exhausted/23-hour-cutoff job: inspect attempt outcomes; do not reset counters. |
+| Claim failures | 3 consecutive 401/404/503 or database errors: hold processing, verify deployment/configuration/grants. A deliberate hold is expected to refuse claims. |
+| Provider rejecting | First rejection in the controlled acceptance, or 3 rejections in 15 minutes: pause and verify sender/account readiness before retrying. |
+| Delayed / missing webhook | Accepted more than 15 minutes without sent/delivery evidence: inspect provider webhook delivery and canonical message ID correlation. Delay is not proof of bounce. |
+| Bounce / suppression spike | Any unexpected bounce/complaint in the controlled test, or 3 new suppressions in 15 minutes: stop new test sends, review eligibility and provider events. Never clear suppression to force acceptance. |
+
+These are investigation triggers, not customer SLAs. Tune them from approved sandbox observations.
+Use existing Vercel logs, Supabase diagnostics, Resend delivery logs and canonical Communications
+records; no additional monitoring platform is needed. Runtime counters expose accepted/retry/failed/
+held, but neither provider details nor credentials should be logged. A finish RPC failure can leave
+an uncertain leased send; preserve its stable IDs and investigate before any retry.
+
+### Tenant-email webhook acceptance plan
+
+Use `https://<approved-api-origin>/webhooks/tenant-email`, rewritten by `apps/api/vercel.json` to
+`api/tenant_email_webhook.py` (POST). The API origin is unresolved until the intended project is
+accessible; never substitute an unrelated project. Reuse this endpoint for notifications.
+Subscribe to `email.sent`, `email.delivered`, `email.delivery_delayed`, `email.bounced`,
+`email.failed`, `email.complained` and `email.suppressed`. Existing optional `email.opened` /
+`email.clicked` events are engagement history, never proof of reading or approval. Do not enable
+`email.received` merely for this outbound acceptance: it invokes the separate inbound-email flow.
+
+The destination's `TENANT_EMAIL_WEBHOOK_SECRET` is scoped to the selected tenant-mail account;
+platform invitation events remain on `/webhooks/invitation-email` with `RESEND_WEBHOOK_SECRET`.
+Current ingress has one configured tenant-email secret, not per-account dynamic signature lookup.
+An isolated account with a different secret therefore needs its isolated API environment.
+Verify public POST accessibility without redirects or deployment-auth interception before acceptance.
+
+Signature verification covers raw bytes with Svix ID/timestamp/signature and a five-minute clock
+tolerance before JSON parsing. Invalid signatures return 400; unconfigured ingress returns 404;
+valid unknown/untracked/duplicate events return 200; persistence failures return 500 for provider
+retry. Organization/message are derived from the already stored provider message ID, never callback
+tenant/customer input. The provider event ID deduplicates ingestion. Replay through the provider's
+delivery tools uses a fresh signed request while retaining the event identity; replaying stale raw
+headers should be refused. Resend retries non-2xx delivery; inspect the current provider retry policy
+and endpoint logs rather than assuming every callback will arrive. Provider references:
+[retries and replays](https://resend.com/docs/webhooks/retries-and-replays),
+[24-hour idempotency keys](https://resend.com/docs/dashboard/emails/idempotency-keys), and
+[test addresses](https://resend.com/docs/dashboard/emails/send-test-emails).
+
+### Acceptance evidence and release blockers
+
+Store each controlled run in the existing protected operational evidence system, with:
+environment; selected tenant/Customer/Engagement/Review; source commit; migration version; API and
+Web deployment identities; schedule and genuine invocation timestamp; intent ID; canonical message
+ID; provider message ID; provider event ID/timestamp and ingestion time; expected/observed result;
+evidence class (`real provider`, `simulated provider`, `not tested`, `blocked`); operator and approved
+traffic scope. General reports redact personal addresses and contain no codes, tokens or credentials.
+
+The prepared provider journey creates fixtures through canonical operations, uses a controlled
+mailbox for actual verification and opt-in, releases one notified review, observes acceptance then
+signed delivery in CRM, safely retries one transient failure with the same message key, confirms
+duplicate callback handling and withdraws consent before a later queued send. Capture before/after
+counts for every other tenant and recipient; no change is the isolation criterion. Provider testing
+addresses may separately validate bounce/delivered callbacks after explicit sending approval.
+
+Batch F review of `bbf4f1c` identifies these release concerns:
+
+- `finish_customer_notification` fences by lease ID and sending state, but does not reject an
+  expired lease until another claim replaces it. The existing test covers a wrong lease ID, not
+  expiry/reclamation. A Batch F rollback-only local probe observed authorization=false but
+  finish=true for an expired, unreclaimed lease, violating the requested expiry-completion contract.
+  Reclamation did issue a different token and refused completion with the replaced token.
+- Five sequential jobs can exceed the 300-second function duration: each can involve four database
+  HTTP calls (10-second timeout each) plus a provider call (30 seconds), roughly 350 seconds under
+  stalls, excluding overhead. A bounded count alone is not a wall-clock budget. Test and bound the
+  invocation before schedule activation; interrupted sends must retain their original key.
+- The job snapshots EmailIdentity/message but resolves Provider Account afresh on every claim.
+  Account rebinding during uncertain retries can change the provider idempotency scope. Freeze
+  sender/binding/account configuration while jobs are active; account pinning/rebinding refusal
+  requires a separately reviewed correction before unrestricted production operation.
+- A callback can arrive before provider acceptance is durably finished. Unknown provider IDs are
+  acknowledged without recording; an early terminal callback can therefore be lost. Provider
+  acceptance testing must exercise this ordering, and production requires a reconciliation or
+  durable handling strategy. A Batch F rollback-only local probe confirmed a simulated delivered
+  event returned no record before acceptance; finishing acceptance afterward left zero delivered
+  events. A green ordinary-order fixture does not close this concern.
+
+These findings are not corrected by inspection/documentation work. Do not claim production readiness
+from the local suite. Hosted acceptance, accessible intended projects, sender/account/domain setup,
+the controlled mailbox and explicit external-action authorization remain separate release gates.
 
 ---
 
