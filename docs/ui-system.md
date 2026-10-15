@@ -128,7 +128,8 @@ larger shapes, richer accent surfaces and longer feedback. None changes status c
 contrast derivation. Color always accompanies a label, icon, border or selection state.
 
 `VisualScope` is an explicit opt-in boundary. Account shells apply only saved personal choices;
-an absent preference row selects no preset and retains existing classes and behavior. `designProperties` admits only
+an absent preference row selects no preset and retains existing classes and behavior. Every scope
+restarts from the platform token defaults, so a nested scope never inherits its parent's preset. `designProperties` admits only
 closed registry values, never arbitrary properties, CSS strings or tenant styles. Appearance
 uses existing forced light/dark roles; system appearance inherits the host scheme. Brand
 accent, on-accent and readable link colors remain owned by `brandPalette`/`BrandStyle`.
@@ -195,7 +196,9 @@ A successful missing-row read means legacy defaults; failed reads are errors, ne
 Reset deletes the row. Save stores only closed choices; blank preset/density/shape values inherit.
 Theme is system/light/dark; motion is system/reduced. Last successful account save wins.
 
-`AppearanceEditor` owns a local draft and previews real shared components. Changing controls
+`AppearanceEditor` owns a local draft. Visual style is one native radio group of compact tiles;
+the single Preview renders the draft through `VisualScope` with real shared components and is
+the only rendered sample on the page. Changing controls
 does not persist or change the shell. Save and Reset are explicit server actions; Discard restores
 the saved selection. Independent light/dark preview controls never become saved preferences.
 Pending, unsaved, saved and refused-write states remain distinct, and rejected drafts survive.

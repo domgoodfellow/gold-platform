@@ -56,7 +56,7 @@ test('draft, durable save, opposite-system theme, account scope, public regressi
   const shell = page.locator('[data-account-appearance]');
   await expect(shell).not.toHaveAttribute('data-visual-preset');
   await page.getByLabel('Theme', { exact: true }).selectOption('light');
-  await page.getByRole('button', { name: 'Expressive', exact: true }).click();
+  await page.getByRole('radio', { name: 'Expressive', exact: true }).check();
   await page.getByLabel('Density', { exact: true }).selectOption('compact');
   await page.getByLabel('Shape', { exact: true }).selectOption('soft');
   await expect(shell).not.toHaveAttribute('data-appearance');
@@ -65,7 +65,7 @@ test('draft, durable save, opposite-system theme, account scope, public regressi
   await page.getByRole('button', { name: 'Discard changes' }).click();
   await expect(page.getByRole('button', { name: 'Save appearance' })).toBeDisabled();
   await page.getByLabel('Theme', { exact: true }).selectOption('light');
-  await page.getByRole('button', { name: 'Layered', exact: true }).click();
+  await page.getByRole('radio', { name: 'Layered', exact: true }).check();
   await page.getByLabel('Density', { exact: true }).selectOption('comfortable');
   await page.getByLabel('Shape', { exact: true }).selectOption('square');
   await page.getByLabel('Motion', { exact: true }).selectOption('reduced');
@@ -75,6 +75,37 @@ test('draft, durable save, opposite-system theme, account scope, public regressi
   await expect(shell).toHaveAttribute('data-visual-preset', 'layered');
   expect(await page.evaluate(() => (window as unknown as { appearanceContinuity: string }).appearanceContinuity)).toBe('same-document');
   await expect.poll(() => shell.evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 255, 255)');
+  const preview = page.getByTestId('appearance-preview');
+  const elevation = (locator: typeof preview) => locator.evaluate(el => getComputedStyle(el).getPropertyValue('--visual-elevation').trim());
+  const platformElevation = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--visual-elevation').trim());
+  await page.getByRole('radio', { name: 'Platform default', exact: true }).check();
+  await expect(preview).toHaveAttribute('data-visual-system', '');
+  expect(await elevation(shell)).not.toBe(platformElevation);
+  expect(await elevation(preview)).toBe(platformElevation);
+  const layered = page.getByRole('radio', { name: 'Layered', exact: true });
+  await layered.check();
+  await expect(preview).toHaveAttribute('data-visual-preset', 'layered');
+  expect(await elevation(preview)).toBe(await elevation(shell));
+  await layered.focus();
+  await page.keyboard.press('ArrowRight');
+  const expressive = page.getByRole('radio', { name: 'Expressive', exact: true });
+  await expect(expressive).toBeChecked();
+  await expect(expressive).toBeFocused();
+  await expect(preview).toHaveAttribute('data-visual-preset', 'expressive');
+  expect(await expressive.evaluate(el => getComputedStyle(el.closest('label')!).boxShadow)).not.toBe('none');
+  await page.keyboard.press('ArrowLeft');
+  await expect(layered).toBeChecked();
+  await expect(page.getByRole('button', { name: 'Save appearance' })).toBeDisabled();
+  const rows = async (locator: ReturnType<typeof page.locator>) => Object.values((await locator.evaluateAll(els => els.map(el => Math.round(el.getBoundingClientRect().top))))
+    .reduce<Record<number, number>>((count, top) => ({ ...count, [top]: (count[top] ?? 0) + 1 }), {}));
+  const tiles = page.locator('[data-slot=preset-choice]');
+  await expect(tiles).toHaveCount(4);
+  expect(await tiles.evaluateAll(els => els.every(el => el.getBoundingClientRect().height >= 44))).toBe(true);
+  const tileRows = await rows(tiles);
+  const settingRows = await rows(page.locator('#appearance-theme, #appearance-density, #appearance-shape, #appearance-motion'));
+  if (info.project.name === 'desktop') { expect(tileRows).toEqual([4]); expect(settingRows).toEqual([4]); }
+  if (info.project.name === 'phone') { expect(tileRows).toEqual([2, 2]); expect(settingRows).toEqual([1, 1, 1, 1]); }
+  expect(new Set(tileRows).size).toBe(1);
   if (info.project.name === 'phone') {
     const menuTrigger = page.getByRole('button', { name: 'Menu', exact: true });
     await menuTrigger.click();

@@ -46,6 +46,7 @@ Entries describe the product or operational change, not every file touched.
 
 ### Changed
 
+- Appearance settings choose a visual style from one compact, keyboard-operable set of choices, and the single Preview is the only sample. The Preview no longer picks up the saved style's shadows and motion when a draft returns to Platform default with an override.
 - Added persistent Help & Support, Settings, and independently authorized Platform controls; Account now owns identity and Sign out.
 - Consolidated workspace configuration behind one contextual entry with responsive page sections. Communications, CRM, and Finance retain compatibility redirects; Work, Support, AI, and Studio retain their canonical domain ownership.
 - Communications configuration reports channel-specific readiness blockers without treating provider configuration as proof of delivery.

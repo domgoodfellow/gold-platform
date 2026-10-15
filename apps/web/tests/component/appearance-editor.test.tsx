@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { designProperties } from '@gold/ui/design-system';
 import { AppearanceEditor } from '@/features/appearance/appearance-editor';
 import { updateAppearanceAction } from '@/app/settings/account/actions';
 
@@ -11,31 +12,125 @@ vi.mock('@/app/settings/account/actions', () => ({ updateAppearanceAction: vi.fn
 afterEach(() => cleanup());
 beforeEach(() => { vi.clearAllMocks(); });
 
+const STYLES = ['Platform default', 'Minimal', 'Layered', 'Expressive'];
+const preview = () => screen.getByTestId('appearance-preview');
+const token = (name: string) => preview().style.getPropertyValue(name);
+const resolved = (selection: Parameters<typeof designProperties>[0]) => designProperties(selection) as Record<string, string>;
+
+it('offers every visual style as one radio group and renders only the main preview', async () => {
+  const user = userEvent.setup(); const { container } = render(<AppearanceEditor saved={{}} />);
+  const group = screen.getByRole('group', { name: 'Visual style' });
+  expect(within(group).getAllByRole('radio').map(radio => radio.closest('label')!.textContent)).toEqual(STYLES);
+  expect(within(group).getByRole('radio', { name: 'Platform default' })).toBeChecked();
+  expect(container.querySelectorAll('[data-visual-scope]')).toHaveLength(1);
+  expect(screen.queryByText('Surface preview')).toBeNull();
+  for (const [index, name] of STYLES.entries()) {
+    await user.click(within(group).getByRole('radio', { name }));
+    expect(within(group).getByRole('radio', { name })).toBeChecked();
+    expect(within(group).getAllByRole('radio', { checked: true })).toHaveLength(1);
+    expect(group.querySelectorAll('svg')).toHaveLength(1);
+    expect(within(group).getAllByRole('radio')[index].closest('label')!.querySelector('svg')).not.toBeNull();
+    if (index === 0) expect(preview()).not.toHaveAttribute('data-visual-preset');
+    else expect(preview()).toHaveAttribute('data-visual-preset', name.toLowerCase());
+  }
+  expect(updateAppearanceAction).not.toHaveBeenCalled();
+});
+
+it('moves the selection with arrow keys and previews each style immediately', async () => {
+  const user = userEvent.setup(); render(<AppearanceEditor saved={{ preset: 'layered' }} />);
+  const layered = screen.getByRole('radio', { name: 'Layered' });
+  await user.click(layered);
+  expect(layered).toHaveFocus();
+  await user.keyboard('{ArrowRight}');
+  expect(screen.getByRole('radio', { name: 'Expressive' })).toBeChecked();
+  expect(screen.getByRole('radio', { name: 'Expressive' })).toHaveFocus();
+  expect(preview()).toHaveAttribute('data-visual-preset', 'expressive');
+  await user.keyboard('{ArrowRight}');
+  expect(screen.getByRole('radio', { name: 'Platform default' })).toBeChecked();
+  expect(preview()).not.toHaveAttribute('data-visual-preset');
+  await user.keyboard('{ArrowLeft}');
+  expect(screen.getByRole('radio', { name: 'Expressive' })).toBeChecked();
+  expect(screen.getByRole('status')).toHaveTextContent('Unsaved changes');
+  expect(updateAppearanceAction).not.toHaveBeenCalled();
+});
+
+it('resolves the preview through the shared design tokens, including overrides', async () => {
+  const user = userEvent.setup(); render(<AppearanceEditor saved={{}} />);
+  expect(token('--visual-radius')).toBe('');
+  await user.click(screen.getByRole('radio', { name: 'Expressive' }));
+  for (const [name, value] of Object.entries(resolved({ preset: 'expressive' }))) expect(token(name)).toBe(value);
+  await user.click(screen.getByRole('radio', { name: 'Minimal' }));
+  expect(token('--visual-elevation')).toBe(resolved({ preset: 'minimal' })['--visual-elevation']);
+  await user.selectOptions(screen.getByLabelText('Shape'), 'square');
+  await user.selectOptions(screen.getByLabelText('Density'), 'compact');
+  await user.selectOptions(screen.getByLabelText('Motion'), 'reduced');
+  for (const [name, value] of Object.entries(resolved({ preset: 'minimal', shape: 'square', density: 'compact' }))) expect(token(name)).toBe(value);
+  expect(preview()).toHaveAttribute('data-density', 'compact');
+  expect(preview()).toHaveAttribute('data-motion', 'reduced');
+  await user.selectOptions(screen.getByLabelText('Shape'), '');
+  expect(token('--visual-radius')).toBe(resolved({ preset: 'minimal' })['--visual-radius']);
+});
+
 it('previews drafts without saving, discards, and keeps the preview scheme independent', async () => {
   const user = userEvent.setup(); render(<AppearanceEditor saved={{}} />);
-  await user.click(screen.getByRole('button', { name: 'Expressive' }));
-  expect(screen.getByTestId('appearance-preview')).toHaveAttribute('data-visual-preset', 'expressive');
+  await user.click(screen.getByRole('radio', { name: 'Expressive' }));
+  expect(preview()).toHaveAttribute('data-visual-preset', 'expressive');
   await user.selectOptions(screen.getByLabelText('Preview theme'), 'dark');
+  expect(preview()).toHaveAttribute('data-appearance', 'dark');
   expect(screen.getByLabelText('Theme')).toHaveValue('system');
   expect(updateAppearanceAction).not.toHaveBeenCalled();
   await user.click(screen.getByRole('button', { name: 'Discard changes' }));
-  expect(screen.getByTestId('appearance-preview')).not.toHaveAttribute('data-visual-preset');
+  expect(preview()).not.toHaveAttribute('data-visual-preset');
+  expect(screen.getByRole('radio', { name: 'Platform default' })).toBeChecked();
   expect(screen.getByRole('button', { name: 'Save appearance' })).toBeDisabled();
 });
+
+it('never turns the preview theme into an unsaved theme change', async () => {
+  const user = userEvent.setup(); render(<AppearanceEditor saved={{ appearance: 'light' }} />);
+  await user.selectOptions(screen.getByLabelText('Preview theme'), 'dark');
+  expect(preview()).toHaveAttribute('data-appearance', 'dark');
+  expect(screen.getByLabelText('Theme')).toHaveValue('light');
+  expect(screen.getByRole('status')).toHaveTextContent('Using saved appearance');
+  expect(screen.getByRole('button', { name: 'Save appearance' })).toBeDisabled();
+  await user.selectOptions(screen.getByLabelText('Theme'), 'dark');
+  await user.selectOptions(screen.getByLabelText('Preview theme'), 'light');
+  vi.mocked(updateAppearanceAction).mockResolvedValueOnce({ selection: { appearance: 'dark' } });
+  await user.click(screen.getByRole('button', { name: 'Save appearance' }));
+  await screen.findByText('Appearance saved.');
+  expect(updateAppearanceAction).toHaveBeenCalledWith({ appearance: 'dark' }, false);
+  expect(preview()).toHaveAttribute('data-appearance', 'light');
+});
+
 it('saves only on explicit action and resets through the domain action', async () => {
-  vi.mocked(updateAppearanceAction).mockResolvedValueOnce({ selection: { appearance: 'light', density: 'compact' } }).mockResolvedValueOnce({ selection: {} });
+  vi.mocked(updateAppearanceAction).mockResolvedValueOnce({ selection: { appearance: 'light', density: 'compact', preset: 'layered' } }).mockResolvedValueOnce({ selection: {} });
   const user = userEvent.setup(); render(<AppearanceEditor saved={{}} />);
   await user.selectOptions(screen.getByLabelText('Theme'), 'light');
+  await user.click(screen.getByRole('radio', { name: 'Layered' }));
   await user.selectOptions(screen.getByLabelText('Density'), 'compact');
   await user.click(screen.getByRole('button', { name: 'Save appearance' }));
   await screen.findByText('Appearance saved.');
   expect(refresh).toHaveBeenCalled();
-  expect(updateAppearanceAction).toHaveBeenCalledWith({ appearance: 'light', density: 'compact' }, false);
+  expect(updateAppearanceAction).toHaveBeenCalledWith({ appearance: 'light', density: 'compact', preset: 'layered' }, false);
+  expect(screen.getByRole('radio', { name: 'Layered' })).toBeChecked();
   await user.click(screen.getByRole('button', { name: 'Reset to defaults' }));
   await screen.findByText('Defaults restored.');
   expect(screen.getByLabelText('Density')).toHaveValue('');
-  expect(updateAppearanceAction).toHaveBeenLastCalledWith({ appearance: 'light', density: 'compact' }, true);
+  expect(screen.getByRole('radio', { name: 'Platform default' })).toBeChecked();
+  expect(updateAppearanceAction).toHaveBeenLastCalledWith({ appearance: 'light', density: 'compact', preset: 'layered' }, true);
 });
+
+it('locks the choices while saving', async () => {
+  let finish!: (value: Awaited<ReturnType<typeof updateAppearanceAction>>) => void;
+  vi.mocked(updateAppearanceAction).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+  const user = userEvent.setup(); render(<AppearanceEditor saved={{}} />);
+  await user.click(screen.getByRole('radio', { name: 'Minimal' }));
+  await user.click(screen.getByRole('button', { name: 'Save appearance' }));
+  await waitFor(() => expect(screen.getByRole('radio', { name: 'Expressive' })).toBeDisabled());
+  finish({ selection: { preset: 'minimal' } });
+  await screen.findByText('Appearance saved.');
+  expect(screen.getByRole('radio', { name: 'Expressive' })).toBeEnabled();
+});
+
 it('retains rejected drafts and exposes an actionable error instead of a saved state', async () => {
   vi.mocked(updateAppearanceAction).mockResolvedValue({ error: 'Save refused. Try again.' });
   const user = userEvent.setup(); render(<AppearanceEditor saved={{}} />);

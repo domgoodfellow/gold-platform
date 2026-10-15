@@ -300,8 +300,10 @@ h1, h2, h3, h4 {
 }
 
 /* Slice A: opt-in visual grammar. Existing routes retain their established defaults.
-   Preset values come only from @gold/ui/design-system's closed registry. */
-:root, [data-public-design], [data-visual-scope]:not([data-visual-system]) {
+   Preset values come only from @gold/ui/design-system's closed registry. Every scope restarts
+   from these defaults, so a nested scope such as the Appearance preview never inherits the
+   saved preset of the shell around it; its own inline preset values still win. */
+:root, [data-public-design], [data-visual-scope] {
   --visual-radius: 0.625rem;
   --visual-elevation: 0 2px 8px rgb(0 0 0 / .08);
   --visual-overlay-shadow: 0 8px 24px rgb(0 0 0 / .18);
@@ -314,6 +316,7 @@ h1, h2, h3, h4 {
   --type-body: .875rem;
   --type-title: 1.125rem;
   --type-display: 1.875rem;
+  --visual-accent-mix: 4%;
   --surface-accent: color-mix(in srgb, var(--accent) 4%, var(--surface));
 }
 
