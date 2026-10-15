@@ -10,6 +10,7 @@ import { engagementAction, readEngagementDetails } from '@/app/organizations/[or
 import { ARTIFACT_KINDS, SERVICE_KINDS, type Engagement } from '@/lib/domain/customers/service-engagements';
 import type { ClientTenantRelationship } from '@/lib/domain/customers/client-tenants';
 import { ServiceDisclosureEditor } from './service-disclosure-editor';
+import { ServiceReviewSection } from './service-review-section';
 
 type Options = { organizationId: string; customerId: string; mayManage: boolean; relationships: ClientTenantRelationship[]; opportunities: { id: string; title: string }[]; proposals: { id: string; version: number; status: string }[]; work: { id: string; title: string }[] };
 
@@ -68,6 +69,7 @@ function EngagementDetails({ item, options }: { item: Engagement; options: Optio
     <div><p className="text-sm capitalize">{item.status}</p><p className="text-sm text-muted">{relationship ? relationship.tenant_name : 'No tenant yet'}</p></div>
     <ErrorText role="alert">{state.error ?? error}</ErrorText>{state.saved ? <p role="status" className="text-sm">Saved.</p> : null}
     {details ? <ServiceDisclosureEditor key={details.disclosure?.version ?? 0} organizationId={options.organizationId} customerId={options.customerId} customerName={details.customerName} organizationName={details.organizationName} timezone={details.timezone} engagement={item} mayManage={options.mayManage} relationshipEnded={relationship?.status === 'ended'} disclosure={details.disclosure} history={details.history} deliverables={details.deliverables} approvedDeliverables={details.approvedDeliverables} onSaved={refreshDisclosure}/> : null}
+    {details ? <ServiceReviewSection organizationId={options.organizationId} customerId={options.customerId} engagementId={item.id} disclosure={details.disclosure} history={details.history} reviews={details.reviews} timezone={details.timezone} mayManage={options.mayManage} mayReadSupport={details.mayReadSupport} relationshipEnded={relationship?.status === 'ended'} onSaved={refreshDisclosure}/> : null}
     {details?.mayReadSupport ? <ButtonLink tone="text" href={`/organizations/${options.organizationId}/support/cases?customer=${options.customerId}`}>Customer Support Cases</ButtonLink> : null}
     {options.mayManage && open && !item.relationship_id ? <form action={action} className="space-y-3"><ContextInputs {...options} engagementId={item.id}/><input type="hidden" name="operation" value="bind"/>
       <FormField id={`${id}-tenant`} label="Linked organization">{props => <SelectInput {...props} name="relationshipId" required defaultValue=""><option value="" disabled>Select linked organization</option>{options.relationships.filter(r => r.status === 'active').map(r => <option key={r.id} value={r.id}>{r.tenant_name}</option>)}</SelectInput>}</FormField><Button type="submit" disabled={pending}>Associate tenant</Button>

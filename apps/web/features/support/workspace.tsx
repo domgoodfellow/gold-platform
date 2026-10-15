@@ -923,9 +923,18 @@ export function SupportWorkspace({
               }
             >
               <p className="whitespace-pre-wrap break-words border-t border-border p-4 text-sm leading-6">
-                {c.description || "No description recorded."}
+                {c.description || (data.serviceReview ? 'Customer changes are recorded in the original review request below.' : 'No description recorded.')}
               </p>
             </OperationalPanel>
+            {data.serviceReview ? <OperationalPanel flush title="Customer review request">
+              <div className="space-y-3 p-4 text-sm break-words [overflow-wrap:anywhere]">
+                <p>{data.serviceReview.targetTitle} · Revision {data.serviceReview.revisionNumber}</p>
+                <p className="whitespace-pre-wrap">{data.serviceReview.description}</p>
+                <p className="text-xs text-muted">Portal customer: {data.serviceReview.responderName} · {new Date(data.serviceReview.respondedAt).toLocaleString('en-GB', { timeZone: timezone })}</p>
+                <Link className="underline" href={`/organizations/${organizationId}/customers/${data.serviceReview.customerId}`}>Open customer engagement</Link>
+                <p className="text-xs text-muted">Original review evidence is retained independently of Case resolution.</p>
+              </div>
+            </OperationalPanel> : null}
             {c.resolution_summary && (
               <OperationalPanel flush title="Latest recorded resolution">
                 <div className="border-t border-border p-4">

@@ -1,0 +1,213 @@
+import { randomUUID } from 'node:crypto';
+import { Client } from 'pg';
+import { createClient } from '@supabase/supabase-js';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Database, Db } from '@/lib/db/types';
+import { foundBusiness } from '@/tests/support/founding';
+import { createCustomer } from '@/lib/domain/customers/customers';
+import { createServiceEngagement, attachEngagementDeliverable } from '@/lib/domain/customers/service-engagements';
+import { disclosureEditorState, saveServiceDisclosure, releaseServiceDisclosure, type DisclosureContent } from '@/lib/domain/customers/service-disclosures';
+import { releaseServiceReview, withdrawServiceReview, respondServiceReview, portalServiceReviews, listServiceReviews } from '@/lib/domain/customers/service-reviews';
+import { createPortalInvite, exchangePortalLink, revokePortalInvite, listPortalInvites } from '@/lib/domain/portal/portal';
+import { savePortalDraft, submitPortalDraft, publishPortalDraft, portalEditorState } from '@/lib/domain/portal/definitions';
+import { portalFromTemplate, DEFAULT_PORTAL_CONTENT } from '@/lib/domain/portal/composition';
+import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
+import { commandSupport, readSupport } from '@/lib/domain/support/support';
+import { createWebsite } from '@/lib/domain/public-site/public-site';
+
+const url = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
+const connection = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+const client = () => createClient<Database>(url, process.env.SUPABASE_ANON_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+let pg: Client; let operator: Db; let outsider: Db; let portal: Db; let otherPortal: Db; let foreignPortal: Db;
+let org: string; let customer: string; let otherCustomer: string; let actor: string;
+const content: DisclosureContent = { title: 'Website ready for review', serviceKind: 'website', summary: 'Approved review material.', status: 'Ready for review', deliverables: [] };
+async function layout(value = portalFromTemplate('managed-services')) {
+  await savePortalDraft(operator, org, (await portalEditorState(operator, org)).definition?.draft_version ?? 0, value);
+  const v = (await portalEditorState(operator, org)).definition!.draft_version;
+  await submitPortalDraft(operator, org, v); await publishPortalDraft(operator, org, (await portalEditorState(operator, org)).definition!.draft_version);
+}
+async function fixture() {
+  const engagement = await createServiceEngagement(operator, { organizationId: org, customerId: customer, name: 'Internal delivery', serviceKind: 'website' });
+  const disclosure = await saveServiceDisclosure(operator, org, customer, engagement, 0, content);
+  await releaseServiceDisclosure(operator, org, customer, engagement, 1, 'publish');
+  const revision = (await disclosureEditorState(operator, org, customer, engagement)).disclosure!.published_revision_id!;
+  const review = await releaseServiceReview(operator, org, customer, engagement, revision);
+  return { engagement, disclosure, revision, review };
+}
+beforeAll(async () => {
+  if (![url, connection].every(value => ['127.0.0.1', 'localhost'].includes(new URL(value).hostname))) throw new Error('Disposable local fixtures only');
+  pg = new Client(connection); await pg.connect();
+  const admin = createClient<Database>(url, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+  async function account() {
+    const email = `review-${randomUUID()}@example.test`; const password = randomUUID();
+    const made = await admin.auth.admin.createUser({ email, password, email_confirm: true }); if (made.error) throw made.error;
+    const db = client(); const login = await db.auth.signInWithPassword({ email, password }); if (login.error) throw login.error;
+    return { db, email, id: made.data.user.id };
+  }
+  const seller = await account(); const stranger = await account(); operator = seller.db; outsider = stranger.db; actor = seller.id;
+  org = await foundBusiness({ ownerEmail: seller.email, name: 'Review service organization', currency: 'CAD' });
+  const foreign = await foundBusiness({ ownerEmail: stranger.email, name: 'Unrelated organization', currency: 'CAD' });
+  customer = await createCustomer(operator, { organizationId: org, name: 'Review customer' });
+  otherCustomer = await createCustomer(operator, { organizationId: org, name: 'Other customer' });
+  await setModuleEnabled(operator, { organizationId: org, key: 'portal', enabled: true });
+  await setModuleEnabled(outsider, { organizationId: foreign, key: 'portal', enabled: true });
+  await pg.query("insert into organization_commercial_terms(organization_id,product_key,period_start,period_end,quantity,price_minor,currency,recorded_by,note) values($1,'module:portal','2020-01-01','9999-12-31',1,0,'CAD',$2,'Local review fixture')", [org, actor]);
+  await pg.query("insert into organization_commercial_terms(organization_id,product_key,period_start,period_end,quantity,price_minor,currency,recorded_by,note) values($1,'module:portal','2020-01-01','9999-12-31',1,0,'CAD',$2,'Local foreign Portal fixture')", [foreign, stranger.id]);
+  await savePortalDraft(outsider, foreign, 0, portalFromTemplate('managed-services'));
+  await submitPortalDraft(outsider, foreign, (await portalEditorState(outsider, foreign)).definition!.draft_version);
+  await publishPortalDraft(outsider, foreign, (await portalEditorState(outsider, foreign)).definition!.draft_version);
+  portal = client(); otherPortal = client(); foreignPortal = client();
+  await exchangePortalLink(portal, { token: await createPortalInvite(operator, { customerId: customer }) });
+  await exchangePortalLink(otherPortal, { token: await createPortalInvite(operator, { customerId: otherCustomer }) });
+  const fc = await createCustomer(outsider, { organizationId: foreign, name: 'Foreign customer' });
+  await exchangePortalLink(foreignPortal, { token: await createPortalInvite(outsider, { customerId: fc }) });
+  await layout();
+});
+afterAll(async () => { await pg?.end(); });
+describe('immutable customer review and canonical Support intake', () => {
+  it('pins exact organization/customer/engagement/revision and rejects forged targets and releases', async () => {
+    const f = await fixture();
+    for (const db of [outsider, portal]) await expect(releaseServiceReview(db, org, customer, f.engagement, f.revision)).rejects.toThrow('permission');
+    await expect(releaseServiceReview(operator, org, otherCustomer, f.engagement, f.revision)).rejects.toThrow('material');
+    await expect(releaseServiceReview(operator, org, customer, f.engagement, randomUUID())).rejects.toThrow('material');
+    await expect(releaseServiceReview(operator, org, customer, f.engagement, f.revision, randomUUID())).rejects.toThrow('deliverable');
+    await expect(releaseServiceReview(operator, org, customer, f.engagement, f.revision)).rejects.toThrow('already requested');
+    const row = (await listServiceReviews(operator, org, customer, f.engagement))[0];
+    expect(row).toMatchObject({ revision_id: f.revision, released_by: actor, version: 1, state: 'pending' });
+    await expect(pg.query('update service_reviews set revision_id=$1 where organization_id=$2 and id=$3', [randomUUID(), org, f.review])).rejects.toThrow('immutable');
+  });
+  it('denies wrong customers, organizations, anonymous users and internal operators as responders', async () => {
+    const f = await fixture();
+    for (const db of [otherPortal, foreignPortal, client(), operator]) expect((await db.rpc('respond_service_review', { p_review_id: f.review, p_expected_version: 1, p_decision: 'approved' })).error?.code).toBe('42501');
+    await expect(portalServiceReviews(otherPortal, f.disclosure)).rejects.toThrow('unavailable');
+    expect((await portal.from('service_reviews').select('*')).data).toEqual([]);
+    expect((await outsider.from('service_reviews').select('*')).data).toEqual([]);
+    const grants = (await pg.query("select relrowsecurity,relforcerowsecurity,has_table_privilege('authenticated','service_reviews','UPDATE') can_update from pg_class where oid='service_reviews'::regclass")).rows[0];
+    expect(grants).toEqual({ relrowsecurity: true, relforcerowsecurity: true, can_update: false });
+  });
+  it('records an attributable approval once and preserves it across later disclosure changes', async () => {
+    const f = await fixture();
+    await saveServiceDisclosure(operator, org, customer, f.engagement, 2, { ...content, summary: 'PRIVATE unpublished changes.' });
+    expect(JSON.stringify(await portalServiceReviews(portal, f.disclosure))).not.toContain('PRIVATE');
+    await respondServiceReview(portal, f.review, 1, 'approved');
+    const row = (await listServiceReviews(operator, org, customer, f.engagement))[0];
+    expect(row).toMatchObject({ state: 'approved', version: 2, responder_name: 'Review customer', revision_id: f.revision });
+    expect(row.revision?.content).toEqual(content);
+    expect(row.finished_by).toBe((await portal.auth.getUser()).data.user?.id); expect(row.portal_invite_id).toBeTruthy();
+    await expect(respondServiceReview(portal, f.review, 1, 'changes_requested', 'Different decision')).rejects.toThrow('changed');
+    await expect(pg.query("update service_reviews set state='pending' where organization_id=$1 and id=$2", [org, f.review])).rejects.toThrow('immutable');
+    await releaseServiceDisclosure(operator, org, customer, f.engagement, 3, 'publish');
+    expect((await listServiceReviews(operator, org, customer, f.engagement))[0]).toEqual(row);
+    expect((await portalServiceReviews(portal, f.disclosure))[0]).toMatchObject({ state: 'approved', materialAvailable: false, revisionId: f.revision });
+  });
+  it('rejects unknown decisions, privileged fields, missing or oversized change text without side effects', async () => {
+    const f = await fixture();
+    for (const [decision, text] of [['resolved', undefined], ['approved', 'unexpected'], ['changes_requested', '  '], ['changes_requested', 'x'.repeat(3001)]] as const) await expect(respondServiceReview(portal, f.review, 1, decision, text)).rejects.toThrow();
+    expect((await portal.rpc('respond_service_review', { p_review_id: f.review, p_expected_version: 1, p_decision: 'approved', p_priority: 'urgent' } as never)).error).toBeTruthy();
+    await expect(commandSupport(portal, org, 'case.create', { title: 'Forged', priority: 'urgent', owner: actor })).rejects.toThrow('permission');
+    expect((await listServiceReviews(operator, org, customer, f.engagement))[0].state).toBe('pending');
+  });
+  it('creates exactly one normal unassigned Support Case and stores request prose only once', async () => {
+    const f = await fixture(); const body = '<script>Untrusted request</script> Move the booking form.';
+    const policy = await commandSupport(operator, org, 'policy.create', { name: 'Normal customer changes', priority: 'normal', minutes: 120 });
+    await respondServiceReview(portal, f.review, 1, 'changes_requested', body);
+    const row = (await listServiceReviews(operator, org, customer, f.engagement))[0];
+    const c = await readSupport(operator, org, 'detail', { selected: row.support_case_id! });
+    expect(c.selected).toMatchObject({ customer_id: customer, priority: 'normal', assigned_membership_id: null, queue_id: null, status: 'new', description: '' });
+    expect(c.serviceReview).toMatchObject({ reviewId: f.review, description: body, responderName: 'Review customer' });
+    expect(c.selected?.target_snapshot).toMatchObject({ name: 'Normal customer changes', minutes: 120, clock: 'elapsed' });
+    expect((await pg.query('select policy_id from support_cases where organization_id=$1 and id=$2', [org, row.support_case_id])).rows[0].policy_id).toBe(policy);
+    await expect(respondServiceReview(portal, f.review, 1, 'changes_requested', body)).rejects.toThrow('changed');
+    expect((await pg.query('select count(*)::int n from support_cases where organization_id=$1 and id=$2', [org, row.support_case_id])).rows[0].n).toBe(1);
+    expect(JSON.stringify((await pg.query('select payload from events where organization_id=$1', [org])).rows)).not.toContain(body);
+    expect(JSON.stringify(c.events)).not.toContain(body);
+    expect((await portal.rpc('support_service_review', { p_organization_id: org, p_case_id: row.support_case_id! })).error?.code).toBe('42501');
+    await expect(commandSupport(portal, org, 'case.resolve', { id: row.support_case_id!, summary: 'Customer attempts to resolve own Case.' })).rejects.toThrow('permission');
+    await commandSupport(operator, org, 'case.resolve', { id: row.support_case_id!, summary: 'Implemented the requested layout change.' });
+    expect((await listServiceReviews(operator, org, customer, f.engagement))[0]).toEqual(row);
+  });
+  it('serializes conflicting customer decisions so only one final decision and at most one Case exists', async () => {
+    const f = await fixture();
+    const results = await Promise.allSettled([respondServiceReview(portal, f.review, 1, 'approved'), respondServiceReview(portal, f.review, 1, 'changes_requested', 'Please adjust the heading.')]);
+    expect(results.filter(x => x.status === 'fulfilled')).toHaveLength(1);
+    const row = (await listServiceReviews(operator, org, customer, f.engagement))[0];
+    expect(['approved', 'changes_requested']).toContain(row.state); expect(row.version).toBe(2);
+    expect((await pg.query('select count(*)::int n from support_cases where organization_id=$1 and id=$2', [org, row.support_case_id])).rows[0].n).toBe(row.state === 'changes_requested' ? 1 : 0);
+  });
+  it('blocks withdrawn, superseded and stale-version reviews while allowing a new revision request', async () => {
+    const f = await fixture();
+    await expect(respondServiceReview(portal, f.review, 2, 'approved')).rejects.toThrow('changed');
+    await withdrawServiceReview(operator, org, customer, f.engagement, f.review, 1);
+    await expect(respondServiceReview(portal, f.review, 1, 'approved')).rejects.toThrow('changed');
+    await expect(releaseServiceReview(operator, org, customer, f.engagement, f.revision)).rejects.toThrow('already');
+    const g = await fixture();
+    await releaseServiceDisclosure(operator, org, customer, g.engagement, 2, 'publish');
+    expect((await listServiceReviews(operator, org, customer, g.engagement))[0].state).toBe('superseded');
+    await expect(respondServiceReview(portal, g.review, 1, 'approved')).rejects.toThrow('changed');
+    const current = (await disclosureEditorState(operator, org, customer, g.engagement)).disclosure!.published_revision_id!;
+    expect(await releaseServiceReview(operator, org, customer, g.engagement, current)).toBeTruthy();
+  });
+  it('withdraws pending reviews atomically with disclosure withdrawal', async () => {
+    const f = await fixture(); await releaseServiceDisclosure(operator, org, customer, f.engagement, 2, 'withdraw');
+    expect((await listServiceReviews(operator, org, customer, f.engagement))[0].state).toBe('withdrawn');
+    await expect(respondServiceReview(portal, f.review, 1, 'approved')).rejects.toThrow();
+    await expect(portalServiceReviews(portal, f.disclosure)).rejects.toThrow('unavailable');
+  });
+  it('rechecks published module, activation and entitlement at response time', async () => {
+    const f = await fixture(); await layout(DEFAULT_PORTAL_CONTENT);
+    await expect(respondServiceReview(portal, f.review, 1, 'approved')).rejects.toThrow('unavailable'); await layout();
+    await setModuleEnabled(operator, { organizationId: org, key: 'portal', enabled: false });
+    await expect(respondServiceReview(portal, f.review, 1, 'approved')).rejects.toThrow('unavailable');
+    await setModuleEnabled(operator, { organizationId: org, key: 'portal', enabled: true });
+    await pg.query("update organization_commercial_terms set period_end='2020-01-02' where organization_id=$1 and product_key='module:portal'", [org]);
+    await expect(respondServiceReview(portal, f.review, 1, 'approved')).rejects.toThrow('unavailable');
+    await pg.query("update organization_commercial_terms set period_end='9999-12-31' where organization_id=$1 and product_key='module:portal'", [org]);
+    await respondServiceReview(portal, f.review, 1, 'approved');
+  });
+  it('refuses expired and revoked invitations on both projection and response', async () => {
+    const f = await fixture(); const userId = (await portal.auth.getUser()).data.user!.id;
+    await pg.query("update external_actors set portal_expires_at=now()-interval '1 second' where user_id=$1", [userId]);
+    await expect(respondServiceReview(portal, f.review, 1, 'approved')).rejects.toThrow('unavailable');
+    await expect(portalServiceReviews(portal, f.disclosure)).rejects.toThrow('unavailable');
+    await exchangePortalLink(portal, { token: await createPortalInvite(operator, { customerId: customer }) });
+    for (const invite of await listPortalInvites(operator, { organizationId: org, customerId: customer })) await revokePortalInvite(operator, { id: invite.id });
+    await expect(respondServiceReview(portal, f.review, 1, 'approved')).rejects.toThrow('unavailable');
+    await exchangePortalLink(portal, { token: await createPortalInvite(operator, { customerId: customer }) });
+  });
+  it('validates typed deliverable ownership, ended-material refusal and zero tenant/artifact mutation', async () => {
+    const tenant = await foundBusiness({ ownerEmail: (await operator.auth.getUser()).data.user!.email!, name: 'Independently managed review tenant', currency: 'CAD' });
+    const rel = (await pg.query("insert into client_tenant_relationships(organization_id,customer_id,tenant_organization_id,origin,authority_basis,created_by) values($1,$2,$3,'existing_tenant_link','Local fixture',$4) returning id", [org, customer, tenant, actor])).rows[0].id;
+    const eng = await createServiceEngagement(operator, { organizationId: org, customerId: customer, name: 'AI delivery', serviceKind: 'ai', relationshipId: rel });
+    const agent = randomUUID(); const deployment = randomUUID();
+    await pg.query('insert into ai_assistants(organization_id,id,name,created_by,updated_by) values($1,$2,$3,$4,$4)', [tenant, agent, 'PRIVATE AI config', actor]);
+    await pg.query("insert into ai_assistant_deployments(organization_id,id,assistant_id,surface) values($1,$2,$3,'operator_copilot')", [tenant, deployment, agent]);
+    await createWebsite(operator, { organizationId: tenant });
+    const automation = randomUUID();
+    await pg.query("insert into organization_modules(organization_id,module_key,enabled_by) values($1,'automations',$2) on conflict do nothing", [tenant, actor]);
+    await pg.query("insert into automation_rules(organization_id,id,name,trigger_kind,trigger_event_action,created_by) values($1,$2,'PRIVATE workflow','event','work_item.created',$3)", [tenant, automation, actor]);
+    const target = await attachEngagementDeliverable(operator, org, eng, 'ai_deployment', deployment);
+    await saveServiceDisclosure(operator, org, customer, eng, 0, { ...content, deliverables: [{ deliverableId: target, title: 'Approved AI presentation', summary: 'Configuration ready for review', status: 'Review', shareLink: false }] });
+    await releaseServiceDisclosure(operator, org, customer, eng, 1, 'publish');
+    const revision = (await disclosureEditorState(operator, org, customer, eng)).disclosure!.published_revision_id!;
+    const review = await releaseServiceReview(operator, org, customer, eng, revision, target);
+    const before = (await pg.query('select to_jsonb(d) d from ai_assistant_deployments d where organization_id=$1 and id=$2', [tenant, deployment])).rows;
+    const membershipCount = (await pg.query('select count(*) from memberships where organization_id=$1', [tenant])).rows;
+    const artifactSnapshot = () => pg.query("select jsonb_build_object('website',(select jsonb_agg(to_jsonb(s)) from public_sites s where organization_id=$1),'ai',(select jsonb_agg(to_jsonb(a)) from ai_assistants a where organization_id=$1),'automation',(select jsonb_agg(to_jsonb(a)) from automation_rules a where organization_id=$1)) artifacts", [tenant]);
+    const artifactsBefore = (await artifactSnapshot()).rows;
+    await respondServiceReview(portal, review, 1, 'approved');
+    const entire = await releaseServiceReview(operator, org, customer, eng, revision);
+    await respondServiceReview(portal, entire, 1, 'changes_requested', 'Please adjust the website, AI and automation configuration.');
+    await releaseServiceDisclosure(operator, org, customer, eng, 2, 'publish');
+    const latestRevision = (await disclosureEditorState(operator, org, customer, eng)).disclosure!.published_revision_id!;
+    const pending = await releaseServiceReview(operator, org, customer, eng, latestRevision);
+    await pg.query("update client_tenant_relationships set status='ended',ended_at=now(),ended_by=$3 where organization_id=$1 and id=$2", [org, rel, actor]);
+    await expect(respondServiceReview(portal, pending, 1, 'approved')).rejects.toThrow();
+    const endedReviews = await portalServiceReviews(portal, (await disclosureEditorState(operator, org, customer, eng)).disclosure!.id);
+    expect(endedReviews.every(r => !r.materialAvailable)).toBe(true);
+    expect(JSON.stringify(endedReviews)).not.toContain('Approved AI presentation');
+    expect((await pg.query('select to_jsonb(d) d from ai_assistant_deployments d where organization_id=$1 and id=$2', [tenant, deployment])).rows).toEqual(before);
+    expect((await pg.query('select count(*) from memberships where organization_id=$1', [tenant])).rows).toEqual(membershipCount);
+    expect((await artifactSnapshot()).rows).toEqual(artifactsBefore);
+    expect((await portal.from('ai_assistants').select('*').eq('organization_id', tenant)).data).toEqual([]);
+  });
+});

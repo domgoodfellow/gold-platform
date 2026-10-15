@@ -6,6 +6,7 @@ import { endClientTenantRelationship, linkExistingTenant, listExistingTenantOpti
 import { DomainError } from '@/lib/domain/errors';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { getCustomer } from '@/lib/domain/customers/customers';
+import { listServiceReviews, releaseServiceReview, withdrawServiceReview } from '@/lib/domain/customers/service-reviews';
 import { disclosureEditorState, parseDisclosureContent, releaseServiceDisclosure, saveServiceDisclosure } from '@/lib/domain/customers/service-disclosures';
 import type { ApprovedDeliverable } from '@/lib/domain/customers/service-disclosures';
 import { SERVICE_KINDS, ARTIFACT_KINDS, createServiceEngagement, getServiceEngagement, transitionServiceEngagement, bindServiceEngagementTenant, attachEngagementDeliverable, attachEngagementWork, listDeliverableOptions, listEngagementDeliverables, type ServiceKind, type ArtifactKind } from '@/lib/domain/customers/service-engagements';
@@ -66,6 +67,7 @@ export async function readEngagementDetails(organizationId: string, customerId: 
   ]);
   if (work.error) throw new DomainError(work.error.message, 'engagement.work_failed');
   const updates = await disclosureEditorState(db, organizationId, customerId, engagementId);
+  const reviews = organization.capabilities.includes('customer.update') ? await listServiceReviews(db, organizationId, customerId, engagementId) : [];
   const customer = await getCustomer(db, { organizationId, customerId });
   const relationship = engagement.relationship_id ? await db.from('client_tenant_relationships').select('status').eq('organization_id', organizationId).eq('id', engagement.relationship_id).maybeSingle() : null;
   if (relationship?.error) throw new DomainError('Relationship could not be loaded.', 'disclosure.read_failed');
@@ -79,7 +81,25 @@ export async function readEngagementDetails(organizationId: string, customerId: 
       return { ...item, url: !bindingError && binding?.some(host => host.organization_id === engagement.tenant_organization_id) ? item.url : null };
     }));
   }
-  return { deliverables, options, workIds: (work.data ?? []).map(item => item.work_item_id), ...updates, approvedDeliverables, customerName: customer?.name ?? 'Customer', organizationName: organization.name, timezone: organization.timezone, mayReadSupport: organization.capabilities.includes('support.read') };
+  return { deliverables, options, workIds: (work.data ?? []).map(item => item.work_item_id), ...updates, reviews, approvedDeliverables, customerName: customer?.name ?? 'Customer', organizationName: organization.name, timezone: organization.timezone, mayReadSupport: organization.capabilities.includes('support.read') };
+}
+
+export async function serviceReviewAction(_previous: ServiceActionState, form: FormData): Promise<ServiceActionState> {
+  const organizationId = String(form.get('organizationId') ?? '');
+  const customerId = String(form.get('customerId') ?? '');
+  const engagementId = String(form.get('engagementId') ?? '');
+  const { db } = await requireOrganization(organizationId);
+  try {
+    if (form.get('operation') === 'release') await releaseServiceReview(db, organizationId, customerId, engagementId, String(form.get('revisionId') ?? ''), String(form.get('deliverableId') ?? '') || undefined);
+    else if (form.get('operation') === 'withdraw') await withdrawServiceReview(db, organizationId, customerId, engagementId, String(form.get('reviewId') ?? ''), Number(form.get('version')));
+    else throw new DomainError('Unsupported review operation.', 'service_review.invalid_operation');
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message, saved: false };
+    throw error;
+  }
+  revalidatePath(`/organizations/${organizationId}/customers/${customerId}`);
+  revalidatePath('/portal', 'layout');
+  return { error: null, saved: true };
 }
 
 export async function disclosureAction(_previous: ServiceActionState, form: FormData): Promise<ServiceActionState> {

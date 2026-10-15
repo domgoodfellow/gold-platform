@@ -118,6 +118,10 @@ only approved disclosure fields. No customer-supplied ownership IDs or raw engag
 are accepted. An optional disclosure ID remains customer-scoped and fails after withdrawal.
 
 Saving seller disclosure drafts does not alter approved content or republish the Portal layout.
+
+Services can additionally present explicit Customer Review requests pinned to an approved disclosure revision and optional approved deliverable presentation. The customer inspects the shared material, confirms an operational acknowledgement, or submits a written change description of at most 3000 characters. The UI states that this does not sign a contract or authorize deployment. Pending, Approved, Changes requested, Withdrawn, Superseded and unavailable-material states reflect persisted records; failed responses remain visible for correction. Saving a disclosure draft never changes the review target. Publishing a replacement supersedes pending reviews; withdrawing material blocks response. Final decisions remain historical.
+
+Review actions use the existing Portal session, hostname binding and current published Services exposure. Customer/Organization ownership is never accepted from form input. Changes requested creates a same-customer Support Case through bounded external intake, without allowing priority, assignment, queue, SLA or resolution fields. Request text is retained in the immutable review response, not copied into multiple ticket/history records. Internal CRM shows attribution, original review reference, current state and an authorized Support link; Support shows the original source alongside its own resolution lifecycle.
 Removing Services in a Portal draft retains live access until layout publication; publishing removal
 blocks direct service RPCs. Withdrawal takes effect on the next uncached request. Portal responses
 retain private/no-store headers. Approved descriptions and progress remain seller snapshots, rather

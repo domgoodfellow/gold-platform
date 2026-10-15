@@ -1261,6 +1261,14 @@ The live response rechecks public hostname association. Termination suppresses t
 seller-approved summary history remains an explicit communication, never a tenant access grant.
 Internal previews use the operator's existing scope and never mint a customer session.
 
+### Customer service review authorization
+
+`service_reviews` forces RLS, denies direct client writes and permits seller `customer.update` reads only. Release/withdraw commands require the same live capability and complete customer/engagement tuple. Release pins the current approved revision and an optional member of its approved deliverable set. Neither platform authority alone nor a receiving-tenant Membership grants seller review authority.
+
+`portal_service_reviews` and `respond_service_review` derive Organization/Customer from current PortalContext; supplied review/disclosure IDs never override it. Every read/response rechecks published Services navigation, Portal activation/entitlement and live invitation/session validity. Server actions separately re-resolve request hostname against PortalContext using the existing separate Portal cookie. Responses require the pending request version and still-current approved revision. Ended relationships make tenant review material unavailable. Row locking and immutable final decisions prevent replay, double-click Cases and conflicting concurrent finals. Narrow parameters accept no owner, priority, queue, SLA, tenant ID or deployment instruction.
+
+Support intake is a private non-callable helper invoked only after authorized review response validation. It creates the canonical same-seller/same-customer Case with server-chosen normal priority and no assignment/queue. `support_service_review` independently requires `support.read` and exposes source prose only to authorized Support staff; no Portal projection exposes private Case history. Review event payloads omit prose. Approval conveys no signature authority, tenant Membership, artifact mutation or deployment authorization.
+
 ### Studio Portal publication and hostname authorization
 
 Portal draft/history reads require Organization membership and `organization.manage`; direct table writes are denied. Version-checked commands require independent management, and publication additionally requires current entitlement/activation and the reviewed draft. The no-argument published projection derives identity from live PortalContext. Revocation, expiry, unpublishing and disabled activation/entitlement fail closed. Form submissions and payment initiation also check published navigation/module exposure before delegating to canonical customer/placement/revision/payment authority. No service-role client is used by runtime or editor.

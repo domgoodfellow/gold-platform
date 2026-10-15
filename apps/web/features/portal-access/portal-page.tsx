@@ -13,6 +13,8 @@ import { invoiceStanding, listInvoiceLines, listPayments } from '@/lib/domain/bi
 import { portalCardPaymentAvailable } from '@/lib/domain/billing/card-payments';
 import { portalFormsAvailable } from '@/lib/domain/portal/portal-forms';
 import { portalServiceDisclosures } from '@/lib/domain/customers/service-disclosures';
+import { portalServiceReviews } from '@/lib/domain/customers/service-reviews';
+import { ServiceReviewResponse } from './service-review-response';
 import { PortalForms } from '@/features/portal-access/portal-forms';
 import { formatWindow, parseWindow } from '@/lib/domain/scheduling/window';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
@@ -54,6 +56,9 @@ export async function CustomerPortalPage({ path }: { path?: string }) {
     const amount=standing.total ? formatMoney(standing.total.totalMinor,standing.total.currency) : 'Total unavailable';
     const balance=standing.settled ? 'paid' : standing.outstandingMinor !== null && standing.total ? `${formatMoney(standing.outstandingMinor,standing.total.currency)} due` : 'Balance unavailable';
     return { id:invoice.id,title:`#${invoice.number}`,detail:`${date} · ${amount} · ${balance}`,action:payment ? <PayInvoiceForm invoiceId={invoice.id} amountLabel={formatMoney(payment.outstandingMinor,payment.currency)}/> : null };
-  })), forms: forms.map(form => ({id:form.formId,title:form.definition.title,detail:'',action:<PortalForms forms={[form]}/>})), services: services.map(service => ({id:service.id,title:service.title,detail:'',service,timezone:organization.timezone})) };
+  })), forms: forms.map(form => ({id:form.formId,title:form.definition.title,detail:'',action:<PortalForms forms={[form]}/>})), services: await Promise.all(services.map(async service => {
+    const reviews = await portalServiceReviews(db, service.id);
+    return { id:service.id,title:service.title,detail:'',service,timezone:organization.timezone,action:reviews.length ? <div className="mt-4 space-y-4">{reviews.map(review => <ServiceReviewResponse key={review.id} review={review} timezone={organization.timezone}/>)}</div> : <p className="mt-3 text-xs text-muted">No review requested.</p> };
+  })) };
   return <main data-brand className="mx-auto w-full max-w-2xl p-3 sm:p-6"><BrandStyle brand={brand}/><PortalRenderer content={content} page={page} records={records} available={available} unbounded={available.defaultExperience} header={<PublicHeader profile={profile} logoUrl={brand.logoPath ? logoUrl(db,brand.logoPath) : null}/>}/></main>;
 }

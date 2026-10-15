@@ -87,6 +87,7 @@ export type RecordKind =
   | "location";
 export type RecordOption = { id: string; name: string; kind: RecordKind };
 export type SupportData = {
+  serviceReview?: { reviewId: string; engagementId: string; customerId: string; revisionNumber: number; targetTitle: string; description: string; respondedAt: string; responderName: string } | null;
   cases: SupportCase[];
   total: number;
   selected: SupportCase | null;
@@ -141,6 +142,14 @@ export async function readSupport<T = SupportData>(
     p_filters: filters,
   });
   if (error) throw new DomainError(error.message, "support.read_failed");
+  if (view === 'detail') {
+    const result = data as unknown as SupportData;
+    if (result.selected) {
+      const source = await db.rpc('support_service_review', { p_organization_id: organizationId, p_case_id: result.selected.id });
+      if (source.error) throw new DomainError('Customer review source could not be loaded.', 'support.read_failed');
+      return { ...result, serviceReview: source.data } as unknown as T;
+    }
+  }
   return data as unknown as T;
 }
 export async function commandSupport(

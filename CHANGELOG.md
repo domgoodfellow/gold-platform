@@ -34,6 +34,8 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
+- Customer service reviews now pin approved disclosure revisions, record attributable Portal approvals or change requests, and preserve final decisions. Change requests create canonical Support Cases; replacement/withdrawn material blocks stale responses. Approval is an operational acknowledgement with no signature, deployment or tenant-access authority.
+
 - CRM service engagements now support private customer-update drafts, explicit approval/publication and withdrawal with immutable history. An opt-in Portal Services module and Managed Services template show only each customer's approved summaries; ended tenant relationships suspend deliverable presentations without changing tenant records or service invoices.
 
 - Studio Portal now supports typed pages/navigation/module configuration, templates, shared branded previews, saved draft review, immutable publication/history/restore and entitlement-aware customer delivery. Published exposure guards Form/payment commands; managed and verified custom origins bind exchanges/pages/actions to PortalContext while preserving legacy links and separate session cookies. Services use the independent CRM disclosure approval boundary; typed Portal deliverables retain independent tenant authority.

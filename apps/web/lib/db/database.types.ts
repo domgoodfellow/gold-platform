@@ -10909,6 +10909,118 @@ export type Database = {
           },
         ]
       }
+      service_reviews: {
+        Row: {
+          change_description: string | null
+          customer_id: string
+          deliverable_id: string | null
+          disclosure_id: string
+          engagement_id: string
+          finished_at: string | null
+          finished_by: string | null
+          id: string
+          organization_id: string
+          portal_invite_id: string | null
+          released_at: string
+          released_by: string
+          responder_name: string | null
+          revision_id: string
+          state: string
+          support_case_id: string | null
+          version: number
+        }
+        Insert: {
+          change_description?: string | null
+          customer_id: string
+          deliverable_id?: string | null
+          disclosure_id: string
+          engagement_id: string
+          finished_at?: string | null
+          finished_by?: string | null
+          id?: string
+          organization_id: string
+          portal_invite_id?: string | null
+          released_at?: string
+          released_by: string
+          responder_name?: string | null
+          revision_id: string
+          state?: string
+          support_case_id?: string | null
+          version?: number
+        }
+        Update: {
+          change_description?: string | null
+          customer_id?: string
+          deliverable_id?: string | null
+          disclosure_id?: string
+          engagement_id?: string
+          finished_at?: string | null
+          finished_by?: string | null
+          id?: string
+          organization_id?: string
+          portal_invite_id?: string | null
+          released_at?: string
+          released_by?: string
+          responder_name?: string | null
+          revision_id?: string
+          state?: string
+          support_case_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_reviews_organization_id_customer_id_engagement_id__fkey"
+            columns: [
+              "organization_id",
+              "customer_id",
+              "engagement_id",
+              "disclosure_id",
+              "revision_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "service_disclosure_revisions"
+            referencedColumns: [
+              "organization_id",
+              "customer_id",
+              "engagement_id",
+              "disclosure_id",
+              "id",
+            ]
+          },
+          {
+            foreignKeyName: "service_reviews_organization_id_portal_invite_id_fkey"
+            columns: ["organization_id", "portal_invite_id"]
+            isOneToOne: false
+            referencedRelation: "customer_portal_invites"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "service_reviews_organization_id_revision_id_deliverable_id_fkey"
+            columns: ["organization_id", "revision_id", "deliverable_id"]
+            isOneToOne: true
+            referencedRelation: "service_disclosure_deliverables"
+            referencedColumns: [
+              "organization_id",
+              "revision_id",
+              "deliverable_id",
+            ]
+          },
+          {
+            foreignKeyName: "service_reviews_organization_id_support_case_id_fkey"
+            columns: ["organization_id", "support_case_id"]
+            isOneToOne: false
+            referencedRelation: "support_case_records"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "service_reviews_organization_id_support_case_id_fkey"
+            columns: ["organization_id", "support_case_id"]
+            isOneToOne: false
+            referencedRelation: "support_cases"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       support_case_counters: {
         Row: {
           last_number: number
@@ -14650,6 +14762,10 @@ export type Database = {
         Args: { p_disclosure_id?: string; p_limit?: number }
         Returns: Json
       }
+      portal_service_reviews: {
+        Args: { p_disclosure_id: string }
+        Returns: Json
+      }
       proposal_context: {
         Args: never
         Returns: {
@@ -15442,6 +15558,16 @@ export type Database = {
         Args: { p_assignment_id: string; p_organization_id: string }
         Returns: undefined
       }
+      release_service_review: {
+        Args: {
+          p_customer_id: string
+          p_deliverable_id?: string
+          p_engagement_id: string
+          p_organization_id: string
+          p_revision_id: string
+        }
+        Returns: string
+      }
       remove_call_participant: {
         Args: { p_organization_id: string; p_participant_id: string }
         Returns: undefined
@@ -15563,6 +15689,15 @@ export type Database = {
           during: unknown
           resource_id: string
         }[]
+      }
+      respond_service_review: {
+        Args: {
+          p_decision: string
+          p_description?: string
+          p_expected_version: number
+          p_review_id: string
+        }
+        Returns: undefined
       }
       review_mcp_tool: {
         Args: {
@@ -16094,6 +16229,10 @@ export type Database = {
         Args: { p_filters?: Json; p_organization_id: string; p_view: string }
         Returns: Json
       }
+      support_service_review: {
+        Args: { p_case_id: string; p_organization_id: string }
+        Returns: Json
+      }
       swap_integration_credential: {
         Args: {
           p_connection_id: string
@@ -16363,6 +16502,16 @@ export type Database = {
           p_engagement_id: string
           p_expected_version: number
           p_organization_id: string
+        }
+        Returns: undefined
+      }
+      withdraw_service_review: {
+        Args: {
+          p_customer_id: string
+          p_engagement_id: string
+          p_expected_version: number
+          p_organization_id: string
+          p_review_id: string
         }
         Returns: undefined
       }

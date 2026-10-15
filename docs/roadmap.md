@@ -795,8 +795,12 @@ entitlement. Customer-scoped disclosure reads supplement published module exposu
 relationship grants tenant access. The Managed Services template composes the existing billing and
 Forms modules. GildOps Internal operates this workflow as an ordinary Organization. Tenant-derived
 presentations suspend when the relationship ends, while seller-approved summaries and history remain.
-Further work requires distinct contracts for customer approvals/change requests, delegated tenant
-operations and authoritative runtime-health projections; this slice does not implement those actions.
+Customer approvals/change requests use the separate Batch D review contract below. Delegated tenant
+operations and authoritative runtime-health projections remain separate future contracts.
+
+### Batch D: Customer deliverable review
+
+CRM now releases review requests pinned to approved disclosure revisions and optional typed deliverable presentations. Portal customers can confirm an operational acknowledgement or request changes. Final decisions retain attribution and original targets; replacement/withdrawal blocks stale responses. Change requests enter canonical Support Cases for resolution, with Work retaining implementation ownership. Customer review grants no legal signing, deployment or underlying tenant authority. This completes the first customer delivery feedback loop; threaded messaging, legal acceptance and automated artifact operations remain separate work.
 
 ### Outcome
 

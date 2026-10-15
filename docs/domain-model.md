@@ -394,6 +394,14 @@ Ending a relationship suspends all associated deliverable presentations and link
 
 ---
 
+### Customer Service Review
+
+CRM owns `service_reviews`, an explicit operator request for an operational customer acknowledgement of one immutable approved disclosure revision, optionally narrowed to one of that revision's typed deliverable presentations. The release records the selling Organization, Customer, Engagement, revision, target, operator and time. It immediately becomes Pending; no separate prepared-content store exists. A revision/target can be requested once. A subsequent decision requires a newly published revision.
+
+Pending may become Approved, Changes requested, Withdrawn or Superseded exactly once. Replacing a live disclosure supersedes its pending reviews; withdrawing it withdraws pending reviews. Final decisions retain their original target and attribution across later disclosure or engagement changes. Customer responses record the Portal user, invitation and customer-name snapshot. This identifies the responding invited Customer; it establishes neither corporate signing authority nor a legal signature, commercial acceptance or deployment permission. The approved object is the disclosure/presentation snapshot; a public destination remains a live resource, not an archived copy of its contents.
+
+A Changes requested response stores bounded immutable request prose once and atomically creates a normal unassigned Support Case for that same selling Organization and Customer. Support reads the original request through a capability-protected source projection; Case descriptions/events do not copy the prose. Support owns assignment, queue, priority, service level, resolution and reopening. Work owns implementation tasks through existing Case/engagement Work associations. Resolving a Case does not rewrite the review decision. No customer action edits an artifact, creates tenant Membership or deploys anything.
+
 ### Opportunity
 
 **Definition:** One organization-owned potential piece of business with a Customer, with an independently closing lifecycle.

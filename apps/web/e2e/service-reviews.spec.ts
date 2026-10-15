@@ -1,0 +1,132 @@
+import { randomUUID } from 'node:crypto';
+import path from 'node:path';
+import { createClient } from '@supabase/supabase-js';
+import { Client } from 'pg';
+import { config } from 'dotenv';
+import { expect, test } from '@playwright/test';
+import type { Database } from '../lib/db/types';
+import { provisionOrganization } from '../lib/domain/platform/provision';
+import { createCustomer } from '../lib/domain/customers/customers';
+import { setModuleEnabled } from '../lib/domain/tenancy/modules';
+import { createPortalInvite, exchangePortalLink, listPortalInvites, revokePortalInvite } from '../lib/domain/portal/portal';
+import { createServiceEngagement, attachEngagementDeliverable } from '../lib/domain/customers/service-engagements';
+import { portalFromTemplate } from '../lib/domain/portal/composition';
+import { savePortalDraft, submitPortalDraft, publishPortalDraft, portalEditorState } from '../lib/domain/portal/definitions';
+import { saveServiceDisclosure, releaseServiceDisclosure, disclosureEditorState } from '../lib/domain/customers/service-disclosures';
+import { listServiceReviews } from '../lib/domain/customers/service-reviews';
+import { createWebsite, siteEditorState, submitSiteRevision, publishSiteRevision } from '../lib/domain/public-site/public-site';
+
+test.use({ storageState: { cookies: [], origins: [] }, hasTouch: true });
+test('customer approval, changes into Support, stale review and invitation boundaries', async ({ page, browser }, testInfo) => {
+  test.setTimeout(300_000);
+  config({ path: path.join(__dirname, '../../..', '.env.test') });
+  const url = process.env.SUPABASE_URL!; const connection = process.env.SUPABASE_DB_URL!;
+  if (![url, connection].every(value => ['localhost', '127.0.0.1'].includes(new URL(value).hostname))) throw new Error('Disposable loopback fixtures only');
+  const admin = createClient<Database>(url, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+  const client = () => createClient<Database>(url, process.env.SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
+  const email = `batch-d-${randomUUID()}@example.test`; const password = randomUUID();
+  const made = await admin.auth.admin.createUser({ email, password, email_confirm: true }); if (made.error) throw made.error;
+  const operator = client(); const login = await operator.auth.signInWithPassword({ email, password }); if (login.error) throw login.error;
+  const pg = new Client(connection); await pg.connect();
+  const customerContext = await browser.newContext({ ignoreHTTPSErrors: true, hasTouch: true });
+  const otherContext = await browser.newContext({ ignoreHTTPSErrors: true });
+  const customerPage = await customerContext.newPage(); const otherPage = await otherContext.newPage();
+  try {
+    await pg.query('insert into platform_staff(user_id,name) values($1,$2)', [made.data.user.id, 'Local Batch D fixture']);
+    const org = await provisionOrganization(operator, { ownerEmail: email, name: 'GildOps review fixture', currency: 'CAD', displayName: 'Delivery operator' });
+    const tenant = await provisionOrganization(operator, { ownerEmail: email, name: 'Independent website tenant', currency: 'CAD', displayName: 'Independent tenant owner' });
+    const customer = await createCustomer(operator, { organizationId: org, name: 'Acme Plumbing' });
+    const otherCustomer = await createCustomer(operator, { organizationId: org, name: 'Second customer' });
+    const relationship = await operator.rpc('link_existing_client_tenant', { p_organization_id: org, p_customer_id: customer, p_tenant_id: tenant, p_authority_basis: 'Local verified delivery fixture' }); if (relationship.error) throw relationship.error;
+    const engagement = await createServiceEngagement(operator, { organizationId: org, customerId: customer, name: 'Website implementation', serviceKind: 'website', relationshipId: relationship.data });
+    await createWebsite(operator, { organizationId: tenant });
+    const site = (await siteEditorState(operator, tenant))!;
+    await submitSiteRevision(operator, tenant, site.working!.id); await publishSiteRevision(operator, tenant, site.working!.id);
+    const deliverable = await attachEngagementDeliverable(operator, org, engagement, 'website', site.siteId);
+    await setModuleEnabled(operator, { organizationId: org, key: 'portal', enabled: true });
+    await pg.query("insert into organization_commercial_terms(organization_id,product_key,period_start,period_end,quantity,price_minor,currency,recorded_by,note) values($1,'module:portal','2020-01-01','9999-12-31',1,0,'CAD',$2,'Local review browser fixture')", [org, made.data.user.id]);
+    const sellerHost = `review-${randomUUID()}.example.test`; const websiteHost = `website-${randomUUID()}.example.test`;
+    for (const [target, host, surface] of [[org, sellerHost, 'portal'], [tenant, websiteHost, 'website']] as const) {
+      const domain = await operator.rpc('begin_custom_domain_connection', { p_organization_id: target, p_hostname: host, p_surface: surface }); if (domain.error) throw domain.error;
+      await pg.query('begin'); await pg.query('set local role provider_operator');
+      await pg.query("select record_custom_domain_registration($1,$2,'satisfied','[]'::jsonb,null,null)", [target, domain.data]);
+      await pg.query("select set_custom_domain_verification($1,$2,'verified','satisfied','issued',null,null,null)", [target, domain.data]); await pg.query('commit');
+    }
+    await savePortalDraft(operator, org, 0, portalFromTemplate('managed-services'));
+    await submitPortalDraft(operator, org, (await portalEditorState(operator, org)).definition!.draft_version);
+    await publishPortalDraft(operator, org, (await portalEditorState(operator, org)).definition!.draft_version);
+    await saveServiceDisclosure(operator, org, customer, engagement, 0, { title: 'Website ready for review', serviceKind: 'website', summary: 'Review the website and the approved delivery summary.', status: 'Ready for review', deliverables: [{ deliverableId: deliverable, title: 'Acme website', summary: 'Booking form and service pages are prepared.', status: 'Ready for review', shareLink: true }] });
+    await releaseServiceDisclosure(operator, org, customer, engagement, 1, 'publish');
+    const token = await createPortalInvite(operator, { customerId: customer }); const otherToken = await createPortalInvite(operator, { customerId: otherCustomer });
+    const portalDb = client(); const otherDb = client(); await exchangePortalLink(portalDb, { token }); await exchangePortalLink(otherDb, { token: otherToken });
+    await pg.query('delete from platform_staff where user_id=$1', [made.data.user.id]);
+    const tls = new URL(process.env.E2E_PORTAL_TLS_URL ?? 'https://localhost:3148');
+    const origin = `https://${sellerHost}:${tls.port}`;
+    const customerPath = `/organizations/${org}/customers/${customer}`;
+    const openEngagement = async () => {
+      await page.goto(customerPath); await page.getByRole('tab', { name: 'Commercial proposal', exact: true }).click();
+      await page.getByRole('button', { name: 'View engagement', exact: true }).click();
+    };
+    await page.goto('/login'); await page.getByLabel('Email', { exact: true }).fill(email); await page.getByLabel('Password', { exact: true }).fill(password);
+    await page.getByRole('button', { name: 'Log in', exact: true }).click(); await page.waitForURL(value => value.pathname !== '/login');
+    await openEngagement(); const drawer = page.getByRole('dialog', { name: 'Website implementation', exact: true });
+    const requestReview = async () => {
+      await drawer.getByLabel('Review target').selectOption(deliverable);
+      await drawer.getByRole('button', { name: 'Request customer review', exact: true }).click();
+      await expect(drawer.getByText('Review pending', { exact: true })).toBeVisible();
+    };
+    await requestReview();
+    await customerPage.goto(`${origin}/portal/${token}`); await customerPage.getByRole('link', { name: 'Services', exact: true }).click();
+    await expect(customerPage.getByRole('button', { name: 'Approve deliverable' })).toBeVisible();
+    await customerPage.getByText('Deliverables (1)', { exact: true }).click();
+    const website = customerPage.getByRole('link', { name: 'Open Acme website', exact: true });
+    await expect(website).toHaveAttribute('href', `https://${websiteHost}/`);
+    await website.evaluate((element, port) => { (element as HTMLAnchorElement).href = `https://${new URL((element as HTMLAnchorElement).href).hostname}:${port}/`; }, tls.port);
+    const [websitePage] = await Promise.all([customerContext.waitForEvent('page'), website.click()]); await websitePage.waitForLoadState();
+    await expect(websitePage.locator('main')).toBeVisible(); await websitePage.close();
+    for (const [width, height, label] of [[1440, 900, 'desktop'], [1024, 900, 'tablet'], [390, 844, 'phone']] as const) {
+      await page.setViewportSize({ width, height }); await customerPage.setViewportSize({ width, height });
+      if (width === 390) {
+        for (const name of ['Approve deliverable', 'Request changes']) await expect.poll(async () => (await customerPage.getByRole('button', { name, exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        await expect.poll(async () => (await drawer.getByRole('button', { name: 'Request customer review', exact: true }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      }
+      await page.screenshot({ path: testInfo.outputPath(`internal-${label}.png`) }); await customerPage.screenshot({ path: testInfo.outputPath(`review-${label}.png`) });
+      for (const target of [page, customerPage]) expect(await target.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+    await customerPage.getByRole('button', { name: 'Approve deliverable' }).focus(); await customerPage.keyboard.press('Enter');
+    await expect(customerPage.getByText('I have reviewed this deliverable and accept it for the purposes of this service review.')).toBeVisible();
+    await expect(customerPage.getByRole('button', { name: 'Confirm approval' })).toBeFocused();
+    await customerPage.getByRole('button', { name: 'Cancel', exact: true }).click(); await expect(customerPage.getByRole('button', { name: 'Approve deliverable' })).toBeFocused();
+    await customerPage.getByRole('button', { name: 'Approve deliverable' }).tap(); await customerPage.getByRole('button', { name: 'Confirm approval' }).tap();
+    await expect(customerPage.getByText('Approved', { exact: true })).toBeVisible();
+    await expect(customerPage.getByText('Your response has been recorded.', { exact: true })).toBeFocused();
+    await openEngagement(); await expect(drawer.getByText('Approved', { exact: true })).toBeVisible();
+    const republish = async () => { const d = (await disclosureEditorState(operator, org, customer, engagement)).disclosure!; await releaseServiceDisclosure(operator, org, customer, engagement, d.version, 'publish'); await openEngagement(); };
+    await republish(); await requestReview(); await customerPage.reload();
+    await customerPage.getByRole('button', { name: 'Request changes' }).tap();
+    const body = 'Please move the booking form above the testimonials.';
+    await customerPage.getByLabel('What would you like changed?').fill(body);
+    await customerPage.screenshot({ path: testInfo.outputPath('changes-phone.png') });
+    await customerPage.getByRole('button', { name: 'Submit request' }).tap(); await expect(customerPage.getByText('Changes requested', { exact: true })).toBeVisible();
+    await openEngagement(); await expect(drawer.getByText('Changes requested', { exact: true })).toBeVisible();
+    await drawer.getByRole('link', { name: 'Open related Support Case', exact: true }).click();
+    await expect(page.getByText(body, { exact: true })).toBeVisible(); await expect(page.getByText('Portal customer: Acme Plumbing', { exact: false })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('support-phone.png') });
+    await republish(); await requestReview(); await customerPage.reload();
+    await customerPage.getByRole('button', { name: 'Approve deliverable' }).click();
+    const stale = (await listServiceReviews(operator, org, customer, engagement))[0];
+    await republish(); await customerPage.getByRole('button', { name: 'Confirm approval' }).click();
+    await expect(customerPage.getByRole('alert').filter({ hasText: 'Review changed' })).toBeVisible();
+    expect((await portalDb.rpc('respond_service_review', { p_review_id: stale.id, p_expected_version: 1, p_decision: 'approved' })).error?.code).toBe('PT409');
+    await requestReview(); await customerPage.reload(); const current = (await listServiceReviews(operator, org, customer, engagement))[0];
+    await otherPage.goto(`${origin}/portal/${otherToken}`); await otherPage.getByRole('link', { name: 'Services', exact: true }).click();
+    await expect(otherPage.getByRole('button', { name: 'Approve deliverable' })).toHaveCount(0);
+    expect((await otherDb.rpc('respond_service_review', { p_review_id: current.id, p_expected_version: 1, p_decision: 'approved' })).error?.code).toBe('42501');
+    await customerPage.getByRole('button', { name: 'Approve deliverable' }).click();
+    for (const invite of await listPortalInvites(operator, { organizationId: org, customerId: customer })) await revokePortalInvite(operator, { id: invite.id });
+    await customerPage.getByRole('button', { name: 'Confirm approval' }).click(); await expect(customerPage.getByRole('alert').filter({ hasText: 'This session has ended.' })).toBeVisible();
+    expect((await portalDb.rpc('respond_service_review', { p_review_id: current.id, p_expected_version: 1, p_decision: 'approved' })).error?.code).toBe('42501');
+    expect((await listServiceReviews(operator, org, customer, engagement))[0].state).toBe('pending');
+    await customerPage.reload(); await expect(customerPage).toHaveURL(/\/portal\/unavailable/);
+  } finally { await customerContext.close(); await otherContext.close(); await pg.end(); }
+});

@@ -1298,6 +1298,12 @@ Batch C hostname acceptance uses the same loopback TLS fixture described below, 
 and browser cookie stores remain independent; a seller context is refused on the tenant hostname.
 Run the hostname acceptance against a locally configured production build to verify Secure cookies.
 
+### Customer service review verification
+
+`service-reviews.test.ts` exercises real local PostgreSQL revision/target ownership, operator authority, Portal customer isolation, forced RLS/direct-write denial, immutable decisions/attribution, duplicate release/response refusal, conflicting concurrent finals, supersession/withdrawal, ended relationships, activation/entitlement/module removal and expired/revoked invitations. Change-request tests verify one unassigned normal-priority canonical Support Case, protected original-source reads, no prose duplication in events, independent Support resolution and no tenant artifact/Membership mutation. `service-review-response.test.tsx` covers explicit confirmation, cancellation focus, bounded text, failed submissions and terminal/unavailable states.
+
+The isolated `playwright.batch-d.config.ts` runs `e2e/service-reviews.spec.ts` using loopback Supabase and the local TLS fixture. It exercises operator review release, Portal approval and change request, CRM/Support follow-up, superseded stale response, customer isolation and revocation, with 1440/1024/390 pixel screenshots, keyboard and touch checks. Existing Batch A–C journeys retain their own configs. Fresh local verification uses the disposable-local `pnpm db:reset`, generated types and `pnpm check`; browser evidence requires inspecting captures, and does not establish hosted migration or provider readiness.
+
 ### Batch B Portal verification
 
 Custom-host browser verification uses a disposable loopback HTTPS reverse proxy so production
