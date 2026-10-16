@@ -328,17 +328,21 @@ with a new message ID or beyond the original idempotency window.
 
 ### Batch F inventory snapshot (2026-10-15)
 
-Reviewed Batch E source: `bbf4f1c5585a8c9667187e3c847bdd06e868302a` (34 files), clean at intake.
-Local links name `goodfellow-studio/gold-web` and `gold-api`; they do not establish current ownership
-or sandbox suitability. The connector denied scoped project access; CLI project inspection found
-Web metadata but the scoped project listing did not include it, environment listing failed, and
-API lookup failed by both stored name and ID. Accessible listed Next-Fund projects are unrelated
-and must not be substituted. Billing/team scope, deployed revisions, plan and environment values
-remain unverified. Reconcile access with the intended owner before any release.
+Reviewed Batch E source: `bbf4f1c5585a8c9667187e3c847bdd06e868302a` (34 files), now committed.
+The follow-up inspection used `b7bee2c7730b39d1a2268681747af1266f107610`; repository history and
+hosted state have advanced beyond the original work-order baseline. Local links name
+`goodfellow-studio/gold-web` and `gold-api`; they do not establish current ownership or sandbox
+suitability. The connector denied scoped project access (403) and returned no accessible teams;
+the explicitly scoped CLI fallback reported both project names unavailable. Do not relink or
+substitute unrelated projects. Billing/team scope, deployed revisions, plan and hosted environment
+values remain unverified. Reconcile access with the intended owner before any release.
 
-Read-only Supabase inventory found active `Gold Platform` (`nuceqypuwrjavrwiloda`), latest migration
-`20261216000001`, no Batch E schema/claim RPC, zero email identities and zero Resend Provider
-Accounts. This is an existing hosted environment, not an approved sandbox. No dedicated hosted
+Refreshed read-only Supabase inventory found active `Gold Platform` (`nuceqypuwrjavrwiloda`), latest
+migration `20261220000004`, the Batch E claim RPC, zero email identities, zero Resend Provider
+Accounts, zero notification intents and zero notification jobs. The notification machine role has
+no table access or private `app` schema usage. This corrects the earlier pre-Batch-E inventory;
+migration presence does not establish application deployment or provider readiness.
+This is an existing hosted environment, not an approved sandbox. No dedicated hosted
 sandbox, Resend domain/account or controlled recipient has been designated. Hosted configuration
 and provider acceptance therefore remain blocked; no deployment/migration/provider change or
 email was performed by Batch F. See `docs/operations.md` for code-review blockers and recovery.
