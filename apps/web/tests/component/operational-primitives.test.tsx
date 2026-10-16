@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
+import { ViewNav } from '@/components/navigation/view-nav';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ClipboardList } from 'lucide-react';
-import { MetricTile, OperationalPanel, PanelState, StatePill, ViewNavigation } from '@/components/operational/primitives';
+import { MetricTile, OperationalPanel, PanelState, StatePill } from '@/components/operational/primitives';
 
 vi.mock('next/link', () => ({ default: ({ href, children, scroll, ...rest }: Record<string, unknown>) => <a href={String(href)} data-scroll={String(scroll)} {...rest}>{children as never}</a> }));
 afterEach(cleanup);
@@ -45,12 +46,12 @@ describe('shared operational components', () => {
     expect(screen.getByRole('link', { name: /View all/ })).toHaveAttribute('href', '/all');
   });
 
-  it('ViewNavigation marks the current view with aria-current and more than colour', () => {
-    render(<ViewNavigation label="Views" items={[{ key: 'a', label: 'One', href: '/a', current: true }, { key: 'b', label: 'Two', href: '/b', current: false }]} />);
+  it('ViewNav marks the current view with aria-current and more than colour', () => {
+    render(<ViewNav label="Views" items={[{ key: 'a', label: 'One', href: '/a', current: true }, { key: 'b', label: 'Two', href: '/b', current: false }]} />);
     const current = screen.getByRole('link', { name: 'One' });
     expect(current).toHaveAttribute('aria-current', 'page');
     expect(current.className).toMatch(/font-semibold/);
-    expect(current.className).toMatch(/border-accent/);
+    expect(current.closest('nav')).toHaveAttribute('data-variant', 'segmented');
     expect(screen.getByRole('link', { name: 'Two' })).not.toHaveAttribute('aria-current');
   });
 });

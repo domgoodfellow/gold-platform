@@ -1,10 +1,8 @@
+import { NavigationList } from '@/components/navigation/navigation-list';
 import type { ReactNode } from 'react';
-import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
 import { ButtonLink } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
 import { Card } from '@/components/surfaces/card';
-import { FOCUS_RING } from '@/components/class-names';
 import { setupStepHref, type SetupStep } from './setup-guide';
 import type { SetupOverview } from '@/lib/domain/tenancy/lifecycle';
 import { LaunchReview, SetupProgressCard } from './setup-cockpit';
@@ -25,20 +23,10 @@ export function GuidedSetup({ organizationId, steps, selected, overview, busines
           <h2 id="current-setup-step" className="mt-1 text-lg font-semibold">{selected.label}</h2>
           <p className="mt-1 text-sm text-muted">{selected.description}</p>
           {selected.key === 'business' ? business : null}
-          {selected.key !== 'business' && selected.destinations.length ? <ul className="mt-4 divide-y divide-border">
-            {selected.destinations.map((entry) => {
-              const area = selected.areas.find((candidate) => candidate.area.href.split('#')[0] === `/organizations/${organizationId}/${entry.path}`);
-              return <li key={entry.key} className="py-3">
-                <Link href={`/organizations/${organizationId}/${entry.path}`} className={`${FOCUS_RING} flex items-start gap-3 rounded-md`}>
-                  <div className="min-w-0 flex-1">
-                    <span className="text-sm font-medium">{entry.title}</span>
-                    {area ? <Badge className="ml-2">{area.state === 'complete' ? 'Ready' : area.importance}</Badge> : null}
-                    <p className="mt-1 text-sm text-muted">{area?.message ?? entry.description}</p>
-                  </div><ChevronRight aria-hidden className="mt-1 size-4 shrink-0" />
-                </Link>
-              </li>;
-            })}
-          </ul> : null}
+          {selected.key !== 'business' && selected.destinations.length ? <NavigationList label={`${selected.label} destinations`} className="mt-4" items={selected.destinations.map(entry => {
+            const area = selected.areas.find(candidate => candidate.area.href.split('#')[0] === `/organizations/${organizationId}/${entry.path}`);
+            return { key: entry.key, href: `/organizations/${organizationId}/${entry.path}`, title: <>{entry.title}{area ? <Badge className="ml-2">{area.state === 'complete' ? 'Ready' : area.importance}</Badge> : null}</>, description: area?.message ?? entry.description, chevron: true };
+          })} /> : null}
           {selected.key === 'review' ? <div className="mt-4 space-y-3">
             <p className="text-sm">{overview.blockers.length ? `${overview.blockers.length} required conditions remain.` : 'All required launch conditions are satisfied.'} Recommendations and optional areas do not prevent launch.</p>
             <ul className="divide-y divide-border">{overview.areas.map((area) => <li key={area.key} className="py-3 text-sm">

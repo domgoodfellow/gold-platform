@@ -145,7 +145,7 @@ Canonical variant ownership:
 | Operational panel | `components/operational/primitives`: same surface variant map, existing density and composition retained |
 | Button | `@gold/ui/components/button`: existing variants plus soft and loading; web `controls/button` maps soft/ghost tones and forwards loading |
 | Selectable card | `components/controls/selectable-card`: native button over shared Button; aria-pressed, visible ring, caller-owned selection policy; no nested actions |
-| Tabs / segmented content | shared Radix Tabs; `TabsList` line (default) or segmented; route navigation retains its existing link grammar |
+| Tabs / segmented content | shared Radix Tabs; `TabsList` segmented (default) or line; URL navigation uses `ViewNav` |
 | Menu / popover | shared Radix content: menu default/comfortable density, popover default/compact; scoped tokens preserve keyboard behavior |
 | Toolbar | existing `components/display/data` Toolbar: default, quiet, outlined; layout container, not an ARIA toolbar with unimplemented arrow-key behavior |
 | Input / field group | shared Input default/filled (forwarded by TextInput), shared FieldGroup default/inset; web FormField owns label/hint/error association |
@@ -280,7 +280,7 @@ No workspace spells a palette colour. A test (`e2e/workspace-convergence.spec.ts
 
 ### Shared operational components
 
-`components/operational/primitives.tsx` is the one source of the operational presentation vocabulary. A workspace composes these; it does not define its own panel, tile, badge, empty box or tab strip. They are presentation only: they take data and links, never fetch, and never decide permission.
+`components/operational/primitives.tsx` owns the operational presentation vocabulary; `components/navigation` owns shared route navigation. A workspace composes these; it does not define its own panel, tile, badge, empty box or tab strip. They are presentation only: they take data and links, never fetch, and never decide permission.
 
 | Component | Owns | A workspace still decides |
 | --- | --- | --- |
@@ -288,13 +288,31 @@ No workspace spells a palette colour. A test (`e2e/workspace-convergence.spec.ts
 | `MetricTile` | label, value, detail, optional passive icon, linked or plain; `emphasis` only for a platform-reported exception | the figure, its meaning and its destination |
 | `StatePill` / `StatusTone` | neutral, accent, success, warning, danger | which platform-owned fact maps to a tone; tenant labels stay neutral |
 | `PanelState` | `empty`, `not-configured`, `unavailable`, `restricted` | the message and any first action |
-| `ViewNavigation` | URL-backed sibling views; current view is marked by `aria-current`, weight and an underline | the views and their URLs |
+| `ViewNav` (`components/navigation/view-nav`) | URL-backed sibling views; segmented by default, optional line; current view uses `aria-current="page"` and weight | the views and their URLs |
 | `OperationalTable` | header, row and overflow geometry | columns and rows |
 | `ConfigureLink` (`components/controls`) | the one "Configure" entry on a hub | the destination; it is never a second editor |
 
 Page identity is `PageHeader` (or `WorkspaceHome`). Search and period filters sit in a toolbar under it, not in its actions, so the actions are the workspace's real tasks. A restated purpose sentence is not used; factual metadata (period, timezone, working date) is `meta`.
 
 Empty states are one of four facts and must not be rendered alike: **empty** (a true zero), **not configured** (something required is missing; link to where), **unavailable** (the read failed or could not be verified; never shown as zero or healthy), **restricted** (about the viewer, not the data). Optional polish, such as a missing logo or introduction, is a suggestion, not an exception.
+
+### Navigation and list ownership
+
+- `Tabs` owns in-place tabbed content, Radix keyboard behavior and content relationships.
+- `ViewNav` owns URL-backed sibling views as Next Links, preserving browser history and optional scroll behavior.
+- `ViewModeSwitcher` owns in-place collection presentation, using pressed buttons.
+- `NavigationList` owns destination lists: named `nav`, `ul`, `li` and full-row links, optional icons, supporting text and chevrons, compact or standard spacing. Rows are undivided by default.
+- `DividedList` owns divided record lists, including documents and chronological activity.
+- `DataTable` owns structured comparable records, including financial records.
+- `OperationalPanel` owns operational content containers, not navigation or record semantics.
+
+Tabs, ViewNav and interactive selection groups share the server-importable `tab-styles` contract.
+Segmented is the compact navigation default: appearance-aware background, selected fill, radius
+and control height. Line is an explicit underline variant with no selected fill. Global selected
+styles are scoped to `data-variant`; do not rebuild either variant in a feature. Native button
+filters retain their existing state and keyboard semantics. Wrap longer navigation sets; do not
+clip items or introduce a horizontal tab scrollbar. Library sections expose all nine destinations;
+Library Home uses only the compact responsive destination directory to avoid duplicate navigation.
 
 ### Configure and readiness
 

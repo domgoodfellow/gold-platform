@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { tabsListClassName, tabsTriggerClassName } from '@gold/ui/components/tab-styles';
+import { ViewNav } from '@/components/navigation/view-nav';
 import { useState, useSyncExternalStore, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Activity, ArrowUpRight, Bot, CalendarClock, ChevronDown, CircleAlert, Clock3, ListTodo, Plus, RefreshCw, Settings2, ShieldCheck, TrendingUp } from 'lucide-react';
@@ -67,7 +67,7 @@ export function HomeDashboard({ data, readiness, creationActions }: { data: Home
   const periodLabel = data.query.when === 'month' ? 'This month' : data.query.when === 'week' ? 'Last 7 days' : 'Today';
   return <AppPage className="@container/home space-y-4">
     <PageHeader title="Home" meta={<><time dateTime={data.date}>{new Intl.DateTimeFormat('en-CA', { dateStyle: 'full', timeZone: 'UTC' }).format(new Date(`${data.date}T12:00:00Z`))}</time> · {data.timezone}</>} actions={<>
-      <nav aria-label="Reporting period" data-slot="tabs-list" className={cx(tabsListClassName, 'w-fit')}>{(['today', 'week', 'month'] as const).map(when => <Link key={when} href={href({ when })} aria-current={data.query.when === when ? 'page' : undefined} data-slot="tabs-trigger" className={tabsTriggerClassName}>{when === 'today' ? 'Today' : when === 'week' ? 'This week' : 'This month'}</Link>)}</nav>
+      <ViewNav label="Reporting period" current={data.query.when} className="mb-0" views={(['today', 'week', 'month'] as const).map(when => ({ key: when, href: href({ when }), label: when === 'today' ? 'Today' : when === 'week' ? 'This week' : 'This month' }))} />
       <Button tone="secondary" size="small" aria-label="Refresh Home" disabled={refreshing} onClick={() => refresh(() => router.refresh())}><RefreshCw aria-hidden className={cx('size-4', refreshing && 'animate-spin')} /></Button>
       <Launcher title="Quick actions" icon={<Plus aria-hidden className="size-4" />} description="Changes use the owning workspace’s forms and permission checks."><div className="flex flex-wrap gap-2">{creationActions}</div><ul className="divide-y divide-border">{data.quickActions.filter(a => !creationActions || a.key !== 'invoice').map(a => <li key={a.key}><Link href={a.href} className={cx('block rounded py-3 hover:bg-hover', FOCUS_RING)}><p className="text-sm font-medium">{a.label} <ArrowUpRight aria-hidden className="inline size-3" /></p><p className="mt-1 text-xs text-muted">{a.description}</p></Link></li>)}</ul>{!data.quickActions.length ? <p className="text-sm text-muted">Your role has no available creation actions.</p> : null}</Launcher>
       <Launcher title="Customize Home" label="Customize" icon={<Settings2 aria-hidden className="size-4" />} description="Optional panels are saved on this browser for you in this organization.">{[['performance', 'Business performance'], ['activity', 'Recent activity'], ['health', 'Workspace health']].map(([key, label]) => <label key={key} className="flex items-center gap-3 rounded border border-border p-3 text-sm"><input type="checkbox" checked={!preferences.hidden.includes(key)} onChange={() => preferences.toggle(key)} />{label}</label>)}</Launcher>

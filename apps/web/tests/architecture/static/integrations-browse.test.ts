@@ -145,8 +145,10 @@ describe('the tenant Integrations screen owns no connector list', () => {
     const nav = read('features/integrations/integrations-nav.tsx');
     expect(catalogue).toContain('sm:grid-cols-2'); // one column at phone width
     expect(catalogue).toContain('flex-wrap'); // chips wrap
-    // The scroll guarantee now lives in the shared ViewNav/tab-styles, not spelled out per caller.
+    // Shared view navigation wraps rather than introducing a horizontal scrollbar.
     expect(nav).toContain('ViewNav');
-    expect(read('../../packages/ui/src/components/tab-styles.ts')).toContain('overflow-x-auto');
+    const styles = read('../../packages/ui/src/components/tab-styles.ts');
+    expect(styles).toContain('flex-wrap');
+    expect(styles).not.toContain('overflow-x-auto');
   });
 });

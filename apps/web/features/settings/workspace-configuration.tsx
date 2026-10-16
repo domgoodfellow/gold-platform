@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react';
-import Link from 'next/link';
+import { NavigationList } from '@/components/navigation/navigation-list';
 import { redirect } from 'next/navigation';
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
-import { FOCUS_RING, cx } from '@/components/class-names';
 import { WORKSPACES, AREAS, areaHref, areaEntitled, areaVisibleTo, type WorkspaceKey } from '@/lib/navigation';
 import { requireWorkspaceConfiguration, configurationLayoutSections } from '@/lib/route/workspace-configuration';
 
@@ -24,10 +23,6 @@ export function WorkspaceConfigurationHome({ organizationId, workspace, configur
   const mayOperate = areaEntitled(home, gate.enabledModules, gate.featureAvailability) && areaVisibleTo(home, gate.capabilities);
   return <AppPage width="form">
     <PageHeader title="Configuration" crumbs={[{ label: owner.label, href: mayOperate ? areaHref(organizationId, owner.home) : undefined }]} />
-    <ul className="divide-y divide-border">
-      {sections.map(section => <li key={section.key}>
-        <Link href={section.href} className={cx(FOCUS_RING, 'flex min-h-11 items-center rounded-md px-2 py-3 text-sm hover:bg-hover')}>{section.label}</Link>
-      </li>)}
-    </ul>
+    <NavigationList label={`${owner.label} configuration`} items={sections.map(section => ({ key: section.key, title: section.label, href: section.href, chevron: true }))} />
   </AppPage>;
 }

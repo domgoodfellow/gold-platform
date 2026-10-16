@@ -1,7 +1,9 @@
 "use client";
+
+import { ViewNav } from '@/components/navigation/view-nav';
 import type { ReactNode } from "react";
 import { Bot } from "lucide-react";
-import { StatePill, ViewNavigation } from "@/components/operational/primitives";
+import { StatePill } from "@/components/operational/primitives";
 /** Agent, deployment and run states are platform facts, so they may carry a tone; anything else is neutral. */
 export function Badge({ children }: { children: ReactNode }) {
   const value = String(children).toLowerCase();
@@ -32,7 +34,7 @@ const AI_VIEWS: [string, string][] = [
 ];
 export function AiNav({ base, active }: { base: string; active: string }) {
   return (
-    <ViewNavigation
+    <ViewNav
       label="AI workspace"
       items={AI_VIEWS.map(([path, label]) => ({
         key: path || "overview",

@@ -1,5 +1,7 @@
 'use client';
 
+import { ViewNav } from '@/components/navigation/view-nav';
+import { NavigationList } from '@/components/navigation/navigation-list';
 import { useId, useState } from 'react';
 import { VISUAL_PRESETS, type VisualPreset, type Appearance, type Density } from '@gold/ui/design-system';
 import { VisualScope } from '@gold/ui/components/visual-scope';
@@ -55,10 +57,17 @@ function Examples({ preset, appearance, density }: { preset: VisualPreset; appea
           <FilterMenu label="Resource filter" value={filter} onValueChange={setFilter} options={[{ value: 'all', label: 'All resources' }, { value: 'mine', label: 'Assigned to me' }]} />
         </Toolbar>
       </div>
+      <Card variant="quiet"><h3 className="mb-3 font-semibold">Navigation</h3>
+        <ViewNav label={`${preset} ${appearance} sibling views`} current="files" views={['Home', 'Files', 'Media', 'Templates', 'Knowledge', 'Collections', 'Sources', 'Imports', 'Trash'].map(label => ({ key: label.toLowerCase(), label, href: `/dev/design-system?view=${label.toLowerCase()}#gallery-controls` }))} />
+        <NavigationList label={`${preset} ${appearance} destinations`} density="compact" current="files" className="sm:grid-cols-2" items={[
+          { key: 'files', title: 'Files', description: 'Shared content', href: '/dev/design-system?view=files#gallery-controls', chevron: true },
+          { key: 'media', title: 'Media', href: '/dev/design-system?view=media#gallery-controls', chevron: true },
+        ]} />
+      </Card>
       <Card variant="quiet"><h3 className="mb-3 font-semibold">Control states</h3><div className="flex flex-wrap gap-2">
         <Button>Primary</Button><Button tone="secondary">Outline</Button><Button tone="soft">Soft</Button><Button tone="ghost">Ghost</Button><Button tone="danger">Destructive</Button><Button disabled>Disabled</Button><Button tone="secondary" aria-pressed>Pressed</Button>
       </div><div className="mt-4 flex flex-wrap gap-2">{(['neutral', 'success', 'warning', 'danger'] as const).map((tone) => <StatePill key={tone} tone={tone}>{tone}</StatePill>)}</div>
-        <Tabs defaultValue="overview" className="mt-4"><TabsList aria-label="Example detail views"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="activity">Activity</TabsTrigger></TabsList><TabsContent value="overview">Line tabs preview</TabsContent><TabsContent value="activity">No activity loaded</TabsContent></Tabs>
+        <Tabs defaultValue="overview" className="mt-4"><TabsList variant="line" aria-label="Example detail views"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="activity">Activity</TabsTrigger></TabsList><TabsContent value="overview">Line tabs preview</TabsContent><TabsContent value="activity">No activity loaded</TabsContent></Tabs>
       </Card>
       <Card variant="outlined"><h3 className="mb-3 font-semibold">Overlays and feedback</h3><div className="flex flex-wrap gap-2">
         <Dialog><DialogTrigger asChild><Button tone="secondary">Open modal</Button></DialogTrigger><DialogContent><DialogTitle>Design preview modal</DialogTitle><DialogDescription>Keyboard focus stays inside this modal. Escape closes it.</DialogDescription><FormField id={`${id}-modal`} label="Preview value">{(props) => <TextInput {...props} />}</FormField></DialogContent></Dialog>

@@ -1,7 +1,9 @@
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { cx } from '@/components/class-names';
 import { DividedList, EmptyState, GroupHeading } from '@/components/surfaces/section';
+import { ViewNav } from '@/components/navigation/view-nav';
+import { NavigationList } from '@/components/navigation/navigation-list';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import { EntityFieldsConfiguration } from '@/features/custom-fields/configuration/entity-fields-configuration';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
@@ -86,27 +88,10 @@ export function WorkConfiguration(props: WorkConfigurationData) {
   if (variant === 'rail') {
     return (
       <div className="flex min-w-0 flex-col gap-4">
-        <nav aria-label="Work types" className="flex items-center gap-2">
-          <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1">
-            {types.map((type) => {
-              const current = type.id === selectedType?.id;
-              return (
-                <Link
-                  key={type.id}
-                  href={typeHref(type.id)}
-                  aria-current={current ? 'page' : undefined}
-                  className={cx(
-                    'shrink-0 rounded-md border px-3 py-1.5 text-sm',
-                    current ? 'border-foreground bg-foreground text-background' : 'border-border hover:bg-hover',
-                  )}
-                >
-                  {type.name}
-                </Link>
-              );
-            })}
-          </div>
+        <div className="flex flex-wrap items-start gap-2">
+          <ViewNav label="Work types" className="mb-0 flex-1" current={selectedType?.id} views={types.map(type => ({ key: type.id, label: type.name, href: typeHref(type.id) }))} />
           {newType}
-        </nav>
+        </div>
         <TypeDetail {...props} />
       </div>
     );
@@ -116,36 +101,12 @@ export function WorkConfiguration(props: WorkConfigurationData) {
   return (
     <div className="@container min-w-0">
     <div className="grid min-w-0 gap-6 @3xl:grid-cols-[15rem_minmax(0,1fr)] @3xl:items-start">
-      <nav aria-label="Work types" className={cx('min-w-0', showDetail && 'hidden @3xl:block')}>
+      <div className={cx('min-w-0', showDetail && 'hidden @3xl:block')}>
         <div className="mb-1 flex min-h-9 items-center justify-between gap-2">
-          <h2 className="text-sm font-medium">Work types</h2>
-          {newType}
+          <h2 className="text-sm font-medium">Work types</h2>{newType}
         </div>
-        <ul className="flex flex-col gap-0.5">
-          {types.map((type) => {
-            const current = type.id === selectedType?.id;
-            return (
-              <li key={type.id}>
-                <Link
-                  href={typeHref(type.id)}
-                  aria-current={current ? 'page' : undefined}
-                  title={type.name}
-                  className={cx(
-                    'flex min-h-11 items-center justify-between gap-2 rounded-md border-l-2 px-3 text-sm hover:bg-hover',
-                    current ? 'border-accent bg-hover font-medium' : 'border-transparent',
-                  )}
-                >
-                  <span className="min-w-0 truncate">{type.name}</span>
-                  <span className="flex shrink-0 items-center gap-1 text-xs font-normal text-muted">
-                    {type.schedulable ? 'Scheduled' : null}
-                    <ChevronRight aria-hidden className="size-4 @3xl:hidden" />
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+        <NavigationList label="Work types" density="compact" current={selectedType?.id} items={types.map(type => ({ key: type.id, title: type.name, href: typeHref(type.id), metadata: type.schedulable ? 'Scheduled' : undefined, chevron: true }))} />
+      </div>
 
       <div className={cx('min-w-0', !showDetail && 'hidden @3xl:block')}>
         {props.listHref ? (
@@ -195,7 +156,7 @@ function TypeDetail({
       </div>
 
       <Tabs key={`${selectedType.id}:${startTab}`} defaultValue={startTab} className="min-w-0 gap-5">
-        <TabsList className="flex-wrap overflow-visible">
+        <TabsList aria-label="Work configuration">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="workflow">Workflow</TabsTrigger>
           {selectedType.schedulable ? <TabsTrigger value="requirements">Requirements</TabsTrigger> : null}

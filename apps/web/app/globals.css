@@ -372,18 +372,6 @@ h1, h2, h3, h4 {
 :scope :where([data-slot=metric-tile]) {
   box-shadow: var(--visual-elevation);
 }
-/* Every row of sibling views (Radix Tabs, view navigation, page filters) takes the chosen shape,
-   density and selected fill. The fill is the accent mix, so Minimal stays a plain underline. */
-:scope :where([data-slot=tabs-trigger]) {
-  border-top-left-radius: var(--visual-radius);
-  border-top-right-radius: var(--visual-radius);
-}
-:scope :where([data-slot=tabs-trigger]):is([data-state=active], [aria-current=page], [aria-selected=true], [aria-pressed=true]) {
-  background-color: var(--surface-accent);
-}
-:scope[data-density] :where([data-slot=tabs-trigger]) {
-  min-height: var(--control-height);
-}
 :scope :where([data-slot=button], [data-slot=input], [data-slot=native-select], [data-slot=selectable-card], [data-slot=toolbar], [data-slot=field-group]) {
   border-radius: var(--visual-radius);
 }
@@ -460,4 +448,21 @@ h1, h2, h3, h4 {
   font-size: 1rem;
   color: var(--foreground);
   background: var(--background);
+}
+
+/* Variant ownership also applies outside an opt-in personal appearance scope. */
+[data-slot=tabs-list][data-variant=segmented] > [data-slot=tabs-trigger] {
+  border-radius: var(--visual-radius, 0.625rem);
+}
+[data-slot=tabs-list][data-variant=segmented] > [data-slot=tabs-trigger]:is([data-state=active], [aria-current=page], [aria-selected=true], [aria-pressed=true]) {
+  background-color: var(--selected);
+}
+[data-slot=tabs-list][data-variant=line] > [data-slot=tabs-trigger] {
+  border-bottom: 2px solid transparent;
+}
+[data-slot=tabs-list][data-variant=line] > [data-slot=tabs-trigger]:is([data-state=active], [aria-current=page], [aria-selected=true], [aria-pressed=true]) {
+  border-bottom-color: var(--accent);
+}
+@media (max-width: 639px) {
+  [data-slot=tabs-list] > [data-slot=tabs-trigger] { min-height: 2.75rem; }
 }

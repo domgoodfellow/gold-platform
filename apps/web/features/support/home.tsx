@@ -1,5 +1,7 @@
 "use client";
 
+import { tabListStyles, tabTriggerStyles } from '@gold/ui/components/tab-styles';
+import { NavigationList } from '@/components/navigation/navigation-list';
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -53,28 +55,10 @@ export function SupportViews({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-56 p-1.5">
-        <nav aria-label="Support destinations" className="grid">
-          {[
-            ["", "Overview"],
-            ["cases", "All Cases"],
-            ["cases?view=board", "Status board"],
-            ["queues", "Queue workbench"],
-            ["service-levels", "Service levels"],
-            ["reports", "Support reports"],
-          ].map(([path, label]) => (
-            <Link
-              key={label}
-              href={
-                path.includes("?")
-                  ? href("cases", { view: "board" })
-                  : href(path)
-              }
-              className="rounded px-3 py-2 text-xs hover:bg-hover hover:text-accent-text"
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
+        <NavigationList label="Support destinations" density="compact" items={[
+          ['', 'Overview'], ['cases', 'All Cases'], ['cases?view=board', 'Status board'],
+          ['queues', 'Queue workbench'], ['service-levels', 'Service levels'], ['reports', 'Support reports'],
+        ].map(([path, title]) => ({ key: path, title, href: path.includes('?') ? href('cases', { view: 'board' }) : href(path) }))} />
       </PopoverContent>
     </Popover>
   );
@@ -237,7 +221,8 @@ export function SupportHome({
         >
           <h2 className="sr-only">Active Cases</h2>
           <div
-            className="flex overflow-x-auto border-b border-border px-1"
+            role="group" data-slot="tabs-list" data-variant="segmented"
+            className={tabListStyles()}
             aria-label="Case views"
           >
             {tabs.map((tab) => (
@@ -246,7 +231,8 @@ export function SupportHome({
                 type="button"
                 onClick={() => change(tab.filters)}
                 aria-pressed={tab.selected}
-                className={`relative shrink-0 px-3 py-3 text-xs transition-colors ${tab.selected ? "font-medium text-accent-text after:absolute after:inset-x-1 after:bottom-0 after:h-0.5 after:bg-accent" : "text-muted hover:text-foreground"}`}
+                data-slot="tabs-trigger"
+                className={tabTriggerStyles}
               >
                 {tab.label}
                 {tab.count !== undefined && (

@@ -1,5 +1,7 @@
 "use client";
 
+import { ViewNav } from '@/components/navigation/view-nav';
+
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -44,7 +46,6 @@ import {
   OperationalPanel,
   OperationalTable,
   PanelState,
-  ViewNavigation,
   OwnerIdentity,
   RelativeTime,
 } from "@/components/operational/primitives";
@@ -692,7 +693,7 @@ export function SupportWorkspace({
         </>}
       />
       {view !== "home" && (
-        <ViewNavigation
+        <ViewNav
           label="Support destinations"
           items={[
             ["", "Home"],

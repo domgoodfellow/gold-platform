@@ -1,3 +1,4 @@
+import { ViewNav } from '@/components/navigation/view-nav';
 import Link from 'next/link';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { SelectInput, TextInput } from '@/components/controls/inputs';
@@ -46,7 +47,7 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
   const statusName = new Map(statuses.map(s => [s.id, s.name]));
   return <div className="space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <nav aria-label="Work view" className="flex gap-1"><ButtonLink size="small" tone={view === 'list' ? 'primary' : 'secondary'} href={href({ view: 'list' })}>List</ButtonLink><ButtonLink size="small" tone={view === 'board' ? 'primary' : 'secondary'} href={href({ view: 'board', status: '' })}>Board</ButtonLink><ButtonLink size="small" tone="secondary" href={`${base}/work/dispatch`}>Dispatch board</ButtonLink></nav>
+      <ViewNav label="Work view" current={view} className="mb-0" views={[{ key: 'list', label: 'List', href: href({ view: 'list' }) }, { key: 'board', label: 'Board', href: href({ view: 'board', status: '' }) }, { key: 'dispatch', label: 'Dispatch board', href: `${base}/work/dispatch` }]} />
       {mayAdd && selectedType ? <WorkCreateDrawer key={selectedType.id} defaultOpen={createOpen} initialTypeId={selectedType.id} configureHref={mayConfigure ? `${base}/work/configuration` : undefined} options={{ organizationId, types, statusesByType, customers, locations, resources, assets, assetsEnabled, definitions }}/> : null}
     </div>
     <form method="get" className="flex flex-wrap items-end gap-2 rounded-lg border border-border p-3">

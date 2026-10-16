@@ -1,43 +1,22 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { tabsListClassName, tabsTriggerClassName } from '@gold/ui/components/tab-styles';
-import { cx } from '../class-names';
+import { tabListStyles, tabTriggerStyles, type TabVariant } from '@gold/ui/components/tab-styles';
+import { cn } from 'cn';
 
-export type ViewNavItem = { key: string; label: ReactNode; href: string };
-
-/**
- * Sibling views of one workspace — Customers' List and Pipeline, Team's Members, Invitations and
- * Roles. Navigation, not an action: each view is a URL, so it survives a reload, arrives with the
- * back button and can be sent to somebody, and the server renders it without a client controller.
- *
- * It sits between `PageHeader` and the toolbar and holds nothing else. What a page *does* to the
- * workspace (create, import, configure) is `PageHeader.actions`, and is never disguised as a view
- * or stood beside one. It shares its look with the Radix `Tabs` through `tab-styles`.
- */
-export function ViewNav({
-  label,
-  views,
-  current,
-  className,
-}: {
+export type ViewNavItem = { key: string; label: ReactNode; href: string; current?: boolean };
+type ViewNavProps = {
   label: string;
-  views: ViewNavItem[];
-  current: string;
+  current?: string;
+  variant?: TabVariant;
+  scroll?: boolean;
   className?: string;
-}) {
-  return (
-    <nav aria-label={label} data-slot="tabs-list" className={cx(tabsListClassName, 'mb-4', className)}>
-      {views.map((view) => (
-        <Link
-          key={view.key}
-          href={view.href}
-          data-slot="tabs-trigger"
-          aria-current={view.key === current ? 'page' : undefined}
-          className={tabsTriggerClassName}
-        >
-          {view.label}
-        </Link>
-      ))}
-    </nav>
-  );
+} & ({ views: readonly ViewNavItem[]; items?: never } | { items: readonly ViewNavItem[]; views?: never });
+
+/** URL-backed sibling views. Wrapping keeps every destination, including the current one, visible. */
+export function ViewNav({ label, views, items, current, variant = 'segmented', scroll, className }: ViewNavProps) {
+  return <nav aria-label={label} data-slot="tabs-list" data-variant={variant} className={cn(tabListStyles(variant), 'mb-4', className)}>
+    {(views ?? items).map(item => <Link key={item.key} href={item.href} scroll={scroll}
+      data-slot="tabs-trigger" aria-current={(current === undefined ? item.current : item.key === current) ? 'page' : undefined}
+      className={tabTriggerStyles}>{item.label}</Link>)}
+  </nav>;
 }

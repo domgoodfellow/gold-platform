@@ -1,5 +1,7 @@
 'use client';
 
+import { ViewNav } from '@/components/navigation/view-nav';
+
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -7,7 +9,7 @@ import { Megaphone, Users, UserCheck, Target, Activity, FileText, ChartNoAxesCom
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
 import { Button, ButtonLink } from '@/components/controls/button';
-import { MetricTile, OperationalPanel, PanelState, StatePill, ViewNavigation } from '@/components/operational/primitives';
+import { MetricTile, OperationalPanel, PanelState, StatePill } from '@/components/operational/primitives';
 import { TextInput, SelectInput } from '@/components/controls/inputs';
 import { OBJECTIVES, type MarketingData, type Campaign, type Inquiry } from '@/lib/domain/marketing/marketing';
 import { CampaignEditor, Lifecycle, Association, AcquisitionLink, AudienceEditor, LeadInspector, LandingPageSelector, RemoveAssociation } from './editors';
@@ -59,7 +61,7 @@ export function MarketingWorkspace({ organizationId, timezone, data, view, mayMa
         {configure}
       </>}
     />
-    <ViewNavigation label="Marketing destinations" items={[['','Home'],['campaigns','Campaigns'],['audiences','Audiences'],['leads','Leads'],['performance','Performance']].map(([path,label])=>({key:path||'home',label,href:path?`${base}/${path}`:base,current:view===(path||'home')}))} />
+    <ViewNav label="Marketing destinations" items={[['','Home'],['campaigns','Campaigns'],['audiences','Audiences'],['leads','Leads'],['performance','Performance']].map(([path,label])=>({key:path||'home',label,href:path?`${base}/${path}`:base,current:view===(path||'home')}))} />
     {toolbar}
     {['home','performance','detail'].includes(view)&&<div className="grid grid-cols-2 gap-3 @min-[56rem]/marketing:grid-cols-4">{metrics.map(({Icon,...m})=><MetricTile key={m.label} label={m.label} value={m.value} detail={m.note} icon={Icon} href={m.url} />)}</div>}
     {view==='home'&&<div className="grid min-w-0 items-start gap-4 @min-[64rem]/marketing:grid-cols-[minmax(0,1fr)_280px]"><div className="grid min-w-0 gap-4">

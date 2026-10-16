@@ -60,3 +60,46 @@ test('all presets and schemes: responsive, accessible, interactive and scoped ov
   const transition = await page.locator('[data-visual-system] [data-slot=button]').first().evaluate((element) => getComputedStyle(element).transitionDuration);
   expect(parseFloat(transition)).toBeLessThan(0.01);
 });
+
+
+test('navigation wraps, variants stay independent and links retain browser history', async ({ page }, testInfo) => {
+  await page.goto('/dev/design-system');
+  await page.getByRole('combobox', { name: 'Component density' }).selectOption('compact');
+  for (const preset of ['Minimal', 'Layered', 'Expressive']) {
+    for (const scheme of ['light', 'dark']) {
+      const scope = page.getByRole('region', { name: `${preset} ${scheme}`, exact: true });
+      const nav = scope.getByRole('navigation', { name: `${preset.toLowerCase()} ${scheme} sibling views` });
+      await expect(nav).toHaveAttribute('data-variant', 'segmented');
+      await expect(nav.getByRole('link')).toHaveCount(9);
+      await nav.scrollIntoViewIfNeeded();
+      const current = nav.getByRole('link', { name: 'Files', exact: true });
+      await expect(current).toHaveAttribute('aria-current', 'page');
+      await expect(current).toHaveCSS('border-bottom-width', '0px');
+      await expect.poll(() => current.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+      expect(await nav.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      expect(await nav.evaluate(el => getComputedStyle(el).overflowX)).toBe('visible');
+      expect(await current.evaluate(el => el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(testInfo.project.name === 'phone' ? 44 : 32);
+      const line = scope.getByRole('tablist', { name: 'Example detail views' });
+      await expect(line).toHaveAttribute('data-variant', 'line');
+      await expect(line.getByRole('tab', { name: 'Overview' })).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+      await expect(line.getByRole('tab', { name: 'Overview' })).toHaveCSS('border-bottom-width', '2px');
+      const day = scope.getByRole('tab', { name: 'Day', exact: true });
+      await day.focus();
+      await page.keyboard.press('ArrowRight');
+      await expect(scope.getByRole('tab', { name: 'Week', exact: true })).toBeFocused();
+      const directory = scope.getByRole('navigation', { name: `${preset.toLowerCase()} ${scheme} destinations` });
+      await expect(directory.getByRole('listitem')).toHaveCount(2);
+      await expect(directory.getByRole('link', { name: /Files/ })).toHaveAttribute('aria-current', 'page');
+      await nav.screenshot({ path: testInfo.outputPath(`view-nav-${preset}-${scheme}.png`) });
+      await directory.screenshot({ path: testInfo.outputPath(`navigation-${preset}-${scheme}.png`) });
+    }
+  }
+  const files = page.getByRole('navigation', { name: 'minimal light sibling views' }).getByRole('link', { name: 'Files', exact: true });
+  await files.focus();
+  await expect(files).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/view=files/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/dev\/design-system$/);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

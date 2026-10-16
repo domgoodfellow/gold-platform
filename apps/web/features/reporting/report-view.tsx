@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { Button } from '@/components/controls/button';
 import { Hint, SelectInput } from '@/components/controls/inputs';
 import { ViewNav } from '@/components/navigation/view-nav';
@@ -79,38 +78,15 @@ export function ReportNavigation({
 
   return (
     <>
-      <nav aria-label="Report measure" className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-        {MEASURES.map((option) => (
-          <Link key={option} href={link({ measure: option })} aria-current={option === measure ? 'page' : undefined} className={option === measure ? 'font-medium' : 'text-muted'}>
-            {MEASURE_LABELS[option]}
-          </Link>
-        ))}
-      </nav>
-      <nav aria-label="Report grouping" className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-        {answerable.map((option) => (
-          <Link key={option} href={link({ grouping: option })} aria-current={option === grouping ? 'page' : undefined} className={option === grouping ? 'font-medium' : 'text-muted'}>
-            By {GROUPING_LABELS[option].toLowerCase()}
-          </Link>
-        ))}
-      </nav>
-      <nav aria-label="Report period" className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-        {PERIODS.map((option) => (
-          <Link key={option} href={link({ period: option })} aria-current={option === period ? 'page' : undefined} className={option === period ? 'font-medium' : 'text-muted'}>
-            {PERIOD_LABELS[option]}
-          </Link>
-        ))}
-      </nav>
+      <ViewNav label="Report measure" current={measure} className="mt-6" views={MEASURES.map(option => ({ key: option, label: MEASURE_LABELS[option], href: link({ measure: option }) }))} />
+      <ViewNav label="Report grouping" current={grouping} className="mt-2" views={answerable.map(option => ({ key: option, label: `By ${GROUPING_LABELS[option].toLowerCase()}`, href: link({ grouping: option }) }))} />
+      <ViewNav label="Report period" current={period} className="mt-2" views={PERIODS.map(option => ({ key: option, label: PERIOD_LABELS[option], href: link({ period: option }) }))} />
 
       {definitions.length > 0 ? (
-        <nav aria-label="Saved reports" className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-          <span className="text-muted">Saved:</span>
-          {definitions.map((definition) => (
-            <Link key={definition.id} href={`/organizations/${organizationId}/insights/reports?report=${definition.id}`} aria-current={definition.id === savedId ? 'page' : undefined} className={definition.id === savedId ? 'font-medium' : 'text-muted'}>
-              {definition.name}
-            </Link>
-          ))}
-          {savedId ? <Link href={`/organizations/${organizationId}/insights/reports`} className="text-muted">Clear</Link> : null}
-        </nav>
+        <ViewNav label="Saved reports" current={savedId ?? undefined} className="mt-4" views={[
+          ...definitions.map(definition => ({ key: definition.id, label: definition.name, href: `/organizations/${organizationId}/insights/reports?report=${definition.id}` })),
+          ...(savedId ? [{ key: 'clear', label: 'Clear', href: `/organizations/${organizationId}/insights/reports` }] : []),
+        ]} />
       ) : null}
     </>
   );
@@ -129,13 +105,7 @@ export function DashboardNavigation({
   if (dashboards.length === 0) return null;
 
   return (
-    <nav aria-label="Dashboards" className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-      {dashboards.map((entry) => (
-        <Link key={entry.id} href={`/organizations/${organizationId}/insights?dashboard=${entry.id}`} aria-current={entry.id === openDashboardId ? 'page' : undefined} className={entry.id === openDashboardId ? 'font-medium' : 'text-muted'}>
-          {entry.name}
-        </Link>
-      ))}
-    </nav>
+    <ViewNav label="Dashboards" current={openDashboardId ?? undefined} className="mt-6" views={dashboards.map(entry => ({ key: entry.id, label: entry.name, href: `/organizations/${organizationId}/insights?dashboard=${entry.id}` }))} />
   );
 }
 

@@ -4,7 +4,7 @@ import * as React from "react"
 import { Tabs as TabsPrimitive } from "radix-ui"
 import { cn } from "cn"
 
-import { tabsListClassName, tabsTriggerClassName } from "./tab-styles"
+import { tabListStyles, tabTriggerStyles } from "./tab-styles"
 
 function Tabs({
   className,
@@ -21,14 +21,14 @@ function Tabs({
 
 function TabsList({
   className,
-  variant = 'line',
+  variant = 'segmented',
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List> & { variant?: 'line' | 'segmented' }) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
       data-variant={variant}
-      className={cn(tabsListClassName, variant === 'segmented' && 'rounded-lg border-0 bg-secondary p-1 [&_[data-slot=tabs-trigger]]:rounded-md [&_[data-slot=tabs-trigger]]:border-0 [&_[data-state=active]]:bg-surface [&_[data-state=active]]:shadow-sm', className)}
+      className={cn(tabListStyles(variant), className)}
       {...props}
     />
   )
@@ -41,7 +41,7 @@ function TabsTrigger({
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
-      className={cn(tabsTriggerClassName, className)}
+      className={cn(tabTriggerStyles, className)}
       {...props}
     />
   )

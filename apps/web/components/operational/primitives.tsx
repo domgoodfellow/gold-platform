@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@gold/ui/components/avatar";
 import { Progress } from "@gold/ui/components/progress";
-import { tabsListClassName, tabsTriggerClassName } from "@gold/ui/components/tab-styles";
 import { cx, FOCUS_RING } from "@/components/class-names";
 import { surfaceVariants, type SurfaceVariant } from '@gold/ui/design-system';
 
@@ -225,40 +224,6 @@ export function OperationalPanel({
       </div>
       <div className={flush ? undefined : compact ? "p-3" : "p-4"}>{children}</div>
     </section>
-  );
-}
-
-/**
- * Sibling views of one workspace, as links. The current view is marked by `aria-current`, a heavier
- * weight and an underline as well as colour, so selection never depends on colour alone.
- */
-export function ViewNavigation({
-  label,
-  items,
-  scroll,
-  className,
-}: {
-  label: string;
-  items: { key: string; label: string; href: string; current: boolean }[];
-  /** `false` keeps the scroll position when the views are filters of one page. */
-  scroll?: boolean;
-  className?: string;
-}) {
-  return (
-    <nav aria-label={label} data-slot="tabs-list" className={cx(tabsListClassName, "sm:w-full", className)}>
-      {items.map((item) => (
-        <Link
-          key={item.key}
-          href={item.href}
-          scroll={scroll}
-          data-slot="tabs-trigger"
-          aria-current={item.current ? "page" : undefined}
-          className={tabsTriggerClassName}
-        >
-          {item.label}
-        </Link>
-      ))}
-    </nav>
   );
 }
 

@@ -66,6 +66,7 @@ for (const scheme of ['light', 'dark'] as const) {
         await page.setViewportSize(size);
         const response = await page.goto(`/organizations/${ctx.organizationId}/${segment}`);
         expect(response?.status(), `${name} ${sizeName}`).toBeLessThan(400);
+        await expect(page).not.toHaveURL(/\/login(?:[?#]|$)/);
         await page.waitForLoadState('networkidle').catch(() => undefined);
         await expect(page.locator('main h1, [data-brand] h1').first()).toBeVisible();
         expect(await page.locator('main h1').count(), `${name} ${sizeName} h1 count`).toBeLessThanOrEqual(1);
@@ -79,13 +80,12 @@ for (const scheme of ['light', 'dark'] as const) {
 }
 
 /**
- * A custom brand reaches every hub's shared controls: the primary action fills with the accent,
- * and the current view's marker uses it, while semantic roles keep their own colours.
+ * A custom brand reaches primary actions while segmented view selection remains neutral
+ * and semantic roles keep their own colours.
  */
-test('a custom brand colours primary actions and current-view markers in every hub, and not the semantic roles', async ({ page }) => {
+test('a custom brand colours primary actions while shared view selection and semantic roles remain independent', async ({ page }) => {
   test.setTimeout(240_000);
   const ctx = loadDemoContext();
-  const ACCENT = 'rgb(15, 118, 110)';
   const branding = `/organizations/${ctx.organizationId}/settings/branding`;
   const reset = async () => {
     await page.goto(branding);
@@ -112,12 +112,53 @@ test('a custom brand colours primary actions and current-view markers in every h
         const danger = await page.evaluate(() => getComputedStyle(document.querySelector('[data-brand]')!).getPropertyValue('--danger').trim());
         expect(danger, `${name} ${scheme} danger role unchanged`).not.toBe('#0f766e');
       }
-      await page.goto(`/organizations/${ctx.organizationId}/ai/agents`);
+      await page.goto(`/organizations/${ctx.organizationId}/ai`);
       const current = page.locator('nav[aria-label="AI workspace"] a[aria-current="page"]');
-      await expect(current).toHaveCSS('border-bottom-color', ACCENT);
+      await expect(current.locator('..')).toHaveAttribute('data-variant', 'segmented');
+      await expect(current).toHaveCSS('border-bottom-width', '0px');
+      await expect(current).toHaveCSS('font-weight', '600');
+      expect(await current.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
     }
   } finally {
     await page.emulateMedia({ colorScheme: 'light' });
     await reset();
+  }
+});
+
+
+test('Library destinations and Work views use shared accessible URL navigation', async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const { organizationId } = loadDemoContext();
+  const base = `/organizations/${organizationId}`;
+  for (const [sizeName, size] of SIZES) {
+    await page.setViewportSize(size);
+    await page.goto(`${base}/library`);
+    const directory = page.getByRole('navigation', { name: 'Library destinations', exact: true });
+    await expect(directory.getByRole('link')).toHaveCount(8);
+    await expect(page.getByRole('navigation', { name: 'Library', exact: true })).toHaveCount(0);
+    const files = directory.getByRole('link', { name: 'Files', exact: true });
+    await files.focus();
+    await expect(files).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(`${base}/library/files`);
+    const nav = page.getByRole('navigation', { name: 'Library', exact: true });
+    await expect(nav.getByRole('link')).toHaveCount(9);
+    await expect(nav.getByRole('link', { name: 'Files', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(nav).toHaveAttribute('data-variant', 'segmented');
+    expect(await nav.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await nav.screenshot({ path: testInfo.outputPath(`library-${sizeName}.png`) });
+    await nav.getByRole('link', { name: 'Templates', exact: true }).click();
+    await expect(page).toHaveURL(`${base}/library/templates`);
+    await page.goBack();
+    await expect(page).toHaveURL(`${base}/library/files`);
+    await page.goto(`${base}/work`);
+    const work = page.getByRole('navigation', { name: 'Work view', exact: true });
+    await expect(work.getByRole('link', { name: 'List', exact: true })).toHaveAttribute('aria-current', 'page');
+    await expect(work.getByRole('link', { name: 'Dispatch board', exact: true })).toHaveAttribute('href', `${base}/work/dispatch`);
+    await work.getByRole('link', { name: 'Board', exact: true }).click();
+    await expect(page).toHaveURL(/view=board/);
+    await expect(page.getByRole('navigation', { name: 'Work view', exact: true }).getByRole('link', { name: 'Board', exact: true })).toHaveAttribute('aria-current', 'page');
+    await page.goBack();
+    await expect(page).toHaveURL(`${base}/work`);
   }
 });

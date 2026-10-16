@@ -137,6 +137,7 @@
     ]
   },
   "files": {
+    "apps/web/tests/component/navigation-components.test.tsx": {"category":"component","concerns":["navigation","accessibility"]},
     "apps/web/tests/unit/organization-calendar.test.ts": {
       "category": "unit",
       "concerns": [

@@ -1,3 +1,5 @@
+import { NavigationList } from '@/components/navigation/navigation-list';
+import { ViewNav } from '@/components/navigation/view-nav';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ArrowUpRight, ClipboardList, FileText, Globe, Layers, ShieldCheck } from 'lucide-react';
@@ -33,9 +35,7 @@ export function StudioHome({ organizationId, timezone, mayManage, overview: data
       {data.publicUrl ? <ButtonLink tone="secondary" href={data.publicUrl} target="_blank" rel="noreferrer">View site <ArrowUpRight aria-hidden className="size-4" /></ButtonLink> : null}
       {configure}
     </>} />
-    <nav aria-label="Studio destinations" className="flex flex-wrap gap-4 text-xs font-medium text-accent-text underline decoration-border underline-offset-4">
-      {[[website, 'Website'], [`${studio}/portal`, 'Customer portal'], [forms, 'Forms'], [templates, 'Templates']].map(([href, label]) => <Link key={href} href={href} className="hover:underline">{label}</Link>)}
-    </nav>
+    <ViewNav label="Studio destinations" views={[[website, 'Website'], [`${studio}/portal`, 'Customer portal'], [forms, 'Forms'], [templates, 'Templates']].map(([href, label]) => ({ key: href, label, href }))} />
     <div className="grid gap-3 sm:grid-cols-2 @min-[64rem]/studio:grid-cols-4">
       {cards.map(({ title, value, note, icon, href }) => <MetricTile key={title} label={title} value={value} detail={note} icon={icon} href={href} />)}
     </div>
@@ -59,14 +59,14 @@ export function StudioHome({ organizationId, timezone, mayManage, overview: data
       </div>
       <aside className="grid min-w-0 gap-3">
         <OperationalPanel title="Publishing status"><dl className="space-y-3 text-sm"><div className="flex justify-between gap-2"><dt className="text-muted">Website</dt><dd><State>{websiteLabel}</State></dd></div><div className="flex justify-between gap-2"><dt className="text-muted">Unpublished revision</dt><dd>{data.website?.working ? `Revision ${data.website.working.number}` : 'None'}</dd></div><div className="flex justify-between gap-2"><dt className="text-muted">Forms with drafts</dt><dd>{data.forms?.withDraft ?? 'Restricted'}</dd></div></dl><div className="mt-3"><ButtonLink tone="text" size="small" href={website}>Review publishing & history</ButtonLink></div></OperationalPanel>
-        <OperationalPanel title="Needs attention"><ul className="divide-y divide-border">{data.attention.length ? data.attention.map((item) => <li key={item.key}><Link href={attentionHref(item.key)} className="flex items-start gap-2 py-2.5 text-sm hover:underline"><span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-warning" />{item.label}</Link></li>) : <li><PanelState>Nothing needs attention.</PanelState></li>}</ul></OperationalPanel>
-        {data.suggestions.length ? <OperationalPanel title="Suggestions"><ul className="divide-y divide-border">{data.suggestions.map((item) => <li key={item.key}><Link href={attentionHref(item.key)} className="block py-2.5 text-sm hover:underline">{item.label}</Link></li>)}</ul></OperationalPanel> : null}
-        <OperationalPanel title="Public surfaces"><ul className="divide-y divide-border text-sm">{[
+        <OperationalPanel title="Needs attention">{data.attention.length ? <NavigationList label="Studio needs attention" density="compact" items={data.attention.map(item => ({ key: item.key, title: item.label, href: attentionHref(item.key), icon: <span className="block size-1.5 rounded-full bg-warning" /> }))} /> : <PanelState>Nothing needs attention.</PanelState>}</OperationalPanel>
+        {data.suggestions.length ? <OperationalPanel title="Suggestions"><NavigationList label="Studio suggestions" density="compact" items={data.suggestions.map(item => ({ key: item.key, title: item.label, href: attentionHref(item.key) }))} /></OperationalPanel> : null}
+        <OperationalPanel title="Public surfaces"><NavigationList label="Public surfaces" density="compact" items={[
           ['Branding', data.brand.logoConfigured ? 'Logo configured' : 'No logo (optional)', `${base}/settings/branding`],
           ['Public address', data.hostname ?? 'Not configured', `${base}/settings/domains`],
           ['Booking', data.booking.available ? `${data.booking.bookableTypeCount} published types` : 'Needs configuration', `${base}/work/configuration`],
           ['Customer portal', data.portal.activeInviteCount ? `${data.portal.activeInviteCount} customers invited` : 'No active invitations', `${studio}/portal`],
-        ].map(([label, value, href]) => <li key={label}><Link href={href} className="block py-2.5 hover:underline"><span className="font-medium">{label}</span><p className="mt-0.5 break-all text-xs text-muted">{value}</p></Link></li>)}</ul><p className="mt-2 text-xs text-muted">Invite customers to their portal from their Customer page.</p></OperationalPanel>
+        ].map(([label, value, href]) => ({ key: label, title: label, description: value, href }))} /><p className="mt-2 text-xs text-muted">Invite customers to their portal from their Customer page.</p></OperationalPanel>
         <OperationalPanel title="Recent activity"><ul className="divide-y divide-border">{data.recentPublishing.length ? data.recentPublishing.map((revision) => <li key={revision.id}><Link href={`/preview/${organizationId}/${revision.id}`} target="_blank" className="flex justify-between gap-2 py-2.5 text-sm hover:text-accent-text"><span>Website revision {revision.number}</span><State>{revision.status.replace('_', ' ')}</State></Link></li>) : <li><PanelState>No website revisions yet.</PanelState></li>}</ul></OperationalPanel>
       </aside>
     </div>

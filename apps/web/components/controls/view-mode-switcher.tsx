@@ -2,7 +2,8 @@
 
 import type { ComponentType } from 'react';
 import { LayoutGrid, List, Table2 } from 'lucide-react';
-import { cx, FOCUS_RING } from '../class-names';
+import { tabListStyles, tabTriggerStyles } from '@gold/ui/components/tab-styles';
+import { cn } from 'cn';
 
 /**
  * How one collection is drawn. It is a **representation** of the same records — never a different
@@ -38,7 +39,7 @@ export function ViewModeSwitcher({
   className?: string;
 }) {
   return (
-    <div role="group" aria-label={label} className={cx('inline-flex rounded border border-border p-0.5', className)}>
+    <div role="group" aria-label={label} data-slot="tabs-list" data-variant="segmented" className={cn(tabListStyles(), className)}>
       {supported.map((presentation) => {
         const { label: name, Icon } = PRESENTATIONS[presentation];
         const active = presentation === value;
@@ -46,12 +47,11 @@ export function ViewModeSwitcher({
           <button
             key={presentation}
             type="button"
+            data-slot="tabs-trigger"
             aria-pressed={active}
             onClick={() => onChange(presentation)}
-            className={cx(
-              FOCUS_RING,
-              'inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1 text-sm',
-              active ? 'bg-foreground font-medium text-background' : 'text-muted hover:bg-hover',
+            className={cn(
+              tabTriggerStyles,
             )}
           >
             <Icon aria-hidden className="size-4" />

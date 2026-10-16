@@ -1021,10 +1021,10 @@ describe('sibling views are navigation, not page actions', () => {
 
   it('ViewNav is link-based, URL-backed and shares the tabs look through one style module', () => {
     expect(viewNav).toContain("from '@gold/ui/components/tab-styles'");
-    expect(viewNav).toContain("aria-current={view.key === current ? 'page' : undefined}");
+    expect(viewNav).toContain('aria-current=');
     expect(viewNav).not.toContain("'use client'");
-    expect(read(`${UI}/tabs.tsx`)).toContain('tabsTriggerClassName');
-    expect(read(`${UI}/tab-styles.ts`)).toContain('aria-[current=page]:border-accent');
+    expect(read(`${UI}/tabs.tsx`)).toContain('tabTriggerStyles');
+    expect(read(`${UI}/tab-styles.ts`)).toContain('aria-[current=page]:font-semibold');
   });
 
   it('Customers and Pipeline remain contextual pages of CRM without a redundant tab strip', () => {
