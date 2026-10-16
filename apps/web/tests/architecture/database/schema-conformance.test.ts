@@ -396,7 +396,7 @@ describe('schema conformance', () => {
     // organization_id. It cannot see the design that has no foreign key at all: a
     // polymorphic `(entity_type, entity_id)` pair points at a different table depending on
     // its own contents, so Postgres cannot constrain it and nothing stops a row from naming
-    // another tenant's record. `documents` is four nullable columns for exactly this reason.
+    // another tenant's record. `document_links` is four nullable columns for exactly this reason.
     //
     // `events` is the deliberate exception and the only one. It is an append-only log rather
     // than a reference: nothing joins to it expecting integrity, and its rows describe things

@@ -3,6 +3,8 @@ import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { BUCKET as DOCUMENTS_BUCKET } from '@/lib/domain/documents/documents';
+import { contentMatchesFormat } from '@/lib/domain/files/content';
+import type { FileStore } from '@/lib/domain/files/storage-port';
 import { checkFileIntake, storageKeySegment } from '@/lib/domain/files/intake';
 import { parseCsv, type ParsedCsv } from '@/lib/domain/files/parsers/csv';
 
@@ -81,7 +83,7 @@ export async function listResourceRecords(db: Db, organizationId: string, resour
  */
 export async function uploadImportFile(
   db: Db,
-  input: { organizationId: string; file: File },
+  input: { organizationId: string; file: File; files: FileStore },
 ): Promise<{ resourceId: string; parsed: ParsedCsv }> {
   await requireActor(db);
 
@@ -98,14 +100,17 @@ export async function uploadImportFile(
 
   const parsed = parseCsv(await file.text());
 
+  if (!contentMatchesFormat(new Uint8Array(await file.arrayBuffer()), artifact.format)) {
+    throw new DomainError('That file is not really a CSV file.', 'integrations.content_mismatch');
+  }
+
   const path = `${input.organizationId}/imports/${randomUUID()}/${storageKeySegment(artifact.name, 'file.csv')}`;
+  const store = input.files;
 
-  const { error: uploadError } = await db.storage
-    .from(DOCUMENTS_BUCKET)
-    .upload(path, file, { contentType: artifact.mimeType, upsert: false });
-
-  if (uploadError) {
-    throw new DomainError(uploadError.message, 'integrations.upload_failed');
+  try {
+    await store.put(path, file, artifact.mimeType);
+  } catch (error) {
+    throw new DomainError(error instanceof Error ? error.message : 'Upload failed.', 'integrations.upload_failed');
   }
 
   const displayName = artifact.name.slice(0, DISPLAY_NAME_MAX) || 'Uploaded file';
@@ -122,7 +127,7 @@ export async function uploadImportFile(
   });
 
   if (error) {
-    await db.storage.from(DOCUMENTS_BUCKET).remove([path]);
+    await store.remove([path]);
     if (error.code === '42501') {
       throw new DomainError('You cannot add data sources here.', 'integrations.forbidden');
     }

@@ -1,3 +1,5 @@
+import { BUCKET } from '@/lib/domain/documents/documents';
+import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
@@ -135,7 +137,7 @@ describe('a connection-scoped integration_resources row is not tenant-forgeable'
 
   it('refuses a tenant session claiming a row by setting connection_id on an update', async () => {
     const connectionId = await recordConnection(alice.db, { organizationId: alice.organizationId, connectorKey: FIXTURE_CONNECTOR });
-    const { resourceId: fileResourceId } = await uploadImportFile(alice.db, {
+    const { resourceId: fileResourceId } = await uploadImportFile(alice.db, { files: supabaseFileStore(alice.db, BUCKET),
       organizationId: alice.organizationId,
       file: new File(['name,email\nA,a@example.test\n'], 'leads.csv', { type: 'text/csv' }),
     });
@@ -200,7 +202,7 @@ describe('a connection-scoped integration_resources row is not tenant-forgeable'
   });
 
   it('leaves the ordinary tenant-owned import-file flow working exactly as before', async () => {
-    const { resourceId, parsed } = await uploadImportFile(alice.db, {
+    const { resourceId, parsed } = await uploadImportFile(alice.db, { files: supabaseFileStore(alice.db, BUCKET),
       organizationId: alice.organizationId,
       file: new File(['name,email\nJane,jane@example.test\n'], 'leads.csv', { type: 'text/csv' }),
     });

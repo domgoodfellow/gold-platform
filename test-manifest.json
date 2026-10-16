@@ -159,6 +159,8 @@
     "apps/web/tests/component/notification-preferences.test.tsx": {"category":"component","concerns":["portal","communications","security","accessibility"]},
     "apps/web/e2e/service-notifications.spec.ts": {"category":"playwright-acceptance","concerns":["crm","portal","communications","security","accessibility"]},
     "apps/web/tests/integration/database/service-notifications.test.ts": {"category": "database-integration", "concerns": ["crm", "portal", "communications", "security"]},
+    "apps/web/tests/integration/database/library-storage-boundary.test.ts": {"category": "database-integration", "concerns": ["library", "storage", "security", "tenant-isolation"]},
+    "apps/web/tests/unit/library-content.test.ts": {"category": "unit", "concerns": ["library", "files", "security"]},
     "apps/api/tests/component/test_customer_notifications.py": {"category": "python-component", "concerns": ["communications", "providers", "security"]},
 
     "apps/web/tests/unit/prospect-import.test.ts": { "category": "unit", "concerns": ["crm", "imports", "data integrity"] },

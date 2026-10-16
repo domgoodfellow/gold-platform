@@ -1,3 +1,5 @@
+import { BUCKET } from '@/lib/domain/documents/documents';
+import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
@@ -149,7 +151,7 @@ describe('integrations: CSV import', () => {
   });
 
   it('uploads a CSV with no connection, and detects headers', async () => {
-    const { resourceId, parsed } = await uploadImportFile(alice.db, {
+    const { resourceId, parsed } = await uploadImportFile(alice.db, { files: supabaseFileStore(alice.db, BUCKET),
       organizationId: alice.organizationId,
       file: csvFile(aliceEmailFieldRows),
     });
@@ -169,13 +171,13 @@ describe('integrations: CSV import', () => {
 
   it('refuses a file the CRM import cannot read, before storing it', async () => {
     await expect(
-      uploadImportFile(alice.db, {
+      uploadImportFile(alice.db, { files: supabaseFileStore(alice.db, BUCKET),
         organizationId: alice.organizationId,
         file: new File(['not a workbook'], 'leads.xlsx'),
       }),
     ).rejects.toMatchObject({ code: 'integrations.file_unsupported' });
     await expect(
-      uploadImportFile(alice.db, { organizationId: alice.organizationId, file: csvFile('') }),
+      uploadImportFile(alice.db, { files: supabaseFileStore(alice.db, BUCKET), organizationId: alice.organizationId, file: csvFile('') }),
     ).rejects.toMatchObject({ code: 'integrations.file_empty' });
   });
 
@@ -348,13 +350,13 @@ describe('integrations: CSV import', () => {
       recordConnection(bob.db, { organizationId: bob.organizationId, connectorKey: FIXTURE_CONNECTOR }),
     ).rejects.toMatchObject({ code: 'integrations.forbidden' });
     await expect(
-      uploadImportFile(bob.db, { organizationId: bob.organizationId, file: csvFile('name\nAnn\n') }),
+      uploadImportFile(bob.db, { files: supabaseFileStore(bob.db, BUCKET), organizationId: bob.organizationId, file: csvFile('name\nAnn\n') }),
     ).rejects.toMatchObject({ code: 'integrations.forbidden' });
   });
 
   it('resumes staging and committed batches without emails or duplicate Customers', async () => {
     const text = ['source_record_id,name,email,phone', ...Array.from({ length: 205 }, (_, i) => `${i},Batch business ${i},null,+1416555${String(i).padStart(4, '0')}`)].join('\n');
-    const upload = await uploadImportFile(alice.db, { organizationId: alice.organizationId, file: csvFile(text, 'source-id-batches.csv') });
+    const upload = await uploadImportFile(alice.db, { files: supabaseFileStore(alice.db, BUCKET), organizationId: alice.organizationId, file: csvFile(text, 'source-id-batches.csv') });
     const definitions = await listFieldDefinitions(alice.db, { organizationId: alice.organizationId, entityType: 'customer' });
     const mapping = suggestMapping(upload.parsed.headers, definitions);
     const mappingId = await createMapping(alice.db, { organizationId: alice.organizationId, resourceId: upload.resourceId, fields: mapping });

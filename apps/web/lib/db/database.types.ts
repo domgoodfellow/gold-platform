@@ -3017,74 +3017,137 @@ export type Database = {
           },
         ]
       }
-      documents: {
+      document_links: {
         Row: {
-          agent_user_id: string | null
           asset_id: string | null
           created_at: string
           created_by: string
           customer_id: string | null
-          file_name: string
+          document_id: string
           id: string
           location_id: string | null
-          mime_type: string
           organization_id: string
-          size_bytes: number
-          storage_path: string
           work_item_id: string | null
         }
         Insert: {
-          agent_user_id?: string | null
           asset_id?: string | null
           created_at?: string
           created_by: string
           customer_id?: string | null
-          file_name: string
+          document_id: string
           id?: string
           location_id?: string | null
-          mime_type: string
           organization_id: string
-          size_bytes: number
-          storage_path: string
           work_item_id?: string | null
         }
         Update: {
-          agent_user_id?: string | null
           asset_id?: string | null
           created_at?: string
           created_by?: string
           customer_id?: string | null
-          file_name?: string
+          document_id?: string
           id?: string
           location_id?: string | null
-          mime_type?: string
           organization_id?: string
-          size_bytes?: number
-          storage_path?: string
           work_item_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "documents_asset_same_org"
+            foreignKeyName: "document_links_asset_same_org"
             columns: ["organization_id", "asset_id"]
             isOneToOne: false
             referencedRelation: "assets"
             referencedColumns: ["organization_id", "id"]
           },
           {
-            foreignKeyName: "documents_customer_same_org"
+            foreignKeyName: "document_links_customer_same_org"
             columns: ["organization_id", "customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
           {
-            foreignKeyName: "documents_location_same_org"
+            foreignKeyName: "document_links_document_same_org"
+            columns: ["organization_id", "document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "document_links_location_same_org"
             columns: ["organization_id", "location_id"]
             isOneToOne: false
             referencedRelation: "locations"
             referencedColumns: ["organization_id", "id"]
           },
+          {
+            foreignKeyName: "document_links_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_links_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_links_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "finance_quote_records"
+            referencedColumns: ["organization_id", "work_item_id"]
+          },
+          {
+            foreignKeyName: "document_links_work_item_same_org"
+            columns: ["organization_id", "work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          agent_user_id: string | null
+          content_sha256: string | null
+          created_at: string
+          created_by: string
+          file_name: string
+          id: string
+          mime_type: string
+          organization_id: string
+          size_bytes: number
+          storage_path: string
+        }
+        Insert: {
+          agent_user_id?: string | null
+          content_sha256?: string | null
+          created_at?: string
+          created_by: string
+          file_name: string
+          id?: string
+          mime_type: string
+          organization_id: string
+          size_bytes: number
+          storage_path: string
+        }
+        Update: {
+          agent_user_id?: string | null
+          content_sha256?: string | null
+          created_at?: string
+          created_by?: string
+          file_name?: string
+          id?: string
+          mime_type?: string
+          organization_id?: string
+          size_bytes?: number
+          storage_path?: string
+        }
+        Relationships: [
           {
             foreignKeyName: "documents_organization_id_fkey"
             columns: ["organization_id"]
@@ -3098,20 +3161,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "documents_work_item_same_org"
-            columns: ["organization_id", "work_item_id"]
-            isOneToOne: false
-            referencedRelation: "finance_quote_records"
-            referencedColumns: ["organization_id", "work_item_id"]
-          },
-          {
-            foreignKeyName: "documents_work_item_same_org"
-            columns: ["organization_id", "work_item_id"]
-            isOneToOne: false
-            referencedRelation: "work_items"
-            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -14092,6 +14141,7 @@ export type Database = {
       create_document: {
         Args: {
           p_asset_id: string
+          p_content_sha256?: string
           p_customer_id: string
           p_file_name: string
           p_location_id: string

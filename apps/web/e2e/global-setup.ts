@@ -1,3 +1,5 @@
+import { BUCKET } from '../lib/domain/documents/documents';
+import { supabaseFileStore } from '../lib/adapters/storage/supabase-file-store';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { config as loadEnv } from 'dotenv';
@@ -207,14 +209,14 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     listDocuments(db, { organizationId, attachedTo: { entity: 'work_item', id: workItemId } }),
   ]);
   if (customerDocs.length === 0) {
-    await uploadDocument(db, {
+    await uploadDocument(db, { files: supabaseFileStore(db, BUCKET),
       organizationId,
       attachedTo: { entity: 'customer', id: customerId },
       file: new File(['e2e fixture'], 'e2e-customer-note.txt', { type: 'text/plain' }),
     });
   }
   if (workItemDocs.length === 0) {
-    await uploadDocument(db, {
+    await uploadDocument(db, { files: supabaseFileStore(db, BUCKET),
       organizationId,
       attachedTo: { entity: 'work_item', id: workItemId },
       file: new File(['e2e fixture'], 'e2e-job-photo.txt', { type: 'text/plain' }),

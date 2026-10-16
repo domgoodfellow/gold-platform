@@ -1,3 +1,5 @@
+import { BUCKET } from '@/lib/domain/documents/documents';
+import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -135,7 +137,7 @@ describe('a location’s history', () => {
   });
 
   it('shows a document attached here, and not one attached elsewhere', async () => {
-    await uploadDocument(acme.db, {
+    await uploadDocument(acme.db, { files: supabaseFileStore(acme.db, BUCKET),
       organizationId: acme.organizationId,
       attachedTo: { entity: 'location', id: locationA },
       file: new File(['x'], 'site-plan.txt', { type: 'text/plain' }),
@@ -250,7 +252,7 @@ describe('an asset’s history', () => {
   });
 
   it('shows a document attached here, and not one attached elsewhere', async () => {
-    await uploadDocument(acme.db, {
+    await uploadDocument(acme.db, { files: supabaseFileStore(acme.db, BUCKET),
       organizationId: acme.organizationId,
       attachedTo: { entity: 'asset', id: assetA },
       file: new File(['x'], 'service-manual.txt', { type: 'text/plain' }),

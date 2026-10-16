@@ -1,4 +1,6 @@
 'use server';
+import { BUCKET } from '@/lib/domain/documents/documents';
+import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
@@ -33,7 +35,7 @@ export async function uploadSourceAction(
   let resourceId: string;
   try {
     await requireImportPipeline(db);
-    const uploaded = await uploadImportFile(db, { organizationId, file });
+    const uploaded = await uploadImportFile(db, { files: supabaseFileStore(db, BUCKET), organizationId, file });
     resourceId = uploaded.resourceId;
     await prepareImportFields(db, organizationId, uploaded.parsed.headers);
   } catch (error) {

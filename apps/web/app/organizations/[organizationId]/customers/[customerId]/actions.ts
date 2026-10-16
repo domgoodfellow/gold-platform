@@ -1,4 +1,6 @@
 'use server';
+import { BUCKET } from '@/lib/domain/documents/documents';
+import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
@@ -34,10 +36,10 @@ export async function uploadCustomerDocumentAction(
 
   try {
     // The customer id comes from a hidden field and is deliberately not re-checked here.
-    // `documents_customer_same_org` makes a document naming another tenant's customer
+    // `document_links_customer_same_org` makes a link naming another tenant's customer
     // impossible to write, and the storage policy pins the bytes to this caller's tenant
     // prefix, so tampering produces a refusal rather than a leak.
-    await uploadDocument(db, {
+    await uploadDocument(db, { files: supabaseFileStore(db, BUCKET),
       organizationId,
       attachedTo: { entity: 'customer', id: customerId },
       file,

@@ -961,6 +961,14 @@ Do not rely only on a storage path string to define authorization.
 
 Public assets should be public intentionally, not because a bucket was made broad for convenience.
 
+Library files (`documents`, ADR-043) are organization-owned. Records reference them through `document_links`, one target per row. An Agent-private file is owned by its person and cannot be linked. The following hold for the private `documents` bucket (migration `20261224000001`):
+
+- Only the uploader may remove an object, and only while no `documents` row or integration resource names its path (ADR-044).
+- The bucket accepts only the MIME types a Library file may have. SVG is not one of them.
+- A stored file's first bytes must match its format before it is written. Text formats must be UTF-8 with no NUL byte.
+- Each file records a SHA-256 checksum of the bytes as stored. A file stored before the checksum existed has none recorded, and it is not shown as an empty one.
+- The storage-limit check and the row insert run under a per-organization lock, so concurrent uploads cannot both pass the same remaining allowance.
+
 ---
 
 ## Database migrations

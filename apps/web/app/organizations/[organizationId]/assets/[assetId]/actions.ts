@@ -1,4 +1,6 @@
 'use server';
+import { BUCKET } from '@/lib/domain/documents/documents';
+import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
@@ -57,7 +59,7 @@ export async function uploadAssetDocumentAction(
     // The asset id comes from a hidden field and is deliberately not re-checked here — the
     // same composite-FK argument `uploadCustomerDocumentAction` rests on: a document naming
     // another tenant's asset is impossible to write, so tampering is refused, not leaked.
-    await uploadDocument(db, {
+    await uploadDocument(db, { files: supabaseFileStore(db, BUCKET),
       organizationId,
       attachedTo: { entity: 'asset', id: assetId },
       file,

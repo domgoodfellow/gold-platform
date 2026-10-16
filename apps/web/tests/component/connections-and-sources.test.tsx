@@ -26,7 +26,7 @@ const connector = (key: string, name: string): Connector => ({ key, name, descri
 const connection = { id: 'c1', connectorKey: 'dropbox', accountLabel: 'Ops Dropbox', status: 'active' } as IntegrationConnection;
 const renderApps = (active: IntegrationConnection[], connectable: Connector[], mayManage = true) => render(
   <ConnectedApps organizationId="org" active={active} connectorByKey={new Map([['dropbox', connector('dropbox', 'Dropbox')]])} logoUrlByKey={new Map()}
-    resourceCount={2} importCount={1} needsAttentionCount={0} mayManage={mayManage} catalogOpen={false} catalogHref="/organizations/org/settings/connections?catalog=open#app-library"
+    needsAttentionCount={0} mayManage={mayManage} catalogOpen={false} catalogHref="/organizations/org/settings/connections?catalog=open#app-library"
     connectable={connectable} organizationName="Acme" mcpServerCount={0} />,
 );
 
@@ -43,7 +43,7 @@ describe('Settings → Connections is the operating page', () => {
     expect(screen.getByRole('button', { name: 'Disconnect' })).toBeInTheDocument();
   });
   it('offers to hide an open catalog from the same page', () => {
-    render(<ConnectedApps organizationId="org" active={[connection]} connectorByKey={new Map()} logoUrlByKey={new Map()} resourceCount={0} importCount={0}
+    render(<ConnectedApps organizationId="org" active={[connection]} connectorByKey={new Map()} logoUrlByKey={new Map()} 
       needsAttentionCount={0} mayManage catalogOpen catalogHref="/organizations/org/settings/connections" connectable={[]} organizationName="Acme" mcpServerCount={0} />);
     const toggle = screen.getByRole('link', { name: 'Hide the App Library' });
     expect(toggle).toHaveAttribute('href', '/organizations/org/settings/connections');
@@ -56,10 +56,11 @@ describe('Settings → Connections is the operating page', () => {
     renderApps([], [connector('slack', 'Slack')], false);
     expect(screen.queryByRole('link', { name: 'Connect' })).not.toBeInTheDocument();
   });
-  it('points data-source and import counts at Library, and keeps the App Library out of the section tabs', () => {
+  it('keeps data sources and imports out of Connections, and the App Library out of the section tabs', () => {
     renderApps([connection], []);
-    expect(screen.getByRole('link', { name: /Data sources/ })).toHaveAttribute('href', libraryHref('org', 'sources'));
-    expect(screen.getByRole('link', { name: /Imports/ })).toHaveAttribute('href', libraryHref('org', 'imports'));
+    // Sources and imports are Library's. Connections only shows the accounts it authorizes.
+    expect(screen.queryByRole('link', { name: /Data sources/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Imports/ })).not.toBeInTheDocument();
     cleanup();
     render(<IntegrationsNav organizationId="org" current="connected" />);
     expect(screen.getAllByRole('link').map(link => link.textContent)).toEqual(['Connected', 'MCP servers', 'Secrets & credentials']);

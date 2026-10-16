@@ -1,3 +1,5 @@
+import { BUCKET } from '@/lib/domain/documents/documents';
+import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -298,7 +300,7 @@ describe('a job’s own history', () => {
 
 describe('a document\'s upload is attributed to the record it was attached to (20260917000001)', () => {
   it('shows a customer\'s own document upload in their own history', async () => {
-    await uploadDocument(acme.db, {
+    await uploadDocument(acme.db, { files: supabaseFileStore(acme.db, BUCKET),
       organizationId: acme.organizationId,
       attachedTo: { entity: 'customer', id: acme.customerId },
       file: new File(['x'], 'contract.txt', { type: 'text/plain' }),
@@ -313,7 +315,7 @@ describe('a document\'s upload is attributed to the record it was attached to (2
   });
 
   it('shows a document uploaded to a job in both that job\'s own history and its customer\'s', async () => {
-    await uploadDocument(acme.db, {
+    await uploadDocument(acme.db, { files: supabaseFileStore(acme.db, BUCKET),
       organizationId: acme.organizationId,
       attachedTo: { entity: 'work_item', id: acme.workItemId },
       file: new File(['x'], 'job-photo.txt', { type: 'text/plain' }),

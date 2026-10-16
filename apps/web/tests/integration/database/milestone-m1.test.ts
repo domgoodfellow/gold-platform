@@ -1,3 +1,5 @@
+import { BUCKET } from '@/lib/domain/documents/documents';
+import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -209,7 +211,7 @@ async function buildTenant(label: string): Promise<Tenant> {
     custom: { [SHARED.fieldKey]: `VAT-${label}` },
   });
 
-  const documentId = await uploadDocument(founder.db, {
+  const documentId = await uploadDocument(founder.db, { files: supabaseFileStore(founder.db, BUCKET),
     organizationId,
     attachedTo: { entity: 'customer', id: customerId },
     file: new File([`contract for ${label}`], SHARED.fileName, { type: 'text/plain' }),

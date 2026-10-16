@@ -1,4 +1,3 @@
-import { ButtonLink } from '@/components/controls/button';
 import { Hint } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { DataTable } from '@/components/display/table';
@@ -10,7 +9,6 @@ import type { SourceRepository } from '@/lib/adapters/source-control';
 import { ConnectorAppStrip } from '../catalogue/connector-app-strip';
 import { ConnectorIcon } from '../catalogue/connector-icon';
 import { AssistantAccessForm } from './connection-controls';
-import { libraryNewImportHref } from '@/lib/route/library';
 
 /**
  * One connection's content: account/scope facts, its child apps and its Resources table — the
@@ -119,16 +117,6 @@ export function ConnectionDetail({
                     ) : (
                       'No access'
                     ),
-                },
-                {
-                  key: 'actions',
-                  header: 'Import',
-                  emphasis: 'secondary',
-                  cell: (r) => (
-                    <ButtonLink href={libraryNewImportHref(organizationId, r.id)} tone="text" size="small">
-                      Import →
-                    </ButtonLink>
-                  ),
                 },
               ]}
             />

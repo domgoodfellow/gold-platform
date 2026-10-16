@@ -72,6 +72,11 @@ describe('SECURITY DEFINER functions in app', () => {
         // definer function because the profile table itself is readable only by its owner.
         'member_display_names',
         'may_spend_on',
+        // A document-link policy's one question about a file, asked without re-entering the file's own
+        // read policies (which read the links back and would recurse).
+        'is_organization_file',
+        // Whether a path is still named by a file or an import, so its bytes may be removed.
+        'storage_path_is_referenced',
         'phone_number_owner',
         'plan_grants_feature',
         'publishes_bookings',

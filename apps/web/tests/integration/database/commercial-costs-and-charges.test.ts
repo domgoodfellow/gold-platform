@@ -1,3 +1,5 @@
+import { BUCKET } from '@/lib/domain/documents/documents';
+import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
@@ -81,7 +83,7 @@ async function foundTenant(label: string): Promise<Tenant> {
 }
 
 function fileOfSize(name: string, bytes: number): File {
-  return new File([new Uint8Array(bytes)], name, { type: 'application/octet-stream' });
+  return new File(['a'.repeat(bytes)], name, { type: 'text/plain' });
 }
 
 async function assign(organizationId: string, planId: string, periodStart?: string) {
@@ -171,7 +173,7 @@ describe('storage', () => {
     await assign(a.organizationId, basePlanId);
     await assign(b.organizationId, basePlanId);
 
-    await uploadDocument(a.db, { organizationId: a.organizationId, attachedTo: { entity: 'customer', id: a.customerId }, file: fileOfSize('a.bin', 300) });
+    await uploadDocument(a.db, { files: supabaseFileStore(a.db, BUCKET), organizationId: a.organizationId, attachedTo: { entity: 'customer', id: a.customerId }, file: fileOfSize('a.txt', 300) });
 
     const aState = (await organizationAllowanceStates(staff, { organizationId: a.organizationId, allowanceKey: 'storage_bytes' }))[0];
     const bState = (await organizationAllowanceStates(staff, { organizationId: b.organizationId, allowanceKey: 'storage_bytes' }))[0];
@@ -183,16 +185,16 @@ describe('storage', () => {
     const org = await foundTenant('store-agg');
     await assign(org.organizationId, basePlanId); // 1000 bytes included, hard limit 1000
 
-    await uploadDocument(org.db, { organizationId: org.organizationId, attachedTo: { entity: 'customer', id: org.customerId }, file: fileOfSize('one.bin', 700) });
+    await uploadDocument(org.db, { files: supabaseFileStore(org.db, BUCKET), organizationId: org.organizationId, attachedTo: { entity: 'customer', id: org.customerId }, file: fileOfSize('one.txt', 700) });
     const mid = (await organizationAllowanceStates(staff, { organizationId: org.organizationId, allowanceKey: 'storage_bytes' }))[0];
     expect(mid.consumed).toBe(700);
 
     // Within the allowance: permitted.
-    await uploadDocument(org.db, { organizationId: org.organizationId, attachedTo: { entity: 'customer', id: org.customerId }, file: fileOfSize('two.bin', 200) });
+    await uploadDocument(org.db, { files: supabaseFileStore(org.db, BUCKET), organizationId: org.organizationId, attachedTo: { entity: 'customer', id: org.customerId }, file: fileOfSize('two.txt', 200) });
 
     // Over the allowance: refused, distinctly from "file too large".
     await expect(
-      uploadDocument(org.db, { organizationId: org.organizationId, attachedTo: { entity: 'customer', id: org.customerId }, file: fileOfSize('three.bin', 500) }),
+      uploadDocument(org.db, { files: supabaseFileStore(org.db, BUCKET), organizationId: org.organizationId, attachedTo: { entity: 'customer', id: org.customerId }, file: fileOfSize('three.txt', 500) }),
     ).rejects.toMatchObject({ code: 'documents.storage_limit_reached' });
 
     // The 25 MB per-file technical limit is independent and still applies, even to a business
@@ -200,10 +202,10 @@ describe('storage', () => {
     const roomy = await foundTenant('store-roomy');
     await assign(roomy.organizationId, basePlanId);
     await expect(
-      uploadDocument(roomy.db, {
+      uploadDocument(roomy.db, { files: supabaseFileStore(roomy.db, BUCKET),
         organizationId: roomy.organizationId,
         attachedTo: { entity: 'customer', id: roomy.customerId },
-        file: fileOfSize('huge.bin', 26 * 1024 * 1024),
+        file: fileOfSize('huge.txt', 26 * 1024 * 1024),
       }),
     ).rejects.toMatchObject({ code: 'documents.too_large' });
   });
@@ -211,10 +213,10 @@ describe('storage', () => {
   it('refuses an upload at the hard limit regardless of role, and permits one below it', async () => {
     const org = await foundTenant('store-limit');
     await assign(org.organizationId, basePlanId);
-    await uploadDocument(org.db, { organizationId: org.organizationId, attachedTo: { entity: 'customer', id: org.customerId }, file: fileOfSize('fill.bin', 1000) });
+    await uploadDocument(org.db, { files: supabaseFileStore(org.db, BUCKET), organizationId: org.organizationId, attachedTo: { entity: 'customer', id: org.customerId }, file: fileOfSize('fill.txt', 1000) });
 
     await expect(
-      uploadDocument(org.db, { organizationId: org.organizationId, attachedTo: { entity: 'customer', id: org.customerId }, file: fileOfSize('over.bin', 1) }),
+      uploadDocument(org.db, { files: supabaseFileStore(org.db, BUCKET), organizationId: org.organizationId, attachedTo: { entity: 'customer', id: org.customerId }, file: fileOfSize('over.txt', 1) }),
     ).rejects.toMatchObject({ code: 'documents.storage_limit_reached' });
 
     const after = (await organizationAllowanceStates(staff, { organizationId: org.organizationId, allowanceKey: 'storage_bytes' }))[0];
@@ -236,7 +238,7 @@ describe('storage', () => {
       [org.organizationId, memberUserId, roleRows[0].id, org.userId],
     );
     await expect(
-      uploadDocument(memberDb, { organizationId: org.organizationId, attachedTo: { entity: 'customer', id: org.customerId }, file: fileOfSize('x.bin', 1) }),
+      uploadDocument(memberDb, { files: supabaseFileStore(memberDb, BUCKET), organizationId: org.organizationId, attachedTo: { entity: 'customer', id: org.customerId }, file: fileOfSize('x.txt', 1) }),
     ).rejects.toMatchObject({ code: 'documents.forbidden' });
     // Plenty of quota remained unused — the refusal was authority, not allowance.
     const state = (await organizationAllowanceStates(staff, { organizationId: org.organizationId, allowanceKey: 'storage_bytes' }))[0];

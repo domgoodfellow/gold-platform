@@ -1,3 +1,5 @@
+import { BUCKET } from '@/lib/domain/documents/documents';
+import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/server';
 import { getDocumentUrl } from '@/lib/domain/documents/documents';
@@ -19,7 +21,7 @@ export async function GET(
   const db = await getDb();
 
   try {
-    const { url } = await getDocumentUrl(db, { documentId });
+    const { url } = await getDocumentUrl(db, { files: supabaseFileStore(db, BUCKET), documentId });
     return NextResponse.redirect(url);
   } catch (error) {
     if (error instanceof DomainError) {

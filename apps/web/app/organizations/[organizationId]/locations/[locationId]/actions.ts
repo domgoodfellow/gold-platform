@@ -1,4 +1,6 @@
 'use server';
+import { BUCKET } from '@/lib/domain/documents/documents';
+import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
@@ -97,7 +99,7 @@ export async function uploadLocationDocumentAction(
   }
 
   try {
-    await uploadDocument(db, {
+    await uploadDocument(db, { files: supabaseFileStore(db, BUCKET),
       organizationId,
       attachedTo: { entity: 'location', id: locationId },
       file,

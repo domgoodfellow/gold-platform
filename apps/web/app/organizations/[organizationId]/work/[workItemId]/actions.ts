@@ -1,4 +1,6 @@
 'use server';
+import { BUCKET } from '@/lib/domain/documents/documents';
+import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 
 import { revalidatePath } from 'next/cache';
 import { customValuesFromFormData } from '@/lib/custom-fields';
@@ -342,10 +344,10 @@ export async function uploadWorkItemDocumentAction(
   }
 
   try {
-    // Not re-checked here: the composite FK on `documents.work_item_id` makes a document
+    // Not re-checked here: the composite FK on `document_links.work_item_id` makes a link
     // naming another tenant's job impossible to write, the same guarantee every other
     // attachment action in this codebase rests on.
-    await uploadDocument(db, {
+    await uploadDocument(db, { files: supabaseFileStore(db, BUCKET),
       organizationId,
       attachedTo: { entity: 'work_item', id: workItemId },
       file,

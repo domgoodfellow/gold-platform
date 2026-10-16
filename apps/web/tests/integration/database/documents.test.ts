@@ -1,3 +1,4 @@
+import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -93,7 +94,7 @@ describe('documents', () => {
   });
 
   it('attaches a file to a customer', async () => {
-    aliceDocumentId = await uploadDocument(alice.db, {
+    aliceDocumentId = await uploadDocument(alice.db, { files: supabaseFileStore(alice.db, BUCKET),
       organizationId: alice.organizationId,
       attachedTo: { entity: 'customer', id: alice.customerId },
       file: fileNamed('contract.txt'),
@@ -120,7 +121,7 @@ describe('documents', () => {
   });
 
   it('mints a signed, expiring URL rather than a durable one', async () => {
-    const { url } = await getDocumentUrl(alice.db, { documentId: aliceDocumentId });
+    const { url } = await getDocumentUrl(alice.db, { files: supabaseFileStore(alice.db, BUCKET), documentId: aliceDocumentId });
 
     expect(url).toContain('/object/sign/');
     expect(url).toContain('token=');
@@ -154,7 +155,7 @@ describe('documents', () => {
     expect(theirs).toEqual([]);
 
     await expect(
-      getDocumentUrl(bob.db, { documentId: aliceDocumentId }),
+      getDocumentUrl(bob.db, { files: supabaseFileStore(bob.db, BUCKET), documentId: aliceDocumentId }),
     ).rejects.toMatchObject({ code: 'documents.not_found' });
   });
 
@@ -194,7 +195,7 @@ describe('documents', () => {
 
   it('cannot attach a document to another tenant\'s customer (I18)', async () => {
     await expect(
-      uploadDocument(alice.db, {
+      uploadDocument(alice.db, { files: supabaseFileStore(alice.db, BUCKET),
         organizationId: alice.organizationId,
         attachedTo: { entity: 'customer', id: bob.customerId },
         file: fileNamed('borrowed.txt'),
@@ -202,34 +203,102 @@ describe('documents', () => {
     ).rejects.toMatchObject({ code: 'documents.owner_not_found' });
   });
 
-  it('insists a document belongs to exactly one thing', async () => {
-    // The domain layer cannot express two owners, so this goes straight at the table.
+  it('stores a Library file that no record references yet', async () => {
+    // The file is organization-owned, so it exists before anything points at it.
+    const { data: unlinkedId, error } = await alice.db.rpc('create_document', {
+      p_organization_id: alice.organizationId,
+      p_customer_id: null,
+      p_location_id: null,
+      p_asset_id: null,
+      p_work_item_id: null,
+      p_storage_path: `${alice.organizationId}/${randomUUID()}/unlinked.txt`,
+      p_file_name: 'unlinked.txt',
+      p_mime_type: 'text/plain',
+      p_size_bytes: 1,
+    });
+    expect(error).toBeNull();
+
+    const { data: links } = await alice.db
+      .from('document_links')
+      .select('id')
+      .eq('document_id', unlinkedId as string);
+    expect(links).toEqual([]);
+
+    const { data: visible } = await bob.db.from('documents').select('id').eq('id', unlinkedId as string);
+    expect(visible).toEqual([]);
+    const { data: ownVisible } = await alice.db.from('documents').select('id').eq('id', unlinkedId as string);
+    expect(ownVisible).toHaveLength(1);
+  });
+
+  it('lets one file be referenced by two records without duplicating it', async () => {
     const assetId = await createAsset(alice.db, {
       organizationId: alice.organizationId,
       name: 'Compressor',
     });
 
-    const { error: bothError } = await alice.db.from('documents').insert({
+    const { error } = await alice.db.from('document_links').insert({
       organization_id: alice.organizationId,
+      document_id: aliceDocumentId,
+      asset_id: assetId,
+      created_by: alice.userId,
+    });
+    expect(error).toBeNull();
+
+    const forCustomer = await listDocuments(alice.db, {
+      organizationId: alice.organizationId,
+      attachedTo: { entity: 'customer', id: alice.customerId },
+    });
+    const forAsset = await listDocuments(alice.db, {
+      organizationId: alice.organizationId,
+      attachedTo: { entity: 'asset', id: assetId },
+    });
+    expect(forCustomer.map((d) => d.id)).toEqual([aliceDocumentId]);
+    expect(forAsset.map((d) => d.id)).toEqual([aliceDocumentId]);
+  });
+
+  it('refuses a link naming more than one record', async () => {
+    const assetId = await createAsset(alice.db, {
+      organizationId: alice.organizationId,
+      name: 'Pump',
+    });
+
+    const { error } = await alice.db.from('document_links').insert({
+      organization_id: alice.organizationId,
+      document_id: aliceDocumentId,
       customer_id: alice.customerId,
       asset_id: assetId,
-      storage_path: `${alice.organizationId}/${randomUUID()}/two-owners.txt`,
-      file_name: 'two-owners.txt',
-      mime_type: 'text/plain',
-      size_bytes: 1,
       created_by: alice.userId,
     });
-    expect(bothError?.code).toBe('23514');
+    expect(error?.code).toBe('23514');
+  });
 
-    const { error: neitherError } = await alice.db.from('documents').insert({
+  it('refuses the same file linked to the same record twice', async () => {
+    const { error } = await alice.db.from('document_links').insert({
       organization_id: alice.organizationId,
-      storage_path: `${alice.organizationId}/${randomUUID()}/no-owner.txt`,
-      file_name: 'no-owner.txt',
-      mime_type: 'text/plain',
-      size_bytes: 1,
+      document_id: aliceDocumentId,
+      customer_id: alice.customerId,
       created_by: alice.userId,
     });
-    expect(neitherError?.code).toBe('23514');
+    expect(error?.code).toBe('23505');
+  });
+
+  it('refuses a link across tenants, in either direction (I18)', async () => {
+    // Bob cannot see Alice's file, and Alice's file cannot be linked to Bob's customer.
+    const { error: intoBob } = await bob.db.from('document_links').insert({
+      organization_id: bob.organizationId,
+      document_id: aliceDocumentId,
+      customer_id: bob.customerId,
+      created_by: bob.userId,
+    });
+    expect(intoBob).not.toBeNull();
+
+    const { error: toAliceFromBob } = await alice.db.from('document_links').insert({
+      organization_id: alice.organizationId,
+      document_id: aliceDocumentId,
+      customer_id: bob.customerId,
+      created_by: alice.userId,
+    });
+    expect(toAliceFromBob?.code).toBe('23503');
   });
 
   it('attaches to an asset as readily as to a customer', async () => {
@@ -238,7 +307,7 @@ describe('documents', () => {
       name: 'Boiler',
     });
 
-    await uploadDocument(alice.db, {
+    await uploadDocument(alice.db, { files: supabaseFileStore(alice.db, BUCKET),
       organizationId: alice.organizationId,
       attachedTo: { entity: 'asset', id: assetId },
       file: fileNamed('manual.txt'),
@@ -260,7 +329,7 @@ describe('documents', () => {
 
   it('refuses an empty file', async () => {
     await expect(
-      uploadDocument(alice.db, {
+      uploadDocument(alice.db, { files: supabaseFileStore(alice.db, BUCKET),
         organizationId: alice.organizationId,
         attachedTo: { entity: 'customer', id: alice.customerId },
         file: fileNamed('empty.txt', ''),
@@ -284,7 +353,7 @@ describe('documents', () => {
     await assignRole(bob.db, { membershipId: membership!.id, roleId: limited });
 
     await expect(
-      uploadDocument(bob.db, {
+      uploadDocument(bob.db, { files: supabaseFileStore(bob.db, BUCKET),
         organizationId: bob.organizationId,
         attachedTo: { entity: 'customer', id: bob.customerId },
         file: fileNamed('nope.txt'),
@@ -310,7 +379,7 @@ describe('documents', () => {
     // `entity_id` on a document.created event is the document's own id — never the customer's
     // or the asset's — so the payload is the only place a reader can learn which record this
     // upload belongs to. Without it, no timeline can ever attribute the event.
-    const documentId = await uploadDocument(alice.db, {
+    const documentId = await uploadDocument(alice.db, { files: supabaseFileStore(alice.db, BUCKET),
       organizationId: alice.organizationId,
       attachedTo: { entity: 'customer', id: alice.customerId },
       file: fileNamed('attribution-check.txt'),
@@ -340,7 +409,7 @@ describe('documents', () => {
       organizationId: alice.organizationId,
       name: 'Attributed compressor',
     });
-    const documentId = await uploadDocument(alice.db, {
+    const documentId = await uploadDocument(alice.db, { files: supabaseFileStore(alice.db, BUCKET),
       organizationId: alice.organizationId,
       attachedTo: { entity: 'asset', id: assetId },
       file: fileNamed('asset-manual.txt'),

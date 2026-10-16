@@ -1,3 +1,4 @@
+import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
@@ -152,7 +153,9 @@ describe('an attachment is a private Document owned by its asker', () => {
     expect(row.created_by).toBe(yard.userId);
     expect(row.mime_type).toBe('text/csv');
     expect(Number(row.size_bytes)).toBe('id,title\n1,Fence\n2,Gate\n'.length);
-    expect(row.customer_id).toBeNull();
+    // A private file names no record, so no business list can show it.
+    const links = await sql<{ id: string }>('select id from public.document_links where document_id = $1', [stored.id]);
+    expect(links).toEqual([]);
 
     // And the bytes are really there, readable by their owner.
     const { data, error } = await yard.db.storage.from(BUCKET).download(row.storage_path);
@@ -266,7 +269,7 @@ describe('an attachment is a private Document owned by its asker', () => {
 
   it('leaves ordinary documents readable by the whole business, as before', async () => {
     const customerId = await createCustomer(yard.db, { organizationId: yard.organizationId, name: 'Shared Customer' });
-    const id = await uploadDocument(yard.db, {
+    const id = await uploadDocument(yard.db, { files: supabaseFileStore(yard.db, BUCKET),
       organizationId: yard.organizationId,
       attachedTo: { entity: 'customer', id: customerId },
       file: new File(['contract'], 'contract.txt', { type: 'text/plain' }),
@@ -374,7 +377,7 @@ describe('taking a file back before it is sent', () => {
     expect(await sql('select 1 from public.documents where id = $1', [stored.id])).toHaveLength(1);
 
     const customerId = await createCustomer(yard.db, { organizationId: yard.organizationId, name: 'Undeletable' });
-    const documentId = await uploadDocument(yard.db, {
+    const documentId = await uploadDocument(yard.db, { files: supabaseFileStore(yard.db, BUCKET),
       organizationId: yard.organizationId,
       attachedTo: { entity: 'customer', id: customerId },
       file: new File(['keep'], 'keep.txt', { type: 'text/plain' }),
@@ -469,7 +472,7 @@ describe('sending a file with a question', () => {
   it('will not send an ordinary document as if it were an attachment', async () => {
     fakeAssistant();
     const customerId = await createCustomer(yard.db, { organizationId: yard.organizationId, name: 'Contract Holder' });
-    const documentId = await uploadDocument(yard.db, {
+    const documentId = await uploadDocument(yard.db, { files: supabaseFileStore(yard.db, BUCKET),
       organizationId: yard.organizationId,
       attachedTo: { entity: 'customer', id: customerId },
       file: new File(['confidential terms'], 'terms.txt', { type: 'text/plain' }),

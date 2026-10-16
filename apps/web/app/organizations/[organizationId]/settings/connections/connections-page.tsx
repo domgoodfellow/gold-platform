@@ -6,9 +6,6 @@ import {
   listConnectors,
 } from '@/lib/domain/integrations/connectors';
 import { loadConnectorReadiness } from '@/lib/domain/integrations/readiness';
-import { isSourceControlConnector } from '@/lib/adapters/source-control';
-import { listResources } from '@/lib/domain/integrations/resources';
-import { listImportRuns } from '@/lib/domain/integrations/import-runs';
 import { requireOrganization } from '@/lib/route/organization';
 import { ConnectedApps } from '@/features/integrations/connections/connected-apps';
 import { IntegrationsNav } from '@/features/integrations/integrations-nav';
@@ -36,10 +33,8 @@ export async function ConnectionsPage({
   const oauthError = first(query.oauth_error);
   const { db, organization } = context;
 
-  const [allConnections, resources, runs, everyConnector] = await Promise.all([
+  const [allConnections, everyConnector] = await Promise.all([
     listConnections(db, { organizationId }),
-    listResources(db, { organizationId }),
-    listImportRuns(db, { organizationId }),
     listConnectors(db),
   ]);
   // An MCP server has its own view (its tools are reviewed and granted one by one) and is never
@@ -50,9 +45,6 @@ export async function ConnectionsPage({
   const mcpServerCount = allConnections.filter((connection) => mcpKeys.has(connection.connectorKey) && connection.status !== 'disconnected').length;
 
   const mayManage = organization.capabilities.includes('integration.manage');
-  // A repository is something GildOps may read, not a source a business imports customers from, so it is not a "data source".
-  const sourceControlConnections = new Set(connections.filter((c) => isSourceControlConnector(c.connectorKey)).map((c) => c.id));
-  const importableResources = resources.filter((r) => !(r.connectionId && sourceControlConnections.has(r.connectionId))).length;
   const active = connections.filter((connection) => connection.status !== 'disconnected');
   const needsAttention = connections.filter((connection) => connection.status === 'needs_attention');
   const connectorByKey = new Map(connectors.map((connector) => [connector.key, connector]));
@@ -91,8 +83,6 @@ export async function ConnectionsPage({
           active={active}
           connectorByKey={connectorByKey}
           logoUrlByKey={logoUrlByKey}
-          resourceCount={importableResources}
-          importCount={runs.length}
           needsAttentionCount={needsAttention.length}
           mayManage={mayManage}
           catalogOpen={catalogOpen}

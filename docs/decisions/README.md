@@ -103,6 +103,8 @@ It is not a duplicate specification.
 | ADR-008 | One canonical owner per business fact | [`ADR-008-canonical-ownership.md`](ADR-008-canonical-ownership.md) |
 | ADR-009 | CRM, Communications and Support own different lifecycles | [`ADR-009-crm-communications-support.md`](ADR-009-crm-communications-support.md) |
 | ADR-010 | Work and Scheduling are separate authorities | [`ADR-010-work-scheduling.md`](ADR-010-work-scheduling.md) |
+| ADR-043 | A Library file is organization-owned; records reference it | [`ADR-043-library-files-and-references.md`](ADR-043-library-files-and-references.md) |
+| ADR-044 | Stored bytes are removed only by their uploader, and only while nothing names them | [`ADR-044-storage-bytes-removal.md`](ADR-044-storage-bytes-removal.md) |
 | ADR-011 | Resource and Asset are role-based concepts | [`ADR-011-resource-asset.md`](ADR-011-resource-asset.md) |
 | ADR-012 | Settings has five independent scopes | [`ADR-012-settings-scopes.md`](ADR-012-settings-scopes.md) |
 | ADR-013 | Entitlement and authorization are independent | [`ADR-013-entitlement-authorization.md`](ADR-013-entitlement-authorization.md) |

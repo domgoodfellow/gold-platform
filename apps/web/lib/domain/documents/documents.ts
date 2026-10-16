@@ -1,8 +1,11 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
+import { contentMatchesFormat } from '@/lib/domain/files/content';
+import { identifyFormat } from '@/lib/domain/files/formats';
+import type { FileStore } from '@/lib/domain/files/storage-port';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
-/** What a document can be attached to — a closed set, each a real column with a composite foreign key behind it (a polymorphic entity/id pair would make I18 unenforceable). */
+/** What a Library file can be linked to — a closed set, each a real column on `document_links` with a composite foreign key behind it (a polymorphic entity/id pair would make I18 unenforceable). */
 export const DOCUMENT_ENTITIES = ['customer', 'location', 'asset', 'work_item'] as const;
 
 export type DocumentEntity = (typeof DOCUMENT_ENTITIES)[number];
@@ -37,6 +40,15 @@ const MAX_BYTES = 25 * 1024 * 1024;
 
 const FILE_NAME_MAX = 255;
 
+/**
+ * The formats a Library file may be. Each one has a signature `content.ts` can check, and each one's
+ * MIME type is on the bucket's allowlist (migration 20261224000001). SVG is absent on purpose: it is
+ * a document that can run script, and a file a person downloads should never be one.
+ */
+const ATTACHABLE_FORMAT_IDS: readonly string[] = [
+  'csv', 'json', 'txt', 'md', 'xml', 'xlsx', 'xls', 'pdf', 'docx', 'rtf', 'pptx', 'png', 'jpg', 'webp',
+];
+
 export function isDocumentEntity(value: string): value is DocumentEntity {
   return (DOCUMENT_ENTITIES as readonly string[]).includes(value);
 }
@@ -45,18 +57,20 @@ export async function listDocuments(
   db: Db,
   input: { organizationId: string; attachedTo: DocumentAttachment },
 ): Promise<StoredDocument[]> {
+  // A record lists the files that reference it. The file itself is organization-owned and may be
+  // referenced by other records too, so this reads the link and follows it to the file.
   const { data, error } = await db
-    .from('documents')
-    .select('id, file_name, mime_type, size_bytes, created_at')
+    .from('document_links')
+    .select('documents!inner(id, file_name, mime_type, size_bytes, created_at)')
     .eq('organization_id', input.organizationId)
     .eq(ATTACHMENT_COLUMN[input.attachedTo.entity], input.attachedTo.id)
-    .order('created_at', { ascending: false });
+    .order('created_at', { referencedTable: 'documents', ascending: false });
 
   if (error) {
     throw new DomainError(error.message, 'documents.list_failed');
   }
 
-  return (data ?? []).map((row) => ({
+  return (data ?? []).map(({ documents: row }) => ({
     id: row.id,
     fileName: row.file_name,
     mimeType: row.mime_type,
@@ -66,11 +80,15 @@ export async function listDocuments(
 }
 
 /**
- * Store a file and record who owns it. Bytes first, then the row — the two can't be one
- * transaction, so between the two failure modes this picks the harmless one: unreferenced bytes
- * with no row are cleanable, while a row with no bytes is a broken link an operator sees. Runs
- * under the caller's own JWT — a service-role client would discard the storage policy that pins
- * the path to the caller's tenant.
+ * Store a file and record it. Bytes first, then the row — the two can't be one transaction, so
+ * between the two failure modes this picks the harmless one: unreferenced bytes with no row are
+ * cleanable, while a row with no bytes is a broken link an operator sees. Runs under the caller's
+ * own JWT — a service-role client would discard the storage policy that pins the path to the
+ * caller's tenant.
+ *
+ * Before any byte is written, the file is checked twice: its name must be a format this library
+ * accepts, and its first bytes must be that format. The browser's own type is not trusted for
+ * either, and the stored type is the one the format implies.
  */
 export async function uploadDocument(
   db: Db,
@@ -78,6 +96,8 @@ export async function uploadDocument(
     organizationId: string;
     attachedTo: DocumentAttachment;
     file: File;
+    /** Where the bytes go. The application builds this from its storage adapter, so this module depends only on the port. */
+    files: FileStore;
   },
 ): Promise<string> {
   await requireActor(db);
@@ -99,15 +119,25 @@ export async function uploadDocument(
     throw new DomainError('That file has no name.', 'documents.name_required');
   }
 
+  const format = identifyFormat(fileName);
+  if (!format || !ATTACHABLE_FORMAT_IDS.includes(format.id)) {
+    throw new DomainError('That kind of file cannot be attached here.', 'documents.unsupported');
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!contentMatchesFormat(bytes, format)) {
+    throw new DomainError(`That file is not really a ${format.label} file.`, 'documents.content_mismatch');
+  }
+
+  const store = input.files;
+
   // A random segment, not the document id — the id doesn't exist until the row is written, and the row is written second.
   const path = `${input.organizationId}/${globalThis.crypto.randomUUID()}/${safeKeySegment(fileName)}`;
 
-  const { error: uploadError } = await db.storage
-    .from(BUCKET)
-    .upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false });
-
-  if (uploadError) {
-    throw new DomainError(uploadError.message, 'documents.upload_failed');
+  try {
+    await store.put(path, file, format.mimeType);
+  } catch (error) {
+    throw new DomainError(error instanceof Error ? error.message : 'Upload failed.', 'documents.upload_failed');
   }
 
   const { data, error } = await db.rpc('create_document', {
@@ -118,13 +148,14 @@ export async function uploadDocument(
     p_work_item_id: columnValue(input.attachedTo, 'work_item'),
     p_storage_path: path,
     p_file_name: fileName,
-    p_mime_type: file.type || 'application/octet-stream',
+    p_mime_type: format.mimeType,
     p_size_bytes: file.size,
+    p_content_sha256: await sha256Hex(bytes),
   });
 
   if (error) {
-    // Compensating delete, best effort — if it fails the bytes are orphaned, which this ordering made harmless.
-    await db.storage.from(BUCKET).remove([path]);
+    // Compensating delete, best effort. The bucket lets the uploader remove an object no row points at, so this is the only caller that can remove it.
+    await store.remove([path]);
 
     if (error.code === '42501') {
       throw new DomainError('You cannot add documents here.', 'documents.forbidden');
@@ -147,7 +178,7 @@ export async function uploadDocument(
 /** The row read is the permission check — RLS returns nothing for a document in another tenant, so there's nothing to sign. */
 export async function getDocumentUrl(
   db: Db,
-  input: { documentId: string },
+  input: { documentId: string; files: FileStore },
 ): Promise<{ url: string; fileName: string }> {
   const { data: row, error } = await db
     .from('documents')
@@ -163,20 +194,22 @@ export async function getDocumentUrl(
     throw new DomainError('No such document here.', 'documents.not_found');
   }
 
-  const { data: signed, error: signError } = await db.storage
-    .from(BUCKET)
-    .createSignedUrl(row.storage_path, SIGNED_URL_TTL_SECONDS, { download: row.file_name });
-
-  if (signError || !signed) {
-    throw new DomainError(signError?.message ?? 'Could not sign that URL.', 'documents.sign_failed');
+  try {
+    const url = await input.files.sign(row.storage_path, SIGNED_URL_TTL_SECONDS, row.file_name);
+    return { url, fileName: row.file_name };
+  } catch (error) {
+    throw new DomainError(error instanceof Error ? error.message : 'Could not sign that URL.', 'documents.sign_failed');
   }
-
-  return { url: signed.signedUrl, fileName: row.file_name };
 }
 
 /** Returns `string`, not `string | null` — `supabase gen types` emits every function argument as non-null even when the parameter accepts null (D15). The cast lives here once instead of at four call sites. */
 function columnValue(attachment: DocumentAttachment, entity: DocumentEntity): string {
   return (attachment.entity === entity ? attachment.id : null) as string;
+}
+
+async function sha256Hex(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 /** Not traversal defence (the tenant prefix handles that) — just keeps keys predictable and stops a `/` in a name from splitting into two path segments. */

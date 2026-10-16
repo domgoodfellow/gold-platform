@@ -6,7 +6,6 @@ import { Widget, WidgetGrid } from '@/components/display/widget';
 import type { IntegrationConnection } from '@/lib/domain/integrations/connections';
 import type { Connector } from '@/lib/domain/integrations/connectors';
 import { ConnectorIcon } from '../catalogue/connector-icon';
-import { libraryHref } from '@/lib/route/library';
 import { DisconnectForm } from './connection-controls';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -29,8 +28,6 @@ export function ConnectedApps({
   active,
   connectorByKey,
   logoUrlByKey,
-  resourceCount,
-  importCount,
   needsAttentionCount,
   mayManage,
   catalogOpen,
@@ -43,8 +40,6 @@ export function ConnectedApps({
   active: IntegrationConnection[];
   connectorByKey: Map<string, Connector>;
   logoUrlByKey: Map<string, string | null>;
-  resourceCount: number;
-  importCount: number;
   needsAttentionCount: number;
   mayManage: boolean;
   catalogOpen: boolean;
@@ -89,8 +84,6 @@ export function ConnectedApps({
     <>
       <WidgetGrid className="mt-6">
         <Widget title="Connected apps" value={active.length} />
-        <Widget title="Data sources" value={resourceCount} href={libraryHref(organizationId, 'sources')} />
-        <Widget title="Imports" value={importCount} href={libraryHref(organizationId, 'imports')} />
         <Widget title="MCP servers" value={mcpServerCount} href={`/organizations/${organizationId}/settings/connections/mcp`} />
         <Widget
           title="Needs attention"
