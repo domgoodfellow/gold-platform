@@ -86,8 +86,7 @@ export function SettingsNav({
       </SidebarGroup>
 
       <div className="px-4 pb-2 group-data-[collapsible=icon]:hidden">
-        <p className="truncate text-xs text-sidebar-foreground/70">Settings for</p>
-        <p className="truncate text-sm font-medium">{organizationName}</p>
+        <p className="truncate text-sm font-medium">Settings</p>
         <label className="relative mt-3 block">
           <span className="sr-only">Search settings</span>
           <Search aria-hidden className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-sidebar-foreground/60" />
