@@ -406,7 +406,7 @@ Work owns **what must be done**.
 
 Scheduling owns **when resources may commit to it**.
 
-The shared Organization Calendar combines CRM follow-ups and scheduled Work by time. Follow-ups feed the calendar; they do not define its scope. Source domains retain record ownership and editing authority, and Work Schedule retains resource availability and dispatch.
+Calendar is a shared capability accessed within each workspace, with no standalone sidebar entry. Its day/week time grid supports creating and editing native events independently of CRM. Workspace scope is the default, with an explicit All workspaces option. CRM follow-ups and scheduled Work are additional feeds; they do not define Calendar. Native events do not reserve resources. Source domains retain record ownership and editing authority, and Work Schedule retains resource availability and dispatch.
 
 Booking, dispatch and resource assignment consume the same scheduling and feasibility rules rather than creating competing availability calculations.
 

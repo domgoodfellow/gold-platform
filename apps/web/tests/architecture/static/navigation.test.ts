@@ -174,7 +174,7 @@ describe('the operator shell navigation', () => {
 
   it.each(['ai'])('%s has one guarded starting Home and no invented child destinations', (key) => {
     expect(WORKSPACES.find((workspace) => workspace.key === key)?.home).toBe(key);
-    expect(AREAS.filter((area) => area.workspace === key)).toEqual([
+    expect(AREAS.filter((area) => area.workspace === key && area.sidebar !== false)).toEqual([
       { segment: key, label: areaLabel(key), group: 'workspaces', workspace: key },
     ]);
     const page = readFileSync(`${ROUTES}/${key}/page.tsx`, 'utf8');
@@ -189,7 +189,7 @@ describe('the operator shell navigation', () => {
     ['support', ['support.read']],
     ['marketing', ['marketing.read', 'marketing.manage']],
   ])('%s retains one flat workspace row with its read authority', (key, capabilities) => {
-    expect(AREAS.filter((area) => area.workspace === key)).toEqual([
+    expect(AREAS.filter((area) => area.workspace === key && area.sidebar !== false)).toEqual([
       { segment: key, label: areaLabel(key as string), group: 'workspaces', workspace: key, relevantCapabilities: capabilities },
     ]);
   });
@@ -241,7 +241,7 @@ describe('the operator shell navigation', () => {
 
   it('gives Work a Home, Work items, Schedule, Resources, Locations and Equipment & Assets as its pages', () => {
     expect(AREAS.filter((area) => area.workspace === 'field').map((area) => area.segment)).toEqual([
-      'field', 'work', 'schedule', 'resources', 'locations', 'assets',
+      'field', 'work', 'work-calendar', 'schedule', 'resources', 'locations', 'assets',
     ]);
     expect(existsSync(`${ROUTES}/field/page.tsx`)).toBe(true);
     // Customer-facing navigation no longer says Operations.
@@ -292,7 +292,6 @@ describe('the operator shell navigation', () => {
     expect(inSidebar).toEqual([
       'home',
       'library',
-      'calendar',
       'sales', 'customers', 'pipeline',
       'comms', 'calls', 'comms-inbox',
       'marketing', 'support', 'ai',

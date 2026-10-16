@@ -34,6 +34,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      calendar_events: {
+        Row: {
+          created_at: string
+          created_by: string
+          ends_at: string
+          id: string
+          notes: string | null
+          organization_id: string
+          starts_at: string
+          status: string
+          title: string
+          workspace: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          ends_at: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          starts_at: string
+          status?: string
+          title: string
+          workspace: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          ends_at?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          starts_at?: string
+          status?: string
+          title?: string
+          workspace?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       account_appearance_preferences: {
         Row: {
           appearance: string

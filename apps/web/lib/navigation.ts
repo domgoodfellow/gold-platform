@@ -346,13 +346,15 @@ export const AREAS: readonly Area[] = [
   // Its own internal destinations (Files, Media, Templates, Knowledge, Collections, Sources,
   // Trash) are reached from Library's own page, not a second permanent sidebar.
   { segment: 'library', label: 'Library', group: 'library' },
-  { segment: 'calendar', label: 'Calendar', group: 'library' },
-  { segment: 'follow-up-calendar', label: 'Calendar (legacy link)', group: 'library', route: 'follow-ups/calendar', sidebar: false },
+  { segment: 'organization-calendar-legacy', label: 'Calendar (legacy organization link)', group: 'library', route: 'calendar', sidebar: false },
 
   // Sales. Home is the workspace's own parent destination — kernel, like Customers, so the row is
   // always there — and is never repeated as a child beneath it. Pipeline is the CRM stages view,
   // offered where the business has it (the reception module).
   { segment: 'sales', label: 'CRM', group: 'workspaces', workspace: 'crm' },
+  ...WORKSPACES.filter(workspace => !['crm', 'field'].includes(workspace.key)).map(workspace => ({ segment: `${workspace.key}-calendar`, label: `${workspace.label} calendar`, group: 'workspaces' as const, workspace: workspace.key, route: `${workspace.home}/calendar`, sidebar: false })),
+  { segment: 'calendar', label: 'Calendar', group: 'workspaces', workspace: 'crm', route: 'sales/calendar', sidebar: false },
+  { segment: 'follow-up-calendar', label: 'Calendar (legacy link)', group: 'workspaces', workspace: 'crm', route: 'follow-ups/calendar', sidebar: false },
   { segment: 'customers', label: 'Customers', group: 'workspaces', workspace: 'crm' },
   { segment: 'pipeline', label: 'Relationship pipeline', group: 'workspaces', workspace: 'crm', route: 'customers/pipeline', module: 'reception', featureKeys: ['pipeline', 'configurable_stages', 'qualification_state'] },
   { segment: 'opportunities', label: 'Opportunities', group: 'workspaces', workspace: 'crm', sidebar: false },
@@ -403,6 +405,7 @@ export const AREAS: readonly Area[] = [
   // page behind a module.
   { segment: 'field', label: 'Work', group: 'workspaces', workspace: 'field' },
   { segment: 'work', label: 'Work items', group: 'workspaces', workspace: 'field' },
+  { segment: 'work-calendar', label: 'Work calendar', group: 'workspaces', workspace: 'field', route: 'field/calendar', sidebar: false },
   { segment: 'schedule', label: 'Schedule', group: 'workspaces', workspace: 'field', needsSchedulableWork: true },
   { segment: 'resources', label: 'Resources', group: 'workspaces', workspace: 'field', needsSchedulableWork: true },
   { segment: 'locations', label: 'Locations', group: 'workspaces', workspace: 'field', needsSchedulableWork: true },

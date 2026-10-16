@@ -5,10 +5,11 @@ import type { FollowUp } from '@/lib/domain/follow-ups/follow-ups';
 import type { WorkItem } from '@/lib/domain/work-items/work-items';
 import { calendarEvents, eventsOnDate, loadOrganizationCalendar, parseCalendarSource } from '@/lib/application/calendar/organization-calendar';
 
-const reads = vi.hoisted(() => ({ available: vi.fn(), followUps: vi.fn(), work: vi.fn(), members: vi.fn() }));
+const reads = vi.hoisted(() => ({ available: vi.fn(), followUps: vi.fn(), work: vi.fn(), members: vi.fn(), events: vi.fn() }));
 vi.mock('@/lib/application/crm/follow-ups', () => ({ followUpsAvailable: reads.available }));
 vi.mock('@/lib/domain/follow-ups/follow-ups', () => ({ listFollowUps: reads.followUps }));
 vi.mock('@/lib/domain/work-items/work-items', () => ({ listWorkItems: reads.work }));
+vi.mock('@/lib/domain/calendar/events', () => ({ listCalendarEvents: reads.events }));
 vi.mock('@/lib/domain/tenancy/members', () => ({ listMembers: reads.members }));
 
 const followUp = { id: 'same-id', title: 'Discuss proposal', dueAt: '2026-11-01T05:30:00Z', kind: 'meeting',
@@ -23,6 +24,7 @@ beforeEach(() => {
   reads.followUps.mockResolvedValue(counted([followUp], 1));
   reads.work.mockResolvedValue(counted([work], 1));
   reads.members.mockResolvedValue([]);
+  reads.events.mockResolvedValue(counted([], 0));
 });
 
 describe('shared organization calendar', () => {

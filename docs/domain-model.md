@@ -418,7 +418,7 @@ CRM Home, the Opportunity collection/pipeline and the Customer's Opportunities t
 
 ### Follow-up
 
-A Follow-up is actionable CRM work for one Customer, optionally attached to an Opportunity for that same Customer. Its type is Call, Email, Meeting or Task. It has a due instant, optional notes and same-Organization owner Membership, and Open, Completed or Cancelled status. Completed and cancelled records remain historical; subsequent work uses a new Follow-up. Customer and Opportunity surfaces, the Follow-ups collection and shared Organization Calendar all project `crm_follow_ups`. Calendar is a read composition of dated domain records, including Follow-ups and scheduled Work; it owns no duplicate event records, pipeline stages or availability rules. Follow-ups are separate from immutable activity Events and from Work Items/resource scheduling.
+A Follow-up is actionable CRM work for one Customer, optionally attached to an Opportunity for that same Customer. Its type is Call, Email, Meeting or Task. It has a due instant, optional notes and same-Organization owner Membership, and Open, Completed or Cancelled status. Completed and cancelled records remain historical; subsequent work uses a new Follow-up. Customer and Opportunity surfaces, the Follow-ups collection and shared Organization Calendar all project `crm_follow_ups`. Calendar composes native calendar events and dated domain projections, including Follow-ups and scheduled Work; it does not copy those domain records or own their pipeline stages or availability rules. Follow-ups are separate from immutable activity Events and from Work Items/resource scheduling.
 
 CRM Home forecasts currently Open Opportunity values with an expected-close date in the selected month, unweighted and grouped by currency. Win rate is Won / (Won + Lost), using the last recorded closed transition per Opportunity in the selected month, including creation in a terminal stage. Reclosures count once per Opportunity in that month. Later reopening does not erase recorded closure evidence. A period with no closures has no defined win rate.
 
@@ -812,6 +812,11 @@ Readings can inform maintenance/automation policy without turning the Asset into
 ---
 
 ## Scheduling
+
+### Calendar event
+
+A native Calendar Event is an Organization-owned appointment with workspace context, title, start/end instants, optional notes, creator and Scheduled/Cancelled status. It is independent of Customers, Follow-ups and Work. Calendar events can overlap and do not reserve Resources or imply scheduling feasibility. Each workspace reads its events by default; All workspaces broadens the view explicitly. Follow-ups and Work remain projections from their own canonical records, never copied into Calendar Events.
+
 
 ### Schedule
 

@@ -99,7 +99,6 @@ import {
 export const AREA_ICONS: Record<string, LucideIcon> = {
   home: Home,
   library: Library,
-  calendar: CalendarDays,
   marketing: Megaphone,
   support: Headset,
   ai: Bot,
@@ -491,6 +490,8 @@ export function OrganizationFrame({
   const recovery = locked && !inPlatformScope(pathname);
   const administration = sections.find((section) => section.key === 'administration')?.items[0];
   const shared = { mark, name, organizations, email, signOutAction };
+  const calendarContext = !recovery && !settingsContext ? workspaceNavigation(sections, pathname) : null;
+  const calendarWorkspace = calendarContext?.workspace.key.startsWith('workspace-') ? calendarContext.workspace : null;
 
   return (
     <WorkspaceShell
@@ -501,6 +502,7 @@ export function OrganizationFrame({
           navigationTrigger="always"
           agentTrigger="md"
           utilities={utilities}
+          beforeActions={calendarWorkspace ? <Link href={`${calendarWorkspace.href}/calendar`} aria-label={`${calendarWorkspace.label} calendar`} className="inline-flex min-h-9 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-hover"><CalendarDays aria-hidden size={16}/><span className="hidden sm:inline">Calendar</span></Link> : null}
         />
       }
       agent={agent}

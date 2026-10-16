@@ -114,10 +114,10 @@ describe('Work follows the declared shape and entitlement', () => {
   const field = (schedulableWork?: boolean, overrides: Partial<ShellInput> = {}) => projectedItems(project(['field.manage'], { schedulableWork, ...overrides })).find((item) => item.key === 'workspace-field')!;
   it('keeps schedule-dependent aliases only where the work shape allows them', () => {
     const paths = (scheduled?: boolean) => field(scheduled).activeHrefs!.filter(href => !href.includes('configuration')).map((href) => href.split('/').at(-1));
-    expect(paths(true)).toEqual(['field', 'work', 'schedule', 'resources', 'locations', 'assets']);
-    expect(paths(false)).toEqual(['field', 'work', 'assets']);
+    expect(paths(true)).toEqual(['field', 'work', 'calendar', 'schedule', 'resources', 'locations', 'assets']);
+    expect(paths(false)).toEqual(['field', 'work', 'calendar', 'assets']);
     expect(paths(undefined)).toEqual(paths(true));
-    expect(field(false, { enabledModules: new Set(), featureAvailability: new Set() }).activeHrefs?.filter(href => !href.includes('configuration'))).toEqual([`/organizations/${ORG}/field`, `/organizations/${ORG}/work`]);
+    expect(field(false, { enabledModules: new Set(), featureAvailability: new Set() }).activeHrefs?.filter(href => !href.includes('configuration'))).toEqual([`/organizations/${ORG}/field`, `/organizations/${ORG}/work`, `/organizations/${ORG}/field/calendar`]);
   });
   it('configuration eligibility keeps the same shape gate', () => {
     expect(configTargetOffered(configTarget('schedule-configuration'), gate(['field.manage'], { schedulableWork: false }))).toBe(false);
@@ -474,6 +474,17 @@ describe('every workspace Configuration is a sidebar group', () => {
         if (!context) { expect(child.href, `${child.key} is a shared Settings page`).toContain('/settings/'); continue; }
         expect(activeItemKey(context.sections, child.href.split('#')[0]), child.key).toMatch(new RegExp(`^(${parent.children!.map(item => item.key.replace(/#.*/, '')).join('|')}|workspace-configuration)$`));
       }
+    }
+  });
+});
+
+describe('workspace calendars', () => {
+  it('retains each workspace context and introduces no standalone calendar sidebar item', () => {
+    const sections = project();
+    expect(projectedItems(sections).some(item => item.key.includes('calendar'))).toBe(false);
+    for (const workspace of WORKSPACES) {
+      const context = workspaceNavigation(sections, `/organizations/${ORG}/${workspace.home}/calendar`);
+      expect(context?.workspace.key).toBe(`workspace-${workspace.key}`);
     }
   });
 });

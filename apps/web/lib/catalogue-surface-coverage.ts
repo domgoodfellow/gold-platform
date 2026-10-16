@@ -102,7 +102,7 @@ const FEATURE_STATES = {
 } as const;
 
 const EVIDENCE: readonly [string, readonly string[]][] = [
-  ['sales.sales.follow_ups', ['apps/web/lib/domain/follow-ups/follow-ups.ts', 'apps/web/app/organizations/[organizationId]/follow-ups/page.tsx', 'apps/web/app/organizations/[organizationId]/calendar/page.tsx', 'apps/web/tests/integration/database/follow-ups.test.ts']],
+  ['sales.sales.follow_ups', ['apps/web/lib/domain/follow-ups/follow-ups.ts', 'apps/web/app/organizations/[organizationId]/follow-ups/page.tsx', 'apps/web/app/organizations/[organizationId]/sales/calendar/page.tsx', 'apps/web/tests/integration/database/follow-ups.test.ts']],
   ['sales.sales.conversion_tracking', ['apps/web/lib/application/crm/dashboard.ts', 'apps/web/features/crm/home/crm-home.tsx', 'apps/web/tests/integration/database/follow-ups.test.ts']],
   ['sales.customers_contacts', ['apps/web/lib/domain/customers/customers.ts', 'apps/web/features/crm/customers/customer-detail.tsx', 'apps/web/app/organizations/[organizationId]/customers/page.tsx', 'apps/web/tests/integration/database/reception.test.ts']],
   ['sales.sales', ['apps/web/lib/domain/customers/stages.ts', 'apps/web/features/crm/sales/pipeline-board.tsx', 'apps/web/app/organizations/[organizationId]/customers/pipeline/page.tsx', 'apps/web/tests/integration/database/reception.test.ts']],

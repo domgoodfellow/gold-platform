@@ -26,6 +26,8 @@ Implementation status belongs in `docs/roadmap.md`.
 
 ## Data objective
 
+`calendar_events` stores only native calendar appointments: Organization, workspace, title, start/end instants, notes, Scheduled/Cancelled status and creator attribution. A positive-duration check and constrained workspace/status vocabulary apply. Domain projections such as Follow-ups and Work are never duplicated into this table. Events may overlap; creating one does not reserve resources or bypass canonical scheduling feasibility. Tenant RLS and restricted column grants protect scope and attribution.
+
 Personal appearance is an account-owned exception to organization-owned operating records.
 `account_appearance_preferences.user_id` references `auth.users(id)` with cascade deletion;
 it has no organization column and is not part of `account_profiles` or `brand_settings`.
