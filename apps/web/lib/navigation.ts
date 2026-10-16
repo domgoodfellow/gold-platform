@@ -346,6 +346,8 @@ export const AREAS: readonly Area[] = [
   // Its own internal destinations (Files, Media, Templates, Knowledge, Collections, Sources,
   // Trash) are reached from Library's own page, not a second permanent sidebar.
   { segment: 'library', label: 'Library', group: 'library' },
+  { segment: 'calendar', label: 'Calendar', group: 'library' },
+  { segment: 'follow-up-calendar', label: 'Calendar (legacy link)', group: 'library', route: 'follow-ups/calendar', sidebar: false },
 
   // Sales. Home is the workspace's own parent destination — kernel, like Customers, so the row is
   // always there — and is never repeated as a child beneath it. Pipeline is the CRM stages view,
@@ -356,7 +358,6 @@ export const AREAS: readonly Area[] = [
   { segment: 'opportunities', label: 'Opportunities', group: 'workspaces', workspace: 'crm', sidebar: false },
   { segment: 'opportunity-pipeline', label: 'Opportunity pipeline', group: 'workspaces', workspace: 'crm', route: 'opportunities/pipeline', sidebar: false },
   { segment: 'follow-ups', label: 'Follow-ups', group: 'workspaces', workspace: 'crm', sidebar: false, featureKeys: ['follow_ups'] },
-  { segment: 'follow-up-calendar', label: 'Follow-ups calendar', group: 'workspaces', workspace: 'crm', route: 'follow-ups/calendar', sidebar: false, featureKeys: ['follow_ups'] },
   { segment: 'crm-search', label: 'Search CRM', group: 'workspaces', workspace: 'crm', route: 'sales/search', sidebar: false },
   // Communications. Home is the workspace's own destination, so it is offered to anyone who can
   // operate **any** of its channels — placing calls (`call.place`) or sending texts

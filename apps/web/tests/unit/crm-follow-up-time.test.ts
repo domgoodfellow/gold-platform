@@ -29,7 +29,7 @@ describe('shared calendar periods and contextual URLs', () => {
     const work = new URL(calendarHref('/schedule', 'month', '2027-01-15', {resource: ['first', 'second']}), 'https://example.test');
     expect(work.searchParams.getAll('resource')).toEqual(['first', 'second']);
     expect(work.searchParams.get('view')).toBe('month');
-    const crm = new URL(calendarHref('/follow-ups/calendar', 'day', '2027-01-15', {owner: 'unassigned'}), 'https://example.test');
+    const crm = new URL(calendarHref('/calendar', 'day', '2027-01-15', {source: 'all', owner: 'unassigned'}), 'https://example.test');
     expect(crm.searchParams.get('owner')).toBe('unassigned');
     expect(crm.searchParams.get('on')).toBe('2027-01-15');
   });

@@ -7,10 +7,10 @@ export type CalendarDayContent = { date: string; content: ReactNode };
 
 export function CalendarAgenda({ days, today, emptyLabel }: { days: CalendarDayContent[]; today: string; emptyLabel: string }) {
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-y-auto">
-      <div className={cx('grid grid-cols-1 gap-3 md:min-h-0 md:flex-1 md:auto-rows-fr md:gap-0 md:divide-x md:divide-border', days.length === 7 && 'md:grid-cols-7')}>
+    <div className="@container flex h-full min-h-0 flex-col overflow-y-auto">
+      <div className={cx('grid grid-cols-1 gap-3 @min-[48rem]:min-h-0 @min-[48rem]:flex-1 @min-[48rem]:auto-rows-fr @min-[48rem]:gap-0 @min-[48rem]:divide-x @min-[48rem]:divide-border', days.length === 7 && '@min-[48rem]:grid-cols-7')}>
         {days.map(day => (
-          <section key={day.date} aria-label={day.date} className={cx('flex min-h-40 flex-col gap-2 border-b border-border p-2 last:border-b-0 md:min-h-0 md:border-b-0', day.date === today && 'bg-hover/40')}>
+          <section key={day.date} aria-label={day.date} className={cx('flex min-h-40 flex-col gap-2 border-b border-border p-2 last:border-b-0 @min-[48rem]:min-h-0 @min-[48rem]:border-b-0', day.date === today && 'bg-hover/40')}>
             <h2 className={cx('flex shrink-0 items-baseline justify-between text-sm font-medium', day.date === today && 'text-accent')}>
               <span>{formatDayHeader(day.date)}</span>
               {day.date === today ? <span className="text-xs font-normal uppercase tracking-wide text-accent">Today</span> : null}
@@ -30,7 +30,7 @@ export function CalendarMonth({ days, monthDate, today }: {
 }) {
   const weeks = Array.from({ length: 6 }, (_, index) => days.slice(index * 7, index * 7 + 7));
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="@container flex h-full min-h-0 flex-col">
       <div className="grid grid-cols-7 border-b border-border text-xs font-medium uppercase tracking-wide text-subtle">
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(label => <div key={label} className="px-2 py-1.5">{label}</div>)}
       </div>
@@ -42,7 +42,8 @@ export function CalendarMonth({ days, monthDate, today }: {
                 <Link href={day.href} aria-label={`View ${day.date}`} className="hover:bg-hover">
                   <span className={cx('inline-flex size-6 items-center justify-center rounded-full text-xs tabular-nums', day.date === today ? 'bg-accent text-on-accent font-medium' : 'font-medium')}>{formatDayOfMonth(day.date)}</span>
                 </Link>
-                <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-hidden">
+                {day.entries.length ? <Link href={day.href} aria-label={`View ${day.entries.length} items on ${day.date}`} className="hidden min-h-10 items-center text-[11px] text-muted @max-[40rem]:flex">{day.entries.length} items</Link> : null}
+                <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-hidden @max-[40rem]:hidden">
                   {day.entries.slice(0, 3).map(entry => <div key={entry.id} className="min-w-0 truncate rounded bg-foreground/90 px-1 py-0.5 text-[11px] leading-tight text-background [&_button]:block [&_button]:max-w-full [&_button]:truncate [&_button]:whitespace-nowrap [&_button]:text-inherit [&_button]:text-[11px] [&_button]:leading-tight">{entry.content}</div>)}
                   {day.entries.length > 3 ? <Link href={day.href} className="text-[11px] text-muted">+{day.entries.length - 3} more</Link> : null}
                 </div>

@@ -99,6 +99,7 @@ import {
 export const AREA_ICONS: Record<string, LucideIcon> = {
   home: Home,
   library: Library,
+  calendar: CalendarDays,
   marketing: Megaphone,
   support: Headset,
   ai: Bot,

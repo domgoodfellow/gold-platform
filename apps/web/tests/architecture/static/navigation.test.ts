@@ -292,6 +292,7 @@ describe('the operator shell navigation', () => {
     expect(inSidebar).toEqual([
       'home',
       'library',
+      'calendar',
       'sales', 'customers', 'pipeline',
       'comms', 'calls', 'comms-inbox',
       'marketing', 'support', 'ai',

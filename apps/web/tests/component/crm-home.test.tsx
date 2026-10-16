@@ -23,7 +23,7 @@ describe('operational CRM dashboard',()=>{
     expect(screen.queryByRole('search')).toBeNull();
     expect(screen.getByLabelText('Reporting month')).toBeInTheDocument();
     expect(screen.getByRole('link',{name:'View pipeline'})).toHaveAttribute('href','/organizations/org/opportunities/pipeline');
-    expect(screen.getByRole('link',{name:'View calendar'})).toHaveAttribute('href','/organizations/org/follow-ups/calendar');
+    expect(screen.getByRole('link',{name:'View calendar'})).toHaveAttribute('href','/organizations/org/calendar');
   });
   it('changes attention inline and sends View all to the selected full collection',async()=>{
     render(<CrmHome {...defaults}/>);const user=userEvent.setup();
@@ -35,7 +35,7 @@ describe('operational CRM dashboard',()=>{
   });
   it('keeps reduced roles read-only and hides disabled feature destinations',()=>{
     render(<CrmHome {...defaults} followUpsEnabled={false} conversionEnabled={false}/>);
-    expect(screen.queryByRole('button',{name:'New customer'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'New opportunity'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'New follow-up'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'Configure'})).not.toBeInTheDocument();expect(screen.queryByRole('link',{name:'View calendar'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:/No next follow-up/})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'New customer'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'New opportunity'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'New follow-up'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'Configure'})).not.toBeInTheDocument();expect(screen.getByRole('link',{name:'View calendar'})).toHaveAttribute('href','/organizations/org/calendar');expect(screen.queryByRole('button',{name:/No next follow-up/})).not.toBeInTheDocument();
   });
   it('offers canonical drawers only for authorized mutation and calculates real win rate',()=>{
     render(<CrmHome {...defaults} mayCreate mayCreateOpportunity mayConfigure followUpOptions={{...defaults.followUpOptions,mayManage:true}} summary={{...defaults.summary,won:3,lost:1}}/>);

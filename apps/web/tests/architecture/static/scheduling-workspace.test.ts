@@ -124,7 +124,7 @@ describe('Week does not force seven Resource-lane columns, and narrows to an age
   it('Week groups by day, not by Resource column', () => {
     const week = read(`${CALENDAR}/week-schedule.tsx`);
     expect(week).toContain('<CalendarAgenda');
-    expect(read(`${SHARED_CALENDAR}/calendar-boards.tsx`)).toContain('md:grid-cols-7');
+    expect(read(`${SHARED_CALENDAR}/calendar-boards.tsx`)).toContain('@min-[48rem]:grid-cols-7');
     expect(week).not.toMatch(/resources\.map[\s\S]{0,80}resources\.map/);
   });
 
@@ -446,8 +446,17 @@ describe('Month navigates coherently and keeps the resource filter and URL-backe
 
 
 describe('CRM and Work use one calendar foundation', () => {
+  it('makes Calendar shared infrastructure and redirects the old CRM-only address', () => {
+    const page = code(read(`${ROUTES}/calendar/page.tsx`));
+    expect(page).toContain('loadOrganizationCalendar');
+    expect(page).not.toContain('notFound');
+    const legacy = code(read(`${ROUTES}/follow-ups/calendar/page.tsx`));
+    expect(legacy).toContain('redirect(');
+    expect(legacy).toContain('/calendar');
+    expect(legacy).not.toContain('listFollowUps');
+  });
   it('both compose shared navigation, toolbar and frame with contextual filters', () => {
-    for (const path of [`${CALENDAR}/schedule-workspace.tsx`, `${ROUTES}/follow-ups/calendar/page.tsx`]) {
+    for (const path of [`${CALENDAR}/schedule-workspace.tsx`, `${ROUTES}/calendar/page.tsx`]) {
       const source = code(read(path));
       expect(source).toContain("from '@/components/calendar/calendar-workspace'");
       expect(source).toContain('<CalendarWorkspace');
@@ -458,8 +467,8 @@ describe('CRM and Work use one calendar foundation', () => {
     expect(existsSync(`${CALENDAR}/schedule-toolbar.tsx`)).toBe(false);
     expect(existsSync(`${CALENDAR}/schedule-view-nav.tsx`)).toBe(false);
   });
-  it('CRM supplies Follow-up content to the same month and agenda boards as Work', () => {
-    const crm = code(read(`${WEB}/features/crm/follow-ups/follow-up-calendar.tsx`));
+  it('Organization Calendar supplies combined domain content to the same month and agenda boards as Work', () => {
+    const crm = code(read(`${WEB}/features/calendar/organization-calendar.tsx`));
     expect(crm).toContain('<CalendarAgenda');
     expect(crm).toContain('<CalendarMonth');
     expect(crm).not.toMatch(/grid-cols-7|grid-rows-6/);
