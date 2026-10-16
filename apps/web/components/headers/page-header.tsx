@@ -32,6 +32,11 @@ export type PageHeaderCrumb = PageLocationCrumb;
  * only for a title that is visually richer (an icon, a status pill) than the plain text a
  * breadcrumb should show.
  *
+ * **The title is not printed twice.** When `title` is plain text that is also the breadcrumb's current
+ * page (no `section`, no `breadcrumbLabel`), the workspace bar already says it on every width, so the
+ * `<h1>` stays in the page for assistive technology and the row keeps only `meta` and the actions. A
+ * `section` page, or a title richer than its breadcrumb, still shows its heading.
+ *
  * **There is no generic `description` prop.** A sentence restating what a screen is for, placed
  * under every title whether or not it earned the space, is exactly the sameness Phase B retires —
  * see `docs/ui-spec.md` §2a and §2d. Explanatory text belongs beside the content it explains, in a
@@ -74,12 +79,13 @@ export function PageHeader({
   /** Replaces the default bottom margin (`mb-6`) where the parent already spaces its children. */
   className?: string;
 }) {
+  const titleInBar = !section && breadcrumbLabel === undefined && typeof title === 'string';
   return (
-    <header className={cx('flex flex-wrap items-start justify-between gap-x-4 gap-y-3', className ?? 'mb-6')}>
-      <div className="min-w-0 flex-1 basis-64">
+    <header className={cx('flex flex-wrap items-start gap-x-4 gap-y-3', titleInBar && !meta ? 'justify-end' : 'justify-between', className ?? 'mb-6')}>
+      <div className={cx('min-w-0', titleInBar && !meta ? 'sr-only' : 'flex-1 basis-64')}>
         <PageLocation crumbs={section ? [] : crumbs} current={section ?? breadcrumbLabel ?? title} />
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {meta ? <div className="mt-1 text-sm text-muted">{meta}</div> : null}
+        <h1 className={titleInBar ? 'sr-only' : 'text-2xl font-semibold tracking-tight'}>{title}</h1>
+        {meta ? <div className={cx('text-sm text-muted', !titleInBar && 'mt-1')}>{meta}</div> : null}
       </div>
       {actions || activity || insights || configure ? (
         <div className="flex flex-wrap items-center gap-2">

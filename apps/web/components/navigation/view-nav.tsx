@@ -26,11 +26,12 @@ export function ViewNav({
   className?: string;
 }) {
   return (
-    <nav aria-label={label} className={cx(tabsListClassName, 'mb-4', className)}>
+    <nav aria-label={label} data-slot="tabs-list" className={cx(tabsListClassName, 'mb-4', className)}>
       {views.map((view) => (
         <Link
           key={view.key}
           href={view.href}
+          data-slot="tabs-trigger"
           aria-current={view.key === current ? 'page' : undefined}
           className={tabsTriggerClassName}
         >

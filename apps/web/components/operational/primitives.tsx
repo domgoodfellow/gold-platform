@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@gold/ui/components/avatar";
 import { Progress } from "@gold/ui/components/progress";
+import { tabsListClassName, tabsTriggerClassName } from "@gold/ui/components/tab-styles";
 import { cx, FOCUS_RING } from "@/components/class-names";
 import { surfaceVariants, type SurfaceVariant } from '@gold/ui/design-system';
 
@@ -109,11 +110,11 @@ export function MetricTile({
   );
   const shell = "flex min-w-0 items-start gap-3 rounded-lg border border-border bg-surface px-4 py-3";
   return href ? (
-    <Link href={href} className={cx(shell, "transition-colors hover:bg-hover", FOCUS_RING)}>
+    <Link href={href} data-slot="metric-tile" className={cx(shell, "transition-colors hover:bg-hover", FOCUS_RING)}>
       {body}
     </Link>
   ) : (
-    <div className={shell}>{body}</div>
+    <div data-slot="metric-tile" className={shell}>{body}</div>
   );
 }
 
@@ -244,20 +245,15 @@ export function ViewNavigation({
   className?: string;
 }) {
   return (
-    <nav aria-label={label} className={cx("flex gap-5 overflow-x-auto overflow-y-hidden border-b border-border text-sm", className)}>
+    <nav aria-label={label} data-slot="tabs-list" className={cx(tabsListClassName, "sm:w-full", className)}>
       {items.map((item) => (
         <Link
           key={item.key}
           href={item.href}
           scroll={scroll}
+          data-slot="tabs-trigger"
           aria-current={item.current ? "page" : undefined}
-          className={cx(
-            "whitespace-nowrap border-b-2 py-2",
-            item.current
-              ? "border-accent font-semibold text-foreground"
-              : "border-transparent text-muted hover:text-foreground",
-            FOCUS_RING,
-          )}
+          className={tabsTriggerClassName}
         >
           {item.label}
         </Link>

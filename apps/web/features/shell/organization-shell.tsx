@@ -112,7 +112,7 @@ export async function OrganizationShell({
               organizationName={organization.name}
               timezone={organization.timezone}
               mayAsk={organization.capabilities.includes('assistant.ask')}
-              canManageConnections={organization.capabilities.includes('integration.manage')}
+              canManageAgent={organization.capabilities.includes('organization.manage')}
             />
           )
         }

@@ -24,7 +24,7 @@ import {
   MessageScrollerViewport,
 } from '@gold/ui/components/message-scroller';
 import { Popover, PopoverContent, PopoverTrigger } from '@gold/ui/components/popover';
-import { Bot, Check, FileText, History, LoaderCircle, Paperclip, Plus, Search, TriangleAlert, X } from 'lucide-react';
+import { ArrowUp, Check, Copy, FileText, History, LoaderCircle, Paperclip, Plus, RotateCcw, Search, Sparkles, TriangleAlert, X, Bot } from 'lucide-react';
 import { cx } from '@/components/class-names';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { TextArea } from '@/components/controls/inputs';
@@ -38,6 +38,7 @@ import { ATTACHMENT_ACCEPT } from '@/lib/domain/assistant/attachment-rules';
 import { attachmentDescription, formatBytes } from './attachment-view';
 import { runEvents, type RunEvent } from './run-events';
 import { formatRecent } from './recent-time';
+import { AnswerText } from './answer-text';
 
 /**
  * The Agent presentation grammar. The panel is a conversation, top to bottom:
@@ -82,7 +83,7 @@ export function AgentConversationHeader({
 
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button type="button" tone="secondary" size="small" className="shrink-0 gap-1.5">
+          <Button type="button" tone="ghost" size="small" className="shrink-0 gap-1.5">
             <History aria-hidden size={14} />
             History
           </Button>
@@ -123,7 +124,7 @@ export function AgentConversationHeader({
         </PopoverContent>
       </Popover>
 
-      <Button type="button" tone="secondary" size="small" className="shrink-0 gap-1.5" onClick={onNewChat}>
+      <Button type="button" tone="ghost" size="small" className="shrink-0 gap-1.5" onClick={onNewChat}>
         <Plus aria-hidden size={14} />
         New chat
       </Button>
@@ -169,12 +170,37 @@ export function AgentUnavailable({
 }
 
 /** Zero turns, infrastructure genuinely available — the composer is the point, not an empty box. */
-export function AgentEmptyConversation({ title, description }: { title: string; description: string }) {
+export function AgentEmptyConversation({
+  title,
+  prompts = [],
+  onPickPrompt,
+}: {
+  title: string;
+  /** Questions the Agent can answer today; choosing one puts it in the composer, it never sends. */
+  prompts?: string[];
+  onPickPrompt?: (prompt: string) => void;
+}) {
   return (
     <Empty className="border-none py-8">
-      <EmptyMedia variant="icon"><Bot aria-hidden /></EmptyMedia>
+      <EmptyMedia variant="icon"><Sparkles aria-hidden /></EmptyMedia>
       <EmptyTitle>{title}</EmptyTitle>
-      <EmptyDescription>{description}</EmptyDescription>
+      {prompts.length > 0 && onPickPrompt ? (
+        <EmptyContent>
+          <ul aria-label="Suggested questions" className="flex w-full flex-col gap-2">
+            {prompts.map((prompt) => (
+              <li key={prompt}>
+                <button
+                  type="button"
+                  onClick={() => onPickPrompt(prompt)}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-left text-sm hover:bg-hover"
+                >
+                  {prompt}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </EmptyContent>
+      ) : null}
     </Empty>
   );
 }
@@ -204,6 +230,7 @@ export function AgentTranscript({
   decidePending,
   decideError,
   scopeIdHiddenField,
+  onReuseQuestion,
 }: {
   conversationId: string | null;
   runs: AgentRun[];
@@ -214,6 +241,8 @@ export function AgentTranscript({
   /** The one hidden field a decide-action needs beyond `runId` — tenant scope carries
    * `organizationId`; platform scope carries none. */
   scopeIdHiddenField: ReactNode;
+  /** Puts an earlier question back in the composer to edit and send again. */
+  onReuseQuestion: (question: string) => void;
 }) {
   const ordered = [...runs].reverse();
 
@@ -231,6 +260,7 @@ export function AgentTranscript({
                 decidePending={decidePending}
                 decideError={decideError}
                 scopeIdHiddenField={scopeIdHiddenField}
+                onReuseQuestion={onReuseQuestion}
               />
             ))}
 
@@ -240,10 +270,16 @@ export function AgentTranscript({
                   <QuestionMessage text={pendingQuestion.text} attachments={pendingQuestion.attachments} />
                 </MessageScrollerItem>
                 <MessageScrollerItem messageId="pending-answer">
-                  <Marker role="status">
-                    <MarkerIcon><LoaderCircle className="animate-spin" /></MarkerIcon>
-                    <MarkerContent>Thinking…</MarkerContent>
-                  </Marker>
+                  <Message>
+                    <MessageContent>
+                      <Bubble variant="outline" className="max-w-[90%]">
+                        <BubbleContent role="status">
+                          <span className="sr-only">Thinking…</span>
+                          <ThinkingDots />
+                        </BubbleContent>
+                      </Bubble>
+                    </MessageContent>
+                  </Message>
                 </MessageScrollerItem>
               </>
             ) : null}
@@ -252,6 +288,58 @@ export function AgentTranscript({
         <MessageScrollerButton />
       </MessageScroller>
     </MessageScrollerProvider>
+  );
+}
+
+/** Three dots in the Agent's own bubble: it is working, and the reply will land where they are. */
+function ThinkingDots() {
+  return (
+    <span aria-hidden className="flex h-5 items-center gap-1">
+      {[0, 1, 2].map((dot) => (
+        <span
+          key={dot}
+          className="size-1.5 animate-pulse rounded-full bg-foreground/40"
+          style={{ animationDelay: `${dot * 200}ms`, animationDuration: '1.2s' }}
+        />
+      ))}
+    </span>
+  );
+}
+
+/**
+ * Beneath an answer: copy it, or put the question back in the composer. Always visible — a touch
+ * screen has no hover — and quiet, so the answer stays the thing on the page.
+ */
+function AnswerActions({ answer, question, onReuseQuestion }: { answer: string; question: string; onReuseQuestion: (question: string) => void }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="flex items-center gap-1 text-xs">
+      <Button
+        type="button"
+        tone="ghost"
+        size="small"
+        className="h-7 gap-1 px-2 text-xs text-muted"
+        onClick={() => {
+          void navigator.clipboard?.writeText(answer).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          });
+        }}
+      >
+        {copied ? <Check aria-hidden size={13} /> : <Copy aria-hidden size={13} />}
+        <span aria-live="polite">{copied ? 'Copied' : 'Copy'}</span>
+      </Button>
+      <Button
+        type="button"
+        tone="ghost"
+        size="small"
+        className="h-7 gap-1 px-2 text-xs text-muted"
+        onClick={() => onReuseQuestion(question)}
+      >
+        <RotateCcw aria-hidden size={13} />
+        Ask again
+      </Button>
+    </div>
   );
 }
 
@@ -293,12 +381,14 @@ function TurnItems({
   decidePending,
   decideError,
   scopeIdHiddenField,
+  onReuseQuestion,
 }: {
   run: AgentRun;
   decideFormAction: (formData: FormData) => void;
   decidePending: boolean;
   decideError: string | null;
   scopeIdHiddenField: ReactNode;
+  onReuseQuestion: (question: string) => void;
 }) {
   const events = runEvents(run);
 
@@ -316,13 +406,16 @@ function TurnItems({
           ))}
 
         {run.outcome === 'answered' ? (
-          <Message>
-            <MessageContent>
-              <Bubble variant="outline" className="max-w-[90%]">
-                <BubbleContent className="whitespace-pre-wrap">{run.answer}</BubbleContent>
-              </Bubble>
-            </MessageContent>
-          </Message>
+          <>
+            <Message>
+              <MessageContent>
+                <Bubble variant="outline" className="max-w-[90%]">
+                  <BubbleContent><AnswerText text={run.answer} /></BubbleContent>
+                </Bubble>
+              </MessageContent>
+            </Message>
+            <AnswerActions answer={run.answer} question={run.question} onReuseQuestion={onReuseQuestion} />
+          </>
         ) : null}
 
         {run.outcome === 'unanswered' ? (
@@ -447,7 +540,7 @@ function ComposerAttachments({
 /**
  * The fixed composer: the files waiting above, the textarea, and a utility toolbar beneath it.
  * Enter sends and Shift+Enter adds a line; the textarea grows to a bound and then scrolls. The
- * paperclip is first on the left, then `tools` (Context, Configure); Send is the right.
+ * paperclip is first on the left, then `tools` (Context); Send is the right.
  *
  * The file input has no `name`, on purpose: a file is uploaded by its own action the moment it is
  * chosen, and the question carries only the ids of files already stored — the form must never
@@ -493,8 +586,9 @@ export function AgentComposer({
       action={formAction}
       // React empties the field after a successful send; the height it grew to goes with it.
       onReset={() => setTimeout(() => textareaRef.current && (textareaRef.current.style.height = 'auto'))}
-      className="flex shrink-0 flex-col gap-2 border-t border-border p-3"
+      className="shrink-0 border-t border-border p-3"
     >
+      <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-2 focus-within:border-foreground/40 has-[textarea:disabled]:opacity-70">
       {hiddenFields}
       {attachments.map((file) =>
         file.state === 'done' && file.documentId ? (
@@ -513,7 +607,7 @@ export function AgentComposer({
         size="small"
         placeholder={placeholder}
         aria-label="Message to the Agent"
-        className="w-full resize-none text-base md:text-sm"
+        className="min-h-12 w-full resize-none border-0 bg-transparent px-1 text-base shadow-none focus-visible:ring-0 focus-visible:outline-none md:text-sm"
         style={{ maxHeight: COMPOSER_MAX_HEIGHT }}
         onInput={(event: FormEvent<HTMLTextAreaElement>) => grow(event.currentTarget)}
         onKeyDown={(event) => {
@@ -535,12 +629,13 @@ export function AgentComposer({
           event.currentTarget.value = '';
         }}
       />
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1">
           <Button
             type="button"
-            tone="secondary"
+            tone="ghost"
             size="small"
+            className="size-8 shrink-0 p-0"
             aria-label="Attach files"
             title="Attach files"
             disabled={disabled || !canAttach}
@@ -550,9 +645,16 @@ export function AgentComposer({
           </Button>
           {tools}
         </div>
-        <Button type="submit" size="small" disabled={disabled || pending || uploading} className="ml-auto">
-          {pending ? 'Sending…' : 'Send'}
+        <Button
+          type="submit"
+          size="small"
+          disabled={disabled || pending || uploading}
+          className="ml-auto size-8 shrink-0 rounded-full p-0"
+        >
+          {pending ? <LoaderCircle aria-hidden size={16} className="animate-spin" /> : <ArrowUp aria-hidden size={16} />}
+          <span className="sr-only">{pending ? 'Sending…' : 'Send'}</span>
         </Button>
+      </div>
       </div>
     </form>
   );
@@ -577,7 +679,7 @@ export function AgentToolPopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button type="button" tone="secondary" size="small" className="gap-1.5">
+        <Button type="button" tone="ghost" size="small" className="gap-1.5 text-muted">
           {icon}
           {label}
         </Button>

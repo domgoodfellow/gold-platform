@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { cx, FOCUS_RING } from '@/components/class-names';
+import { tabsListClassName, tabsTriggerClassName } from '@gold/ui/components/tab-styles';
+import { cx } from '@/components/class-names';
 import { LIBRARY_SECTIONS, libraryHref, type LibrarySectionKey } from '@/lib/route/library';
 
 /**
@@ -12,19 +13,14 @@ import { LIBRARY_SECTIONS, libraryHref, type LibrarySectionKey } from '@/lib/rou
  */
 export function LibraryNav({ organizationId, active }: { organizationId: string; active: LibrarySectionKey }) {
   return (
-    <nav aria-label="Library" className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
+    <nav aria-label="Library" data-slot="tabs-list" className={cx(tabsListClassName, 'mb-6 sm:w-full')}>
       {LIBRARY_SECTIONS.map((section) => (
         <Link
           key={section.key}
           href={libraryHref(organizationId, section.key)}
           aria-current={section.key === active ? 'page' : undefined}
-          className={cx(
-            FOCUS_RING,
-            '-mb-px shrink-0 border-b-2 px-3 py-2 text-sm',
-            section.key === active
-              ? 'border-foreground font-medium'
-              : 'border-transparent text-muted hover:text-foreground',
-          )}
+          data-slot="tabs-trigger"
+          className={tabsTriggerClassName}
         >
           {section.label}
         </Link>

@@ -23,7 +23,7 @@ function Harness({ organizationId = 'org' }: { organizationId?: string }) {
   return <TooltipProvider><WorkspaceRailProvider>
     <AgentTrigger />
     <WorkspaceRightRail main={<div>The page</div>} />
-    <TenantAgentRail organizationId={organizationId} organizationName="Business" timezone="America/Toronto" mayAsk canManageConnections={false} />
+    <TenantAgentRail organizationId={organizationId} organizationName="Business" timezone="America/Toronto" mayAsk canManageAgent={false} />
   </WorkspaceRailProvider></TooltipProvider>;
 }
 beforeEach(() => {

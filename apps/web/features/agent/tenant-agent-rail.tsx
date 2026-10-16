@@ -3,7 +3,7 @@
 import { useActionState, useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { usePathname } from 'next/navigation';
 import { Checkbox } from '@gold/ui/components/checkbox';
-import { Brain, Settings } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { useAgentContent, useWorkspaceRail } from '@/components/panels/workspace-right-rail';
 import {
@@ -40,6 +40,11 @@ import {
 
 const INITIAL: AskActionState = { error: null };
 
+const SUGGESTED_QUESTIONS = [
+  'What is at risk of being late today?',
+  'What is booked with nobody assigned?',
+];
+
 /** The transcript the shell loaded: the most recent conversation, and nothing older. */
 export type InitialConversation = { id: string; runs: AgentRun[] };
 
@@ -71,7 +76,7 @@ function TenantAgentPanel({
   timezone,
   canAnswer,
   mayAsk,
-  canManageConnections,
+  canManageAgent,
   conversations,
   initialConversation,
   bootstrapError,
@@ -83,7 +88,7 @@ function TenantAgentPanel({
   timezone: string;
   canAnswer: boolean;
   mayAsk: boolean;
-  canManageConnections: boolean;
+  canManageAgent: boolean;
   conversations: AgentConversationSummary[];
   initialConversation: InitialConversation | null;
   bootstrapError: string | null;
@@ -235,6 +240,14 @@ function TenantAgentPanel({
     if (file.state === 'done' && file.documentId) void removeAttachmentAction(organizationId, file.documentId);
   }
 
+  /** Puts text in the composer for the person to edit and send; nothing is sent from here. */
+  function fillComposer(text: string) {
+    if (!composer.current) return;
+    composer.current.value = text.slice(0, 2000);
+    composer.current.dispatchEvent(new Event('input', { bubbles: true }));
+    composer.current.focus();
+  }
+
   function newChat() {
     setAskError(null);
     setDecideError(null);
@@ -254,7 +267,7 @@ function TenantAgentPanel({
       ? [
           {
             label: 'Open record',
-            value: includeRecord ? `A record in ${viewing.workspace}` : 'Not shared — turned off in Configure',
+            value: includeRecord ? `A record in ${viewing.workspace}` : 'Not shared — turned off below',
           },
         ]
       : []),
@@ -283,12 +296,14 @@ function TenantAgentPanel({
           decidePending={deciding}
           decideError={decideError}
           scopeIdHiddenField={<input type="hidden" name="organizationId" value={organizationId} />}
+          onReuseQuestion={fillComposer}
         />
       ) : (
         <div aria-busy={opening} className="min-h-0 flex-1">
           <AgentEmptyConversation
             title="Ask about this business"
-            description="What is at risk of being late today, what is booked with nobody assigned."
+            prompts={mayAsk && canAnswer ? SUGGESTED_QUESTIONS : []}
+            onPickPrompt={fillComposer}
           />
         </div>
       )}
@@ -319,7 +334,7 @@ function TenantAgentPanel({
         onRemoveAttachment={removeDraft}
         placeholder={
           !canAnswer
-            ? 'Agent is currently unavailable.'
+            ? 'Ask about this business…'
             : mayAsk
               ? 'Ask about this business…'
               : 'Your role cannot ask questions here.'
@@ -336,13 +351,10 @@ function TenantAgentPanel({
         }
         tools={
           <>
-            <AgentToolPopover label="Context" icon={<Brain aria-hidden size={14} />} title="What the Agent sees next">
+            <AgentToolPopover label="Context" icon={<SlidersHorizontal aria-hidden size={14} />} title="What the Agent sees next">
               <AgentContextFacts facts={facts} />
-              <p className="text-xs text-muted">This follows the page you are on. To change what it may use, see Configure.</p>
-            </AgentToolPopover>
-
-            <AgentToolPopover label="Configure" icon={<Settings aria-hidden size={14} />} title="This conversation">
-              <div className="flex items-start gap-2">
+              <p className="text-xs text-muted">This follows the page you are on.</p>
+              <div className="flex items-start gap-2 border-t border-border pt-3">
                 <Checkbox
                   id="agent-include-record"
                   checked={includeRecord}
@@ -356,9 +368,9 @@ function TenantAgentPanel({
                   </span>
                 </label>
               </div>
-              {canManageConnections ? (
-                <ButtonLink href={`/organizations/${organizationId}/settings/connections`} tone="secondary" size="small" className="w-fit">
-                  Connections &amp; permissions
+              {canManageAgent ? (
+                <ButtonLink href={`/organizations/${organizationId}/ai/agents`} tone="secondary" size="small" className="w-fit">
+                  Agent settings
                 </ButtonLink>
               ) : null}
             </AgentToolPopover>
@@ -375,7 +387,7 @@ function TenantAgentPanel({
  * itself.
  *
  * Shell-time props are static only — `organizationId`, `organizationName`, `timezone`, `mayAsk`
- * and `canManageConnections` are facts the shell already read for the page around it. Everything
+ * and `canManageAgent` are facts the shell already read for the page around it. Everything
  * an open conversation needs (`canAnswer`, History, the latest transcript) is a *conversation*
  * fact, not a shell one, and is fetched here lazily, from `loadAgentBootstrapAction`, the first
  * time the panel is actually opened — this component mounts on every page regardless of whether
@@ -387,7 +399,7 @@ type TenantAgentRailProps = {
   organizationName: string;
   timezone: string;
   mayAsk: boolean;
-  canManageConnections: boolean;
+  canManageAgent: boolean;
 };
 
 export function TenantAgentRail(props: TenantAgentRailProps) {
@@ -407,7 +419,7 @@ function BootstrapError({ message, loading, onRetry }: { message: string; loadin
 }
 
 function TenantAgentBootstrap(props: TenantAgentRailProps) {
-  const { organizationId, organizationName, timezone, mayAsk, canManageConnections } = props;
+  const { organizationId, organizationName, timezone, mayAsk, canManageAgent } = props;
 
   // The same lazy-mount rule `AgentPanel` applies to whether the panel's content is shown at all:
   // here it gates whether this rail's own data fetch ever runs. `agentOpen` flips as soon as
@@ -475,7 +487,7 @@ function TenantAgentBootstrap(props: TenantAgentRailProps) {
         timezone={timezone}
         canAnswer={bootstrap.status === 'success' && bootstrap.data.canAnswer}
         mayAsk={mayAsk}
-        canManageConnections={canManageConnections}
+        canManageAgent={canManageAgent}
         conversations={bootstrap.data.conversations}
         initialConversation={bootstrap.data.initialConversation}
         bootstrapError={bootstrap.error}
@@ -483,7 +495,7 @@ function TenantAgentBootstrap(props: TenantAgentRailProps) {
         onRetry={retry}
       />
     );
-  }, [everOpened, bootstrap, organizationId, organizationName, timezone, mayAsk, canManageConnections, retry]);
+  }, [everOpened, bootstrap, organizationId, organizationName, timezone, mayAsk, canManageAgent, retry]);
 
   useAgentContent(content);
   return null;

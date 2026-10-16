@@ -106,7 +106,7 @@ test('phone Menu hands focus to fullscreen Agent, nested popovers consume Escape
   const originalComposer = await composer.elementHandle();
   const canAnswer = await composer.isEnabled();
   if (canAnswer) await composer.fill('Keep this unsent phone draft');
-  for (const name of ['History', 'Configure', 'Context']) {
+  for (const name of ['History', 'Context']) {
     const trigger = panel.getByRole('button', { name, exact: true });
     await trigger.click();
     const popup = page.locator('[data-slot="popover-content"]');
@@ -221,7 +221,7 @@ test('Agent works in a touch-enabled mobile browser viewport', async ({ browser 
     const panel = page.getByRole('dialog', { name: 'Agent', exact: true });
     await expect(panel.getByRole('textbox', { name: 'Message to the Agent' })).toBeVisible();
     expect((await panel.boundingBox())!.height).toBeCloseTo(await page.evaluate(() => visualViewport!.height), 0);
-    await panel.getByRole('button', { name: 'Configure', exact: true }).tap();
+    await panel.getByRole('button', { name: 'Context', exact: true }).tap();
     await expect(page.getByRole('checkbox', { name: /Include the open record/ })).toBeVisible();
     await page.keyboard.press('Escape');
     await page.screenshot({ animations: 'disabled', path: testInfo.outputPath('agent-mobile-emulation-390.png') });

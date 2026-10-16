@@ -7,8 +7,8 @@ import { formatsFor } from '@/lib/domain/files/formats';
  * The Agent panel is a conversation: source guards, like `workspace-shell.test.ts` — nothing here
  * mounts a component. What is asserted is the shape the reasoning depends on: the grammar is
  * Agent header → conversation header → transcript → composer, with no tabs; the transcript is the
- * shared Message Scroller and the only thing that scrolls; Context and Configure are composer
- * popovers that show only what exists; a question's result reaches the rail whichever page asked
+ * shared Message Scroller and the only thing that scrolls; Context is one composer
+ * popover that show only what exists; a question's result reaches the rail whichever page asked
  * it; and the same organization Agent stays mounted everywhere inside the shell, Platform routes
  * included, rather than forking by pathname into a second implementation.
  */
@@ -109,8 +109,29 @@ describe('the transcript is the shared Message Scroller', () => {
     expect(shared).toMatch(/<Message>\s*<MessageContent>\s*<Bubble variant="outline"/);
   });
 
-  it('adds no avatars, reactions, delivery states or regeneration', () => {
+  it('adds no avatars, reactions or delivery states, and no regeneration that would spend a second answer', () => {
     expect(code(shared)).not.toMatch(/Avatar|Reaction|regenerate|Regenerate|Delivered|Seen|Retry/);
+  });
+
+  it('puts Copy and Ask again beneath an answer; Ask again only refills the composer and sends nothing', () => {
+    const turn = between(shared, 'function TurnItems', 'function EventMarker');
+    expect(turn).toContain('<AnswerActions');
+    expect(shared).toContain('Ask again');
+    expect(shared).toContain("'Copied' : 'Copy'");
+    expect(tenantRail).toContain('onReuseQuestion={fillComposer}');
+    const fill = between(tenantRail, 'function fillComposer', 'function newChat');
+    expect(code(fill)).not.toMatch(/requestSubmit|Action\(|askFormAction/);
+  });
+
+  it('shows an answer as formatted text built from elements, never as parsed HTML', () => {
+    const answer = read('features/agent/answer-text.tsx');
+    expect(shared).toContain('<AnswerText text={run.answer} />');
+    expect(code(answer)).not.toMatch(/dangerouslySetInnerHTML|innerHTML|<a\b|href=/);
+  });
+
+  it('waits in the Agent’s own bubble, not in a bare marker', () => {
+    expect(shared).toContain('<ThinkingDots />');
+    expect(shared).toMatch(/<BubbleContent role="status">\s*<span className="sr-only">Thinking…<\/span>/);
   });
 
   it('marks only concise events, never a tool-call audit trail', () => {
@@ -126,7 +147,8 @@ describe('the transcript is the shared Message Scroller', () => {
 
   it('keeps a proposed action directly beneath its response, with shared Buttons, behind the human approval', () => {
     const turn = between(shared, 'function TurnItems', 'function EventMarker');
-    expect(turn.indexOf('{run.answer}')).toBeLessThan(turn.indexOf('name="decision"'));
+    expect(turn.indexOf('text={run.answer}')).toBeGreaterThan(-1);
+    expect(turn.indexOf('text={run.answer}')).toBeLessThan(turn.indexOf('name="decision"'));
     expect(turn).toContain('<Button type="submit" name="decision" value="decline"');
     expect(turn).toContain('<Button type="submit" name="decision" value="carry-out"');
     expect(turn).toContain('Decline');
@@ -223,12 +245,12 @@ describe('the composer', () => {
   });
 });
 
-describe('Context and Configure are composer popovers, and inspection only', () => {
+describe('Context is one composer popover: what the Agent sees, plus the one runtime control', () => {
   const tools = between(tenantRail, 'tools={', '</AgentComposer') || tenantRail.slice(tenantRail.indexOf('tools={'));
 
-  it('sit beside each other on the left of the toolbar', () => {
+  it('is the only tool beside the paperclip; there is no separate Configure', () => {
     expect(tools.indexOf('label="Context"')).toBeGreaterThan(-1);
-    expect(tools.indexOf('label="Configure"')).toBeGreaterThan(tools.indexOf('label="Context"'));
+    expect(tools).not.toContain('label="Configure"');
   });
 
   it('Context shows only facts GOLD has, and follows the page as navigation changes', () => {
@@ -246,11 +268,12 @@ describe('Context and Configure are composer popovers, and inspection only', () 
     expect(questions).toContain('describeViewing(input.viewing)');
   });
 
-  it('Configure exposes only what has a behaviour behind it, and links to where durable settings live', () => {
-    const configure = tenantRail.slice(tenantRail.indexOf('label="Configure"'));
+  it('exposes only what has a behaviour behind it, and links to where the Agent itself is configured', () => {
+    const configure = tenantRail.slice(tenantRail.indexOf('label="Context"'));
     expect(configure).toContain('Include the open record');
-    expect(configure).toContain('/settings/connections');
-    expect(configure).toContain('Connections &amp; permissions');
+    expect(configure).toContain('/ai/agents');
+    expect(configure).toContain('Agent settings');
+    expect(configure).not.toContain('/settings/connections');
     // No control for a behaviour that does not exist.
     expect(configure).not.toMatch(/verbosity|Verbosity|Style|style|Approved tools|suggested actions/i);
   });

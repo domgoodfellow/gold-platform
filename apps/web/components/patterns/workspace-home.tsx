@@ -26,11 +26,14 @@ export function WorkspaceHome({
   configure?: boolean;
   children: ReactNode;
 }) {
+  // The workspace bar already names the page on every width, so a plain-text title stays for assistive
+  // technology only rather than being printed a second time.
+  const titleInBar = typeof title === 'string';
   return (
     <AppPage>
       <PageLocation crumbs={crumbs} current={title} />
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-end gap-x-4 gap-y-3">
+        <h1 className={titleInBar ? 'sr-only' : 'mr-auto text-2xl font-semibold tracking-tight'}>{title}</h1>
         {actions || insights || configure ? (
           <div className="flex flex-wrap items-center gap-2">
             {actions}
