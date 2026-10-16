@@ -163,9 +163,14 @@ inspect active leases and reconcile uncertain sends against provider evidence be
 
 The hold requires no schema downgrade and survives an API/Web rollback. Retain queued rows, consent,
 attempts and delivery evidence. Leases expire after five minutes; resumption can reclaim expired
-jobs using a fresh fencing token and the original canonical message/idempotency key. Five claims
-and the 23-hour first-attempt cutoff still apply. Do not move timestamps, reset attempts or create
-a replacement message to bypass those bounds. Expired or ambiguous jobs require investigation.
+jobs using a fresh fencing token, the original canonical message/idempotency key and the provider
+account pinned at the first claim. A lease that has expired cannot complete, even unreclaimed; a
+definitive provider answer arriving after expiry is kept privately and settles the job on its next
+claim instead of a resend. Five claims and the 23-hour first-attempt cutoff still apply. A job that
+reaches either bound, or whose sender's provider account changes, after a send was authorized is
+held as **Delivery uncertain** rather than failed: an earlier attempt may have been delivered.
+Do not move timestamps, reset attempts or create a replacement message to bypass those bounds.
+Uncertain jobs require reconciliation against provider evidence.
 
 After dependencies, recipient eligibility and provider reconciliation are confirmed, separately
 authorized resumption grants those same two exact function signatures to
@@ -246,31 +251,59 @@ duplicate callback handling and withdraws consent before a later queued send. Ca
 counts for every other tenant and recipient; no change is the isolation criterion. Provider testing
 addresses may separately validate bounce/delivered callbacks after explicit sending approval.
 
-Batch F review of `bbf4f1c` identifies these release concerns:
+The deterministic acceptance matrix uses
+`apps/web/tests/integration/database/service-notifications.test.ts` for canonical database
+operations, `apps/api/tests/component/test_customer_notifications.py` for simulated dispatch,
+and `apps/api/tests/component/test_handlers.py` plus
+`apps/api/tests/contract/test_resend_webhook.py` for signed ingress. These fixtures do not prove
+mailbox ownership, hosted routing or real provider delivery.
 
-- `finish_customer_notification` fences by lease ID and sending state, but does not reject an
-  expired lease until another claim replaces it. The existing test covers a wrong lease ID, not
-  expiry/reclamation. A Batch F rollback-only local probe observed authorization=false but
-  finish=true for an expired, unreclaimed lease, violating the requested expiry-completion contract.
-  Reclamation did issue a different token and refused completion with the replaced token.
-- Five sequential jobs can exceed the 300-second function duration: each can involve four database
-  HTTP calls (10-second timeout each) plus a provider call (30 seconds), roughly 350 seconds under
-  stalls, excluding overhead. A bounded count alone is not a wall-clock budget. Test and bound the
-  invocation before schedule activation; interrupted sends must retain their original key.
-- The job snapshots EmailIdentity/message but resolves Provider Account afresh on every claim.
-  Account rebinding during uncertain retries can change the provider idempotency scope. Freeze
-  sender/binding/account configuration while jobs are active; account pinning/rebinding refusal
-  requires a separately reviewed correction before unrestricted production operation.
-- A callback can arrive before provider acceptance is durably finished. Unknown provider IDs are
-  acknowledged without recording; an early terminal callback can therefore be lost. Provider
-  acceptance testing must exercise this ordering, and production requires a reconciliation or
-  durable handling strategy. A Batch F rollback-only local probe confirmed a simulated delivered
-  event returned no record before acceptance; finishing acceptance afterward left zero delivered
-  events. A green ordinary-order fixture does not close this concern.
+| Scenario | Required result and local coverage |
+| --- | --- |
+| Verified, opted-in recipient | Eligible after session-bound code confirmation; database fixture. |
+| Unverified recipient | No service notice from Portal access alone; database fixture. |
+| Consent withdrawn | Queued notices suppressed and pre-send authorization refused; database and simulated dispatch fixtures. |
+| Sender domain not ready | Claim held or failed without successful dispatch; database fixture. |
+| Provider unavailable | Same message retried with durable unavailable evidence; simulated dispatch and database retry fixtures. |
+| Duplicate worker invocation | Concurrent claim refused; retries retain the canonical provider idempotency key. Actual provider deduplication remains untested. |
+| Expired lease | Completion after expiry is refused with or without reclamation; a late definitive answer settles the job on the next claim; concurrent completion of one lease succeeds once. Database fixtures. |
+| Early provider callback | Held privately (bounded) until acceptance records its provider ID, then applied once in provider order; racing callbacks are serialized with acceptance. Database fixtures. |
+| Provider account rebinding | Retries use the account pinned at first claim; credential rotation keeps it; a change after a possibly delivered attempt holds the delivery as uncertain. Database and simulated dispatch fixtures. |
+| Worker execution budget | Monotonic 240-second invocation deadline, per-call timeouts, completion reserve, 60-second lease margin before authorization, 3-second lock waits and a 5-second worker statement timeout. Simulated dispatch and database fixtures. |
+| Superseded review | Obsolete pending notice suppressed; database fixture. |
+| Delivered / bounced callback | Canonical evidence and suppression updated, duplicate ignored; simulated database events and signed ingress fixtures. |
+| Invalid signature | Refused before persistence; signed ingress fixture. |
+| Unknown provider message | Acknowledged without tenant correlation; database and ingress fixtures. |
+| Wrong customer | Canonical operation refused without creating an intent; database fixture. |
 
-These findings are not corrected by inspection/documentation work. Do not claim production readiness
-from the local suite. Hosted acceptance, accessible intended projects, sender/account/domain setup,
-the controlled mailbox and explicit external-action authorization remain separate release gates.
+No hosted acceptance tenant or tester-controlled mailbox is selected. Selecting them requires the
+specific sandbox and recipient authorization; local synthetic fixtures are the only prepared
+executable environment. Provider acceptance and genuine scheduled execution remain blocked.
+
+Batch F review of `bbf4f1c` identified four release concerns, corrected by migration
+`20261222000001_customer_notification_delivery_reliability.sql` and the bounded worker in
+`app/services/tenant_email/notifications.py`:
+
+- Lease fencing: `finish_customer_notification` completes only the current, unexpired lease. An
+  expired lease's late `accepted`/`rejected` answer is private evidence (`app.notification_send_evidence`)
+  that the next claim settles; it is never treated as proof that nothing was sent.
+- Early callbacks: a signed callback whose provider message ID is not yet recorded is held in
+  `app.email_early_events` (48 hours, 20 per provider message, 10,000 overall, 16 KB payloads) and
+  replayed through the canonical Communications event path when acceptance records the ID.
+  Acceptance and callbacks for one provider message ID are serialized by an advisory lock.
+- Provider scope: the job pins provider and account on first claim and records when a send was
+  first authorized. Retries read the pinned account's current credential. A changed account before
+  any authorized send is taken up and noted on the attempt; after one, the job is held as uncertain.
+- Execution budget: the worker claims only when a whole job fits in its 240-second deadline, bounds
+  every call, keeps a completion reserve and stops after a failed completion. The database refuses
+  to authorize a send with under 60 seconds of lease left and bounds the worker's lock waits and
+  statements.
+
+Local fixtures prove these contracts; they do not prove Resend's idempotency scope across key
+rotation, hosted PostgREST role settings or real callback ordering. Do not claim production
+readiness from the local suite. Hosted acceptance, accessible intended projects, sender/account/
+domain setup, the controlled mailbox and explicit external-action authorization remain separate
+release gates.
 
 ---
 

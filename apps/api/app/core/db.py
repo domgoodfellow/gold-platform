@@ -453,6 +453,7 @@ def read_provider_account_credential(
     settings: ProviderOperationsSettings,
     *,
     account_id: str,
+    timeout: float = 10.0,
 ) -> dict | None:
     """One GOLD provider account's decrypted credential, or `None` for an account that is
     absent, disabled or has none stored.
@@ -471,7 +472,7 @@ def read_provider_account_credential(
             "Content-Type": "application/json",
         },
         json={"p_account_id": account_id},
-        timeout=10.0,
+        timeout=timeout,
     )
 
     if response.status_code >= 400:

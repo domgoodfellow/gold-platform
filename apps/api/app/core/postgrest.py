@@ -19,6 +19,7 @@ def caller_rest(
     token: str,
     method: str,
     path: str,
+    timeout: float = 10.0,
     **kwargs,
 ) -> httpx.Response:
     response = httpx.request(
@@ -29,7 +30,7 @@ def caller_rest(
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         },
-        timeout=10.0,
+        timeout=timeout,
         **kwargs,
     )
     if response.status_code >= 400:

@@ -29,8 +29,12 @@ select jsonb_build_object(
   'retrying_jobs', (select count(*) from jobs where state='queued' and attempts>0),
   'jobs_with_three_claims', (select count(*) from jobs where attempts>=3 and state in ('queued','sending','failed')),
   'failed_jobs', (select count(*) from jobs where state='failed'),
+  'uncertain_jobs', (select count(*) from jobs where state='held'),
+  'unreconciled_late_answers', (select count(*) from app.notification_send_evidence v join scope s using(organization_id) where v.reconciled_at is null),
+  -- Untenanted by design: early callbacks name no organization until acceptance correlates them.
+  'deployment_early_callbacks_held', (select count(*) from app.email_early_events),
   'recent_failed_attempts', (select count(*) from public.service_notification_attempts a join scope s using(organization_id)
-    where a.started_at>now()-interval '15 minutes' and a.outcome in ('retry','failed','rejected','lease_expired')),
+    where a.started_at>now()-interval '15 minutes' and a.outcome in ('retry','failed','rejected','lease_expired','held','provider_changed')),
   'recent_rejections', (select count(*) from events where event_type='rejected' and occurred_at>now()-interval '15 minutes'),
   'recent_bounces', (select count(*) from events where event_type='bounced' and occurred_at>now()-interval '15 minutes'),
   'recent_suppressions', (select count(*) from public.email_recipient_suppressions p join scope s using(organization_id)

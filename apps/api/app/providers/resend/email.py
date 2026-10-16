@@ -126,6 +126,7 @@ def send_tenant_email(
     in_reply_to: str | None,
     references: list[str],
     attachments: list[dict],
+    timeout: float = 30.0,
 ) -> dict:
     """One tenant email. `{"ok", "external_id", "detail", "retryable"}` is the whole answer.
 
@@ -157,7 +158,7 @@ def send_tenant_email(
                 "Idempotency-Key": idempotency_key[:256],
             },
             json=body,
-            timeout=30.0,
+            timeout=timeout,
         )
     except httpx.HTTPError as failure:
         return {"ok": False, "external_id": None, "retryable": True, "detail": f"The mail provider could not be reached: {type(failure).__name__}"}

@@ -9,7 +9,7 @@ export const NOTIFICATION_PURPOSES = {
 export const NOTIFICATION_STATES: Record<string, string> = {
   not_requested: 'Not requested', suppressed: 'Suppressed / ineligible', queued: 'Queued',
   accepted: 'Accepted by provider', sent: 'Sent', delivered: 'Delivered', delayed: 'Delayed',
-  bounced: 'Bounced', rejected: 'Rejected', failed: 'Failed',
+  bounced: 'Bounced', rejected: 'Rejected', failed: 'Failed', uncertain: 'Delivery uncertain',
 };
 export type NotificationHistory = {
   id: string; reviewId: string | null; purpose: keyof typeof NOTIFICATION_PURPOSES;
