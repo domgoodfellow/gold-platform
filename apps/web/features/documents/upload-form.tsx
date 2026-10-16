@@ -18,9 +18,11 @@ export const INITIAL_UPLOAD_DOCUMENT_STATE: UploadDocumentState = { error: null 
 export function DocumentUploadForm({
   action,
   hiddenFields,
+  submitLabel = 'Attach document',
 }: {
   action: (previous: UploadDocumentState, formData: FormData) => Promise<UploadDocumentState>;
   hiddenFields: Record<string, string>;
+  submitLabel?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, INITIAL_UPLOAD_DOCUMENT_STATE);
 
@@ -39,7 +41,7 @@ export function DocumentUploadForm({
       />
 
       <Button type="submit" disabled={pending} className="w-fit">
-        {pending ? 'Uploading…' : 'Attach document'}
+        {pending ? 'Uploading…' : submitLabel}
       </Button>
 
       <ErrorText role="alert">{state.error}</ErrorText>

@@ -1,21 +1,25 @@
-import { LibrarySectionPage } from '@/features/library/library-section-page';
+import { uploadLibraryFileAction } from './actions';
+import { LibraryFilesCollection } from '@/features/library/files/library-files';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
 
 export default async function LibraryFilesPage({
   params,
+  searchParams,
 }: PageProps<'/organizations/[organizationId]/library/files'>) {
   const { organizationId } = await params;
-  await requireOrganization(organizationId);
+  const query = await searchParams;
+  const { db, organization } = await requireOrganization(organizationId);
 
   return (
-    <LibrarySectionPage
+    <LibraryFilesCollection
+      db={db}
       organizationId={organizationId}
-      active="files"
-      label="Files"
-      description="Files shared across this business's workspaces, rather than attached to one record."
-      empty="No files in Library yet."
+      timezone={organization.timezone}
+      capabilities={organization.capabilities}
+      query={query}
+      upload={uploadLibraryFileAction}
     />
   );
 }

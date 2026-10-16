@@ -969,6 +969,8 @@ Library files (`documents`, ADR-043) are organization-owned. Records reference t
 - Each file records a SHA-256 checksum of the bytes as stored. A file stored before the checksum existed has none recorded, and it is not shown as an empty one.
 - The storage-limit check and the row insert run under a per-organization lock, so concurrent uploads cannot both pass the same remaining allowance.
 
+The Library's file list is read through `library_file_page` and `library_file_summary` (migration `20261225000001`). Search, type, usage, sort and paging run in PostgreSQL, so the count above a list and the rows beneath it agree. Both are security-invoker, and neither ever lists an Agent-private file.
+
 ---
 
 ## Database migrations

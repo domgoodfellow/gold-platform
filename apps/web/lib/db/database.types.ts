@@ -14648,6 +14648,35 @@ export type Database = {
         Returns: string
       }
       launch_organization: { Args: { p_id: string }; Returns: undefined }
+      library_file_page: {
+        Args: {
+          p_limit?: number
+          p_mime_types?: string[]
+          p_offset?: number
+          p_organization_id: string
+          p_search?: string
+          p_sort?: string
+          p_usage?: string
+        }
+        Returns: {
+          content_sha256: string
+          created_at: string
+          file_name: string
+          id: string
+          link_count: number
+          mime_type: string
+          size_bytes: number
+          total_count: number
+        }[]
+      }
+      library_file_summary: {
+        Args: { p_organization_id: string }
+        Returns: {
+          file_count: number
+          total_bytes: number
+          unused_count: number
+        }[]
+      }
       link_call_customer: {
         Args: {
           p_call_id: string

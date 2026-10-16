@@ -94,7 +94,8 @@ export async function uploadDocument(
   db: Db,
   input: {
     organizationId: string;
-    attachedTo: DocumentAttachment;
+    /** Omitted for a Library file that no record uses yet. */
+    attachedTo?: DocumentAttachment;
     file: File;
     /** Where the bytes go. The application builds this from its storage adapter, so this module depends only on the port. */
     files: FileStore;
@@ -203,8 +204,8 @@ export async function getDocumentUrl(
 }
 
 /** Returns `string`, not `string | null` — `supabase gen types` emits every function argument as non-null even when the parameter accepts null (D15). The cast lives here once instead of at four call sites. */
-function columnValue(attachment: DocumentAttachment, entity: DocumentEntity): string {
-  return (attachment.entity === entity ? attachment.id : null) as string;
+function columnValue(attachment: DocumentAttachment | undefined, entity: DocumentEntity): string {
+  return (attachment?.entity === entity ? attachment.id : null) as string;
 }
 
 async function sha256Hex(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
