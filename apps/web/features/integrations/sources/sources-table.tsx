@@ -37,7 +37,7 @@ export function SourcesTable({
         {
           key: 'actions',
           header: 'Import',
-          emphasis: 'secondary',
+          visibility: 'card-only',
           cell: (r) => ['file_upload','google_sheet','microsoft_workbook'].includes(r.resourceType) ? (
             <ButtonLink href={libraryNewImportHref(organizationId, r.id)} tone="text" size="small">
               Import →

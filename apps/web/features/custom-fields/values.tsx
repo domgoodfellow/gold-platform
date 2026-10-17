@@ -4,7 +4,7 @@ import type {
 } from '@/lib/domain/fields/field-definitions';
 
 /** Rendered exactly as stored — formatting a date would pick a locale, and the raw spelling is unambiguous to everyone. */
-function readValue(value: CustomValues[string]): string {
+export function readValue(value: CustomValues[string]): string {
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (Array.isArray(value)) return value.join(', ');
   return String(value);

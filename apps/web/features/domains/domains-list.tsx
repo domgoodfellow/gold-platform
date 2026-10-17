@@ -69,7 +69,7 @@ export function DomainsList({
                 );
               },
             },
-            { key: 'checked', header: 'Last checked', emphasis: 'secondary', cell: (domain) => when(domain.lastCheckedAt) },
+            { key: 'checked', header: 'Last checked', visibility: 'card-only', cell: (domain) => when(domain.lastCheckedAt) },
           ]}
           actions={
             mayManage

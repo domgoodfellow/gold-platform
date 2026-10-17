@@ -47,8 +47,8 @@ export function ImportRunsTable({
         },
         { key: 'created', header: 'Created', numeric: true, cell: (run) => run.rowsCreated },
         { key: 'updated', header: 'Updated', numeric: true, cell: (run) => run.rowsUpdated },
-        { key: 'skipped', header: 'Skipped', numeric: true, emphasis: 'secondary', cell: (run) => run.rowsSkipped },
-        { key: 'failed', header: 'Failed', numeric: true, emphasis: 'secondary', cell: (run) => run.rowsFailed },
+        { key: 'skipped', header: 'Skipped', numeric: true, visibility: 'card-only', cell: (run) => run.rowsSkipped },
+        { key: 'failed', header: 'Failed', numeric: true, visibility: 'card-only', cell: (run) => run.rowsFailed },
       ]}
     />
   );

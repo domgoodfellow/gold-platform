@@ -145,7 +145,7 @@ export function McpOverview({
                 key: 'took',
                 header: 'Took',
                 numeric: true,
-                emphasis: 'secondary',
+                visibility: 'card-only',
                 cell: (execution) => (execution.durationMs === null ? '' : `${execution.durationMs} ms`),
               },
             ]}

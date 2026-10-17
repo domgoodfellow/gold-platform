@@ -109,7 +109,7 @@ export default async function UsageEconomicsPage({
             { key: 'charge', header: 'Customer charge', numeric: true, cell: (event) => event.retailState === 'priced' ? formatMicrosMoney(event.customerChargeMicros, event.customerCurrency, 4) : event.retailState === 'no_currency' ? 'No currency' : 'Unpriced' },
             { key: 'cost', header: 'Known cost', numeric: true, cell: (event) => event.costState === 'unknown' ? (event.knownCostMicros > 0 ? `${formatMicrosMoney(event.knownCostMicros, event.reportingCurrency)} + unknown` : '—') : formatMicrosMoney(event.knownCostMicros, event.reportingCurrency) },
             { key: 'status', header: 'Status', cell: (event) => event.costState === 'unknown' ? 'Cost unknown' : event.costState },
-            { key: 'occurred', header: 'Occurred', emphasis: 'secondary', cell: (event) => new Date(event.occurredAt).toLocaleString() },
+            { key: 'occurred', header: 'Occurred', visibility: 'card-only', cell: (event) => new Date(event.occurredAt).toLocaleString() },
           ]}
         />
       </div>

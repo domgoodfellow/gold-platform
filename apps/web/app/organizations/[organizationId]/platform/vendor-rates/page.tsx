@@ -56,7 +56,7 @@ export default async function VendorRatesPage({ params, searchParams }: PageProp
           { key: 'rate', header: 'Rate', numeric: true, cell: (rate) => `${formatMicrosMoney(rate.unitAmountMicros, rate.currency, 4)} / ${costMetersByKey.get(rate.costMeterKey)?.unit ?? 'unit'}` },
           { key: 'effective', header: 'Effective', cell: (rate) => new Date(rate.effectiveFrom).toLocaleDateString() },
           { key: 'attention', header: 'Status', cell: (rate) => allRates.some((item) => scopesMatch(rate, item) && intervalsOverlap(rate, item)) ? 'Needs attention' : 'OK' },
-          { key: 'source', header: 'Source', emphasis: 'secondary', cell: (rate) => rate.source },
+          { key: 'source', header: 'Source', visibility: 'card-only', cell: (rate) => rate.source },
         ]} />
       </div>
     </AppPage>

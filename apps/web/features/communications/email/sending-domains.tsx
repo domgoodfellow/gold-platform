@@ -71,11 +71,11 @@ export function SendingDomains({
             {
               key: 'records',
               header: 'Records',
-              emphasis: 'secondary',
+              visibility: 'card-only',
               cell: (domain) =>
                 domain.records.length === 0 ? '—' : `${domain.records.length - domain.outstandingRecords} of ${domain.records.length} verified`,
             },
-            { key: 'verified', header: 'Verified', emphasis: 'secondary', cell: (domain) => when(domain.lastVerifiedAt) },
+            { key: 'verified', header: 'Verified', visibility: 'card-only', cell: (domain) => when(domain.lastVerifiedAt) },
           ]}
           actions={(domain) => (
             <SendingDomainActions

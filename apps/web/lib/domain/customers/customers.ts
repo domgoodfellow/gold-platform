@@ -77,6 +77,104 @@ export async function listCustomers(
   );
 }
 
+export const CUSTOMER_PAGE_SIZE = 25;
+
+export type CustomerPageFilter = {
+  search?: string;
+  /** `null` selects customers with no stage; `undefined` selects every stage. */
+  stageId?: string | null;
+  /** Exact match on the `industry` custom value. */
+  industry?: string;
+  website?: 'with' | 'without';
+  /** One-based. */
+  page: number;
+};
+
+/**
+ * One page of the customer directory, filtered in the database.
+ *
+ * `listCustomers` reads up to 500 rows for the many callers that populate a picker. A directory
+ * is different: it must page, and the count must describe the filtered set, not every customer,
+ * so every filter here applies to both the rows and the total.
+ */
+export async function listCustomerPage(
+  db: Db,
+  input: { organizationId: string; filter: CustomerPageFilter },
+): Promise<Counted<Customer>> {
+  const { filter } = input;
+  let query = db
+    .from('customers')
+    .select('id, name, email, phone, custom, stage_id, created_at', { count: 'exact' })
+    .eq('organization_id', input.organizationId);
+
+  const search = filter.search?.trim().replace(/[%_,()]/g, ' ');
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+  }
+  if (filter.stageId === null) query = query.is('stage_id', null);
+  else if (filter.stageId !== undefined) query = query.eq('stage_id', filter.stageId);
+  if (filter.industry) query = query.eq('custom->>industry', filter.industry);
+  if (filter.website === 'with') query = query.not('custom->>website', 'is', null).neq('custom->>website', '');
+  if (filter.website === 'without') query = query.or('custom->>website.is.null,custom->>website.eq.');
+
+  const from = (filter.page - 1) * CUSTOMER_PAGE_SIZE;
+  const { data, error, count } = await query
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .range(from, from + CUSTOMER_PAGE_SIZE - 1);
+
+  if (error) {
+    throw new DomainError(error.message, 'customers.list_failed');
+  }
+
+  return counted(
+    (data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      custom: (row.custom ?? {}) as CustomValues,
+      stageId: row.stage_id,
+      createdAt: row.created_at,
+    })),
+    count,
+  );
+}
+
+/**
+ * The address (or, failing that, the name) of each listed customer's first recorded location.
+ *
+ * Only what has been recorded. A customer with no location, or a location with neither an address
+ * nor a label, gets no entry, so the directory shows a dash rather than a place inferred from a
+ * company name or from a phone's area code.
+ */
+export async function listCustomerLocationLabels(
+  db: Db,
+  input: { organizationId: string; customerIds: string[] },
+): Promise<Record<string, string>> {
+  if (input.customerIds.length === 0) return {};
+
+  const { data, error } = await db
+    .from('customer_locations')
+    .select('customer_id, created_at, locations(label, address)')
+    .eq('organization_id', input.organizationId)
+    .in('customer_id', input.customerIds)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    throw new DomainError(error.message, 'customers.locations_failed');
+  }
+
+  const labels: Record<string, string> = {};
+  for (const row of data ?? []) {
+    if (labels[row.customer_id]) continue;
+    const location = Array.isArray(row.locations) ? row.locations[0] : row.locations;
+    const text = (location?.address || location?.label || '').trim();
+    if (text) labels[row.customer_id] = text;
+  }
+  return labels;
+}
+
 export async function createCustomer(
   db: Db,
   input: {

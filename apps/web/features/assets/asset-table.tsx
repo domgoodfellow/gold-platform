@@ -86,7 +86,7 @@ export function AssetTable({
               {
                 key: 'custom',
                 header: 'Custom fields',
-                emphasis: 'secondary' as const,
+                visibility: 'card-only' as const,
                 cell: (asset: Asset) => <CustomFieldValues definitions={definitions} custom={asset.custom} />,
               },
             ]

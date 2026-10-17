@@ -168,7 +168,7 @@ export default async function PlatformBillingPage({ params }: PageProps<'/organi
                 </Badge>
               ),
             },
-            { key: 'environment', header: 'Environment', emphasis: 'secondary', cell: (s) => s.environment },
+            { key: 'environment', header: 'Environment', visibility: 'card-only', cell: (s) => s.environment },
             {
               key: 'period',
               header: 'Current period ends',

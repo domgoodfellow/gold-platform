@@ -36,7 +36,7 @@ export function InvitationsTable({
         {
           key: 'lastSent',
           header: 'Last sent',
-          emphasis: 'secondary',
+          visibility: 'card-only',
           cell: (invitation) => when(deliveryStatus.get(invitation.id)?.occurredAt ?? null),
         },
         {

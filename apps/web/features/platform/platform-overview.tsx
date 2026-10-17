@@ -79,7 +79,7 @@ export function PlatformOverview({
               {
                 key: 'currency',
                 header: 'Currency / timezone',
-                emphasis: 'secondary',
+                visibility: 'card-only',
                 cell: (tenant) => `${tenant.currency || '—'} · ${tenant.timezone}`,
               },
               {

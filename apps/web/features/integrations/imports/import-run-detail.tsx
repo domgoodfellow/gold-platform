@@ -120,11 +120,11 @@ export function ImportRunDetail({
                   </Badge>
                 ),
               },
-              { key: 'action', header: 'Action', emphasis: 'secondary', cell: (row) => row.proposedAction },
+              { key: 'action', header: 'Action', visibility: 'card-only', cell: (row) => row.proposedAction },
               {
                 key: 'problem',
                 header: 'Problem',
-                emphasis: 'secondary',
+                visibility: 'card-only',
                 cell: (row) =>
                   row.validationErrors.length > 0 ? <span className="text-danger">{row.validationErrors.join(' ')}</span> : '—',
               },

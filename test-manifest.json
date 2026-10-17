@@ -1414,6 +1414,18 @@
         "accessibility"
       ]
     },
+    "apps/web/tests/component/customer-table.test.tsx": {
+      "category": "component",
+      "concerns": ["crm", "customers", "responsive"]
+    },
+    "apps/web/tests/component/data-table.test.tsx": {
+      "category": "component",
+      "concerns": ["ui", "responsive"]
+    },
+    "apps/web/tests/unit/phone-display.test.ts": {
+      "category": "unit",
+      "concerns": ["customers", "locale"]
+    },
     "apps/web/tests/component/required-records-table.test.tsx": {
       "category": "component",
       "concerns": [

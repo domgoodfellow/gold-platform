@@ -24,8 +24,13 @@ export type Column<T> = {
   header: string;
   /** Right-aligned, `tabular-nums`. */
   numeric?: boolean;
-  /** `primary` becomes the card's heading line; `secondary` is dropped from the wide table. */
-  emphasis?: 'primary' | 'secondary';
+  /** `primary` becomes the card's heading line. Presentation only; it never changes visibility. */
+  emphasis?: 'primary';
+  /**
+   * Where the column appears. `table-and-card` is the default. `card-only` keeps it out of the wide
+   * table, for columns too wide or too secondary to share a row, while the card still shows it.
+   */
+  visibility?: 'table-and-card' | 'card-only';
   cell: (row: T) => ReactNode;
 };
 
@@ -50,7 +55,7 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   if (rows.length === 0) return <EmptyState>{empty}</EmptyState>;
 
-  const wide = columns.filter((column) => column.emphasis !== 'secondary');
+  const wide = columns.filter((column) => column.visibility !== 'card-only');
 
   // `rows` may be a `Counted` (carries `total`) or a plain filtered array with no honest total.
   const total = (rows as Partial<{ total: number }>).total;
@@ -58,7 +63,7 @@ export function DataTable<T>({
 
   return (
     <div className="@container">
-      <div className="hidden @min-[38rem]:block">
+      <div className="hidden overflow-x-auto @min-[38rem]:block">
         <Table>
           <TableHeader>
             <TableRow>

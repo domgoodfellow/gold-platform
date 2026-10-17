@@ -54,13 +54,13 @@ export function LocationTable({
         {
           key: 'accessNotes',
           header: 'Access notes',
-          emphasis: 'secondary',
+          visibility: 'card-only',
           cell: (location) => location.accessNotes,
         },
         {
           key: 'customers',
           header: 'Customers served',
-          emphasis: 'secondary',
+          visibility: 'card-only',
           cell: (location) =>
             location.customers.length > 0 ? location.customers.map((customer) => customer.name).join(', ') : null,
         },
@@ -69,7 +69,7 @@ export function LocationTable({
               {
                 key: 'coordinates',
                 header: 'Coordinates',
-                emphasis: 'secondary' as const,
+                visibility: 'card-only' as const,
                 cell: (location: Location) =>
                   location.coordinates ? `${location.coordinates.latitude}, ${location.coordinates.longitude}` : null,
               },
@@ -80,7 +80,7 @@ export function LocationTable({
               {
                 key: 'custom',
                 header: 'Custom fields',
-                emphasis: 'secondary' as const,
+                visibility: 'card-only' as const,
                 cell: (location: Location) => <CustomFieldValues definitions={definitions} custom={location.custom} />,
               },
             ]

@@ -71,7 +71,7 @@ export function CallHistory({
             </>
           ),
         },
-        { key: 'handledBy', header: 'Handled by', emphasis: compact ? 'secondary' : undefined, cell: (call) => call.handledBy.map((member) => member.name).join(', ') || '—' },
+        { key: 'handledBy', header: 'Handled by', visibility: compact ? 'card-only' : undefined, cell: (call) => call.handledBy.map((member) => member.name).join(', ') || '—' },
         { key: 'outcome', header: 'Outcome', cell: (call) => call.outcome?.name ?? <span className="text-subtle">Not written up</span> },
       ]}
       actions={renderWrapUp}

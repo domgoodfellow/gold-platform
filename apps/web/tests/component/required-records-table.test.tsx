@@ -38,9 +38,9 @@ describe('the records a sending domain still needs', () => {
   });
 
   it('shows the preference on the MX record, and nothing where a type has none', () => {
-    // Priority is a `secondary` column, so `DataTable` drops it from the wide table and keeps it
-    // only in the narrow card rendering (both render into jsdom at once; only one is visible by
-    // CSS, which jsdom does not compute) — so this looks for the value rather than a table cell.
+    // Priority is a `card-only` column, so `DataTable` keeps it out of the wide table and shows it
+    // only in the narrow card rendering. jsdom renders both layouts and does not compute CSS, so
+    // this looks for the value in either rather than asserting which one is visible.
     render(<RequiredRecordsTable records={RECORDS} />);
 
     expect(screen.getAllByText('10').length).toBeGreaterThan(0);

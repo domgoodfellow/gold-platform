@@ -12,6 +12,7 @@ import { FieldLabel } from './inputs';
 export function CheckboxField({
   id,
   name,
+  value,
   label,
   defaultChecked,
   disabled,
@@ -19,6 +20,8 @@ export function CheckboxField({
 }: {
   id: string;
   name: string;
+  /** What a GET form submits when ticked. Without it the box submits `on`. */
+  value?: string;
   label: ReactNode;
   defaultChecked?: boolean;
   disabled?: boolean;
@@ -26,7 +29,7 @@ export function CheckboxField({
 }) {
   return (
     <div className={cx('flex items-center gap-2', className)}>
-      <Checkbox id={id} name={name} defaultChecked={defaultChecked} disabled={disabled} />
+      <Checkbox id={id} name={name} value={value} defaultChecked={defaultChecked} disabled={disabled} />
       <FieldLabel htmlFor={id} className="font-normal">
         {label}
       </FieldLabel>

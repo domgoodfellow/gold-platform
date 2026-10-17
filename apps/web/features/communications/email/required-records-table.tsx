@@ -50,10 +50,10 @@ export function RequiredRecordsTable({ records }: { records: RequiredDnsRecord[]
         {
           key: 'priority',
           header: 'Priority',
-          emphasis: 'secondary',
+          visibility: 'card-only',
           cell: (record) => (record.priority === undefined ? <span className="text-muted">—</span> : <span className="font-mono text-xs">{record.priority}</span>),
         },
-        { key: 'ttl', header: 'TTL', emphasis: 'secondary', cell: () => <span className="text-muted">Your host&rsquo;s default</span> },
+        { key: 'ttl', header: 'TTL', visibility: 'card-only', cell: () => <span className="text-muted">Your host&rsquo;s default</span> },
       ]}
     />
   );
