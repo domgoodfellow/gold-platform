@@ -22,6 +22,8 @@ export function NewCallForm({
   defaultNumber,
   toNumber: initialToNumber = '',
   phoneNumberId: initialPhoneNumberId = '',
+  customerId,
+  customerName,
   compact = false,
 }: {
   organizationId: string;
@@ -31,6 +33,8 @@ export function NewCallForm({
   defaultNumber: DialableNumber | null;
   toNumber?: string;
   phoneNumberId?: string;
+  customerId?: string;
+  customerName?: string;
   compact?: boolean;
 }) {
   const { dial, dialing, error } = useDial(organizationId);
@@ -63,7 +67,8 @@ export function NewCallForm({
       onSubmit={(event) => {
         event.preventDefault();
         if (busy || unavailable || (!defaultNumber && !phoneNumberId)) return;
-        void dial({ toNumber, contactLabel: toNumber, phoneNumberId: phoneNumberId || null });
+        const matchesCustomer = toNumber === initialToNumber;
+        void dial({ toNumber, contactLabel: matchesCustomer ? customerName ?? toNumber : toNumber, customerId: matchesCustomer ? customerId : undefined, phoneNumberId: phoneNumberId || null });
       }}
     >
       <div className="flex flex-col gap-1">
@@ -105,7 +110,7 @@ export function NewCallForm({
       <Button type="submit" disabled={busy || unavailable || !toNumber || (!defaultNumber && !phoneNumberId)}>
         <Phone aria-hidden /> {dialing ? 'Calling…' : 'Call'}
       </Button>
-      {!compact && popout ? <Button type="button" tone="secondary" data-dialer-popout-trigger disabled={dialing} onClick={() => popout.open({ numbers, defaultNumber, toNumber, phoneNumberId, onReturn: (draft) => { setToNumber(draft.toNumber); setPhoneNumberId(draft.phoneNumberId); } })}><ExternalLink aria-hidden /> Pop out dialer</Button> : null}
+      {!compact && popout ? <Button type="button" tone="secondary" data-dialer-popout-trigger disabled={dialing} onClick={() => popout.open({ numbers, defaultNumber, toNumber, phoneNumberId, customerId: toNumber === initialToNumber ? customerId : undefined, customerName: toNumber === initialToNumber ? customerName : undefined, onReturn: (draft) => { setToNumber(draft.toNumber); setPhoneNumberId(draft.phoneNumberId); } })}><ExternalLink aria-hidden /> Pop out dialer</Button> : null}
       {activeCall || incoming ? <Hint>Finish the current call before starting another.</Hint> : null}
       {!compact && popout?.error ? <ErrorText>{popout.error}</ErrorText> : null}
       {error ? <ErrorText>{error}</ErrorText> : null}

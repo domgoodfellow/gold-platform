@@ -18,6 +18,7 @@ export function WorkspaceHeader({
   beforeActions,
   utilities = [],
   agentTrigger = 'always',
+  phoneAction,
 }: {
   navigationTrigger?: 'always' | 'md';
   context?: ReactNode;
@@ -28,6 +29,7 @@ export function WorkspaceHeader({
   utilities?: HeaderUtility[];
   /** Use 'md' when mobile navigation carries Agent. */
   agentTrigger?: 'always' | 'md';
+  phoneAction?: ReactNode;
 }) {
   return (
     <header className="sticky top-0 z-20 flex h-(--header-height) shrink-0 items-center gap-3 border-b border-border bg-background px-4 sm:px-6">
@@ -49,7 +51,7 @@ export function WorkspaceHeader({
       <WorkspaceCrumbSlot />
       <span className="hidden flex-1 md:block" />
       {beforeActions}
-      <div className={cx('items-center gap-2', agentTrigger === 'md' ? 'hidden md:flex' : 'flex')}>
+      <div className="flex shrink-0 items-center gap-2">
         <div className="hidden items-center gap-2 md:flex">
           {utilities.map((utility) => {
             const Icon = utility.key === 'team' ? Users : Plug;
@@ -65,7 +67,8 @@ export function WorkspaceHeader({
             );
           })}
         </div>
-        <AgentTrigger />
+        {phoneAction}
+        <div className={cx('items-center', agentTrigger === 'md' ? 'hidden md:flex' : 'flex')}><AgentTrigger /></div>
       </div>
     </header>
   );

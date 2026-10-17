@@ -6,7 +6,6 @@ test.use({ storageState: OWNER_STORAGE_STATE });
 test('compact dialer preserves its draft across workspace navigation and window closure', async ({ page }, testInfo) => {
   const { organizationId } = loadDemoContext();
   await page.goto(`/organizations/${organizationId}/calls`);
-  await page.getByRole('button', { name: 'New call', exact: true }).click();
   await page.getByLabel('Number to call', { exact: true }).fill('+1514555012');
   const popupPromise = page.waitForEvent('popup');
   await page.getByRole('button', { name: 'Pop out dialer', exact: true }).click();
@@ -30,7 +29,6 @@ test('compact dialer preserves its draft across workspace navigation and window 
   await page.goBack();
   await page.goBack();
   await page.goBack();
-  await page.getByRole('button', { name: 'New call', exact: true }).click();
   await expect(page.getByText('The dialer is open in a separate window.')).toBeVisible();
   await popup.close();
   await expect(page.getByLabel('Number to call')).toBeVisible();

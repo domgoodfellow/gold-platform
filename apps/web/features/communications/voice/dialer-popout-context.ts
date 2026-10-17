@@ -8,6 +8,8 @@ export type PopoutCallDraft = {
   defaultNumber: DialableNumber | null;
   toNumber: string;
   phoneNumberId: string;
+  customerId?: string;
+  customerName?: string;
   onReturn?: (draft: { toNumber: string; phoneNumberId: string }) => void;
 };
 

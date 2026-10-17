@@ -206,7 +206,7 @@ describe('the Business mobile navigation', () => {
     expect(organizationLayout).toContain('navigationTrigger="always"');
     expect(organizationLayout).not.toContain('CompactContextSwitcher');
     expect(organizationLayout).not.toContain('bottomBar=');
-    expect(organizationLayout).not.toContain('beforeActions=');
+    expect(organizationLayout).toContain('beforeActions={calendarWorkspace');
   });
   it('reuses authorized switcher choices and keeps recovery mobile identity inert', () => {
     expect(organizationShellModel).toMatch(/myOrganizations\.map/);

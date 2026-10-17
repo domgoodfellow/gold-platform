@@ -1,6 +1,7 @@
 'use client';
 
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
+import { DialerTrigger } from '@/features/communications/voice/dialer-trigger';
 import { SIDEBAR_HEADER_HEIGHT } from '@/components/layout/workspace-geometry';
 import { WorkspaceShell } from '@/components/layout/workspace-shell';
 import { AccountMenu } from '@/components/navigation/account-menu';
@@ -501,6 +502,7 @@ export function OrganizationFrame({
         <WorkspaceHeader
           navigationTrigger="always"
           agentTrigger="md"
+          phoneAction={recovery ? undefined : <DialerTrigger />}
           utilities={utilities}
           beforeActions={calendarWorkspace ? <Link href={`${calendarWorkspace.href}/calendar`} aria-label={`${calendarWorkspace.label} calendar`} className="inline-flex min-h-9 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-hover"><CalendarDays aria-hidden size={16}/><span className="hidden sm:inline">Calendar</span></Link> : null}
         />

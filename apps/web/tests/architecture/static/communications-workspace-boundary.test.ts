@@ -25,9 +25,9 @@ const TENANT_COMMS_SOURCE = [
 const PROVIDER_VOCABULARY = /twilio|account[_ ]?sid|auth[_ ]?token|twiml/i;
 
 describe('Communications workspace boundaries', () => {
-  it('registers Calls, the Inbox and Numbers as sibling pages of the Communications workspace', () => {
+  it('registers Calendar, Dialer, Inbox and Numbers in Communications', () => {
     const pages = AREAS.filter((area) => area.workspace === 'communications').map((area) => area.segment);
-    expect(pages).toEqual(['comms', 'calls', 'comms-inbox', 'comms-numbers']);
+    expect(pages).toEqual(['communications-calendar', 'comms', 'calls', 'comms-inbox', 'comms-numbers']);
   });
 
   it('names no provider in a tenant-facing Communications route', () => {

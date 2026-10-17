@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+Read [docs/journeys.md](docs/journeys.md) first for end-to-end customer paths and implementation gaps.
+
 ## Purpose
 
 This file is the **operating contract for coding agents working in the GildOps repository**.

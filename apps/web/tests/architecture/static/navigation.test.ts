@@ -918,7 +918,7 @@ describe('the organization shell taxonomy', () => {
 
   it('names the workspaces in the operator’s words', () => {
     const labels = new Map(AREAS.map((area) => [area.segment, area.label]));
-    expect(labels.get('calls')).toBe('Calls');
+    expect(labels.get('calls')).toBe('Dialer');
     expect(labels.get('comms-inbox')).toBe('Inbox');
     expect(labels.get('comms-numbers')).toBe('Numbers');
     expect(labels.get('automations')).toBe('Automations');

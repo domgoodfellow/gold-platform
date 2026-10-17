@@ -18,6 +18,7 @@ import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocationsForCustomer } from '@/lib/domain/locations/locations';
 import { mapConfig } from '@/lib/adapters/maps/config';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
+import { loadPlatformContext } from '@/lib/application/shell/platform-context';
 import { listPortalInvites } from '@/lib/domain/portal/portal';
 import { portalOrigin } from '@/lib/domain/portal/address';
 import { listCustomerCalls } from '@/lib/domain/reception/calls';
@@ -40,6 +41,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
   const { db, organization } = await requireOrganization(organizationId);
   const customer = await getCustomer(db, { organizationId, customerId });
   if (!customer) notFound();
+  const mayPropose = (await loadPlatformContext(db, organizationId)) !== null;
 
   const origin = await requestOrigin();
   const customerPortalOrigin = await portalOrigin(db, organizationId, origin);
@@ -55,15 +57,15 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
     listCustomerInvoices(db, { organizationId, customerId }),
     listWorkItems(db, { organizationId, customerId }),
     listLocationsForCustomer(db, { organizationId, customerId }),
-    getDiscoverySnapshot(db, { organizationId, customerId }),
-    listCommercialProposals(db, { organizationId, customerId }),
-    listProposalInvites(db, { organizationId, customerId }),
-    listPlans(db, { kind: 'plan' }),
-    listPlans(db, { kind: 'addon' }),
+    mayPropose ? getDiscoverySnapshot(db, { organizationId, customerId }) : null,
+    mayPropose ? listCommercialProposals(db, { organizationId, customerId }) : [],
+    mayPropose ? listProposalInvites(db, { organizationId, customerId }) : [],
+    mayPropose ? listPlans(db, { kind: 'plan' }) : [],
+    mayPropose ? listPlans(db, { kind: 'addon' }) : [],
   ]);
-  const configurationRecommendation = await recommendConfiguration(db, {
+  const configurationRecommendation = mayPropose ? await recommendConfiguration(db, {
     answers: discoverySnapshot?.answers ?? {},
-  });
+  }) : null;
   const modules = activeModuleKeys(resolvedFeatures);
   const followUpsEnabled = await followUpsAvailable(db, organizationId);
   const followUps = followUpsEnabled ? await relatedFollowUps(db, organizationId, customerId) : null;
@@ -108,6 +110,7 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
         invoices={invoices}
         invites={invites}
         discoverySnapshot={discoverySnapshot}
+        mayPropose={mayPropose}
         configurationRecommendation={configurationRecommendation}
         commercialProposals={commercialProposals}
         proposalInvites={proposalInvites}

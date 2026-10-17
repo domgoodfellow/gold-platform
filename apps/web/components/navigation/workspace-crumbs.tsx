@@ -33,7 +33,7 @@ export function WorkspaceCrumbsProvider({ children, navigation }: { children: Re
 /** The place in the workspace bar where the current page's trail appears. */
 export function WorkspaceCrumbSlot() {
   const context = useContext(CrumbSlotContext);
-  return <div ref={context?.setSlot} className="min-w-0 flex-1 md:flex-none" />;
+  return <div ref={context?.setSlot} className="min-w-0 flex-1 md:flex-initial" />;
 }
 
 function MobilePageLocation({ current, navigation }: { current: ReactNode; navigation: PageNavigation }) {

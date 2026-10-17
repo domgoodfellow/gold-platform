@@ -64,7 +64,7 @@ test('customer approval, changes into Support, stale review and invitation bound
     const origin = `https://${sellerHost}:${tls.port}`;
     const customerPath = `/organizations/${org}/customers/${customer}`;
     const openEngagement = async () => {
-      await page.goto(customerPath); await page.getByRole('tab', { name: 'Commercial proposal', exact: true }).click();
+      await page.goto(customerPath); await page.getByRole('tab', { name: 'Overview', exact: true }).click();
       await page.getByRole('button', { name: 'View engagement', exact: true }).click();
     };
     await page.goto('/login'); await page.getByLabel('Email', { exact: true }).fill(email); await page.getByLabel('Password', { exact: true }).fill(password);

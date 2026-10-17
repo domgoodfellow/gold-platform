@@ -191,7 +191,7 @@ describe('contextual sidebar rendering', () => {
     expect(screen.getByRole('link', { name: 'Back to Workspaces' })).toHaveAttribute('href', `/organizations/${org}/home`);
     route.pathname = `/organizations/${org}/calls`;
     rerender(view());
-    expect(screen.getByRole('link', { name: 'Calls' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Dialer' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByRole('link', { name: 'Customers' })).not.toBeInTheDocument();
     for (const path of ['comms/configuration/calling', 'settings/general']) { route.pathname = `/organizations/${org}/${path}`; rerender(view()); expect(runtime).toHaveTextContent('call-1'); }
     route.pathname = `/organizations/${org}/home`;

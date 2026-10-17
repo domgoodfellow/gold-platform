@@ -137,6 +137,22 @@
     ]
   },
   "files": {
+    "apps/web/e2e/dialer-workspace.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": ["communications", "crm", "tenant-isolation", "responsive", "calling"]
+    },
+    "apps/web/tests/unit/calling-options.test.ts": {
+      "category": "unit",
+      "concerns": ["communications", "authorization", "readiness"]
+    },
+    "apps/web/tests/unit/dialer-queue.test.ts": {
+      "category": "unit",
+      "concerns": ["communications", "crm", "tenant-isolation"]
+    },
+    "apps/web/tests/component/dialer-workspace.test.tsx": {
+      "category": "component",
+      "concerns": ["communications", "crm", "calling"]
+    },
     "apps/web/tests/integration/database/calendar-events.test.ts": {"category":"database-integration","concerns":["calendar","security","tenant-isolation"]},
     "apps/web/tests/unit/calendar-time-layout.test.ts": {"category":"unit","concerns":["calendar","ui"]},
     "apps/web/tests/component/navigation-components.test.tsx": {"category":"component","concerns":["navigation","accessibility"]},
@@ -1413,6 +1429,10 @@
         "scheduling",
         "accessibility"
       ]
+    },
+    "apps/web/tests/component/customer-proposal-scope.test.tsx": {
+      "category": "component",
+      "concerns": ["crm", "customers", "authorization", "platform"]
     },
     "apps/web/tests/component/customer-table.test.tsx": {
       "category": "component",

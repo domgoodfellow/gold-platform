@@ -373,7 +373,7 @@ export const AREAS: readonly Area[] = [
   // still `planned` in the catalogue (SMS today) shows the page and says so truthfully rather
   // than riding along on the `reception` module the way an unqualified module gate would.
   { segment: 'comms', label: 'Communications', group: 'workspaces', workspace: 'communications', module: 'reception', relevantCapabilities: ['call.place', 'message.send'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions', 'inbound_sms', 'outbound_sms', 'sending'] },
-  { segment: 'calls', label: 'Calls', group: 'workspaces', workspace: 'communications', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
+  { segment: 'calls', label: 'Dialer', group: 'workspaces', workspace: 'communications', module: 'reception', relevantCapabilities: ['call.place'], featureKeys: ['inbound_calling', 'outbound_calling', 'recording', 'call_dispositions'] },
   // Inbox: one list of every asynchronous conversation, SMS and email together, and the one screen a conversation opens in. It replaced
   // the separate Text messages and Email pages (their old addresses redirect here, filtered). Gated by the sending authority (`message.send`)
   // and by either channel's Features: a business with only one of the two channels still has its Inbox.

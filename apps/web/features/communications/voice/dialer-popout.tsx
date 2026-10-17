@@ -8,6 +8,7 @@ import { Badge } from '@/components/display/data';
 import { DialerPopoutContext, type PopoutCallDraft } from './dialer-popout-context';
 import { NewCallForm } from './new-call-form';
 import { useTelephoneDevice } from './telephone-device';
+import { loadDialerAction } from '@/app/organizations/[organizationId]/calls/dialer-actions';
 
 /** Only the controls move windows; the organization layout retains the telephone connection. */
 export function DialerPopoutProvider({ organizationId, children }: { organizationId: string; children: ReactNode }) {
@@ -15,6 +16,8 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const [draft, setDraft] = useState<PopoutCallDraft | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [unavailableReason, setUnavailableReason] = useState<string | null>(null);
   const opener = useRef<HTMLElement | null>(null);
   const draftRef = useRef<PopoutCallDraft | undefined>(undefined);
   const popupWindow = useRef<Window | null>(null);
@@ -44,11 +47,27 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
     base.href = document.baseURI;
     child.document.head.append(base);
     setError(null);
+    setUnavailableReason(null);
     draftRef.current = draft ? { ...draft } : undefined;
     popupWindow.current = child;
     setDraft(draft);
     setContainer(child.document.body);
-  }, []);
+    setLoading(!draft);
+    if (!draft) {
+      void loadDialerAction(organizationId).then(options => {
+        if (popupWindow.current !== child || child.closed) return;
+        const next = { ...options, toNumber: '', phoneNumberId: '' };
+        draftRef.current = next;
+        setDraft(next);
+        setUnavailableReason(options.unavailableReason);
+        setLoading(false);
+      }).catch(() => {
+        if (popupWindow.current !== child || child.closed) return;
+        setUnavailableReason('Calling options could not be loaded. Close and reopen the dialer to retry.');
+        setLoading(false);
+      });
+    }
+  }, [organizationId]);
 
   useEffect(() => {
     const child = popupWindow.current;
@@ -128,9 +147,9 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
                 <span className="text-muted">Outbound call</span>
                 <Badge tone={status === 'ready' ? 'success' : status === 'error' ? 'danger' : 'neutral'}>{status === 'ready' ? 'Connected' : status === 'error' ? 'Connection failed' : status === 'connecting' ? 'Connecting' : 'Connects when you call'}</Badge>
               </div>
-              {draft ? <NewCallForm key={organizationId} organizationId={organizationId} {...draft} compact /> : (
-                <p className="text-sm text-muted">Call ended. Open New call in GildOps to dial another number.</p>
-              )}
+              {loading ? <p role="status" className="text-sm text-muted">Loading calling options…</p> : null}
+              {unavailableReason ? <p role="status" className="mb-3 text-sm text-muted">{unavailableReason}</p> : null}
+              {draft ? <NewCallForm key={organizationId} organizationId={organizationId} {...draft} compact /> : null}
             </main>
           ) : null}
           <p className="order-3 mt-auto px-4 py-3 text-xs text-muted">Keep the main GildOps window open while calling.</p>

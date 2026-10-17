@@ -1,34 +1,27 @@
-import { Phone } from 'lucide-react';
 import { ButtonLink } from '@/components/controls/button';
 import { AppPage } from '@/components/layout/app-page';
 import { CollectionHeader } from '@/components/patterns/collection-header';
 import { SectionHeading } from '@/components/surfaces/section';
-import { PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
-import { Button } from '@/components/controls/button';
 import { CallFilters, callFilterFromParams, callsHref, parseCallParams } from '@/features/communications/voice/call-filters';
 import { CallHistory } from '@/features/communications/voice/call-history';
-import { NewCallForm } from '@/features/communications/voice/new-call-form';
 import { VoiceCounters } from '@/features/communications/voice/voice-overview';
 import { WorkspaceConfigure } from '@/features/settings/workspace-configure';
 import { WrapUpCallSheet } from '@/features/communications/voice/wrap-up-sheet';
 import { getCallCounts, listCallPage } from '@/lib/domain/reception/calls';
-import { listPhoneNumbers, resolveOutboundNumber } from '@/lib/domain/reception/numbers';
+import { listPhoneNumbers } from '@/lib/domain/reception/numbers';
 import { listCallOutcomes } from '@/lib/domain/reception/outcomes';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
-import { callingRuntimeConfigured } from '@/lib/application/communications/calling-runtime';
-import { communicationsProviderReadiness } from '@/lib/domain/reception/provider-readiness';
-import { availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { requireOperatingArea } from '@/lib/route/workspace-configuration';
+
+import { loadCallingOptions } from '@/lib/application/communications/calling-options';
+import { loadDialerQueue } from '@/lib/application/communications/dialer-queue';
+import { followUpsAvailable } from '@/lib/application/crm/follow-ups';
+import { DialerWorkspace } from '@/features/communications/voice/dialer-workspace';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * The voice history and operating surface: every call this business made or took, inbound and
- * outbound in one list, filtered and paged by the database, each one opening to its own page.
- * The day's numbers sit above it and lead into it. There is no second place calls are listed.
- */
 export default async function CallsPage({ params, searchParams }: PageProps<'/organizations/[organizationId]/calls'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOperatingArea(organizationId, 'calls');
@@ -37,26 +30,19 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
   const mayCall = organization.capabilities.includes('call.place');
   const base = `/organizations/${organizationId}/calls`;
 
-  const [page, counts, todays, outcomes, numbers, members, usual, runtimeConfigured, readiness, featureStates] = await Promise.all([
+  const [page, counts, todays, outcomes, numbers, members, options, queueAvailable] = await Promise.all([
     listCallPage(db, { organizationId, filter: callFilterFromParams(callParams, organization.timezone), cursor }),
     getCallCounts(db, { organizationId, dayStart: day.startsAt, dayEnd: day.endsAt }),
     listCallPage(db, { organizationId, filter: { since: day.startsAt, until: day.endsAt }, limit: 100 }),
     listCallOutcomes(db, { organizationId }),
     listPhoneNumbers(db, { organizationId }),
     listMembers(db, { organizationId }),
-    mayCall ? resolveOutboundNumber(db, { organizationId }) : Promise.resolve(null),
-    callingRuntimeConfigured(mayCall),
-    communicationsProviderReadiness(db, { organizationId }),
-    organizationResolvedFeatureStates(db, { organizationId }),
+    loadCallingOptions(db, { organizationId, mayCall }),
+    followUpsAvailable(db, organizationId),
   ]);
 
   const numberById = new Map(numbers.map((entry) => [entry.id, { e164: entry.e164, label: entry.label }]));
-  const canCall = mayCall && availableFeatureKeys(featureStates).has('outbound_calling');
-  const runtimeReady = canCall && runtimeConfigured && readiness === 'ready';
-  const dialable = (runtimeReady ? numbers : [])
-    .filter((entry) => entry.voiceOutboundEnabled && entry.readiness === 'ready' && entry.lifecycle === 'active' && (entry.origin === 'provisioned' || entry.origin === 'external'))
-    .map((entry) => ({ id: entry.id, e164: entry.e164, label: entry.label }));
-  const usualNumber = runtimeReady && usual ? { id: usual.phoneNumberId, e164: usual.e164, label: numberById.get(usual.phoneNumberId)?.label ?? null } : null;
+  const queue = queueAvailable ? await loadDialerQueue(db, organizationId) : { items: [], total: 0 };
   const filtered = Object.keys(callParams).length > 0;
 
   return (
@@ -66,26 +52,16 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
       crumbs={workspaceAncestry(organizationId, 'calls')}
       actions={
         <>
-          {canCall ? (
-            <PageDrawer>
-              <PageDrawerTrigger asChild><Button type="button"><Phone aria-hidden /> New call</Button></PageDrawerTrigger>
-              <PageDrawerContent>
-                <PageDrawerHeader>
-                  <PageDrawerTitle>New call</PageDrawerTitle>
-                  <PageDrawerDescription>Ring a number from this browser. The call joins the history below as it begins.</PageDrawerDescription>
-                </PageDrawerHeader>
-                <div className="px-4 pb-4"><NewCallForm organizationId={organizationId} numbers={dialable} defaultNumber={usualNumber} /></div>
-              </PageDrawerContent>
-            </PageDrawer>
-          ) : null}
+          <ButtonLink href="#call-history" tone="secondary">Call history</ButtonLink>
           <WorkspaceConfigure organizationId={organizationId} workspace="communications" />
         </>
       }
     />
-      <VoiceCounters organizationId={organizationId} counts={counts} todaysCalls={todays.items} />
+      <DialerWorkspace organizationId={organizationId} timezone={organization.timezone} queue={queue.items} queueTotal={queue.total} queueAvailable={queueAvailable} options={options} />
 
-      <section className="mt-8" aria-labelledby="call-history">
-        <SectionHeading id="call-history">Call history</SectionHeading>
+      <section id="call-history" className="mt-8 scroll-mt-20" aria-labelledby="call-history-heading">
+        <VoiceCounters organizationId={organizationId} counts={counts} todaysCalls={todays.items} />
+        <SectionHeading id="call-history-heading">Call history</SectionHeading>
         <div className="mt-3">
           <CallFilters
             base={base}

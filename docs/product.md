@@ -643,7 +643,7 @@ Lead/customer context in GildOps' own organization
 
 ### 2. Sales discovery
 
-GildOps captures durable facts about the prospect's operation, including relevant information such as:
+In GildOps' operating organization, platform-authorized viewers capture prospect facts:
 
 - how customers contact them;
 - how work is booked;
@@ -659,7 +659,7 @@ GildOps captures durable facts about the prospect's operation, including relevan
 - scheduling requirements;
 - automation opportunities.
 
-The output is a **Discovery Snapshot**, not a collection of sales-call notes that disappear after close.
+The **Discovery Snapshot**, configuration/proposal tabs and catalogue loads require this scope.
 
 ### 3. Proposed configuration
 

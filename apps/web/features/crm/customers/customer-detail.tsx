@@ -58,6 +58,7 @@ export function CustomerDetail({
   proposalInvites,
   handoffsByProposalId,
   mayHandoff,
+  mayPropose,
   plans,
   addonPlans,
   origin,
@@ -93,11 +94,12 @@ export function CustomerDetail({
   invoices: Invoice[];
   invites: PortalInvite[];
   discoverySnapshot: DiscoverySnapshot | null;
-  configurationRecommendation: ConfigurationRecommendation;
+  configurationRecommendation: ConfigurationRecommendation | null;
   commercialProposals: CommercialProposal[];
   proposalInvites: ProposalInvite[];
   handoffsByProposalId: Record<string, AcceptedProposalHandoff>;
   mayHandoff: boolean;
+  mayPropose: boolean;
   plans: Plan[];
   addonPlans: Plan[];
   origin: string;
@@ -118,9 +120,11 @@ export function CustomerDetail({
           <TabsTrigger value="overview">Overview</TabsTrigger>
           {opportunities ? <TabsTrigger value="opportunities">Opportunities</TabsTrigger> : null}
           {followUps ? <TabsTrigger value="follow-ups">Follow-ups</TabsTrigger> : null}
-          <TabsTrigger value="discovery">Discovery</TabsTrigger>
-          <TabsTrigger value="configuration">Proposed configuration</TabsTrigger>
-          <TabsTrigger value="commercial">Commercial proposal</TabsTrigger>
+          {mayPropose ? <>
+            <TabsTrigger value="discovery">Discovery</TabsTrigger>
+            <TabsTrigger value="configuration">Proposed configuration</TabsTrigger>
+            <TabsTrigger value="commercial">Commercial proposal</TabsTrigger>
+          </> : null}
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="work">Work</TabsTrigger>
           <TabsTrigger value="locations">Locations</TabsTrigger>
@@ -141,39 +145,42 @@ export function CustomerDetail({
             <CustomFieldValues definitions={definitions} custom={customer.custom} />
             {!permissions.edit ? <Hint className="mt-6">Your role, {role}, cannot change this customer.</Hint> : null}
           </Section>
+          {!mayPropose ? services : null}
         </TabsContent>
         {followUps ? <TabsContent value="follow-ups" className="mt-6">{followUps}</TabsContent> : null}
 
-        <TabsContent value="discovery" className="mt-6">
-          <DiscoverySnapshotSection
-            organizationId={organizationId}
-            customerId={customer.id}
-            snapshot={discoverySnapshot}
-            mayEdit={permissions.edit}
-            role={role}
-          />
-        </TabsContent>
-        <TabsContent value="configuration" className="mt-6">
-          <ConfigurationRecommendationSection recommendation={configurationRecommendation} />
-        </TabsContent>
-        <TabsContent value="commercial" className="mt-6">
-          {services}
-          <CommercialProposalSection
-            accessibleTenantIds={accessibleTenantIds}
-            organizationId={organizationId}
-            customerId={customer.id}
-            proposals={commercialProposals}
-            invites={proposalInvites}
-            handoffsByProposalId={handoffsByProposalId}
-            mayHandoff={mayHandoff}
-            origin={origin}
-            plans={plans}
-            addonPlans={addonPlans}
-            mayEdit={permissions.priceManage}
-            role={role}
-            currency={currency}
-          />
-        </TabsContent>
+        {mayPropose ? <>
+          <TabsContent value="discovery" className="mt-6">
+            <DiscoverySnapshotSection
+              organizationId={organizationId}
+              customerId={customer.id}
+              snapshot={discoverySnapshot}
+              mayEdit={permissions.edit}
+              role={role}
+            />
+          </TabsContent>
+          <TabsContent value="configuration" className="mt-6">
+            {configurationRecommendation ? <ConfigurationRecommendationSection recommendation={configurationRecommendation} /> : null}
+          </TabsContent>
+          <TabsContent value="commercial" className="mt-6">
+            {services}
+            <CommercialProposalSection
+              accessibleTenantIds={accessibleTenantIds}
+              organizationId={organizationId}
+              customerId={customer.id}
+              proposals={commercialProposals}
+              invites={proposalInvites}
+              handoffsByProposalId={handoffsByProposalId}
+              mayHandoff={mayHandoff}
+              origin={origin}
+              plans={plans}
+              addonPlans={addonPlans}
+              mayEdit={permissions.priceManage}
+              role={role}
+              currency={currency}
+            />
+          </TabsContent>
+        </> : null}
         <TabsContent value="activity" className="mt-6"><ActivityList timeline={timeline} timezone={timezone} /></TabsContent>
         {opportunities ? <TabsContent value="opportunities" className="mt-6">{opportunities}</TabsContent> : null}
         <TabsContent value="work" className="mt-6"><CustomerRelatedWork organizationId={organizationId} work={work} /></TabsContent>

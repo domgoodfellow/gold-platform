@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DialerPopoutProvider } from '@/features/communications/voice/dialer-popout';
 import { ActiveCallDock } from '@/features/communications/voice/active-call-dock';
 import { NewCallForm } from '@/features/communications/voice/new-call-form';
+import { DialerTrigger } from '@/features/communications/voice/dialer-trigger';
 import { TelephoneDeviceContext, type TelephoneDeviceContextValue } from '@/features/communications/voice/telephone-device';
 
 vi.mock('@/app/organizations/[organizationId]/calls/conference-actions', () => ({
@@ -15,6 +16,8 @@ vi.mock('@/app/organizations/[organizationId]/calls/conference-actions', () => (
 }));
 
 const number = { id: 'number-1', e164: '+14385550194', label: 'Main line' };
+const loadOptions = vi.hoisted(() => vi.fn());
+vi.mock('@/app/organizations/[organizationId]/calls/dialer-actions', () => ({ loadDialerAction: loadOptions }));
 const device: TelephoneDeviceContextValue = {
   status: 'ready', error: null, activeCall: null, incoming: null,
   register: vi.fn(), unregister: vi.fn(), connectToRoom: vi.fn(),
@@ -25,6 +28,7 @@ function App({ value = device, showForm = true }: { value?: TelephoneDeviceConte
   return (
     <TelephoneDeviceContext.Provider value={value}>
       <DialerPopoutProvider organizationId="org-1">
+        <DialerTrigger />
         {showForm ? <NewCallForm organizationId="org-1" numbers={[number]} defaultNumber={number} /> : <h1>Another workspace</h1>}
         <ActiveCallDock organizationId="org-1" />
       </DialerPopoutProvider>
@@ -46,11 +50,31 @@ function fakePopup() {
 afterEach(() => { cleanup(); document.querySelectorAll('iframe').forEach((frame) => frame.remove()); vi.restoreAllMocks(); vi.clearAllMocks(); });
 
 describe('compact dialer pop-out', () => {
+  it('opens from the global phone button and loads current calling options without registering a telephone', async () => {
+    const { popup } = fakePopup();
+    loadOptions.mockResolvedValue({ numbers: [number], defaultNumber: number, unavailableReason: null });
+    render(<App showForm={false} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Open dialer' }));
+    await waitFor(() => expect(popup.getByLabelText('Number to call')).toBeVisible());
+    expect(loadOptions).toHaveBeenCalledWith('org-1');
+    expect(popup.getByLabelText('Call from')).toHaveTextContent('Main line');
+    expect(device.register).not.toHaveBeenCalled();
+  });
+
+  it('shows unavailable calling from the global phone button without enabling a call', async () => {
+    const { popup } = fakePopup();
+    loadOptions.mockResolvedValue({ numbers: [], defaultNumber: null, unavailableReason: 'Your role cannot place calls.' });
+    render(<App showForm={false} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Open dialer' }));
+    await waitFor(() => expect(popup.getByText('Your role cannot place calls.')).toBeVisible());
+    expect(popup.getByRole('button', { name: 'Call' })).toBeDisabled();
+    expect(device.register).not.toHaveBeenCalled();
+  });
   it('keeps the form available and explains when the browser blocks the window', async () => {
     vi.spyOn(window, 'open').mockReturnValue(null);
     render(<App />);
     await userEvent.click(screen.getByRole('button', { name: 'Pop out dialer' }));
-    expect(screen.getByText(/Allow pop-ups for GildOps/)).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(/Allow pop-ups for GildOps/);
     expect(screen.getByLabelText('Number to call')).toBeInTheDocument();
     expect(device.register).not.toHaveBeenCalled();
   });
