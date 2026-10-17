@@ -73,6 +73,13 @@ export type LibraryFileDetail = {
   uses: FileUse[];
 };
 
+/** A file id as the address carries it. Anything else is not a file, so it is treated as absent rather than sent to the database. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isLibraryFileId(value: string | undefined): value is string {
+  return typeof value === "string" && UUID.test(value);
+}
+
 function one<T extends string>(value: string | string[] | undefined, allowed: readonly T[]): T | null {
   const candidate = Array.isArray(value) ? value[0] : value;
   return (allowed as readonly string[]).includes(candidate ?? '') ? (candidate as T) : null;
@@ -138,6 +145,7 @@ export async function readLibraryFile(
   db: Db,
   input: { organizationId: string; fileId: string },
 ): Promise<LibraryFileDetail | null> {
+  if (!isLibraryFileId(input.fileId)) return null;
   const { data: file, error } = await db
     .from('documents')
     .select('id, file_name, mime_type, size_bytes, created_at, content_sha256')

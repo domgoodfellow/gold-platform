@@ -75,10 +75,11 @@ describe('Library owns Sources and Imports', () => {
     expect(libraryNewImportHref('org', 'r1')).toBe('/organizations/org/library/imports/new?resourceId=r1');
     expect(libraryNewImportHref('org')).toBe('/organizations/org/library/imports/new');
   });
-  it('lists Sources and Imports as Library sections', () => {
-    render(<LibraryNav organizationId="org" active="imports" />);
+  it('keeps Sources as the one Library section for data coming in, with no separate Imports tab', () => {
+    render(<LibraryNav organizationId="org" active="sources" />);
     expect(screen.getByRole('link', { name: 'Sources' })).toHaveAttribute('href', '/organizations/org/library/sources');
-    expect(screen.getByRole('link', { name: 'Imports' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Sources' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('link', { name: 'Imports' })).not.toBeInTheDocument();
   });
   const redirectOf = async (call: () => Promise<unknown>) => {
     try { await call(); } catch (error) { return (error as Error).message.replace('REDIRECT:', ''); }

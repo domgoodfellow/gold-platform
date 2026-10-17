@@ -18,6 +18,7 @@ import {
   type FileUse,
   type LibraryFileDetail,
   type LibraryFileRow,
+  isLibraryFileId,
   libraryFileFilter,
 } from '@/lib/domain/documents/library-files';
 import type { Db } from '@/lib/db/types';
@@ -63,7 +64,7 @@ export async function LibraryFilesCollection({
   upload: (previous: UploadDocumentState, formData: FormData) => Promise<UploadDocumentState>;
 }) {
   const filter = libraryFileFilter(query);
-  const selectedId = typeof query.file === 'string' ? query.file : null;
+  const selectedId = isLibraryFileId(query.file as string | undefined) ? (query.file as string) : null;
   const base = `/organizations/${organizationId}/library/files`;
   const mayUpload = capabilities.includes('document.create');
 

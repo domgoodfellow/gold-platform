@@ -13,7 +13,6 @@ export type LibrarySectionKey =
   | 'knowledge'
   | 'collections'
   | 'sources'
-  | 'imports'
   | 'trash';
 
 export type LibrarySection = {
@@ -31,9 +30,11 @@ export const LIBRARY_SECTIONS: readonly LibrarySection[] = [
   { key: 'knowledge', label: 'Knowledge', path: 'knowledge' },
   { key: 'collections', label: 'Collections', path: 'collections' },
   { key: 'sources', label: 'Sources', path: 'sources' },
-  { key: 'imports', label: 'Imports', path: 'imports' },
   { key: 'trash', label: 'Trash', path: 'trash' },
 ] as const;
+
+/** The tab bar: every Library section except the overview, which is reached through the Library name itself. */
+export const LIBRARY_TABS: readonly LibrarySection[] = LIBRARY_SECTIONS.filter((section) => section.key !== 'home');
 
 export function libraryHref(organizationId: string, key: LibrarySectionKey): string {
   const section = LIBRARY_SECTIONS.find((candidate) => candidate.key === key);
@@ -45,10 +46,13 @@ export function librarySourceHref(organizationId: string, resourceId: string): s
   return `${libraryHref(organizationId, 'sources')}/${resourceId}`;
 }
 
+// Imports are Sources' history: their pages live under the Sources area's own path, not a tab of their own.
+const importsBase = (organizationId: string) => `/organizations/${organizationId}/library/imports`;
+
 export function libraryImportHref(organizationId: string, runId: string, search = ''): string {
-  return `${libraryHref(organizationId, 'imports')}/${runId}${search}`;
+  return `${importsBase(organizationId)}/${runId}${search}`;
 }
 
 export function libraryNewImportHref(organizationId: string, resourceId?: string): string {
-  return `${libraryHref(organizationId, 'imports')}/new${resourceId ? `?resourceId=${resourceId}` : ''}`;
+  return `${importsBase(organizationId)}/new${resourceId ? `?resourceId=${resourceId}` : ''}`;
 }

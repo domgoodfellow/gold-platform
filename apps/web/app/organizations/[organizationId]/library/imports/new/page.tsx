@@ -26,7 +26,7 @@ export default async function NewImportPage({
   if (!organization.capabilities.includes('integration.manage')) {
     return (
       <>
-        <PageHeader title="Import customers" crumbs={[{ label: 'Imports', href: libraryHref(organizationId, 'imports') }]} />
+        <PageHeader title="Import customers" crumbs={[{ label: 'Imports', href: libraryHref(organizationId, 'sources') }]} />
         <Alert>
           <Lock aria-hidden />
           <AlertTitle>Your role, {organization.role}, cannot import data</AlertTitle>
@@ -39,7 +39,7 @@ export default async function NewImportPage({
   if (typeof resourceId !== 'string') {
     return (
       <>
-        <PageHeader title="Import customers" crumbs={[{ label: 'Imports', href: libraryHref(organizationId, 'imports') }]} />
+        <PageHeader title="Import customers" crumbs={[{ label: 'Imports', href: libraryHref(organizationId, 'sources') }]} />
         <Hint className="mb-4 block">
           Upload a CSV export. GildOps reads the header row and shows you a mapping to review before anything is written.
         </Hint>
@@ -60,7 +60,7 @@ export default async function NewImportPage({
 
   return (
     <>
-      <PageHeader title="Map your columns" crumbs={[{ label: 'Imports', href: libraryHref(organizationId, 'imports') }]} />
+      <PageHeader title="Map your columns" crumbs={[{ label: 'Imports', href: libraryHref(organizationId, 'sources') }]} />
       <MappingEditor
         organizationId={organizationId}
         resourceId={resourceId}
