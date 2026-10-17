@@ -5,14 +5,14 @@
 this file or reads that secret (`app/auth` handles people, with no signing key of its own).
 
 **The second writer with no human caller**, and it is deliberately built the same way as the
-first (D26): its own Postgres role, its own three `execute` grants, and emphatically not
+first: its own Postgres role, its own three `execute` grants, and emphatically not
 service-role. `automation_runner` holds no grant on any table at all, so nothing here can read a
 customer or a job even by accident — what it gets back from `queued_messages` is an address and
 the finished words, and what it can say back is whether the sending worked.
 
-Identity still arrives as a JWT (D17). The `sub` is the automation actor from
+Identity still arrives as a JWT. The `sub` is the automation actor from
 `20260831000002_automations.sql` — a real `auth.users` row with no password and no address — so
-`events.actor_id` stays satisfiable and I11 keeps one shape.
+`events.actor_id` stays satisfiable without a second machine-only actor shape.
 """
 
 from __future__ import annotations
@@ -75,7 +75,7 @@ def _post(settings: RunnerSettings, function: str, payload: dict) -> httpx.Respo
 def run_due_automations(settings: RunnerSettings) -> int:
     """Ask what is due and do it. Returns how many rules acted.
 
-    The whole scheduler is a query on the other side of this call (D24): there is no queue to
+    The whole scheduler is a query on the other side of this call: there is no queue to
     drain and nothing held between invocations. A tick that runs twice is a tick that ran once,
     because every action this platform has is one a repeat leaves alone.
     """

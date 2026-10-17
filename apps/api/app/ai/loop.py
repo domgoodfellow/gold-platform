@@ -4,7 +4,7 @@
 here, and a provider only ever answers *what is the next turn*. Building on a vendor SDK's own
 tool-runner would have been less code and would have meant a second loop the first time a
 business ran a local model -- two dispatch paths and an `agent_runs` row whose meaning depended
-on who answered it (D34).
+on who answered it.
 
 **Nothing in here decides what the caller may see.** Every tool runs under the operator's own
 token, so the rows that come back are the rows their browser would show them. This module does
@@ -140,7 +140,7 @@ class ProposedAction:
 
     **Reported, never performed.** Nothing in this runtime can perform one: an action carries no
     Postgres function, and the only thing that turns this into a write is somebody in `apps/web`
-    pressing a button, at which point the domain layer does it under their own session (D34).
+    pressing a button, at which point the domain layer does it under their own session.
     """
 
     name: str
@@ -186,7 +186,7 @@ def _run_tool(
     # **Which business is filled in here and is not the model's to choose.** It appears in no
     # schema and no prompt, so there is nothing for a model to get wrong or to be talked into --
     # and it is written *after* whatever the model sent, so a model that supplies one anyway is
-    # overridden rather than obeyed. RLS decides what any of it can see regardless (D34); this is
+    # overridden rather than obeyed. RLS decides what any of it can see regardless; this is
     # what keeps the tool from being handed an id nobody ever told it.
     # **Only what the schema offered, and a business the model was never asked for.**
     #

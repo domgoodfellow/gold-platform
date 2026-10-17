@@ -157,10 +157,10 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   }
 
   // The demo shapes (`scripts/demo/businesses.ts`) don't enable `portal` — this stack's own
-  // operator-path specs are what needs it. D41: wanted and paid are two rows, so switching the
-  // module on is not enough by itself; the module-owning term is what `run.ts` also records for
-  // everything a demo shape switches on beyond its zero-price founding set, done here the same
-  // way for the one module none of the shapes ask for.
+  // operator-path specs need it. Module activation and commercial entitlement are separate,
+  // so switching the module on is not enough by itself; the module-owning term is what `run.ts`
+  // also records for everything a demo shape switches on beyond its zero-price founding set,
+  // done here the same way for the one module none of the shapes ask for.
   const usableModules = await listUsableModules(db, { organizationId });
   if (!usableModules.has('portal')) {
     await setModuleEnabled(db, { organizationId, key: 'portal', enabled: true });

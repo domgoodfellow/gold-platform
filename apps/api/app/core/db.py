@@ -4,22 +4,21 @@
 legacy shared HS256 secret — never used for a human caller (see `app/auth`, which verifies
 people's tokens through JWKS and holds no signing key at all). This module is scoped to a
 handful of machine Postgres roles, each with a small set of `execute` grants and no table grant,
-which is the property worth keeping through the migration named in `SETUP.md`'s
-"SUPABASE_JWT_SECRET pre-flight" and the docstring of `machine_token` below. Do not extend this
-module's reach while that migration is open — narrow the machine identity further, never
-generalise it. `platform_billing_webhook` is the third such role, added alongside
+which is the property worth keeping through the migration away from the legacy machine-auth
+dependency described in `docs/deployment.md`. Do not extend this module's reach while that
+migration remains open — narrow the machine identity further, never generalise it.
+`platform_billing_webhook` is the third such role, added alongside
 `payment_webhook` and `voice_webhook` rather than folding into either — its own Stripe account,
 its own signing secret, its own actor.
 
 **This is the half of the Stripe slice that was never about which language.**
-`docs/constraints.md` D26: what is distinctive about a webhook is that it arrives with no
-human session, which is an authorization problem, and the answer is the same either way — its
-own Postgres role, its own policies, and emphatically not service-role.
+What is distinctive about a webhook is that it arrives with no human session, which is an
+authorization problem. The answer is its own narrow Postgres role and grants, emphatically not
+service-role.
 
-**Identity still arrives as a JWT** (D17); it simply is not a person's. The token names the
+**Identity still arrives as a JWT**; it simply is not a person's. The token names the
 role PostgREST switches into and a `sub` that is a real `auth.users` row, so `auth.uid()`
-answers and `events.actor_id` is satisfiable. That is what let I11 keep a single shape rather
-than growing a nullable actor for machines.
+answers and `events.actor_id` is satisfiable without growing a nullable actor path for machines.
 """
 
 from __future__ import annotations
@@ -376,8 +375,7 @@ def record_inbound_message(
 
     Organization and conversation are both derived *inside* `record_inbound_message` from
     `to_number`, the carrier's own -- never from an organization id this handler could otherwise
-    have been asked to trust (D17): a callback that could name a business could name somebody
-    else's.
+    have been asked to trust: a callback that could name a business could name somebody else's.
     """
     token = machine_token(settings.supabase_jwt_secret, role=SMS_ROLE, sub=SMS_ACTOR)
 
@@ -492,8 +490,8 @@ def resolve_ai_runtime_assignment(
     """The provider, service and account assigned to one AI capability, or `None` if unassigned.
 
     Uses the same `provider_operator` role and token `read_provider_account_credential` does --
-    resolving an assignment is one step in the same trusted path, not a second axis (D45's
-    reasoning: a narrow role does one small job well, not several unrelated ones cheaply).
+    resolving an assignment is one step in the same trusted path, not a second authority axis.
+    The role stays narrow: one small provider-operations job rather than several unrelated ones.
     """
     token = machine_token(settings.supabase_jwt_secret, role=PROVIDER_ROLE, sub=PROVIDER_ACTOR)
 
@@ -527,7 +525,7 @@ def resolve_public_assistant(
     **How the public chat endpoint learns which business it is answering for.** The request names
     a deployment and nothing else: an organization id or a block of instructions that arrived in
     the body would be values the caller chose, and the shared secret proves who the caller is, not
-    that what it sent is true (D17, D22).
+    that tenant/resource assertions supplied in the request are true.
     """
     token = machine_token(settings.supabase_jwt_secret, role=PROVIDER_ROLE, sub=PROVIDER_ACTOR)
 

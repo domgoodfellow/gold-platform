@@ -5,10 +5,10 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 /**
  * The areas of one business, and the only place the platform's own nouns are written down.
  * Concentrated here so a future per-tenant terminology override is a lookup on `label`, not an
- * excavation across nine page headings (M3). These are the platform's words, not a tenant's —
+ * excavation across page headings. These are the platform's words, not a tenant's —
  * a business's own vocabulary is rows, read from the database wherever it appears.
  *
- * **Most of this list is still not capability-gated, and that stays deliberate (I12):** a kernel
+ * **Most of this list is still not capability-gated, and that stays deliberate:** a kernel
  * or general-purpose area shows itself to any member and explains what their role can't do,
  * because the guard is the RLS policy and the sentence is the courtesy. `Area.relevantCapabilities`
  * is the narrow exception, added for a genuinely feature-specific area whose entire content is
@@ -22,7 +22,8 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
  * Which section of the shell an area belongs to.
  *
  * **Named for what an operator does, never for what we bill.** *Module* is the billing axis
- * (D25): Reports, Assets, Automations and Reception are all modules, so a section by that name
+ * while these groups are the navigation axis. Reports, Assets, Automations and Reception are all
+ * modules, so a section named for billing/module structure
  * would have to hold areas belonging to every other section. Two axes crossed in one list is how
  * a sidebar stops making sense.
  *
@@ -31,15 +32,15 @@ import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
  * Configuration owner; shared organization concerns retain Settings ownership. `Area.sidebar:
  * false` hides record/compatibility destinations without creating a second editor.
  *
- * D23 still governs the part that matters: work comes first and Settings last, and an operator
- * must never reach today's work by going through settings.
+ * Work comes before Settings: an operator must never reach today's work by going through
+ * configuration first.
  */
 export type AreaGroup = 'home' | 'library' | 'workspaces' | 'settings';
 
 /**
  * The nine canonical operator workspaces, whether or not each has an operating surface yet. A
  * workspace is where an operator does a kind of work — never a Product, Plan, Module, Feature or
- * permission (D68). Registered is not visible. A workspace draws a row in the sidebar only
+ * permission.Registered is not visible. A workspace draws a row in the sidebar only
  * when at least one page names it (`Area.workspace`) and that page is reachable to this person
  * (`projectShell`). An authenticated Home with an honest starting state is a real page,
  * even before the workspace has records. Navigation never leads to a dead placeholder, and
@@ -49,14 +50,14 @@ export type AreaGroup = 'home' | 'library' | 'workspaces' | 'settings';
  * and workspaces have a many-to-many relationship. `featureKeys` records the current capability
  * contribution used by operator previews; it is not a commercial ownership claim.
  *
- * `label` is what an operator reads; it carries no `Gild ` prefix (that is the catalogue's own
- * naming, kept there deliberately — D67 restated: operator vocabulary and catalogue identity are
- * separate concerns). `home` names the Area that is this workspace's landing page — the parent
+ * `label` is what an operator reads; it carries no catalogue prefix because operator vocabulary
+ * and catalogue identity are separate concerns. `home` names the Area that is this workspace's
+ * landing page — the parent
  * row's own destination — and is absent only for a workspace with no page yet. Insights is not a
  * workspace here: it is cross-cutting, surfaced from each workspace's own Home and from a page's
- * Insights support mode, not a ninth row (D66 restated for this slice). Home the cross-workspace
- * cockpit is not a workspace either, and neither is Platform Administration — a scope of GOLD's
- * own organization, never a workspace of a business (D45, D60).
+ * Insights support mode, not another workspace row. Home the cross-workspace cockpit is not a
+ * workspace either, and neither is Platform Administration — a separate privileged scope,
+ * never a workspace of a business.
  *
  * Order is the order a customer meets them.
  */
@@ -75,16 +76,16 @@ export const WORKSPACES = [
 export type WorkspaceKey = (typeof WORKSPACES)[number]['key'];
 
 /**
- * The sections, in the order the sidebar draws them. One list, so the ordering rule D23 states
- * is a value the test can read rather than a sentence it has to trust. `label: null` draws no
+ * The sections, in the order the sidebar draws them. One list makes the ordering rule a value
+ * the test can read rather than a sentence it has to trust. `label: null` draws no
  * heading: Settings is one row set apart by the rule above it, and a heading repeating its only
  * entry would say the word twice.
  */
 export const AREA_GROUPS = [
   // Home is one row set apart, and the answer to "what matters right now".
   { key: 'home', label: null },
-  // Shared organization infrastructure — never a workspace, and ruled apart from where an
-  // operator does a kind of work (docs/ui-spec.md). One row today, like Home; no heading for the
+  // Shared organization infrastructure — never a workspace, and separate from where an
+  // operator does a kind of work. One row today, like Home; no heading for the
   // same reason Home draws none.
   { key: 'library', label: null },
   // Where an operator does a kind of work: each row is a workspace, and a workspace with several
@@ -95,11 +96,10 @@ export const AREA_GROUPS = [
 
 /**
  * The modules this platform sells, and the only list of them — a row in `organization_modules`,
- * never a directory (D25), and never read by an RLS policy. The kernel (work, schedule,
+ * never a navigation directory and never read by an RLS policy. The kernel (work, schedule,
  * customers, locations, resources, fields, roles, settings) is not a module and names none
- * below; `Area.module` is optional for that reason. Every key here has a screen behind it —
- * `starting_conversation.txt` names future modules that don't yet exist, and this list is only
- * the subset that does; `navigation.test.ts` keeps the two from drifting.
+ * below; `Area.module` is optional for that reason. Every key here has a real product surface;
+ * `navigation.test.ts` keeps the declared destinations from drifting from the application.
  */
 
 /** Where inside one business a module is set up — an area, and optionally a section of that area's page. */
@@ -126,7 +126,7 @@ export type Module = {
   /** The surface this module controls, when it isn't an area of the operator shell — public booking, the portal, a control on an invoice. Still a module: it's switched on and billed for either way. */
   outside?: string;
   /**
-   * Where this module is configured — required of every module (D31). Answers a different
+   * Where this module is configured — required of every module. Answers a different
    * question from `outside`: not what the module controls, but where a business fills it in.
    * A module that's switched on with nowhere to configure it is worse than no switch at all —
    * card payments once did exactly that, rendering an empty section. The segment must be the
@@ -271,7 +271,7 @@ export type Area = {
   segment: string;
   /** The platform's word for this area — used for the nav entry **and** the page's `<h1>`, so no page under `[organizationId]` carries its own heading. */
   label: string;
-  /** Which sidebar section (D23). */
+  /** Which sidebar section. */
   group: AreaGroup;
   /**
    * The workspace that **owns** this area (`WORKSPACES`). An owned page with a sidebar row is drawn
@@ -320,8 +320,8 @@ export type Area = {
    * The canonical `platform_catalog_features.key` value(s) that actually back this area's
    * surface — route metadata (an identifying key, nothing copied from the catalogue itself),
    * used to resolve visibility against `organizationResolvedFeatureStates` rather than against
-   * `area.module` alone. One legacy `ModuleKey` can back several canonical Features (D46's
-   * many-to-many seam via `platform_catalog_runtime_mappings`), so gating on `module` alone
+   * `area.module` alone. One legacy `ModuleKey` can back several canonical Features through
+   * `platform_catalog_runtime_mappings`, so gating on `module` alone
    * would show this area whenever *any* sibling feature sharing that module key stayed active —
    * `featureKeys` names the specific one(s) this area is actually the surface for. Absent for
    * the kernel and for an area whose module has no canonical feature mapping yet (Guided
@@ -335,14 +335,14 @@ export type Area = {
  *
  * **Operator workspaces are not the commercial catalogue.** A row here is a place somebody works;
  * a Plan grants Features that may compose into several rows, and one row may compose Features from
- * several catalogue Modules. Nothing here is one-to-one with a Product (D25, D46).
+ * several catalogue Modules. Nothing here is one-to-one with a Product.
  */
 export const AREAS: readonly Area[] = [
-  // Leads because D23 says the action an operator's phone is designed around is "what do I do next".
+  // Home leads because the operator should reach current work before configuration.
   { segment: 'home', label: 'Home', group: 'home' },
 
-  // Library: shared organization infrastructure, never a workspace (docs/domain-model.md,
-  // constraints.md D60/D68). Kernel, like Home — every business has it, so it names no module.
+  // Library: shared organization infrastructure, never a workspace. Kernel, like Home — every
+  // business has it, so it names no module.
   // Its own internal destinations (Files, Media, Templates, Knowledge, Collections, Sources,
   // Trash) are reached from Library's own page, not a second permanent sidebar.
   { segment: 'library', label: 'Library', group: 'library' },
@@ -366,8 +366,8 @@ export const AREAS: readonly Area[] = [
   // (`message.send`), two independent authorities — and entitled through either channel's
   // Features. Calls requires calling alone and Messages requires messaging alone, so a person who
   // only texts is never shown a calling surface, and the reverse. Numbers serve both channels and
-  // is offered to either. Not the pipeline features that share the `reception` module key (D46's
-  // many-to-many seam, and the reason `featureKeys` exists rather than gating on `module` alone). Messages and Numbers
+  // is offered to either. Not the pipeline features that share the `reception` module key; that
+  // many-to-many relationship is why `featureKeys` exists rather than gating on `module` alone. Messages and Numbers
   // are the domain-facing shells for SMS and the number inventory: each names the canonical
   // catalogue Features it is actually the surface for, so a deployment where those Features are
   // still `planned` in the catalogue (SMS today) shows the page and says so truthfully rather
@@ -413,7 +413,7 @@ export const AREAS: readonly Area[] = [
   // Studio: what is public for this business, and what needs attention. Home is a real page —
   // kernel, like Sales and Field's own Home, so a member sees it regardless of role. Website, Forms
   // and Templates have each earned an operating page, listed beneath it; Brand and Portal remain
-  // configuration reached from Settings (`CONFIG_TARGETS`) until each earns one too (D68).
+  // configuration reached from Settings (`CONFIG_TARGETS`) until each earns an operating page.
   { segment: 'studio', label: 'Studio', group: 'workspaces', workspace: 'studio' },
   // Website, Forms and Templates are Studio's mature operating pages: children of the one Studio
   // workspace, shown under its expandable row like Automations' own. Studio's row is Home and is
@@ -426,7 +426,7 @@ export const AREAS: readonly Area[] = [
   { segment: 'studio-templates', label: 'Templates', group: 'workspaces', workspace: 'studio', route: 'studio/templates', relevantCapabilities: ['organization.manage'] },
 
   // Insights: dashboards and reports over the one reporting aggregate every workspace reads. Not a
-  // workspace of its own (D66) — no permanent sidebar row — but still a real, directly addressable
+  // workspace of its own — no permanent sidebar row — but still a real, directly addressable
   // route, read from each workspace's own Home and from a page's Insights support mode.
   { segment: 'insights', label: 'Insights', group: 'workspaces', sidebar: false, module: 'reporting', relevantCapabilities: ['report.read', 'report.manage'], featureKeys: ['saved_dashboards', 'saved_reports', 'utilization'] },
 
@@ -648,10 +648,10 @@ export function areaAvailable(
 /**
  * Every area visible in navigation for the given state — one predicate, so `OrgNav` (grouped)
  * and the phone Menu (the same sidebar) can never diverge on eligibility even though they render
- * differently (D4 of this slice). `enabled` is legacy module keys, `featureAvailability` is the
+ * differently. `enabled` is legacy module keys, `featureAvailability` is the
  * canonical resolver's available-and-entitled-and-active Feature keys
  * (`availableFeatureKeys(organizationResolvedFeatureStates(...))`), and `capabilities` is the
- * role-relevance layer (I12, evolved) — all three optional, and passing none shows everything a
+ * role-relevance layer — all three optional, and passing none shows everything a
  * business has switched on, exactly as before either of the latter two existed.
  */
 export function visibleAreas(

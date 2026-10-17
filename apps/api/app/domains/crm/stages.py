@@ -21,8 +21,9 @@ have.
 **What this module decides, and what it does not.** Nothing here checks a role or a capability --
 `change_customer_stage` is `security invoker`, so `customers_update` (capability
 `customer.update`) is what actually authorizes the write, under the caller's own forwarded token
-(D17, D34). A caller this function could not authorize gets the database's own ambiguous refusal,
-translated by `app.domains.errors`, not a second and weaker check performed here.
+through the same RLS/domain boundary used by every caller. A caller this function could not
+authorize gets the database's own ambiguous refusal, translated by `app.domains.errors`, not a
+second and weaker check performed here.
 """
 
 from __future__ import annotations
@@ -59,7 +60,7 @@ def change_customer_stage(
 
     Callable independently of any web request -- an AI tool or a worker reaches the same pipeline
     move this function performs, under whichever token it is holding, with no React or HTTP
-    concept anywhere in the call (D34's reasoning, extended to a second axis).
+    concept anywhere in the call.
     """
     if not command.organization_id or not command.customer_id:
         raise DomainError("An organization and a customer are both required.")
