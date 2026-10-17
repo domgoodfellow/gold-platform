@@ -137,28 +137,9 @@
     ]
   },
   "files": {
-    "apps/web/tests/unit/calendar-time-layout.test.ts": {"category": "unit", "concerns": ["calendar", "ui"]},
-    "apps/web/tests/integration/database/calendar-events.test.ts": {"category": "database-integration", "concerns": ["calendar", "security", "tenant-isolation"]},
+    "apps/web/tests/integration/database/calendar-events.test.ts": {"category":"database-integration","concerns":["calendar","security","tenant-isolation"]},
+    "apps/web/tests/unit/calendar-time-layout.test.ts": {"category":"unit","concerns":["calendar","ui"]},
     "apps/web/tests/component/navigation-components.test.tsx": {"category":"component","concerns":["navigation","accessibility"]},
-    "apps/web/tests/unit/organization-calendar.test.ts": {
-      "category": "unit",
-      "concerns": [
-        "calendar",
-        "crm",
-        "work",
-        "navigation"
-      ]
-    },
-    "apps/web/e2e/organization-calendar.spec.ts": {
-      "category": "playwright-acceptance",
-      "concerns": [
-        "calendar",
-        "crm",
-        "work",
-        "navigation",
-        "rbac"
-      ]
-    },
     "apps/web/tests/component/notification-preferences.test.tsx": {"category":"component","concerns":["portal","communications","security","accessibility"]},
     "apps/web/e2e/service-notifications.spec.ts": {"category":"playwright-acceptance","concerns":["crm","portal","communications","security","accessibility"]},
     "apps/web/tests/integration/database/service-notifications.test.ts": {"category": "database-integration", "concerns": ["crm", "portal", "communications", "security"]},
@@ -639,6 +620,10 @@
         "commercial",
         "platform"
       ]
+    },
+    "apps/web/e2e/organization-calendar.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": ["calendar", "crm", "work", "navigation", "rbac"]
     },
     "apps/web/e2e/crm-home.spec.ts": {
       "category": "playwright-acceptance",
@@ -1310,6 +1295,10 @@
         "navigation",
         "ui"
       ]
+    },
+    "apps/web/tests/unit/organization-calendar.test.ts": {
+      "category": "unit",
+      "concerns": ["calendar", "crm", "work", "navigation"]
     },
     "apps/web/tests/component/crm-home.test.tsx": {
       "category": "component",
