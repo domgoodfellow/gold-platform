@@ -15,14 +15,14 @@ import { CancelBookingControl } from './change-controls';
 export const dynamic = 'force-dynamic';
 
 /**
- * What a visitor sees after booking, and the first read-back on D22's axis.
+ * What a visitor sees after booking, and the first read-back on the anonymous-session model's axis.
  *
  * Every row here is reached by exactly one permission check: `created_by = auth.uid()` under
  * the external policies. There is no token in the URL to guess and no capability to hold — a
  * work item id that is not theirs simply does not exist from out here, which is why this is a
  * 404 rather than a refusal.
  *
- * The price is `priceWorkItem` (I4), reading the lines the booking copied from the catalogue.
+ * The price is `priceWorkItem`, reading the lines the booking copied from the catalogue.
  * A stranger seeing what they were quoted is the same total the operator sees, from the same
  * function, because there is only one.
  */
@@ -75,7 +75,7 @@ export default async function BookingConfirmationPage({
         {window ? (
           <div>
             <dt className="text-subtle">When</dt>
-            {/* I9: an absolute instant, rendered in the business's zone rather than the
+            {/* The absolute-time rule: an absolute instant, rendered in the business's zone rather than the
                 reader's — the appointment is at the shop's clock, wherever the phone is. */}
             <dd className="font-medium">{formatWindow(window, organization.data.timezone)}</dd>
           </div>
@@ -84,7 +84,7 @@ export default async function BookingConfirmationPage({
           <div>
             <dt className="text-subtle">Status</dt>
             {/* The tenant's own word, rendered as written. The platform does not know what it
-                means and never translates it (D6). */}
+                means and never translates it. */}
             <dd className="font-medium">{status.name}</dd>
           </div>
         ) : null}

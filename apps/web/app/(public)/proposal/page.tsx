@@ -36,7 +36,7 @@ export default async function ProposalPage() {
 
   // The session is the one the link was exchanged for (`[token]/route.ts`). No session, a withdrawn
   // link and an expired exchange are the same answer, so the same page — telling them apart would
-  // let somebody holding a dead link learn it had once been real (I26's reasoning).
+  // let somebody holding a dead link learn it had once been real (the no-existence-leak rule's reasoning).
   const access = await proposalAccessContext(db);
   if (!access) redirect('/proposal/unavailable');
   const { organizationId } = access;

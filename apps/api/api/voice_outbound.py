@@ -5,7 +5,7 @@ customer and hold the line open, with nobody on the other end -- a telephone tha
 said nothing. The browser connects here instead, this puts the agent into a named room, and the
 web app adds the customer to the same room as a participant.
 
-**Both legs join a conference rather than dialling each other, which is D38.** Hold, transfer,
+**Both legs join a conference rather than dialling each other, which is the conference-call design.** Hold, transfer,
 merge and a supervisor listening in are then each one operation on one participant, instead of
 four features that cannot be added to a two-leg call without dropping it.
 

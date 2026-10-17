@@ -1,8 +1,8 @@
 """The carrier calling in, and the instructions it fetches when it does.
 
 **The second half of the telephony adapter, and the half that could not live in TypeScript.**
-Placing a call is an operator pressing a button, which D2 gives to the transactional runtime;
-being *called* by the carrier with nobody signed in is webhook ingress, which D2 gives to this
+Placing a call is an operator pressing a button, which the web/API runtime split gives to the transactional runtime;
+being *called* by the carrier with nobody signed in is webhook ingress, which the web/API runtime split gives to this
 one. The same split payments already made, stated in `app/providers/stripe/webhook.py`.
 
 **No SDK, and the same reasoning as everywhere else here.** What this needs is one HMAC, one
@@ -10,7 +10,7 @@ form parse and some XML, all of them specified and stable. Everything below is p
 tested directly, signature included -- there is no network in this file.
 
 **TwiML lives here because it is the carrier's dialect.** A conference, a dial verb and an
-attribute spelled `startConferenceOnEnter` are that vendor's vocabulary, and I15 says the place
+attribute spelled `startConferenceOnEnter` are that vendor's vocabulary, and the no-vendor-SDK-in-domain rule says the place
 for a vendor's vocabulary is inside its own adapter. Nothing above this module ever sees XML.
 """
 
@@ -190,7 +190,7 @@ def conference_twiml(
 ) -> str:
     """Put whoever is calling this URL into a named room.
 
-    **This is D38 in eleven lines of XML.** Both legs of every call join a conference rather
+    **This is the conference-call design in eleven lines of XML.** Both legs of every call join a conference rather
     than dialling each other, which is what makes hold, transfer, merge and supervision
     operations on a participant instead of four features nobody can add later.
 

@@ -12,7 +12,7 @@ import { DomainError } from '@/lib/domain/errors';
  */
 
 /**
- * Who this identity belongs to, not who dialled it (D39, restated for the number itself).
+ * Who this identity belongs to, not who dialled it (the telephony-identity design, restated for the number itself).
  * `provisioned`: GildOps created it at the carrier and holds the provider resource behind it.
  * `external`: a number this business already owned, taken as an outbound caller id where the
  * carrier's own rules permit — GildOps controls no inbound traffic on it. `browser`: an internal

@@ -5,8 +5,8 @@ import { formatMoney } from '@/lib/domain/work-items/consumption';
 /**
  * What happened to a customer, read back out of `events`. Payloads are thin about vocabulary
  * and thick about snapshots, deliberately: a status name is the tenant's vocabulary and is
- * resolved fresh (renaming moves no work, D6), while an amount or title is a term somebody
- * agreed to and is snapshotted (I8) so editing configuration can't reach backwards. `describe`
+ * resolved fresh (renaming moves no work, the tenant-vocabulary rule), while an amount or title is a term somebody
+ * agreed to and is snapshotted so editing configuration can't reach backwards. `describe`
  * falls back rather than rendering an empty sentence when a referenced row has since gone.
  * Deliberately concrete and named for a customer, not a general `listTimeline` — that's one
  * extraction away the day the work item screen wants one.
@@ -20,7 +20,7 @@ export type TimelineEntry = {
   action: string;
   /** One sentence, in this tenant's vocabulary where the event names any of it. */
   description: string;
-  /** I11 guarantees an actor id, not a name — identity is global (D19), so the only name available is the one this organization wrote on a membership; somebody who's left has none. */
+  /** Actor attribution guarantees an actor id, not a name — identity is global, so the only name available is the one this organization wrote on a membership; somebody who's left has none. */
   actorName: string | null;
 };
 
@@ -148,7 +148,7 @@ function text(payload: Record<string, unknown>, key: string): string | null {
  *
  * `perspective` disambiguates the one action written against the *other* side of what it
  * describes: `location.linked` names the location and carries the customer in its payload
- * (I11), so "Linked to a location" reads correctly from a customer's own timeline but makes no
+ *, so "Linked to a location" reads correctly from a customer's own timeline but makes no
  * sense on the location's — there it is the customer who did the linking, and the location's
  * timeline says so instead, the same relationship named from its own side.
  */
@@ -284,7 +284,7 @@ function describe(row: EventRow, words: Vocabulary, perspective?: 'location'): s
     case 'work_item.updated':
       return `Details corrected${on}`;
     case 'invoice.issued': {
-      // The number is snapshotted — it's what the document this customer holds says on it (I8), and unlike a status name it can never be renamed later.
+      // The number is snapshotted — it's what the document this customer holds says on it, and unlike a status name it can never be renamed later.
       const number = row.payload.number;
       return `Invoiced${typeof number === 'number' ? ` (#${number})` : ''}${on}`;
     }
@@ -554,14 +554,14 @@ export async function listWorkItemTimeline(
  * written down, not a gap in what happened, and this reader does not paper over it with a join to
  * `work_items.location_id` — a job's location is ordinary, mutable state (`updateWorkItem`), so a
  * current-state join would attribute a job's *today's* location onto the moment it was created,
- * which is exactly the falsified history I8 exists to refuse. `update_work_item`'s own event does
+ * which is exactly the falsified history the preserved-history rule exists to refuse. `update_work_item`'s own event does
  * snapshot `location_id` (`20260829000001`), so a job edited to name this location is truthfully
  * this location's history from that edit forward — the same reasoning `listWorkItemTimeline`
  * already applies to attributing `document.created` by payload rather than by `entity_id`.
  *
  * **`location.linked` needs no second query.** Unlike a customer's timeline, which has to recover
  * it from the *other* side (`customer_activity.sql`), this event is already written directly
- * against the location's own id — a location's own history is the one place I11's polymorphic-
+ * against the location's own id — a location's own history is the one place actor attribution's polymorphic-
  * subject hazard never applied.
  */
 export async function listLocationTimeline(

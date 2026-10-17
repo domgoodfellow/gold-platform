@@ -239,7 +239,7 @@ export async function createFieldDefinition(
 /**
  * Change how a field appears on the form: its label, whether it's required, where it sits.
  * Never `kind` or `key` — both are refused by the column grant, since each would be a
- * retroactive rewrite of stored values wearing a rename's clothing (I8). Options are editable
+ * retroactive rewrite of stored values wearing a rename's clothing. Options are editable
  * and `kind` is not: adding a fourth choice doesn't reinterpret the three already stored, but
  * turning a choice into a number would. Removing an option doesn't reach back — rows already
  * carrying it keep it, and only the next write to one of those rows is refused. `kind` is taken

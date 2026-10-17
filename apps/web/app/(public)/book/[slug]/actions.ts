@@ -21,7 +21,7 @@ export type BookingActionState = {
  * The slot travels back as the two values the offer was computed from — a time. Who takes part is
  * the server's to work out again at the moment of booking, never something this form names.
  *
- * A failure here is ordinary rather than exceptional: the whole of I6 is that the answer this
+ * A failure here is ordinary rather than exceptional: the whole of the advisory-availability rule is that the answer this
  * form was built from may be stale by the time it is submitted, so `booking.slot_taken` is a
  * sentence a visitor reads, not an error anybody needs to investigate.
  */

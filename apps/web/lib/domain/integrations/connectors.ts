@@ -3,7 +3,7 @@ import { DomainError } from '@/lib/domain/errors';
 import type { ConnectorReadiness } from './readiness';
 
 /**
- * The connector catalogue (D55) — which outside apps exist, never which a business has
+ * The connector catalogue — which outside apps exist, never which a business has
  * connected (`connections.ts`) and never who GOLD buys infrastructure from (`providers/`).
  * Visibility is the table's own policy: a business sees public rows, platform staff sees all.
  */

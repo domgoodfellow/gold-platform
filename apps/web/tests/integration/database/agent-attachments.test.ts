@@ -22,7 +22,7 @@ import { foundBusiness } from '@/tests/support/founding';
 /**
  * A file attached to an Agent question.
  *
- * `20260929000009` and D34 are the reasoning. What is asserted, and why each is its own claim:
+ * `20260929000009` and the AI-tool architecture are the reasoning. What is asserted, and why each is its own claim:
  *
  *   * **The file is a Document, owned by a person.** Same bucket, same table — and readable, in
  *     both, by that person alone. A colleague who shares the business reads nothing of it: not the

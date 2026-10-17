@@ -17,7 +17,7 @@ const INITIAL: FormState = { error: null };
  * placeholder number, because a suggested `+1…` is the platform guessing at a country.
  *
  * A first step toward the eventual Voice control plane (number inventory, pools, routing —
- * `constraints.md`'s next-slice list), not that plane itself: this remains one nullable number.
+ * see `docs/roadmap.md`), not that plane itself: this remains one nullable number.
  */
 export function OutboundIdentity({
   organizationId,

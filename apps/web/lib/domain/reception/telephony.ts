@@ -4,9 +4,9 @@ import { DomainError } from '@/lib/domain/errors';
 /**
  * The number one business dials from.
  *
- * **An identifier, never a credential** (D39). The carrier account is GOLD's and the subaccount
+ * **An identifier, never a credential**. The carrier account is GOLD's and the subaccount
  * under it is what keeps one business off another's number; what a business stores here grants
- * nothing on its own. A form that took a carrier auth token is the shape D27 already refused for
+ * nothing on its own. A form that took a carrier auth token is the shape the provider-credential rule already refused for
  * payments — a real secret needing rotation and revocation — and it is refused here too.
  *
  * **Which half of the dialer this is.** `lib/adapters/telephony/` answers *can this deployment

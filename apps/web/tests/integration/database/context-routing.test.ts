@@ -12,7 +12,7 @@ import { resolveOrganizationsLanding } from '@/lib/route/landing';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * D45's routing claim end to end: platform authority and organization membership are two
+ * The one-identity rule's routing claim end to end: platform authority and organization membership are two
  * independent facts about one identity, read together rather than either being hidden by the
  * other. `landing.test.ts` proves `resolveOrganizationsLanding` itself against every combination,
  * pure; this suite proves the two facts it is fed — `isPlatformStaff` and `listMyOrganizations` —
@@ -83,7 +83,7 @@ let mixedOne: { db: SupabaseClient; email: string };
 let mixedMulti: { db: SupabaseClient; email: string };
 let mixedOneOrgId: string;
 
-describe('who lands where, once platform authority and organization membership are read independently (D45)', () => {
+describe('who lands where, once platform authority and organization membership are read independently', () => {
   beforeAll(async () => {
     if (!ANON_KEY || !SERVICE_ROLE_KEY) {
       throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
@@ -270,7 +270,7 @@ describe('business-entry links go through organizationHomeHref, not a hand-built
   });
 
   it('/organizations/[organizationId] is a real doorway — guarded, then redirected to organizationHomeHref', () => {
-    // The same guard every area page calls, not a layout trusted for authorization (I12) and not
+    // The same guard every area page calls, not a layout trusted for authorization and not
     // a second permission model: a non-member reaches this route's own `not-found.tsx`, exactly
     // as any other page under `[organizationId]` does.
     expect(organizationRootPage).toContain('requireOrganization(');

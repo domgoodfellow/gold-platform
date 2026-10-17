@@ -9,13 +9,13 @@ import {
 } from '@/lib/domain/tenancy/organizations';
 
 /**
- * The operator door: GOLD creates a business and hands it to its owner (D29). Not an
+ * The operator door: GOLD creates a business and hands it to its owner. Not an
  * alternative to `createOrganization` — both doors normalise through the same three imported
  * rules, so a provisioned business is the same row under the same policies as a self-founded
  * one. What differs is only that the founding member is somebody other than the caller, which
  * `create_organization`'s `auth.uid()` gate can't express — hence a second function rather than
  * a flag on the first. No `requireStaff()` here: the gate is `provision_organization`'s own
- * Postgres-role check (I12).
+ * Postgres-role check.
  */
 export async function provisionOrganization(
   db: Db,
@@ -23,7 +23,7 @@ export async function provisionOrganization(
     /** Who the business belongs to. They must already have an account. */
     ownerEmail: string;
     name: string;
-    /** What the business will call its owner — per-tenant, never a global profile (D19). */
+    /** What the business will call its owner — per-tenant, never a global profile. */
     displayName?: string;
     timezone?: string;
     currency: string;
@@ -59,7 +59,7 @@ export async function provisionOrganization(
     p_capabilities: ALL_CAPABILITIES,
     p_display_name: displayName,
     // UTC rather than the staff member's own timezone — a Montreal business shouldn't land on a
-    // London clock because of where the operator was sitting (I9).
+    // London clock because of where the operator was sitting.
     p_timezone: (input.timezone || 'UTC') as string,
     p_currency: currency,
   });

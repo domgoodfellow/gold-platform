@@ -7,7 +7,7 @@ import { loadPersonContext, type PersonContext } from '@/lib/route/person-contex
 
 /**
  * The frame both Personal settings pages render inside. Each page calls this itself rather than
- * leaning on a layout, for the reason every organization page calls `requireOrganization` (I12);
+ * leaning on a layout, for the reason every organization page calls `requireOrganization`;
  * it hands back what a section needs to render and takes the section as children.
  *
  * **There is one shell, and Personal settings is a page inside it.** Where the person has a

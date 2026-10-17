@@ -25,7 +25,7 @@ import type { BookingPolicy } from '@/lib/domain/booking/policy';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * Booking policy (I86), proved against the real database: what a customer is offered (notice,
+ * Booking policy, proved against the real database: what a customer is offered (notice,
  * horizon, same-day, cadence) and may do afterwards (reschedule, cancel), with the commit — not the
  * page — as the guarantee. Policy is not feasibility, so these tests move one without the other.
  */

@@ -192,7 +192,7 @@ export async function dispatchQueuedEmail(db: Db, input: { organizationId: strin
   }
 }
 
-/** `supabase gen types` types every function argument as non-null even where the parameter accepts null (D15); the cast lives here once. */
+/** `supabase gen types` types every function argument as non-null even where the parameter accepts null; the cast lives here once. */
 const nullable = (value: string | null | undefined): string => (value ?? null) as string;
 
 type QueueInput = {

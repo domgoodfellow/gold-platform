@@ -12,13 +12,13 @@ import { type Capability } from '@/lib/domain/tenancy/capabilities';
 /**
  * A business's own words, and the rule that made this exist.
  *
- * `constraints.md`: "Never hardcode a claim a business makes about itself — guarantees, trust
+ * `docs/product.md`: "Never hardcode a claim a business makes about itself — guarantees, trust
  * points, service assertions, section headings. Copy is configuration." The booking surface
  * shipped saying "Book a time" and "This business is not taking bookings online at the moment"
  * on a URL a business puts on the side of a van, which is the platform speaking in that
  * business's voice.
  *
- * D20 defers the marketing surface for exactly that reason and then permits booking — which is
+ * The tenant marketing surface is deferred for exactly that reason and then permits booking — which is
  * a public page. The two are one problem, and the second arrived first.
  *
  * The last test in this file is the one that matters most: it reads the public route's source
@@ -197,7 +197,7 @@ describe('what a business says about itself', () => {
     // **The assertion that survives a careless author.** Everything above can be satisfied by
     // somebody who remembers the rule; this fails if they forget it and add a sentence to the
     // public page. It reads the route's own source and looks for prose that is not application
-    // state — `constraints.md` carves out "Loading", "No results" and aria labels, and nothing
+    // state — `docs/product.md` carves out "Loading", "No results" and aria labels, and nothing
     // else.
     // Comments are stripped first, and that is deliberate rather than a loophole. The pages
     // *document* the sentences they used to carry — a test that forbade explaining the rule
@@ -208,7 +208,7 @@ describe('what a business says about itself', () => {
 
     // Under `(public)` since the route groups landed. That group is a tenant's own customers;
     // `(marketing)` is GOLD speaking for itself and is deliberately not scanned here — see
-    // that page, and D20, which had been using one word for both.
+    // that page, and the deferred tenant-marketing decision, which had been using one word for both.
     //
     // **Every file under the group, found by walking it — not a list.** This was two paths
     // written out by hand, which meant the guard covered the two files somebody remembered and
@@ -260,7 +260,7 @@ describe("GOLD's chrome, and the one place it must never appear", () => {
    *
    * On `/book/{slug}` and `/portal/{token}` it would be our wordmark on somebody else's shop
    * front. That is the same failure the rest of this file guards against, in structural form
-   * rather than as a sentence: a customer of a business must meet that business, and D20 keeps
+   * rather than as a sentence: a customer of a business must meet that business, and the deferred tenant-marketing decision keeps
    * the platform out of the frame entirely.
    */
   const sourcesIn = (relative: string): string[] => {

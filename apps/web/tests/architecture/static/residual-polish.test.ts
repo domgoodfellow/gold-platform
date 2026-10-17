@@ -113,8 +113,8 @@ describe('a tenant’s own words stay neutral', () => {
 
 // ---- empty states -----------------------------------------------------------------------
 
-// An empty state may describe the truth and offer concise next-step guidance (`docs/ui-spec.md`
-// §8, D23) — the earlier blanket ban on any `EmptyState`/`DataTable` action is retired. What
+// An empty state may describe the truth and offer concise next-step guidance (`docs/ui-system.md`
+// §8, the UI system) — the earlier blanket ban on any `EmptyState`/`DataTable` action is retired. What
 // remains a durable rule is not duplicating a create control a page already shows elsewhere.
 describe('an empty state duplicates no create control the page already shows', () => {
   it('the field list in a Configure drawer shows its create control once, beside the count', () => {

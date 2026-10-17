@@ -7,10 +7,10 @@ const root = resolve(import.meta.dirname, '..', '..', '..');
 const source = (path: string) => readFileSync(resolve(root, path), 'utf8');
 
 /**
- * Every migration under `supabase/migrations/`, concatenated. D43's own catalogue is additive —
+ * Every migration under `supabase/migrations/`, concatenated. The platform-economics separation's own catalogue is additive —
  * `platform_products` gains a row in a *new* migration when a module gains one (the shape
  * `20260913000001`/`20260913000002` already used for the rest of the catalogue), never an edit
- * to the migration that first created the table (D15: a migration that may have been applied is
+ * to the migration that first created the table (the forward-only migration rule: a migration that may have been applied is
  * never modified). A single-file read would fail the day a module arrived after that first one.
  */
 const migrationsRoot = resolve(root, '../../supabase/migrations');

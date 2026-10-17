@@ -5,7 +5,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 /**
  * What a machine's counter said, and when.
  *
- * **The third trigger shape's input**, and the one `constraints.md` warns is easy to miss: a
+ * **The third trigger shape's input**, and the one that is easy to miss: a
  * schedule fires at a time, a reading from outside fires on somebody else's number, and this
  * fires when a counter a person or a sensor advances crosses a line. The four hundredth hour is
  * the event, and nothing happened at any particular moment to announce it.
@@ -13,7 +13,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
  * **What it counts is the business's word.** Hours, kilometres, cycles, litres — the platform
  * keeps no list, because a counter is a counter whatever it measures. What the platform does
  * insist on is that the unit travels with the value and is never assumed, which is the same rule
- * money follows (I10) and the same one the weather thresholds follow.
+ * money follows and the same one the weather thresholds follow.
  *
  * **Append-only.** A correction is a new row, exactly as it is for a recorded cost. A counter
  * that could be edited backwards is a counter that could be made to trip a rule twice, or never

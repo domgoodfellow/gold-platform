@@ -118,7 +118,7 @@ def test_a_customer_the_caller_may_not_touch_is_not_found_not_an_internal_error(
 
 
 def test_a_stage_from_another_business_is_a_validation_error(monkeypatch) -> None:
-    # `customers_stage_same_org` is a foreign key (I18) — a stage id belonging to another
+    # `customers_stage_same_org` is a foreign key — a stage id belonging to another
     # organization fails it, not RLS.
     _respond(
         monkeypatch,

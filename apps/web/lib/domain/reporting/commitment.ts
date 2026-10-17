@@ -5,8 +5,8 @@ import type { Filters, Grouping, Period } from '@/lib/domain/reporting/shape';
 /**
  * How much resource time a business has committed. Pinned to `listSchedule` and the double-
  * booking constraint by `availability.test.ts`/`reporting.test.ts` so the three stay in
- * agreement (D35). The numerator of utilisation, deliberately not utilisation itself — a
- * percentage needs `freeWindows`, the one availability calculation (I5); dividing by opening
+ * agreement. The numerator of utilisation, deliberately not utilisation itself — a
+ * percentage needs `freeWindows`, the one availability calculation; dividing by opening
  * hours is arithmetic this platform doesn't do for a business. Time is clipped to the period,
  * so a job spanning a month boundary is split in proportion rather than double-counted.
  */
@@ -52,7 +52,7 @@ export function totalMinutes(groups: CommitmentGroup[]): number {
   return groups.reduce((total, group) => total + group.minutes, 0);
 }
 
-/** Hours and minutes, not decimal hours — decimal invites multiplying by a rate, which would make this the accounting system `vision.md` refuses to be. */
+/** Hours and minutes, not decimal hours — decimal invites multiplying by a rate, which would make this the accounting system `docs/product.md` refuses to be. */
 export function formatMinutes(minutes: number): string {
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;

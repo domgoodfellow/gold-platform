@@ -32,7 +32,7 @@ import { foundBusiness } from '@/tests/support/founding';
 /**
  * THE M2 MILESTONE TEST.
  *
- * roadmap.md describes M2 as one demonstration, not a list of tables:
+ * This milestone was defined as one demonstration, not a list of tables:
  *
  *   > an operator can define a work item type, its statuses, and its allowed transitions
  *   > from the admin UI without opening the database — and a work item moves through that
@@ -55,8 +55,8 @@ import { foundBusiness } from '@/tests/support/founding';
  * And it is done twice, from byte-identical input: the same organization, type, status names,
  * transitions, technician, job title and — the sharp one — the same instants. Two businesses
  * booking the same technician's name for the same hour on the same Tuesday, and neither
- * blocking the other, is I7 and I2 together, and is the failure `constraints.md` quotes from
- * `tire-app-template` by name.
+ * blocking the other, is the no-double-booking constraint and tenant isolation together, and is the failure from
+ * the earlier `tire-app-template` prototype.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -344,7 +344,7 @@ describe('M2 — the work engine', () => {
   });
 
   it('lets the other business book the identical hour on an identically named technician', async () => {
-    // The milestone's cross-tenant half, and the exact failure constraints.md quotes: with a
+    // The milestone's cross-tenant half, and the exact earlier-prototype failure: with a
     // global exclusion constraint, or one that coalesced a null resource, business A's 9am
     // would block business B's.
     const db = b.operator.db;
@@ -480,7 +480,7 @@ describe('M2 — the work engine', () => {
     expect(cost.currency).toBe(SHARED.currency);
   });
 
-  it('has the whole lifecycle on the timeline, attributed and tenant-scoped (I11)', async () => {
+  it('has the whole lifecycle on the timeline, attributed and tenant-scoped', async () => {
     const { data, error } = await a.operator.db
       .from('events')
       .select('action, actor_id, organization_id')

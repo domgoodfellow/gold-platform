@@ -1,4 +1,4 @@
-"""Dropbox: one sign-in, reaching the top-level folders (D56).
+"""Dropbox: one sign-in, reaching the top-level folders.
 
 Read-only metadata scopes. Dropbox's API is POST-only and hands out a refresh token only when the
 authorize step asks for offline access.

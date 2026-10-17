@@ -14,7 +14,7 @@ class DomainError(Exception):
     """A command could not be completed. The base case: an unclassified failure.
 
     Deliberately vague in its default message -- an unclassified error is exactly the case where
-    the underlying detail must not reach whoever asked (I31's reasoning). Anything printed for an
+    the underlying detail must not reach whoever asked (the no-detail-leak rule's reasoning). Anything printed for an
     operator to see goes to stderr by the caller, never into this exception's own text.
     """
 
@@ -30,7 +30,7 @@ class ValidationError(DomainError):
 
 
 class NotFoundError(DomainError):
-    """Nothing answered. Deliberately the same outcome as "not yours" (I18's reasoning, RLS's
+    """Nothing answered. Deliberately the same outcome as "not yours" (the same-organization reference rule's reasoning, RLS's
     own): a caller able to tell a refusal from an absence has been told the row exists."""
 
     status = 404

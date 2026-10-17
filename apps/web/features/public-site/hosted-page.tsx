@@ -9,7 +9,7 @@ import { PublicSiteCommunication } from '@/features/communications/public-site-c
 
 /**
  * One page of a business's published website at its own hostname. The hostname is resolved again
- * here (D17) — a URL cannot name the business it shows — and the page is chosen from the one
+ * here — a URL cannot name the business it shows — and the page is chosen from the one
  * published snapshot that read returned, so navigation, this page and every other page are always
  * the same revision. A path that names no published page is the canonical public 404, never a
  * fall-through into GildOps' own routes.

@@ -62,7 +62,7 @@ type View =
 
 /**
  * Tenant scope. `askQuestion` never streams and answers under the caller's own session
- * (`constraints.md` D34); each question carries the earlier finished turns of the *same*
+ * (the AI-tool architecture, ADR-018); each question carries the earlier finished turns of the *same*
  * conversation, read by the domain layer, never by this component.
  *
  * The panel is a conversation: conversation header → transcript → composer, under the workspace

@@ -6,7 +6,7 @@ import { provisionOrganization } from '@/lib/domain/platform/provision';
 /**
  * How a business comes into existence, for every suite that needs one.
  *
- * **This file exists because D29 closed founding.** Until then each suite founded its own
+ * **This file exists because the one-creation-path rule closed founding.** Until then each suite founded its own
  * tenants by calling `create_organization` as an ordinary signed-in user — twenty-nine files,
  * each with its own copy of the same five lines. That was not duplication worth fixing while
  * it was true; it became worth fixing the moment it stopped being true, because the suite's
@@ -17,7 +17,7 @@ import { provisionOrganization } from '@/lib/domain/platform/provision';
  * to an owner who already has an account — which means every suite below this line is
  * exercising the real path rather than a fixture shortcut around it. That is the point of the
  * migration and not a side effect of it: a founding path only the tests can reach would be a
- * second creation path, which is the thing D29 says must never exist.
+ * second creation path, which is the thing the one-creation-path rule says must never exist.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -31,7 +31,7 @@ const CONNECTION =
  *
  * Vitest isolates modules per file, so this is one extra user per suite rather than one per
  * tenant. The `platform_staff` row goes in over a direct connection because **nothing in the
- * application may write it** — D28 grants no path, and `supabase/snippets/` holds the
+ * application may write it** — the platform-staff separation grants no path, and `supabase/snippets/` holds the
  * same statement. It is written *before* the sign-in below, because the role claim is minted
  * at sign-in and promotion does not refresh an existing token.
  */

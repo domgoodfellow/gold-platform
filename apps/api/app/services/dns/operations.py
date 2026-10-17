@@ -1,6 +1,6 @@
 """Reconciling the DNS records a hosting provider asked for, through a tenant's connected DNS.
 
-**The smallest coherent capability over a tenant's own OAuth connection (D33), never a Cloudflare
+**The smallest coherent capability over a tenant's own OAuth connection, never a Cloudflare
 control panel.** `app.services.web_delivery` asks `ensure_required_records` for a hostname and the
 records a provider named; this resolves which connected zone answers for that hostname, reads what
 is there, and writes only what is missing or only what GildOps itself already wrote once.
@@ -11,7 +11,7 @@ recorded as an `integration_resources` row under the connection that created it 
 with no such row is somebody else's, or nobody's doing GildOps can prove, and is refused rather
 than silently replaced. Neither that row nor the `cloudflare_zone` rows this reads to resolve a
 zone can be manufactured by a tenant session: `integration_resources_insert`/`_update` admit only a
-row with no `connection_id` (an uploaded file, D63); anything connection-scoped is written only
+row with no `connection_id` (an uploaded file, the uploaded-file rule); anything connection-scoped is written only
 through `integration_operator`, via `record_managed_integration_resource` here and
 `replace_integration_resources` for discovery -- the same role that reads the OAuth credential the
 write itself used.

@@ -241,7 +241,7 @@ describe('what a business has switched on', () => {
     expect(secondOn).not.toBe(firstOn);
 
     // And the business is still there. Switching a module off removes a surface, never the
-    // history behind it — I8's reasoning one level up.
+    // history behind it — the preserved-history rule's reasoning one level up.
     const { data: types } = await shop.db
       .from('work_item_types')
       .select('id')
@@ -293,7 +293,7 @@ describe('what a business has switched on', () => {
     // **The case that would catch modules and capabilities merging.** A member who cannot
     // change what the business bought must still be able to read and work — modules decide
     // what a business *has*, `app.has_capability` decides what a member may *do*, and nothing
-    // in `organization_modules` is ever an RLS predicate on a tenant-owned table (D25).
+    // in `organization_modules` is ever an RLS predicate on a tenant-owned table.
     const roleId = await createRole(shop.db, {
       organizationId: shop.organizationId,
       name: `Dispatcher ${randomUUID().slice(0, 6)}`,
@@ -338,7 +338,7 @@ describe('what a business has switched on', () => {
  * Where a business is paid.
  *
  * The claim worth holding is not that a row can be written — it is that **nothing here is a
- * credential and nothing here reaches another tenant**. D27's whole argument is that an account
+ * credential and nothing here reaches another tenant**. The provider-credential rule's whole argument is that an account
  * id can live in an ordinary row precisely because it grants nothing on its own; that only
  * stays true if the row is scoped like every other row.
  */
@@ -358,7 +358,7 @@ describe('a connected payment account', () => {
     });
     expect(mine!.account.accountId).toBe('acct_shop_1');
 
-    // Knowing the other tenant's id is no help — RLS is the boundary (I1).
+    // Knowing the other tenant's id is no help — RLS is the boundary.
     const theirs = await getPaymentAccount(rival.db, {
       organizationId: shop.organizationId,
       provider: 'stripe',
@@ -404,7 +404,7 @@ describe('a connected payment account', () => {
 
     try {
       // Where the money goes is not a dispatcher's decision, and the guard is the policy
-      // rather than the absence of a button (I12).
+      // rather than the absence of a button.
       await expect(
         connectPaymentAccount(shop.db, {
           organizationId: shop.organizationId,
@@ -454,7 +454,7 @@ describe('a connected payment account', () => {
       }),
     ).toBeNull();
 
-    // Disconnecting stops new charges. It reaches nothing that already happened — I8's
+    // Disconnecting stops new charges. It reaches nothing that already happened — the preserved-history rule's
     // reasoning, which is why there is no cascade from this table to `payments`.
     const { data } = await shop.db
       .from('work_item_types')
@@ -470,7 +470,7 @@ describe('a connected payment account', () => {
  * **The bug this describes is not a broken function — every piece worked.** Card payments could
  * be switched on while the section that connects an account was never rendered, because it sat
  * behind a deployment-level check for a processor. The business saw a switch go on and a page
- * say nothing, which is indistinguishable from having finished. `constraints.md` D31 makes the
+ * say nothing, which is indistinguishable from having finished. The no-dead-end rule (`docs/ui-system.md`) makes the
  * rule general: a module names where it is configured, and a module that is on is asked whether
  * it can actually do the thing it was switched on for.
  *
@@ -578,7 +578,7 @@ describe('what a switched-on module still needs', () => {
     // An address and nothing published: a page that answers for nobody. **This sentence used to
     // end "and no screen here can publish one", which was true and was the debt** —
     // `setTypeBookable` was reachable from the domain layer and from no route, which
-    // `walkthrough.md` recorded as M4's. Now it names the screen, which is what D31 asks of every
+    // was a recorded gap. Now it names the screen, which is what the no-dead-end rule asks of every
     // input a module has: a business told what is missing has somewhere to go.
     const addressed = await outstandingModuleSetup(bare.db, {
       organizationId: bare.organizationId,
@@ -611,7 +611,7 @@ describe('what a switched-on module still needs', () => {
     // **Deliberately not asserting which sentence.** Which of the two applies depends on whether
     // the deployment running this suite holds processor keys, and that is a property of an
     // environment rather than of this business. What must hold either way is that the screen is
-    // not silent — silence is the whole of what D31 forbids.
+    // not silent — silence is the whole of what the no-dead-end rule forbids.
     await setModuleEnabled(bare.db, {
       organizationId: bare.organizationId,
       key: 'card_payments',
@@ -680,7 +680,7 @@ describe('the modules a configuration asks for', () => {
   it('switches on what it names, and leaves what it does not name alone', async () => {
     await configureBusiness(business.db, business.organizationId, minimal(['assets']));
 
-    // `listEnabledModules` is the wanted axis — organization_modules itself, unaffected by D41.
+    // `listEnabledModules` is the wanted axis — organization_modules itself, unaffected by the wanted-versus-paid entitlement rule.
     // Modules are switched on as feature activations now (configure.ts), so the wanted axis is
     // read from the resolved feature states, not from the retired module toggle.
     const wanted = new Set(activeModuleKeys(await organizationResolvedFeatureStates(business.db, { organizationId: business.organizationId })));
@@ -726,7 +726,7 @@ describe('the modules a configuration asks for', () => {
     });
 
     // Maintenance is counters and the rules that watch them, and a rule is an automation. On
-    // its own it is a switch that does nothing — which is what D31 exists to prevent, caught
+    // its own it is a switch that does nothing — which is what the no-dead-end rule exists to prevent, caught
     // here rather than discovered on the Settings screen afterwards.
     await expect(
       configureBusiness(business.db, business.organizationId, minimal(['maintenance'])),

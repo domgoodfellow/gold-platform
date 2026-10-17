@@ -38,7 +38,7 @@ import { foundBusiness } from '@/tests/support/founding';
 /**
  * THE M4 MILESTONE TEST.
  *
- * `roadmap.md` describes M4 as one demonstration:
+ * This milestone was defined as one demonstration:
  *
  *   > a real business runs its operations on GOLD — quotes or bookings in, work scheduled and
  *   > assigned, work completed, invoiced, and paid — and nobody at that business has ever been
@@ -57,7 +57,7 @@ import { foundBusiness } from '@/tests/support/founding';
  * something. The only raw connection in this file reads `app.current_tenant_ids()` back as an
  * *assertion about* the visitor, never to set anything up.
  *
- * **Pneu3L is the evidence and not the subject** (`roadmap.md` M4). Every word, number, status
+ * **Pneu3L is the evidence and not the subject** (this milestone's own framing). Every word, number, status
  * and price below is data this business chose; nothing in the tree names it, and a clinic in
  * Tokyo would run the identical sequence with different rows. What this test proves is that
  * the platform can carry a business end to end — the fact that one named business is doing so
@@ -137,7 +137,7 @@ let pneu: Business;
 async function standUpPneu3L(): Promise<Business> {
   const { db, userId, email } = await newOperator();
 
-  // **Pneu3L is provisioned, because since D29 that is how a business begins.** The milestone's
+  // **Pneu3L is provisioned, because since the one-creation-path rule that is how a business begins.** The milestone's
   // criterion is unchanged and so is everything below: nobody at this business is ever given
   // database credentials, and the owner runs every step from here on. What changed is only the
   // door it came through, which is the distinction that record exists to draw.
@@ -146,7 +146,7 @@ async function standUpPneu3L(): Promise<Business> {
     name: 'Pneu3L',
     displayName: 'Owner-operator',
     // Montreal, in Canadian dollars. Neither is a default: `organizations.currency` is
-    // required at founding because there is no neutral currency (I10).
+    // required at founding because there is no neutral currency.
     timezone: 'America/Toronto',
     currency: 'CAD',
   });
@@ -171,7 +171,7 @@ async function standUpPneu3L(): Promise<Business> {
     position: 2,
   });
 
-  // A type with no configured transitions is frozen rather than unconstrained (I13), so the
+  // A type with no configured transitions is frozen rather than unconstrained, so the
   // lifecycle is these two rows and nothing else.
   await createWorkItemTransition(db, { organizationId, typeId, fromStatusId: requestedId, toStatusId: scheduledId });
   await createWorkItemTransition(db, { organizationId, typeId, fromStatusId: scheduledId, toStatusId: doneId });
@@ -269,7 +269,7 @@ describe('THE M4 MILESTONE: a real business runs on the platform', () => {
     const slots = await bookableSlots(stranger, {
       organizationId: pneu.organizationId,
       type: offered[0],
-      // A Monday ahead of any real clock: a booking in the past is refused by booking policy (I86).
+      // A Monday ahead of any real clock: a booking in the past is refused by booking policy.
       date: '2027-04-05',
       timeZone: 'America/Toronto',
     });
@@ -286,7 +286,7 @@ describe('THE M4 MILESTONE: a real business runs on the platform', () => {
 
     // Still a member of nothing, having just written. The write went through one privileged
     // function whose first act is the scope check; the stranger holds no insert permission on
-    // any table (D22).
+    // any table.
     expect(await tenantsFor(strangerId)).toEqual([]);
 
     // ---------------------------------------------------------------------
@@ -305,7 +305,7 @@ describe('THE M4 MILESTONE: a real business runs on the platform', () => {
     });
 
     // Along the lifecycle this business configured, and no other path: a type with no
-    // configured transitions is frozen (I13), and these two rows are the whole of it.
+    // configured transitions is frozen, and these two rows are the whole of it.
     await changeWorkItemStatus(pneu.db, { workItemId, toStatusId: pneu.scheduledId });
     await changeWorkItemStatus(pneu.db, { workItemId, toStatusId: pneu.doneId });
 
@@ -328,7 +328,7 @@ describe('THE M4 MILESTONE: a real business runs on the platform', () => {
       workItemId,
     });
 
-    // The invoice is the quote copied, and its total comes from the same one calculation (I4).
+    // The invoice is the quote copied, and its total comes from the same one calculation.
     expect(invoiceStanding(issued!).total).toEqual(quote);
     expect(invoiceStanding(issued!).settled).toBe(false);
 
@@ -378,7 +378,7 @@ describe('THE M4 MILESTONE: a real business runs on the platform', () => {
 
   it('never lets a stranger read anything but what they created', async () => {
     // A second visitor to the same business, scoped to one tenant like the first -- and to
-    // their own rows within it, by `created_by` rather than by a customer id (D22).
+    // their own rows within it, by `created_by` rather than by a customer id.
     const other = anonClient();
     await beginBooking(other, { organizationId: pneu.organizationId });
 

@@ -10,7 +10,7 @@ import {
 
 /**
  * Where an answer stands. `unknown` is absence, not a stored value — the same reasoning
- * `customers.stageId` being nullable already carries here (D31): a requirement nobody has
+ * `customers.stageId` being nullable already carries here: a requirement nobody has
  * touched yet is not a row saying so.
  *
  * `provided` is what a prospect said themselves, unconfirmed by anyone at GildOps. `confirmed`
@@ -122,7 +122,7 @@ export type DiscoveryAnswerPatch = Partial<
  * cannot backdate an answer.
  *
  * An entry whose `value` is blank clears that requirement rather than storing an empty answer —
- * "unknown" is absence here (D31), the same as everywhere else this domain holds that rule, so a
+ * "unknown" is absence here, the same as everywhere else this domain holds that rule, so a
  * form submitting its untouched fields alongside a real edit does not manufacture eleven empty
  * "confirmed" answers nobody gave. `not_applicable` is the one status this does not apply to: a
  * blank value there is not "nothing was said", it is the answer.

@@ -24,7 +24,7 @@ import {
  * attribute is not a constraint.
  *
  * `values` arrived with the third caller — the work item edit form — and the component was
- * extended rather than copied, which is the rule D23 states for exactly this moment. An edit
+ * extended rather than copied, which is the rule the UI system states for exactly this moment. An edit
  * form prefills; a create form passes nothing and gets the empty inputs it always had. A key
  * the registry no longer declares simply does not render, because `definitions` decides what
  * exists and the stored values only decide what they contain.

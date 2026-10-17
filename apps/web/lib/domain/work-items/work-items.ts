@@ -32,7 +32,7 @@ export type WorkItem = {
   asset: WorkItemRef | null;
   /** When this work occupies its resource, or null if it is not yet scheduled. */
   window: Window | null;
-  /** Tenant-defined fields, governed by this organization's registry (D7). */
+  /** Tenant-defined fields, governed by this organization's registry. */
   custom: CustomValues;
   createdAt: string;
 };
@@ -165,7 +165,7 @@ export async function listWorkItems(
           location: location ? { id: location.id, label: location.label } : null,
           resources: resourcesOf(row.assignments as AssignmentRow[] | null),
           asset: asset ? { id: asset.id, label: asset.name } : null,
-          // D15's boundary again: `supabase gen types` has no TypeScript for a Postgres range
+          // the forward-only migration rule's boundary again: `supabase gen types` has no TypeScript for a Postgres range
           // and emits `unknown`. The cast is at the one place the value enters the domain, and
           // `parseWindow` treats anything it cannot read as "not scheduled" rather than trusting
           // the shape.
@@ -220,7 +220,7 @@ export async function getWorkItem(
  * There is deliberately no check here that the status, customer, location and resource
  * belong to this organization. All four references are composite, so a work item naming
  * another tenant's anything is impossible to write down — a stronger guarantee than this
- * function could make, and one a direct PostgREST insert cannot skip (I18).
+ * function could make, and one a direct PostgREST insert cannot skip.
  *
  * The type is not an argument. It follows from the status, and `create_work_item` derives it
  * under the caller's own RLS — an argument that must agree with another argument is an
@@ -303,10 +303,10 @@ export async function createWorkItem(
  * Correct a work item's details.
  *
  * **What this deliberately cannot touch is the whole design.** Not `status_id`, which is
- * `work_item.transition` and is validated against the tenant's configured transitions (I13).
+ * `work_item.transition` and is validated against the tenant's configured transitions.
  * Not `resource_id` or `scheduled_during`, which is `work_item.schedule` and lands on the
- * exclusion constraint (I7). Not `type_id` at any price: changing a type strands the status
- * the job is in, and I20's three-column reference exists so that mismatch cannot be written
+ * exclusion constraint. Not `type_id` at any price: changing a type strands the status
+ * the job is in, and the status-belongs-to-its-type constraint's three-column reference exists so that mismatch cannot be written
  * down at all. `create_work_item` derives the type from the status precisely so nobody ever
  * holds both, and this keeps that true for the rest of the job's life.
  *

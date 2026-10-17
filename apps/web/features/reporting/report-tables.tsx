@@ -14,7 +14,7 @@ import { formatMoney } from '@/lib/domain/work-items/consumption';
  *
  * Extracted at the second caller and not before: the ad-hoc view had them inline until a
  * dashboard needed the same table for each of its tiles. They render and total and decide
- * nothing — `totalsByCurrency` and `totalJobs` are the domain functions, for the reason I4 gives
+ * nothing — `totalsByCurrency` and `totalJobs` are the domain functions, for the reason the one-calculation rule gives
  * about inline sums.
  *
  * Three absences are deliberate and each is a rule rather than a gap. A dash where a cost or a

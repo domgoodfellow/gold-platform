@@ -3,7 +3,7 @@ import { DomainError } from '@/lib/domain/errors';
 import type { ConnectorStatus } from './connectors';
 
 /**
- * What GOLD's public site says about connectors (D55): the published projection, public columns
+ * What GOLD's public site says about connectors: the published projection, public columns
  * only, read without a session. Editing a connector in Platform → Integrations expires
  * `CONNECTOR_CATALOGUE_CACHE_TAG` (`published-cache.ts`), so the public catalogue changes without a
  * deployment. This file holds no cache and no server-only import so a test can drive it.

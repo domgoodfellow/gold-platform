@@ -1,27 +1,27 @@
 """Which questions this platform can be asked, and which function answers each.
 
 **Six, and the list grows one entry per slice that has a screen behind it.** A tool list written ahead
-of its callers is the speculative abstraction `constraints.md` opens by refusing, and here it has
+of its callers is a speculative abstraction: nothing is built before it has a caller, and here it has
 a second cost: every tool is a sentence in a prompt, and a model given nine plausible tools
-chooses worse than one given the few that fit. Two of these are the questions M8's criterion
-names. The third is here because watching a model handle *move it to 9am tomorrow* showed it had
+chooses worse than one given the few that fit. Two of these are the onboarding
+questions. The third is here because watching a model handle *move it to 9am tomorrow* showed it had
 no way to find out what was already booked, so it guessed — which is a foundation problem rather
 than a model problem, and the fix is a tool rather than a firmer instruction. The last three are
-the aggregates, each with a screen behind it in the same change (D35).
+the aggregates, each with a screen behind it in the same change.
 
 **No tool asks which business, and that was a bug before it was a decision.** Every function
 takes `p_organization_id`, and the first version of this file put it in the schema -- so a model
 was required to supply an id nothing had ever told it. Driving the real path found it: a model
 either invents a uuid, which matches nothing, or asks the person a question they should not have
 to answer. The loop fills it in from the request instead. It is not the model's to choose, and now
-it cannot: the parameter never appears in a prompt, and RLS decides regardless (D34).
+it cannot: the parameter never appears in a prompt, and RLS decides regardless.
 
 **The report-shaped half arrived, and it arrived as a function rather than as arithmetic here.**
-This list said for two milestones that revenue by customer got no tool until M7's aggregate layer
+This list said for two milestones that revenue by customer got no tool until the reporting aggregate layer
 existed, because the only other way to answer was a total computed inside the loop -- the second
-aggregate layer I4 and I5 exist to prevent one level up. `invoiced_and_incurred` is that layer,
+aggregate layer the one-calculation rule and the single availability model exist to prevent one level up. `invoiced_and_incurred` is that layer,
 and the reason it can be a tool at all is that it is the same `stable`, `security invoker`
-function shape as everything else here (D35).
+function shape as everything else here.
 
 **What is still missing is missing on purpose.** *Cost trends* is a shape this returns one period
 of rather than a series, and *least profitable service* is a question this cannot answer at all --

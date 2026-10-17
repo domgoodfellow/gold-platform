@@ -3,7 +3,7 @@ import type { ComponentProps } from 'react';
 import { Button as ShadcnButton } from '@gold/ui/components/button';
 import { cx, FOCUS_RING } from '@/components/class-names';
 
-/** The one button set (D23) — extended per surface, never duplicated. */
+/** The one button set — extended per surface, never duplicated. */
 export type ButtonTone = 'primary' | 'secondary' | 'danger' | 'text' | 'soft' | 'ghost';
 export type ButtonSize = 'default' | 'small' | 'tiny';
 

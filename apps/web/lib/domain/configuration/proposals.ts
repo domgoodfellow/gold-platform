@@ -12,11 +12,11 @@ import { readBusinessShape } from './shape';
 
 /**
  * Proposals: a configuration drafted from a business's own description, for a person to review.
- * The domain layer owns the flow, the adapter owns the drafting (I15, D32) — this file never
+ * The domain layer owns the flow, the adapter owns the drafting — this file never
  * names a provider. Applying is a separate act (`configureBusiness`, called from a screen): a
  * proposal is a record somebody approved, not a configuration that arrived. Runs only against
  * an organization that already exists — a drafting flow that created one would be the second
- * creation path D29 forbids.
+ * creation path the one-creation-path rule forbids.
  */
 
 /** Re-exported so no screen imports the adapter directly for the type. */
@@ -34,7 +34,7 @@ export type ConfigurationProposal = {
   outcome: ConfigurationProposalOutcome;
   /** The database's or the domain layer's own words, when applying did not finish. */
   detail: string | null;
-  /** What applying produced, snapshotted. Never joined to (I8). */
+  /** What applying produced, snapshotted. Never joined to. */
   result: unknown;
   /** Which provider drafted it. For a person reading the row; decides nothing. */
   draftedBy: string;
@@ -119,7 +119,7 @@ export async function currentConfigurationProposal(
   return row ? toProposal(row) : null;
 }
 
-/** Lets a screen say "can't draft" rather than rendering a form that fails after somebody's written three paragraphs (D31). */
+/** Lets a screen say "can't draft" rather than rendering a form that fails after somebody's written three paragraphs. */
 export async function canDraftConfiguration(): Promise<boolean> {
   return (await draftingProvider()) !== null;
 }
@@ -242,7 +242,7 @@ export async function proposeConfiguration(
 
 /**
  * Replace the shape on a draft with what a person edited it into — the half that keeps review
- * from being a rubber stamp (D32). Only a draft can be edited, enforced by the update policy
+ * from being a rubber stamp. Only a draft can be edited, enforced by the update policy
  * rather than this function: an applied or failed row matches no update policy, so what was
  * applied can't later be made to say something else was.
  */
@@ -303,8 +303,8 @@ async function observeConfiguration(
  * Apply one, under the acting person's own session. Adds no capability — every write goes
  * through `configureBusiness`, whose steps already run against `app.has_capability` policies, so
  * a check here would be a second copy of a rule that already exists. A failure is recorded, not
- * rolled back (D32): making the sequence atomic would need one privileged function taking the
- * shape as JSON, which is a second configuration path (the same mistake D29 forbids elsewhere).
+ * rolled back: making the sequence atomic would need one privileged function taking the
+ * shape as JSON, which is a second configuration path (the same mistake the one-creation-path rule forbids elsewhere).
  * Re-applying is a new draft, not an edit — the update policy matches drafts only.
  */
 export async function applyConfigurationProposal(

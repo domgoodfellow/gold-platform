@@ -17,12 +17,12 @@ from typing import Any, Mapping
 class CallerContext:
     """One authenticated caller, for the length of one request.
 
-    `token` is kept only to be forwarded to PostgREST under this same person's own rights (D17) —
-    never logged, never echoed in a response (constraints.md, item 12 of this security pass).
+    `token` is kept only to be forwarded to PostgREST under this same person's own rights —
+    never logged, never echoed in a response (`docs/security.md`: never log secret values).
 
     `role` is Supabase's own JWT `role` claim (ordinarily `authenticated`), exposed for
     inspection only. **It must never be read as platform authority.** `platform_staff` is a
-    database fact checked live (D45); a JWT claim a session merely presents is exactly the
+    database fact checked live; a JWT claim a session merely presents is exactly the
     design this repository tore out once already, and `require_caller` does not special-case it.
 
     `verification_mechanism` says *how* this identity was established — `"jwks"` (this process

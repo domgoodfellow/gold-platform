@@ -10,7 +10,7 @@ import { listUsableModules } from '@/lib/domain/tenancy/modules';
  * Asking a processor for money, and writing down what it says arrived. Only the asking half is
  * here — asking is an ordinary write under the caller's own JWT; being told is webhook ingress
  * with no human caller, which lives in `apps/api` under its own Postgres role with no table
- * grant (D2, D26).
+ * grant.
  *
  * Two callers, one implementation of the actual asking. An operator resolves *their own*
  * organization-authorized invoice and writes `payment_requests` directly, under RLS the
@@ -18,7 +18,7 @@ import { listUsableModules } from '@/lib/domain/tenancy/modules';
  * `begin_external_card_payment` (a narrow `SECURITY DEFINER` function, see the migration this
  * shipped in) derives their external scope, re-proves invoice ownership and entitlement, and
  * writes the row on their behalf, since an external actor holds no table grant on
- * `payment_requests` at all and none is added here (I21's shape, restated for a fourth axis).
+ * `payment_requests` at all and none is added here (the no-grant-rather-than-policy rule's shape, restated for a fourth axis).
  * What both share — ask the provider, then correct the row with what it actually said — is
  * `askProviderToCollect` below, so there is exactly one place that talks to a processor.
  */
@@ -70,7 +70,7 @@ async function askProviderToCollect(input: {
 
 /**
  * Ask the processor to collect what is still owed on an invoice. The amount is never an
- * argument — it's `invoiceStanding`'s outstanding figure (I4), so a caller can't ask a customer
+ * argument — it's `invoiceStanding`'s outstanding figure, so a caller can't ask a customer
  * for a number nothing here stands behind. Null when this deployment has no processor
  * configured — a cash-only business is complete, and the screen shows no card option.
  */
@@ -89,7 +89,7 @@ export async function requestCardPayment(
   if (!provider || !enabled.has('card_payments')) return null;
 
   // No fallback account — charging on the platform's own account "for now" is the
-  // money-transmitter shape D27 refuses.
+  // money-transmitter shape the provider-credential rule refuses.
   const connected = await getPaymentAccount(db, {
     organizationId: input.organizationId,
     provider: provider.name,
@@ -158,7 +158,7 @@ export async function requestCardPayment(
 }
 
 /**
- * The customer's own door onto the same processor request — D22's external axis, not
+ * The customer's own door onto the same processor request — the anonymous-session model's external axis, not
  * Organization Context. `begin_external_card_payment` derives everything: which organization,
  * which invoice is genuinely this customer's, what it still stands at, and which connected
  * account receives it. This function accepts none of those from its own caller either — an
@@ -167,7 +167,7 @@ export async function requestCardPayment(
  * Null covers every reason there might be nothing to offer — no processor configured, card
  * payments not usable, no connected account, or the invoice simply isn't this customer's —
  * indistinguishably, the same shape a 404 already gives a portal visitor elsewhere on this
- * surface. Hiding the reason is not the guard; the database's own scope check is (I12).
+ * surface. Hiding the reason is not the guard; the database's own scope check is.
  */
 export async function requestPortalCardPayment(
   db: Db,
@@ -226,7 +226,7 @@ export async function requestPortalCardPayment(
  * Whether the portal should offer a Pay action on one invoice at all — read-only, so a page may
  * call it on every render without creating anything. A courtesy, never the guard:
  * `requestPortalCardPayment` re-proves every one of these conditions itself rather than trusting
- * that this was called first (I12).
+ * that this was called first.
  */
 export async function portalCardPaymentAvailable(
   db: Db,

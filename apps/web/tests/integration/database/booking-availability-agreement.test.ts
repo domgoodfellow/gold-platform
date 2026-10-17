@@ -19,7 +19,7 @@ import { createWorkItemType, setTypeBookable } from '@/lib/domain/work-items/typ
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * I5 on the public axis.
+ * The single availability model on the public axis.
  *
  * What counts as a commitment is `work_items_resource_not_double_booked`'s partial predicate,
  * and it is written out more than once: as the constraint, as `listSchedule`'s filters, and as
@@ -77,7 +77,7 @@ async function setBuffer(minutes: number) {
   });
 }
 
-describe('public booking offers what the exclusion constraint would accept (I5)', () => {
+describe('public booking offers what the exclusion constraint would accept', () => {
   beforeAll(async () => {
     if (!ANON_KEY || !SERVICE_ROLE_KEY) {
       throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
@@ -143,7 +143,7 @@ describe('public booking offers what the exclusion constraint would accept (I5)'
     await setBuffer(30);
 
     // 10:30 is the first free instant, but a one-hour cadence offers starts on the hour of the
-    // business's local clock (booking cadence, I86): 11:00 is the first, and it ends at closing.
+    // business's local clock (booking cadence, the local-clock rule): 11:00 is the first, and it ends at closing.
     // Not 10:00, which the buffer now occupies.
     expect(await offered(watcher)).toEqual(['11:00']);
 

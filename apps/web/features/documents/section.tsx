@@ -35,7 +35,7 @@ export function DocumentsSection({
       <DocumentList organizationId={organizationId} documents={documents} />
 
       {/* Hiding the form is a courtesy, not the guard — the underlying write is refused by the
-          database for anyone without document.create regardless of what this renders (I12). */}
+          database for anyone without document.create regardless of what this renders. */}
       {mayAttach ? (
         <DocumentUploadForm action={uploadAction} hiddenFields={hiddenFields} />
       ) : (

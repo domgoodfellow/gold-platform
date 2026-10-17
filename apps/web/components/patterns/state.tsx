@@ -7,7 +7,7 @@ import { PageLocation, type PageLocationCrumb } from '../navigation/page-locatio
  * The State/Exception pattern: a 404, an unavailable business, a permission refusal, a paused
  * subscription — never an ordinary page with a `PageHeader`. The recovery action sits inside the
  * same centred column as the message, never pulled to a header's far edge by `justify-between`
- * (`docs/ui-spec.md` §2a, §2e).
+ * (`docs/ui-system.md`).
  *
  * `title` renders as the page's one `<h1>` — a state screen is still a navigable page and still
  * needs a meaningful heading, even though it looks nothing like `PageHeader`. `location` is

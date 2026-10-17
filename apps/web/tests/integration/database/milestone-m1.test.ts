@@ -28,7 +28,7 @@ import { foundBusiness } from '@/tests/support/founding';
 /**
  * THE M1 MILESTONE TEST.
  *
- * roadmap.md does not describe M1 as a list of tables. It describes one demonstration:
+ * This milestone was not defined as a list of tables. It describes one demonstration:
  *
  *   > two organizations exist in one database, each with its own users, customers,
  *   > locations, and work items, and no query, index, or constraint belonging to one can
@@ -45,7 +45,7 @@ import { foundBusiness } from '@/tests/support/founding';
  * that a single-tenant schema would have made unique, and every one of them must collide
  * harmlessly.
  *
- * The failure it exists to catch is named in constraints.md, from a real prior repository:
+ * The failure it exists to catch comes from a real prior repository:
  *
  *   > Its `customers_email_unique` is global too, so two tenants could never share a
  *   > customer email address.
@@ -257,7 +257,7 @@ describe('M1 — the kernel', () => {
   });
 
   it('lets both tenants hold the same customer email address', async () => {
-    // The regression test for the failure constraints.md names by name.
+    // The regression test for that prior-repository failure.
     const mine = await listCustomers(a.founder.db, { organizationId: a.organizationId });
     const theirs = await listCustomers(b.founder.db, { organizationId: b.organizationId });
 
@@ -396,7 +396,7 @@ describe('M1 — the kernel', () => {
     expect(error).not.toBeNull();
   });
 
-  it('refuses a row that would join the two tenants (I18)', async () => {
+  it('refuses a row that would join the two tenants', async () => {
     // The composite references, sampled. Each of these is proved exhaustively in its own
     // test file; here it matters that the whole kernel holds the line at once.
     const attempts = await Promise.all([
@@ -427,7 +427,7 @@ describe('M1 — the kernel', () => {
     }
   });
 
-  it('keeps each tenant\'s timeline to itself (I11)', async () => {
+  it('keeps each tenant\'s timeline to itself', async () => {
     for (const [self, other] of [
       [a, b],
       [b, a],

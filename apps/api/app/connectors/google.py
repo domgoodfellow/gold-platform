@@ -1,4 +1,4 @@
-"""Google Workspace: one Google sign-in, reaching Calendar and Drive (D56).
+"""Google Workspace: one Google sign-in, reaching Calendar and Drive.
 
 Read-only scopes only: this slice discovers what is reachable and proves the connection is
 healthy. A scope that writes arrives with the feature that needs it, and asks the person again.

@@ -8,7 +8,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
  * **This is the table that keeps a dialer general.** Every system that has solved this before
  * ships a fixed list — no answer, voicemail, wrong number, interested, qualified, appointment
  * booked — in a check constraint. That list is one company's sales process, and the next
- * company's differs in ways that matter to it and to nobody else. D6 is the rule; this is what
+ * company's differs in ways that matter to it and to nobody else. The tenant-vocabulary rule is the rule; this is what
  * the rule looks like when a second vertical arrives.
  *
  * **One platform fact rides along, and only one.** `reached` answers *did somebody actually

@@ -139,7 +139,7 @@ describe('feature entitlement, activation and readiness', () => {
     expect(unentitled!.readiness).toBe('unavailable');
   });
 
-  it('refuses feature.manage to a role that does not hold it (I12), in the database', async () => {
+  it('refuses feature.manage to a role that does not hold it, in the database', async () => {
     const noFeatureManage = await createRole(db, {
       organizationId,
       name: 'No Feature Manage',
@@ -160,7 +160,7 @@ describe('feature entitlement, activation and readiness', () => {
 });
 
 /**
- * Plan-assignment authority (M17 closure slice). Whether a Plan is authoritative for an
+ * Plan-assignment authority. Whether a Plan is authoritative for an
  * organization must be a fact about `organization_plan_assignments`, never inferred from how
  * many rows the entitlement RPC happened to return — a real base-Plan assignment that currently
  * grants zero Features (a minimal or placeholder Plan) must still block the legacy wanted∩paid

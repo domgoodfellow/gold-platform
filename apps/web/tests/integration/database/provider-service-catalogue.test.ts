@@ -81,7 +81,7 @@ afterAll(async () => {
 });
 
 describe('the provider-service catalogue', () => {
-  it('is readable by staff alone — who GOLD uses is control-plane data, never a tenant’s to see (D64)', async () => {
+  it('is readable by staff alone — who GOLD uses is control-plane data, never a tenant’s to see', async () => {
     const asStaff = await staff.from('platform_provider_services').select('provider_key, key').eq('provider_key', 'google');
     expect(asStaff.error).toBeNull();
     expect((asStaff.data ?? []).length).toBeGreaterThan(0);

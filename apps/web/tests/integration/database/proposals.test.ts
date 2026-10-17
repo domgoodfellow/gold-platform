@@ -19,9 +19,9 @@ import { createOrganization } from '@/lib/domain/tenancy/organizations';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * The row between the drafting and the applying (`constraints.md` D32).
+ * The row between the drafting and the applying (the draft-then-apply rule, ADR-039).
  *
- * **Nothing here calls a language model, and that is not a compromise.** What D32 decides is
+ * **Nothing here calls a language model, and that is not a compromise.** What the draft-then-apply rule decides is
  * structural — where a proposal lives, who may make one, what may be changed after the fact and
  * what may never be joined — and every one of those is a fact about this database rather than
  * about anybody's judgement. A test that asked a provider for a proposal would be slow,
@@ -31,7 +31,7 @@ import { foundBusiness } from '@/tests/support/founding';
  * produced, and the absence is the enforcement** — the same claim `prices.test.ts` makes about
  * `work_item_priced_lines`, read from `pg_constraint` for the same reason: a key added later for
  * a perfectly good reason is how last month's record starts reporting this month's
- * configuration (I8).
+ * configuration.
  */
 
 // `apps/web` itself, located the same way `adapters.test.ts` does it — there is no `src/`.
@@ -163,7 +163,7 @@ describe('a proposal is a row between the drafting and the applying', () => {
     bob = await newTenant('prop-bob');
   });
 
-  it('holds no foreign key to anything applying it produced (I8, D32)', async () => {
+  it('holds no foreign key to anything applying it produced', async () => {
     const client = new Client({ connectionString: CONNECTION });
     await client.connect();
     try {
@@ -187,7 +187,7 @@ describe('a proposal is a row between the drafting and the applying', () => {
     }
   });
 
-  it('refuses a member who does not hold the capability (I16)', async () => {
+  it('refuses a member who does not hold the capability', async () => {
     // A whole tenant of its own, because this demotes the only member it has. Capabilities that
     // are plainly not nothing, so what refuses the write is this rule rather than membership —
     // and `organization.manage` among them deliberately: it is the closest thing on the list to
@@ -212,7 +212,7 @@ describe('a proposal is a row between the drafting and the applying', () => {
     expect(data?.outcome).toBe('draft');
   });
 
-  it('freezes a proposal once it is no longer a draft (D32)', async () => {
+  it('freezes a proposal once it is no longer a draft', async () => {
     const { data: created } = await insertProposal(alice, 'A workshop that will be applied.');
     const id = created!.id;
 
@@ -242,7 +242,7 @@ describe('a proposal is a row between the drafting and the applying', () => {
     expect(after?.description).toBe('A workshop that will be applied.');
   });
 
-  it('keeps one business’s proposals out of another’s (I2)', async () => {
+  it('keeps one business’s proposals out of another’s', async () => {
     await insertProposal(alice, 'Alice’s own description.');
 
     const { data } = await bob.db
@@ -255,8 +255,8 @@ describe('a proposal is a row between the drafting and the applying', () => {
     expect(data).toEqual([]);
   });
 
-  it('gives the drafting capability no database handle at all (I14, D32)', () => {
-    // **The claim D32 rests on, asserted structurally because it is a structural claim.** I14
+  it('gives the drafting capability no database handle at all', () => {
+    // **The claim the draft-then-apply rule rests on, asserted structurally because it is a structural claim.** The AI-acts-only-through-tools rule
     // says an AI reaches business state only through domain tools that validate and check
     // permissions; on this path it reaches business state through nothing, because there is
     // nothing for it to reach with. That is a stronger guarantee than a permitted tool, and it
@@ -303,7 +303,7 @@ describe('a proposal is a row between the drafting and the applying', () => {
     const prices = await listPriceBookItems(dave.db, { organizationId: dave.organizationId });
     expect(prices.map((item) => item.name)).toContain('Callout');
 
-    // Ids, snapshotted. Nothing joins to them (I8) — the assertion above reads the live
+    // Ids, snapshotted. Nothing joins to them — the assertion above reads the live
     // configuration, and this one reads the record of what was approved.
     const result = applied.result as { typeId: string; statusIds: string[] };
     expect(typeof result.typeId).toBe('string');
@@ -363,7 +363,7 @@ describe('a proposal is a row between the drafting and the applying', () => {
     expect(await listWorkItemTypes(tenant.db, { organizationId: tenant.organizationId })).toEqual([]);
   });
 
-  it('is refused by the policy of whatever step the person may not take (D32)', async () => {
+  it('is refused by the policy of whatever step the person may not take', async () => {
     const erin = await newTenant('prop-erin');
     await insertProposal(erin, 'A workshop with prices.', WORKSHOP_SHAPE);
 
@@ -385,7 +385,7 @@ describe('a proposal is a row between the drafting and the applying', () => {
     });
 
     expect(failed.outcome).toBe('failed');
-    // The domain layer's own words, carried onto the row rather than paraphrased (I25's shape).
+    // The domain layer's own words, carried onto the row rather than paraphrased (the no-paraphrase rule's shape).
     expect(failed.detail).toContain('prices');
 
     // What landed before it stopped, read back — which is what "edit the remainder and apply

@@ -53,7 +53,7 @@ export function Widget({
   title: ReactNode;
   /** The one figure this tile is about, when it has one. */
   value?: ReactNode;
-  /** What the figure means, in the platform's voice — never advice (`ui-spec.md` §8). */
+  /** What the figure means, in the platform's voice — never advice (`docs/ui-system.md`). */
   note?: ReactNode;
   /** Where this tile opens. Absent for a tile with nothing more to show than it already shows. */
   href?: string;

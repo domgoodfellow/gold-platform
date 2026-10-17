@@ -19,7 +19,7 @@ import { foundBusiness } from '@/tests/support/founding';
  * genuinely a different person, and where a tenant boundary separates two humans rather than
  * two rows created by the same human.
  *
- * D19 bounds what this may be: a membership against an existing `auth.users` id. Not an
+ * The no-mirrored-profile rule bounds what this may be: a membership against an existing `auth.users` id. Not an
  * invitation, not a profile. The display name is per-tenant on purpose, and one test asserts
  * exactly that — the same account is called different things in two organizations, and
  * neither learns anything about the other.
@@ -155,7 +155,7 @@ describe('members', () => {
   });
 
   it('refuses an address with no account, rather than inventing one', async () => {
-    // D19: this is not an invitation system. Someone without an account signs up first.
+    // the no-mirrored-profile rule: this is not an invitation system. Someone without an account signs up first.
     await expect(
       addMember(owner.db, {
         organizationId,
@@ -166,7 +166,7 @@ describe('members', () => {
     ).rejects.toMatchObject({ code: 'members.no_account' });
   });
 
-  it('denies a capability to a genuinely different person (I12)', async () => {
+  it('denies a capability to a genuinely different person', async () => {
     // Until this slice every capability denial was one member reassigning their own role.
     // Sam holds customer.create and not role.manage, and is refused by RLS.
     await expect(
@@ -220,7 +220,7 @@ describe('members', () => {
     ).rejects.toMatchObject({ code: 'members.forbidden' });
   });
 
-  it('cannot give a member a role belonging to another organization (I18)', async () => {
+  it('cannot give a member a role belonging to another organization', async () => {
     await expect(
       addMember(owner.db, {
         organizationId,
@@ -231,7 +231,7 @@ describe('members', () => {
     ).rejects.toMatchObject({ code: 'members.role_not_found' });
   });
 
-  it('calls the same account different things in different tenants (D19)', async () => {
+  it('calls the same account different things in different tenants', async () => {
     // Sam is "Sam" here. In the stranger's organization the same account is "Contractor",
     // and neither tenant can see the other's name for them — there is no profile to share.
     const otherRole = await firstRoleId(stranger.db, otherOrganizationId);
@@ -249,7 +249,7 @@ describe('members', () => {
     expect(there.find((m) => m.userId === staff.userId)?.displayName).toBe('Contractor');
   });
 
-  it('records a new membership on the timeline (I11)', async () => {
+  it('records a new membership on the timeline', async () => {
     const { data, error } = await owner.db
       .from('events')
       .select('action, actor_id')

@@ -173,7 +173,7 @@ export async function listStagingRows(
   }));
 }
 
-/** Opens a run and freezes the mapping it will use — see `begin_import_run` (I8). */
+/** Opens a run and freezes the mapping it will use — see `begin_import_run`. */
 export async function beginImportRun(
   db: Db,
   input: { organizationId: string; mappingId: string },

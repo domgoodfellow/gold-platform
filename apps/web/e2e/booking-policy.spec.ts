@@ -151,7 +151,7 @@ test.beforeAll(async () => {
   const slug = `policy-${randomUUID().slice(0, 8)}`;
   await updateOrganization(o, { id: organizationId, name: org!.name, timezone: 'UTC', currency: 'EUR', bufferMinutes: 0, slug });
   await setModuleEnabled(o, { organizationId, key: 'booking', enabled: true });
-  // Switched on *and* paid for, so the operator's own screens show the booking controls (D41).
+  // Switched on *and* paid for, so the operator's own screens show the booking controls.
   await recordCommercialTerm(await asPlatformStaff(), {
     organizationId,
     productKey: 'module:booking',

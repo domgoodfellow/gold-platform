@@ -1,5 +1,5 @@
 /**
- * Turning an address into a point, named as a capability rather than a provider (I15).
+ * Turning an address into a point, named as a capability rather than a provider.
  * No type here may carry a provider id, a place id, a confidence score, or a formatted
  * address — two numbers come back, or nothing does.
  */

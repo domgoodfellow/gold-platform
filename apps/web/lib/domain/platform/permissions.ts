@@ -37,7 +37,7 @@ export const PLATFORM_CAPABILITY_LABELS: Record<PlatformCapability, string> = {
  * The caller's own platform permissions, read live from their own `platform_staff` row (the one row
  * `platform_staff_self_select` shows them). Empty for anybody who is not staff — never an error, so
  * a caller can ask before knowing. A live read rather than a claim in the token, so removing a
- * permission takes effect on the next request (D45).
+ * permission takes effect on the next request.
  */
 export async function platformPermissions(db: Db): Promise<ReadonlySet<PlatformCapability>> {
   const { data } = await db.auth.getUser();

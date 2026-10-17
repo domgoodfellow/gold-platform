@@ -13,7 +13,7 @@ export type ScheduleConfigurationData = {
 };
 
 /**
- * When this business is open — the input `freeWindows` (I5) reads before it decides what's
+ * When this business is open — the input `freeWindows` reads before it decides what's
  * free. The same component from the Schedule page's Configure rail and Schedule's own
  * configuration route (contract: one configuration surface, every host — the Work pattern,
  * generalized). Scheduling owns this presentation outright: it reaches into no Settings UI.

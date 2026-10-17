@@ -8,7 +8,7 @@ import type { CustomerStage } from '@/lib/domain/customers/stages';
 /**
  * Who this business serves, and how to reach each one. The customer list's own canonical
  * rendering — extracted so the same table this route composes today is what a future search or
- * filter toolbar (`ui-spec.md` §16) would extend, rather than markup that route owns alone.
+ * filter toolbar (`docs/ui-system.md`) would extend, rather than markup that route owns alone.
  */
 export function CustomerTable({
   organizationId,

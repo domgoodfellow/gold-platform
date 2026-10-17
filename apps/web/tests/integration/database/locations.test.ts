@@ -227,7 +227,7 @@ describe('locations', () => {
     expect(error!.code).toBe('23514');
   });
 
-  it('refuses locations to a member without the capability (I12)', async () => {
+  it('refuses locations to a member without the capability', async () => {
     const limited = await createRole(bob.db, {
       organizationId: bob.organizationId,
       name: 'No Locations',
@@ -251,7 +251,7 @@ describe('locations', () => {
     ).rejects.toMatchObject({ code: 'locations.forbidden' });
   });
 
-  it('records locations and links on the timeline (I11)', async () => {
+  it('records locations and links on the timeline', async () => {
     const { data, error } = await alice.db
       .from('events')
       .select('action, actor_id')
@@ -303,7 +303,7 @@ describe('locations', () => {
  * Where a place is, and the first write path this table has ever had.
  *
  * `20260827000001` shipped `locations` with insert and select and no update at all, on the
- * grounds that nothing needed one. M6 needs one: a provider cannot say what the weather is at an
+ * grounds that nothing needed one. Weather needs one: a provider cannot say what the weather is at an
  * address, and the same gap blocks travel time and service areas.
  *
  * **The interesting assertions here are the two refusals**, not the save. A column grant that

@@ -3,7 +3,7 @@ import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
- * A state a work item of one type can be in, in the tenant's own vocabulary (D6) — statuses are
+ * A state a work item of one type can be in, in the tenant's own vocabulary — statuses are
  * data, not enums. A status belongs to a **type**, not the organization: two types can both
  * have a "Scheduled" column, hence the unique index on `(organization_id, type_id, lower(name))`.
  */
@@ -19,7 +19,7 @@ export type WorkItemStatus = {
   releasesResource: boolean;
   /**
    * Whether moving into this status means the work was done — separate from `releasesResource`
-   * on purpose (M4): "Cancelled" releases the resource without completing work. Read afterwards
+   * on purpose: "Cancelled" releases the resource without completing work. Read afterwards
    * by `work_marked_complete` against the event log, so changing the answer re-reads history
    * rather than rewriting it.
    */
@@ -118,7 +118,7 @@ export async function createWorkItemStatus(
 /**
  * Rename a status, or move it along the board. `releasesResource` reaches work already
  * committed on purpose — marking "Cancelled" as releasing frees every job already sitting in
- * it. Type is not changeable: I20's constraint would refuse a status moved to another type
+ * it. Type is not changeable: the status-belongs-to-its-type constraint would refuse a status moved to another type
  * while work items still reference it.
  */
 export async function updateWorkItemStatus(

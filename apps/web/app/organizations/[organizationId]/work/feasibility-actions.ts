@@ -15,7 +15,7 @@ export type FeasibilityState = { error: string | null; view?: FeasibilityView };
 
 /**
  * *Would this time work?* — asked while somebody is choosing it, instead of after they press
- * Schedule. A read: it writes nothing and records nothing, and it is advisory (I6) — the schedule
+ * Schedule. A read: it writes nothing and records nothing, and it is advisory — the schedule
  * command still decides, in its own transaction, whatever this said a moment earlier.
  *
  * The times are typed as the business reads the clock, so they are converted in the business's zone.

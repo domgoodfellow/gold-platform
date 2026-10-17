@@ -15,7 +15,7 @@ export function getIdentityVerifier(): Db {
  *
  * This is the only place a client is constructed for a web request, and it never uses the
  * service-role key: a service-role client discards RLS, which is the tenant boundary
- * (constraints.md, Tenancy). If a future operation genuinely needs to act outside a
+ * (ADR-026). If a future operation genuinely needs to act outside a
  * caller's rights, it gets its own narrowly-scoped SECURITY DEFINER function in a
  * migration — not a privileged client here.
  */

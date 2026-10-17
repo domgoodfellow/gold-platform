@@ -3,9 +3,9 @@ import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
- * What a business charges for. Nothing here calculates a price — that's I4, and lives with the
+ * What a business charges for. Nothing here calculates a price — that's the one-calculation rule, and lives with the
  * lines that consume this catalogue. Money is integer minor units throughout, with the currency
- * it was written in (I10); `formatMoney` in `work-items/consumption.ts` remains the only place
+ * it was written in; `formatMoney` in `work-items/consumption.ts` remains the only place
  * a minor unit is divided.
  */
 
@@ -17,7 +17,7 @@ export type PriceBookItem = {
   unit: string;
   /** Integer minor units. Never divided before it reaches a formatter. */
   unitAmountMinor: number;
-  /** As it was when this item was priced, not as the organization reads today (I8). */
+  /** As it was when this item was priced, not as the organization reads today. */
   currency: string;
   createdAt: string;
 };
@@ -56,7 +56,7 @@ function normaliseUnit(value: string): string {
   return unit;
 }
 
-/** Zero allowed (a no-charge item is real); negative isn't — discounting is deferred (constraints.md), and a negative line would be that feature arriving with no reasoning attached. */
+/** Zero allowed (a no-charge item is real); negative isn't — discounting is deliberately deferred, and a negative line would be that feature arriving with no reasoning attached. */
 function normaliseAmount(value: number): number {
   if (!Number.isInteger(value)) {
     throw new DomainError(
@@ -97,7 +97,7 @@ export async function listPriceBookItems(
   }));
 }
 
-/** Currency is never an argument — `create_price_book_item` reads it from the organization, so a caller can't assert what a business prices in (I10). */
+/** Currency is never an argument — `create_price_book_item` reads it from the organization, so a caller can't assert what a business prices in. */
 export async function createPriceBookItem(
   db: Db,
   input: {
@@ -134,7 +134,7 @@ export async function createPriceBookItem(
 
 /**
  * Re-price something, or rename it. Safe because nothing already quoted reads this row again —
- * a priced line copies what it needs when added, so this changes only the next job quoted (I8).
+ * a priced line copies what it needs when added, so this changes only the next job quoted.
  * Currency isn't editable by anyone, through any path — the column grant refuses it, since
  * changing it would reinterpret the amount rather than convert it.
  */

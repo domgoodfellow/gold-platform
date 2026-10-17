@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: siteUrl(),
   title: `${PLATFORM_NAME} | One operating system for your business`,
-  // Not `vision.md`'s "One engine. Many businesses." -- that's the platform's own architecture,
+  // Not the platform tagline "One engine. Many businesses." -- that's the platform's own architecture,
   // read by whoever builds it. A search result is read by the one business being sold to.
   description:
     `${PLATFORM_NAME} replaces the spreadsheet, the shared calendar and the group chat holding your business together.`,

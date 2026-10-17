@@ -70,7 +70,7 @@ const COLUMNS =
 
 /**
  * Every charge component for one organization's billing period — a member reads their own
- * business's (revenue is a fact a tenant may read, D43's asymmetry, unlike cost); staff read any.
+ * business's (revenue is a fact a tenant may read, the platform-economics separation's asymmetry, unlike cost); staff read any.
  */
 export async function listOrganizationCharges(
   db: Db,

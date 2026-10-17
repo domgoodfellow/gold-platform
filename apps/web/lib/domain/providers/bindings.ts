@@ -14,7 +14,7 @@ import { DomainError } from '@/lib/domain/errors';
  * **Every write goes through a narrow function** — `begin_provider_binding`,
  * `set_provider_binding_status`, `record_provider_resource`, `set_provider_resource_status`,
  * `store_provider_secret` — because platform staff hold no insert, update or delete grant on
- * either table (D40's rule, restated for this axis). This file's writers are thin wrappers over
+ * either table (the messaging rules, restated for this axis). This file's writers are thin wrappers over
  * those, exactly as `catalogue.ts` wraps `record_provider_rate`.
  */
 
@@ -36,7 +36,7 @@ export type ProviderResource = {
   organizationId: string;
   bindingId: string;
   /**
-   * Opaque, exactly like `externalId` below (I15): the set of resource types a capability
+   * Opaque, exactly like `externalId` below: the set of resource types a capability
    * records is that capability's own vocabulary, named once in its adapter — see
    * `TELEPHONY_RESOURCE_TYPES` — never spelled out again here.
    */
@@ -284,7 +284,7 @@ export async function setProviderResourceStatus(
 
 /**
  * Stores or rotates a resource's generated secret. Returns only the resource id — never the
- * secret. Staff-only, and the only door onto Vault this repository has (D14's own boundary,
+ * secret. Staff-only, and the only door onto Vault this repository has (the no-service-role rule's own boundary,
  * restated for a generated credential rather than a person's).
  */
 export async function storeProviderSecret(

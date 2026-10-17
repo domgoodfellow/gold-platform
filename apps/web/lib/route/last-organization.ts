@@ -6,7 +6,7 @@
  * It is a hint and never authority: the landing checks it against the caller's own memberships, so
  * a cookie naming somebody else's business (or a business they have since left) simply falls
  * through to their first one. It holds an id and nothing else, and no destination — the
- * destination is `organizationHomeHref`, decided from the business's lifecycle (D53).
+ * destination is `organizationHomeHref`, decided from the business's lifecycle.
  *
  * Constants only, so the proxy bundle imports no request-scoped API from here.
  */

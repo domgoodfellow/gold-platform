@@ -8,7 +8,7 @@ import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
  * Which platform tables each kind of caller can read.
  *
  * Every platform table was `using (true)` for `authenticated`, and a booking visitor is
- * `authenticated` (D22). Three classes now, and each is proved from both sides: what the
+ * `authenticated`. Three classes now, and each is proved from both sides: what the
  * allowed callers see equals the table's real row count, and what the others see is nothing.
  *
  *   vocabulary    any signed-in caller, a booking visitor included

@@ -140,7 +140,7 @@ export function AgentConversationHeader({
  *
  * Platform staff can act on a missing provider, so they see the actual next step
  * (Platform Providers). A tenant cannot configure GOLD's own AI provider and has no standing
- * to see that it's a provider at all — the same reasoning `constraints.md` already applies to
+ * to see that it's a provider at all — the same reasoning ADR-014 already applies to
  * GOLD's own cost never reaching a tenant — so they see only that Agent is unavailable right now.
  */
 export function AgentUnavailable({

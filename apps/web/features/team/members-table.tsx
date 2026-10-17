@@ -6,7 +6,7 @@ import { RoleAssignmentControl } from './role-assignment-control';
 
 /**
  * Members as a compact collection — name and role, the only two facts a membership carries
- * (D19: no mirrored profile). Role assignment stays inline for a manager; the last-manager and
+ * (no mirrored profile). Role assignment stays inline for a manager; the last-manager and
  * ownership invariants stay in the database, not repeated here.
  */
 export function MembersTable({

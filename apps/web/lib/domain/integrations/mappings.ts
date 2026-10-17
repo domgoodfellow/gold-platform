@@ -28,7 +28,7 @@ export async function prepareImportFields(db: Db, organizationId: string, header
 
 /**
  * What a source column becomes. `ignore` and `custom` cover an open-ended source; `core` is the
- * closed set of columns `customers` itself has (I17 — nothing else is a real column to target).
+ * closed set of columns `customers` itself has (the custom-field registry rule — nothing else is a real column to target).
  */
 export type MappingTarget =
   | { kind: 'ignore' }
@@ -37,7 +37,7 @@ export type MappingTarget =
   | { kind: 'custom'; key: string };
 
 /**
- * A normalization step applied before validation, not a field kind of its own (D7 names the six
+ * A normalization step applied before validation, not a field kind of its own (the custom-field registry rule names the six
  * kinds and this isn't a seventh) — `url` and `e164` clean up a value the way a person retyping
  * it by hand would, and still land in a `text` custom field afterward.
  */
@@ -149,7 +149,7 @@ export async function createMapping(
 
 // ---------------------------------------------------------------------------
 // Suggesting a mapping — deterministic, not a model. See CLAUDE.md: honest and testable first;
-// an AI-assisted upgrade is a separable later change, the same propose/apply shape D32 already
+// an AI-assisted upgrade is a separable later change, the same propose/apply shape the draft-then-apply rule already
 // uses elsewhere.
 // ---------------------------------------------------------------------------
 
@@ -212,8 +212,8 @@ export function suggestMapping(headers: string[], definitions: FieldDefinition[]
 
 // ---------------------------------------------------------------------------
 // Applying a mapping to one source row — the same validation every other write into `custom`
-// already runs (`parseCustom`), reused rather than reimplemented (constraints.md: "a rule needed
-// by a second caller is extracted first, then called twice. Never copy it.").
+// already runs (`parseCustom`), reused rather than reimplemented (a rule needed
+// by a second caller is extracted first, then called twice; never copied).
 // ---------------------------------------------------------------------------
 
 export type NormalizedCustomerRow = {

@@ -14,13 +14,13 @@ import { foundBusiness } from '@/tests/support/founding';
  * The registry as a form: ordered, relabellable, and unable to reinterpret what it already
  * governs.
  *
- * `field-definitions.test.ts` proves the registry constrains what may be stored (I17) and
- * that two tenants do not collide (I2). This proves the other half M3 needs — that the shape
+ * `field-definitions.test.ts` proves the registry constrains what may be stored and
+ * that two tenants do not collide. This proves the other half configuration needs — that the shape
  * of a form is configuration a business owns rather than an artefact of the order somebody
  * happened to define things in.
  *
  * The sharpest assertions here are the refusals. `kind` and `key` are not editable by
- * anybody, at any privilege, through any path, and the reason is I8: both would silently
+ * anybody, at any privilege, through any path, and the reason is the preserved-history rule: both would silently
  * reinterpret values already written under that key, and would surface as a constraint
  * violation on some later unrelated write rather than at the moment of the edit.
  */
@@ -148,7 +148,7 @@ describe('a field registry is a form', () => {
     expect(resources.map((d) => d.position)).toEqual([0]);
   });
 
-  it('will not change a field kind, even as a raw update (I8)', async () => {
+  it('will not change a field kind, even as a raw update', async () => {
     const [field] = await listFieldDefinitions(alice.db, {
       organizationId: alice.organizationId,
       entityType: 'customer',
@@ -166,7 +166,7 @@ describe('a field registry is a form', () => {
     expect(error!.code).toBe('42501');
   });
 
-  it('will not rename a key, even as a raw update (I8)', async () => {
+  it('will not rename a key, even as a raw update', async () => {
     const [field] = await listFieldDefinitions(alice.db, {
       organizationId: alice.organizationId,
       entityType: 'customer',
@@ -181,7 +181,7 @@ describe('a field registry is a form', () => {
     expect(error!.code).toBe('42501');
   });
 
-  it('does not touch a value already stored when the form is rearranged (I8)', async () => {
+  it('does not touch a value already stored when the form is rearranged', async () => {
     await createCustomer(alice.db, {
       organizationId: alice.organizationId,
       name: 'Before The Edit Ltd',
@@ -211,7 +211,7 @@ describe('a field registry is a form', () => {
     expect(customer?.custom.first).toBe('kept');
   });
 
-  it('refuses an edit to a member without the capability, through both paths (I12)', async () => {
+  it('refuses an edit to a member without the capability, through both paths', async () => {
     const field = await createFieldDefinition(bob.db, {
       organizationId: bob.organizationId,
       entityType: 'customer',

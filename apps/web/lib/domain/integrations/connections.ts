@@ -5,7 +5,7 @@ import { getConnector } from './connectors';
 import { disconnectOAuth } from './oauth';
 
 /**
- * A tenant's own authorization to an external system — D33's axis, never D44's
+ * A tenant's own authorization to an external system — a tenant Connection, never a platform Provider Account (ADR-016)
  * (`organization_provider_bindings`). The tenant holds the account; GOLD stores a reference.
  * See `supabase/migrations/20260914000001_a_tenant_connects_its_own_data_sources.sql`.
  */

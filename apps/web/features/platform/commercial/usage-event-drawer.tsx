@@ -73,7 +73,7 @@ export function UsageEventDrawer({
         {/*
           Two accounts, kept visibly apart. A customer's allowance, overage and retail charge and
           GildOps' provider components and COGS are independent economic interpretations of one
-          reading (D43); blending them into a single "rate" is the thing this layout refuses to do.
+          reading; blending them into a single "rate" is the thing this layout refuses to do.
         */}
         <Section className="mx-4">
           <SectionHeading>Customer economics</SectionHeading>

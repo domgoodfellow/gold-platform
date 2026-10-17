@@ -12,7 +12,7 @@ import {
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * A discovery snapshot is state about an existing customer, never a second entity (I61). This
+ * A discovery snapshot is state about an existing customer, never a second entity. This
  * suite proves the composite FK to `(organization_id, customers.id)` actually refuses a
  * cross-tenant customer id, that the capability gate (`customer.update`) holds, that
  * `upsertDiscoverySnapshotAnswers` merges rather than overwrites, and that each answer's own
@@ -171,7 +171,7 @@ describe('discovery snapshots', () => {
     expect(unresolved.map((requirement) => requirement.key)).toContain('phoneHandling');
   });
 
-  it('shows each tenant only its own snapshot (I1)', async () => {
+  it('shows each tenant only its own snapshot', async () => {
     await upsertDiscoverySnapshotAnswers(bob.db, {
       organizationId: bob.organizationId,
       customerId: bobCustomerId,

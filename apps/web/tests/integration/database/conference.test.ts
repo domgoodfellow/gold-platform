@@ -74,7 +74,7 @@ beforeAll(async () => {
   customerId = await createCustomer(mine.db, { organizationId: mine.organizationId, name: 'Ada Customer' });
 }, 60_000);
 
-describe('a conference already exists; a participant is one operation on it (D38)', () => {
+describe('a conference already exists; a participant is one operation on it', () => {
   it('adds a fourth party and reads the row back, tenant-scoped', async () => {
     const callId = await openCall(mine, customerId);
 
@@ -109,7 +109,7 @@ describe('a conference already exists; a participant is one operation on it (D38
     const callId = await openCall(mine, customerId);
 
     // `other` is signed in as a different business; supplying `mine`'s organization id does not
-    // borrow its membership (D17) — RLS/`app.current_tenant_ids()` decides, not the argument.
+    // borrow its membership — RLS/`app.current_tenant_ids()` decides, not the argument.
     const { error } = await other.db.rpc('add_call_participant', {
       p_organization_id: mine.organizationId,
       p_call_id: callId,
@@ -142,7 +142,7 @@ describe('a conference already exists; a participant is one operation on it (D38
     expect(row.data).toMatchObject({ muted: true, on_hold: false });
   });
 
-  it('removes one leg without ending the conference for the rest — the whole reason D38 chose a room', async () => {
+  it('removes one leg without ending the conference for the rest — the whole reason the conference-call design chose a room', async () => {
     const callId = await openCall(mine, customerId);
     const { data: participantId } = await mine.db.rpc('add_call_participant', {
       p_organization_id: mine.organizationId,

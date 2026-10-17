@@ -16,7 +16,7 @@ import { createWorkItem, listWorkItems } from '@/lib/domain/work-items/work-item
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * Work Item, and I18 four times over.
+ * Work Item, and the same-organization reference rule four times over.
  *
  * A work item names a status, a customer, a location and a resource. Every one of those is
  * an opportunity to point across the tenant wall, and RLS stops none of them: a policy on
@@ -24,7 +24,7 @@ import { foundBusiness } from '@/tests/support/founding';
  * beside it name anyone at all. The composite references are what make those rows
  * impossible to write, and the tests below insert directly to prove it.
  *
- * D6 gets its first real exercise here too. Nothing in the domain layer knows what any
+ * The tenant-vocabulary rule gets its first real exercise here too. Nothing in the domain layer knows what any
  * status means; two tenants pick different words for the same stage and neither is
  * privileged.
  */
@@ -123,7 +123,7 @@ describe('work items', () => {
     bob = await newTenant('wi-bob', 'Ingepland');
   });
 
-  it('lets two tenants name the same status (I2, D6)', async () => {
+  it('lets two tenants name the same status', async () => {
     // Both boards now gain a column called Done. If work_item_statuses_org_name_unique had
     // lost its leading organization_id, the second of these would fail.
     const mine = await createWorkItemStatus(alice.db, {
@@ -140,7 +140,7 @@ describe('work items', () => {
     expect(mine).not.toBe(theirs);
   });
 
-  it('refuses two statuses with the same name on one type (I2)', async () => {
+  it('refuses two statuses with the same name on one type', async () => {
     await expect(
       createWorkItemStatus(alice.db, {
         organizationId: alice.organizationId,
@@ -194,17 +194,17 @@ describe('work items', () => {
     expect(unassigned?.resources).toEqual([]);
   });
 
-  it('cannot borrow another tenant\'s customer (I18)', async () => {
+  it('cannot borrow another tenant\'s customer', async () => {
     const { error } = await insertDirectly(alice, { customer_id: bob.customerId });
     expect(error?.code).toBe('23503');
   });
 
-  it('cannot borrow another tenant\'s location (I18)', async () => {
+  it('cannot borrow another tenant\'s location', async () => {
     const { error } = await insertDirectly(alice, { location_id: bob.locationId });
     expect(error?.code).toBe('23503');
   });
 
-  it('cannot borrow another tenant\'s resource (I18)', async () => {
+  it('cannot borrow another tenant\'s resource', async () => {
     // An assignment is its own row, and both of its references are tenant-leading: one tenant's
     // job cannot name another tenant's resource however the row is written.
     const id = await createWorkItem(alice.db, {
@@ -221,7 +221,7 @@ describe('work items', () => {
     expect(error?.code).toBe('23503');
   });
 
-  it('cannot borrow another tenant\'s status (I18)', async () => {
+  it('cannot borrow another tenant\'s status', async () => {
     const { error } = await insertDirectly(alice, { status_id: bob.statusId });
     expect(error?.code).toBe('23503');
   });
@@ -322,7 +322,7 @@ describe('work items', () => {
     expect(survivor!.status.label).toBe('Scheduled');
   });
 
-  it('refuses work items to a member without the capability (I12)', async () => {
+  it('refuses work items to a member without the capability', async () => {
     const limited = await createRole(bob.db, {
       organizationId: bob.organizationId,
       name: 'No Work',
@@ -346,7 +346,7 @@ describe('work items', () => {
     ).rejects.toMatchObject({ code: 'work_items.forbidden' });
   });
 
-  it('records work items and statuses on the timeline (I11)', async () => {
+  it('records work items and statuses on the timeline', async () => {
     const { data, error } = await alice.db
       .from('events')
       .select('action, actor_id')

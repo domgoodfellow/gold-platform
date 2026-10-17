@@ -20,7 +20,7 @@ export type Asset = {
   /** The customer who owns it, when the asset is not the tenant's own. */
   customer: AssetRef | null;
   location: AssetRef | null;
-  /** Tenant-defined fields, governed by this organization's registry (D7). */
+  /** Tenant-defined fields, governed by this organization's registry. */
   custom: CustomValues;
   createdAt: string;
 };
@@ -118,7 +118,7 @@ export async function getAsset(
  *
  * There is deliberately no check that the customer and location belong to this organization.
  * Both references are composite, so an asset naming another tenant's anything is impossible
- * to write down — stronger than any check here, and not skippable by a direct insert (I18).
+ * to write down — stronger than any check here, and not skippable by a direct insert.
  */
 export async function createAsset(
   db: Db,

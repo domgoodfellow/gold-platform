@@ -4,7 +4,7 @@ import { MarketingActions, MarketingNav } from './marketing-nav';
 
 /**
  * GOLD's own header: a floating bar that stays with the reader. Never on a `(public)` tenant
- * surface — that would put GOLD's wordmark on somebody else's shop front (D20).
+ * surface — that would put GOLD's wordmark on somebody else's shop front.
  */
 export function MarketingHeader({ name, logoUrl }: { name: string; logoUrl: string | null }) {
   return (

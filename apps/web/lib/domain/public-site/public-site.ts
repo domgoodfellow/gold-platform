@@ -12,7 +12,7 @@ export type { PublicSiteProjection, PublicWebsiteSnapshot } from '@gold/schemas'
  * The one public-site engine. A website is one revision of many pages: every read and write here
  * is of a whole snapshot (pages, sections and navigation together), and publishing selects one,
  * so a visitor can never be shown parts of two revisions. The database is the authority; these
- * functions give it a typed face (docs/constraints.md D88).
+ * functions give it a typed face (the typed-RPC rule, `docs/data.md`).
  */
 
 export type RevisionStatus = 'draft' | 'in_review' | 'published' | 'archived';

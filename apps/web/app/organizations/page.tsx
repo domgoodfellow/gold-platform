@@ -33,7 +33,7 @@ export default async function OrganizationsPage() {
   const db = await getDb();
 
   // The proxy already turned anonymous callers away, and this still runs. That is the
-  // point: a redirect is not the authorization boundary (constraints.md, Security). If the
+  // point: a redirect is not the authorization boundary (`docs/security.md`). If the
   // matcher were misconfigured tomorrow, this guard and RLS would both still hold.
   try {
     await requireActor(db);
@@ -45,7 +45,7 @@ export default async function OrganizationsPage() {
   }
 
   // Platform authority and organization membership are two independent facts about one
-  // identity (D45) — a staff member's memberships are never taken away, held elsewhere, or
+  // identity — a staff member's memberships are never taken away, held elsewhere, or
   // hidden by this read. What this page decides is only which of an identity's true contexts it
   // lands in *by default*: a real membership of GildOps' operating organization is preferred; staff
   // without it still default to the bootstrap-required Platform route; everyone else enters the
@@ -82,7 +82,7 @@ export default async function OrganizationsPage() {
         </form>
       </div>
 
-      {/* **Founding is open again, and both doors are now open at once** (D29, amended). This
+      {/* **Founding is open again, and both doors are now open at once** (the one-creation-path rule, amended). This
           page used to end here, with a sentence saying businesses are set up *for* you and
           nothing to press — which meant somebody who signed up had no way forward at all. The
           argument for closing it was about the *quality* of a self-served business, and what it

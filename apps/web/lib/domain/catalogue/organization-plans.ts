@@ -395,7 +395,7 @@ export type ResolvedFeatureState = {
 };
 
 /**
- * The authoritative feature-availability resolver (domain-model.md, D25/D41 evolved): combines
+ * The authoritative feature-availability resolver (domain-model.md, the module-visibility rule and the wanted-versus-paid entitlement rule evolved): combines
  * catalogue implementation, entitlement, this organization's deliberate activation override, and
  * per-feature readiness. Role authorization is never an input here and never an output — it
  * stays `app.has_capability`'s question alone.
@@ -581,7 +581,7 @@ export async function disableOrganizationFeature(
  * `listUsableModules`'s raw wanted∩paid set at a presentation call site: everything
  * `listUsableModules` would say is on, minus anything this business has since switched off
  * through Settings > Features. Several canonical Features can share one legacy module key
- * (D46's many-to-many seam); a key counts as active here if any of them does, matching how
+ * (the capability catalogue's many-to-many seam); a key counts as active here if any of them does, matching how
  * `usable_modules` already treats the module axis as one fact per key.
  */
 export function activeModuleKeys(states: readonly ResolvedFeatureState[]): Set<ModuleKey> {
@@ -603,7 +603,7 @@ export function readinessModuleKey(state: Pick<ResolvedFeatureState, 'featureKey
  * Canonical Feature keys this organization can currently act on — implemented, entitled and not
  * deliberately disabled. The feature-level counterpart to `activeModuleKeys`, and the one
  * `lib/navigation.ts`'s `Area.featureKeys` resolve against: two Features can share one legacy
- * `ModuleKey` (D46), so a caller that only asked "is this module active" cannot tell them apart —
+ * `ModuleKey`, so a caller that only asked "is this module active" cannot tell them apart —
  * this can. Readiness is deliberately not a filter here: an available, entitled, active feature
  * that merely has nothing configured yet (`readiness: 'setup_required'`) still counts, since
  * setup-required is a reason to show the area with a "Set up" prompt, not to hide it.

@@ -600,7 +600,7 @@ describe('the tenant workspace header — Platform administering an organization
 
   it('"Open business" only ever appears for a caller with real membership in that organization', () => {
     expect(tenantWorkspace).toContain('canOpenBusiness');
-    // Never a fabricated tenant capability inside /platform (constraints.md) — the gate is the
+    // Never a fabricated tenant capability inside /platform (ADR-003) — the gate is the
     // caller's own listMyOrganizations() result, resolved server-side, not staff authority.
     expect(platformOrganizationOverview).toContain('listMyOrganizations');
     expect(platformOrganizationOverview).toMatch(

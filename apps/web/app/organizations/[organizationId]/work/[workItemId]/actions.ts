@@ -74,7 +74,7 @@ export async function setChecklistItemDoneAction(
 
   try {
     // Who ticked it is not submitted. The policy pins `done_by` to `auth.uid()`, so a forged
-    // field would be refused by the database rather than trusted here (I11).
+    // field would be refused by the database rather than trusted here.
     await setChecklistItemDone(db, {
       checklistItemId: String(formData.get('checklistItemId') ?? ''),
       done: formData.get('done') === '1',

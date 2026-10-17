@@ -17,7 +17,7 @@ def _publishable_key() -> str | None:
     `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`). `SUPABASE_ANON_KEY` is read only as a **temporary**
     fallback for a deployment not yet migrated — never the other way round, so a deployment that
     sets both is already on the target name. Neither key is privileged; the safety property this
-    project depends on (D14, D26) is that this is never a service-role/secret key, not which of
+    project depends on is that this is never a service-role/secret key, not which of
     these two names it arrives under.
     """
     return os.environ.get("SUPABASE_PUBLISHABLE_KEY") or os.environ.get("SUPABASE_ANON_KEY")
@@ -42,7 +42,7 @@ def load_settings() -> Settings | None:
     values = {
         "supabase_url": os.environ.get("SUPABASE_URL"),
         "supabase_publishable_key": _publishable_key(),
-        # NOT the service-role key, and the distinction is the whole of D26. This signs a
+        # NOT the service-role key, and the distinction is the whole of the authoritative-webhook rule. This signs a
         # short-lived token for the `payment_webhook` Postgres role, which holds no grant on
         # any table and exactly one execute. A service-role key would discard RLS entirely.
         "supabase_jwt_secret": os.environ.get("SUPABASE_JWT_SECRET"),
@@ -61,7 +61,7 @@ class PlatformBillingSettings:
 
     **A separate dataclass from `Settings` above, deliberately, even though both mint a token for
     a narrow machine role and read a signing secret.** The vendor may be the same; the account and
-    the money direction are not (constraints.md, "Commercial" — GOLD Plans & Billing is the
+    the money direction are not (ADR-014 — GOLD Plans & Billing is the
     opposite plane from Financial Operations). Folding the two together would make one
     destination's signing secret readable by the other's handler, and a leaked
     `STRIPE_PLATFORM_BILLING_WEBHOOK_SECRET` would then also authenticate as `payment_webhook`.
@@ -78,7 +78,7 @@ def load_platform_billing_settings() -> PlatformBillingSettings | None:
         "supabase_url": os.environ.get("SUPABASE_URL"),
         "supabase_publishable_key": _publishable_key(),
         # Signs a 60-second token for `platform_billing_webhook`, which holds no grant on any
-        # table and exactly two executes. Not the service-role key, which D14 refuses.
+        # table and exactly two executes. Not the service-role key, which the no-service-role rule refuses.
         "supabase_jwt_secret": os.environ.get("SUPABASE_JWT_SECRET"),
         "signing_secret": os.environ.get("STRIPE_PLATFORM_BILLING_WEBHOOK_SECRET"),
     }
@@ -121,7 +121,7 @@ def load_provider_operations_settings() -> ProviderOperationsSettings | None:
 
 @dataclass(frozen=True)
 class IntegrationSettings:
-    """What acting on a tenant's own OAuth connection needs (D56).
+    """What acting on a tenant's own OAuth connection needs.
 
     **Separate from every other settings group, because it reaches a credential that is not
     GOLD's.** It signs a 60-second token for `integration_operator`, a machine role holding no
@@ -188,7 +188,7 @@ class AssistantSettings:
     """What answering a question needs, and it is deliberately the shortest of the three.
 
     **No JWT secret.** The other two dataclasses hold one because they mint a token for a
-    machine role; this feature forwards the operator's own and has nothing to sign (D34). A
+    machine role; this feature forwards the operator's own and has nothing to sign. A
     deployment that can answer questions therefore holds strictly less than one that can send a
     message, which is the right way round.
 
@@ -218,7 +218,7 @@ def load_runner_settings() -> RunnerSettings | None:
         "supabase_url": os.environ.get("SUPABASE_URL"),
         "supabase_publishable_key": _publishable_key(),
         # Signs a 60-second token for `automation_runner`, which holds no grant on any table and
-        # three executes. Not the service-role key, which D14 refuses.
+        # three executes. Not the service-role key, which the no-service-role rule refuses.
         "supabase_jwt_secret": os.environ.get("SUPABASE_JWT_SECRET"),
         "cron_secret": os.environ.get("CRON_SECRET"),
     }
@@ -240,7 +240,7 @@ class DomainSettings:
     assistant feature would tie a change to that feature to something it has nothing to do with.
 
     **No JWT secret, for the same reason `AssistantSettings` has none.** A domain command forwards
-    the operator's own token (D17, D34) rather than minting one for a machine role.
+    the operator's own token rather than minting one for a machine role.
     """
 
     supabase_url: str
@@ -277,7 +277,7 @@ class VoiceSettings:
     supabase_url: str
     supabase_publishable_key: str
     # Signs a 60-second token for `voice_webhook`, which holds no grant on any table and one
-    # execute. Not the service-role key, which D14 refuses.
+    # execute. Not the service-role key, which the no-service-role rule refuses.
     supabase_jwt_secret: str
     # The carrier signs every callback with this. Without it the endpoints below would accept
     # anything, which is a stranger writing calls into a business's record.
@@ -312,7 +312,7 @@ class InvitationEmailWebhookSettings:
     supabase_url: str
     supabase_publishable_key: str
     # Signs a 60-second token for `invitation_email_webhook`, which holds no grant on any table
-    # and one execute. Not the service-role key, which D14 refuses.
+    # and one execute. Not the service-role key, which the no-service-role rule refuses.
     supabase_jwt_secret: str
     # Resend signs every callback with this (a Svix webhook secret, `whsec_...`). Without it the
     # endpoint below would accept anything, which is a stranger writing delivery state for a
@@ -373,7 +373,7 @@ def environment_warnings() -> list[str]:
     """Partial configuration this deployment's own graceful-degradation rules cannot see.
 
     Every `load_*` function above already treats *any* missing value in its group as the whole
-    feature being off (D31) — that is correct and not what this checks. What none of them can
+    feature being off — that is correct and not what this checks. What none of them can
     catch is `app.ai.registry.answering_provider()`, which chooses between two *separate*
     providers rather than one group: `ASSISTANT_BASE_URL` set without `ASSISTANT_MODEL` (or the
     other way round) does not disable anything, it silently falls through to whichever provider

@@ -6,7 +6,7 @@ import type { RuntimeAccount, RuntimeService } from './runtime-assignment-form';
 /**
  * One capability, whether or not it currently has an assignment. An unassigned row is not an
  * error state — `app.ai.runtime` falls back to the deployment default exactly as it did before
- * this screen existed (D31's reasoning, restated for a runtime rather than a whole feature).
+ * this screen existed (the no-dead-end rule's reasoning, restated for a runtime rather than a whole feature).
  */
 export function RuntimeAssignmentRow({
   capability,

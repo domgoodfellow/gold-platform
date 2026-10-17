@@ -125,7 +125,7 @@ def send_queued_email(
         {"id": f"eq.{message_id}", "organization_id": f"eq.{organization_id}", "requested_transport": "eq.email", "direction": "eq.outbound",
          "select": "id,status,body,conversation_id,external_id"},
     )
-    # One refusal for "not yours", "no such message" and "not an email": I18's ambiguous answer.
+    # One refusal for "not yours", "no such message" and "not an email": the same-organization reference rule's ambiguous answer.
     if message is None:
         raise NotFoundError("No such email.")
 

@@ -13,7 +13,7 @@ import { DomainError } from '@/lib/domain/errors';
  *
  * **A credential goes in and never comes out.** `storeProviderAccountCredential` returns nothing
  * and no reader exists in this runtime: the row exposes `credentialSetAt`, which is the whole of
- * what a person may know about it. Using the credential happens in `apps/api` (D14).
+ * what a person may know about it. Using the credential happens in `apps/api`.
  *
  * Every write is a narrow function, exactly as for bindings — staff hold no table grant.
  */

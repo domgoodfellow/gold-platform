@@ -1,7 +1,7 @@
 """Whether a business holds the module an AI request would spend on, asked before it is spent.
 
 **Entitlement is not permission, and this answers only the first.** `assistant.ask` says a *role*
-may use the Agent; whether the *business* holds it at all is a commercial fact (D25), and an
+may use the Agent; whether the *business* holds it at all is a commercial fact, and an
 endpoint that checked only the role would let any business consume what it has not bought. Both
 are required and neither stands in for the other.
 

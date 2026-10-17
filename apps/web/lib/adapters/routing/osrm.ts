@@ -2,7 +2,7 @@ import { RoutingError, type Coordinates, type RouteRequest, type RouteResult, ty
 
 /**
  * The Open Source Routing Machine's HTTP API, behind the capability its interface names — one of two
- * files that knows this vendor exists (I15). No SDK: one HTTPS call. The service is self-hostable,
+ * files that knows this vendor exists. No SDK: one HTTPS call. The service is self-hostable,
  * which is why a deployment can run one without a key; it has no traffic model, so `departureAt` is
  * ignored and the answer is the ordinary driving duration.
  */

@@ -3,13 +3,13 @@
 **Authorization is proved before the credential is read, and RLS proves it.** The caller's own
 token asks `can_manage_email_domains` (membership and `organization.manage`) and selects the
 resource row (a business sees its own and nobody else's, so an empty answer means *not yours, or no
-such domain* -- I18's ambiguous refusal). Only then does this mint the machine token that may learn
+such domain* -- the same-organization reference rule's ambiguous refusal). Only then does this mint the machine token that may learn
 which GildOps account answers, read that account's credential, and record what the provider said.
 
 **Every outcome is recorded before it is returned.** A provider account nobody has configured, a
 domain the provider will not take, a provider that refused or answered nonsense: each is written
 onto the resource's own row by the same machine role that asked, so the Email page can say what
-happened after the dialog is closed (D44: a failure is a row, not a toast).
+happened after the dialog is closed (the failure-is-a-row rule: a failure is a row, not a toast).
 
 **`active` means the provider says the domain is usable -- never that a form was submitted, and
 never that DNS was written.** Publishing a record and the provider accepting it are two facts

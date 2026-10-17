@@ -2,7 +2,7 @@ import type { PlatformEmailSender } from './index';
 
 /**
  * Which implementation this deployment uses — the only file outside an implementation that
- * names one. `null` when this deployment has no API to relay to, the same `D31` reasoning
+ * names one. `null` when this deployment has no API to relay to, the same no-dead-end reasoning
  * `apps/web/lib/adapters/domains/registry.ts` already gives for a hosting credential: a
  * deployment with no `apps/api` configured sends no platform email, and the invitation it creates
  * still gets its copyable link.

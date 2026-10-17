@@ -19,7 +19,7 @@ import { foundBusiness } from '@/tests/support/founding';
 /**
  * THE M8 MILESTONE TEST — the second of its two criteria.
  *
- * `roadmap.md` describes M8's second half as one demonstration:
+ * This milestone's second half was defined as one demonstration:
  *
  *   > can describe a business in prose and receive a proposed configuration, work item types,
  *   > statuses, fields and price book, which a human reviews and applies.
@@ -36,7 +36,7 @@ import { foundBusiness } from '@/tests/support/founding';
  * the same policies a hand-typed write would meet.
  *
  * **The review is exercised rather than assumed.** Between proposing and applying, this file
- * changes a word — because a proposal a person can only accept or reject is an approval, and D29's
+ * changes a word — because a proposal a person can only accept or reject is an approval, and the one-creation-path rule's
  * argument for the self-serve door is that an *edited* proposal beats a form filled in by somebody
  * guessing. What lands in the database is the edited word, and the drafted one appears nowhere.
  *
@@ -44,7 +44,7 @@ import { foundBusiness } from '@/tests/support/founding';
  * claim this milestone makes is about the path from a description to a configured business —
  * where the proposal lives, what may touch it, and who writes. A test that called a real provider
  * would be slow, chargeable, non-deterministic, and would be asserting somebody else's judgement.
- * `constraints.md` D32 records that the model holds no tool and no database handle; it is
+ * The draft-then-apply rule (ADR-039) records that the model holds no tool and no database handle; it is
  * `proposals.test.ts` that reads the adapter's imports and fails the gate on one.
  *
  * **What this deliberately does not claim.** M8's *first* criterion — asking the system questions
@@ -182,7 +182,7 @@ async function standUp(business: typeof SWEEP | typeof DIVE, label: string): Pro
   if (signInError) throw signInError;
 
   // GOLD brings the business into existence and hands it over. It is empty, and the emptiness is
-  // the product (D29) — there is nothing here for a proposal to have to work around.
+  // the product — there is nothing here for a proposal to have to work around.
   const organizationId = await foundBusiness({
     ownerEmail: email,
     name: business.identity.name,
@@ -264,7 +264,7 @@ describe('M8 — a business describes itself and is configured from the descript
       expect(prices.map((item) => item.name)).toEqual(
         business.shape.prices.map((price) => price.name),
       );
-      // The currency is the organization's, snapshotted onto the amount (I10). Nothing in the
+      // The currency is the organization's, snapshotted onto the amount. Nothing in the
       // proposal asserted it and nothing could.
       expect(prices.every((item) => item.currency === business.identity.currency)).toBe(true);
 
@@ -291,7 +291,7 @@ describe('M8 — a business describes itself and is configured from the descript
     expect(statuses.map((status) => status.name)).not.toContain(SWEEP.shape.statuses.at(-1));
   });
 
-  it('let neither business observe the other (I2)', async () => {
+  it('let neither business observe the other', async () => {
     const seenByDive = await listWorkItemTypes(dive.db, {
       organizationId: sweep.organizationId,
     });
@@ -308,7 +308,7 @@ describe('M8 — a business describes itself and is configured from the descript
     // `configureBusiness` alone: one function, no branch on which business it is holding. M8 has
     // a second place a business's specifics could have been smuggled in — the thing that drafts —
     // and a drafting capability that knew what a chimney sweep was would be the per-client app
-    // studio `vision.md` refuses, arriving one layer further out than M3 was watching.
+    // studio `docs/product.md` refuses, arriving one layer further out than M3 was watching.
     const drafting = join(SRC, 'lib', 'adapters', 'drafting');
     const sources = [
       configureBusiness.toString(),

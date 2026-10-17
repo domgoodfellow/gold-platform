@@ -50,7 +50,7 @@ export default async function AssetsPage({
       >
         {/*
           Hiding the trigger is a courtesy, not the guard. `assets_insert` requires
-          asset.create in the database (constraints.md: hiding a UI element is not
+          asset.create in the database (`docs/security.md`: hiding a UI element is not
           authorization).
         */}
         <CollectionHeader

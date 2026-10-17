@@ -791,6 +791,14 @@ Business variation should be expressed through:
 
 Custom code is the exception.
 
+### The business speaks; the platform does not
+
+Never hardcode a word or a claim a business makes about itself. Statuses, stages, prices, business hours, buffers, guarantees, trust points, service assertions, section headings, greetings, email signatures and AI prompt defaults are the business's configuration, never platform defaults. Copy is configuration.
+
+The platform does not decide what a business trades in, what currency it uses or what country it calls from. When an answer is missing, ask or raise a gap rather than guess.
+
+On a business's public and customer-facing surfaces, the only platform-authored text is neutral application state: "Loading", "No results" and accessible labels.
+
 ### Workspaces follow operator intent
 
 Navigation should represent the kind of work a person is doing, not internal package structure or billing vocabulary.
@@ -852,7 +860,8 @@ GildOps is not intended to become:
 - a navigation tree generated from commercial catalogue rows;
 - a reporting system that reimplements operational calculations;
 - a configuration system that duplicates operating screens;
-- a place where “future” functionality appears as if it already works.
+- a place where “future” functionality appears as if it already works;
+- accounting software: GildOps records what a business quotes, charges and is paid, but does not keep its books.
 
 ---
 

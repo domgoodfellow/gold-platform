@@ -5,7 +5,7 @@ import type { Location } from '@/lib/domain/locations/locations';
 
 /**
  * What selecting a marker or a rail row reveals — compact, not the record. The full detail stays
- * on the record route (`ui-spec.md`'s reasoning for keeping a page's own controls off a shared
+ * on the record route (`docs/ui-system.md`'s reasoning for keeping a page's own controls off a shared
  * surface, applied to a map popup rather than a header).
  */
 export function LocationMapPanel({

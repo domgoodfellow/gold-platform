@@ -34,7 +34,7 @@ export const dynamic = 'force-dynamic';
 /**
  * One number's own page: what it is, whether it works, what this business has said it is for, who
  * dials from it, and the calls that have used it. Everything is a fact this organization is
- * entitled to about its own row — never a provider identifier (D39): no account, no SID. What the
+ * entitled to about its own row — never a provider identifier: no account, no SID. What the
  * carrier knows is read as one word (ready, setup required, degraded, unavailable).
  */
 export default async function PhoneNumberDetailPage({

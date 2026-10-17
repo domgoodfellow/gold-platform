@@ -14,7 +14,7 @@ const INITIAL: ReissueInvitationState = { error: null, link: null, emailSent: nu
 
 /**
  * A fresh token, a fresh link, a fresh send attempt. Never offers the original link again —
- * D33's own invariant (only the hash is ever stored) makes that impossible, not merely withheld —
+ * the hashed-token rule's own invariant (only the hash is ever stored) makes that impossible, not merely withheld —
  * so pressing this is the only way back once the first link is lost or stale.
  */
 export function ResendInvitationButton({

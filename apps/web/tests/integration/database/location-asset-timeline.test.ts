@@ -23,7 +23,7 @@ import { foundBusiness } from '@/tests/support/founding';
  * never has, `create_work_item`'s own event never having copied the column) — that asymmetry is
  * the point of the file, not an oversight in it: joining either reader to `work_items`' own
  * *current* `location_id`/`asset_id` would misattribute a job's history to wherever it sits
- * today, which is exactly the falsified-history shape I8 refuses. An asset's timeline has no such
+ * today, which is exactly the falsified-history shape the preserved-history rule refuses. An asset's timeline has no such
  * gap, because `create_work_item` has carried `asset_id` since the column arrived.
  */
 

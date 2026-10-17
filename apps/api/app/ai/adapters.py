@@ -2,7 +2,7 @@
 
 **The only place a Provider Service's key is turned into a running `AnsweringProvider`.**
 `app.ai.runtime` asks for the adapter behind a resolved runtime assignment and never imports a
-vendor module directly (I15, mirroring `app.providers.providers.operations_for`). A service with
+vendor module directly (the no-vendor-SDK-in-domain rule, mirroring `app.providers.providers.operations_for`). A service with
 no entry here has no answering implementation, however the catalogue describes it -- credential
 configured is not the same fact as service implemented, and `record_ai_runtime_assignment` refuses
 an assignment to a service the catalogue itself has not marked `available` for exactly that reason.

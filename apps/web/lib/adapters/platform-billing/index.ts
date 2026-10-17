@@ -1,11 +1,11 @@
 /**
  * GOLD charging an organization for its own subscription — named as a capability rather than a
- * provider (I15), the same discipline `lib/adapters/payments` already holds for the opposite
+ * provider, the same discipline `lib/adapters/payments` already holds for the opposite
  * money direction. Domain code imports `PlatformBillingProvider`/`platformBillingProvider` from
  * here and never reaches past it to `./stripe`.
  *
  * **Never confused with `lib/adapters/payments`.** That capability is a customer paying a
- * tenant's own connected Stripe account (`acct_...`, D27) — GOLD is never in that flow. This one
+ * tenant's own connected Stripe account (`acct_...`, the provider-credential rule) — GOLD is never in that flow. This one
  * is the opposite direction: an organization paying GOLD, on GOLD's own Stripe account, using
  * GOLD's own Customer (`cus_...`) and Subscription (`sub_...`) objects. No type here may be
  * mistaken for one over there — there is no `ConnectedAccount` in this file, and nothing here
@@ -58,7 +58,7 @@ export type PlatformBillingProvider = {
     name: string;
   }): Promise<PlatformBillingCustomer>;
 
-  /** Outbound only — being told what happened is webhook ingress, which belongs to Python (D2, D26). */
+  /** Outbound only — being told what happened is webhook ingress, which belongs to Python. */
   createCheckoutSession(input: CheckoutSessionRequest): Promise<CheckoutSessionStarted>;
 
   createPortalSession(input: { customerId: string; returnUrl: string }): Promise<PortalSessionStarted>;

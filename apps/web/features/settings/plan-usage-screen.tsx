@@ -21,7 +21,7 @@ function formatMinor(amountMinor: number, currency: string | null): string {
 /**
  * How much of one reading the plan covered. Reads the split `app.record_usage` stored at the
  * moment the usage occurred — nothing is recomputed here against today's plan, which is what
- * keeps an old reading saying what it said when it happened (I8).
+ * keeps an old reading saying what it said when it happened.
  */
 function usageSplit(entry: UsageEvent): string {
   switch (entry.allowanceApplication) {
@@ -107,7 +107,7 @@ function SubscriptionPackageSummary({ summary }: { summary: NonNullable<PlanUsag
 
 /**
  * What this business is entitled to use, what GOLD has recorded selling it, what it used, and
- * what that cost it — never what it cost GOLD, and never a margin (`constraints.md` D43). A
+ * what that cost it — never what it cost GOLD, and never a margin (the platform-economics separation, ADR-014). A
  * detail route under Settings, so it writes its own heading rather than
  * one `navigation.ts` also owns.
  */

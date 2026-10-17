@@ -2,7 +2,7 @@ import type { Coordinates } from '@/lib/adapters/geocoding';
 
 /**
  * How long it takes to drive from one stored point to another, named as a capability rather than a
- * provider (I15). No type here may carry a provider's response shape, a route geometry, a turn list
+ * provider. No type here may carry a provider's response shape, a route geometry, a turn list
  * or a vendor's error code — a duration and a distance come back, or a categorised refusal does.
  *
  * Scheduling asks this to know whether a resource can get from one job to the next. It is not the

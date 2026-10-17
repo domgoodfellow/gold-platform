@@ -11,7 +11,7 @@ import type { PlatformBillingProvider } from './index';
  * act as GOLD's own Stripe account — Connect's OAuth/direct-charge calls act *as* GOLD *on
  * behalf of* a connected account via the `Stripe-Account` header; this capability acts as GOLD
  * *for itself*, with no such header. One platform credential, two ways of using it, never a
- * tenant's own key either way (D27, restated for this plane).
+ * tenant's own key either way (the provider-credential rule, restated for this plane).
  */
 export async function platformBillingProvider(): Promise<PlatformBillingProvider | null> {
   const secret = process.env.STRIPE_SECRET_KEY;

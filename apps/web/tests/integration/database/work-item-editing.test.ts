@@ -34,12 +34,12 @@ import { foundBusiness } from '@/tests/support/founding';
  * scheduled_during is not null`, which knows nothing about status, so a cancelled job went on
  * holding its van forever. The fix is a question the tenant answers about their own word —
  * `releases_resource` — and the assertions below are that the constraint and `listSchedule`
- * both now believe the answer. That agreement *is* I5: what keeps one availability
+ * both now believe the answer. That agreement *is* the single availability model: what keeps one availability
  * calculation honest is that it and the constraint say the same thing.
  *
  * It is deliberately not `is_terminal`. That flag would be the platform deciding what a
  * status means; this asks whether the van is still occupied, which is a fact about the
- * business's own operations that only the business can supply (D6).
+ * business's own operations that only the business can supply.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -112,7 +112,7 @@ async function newTenant(label: string): Promise<Tenant> {
   });
 
   // The lifecycle has to be wired, because a type with no configured transitions is frozen
-  // rather than unconstrained (I13).
+  // rather than unconstrained.
   await createWorkItemTransition(db, {
     organizationId: orgId,
     typeId,
@@ -226,7 +226,7 @@ describe('correcting a job, and cancelling one', () => {
 
   it('will not change a work item type, even as a raw update', async () => {
     // `type_id` is outside the column grant entirely. Changing it would strand the status
-    // the job sits in, and I20's three-column reference is what would refuse it — better to
+    // the job sits in, and the status-belongs-to-its-type constraint's three-column reference is what would refuse it — better to
     // have no path at all than one that fails halfway with a foreign key error.
     const otherType = await createWorkItemType(acme.db, { schedulable: true,
       organizationId: acme.organizationId,
@@ -272,7 +272,7 @@ describe('correcting a job, and cancelling one', () => {
       }),
     ).rejects.toMatchObject({ code: 'scheduling.forbidden' });
 
-    // And the raw path is refused identically — the capability lives in the database (I12).
+    // And the raw path is refused identically — the capability lives in the database.
     const { error } = await editor.db
       .from('work_items')
       .update({ status_id: acme.cancelledId })
@@ -295,7 +295,7 @@ describe('correcting a job, and cancelling one', () => {
     expect((await readItem(acme)).title).toBe('Edited by someone who may only edit');
   });
 
-  it('re-checks the field registry on an edit (I17)', async () => {
+  it('re-checks the field registry on an edit', async () => {
     await createFieldDefinition(acme.db, {
       organizationId: acme.organizationId,
       entityType: 'work_item',
@@ -327,7 +327,7 @@ describe('correcting a job, and cancelling one', () => {
     ).rejects.toMatchObject({ code: 'fields.unknown' });
   });
 
-  it('writes the edit to the timeline, attributed (I11)', async () => {
+  it('writes the edit to the timeline, attributed', async () => {
     const { data, error } = await acme.db
       .from('events')
       .select('action, actor_id, entity_id')
@@ -378,7 +378,7 @@ describe('correcting a job, and cancelling one', () => {
       marksComplete: false,
     });
 
-    // The availability calculation now agrees (I5) — the cancelled job is no longer busy.
+    // The availability calculation now agrees — the cancelled job is no longer busy.
     const [van] = await listSchedule(acme.db, {
       organizationId: acme.organizationId,
       within: MORNING,
@@ -387,7 +387,7 @@ describe('correcting a job, and cancelling one', () => {
     expect(van.free).toEqual([MORNING]);
 
     // …and so does the constraint, which is the half that matters. A window `freeWindows`
-    // calls free must be committable, or I5 is a second opinion rather than the only one.
+    // calls free must be committable, or the single availability model is a second opinion rather than the only one.
     const replacement = await createWorkItem(acme.db, {
       organizationId: acme.organizationId,
       title: 'The job that took the slot',
@@ -405,7 +405,7 @@ describe('correcting a job, and cancelling one', () => {
   it('reaches work already in that status, because it is a cache and not a snapshot', async () => {
     // The cancelled job was cancelled *before* the tenant answered the question, and it was
     // freed anyway. A snapshot would have freed only the next cancellation and left this
-    // van booked — which is why this one column is deliberately not I8's shape.
+    // van booked — which is why this one column is deliberately not the preserved-history rule's shape.
     const { data, error } = await acme.db
       .from('work_items')
       .select('status_releases_resource')
@@ -416,7 +416,7 @@ describe('correcting a job, and cancelling one', () => {
     expect(data!.status_releases_resource).toBe(true);
   });
 
-  it('refuses to un-release a status when that would double-book (I7)', async () => {
+  it('refuses to un-release a status when that would double-book', async () => {
     // Two jobs now overlap on Van 1: the cancelled one and its replacement. Telling the
     // platform that "Cancelled" holds a resource after all is refusing to be representable,
     // and the exclusion constraint says so rather than letting the board lie.
@@ -472,7 +472,7 @@ describe('correcting a job, and cancelling one', () => {
     // raise one already in it, occupying a resource nobody let them book.
     //
     // The domain layer never does this — `createWorkItem` takes no schedule — which is why it
-    // survived: the shape of the one caller was doing the work a policy should. I12 says a
+    // survived: the shape of the one caller was doing the work a policy should. The UI-is-not-authorization rule says a
     // direct call must be refused exactly as a form is.
     const clerk = await member(acme, 'wie-clerk', ['work_item.create']);
 

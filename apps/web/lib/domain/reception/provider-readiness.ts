@@ -6,10 +6,10 @@ export type CommunicationsReadiness = 'ready' | 'not_ready' | 'provisioning' | '
 
 /**
  * What Communications may truthfully say about its own calling infrastructure — never the scope
- * itself (D39): no subaccount id, no credential, nothing a carrier would recognise, only this one
+ * itself: no subaccount id, no credential, nothing a carrier would recognise, only this one
  * word. Presentation vocabulary over the one binding read every other caller of
  * `organization_provider_bindings` already uses (`getProviderBinding`) — not a second calculation
- * of readiness (I4); `lib/domain/providers/status.ts`'s `providerReadiness` is the platform's own
+ * of readiness; `lib/domain/providers/status.ts`'s `providerReadiness` is the platform's own
  * reading of the same fact, for the same reason.
  *
  * **A business with no binding at all is `ready`, not `not_ready`.** It dials through the

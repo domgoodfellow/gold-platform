@@ -1,7 +1,7 @@
 /**
  * What a role may do — platform vocabulary, not tenant configuration. Adding one means writing
  * the code, the policy, and a migration extending `roles_capabilities_known`. Which role holds
- * which capability, and what that role is called, are tenant rows (D6).
+ * which capability, and what that role is called, are tenant rows.
  */
 export const CAPABILITIES = [
   'support.read',
@@ -93,7 +93,7 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'payment.record': 'Record a payment against an invoice',
   /** Its own authority — the one capability a role can hold that acts when nobody is present. */
   'automation.manage': 'Write the rules this business runs on its own',
-  /** Asking for a proposal, not applying one — applying is gated per-part by whatever capability that part needs (D32). */
+  /** Asking for a proposal, not applying one — applying is gated per-part by whatever capability that part needs. */
   'configuration.propose': 'Ask the platform to draft this business’s setup',
   /** Its own authority because asking spends this deployment's money and shares this business's rows with whoever answers — not because a question is dangerous. */
   'assistant.ask': 'Ask the platform questions about this business',

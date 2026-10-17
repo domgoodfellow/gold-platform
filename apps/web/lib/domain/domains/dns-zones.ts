@@ -4,7 +4,7 @@ import { DomainError } from '@/lib/domain/errors';
 /**
  * Whether this business has already connected the DNS that answers for a hostname (work order 1,
  * section 4) — read-only, and never the records themselves: `apps/api`'s `app.services.dns` is
- * the one place that writes one (D56, I15, one axis over). This only tells the Domains screen
+ * the one place that writes one (the vendor-shape-stays-at-the-edge rule, the no-vendor-SDK-in-domain rule, one axis over). This only tells the Domains screen
  * whether to say "GildOps is publishing these records automatically" or hand back the manual
  * copy-and-paste instruction it has always given.
  */

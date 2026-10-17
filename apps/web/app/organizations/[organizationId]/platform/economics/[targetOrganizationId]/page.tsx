@@ -37,7 +37,7 @@ const COMPONENT_LABEL: Record<string, string> = {
  * One organization's revenue, known cost-to-serve, contribution and storage/infrastructure
  * detail for the current month (Work Order B, B5/B8). Staff-only — never reached by the business
  * itself, which sees its own obligation through Settings → Plan & usage and nothing of GildOps'
- * own cost (D43).
+ * own cost.
  */
 export default async function PortfolioEconomicsDetailPage({
   params,

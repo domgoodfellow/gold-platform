@@ -1,6 +1,6 @@
 /**
  * Putting a business's own hostname in front of GildOps, named as a capability rather than a host
- * (I15). The hosting provider's credential lives in the other runtime and never here (D14, D54):
+ *. The hosting provider's credential lives in the other runtime and never here:
  * every method is a request to `apps/api` carrying the person's own token, and what comes back is
  * GildOps' vocabulary — never a provider's JSON.
  */

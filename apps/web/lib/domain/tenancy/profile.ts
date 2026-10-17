@@ -6,7 +6,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
  * What a business says about itself, on a page strangers can see. Exists because copy is
  * configuration, not something the platform says on a business's behalf — a public page must
  * carry the business's own voice, never a platform claim ("Book a time now!"). No colour here;
- * that's the marketing surface D23 defers separately.
+ * that's the marketing surface the UI system defers separately.
  */
 
 export type PublicProfile = {

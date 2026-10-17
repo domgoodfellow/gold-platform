@@ -1,14 +1,14 @@
 /**
  * Placing a telephone call, as a capability.
  *
- * **Not a word in here belongs to a vendor** (I15), and `adapters.test.ts` reads this file to
+ * **Not a word in here belongs to a vendor**, and `adapters.test.ts` reads this file to
  * hold that from both sides: no domain file may import an implementation, and the contract may
  * not speak a provider's vocabulary. What a caller says is *ring this number into that room*.
  * Which company carries it is `registry.ts`'s only subject.
  *
- * **Three methods, and each arrived with a caller** — which is the bar `constraints.md` sets and
+ * **Three methods, and each arrived with a caller** — which is the bar (nothing is built before it has a caller) and
  * the reason there is no `hold`, no `transfer` and no `merge` here yet. All three are one
- * operation on a participant once D38's conference exists, and each gets added by the screen
+ * operation on a participant once the conference-call design's conference exists, and each gets added by the screen
  * that presses the button rather than in advance of one.
  */
 
@@ -37,7 +37,7 @@ export type TelephonyProvider = {
   /**
    * Ring `to` from `from`, and put them in the room called `room`.
    *
-   * **A room rather than a direct dial, which is D38.** Both parties join a conference instead
+   * **A room rather than a direct dial, which is the conference-call design.** Both parties join a conference instead
    * of being connected to each other, because hold, transfer, merge and supervision are each
    * one operation on somebody in a room and none of them is possible on a two-party line.
    *
@@ -64,7 +64,7 @@ export type TelephonyProvider = {
   browserToken(input: { identity: string; ttlSeconds?: number }): Promise<string>;
 
   /**
-   * Change what one leg is doing inside a room that already exists — the operation D38 promised
+   * Change what one leg is doing inside a room that already exists — the operation the conference-call design promised
    * once a conference existed: hold, mute, or end this one leg without ending the conference for
    * everybody else in it. One method rather than three, because all three are the same REST
    * shape at the carrier (update one participant) and a caller asks for only the field it means
@@ -75,7 +75,7 @@ export type TelephonyProvider = {
     externalId: string;
     hold?: boolean;
     muted?: boolean;
-    /** Ends this one leg. The conference itself survives — that is the entire point of D38. */
+    /** Ends this one leg. The conference itself survives — that is the entire point of the conference-call design. */
     status?: 'completed';
     /**
      * Whether this leg leaving closes the room for everybody. The agent who started a call closes
@@ -102,7 +102,7 @@ export type TelephonyProvider = {
  * never uses.
  *
  * **Three steps and nothing beyond them**, matching what a subaccount actually needs before a
- * call or a browser token can use it (D39): its own scope, a key to sign a token with later, and
+ * call or a browser token can use it: its own scope, a key to sign a token with later, and
  * an application a browser's outgoing call can be pointed at. Which of these already exist for a
  * retry is `lib/domain/providers/`'s question, not this one's — each method here does the one
  * externally-visible thing its name says and nothing to check first.
@@ -127,7 +127,7 @@ export type TelephonyProvisioner = {
  *
  * **Every method reaches the carrier through `apps/api`, never from here.** The credential for a
  * GOLD-owned account is stored in Vault and readable by exactly one machine role that only that
- * runtime can wear; this runtime holds no signing secret and must not (D14). What comes back is
+ * runtime can wear; this runtime holds no signing secret and must not. What comes back is
  * an answer, never the credential.
  *
  * `provisioner` is the same three-step contract the deployment-credential path implements, so

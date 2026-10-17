@@ -7,7 +7,7 @@ a customer only when exactly one holds the number, and an unknown or withheld ca
 the same. A number no active business holds records nothing and is declined.
 
 **It still declines, because routing a live call is not built.** Deciding *who here should take it*
-is the routing slice's, and the words a caller hears belong to the business (I24), which has not
+is the routing slice's, and the words a caller hears belong to the business, which has not
 been asked. Until a route is wired to this request the honest answer is the carrier's own
 busy signal, and the honest record is a call that was missed. A recording failure never changes the
 answer to the carrier: the caller hears the same thing whether or not this deployment could write

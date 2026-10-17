@@ -28,7 +28,7 @@ export async function provisionOrganizationAction(
       displayName: String(formData.get('displayName') ?? ''),
       // Not the staff member's browser zone. See `provision.ts` — this business's clock is
       // a fact about the business, and defaulting it to where we are sitting would be the
-      // platform deciding one (I9).
+      // platform deciding one.
       timezone: String(formData.get('timezone') ?? ''),
       currency: String(formData.get('currency') ?? ''),
     });

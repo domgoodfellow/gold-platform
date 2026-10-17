@@ -1,11 +1,11 @@
 """The clock, and the two claims that are this runtime's to make.
 
-Everything about *what is due* lives in Postgres (D30) and is tested there, against real RLS,
+Everything about *what is due* lives in Postgres and is tested there, against real RLS,
 by `apps/web/tests/integration/database/automations.test.ts`. What belongs here is the half that is a fact about this
 process: that it identifies itself as a role holding almost nothing, and that it does not put a
 single word of its own into a message a business wrote.
 
-These run in `pnpm check` from the root, after the TypeScript half. They did not until M8;
+These run in `pnpm check` from the root, after the TypeScript half. They did not always;
 `apps/api/README.md` records what changed.
 """
 
@@ -29,7 +29,7 @@ def claims(token: str) -> dict:
 
 
 def test_identifies_as_the_runner_role_and_not_as_a_person() -> None:
-    # The whole of D26's argument, applied on a second axis: identity reaches Postgres as a JWT
+    # The whole of the authoritative-webhook rule's argument, applied on a second axis: identity reaches Postgres as a JWT
     # naming a role that holds no table grant — never as a service-role key, which would discard
     # RLS for everything rather than narrowing to three functions.
     token = machine_token(SECRET, role=ROLE, sub=AUTOMATION_ACTOR)
@@ -63,7 +63,7 @@ def test_has_no_sender_for_a_channel_this_deployment_is_not_configured_for(monke
     assert sender_for("email") is None
     assert sender_for("sms") is None
     # And it says so, rather than leaving a business to wonder. The sentence is for an operator
-    # on the Automations screen and names whose problem it is (constraints.md D31).
+    # on the Automations screen and names whose problem it is (the no-dead-end rule, `docs/ui-system.md`).
     assert "cannot send email" in unconfigured_reason("email")
 
 
@@ -74,7 +74,7 @@ def test_has_no_sender_for_a_channel_that_does_not_exist() -> None:
 def test_sends_the_body_exactly_as_the_business_wrote_it(monkeypatch) -> None:
     """The one assertion that would catch a friendly footer being added later.
 
-    `constraints.md` forbids the platform putting words in a business's mouth, and an email is
+    `docs/product.md` forbids the platform putting words in a business's mouth, and an email is
     the strongest case of that rule — it lands in somebody's inbox with the business's name on
     it. So the finished words are resolved in Postgres when the message is queued, and every
     layer after that is a pipe.

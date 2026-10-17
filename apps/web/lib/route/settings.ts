@@ -2,7 +2,7 @@
  * Settings is a landing page — `/organizations/{id}/settings` — with five destinations chosen
  * from it: Organization, Account, Access, Connections and Plan & usage. Each still writes to its
  * own domain surface — Account is the signed-in person's and follows them across businesses
- * (D45); Organization, Access, Connections and Plan & usage are this business's, checked against
+ *; Organization, Access, Connections and Plan & usage are this business's, checked against
  * the caller's membership on every page the same as before. Choosing one opens its own page with
  * its own local navigation (Access's Members/Invitations/Roles, Account's Profile/Security); none
  * of them re-renders a persistent Settings tab bar on top of its content. This registry exists so
@@ -26,7 +26,7 @@ export const SETTINGS_SCOPES: readonly SettingsScope[] = [
 
 /**
  * Where a scope lives. `organizationId` is a hint the same way it is everywhere else in Settings
- * (D17): every page behind these addresses still checks membership itself. `null` collapses every
+ *: every page behind these addresses still checks membership itself. `null` collapses every
  * scope but Account, since there is nothing organization-shaped to reach.
  */
 export function settingsScopeHref(key: SettingsScopeKey, organizationId: string | null): string {

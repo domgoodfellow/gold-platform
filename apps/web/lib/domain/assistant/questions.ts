@@ -22,10 +22,10 @@ import {
 
 /**
  * Asking the system a question, and the record of having asked — grouped into conversations, each
- * readable only by the person who started it (D34). The domain layer owns the flow;
+ * readable only by the person who started it. The domain layer owns the flow;
  * the capability owns the answering — nothing here knows there's a loop, a model, or a second
  * deployment. Nothing here reads or writes business data: a question is answered by tools
- * running under the asking person's own token (D34), so this function could not widen what
+ * running under the asking person's own token, so this function could not widen what
  * somebody sees if it tried. Carrying out a suggested action is a separate, later step with its
  * own screen.
  */
@@ -56,7 +56,7 @@ export type AgentRun = {
   /** What it suggested doing, if anything. Nothing has been done until somebody says so. */
   proposedAction: ProposedAction | null;
   actionOutcome: ActionOutcome | null;
-  /** The refusal, in the words of whoever refused (I25). */
+  /** The refusal, in the words of whoever refused. */
   actionDetail: string | null;
   /** The files this question was sent with, so a reopened conversation shows them again. */
   attachments: AgentAttachment[];
@@ -187,7 +187,7 @@ function isActionOutcome(value: string | null): value is ActionOutcome {
 const COLUMNS =
   'id, conversation_id, question, answer, outcome, detail, tools, answered_by, occurred_at, proposed_action, action_outcome, action_detail';
 
-/** Lets a screen say "this deployment can't answer" rather than rendering a box that fails (D31). */
+/** Lets a screen say "this deployment can't answer" rather than rendering a box that fails. */
 export async function canAnswerQuestions(): Promise<boolean> {
   return (await answeringProvider()) !== null;
 }
@@ -297,7 +297,7 @@ async function priorTurnsOf(
 }
 
 /**
- * Ask, and write down what came back. A failure is recorded rather than discarded (I25) — a
+ * Ask, and write down what came back. A failure is recorded rather than discarded — a
  * refusal, an unconfigured deployment, a declined tool all leave a row saying so in whoever's
  * words said it. The token is fetched here and passed straight through, so every tool on the
  * far side runs inside the caller's own RLS boundary.
@@ -397,7 +397,7 @@ export async function askQuestion(
       attachments: sending.texts,
       token,
       organizationId: input.organizationId,
-      // I9, not a convenience — the model has no clock, so `Intl` (not Date arithmetic) resolves the business's own today in its own zone.
+      // the absolute-time rule, not a convenience — the model has no clock, so `Intl` (not Date arithmetic) resolves the business's own today in its own zone.
       context: `Today is ${new Intl.DateTimeFormat('en-CA', {
         timeZone: organization.timezone,
         dateStyle: 'full',
@@ -423,7 +423,7 @@ export async function askQuestion(
         'assistant.not_entitled',
       );
     }
-    // Their words, not a paraphrase (I25).
+    // Their words, not a paraphrase.
     detail = failure instanceof Error ? failure.message : 'the assistant could not answer';
   }
 
@@ -491,7 +491,7 @@ export async function askQuestion(
  * `applyConfigurationProposal`). Adds no capability and checks none — moving a job is still
  * `work_item.schedule`, refused by the same policy it would be if dragged by hand. A refusal is
  * recorded rather than thrown: the exclusion constraint refusing an overlap is the ordinary
- * case here, not a rare one (I6).
+ * case here, not a rare one.
  */
 export async function decideOnAction(
   db: Db,

@@ -43,7 +43,7 @@ function step(currency: string): string {
  *
  * Nothing preselected, deliberately. The browser knows where somebody is and does not know what
  * they sell in — a Dutch company invoicing in dollars is ordinary — so a country-to-currency
- * guess would be the platform deciding what this business trades in, which `constraints.md`
+ * guess would be the platform deciding what this business trades in, which `docs/product.md`
  * forbids outright.
  */
 export function ChooseCurrencyForm({ organizationId, currentCurrency }: { organizationId: string; currentCurrency?: string | null }) {

@@ -41,7 +41,7 @@ function requiredInstant(
 ): string {
   const value = requiredText(values, key, label);
   // An unparseable date is caught here because "that is not a time" is the useful sentence —
-  // everything else about when a job may land (overlap, buffer) is the database's to refuse (I6).
+  // everything else about when a job may land (overlap, buffer) is the database's to refuse.
   if (Number.isNaN(Date.parse(value))) {
     throw new DomainError(
       `That suggestion's ${label} is not a time this platform can read.`,
@@ -75,8 +75,8 @@ const validateReschedule: ActionValidator = (values) => {
 };
 
 /**
- * Asserts an instant rather than searching for one — not a second `freeWindows` (I5); whether it
- * lands is the exclusion constraint's call, not a check here (I6). Who is on the job is not named:
+ * Asserts an instant rather than searching for one — not a second `freeWindows`; whether it
+ * lands is the exclusion constraint's call, not a check here. Who is on the job is not named:
  * `scheduleWorkItem` leaves the assignments as they are when none are given, so moving something
  * in time can never quietly reassign it — moving and reassigning are two decisions, and only one
  * is here. Every resource already on it is tested against the new time in the same transaction.

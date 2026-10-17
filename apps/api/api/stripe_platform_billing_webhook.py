@@ -11,7 +11,7 @@ and `app.providers.stripe.platform_billing_webhook` for why the two are never fo
 `stripe_webhook.py`: a bad signature, a body that is not JSON, and an event about nothing all
 produce the same terse answer.
 
-Vercel's Python runtime routes a file under `api/` to a path (D24). One file, one route, one
+Vercel's Python runtime routes a file under `api/` to a path. One file, one route, one
 thing it may do.
 """
 

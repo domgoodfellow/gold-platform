@@ -1,6 +1,6 @@
 """Which vendor implementation answers for a connector key, and GOLD's registration with it.
 
-**The one place a connector key is turned into an OAuth implementation** (I15, as
+**The one place a connector key is turned into an OAuth implementation** (the no-vendor-SDK-in-domain rule, as
 `app.providers.providers` is for provider keys). `app.domains.integrations` asks for a provider
 by key and never imports a vendor. A connector with no entry here, or no client credentials in
 this deployment's environment, is refused rather than guessed at.

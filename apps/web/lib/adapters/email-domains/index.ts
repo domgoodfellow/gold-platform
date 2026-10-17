@@ -1,5 +1,5 @@
 /**
- * Proving a business's own sending domain, named as a capability rather than a provider (I15).
+ * Proving a business's own sending domain, named as a capability rather than a provider.
  *
  * **A sending domain is not a sender identity and not a mailbox.** Proven here means the provider
  * will authorize mail sent *from* addresses under this domain. It does not mean any particular
@@ -8,8 +8,8 @@
  * either of them.
  *
  * **No credential is here and none can be.** The provider account lives in
- * `platform_provider_accounts` (D54/D62) and is read only by `apps/api`'s `provider_operator`
- * (D14): every method is a request carrying the person's own token, and what comes back is
+ * `platform_provider_accounts` and is read only by `apps/api`'s `provider_operator`
+ *: every method is a request carrying the person's own token, and what comes back is
  * GildOps' vocabulary — never a provider's JSON, and never its own word for anything but the one
  * opaque `providerStatus` string a screen may show a person verbatim.
  */

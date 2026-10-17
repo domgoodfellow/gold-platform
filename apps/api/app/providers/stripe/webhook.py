@@ -6,10 +6,10 @@ nothing here uses, and it would want a network at import time -- which makes the
 untestable without one, in a repository whose testing discipline is running against real things
 rather than fakes. Everything below is pure and is tested directly, signature and all.
 
-**The web app also talks to Stripe, and the split is D2's rather than an accident.** Creating a
-checkout session is an operator pressing a button inside a transactional flow, and D2 gives the
+**The web app also talks to Stripe, and the split is the web/API runtime split's rather than an accident.** Creating a
+checkout session is an operator pressing a button inside a transactional flow, and the web/API runtime split gives the
 transactional domain to TypeScript. Being *called* by Stripe with no session behind it is
-webhook ingress, which D2 gives to Python. Two touchpoints, each owned by whoever owns the
+webhook ingress, which the web/API runtime split gives to Python. Two touchpoints, each owned by whoever owns the
 write -- and the cost is that the vendor is named in two runtimes, stated here rather than
 discovered later.
 """

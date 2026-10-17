@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 /**
  * A form at a business's own address — `https://{its hostname}/forms/{form slug}`. `proxy.ts`
  * rewrites that path here carrying the **hostname**, never an organization id, and the business is
- * whatever the one hostname resolver says it is (D17). A hostname that resolves to nothing, or to a
+ * whatever the one hostname resolver says it is. A hostname that resolves to nothing, or to a
  * portal, or a form that is not published, are the same 404.
  */
 export default async function HostedSiteFormPage({ params }: PageProps<'/sites/[hostname]/forms/[formSlug]'>) {

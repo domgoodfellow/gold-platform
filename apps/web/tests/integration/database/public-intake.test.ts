@@ -14,7 +14,7 @@ import { foundBusiness } from '@/tests/support/founding';
  * **Narrower than booking on purpose.** `booking.test.ts` proves a stranger can read back their
  * own booking; this proves the opposite — after submitting, a caller can read nothing at all,
  * because no select policy anywhere is keyed to this axis. What carries the whole record here is
- * the same shape I21 already proved for platform staff: absence of a grant, not a policy that
+ * the same shape the no-grant-rather-than-policy rule already proved for platform staff: absence of a grant, not a policy that
  * happens to decline.
  */
 
@@ -131,7 +131,7 @@ describe('the public intake, by somebody who is a member of nothing', () => {
     expect(written!.stageId).toBeNull();
   });
 
-  it('starts a discovery snapshot from whatever the form already collected (I61)', async () => {
+  it('starts a discovery snapshot from whatever the form already collected', async () => {
     const visitor = anonClient();
     await submitPublicInquiry(visitor, {
       kind: 'demo',
@@ -304,7 +304,7 @@ describe('the public intake, by somebody who is a member of nothing', () => {
     expect(rows.map((row) => row.argument_name)).not.toContain('p_organization_id');
   });
 
-  it('refuses honestly when no deployment target is configured (D31)', async () => {
+  it('refuses honestly when no deployment target is configured', async () => {
     await pointAt(null);
 
     const visitor = anonClient();

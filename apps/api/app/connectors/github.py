@@ -1,4 +1,4 @@
-"""GitHub: a business installs a GitHub App on the repositories it chooses (D56, work order 2).
+"""GitHub: a business installs a GitHub App on the repositories it chooses (the vendor-shape-stays-at-the-edge rule, work order 2).
 
 **An installation, not an OAuth sign-in.** What a business authorizes is *which repositories*
 GildOps may read -- the narrowing and the revocation a business actually wants -- and GitHub models

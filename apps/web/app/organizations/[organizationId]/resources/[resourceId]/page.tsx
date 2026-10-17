@@ -34,7 +34,7 @@ export const dynamic = 'force-dynamic';
  *
  * The one correction the domain layer supports today is which Membership this Resource
  * represents (Slice 0B) — `resource.update`-gated, shown as a control only to a caller who
- * holds it, and as plain text otherwise (I12: hiding is a courtesy, RLS is the guard). No
+ * holds it, and as plain text otherwise (the UI-is-not-authorization rule: hiding is a courtesy, RLS is the guard). No
  * documents section — `resource` is not in `DOCUMENT_ENTITIES` at the schema level, not just
  * the UI, so adding one here would be a UI claim the database cannot back. No Schedule or
  * Activity tab for the same reason: no backing domain data exists for either yet.

@@ -19,7 +19,7 @@ import { foundBusiness } from '@/tests/support/founding';
  *
  * `20260827000010_checklists.sql` deferred this and named the question it could not answer
  * without guessing: what happens to work already created when a template changes. The answer
- * is nothing, and it is I8 — "editing today's configuration never changes yesterday's
+ * is nothing, and it is the preserved-history rule — "editing today's configuration never changes yesterday's
  * committed work."
  *
  * A join would have meant that editing a template silently rewrote what a technician had
@@ -150,7 +150,7 @@ describe('checklist templates', () => {
     expect(steps.every((step) => step.doneAt === null)).toBe(true);
   });
 
-  it('does not reach a job that already exists when the template gains a step (I8)', async () => {
+  it('does not reach a job that already exists when the template gains a step', async () => {
     const job = await newJob(alice, 'Created before the third step');
 
     await addTypeChecklistItem(alice.db, {
@@ -177,7 +177,7 @@ describe('checklist templates', () => {
     expect(laterSteps.map((step) => step.label)).toContain('Bleed the radiators');
   });
 
-  it('does not untick work when a template step is removed (I8)', async () => {
+  it('does not untick work when a template step is removed', async () => {
     const job = await newJob(alice, 'Half done already');
     const [first] = await listChecklistItems(alice.db, {
       organizationId: alice.organizationId,
@@ -217,7 +217,7 @@ describe('checklist templates', () => {
     expect(data!.some((event) => (event.payload as { checklist_items: number }).checklist_items > 0)).toBe(true);
   });
 
-  it('cannot hang a template step off another tenant\'s type (I18)', async () => {
+  it('cannot hang a template step off another tenant\'s type', async () => {
     await expect(
       addTypeChecklistItem(bob.db, {
         organizationId: bob.organizationId,
@@ -236,7 +236,7 @@ describe('checklist templates', () => {
     ).toEqual([]);
   });
 
-  it('refuses template changes to a member without the capability (I12, I16)', async () => {
+  it('refuses template changes to a member without the capability', async () => {
     const limited = await createRole(bob.db, {
       organizationId: bob.organizationId,
       name: 'Worker',

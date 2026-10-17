@@ -21,7 +21,7 @@ import { createWorkItem } from '@/lib/domain/work-items/work-items';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * I4: there is exactly one price calculation.
+ * The one-calculation rule: there is exactly one price calculation.
  *
  * The invariant is not "the arithmetic is correct" — it is that there is one place doing it.
  * A total is trivial, which is exactly why a second one gets written: `lines.reduce(…)` in a
@@ -29,10 +29,10 @@ import { foundBusiness } from '@/tests/support/founding';
  * properties that make a single calculation *observable* rather than merely intended:
  *
  *   * A quoted job holds copies, so re-pricing the catalogue moves nothing already quoted
- *     (I8). If a total were derived by joining back to `price_book_items`, this fails.
+ *. If a total were derived by joining back to `price_book_items`, this fails.
  *   * A job is never quoted in two currencies, so the total is always a number in a named
  *     currency. That is a database constraint, not a check before the insert, for the reason
- *     I6 gives.
+ *     the advisory-availability rule gives.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -146,7 +146,7 @@ describe('pricing a work item', () => {
     expect(price).toEqual({ totalMinor: 22250, currency: 'EUR' });
   });
 
-  it('copies the catalogue onto the line rather than joining to it (I8)', async () => {
+  it('copies the catalogue onto the line rather than joining to it', async () => {
     const job = await newJob(alice, 'Quoted before the rise');
     const items = await listPriceBookItems(alice.db, { organizationId: alice.organizationId });
     const callout = items.find((item) => item.name === 'Callout')!;
@@ -214,7 +214,7 @@ describe('pricing a work item', () => {
     }
   });
 
-  it('refuses a second currency on one job, in the database (I4)', async () => {
+  it('refuses a second currency on one job, in the database', async () => {
     // A business changes what it trades in. Its catalogue now holds both, because amounts are
     // never converted — see the price book migration.
     await updateOrganization(alice.db, {
@@ -239,7 +239,7 @@ describe('pricing a work item', () => {
     await addPricedLine(alice.db, { workItemId: job, priceBookItemId: inEuro.id, quantity: 1 });
 
     // work_item_priced_lines_one_currency, a gist exclusion using `currency with <>`. Not a
-    // check before the insert, which would race identically (I6's reasoning).
+    // check before the insert, which would race identically (the advisory-availability rule's reasoning).
     await expect(
       addPricedLine(alice.db, { workItemId: job, priceBookItemId: inDollars, quantity: 1 }),
     ).rejects.toMatchObject({ code: 'prices.mixed_currency' });
@@ -277,7 +277,7 @@ describe('pricing a work item', () => {
     expect(price).toEqual({ totalMinor: 10000, currency: 'USD' });
   });
 
-  it('cannot quote from another tenant’s catalogue (I18)', async () => {
+  it('cannot quote from another tenant’s catalogue', async () => {
     const theirs = await createPriceBookItem(bob.db, {
       organizationId: bob.organizationId,
       name: 'Their callout',
@@ -352,7 +352,7 @@ describe('pricing a work item', () => {
     expect(error?.code).toBe('23514');
   });
 
-  it('refuses pricing work to a member without the capability (I12)', async () => {
+  it('refuses pricing work to a member without the capability', async () => {
     const job = await newJob(bob, 'Not theirs to price');
     const item = (await listPriceBookItems(bob.db, { organizationId: bob.organizationId }))[0];
 
@@ -373,7 +373,7 @@ describe('pricing a work item', () => {
     ).rejects.toMatchObject({ code: 'prices.forbidden' });
   });
 
-  it('records each quoted line on the timeline (I11)', async () => {
+  it('records each quoted line on the timeline', async () => {
     const { data, error } = await alice.db
       .from('events')
       .select('action, actor_id')

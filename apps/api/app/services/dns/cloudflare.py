@@ -1,4 +1,4 @@
-"""The one file that knows what Cloudflare's DNS API looks like (I15).
+"""The one file that knows what Cloudflare's DNS API looks like.
 
 Three calls: list a zone's records matching a name and type, create one, update one by id.
 Cloudflare's JSON travels no further than the three functions below -- `app.services.dns.operations`

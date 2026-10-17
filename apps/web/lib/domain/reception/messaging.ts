@@ -169,7 +169,7 @@ export async function markConversationRead(db: Db, input: { organizationId: stri
   if (error) throw new DomainError(error.message, 'messaging.mark_read_failed');
 }
 
-/** Whether this deployment has said `sendMessage` may reach this recipient (D40's own restated rule, for suppression). */
+/** Whether this deployment has said `sendMessage` may reach this recipient (the messaging rules' own restated rule, for suppression). */
 async function isSuppressed(db: Db, input: { organizationId: string; externalNumber: string }): Promise<boolean> {
   const { data, error } = await db
     .from('messaging_opt_outs')

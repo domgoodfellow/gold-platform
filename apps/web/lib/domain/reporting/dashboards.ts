@@ -10,7 +10,7 @@ import {
 /**
  * A dashboard: saved reports, in an order a business chose.
  *
- * **It holds no audience and needs none** (D36). Who sees a dashboard follows from which of its
+ * **It holds no audience and needs none**. Who sees a dashboard follows from which of its
  * reports they can read — `dashboards_select` asks exactly that, with
  * `report_definitions_select` running inside the subquery under the caller's own rights. A
  * second role list here would be a second thing to keep in step, and the day the two disagreed
@@ -24,7 +24,7 @@ import {
 
 export type Dashboard = {
   id: string;
-  /** The business's own word for it. The platform seeds none, including the four M7 names. */
+  /** The business's own word for it. The platform seeds none, not even the four common ones. */
   name: string;
   createdAt: string;
 };
@@ -164,7 +164,7 @@ export async function unpinReport(
  * What a dashboard shows this caller, right now.
  *
  * **Each tile is `runReportDefinition`**, so a dashboard is one more caller of whichever
- * aggregate that report names and never a query of its own (D35). The reports it can
+ * aggregate that report names and never a query of its own. The reports it can
  * see are whatever `dashboard_reports_select` returned, which is the audience doing its work;
  * a viewer with access to two of five pinned reports gets two tiles and is told nothing about
  * the other three.

@@ -8,7 +8,7 @@ and stayed that way, with its duration typed in by a person if at all.
 unsigned request, an unparseable one, and one about a call this platform never placed all get
 the same terse answer. A handler that said which would help somebody find the third.
 
-Vercel's Python runtime routes a file under `api/` to a path (D24). No framework, no router:
+Vercel's Python runtime routes a file under `api/` to a path. No framework, no router:
 one file, one route, one thing it may do.
 """
 

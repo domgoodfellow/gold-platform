@@ -27,7 +27,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // A business's own hostname opens its public surface at the root, and its published forms. The rewrite carries the hostname, never an organization id: the page resolves it again
-  // itself (D17). A hostname that resolves to nothing falls through unchanged — to exactly what an
+  // itself. A hostname that resolves to nothing falls through unchanged — to exactly what an
   // unknown host would have seen — so nothing says which names are almost valid.
   // `/` opens the home page; `/forms/{slug}` opens one of that business's published forms; any other
   // single segment that could name a page (and is not a path the platform owns) opens that page of

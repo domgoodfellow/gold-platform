@@ -1,6 +1,6 @@
 """Attaching a business's hostname to GildOps' one Vercel project, and asking how it stands.
 
-**The only file in this repository that knows what Vercel's Domains API looks like** (I15).
+**The only file in this repository that knows what Vercel's Domains API looks like**.
 Everything above it asks to *connect a hostname*, *check it* or *remove it*, and hears back in
 GildOps' own words: a configuration state (`dns_required` | `satisfied`), a verification state
 (`pending` | `verifying` | `verified` | `failed`), a certificate state, and the DNS records a
@@ -8,7 +8,7 @@ person has to publish. Vercel's JSON never travels further than `normalize` belo
 reason `app.providers.twilio.accounts` gives: each step is one HTTPS call.
 
 **Where the account's facts live.** GildOps holds one Vercel account as a
-`platform_provider_accounts` row (D62), and `read_provider_account_credential` returns exactly
+`platform_provider_accounts` row, and `read_provider_account_credential` returns exactly
 five things, which this module reads as:
 
 - `secret` -- the Vercel access token, stored in Vault, used as a bearer token.
@@ -22,7 +22,7 @@ five things, which this module reads as:
   which is exactly what that column is for; `metadata` was not used because verification
   overwrites it and the credential reader does not return it.
 
-**A failure is Vercel's own words** (D56), carried in the exception text and recorded on the row.
+**A failure is Vercel's own words**, carried in the exception text and recorded on the row.
 Vercel's error bodies carry no credential.
 """
 

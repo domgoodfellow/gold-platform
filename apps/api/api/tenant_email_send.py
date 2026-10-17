@@ -7,7 +7,7 @@ that person may see this message, and only after that reads the provider credent
 role no human session can wear. The response carries GildOps' own state of the message, never the
 credential and never the provider's raw answer.
 
-Vercel's Python runtime routes a file under `api/` to a path (D24). One file, one route.
+Vercel's Python runtime routes a file under `api/` to a path. One file, one route.
 """
 
 from __future__ import annotations

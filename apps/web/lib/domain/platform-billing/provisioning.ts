@@ -7,7 +7,7 @@ import { DomainError } from '@/lib/domain/errors';
 /**
  * Staff provisioning a Plan's recorded price with the billing provider (Phase 4: GOLD
  * provisions Products/Prices via the provider's API, never a price invented while a caller
- * waits at checkout). The provider call happens here, in TypeScript (D2); only the resulting
+ * waits at checkout). The provider call happens here, in TypeScript; only the resulting
  * references are ever written to the database, by `record_plan_provider_price`.
  */
 export type ProvisionedPlanPrice = {
@@ -107,7 +107,7 @@ export async function provisionPlanPrice(
 /**
  * Staff provisioning the processor's representation of one organization's negotiated price
  * (`organization_plan_agreements`) -- the agreement-priced counterpart to `provisionPlanPrice`.
- * Never mutates the Plan's own standard provider price (I8); the mapping is its own table, keyed
+ * Never mutates the Plan's own standard provider price; the mapping is its own table, keyed
  * by the `organization_plan_agreements` row that produced the amount -- so a later agreement is
  * provisioned as its own provider price and the earlier one's mapping stays as it was.
  */

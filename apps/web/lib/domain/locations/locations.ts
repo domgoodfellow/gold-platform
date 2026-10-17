@@ -27,7 +27,7 @@ export type Location = {
    * or travel has no reason to fill it in.
    */
   coordinates: Coordinates | null;
-  /** Tenant-defined fields, governed by this organization's registry (D7). */
+  /** Tenant-defined fields, governed by this organization's registry. */
   custom: CustomValues;
   /** The customers served here. Many-to-many: a site can serve several. */
   customers: LinkedCustomer[];
@@ -259,7 +259,7 @@ export async function createLocation(
     p_label: label,
     p_address: address,
     // Non-null in the generated types because Postgres records no nullability for function
-    // parameters — the same gap `customers.ts` documents (constraints.md D15).
+    // parameters — the same gap `customers.ts` documents (the forward-only migration rule, ADR-028).
     p_access_notes: accessNotes as string,
     p_custom: custom,
   });

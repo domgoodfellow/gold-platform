@@ -2,9 +2,9 @@
 
 **Calls the exact function a live inbound call will (once that slice wires the webhook to it) —
 never a second, weaker copy.** `resolve_inbound_route` reads Postgres under this caller's own
-forwarded token, so a preview can see only what the operator asking could already see (D17).
+forwarded token, so a preview can see only what the operator asking could already see.
 
-Vercel's Python runtime routes a file under `api/` to a path (D24). One file, one route.
+Vercel's Python runtime routes a file under `api/` to a path. One file, one route.
 """
 
 from __future__ import annotations

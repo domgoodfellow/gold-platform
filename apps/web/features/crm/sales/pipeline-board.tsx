@@ -44,7 +44,7 @@ export function buildPipelineColumns(
  * The pipeline, read as a board.
  *
  * **CRM/Sales owns this component.** Communications/Voice consumes it for a calls-page summary
- * but must not define it — the same rule `constraints.md` states for navigation sections applies
+ * but must not define it — the same one-owner rule ADR-008 states for business facts applies
  * to the component itself: `reception` is a shared runtime module underneath both catalogue
  * Products, and this is CRM's own reading of it.
  *

@@ -21,7 +21,7 @@ def require_caller(
     """Extract and authoritatively verify the caller's bearer token, or raise `AuthError`.
 
     Both arguments are passed in rather than read from the environment here, because every
-    caller already loaded a `*Settings` dataclass for its own feature (D31) — this stays a pure
+    caller already loaded a `*Settings` dataclass for its own feature — this stays a pure
     function of what it is given rather than a second reader of `os.environ`. Note what is
     absent: no signing secret of any kind, for either verification mechanism `verify_access_token`
     may use.

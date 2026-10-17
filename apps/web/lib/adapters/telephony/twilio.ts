@@ -13,17 +13,17 @@ import type {
  * Twilio, behind the capability its interface names.
  *
  * **The only file in `apps/web` that knows Twilio carries voice.** Everything above it asks for
- * somebody to be rung into a room, and I15 is the test that keeps it that way.
+ * somebody to be rung into a room, and the no-vendor-SDK-in-domain rule is the test that keeps it that way.
  *
  * **No SDK**, for the reason the payment adapter gives: this is one HTTPS call, one form
  * encoding and one signed token, all stable and specified. An SDK would add a transitive
  * surface nothing here uses, and it would want a network at import time.
  *
  * **Only the outbound half is here.** What the carrier sends back when a call progresses is
- * webhook ingress, which is `apps/api`'s by D2 and D26 — so this file makes requests and never
+ * webhook ingress, which is `apps/api`'s by the web/API runtime split and the authoritative-webhook rule — so this file makes requests and never
  * reads a callback. The mapping between their words and ours therefore exists twice, once on
  * each side, and that is the cost of the split rather than a duplication to remove: neither
- * runtime can call the other (D30).
+ * runtime can call the other.
  */
 
 const API = 'https://api.twilio.com/2010-04-01';
@@ -58,7 +58,7 @@ export function twilioTelephony(config: {
   apiKeySid: string;
   apiKeySecret: string;
   appSid: string;
-  /** A business's own subaccount, addressed with the master credentials above (D39). */
+  /** A business's own subaccount, addressed with the master credentials above. */
   actingAccountSid?: string | null;
 }): TelephonyProvider {
   const basic = Buffer.from(`${config.account}:${config.token}`).toString('base64');

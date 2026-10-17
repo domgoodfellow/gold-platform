@@ -10,8 +10,8 @@ import { PLATFORM_NAME } from '@/lib/brand';
  * **Never the `(public)` surfaces, and this is the whole reason it is a separate component from
  * `AppShell`.** `/book/{slug}` and `/portal/{token}` belong to a *tenant* — a customer of theirs
  * meets that business's name, that business's brand, and no mention of the platform underneath
- * (D20, and `public-profile.test.ts` fails the build over a platform sentence there). Putting a
- * GOLD header on those pages would put our wordmark on somebody else's shop front. `ui-spec.md`
+ * (the deferred tenant-marketing decision, and `public-profile.test.ts` fails the build over a platform sentence there). Putting a
+ * GOLD header on those pages would put our wordmark on somebody else's shop front. `docs/ui-system.md`
  * §1 already says those two surfaces have no navigation at all; this is what must not be given
  * to them.
  *
@@ -71,7 +71,7 @@ export function SiteShell({
         to pages nobody has written is four dead ends, and this application has enough of those
         recorded already. It says who made the thing and what the thing is, both of which are
         true today.
-        **Not `vision.md`'s epigraph.** "One engine. Many businesses." describes this platform's
+        **Not the platform's own tagline.** "One engine. Many businesses." describes this platform's
         own architecture to whoever builds it — one engine serving many tenant businesses. Read
         by a visitor rather than a maintainer it says the opposite of what is sold: they are one
         business, not a fleet of them, and "many businesses" is GOLD's shape, not theirs.

@@ -110,7 +110,7 @@ describe('a purse', () => {
     expect(await creditBalance(priced.db, { organizationId: priced.organizationId })).toEqual(0);
   });
 
-  it('is invisible to another business (I1)', async () => {
+  it('is invisible to another business', async () => {
     await pg.query(
       `insert into public.organization_credits
          (organization_id, amount_minor, currency, reason, note)

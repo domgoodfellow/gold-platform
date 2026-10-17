@@ -45,7 +45,7 @@ describe('what a job earned', () => {
     expect(result.currency).toBe('CAD');
   });
 
-  it('is integer minor units throughout, with nothing divided (I10)', () => {
+  it('is integer minor units throughout, with nothing divided', () => {
     const result = jobEconomics({
       lines: [line({ unitAmountMinor: 1, quantity: 3 })],
       costs: [cost({ amountMinor: 1 })],
@@ -77,8 +77,8 @@ describe('what a job earned', () => {
   it('refuses a margin across currencies, and reports both totals instead', () => {
     // The reachable case, not a theoretical one: a business that changes what it trades in
     // has costs in the old currency and quotes in the new one, and amounts are never
-    // converted (I8, I10). Converting would need a rate, a rate has a date, and that is the
-    // accounting system `vision.md` refuses to be.
+    // converted. Converting would need a rate, a rate has a date, and that is the
+    // accounting system `docs/product.md` refuses to be.
     const result = jobEconomics({
       lines: [line()],
       costs: [cost(), cost({ id: 'c2', amountMinor: 3_000, currency: 'EUR' })],
@@ -106,7 +106,7 @@ describe('what a job earned', () => {
   });
 
   it('takes its revenue from the one price calculation, not from its own sum', () => {
-    // I4 is a claim about there being exactly one place an amount is derived. This module
+    // the one-calculation rule is a claim about there being exactly one place an amount is derived. This module
     // calls it; the assertion is that the two agree on a case with a quantity in it, which
     // is where a second implementation would first diverge.
     const lines = [line({ quantity: 3 }), line({ id: 'l2', unitAmountMinor: 500, quantity: 2 })];

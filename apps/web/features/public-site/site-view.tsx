@@ -31,7 +31,7 @@ function NavLink({ item, pages, current, linkBase }: { item: NavigationItem; pag
 /**
  * One page of a published (or previewed) website inside the business's own frame: its name and
  * logo, the navigation the business chose, the page's sections, and its contact details. Every
- * string in the frame is one the business wrote — nothing here is GildOps' voice (D20). The same
+ * string in the frame is one the business wrote — nothing here is GildOps' voice. The same
  * view serves the public hostname and the private preview, so the two cannot drift.
  */
 export function SiteView({ site, page, context, logoSrc = null, linkBase = '', banner }: {

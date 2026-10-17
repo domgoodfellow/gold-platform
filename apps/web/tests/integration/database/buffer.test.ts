@@ -13,7 +13,7 @@ import { foundBusiness } from '@/tests/support/founding';
 /**
  * Time a resource stays busy after a job, and the fact that it is configuration.
  *
- * `constraints.md` lists **buffers** in the never-hardcode set, beside statuses, prices,
+ * `docs/product.md` lists **buffers** in the never-hardcode set, beside statuses, prices,
  * business hours and currency. This suite is what makes that literal rather than aspirational:
  * the platform holds no gap between jobs, invents none, and a business that has said nothing
  * gets zero — byte-identical behaviour to before the column existed.
@@ -25,8 +25,8 @@ import { foundBusiness } from '@/tests/support/founding';
  *
  * The load-bearing claim is that the buffer is **enforced, not displayed**. Padding only the
  * availability calculation would leave `freeWindows` refusing a slot the database accepts,
- * which breaks I5 in the direction nobody notices — the constraint would stop being the
- * re-assertion I6 depends on. So the constraint compares the occupied window, and these tests
+ * which breaks the single availability model in the direction nobody notices — the constraint would stop being the
+ * re-assertion the advisory-availability rule depends on. So the constraint compares the occupied window, and these tests
  * check both directions of that agreement.
  */
 
@@ -174,7 +174,7 @@ describe('a buffer between jobs, which the tenant owns', () => {
     await unscheduleWorkItem(yard.db, { workItemId: later });
   });
 
-  it('subtracts the buffer from availability, and still agrees with the constraint (I5)', async () => {
+  it('subtracts the buffer from availability, and still agrees with the constraint', async () => {
     const [van] = await listSchedule(yard.db, {
       organizationId: yard.organizationId,
       within: DAY,

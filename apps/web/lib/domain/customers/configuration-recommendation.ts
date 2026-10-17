@@ -7,14 +7,14 @@ import { WORKSPACES, type WorkspaceKey } from '@/lib/navigation';
 /**
  * What a discovery answer suggests, in the canonical catalogue's own words — never a provider or
  * an implementation detail (Twilio, a webhook, a Supabase row), only the outcome a Feature is the
- * customer-facing surface of (D46/D61; the brief this follows: "recommend outcomes/capabilities,
+ * customer-facing surface of (the capability-catalogue seam, ADR-005; the brief this follows: "recommend outcomes/capabilities,
  * not internal provider infrastructure").
  *
- * Deliberately not persisted (I4's reasoning extended: a recommendation computed fresh from the
+ * Deliberately not persisted (the one-calculation rule's reasoning extended: a recommendation computed fresh from the
  * catalogue and the snapshot is one answer; a stored copy is a second one that can disagree with
  * either the moment a requirement is re-answered or a Feature's `implementationState` changes).
  * A commercial proposal that needs to freeze one in time snapshots it onto its own row when that
- * slice arrives (I8) — this function is not that row.
+ * slice arrives — this function is not that row.
  */
 const REQUIREMENT_FEATURE_MAP: Record<DiscoveryRequirementKey, readonly string[]> = {
   contactChannels: ['inbound_calling', 'inbound_sms', 'outbound_sms'],
@@ -57,7 +57,7 @@ export type ConfigurationRecommendation = {
  * discovery answer) that this function does not have and must not pretend to.
  *
  * Never recommends a Feature whose `implementationState` is `planned` — offering something that
- * does not work yet is exactly the false claim D31 refuses, catalogue outcome or not.
+ * does not work yet is exactly the false claim the no-dead-end rule refuses, catalogue outcome or not.
  */
 export async function recommendConfiguration(
   db: Db,

@@ -114,7 +114,7 @@ export async function revokeInvitation(db: Db, input: { id: string }): Promise<v
 }
 
 /**
- * Rotates a pending invitation onto a fresh token and a fresh seven-day window (D33's own
+ * Rotates a pending invitation onto a fresh token and a fresh seven-day window (the hashed-token rule's own
  * invariant, restated: `token_hash` is a single column, so the old link stops validating the
  * instant this commits — issuing a new one cannot be undone). Returns the one-time plaintext
  * token, exactly as `inviteMember` does, to build the new link.

@@ -17,7 +17,7 @@ import { buildOrganizationPurchaseQuote, type PurchaseQuote } from '@/lib/domain
 
 /**
  * What this business is entitled to use, how much of it is left, what it has used and what that
- * cost — never what it cost GildOps, and never a margin (`constraints.md` D43).
+ * cost — never what it cost GildOps, and never a margin (the platform-economics separation, ADR-014).
  *
  * **Allowances come from the runtime resolver, not from the raw quota rows.** The screen used to
  * render `organizationEffectiveQuotas`, which is one row per contributing Plan with no window and

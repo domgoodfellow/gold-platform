@@ -8,7 +8,7 @@ adapter has no GOLD vocabulary for) are cached on the provider instance and rese
 next call, because Gemini's own continuation needs them and GOLD's summarised `ToolCall` cannot
 reconstruct them. That cache is process memory for the lifetime of one `answer()` call only --
 never written to `agent_runs` or any other row, and never surfaced through `Turn.text`. See
-`docs/constraints.md` for the AI runtime architecture this adapter plugs into.
+ADR-018 and ADR-033 for the AI runtime architecture this adapter plugs into.
 """
 
 from __future__ import annotations

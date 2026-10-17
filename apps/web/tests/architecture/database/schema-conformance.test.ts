@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 
 /**
- * I1 and I2, enforced for every table that exists — including ones not written yet.
+ * Tenant scoping and tenant isolation, enforced for every table that exists — including ones not written yet.
  *
  * The tenancy test proves isolation for the three tables shipped so far. This one asks the
  * catalog instead of asking the code, so a table added in six months with RLS forgotten, or
@@ -42,7 +42,7 @@ describe('schema conformance', () => {
     expect(Number(rows[0].count)).toBeGreaterThan(0);
   });
 
-  it('enables and forces RLS on every table in public (I1)', async () => {
+  it('enables and forces RLS on every table in public', async () => {
     const { rows } = await db.query<{ table_name: string; enabled: boolean; forced: boolean }>(
       `select c.relname as table_name,
               c.relrowsecurity as enabled,
@@ -57,7 +57,7 @@ describe('schema conformance', () => {
     expect(rows).toEqual([]);
   });
 
-  it('leads every unique index on a tenant-owned table with organization_id (I2)', async () => {
+  it('leads every unique index on a tenant-owned table with organization_id', async () => {
     const { rows } = await db.query<{ table_name: string; index_name: string; first: string }>(
       `select t.relname as table_name,
               i.relname as index_name,
@@ -82,14 +82,14 @@ describe('schema conformance', () => {
 
     // **Six exceptions, and they share one rule rather than being separate lapses.**
     //
-    // I2 exists so one tenant's uniqueness cannot block another's: two businesses must both be
+    // Tenant isolation exists so one tenant's uniqueness cannot block another's: two businesses must both be
     // able to call a status "Booked". Every index below is the opposite question — **an
     // identifier the outside world *presents* must be resolvable without already knowing which
     // tenant it belongs to**, while an identifier the inside world *uses* is scoped by the
     // tenant that owns it.
     //
     //   * `external_actors_one_tenant_per_user` enforces that one *actor* never spans two
-    //     tenants (D22's "always exactly one tenant, never a set"). Leading it with
+    //     tenants (the anonymous-session model's "always exactly one tenant, never a set"). Leading it with
     //     `organization_id` would permit exactly the row it forbids, and
     //     `app.current_external_tenant()` would then have a set to return.
     //   * `customer_portal_invites_token_unique` is a secret a customer arrives holding, with
@@ -114,10 +114,10 @@ describe('schema conformance', () => {
     //     secret, but a row that may belong to *no* tenant at all. `platform_retail_rates` gained
     //     an optional `organization_id` in `20261018000001` for a negotiated override; most rows
     //     are still the platform-default rate, shared by every business, with `organization_id`
-    //     null. This constraint exists only so `usage_events_retail_rate_matches` (I18's own named
+    //     null. This constraint exists only so `usage_events_retail_rate_matches` (the same-organization reference rule's own named
     //     exception, below) has a composite key to point at, and `id` already makes it globally
     //     collision-proof regardless of tenant — leading it with `organization_id` would buy
-    //     nothing I2 exists to prevent, since no two tenants' rows can collide here either way.
+    //     nothing tenant isolation exists to prevent, since no two tenants' rows can collide here either way.
     //     `20261028000001` records why forcing the alternative would actually be wrong: it would
     //     require every usage event to match a retail-rate row carrying its *own* organization_id,
     //     but the row nearly every usage event prices against is the shared default, whose
@@ -166,7 +166,7 @@ describe('schema conformance', () => {
     ]);
   });
 
-  it('leads every exclusion constraint on a tenant-owned table with organization_id (I2)', async () => {
+  it('leads every exclusion constraint on a tenant-owned table with organization_id', async () => {
     const { rows } = await db.query<{ table_name: string; constraint_name: string }>(
       `select t.relname as table_name, c.conname as constraint_name
          from pg_constraint c
@@ -185,7 +185,7 @@ describe('schema conformance', () => {
     expect(rows).toEqual([]);
   });
 
-  it('backs every declared capability with a database policy or a database function (I16)', async () => {
+  it('backs every declared capability with a database policy or a database function', async () => {
     // A capability enforced only in TypeScript is a capability a direct RPC call ignores.
     // This asserts each one named in code appears in some policy's USING or WITH CHECK, so
     // adding an entry to CAPABILITIES without the thing that gives it teeth fails here
@@ -194,7 +194,7 @@ describe('schema conformance', () => {
     // **Function bodies count too, and that is a clarification rather than a loosening.** What
     // this invariant forbids is enforcement that lives outside the database, where a direct call
     // walks past it. A function that raises on `app.has_capability` is inside it and is refused
-    // just as hard — `add_member_by_email` has enforced `role.manage` that way since M1, because
+    // just as hard — `add_member_by_email` has enforced `role.manage` that way from the start, because
     // `auth.users` is not readable and no policy could have expressed it.
     //
     // `report.read` is the case that made this explicit. It gates an aggregate, and an aggregate
@@ -253,7 +253,7 @@ describe('schema conformance', () => {
     expect(enforcement).not.toContain(`'report.write_everything'`);
   });
 
-  it('keeps the generated database types current with the schema (D15)', async () => {
+  it('keeps the generated database types current with the schema', async () => {
     // Stale generated types are strictly worse than none: `tsc` cheerfully validates every
     // query against a schema that no longer exists, and passes. This asks the catalog and
     // compares it to the checked-in file, in the same spirit as everything else here —
@@ -288,7 +288,7 @@ describe('schema conformance', () => {
     }).toEqual({ inSchemaButNotInTypes: [], inTypesButNotInSchema: [] });
   });
 
-  it('makes every reference between tenant-owned tables composite (I18)', async () => {
+  it('makes every reference between tenant-owned tables composite', async () => {
     // A foreign key from one tenant-owned table to another must carry organization_id, so
     // that a row can only ever reference an entity in its own tenant. RLS cannot do this:
     // a policy on the referencing table sees that row's organization_id and is satisfied,
@@ -338,7 +338,7 @@ describe('schema conformance', () => {
     );
 
     // **One exception, for the reason `platform_retail_rates_id_meter_currency_unique` is named
-    // above (I2), the same fact seen from the referencing side.** `usage_events_retail_rate_matches`
+    // above, the same fact seen from the referencing side.** `usage_events_retail_rate_matches`
     // points at a row that may belong to no tenant at all — the shared platform-default rate —
     // not at another tenant's own row. Composite-with-`organization_id` would require that shared
     // row's `organization_id` (null) to equal the usage event's own (never null), which can never
@@ -391,8 +391,8 @@ describe('schema conformance', () => {
     }
   });
 
-  it('keeps attachment references real rather than polymorphic (I18)', async () => {
-    // The I18 assertion above checks that foreign keys between tenant-owned tables carry
+  it('keeps attachment references real rather than polymorphic', async () => {
+    // the same-organization reference rule assertion above checks that foreign keys between tenant-owned tables carry
     // organization_id. It cannot see the design that has no foreign key at all: a
     // polymorphic `(entity_type, entity_id)` pair points at a different table depending on
     // its own contents, so Postgres cannot constrain it and nothing stops a row from naming

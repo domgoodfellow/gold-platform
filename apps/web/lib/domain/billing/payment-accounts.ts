@@ -5,13 +5,13 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
  * The processor account a business connected. What's stored is an account id, not a credential
- * (D27) — it grants nothing alone, and the business can revoke it from their own dashboard.
+ * — it grants nothing alone, and the business can revoke it from their own dashboard.
  * The money never reaches GOLD: the charge is created directly on this account, which is what
- * keeps this off the money-transmitter shape D27 refuses.
+ * keeps this off the money-transmitter shape the provider-credential rule refuses.
  */
 
 export type PaymentAccount = {
-  /** The domain layer never branches on this (I15). */
+  /** The domain layer never branches on this. */
   provider: string;
   account: ConnectedAccount;
   connectedAt: string;
@@ -87,7 +87,7 @@ export async function connectPaymentAccount(
 
 /**
  * Stop using an account. Removes nothing already recorded — past payments stay attached to the
- * invoices they settled (I8). Doesn't revoke the authorization at the provider; the business
+ * invoices they settled. Doesn't revoke the authorization at the provider; the business
  * does that from their own dashboard.
  */
 export async function disconnectPaymentAccount(

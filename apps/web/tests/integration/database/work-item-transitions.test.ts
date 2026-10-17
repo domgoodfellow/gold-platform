@@ -14,17 +14,17 @@ import { createWorkItem, listWorkItems } from '@/lib/domain/work-items/work-item
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * I13 — a work item's status transition is valid according to that tenant's configured
+ * The status-transition rule — a work item's status transition is valid according to that tenant's configured
  * transitions.
  *
  * The claim under test is not "the domain layer refuses an illegal move". It is that the
- * move is refused *at all*, by whatever path is taken, which is I12's standard: a direct
+ * move is refused *at all*, by whatever path is taken, which is the UI-is-not-authorization rule's standard: a direct
  * PostgREST update must be refused exactly as a form is. Every negative case here is
  * therefore run twice where it can be — once through the domain and once as a raw update —
  * because a check that lives only in TypeScript is absent from the path an attacker uses.
  *
  * The other half is the choice recorded in the migration: a type with no configured
- * transitions is FROZEN, not unconstrained. That is the reading of I13 that keeps it from
+ * transitions is FROZEN, not unconstrained. That is the reading of the status-transition rule that keeps it from
  * holding vacuously for every tenant who never opened the transitions screen, and the first
  * test asserts it directly.
  */
@@ -116,7 +116,7 @@ describe('work item transitions', () => {
 
   it('freezes a type with no configured transitions', async () => {
     // Before anything is wired, nothing moves. The alternative reading — unconfigured means
-    // unconstrained — would let I13 hold vacuously for every tenant who never configured a
+    // unconstrained — would let the status-transition rule hold vacuously for every tenant who never configured a
     // transition, which is every tenant on their first day.
     const workItemId = await newWorkItem(alice);
 
@@ -147,7 +147,7 @@ describe('work item transitions', () => {
     expect(items.find((i) => i.id === workItemId)?.status.label).toBe('In progress');
   });
 
-  it('still refuses the move that was not configured (I13)', async () => {
+  it('still refuses the move that was not configured', async () => {
     // Open → In progress is wired; Open → Done is not. Configuring one move must not open
     // the board, which is the failure mode of "an update policy would let it move anywhere".
     const workItemId = await newWorkItem(alice);
@@ -201,7 +201,7 @@ describe('work item transitions', () => {
     expect(error?.code).toBe('23514');
   });
 
-  it('refuses a duplicate transition (I2)', async () => {
+  it('refuses a duplicate transition', async () => {
     await expect(
       createWorkItemTransition(alice.db, {
         organizationId: alice.organizationId,
@@ -212,7 +212,7 @@ describe('work item transitions', () => {
     ).rejects.toMatchObject({ code: 'transitions.already_allowed' });
   });
 
-  it('lets two tenants wire the same pair of statuses (I2)', async () => {
+  it('lets two tenants wire the same pair of statuses', async () => {
     // Both boards gain Open → In progress. If the unique index had lost its leading
     // organization_id, the second of these would fail.
     const theirs = await createWorkItemTransition(bob.db, {
@@ -224,7 +224,7 @@ describe('work item transitions', () => {
     expect(theirs).toBeTypeOf('string');
   });
 
-  it('cannot wire a transition to another tenant\'s status (I18)', async () => {
+  it('cannot wire a transition to another tenant\'s status', async () => {
     await expect(
       createWorkItemTransition(bob.db, {
         organizationId: bob.organizationId,
@@ -235,7 +235,7 @@ describe('work item transitions', () => {
     ).rejects.toMatchObject({ code: 'transitions.status_not_found' });
   });
 
-  it('cannot wire a transition across two of its own types (I20)', async () => {
+  it('cannot wire a transition across two of its own types', async () => {
     // Not a tenancy question: both statuses are Bob's, so RLS is satisfied and every
     // composite reference carrying only organization_id would pass. The third column is what
     // refuses it.
@@ -292,7 +292,7 @@ describe('work item transitions', () => {
     expect(allowedNextStatusIds(transitions, alice.done)).toEqual([]);
   });
 
-  it('records the move on the timeline, naming both ends (I11)', async () => {
+  it('records the move on the timeline, naming both ends', async () => {
     const workItemId = await newWorkItem(alice);
     await changeWorkItemStatus(alice.db, { workItemId, toStatusId: alice.doing });
 
@@ -312,7 +312,7 @@ describe('work item transitions', () => {
     });
   });
 
-  it('refuses a move to a member without the capability (I12, I16)', async () => {
+  it('refuses a move to a member without the capability', async () => {
     const limited = await createRole(bob.db, {
       organizationId: bob.organizationId,
       name: 'No Moving',

@@ -20,7 +20,7 @@ import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
  * **Readiness is a read, never a write.** Every assertion below that touches `computeReadiness`
  * changes something about the business first (a module switched on, then off) and reads the
  * function again rather than reading a stored flag — there is no flag, on purpose, for the same
- * reason I4 and I5 refuse a second price or a second availability calculation one level up.
+ * reason the one-calculation rule and the single availability model refuse a second price or a second availability calculation one level up.
  *
  * **A solo tenant with nothing configured is a valid business.** The suite proves the negative
  * space as carefully as the positive: a fresh organization with no work item type, no second
@@ -85,7 +85,7 @@ describe('a business starts in setup and someone launches it', () => {
       currency: 'GBP',
     });
     // The owner's own session, not staff's — `getOrganization` for staff already returns null
-    // for a tenant they hold no membership in (I21), which this suite is not what is testing.
+    // for a tenant they hold no membership in, which this suite is not what is testing.
     const pg = new Client(CONNECTION);
     await pg.connect();
     const { rows } = await pg.query(

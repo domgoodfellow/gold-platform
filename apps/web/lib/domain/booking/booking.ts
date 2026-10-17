@@ -18,18 +18,18 @@ import {
 
 /**
  * Booking: what a stranger may see of a business, and what they may commit it to — the first
- * caller of D22's axis. Everything reads under an RLS policy keyed to
+ * caller of the anonymous-session model's axis. Everything reads under an RLS policy keyed to
  * `app.current_external_tenant()`; nothing here decides visibility. No second notion of
  * availability or price: `bookableSlots` asks the feasibility engine — the same open windows and
  * commitments `listSchedule` reads, then one distinct resource per slot the work needs — and a
- * price is copied from the catalogue by `add_work_item_priced_line` inside `create_booking` (I4,
- * I5, I6, I8). A visitor sends a time; which resources take part is the server's to work out and
+ * price is copied from the catalogue by `add_work_item_priced_line` inside `create_booking` (the one-calculation rule,
+ * the single availability model, the advisory-availability rule, the preserved-history rule). A visitor sends a time; which resources take part is the server's to work out and
  * never theirs to name.
  */
 
 export type BookableType = {
   id: string;
-  /** The tenant's own word for this kind of work. The platform never translates it (D6). */
+  /** The tenant's own word for this kind of work. The platform never translates it. */
   name: string;
   durationMinutes: number;
   /** What the business publishes as the price, or null if it does not publish one. */
@@ -58,10 +58,10 @@ export async function resolveBookingSlug(db: Db, slug: string): Promise<string |
 }
 
 /**
- * Become an external actor of one business. Anonymous sign-in first (D22, I11, D17) produces a
+ * Become an external actor of one business. Anonymous sign-in first produces a
  * genuine `auth.uid()`, then the binding row scopes it to exactly one tenant — calling this
  * twice is harmless since the unique index on `user_id` makes the second insert a no-op. The
- * organization id is one this process resolved from a slug, never one a URL supplied (D17).
+ * organization id is one this process resolved from a slug, never one a URL supplied.
  */
 export async function beginBooking(db: Db, input: { organizationId: string }): Promise<void> {
   const { data: existing } = await db.auth.getUser();
@@ -132,7 +132,7 @@ export async function listBookableTypes(
  * finds a complete set of resources — every required slot filled by a distinct resource that is
  * eligible, open and uncommitted. Policy bounds come first, so a day or a start that policy forbids
  * costs no resource matching, and nothing here is asked per candidate. The same availability
- * calculation the operator sees (I5), advisory only (I6): the re-assertion is `create_booking`'s own
+ * calculation the operator sees, advisory only: the re-assertion is `create_booking`'s own
  * transaction. Resource identities never leave this function — a visitor is offered times.
  *
  * Duration and cadence are separate: a 90-minute job offered every 30 minutes ends 90 minutes after
@@ -303,7 +303,7 @@ export async function bookSlot(
         'booking.policy_refused',
       );
     }
-    // I6, arriving as a sentence — the slot was free when rendered and is not now, and nothing could have prevented that.
+    // the advisory-availability rule, arriving as a sentence — the slot was free when rendered and is not now, and nothing could have prevented that.
     if (error.code === '23P01' || error.code === 'GD014') {
       throw new DomainError(
         'Somebody took that time while you were filling this in. Please choose another.',

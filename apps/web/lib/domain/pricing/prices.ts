@@ -4,10 +4,10 @@ import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
- * What a job is quoted, and the one place a price is derived — `priceWorkItem` is I4. No
+ * What a job is quoted, and the one place a price is derived — `priceWorkItem` is the one-calculation rule. No
  * component totals lines, no route sums an array, no `subtotal` column exists anywhere. A line
  * is a copy of a catalogue row, never a join to one, so re-pricing the catalogue never touches
- * an existing quote (I8).
+ * an existing quote.
  */
 
 export type PricedLine = {
@@ -17,7 +17,7 @@ export type PricedLine = {
   unit: string;
   /** Integer minor units, snapshotted. */
   unitAmountMinor: number;
-  /** Snapshotted too, which is what makes the total well defined (I10). */
+  /** Snapshotted too, which is what makes the total well defined. */
   currency: string;
   quantity: number;
 };
@@ -91,8 +91,8 @@ export type PricedWork = {
 /**
  * The jobs this business has priced, newest first, each with all of its lines. A quote is a job
  * with priced lines (there is no quote table), so this is that list; the amount is
- * `priceWorkItem` over `lines`, applied by the caller (I4). The lines are the snapshots on the
- * job, never re-read from the price book (I8). `!inner` keeps a job with nothing priced out, and
+ * `priceWorkItem` over `lines`, applied by the caller. The lines are the snapshots on the
+ * job, never re-read from the price book. `!inner` keeps a job with nothing priced out, and
  * the limit counts whole jobs rather than lines, so no job is shown with part of its quote.
  */
 export async function listPricedWork(

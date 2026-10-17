@@ -123,7 +123,7 @@ describe('a connection-scoped integration_resources row is not tenant-forgeable'
     });
 
     // RLS's `using` clause excludes a connection-scoped row from this session's update target
-    // entirely, so this is the same "ambiguous refusal" shape I18 already names elsewhere: no
+    // entirely, so this is the same "ambiguous refusal" shape the same-organization reference rule already names elsewhere: no
     // error, zero rows touched, never a change.
     const { error } = await alice.db
       .from('integration_resources')

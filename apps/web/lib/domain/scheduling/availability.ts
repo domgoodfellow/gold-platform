@@ -15,8 +15,8 @@ import {
 import { clipWindow, overlaps, parseWindow, zonedDayRange, type Window } from '@/lib/domain/scheduling/window';
 
 /**
- * **The** availability calculation (I5) — anything that wants to know what's free calls
- * `freeWindows` or `listSchedule`/`listScheduleDays`; nothing recomputes. Advisory only (I6):
+ * **The** availability calculation — anything that wants to know what's free calls
+ * `freeWindows` or `listSchedule`/`listScheduleDays`; nothing recomputes. Advisory only:
  * every answer is a snapshot the world may already have invalidated, and the real check is
  * `work_items_resource_not_double_booked` refusing the commit in the same transaction —
  * `scheduleWorkItem` deliberately doesn't call this first. Operating hours are subtracted first
@@ -139,7 +139,7 @@ function groupBookedByResource(
   const problems = new Map(conflicts.map((c) => [`${c.workItemId}:${c.resourceId}`, c.problem]));
   const byResource = new Map<string, ResourceSchedule['booked']>();
   for (const row of rows) {
-    // `supabase gen types` has no TypeScript for a Postgres range (D15).
+    // `supabase gen types` has no TypeScript for a Postgres range.
     const window = parseWindow(row.scheduled_during);
     const occupied = parseWindow(row.occupies);
     const resourceIds = (row.assignments ?? []).map((assignment) => assignment.resource_id).sort();
@@ -275,7 +275,7 @@ export type ScheduleDay = {
   date: string;
   /** The day's own absolute bounds (`zonedDayRange`). */
   within: Window;
-  /** This day's open periods — the business's own claim, or the whole day if it has made none (I6, advisory). Background context for a caller that draws a timeline; never the source of a second calculation. */
+  /** This day's open periods — the business's own claim, or the whole day if it has made none (advisory). Background context for a caller that draws a timeline; never the source of a second calculation. */
   open: Window[];
   resources: ResourceSchedule[];
   /** Work scheduled this day with nobody on it. Empty is the ordinary answer. */

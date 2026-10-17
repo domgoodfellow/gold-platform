@@ -6,7 +6,7 @@ import { MobileDemoCta } from './mobile-demo-cta';
 /**
  * The one frame every GOLD marketing page wears: header, page, footer, and the phone-sized demo
  * bar. Not `AppShell` and not `SiteShell` (the credential screens' plainer chrome), and never a
- * tenant's `(public)` surface (D20).
+ * tenant's `(public)` surface.
  */
 export function MarketingShell({
   name,

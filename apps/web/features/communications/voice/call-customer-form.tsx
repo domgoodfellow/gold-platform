@@ -17,7 +17,7 @@ const CALL_INITIAL: FormState = { error: null };
  * **Two buttons on one form, and they are two different acts.** Placing a call asks the carrier
  * to ring and fails loudly on a deployment that has none. Recording one is a person saying what
  * happened on their mobile. Collapsing them would mean a button that sometimes dials and
- * sometimes does not, which is the dead end D31 names.
+ * sometimes does not, which is the dead end the no-dead-end rule names.
  *
  * **"Call" does two things in sequence rather than one.** `useDial` rings the number into a
  * room and then joins the agent's own browser to that same room through `TelephoneDeviceProvider`,

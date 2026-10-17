@@ -2,7 +2,7 @@
 
 **The outbound half of provider operations, and the only half that names the vendor.** Everything
 above this module asks to *verify an account*, *list its subaccounts* or *create one*; how Twilio
-spells that is here (I15). No SDK, for the reason `voice.py` gives: each step is one HTTPS call.
+spells that is here. No SDK, for the reason `voice.py` gives: each step is one HTTPS call.
 
 **Two ways to authenticate, chosen by the account's `credential_kind`.** An API key (`api_key`)
 signs with its own SID and secret and is the preferred mechanism -- it can be revoked without

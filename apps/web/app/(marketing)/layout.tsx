@@ -24,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * GOLD's own front door, in GOLD's own chrome: `MarketingShell` for every page in this group.
  *
- * Not the tenant marketing surface D20 defers: the business making claims on these pages is
+ * Not the tenant marketing surface, which is deliberately deferred: the business making claims on these pages is
  * GOLD, which is why `public-profile.test.ts` scans `app/(public)/` and not this group.
  *
  * **The header's right side is Log in, then the primary CTA — never two equal buttons**

@@ -87,7 +87,7 @@ export async function recordCallAction(
  * How it went, filled in after the call.
  *
  * Reaches `apps/api/app/domains/communications/voice/wrap_up.py::wrap_up_call` under the
- * operator's own forwarded access token (D17, D34) — the FastAPI-authoritative write for this
+ * operator's own forwarded access token — the FastAPI-authoritative write for this
  * act, replacing what `recordCallOutcome` (formerly in `lib/domain/reception/calls.ts`) used to
  * perform as two separate requests to Postgres.
  */

@@ -21,7 +21,7 @@ export default async function AcceptInvitePage({
   const db = await getDb();
   const identity = await resolveSessionIdentity(db);
 
-  // A signed-out visitor and an anonymous Supabase session (D22 — booking, the portal) see the
+  // A signed-out visitor and an anonymous Supabase session (the anonymous-session model — booking, the portal) see the
   // same prompt: neither is a permanent GOLD account, and `accept_invitation` will refuse both
   // regardless (no caller, or an email that can never match), so there is nothing this form
   // could usefully collect from either.

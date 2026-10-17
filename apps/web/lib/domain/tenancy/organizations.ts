@@ -16,21 +16,21 @@ export type Organization = {
   role: string;
   /** What the acting user may do here. Read from the role, never from the UI. */
   capabilities: Capability[];
-  /** The IANA zone this business thinks in. Applied at render, never stored (I9). */
+  /** The IANA zone this business thinks in. Applied at render, never stored. */
   timezone: string;
-  /** Null until the business has said (I10) — never assumed. Signup doesn't ask; the pricing screen does, at the moment it's first needed. */
+  /** Null until the business has said — never assumed. Signup doesn't ask; the pricing screen does, at the moment it's first needed. */
   currency: string | null;
   /** Minutes a resource stays occupied after work ends — travel, cleaning, inspection. The reason is the tenant's; zero means unset, same as an empty operating-hours set. */
   bufferMinutes: number;
   /** What this business is called in a public URL, or null until it wants one. Never derived from the name — that would be the platform naming a business. */
   slug: string | null;
-  /** Whether this business is still being configured or is running for real. Not billing, not entitlement (D41 remains undone) — see `lib/domain/tenancy/lifecycle.ts`. */
+  /** Whether this business is still being configured or is running for real. Not billing, not entitlement (the wanted-versus-paid entitlement rule remains undone) — see `lib/domain/tenancy/lifecycle.ts`. */
   operationalState: 'setup' | 'live';
 };
 
 const NAME_MAX = 200;
 
-/** Shared with the operator door (`platform/provision.ts`) rather than duplicated — both doors normalise identically or they aren't one path (D29). */
+/** Shared with the operator door (`platform/provision.ts`) rather than duplicated — both doors normalise identically or they aren't one path. */
 export function normaliseCurrency(value: string): string {
   const currency = value.trim().toUpperCase();
   if (!/^[A-Z]{3}$/.test(currency)) {
@@ -58,8 +58,8 @@ export function normaliseName(value: string): string {
 
 /**
  * What the first membership's role is called, through either door — a row in `roles`,
- * renameable without a migration (D6). `Admin`, not `Owner`: the highest ordinary organization
- * role and platform authority (`platform_staff`) are two different axes (D28), and this is only
+ * renameable without a migration. `Admin`, not `Owner`: the highest ordinary organization
+ * role and platform authority (`platform_staff`) are two different axes, and this is only
  * ever the tenant's own vocabulary for the first one — nothing anywhere branches on this string.
  */
 export const FOUNDING_ROLE = 'Admin';
@@ -137,7 +137,7 @@ export async function listMyOrganizations(db: Db): Promise<Organization[]> {
     .eq('user_id', actor.id);
 
   if (error) {
-    // Platform staff hold `select` on `memberships` and none on `roles` (D28), so the embed
+    // Platform staff hold `select` on `memberships` and none on `roles`, so the embed
     // fails for them outright — treated as "a member of nothing" rather than a crash.
     if (error.code === '42501') return [];
     throw new DomainError(error.message, 'organizations.list_failed');
@@ -164,7 +164,7 @@ export async function getOrganization(db: Db, id: string): Promise<Organization 
     .limit(1);
 
   if (error) {
-    // Staff hold `select` on `memberships` and none on `roles` (D28), so the embed fails for
+    // Staff hold `select` on `memberships` and none on `roles`, so the embed fails for
     // them outright — a staff member typing a tenant URL should get the same 404 a stranger
     // gets, not a 500. Narrow to 42501 (insufficient_privilege) so every other failure surfaces.
     if (error.code === '42501') return null;
@@ -176,7 +176,7 @@ export async function getOrganization(db: Db, id: string): Promise<Organization 
 }
 
 /**
- * Found a business, as the person who will own it. Reopened after D29 closed the self-serve
+ * Found a business, as the person who will own it. Reopened after the one-creation-path rule closed the self-serve
  * door — the argument was about the quality of an unstaffed setup, and it was read as being
  * about the door's existence, leaving somebody who signs up with no way forward at all. The two
  * doors are not alternatives: `provisionOrganization` is GOLD creating a business for somebody
@@ -187,7 +187,7 @@ export async function createOrganization(
   db: Db,
   input: {
     name: string;
-    /** What this business calls the person who owns it. Theirs to change afterwards (D6). */
+    /** What this business calls the person who owns it. Theirs to change afterwards. */
     role?: string;
     /** What this person is called inside this business. Per-tenant, never a global profile. */
     displayName?: string;
@@ -262,8 +262,8 @@ export async function createOrganization(
  * Change what a business calls itself, the clock it thinks in, what it trades in, and how long
  * a resource stays busy after a job. Shipped write-once, then reopened once each change had a
  * caller. Currency and timezone changes are safe without rewriting history — an amount carries
- * the currency it was recorded in (I8), and a window is an absolute instant that only renders
- * differently under a new zone (I9). The buffer is the one field that does reach committed
+ * the currency it was recorded in, and a window is an absolute instant that only renders
+ * differently under a new zone. The buffer is the one field that does reach committed
  * work, because it must: widening it recomputes every scheduled job's occupied window, and the
  * exclusion constraint refuses a widen that would overlap two committed jobs.
  */

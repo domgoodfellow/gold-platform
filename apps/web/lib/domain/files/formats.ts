@@ -11,7 +11,7 @@
  *   usable by X — that consumer lists it
  *
  * The last two are derived from `consumers`, never a flag beside it, so they cannot disagree. A
- * format joins a consumer the day the reader that consumer needs exists, and not before (D31): a PDF
+ * format joins a consumer the day the reader that consumer needs exists, and not before: a PDF
  * being recognized is not a promise that a CRM import can read one.
  */
 

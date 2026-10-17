@@ -6,13 +6,13 @@ refusals, incomplete generations -- are what an SDK is for, and hand-parsing the
 maintaining a parser for somebody else's response shape. The chat-completions dialect beside this
 one needs no library at all, because that wire format is a plain JSON dict either way.
 
-**The loop is not here, for the same reason D34 gives everywhere else in this package.** This
+**The loop is not here, for the same reason the AI-tool architecture gives everywhere else in this package.** This
 module answers one question and stops; `app.ai.loop` owns iteration.
 
 **Stateless by construction, deliberately not using `previous_response_id`.** The Responses API
 can hold conversation state server-side, keyed by a response id this runtime would then have to
 store somewhere and treat as sensitive. `AnsweringProvider.next_turn` already receives the whole
-transcript every call (D34's contract), so this adapter rebuilds `input` from it in full instead
+transcript every call (the AI-tool architecture's contract), so this adapter rebuilds `input` from it in full instead
 -- one fewer thing to store, and the same shape every other adapter already has.
 """
 

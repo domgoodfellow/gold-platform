@@ -5,7 +5,7 @@ import type { PublicProfile } from '@/lib/domain/tenancy/profile';
 /**
  * A business, in its own words, at the top of a page strangers can see — every string here is
  * one the business wrote, never a platform heading or strapline. Renders name-only when nothing
- * else is configured. Lives in `features/` because both booking and admin preview use it (D23).
+ * else is configured. Lives in `features/` because both booking and admin preview use it.
  */
 export function PublicHeader({
   profile,

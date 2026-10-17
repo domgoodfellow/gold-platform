@@ -33,10 +33,10 @@ export const dynamic = 'force-dynamic';
  * **This screen is a map, not a second configuration model.** Every area links to the workspace
  * that owns it and no field of any of them is copied here. The areas come from
  * `computeSetupOverview`, which builds on `computeReadiness` — and which modules count as
- * blockers is the database's answer (I27), never this page's.
+ * blockers is the database's answer, never this page's.
  *
  * **Drafting is one optional route through it.** A proposal is a row between the drafting and the
- * applying (`constraints.md` D32): nothing on it has happened to the business until somebody
+ * applying (the draft-then-apply rule, ADR-039): nothing on it has happened to the business until somebody
  * presses Apply, and it goes through `configureBusiness` like any typed setup. A deployment or a
  * business without drafting still has every area above, in full.
  *
@@ -66,7 +66,7 @@ export default async function SetupPage({
   ]);
 
   // Asking for a proposal is its own authority; applying one is not, because every step of
-  // applying is already gated by the capability that step needs (D32). Offered owner links and
+  // applying is already gated by the capability that step needs. Offered owner links and
   // Launch still respect this actor's authority; each write independently rechecks that authority.
   const mayPropose = organization.capabilities.includes('configuration.propose');
   const mayLaunch = organization.capabilities.includes('organization.manage');
@@ -119,7 +119,7 @@ export default async function SetupPage({
 
             {/* Application state in the platform's own voice. A deployment with no drafting behind
                 it says so rather than rendering a box that takes three paragraphs and refuses
-                them (D31) — and the areas above stay fully usable. */}
+                them — and the areas above stay fully usable. */}
             {!canDraft ? (
               <p className="mt-4 max-w-2xl rounded border border-border p-3 text-sm">
                 This installation cannot draft a setup. Every area above can still be configured

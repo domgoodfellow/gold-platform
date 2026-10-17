@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Workspace packages ship as TypeScript source, not a prebuilt dist (D13: no build
+  // Workspace packages ship as TypeScript source, not a prebuilt dist (the source-package rule: no build
   // orchestrator until a second consumer earns one) -- Next has to run its own compiler over
   // them itself rather than treating them as pre-built node_modules.
   // A file attached to an Agent question arrives as a server action's body. Files are capped at 1 MB

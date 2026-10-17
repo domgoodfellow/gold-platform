@@ -18,14 +18,14 @@ import { foundBusiness } from '@/tests/support/founding';
 /**
  * The first reader `events` has ever had.
  *
- * The table shipped in M1 because it cannot be backfilled, and thirty-odd writers have been
+ * The table shipped first because it cannot be backfilled, and thirty-odd writers have been
  * filling it since with nothing looking. These assertions are about what reading found.
  *
  * Two of them are the point of the file:
  *
  *   * **A renamed status renames its history.** The timeline resolves ids against the same
  *     rows every other screen reads, so a business that renames a board column sees the new
- *     word everywhere including last month. That follows from D6 rather than from a choice
+ *     word everywhere including last month. That follows from the tenant-vocabulary rule rather than from a choice
  *     made here: the job moved into a *row*, and renaming a row moves no work. Snapshotting
  *     the word onto the event would make this the one screen still showing a name the
  *     business has stopped using.
@@ -134,7 +134,7 @@ describe('a customer’s history', () => {
 
   it('reads a history nobody wrote for it', async () => {
     // Every one of these rows was written by a slice that had no reader in mind. That is the
-    // whole argument for shipping `events` in M1: none of this could be reconstructed now.
+    // whole argument for shipping `events` from the start: none of this could be reconstructed now.
     const entries = await timeline(acme);
     const actions = entries.map((entry) => entry.action);
 
@@ -162,7 +162,7 @@ describe('a customer’s history', () => {
     expect([...stamps].sort((a, b) => b.localeCompare(a))).toEqual(stamps);
   });
 
-  it('attributes every entry to what this tenant calls that person (I11, D19)', async () => {
+  it('attributes every entry to what this tenant calls that person', async () => {
     const entries = await timeline(acme);
     expect(entries.every((entry) => entry.actorName === 'Dominique')).toBe(true);
   });
@@ -172,7 +172,7 @@ describe('a customer’s history', () => {
     expect(entries.map((entry) => entry.action)).toEqual(['customer.created']);
   });
 
-  it('renames history when a status is renamed (D6)', async () => {
+  it('renames history when a status is renamed', async () => {
     const before = await timeline(acme);
     expect(before.find((entry) => entry.action === 'work_item.status_changed')!.description).toBe(
       'Moved to Done on Winter tyres',

@@ -4,7 +4,7 @@ import type { Brand } from '@/lib/domain/branding/brand';
 
 /**
  * A business's own colour and lettering, as overridden CSS custom properties and nothing else —
- * every control already reads a role rather than a literal (ui-spec §3), so a theme is just
+ * every control already reads a role rather than a literal (`docs/ui-system.md`), so a theme is just
  * where those values come from. Only accent/on-accent/accent-text and the two font stacks ever
  * change; background, border, muted, subtle and the semantic roles stay the platform's, so a
  * tenant can't make its own text or its own refusals unreadable.

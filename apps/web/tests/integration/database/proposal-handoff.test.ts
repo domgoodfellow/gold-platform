@@ -28,13 +28,13 @@ vi.mock('@/lib/db/server', () => ({ getDb: async () => currentDb }));
 
 /**
  * Slice 10: "Create this business in GildOps," from an accepted proposal. Proves the terminal
- * boundary this repo's own D29 already drew: only platform staff may provision, the original
+ * boundary this repo's own the one-creation-path rule already drew: only platform staff may provision, the original
  * GildOps customer record is untouched, and a second handoff attempt returns the original
  * business and relationship period rather than creating a second business for one acceptance.
  *
  * The reads this function makes (the proposal, the customer, the discovery snapshot) need
  * ordinary GildOps organization membership; the provisioning write needs genuine platform staff
- * authority. One person plausibly holds both (D45: "one identity, capable of holding platform
+ * authority. One person plausibly holds both (the one-identity rule: "one identity, capable of holding platform
  * authority and organization membership at once"), so the caller here is promoted to staff on
  * top of the membership `foundBusiness` already gave it, rather than a separate staff-only
  * session that could never pass the read side at all.
@@ -125,7 +125,7 @@ describe('handing off an accepted proposal', () => {
   });
 
   it('creates the business with organization authority alone and leaves the seller customer untouched', async () => {
-    // Promote the same, already-signed-in rep to platform staff — live-checked (D45), so no
+    // Promote the same, already-signed-in rep to platform staff — live-checked, so no
     // re-sign-in is needed for it to take effect on this session's next request.
     const pg = new Client(CONNECTION);
     await pg.connect();

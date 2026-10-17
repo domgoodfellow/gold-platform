@@ -7,7 +7,7 @@ import type { Filters, Grouping, Period } from '@/lib/domain/reporting/shape';
  * `occurred_at` is when a status changed, not necessarily when the work stopped. Which status
  * means finished is the tenant's own answer (`work_item_statuses.marks_complete`), distinct
  * from `releases_resource` since cancelling frees a resource without completing work. Nothing
- * here computes anything — every number comes from `public.work_marked_complete` (D35).
+ * here computes anything — every number comes from `public.work_marked_complete`.
  */
 
 export type CompletionGroup = {
@@ -48,7 +48,7 @@ export async function listWorkMarkedComplete(
   }));
 }
 
-/** A function rather than an inline `reduce` (I4's reasoning about totals). */
+/** A function rather than an inline `reduce` (the one-calculation rule's reasoning about totals). */
 export function totalJobs(groups: CompletionGroup[]): number {
   return groups.reduce((total, group) => total + group.jobs, 0);
 }

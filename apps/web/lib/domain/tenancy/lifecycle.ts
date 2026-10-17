@@ -43,7 +43,7 @@ export type Readiness = {
 
 /**
  * Everything standing between this business and Launch — computed fresh on every call, never
- * stored. A persisted `ready` boolean would be exactly the second answer I4 and I5 already
+ * stored. A persisted `ready` boolean would be exactly the second answer the one-calculation rule and the single availability model already
  * refuse one level up, and it would go stale the instant a module was switched off again.
  *
  * **Deliberately not a general checklist.** No work item type, no transitions, no additional
@@ -352,7 +352,7 @@ async function launchBlockers(
  * that asks `app.organization_launch_blockers_unchecked`, the same answer this function's readiness check just
  * asked, atomically, inside the transition — so a caller who skips this function and invokes
  * `launch_organization` directly is refused by the database regardless, not merely by whichever
- * TypeScript happened to be in front of it (I12: hiding a control, or in this case a call, was
+ * TypeScript happened to be in front of it (the UI-is-not-authorization rule: hiding a control, or in this case a call, was
  * never the authorization).
  */
 export async function launchOrganization(

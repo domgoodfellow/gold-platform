@@ -21,7 +21,7 @@ import { foundBusiness } from '@/tests/support/founding';
  * A business looks like itself, and cannot make its own screens unreadable.
  *
  * **The second half is the one worth testing.** That a colour is stored and rendered is
- * ordinary; that *any* colour a business picks stays legible is the guarantee D23's refusal was
+ * ordinary; that *any* colour a business picks stays legible is the guarantee the UI system's refusal was
  * really about, and it is arithmetic — so it is asserted over a spread of colours rather than
  * over the one somebody had in mind while writing it.
  */
@@ -240,7 +240,7 @@ describe('what a business chose', () => {
   });
 
   it('is settings, so a role without organization.manage cannot change it', async () => {
-    // The line D23's amendment draws: how a business looks is a claim it makes about itself, in
+    // The line the UI system's amendment draws: how a business looks is a claim it makes about itself, in
     // the same way its tagline is, so it is gated by the capability that already owns that —
     // not by a new one nobody would grant separately.
     const roleId = await createRole(shop.db, {

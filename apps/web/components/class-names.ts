@@ -13,7 +13,7 @@ export function cx(...parts: (string | false | null | undefined)[]): string {
 }
 
 /**
- * The one focus ring, shared by every interactive control (M11). `--accent-text`, not `--accent`
+ * The one focus ring, shared by every interactive control. `--accent-text`, not `--accent`
  * — a tenant's accent can be too close to the page to read against, and the ring is the one thing
  * whose job is to stay visible (see palette.ts). `focus-visible` so a mouse click doesn't leave a
  * ring on a control that was only clicked, not tabbed to.

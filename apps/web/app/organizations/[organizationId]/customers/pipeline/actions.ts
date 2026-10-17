@@ -79,7 +79,7 @@ export async function updateStageAction(
  * Move a customer to a different stage, from the board.
  *
  * Reaches `apps/api/app/domains/crm/stages.py::change_customer_stage` under the operator's own
- * forwarded access token (D17, D34) — the FastAPI-authoritative write for this act.
+ * forwarded access token — the FastAPI-authoritative write for this act.
  */
 export async function changeCustomerStageAction(
   _previous: ChangeStageState,

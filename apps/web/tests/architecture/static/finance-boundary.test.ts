@@ -69,7 +69,7 @@ describe('Finance is tenant Financial Operations', () => {
     expect(source).toMatch(/@\/lib\/domain\/billing\/invoices/);
     expect(source).toMatch(/@\/lib\/domain\/pricing\/prices/);
     expect(source).toMatch(/@\/lib\/domain\/reporting\/financials/);
-    // A second total would be a second price calculation (I4); standing and totals are the domain's.
+    // A second total would be a second price calculation; standing and totals are the domain's.
     expect(source).not.toMatch(/\.from\(['"]/);
     expect(source).not.toMatch(/unitAmountMinor\s*\*/);
   });

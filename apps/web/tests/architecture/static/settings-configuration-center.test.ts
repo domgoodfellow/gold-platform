@@ -353,7 +353,7 @@ describe('Work, as an operational surface (source scan)', () => {
     expect(work).toContain('No work types yet');
     expect(work).toMatch(/work\/configuration/);
     // The link is offered only to somebody who could act on it â€” a member who cannot configure
-    // work is not shown a control dressed up as one (I12, applied to navigation rather than a
+    // work is not shown a control dressed up as one (the UI-is-not-authorization rule, applied to navigation rather than a
     // write).
     expect(work).toMatch(/mayConfigure\s*\?[\s\S]{0,220}Configure work/);
   });

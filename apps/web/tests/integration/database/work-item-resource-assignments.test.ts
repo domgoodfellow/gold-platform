@@ -250,7 +250,7 @@ describe('a work item has many resources', () => {
       expect(error).not.toBeNull();
     });
 
-    it('is the creator’s to set on a job they raise and scheduling’s to change after (I12, I16)', async () => {
+    it('is the creator’s to set on a job they raise and scheduling’s to change after', async () => {
       const clerk = await signUp('wra-clerk');
       const role = await createRole(shop.db, { organizationId: shop.organizationId, name: 'Clerk', capabilities: ['work_item.create'] });
       await addMember(shop.db, { organizationId: shop.organizationId, email: clerk.email, displayName: 'Clerk', roleId: role });

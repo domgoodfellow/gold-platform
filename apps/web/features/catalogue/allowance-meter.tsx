@@ -8,7 +8,7 @@ import {
 /**
  * One resolved allowance, as a person reads it. Two callers: a business's own Plan & usage
  * screen, and the staff Commercial Account — so the arithmetic-free presentation lives here once
- * rather than being written twice and drifting (I4's reasoning, applied to a screen).
+ * rather than being written twice and drifting (the one-calculation rule's reasoning, applied to a screen).
  *
  * **Nothing here computes a quantity.** Every number is one `app.allowance_states` already
  * resolved; this file decides only how to say it. The one calculation is the bar's own width,

@@ -99,8 +99,8 @@ export function revalidatePlatform(): void {
  *
  *   GildOps' operating organization with the caller's membership of it, both answered by
  *     `callerOperatingOrganization` — never from a `goldId` a form supplied, which is a parameter
- *     the caller chose (D17);
- *   the permission, read live from the caller's own `platform_staff` row (D45).
+ *     the caller chose;
+ *   the permission, read live from the caller's own `platform_staff` row.
  *
  * **UI visibility is not an authorization boundary.** Every canonical commercial mutation calls
  * this before it writes, and the function behind it checks `app.require_platform_capability`

@@ -1,6 +1,6 @@
 """Proving a business's sending domain at GildOps' one Resend account, and asking how it stands.
 
-**The only file in this repository that knows what Resend's Domains API looks like** (I15).
+**The only file in this repository that knows what Resend's Domains API looks like**.
 Everything above it asks to *ensure a sending domain*, *check one* or *release one*, and hears back
 in GildOps' own words: a state (`pending` | `active` | `failed`), the provider's own status word
 kept beside it for the sentence a person reads, and the DNS records the provider says it wants. No
@@ -12,13 +12,13 @@ rather than a sentence in our copy: a verified domain means Resend will authoriz
 addresses under it, and nothing here makes `support@` a place mail arrives.
 
 **Where the account's facts live.** GildOps holds one Resend account as a
-`platform_provider_accounts` row (D62) and `read_provider_account_credential` returns the API key
+`platform_provider_accounts` row and `read_provider_account_credential` returns the API key
 as `secret`. Resend has no subaccounts and no per-tenant parent, so unlike the Vercel adapter there
 is no `external_account_id` to scope a request by -- a tenant's domain is scoped by being recorded
 against that tenant's own `organization_provider_resources` row, which is `app.services`'s job and
 not this file's.
 
-**A failure is Resend's own words** (D56), carried in the exception text and recorded on the row.
+**A failure is Resend's own words**, carried in the exception text and recorded on the row.
 Resend's error bodies carry no credential.
 """
 
@@ -60,7 +60,7 @@ _TYPES = {"MX", "TXT", "CNAME"}
 
 # What `organization_provider_resources.resource_type` calls a sending domain beneath this
 # provider's binding. Declared here because this is the module that owns the vendor's vocabulary
-# (I15, the same reason `TELEPHONY_RESOURCE_TYPES` lives in the telephony registry); the service
+# (the no-vendor-SDK-in-domain rule, the same reason `TELEPHONY_RESOURCE_TYPES` lives in the telephony registry); the service
 # layer resolves it through `email_domains_for` rather than spelling it.
 RESOURCE_TYPE = "resend_domain"
 

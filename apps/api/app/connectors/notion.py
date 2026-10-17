@@ -1,4 +1,4 @@
-"""Notion: one sign-in, reaching the databases a person shared with GOLD (D56).
+"""Notion: one sign-in, reaching the databases a person shared with GOLD.
 
 Notion differs from the suites in three ways, all held here: it exchanges a code with HTTP Basic
 credentials and a JSON body, its tokens never expire and are never refreshed, and every call

@@ -2,7 +2,7 @@ import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 
 /**
- * D41, built: what a business has bought, and what it is entitled to use right now — the
+ * The wanted-versus-paid entitlement rule, built: what a business has bought, and what it is entitled to use right now — the
  * wanted∩paid intersection, computed rather than stored. `organization_modules` still answers
  * "does this business want this module"; this file is the "has it paid for it" half.
  */
@@ -54,7 +54,7 @@ export async function listOrganizationTerms(
   }));
 }
 
-/** The four D41 states, minus "absent" — a module in neither set produces no row (nothing to explain). */
+/** The four the wanted-versus-paid entitlement rule states, minus "absent" — a module in neither set produces no row (nothing to explain). */
 export async function moduleCommercialState(
   db: Db,
   input: { organizationId: string },
@@ -84,7 +84,7 @@ export type RecordTermInput = {
   note?: string;
 };
 
-/** Staff only — `public.record_commercial_term` is the one door onto this table (D41's own rule). */
+/** Staff only — `public.record_commercial_term` is the one door onto this table (the wanted-versus-paid entitlement rule). */
 export async function recordCommercialTerm(db: Db, input: RecordTermInput): Promise<string> {
   const { data, error } = await db.rpc('record_commercial_term', {
     p_organization_id: input.organizationId,

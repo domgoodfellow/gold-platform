@@ -22,7 +22,7 @@ import { foundBusiness } from '@/tests/support/founding';
  * reach for the storage API directly, because a caller that skips the domain layer is
  * exactly the case the policy exists for.
  *
- * The third property is the one constraints.md is most explicit about: a private file is
+ * The third property is the strictest: a private file is
  * never served from a durable public URL. There is no public URL at all; a signed one is
  * minted per click and lives sixty seconds.
  */
@@ -193,7 +193,7 @@ describe('documents', () => {
     expect(error).not.toBeNull();
   });
 
-  it('cannot attach a document to another tenant\'s customer (I18)', async () => {
+  it('cannot attach a document to another tenant\'s customer', async () => {
     await expect(
       uploadDocument(alice.db, { files: supabaseFileStore(alice.db, BUCKET),
         organizationId: alice.organizationId,
@@ -282,7 +282,7 @@ describe('documents', () => {
     expect(error?.code).toBe('23505');
   });
 
-  it('refuses a link across tenants, in either direction (I18)', async () => {
+  it('refuses a link across tenants, in either direction', async () => {
     // Bob cannot see Alice's file, and Alice's file cannot be linked to Bob's customer.
     const { error: intoBob } = await bob.db.from('document_links').insert({
       organization_id: bob.organizationId,
@@ -337,7 +337,7 @@ describe('documents', () => {
     ).rejects.toMatchObject({ code: 'documents.empty' });
   });
 
-  it('refuses documents to a member without the capability (I12)', async () => {
+  it('refuses documents to a member without the capability', async () => {
     const limited = await createRole(bob.db, {
       organizationId: bob.organizationId,
       name: 'No Documents',
@@ -361,7 +361,7 @@ describe('documents', () => {
     ).rejects.toMatchObject({ code: 'documents.forbidden' });
   });
 
-  it('records documents on the timeline (I11)', async () => {
+  it('records documents on the timeline', async () => {
     const { data, error } = await alice.db
       .from('events')
       .select('action, actor_id')

@@ -19,7 +19,7 @@ function pct(value: number | null): string {
  * GildOps' commercial portfolio economics (Work Order B, B8/B9): every organization with a
  * composed charge this month, its known cost-to-serve and contribution, and how complete that
  * cost figure actually is. Never accounting profit — operational commercial economics, read
- * straight from `platform_revenue_portfolio` rather than totalled here a second time (I4).
+ * straight from `platform_revenue_portfolio` rather than totalled here a second time.
  */
 export default async function PortfolioEconomicsPage({ params }: PageProps<'/organizations/[organizationId]/platform/economics'>) {
   const { organizationId } = await params;

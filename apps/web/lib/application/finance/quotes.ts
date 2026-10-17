@@ -3,9 +3,9 @@ import { invoicedWorkItemIds } from '@/lib/domain/billing/invoices';
 import { listPricedWork, priceWorkItem } from '@/lib/domain/pricing/prices';
 
 /**
- * A quote is a job with priced lines — there is no quote table (I4). The amount is
+ * A quote is a job with priced lines — there is no quote table. The amount is
  * `priceWorkItem` over the lines the job holds, which are snapshots of the price book as it read
- * when each was added (I8); nothing here reads the price book.
+ * when each was added; nothing here reads the price book.
  */
 export type { FinanceQuoteRow } from '@/lib/domain/billing/finance-reads';
 import type { FinanceQuoteRow } from '@/lib/domain/billing/finance-reads';

@@ -2,8 +2,8 @@ import { Client } from 'pg';
 import { describe, expect, it } from 'vitest';
 
 /**
- * What the payment webhook's database role can and cannot do (D14). Split out of `adapters.test.ts`,
- * whose I15 boundary scan reads source only: this half inspects grants in the real local Postgres.
+ * What the payment webhook's database role can and cannot do. Split out of `adapters.test.ts`,
+ * whose vendor-SDK boundary scan reads source only: this half inspects grants in the real local Postgres.
  */
 
 const CONNECTION =
@@ -12,17 +12,17 @@ const CONNECTION =
 /**
  * The writer with no human caller.
  *
- * **The handler itself is Python and lives in `apps/api`** (D2, D26), with its own tests under
+ * **The handler itself is Python and lives in `apps/api`**, with its own tests under
  * `apps/api/tests` — including the signature check and the shape of the token it mints. What
  * belongs here is the half that is a fact about *this database*: that the role it arrives as
- * can do almost nothing, which is the claim D14 makes concrete when it refuses service-role.
+ * can do almost nothing, which is the claim the no-service-role rule makes concrete when it refuses service-role.
  */
 describe('the writer with no human caller', () => {
   it('holds no grant on any table, and exactly one execute', async () => {
     const client = new Client({ connectionString: CONNECTION });
     await client.connect();
     try {
-      // The claim D14 makes concrete. If this role could `select` one row of one table, the
+      // The claim the no-service-role rule makes concrete. If this role could `select` one row of one table, the
       // argument for it over service-role would be a matter of degree.
       const { rows: tables } = await client.query(
         `select table_name, privilege_type

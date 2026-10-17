@@ -201,7 +201,7 @@ function TypeDetail({
           {statuses.length >= 2 ? (
             <section className="flex max-w-2xl flex-col gap-3" aria-label="Allowed moves">
               <GroupHeading>Allowed moves</GroupHeading>
-              {/* An unconfigured type is frozen, not unconstrained (I13). */}
+              {/* An unconfigured type is frozen, not unconstrained. */}
               <p className="text-sm text-muted">
                 {transitions.length === 0
                   ? 'None yet, so work of this type cannot change stage.'
@@ -228,7 +228,7 @@ function TypeDetail({
         ) : null}
 
         <TabsContent value="checklists" className="flex max-w-2xl flex-col gap-3">
-          {/* Copied onto each job at creation, never joined (I8) — editing this list never reaches a job that already exists. */}
+          {/* Copied onto each job at creation, never joined — editing this list never reaches a job that already exists. */}
           <p className="text-sm text-muted">
             {templateSteps.length === 0 ? 'No steps yet.' : 'Steps are copied onto new work. Existing work is unchanged.'}
           </p>

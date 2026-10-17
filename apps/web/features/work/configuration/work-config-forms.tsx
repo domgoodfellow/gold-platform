@@ -306,7 +306,7 @@ export function EditStatusForm({
           answer. Neither is `is_terminal`: that would be the platform deciding what a word
           means, and these ask about two different consequences of it. "Cancelled" frees the
           van and is not finished work; "Awaiting parts" holds the van and is not finished
-          work either — one flag could not have said both, which is why M4 refused one. */}
+          work either — one flag could not have said both, which is why there isn't one. */}
       <label className="flex items-center gap-1.5 text-xs opacity-80">
         <input
           name="releasesResource"

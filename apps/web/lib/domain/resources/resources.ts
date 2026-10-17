@@ -19,7 +19,7 @@ export type Resource = {
   resourceClass: ResourceClass;
   /** What the business says this resource can do, by name. Archived ones stay on the resource that holds them. */
   capabilities: ResourceCapability[];
-  /** Tenant-defined fields, governed by this organization's registry (D7). Nothing the scheduling engine reads lives here. */
+  /** Tenant-defined fields, governed by this organization's registry. Nothing the scheduling engine reads lives here. */
   custom: CustomValues;
   createdAt: string;
   /**
@@ -299,7 +299,7 @@ export async function setResourceMembership(
 
   const { error } = await db.rpc('set_resource_membership', {
     p_resource_id: input.resourceId,
-    // Null by design, not by omission — see the parameter above. The cast is D15's: Postgres
+    // Null by design, not by omission — see the parameter above. The cast is the forward-only migration rule's: Postgres
     // records no nullability for a function argument (the same shape `scheduleWorkItem` casts).
     p_membership_id: input.membershipId as string,
   });

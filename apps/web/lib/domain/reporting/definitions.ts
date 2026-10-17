@@ -19,13 +19,13 @@ import {
 /**
  * A report a business saved, and running one.
  *
- * **A definition holds arguments, never a query and never a figure** (D36). What it saves is
+ * **A definition holds arguments, never a query and never a figure**. What it saves is
  * exactly what the Reports screen was showing: a grouping, a period, and up to three filters.
  * There is no builder here because for this report set there is nothing left to build — the
  * entity *is* the grouping, the fields are invoiced, incurred and margin, and the calculation
  * is the subtraction `invoiced_and_incurred` owns.
  *
- * **Running one calls the same aggregate the ad-hoc screen calls.** That is D35's rule one
+ * **Running one calls the same aggregate the ad-hoc screen calls.** That is the agreeing-implementations rule one
  * level up and the thing most likely to be undone by a well-meaning optimisation: a saved
  * report that grew its own query would be a second answer to a question that already has one.
  * `reporting.test.ts` asserts that a saved report and the ad-hoc view return identical rows.
@@ -42,7 +42,7 @@ export type ReportDefinition = {
   /**
    * Which aggregate this report is of.
    *
-   * **The column D36 said would come, and the argument it said would have to be made is still
+   * **The column the schema plan said would come, and the argument it said would have to be made is still
    * not made.** That record permits a grouping, a period and filters *for this report set*, and
    * says the day a set arrives whose fields are not fixed is when a query language has to be
    * argued for. The fields stay fixed **per measure**, so what a report gained is one more value
@@ -162,7 +162,7 @@ export async function saveReportDefinition(
   // **A pair that can never answer, refused where somebody can read why.** Completed work has no
   // service grouping — a job is finished as a whole — and `report_definitions_grouping_answerable`
   // refuses the row regardless. Storing it would put a report on screen whose only outcome is a
-  // failure, which is D34's reasoning about judging a suggestion when it is written.
+  // failure, which is the AI-tool architecture's reasoning about judging a suggestion when it is written.
   if (!GROUPINGS_FOR[input.measure].includes(input.grouping)) {
     throw new DomainError(
       'That grouping cannot answer that question, so there would be nothing to show.',
@@ -322,7 +322,7 @@ export async function setReportRoles(
  * nullable columns would produce a type whose invalid states outnumber its valid ones, and a
  * screen that had to guess which half to read.
  *
- * **Each branch calls the one aggregate for its question and does nothing else** (D35, D36). The
+ * **Each branch calls the one aggregate for its question and does nothing else**. The
  * dispatch is the whole of what this function adds; there is no second query here and there must
  * never be one, because a saved report is arguments and the answer to those arguments already has
  * exactly one source.

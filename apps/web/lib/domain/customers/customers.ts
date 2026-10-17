@@ -13,7 +13,7 @@ export type Customer = {
   name: string;
   email: string | null;
   phone: string | null;
-  /** Tenant-defined fields, governed by this organization's registry (D7). */
+  /** Tenant-defined fields, governed by this organization's registry. */
   custom: CustomValues;
   /**
    * Where this relationship has got to, or null.
@@ -122,7 +122,7 @@ export async function createCustomer(
     // `supabase gen types` emits every function argument as non-null, because Postgres
     // records no nullability for parameters: `p_email text` accepts null and is meant to,
     // and the catalog has nowhere to say so. Generated types are authoritative for tables
-    // and columns, not for function arguments (constraints.md D15). These two casts are the
+    // and columns, not for function arguments (the forward-only migration rule, ADR-028). These two casts are the
     // whole of that gap in this codebase, and they assert what the migration already allows.
     p_email: email as string,
     p_phone: phone as string,
@@ -244,7 +244,7 @@ export async function updateCustomer(
     p_customer_id: input.customerId,
     p_name: name,
     // The same two casts `createCustomer` carries, and the same reason: Postgres records no
-    // nullability for function parameters, so the generated types cannot express one (D15).
+    // nullability for function parameters, so the generated types cannot express one.
     p_email: email as string,
     p_phone: phone as string,
     p_custom: custom,

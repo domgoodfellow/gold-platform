@@ -6,7 +6,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
  * Route configuration — the data a tenant edits under Communications Configure. The *decision*
  * a route produces for a live call is a different question, answered once, in Python
  * (`apps/api/app/domains/communications/routing.py`): the two runtimes cannot call each other
- * (D30), and the carrier's own webhook needs that same answer synchronously, so the resolver
+ *, and the carrier's own webhook needs that same answer synchronously, so the resolver
  * cannot live here — only here would make `previewInboundRoute` a second, drifting copy of it,
  * which the work order explicitly refuses. This file is CRUD only.
  */
@@ -212,7 +212,7 @@ export async function updateRoute(
   if (error) throw writeError(error);
 }
 
-/** Routes are disabled, never deleted — a call already placed through one must stay explainable (I8). */
+/** Routes are disabled, never deleted — a call already placed through one must stay explainable. */
 export async function setRouteEnabled(db: Db, input: { organizationId: string; routeId: string; enabled: boolean }): Promise<void> {
   await updateRoute(db, { organizationId: input.organizationId, routeId: input.routeId, enabled: input.enabled });
 }

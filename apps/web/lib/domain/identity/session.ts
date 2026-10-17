@@ -4,7 +4,7 @@ import type { Db } from '@/lib/db/types';
 /**
  * What a session actually is, which `userId: string | null` collapsed into one thing.
  *
- * D22 gives a booking/portal visitor a real `auth.uid()` so RLS stays the boundary -- which
+ * The anonymous-session model gives a booking/portal visitor a real `auth.uid()` so RLS stays the boundary -- which
  * also means an anonymous Supabase session is genuinely authenticated, in the only sense the
  * database has an opinion about. It is not, and must never be treated as, a signed-in GOLD
  * account: it cannot be an organization member (RLS already refuses that on its own), and it

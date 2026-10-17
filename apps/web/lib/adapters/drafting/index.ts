@@ -2,8 +2,8 @@ import type { BusinessShape } from '@/lib/domain/configuration/configure';
 
 /**
  * Drafting a configuration from a description, named as a capability rather than a provider
- * (I15). No DB handle, no domain writer — everything returned is a proposal a person applies
- * under their own session (D32).
+ *. No DB handle, no domain writer — everything returned is a proposal a person applies
+ * under their own session.
  */
 
 export type ConfigurationGap = {
@@ -29,7 +29,7 @@ export type DraftingRequest = {
   description: string;
   /** Never given to the model — `apps/api` reads the entitlement as the caller, so a business that is not theirs answers *no*. */
   organizationId: string;
-  /** The caller's own access token (D17). */
+  /** The caller's own access token. */
   token: string;
   business: {
     name: string;

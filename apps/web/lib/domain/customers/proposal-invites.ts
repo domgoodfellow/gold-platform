@@ -4,7 +4,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
  * The link a salesperson sends a prospect to review their own commercial proposal — a third kind
- * of token over D22's external axis, the same shared-document model `customer_portal_invites`
+ * of token over the anonymous-session model's external axis, the same shared-document model `customer_portal_invites`
  * already uses. See `20261024000001_a_prospect_reviews_their_own_proposal.sql`.
  */
 export type ProposalInvite = {
@@ -67,7 +67,7 @@ export async function revokeProposalInvite(db: Db, input: { id: string }): Promi
 
 /**
  * Present a link and become that customer, exactly as `claimPortalInvite` does for the portal —
- * one shared axis, a second kind of invite over it. Anonymous sign-in first (D22), kept alive:
+ * one shared axis, a second kind of invite over it. Anonymous sign-in first, kept alive:
  * this session needs to come back and read what it just unlocked, unlike public intake's own
  * sign-out-immediately shape.
  */

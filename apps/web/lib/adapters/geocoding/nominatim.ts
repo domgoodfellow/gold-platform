@@ -1,6 +1,6 @@
 import type { Coordinates, GeocodingProvider } from './index';
 
-/** Nominatim, behind the capability its interface names — one of two files that knows this vendor exists (I15). No SDK: one HTTPS call and a query string. */
+/** Nominatim, behind the capability its interface names — one of two files that knows this vendor exists. No SDK: one HTTPS call and a query string. */
 
 const API = 'https://nominatim.openstreetmap.org/search';
 

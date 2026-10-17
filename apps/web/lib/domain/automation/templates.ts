@@ -6,7 +6,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 /**
  * What a business says to its customers, and what it has said.
  *
- * **Not one word here belongs to the platform.** `constraints.md` forbids hardcoding a claim a
+ * **Not one word here belongs to the platform.** `docs/product.md` forbids hardcoding a claim a
  * business makes about itself; a message arriving in somebody's inbox with that business's name
  * on it is the strongest form of such a claim, stronger than a public page, because nobody chose
  * to open it. So a template is a row a business wrote, the resolver substitutes values and adds
@@ -150,7 +150,7 @@ export async function createMessageTemplate(
  *
  * **It changes nothing that has been sent.** A delivery carries the finished words, resolved
  * once at the moment it was queued, so editing this cannot reach into somebody's inbox or into
- * the record of what they were told (I8) — the same protection a checklist template and a priced
+ * the record of what they were told — the same protection a checklist template and a priced
  * line already have.
  */
 export async function updateMessageTemplate(

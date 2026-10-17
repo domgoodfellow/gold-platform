@@ -18,7 +18,7 @@ import { foundBusiness } from '@/tests/support/founding';
  *     installs and also repairs wants "Scheduled" on both boards, and the old index would
  *     have refused the second one.
  *   * A work item cannot sit in another type's status. That is not a tenancy question —
- *     both rows belong to the same organization and RLS is satisfied — so nothing in I18's
+ *     both rows belong to the same organization and RLS is satisfied — so nothing in the same-organization reference rule's
  *     machinery catches it. The three-column reference
  *     `(organization_id, type_id, status_id)` does, and this file proves it by inserting
  *     the mismatch directly rather than through the domain layer.
@@ -77,7 +77,7 @@ describe('work item types', () => {
     bob = await newTenant('wt-bob');
   });
 
-  it('lets two tenants define the same type (I2)', async () => {
+  it('lets two tenants define the same type', async () => {
     // If work_item_types_org_name_unique had lost its leading organization_id, the second of
     // these would fail — and no two businesses could ever both do installations.
     const mine = await createWorkItemType(alice.db, { schedulable: true,
@@ -145,7 +145,7 @@ describe('work item types', () => {
     )[0];
 
     // Written directly, because the domain layer derives the type from the status and so
-    // cannot express the mismatch. Both rows are Alice's, so RLS passes and I18's composite
+    // cannot express the mismatch. Both rows are Alice's, so RLS passes and the same-organization reference rule's composite
     // references pass — only the three-column constraint objects.
     const { error } = await alice.db.from('work_items').insert({
       organization_id: alice.organizationId,
@@ -217,7 +217,7 @@ describe('work item types', () => {
     expect(acrossTheWall).toEqual([]);
   });
 
-  it('cannot hang a status off another tenant\'s type (I18)', async () => {
+  it('cannot hang a status off another tenant\'s type', async () => {
     const [aliceType] = await listWorkItemTypes(alice.db, {
       organizationId: alice.organizationId,
     });
@@ -231,7 +231,7 @@ describe('work item types', () => {
     ).rejects.toMatchObject({ code: 'statuses.type_not_found' });
   });
 
-  it('enforces the capability in the database, not just the domain (I16)', async () => {
+  it('enforces the capability in the database, not just the domain', async () => {
     const limited = await createRole(bob.db, {
       organizationId: bob.organizationId,
       name: 'No Config',
@@ -262,7 +262,7 @@ describe('work item types', () => {
     expect(error?.code).toBe('42501');
   });
 
-  it('records a type on the timeline (I11)', async () => {
+  it('records a type on the timeline', async () => {
     const { data, error } = await alice.db
       .from('events')
       .select('action, actor_id')

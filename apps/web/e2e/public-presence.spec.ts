@@ -23,7 +23,7 @@ test('opens the public booking preview from Settings and finds the real public p
   const href = await preview.getAttribute('href');
   expect(href).toBe(`/book/${ctx.bookingSlug}`);
 
-  // A fresh, signed-out context: this is the public page, and I18n/D17 both say it must not
+  // A fresh, signed-out context: this is the public page, and I18n/the tenant-isolation rule both say it must not
   // need the operator's own session to resolve.
   const anonymousPage = await context.browser()!.newContext().then((c) => c.newPage());
   await anonymousPage.goto(href!);

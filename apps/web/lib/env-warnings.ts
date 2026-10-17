@@ -2,7 +2,7 @@
  * Partial configuration none of the adapter registries can see for themselves.
  *
  * Every `lib/adapters/*\/registry.ts` already treats any missing value in its own group as the
- * whole capability being off (D31) — correct, and not what this checks. What a registry cannot
+ * whole capability being off — correct, and not what this checks. What a registry cannot
  * catch is a group where *some* values are set and others are not: `STRIPE_SECRET_KEY` without
  * `STRIPE_CONNECT_CLIENT_ID` doesn't fail loudly, it just returns `null` from
  * `payments/registry.ts` exactly as if nothing were set at all — an operator who set one and

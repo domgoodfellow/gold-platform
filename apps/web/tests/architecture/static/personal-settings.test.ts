@@ -58,7 +58,7 @@ describe('the one address', () => {
 describe('the menu', () => {
   const menu = read('components/navigation/account-menu.tsx');
 
-  it('offers one Settings entry and Sign out, and leaves switching context to the switcher (D71)', () => {
+  it('offers one Settings entry and Sign out, and leaves switching context to the switcher', () => {
     expect(menu).toContain('>Settings</Link>');
     expect(existsSync(`${WEB}/components/navigation/sidebar-footer-navigation.tsx`)).toBe(false);
     expect(menu).not.toContain('Business settings');
@@ -91,7 +91,7 @@ describe('scope stays honest in both directions', () => {
     }
   });
 
-  it('Settings has no landing chooser: the sidebar is the directory, and Account is one of its destinations (D71)', () => {
+  it('Settings has no landing chooser: the sidebar is the directory, and Account is one of its destinations', () => {
     const landing = read('app/organizations/[organizationId]/settings/page.tsx');
     expect(landing).toContain('redirect(defaultSettingsHref(');
     expect(landing).not.toContain('PersonalSettingsEntries');

@@ -6,7 +6,7 @@ import { SupportTrigger } from '../panels/workspace-right-rail';
 /**
  * Collection/Board: compact identity and controls, then the collection or board itself promptly —
  * never a large introductory block above the work surface the operator came to use
- * (`docs/ui-spec.md` §2a). Tighter default spacing than `PageHeader`'s `mb-6`, and no description
+ * (`docs/ui-system.md`). Tighter default spacing than `PageHeader`'s `mb-6`, and no description
  * slot at all: the table or board explains itself.
  */
 export function CollectionHeader({

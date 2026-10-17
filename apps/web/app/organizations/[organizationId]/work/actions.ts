@@ -105,7 +105,7 @@ export async function scheduleWorkItemAction(
   try {
     // The overlap is not checked here and must not be. `work_item_resource_assignments_resource_not_double_booked`
     // is the guarantee, and it is the only thing that can catch two dispatchers committing
-    // the same free slot at the same moment (I6, I7).
+    // the same free slot at the same moment.
     if (formData.get('clear')) {
       await unscheduleWorkItem(db, { workItemId: String(formData.get('workItemId') ?? '') });
     } else {

@@ -21,7 +21,7 @@ import { foundBusiness } from '@/tests/support/founding';
 /**
  * THE M3 MILESTONE TEST.
  *
- * `roadmap.md` describes M3 as one demonstration:
+ * This milestone was defined as one demonstration:
  *
  *   > a new business can be stood up entirely through configuration — modules, roles, fields,
  *   > statuses, forms, terminology, pricing rules, scheduling rules — with no migration and
@@ -40,7 +40,7 @@ import { foundBusiness } from '@/tests/support/founding';
  * **It used to live in this file, and moving it strengthened the claim rather than relocating
  * it.** A `configure` helper inside a test proves that a test can stand up two businesses; a
  * domain function with a second caller proves the platform can. The second caller is the AI
- * onboarding flow D29 makes self-serve signup conditional on, and `BusinessShape` is the type
+ * onboarding flow the one-creation-path rule makes self-serve signup conditional on, and `BusinessShape` is the type
  * a proposal from it arrives as. The local `configure` below is now only the *evidence* — one
  * customer, one job, one quote — that these assertions read.
  *
@@ -73,7 +73,7 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
  * job and one quote the assertions read: those are evidence, not configuration, and a business
  * that has just been stood up has neither.
  */
-/** The owner a business is handed to. Since D29 closed founding, every business has one. */
+/** The owner a business is handed to. Since the one-creation-path rule closed founding, every business has one. */
 type Owner = { db: SupabaseClient; email: string };
 
 type Evidence = {
@@ -89,7 +89,7 @@ type Evidence = {
   /**
    * Who the business is, as opposed to what shape it has.
    *
-   * **These four moved out of `BusinessShape` when D29 split creating a business from
+   * **These four moved out of `BusinessShape` when the one-creation-path rule split creating a business from
    * configuring one**, and the split is not cosmetic: a name, a zone and a currency are settled
    * when GOLD provisions the business, and everything in `shape` is settled afterwards by
    * whoever does the configuring. The milestone's claim is unaffected — these two businesses
@@ -256,7 +256,7 @@ async function configure(owner: Owner, evidence: Evidence): Promise<StoodUp> {
   // The whole of the configuration, in one call, with no branch anywhere in it. Everything
   // below this line is the evidence the assertions read — one customer, one job, one quote —
   // and none of it is part of standing a business up.
-  // **Standing it up runs as GOLD; everything after runs as the business.** D29 closed
+  // **Standing it up runs as GOLD; everything after runs as the business.** The one-creation-path rule closed
   // founding, so a business now comes into existence through the operator door and is handed
   // to an owner — which changes who makes the call below and nothing about what it does. The
   // assertion this milestone turns on is unchanged and is at the bottom of this file: that
@@ -364,7 +364,7 @@ describe('M3 — a second business shape, without a pull request', () => {
     expect(clinicJob.status.label).toBe('Seen');
 
     // And each board refuses the other's move, because a transition belongs to one tenant's
-    // type (I13). The clinic has no Billed → anywhere, so nothing follows it.
+    // type. The clinic has no Billed → anywhere, so nothing follows it.
     await expect(
       changeWorkItemStatus(clinic.db, {
         workItemId: clinic.jobId,
@@ -403,7 +403,7 @@ describe('M3 — a second business shape, without a pull request', () => {
     expect(hireJob.custom.site_contact).toBe('Ruud');
   });
 
-  it('refuses each business the other’s fields (I17)', async () => {
+  it('refuses each business the other’s fields', async () => {
     // The clinic has no `site_contact` and the registry is per tenant, so this is not a
     // missing column — it is one business's vocabulary being meaningless in another.
     await expect(
@@ -430,7 +430,7 @@ describe('M3 — a second business shape, without a pull request', () => {
     expect(clinicHours).toEqual([]);
   });
 
-  it('prices each business in its own money, through the one calculation (I4)', async () => {
+  it('prices each business in its own money, through the one calculation', async () => {
     const hirePrice = priceWorkItem(
       await listPricedLines(hire.db, {
         organizationId: hire.organizationId,

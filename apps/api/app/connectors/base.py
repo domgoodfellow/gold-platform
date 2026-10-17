@@ -1,4 +1,4 @@
-"""The one contract every OAuth connector implements (D56).
+"""The one contract every OAuth connector implements.
 
 **A suite is one authorization.** Google Workspace and Microsoft 365 each ask a person to sign in
 once and then reach several apps beneath it, so a connector here is *one sign-in plus what it can

@@ -20,7 +20,7 @@ const NO_COORDINATES: CoordinatesActionState = { error: null, suggested: null, n
  * the split `locateAddress` makes in the domain layer, and the reason for it is that a
  * provider's best guess about a customer's site is where a technician gets sent.
  *
- * **A deployment with no lookup says so rather than showing nothing** (D31). Two empty boxes and
+ * **A deployment with no lookup says so rather than showing nothing**. Two empty boxes and
  * no explanation is the same silence a switch with no inputs produces: the person cannot tell
  * whether the feature is missing, broken, or theirs to fill in.
  *

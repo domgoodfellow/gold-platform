@@ -34,8 +34,8 @@ export const dynamic = 'force-dynamic';
  *   > live, and the two would disagree the first time one was written without the other.
  *
  * So there is no calendar table, no cached day, and no denormalised slot — every window below is
- * derived on read, through `listScheduleDays` (I5), advisory until the exclusion constraint
- * re-asserts it at the moment of booking (I6). This route only resolves the URL (`view`, `on`,
+ * derived on read, through `listScheduleDays`, advisory until the exclusion constraint
+ * re-asserts it at the moment of booking. This route only resolves the URL (`view`, `on`,
  * `resource`), loads that day or week, and hands the result to `ScheduleWorkspace`, which is the
  * whole of what Schedule looks like.
  */
@@ -140,7 +140,7 @@ export default async function SchedulePage({
         </ConfigureRegistrar>
       ) : null}
 
-      {/* I9: every window drawn below is an absolute instant rendered in this business's own
+      {/* The absolute-time rule: every window drawn below is an absolute instant rendered in this business's own
           zone, so naming the zone is part of reading the page rather than decoration. */}
       <PageHeader
         title={areaLabel('schedule')}

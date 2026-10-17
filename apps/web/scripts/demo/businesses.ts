@@ -5,7 +5,7 @@ import type { Grouping, Measure, PeriodPreset } from '@/lib/domain/reporting/sha
 /**
  * Two businesses, entirely words and numbers.
  *
- * **Everything that differs between them lives here and nowhere else** (D37). `run.ts` contains no
+ * **Everything that differs between them lives here and nowhere else**. `run.ts` contains no
  * branch on which of these it is holding, which is what makes the script a small piece of
  * evidence rather than only a convenience — the same discipline `configureBusiness` keeps, and
  * the same claim `milestone-m3.test.ts` makes with two shapes and one function.
@@ -45,7 +45,7 @@ export type DemoJob = {
    * Invoiced, and possibly paid.
    *
    * `daysAgo` is what makes the money reports spread across months rather than stacking on the
-   * afternoon the script ran — which D37's amendment names as a requirement rather than a
+   * afternoon the script ran — which is a stated requirement rather than a
    * flourish, because otherwise *this month* and *this year* are the same number.
    */
   invoice: { daysAgo: number; paid?: { amountMinor: number; daysAgo: number } } | null;
@@ -56,7 +56,7 @@ export type DemoBusiness = {
   timezone: string;
   currency: string;
   owner: { email: string; displayName: string };
-  /** One colleague on a reduced role, so I12 is something to look at rather than read about. */
+  /** One colleague on a reduced role, so the UI-is-not-authorization rule is something to look at rather than read about. */
   member: { email: string; displayName: string };
   shape: BusinessShape;
   /**
@@ -100,7 +100,7 @@ const GRACHTWERK: DemoBusiness = {
   member: { email: 'joris@grachtwerk.test', displayName: 'Joris Bakker' },
   shape: {
     // Inside the shape rather than beside it, so the demo takes the same path a proposal does
-    // (D37). Different lengths from the clinic's, so the two sidebars differ.
+    //. Different lengths from the clinic's, so the two sidebars differ.
     modules: ['billing', 'assets', 'reporting'],
     typeName: 'Verhuring', // a hire
     schedulable: true,

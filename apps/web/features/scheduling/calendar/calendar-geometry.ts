@@ -5,7 +5,7 @@ import { clipWindow, zonedTimeToInstant, type Window } from '@/lib/domain/schedu
  * Pixel/axis geometry for Day's timeline — never business logic (`CLAUDE.md`, "presentation code
  * organization"): what this module answers is "where on the screen", never "is this resource
  * free". The one thing it does decide, deliberately, is the *display* range the axis draws —
- * separate from `freeWindows`/`openWindows`'s own availability answer (I5/I6) so that drawing a
+ * separate from `freeWindows`/`openWindows`'s own availability answer so that drawing a
  * calendar never becomes a second claim about when a business is open.
  */
 

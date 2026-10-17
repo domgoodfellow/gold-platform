@@ -3,7 +3,7 @@ import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
- * Support access, kept separate from membership (D28, restated). Starting a session is the one
+ * Support access, kept separate from membership (the platform-staff separation, restated). Starting a session is the one
  * thing that makes "Open Organization" more than a click that leaves no trace — every session is
  * a row naming who, which business, when, and until when. It grants no new read on any other
  * table; it is the "why were you looking" record, not a second access path.
@@ -94,7 +94,7 @@ export type SupportMember = {
 
 /**
  * Who is on this team, read the way platform staff are actually allowed to read it today:
- * `memberships` in full, `roles` not at all (D28's grant list has never included it). A role
+ * `memberships` in full, `roles` not at all (the platform-staff separation's grant list has never included it). A role
  * name would need that grant widened — a real, separate decision, not a side effect of this one.
  */
 export async function listMembersForSupport(

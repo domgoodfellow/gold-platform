@@ -17,7 +17,7 @@ import type {
  * reason: one HTTPS call and a form encoding, both stable and specified, is what this needs.
  *
  * **Only the outbound half is here.** Being told what happened to a subscription is webhook
- * ingress and lives in `apps/api` (D2, D26) — its own destination, its own signing secret, its
+ * ingress and lives in `apps/api` — its own destination, its own signing secret, its
  * own Postgres role, entirely separate from the tenant-commerce webhook.
  */
 

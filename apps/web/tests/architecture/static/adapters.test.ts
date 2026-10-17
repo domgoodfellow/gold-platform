@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 
 /**
- * I15: no domain code imports a vendor SDK directly.
+ * The no-vendor-SDK-in-domain rule: no domain code imports a vendor SDK directly.
  *
  * **The invariant is structural, so the test reads the tree rather than exercising a path.**
  * The same reasoning `schema-conformance.test.ts` uses: a boundary that is only a convention
@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
  * introduced — a domain file importing `./stripe` works perfectly, and costs nothing until the
  * day a second processor arrives and every call site has to be found.
  *
- * `constraints.md` states it as *domain code names capabilities — place a call, charge a card
+ * ADR-015 states it as *domain code names capabilities — place a call, charge a card
  * — never providers*. So there are two assertions, and the second is the one with teeth: the
  * import boundary, and the absence of the word.
  */
@@ -62,7 +62,7 @@ const VENDORS = [
  */
 const CONTRACTS = ['payments', 'platform-billing', 'geocoding', 'routing', 'drafting', 'answering', 'telephony', 'messaging', 'email', 'email-domains', 'tenant-email'];
 
-describe('the adapter boundary (I15)', () => {
+describe('the adapter boundary', () => {
   it('has no domain file importing a provider implementation', () => {
     const offenders = sources(join(SRC, 'lib', 'domain')).filter((path) => {
       const text = readFileSync(path, 'utf8');

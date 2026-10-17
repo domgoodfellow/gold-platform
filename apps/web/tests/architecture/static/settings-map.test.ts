@@ -70,7 +70,7 @@ describe('the Settings configuration map', () => {
     // Setup is its own SETUP-lifecycle destination, Insights is an operating page reached
     // contextually from each workspace's Home and from PageHeader's Insights support mode
     // (`areaAvailable('insights', ...)`), and Website, Forms and Templates are Studio's own operating pages, reached from
-    // Studio Home (D68) — none of them is a Settings *configuration* door.
+    // Studio Home — none of them is a Settings *configuration* door.
     // `help` is product help opened from the account menu: not configuration, so not a door on the map.
     const settingsOwned: Record<string, string> = {
       pricing: 'pricing',

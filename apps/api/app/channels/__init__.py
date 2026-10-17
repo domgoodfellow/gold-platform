@@ -1,6 +1,6 @@
 """Reaching a person, named as a capability rather than as a provider.
 
-The Python side of I15. `apps/web/lib/adapters/` holds the same boundary in TypeScript, and the
+The Python side of the no-vendor-SDK-in-domain rule. `apps/web/lib/adapters/` holds the same boundary in TypeScript, and the
 reasoning does not change with the language: everything above this file asks to *send a message
 to somebody*, and exactly one module per channel knows how.
 

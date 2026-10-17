@@ -5,7 +5,7 @@ registry that chooses it. No SDK, for the reason the Stripe adapter gives: what 
 HTTPS call and a JSON body, both stable and specified.
 
 **The body is sent exactly as it arrives.** No greeting, no signature, no footer, no HTML
-wrapper — `constraints.md` forbids the platform putting words in a business's mouth, and an
+wrapper — `docs/product.md` forbids the platform putting words in a business's mouth, and an
 email is the strongest case of that rule because it lands in somebody's inbox with the business's
 name on it. Plain text is what the business wrote, so plain text is what goes.
 """

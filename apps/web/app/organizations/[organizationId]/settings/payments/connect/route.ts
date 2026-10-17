@@ -9,7 +9,7 @@ import { callbackUrl, STATE_COOKIE } from '../state';
  * Send an operator to their processor to authorize this business. A route handler, not a server
  * action — the redirect carries a value this server generated, and an action would put the
  * cookie and the navigation in two places that could disagree. Not under `api/` — there is none
- * in `apps/web` (D26); this is the screen's own machinery.
+ * in `apps/web`; this is the screen's own machinery.
  */
 
 export const dynamic = 'force-dynamic';

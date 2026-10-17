@@ -7,7 +7,7 @@ the provider's own message id; the authority it writes with is a Postgres role h
 grant at all. A bad signature, an unparseable body, and an event this platform does not track all
 produce the same terse answer, and none of them is distinguishable from the others to the caller.
 
-Vercel's Python runtime routes a file under `api/` to a path (D24). No framework, one file, one
+Vercel's Python runtime routes a file under `api/` to a path. No framework, one file, one
 route.
 """
 

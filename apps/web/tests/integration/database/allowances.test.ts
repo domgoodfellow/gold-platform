@@ -191,7 +191,7 @@ describe('a commercial mutation needs the commercial permission', () => {
   beforeAll(async () => {
     inspector = await signedIn('alw-inspector');
     // Staff who may look at an organization and nothing more. Written over a direct connection,
-    // as every staff row is (D28).
+    // as every staff row is.
     await pg.query(
       `insert into public.platform_staff (user_id, name, capabilities)
        values ($1, 'Inspector', array['platform.organizations'])`,

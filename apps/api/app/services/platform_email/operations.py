@@ -5,7 +5,7 @@ this reaches and *what it says* is derived here: the recipient from the invitati
 caller's own token can see (the same `role.manage` capability `invite_member` and
 `revoke_invitation` already require), the subject and body from one fixed template this platform
 writes once. `link` is the one thing only `apps/web` can supply, because only it just minted the
-plaintext token that makes the link work (D33: the token is hashed at rest and returned exactly
+plaintext token that makes the link work (the hashed-token rule: the token is hashed at rest and returned exactly
 once, to the caller who created it) -- never a `to`, never free text, so this is not an open relay
 a signed-in caller could point at an arbitrary address with arbitrary words.
 

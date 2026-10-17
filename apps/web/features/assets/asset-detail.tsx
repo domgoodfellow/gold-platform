@@ -106,7 +106,7 @@ export function AssetDetail({
           )}
 
           {/* Hiding it is a courtesy, not the guard: `asset_readings_insert` requires
-              asset.create in the database (I12). */}
+              asset.create in the database. */}
           {mayRecord ? (
             <RecordReadingForm
               organizationId={organizationId}

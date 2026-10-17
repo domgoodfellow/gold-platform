@@ -1,7 +1,7 @@
 """Answering a question about a business, named as a capability rather than as a provider.
 
 The third capability contract in this runtime, beside `app.channels` and `app.conditions`, and
-it holds the same line for the same reason (I15): everything above this file asks for *the next
+it holds the same line for the same reason: everything above this file asks for *the next
 turn of a conversation*, and exactly one module per provider knows who is being asked.
 
 **The loop is not in here, and that is the load-bearing part.** `app.ai.loop` owns iteration,
@@ -9,7 +9,7 @@ tool dispatch, the cap and the record; a provider answers one question and stops
 alternative is to build on a vendor SDK's own tool-running helper, which is genuinely less code
 -- and it puts the loop inside one vendor's convenience wrapper, so the day a business runs a
 local model there are two loops, two dispatch paths, and an `agent_runs` row that means
-different things depending on who answered. `constraints.md` D34 records that decision.
+different things depending on who answered. The AI-tool architecture (ADR-018) records that decision.
 
 **What a capability may not leak.** No type here carries a model name, a finish reason, a role
 string or a vendor's identifier for a tool call. The one number it does carry is `ModelUsage`:
@@ -24,7 +24,7 @@ proposal.
 sentence and a JSON schema; what runs is `public.work_at_risk` and the tools after it, `stable`
 and `security invoker`, under the caller's own token. Nothing in this package writes SQL, and
 nothing in it does arithmetic on an answer -- both of those are how a second domain layer starts
-(I4, I5).
+.
 """
 
 from __future__ import annotations

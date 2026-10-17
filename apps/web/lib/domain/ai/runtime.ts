@@ -5,7 +5,7 @@ import { DomainError } from '@/lib/domain/errors';
  * Which Provider Service, Provider Account and model answers one AI capability.
  *
  * **GOLD-owned and platform-wide, like a Provider Account itself.** A tenant bringing its own
- * model key is a different feature with a different record (D33) — nothing here carries an
+ * model key is a different feature with a different record — nothing here carries an
  * `organizationId`. Three capabilities exist today because three callers actually resolve one:
  * `operator_assistant` (`apps/api/api/ai_ask.py`), `public_assistant`
  * (`apps/api/api/public_chat.py`) and `configuration_drafting`

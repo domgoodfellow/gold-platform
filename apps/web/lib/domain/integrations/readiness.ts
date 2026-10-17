@@ -4,7 +4,7 @@ import { DomainError } from '@/lib/domain/errors';
 
 /**
  * Whether this deployment can connect each app — asked of `apps/api`, which holds the adapters and
- * the vendor registrations, and never answered here from a list of keys (I15, one axis over).
+ * the vendor registrations, and never answered here from a list of keys (the no-vendor-SDK-in-domain rule, one axis over).
  *
  * Three independent facts decide whether a business is offered Connect: the catalogue's product
  * status (`connectors.ts`), this deployment readiness, and — once connected — the business's own

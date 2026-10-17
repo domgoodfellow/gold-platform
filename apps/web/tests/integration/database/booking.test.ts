@@ -21,20 +21,20 @@ import { listWorkItems } from '@/lib/domain/work-items/work-items';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * D22's axis, and the first surface that pays for it.
+ * The anonymous-session model's axis, and the first surface that pays for it.
  *
  * Every other suite here signs in as a member. This one is mostly a stranger — somebody who
  * holds no membership, no role and no capability, and who must nonetheless be able to see what
  * a business publishes and commit it to a time.
  *
  * **The assertion that carries the whole record is `app.current_tenant_ids()` staying empty.**
- * D22 rejected a membership row with a `customer` role as "by far the cheapest" and "also the
+ * The anonymous-session model rejected a membership row with a `customer` role as "by far the cheapest" and "also the
  * leak", because a membership puts an outsider inside that function's result and every table's
  * policies then return rows to them. So the test does not merely check that a stranger cannot
  * read the wrong thing; it checks that the mechanism which would make them able to has not
  * been used, at every point including the ones where they successfully wrote.
  *
- * **I6 is proved here rather than described.** The slot is read, a second party takes it, and
+ * **The advisory-availability rule is proved here rather than described.** The slot is read, a second party takes it, and
  * the booking is committed against the stale answer — which is refused by the exclusion
  * constraint in the transaction that would have written it. Nothing checks first, because a
  * check before an insert races identically.
@@ -166,7 +166,7 @@ describe('booking, by somebody who is a member of nothing', () => {
   it('is reached by a name the business chose, not by its tenant id', async () => {
     // The booking surface first shipped at `/book/{organizationId}`, which published a tenant
     // id and — worse — let a path segment decide which business an anonymous visitor was bound
-    // to. D17 says a segment is routing convenience and never an authorization input; under
+    // to. The tenant-isolation rule says a segment is routing convenience and never an authorization input; under
     // `/organizations/[organizationId]` that holds because RLS re-derives membership, and out
     // here there is no membership to re-derive against.
     const anonymous = anonClient();
@@ -218,7 +218,7 @@ describe('booking, by somebody who is a member of nothing', () => {
     ).rejects.toMatchObject({ code: 'organizations.slug_invalid' });
   });
 
-  it('is in no tenant at all, which is the whole of D22', async () => {
+  it('is in no tenant at all, which is the whole of the anonymous-session model', async () => {
     const db = await visitor(pneu.organizationId);
 
     // The rejected design was a membership row with a `customer` role. This is the assertion
@@ -260,7 +260,7 @@ describe('booking, by somebody who is a member of nothing', () => {
   it('is never told who anyone is', async () => {
     const db = await visitor(pneu.organizationId);
 
-    // A resource can be a person (D19). A stranger learns that something is free, never who.
+    // A resource can be a person. A stranger learns that something is free, never who.
     const { data: named } = await db.from('resources').select('id, name');
     expect(named ?? []).toEqual([]);
 
@@ -285,7 +285,7 @@ describe('booking, by somebody who is a member of nothing', () => {
 
     // 09:00, 10:00, 11:00 local — three hour-long slots in a three-hour morning. Nothing
     // outside it, because operating hours are subtracted by the same calculation the operator
-    // sees (I5) rather than by a second one written for this page.
+    // sees rather than by a second one written for this page.
     expect(slots).toHaveLength(3);
     const local = new Intl.DateTimeFormat('en-GB', { timeStyle: 'short', timeZone: ZONE });
     expect(slots.map((slot) => local.format(new Date(slot.startsAt)))).toEqual([
@@ -322,7 +322,7 @@ describe('booking, by somebody who is a member of nothing', () => {
     expect(booked.customer?.label).toBe('Ariane Blais');
     expect(booked.window).not.toBeNull();
 
-    // Priced from the catalogue by the same copy every quote gets (I4, I8) — the visitor
+    // Priced from the catalogue by the same copy every quote gets — the visitor
     // never sent an amount, and could not have.
     const lines = await listPricedLines(pneu.db, {
       organizationId: pneu.organizationId,
@@ -331,7 +331,7 @@ describe('booking, by somebody who is a member of nothing', () => {
     expect(priceWorkItem(lines)).toEqual({ totalMinor: 12_000, currency: 'CAD' });
   });
 
-  it('is advisory, and the constraint is the re-assertion (I6)', async () => {
+  it('is advisory, and the constraint is the re-assertion', async () => {
     const db = await visitor(pneu.organizationId);
     const [type] = await listBookableTypes(db, { organizationId: pneu.organizationId });
 
@@ -504,7 +504,7 @@ describe('booking, by somebody who is a member of nothing', () => {
     const db = await visitor(pneu.organizationId);
 
     // The unique index is on `user_id` alone — deliberately not led by `organization_id`, which
-    // is the one place in this schema I2's shape would be wrong. Leading with the tenant would
+    // is the one place in this schema tenant isolation's shape would be wrong. Leading with the tenant would
     // permit exactly this row, and `app.current_external_tenant()` would then have a set.
     const { data: user } = await db.auth.getUser();
     const { error } = await db
@@ -553,8 +553,8 @@ describe('booking, by somebody who is a member of nothing', () => {
     expect(hours).not.toBeNull();
   });
 
-  it('leaves the booking attributable (I11)', async () => {
-    // An anonymous visitor is still a genuine `auth.users` row, which is why I11 needed no
+  it('leaves the booking attributable', async () => {
+    // An anonymous visitor is still a genuine `auth.users` row, which is why actor attribution needed no
     // second shape. The business can see that somebody booked, and when.
     const { data } = await pneu.db
       .from('events')

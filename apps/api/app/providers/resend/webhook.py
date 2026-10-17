@@ -1,4 +1,4 @@
-"""Verifying a Resend webhook before anything in its body is trusted (D56, restated for a stranger).
+"""Verifying a Resend webhook before anything in its body is trusted (the vendor-shape-stays-at-the-edge rule, restated for a stranger).
 
 **Resend signs its webhooks the way Svix does** -- three headers (`svix-id`, `svix-timestamp`,
 `svix-signature`) over the exact bytes that arrived, never the parsed JSON (a reformatted body
@@ -104,7 +104,7 @@ def _event_at(body: dict) -> datetime | None:
 
 def parse_event(body: dict) -> dict | None:
     """Resend's own event shape, turned into `{message_id, state, detail, event_at}` -- or `None`
-    for an event type this platform does not track (D56: the vendor's shape goes no further than
+    for an event type this platform does not track (the vendor-shape-stays-at-the-edge rule: the vendor's shape goes no further than
     this file). A webhook handler records nothing for `None`, which is a 200, not a refusal: an
     event this platform does not act on is not a failure to understand it."""
     if not isinstance(body, dict):

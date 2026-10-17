@@ -43,7 +43,7 @@ function groupedRequirements(): [string, DiscoveryRequirement[]][] {
 
 /**
  * What GildOps has learned about this customer before they have their own organization —
- * or what any business using this screen has learned about theirs (I61). Editable as one form
+ * or what any business using this screen has learned about theirs. Editable as one form
  * rather than field-by-field, because a discovery conversation is written up in one sitting, not
  * corrected one line at a time — the shape a salesperson running this during a call needs.
  */

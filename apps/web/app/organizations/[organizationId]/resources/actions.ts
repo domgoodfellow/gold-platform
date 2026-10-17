@@ -97,7 +97,7 @@ export type SetResourceMembershipState = { error: string | null };
 /**
  * Link, change or clear the Membership a Resource represents. Not gated a second time here —
  * `resources_update` requires `resource.update`, so a caller without it is refused by the
- * database whether it arrives through this action or a direct RPC call (I12).
+ * database whether it arrives through this action or a direct RPC call.
  */
 export async function setResourceMembershipAction(
   _previous: SetResourceMembershipState,

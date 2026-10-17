@@ -1,7 +1,7 @@
 /**
  * Library is one destination with several internal sections — Files, Media, Templates, Knowledge,
  * Collections, Sources, Imports and Trash — reached from Library's own navigation rather than a second
- * permanent sidebar (docs/ui-spec.md: Library is shared organization infrastructure, never a
+ * permanent sidebar (`docs/ui-system.md`: Library is shared organization infrastructure, never a
  * workspace). This registry exists so the one tab bar every section renders (`LibraryNav`) cannot
  * disagree with itself about where a section lives.
  */

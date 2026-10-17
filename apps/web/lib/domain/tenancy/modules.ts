@@ -10,9 +10,9 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 import { getOrganization } from '@/lib/domain/tenancy/organizations';
 
 /**
- * What a business has switched on — a row, never a directory (D25). Not authorization and must
+ * What a business has switched on — a row, never a directory. Not authorization and must
  * never become it: no RLS policy consults this. A role that lacks a capability is told why
- * (I12); a module the business hasn't enabled is simply absent, because it isn't part of that
+ *; a module the business hasn't enabled is simply absent, because it isn't part of that
  * business.
  */
 
@@ -47,9 +47,9 @@ export async function listEnabledModules(
 }
 
 /**
- * What a business wants **and** has currently paid for (D41) — the wanted∩paid intersection,
+ * What a business wants **and** has currently paid for — the wanted∩paid intersection,
  * computed by `public.usable_modules`. This is what a screen or a presentation-level gate should
- * ask: D41's "screens hidden, nothing deleted" is a rendering rule, not an operational one, and
+ * ask: the wanted-versus-paid entitlement rule's "screens hidden, nothing deleted" is a rendering rule, not an operational one, and
  * `listEnabledModules` above still answers the operational question unchanged.
  */
 export async function listUsableModules(
@@ -89,7 +89,7 @@ export async function listModuleSettings(
 /**
  * Switch a module on or off. Off is a deleted row, not a false flag, so re-enabling always
  * writes a fresh `enabled_at`. Turning a module off never deletes anything it produced — the
- * history stays even after the page goes away (I8's reasoning one level up).
+ * history stays even after the page goes away (the preserved-history rule's reasoning one level up).
  */
 export async function setModuleEnabled(
   db: Db,
@@ -156,7 +156,7 @@ export const MODULES_WITH_READINESS_CHECK: ReadonlySet<ModuleKey> = new Set<Modu
 ]);
 
 /**
- * What a business still has to do before a module it has switched on does anything (D31). A
+ * What a business still has to do before a module it has switched on does anything. A
  * link alone still lets a business believe it's finished — card payments on, nothing connected
  * behind it — so an enabled module is also checked against what it actually needs to work.
  * Answers only for modules that are on; describes application state only, never a claim on the

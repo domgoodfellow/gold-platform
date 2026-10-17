@@ -53,7 +53,7 @@ def wrap_up_call(
 
     Callable independently of any web request, on the same terms `change_customer_stage` is: an
     AI call-summary tool or a worker reaching this later reuses exactly this write rather than a
-    second copy of it (D34's reasoning; `ai_call_summary` and `ai_receptionist` are catalogue
+    second copy of it (the AI-tool architecture's reasoning; `ai_call_summary` and `ai_receptionist` are catalogue
     Features this repository has not built yet, and this is the seam they would call through).
     """
     if not command.organization_id or not command.call_id:

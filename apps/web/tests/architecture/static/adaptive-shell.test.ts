@@ -28,7 +28,7 @@ describe('hiding a navigation item is never the security boundary', () => {
 
   it('every platform page asks for its own area, with the permission the registry assigns its path', () => {
     // A layout is not re-rendered on every client navigation and renders beside its page, so the page
-    // guards itself (I12) exactly as an organization page does. The catch-all only throws notFound().
+    // guards itself exactly as an organization page does. The catch-all only throws notFound().
     const root = `${WEB}/app/organizations/[organizationId]/platform`;
     const pages: string[] = [];
     const walk = (dir: string) => {

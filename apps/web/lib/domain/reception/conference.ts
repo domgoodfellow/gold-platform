@@ -5,7 +5,7 @@ import { actingTelephonyAccount } from '@/lib/domain/reception/calls';
 import { currentMembershipId } from '@/lib/domain/reception/inbox';
 
 /**
- * Operations on a participant already in a room — the half of D38 a conference existing does not
+ * Operations on a participant already in a room — the half of the conference-call design a conference existing does not
  * give you for free. Everything here changes one leg; the conference itself, and every other leg
  * in it, is untouched by any one of these.
  *
@@ -154,7 +154,7 @@ const E164 = /^\+[1-9][0-9]{7,14}$/;
 /**
  * Ring another party into a conference that already exists — an additional agent, a supervisor
  * listening in, or a transfer's destination. The room is not created here; it already has a
- * customer and an agent in it, or this call would not exist (D38, `open_call`). The party is
+ * customer and an agent in it, or this call would not exist (the conference-call design, `open_call`). The party is
  * recorded before the carrier is asked, so a telephone ringing is always one something knows about;
  * if the carrier refuses, the party is withdrawn again and the call carries on as it was.
  */
@@ -219,7 +219,7 @@ export async function addCallParticipant(
 }
 
 /**
- * End one leg. The conference survives for everybody still in it — the entire reason D38 chose a
+ * End one leg. The conference survives for everybody still in it — the entire reason the conference-call design chose a
  * room over a two-party line: leaving is one operation on one participant, not a second call.
  * Turning off "ends the room when this leg leaves" first is what makes that true of the agent
  * who started it.

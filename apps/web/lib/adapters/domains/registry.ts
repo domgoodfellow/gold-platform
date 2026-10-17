@@ -13,7 +13,7 @@ export function domainProvider(input: { token: string }): DomainProvider {
 
 /**
  * The hosting provider GildOps attaches tenant hostnames at, for the Platform screens that
- * configure its account. Route and adapter code may name it; `lib/domain/` never does (I15).
+ * configure its account. Route and adapter code may name it; `lib/domain/` never does.
  */
 export function domainHostingProviderKey(): string {
   return 'vercel';

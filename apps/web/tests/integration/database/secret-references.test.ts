@@ -122,7 +122,7 @@ describe('a business sees its own references and nobody else’s', () => {
     expect(seen.data).toEqual([]);
   });
 
-  it('shows platform staff nothing: staff may not reach into a business that exists (I21)', async () => {
+  it('shows platform staff nothing: staff may not reach into a business that exists', async () => {
     const seen = await staff.from('secret_references').select('id, key').eq('organization_id', alice.organizationId);
     expect(seen.data ?? []).toEqual([]);
   });

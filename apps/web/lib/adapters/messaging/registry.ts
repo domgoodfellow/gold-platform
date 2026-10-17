@@ -4,7 +4,7 @@ import type { MessagingProvider } from './index';
  * Which implementation this deployment uses — the one file outside an implementation that names
  * a carrier, exactly as `../telephony/registry.ts` is for calling.
  *
- * `null` when nothing is configured, the same D31 reasoning `telephonyProvider` states: a
+ * `null` when nothing is configured, the same no-dead-end reasoning `telephonyProvider` states: a
  * deployment that cannot send yet must say so, never silently do nothing.
  */
 export async function messagingProvider(): Promise<MessagingProvider | null> {

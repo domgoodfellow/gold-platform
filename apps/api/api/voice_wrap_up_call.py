@@ -4,9 +4,9 @@
 four `voice_*` files here answer Twilio; this one answers `apps/web` on behalf of somebody who
 just hung up. Same authorization story as `crm_change_customer_stage.py` and `ai_ask.py`:
 `record_call_outcome` is `security invoker`, so `calls_update` (capability `call.place`) is what
-actually decides the write, under the caller's own forwarded token (D17, D34).
+actually decides the write, under the caller's own forwarded token.
 
-Vercel's Python runtime routes a file under `api/` to a path (D24). One file, one route.
+Vercel's Python runtime routes a file under `api/` to a path. One file, one route.
 """
 
 from __future__ import annotations

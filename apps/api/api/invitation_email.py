@@ -6,7 +6,7 @@ exact invitation by letting RLS answer, resolves GildOps' own Resend credential 
 role no human session can wear, and builds the email itself from a fixed template -- never from a
 subject or body this handler received.
 
-Vercel's Python runtime routes a file under `api/` to a path (D24). One file, one route.
+Vercel's Python runtime routes a file under `api/` to a path. One file, one route.
 """
 
 from __future__ import annotations

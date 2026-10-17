@@ -27,7 +27,7 @@ function when(value: string | null): string {
 
 /**
  * Support's view of what a business has connected: which app, which account, granted scopes and
- * health. It shows whether a credential is held and never the credential (D55) — the read goes
+ * health. It shows whether a credential is held and never the credential — the read goes
  * through a staff-checked door that has no column able to carry one.
  */
 export default async function TenantIntegrations({ params }: PageProps<'/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/integrations'>) {

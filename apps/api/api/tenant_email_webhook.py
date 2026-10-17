@@ -13,7 +13,7 @@ rather than the message being lost. Anything already recorded is acknowledged wi
 recorded again (`record_email_event` and `record_inbound_email` are both idempotent on the
 provider's own identifiers).
 
-Vercel's Python runtime routes a file under `api/` to a path (D24). No framework, one file, one route.
+Vercel's Python runtime routes a file under `api/` to a path. No framework, one file, one route.
 """
 
 from __future__ import annotations

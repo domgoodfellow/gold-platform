@@ -7,7 +7,7 @@ export type PageHeaderCrumb = PageLocationCrumb;
 
 /**
  * One available page-identity composition — title, optional metadata, actions and support modes —
- * built on `PageLocation` (`docs/ui-spec.md` §2a). It is not the required representation of every
+ * built on `PageLocation` (`docs/ui-system.md`). It is not the required representation of every
  * page: a screen pattern under `components/patterns/` may publish `PageLocation` directly and draw
  * its own identity where this generic title-row shape does not fit the task.
  *
@@ -39,7 +39,7 @@ export type PageHeaderCrumb = PageLocationCrumb;
  *
  * **There is no generic `description` prop.** A sentence restating what a screen is for, placed
  * under every title whether or not it earned the space, is exactly the sameness Phase B retires —
- * see `docs/ui-spec.md` §2a and §2d. Explanatory text belongs beside the content it explains, in a
+ * see `docs/ui-system.md`. Explanatory text belongs beside the content it explains, in a
  * workspace-home's own structure, or nowhere; `meta` remains for short factual metadata (a
  * schedule window, a status), never a restated purpose sentence.
  */

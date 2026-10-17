@@ -10,7 +10,7 @@ import { publicProfile } from '@/lib/domain/tenancy/profile';
 
 /**
  * What is currently public for this business, and what needs attention — the read Studio's Home
- * summarizes. One projection over state that already exists elsewhere (I4/I5's reasoning extended
+ * summarizes. One projection over state that already exists elsewhere (the one-calculation rule and the single availability model's reasoning extended
  * to a summary screen): nothing here is a second website, brand, booking or portal model, and
  * nothing is stored — every figure is recomputed from its own domain's source of truth.
  */

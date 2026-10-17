@@ -22,12 +22,12 @@ import { createWorkItem } from '@/lib/domain/work-items/work-items';
 import { BUSINESSES, DEMO_PASSWORD, type DemoBusiness, type DemoJob } from './businesses';
 
 /**
- * A populated pair of businesses, in one command. D37 holds the decisions.
+ * A populated pair of businesses, in one command.
  *
  * **Nothing here is seeded.** Every line below is a real domain call under a real session, so a
- * fresh database stays genuinely empty until somebody runs this on purpose — which is what
- * `walkthrough.md` means when it says an empty organization is the product working. The only SQL
- * is the `platform_staff` row, because no application path may write one (D28).
+ * fresh database stays genuinely empty until somebody runs this on purpose — which is the
+ * point: an empty organization is the product working. The only SQL
+ * is the `platform_staff` row, because no application path may write one.
  *
  * **There is no branch on which business this is holding**, and that is the property that makes
  * the script evidence rather than only a convenience. Everything that differs lives in
@@ -220,7 +220,7 @@ async function standUp(
   // below, and the point of the account is that somebody can sign in as them afterwards.
   void memberDb;
 
-  // GOLD creates the business; whoever is inside it does the configuring (D29). Two acts, two
+  // GOLD creates the business; whoever is inside it does the configuring. Two acts, two
   // parties, and the second one is `configureBusiness` — which this script is the first caller of
   // from outside the test suite.
   const organizationId = await provisionOrganization(staff, {
@@ -232,10 +232,10 @@ async function standUp(
   });
 
   // Modules are part of the shape now, so `configureBusiness` switches them on — one path,
-  // the same one a proposal takes (D37).
+  // the same one a proposal takes.
   const configured = await configureBusiness(ownerDb, organizationId, business.shape);
 
-  // **D41's own trigger, applied to this script.** Only `billing` and `drafting` carry a term
+  // **The wanted-versus-paid entitlement rule's own trigger, applied to this script.** Only `billing` and `drafting` carry a term
   // from founding (`app.grant_founding_terms`); anything else a shape names sits wanted-but-
   // unpaid until GOLD records one. A demo business is meant to be seen fully working, so the
   // staff session that just provisioned it also records a term for whatever else it switched
@@ -325,7 +325,7 @@ async function standUp(
     );
   }
 
-  // **Saved reports and a dashboard**, because M7's machinery *is* a definition and a pin, and a
+  // **Saved reports and a dashboard**, because the reporting machinery *is* a definition and a pin, and a
   // demo that stopped at the ad-hoc screen would leave both invisible in the one command that
   // exists so somebody can look at them.
   const reportIds: string[] = [];
@@ -363,7 +363,7 @@ async function standUp(
 
   // Three months of jobs, invoices and reports is not a business "still being set up" — the
   // real path a person building one of these by hand would have launched it long before now,
-  // and D37 says this script takes the real path, not a shortcut around it.
+  // and the demo-seed decision says this script takes the real path, not a shortcut around it.
   await launchOrganization(ownerDb, { organizationId });
 
   return { organizationId };
@@ -392,7 +392,7 @@ async function main(): Promise<void> {
     }
 
     // The staff row goes in over a direct connection because nothing in the application may write
-    // one (D28), and it goes in *before* the sign-in below, because the role claim is minted at
+    // one, and it goes in *before* the sign-in below, because the role claim is minted at
     // sign-in and promoting somebody afterwards does not refresh their token.
     const staffEmail = 'staff@gold.test';
     const { data: created, error } = await admin().auth.admin.createUser({

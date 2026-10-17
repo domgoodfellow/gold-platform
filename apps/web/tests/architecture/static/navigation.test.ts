@@ -80,7 +80,7 @@ describe('the operator shell navigation', () => {
     expect(new Set(labels).size).toBe(labels.length);
   });
 
-  it('gives every area an icon for the tablet rail (M11)', () => {
+  it('gives every area an icon for the tablet rail', () => {
     // The rail renders icon-only between `md` and `lg` — an area with no entry here would
     // render blank rather than failing loudly.
     for (const area of AREAS.filter((entry) => entry.sidebar !== false)) {
@@ -116,14 +116,14 @@ describe('the operator shell navigation', () => {
     expect(currentSegment('/organizations/org-1/documents/doc-1/download')).toBeNull();
   });
 
-  it('keeps each section contiguous and in AREA_GROUPS order (D23)', () => {
+  it('keeps each section contiguous and in AREA_GROUPS order', () => {
     // "An operator must never reach today's work by going through settings." The order used
-    // to carry that claim and nothing held it, which made it the accident D23 says a later
+    // to carry that claim and nothing held it, which made it the accident the UI system says a later
     // contributor would be free to tidy away. The sidebar rules between the two groups, so
     // an interleaved list would render a divider in the middle of the operational half.
     // Each section appears as one unbroken run, and the runs come in the declared order. The
     // sidebar rules between sections, so an interleaved list would draw a divider through the
-    // middle of one — and D23's rule, that an operator never reaches today's work by going
+    // middle of one — and the UI system's rule, that an operator never reaches today's work by going
     // through settings, is the first and last entries of that order.
     const order = AREA_GROUPS.map((group) => group.key);
     const runs = AREAS.map((area) => area.group).filter(
@@ -154,7 +154,7 @@ describe('the operator shell navigation', () => {
   it('registers every workspace and draws a row for only those with a page', () => {
     // The registry is the target taxonomy in the customer's order; visibility is derived from pages,
     // never a flag on the workspace and never an entitlement. Insights is not registered here at
-    // all — it is cross-cutting, not a ninth workspace (D66).
+    // all — it is cross-cutting, not a ninth workspace.
     expect(WORKSPACES.map((workspace) => workspace.key)).toEqual([
       'crm', 'communications', 'marketing', 'support', 'field', 'finance', 'automations', 'ai', 'studio',
     ]);
@@ -221,7 +221,7 @@ describe('the operator shell navigation', () => {
     expect(['comms', 'calls', 'comms-inbox', 'comms-numbers'].map(owner)).toEqual(['communications', 'communications', 'communications', 'communications']);
     expect(['automations', 'automation-rules'].map(owner)).toEqual(['automations', 'automations']);
     expect(owner('pricing')).toBe('finance');
-    // Insights is cross-cutting, not a workspace (D66) — it belongs to no one workspace either.
+    // Insights is cross-cutting, not a workspace — it belongs to no one workspace either.
     expect(owner('insights')).toBeUndefined();
     expect(['work', 'schedule', 'resources', 'locations', 'assets'].map(owner)).toEqual(Array(5).fill('field'));
     // Home is the cross-workspace cockpit and the cross-cutting configuration areas are nobody's.
@@ -233,7 +233,7 @@ describe('the operator shell navigation', () => {
     expect(configOwner('pricing')).toBe('finance');
     expect(configOwner('communications')).toBe('communications');
     expect(configOwner('team')).toBeUndefined();
-    // Website earned its own operating page (D68): it is an `Area`, not a `ConfigTarget`, and the
+    // Website earned its own operating page: it is an `Area`, not a `ConfigTarget`, and the
     // Settings map names nothing by this key any more.
     expect(configOwner('website')).toBe('studio');
     expect(AREAS.find((area) => area.segment === 'studio-website')?.workspace).toBe('studio');
@@ -328,7 +328,7 @@ describe('organizationHomeHref', () => {
  * `MODULES` is what a business is offered and billed for; `AREAS` is what it then sees. A
  * module owning no area is a line on an invoice with no product behind it. An area owned by no
  * module is a screen nobody can switch off, which is the state the whole platform was in
- * before this — see `constraints.md` D25 and `roadmap.md` M3.
+ * before this — see ADR-006.
  */
 describe('modules', () => {
   it('offers no module that owns nothing', () => {
@@ -354,7 +354,7 @@ describe('modules', () => {
     // filter below could never remove an entry — module enablement shipped inert and no test
     // noticed, because every assertion was about the two lists agreeing rather than about the
     // feature doing anything. An area owned by an optional module is what makes the switch
-    // real, and `roadmap.md` M4 named the caller: an operator who does not want Assets.
+    // real, and the roadmap named the caller: an operator who does not want Assets.
     const optional = AREAS.filter((area) => area.module);
     expect(optional.length).toBeGreaterThan(0);
 
@@ -381,7 +381,7 @@ describe('modules', () => {
     }
     // And the two that are modules are gone. This is a module gate, not the capability-relevance
     // layer Slice E added: a role that cannot manage locations still sees Locations and is told
-    // why (I12, evolved — most areas stay ungated on capability), whereas a module the business
+    // why (the UI-is-not-authorization rule, evolved — most areas stay ungated on capability), whereas a module the business
     // never bought is not part of that business at all. `assets` is absent here
     // purely because its module is off, independent of any capability.
     expect(shown.map((area) => area.segment)).not.toContain('assets');
@@ -406,7 +406,7 @@ describe('modules', () => {
 });
 
 /**
- * Canonical Feature-level gating (M17 closure slice). `Area.featureKeys` and
+ * Canonical Feature-level gating. `Area.featureKeys` and
  * `availableFeatureKeys(organizationResolvedFeatureStates(...))` are what let one area resolve
  * against the *specific* canonical Feature(s) it is the surface for, rather than the coarser
  * legacy `ModuleKey` several Features can share. No database here — these are properties of the
@@ -499,7 +499,7 @@ describe('canonical Feature-level navigation gating', () => {
   });
 
   it('proves the shared-module granularity fix: a sibling Feature staying active must not keep a different area visible', () => {
-    // The real production seam (D46): `pipeline`, `configurable_stages` and `qualification_state`
+    // The real production seam: `pipeline`, `configurable_stages` and `qualification_state`
     // (the CRM pipeline, which Customers reads) share the legacy `reception` module key with
     // `inbound_calling`/`outbound_calling`/`recording`/`call_dispositions` (Calls). A raw
         // module-key gate (`activeModuleKeys`) reports `reception` as "active" as long as any one of
@@ -539,7 +539,7 @@ describe('capability-relevance filtering (Slice E)', () => {
   it('leaves every kernel and general operational area visible to any role', () => {
     // Today, Work, Schedule, Customers and the rest of the areas nobody assigned no
     // `relevantCapabilities` — a role with zero capabilities still sees them, exactly as before
-    // this field existed (I12).
+    // this field existed.
     const noCapabilities = new Set<Capability>();
     const shown = AREA_GROUPS.flatMap((group) => areasIn(group.key, undefined, noCapabilities));
     for (const segment of ['home', 'work', 'schedule', 'customers', 'locations', 'settings']) {
@@ -576,7 +576,7 @@ describe('capability-relevance filtering (Slice E)', () => {
     expect(withModuleOnly.map((area) => area.segment)).toContain('automation-rules');
   });
 
-  it('Insights is never in the sidebar, whatever the module or capability — it is reached contextually, not as a row (D66)', () => {
+  it('Insights is never in the sidebar, whatever the module or capability — it is reached contextually, not as a row', () => {
     expect(AREAS.find((area) => area.segment === 'insights')?.sidebar).toBe(false);
     const everything = areasIn('workspaces', new Set(['reporting']), new Set(['report.read', 'report.manage']));
     expect(everything.map((area) => area.segment)).not.toContain('insights');
@@ -586,7 +586,7 @@ describe('capability-relevance filtering (Slice E)', () => {
 /**
  * Where a module is configured, and why a link is a test rather than a convention.
  *
- * **D31, and the failure it was written from.** Card payments could be switched on while the
+ * **The no-dead-end rule, and the failure it was written from.** Card payments could be switched on while the
  * section that connects an account was not rendered at all: `paymentProvider()` answers null on
  * a deployment holding no processor keys, and the whole *Getting paid* section sat behind that.
  * A business turned the switch on and its settings page said nothing. That is the same class of
@@ -686,7 +686,7 @@ describe('a switch leads to its inputs', () => {
 
   it('gates the asset reference on a job on the assets module, on both the board and the job page', () => {
     // The same rule as above, one module over: an asset is what the Assets module owns on a
-    // job screen, and D25 says a module hides what it owns everywhere. This one was found by
+    // job screen, and the module-visibility rule says a module hides what it owns everywhere. This one was found by
     // the product reality audit rather than caught at the time — the asset picker and badge
     // rendered regardless of whether a business had switched Assets off at all.
     const work = `${readFileSync(`${ROUTES}/work/page.tsx`, 'utf8')}\n${readFileSync(`${WEB_ROOT}/features/work/work-list.tsx`, 'utf8')}`;
@@ -854,7 +854,7 @@ describe('Guided Setup is no longer a permanent sidebar destination', () => {
     expect(area, 'setup was removed from AREAS entirely').toBeDefined();
     expect(areaHref('org-1', 'setup')).toBe('/organizations/org-1/setup');
 
-    // D31's own link for the drafting module still resolves — nothing about `MODULES` or
+    // The no-dead-end rule's own link for the drafting module still resolves — nothing about `MODULES` or
     // `configuredAt` changed, only where a person finds the sidebar row that used to point here.
     const drafting = MODULES.find((sold) => sold.key === 'drafting')!;
     expect(moduleConfiguration('org-1', drafting)).toEqual({
@@ -933,7 +933,7 @@ describe('the organization shell taxonomy', () => {
 
   it('adds no workspace whose surface does not exist yet', () => {
     // Financials, Website & Portal are target vocabulary, not rows: nothing operates them as a
-    // workspace today (see docs/ui-spec.md). Library is shared infrastructure rather than a
+    // workspace today (see `docs/ui-system.md`). Library is shared infrastructure rather than a
     // workspace, and has its own shell — see 'the Library area' below. A row appears with its
     // real route.
     for (const absent of ['financials', 'website', 'documents']) {
@@ -974,7 +974,7 @@ describe('the organization shell taxonomy', () => {
 
 /**
  * Library: shared organization infrastructure, never a workspace (docs/domain-model.md,
- * constraints.md D60/D68, docs/ui-spec.md). Ruled apart from Home and from Workspaces, one row
+ * the navigation rules (`docs/ui-system.md`)/the navigation rules, `docs/ui-system.md`). Ruled apart from Home and from Workspaces, one row
  * today — its internal destinations (Files, Media, Templates, Knowledge, Collections, Sources,
  * Trash) are reached from Library's own page, not a second permanent sidebar.
  */
@@ -1008,7 +1008,7 @@ describe('the Library area', () => {
 });
 
 /**
- * URL-addressable sibling views are navigation, never actions (`docs/ui-spec.md` §5b) — a
+ * URL-addressable sibling views are navigation, never actions (`docs/ui-system.md`) — a
  * product contract, not a placement rule. `ViewNav`'s own visual position inside a page is a
  * pattern/default and is not pinned here.
  */

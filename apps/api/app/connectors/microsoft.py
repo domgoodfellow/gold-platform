@@ -1,4 +1,4 @@
-"""Microsoft 365: one Microsoft sign-in, reaching Calendar and OneDrive (D56).
+"""Microsoft 365: one Microsoft sign-in, reaching Calendar and OneDrive.
 
 Implements exactly the contract `base.OAuthProvider` gives Google, and differs where Microsoft
 does: it always rotates the refresh token, has no per-token revocation endpoint, and names its

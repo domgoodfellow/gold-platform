@@ -21,7 +21,7 @@ import { foundBusiness } from '@/tests/support/founding';
 /**
  * What a tool is, and what keeps one from reading a row its caller could not.
  *
- * `constraints.md` D34 holds the reasoning. Two halves are asserted here and they are not the
+ * The AI-tool architecture (ADR-018) holds the reasoning. Two halves are asserted here and they are not the
  * same claim:
  *
  *   * **A tool cannot write, and cannot see past the person who called it.** Not because the
@@ -35,7 +35,7 @@ import { foundBusiness } from '@/tests/support/founding';
  *     model made up. The test below hands one business's id to another business's session and
  *     to a portal customer, and gets nothing back both times.
  *
- * **No model is called here, deliberately.** What D34 decides is structural, and a test that
+ * **No model is called here, deliberately.** What the AI-tool architecture decides is structural, and a test that
  * asked a provider would be asserting somebody else's judgement, slowly and for money. The loop
  * has its own tests in `apps/api`, which are not in the gate — `apps/api/README.md` names that
  * gap, and it is the reason everything load-bearing is asserted from this side.
@@ -71,7 +71,7 @@ function anonClient(): SupabaseClient {
  * Every Postgres function the tool registry names.
  *
  * **Read out of the Python source rather than restated here**, because a list of tool names
- * maintained on both sides of the seam is the hand-kept mirror D2 refuses by name. There is one
+ * maintained on both sides of the seam is the hand-kept mirror the web/API runtime split refuses by name. There is one
  * registry, it lives where the loop lives, and this file reads it.
  */
 function registeredTools(): string[] {
@@ -121,7 +121,7 @@ async function newBusiness(label: string): Promise<Business> {
   });
 
   // Each business's own words, and they share none. What the tool reports back is the tenant's
-  // status name rather than a platform one, which is the same claim M3 makes about configuring.
+  // status name rather than a platform one, which is the same claim configuration makes.
   const typeId = await createWorkItemType(db, { schedulable: true,
     organizationId,
     name: label === 'tool-yard' ? 'Verhuur' : 'Shinsatsu',
@@ -220,7 +220,7 @@ async function askQuiet(db: SupabaseClient, organizationId: string, days: number
   }[];
 }
 
-describe('a tool is a function in this database (D34)', () => {
+describe('a tool is a function in this database', () => {
   beforeAll(async () => {
     if (!ANON_KEY || !SERVICE_ROLE_KEY) {
       throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
@@ -366,7 +366,7 @@ describe('a run is recorded, and only its asker may read it', () => {
       .single();
   }
 
-  it('holds no foreign key to anything it read (I8)', async () => {
+  it('holds no foreign key to anything it read', async () => {
     const client = new Client({ connectionString: CONNECTION });
     await client.connect();
     try {
@@ -502,7 +502,7 @@ describe('a run is recorded, and only its asker may read it', () => {
  * overlap constraint and the buffer are all the ordinary ones — a suggestion is not a shortcut
  * past any of them.
  */
-describe('a write is proposed, and a person decides (D34)', () => {
+describe('a write is proposed, and a person decides', () => {
   /** What the loop would have written: a pending suggestion and nothing else. */
   async function proposeMove(business: Business, startsAt: string, endsAt: string) {
     const { data, error } = await business.db
@@ -582,7 +582,7 @@ describe('a write is proposed, and a person decides (D34)', () => {
 
   it('records the database’s own refusal rather than raising it', async () => {
     // Somebody else's job already has that resource for that window. `scheduleWorkItem` does not
-    // look before it writes (I6) — the exclusion constraint decides, which is exactly what makes
+    // look before it writes — the exclusion constraint decides, which is exactly what makes
     // a proposal safe to offer without searching for a free slot first.
     const { data: statusRow } = await yard.db
       .from('work_items')
@@ -605,7 +605,7 @@ describe('a write is proposed, and a person decides (D34)', () => {
     const clash = await proposeMove(yard, tomorrow(16), tomorrow(17));
     const decided = await decideOnAction(yard.db, { runId: clash, carryOut: true });
 
-    // Recorded, not thrown, and in whoever's words refused it (I25).
+    // Recorded, not thrown, and in whoever's words refused it.
     expect(decided.actionOutcome).toBe('failed');
     expect(decided.actionDetail).toBeTruthy();
   });
@@ -725,14 +725,14 @@ describe('a write is proposed, and a person decides (D34)', () => {
     }
 
     // **It answers what is taken, never what is free.** There is one availability calculation
-    // in this platform and it is not here (I5) — a tool that returned free windows would be a
-    // second one, in a second runtime, which is precisely what D30 refused for automations.
+    // in this platform and it is not here — a tool that returned free windows would be a
+    // second one, in a second runtime, which is precisely what the runtime-boundary rule refused for automations.
     expect(Object.keys(booked[0] ?? {})).not.toContain('free');
   });
 });
 
 /**
- * The other question M8's criterion names, and the definition it shares with a screen.
+ * The other question onboarding names, and the definition it shares with a screen.
  *
  * **The interesting assertion is the third one.** Almost everything a business remembers about a
  * customer happened to a *job*, and one action names the customer only in its payload — so a
@@ -740,7 +740,7 @@ describe('a write is proposed, and a person decides (D34)', () => {
  * resolution now lives in `customer_activity` and is read by both this tool and the customer
  * timeline, which is the extract-then-call-twice rule arriving at a view.
  */
-describe('customers nobody has recorded anything about (D34)', () => {
+describe('customers nobody has recorded anything about', () => {
   it('counts what happened to a customer’s jobs as theirs', async () => {
     // **The sharp one, and the reason the definition moved.** Almost everything a business
     // remembers about a customer happened to a *job*. `yard.customerId` has had nothing written

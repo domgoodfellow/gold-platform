@@ -17,7 +17,7 @@ import { foundBusiness } from '@/tests/support/founding';
 /**
  * Conversations: what a run belongs to, who may read it, and what the answering side is told.
  *
- * `constraints.md` D34 is the reasoning. Three claims are asserted here and they are separate:
+ * The AI-tool architecture (ADR-018) is the reasoning. Three claims are asserted here and they are separate:
  *
  *   * **A conversation is readable by its starter and nobody else** — not a colleague in the same
  *     business, not somebody in another one — and a run cannot be filed under a conversation that
@@ -380,7 +380,7 @@ describe('the Agent is told where the person is, and only that', () => {
   });
 });
 
-describe('a conversation is readable only by whoever started it (D34)', () => {
+describe('a conversation is readable only by whoever started it', () => {
   it('is invisible to a colleague in the same business', async () => {
     assistantConfigured();
     fakeAssistant();

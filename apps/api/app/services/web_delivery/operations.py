@@ -3,13 +3,13 @@
 **Authorization is proved before the credential is read, and RLS proves it.** The caller's own
 token asks `can_manage_custom_domains` (membership and `organization.manage`) and selects the
 domain row (a business sees its own and nobody else's, so an empty answer means *not yours, or no
-such domain* -- I18's ambiguous refusal). Only then does this mint the machine token that may learn
+such domain* -- the same-organization reference rule's ambiguous refusal). Only then does this mint the machine token that may learn
 which GildOps account answers, read that account's credential, and record what the provider said.
 
 **Every outcome is recorded before it is returned.** A hosting account nobody has configured, a
 hostname the provider will not take, a provider that refused or answered nonsense: each is written
 onto the row (`error_code`, `error_message`) by the same machine role that asked, so the Domains
-page can say what happened after the dialog is closed (D44: a failure is a row, not a toast).
+page can say what happened after the dialog is closed (the failure-is-a-row rule: a failure is a row, not a toast).
 
 **Nothing here names a vendor.** `app.providers.domain_hosting_for` turns the row's own provider
 key into a module; this file sequences it and speaks GildOps' vocabulary only.

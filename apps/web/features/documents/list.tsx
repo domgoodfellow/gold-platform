@@ -26,7 +26,7 @@ export function DocumentList({
             {/*
               Points at our own route, never at storage. The signed URL is minted when this is
               clicked and lives sixty seconds; a link to storage rendered into this page would
-              be the durable URL constraints.md forbids.
+              be a durable public URL to a private file, which is never allowed.
             */}
             <a
               href={`/organizations/${organizationId}/documents/${document.id}/download`}

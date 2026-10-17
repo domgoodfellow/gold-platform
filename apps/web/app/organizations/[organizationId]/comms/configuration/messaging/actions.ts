@@ -9,7 +9,7 @@ export type CommunicationProfileState = { error: string | null; success?: string
 
 /**
  * The website's public assistant — greeting, instructions, handoff — is behaviour Communications
- * already owns (D25: a switch leads to its inputs, once). It moved here from the Website workbench
+ * already owns (the module-visibility rule: a switch leads to its inputs, once). It moved here from the Website workbench
  * so drafting/publishing copy and configuring what a visitor's message does stay two different
  * questions; the site it applies to is still named by `siteId`, read from the public-site domain.
  */

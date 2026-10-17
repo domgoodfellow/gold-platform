@@ -31,11 +31,11 @@ export const dynamic = 'force-dynamic';
 
 /**
  * The first surface in this application that isn't the admin one — slots come from the same
- * calculation the operator's schedule uses (I5) and the price is the catalogue's own row (I4),
+ * calculation the operator's schedule uses and the price is the catalogue's own row,
  * so this carries no availability or pricing logic of its own. No shell, no areas — a customer's
- * goal is booking with least friction, not "what do I do next" (D23). The slug is resolved to an
+ * goal is booking with least friction, not "what do I do next". The slug is resolved to an
  * id by a function that answers only for a business with something published; the id it returns,
- * never the URL, is what the binding is made against (D17).
+ * never the URL, is what the binding is made against.
  */
 export default async function BookingPage({
   params,
@@ -167,7 +167,7 @@ export default async function BookingPage({
         </div>
       )}
 
-      {/* I6, said out loud rather than implied — showing these as reservations would be a promise the platform doesn't keep. */}
+      {/* The advisory-availability rule, said out loud rather than implied — showing these as reservations would be a promise the platform doesn't keep. */}
       <Hint weight="subtle" className="mt-10 text-xs">
         Times shown are in {organization.timezone} and are not held until you book.
       </Hint>

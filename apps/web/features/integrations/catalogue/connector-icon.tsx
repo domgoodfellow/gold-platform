@@ -19,8 +19,8 @@ import type { Connector } from '@/lib/domain/integrations/connectors';
  *
  * **A mark or a curated colour's presence here is also the built-in signal.**
  * `isBuiltInConnector` (below) is what `LogoForm`'s caller checks to decide whether uploading a
- * logo makes sense for a given connector (constraints.md, "Built-in Provider/Connector/App...
- * NO logo-upload UI") — and now also what this component checks to decide whether `logoUrl` is
+ * logo makes sense for a given connector (built-in providers, connectors and apps get no
+ * logo-upload UI) — and now also what this component checks to decide whether `logoUrl` is
  * even looked at.
  */
 const BRAND_COLOR: Record<string, string> = {

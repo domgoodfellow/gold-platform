@@ -42,7 +42,7 @@ import { isEligible, listResourceRequirements } from '@/lib/domain/work-items/re
  * working, free and not eligible, or assigned and no longer able. Each is its own fact and a reason
  * below names which one failed.
  *
- * **Advisory (I6).** Every answer is a snapshot. The assignment triggers and the exclusion
+ * **Advisory.** Every answer is a snapshot. The assignment triggers and the exclusion
  * constraint decide at commit, in the same transaction as the write; nothing here weakens them. It
  * persists nothing and caches nothing — it is derived from state that changes by the minute.
  *
@@ -522,7 +522,7 @@ export async function prepareTravel(
 function groupById(rows: { resource_id: string | null; occupies: unknown }[]): Map<string, Window[]> {
   const grouped = new Map<string, Window[]>();
   for (const row of rows) {
-    // `supabase gen types` has no TypeScript for a Postgres range (D15).
+    // `supabase gen types` has no TypeScript for a Postgres range.
     const window = parseWindow(row.occupies as string | null);
     if (!window || !row.resource_id) continue;
     grouped.set(row.resource_id, [...(grouped.get(row.resource_id) ?? []), window]);

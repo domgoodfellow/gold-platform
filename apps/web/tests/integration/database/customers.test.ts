@@ -5,8 +5,8 @@ import { createCustomer, listCustomers } from '@/lib/domain/customers/customers'
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * Customer is the first genuinely tenant-owned entity, so this is where the failure
- * constraints.md names gets its regression test:
+ * Customer is the first genuinely tenant-owned entity, so this is where the earlier-prototype failure
+ * gets its regression test:
  *
  *   > Its `customers_email_unique` is global too, so two tenants could never share a
  *   > customer email address.
@@ -66,7 +66,7 @@ describe('customers', () => {
     bob = await newTenant('bob');
   });
 
-  it('lets two tenants hold the same customer email address (I2)', async () => {
+  it('lets two tenants hold the same customer email address', async () => {
     await expect(
       createCustomer(alice.db, {
         organizationId: alice.organizationId,
@@ -95,7 +95,7 @@ describe('customers', () => {
     ).rejects.toMatchObject({ code: 'customers.email_taken' });
   });
 
-  it('shows each tenant only its own customers (I1)', async () => {
+  it('shows each tenant only its own customers', async () => {
     const forAlice = await listCustomers(alice.db, { organizationId: alice.organizationId });
     const forBob = await listCustomers(bob.db, { organizationId: bob.organizationId });
 
@@ -104,12 +104,12 @@ describe('customers', () => {
     expect(forAlice[0].id).not.toBe(forBob[0].id);
   });
 
-  it('returns nothing when asked for another tenant by id (I1)', async () => {
+  it('returns nothing when asked for another tenant by id', async () => {
     const stolen = await listCustomers(alice.db, { organizationId: bob.organizationId });
     expect(stolen).toEqual([]);
   });
 
-  it('refuses to create a customer inside another tenant (I1)', async () => {
+  it('refuses to create a customer inside another tenant', async () => {
     await expect(
       createCustomer(alice.db, {
         organizationId: bob.organizationId,
@@ -122,7 +122,7 @@ describe('customers', () => {
     expect(forBob.map((c) => c.name)).not.toContain('Trojan');
   });
 
-  it('writes a timeline event attributable to its author (I11)', async () => {
+  it('writes a timeline event attributable to its author', async () => {
     const { data, error } = await alice.db
       .from('events')
       .select('actor_id, entity_type, entity_id, action')

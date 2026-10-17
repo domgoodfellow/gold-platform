@@ -35,9 +35,9 @@ PUBLIC = (
     "follow-up for account-specific help."
 )
 
-# The rules of the one-shot structured task that proposes a configuration (D32). The two that
+# The rules of the one-shot structured task that proposes a configuration. The two that
 # matter are this repository's, not prompt-craft: it may not invent a working week, because
-# `constraints.md` forbids the platform holding one and a drafted default would be that same
+# `docs/product.md` forbids the platform holding one and a drafted default would be that same
 # hardcoded week arriving through a different door; and it must raise a gap rather than guess a
 # price, because a number nobody said is a claim the business would be publishing without having
 # made it -- the same line the public pages hold.

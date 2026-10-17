@@ -7,7 +7,7 @@ that names a vendor is a contract shaped by one.
 `None` for a channel this deployment cannot send on, rather than a throw. A deployment
 configured for email and not for text messages is a complete deployment — and a business that
 writes a text-message rule on it gets a failed delivery saying so, rather than silence
-(constraints.md D31).
+(the no-dead-end rule, `docs/ui-system.md`).
 """
 
 from __future__ import annotations

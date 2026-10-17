@@ -8,9 +8,9 @@ import {
 } from './index';
 
 /**
- * `apps/api`, as one implementation of the answering capability (D34) — the one call this
+ * `apps/api`, as one implementation of the answering capability — the one call this
  * repository makes from one deployment to the other. Carries the operator's own token, performs
- * no write, and the far side holds no role or grant of its own (distinct from D30's frozen
+ * no write, and the far side holds no role or grant of its own (distinct from the runtime-boundary rule's frozen
  * direction: an action runtime calling back to write). Nothing is retried — a second attempt
  * nobody asked for is a second bill and a second copy of their data leaving.
  */

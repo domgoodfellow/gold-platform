@@ -206,7 +206,7 @@ describe('Personal settings says it once', () => {
     }
   });
 
-  it('keeps its sections presentation-free, named once for its own Profile/Security local nav (D71)', () => {
+  it('keeps its sections presentation-free, named once for its own Profile/Security local nav', () => {
     expect(read('lib/route/personal-settings.ts')).not.toMatch(/lucide|Icon/);
     expect(read('features/account/account-section-nav.tsx')).toContain('PERSONAL_SECTIONS');
   });

@@ -132,7 +132,7 @@ function ProposalInviteRow({ invite, origin }: { invite: ProposalInvite; origin:
 /**
  * A commercial proposal is a distinct, versioned commitment — never `configuration_proposals`
  * (which needs an organization to already exist) and never a live join to the price book a later
- * change could reprice underneath a customer's own copy (I8). Every version stays visible; a
+ * change could reprice underneath a customer's own copy. Every version stays visible; a
  * changed term is a new one, not an edit.
  */
 export function CommercialProposalSection({

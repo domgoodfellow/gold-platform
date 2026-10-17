@@ -79,7 +79,7 @@ describe('a feature imports no route-owned presentation component', () => {
 
 /**
  * Phase A — `apps/web/components` is shared GildOps application UI, one layer below `features/`
- * and `app/`. It never consumes either (`docs/constraints.md` D23, `components/README.md`).
+ * and `app/`. It never consumes either (`docs/ui-system.md`, `components/README.md`).
  */
 describe('a shared component imports no feature, route or database/adapter layer', () => {
   const FORBIDDEN = [/^@\/features\//, /^@\/app\//, /^@\/lib\/db\//, /^@\/lib\/adapters\//];

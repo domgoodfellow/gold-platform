@@ -1,7 +1,7 @@
 /**
  * Sending a text message, as a capability.
  *
- * **Not a word in here belongs to a vendor** (I15) — `adapters.test.ts` holds that from both
+ * **Not a word in here belongs to a vendor** — `adapters.test.ts` holds that from both
  * sides. What a caller says is *send this text from this number to that one*. Which company
  * carries it is `registry.ts`'s only subject, the same split `../telephony` already draws.
  *

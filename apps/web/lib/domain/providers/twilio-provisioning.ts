@@ -20,7 +20,7 @@ import {
 
 /**
  * Standing up one organization's own scope inside this deployment's telephony capability — a
- * subaccount, a key and an application, in that order (D39, section 4).
+ * subaccount, a key and an application, in that order (the telephony-identity design, section 4).
  *
  * **The real lifecycle, in order, and idempotent at every step.** A retried call after a partial
  * failure does not recreate a subaccount, key or application that already exists — each step
@@ -33,7 +33,7 @@ import {
  * `setProviderBindingStatus(..., 'failed', ...)` before this function's caller ever sees an
  * exception, so the platform console's next read of this organization already shows why.
  *
- * **Which vendor this is stays `lib/adapters/telephony/registry.ts`'s own subject (I15).** This
+ * **Which vendor this is stays `lib/adapters/telephony/registry.ts`'s own subject.** This
  * file asks it for a provider key and a set of resource type names rather than spelling either.
  */
 export async function provisionTelephonySubaccount(
@@ -96,7 +96,7 @@ export async function provisionTelephonySubaccount(
       subaccountSid = created.sid;
     }
 
-    // The subaccount id itself is what every later call in this deployment addresses (D39) —
+    // The subaccount id itself is what every later call in this deployment addresses —
     // recorded on the binding, not only on the resource, so `telephonyProvider` can resolve it
     // without a second table read.
     await setProviderBindingStatus(db, {

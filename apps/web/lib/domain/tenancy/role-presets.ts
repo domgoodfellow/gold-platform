@@ -6,7 +6,7 @@ import type { Capability } from './capabilities';
  * ordinary list of capabilities, with no reference back to the preset. So a preset cannot be
  * "edited out from under" the roles made from it, a business can rename or reshape any of them,
  * and nothing anywhere asks which preset a role came from. Behaviour checks capabilities, never a
- * role's name (I12) — a preset only saves somebody ticking eleven boxes.
+ * role's name — a preset only saves somebody ticking eleven boxes.
  *
  * These are the platform's suggestions, not a vocabulary a business must use: a two-person company
  * may need one role, a forty-person one eight, and a financial-sales business will name its own.

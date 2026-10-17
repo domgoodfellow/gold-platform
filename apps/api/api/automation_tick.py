@@ -1,14 +1,14 @@
 """The clock, invoked on a schedule.
 
-**The responsibility D2 lists first for this runtime, arriving in the milestone that finally has
+**The responsibility the web/API runtime split lists first for this runtime, arriving in the milestone that finally has
 something to ask about.** A scheduled evaluation asking *what is due* has nowhere to live in
 Next.js: there is no persistent process, `apps/web` has no `api/` directory and may not grow one
-(D26), and the answer must be reachable by a caller with no session at all.
+, and the answer must be reachable by a caller with no session at all.
 
 Two things happen here and they are separate on purpose:
 
   * **What is due** — one call, and the whole scheduler is a query on the far side of it. There
-    is no queue in this process, because D24 forbids anything that must survive between
+    is no queue in this process, because the no-queue scheduling rule forbids anything that must survive between
     invocations from living anywhere but Postgres.
   * **What is waiting to be sent** — the queue that does exist, drained one message at a time so
     that one bad address cannot stop the rest.
@@ -42,7 +42,7 @@ def _hour(moment: str) -> str:
 
     Both sides are already UTC — the database truncates and the provider is asked for UTC — so
     this is string trimming rather than arithmetic, and there is no timezone decision hiding in
-    it. A tenant's own zone never enters into this: an instant is absolute (I9).
+    it. A tenant's own zone never enters into this: an instant is absolute.
     """
     return moment.replace("Z", "").replace("+00:00", "")[:13]
 
@@ -191,7 +191,7 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
         sender = sender_for(message.channel)
         if sender is None:
             # A channel this deployment cannot send on. Recorded as a failure with a sentence
-            # saying whose problem it is — not silence, which is what D31 exists to forbid.
+            # saying whose problem it is — not silence, which is what the no-dead-end rule exists to forbid.
             from app.channels import Sent
 
             return Sent(ok=False, detail=unconfigured_reason(message.channel))

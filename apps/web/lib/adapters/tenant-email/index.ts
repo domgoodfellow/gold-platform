@@ -13,7 +13,7 @@
  * session. This contract therefore carries only *which message*: the runtime on the other side reads
  * everything else under the caller's token. There is no `from`, `to` or `subject` here for a caller
  * to supply, so no path through this capability can send as an address the business does not hold or
- * to a person the message does not name. Nothing here carries a vendor's vocabulary (I15):
+ * to a person the message does not name. Nothing here carries a vendor's vocabulary:
  * `adapters.test.ts` holds that from both sides.
  *
  * **The canonical status is the database's.** What came back is for the caller to show; the message

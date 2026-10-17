@@ -29,7 +29,7 @@ const INITIAL: ReportState = { error: null };
  * Saving what is currently on screen, and saying who it is for.
  *
  * **Every hidden field here is what the page was already showing.** A saved report is arguments
- * (D36), so saving one is naming the view rather than building anything — which is why there is
+ *, so saving one is naming the view rather than building anything — which is why there is
  * no builder on this screen and why the grouping, period and filters travel as they are.
  */
 export function SaveReportForm({
@@ -167,7 +167,7 @@ export function ReportAudienceForm({
   );
 }
 
-/** Naming a new dashboard. The platform seeds none, including the four M7's source lists. */
+/** Naming a new dashboard. The platform seeds none, not even the four common ones. */
 export function CreateDashboardForm({ organizationId }: { organizationId: string }) {
   const [state, formAction, pending] = useActionState(createDashboardAction, INITIAL);
 

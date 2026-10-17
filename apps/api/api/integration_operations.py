@@ -5,7 +5,7 @@
 letting RLS answer, and only then touches the stored credential through a machine role no human
 session can wear. The response carries the operation's result -- never a token.
 
-Vercel's Python runtime routes a file under `api/` to a path (D24). One file, one route.
+Vercel's Python runtime routes a file under `api/` to a path. One file, one route.
 """
 
 from __future__ import annotations

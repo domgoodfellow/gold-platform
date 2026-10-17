@@ -19,11 +19,11 @@ const FIELD_LABEL: Record<keyof typeof PUBLIC_INTAKE_LIMITS, string> = {
  * contact inquiry. One path for both, so neither copies the other's validation or the customer
  * write.
  *
- * The same anonymous axis booking uses (D22, I11): sign in anonymously so the write has a real
+ * The same anonymous axis booking uses: sign in anonymously so the write has a real
  * actor, call the one privileged function, then sign out again immediately. Booking keeps its
  * session alive on purpose, so a visitor can come back and see what they booked; this deliberately
  * does not — there is nothing here to come back and read, and no select policy would let this
- * session read anything even if it stayed signed in (I26).
+ * session read anything even if it stayed signed in.
  */
 export async function submitPublicInquiry(
   db: Db,

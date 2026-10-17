@@ -4,7 +4,7 @@ import { PageLocation, type PageLocationCrumb } from '../navigation/page-locatio
 import { SupportTrigger } from '../panels/workspace-right-rail';
 
 /**
- * Workspace Home: what is happening here, what can I do, where can I go next (`docs/ui-spec.md`
+ * Workspace Home: what is happening here, what can I do, where can I go next (`docs/ui-system.md`
  * §2a's Workspace Home archetype). No generic "<Workspace>: <restated purpose sentence>" line —
  * the title is the workspace's name, and everything beneath it is real content: destination
  * summaries, state, recent or attention-worthy items. `children` is the workspace's own content;

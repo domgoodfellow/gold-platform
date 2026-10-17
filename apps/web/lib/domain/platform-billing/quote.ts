@@ -115,7 +115,7 @@ async function purchasedOneTimeAssignmentIds(
 /**
  * Builds the organization's current package as a priced quote. There is no currency parameter:
  * the base Plan's own resolved price determines the quote's currency, and a component priced in
- * a different currency becomes a blocker rather than a silent conversion (I10, D40's reasoning
+ * a different currency becomes a blocker rather than a silent conversion (the minor-units money rule, the messaging rules' reasoning
  * restated for this boundary).
  */
 export async function buildOrganizationPurchaseQuote(

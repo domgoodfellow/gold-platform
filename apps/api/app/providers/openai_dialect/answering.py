@@ -9,7 +9,7 @@ a reason for two files.
 **This is the answer to "must our rows leave the building".** A deployment that sets
 `ASSISTANT_BASE_URL` to a model it runs sends nothing to anybody, and nothing above this file
 changes. That is the whole argument for the provider seam existing in the first slice rather
-than being retrofitted the first time somebody asks (D34).
+than being retrofitted the first time somebody asks.
 
 **No SDK, and here that is the ordinary choice rather than an exception.** Two POSTs to a JSON
 endpoint, in a runtime whose dependency list is deliberately one line long. Which vendor's client

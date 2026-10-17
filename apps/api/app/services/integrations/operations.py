@@ -3,7 +3,7 @@
 **Authorization is proved before any credential is read or written, and it is RLS that proves
 it.** The caller's own token asks `can_manage_integrations` (the caller's rights, not this
 runtime's) and selects the connection row (a business sees its own and nobody else's, so an empty
-answer means *not yours, or no such connection* -- I18's ambiguous refusal). Only then does this
+answer means *not yours, or no such connection* -- the same-organization reference rule's ambiguous refusal). Only then does this
 mint the one machine token that may touch the credential.
 
 **Nothing here decides what a vendor means.** `app.connectors` owns the handshake and the

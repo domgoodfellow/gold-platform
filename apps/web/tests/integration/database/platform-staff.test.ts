@@ -9,7 +9,7 @@ import { listRoles } from '@/lib/domain/tenancy/roles';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * D28's axis: the people who run GOLD rather than a business on it.
+ * The platform-staff separation's axis: the people who run GOLD rather than a business on it.
  *
  * Every other suite here signs in as somebody scoped narrowly by construction — a member
  * through `memberships`, an outsider bound to exactly one tenant. This one signs in as the
@@ -24,7 +24,7 @@ import { foundBusiness } from '@/tests/support/founding';
  * authority and a real organization membership at once and switch between the two — see the
  * describe block below this one, which is the capability this rewrite exists to prove.
  *
- * **What the assertion had to change to, and why that is not a weaker claim.** D28 still says a
+ * **What the assertion had to change to, and why that is not a weaker claim.** The platform-staff separation still says a
  * platform-staff path reads what it needs and writes nothing a tenant owns — that has not moved.
  * What *has* moved is which of two honest refusals a given table produces. A table staff have no
  * legitimate reason to touch at all (`memberships` inserts, `platform_staff` inserts,
@@ -85,7 +85,7 @@ async function signedInUser(
  * Somebody who runs GOLD.
  *
  * The `platform_staff` row is written over a direct connection because **nothing in the
- * application may write it** — there is no insert policy and no grant, which is D28 declining
+ * application may write it** — there is no insert policy and no grant, which is the platform-staff separation declining
  * to decide what a staff *write* is. That makes this the one place in the suite where a raw
  * connection is the honest setup rather than a shortcut: it is how a colleague is actually
  * added today, and `supabase/snippets/add-platform-staff.sql` is the same statement.
@@ -115,7 +115,7 @@ let member: { db: SupabaseClient; userId: string; email: string };
 let alphaId: string;
 let betaId: string;
 
-describe('the platform staff axis (D28)', () => {
+describe('the platform staff axis', () => {
   beforeAll(async () => {
     if (!ANON_KEY || !SERVICE_ROLE_KEY) {
       throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
@@ -127,7 +127,7 @@ describe('the platform staff axis (D28)', () => {
     member = await signedInUser('m5-alpha');
     const other = await signedInUser('m5-beta');
 
-    // GOLD creates it; its own owner gives it its shape. Two acts, two sessions (D29).
+    // GOLD creates it; its own owner gives it its shape. Two acts, two sessions.
     const alphaOrg = await foundBusiness({
       ownerEmail: member.email,
       name: `Alpha Groundworks ${randomUUID().slice(0, 6)}`,
@@ -180,7 +180,7 @@ describe('the platform staff axis (D28)', () => {
   });
 
   it('holds no membership in any tenant, which is what makes it a fourth shape', async () => {
-    // D28 rejected giving staff a membership in every tenant as "cheapest, and also the leak".
+    // the platform-staff separation rejected giving staff a membership in every tenant as "cheapest, and also the leak".
     // Staff can read `memberships` precisely so this is checkable from inside the axis. This
     // stays true of *this* staff fixture because nothing here ever adds one for them — it is no
     // longer true of the axis in general, which the next test proves directly.
@@ -324,7 +324,7 @@ describe('the platform staff axis (D28)', () => {
 
   it('cannot add itself, or anybody else, to the staff list', async () => {
     // There is no insert policy and no grant. Adding a colleague is a privileged operation
-    // performed with database access, which is D28 declining to decide what a staff write is.
+    // performed with database access, which is the platform-staff separation declining to decide what a staff write is.
     const { error } = await staff.db
       .from('platform_staff')
       .insert({ user_id: staff.userId, name: 'Promoted' });
@@ -353,8 +353,8 @@ describe('the platform staff axis (D28)', () => {
     expect(beta).toBeDefined();
 
     // Each business's own zone and currency travel with it. A console that rendered both in
-    // one zone would be deciding what Tuesday means for somebody in Tokyo (I9), and one that
-    // totalled the two currencies would be inventing a rate (I10). It does neither.
+    // one zone would be deciding what Tuesday means for somebody in Tokyo, and one that
+    // totalled the two currencies would be inventing a rate. It does neither.
     expect(alpha.currency).toBe('EUR');
     expect(alpha.timezone).toBe('Europe/Amsterdam');
     expect(beta.currency).toBe('JPY');
@@ -385,7 +385,7 @@ describe('the platform staff axis (D28)', () => {
   it('builds that view as security_invoker, so it carries no visibility of its own', async () => {
     // The inner boundary, and the one worth asserting structurally rather than by behaviour.
     // A view defaults to running as its *owner*, which would make this a service-role client
-    // with extra steps — exactly what D14 refuses and D28 refuses again. `security_invoker`
+    // with extra steps — exactly what the no-service-role rule refuses and the platform-staff separation refuses again. `security_invoker`
     // makes it execute under the caller's own role, so every policy on `organizations`,
     // `organization_modules` and `events` still applies underneath it. Nothing about the grant
     // above would reveal if this flag were dropped, and dropping it is one word.
@@ -412,11 +412,11 @@ describe('the platform staff axis (D28)', () => {
 });
 
 /**
- * The fourth question, and the half of M5's criterion that was deferred to M6.
+ * The fourth question, and the half that was deferred until failures were recorded.
  *
  * That milestone answered three — who exists, what they have switched on, when they last did
  * anything — and left this one open with its reason written down: nothing in the schema recorded
- * a failure, so a failed-thing table would have been a table with no writer. M6 supplies the
+ * a failure, so a failed-thing table would have been a table with no writer. Automations supply the
  * writer, and these are the assertions that the reader did not quietly become something wider.
  */
 describe('what is failing, on the console', () => {
@@ -452,7 +452,7 @@ describe('what is failing, on the console', () => {
   });
 
   it('cannot write a run or a delivery, and fails on privilege rather than on policy', async () => {
-    // I21's second half, extended to the tables M6 added. A permissive policy written later
+    // the no-grant-rather-than-policy rule's second half, extended to the automation tables. A permissive policy written later
     // still hits a missing privilege, which is why the message is asserted and not the failure.
     const run = await staff.db.from('automation_runs').insert({
       organization_id: alphaId,
@@ -490,7 +490,7 @@ describe('what is failing, on the console', () => {
   it('builds the failures view as security_invoker, so it carries no visibility of its own', async () => {
     // Read from `pg_class` rather than from the definition, for the reason the tenant view's own
     // test gives: dropping that flag is one word and nothing else about the view would look
-    // different — and without it this becomes the service-role client D14 refuses.
+    // different — and without it this becomes the service-role client the no-service-role rule refuses.
     const client = new Client({ connectionString: CONNECTION });
     await client.connect();
     try {

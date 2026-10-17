@@ -5,7 +5,7 @@ import type { RoutingProvider } from './index';
  * one. Null when unconfigured: travel is then *unverified*, never zero, and scheduling says so.
  * "Configured" means the address of a routing service the deployment operates or rents; a keyless
  * service has no credential for this runtime to hold, and a credentialed one belongs behind the
- * API runtime's provider accounts, not here (D14, D62).
+ * API runtime's provider accounts, not here.
  */
 export async function routingProvider(): Promise<RoutingProvider | null> {
   const baseUrl = process.env.ROUTING_BASE_URL;

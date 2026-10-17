@@ -13,7 +13,7 @@ import { listMyOrganizations, type Organization } from '@/lib/domain/tenancy/org
  * outside a business (Personal settings, the fallback frame) render from — none of it is read
  * from a URL, so none of it can be made to describe somebody else's organization.
  *
- * Every caller runs this itself rather than trusting a layout (I12).
+ * Every caller runs this itself rather than trusting a layout.
  */
 export type PersonContext = {
   email: string;
@@ -46,7 +46,7 @@ export async function loadPersonContext(): Promise<PersonContext> {
     signInMethods = [...new Set((data.user?.identities ?? []).map((identity) => identity.provider))];
     // Supabase records how somebody actually signed in as a list of identities. A Google-only
     // account has no password to change, and offering the form anyway would be a control with
-    // nothing behind it (D31's reasoning, restated for auth rather than a module switch).
+    // nothing behind it (the no-dead-end rule's reasoning, restated for auth rather than a module switch).
     hasPassword = (data.user?.identities ?? []).some((identity) => identity.provider === 'email');
   } catch (error) {
     if (error instanceof DomainError && error.code === 'auth.required') {

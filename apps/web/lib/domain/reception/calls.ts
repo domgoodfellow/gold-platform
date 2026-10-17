@@ -16,7 +16,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 /**
  * The scope a business's own calls happen inside, or `null` for one with no telephony binding
  * yet — which is every business until staff provisions one, and `telephonyProvider` reads that
- * exactly like GOLD's master scope, unchanged (D39).
+ * exactly like GOLD's master scope, unchanged.
  */
 export async function actingTelephonyAccount(db: Db, organizationId: string): Promise<string | null> {
   const binding = await getProviderBinding(db, { organizationId, providerKey: telephonyProviderKey() });
@@ -355,7 +355,7 @@ export async function getCall(
 /**
  * Ring a number into a room, and write down that it happened.
  *
- * **A conference rather than a two-party line, which is D38.** The customer joins a named room
+ * **A conference rather than a two-party line, which is the conference-call design.** The customer joins a named room
  * and the agent's browser joins the same one. Hold, transfer, merge and a supervisor listening
  * in are then each one operation on somebody in that room, instead of four features that cannot
  * be added to a connected pair without dropping the call in front of the person being sold to.
@@ -370,7 +370,7 @@ export async function getCall(
  * failed rather than a room nothing knows about.
  *
  * **A deployment with no carrier configured is refused rather than silently logged.** The
- * opposite — record the row, skip the dialling — is the failure D31 names: somebody presses a
+ * opposite — record the row, skip the dialling — is the failure the no-dead-end rule names: somebody presses a
  * button, something appears on the screen, and no telephone rings anywhere. `recordCall` below
  * is how a call made on a mobile gets written down, and it is a different act with a different
  * name.
@@ -504,9 +504,9 @@ async function rememberCustomerLeg(db: Db, organizationId: string, callId: strin
  *
  * It is not gated by `call.place` and must not be: holding a telephone is not making a call, and
  * the policy on `calls` is what refuses somebody who may not dial. A second check here would be
- * a second authorization system shadowing the real one (I12).
+ * a second authorization system shadowing the real one.
  *
- * The credential is signed by the deployment's own key; a per-business key (D43) is not built, so
+ * The credential is signed by the deployment's own key; a per-business key is not built, so
  * the browser's *scope* is the deployment's and it names no account of its own.
  */
 export async function browserTelephoneToken(db: Db, input: { organizationId: string }): Promise<string> {

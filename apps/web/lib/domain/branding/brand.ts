@@ -5,8 +5,8 @@ import { LOGO_MAX_BYTES, LOGO_TYPES } from './logo-rules';
 import { FONT_KEYS, isFontKey, normaliseBrandColour, type FontKey } from './palette';
 
 /**
- * How one business looks, as rows rather than as a fork (D23's per-tenant theme, built small
- * because every control already reads a colour role rather than a literal — ui-spec §3). Not
+ * How one business looks, as rows rather than as a fork (the UI system's per-tenant theme, built small
+ * because every control already reads a colour role rather than a literal — `docs/ui-system.md`). Not
  * the marketing surface, which stays deferred: no pages, blocks, or editor, just a colour, a
  * pair of fonts, and a logo. Reading is separated from rendering — this module knows what a
  * business chose, `palette.ts` knows what that renders as.

@@ -7,13 +7,13 @@ import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 
 /**
- * D41, built: the wanted∩paid intersection, and the four states it produces.
+ * The wanted-versus-paid entitlement rule, built: the wanted∩paid intersection, and the four states it produces.
  *
- * The claim worth testing is the middle two states — the ones D41 exists for. "On" and
+ * The claim worth testing is the middle two states — the ones the wanted-versus-paid entitlement rule exists for. "On" and
  * "absent" were already true by construction (a row exists or it does not); "switched on but
  * unpaid" and "paid but switched off" are the two this migration actually adds meaning to, and
  * the first of them is also where the write-refusal trigger lives (`payment_accounts`, the
- * `card_payments` pilot — see `constraints.md` D43's fourth amendment for why only one table).
+ * `card_payments` pilot — see ADR-014 for why only one table).
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -50,7 +50,7 @@ async function newTenant(label: string): Promise<{ db: SupabaseClient; organizat
   return { db, organizationId };
 }
 
-describe('D41: wanted, paid, and their intersection', () => {
+describe('the wanted-versus-paid entitlement rule: wanted, paid, and their intersection', () => {
   let staff: SupabaseClient;
   let tenant: { db: SupabaseClient; organizationId: string };
 

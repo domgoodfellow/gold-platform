@@ -13,10 +13,10 @@ import { foundBusiness } from '@/tests/support/founding';
 /**
  * The catalogue: what a business charges for, in its own money.
  *
- * Nothing here calculates a price, and that absence is the point — I4 says there is exactly
+ * Nothing here calculates a price, and that absence is the point — the one-calculation rule says there is exactly
  * one price calculation, and it belongs with the lines that consume this. What this proves is
  * that the numbers are held correctly: integer minor units, currency snapshotted onto each
- * amount rather than joined from the organization (I10), and no cross-tenant reach (I2).
+ * amount rather than joined from the organization, and no cross-tenant reach.
  *
  * The sharpest test is the currency one. `organizations.currency` is editable, so an amount
  * with no currency of its own would silently mean something different the day after a
@@ -107,7 +107,7 @@ describe('the price book', () => {
     expect(item.unitAmountMinor).toBe(4250);
   });
 
-  it('lets two tenants price the same thing under the same name (I2)', async () => {
+  it('lets two tenants price the same thing under the same name', async () => {
     // If price_book_items_org_name_unique had been written on (name) alone, the second of
     // these would fail with a bare 23505 and no two businesses could both sell a callout.
     const theirs = await createPriceBookItem(bob.db, {
@@ -145,7 +145,7 @@ describe('the price book', () => {
       }),
     ).rejects.toMatchObject({ code: 'prices.amount_not_integer' });
 
-    // Not arithmetic squeamishness: discounting is deferred in constraints.md until travel
+    // Not arithmetic squeamishness: discounting is deliberately deferred until travel
     // cost modelling can bound it, and a negative line item is that feature by the back door.
     await expect(
       createPriceBookItem(alice.db, {
@@ -168,7 +168,7 @@ describe('the price book', () => {
     expect(id).toBeTypeOf('string');
   });
 
-  it('does not reinterpret a priced item when the business changes currency (I8)', async () => {
+  it('does not reinterpret a priced item when the business changes currency', async () => {
     const before = await listPriceBookItems(alice.db, {
       organizationId: alice.organizationId,
     });
@@ -193,7 +193,7 @@ describe('the price book', () => {
     expect(stillCallout.unitAmountMinor).toBe(4250);
   });
 
-  it('will not change an item’s currency, even as a raw update (I8)', async () => {
+  it('will not change an item’s currency, even as a raw update', async () => {
     const [item] = await listPriceBookItems(alice.db, { organizationId: alice.organizationId });
 
     // The column grant, not the domain layer declining an argument. Changing this converts
@@ -234,7 +234,7 @@ describe('the price book', () => {
     expect(reach).toHaveLength(0);
   });
 
-  it('refuses pricing to a member without the capability (I12)', async () => {
+  it('refuses pricing to a member without the capability', async () => {
     const limited = await createRole(bob.db, {
       organizationId: bob.organizationId,
       name: 'No Prices',
@@ -269,7 +269,7 @@ describe('the price book', () => {
     ).rejects.toMatchObject({ code: 'prices.forbidden' });
   });
 
-  it('records a priced item on the timeline (I11)', async () => {
+  it('records a priced item on the timeline', async () => {
     const { data, error } = await alice.db
       .from('events')
       .select('action, actor_id, payload')

@@ -15,6 +15,6 @@ export function sendingDomainProvider(input: { token: string }): SendingDomainPr
 /**
  * What `organization_provider_resources.resource_type` calls a sending domain. The resource type
  * carries the vendor's name, so like `TELEPHONY_RESOURCE_TYPES` it is declared once in the
- * capability's registry and read from here; `lib/domain/` never spells it (I15).
+ * capability's registry and read from here; `lib/domain/` never spells it.
  */
 export const SENDING_DOMAIN_RESOURCE_TYPE = 'resend_domain';

@@ -1,4 +1,4 @@
-"""Acting on GOLD's own Resend account (D62).
+"""Acting on GOLD's own Resend account.
 
 **One operation, the same reason `app.providers.openai.accounts` gives.** A Resend account has no
 subaccounts and no per-tenant resource this platform creates -- GOLD holds one API key and every

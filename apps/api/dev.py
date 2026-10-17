@@ -10,8 +10,8 @@ production.
     curl -H "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:8787/tasks/automation-tick
 
 **The routes are read out of `vercel.json` rather than written twice**, which is what the
-previous version of this file said should happen when a third one landed. It landed: M6 added
-the automation tick, and two lists that must agree had already been called a smell here in
+previous version of this file said should happen when a third one landed. It landed: the automation
+tick was added, and two lists that must agree had already been called a smell here in
 writing. One list now.
 """
 

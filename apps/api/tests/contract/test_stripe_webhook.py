@@ -114,7 +114,7 @@ def test_mints_a_token_naming_its_own_role_and_never_service_role() -> None:
 
     assert claims["role"] == ROLE
     assert claims["role"] != "service_role"
-    # A real auth.users id, which is what keeps I11 in one shape (D26).
+    # A real auth.users id, which is what keeps actor attribution in one shape.
     assert claims["sub"] == INTEGRATION_ACTOR
     # Short-lived. Issued per request, stored nowhere.
     assert claims["exp"] - claims["iat"] <= 60

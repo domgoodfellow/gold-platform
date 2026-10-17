@@ -29,7 +29,7 @@ async function signedInUser(label: string): Promise<{ db: SupabaseClient; userId
   return { db, userId: data.user.id };
 }
 
-/** Written over a direct connection, as every staff row is — nothing in the application may write one (D28). */
+/** Written over a direct connection, as every staff row is — nothing in the application may write one. */
 async function makeStaff(userId: string, capabilities?: string[]) {
   const pg = new Client(CONNECTION);
   await pg.connect();

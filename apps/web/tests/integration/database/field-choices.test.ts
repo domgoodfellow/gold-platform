@@ -23,7 +23,7 @@ import { foundBusiness } from '@/tests/support/founding';
  * The other half is what a business can *do to its own configuration afterwards*. A choice
  * list is the first piece of configuration that is editable, non-trivial, and load-bearing on
  * rows already written, so the two edits that matter — adding a choice and removing one — are
- * both asserted here, including the asymmetry between them that I8 requires.
+ * both asserted here, including the asymmetry between them that the preserved-history rule requires.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -187,7 +187,7 @@ describe('fields that offer a choice, and fields that hold a date', () => {
     expect((await definitionFor(alice, 'plain_note')).options).toEqual([]);
   });
 
-  it('refuses options written straight onto a text field (I17)', async () => {
+  it('refuses options written straight onto a text field', async () => {
     // The check constraint rather than the domain layer, because a raw PostgREST update names
     // a column and never passes through `cleanOptions`.
     const plain = await definitionFor(alice, 'plain_note');
@@ -199,7 +199,7 @@ describe('fields that offer a choice, and fields that hold a date', () => {
     expect(error).not.toBeNull();
   });
 
-  it('lets two tenants offer different choices under one key (I2)', async () => {
+  it('lets two tenants offer different choices under one key', async () => {
     await createFieldDefinition(bob.db, {
       organizationId: bob.organizationId,
       entityType: 'customer',
@@ -242,7 +242,7 @@ describe('fields that offer a choice, and fields that hold a date', () => {
     ).rejects.toMatchObject({ code: 'fields.not_an_option' });
   });
 
-  it('refuses that same choice written straight to the table (I17)', async () => {
+  it('refuses that same choice written straight to the table', async () => {
     // **The assertion the whole kind exists for.** Without it, `select` is a text field with a
     // nicer form and the dropdown is a suggestion.
     const { error } = await insertCustomerDirectly(alice, { service_level: 'Platinum' });
@@ -250,7 +250,7 @@ describe('fields that offer a choice, and fields that hold a date', () => {
     expect(error!.message).toContain('does not offer');
   });
 
-  it('refuses another tenant’s choice, even though it is somebody’s (I2)', async () => {
+  it('refuses another tenant’s choice, even though it is somebody’s', async () => {
     // 'Spoed' is a real option — Bob's. Alice's field does not offer it, and the check reads
     // the definition beside the row rather than any definition anywhere.
     const { error } = await insertCustomerDirectly(alice, { service_level: 'Spoed' });
@@ -296,7 +296,7 @@ describe('fields that offer a choice, and fields that hold a date', () => {
     ).rejects.toMatchObject({ code: 'fields.not_an_option' });
   });
 
-  it('refuses that list written straight to the table (I17)', async () => {
+  it('refuses that list written straight to the table', async () => {
     const { error } = await insertCustomerDirectly(alice, {
       coverage: ['Weekdays', 'Bank holidays'],
     });
@@ -304,7 +304,7 @@ describe('fields that offer a choice, and fields that hold a date', () => {
     expect(error!.message).toContain('does not offer');
   });
 
-  it('refuses a single string where the registry declares a list (I17)', async () => {
+  it('refuses a single string where the registry declares a list', async () => {
     const { error } = await insertCustomerDirectly(alice, { coverage: 'Weekdays' });
     expect(error).not.toBeNull();
     expect(error!.message).toContain('expects');
@@ -348,7 +348,7 @@ describe('fields that offer a choice, and fields that hold a date', () => {
     ).rejects.toMatchObject({ code: 'fields.not_a_date' });
   });
 
-  it('refuses both of those written straight to the table (I17)', async () => {
+  it('refuses both of those written straight to the table', async () => {
     const impossible = await insertCustomerDirectly(alice, { contract_from: '2026-02-31' });
     expect(impossible.error).not.toBeNull();
 
@@ -382,7 +382,7 @@ describe('fields that offer a choice, and fields that hold a date', () => {
     ).resolves.toBeTypeOf('string');
   });
 
-  it('leaves rows alone when a business stops offering a choice (I8)', async () => {
+  it('leaves rows alone when a business stops offering a choice', async () => {
     // **The asymmetry this kind is built around.** Removing an option changes what happens
     // next and never what already happened: the customer who chose Priority still reads
     // Priority, because the trigger fires on write and nothing rewrote that row.

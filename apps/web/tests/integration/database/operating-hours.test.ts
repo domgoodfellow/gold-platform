@@ -27,13 +27,13 @@ import { foundBusiness } from '@/tests/support/founding';
  *
  * The claim under test is not only that hours are subtracted. It is that **nothing anywhere
  * knows what a working week is**: no Monday-to-Friday, no weekend, no default set, and no
- * seeded rows. `constraints.md` forbids hardcoding business hours, and a nine-to-five living
+ * seeded rows. `docs/product.md` forbids hardcoding business hours, and a nine-to-five living
  * in a default would be that rule broken quietly rather than loudly.
  *
  * So the first test is the important one: a business that has configured nothing is available
  * around the clock. Not because always-open is a good guess, but because it is the only
  * reading of "this business has not told us" that does not invent a claim on its behalf.
- * Contrast I13, where an unconfigured type is *frozen* — an empty transition set genuinely
+ * Contrast the status-transition rule, where an unconfigured type is *frozen* — an empty transition set genuinely
  * asserts that no move is legal, and an empty hours set asserts nothing at all.
  */
 
@@ -245,7 +245,7 @@ describe('operating hours', () => {
     ).toEqual([]);
   });
 
-  it('lets two businesses open at the same time on the same day (I2)', async () => {
+  it('lets two businesses open at the same time on the same day', async () => {
     // If the unique index had lost its leading organization_id, no two businesses could ever
     // share an opening time.
     const mine = await addOperatingHours(alice.db, {
@@ -319,7 +319,7 @@ describe('operating hours', () => {
     expect(entry.free[0].startsAt).toBe(zonedDayRange(TUESDAY, ZONE).startsAt);
   });
 
-  it('refuses hours to a member without the capability (I12, I16)', async () => {
+  it('refuses hours to a member without the capability', async () => {
     const limited = await createRole(bob.db, {
       organizationId: bob.organizationId,
       name: 'No Config',

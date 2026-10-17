@@ -5,7 +5,7 @@ import { identifyFormat } from '@/lib/domain/files/formats';
 import type { FileStore } from '@/lib/domain/files/storage-port';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
-/** What a Library file can be linked to — a closed set, each a real column on `document_links` with a composite foreign key behind it (a polymorphic entity/id pair would make I18 unenforceable). */
+/** What a Library file can be linked to — a closed set, each a real column on `document_links` with a composite foreign key behind it (a polymorphic entity/id pair would make the same-organization reference rule unenforceable). */
 export const DOCUMENT_ENTITIES = ['customer', 'location', 'asset', 'work_item'] as const;
 
 export type DocumentEntity = (typeof DOCUMENT_ENTITIES)[number];
@@ -203,7 +203,7 @@ export async function getDocumentUrl(
   }
 }
 
-/** Returns `string`, not `string | null` — `supabase gen types` emits every function argument as non-null even when the parameter accepts null (D15). The cast lives here once instead of at four call sites. */
+/** Returns `string`, not `string | null` — `supabase gen types` emits every function argument as non-null even when the parameter accepts null. The cast lives here once instead of at four call sites. */
 function columnValue(attachment: DocumentAttachment | undefined, entity: DocumentEntity): string {
   return (attachment?.entity === entity ? attachment.id : null) as string;
 }

@@ -14,7 +14,7 @@ import type {
  * `null` when nothing is configured, rather than a throw. A business that dials from mobile
  * phones and writes down what happened is a complete business, and on a deployment with no
  * carrier configured that is what this platform offers: the call is recorded by hand, and the
- * button that would have dialled says why it cannot (D31).
+ * button that would have dialled says why it cannot.
  *
  * **Five values rather than two, and the extra three are what a dialer costs.** Placing a call
  * from a server needs an account and its token. Letting a *browser* be a telephone needs an API
@@ -24,7 +24,7 @@ import type {
  * provider.
  *
  * **Selection is still by environment — GOLD's master account is always the credential — and
- * D39 is why an organization argument does not change that.** A business's subaccount is a scope
+ * the telephony-identity design is why an organization argument does not change that.** A business's subaccount is a scope
  * inside GOLD's own account, not a second set of credentials: Twilio lets the parent's own
  * Account SID and auth token address a resource under any of its subaccounts by naming that
  * subaccount's SID in the request path. `actingAccountSid` is exactly that name. Passed, calls
@@ -35,7 +35,7 @@ import type {
  * A token granting access to one subaccount's own TwiML application can only be signed by an API
  * key belonging to that same subaccount, which is a deeper resolution — safely reading that
  * business's own generated key back out of Vault at the moment of signing — that this slice does
- * not build; `docs/constraints.md` D43 names it as what is not yet built here.
+ * not build; the platform-economics separation (ADR-014) names it as what is not yet built here.
  */
 export async function telephonyProvider(
   actingAccountSid?: string | null,
@@ -92,7 +92,7 @@ export function callbackBase(): string | null {
 /**
  * The one place `platform_providers.key` and `organization_provider_resources.resource_type`
  * spell a carrier's name for this capability — so `lib/domain/providers/` can resolve *this
- * business's telephony scope* without importing the word itself (I15). A domain file that
+ * business's telephony scope* without importing the word itself. A domain file that
  * needs "the provider key this capability uses" asks this function; needing to know which
  * vendor that is remains this file's job alone.
  */

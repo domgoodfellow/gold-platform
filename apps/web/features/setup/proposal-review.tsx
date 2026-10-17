@@ -62,8 +62,8 @@ function Row({ children, onRemove }: { children: React.ReactNode; onRemove: () =
 /**
  * The proposal, editable.
  *
- * **Editable is the point, not a convenience** (`constraints.md` D32). A review a person can
- * only accept or reject is an approval, and the argument D29 makes for the self-serve door is
+ * **Editable is the point, not a convenience** (the draft-then-apply rule, ADR-039). A review a person can
+ * only accept or reject is an approval, and the argument the one-creation-path rule makes for the self-serve door is
  * that a proposal *edited* by the person who runs the business beats a form filled in by
  * somebody guessing. So every word here is theirs to change before anything is written.
  *
@@ -250,7 +250,7 @@ export function ProposalReview({
       </Section>
 
       <Section title="Which moves are allowed" hidden={domain !== 'operations'}>
-        {/* A type with no moves is frozen rather than unconstrained (I13), so an empty list here
+        {/* A type with no moves is frozen rather than unconstrained, so an empty list here
             is a real answer and the screen says which one it is. */}
         {shape.transitions.length === 0 && (
           <EmptyState>
@@ -344,7 +344,7 @@ export function ProposalReview({
               }
               size="small"
             />
-            {/* Minor units, uncomverted and undivided (I10). The label says so rather than the
+            {/* Minor units, uncomverted and undivided. The label says so rather than the
                 screen guessing at a decimal point that means nothing in a currency without one. */}
             <TextInput
               type="number"

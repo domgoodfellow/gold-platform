@@ -9,7 +9,7 @@ export type AvailableMember = { membershipId: string; displayName: string };
  * available" half of Slice 0B's UI requirement. `excludeResourceId` keeps a Resource's own
  * current link selectable while it is being edited, rather than hiding the very choice already
  * in effect. The attempted write is still refused with a clear error if this list is ever
- * stale (`resources.member_already_linked`) — this is a courtesy, not the guard (I12).
+ * stale (`resources.member_already_linked`) — this is a courtesy, not the guard.
  */
 export function availableMembers(
   members: Member[],

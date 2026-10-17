@@ -21,7 +21,7 @@ async function signedInUser(label: string, options: { staff?: boolean } = {}) {
   const password = `pw-${randomUUID()}`;
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   if (created.error) throw created.error;
-  // Written over a direct connection, before sign-in: nothing in the application may write a staff row (D28).
+  // Written over a direct connection, before sign-in: nothing in the application may write a staff row.
   if (options.staff) {
     await pg.query('insert into public.platform_staff (user_id, name) values ($1, $2)', [created.data.user.id, 'Operator']);
   }

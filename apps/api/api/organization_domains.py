@@ -6,7 +6,7 @@ letting RLS answer, and only after that reads GildOps' hosting credential throug
 no human session can wear. The response carries GildOps' own states and the DNS records to
 publish -- never the credential, never the provider's raw answer.
 
-Vercel's Python runtime routes a file under `api/` to a path (D24). One file, one route.
+Vercel's Python runtime routes a file under `api/` to a path. One file, one route.
 """
 
 from __future__ import annotations

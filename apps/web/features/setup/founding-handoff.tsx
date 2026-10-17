@@ -15,7 +15,7 @@ type CommercialTerms = {
 /**
  * "Where this business came from" — read straight off the handoff a business was founded from
  * (`getFoundingHandoff`), never recomputed. Every field here is a receipt of what Sales already
- * showed the prospect, not a live join (I8).
+ * showed the prospect, not a live join.
  *
  * **Deliberately inert.** The accepted Feature recommendation is discovery's own suggestion, not
  * a purchase — Sales determines what was bought (entitled automatically, at handoff, onto

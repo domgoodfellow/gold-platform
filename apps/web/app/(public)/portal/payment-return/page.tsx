@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 /**
  * Where a processor sends a payer back — deliberately named with no token in its path.
  *
- * A checkout redirect is not proof of payment (the webhook is authoritative, D26/D27), and this
+ * A checkout redirect is not proof of payment (the webhook is authoritative; see `docs/security.md`), and this
  * page carries nothing that needs to be — no invoice, no amount, no "success". Its only real job
  * is to *not* be `/portal/{token}`: that token is this customer's whole credential, and handing
  * it to a processor as a `success_url`/`cancel_url` would disclose a bearer-like secret to a

@@ -1,5 +1,5 @@
 /**
- * The scheduling core: a window of time a work item occupies on a resource. I9: every scheduled
+ * The scheduling core: a window of time a work item occupies on a resource. The absolute-time rule: every scheduled
  * item is an absolute instant, rendered in the tenant's timezone — `formatWindow` is the one
  * renderer, so there's one answer to what time a job is.
  */

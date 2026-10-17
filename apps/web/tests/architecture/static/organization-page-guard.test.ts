@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 /**
- * "Every page calls `requireOrganization` for itself" (CLAUDE.md, "Tenancy and access", I12).
+ * "Every page calls `requireOrganization` for itself" (CLAUDE.md, "Tenancy and access", the UI-is-not-authorization rule).
  *
  * That rule had nothing holding it. Next reuses a layout across client-side navigations without
  * re-rendering it, so a page that trusted its layout for the membership check would be trusting a

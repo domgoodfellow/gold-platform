@@ -7,7 +7,7 @@ import type { AllowanceType, OverageBehavior, OveragePolicy, QuotaPeriod } from 
  *
  * **One answer, not a second calculation.** Both functions here are thin readers over
  * `app.allowance_states` and `app.allowance_decision` — the one place composition, the window and
- * consumption are worked out (I4/I5's rule, applied to allowances). Nothing in this file adds,
+ * consumption are worked out (the one-calculation rule and the single availability model's rule, applied to allowances). Nothing in this file adds,
  * subtracts or compares a quantity, because the moment it did there would be two answers to "how
  * much is left" and the one a screen shows would be the one nothing enforces.
  *
@@ -15,7 +15,7 @@ import type { AllowanceType, OverageBehavior, OveragePolicy, QuotaPeriod } from 
  * operation: `app.record_usage` takes a lock over the same allowance and splits the quantity in
  * the same transaction, so two concurrent operations cannot both spend the last included unit. An
  * enforcement point a screen could reach but `open_call`, an automation or a provider callback
- * could not would be a disabled button, which is exactly what D40's credit gate already refused
+ * could not would be a disabled button, which is exactly what the messaging rules' credit gate already refused
  * to be.
  *
  * Nothing here reads a provider cost, a provider key or a margin: `organization_allowance_state`
@@ -181,7 +181,7 @@ function toState(row: StateRow): OrganizationAllowanceState {
 /**
  * Every allowance this organization currently has, resolved. A member reads its own business's;
  * platform staff read any — the function proves which itself rather than trusting the caller
- * (D17), so there is nothing here for a page to filter.
+ *, so there is nothing here for a page to filter.
  *
  * Empty for an organization with no Plan assignment: it has no allowances, which is a different
  * answer from having allowances of nothing.

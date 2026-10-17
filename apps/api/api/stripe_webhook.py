@@ -11,7 +11,7 @@ status codes.
 is not JSON, and an event about nothing all produce the same terse answer. A handler that said
 which one would be a handler that helps somebody find the third.
 
-Vercel's Python runtime routes a file under `api/` to a path (D24). No framework and no router:
+Vercel's Python runtime routes a file under `api/` to a path. No framework and no router:
 one file, one route, one thing it may do.
 """
 

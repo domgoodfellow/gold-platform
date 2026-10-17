@@ -4,14 +4,14 @@ import { DomainError } from '@/lib/domain/errors';
 /**
  * What a business used, and — on the staff-only path — what it cost GOLD. Two return shapes on
  * purpose: `UsageEvent` has no cost field to accidentally render on a tenant screen, and the
- * column grant on `usage_events` (`constraints.md` D43) is what actually withholds
+ * column grant on `usage_events` (the platform-economics separation, ADR-014) is what actually withholds
  * `provider_cost_micros`/`provider_currency`/`provider_key` if a caller ever asks for them
  * anyway.
  *
- * **A provider's cost and a customer's charge are two currencies, not one** (D43's correction).
+ * **A provider's cost and a customer's charge are two currencies, not one** (the platform-economics separation's correction).
  * Nothing here converts between them — a mismatched pair reports no margin rather than a
  * guessed one, the same rule `jobEconomics` already applies across a tenant's own currencies
- * (I10).
+ *.
  */
 
 /**
@@ -123,7 +123,7 @@ export type CommercialSummaryRow = {
   quantity: number;
   /**
    * Null whenever `providerCurrency` and `customerCurrency` disagree and the cost is not exactly
-   * zero — a real conversion is not built (D43), and this is honest about that rather than
+   * zero — a real conversion is not built, and this is honest about that rather than
    * subtracting unlike currencies. Also null while any of the group is not priced or not costed:
    * a margin needs both.
    */
@@ -314,7 +314,7 @@ export type ProviderSyncFailure = {
 
 /**
  * A reconciliation that could not confirm GOLD's own estimate against a provider's real bill.
- * Ships empty in this slice — nothing writes here yet (`constraints.md` D43) — so an empty
+ * Ships empty in this slice — nothing writes here yet (the platform-economics separation, ADR-014) — so an empty
  * result is the honest, expected answer, not a sign anything is broken.
  */
 export async function listProviderSyncFailures(

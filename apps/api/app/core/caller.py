@@ -5,7 +5,7 @@
 `automation_runner`. Both exist because no person is present. Here a person always is, so this
 module **mints nothing** -- it forwards the access token `apps/web` was already holding for the
 operator who asked the question, and every read lands on the policies that operator's own
-browser session lands on (D17).
+browser session lands on.
 
 **That absence is the security property, not a simplification.** The alternative is an
 `assistant` Postgres role reading across tenants and filtering by an organization id -- and the
@@ -45,7 +45,7 @@ class ToolFailed(RuntimeError):
     Kept verbatim and handed back to the model as a tool result rather than raised out of the
     loop: a question that asks for something the caller may not see is an ordinary event, and
     the useful answer is *the database declined*, not a failed run. The same words reach the run
-    row (I25).
+    row.
     """
 
 
@@ -125,7 +125,7 @@ def call_command(
     -- PostgREST answers a scalar-returning function with one JSON object, so this does not share
     `call_tool`'s "must be a list" shape. The one thing both keep in common is the whole reason
     either can exist without a role of its own: the token forwarded is the caller's, and RLS on
-    the underlying table is what actually decides whether the write happens (D17, D34).
+    the underlying table is what actually decides whether the write happens.
     """
     response = httpx.post(
         f"{settings.supabase_url}/rest/v1/rpc/{function}",

@@ -42,7 +42,7 @@ export function AddMemberForm({
           className="flex-1"
         />
         {/* What this organization calls them. Not a profile: the same account can be "Sam"
-            here and something else entirely to another tenant (D19). */}
+            here and something else entirely to another tenant. */}
         <TextInput
           name="displayName"
           type="text"

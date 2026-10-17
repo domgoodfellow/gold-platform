@@ -18,7 +18,7 @@ import type { ProvisionTwilioState, RegisterResourceState, SetResourceStatusStat
  * screen hides their controls from a caller whose `platform_staff` row does not name it, which is
  * courtesy; `requirePlatformCapability` is the boundary, and `app.require_platform_capability`
  * inside each RPC is the second one. Neither reads the organization id out of the form: a `goldId`
- * a form supplied is a parameter the caller chose (D17), so GildOps' own organization is resolved
+ * a form supplied is a parameter the caller chose, so GildOps' own organization is resolved
  * from the caller's own memberships instead.
  */
 async function attempt<T extends { error: string | null }>(operation: () => Promise<void>, success: Omit<T, 'error'>): Promise<T> { try { await operation(); revalidatePlatform(); return { ...success, error: null } as T; } catch (error) { return { ...success, error: error instanceof Error ? error.message : 'Unable to record change.' } as T; } }

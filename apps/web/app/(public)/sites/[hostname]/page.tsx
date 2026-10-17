@@ -4,7 +4,7 @@ import { HostedPage, hostedPageMetadata } from '@/features/public-site/hosted-pa
 /**
  * What a business's own hostname opens at its root: the homepage of its published website.
  * `proxy.ts` rewrites `/` on a resolved host here, carrying the **hostname** — never an
- * organization id — and `HostedPage` resolves it again for itself (D17).
+ * organization id — and `HostedPage` resolves it again for itself.
  *
  * Dynamic for the reason GildOps' own homepage is (`public-site-schema.test.ts`): the snapshot is
  * read from the database at request time, never at build time.

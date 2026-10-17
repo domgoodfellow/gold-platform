@@ -12,7 +12,7 @@ import { DomainError } from '@/lib/domain/errors';
  * **Bought in advance, which is what keeps this out of being a utility bill.** Nobody can spend
  * what they have not already handed over: no arrears, no dunning, no credit risk, and no invoice
  * at the end of a month. A pack of credit is a thing purchased, like an implementation — which
- * is why `market.md` needed one row corrected rather than its position rewritten.
+ * is why it is sold as a purchase, not billed as usage.
  *
  * **Nothing here can add credit**, and that is deliberate rather than unfinished. No policy on
  * `organization_credits` permits an insert by anybody signed in, so a member topping up their
@@ -39,7 +39,7 @@ export const COMMUNICATION_METER_LABELS: Record<CommunicationMeter, string> = {
 export type Rate = {
   meterId: CommunicationMeter;
   currency: string;
-  /** What one unit costs, in micro-minor units of the currency (I10). */
+  /** What one unit costs, in micro-minor units of the currency. */
   unitAmountMicros: number;
 };
 
@@ -50,7 +50,7 @@ function isCommunicationMeter(value: string): value is CommunicationMeter {
 /**
  * What is left, in minor units.
  *
- * **One answer, and it is a sum rather than a column** (I4). Credit bought, less every charge on
+ * **One answer, and it is a sum rather than a column**. Credit bought, less every charge on
  * a usage event, in the business's own currency; there is no balance field anywhere in the
  * schema, for the same reason there is no stored invoice total.
  */

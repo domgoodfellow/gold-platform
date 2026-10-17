@@ -1,8 +1,8 @@
-"""Cloudflare: one sign-in to the account that owns a business's own DNS (D56, work order 1).
+"""Cloudflare: one sign-in to the account that owns a business's own DNS (the vendor-shape-stays-at-the-edge rule, work order 1).
 
 **Tenant-owned, never a GildOps provider account.** The Cloudflare account connected here belongs
-to the business, not to GildOps (D33) -- the opposite ownership from the Vercel hosting account
-`app.providers.vercel` speaks to (D44/D62). This file only runs the handshake and lists the zones
+to the business, not to GildOps -- the opposite ownership from the Vercel hosting account
+`app.providers.vercel` speaks to. This file only runs the handshake and lists the zones
 the authorization can reach, exactly like every other connector; writing a DNS record is a
 separate, narrower capability in `app.services.dns`, reached only through an active connection
 this file produced.
@@ -36,7 +36,7 @@ API = "https://api.cloudflare.com/client/v4"
 
 
 def cloudflare_error_message(body: dict, status_code: int) -> str:
-    """Cloudflare's own words from its `errors` array, kept short (I25) -- the one place both this
+    """Cloudflare's own words from its `errors` array, kept short -- the one place both this
     connector and `app.services.dns.cloudflare` read that shape from, so neither collapses a
     refusal to a bare status code where the vendor said something more useful."""
     errors = body.get("errors") if isinstance(body, dict) else None

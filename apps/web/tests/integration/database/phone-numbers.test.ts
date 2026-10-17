@@ -10,7 +10,7 @@ import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
  * writer that has ever created a `phone_numbers` row (`sync_phone_number`, staff-only) is proven
  * to record who did it — the audit gap Work Order 2 found and this slice closes for the one
  * reachable writer. Organization-integrity: a business reads only its own numbers, regardless of
- * which organization id a caller supplies (RLS decides, not the argument — D17).
+ * which organization id a caller supplies (RLS decides, not the argument — the tenant-isolation rule).
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -101,7 +101,7 @@ describe('a number names where it came from', () => {
     const id = await provisionOneNumber(mine.organizationId, e164);
 
     // `other` is signed in as a different business entirely; RLS refuses the row regardless of
-    // which organization id this call supplies (D17) — the parameter is never the authority.
+    // which organization id this call supplies — the parameter is never the authority.
     const crossTenant = await getPhoneNumber(other.db, { organizationId: mine.organizationId, phoneNumberId: id });
     expect(crossTenant).toBeNull();
 

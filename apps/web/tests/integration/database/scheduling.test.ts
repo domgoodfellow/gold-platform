@@ -13,15 +13,15 @@ import { createWorkItem, listWorkItems } from '@/lib/domain/work-items/work-item
 import { asPlatformStaff, foundBusiness, newAccountEmail } from '@/tests/support/founding';
 
 /**
- * I7 — two work items can never occupy the same resource and window.
+ * The no-double-booking constraint — two work items can never occupy the same resource and window.
  *
- * `roadmap.md` will not accept this in any other form: "`I7` is a database exclusion
+ * `roadmap.md` will not accept this in any other form: "the no-double-booking constraint is a database exclusion
  * constraint. An application-level overlap check is not this milestone." So every assertion
  * here goes through the database, and the negative cases are checked for `23P01`
  * specifically — the constraint firing — rather than for "some error", which a domain check
  * would also produce.
  *
- * The shape of the constraint is the answer to a failure constraints.md quotes by name:
+ * The shape of the constraint is the answer to a failure from an earlier prototype:
  *
  *   > `tire-app-template` has an exclusion constraint that coalesces a null technician to
  *   > the zero UUID, so every unassigned booking in the database shares one exclusion key.
@@ -29,7 +29,7 @@ import { asPlatformStaff, foundBusiness, newAccountEmail } from '@/tests/support
  *
  * Three tests below are that failure, inverted: unassigned work does not block unassigned
  * work, untimed work does not block anything, and the other tenant's identical booking on an
- * identically named resource succeeds. The last is I7 and I2 together and is the one that
+ * identically named resource succeeds. The last is the no-double-booking constraint and tenant isolation together and is the one that
  * would have failed in the repository the quotation comes from.
  */
 
@@ -111,7 +111,7 @@ describe('scheduling', () => {
     if (!ANON_KEY || !SERVICE_ROLE_KEY) {
       throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
     }
-    // Two businesses on two clocks, which is what makes I9 observable at all.
+    // Two businesses on two clocks, which is what makes the absolute-time rule observable at all.
     alice = await newTenant('sc-alice', 'Europe/Amsterdam');
     bob = await newTenant('sc-bob', 'America/New_York');
   });
@@ -131,7 +131,7 @@ describe('scheduling', () => {
     expect(scheduled?.resources.map((r) => r.label)).toEqual(['Sam Okafor']);
   });
 
-  it('refuses an overlapping booking on the same resource (I7)', async () => {
+  it('refuses an overlapping booking on the same resource', async () => {
     const workItemId = await newWorkItem(alice, 'Overlaps the morning');
 
     await expect(
@@ -146,7 +146,7 @@ describe('scheduling', () => {
 
   it('refuses the overlap as a raw update too, with 23P01', async () => {
     // The constraint, not the domain. A caller that never touches scheduleWorkItem gets the
-    // same answer, which is the whole reason I7 must be a database constraint.
+    // same answer, which is the whole reason the no-double-booking constraint must be a database constraint.
     const workItemId = await newWorkItem(alice, 'Overlaps, written directly');
 
     // The window is written straight onto the work item, and the resource straight onto the
@@ -183,8 +183,8 @@ describe('scheduling', () => {
     expect(items.find((i) => i.id === workItemId)?.window?.startsAt).toBe(TUESDAY_10);
   });
 
-  it('lets the other tenant book the identical window on an identically named resource (I7, I2)', async () => {
-    // The exact failure constraints.md quotes. If organization_id did not lead the exclusion
+  it('lets the other tenant book the identical window on an identically named resource', async () => {
+    // The exact earlier-prototype failure. If organization_id did not lead the exclusion
     // constraint, Alice's 9am would block Bob's.
     const workItemId = await newWorkItem(bob, 'Morning callout');
     await scheduleWorkItem(bob.db, {
@@ -328,7 +328,7 @@ describe('scheduling', () => {
     expect(inclusive.error?.code).toBe('23514');
   });
 
-  it('cannot schedule against another tenant\'s resource (I18)', async () => {
+  it('cannot schedule against another tenant\'s resource', async () => {
     const workItemId = await newWorkItem(alice, 'Borrowed technician');
 
     await expect(
@@ -341,7 +341,7 @@ describe('scheduling', () => {
     ).rejects.toMatchObject({ code: 'scheduling.resource_not_found' });
   });
 
-  it('stores an absolute instant and renders it in each tenant\'s zone (I9)', async () => {
+  it('stores an absolute instant and renders it in each tenant\'s zone', async () => {
     // One instant, two businesses, two clocks. 09:00Z is 11:00 in Amsterdam and 05:00 in New
     // York, and neither reading is the server's.
     const window = { startsAt: TUESDAY_09, endsAt: TUESDAY_10 };
@@ -366,7 +366,7 @@ describe('scheduling', () => {
   });
 
   it('refuses a timezone Postgres does not recognise', async () => {
-    // Asked of the provisioning door — the only one with a grant since D29 (see
+    // Asked of the provisioning door — the only one with a grant since the one-creation-path rule (see
     // `consumption.test.ts` for the same move). The check being exercised is on
     // `organizations`, so it fires whichever door writes the row.
     const { error } = await (await asPlatformStaff()).rpc('provision_organization', {
@@ -382,7 +382,7 @@ describe('scheduling', () => {
     expect(error?.code).toBe('23514');
   });
 
-  it('holds no timestamp without a zone anywhere in the schema (I9)', async () => {
+  it('holds no timestamp without a zone anywhere in the schema', async () => {
     // The general form of the invariant. A single `timestamp` column added later would be an
     // instant that means different things depending on who reads it, and no test of one
     // table would notice.
@@ -410,7 +410,7 @@ describe('scheduling', () => {
     }
   });
 
-  it('refuses scheduling to a member without the capability (I12, I16)', async () => {
+  it('refuses scheduling to a member without the capability', async () => {
     const limited = await createRole(bob.db, {
       organizationId: bob.organizationId,
       name: 'Mover Only',

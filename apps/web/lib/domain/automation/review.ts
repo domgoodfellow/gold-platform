@@ -137,7 +137,7 @@ export async function reviewAutomationRules(
 
         // **The check that catches the most common broken rule.** A status is reached by a
         // transition this business wired; with none pointing at it, no job can ever arrive
-        // there and every run of this rule fails on `app.check_status_transition` (I13).
+        // there and every run of this rule fails on `app.check_status_transition`.
         if (!reachable.has(action.statusId)) {
           say(
             rule.id,

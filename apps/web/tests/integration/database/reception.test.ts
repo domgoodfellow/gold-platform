@@ -21,11 +21,11 @@ import { foundBusiness } from '@/tests/support/founding';
  * **The claims worth testing here are the ones a dialer usually gets wrong**, and none of them is
  * "a call can be written down":
  *
- *   * two businesses can use the same word for different stages, which is I2 on a table that did
+ *   * two businesses can use the same word for different stages, which is tenant isolation on a table that did
  *     not exist before;
- *   * a call cannot name another business's outcome, which is I18 on a new composite key;
+ *   * a call cannot name another business's outcome, which is the same-organization reference rule on a new composite key;
  *   * a role without `call.place` is refused by the database rather than by a hidden button,
- *     which is I12;
+ *     which is the UI-is-not-authorization rule;
  *   * a customer's stage moves and the timeline says so in the tenant's word, which is the loop
  *     the module exists for.
  */
@@ -78,7 +78,7 @@ beforeAll(async () => {
 
 describe('a stage is a word a business owns', () => {
   it('lets two businesses mean different things by the same word', async () => {
-    // I2 on a table that did not exist before this slice. `customer_stages_org_name_unique`
+    // tenant isolation on a table that did not exist before this slice. `customer_stages_org_name_unique`
     // leads with the tenant id, so a sales floor's *Qualified* and a clinic's *Qualified* are
     // two rows. If this ever fails, that index has lost its leading column.
     const mine = await createCustomerStage(floor.db, {
@@ -143,7 +143,7 @@ describe('a stage is a word a business owns', () => {
   });
 
   it('cannot be given to another business’s customer', async () => {
-    // I18 through the composite foreign key. The stage id is real and the customer is real; they
+    // the same-organization reference rule through the composite foreign key. The stage id is real and the customer is real; they
     // belong to different businesses, and the database is what refuses to join them.
     const theirStage = await createCustomerStage(other.db, {
       organizationId: other.organizationId,
@@ -210,7 +210,7 @@ describe('a customer can be edited at all', () => {
     expect(untouched?.name).toEqual('Not Yours Ltd');
   });
 
-  it('is refused by the database for a role that does not hold it (I12)', async () => {
+  it('is refused by the database for a role that does not hold it', async () => {
     // A role with everything else it needs to work here and no `customer.update`. The refusal
     // has to come from the policy, because hiding the form is a courtesy and not the guard.
     const { email } = await account('reader');
@@ -341,7 +341,7 @@ describe('a call', () => {
   });
 
   it('cannot be given another business’s outcome', async () => {
-    // I18 again, on the second composite key this slice adds. Their word, my call.
+    // the same-organization reference rule again, on the second composite key this slice adds. Their word, my call.
     const theirOutcome = await createCallOutcome(other.db, {
       organizationId: other.organizationId,
       name: 'Theirs',
@@ -369,7 +369,7 @@ describe('a call', () => {
     expect(error).not.toBeNull();
   });
 
-  it('is invisible to another business (I1)', async () => {
+  it('is invisible to another business', async () => {
     const customerId = await createCustomer(floor.db, {
       organizationId: floor.organizationId,
       name: 'Private Ltd',
@@ -538,7 +538,7 @@ describe('moving a customer along the pipeline, on its own', () => {
     expect(after).toHaveLength(before.length);
   });
 
-  it('cannot move another business’s customer (I2)', async () => {
+  it('cannot move another business’s customer', async () => {
     const customerId = await createCustomer(floor.db, {
       organizationId: floor.organizationId,
       name: 'Not Yours Ltd',
@@ -568,7 +568,7 @@ describe('the number a business dials from', () => {
     expect(await callingNumber(floor.db, { organizationId: floor.organizationId })).toBeNull();
   });
 
-  it("is one business's own, and another can neither read nor write it (I2)", async () => {
+  it("is one business's own, and another can neither read nor write it", async () => {
     await setCallingNumber(floor.db, {
       organizationId: floor.organizationId,
       number: '+14165550142',
@@ -604,7 +604,7 @@ describe('the number a business dials from', () => {
     expect(await callingNumber(floor.db, { organizationId: floor.organizationId })).toBeNull();
   });
 
-  it('refuses a role holding every reception capability but not organization.manage (I12)', async () => {
+  it('refuses a role holding every reception capability but not organization.manage', async () => {
     // `organization.manage`, not `field.manage`. Naming a stage is configuring how a business
     // records work; the number its customers see when it rings them is the business itself, and
     // it sits with currency and the clock.

@@ -3,10 +3,10 @@ import { DomainError } from '@/lib/domain/errors';
 
 /**
  * What can be metered, what GOLD sells, and what each costs — GOLD selling GOLD, never a
- * tenant's own catalogue (`price_book_items`, `lib/domain/billing/`, D42's two money paths).
+ * tenant's own catalogue (`price_book_items`, `lib/domain/billing/`, the two money paths).
  *
  * Every rate is a per-unit price in **micro-minor-units** — millionths of one minor currency
- * unit — because a provider's wholesale price is routinely sub-cent (`constraints.md` D43). A
+ * unit — because a provider's wholesale price is routinely sub-cent (the platform-economics separation, ADR-014). A
  * caller wanting a number to show a person converts with `microsToMinor` below, once, at
  * render.
  */
@@ -137,7 +137,7 @@ export function meterIsRecorded(meter: Meter): boolean {
   return meter.writer !== null;
 }
 
-/** Who GOLD can pay for a unit of a meter — decoupled on purpose (D43's correction): two
+/** Who GOLD can pay for a unit of a meter — decoupled on purpose (the platform-economics separation's correction): two
  * providers may answer the same meter, and a meter names no provider of its own. */
 export async function listProviders(db: Db): Promise<Provider[]> {
   const { data, error } = await db
@@ -323,7 +323,7 @@ export async function listProviderRates(
   return (data ?? []).map(toRate);
 }
 
-/** What GOLD charges. Readable by a member of any business or by staff (D64). No provider dimension — a business is charged one retail price per meter regardless of which vendor GOLD used. */
+/** What GOLD charges. Readable by a member of any business or by staff. No provider dimension — a business is charged one retail price per meter regardless of which vendor GOLD used. */
 export async function listRetailRates(db: Db, input: { meterId?: string } = {}): Promise<Rate[]> {
   let query = db
     .from('platform_retail_rates')

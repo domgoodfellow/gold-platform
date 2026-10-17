@@ -7,7 +7,7 @@ that person's own access token.
 
 **That token is the whole authorization story.** There is no role for this endpoint, no grant to
 check and no organization to trust: what a tool can see is what the caller's session can see,
-decided by RLS in the ordinary way (D17, D34). `app.auth.require_caller` establishes *who* is
+decided by RLS in the ordinary way. `app.auth.require_caller` establishes *who* is
 calling, authoritatively, before anything below it runs -- there is nothing it could usefully
 decide about *what* that caller may see that Postgres does not decide better a moment later, and
 a second copy of that decision here would be a weaker one. A stranger holding no genuine token
@@ -21,7 +21,7 @@ is a business that does not hold the Agent: `assistant.ask` is a role's permissi
 (`app.ai.entitlement`). What a question consumed is written down after it is answered
 (`app.ai.metering`).
 
-Vercel's Python runtime routes a file under `api/` to a path (D24). One file, one route.
+Vercel's Python runtime routes a file under `api/` to a path. One file, one route.
 """
 
 from __future__ import annotations
@@ -151,7 +151,7 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             return
         if provider is None:
             # A deployment with no model. Said out loud rather than left as a silence, and in
-            # the same words the settings screen uses (D31).
+            # the same words the settings screen uses.
             self._reply(503, {"error": unconfigured_reason()})
             return
 
@@ -228,7 +228,7 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
                 "answered_by": provider.name,
                 "tools": [asdict(record) for record in given.tools],
                 # Reported, and performed by nobody here. `apps/web` looks the name up in its
-                # own whitelist and a person decides (D34).
+                # own whitelist and a person decides.
                 "action": asdict(given.action) if given.action else None,
                 # Whether what this answer consumed was written down: `recorded`, `none_reported`
                 # or `failed`. Carried back rather than swallowed, so a failed meter is visible.

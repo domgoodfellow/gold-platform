@@ -288,7 +288,7 @@ export type Area = {
    * `areaLabel` reads; the first path part is the directory `navigation.test.ts` finds the page in.
    */
   route?: string;
-  /** The module this area belongs to, or absent for the kernel. A business without a named module doesn't see its entry — not capability gating (I12), just a fact that it isn't part of that business. */
+  /** The module this area belongs to, or absent for the kernel. A business without a named module doesn't see its entry — not capability gating, just a fact that it isn't part of that business. */
   module?: ModuleKey;
   /**
    * Route metadata, kept apart from sidebar visibility on purpose. `false` means this area's

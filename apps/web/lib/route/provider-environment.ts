@@ -2,11 +2,11 @@
  * Providers with the generic, API-key-only account model (`ProviderConfiguration`) rather than
  * Twilio's own subaccount/binding one. Route-owned: naming which
  * providers this platform built account UI for is a fact about this deployment's routes, never
- * something `lib/domain/` may say (I15). Named once so the Providers list and a Provider's own
+ * something `lib/domain/` may say. Named once so the Providers list and a Provider's own
  * detail route agree, and held to the API's own registry (`app.providers.providers.operations_for`)
  * by `provider-account-adapters.test.ts`, so the two lists cannot drift apart.
  *
- * `resend` joined this set once platform email moved onto `platform_provider_accounts` (D62,
+ * `resend` joined this set once platform email moved onto `platform_provider_accounts` (the platform-provider-account rule,
  * work order 1 §6); `RESEND_API_KEY`/`PLATFORM_EMAIL_FROM_ADDRESS` are the bootstrap fallback
  * `app.services.platform_email` tries when no account is recorded, never a second UI for it.
  */

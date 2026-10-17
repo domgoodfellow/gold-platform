@@ -26,10 +26,10 @@ import { createWorkItemType } from '@/lib/domain/work-items/types';
 /**
  * Standing a business up from reviewed data through its canonical owners. `BusinessShape` is
  * a type rather than an argument list because a proposal has to survive being generated,
- * rendered, edited by a human, and only then applied (the second caller is M8's onboarding
+ * rendered, edited by a human, and only then applied (the second caller is the onboarding
  * flow). Not a business template — nothing here is seeded or known to the platform in advance.
  * Creates no customer and no job, since inventing one would be the platform speaking for a
- * business that hasn't said anything (D6, D20). Not atomic: each call is its own transaction,
+ * business that hasn't said anything. Not atomic: each call is its own transaction,
  * so a failure partway leaves a partly-configured business — the same state a business
  * configuring by hand can be in, and every screen already handles it.
  */
@@ -61,7 +61,7 @@ export type ShapeAutomation = {
 
 /**
  * A business, as data. The platform supplies `Customer`, `Work Item`, `Resource` and `Event`
- * (vision.md's non-negotiable primitives); every word describing them here belongs to the tenant.
+ * (the platform's fixed primitives); every word describing them here belongs to the tenant.
  */
 export type BusinessShape = {
   /** What this business calls the work it does. */
@@ -73,17 +73,17 @@ export type BusinessShape = {
   schedulable: boolean;
   /** Its lifecycle, in its own words and its own length. */
   statuses: string[];
-  /** Which moves are legal, as index pairs — an empty list means this business hasn't said how its work moves, and a type with none is frozen rather than unconstrained (I13). */
+  /** Which moves are legal, as index pairs — an empty list means this business hasn't said how its work moves, and a type with none is frozen rather than unconstrained. */
   transitions: [number, number][];
   /** Its own form, in its own order — `position` is applied explicitly below. */
   fields: Partial<Record<CustomFieldEntity, ShapeField[]>>;
-  /** What it charges for. Amounts are minor units in *its* currency (I10). */
+  /** What it charges for. Amounts are minor units in *its* currency. */
   prices: { name: string; unit: string; amountMinor: number }[];
   /** When it is open. Empty means it has said nothing, which is treated as always open. */
   hours: { dayOfWeek: number; opensAt: string; closesAt: string }[];
   /** Roles that are not the founder's, holding what this business decided it needs. */
   roles: { name: string; capabilities: string[] }[];
-  /** Optional — a business that automates nothing is ordinary, and a shape written before M6 existed is still valid. */
+  /** Optional — a business that automates nothing is ordinary, and a shape written before automations existed is still valid. */
   automations?: ShapeAutomation[];
   /**
    * What this business is switching on. A description like *"we repair plant on site, we
@@ -202,9 +202,9 @@ function validateScheduling(shape: BusinessShape): void {
 /**
  * Configure a business that already exists — it no longer creates one, since `createRole` and
  * everything after it run against policies keyed to `app.current_tenant_ids()`, and platform
- * staff are a member of nothing (I21). Standing a business up is two acts by two parties (D29):
+ * staff are a member of nothing. Standing a business up is two acts by two parties:
  * GOLD creates it (`provisionOrganization`), and whoever does the configuring configures it —
- * today the owner, at M8 the same call made after a human reviews a proposal. What hasn't
+ * today the owner, in onboarding the same call made after a human reviews a proposal. What hasn't
  * changed is the fixed sequence of domain calls with no branch on which business this is.
  */
 export async function configureBusiness(
@@ -321,7 +321,7 @@ export async function configureBusiness(
   // Switching a module on is `organization.manage`, and the comment below is the rule: a member
   // who may operate but not rename the business gets the whole operational setup before
   // anything refuses them. Nothing above depends on a module being on — no write in this file
-  // is gated on enablement, and D25 is why that stays true.
+  // is gated on enablement, and the module-visibility rule is why that stays true.
   const moduleKeys: ModuleKey[] = [];
   for (const key of shape.modules ?? []) {
     for (const state of featureStates.filter((state) => state.moduleKey === key && state.entitled && state.implementationState === 'available')) {

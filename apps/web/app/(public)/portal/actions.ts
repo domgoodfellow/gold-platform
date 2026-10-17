@@ -17,7 +17,7 @@ export type PayInvoiceActionState = { error: string | null };
  * **What this submits, and nothing more.** `invoiceId` is the only value the form carries.
  * `requestPortalCardPayment` derives which organization, what is actually outstanding, and which
  * connected account receives it — none of that is a value this action could choose even if the
- * form tried to submit one (D22, D27).
+ * form tried to submit one.
  *
  * **The return URL carries no secret.** Building it here, from
  * `requestOrigin()`, at a route with no token in its path, is deliberate: the token is this

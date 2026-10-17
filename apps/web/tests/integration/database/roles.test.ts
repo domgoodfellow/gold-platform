@@ -9,7 +9,7 @@ import { assignRole, createRole, listRoles } from '@/lib/domain/tenancy/roles';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * I12, upgraded. Before this slice it meant "is there an actor"; these tests assert it now
+ * The UI-is-not-authorization rule, upgraded. Before this slice it meant "is there an actor"; these tests assert it now
  * means "may this actor" — and that the answer is enforced by RLS, not only by the domain
  * layer, so a direct RPC call gets the same refusal a form does.
  */
@@ -95,13 +95,13 @@ describe('roles and capabilities', () => {
     ).rejects.toMatchObject({ code: 'roles.capability_unknown' });
   });
 
-  it('refuses two roles with the same name in one tenant (I2)', async () => {
+  it('refuses two roles with the same name in one tenant', async () => {
     await expect(
       createRole(owner.db, { organizationId, name: 'admin', capabilities: [] }),
     ).rejects.toMatchObject({ code: 'roles.name_taken' });
   });
 
-  it('lets two tenants each have a role of the same name (I2)', async () => {
+  it('lets two tenants each have a role of the same name', async () => {
     const other = await signUp('other');
     const otherOrganizationId = await foundBusiness({ ownerEmail: other.email, name: 'Other Ltd', displayName: 'Founder', currency: 'EUR' });
 
@@ -114,7 +114,7 @@ describe('roles and capabilities', () => {
     expect(theirs.some((r) => r.name === 'Admin')).toBe(true);
   });
 
-  it('enforces the capability in the database, not just the domain (I12)', async () => {
+  it('enforces the capability in the database, not just the domain', async () => {
     // A role that can do nothing, assigned to the only member. From here the owner should
     // be refused by RLS even though they are still a member of the organization.
     const powerless = await createRole(owner.db, {
@@ -166,7 +166,7 @@ describe('roles and capabilities', () => {
     ).resolves.toBeTypeOf('string');
   });
 
-  it('refuses assigning a role that belongs to another organization (I18)', async () => {
+  it('refuses assigning a role that belongs to another organization', async () => {
     // The composite foreign key `memberships_role_same_org` is what actually refuses this —
     // `assignRole`'s own RLS-backed update happily reaches the owner's own membership, and it is
     // the role id naming a row that does not exist for *this* organization that fails.
@@ -184,7 +184,7 @@ describe('roles and capabilities', () => {
     ).rejects.toMatchObject({ code: 'roles.role_not_found' });
   });
 
-  it('refuses role management to someone without the capability (I12)', async () => {
+  it('refuses role management to someone without the capability', async () => {
     const outsider = await signUp('outsider');
     await expect(
       createRole(outsider.db, {
@@ -195,7 +195,7 @@ describe('roles and capabilities', () => {
     ).rejects.toMatchObject({ code: 'roles.forbidden' });
   });
 
-  it('records role changes on the timeline (I11)', async () => {
+  it('records role changes on the timeline', async () => {
     const { data, error } = await owner.db
       .from('events')
       .select('action, actor_id')

@@ -14,9 +14,9 @@ import {
 } from '@/lib/domain/tenancy/organizations';
 
 /**
- * The operator door (D29): GOLD creates a business and hands it to its owner.
+ * The operator door: GOLD creates a business and hands it to its owner.
  *
- * **What this suite is really about is the line I21 now sits on.** D28 gave platform staff a
+ * **What this suite is really about is the line the no-grant-rather-than-policy rule now sits on.** The platform-staff separation gave platform staff a
  * role that reads everything and writes nothing, and provisioning is the first thing staff must
  * write — so the question is not *may staff write* but *what may they write*. The answer here
  * is: a tenant that did not exist when the call began, and nothing else, ever. The two halves
@@ -24,7 +24,7 @@ import {
  * provision proves nothing about containment, and that staff cannot write proves nothing if
  * they cannot provision either.
  *
- * **The second thing it asserts is that there is one creation path and not two.** D29's whole
+ * **The second thing it asserts is that there is one creation path and not two.** The one-creation-path rule's whole
  * correction is that provisioned and self-served are two doors rather than two kinds of tenant,
  * and a claim like that decays silently: the doors drift, one gains a default the other lacks,
  * and a year later a provisioned business is subtly a different product. So the last test
@@ -90,7 +90,7 @@ let staff: Awaited<ReturnType<typeof signedInStaff>>;
 let owner: Person;
 let stranger: Person;
 
-describe('the operator door (D29)', () => {
+describe('the operator door', () => {
   beforeAll(async () => {
     staff = await signedInStaff();
     owner = await signedInUser('owner');
@@ -106,7 +106,7 @@ describe('the operator door (D29)', () => {
       currency: 'EUR',
     });
 
-    // The owner has it, named as the business names them (D19).
+    // The owner has it, named as the business names them.
     const theirs = await getOrganization(owner.db, id);
     expect(theirs).toMatchObject({
       name: 'Northern Plant Services',
@@ -115,7 +115,7 @@ describe('the operator door (D29)', () => {
     });
     expect(theirs?.capabilities).toEqual(expect.arrayContaining([...ALL_CAPABILITIES]));
 
-    // And the staff member does not, which is the half D28 rejected `memberships` over: our
+    // And the staff member does not, which is the half the platform-staff separation rejected `memberships` over: our
     // people are not in a customer's own list of who works at their business.
     //
     // `null` rather than a thrown error matters beyond this assertion: `requireOrganization`
@@ -185,7 +185,7 @@ describe('the operator door (D29)', () => {
       );
       expect(events.rows).toHaveLength(1);
 
-      // The same action through either door — D29's correction as a row. A timeline reader
+      // The same action through either door — the one-creation-path rule's correction as a row. A timeline reader
       // filtering on the action keeps working; one asking how a business arrived reads the
       // payload.
       expect(events.rows[0].action).toBe('organization.created');
@@ -213,7 +213,7 @@ describe('the operator door (D29)', () => {
 
     // **`billing` and `drafting`, and that is the whole list** — `20260829000012` took the
     // kernel out of the module table, so work, scheduling and customers are not modules to
-    // switch on (D25), and `20260904000001` added guided setup because a first-run screen that
+    // switch on, and `20260904000001` added guided setup because a first-run screen that
     // has to be found in settings is not a first-run screen. Deliberately absent: `booking` and
     // `portal`, because publishing a business to the internet is not something GOLD does on
     // somebody's behalf at the moment of handover.
@@ -225,7 +225,7 @@ describe('the operator door (D29)', () => {
     expect(provisioned?.moduleKeys).toEqual(['billing', 'drafting']);
   });
 
-  it('still cannot reach into a business once it exists, which is where I21 now sits', async () => {
+  it('still cannot reach into a business once it exists, which is where the no-grant-rather-than-policy rule now sits', async () => {
     const id = await provisionOrganization(staff.db, {
       ownerEmail: owner.email,
       name: 'Not Ours Ltd',
@@ -234,7 +234,7 @@ describe('the operator door (D29)', () => {
     });
 
     // Created by this very caller, one line ago, and still unreachable for writing. Two
-    // different refusals now, and both are I21 -- 20260915000001 stopped staff wearing a
+    // different refusals now, and both are the no-grant-rather-than-policy rule -- 20260915000001 stopped staff wearing a
     // separate Postgres role, so `organizations`'s ordinary member-facing update grant applies to
     // them too; what refuses them is `organizations_update`'s policy declining because they hold
     // no membership here, not a missing privilege. `memberships` carries no insert grant to
@@ -428,7 +428,7 @@ describe('the operator door (D29)', () => {
   it('will not hand a business to an anonymous account', async () => {
     // `create_organization` has carried this guard since 20260830000001 and can no longer be
     // reached to prove it, so the rule is asserted here, at the door that is open. An anonymous
-    // session is a real `auth.users` row with a real `auth.uid()` (D22) — which is exactly why
+    // session is a real `auth.users` row with a real `auth.uid()` — which is exactly why
     // it would otherwise pass for an owner.
     const visitor = createClient(SUPABASE_URL, ANON_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },

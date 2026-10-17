@@ -54,15 +54,15 @@ import { getAutomationSummary } from '@/lib/domain/automation/monitoring';
  * **It runs where a person is not.** A rule is written by a member holding
  * `automation.manage` and then runs in transactions that member is not in — including one
  * started by a stranger with no membership at all. That is why the runtime is in the database
- * (D30) and why these tests exercise the path rather than a function.
+ * and why these tests exercise the path rather than a function.
  *
  * **A bad rule may not break a good write.** Every rule runs in its own subtransaction, so a
  * business that writes a rule its own lifecycle forbids gets a recorded failure and keeps the
  * job that tripped it. Before this milestone a failure here would have been a `DomainError`
- * raised, rendered and dropped; `automation_runs` is the substrate `roadmap.md` M5 deferred.
+ * raised, rendered and dropped; `automation_runs` is the substrate that was deliberately deferred.
  *
  * **An automation may not do what a person may not do.** `app.check_status_transition` fires on
- * a rule's write exactly as it fires on a human's (I13), which is the difference between a
+ * a rule's write exactly as it fires on a human's, which is the difference between a
  * runtime and a back door.
  *
  * **And it stays inside one tenant.** Two businesses run rules that share every word.
@@ -218,12 +218,12 @@ describe('rules a business writes', () => {
     const runs = await listAutomationRuns(one.db, { organizationId: one.organizationId, ruleId });
     expect(runs).toHaveLength(1);
     expect(runs[0].outcome).toBe('done');
-    // Snapshotted, so renaming the rule tomorrow leaves this record saying what it said (I8).
+    // Snapshotted, so renaming the rule tomorrow leaves this record saying what it said.
     expect(runs[0].ruleName).toBe('Confirm a new callout');
     expect(runs[0].subjectId).toBe(workItemId);
   });
 
-  it('cannot cross a transition this business has not wired (I13)', async () => {
+  it('cannot cross a transition this business has not wired', async () => {
     // **The claim that separates a runtime from a back door.** The rule is legitimate, the
     // status is this tenant's own, and the move is still refused — by the same trigger that
     // refuses a person.
@@ -267,7 +267,7 @@ describe('rules a business writes', () => {
   it('keeps what a deleted rule did', async () => {
     // `automation_runs` holds no key to `automation_rules`, so the history above outlived the
     // rule deleted at the end of the previous case. That absence is the same one
-    // `work_item_priced_lines` keeps against the price book (I8).
+    // `work_item_priced_lines` keeps against the price book.
     const runs = await listAutomationRuns(one.db, {
       organizationId: one.organizationId,
       failedOnly: true,
@@ -417,7 +417,7 @@ describe('rules a business writes', () => {
   });
 
   it('refuses a rule from a member who cannot write one, and shows it to them anyway', async () => {
-    // I12 in its usual shape, and the half that is particular to this screen: reading is not
+    // the UI-is-not-authorization rule in its usual shape, and the half that is particular to this screen: reading is not
     // gated. A job that moves on its own must never be a mystery to the person watching it.
     const roleId = await createRole(one.db, {
       organizationId: one.organizationId,
@@ -491,7 +491,7 @@ describe('rules a business writes', () => {
     }
   });
 
-  it('attributes what it did to nobody, and names the rule instead (I11)', async () => {
+  it('attributes what it did to nobody, and names the rule instead', async () => {
     const client = new Client({ connectionString: CONNECTION });
     await client.connect();
     try {
@@ -506,7 +506,7 @@ describe('rules a business writes', () => {
       );
 
       expect(rows).toHaveLength(1);
-      // The same answer D26 gave the payment webhook: a real `auth.users` row that can never
+      // The same answer the authoritative-webhook rule gave the payment webhook: a real `auth.users` row that can never
       // sign in, rather than a second shape for the invariant.
       expect(rows[0].actor_id).toBe('00000000-0000-4000-8000-0000000000a2');
       expect(rows[0].payload.automation_rule_name).toBeTruthy();
@@ -558,7 +558,7 @@ describe('rules a business writes', () => {
 /**
  * The clock, and what it may reach.
  *
- * **Everything about *what is due* is a query** (D24: a scheduled invocation asks, it does not
+ * **Everything about *what is due* is a query** (the no-queue scheduling rule: a scheduled invocation asks, it does not
  * hold a queue), so it is exercised here rather than in Python — the same division
  * `adapters.test.ts` makes for the payment webhook, where the handler's own logic is tested in
  * its own language and the privileges are tested against the database that grants them.
@@ -639,7 +639,7 @@ describe('the clock', () => {
   });
 
   it('gives the runner five functions and no table at all', async () => {
-    // I21's shape on a fourth axis, and the reason it is asserted from `information_schema`
+    // the no-grant-rather-than-policy rule's shape on a fourth axis, and the reason it is asserted from `information_schema`
     // rather than from the migration: a permissive policy added later still hits a missing
     // privilege, and the difference between a policy declining and a privilege not existing is
     // the whole guarantee.
@@ -729,7 +729,7 @@ describe('what a rule says', () => {
       subjectId: workItemId,
     });
 
-    // **The assertion I24 exists for.** Not "contains", not "starts with" — exactly. A greeting,
+    // **The assertion the exact-text rule exists for.** Not "contains", not "starts with" — exactly. A greeting,
     // a signature or a footer added by any layer would fail here, which is the point: a message
     // arrives in somebody's inbox with this business's name on it, and every word has to be
     // theirs.
@@ -797,7 +797,7 @@ describe('what a rule says', () => {
     await deleteAutomationRule(one.db, { id: ruleId });
   });
 
-  it('leaves a sent message alone when the template is rewritten (I8)', async () => {
+  it('leaves a sent message alone when the template is rewritten', async () => {
     const [delivery] = await listMessageDeliveries(one.db, {
       organizationId: one.organizationId,
     });
@@ -886,7 +886,7 @@ describe('what a rule says', () => {
 });
 
 /**
- * Weather, which is an integration plus rules and nothing else (D11).
+ * Weather, which is an integration plus rules and nothing else.
  *
  * There is no weather table in this schema, no weather entity in the domain layer and no
  * directory named after it. What exists is a reading somebody outside took, a threshold a
@@ -1008,7 +1008,7 @@ describe('conditions at a job', () => {
         await listWorkItems(one.db, { organizationId: one.organizationId })
       ).find((item) => item.id === workItemId);
       // A day later, which is what the business typed. Nothing searched for a free slot: that
-      // would be a second availability calculation, which I5 forbids (D30).
+      // would be a second availability calculation, which the single availability model forbids.
       expect(new Date(moved!.window!.startsAt).getTime()).toBe(
         starts.getTime() + 24 * 60 * 60 * 1000,
       );
@@ -1046,7 +1046,7 @@ describe('conditions at a job', () => {
 
       // The hour this job would be pushed into, already held by somebody else on the same
       // resource. **Nothing looks before it writes** — the exclusion constraint refuses the move
-      // in the transaction that would have made it, which is I6 doing what it exists for.
+      // in the transaction that would have made it, which is the advisory-availability rule doing what it exists for.
       // **No location, deliberately.** With one it would match this rule too, both jobs would
       // be due at once, and which of them moved first would decide whether either failed — a
       // test that passes or fails on the order a `union all` happens to return. The rule cares
@@ -1117,7 +1117,7 @@ describe('conditions at a job', () => {
 /**
  * The third trigger shape, and the one this milestone was warned about.
  *
- * `constraints.md` names it under *Decided, not yet built*: a schedule fires at a time, weather
+ * It was decided before it was built: a schedule fires at a time, weather
  * fires on somebody else's number, and this fires when **an accumulated counter a human or a
  * sensor advances crosses a threshold** — a shape a when/if/then runtime built for events does
  * not express naturally. The four hundredth hour is the event, and nothing happened at any

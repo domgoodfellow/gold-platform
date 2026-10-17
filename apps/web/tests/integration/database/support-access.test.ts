@@ -11,8 +11,8 @@ import {
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * Support access, separate from membership (D28). A session is an audit trail for an action
- * staff could already take (D28 already grants `platform_staff`-equivalent reads on
+ * Support access, separate from membership. A session is an audit trail for an action
+ * staff could already take (the platform-staff separation already grants `platform_staff`-equivalent reads on
  * `organizations`/`memberships` in full) — it does not widen what any table admits. What it
  * proves is narrower and just as real: *that* and *why* a staff member opened one business is
  * now a row, not a click that left no trace, and only the staff member who opened it may close
@@ -113,7 +113,7 @@ describe('platform support sessions', () => {
     const members = await listMembersForSupport(staff.db, { organizationId });
     expect(members.some((m) => m.displayName === 'Owner')).toBe(true);
 
-    // Confirms this is D28's pre-existing read, not something the session widened — the session
+    // Confirms this is the platform-staff separation's pre-existing read, not something the session widened — the session
     // is the audit trail for the click, not a new grant.
     const { data, error } = await staff.db
       .from('customers')

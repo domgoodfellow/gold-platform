@@ -9,7 +9,7 @@ Postgres function, and no name here appears in that registry.
 **The whitelist that matters is in `apps/web`**, which maps a name to a domain function,
 validates the arguments with the same schema the screen's own form uses, and calls it when a
 person presses the button — under that person's session, so every capability check is the
-ordinary one (D34). A name this file invents and that whitelist does not know is a recorded
+ordinary one. A name this file invents and that whitelist does not know is a recorded
 refusal rather than a dispatch, which is what lets the two sides disagree safely and is why this
 list needs no version.
 
@@ -18,9 +18,9 @@ layer would be the abstraction with no caller this repository refuses everywhere
 a second cost: every action is a sentence in a prompt, and a model given nine plausible ones
 chooses worse than one given the one that fits.
 
-**Why rescheduling is the first.** It is the action D30 already reasoned about for automations,
+**Why rescheduling is the first.** It is the action the runtime-boundary rule already reasoned about for automations,
 and the reasoning carries: it asserts an instant rather than searching for one, so nothing here
-is a second `freeWindows` (I5), and the exclusion constraint decides whether it lands (I6). A
+is a second `freeWindows`, and the exclusion constraint decides whether it lands. A
 refusal is a row somebody reads.
 """
 

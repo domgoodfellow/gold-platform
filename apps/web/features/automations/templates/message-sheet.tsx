@@ -31,7 +31,7 @@ import {
  *
  * **Every word here belongs to the business.** The placeholders are the platform's whole
  * contribution — five names for things it already has — and an unknown one is left exactly as
- * typed rather than blanked (I24).
+ * typed rather than blanked.
  */
 export function MessageSheet({
   organizationId,

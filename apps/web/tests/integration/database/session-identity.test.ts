@@ -7,7 +7,7 @@ import { decideRedirect, isPublic } from '@/lib/route/access';
 import { classifySessionUser, resolveSessionIdentity } from '@/lib/domain/identity/session';
 
 /**
- * D22 gives a booking/portal visitor a real, RLS-visible `auth.uid()` — which used to collapse,
+ * The anonymous-session model gives a booking/portal visitor a real, RLS-visible `auth.uid()` — which used to collapse,
  * in `proxy.ts` and everywhere else, into the same `userId: string | null` a permanent account
  * produces. That let an anonymous session be redirected away from `/login`/`/sign-up` as though
  * it were already signed in, and let the accept-invite page offer it an acceptance form

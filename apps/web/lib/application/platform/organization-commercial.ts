@@ -28,7 +28,7 @@ import {
  * Plan/Add-on functions (`organization-plans.ts`, `plans.ts`) and the legacy per-product terms
  * (`commercial/terms.ts`) — the authoritative staff answer to what this organization bought, what
  * commercial terms apply, and what that grants right now. Composes; it introduces no second
- * calculation of any of them (I4) — `effective` below is always `organizationPlanPrice()`'s own
+ * calculation of any of them — `effective` below is always `organizationPlanPrice()`'s own
  * result, never re-derived.
  */
 
@@ -110,7 +110,7 @@ async function componentPrice(
   };
 }
 
-/** Sums every component's effective price, only when every component is priced and every price shares one currency — an absent or mixed-currency total is `null` (`Unknown / incomplete`), never `$0` or a guess (I10). */
+/** Sums every component's effective price, only when every component is priced and every price shares one currency — an absent or mixed-currency total is `null` (`Unknown / incomplete`), never `$0` or a guess. */
 function recurringTotal(components: readonly ComponentPrice[]): { amountMinor: number; currency: string } | null {
   if (components.length === 0) return null;
   const currencies = new Set(components.map((component) => component.effective?.currency).filter((currency): currency is string => Boolean(currency)));
@@ -239,7 +239,7 @@ export async function loadOrganizationCommercial(db: Db, organizationId: string)
     assignmentHistory,
     quotaOverrideHistory: quotaOverrides,
     legacy: { hasLegacyTerms: terms.length > 0, terms },
-    // Kept for the legacy-compatibility surfaces (D41 wanted∩paid state, and the form that records
+    // Kept for the legacy-compatibility surfaces (the wanted∩paid entitlement state, and the form that records
     // a standalone term) — not part of the canonical commercial account shape above.
     states,
     products,

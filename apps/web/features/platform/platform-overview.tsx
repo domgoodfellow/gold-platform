@@ -8,11 +8,11 @@ import { Widget, WidgetGrid } from '@/components/display/widget';
 import type { PlatformOverview as PlatformOverviewData } from '@/lib/application/platform/platform-overview';
 
 /**
- * The Platform overview, the landing screen. An area dashboard in the `ui-spec.md` §2b sense — the same
+ * The Platform overview, the landing screen. An area dashboard in the `docs/ui-system.md` sense — the same
  * `Widget`/`WidgetGrid` vocabulary Today uses, not the tenant-configured `dashboards` in
  * `lib/domain/reporting/`. Four numbers and one table, all read straight off `PlatformOverview`
  * (`lib/domain/platform/overview.ts`) with no arithmetic performed here — see
- * `docs/constraints.md`'s "Decided, not yet built" table for what was deliberately left off this
+ * `docs/roadmap.md` for what was deliberately left off this
  * screen and why.
  */
 export function PlatformOverview({

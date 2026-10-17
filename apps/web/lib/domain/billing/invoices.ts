@@ -6,9 +6,9 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
  * What a business asked to be paid, and what arrived. An invoice line copies the priced line
- * (I8, one level up from a priced line copying the catalogue), so amending a quote can't move a
+ * (the preserved-history rule, one level up from a priced line copying the catalogue), so amending a quote can't move a
  * document already sent. No `total_minor` column — the total is `priceWorkItem` over the
- * invoice's own lines (I4), which is why `InvoiceLine` is a `PricedLine` with a position rather
+ * invoice's own lines, which is why `InvoiceLine` is a `PricedLine` with a position rather
  * than a parallel shape. No `status` or `paid` flag either — settled-ness is arithmetic over
  * payments, computed in `invoiceStanding`. A payment with no provider is what "cash" means: a
  * vendor is authoritative only for its own events, so `recordPayment` takes no provider argument
@@ -35,7 +35,7 @@ export type Invoice = {
   workItemId: string;
   /** Per tenant and human-facing. Two businesses both having an invoice 1 is the ordinary case. */
   number: number;
-  /** Who was billed, as it read at issue — snapshotted rather than joined (I8). */
+  /** Who was billed, as it read at issue — snapshotted rather than joined. */
   billedTo: string;
   customerId: string | null;
   currency: string;
@@ -47,7 +47,7 @@ export type Invoice = {
 
 /** Where an invoice stands. Derived on every read; stored in no column. */
 export type InvoiceStanding = {
-  /** Straight from the one price calculation (I4) and unreshaped. Null only if every line was struck, which `issue_invoice` refuses to produce. */
+  /** Straight from the one price calculation and unreshaped. Null only if every line was struck, which `issue_invoice` refuses to produce. */
   total: Price;
   /** In the invoice's currency, the only currency a payment can be in. */
   paidMinor: number;
@@ -58,12 +58,12 @@ export type InvoiceStanding = {
 
 const NOTE_MAX = 1000;
 
-/** A function rather than an inline `reduce` (I4's reasoning). One number, not one per currency, since `record_payment` writes the invoice's own currency onto every row. */
+/** A function rather than an inline `reduce` (the one-calculation rule's reasoning). One number, not one per currency, since `record_payment` writes the invoice's own currency onto every row. */
 export function totalPaid(payments: Payment[]): number {
   return payments.reduce((total, payment) => total + payment.amountMinor, 0);
 }
 
-/** Pure, and calls `priceWorkItem` rather than totalling lines itself — what keeps I4 true on a page showing both a quote and an invoice. */
+/** Pure, and calls `priceWorkItem` rather than totalling lines itself — what keeps the one-calculation rule true on a page showing both a quote and an invoice. */
 export function invoiceStanding(invoice: Pick<Invoice, 'lines' | 'payments'>): InvoiceStanding {
   const total = priceWorkItem(invoice.lines);
   const paidMinor = totalPaid(invoice.payments);
@@ -206,7 +206,7 @@ async function hydrateInvoices(db: Db, organizationId: string, invoices: Invoice
  * What this customer has actually been billed, across every job they've ever had — not which
  * jobs currently point to them. `invoices.customer_id` is snapshotted at `issue_invoice` and
  * never updated afterward (no update policy exists on `invoices` at all), so filtering on it
- * directly is already the historical truth (I8); nothing here joins through a work item's own,
+ * directly is already the historical truth; nothing here joins through a work item's own,
  * mutable `customer_id`.
  */
 export async function listCustomerInvoices(
@@ -266,7 +266,7 @@ export async function invoicedWorkItemIds(
   return new Set((data ?? []).map((row) => row.work_item_id));
 }
 
-/** A recorded payment together with the invoice it settled, as that invoice read at issue (I8). */
+/** A recorded payment together with the invoice it settled, as that invoice read at issue. */
 export type PaymentRecord = Payment & {
   invoiceId: string;
   invoiceNumber: number;
@@ -281,7 +281,7 @@ export type PaymentRecord = Payment & {
  * Every payment this business has recorded, most recently received first. Customer-to-business
  * money only: `payments` holds no row for what the business pays GildOps. Two queries — the
  * payments, then the invoices they settle — rather than a join, so the invoice's own snapshot is
- * what is read (I8).
+ * what is read.
  */
 export async function listOrganizationPayments(
   db: Db,
@@ -418,7 +418,7 @@ export async function issueInvoice(
 
   const { data, error } = await db.rpc('issue_invoice', {
     p_work_item_id: input.workItemId,
-    // Postgres records no nullability for a function argument (D15).
+    // Postgres records no nullability for a function argument.
     p_issued_at: issuedAt as string,
     p_due_at: dueAt as string,
   });

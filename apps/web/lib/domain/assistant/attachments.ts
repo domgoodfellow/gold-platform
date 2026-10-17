@@ -19,14 +19,14 @@ export type { AgentAttachment, AttachmentText };
  *
  * **The file is a Document** — the same private bucket, the same `documents` table, the same
  * signed-access rules — owned by the person rather than by a customer or a job, so that only they
- * can read it (D34: an answer, and what it was answered from, is readable by its asker alone). The
+ * can read it (the AI-tool architecture: an answer, and what it was answered from, is readable by its asker alone). The
  * reasoning is in `20260929000009`. Nothing here is a second file store.
  *
  * **What the model receives is text, and only text.** Nothing in this codebase extracts text from
  * a PDF or reads an image, so the supported set is exactly the four types whose bytes are already
  * text: plain text, Markdown, CSV and JSON. A type is added the day the reader that consumes it
  * exists, together with it and never before — a file the Agent cannot read would be a control that
- * looks finished and does nothing (D31). Raw binary is never sent to a model.
+ * looks finished and does nothing. Raw binary is never sent to a model.
  */
 
 const COLUMNS = 'id, file_name, mime_type, size_bytes';

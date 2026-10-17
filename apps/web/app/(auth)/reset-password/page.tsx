@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
  * expired, or belongs to somebody else's browser — so there is nobody to change a password for,
  * and the honest answer is the screen that issues a new link. The guard is not the boundary
  * either way: with no session the auth server refuses the update, which is where it is actually
- * decided (I12's shape, one axis over).
+ * decided (the UI-is-not-authorization rule's shape, one axis over).
  */
 export default async function ResetPasswordPage() {
   const db = await getDb();

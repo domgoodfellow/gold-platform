@@ -1,6 +1,6 @@
 """What the world is doing at a place, named as a capability rather than as a provider.
 
-**D11 as code.** Weather is an integration plus rules and nothing else: it owns no entity, and
+**the integrations-plus-rules principle as code.** Weather is an integration plus rules and nothing else: it owns no entity, and
 this package owns no model of one. What it can be asked is *what is the reading for this metric
 at this place over the next few days*, and the answer is numbers with units. A business decides
 which number matters, in which unit, and what to do about it — none of which is here.

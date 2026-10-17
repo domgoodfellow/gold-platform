@@ -5,7 +5,7 @@ import { AREAS } from '@/lib/navigation';
 
 /**
  * Communications owns channels and conversation history (Calls, the Inbox, Numbers); Platform
- * Infrastructure owns the carrier account, credentials and subaccounts behind them (D39, I15).
+ * Infrastructure owns the carrier account, credentials and subaccounts behind them.
  * What proves the boundary is the one thing a business's own screens must never say.
  */
 
@@ -38,7 +38,7 @@ describe('Communications workspace boundaries', () => {
 
   it('renders no provider vocabulary from the number inventory a tenant screen reads', () => {
     // `lib/domain/reception/telephony.ts` names "auth token" once, in its own doc comment
-    // explaining the D39 refusal — legitimate architectural commentary, not a leak. What must
+    // explaining the telephony-identity design refusal — legitimate architectural commentary, not a leak. What must
     // stay clean is what the row actually carries: `PhoneNumber` names no vendor field, and the
     // component that renders it names no vendor either.
     const numbers = readFileSync(`${WEB_ROOT}/lib/domain/reception/numbers.ts`, 'utf8');

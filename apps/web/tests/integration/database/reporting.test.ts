@@ -53,20 +53,20 @@ import { foundBusiness } from '@/tests/support/founding';
  * The aggregate layer, and the claim that keeps it from becoming a second one.
  *
  * **The test that carries this suite is the correspondence** — the aggregate's total and
- * `priceWorkItem` over the same lines, asserted equal. D35 permits one rule to be expressed
- * twice on exactly that condition, and the precedent is I5 rather than an analogy: the
+ * `priceWorkItem` over the same lines, asserted equal. The agreeing-implementations rule permits one rule to be expressed
+ * twice on exactly that condition, and the precedent is the single availability model rather than an analogy: the
  * availability predicate genuinely lives in a Postgres constraint *and* in `listSchedule`'s
- * filters, and what holds I5 up is `availability.test.ts` asserting the two agree in both
+ * filters, and what holds the single availability model up is `availability.test.ts` asserting the two agree in both
  * directions.
  *
  * So this suite is not really about arithmetic. It is about what happens the day somebody adds
  * a minimum charge, a tax or a rounding rule to `priceWorkItem`: the correspondence fails, which
- * is exactly the event I4 was written to catch. **It must be repaired by teaching the aggregate
+ * is exactly the event the one-calculation rule was written to catch. **It must be repaired by teaching the aggregate
  * the new rule, never by relaxing the assertion.**
  *
  * Everything else here is a refusal. Grouping by service reports no cost. Two currencies produce
  * two rows and no conversion. A renamed catalogue item does not move last month's figures. Each
- * is a rule from D35 and each would be silently easy to lose.
+ * is a rule from the agreeing-implementations rule and each would be silently easy to lose.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -220,10 +220,10 @@ describe('what a business billed, and what its work consumed', () => {
     ];
   });
 
-  it('agrees with the one price calculation, line for line (I4, D35)', async () => {
+  it('agrees with the one price calculation, line for line', async () => {
     // **The load-bearing test.** The aggregate totals in SQL; `priceWorkItem` totals in
-    // TypeScript. D35 permits both only while they answer identically on the same rows, which
-    // is I5's mechanism applied to price. A failure here is not a broken test — it means a
+    // TypeScript. The agreeing-implementations rule permits both only while they answer identically on the same rows, which
+    // is the single availability model's mechanism applied to price. A failure here is not a broken test — it means a
     // pricing rule reached one expression and not the other, and the aggregate is what has to
     // learn it.
     const groups = await listInvoicedAndIncurred(acme.db, {
@@ -262,7 +262,7 @@ describe('what a business billed, and what its work consumed', () => {
     expect(harbour!.marginMinor).toBe(39_000);
   });
 
-  it('narrows to one customer, and takes that customer’s costs with it (D36)', async () => {
+  it('narrows to one customer, and takes that customer’s costs with it', async () => {
     // **A filter narrows jobs, not amounts**, which is why both halves of the aggregate read the
     // grouping keys off the work item. A filter that kept a job's revenue and dropped its costs
     // would report a margin for work that was only partly counted — plausible, and wrong.
@@ -292,7 +292,7 @@ describe('what a business billed, and what its work consumed', () => {
     expect(unattributed!.invoicedMinor).toBe(24_000);
   });
 
-  it('reports no cost and no margin when grouping by service, rather than zero (D35)', async () => {
+  it('reports no cost and no margin when grouping by service, rather than zero', async () => {
     // A cost belongs to a job; a service is one line on one. Splitting a job's costs across its
     // lines needs an allocation rule this platform has no basis to invent, so the honest answer
     // is an absence. Zero would say the service cost nothing, which is a claim.
@@ -310,7 +310,7 @@ describe('what a business billed, and what its work consumed', () => {
     expect(callout!.groupId).toBeNull();
   });
 
-  it('keeps a renamed catalogue item out of last month’s figures (I8)', async () => {
+  it('keeps a renamed catalogue item out of last month’s figures', async () => {
     // The join this would need is the one `work_item_priced_lines` and `invoice_lines` refuse
     // to hold a key for. Renaming a service splits the report, and that is correct: those were
     // two things sold under two names, and each line records what was agreed at the time.
@@ -336,7 +336,7 @@ describe('what a business billed, and what its work consumed', () => {
     expect(find(groups, 'Site visit')?.invoicedMinor).toBe(12_000);
   });
 
-  it('counts an invoice into the month the business is in, not the server’s (I9)', async () => {
+  it('counts an invoice into the month the business is in, not the server’s', async () => {
     // 2026-08-31T17:00Z is 2026-09-01 01:00 in Manila. A boundary computed in UTC puts this in
     // August; the business it belongs to has already started September.
     const septemberInManila = await newTenant('rep-zone');
@@ -360,7 +360,7 @@ describe('what a business billed, and what its work consumed', () => {
     expect(september[0]?.invoicedMinor).toBe(12_000);
   });
 
-  it('totals each currency separately and converts nothing (I10)', async () => {
+  it('totals each currency separately and converts nothing', async () => {
     // The reachable case rather than a theoretical one: a business that changes what it trades
     // in has a catalogue and a history in two currencies, and amounts are never converted.
     const shifted = await newTenant('rep-currency');
@@ -386,7 +386,7 @@ describe('what a business billed, and what its work consumed', () => {
 
     // A new catalogue entry rather than a re-priced one, because that is what actually happens:
     // `update_price_book_item` takes no currency, so an item carries the currency the business
-    // traded in when it was created and keeps it (I8). The old entry is the one the Pricing
+    // traded in when it was created and keeps it. The old entry is the one the Pricing
     // screen already reports as priced in a currency this business no longer trades in.
     const inEuro = await createPriceBookItem(shifted.db, {
       organizationId: shifted.organizationId,
@@ -416,7 +416,7 @@ describe('what a business billed, and what its work consumed', () => {
     expect(totals.map((total) => total.currency)).toEqual(['EUR', 'PHP']);
   });
 
-  it('is narrowed by the caller’s own session, never by the id it was handed (D34)', async () => {
+  it('is narrowed by the caller’s own session, never by the id it was handed', async () => {
     // The failure a tool layer invites: if the organization id were what kept a caller inside
     // their own business, the protection would be a value the caller chose. It is not.
     //
@@ -468,7 +468,7 @@ describe('what a business billed, and what its work consumed', () => {
     expect(find(groups, null)?.invoicedMinor).toBe(24_000);
   });
 
-  it('refuses a member who does not hold report.read, in the database (I16)', async () => {
+  it('refuses a member who does not hold report.read, in the database', async () => {
     // **A whole tenant of its own, because this demotes the only member it has.** The
     // capabilities left are plainly not nothing — this member can create work, price it and
     // invoice it, which means they can open every invoice this report adds up, one at a time.
@@ -476,7 +476,7 @@ describe('what a business billed, and what its work consumed', () => {
     // `20260903000003` exists to make: a total is a disclosure that exists in no row.
     //
     // Asserted against the function rather than against the page, because hiding a page is a
-    // courtesy and the refusal has to survive somebody calling the RPC directly (I12).
+    // courtesy and the refusal has to survive somebody calling the RPC directly.
     const limited = await newTenant('rep-limited');
     const roleId = await createRole(limited.db, {
       organizationId: limited.organizationId,
@@ -584,7 +584,7 @@ describe('a period total', () => {
 /**
  * A saved report, and who it is for.
  *
- * **The claim that matters is that a saved report is arguments** (D36). It holds no figures and
+ * **The claim that matters is that a saved report is arguments**. It holds no figures and
  * no query, so opening one takes the same road the ad-hoc screen takes — asserted below by
  * running both and comparing whole rows, because a second read path is the thing this design is
  * most likely to grow.
@@ -669,7 +669,7 @@ describe('a report a business saved', () => {
     });
   });
 
-  it('runs through the same aggregate the ad-hoc view runs through (D35, D36)', async () => {
+  it('runs through the same aggregate the ad-hoc view runs through', async () => {
     // **The load-bearing test of this slice.** A saved report that grew its own query would be a
     // second answer to a question that already has one, and it would look like an optimisation
     // on the day somebody wrote it. Whole rows compared, not a total.
@@ -707,7 +707,7 @@ describe('a report a business saved', () => {
     ).toBeNull();
   });
 
-  it('shows it to the role it names, and to nobody else (D36)', async () => {
+  it('shows it to the role it names, and to nobody else', async () => {
     await setReportRoles(owner.db, {
       organizationId: owner.organizationId,
       reportId,
@@ -741,7 +741,7 @@ describe('a report a business saved', () => {
     expect(result.groups[0]).toMatchObject({ invoicedMinor: 24_000 });
   });
 
-  it('refuses a member who may read figures but not author a report (I16)', async () => {
+  it('refuses a member who may read figures but not author a report', async () => {
     await expect(
       saveReportDefinition(readerDb, {
         organizationId: owner.organizationId,
@@ -761,7 +761,7 @@ describe('a report a business saved', () => {
     ).rejects.toMatchObject({ code: 'reports.share_failed' });
   });
 
-  it('cannot be filtered to another business’s customer (I18)', async () => {
+  it('cannot be filtered to another business’s customer', async () => {
     // The composite key refuses it, so the row cannot be written at all. A JSON filter column
     // would have accepted this and produced an empty report nobody could explain.
     const stranger = await newTenant('def-stranger');
@@ -782,7 +782,7 @@ describe('a report a business saved', () => {
     ).rejects.toMatchObject({ code: 'reports.save_failed' });
   });
 
-  it('refuses a second report with the same name (I2)', async () => {
+  it('refuses a second report with the same name', async () => {
     await expect(
       saveReportDefinition(owner.db, {
         organizationId: owner.organizationId,
@@ -912,7 +912,7 @@ describe('a dashboard', () => {
     expect(tiles[0].result.groups[0]).toMatchObject({ invoicedMinor: 12_000 });
   });
 
-  it('shows one person two tiles and another person one, from the same row (D36)', async () => {
+  it('shows one person two tiles and another person one, from the same row', async () => {
     const forReader = await readDashboard(readerDb, {
       organizationId: owner.organizationId,
       dashboardId,
@@ -945,7 +945,7 @@ describe('a dashboard', () => {
     expect(visible.map((entry) => entry.name)).toEqual(['The board']);
   });
 
-  it('refuses a member who may read figures but not author one (I16)', async () => {
+  it('refuses a member who may read figures but not author one', async () => {
     await expect(
       createDashboard(readerDb, { organizationId: owner.organizationId, name: 'Mine' }),
     ).rejects.toMatchObject({ code: 'dashboards.create_failed' });
@@ -982,7 +982,7 @@ describe('a dashboard', () => {
  *
  * *Which status means finished is the tenant's answer*, and a business that has said nothing
  * reports nothing rather than everything. *`releases_resource` is not that answer* — Cancelled
- * frees the van and is not completed work, which is exactly why M4 declined to answer both
+ * frees the van and is not completed work, which is exactly why it was never made to answer both
  * questions with one flag. And a job finished, reopened and finished again inside one period
  * **counts once**, because counting the moves would make a business that corrects a mistake look
  * busier than one that does not.
@@ -1013,7 +1013,7 @@ describe('work a business marked finished', () => {
       position: 2,
     });
 
-    // Every move has to be legal before it can be made (I13).
+    // Every move has to be legal before it can be made.
     for (const to of [doneId, cancelledId]) {
       await createWorkItemTransition(shop.db, {
         organizationId: shop.organizationId,
@@ -1080,8 +1080,8 @@ describe('work a business marked finished', () => {
     expect(groups[0].jobs).toBe(1);
   });
 
-  it('does not treat freeing the resource as finishing the work (M4)', async () => {
-    // The distinction M4 refused to collapse, asserted rather than described. Cancelled releases
+  it('does not treat freeing the resource as finishing the work', async () => {
+    // The distinction deliberately never collapsed, asserted rather than described. Cancelled releases
     // the van; it is not work anybody did.
     await updateWorkItemStatus(shop.db, {
       id: cancelledId,
@@ -1198,16 +1198,16 @@ describe('work a business marked finished', () => {
  *
  * **The correspondence is the test and everything else is secondary.** What counts as a
  * commitment is `work_items_resource_not_double_booked`'s partial predicate, and it now lives in
- * three places: the exclusion constraint, `listSchedule`'s filters, and `time_committed`. D35
- * permits that only while they agree, which is I5's own mechanism — `availability.test.ts` already
+ * three places: the exclusion constraint, `listSchedule`'s filters, and `time_committed`. The agreeing-implementations rule
+ * permits that only while they agree, which is the single availability model's own mechanism — `availability.test.ts` already
  * holds the first two together in both directions, and this holds the third to them.
  *
  * **A failure here is not a broken test.** It means a clause reached one expression and not the
- * others, which is the event I5 was written to catch. Repair it by teaching the aggregate what
+ * others, which is the event the single availability model was written to catch. Repair it by teaching the aggregate what
  * the constraint learned, never by relaxing the assertion.
  *
  * What is deliberately absent is utilisation. A percentage needs opening hours minus commitments,
- * which is `freeWindows`, and a second answer to *what is free* is what I5 forbids outright — no
+ * which is `freeWindows`, and a second answer to *what is free* is what the single availability model forbids outright — no
  * correspondence test would make that safe, because the second answer is the one somebody books
  * against.
  */
@@ -1267,7 +1267,7 @@ describe('time a business has committed', () => {
     return id;
   }
 
-  it('agrees with the one availability calculation, on the same jobs (I5, D35)', async () => {
+  it('agrees with the one availability calculation, on the same jobs', async () => {
     // **The load-bearing test of this slice.** Two hours and ninety minutes, on one van, on one
     // day. `listSchedule` reads the commitments through the domain layer; `time_committed` reads
     // them in SQL. Both are the same predicate and they have to answer identically.

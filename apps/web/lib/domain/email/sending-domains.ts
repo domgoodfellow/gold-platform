@@ -17,7 +17,7 @@ import { PROVIDER_UNAVAILABLE_MESSAGE } from './presentation';
  * the business's own act, checked by the database (`record_organization_email_domain`:
  * `organization.manage`, and a name this platform could verify). Creating it at the provider,
  * learning which DNS records it wants and asking whether they are published is the provider's
- * answer, which only `apps/api` can ask for and record (D54). What a person sees afterwards is
+ * answer, which only `apps/api` can ask for and record. What a person sees afterwards is
  * read back from the row, so the answer survives the page being closed.
  *
  * **A verified domain is permission to send, not an address and not a mailbox.** Nothing here

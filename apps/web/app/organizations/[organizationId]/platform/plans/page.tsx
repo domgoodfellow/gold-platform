@@ -20,7 +20,7 @@ const plansHref = (organizationId: string, path = '') => `/organizations/${organ
 
 /**
  * Plans & Add-ons: how GildOps packages, prices and sells the Products/Modules/Features the catalogue
- * defines (D25, D43, D50). GildOps' own commercial control plane — what a business buys from
+ * defines. GildOps' own commercial control plane — what a business buys from
  * GildOps — and never tenant Financial Operations. Gated by `requirePlatformArea` on a live
  * `platform_staff` permission.
  */

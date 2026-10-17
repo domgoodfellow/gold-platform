@@ -16,7 +16,7 @@ const sections = [['Overview', ''], ['Plan & Entitlements', '/commercial'], ['Pr
  * is the one door between the two: true only when this platform-staff caller's own
  * `listMyOrganizations()` already includes this organization (real membership, not staff
  * authority standing in for one), so "Open business" never fabricates a tenant capability inside
- * `/platform` (constraints.md, this correction). Computed once, on the overview page, since a
+ * `/platform` (ADR-003). Computed once, on the overview page, since a
  * membership fact doesn't change per tab.
  */
 export function TenantWorkspaceHeader({

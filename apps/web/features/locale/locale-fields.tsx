@@ -21,7 +21,7 @@ function useIsClient(): boolean {
  * Both lists come from **ICU at runtime**, never from a table in this repository. That is not
  * laziness: a currency list checked into the application would be a second, staler answer to
  * a question the platform already has a source for, and a country-to-currency map would be
- * the platform deciding what a business trades in — which `constraints.md` forbids outright
+ * the platform deciding what a business trades in — which `docs/product.md` forbids outright
  * ("Currency is per-tenant configuration and is never assumed").
  *
  * So the timezone is offered with the reader's own zone preselected, because where you are is

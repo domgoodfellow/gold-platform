@@ -7,13 +7,13 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
  * What a job actually consumed: time worked, and money spent.
  *
  * **A cost is not a price.** A price is derived from configuration a business publishes, and
- * I4 says there is exactly one calculation for it; that lands in M3. A cost is an observation
+ * the one-calculation rule says there is exactly one calculation for it; that is a separate, later change. A cost is an observation
  * about a job that already happened — what the part cost, what the subcontractor charged —
  * and needs no engine at all. Nothing here computes anything, and nothing here may start to:
- * the moment a rate appears on a resource and an hour becomes an amount, that is I4's
+ * the moment a rate appears on a resource and an hour becomes an amount, that is the one-calculation rule's
  * territory and belongs in one place with the rest of pricing.
  *
- * I10 lives here: money is integer minor units, and the currency is the tenant's, snapshotted
+ * The minor-units money rule lives here: money is integer minor units, and the currency is the tenant's, snapshotted
  * onto each row at the moment it is written.
  */
 
@@ -30,7 +30,7 @@ export type Cost = {
   description: string;
   /** Integer minor units. Never a float, and never divided before it reaches a formatter. */
   amountMinor: number;
-  /** As it was when the cost was recorded, not as the organization reads today (I8). */
+  /** As it was when the cost was recorded, not as the organization reads today. */
   currency: string;
   incurredAt: string;
 };
@@ -75,7 +75,7 @@ export async function listTimeEntries(
   }
 
   return (data ?? []).flatMap((row) => {
-    // D15's boundary: `supabase gen types` has no TypeScript for a Postgres range.
+    // the forward-only migration rule's boundary: `supabase gen types` has no TypeScript for a Postgres range.
     const worked = parseWindow(row.worked_during as string | null);
     if (!worked) return [];
     return [{ id: row.id, worked, resourceId: row.resource_id, note: row.note }];
@@ -117,7 +117,7 @@ export async function recordTime(
 
   const { data, error } = await db.rpc('record_work_item_time', {
     p_work_item_id: input.workItemId,
-    // D15: Postgres records no nullability for a function argument.
+    // the forward-only migration rule: Postgres records no nullability for a function argument.
     p_resource_id: (input.resourceId || null) as string,
     p_started_at: started.toISOString(),
     p_ended_at: ended.toISOString(),
@@ -175,7 +175,7 @@ export async function listCosts(
  *
  * The currency is not an argument. `record_work_item_cost` reads it from the organization and
  * writes it onto the row, so a caller cannot assert what a business trades in, and a later
- * change of currency does not silently reinterpret what this job cost (I8).
+ * change of currency does not silently reinterpret what this job cost.
  *
  * **`incurredAt` is when the cost happened, not when it was entered**, and it is optional
  * because most costs are entered as they happen. The row has always carried both dates and
@@ -230,7 +230,7 @@ export async function recordCost(
     p_work_item_id: input.workItemId,
     p_description: description,
     p_amount_minor: input.amountMinor,
-    // D15: Postgres records no nullability for a function argument.
+    // the forward-only migration rule: Postgres records no nullability for a function argument.
     p_incurred_at: incurredAt as string,
   });
 

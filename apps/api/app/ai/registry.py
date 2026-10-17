@@ -6,7 +6,7 @@ recorded there: a contract that names a vendor is a contract shaped by one.
 
 `None` when nothing is configured, rather than a throw. A deployment with no model is a complete
 deployment -- every screen in the platform works without one -- and what `None` obliges the
-caller to do is say so out loud rather than render a box that cannot work (D31).
+caller to do is say so out loud rather than render a box that cannot work.
 
 **Selection is by environment, and the order below is the decision.** A deployment that sets
 `ASSISTANT_BASE_URL` is answering with something it runs or chose itself -- a local model, or
@@ -15,7 +15,7 @@ to configure it is usually that rows must not leave the building. Nothing furthe
 can find out which case it is in.
 
 **Not per tenant.** A business supplying its own endpoint and its own key is a business holding
-an account with a vendor, which is D33's axis and is a different feature with a different record
+an account with a vendor, which is a tenant Connection (ADR-016) and is a different feature with a different record
 -- a credential to store, a grant to refresh, a failure surface for the day it is revoked. This
 is GOLD's own integration, like the other six.
 """

@@ -8,7 +8,7 @@ import { payInvoiceAction, type PayInvoiceActionState } from '@/app/(public)/por
 const INITIAL: PayInvoiceActionState = { error: null };
 
 /** One invoice, one button. The amount shown is a label only — what is actually charged is
- * derived server-side, again, at the moment this is submitted (I12). */
+ * derived server-side, again, at the moment this is submitted. */
 export function PayInvoiceForm({ invoiceId, amountLabel }: { invoiceId: string; amountLabel: string }) {
   const [state, formAction, pending] = useActionState(payInvoiceAction, INITIAL);
   return (

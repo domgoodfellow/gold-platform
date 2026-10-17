@@ -49,7 +49,7 @@ export function DividedList<T extends ElementType = 'ul'>({
 
 /**
  * An empty state describes the truth and may offer concise, honest next-step guidance
- * (`docs/ui-spec.md` §8) — never misleading, manipulative or a duplicate of a create control the
+ * (`docs/ui-system.md`) — never misleading, manipulative or a duplicate of a create control the
  * page already shows continuously.
  *
  * Two scales, chosen by what is given. Plain `children` with nothing else — "No matching rows",

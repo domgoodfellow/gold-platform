@@ -17,7 +17,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
  * works, and for how long, is entirely rows.
  *
  * A business that has configured nothing is treated as **always open**, because that is what
- * "it has said nothing" means. Contrast I13, where an unconfigured type is frozen: an empty
+ * "it has said nothing" means. Contrast the status-transition rule, where an unconfigured type is frozen: an empty
  * transition set genuinely asserts that no move is legal, and reading it permissively would
  * void the invariant. An empty hours set asserts nothing, and reading it as *closed* would
  * invent a claim the business never made.

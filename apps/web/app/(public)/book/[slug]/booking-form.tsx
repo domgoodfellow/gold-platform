@@ -10,11 +10,11 @@ import { bookAction, type BookingActionState } from './actions';
 
 const INITIAL: BookingActionState = { error: null };
 /**
- * One primary action, which D23 asks of every screen and this one takes literally.
+ * One primary action, which the UI system asks of every screen and this one takes literally.
  *
  * Pick a time, say who you are, book. The slot's two values ride along in hidden fields
  * rather than as an index, so the server commits against exactly the offer that was rendered
- * — and finds out from the exclusion constraint if the world moved underneath it (I6).
+ * — and finds out from the exclusion constraint if the world moved underneath it.
  */
 export function BookingForm({
   slug,

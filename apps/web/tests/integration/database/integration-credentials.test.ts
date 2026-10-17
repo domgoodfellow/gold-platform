@@ -10,7 +10,7 @@ import { listResources } from '@/lib/domain/integrations/resources';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 
 /**
- * A business's own OAuth credential, against real Postgres (D56). What is proven here is the
+ * A business's own OAuth credential, against real Postgres. What is proven here is the
  * database half: nothing signed in can read a credential or its Vault pointer, only the machine
  * role can, it holds no table grant and exactly five executes, a business sees only its own
  * connections, and health is recorded only by the runtime that asked the provider. The other half
@@ -77,7 +77,7 @@ beforeAll(async () => {
   bob = await newTenant('cred-bob');
 
   connectionId = await recordConnection(alice.db, { organizationId: alice.organizationId, connectorKey: CONNECTOR, accountLabel: 'alice@example.test' });
-  // A credential is written by the machine role after the API has proved the caller (D56).
+  // A credential is written by the machine role after the API has proved the caller.
   await asOperator(() => pg.query('select public.store_integration_credential($1, $2)', [connectionId, SECRET]));
 }, 90_000);
 

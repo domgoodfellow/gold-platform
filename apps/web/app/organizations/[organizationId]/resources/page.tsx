@@ -57,7 +57,7 @@ export default async function ResourcesPage({
         {/*
           Hiding the trigger is a courtesy, not the guard. `resources_insert` requires
           resource.create in the database, so a caller who reaches the action anyway is
-          refused there (constraints.md: hiding a UI element is not authorization).
+          refused there (`docs/security.md`: hiding a UI element is not authorization).
         */}
         <CollectionHeader
           title={areaLabel('resources')}

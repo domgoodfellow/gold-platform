@@ -41,7 +41,7 @@ export type CommercialProposal = {
   addons: CommercialProposalAddon[];
 };
 
-/** What GildOps actually charges for this: plan plus add-ons, minus any discount. Derived, never stored (I4). */
+/** What GildOps actually charges for this: plan plus add-ons, minus any discount. Derived, never stored. */
 export function commercialProposalTotalMinor(proposal: Pick<CommercialProposal, 'planPriceMinor' | 'addonPriceMinor' | 'discountMinor'>): number {
   return Math.max(0, proposal.planPriceMinor + proposal.addonPriceMinor - proposal.discountMinor);
 }
@@ -153,7 +153,7 @@ export async function getCommercialProposal(
  * The proposals a recognized external customer may see — every non-draft version, newest first.
  * Reads exactly the rows `customer_commercial_proposals_select_external` already scopes to; this
  * function adds no filtering of its own; it is a plain, unscoped read, deliberately, because RLS
- * is where "this organization, this customer, never a draft" is decided (I19).
+ * is where "this organization, this customer, never a draft" is decided.
  */
 export async function listCommercialProposalsForExternalCustomer(db: Db): Promise<CommercialProposal[]> {
   const { data, error } = await db
@@ -195,7 +195,7 @@ export type BuildCommercialProposalInput = {
 
 /**
  * Build a new commercial proposal, snapshotting the plan's and each add-on's currently approved
- * price rather than joining to `platform_plan_prices` (I8) — a later price change must never
+ * price rather than joining to `platform_plan_prices` — a later price change must never
  * silently reprice a proposal a customer already has in hand.
  *
  * Always a new row. There is no update for a proposal's terms: correcting one is a fresh version,
@@ -250,7 +250,7 @@ export async function buildCommercialProposal(db: Db, input: BuildCommercialProp
   // The authoritative recommendation, snapshotted now rather than left to be recomputed (and
   // possibly disagree with itself) later — the same reasoning `plan_price_minor` already holds
   // to, applied to configuration. Acceptance copies this back out; nothing downstream computes
-  // its own second answer to "what was proposed" (I4, I8).
+  // its own second answer to "what was proposed".
   const snapshot = await getDiscoverySnapshot(db, { organizationId: input.organizationId, customerId: input.customerId });
   const proposedConfiguration = await recommendConfiguration(db, { answers: snapshot?.answers ?? {} });
 

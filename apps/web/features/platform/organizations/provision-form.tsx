@@ -16,10 +16,10 @@ const INITIAL: ProvisionState = { error: null, provisioned: null };
  * operator door rather than the other one: **whose business it is**. The staff member filling
  * this in is not going to be a member of what they create.
  *
- * **The two forms are not extracted into one shared control, and that is D23 rather than an
+ * **The two forms are not extracted into one shared control, and that is the UI system rather than an
  * oversight** — a component is extracted at the third caller. There are two, they ask different
  * questions of different people, and folding them together now would produce one form with a
- * mode flag, which is the shape D29 spent a record arguing against at the layer below this one.
+ * mode flag, which is the shape the one-creation-path rule spent a record arguing against at the layer below this one.
  */
 export function ProvisionForm({ compact = false }: { compact?: boolean }) {
   const [state, formAction, pending] = useActionState(provisionOrganizationAction, INITIAL);
@@ -87,7 +87,7 @@ export function ProvisionForm({ compact = false }: { compact?: boolean }) {
           UTC rather than our own zone. `TimeZoneField` preselects the reader's browser zone,
           which is the right answer when somebody founds their own business and the wrong one
           here — the browser belongs to us, and a business in Montreal would arrive on a London
-          clock because of where a staff member happened to be sitting (I9).
+          clock because of where a staff member happened to be sitting.
         */}
         <TimeZoneField defaultValue="UTC" label="Where is the business?" />
       </div>

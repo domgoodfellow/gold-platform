@@ -7,7 +7,7 @@ import type { SessionIdentity } from '@/lib/domain/identity/session';
  * can talk its way into. The redirect target below is likewise a fixed literal: there is
  * deliberately no `?next=` parameter, because a stored destination would have to resolve
  * against a closed set on read as well as on write, and nothing needs one yet
- * (constraints.md, "Never build an open redirector").
+ * (`docs/security.md`: never build an open redirector).
  *
  * Pulled out of `proxy.ts` itself (which otherwise pulls in `next/server`) so this stays plain
  * TypeScript with no Next.js runtime import — `session-identity.test.ts` calls `decideRedirect`
@@ -124,7 +124,7 @@ export function isPublic(pathname: string): boolean {
  * Where to send somebody, or `null` to let the request through as-is.
  *
  * `'account'` is the only identity that counts as genuinely signed in here: an anonymous
- * Supabase session (D22 — booking, the portal) is real for RLS but must not be treated as an
+ * Supabase session (the anonymous-session model — booking, the portal) is real for RLS but must not be treated as an
  * operator/organization identity, so it is redirected to `/login` exactly like no session at
  * all — and, unlike an anonymous session before this, must still be able to *reach* `/login`
  * and `/sign-up` rather than being bounced away from them the way a genuine account is.

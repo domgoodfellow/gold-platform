@@ -4,7 +4,7 @@ import { invoiceStanding, listInvoices, type Invoice } from '@/lib/domain/billin
 /**
  * One invoice as Finance lists it: the invoice's own snapshot and the standing
  * `invoiceStanding` derives from it. Nothing here totals, prices or decides settled-ness a second
- * time (I4) — `invoiceStanding` calls `priceWorkItem` over the invoice's own lines, and a payment
+ * time — `invoiceStanding` calls `priceWorkItem` over the invoice's own lines, and a payment
  * is only ever a recorded one.
  */
 export type { FinanceInvoiceRow } from '@/lib/domain/billing/finance-reads';

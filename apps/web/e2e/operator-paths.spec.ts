@@ -6,7 +6,7 @@ import { restoreDemoRoles } from './restore-demo-roles';
 test.afterEach(async () => { await restoreDemoRoles(); });
 
 /**
- * The two P0 gaps `docs/product-surface-audit.md` named: `assignRole` and `revokePortalInvite`
+ * Two known P0 gaps: `assignRole` and `revokePortalInvite`
  * existed in the domain layer, tested, with no screen that reached either. This proves both are
  * now reachable and usable through the rendered application — not a re-proof of `assign_role`'s
  * own invariant or `revokePortalInvite`'s own refusal, which `tests/integration/database/roles.test.ts` and

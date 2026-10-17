@@ -187,7 +187,7 @@ describe('a resource has a class and capabilities', () => {
       expect(rows[0].bad).toBe(0);
     });
 
-    it('is changed only by somebody who may update the resource (I12)', async () => {
+    it('is changed only by somebody who may update the resource', async () => {
       const id = await createResource(sam.db, { organizationId: alice.organizationId, name: 'By Sam', resourceClass: 'other' });
       await expect(setResourceClass(sam.db, { resourceId: id, resourceClass: 'vehicle' })).rejects.toMatchObject({ code: 'resources.update_forbidden' });
     });
@@ -199,7 +199,7 @@ describe('a resource has a class and capabilities', () => {
       await expect(
         createResourceCapability(alice.db, { organizationId: alice.organizationId, name: 'tire service' }),
       ).rejects.toMatchObject({ code: 'resource_capabilities.name_taken' });
-      // Another business may use the very same word (I2).
+      // Another business may use the very same word.
       await expect(createResourceCapability(bob.db, { organizationId: bob.organizationId, name: 'Tire Service' })).resolves.toEqual(expect.any(String));
 
       const dominic = await createResource(alice.db, { organizationId: alice.organizationId, name: 'Dominic', resourceClass: 'person', capabilityIds: [tires] });
@@ -271,7 +271,7 @@ describe('a resource has a class and capabilities', () => {
       await expect(pg.query('select 1 from public.resource_capabilities where id = $1', [kept])).resolves.toMatchObject({ rowCount: 1 });
     });
 
-    it('is configured by whoever may configure, and given by whoever may change a resource (I12, I16)', async () => {
+    it('is configured by whoever may configure, and given by whoever may change a resource', async () => {
       await expect(createResourceCapability(sam.db, { organizationId: alice.organizationId, name: 'Sams word' })).rejects.toMatchObject({
         code: 'resource_capabilities.forbidden',
       });
@@ -286,7 +286,7 @@ describe('a resource has a class and capabilities', () => {
       });
     });
 
-    it('leaves a trail: every mutation is an event by the person who made it (I11)', async () => {
+    it('leaves a trail: every mutation is an event by the person who made it', async () => {
       const { rows } = await pg.query(
         `select distinct action from public.events
           where organization_id = $1 and (action like 'resource_capability.%' or action like 'resource.capability_%' or action = 'resource.class_changed')`,

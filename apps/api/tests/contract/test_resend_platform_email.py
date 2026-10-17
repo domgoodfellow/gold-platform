@@ -1,4 +1,4 @@
-"""`send_platform_email`: the one function that knows Resend returns a message id (I15).
+"""`send_platform_email`: the one function that knows Resend returns a message id.
 
 `resend_sender` (the tenant channel path, `Sent(ok, detail)`, no id) is proven in its own
 suite; this is the platform-email-specific counterpart that a webhook later correlates against.

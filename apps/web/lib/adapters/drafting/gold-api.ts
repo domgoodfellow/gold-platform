@@ -17,7 +17,7 @@ import {
  *
  * **No vendor, no model and no key in this file.** Which provider drafts, with which account and
  * which model, is `platform_ai_runtime_assignments`' decision for the `configuration_drafting`
- * capability, made and read by `apps/api` (D34, D62); this runtime used to hold its own Anthropic
+ * capability, made and read by `apps/api`; this runtime used to hold its own Anthropic
  * key and a model name hard-coded in source, which was a third answer to a question that has one.
  * What it consumes is metered there, through the same writer as every other AI request.
  *
@@ -31,7 +31,7 @@ import {
  *
  * **Nothing here writes anything.** No database handle reaches this file and no domain function
  * is called from it — the imports above are types and constant lists. That is the whole of how
- * I14 holds on this path (D32): the model has no tool, so there is no permitted write to check.
+ * the AI-acts-only-through-tools rule holds on this path: the model has no tool, so there is no permitted write to check.
  * Nothing is retried: a second attempt nobody asked for is a second bill.
  */
 
@@ -379,7 +379,7 @@ export function goldApiDraftingProvider(config: { baseUrl: string }): DraftingPr
         headers: {
           'content-type': 'application/json',
           // The caller's own token, forwarded rather than exchanged — identity reaches the
-          // database as their JWT, and the far side reads the entitlement as them (D17).
+          // database as their JWT, and the far side reads the entitlement as them.
           authorization: `Bearer ${input.token}`,
         },
         body: JSON.stringify({

@@ -17,7 +17,7 @@ mean maintaining a parser for somebody else's response shape.
 **The loop is not here.** The SDK offers a tool runner that would drive the whole exchange, and
 taking it would put iteration inside one vendor's helper -- so a deployment running a local model
 would need a second loop, and `agent_runs` would mean two different things. See `app.ai.loop`,
-and D34.
+and the AI-tool architecture.
 """
 
 from __future__ import annotations

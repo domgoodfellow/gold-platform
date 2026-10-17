@@ -16,7 +16,7 @@ export const metadata: Metadata = {
  * background effect: a diffuse light behind a bare form read as a smudge, not as depth.
  *
  * A route group is a layout boundary, never a security boundary — `proxy.ts` decides what an
- * anonymous caller may open, by path, and groups do not change paths (I12).
+ * anonymous caller may open, by path, and groups do not change paths.
  */
 export default function AuthLayout({ children }: LayoutProps<'/'>) {
   return (

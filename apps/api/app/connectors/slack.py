@@ -1,4 +1,4 @@
-"""Slack: one workspace install, reaching the public channels GOLD may post to (D56).
+"""Slack: one workspace install, reaching the public channels GOLD may post to.
 
 Slack answers a refusal with HTTP 200 and `ok: false`, so each read checks the flag rather than
 the status. A bot token does not expire, so there is nothing to refresh.

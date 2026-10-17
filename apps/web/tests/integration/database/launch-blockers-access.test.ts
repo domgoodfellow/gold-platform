@@ -9,7 +9,7 @@ import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 /**
  * `organization_launch_blockers` answers for one organization, and only to somebody who belongs
  * there. It is definer, so the check is its own: without it any signed-in caller — a member of
- * another business, or a booking visitor, who is `authenticated` too (D22) — could ask whether a
+ * another business, or a booking visitor, who is `authenticated` too — could ask whether a
  * business had a module switched on with nothing behind it.
  */
 

@@ -3,7 +3,7 @@ import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
- * The customer portal: a customer seeing their own work and what they owe (D22's second
+ * The customer portal: a customer seeing their own work and what they owe (the anonymous-session model's second
  * surface). Booking scopes an outsider to rows *they made* (`created_by`); a returning customer
  * made nothing themselves, so the portal scopes to rows *about them* via
  * `external_actors.customer_id`, written by one privileged function on presentation of a token.
@@ -121,7 +121,7 @@ export async function revokePortalInvite(db: Db, input: { id: string }): Promise
 }
 
 /**
- * Present a link and become that customer. Anonymous sign-in first (D22) produces a genuine
+ * Present a link and become that customer. Anonymous sign-in first produces a genuine
  * `auth.uid()` so RLS stays the boundary; the token is then exchanged for a binding by a
  * privileged function, since the caller has no binding yet for RLS to key on. A browser already
  * bound to a different business is refused rather than moved — a binding is exactly one tenant.

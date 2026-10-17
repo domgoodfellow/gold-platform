@@ -349,7 +349,7 @@ export async function linkConversationCustomer(
   const { error } = await db.rpc('link_conversation_customer', {
     p_organization_id: input.organizationId,
     p_conversation_id: input.conversationId,
-    // `supabase gen types` types every function argument as non-null; this one accepts null to unlink (D15).
+    // `supabase gen types` types every function argument as non-null; this one accepts null to unlink.
     p_customer_id: input.customerId as string,
   });
   if (error) throw refusal(error);

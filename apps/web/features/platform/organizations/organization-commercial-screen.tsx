@@ -64,7 +64,7 @@ export function OrganizationCommercialScreen({
   organizationId: string;
   model: OrganizationCommercialModel;
   canManageCommercial: boolean;
-  /** Null when the caller lacks `platform.commercial` — the Economics tab stays off rather than showing an empty one (D68's own discipline, one layer down). */
+  /** Null when the caller lacks `platform.commercial` — the Economics tab stays off rather than showing an empty one (the navigation rules' own discipline, one layer down). */
   economics: OrganizationEconomicsModel | null;
 }) {
   const {

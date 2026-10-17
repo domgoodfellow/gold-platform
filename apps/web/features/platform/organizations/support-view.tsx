@@ -15,7 +15,7 @@ import { SUPPORT_SESSION_INITIAL } from '@/app/organizations/[organizationId]/pl
 /**
  * Support access, on screen. There is no button anywhere that reaches a tenant's own operating
  * data (customers, work items, and the rest) — opening a session only reveals what
- * `platform_staff` could already read in full (D28): the organization itself and who is a
+ * `platform_staff` could already read in full: the organization itself and who is a
  * member of it. `requireOrganization`'s own boundary for the tenant's real shell is unchanged.
  */
 

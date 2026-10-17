@@ -15,7 +15,7 @@ import { listNativeCapabilities } from '@/lib/domain/integrations/tool-access';
  * does — is rows a business wrote, rendered as written.
  *
  * **Nothing here evaluates a rule.** The runtime is `app.run_automation` and the trigger that
- * calls it, both in the database (D30), and that is not an implementation detail: a rule tripped
+ * calls it, both in the database, and that is not an implementation detail: a rule tripped
  * by a stranger's booking runs in a transaction where `app.current_tenant_ids()` is empty, and a
  * rule tripped by the scheduler runs in one with no person in it at all. This file writes the
  * rules down and reads back what they did.
@@ -45,7 +45,7 @@ export const TRIGGER_KINDS = [
 /**
  * What can be measured at a place.
  *
- * **This is the whole of weather in this codebase** (D11): a metric a provider can answer, and
+ * **This is the whole of weather in this codebase**: a metric a provider can answer, and
  * a number a business types. There is no weather entity, no weather rule the platform knows by
  * name, and no directory named after it. The threshold and the unit belong to the business.
  */
@@ -114,8 +114,8 @@ export const ACTION_KINDS = [
   { kind: 'change_status', label: 'move it to' },
   { kind: 'notify', label: 'tell the customer' },
   // **Shifts by an amount the business typed, and never searches for a free slot.** Searching
-  // is `freeWindows`, and a second one of those is exactly what I4 and I5 exist to forbid — see
-  // `constraints.md` D30. What decides whether the move lands is the exclusion constraint (I6),
+  // is `freeWindows`, and a second one of those is exactly what the one-calculation rule and the single availability model exist to forbid — see
+  // the runtime-boundary rule (ADR-027). What decides whether the move lands is the exclusion constraint,
   // and a refusal is recorded as a failed run rather than swallowed.
   { kind: 'shift_schedule', label: 'move it in the diary by' },
   // The one action that makes work rather than changing it, and the only one a counter rule can
@@ -172,7 +172,7 @@ export type AutomationRule = {
 export type AutomationRun = {
   id: string;
   ruleId: string;
-  /** Snapshotted when it ran, so a renamed rule leaves the record readable (I8). */
+  /** Snapshotted when it ran, so a renamed rule leaves the record readable. */
   ruleName: string;
   subjectType: string;
   subjectId: string;
@@ -533,7 +533,7 @@ export async function updateAutomationRule(
  *
  * Its conditions and actions go with it, and **its runs do not** — `automation_runs` holds no
  * key to `automation_rules`, so what a rule did survives the rule. That absence is the same one
- * `work_item_priced_lines` keeps against the price book, and for the same reason (I8).
+ * `work_item_priced_lines` keeps against the price book, and for the same reason.
  */
 export async function deleteAutomationRule(
   db: Db,
@@ -697,7 +697,7 @@ export async function removeAutomationCondition(
  *
  * The status is not checked against the rule's own type here, because it cannot be: a rule
  * watches an event rather than a kind of work, so which type it will act on is not known until
- * it acts. What keeps it honest at the moment it runs is `app.check_status_transition` (I13) —
+ * it acts. What keeps it honest at the moment it runs is `app.check_status_transition` —
  * a rule that moves a job somewhere that job's lifecycle forbids is refused, and the refusal is
  * recorded as a failed run rather than silently doing nothing.
  */

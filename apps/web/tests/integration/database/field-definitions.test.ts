@@ -10,14 +10,14 @@ import { createRole, assignRole } from '@/lib/domain/tenancy/roles';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * D7's registry, and the first entity to carry a `custom` column.
+ * The custom-field registry rule's registry, and the first entity to carry a `custom` column.
  *
- * Two things are being proved here. The first is I2 again, on the table where the collision
+ * Two things are being proved here. The first is tenant isolation again, on the table where the collision
  * is most obviously ordinary: two businesses both wanting a field called `vat_number` on
  * their customers is not a conflict, and if it behaves like one the unique index has lost
  * its leading organization_id.
  *
- * The second is I17. The registry is only a registry if something enforces it, and the
+ * The second is the custom-field registry rule. The registry is only a registry if something enforces it, and the
  * enforcement has to be in the database — `customers` grants INSERT to authenticated, so a
  * direct PostgREST call never passes through the domain layer at all. Several tests below
  * deliberately bypass `createCustomer` for exactly that reason.
@@ -84,7 +84,7 @@ describe('field definitions', () => {
     bob = await newTenant('fd-bob');
   });
 
-  it('lets two tenants define the same field key on the same entity (I2)', async () => {
+  it('lets two tenants define the same field key on the same entity', async () => {
     // The whole point of the table. If field_definitions_org_entity_key_unique had been
     // written (entity_type, key) instead of leading with organization_id, the second of
     // these would fail with a bare 23505 and two businesses could never share a field name.
@@ -111,7 +111,7 @@ describe('field definitions', () => {
     expect(mine).not.toBe(theirs);
   });
 
-  it('refuses two fields with the same key in one tenant (I2)', async () => {
+  it('refuses two fields with the same key in one tenant', async () => {
     await expect(
       createFieldDefinition(alice.db, {
         organizationId: alice.organizationId,
@@ -169,7 +169,7 @@ describe('field definitions', () => {
     ).rejects.toMatchObject({ code: 'fields.unknown' });
   });
 
-  it('refuses an undeclared key in the database, not just the domain (I17)', async () => {
+  it('refuses an undeclared key in the database, not just the domain', async () => {
     // Bypasses createCustomer entirely, which is the case that matters: the domain check
     // produces the message, app.check_custom_fields produces the guarantee.
     const { error } = await insertCustomerDirectly(alice, { not_a_field: 'whatever' });
@@ -178,7 +178,7 @@ describe('field definitions', () => {
     expect(error!.code).toBe('23514');
   });
 
-  it('does not let one tenant\'s definition authorize another tenant\'s row (I17)', async () => {
+  it('does not let one tenant\'s definition authorize another tenant\'s row', async () => {
     // `vat_number` is declared in BOTH organizations by now, so this proves the trigger
     // scopes its lookup by organization_id rather than asking whether the key exists
     // anywhere. Bob declares `btw_only`; Alice may not use it.
@@ -251,7 +251,7 @@ describe('field definitions', () => {
     ).rejects.toMatchObject({ code: 'fields.required' });
   });
 
-  it('leaves customers created before a required field alone (I8)', async () => {
+  it('leaves customers created before a required field alone', async () => {
     // account_code became required in the previous test. Declared Fields Ltd predates it and
     // must still be readable — configuration changes are not retroactive. The trigger fires
     // on write, so this falls out of its shape rather than needing a rule of its own.
@@ -262,7 +262,7 @@ describe('field definitions', () => {
     expect(older!.custom.account_code).toBeUndefined();
   });
 
-  it('refuses field management to a member without the capability (I12)', async () => {
+  it('refuses field management to a member without the capability', async () => {
     // A role that keeps role.manage — otherwise assign_role refuses to leave the tenant with
     // nobody able to manage roles — but loses field.manage.
     const limited = await createRole(bob.db, {
@@ -293,7 +293,7 @@ describe('field definitions', () => {
     ).rejects.toMatchObject({ code: 'fields.forbidden' });
   });
 
-  it('records a defined field on the timeline (I11)', async () => {
+  it('records a defined field on the timeline', async () => {
     const { data, error } = await alice.db
       .from('events')
       .select('action, actor_id, payload')

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { COLLEAGUE_STORAGE_STATE, OWNER_STORAGE_STATE, loadDemoContext } from './helpers';
 
 /**
- * The M17 navigation-closure slice: Settings -> Features shows canonical Feature
+ * Feature-level navigation gating: Settings -> Features shows canonical Feature
  * entitlement/activation/readiness (`organizationResolvedFeatureStates`), and the operator
  * shell's sidebar/phone bar now gate a feature-specific area on that same resolved state
  * (`Area.featureKeys`) rather than the coarser legacy module key. This spec drives the real

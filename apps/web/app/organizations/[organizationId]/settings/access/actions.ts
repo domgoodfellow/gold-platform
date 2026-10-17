@@ -164,7 +164,7 @@ export type ReissueInvitationState = { error: string | null; link: string | null
 
 /**
  * Resend: a fresh token, a fresh link, a fresh send attempt — never the original plaintext, which
- * no longer exists anywhere to resend (D33). The old link stops working the instant this commits.
+ * no longer exists anywhere to resend. The old link stops working the instant this commits.
  */
 export async function reissueInvitationAction(
   _previous: ReissueInvitationState,

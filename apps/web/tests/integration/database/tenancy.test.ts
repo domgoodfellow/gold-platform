@@ -6,7 +6,7 @@ import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * The M1 milestone test.
+ * The original kernel test.
  *
  * Two organizations in one database, each with its own user, and no query, index, or
  * constraint belonging to one can observe or block the other. Everything here runs under a
@@ -66,7 +66,7 @@ describe('tenant isolation', () => {
     const b = await signUp(`bob-${run}@example.test`);
 
     // Both tenants are created with the SAME name, in the same table, in the same database.
-    // If either of these fails, a unique index is missing its leading tenant column (I2).
+    // If either of these fails, a unique index is missing its leading tenant column.
     const aOrg = await foundBusiness({
       ownerEmail: a.email,
       name: COLLIDING_NAME,
@@ -95,18 +95,18 @@ describe('tenant isolation', () => {
     aliceSecondOrganizationId = aSecond as string;
   });
 
-  it('gives each tenant a distinct organization despite identical names (I2)', () => {
+  it('gives each tenant a distinct organization despite identical names', () => {
     expect(alice.organizationId).not.toEqual(bob.organizationId);
   });
 
-  it('lets one user hold memberships in two organizations (I2)', async () => {
+  it('lets one user hold memberships in two organizations', async () => {
     const { data, error } = await alice.db.from('memberships').select('organization_id');
     expect(error).toBeNull();
     const ids = (data ?? []).map((row) => row.organization_id).sort();
     expect(ids).toEqual([alice.organizationId, aliceSecondOrganizationId].sort());
   });
 
-  it('shows each user only their own organizations (I1, I3)', async () => {
+  it('shows each user only their own organizations', async () => {
     const forAlice = await listMyOrganizations(alice.db);
     const forBob = await listMyOrganizations(bob.db);
 
@@ -116,7 +116,7 @@ describe('tenant isolation', () => {
     expect(forBob.map((organization) => organization.id)).toEqual([bob.organizationId]);
   });
 
-  it('hides the other tenant even when its id is known (I1)', async () => {
+  it('hides the other tenant even when its id is known', async () => {
     const { data, error } = await alice.db
       .from('organizations')
       .select('id')
@@ -126,7 +126,7 @@ describe('tenant isolation', () => {
     expect(data).toEqual([]);
   });
 
-  it('records an attributable creation event per tenant (I11)', async () => {
+  it('records an attributable creation event per tenant', async () => {
     const { data, error } = await alice.db
       .from('events')
       .select('organization_id, actor_id, action, entity_type');
@@ -135,8 +135,8 @@ describe('tenant isolation', () => {
     expect(data).not.toBeNull();
     expect(data!.length).toBe(2); // one per organization Alice was handed
 
-    // **The actor is whoever acted, and since D29 closed founding that is GOLD** — these
-    // businesses were provisioned rather than founded by Alice. I11 is unchanged and is what
+    // **The actor is whoever acted, and since the one-creation-path rule closed founding that is GOLD** — these
+    // businesses were provisioned rather than founded by Alice. Actor attribution is unchanged and is what
     // this asserts: every state change names a real `auth.users` id. What it must *not* be is
     // Alice, because she did not do it, and an event that credits the wrong person is worse
     // than one that credits somebody the tenant cannot look up.
@@ -149,7 +149,7 @@ describe('tenant isolation', () => {
     }
   });
 
-  it('refuses to write an event into another tenant (I1)', async () => {
+  it('refuses to write an event into another tenant', async () => {
     const { error } = await alice.db.from('events').insert({
       organization_id: bob.organizationId,
       actor_id: alice.userId,
@@ -161,7 +161,7 @@ describe('tenant isolation', () => {
     expect(error).not.toBeNull();
   });
 
-  it('refuses to attribute an event to someone else (I11)', async () => {
+  it('refuses to attribute an event to someone else', async () => {
     const { error } = await alice.db.from('events').insert({
       organization_id: alice.organizationId,
       actor_id: bob.userId,
@@ -189,7 +189,7 @@ describe('tenant isolation', () => {
     expect(deleted.data ?? []).toEqual([]);
   });
 
-  it('refuses an unauthenticated caller (I12)', async () => {
+  it('refuses an unauthenticated caller', async () => {
     const anonymous = createClient(SUPABASE_URL, ANON_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
@@ -206,15 +206,15 @@ describe('tenant isolation', () => {
     expect(error).not.toBeNull();
   });
 
-  it('refuses an anonymous session, which is a caller with a real uid (D22)', async () => {
+  it('refuses an anonymous session, which is a caller with a real uid', async () => {
     // The test above passes because there is no session at all. This one is the case that
     // arrived with booking and was not noticed: `signInAnonymously` produces a genuine
     // `auth.users` row and a genuine `auth.uid()` -- deliberately, because that is what kept
-    // I11 and D17 intact when D22 was answered -- and it carries `role: authenticated` in its
+    // actor attribution and the tenant-isolation rule intact when the anonymous-session model was answered -- and it carries `role: authenticated` in its
     // JWT exactly as a registered user does. `create_organization` gated on `auth.uid() is not
     // null` and therefore let it through.
     //
-    // **Two guards stand here now and the outer one arrived second.** D29 revoked this
+    // **Two guards stand here now and the outer one arrived second.** The one-creation-path rule revoked this
     // function from `authenticated` outright, so an anonymous caller is refused for the same
     // reason every caller is: no grant. The `is_anonymous` check inside is still there, still
     // correct, and now unreachable from any session -- which is why this test asserts the

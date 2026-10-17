@@ -165,7 +165,7 @@ describe('integrations: CSV import', () => {
     const resources = await listResources(alice.db, { organizationId: alice.organizationId });
     expect(resources.find((r) => r.id === resourceId)).toMatchObject({ connectionId: null, resourceType: 'file_upload' });
 
-    // Bob cannot see Alice's resource at all (I1).
+    // Bob cannot see Alice's resource at all.
     expect(await listResources(bob.db, { organizationId: alice.organizationId })).toEqual([]);
   });
 
@@ -333,7 +333,7 @@ describe('integrations: CSV import', () => {
     expect(links![0].gold_entity_id).toBe(annRows![0].id);
   });
 
-  it('refuses a member without integration.manage (I12)', async () => {
+  it('refuses a member without integration.manage', async () => {
     const limited = await createRole(bob.db, {
       organizationId: bob.organizationId,
       name: 'No Integrations',
@@ -380,7 +380,7 @@ describe('integrations: CSV import', () => {
     expect(await getImportRun(alice.db, { organizationId: alice.organizationId, runId: secondRunId })).toMatchObject({ status: 'completed', rowsCreated: 0, rowsUpdated: 205 });
   });
 
-  it('disconnecting a connection never touches the customers it already imported (I1/I8)', async () => {
+  it('disconnecting a connection never touches the customers it already imported', async () => {
     const connectionId = await recordConnection(alice.db, {
       organizationId: alice.organizationId,
       connectorKey: FIXTURE_CONNECTOR,

@@ -13,12 +13,12 @@ import {
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 
 /**
- * The generalized usage ledger (D43, corrected): what a call cost GOLD, in the provider's own
+ * The generalized usage ledger (the platform-economics separation, corrected): what a call cost GOLD, in the provider's own
  * currency, what it charged a tenant, in the tenant's own currency, and who may see which half.
  *
  * **The retail rate is written over a direct connection**, exactly as `communications.test.ts`
  * does, into `platform_retail_rates`. **The provider side goes through the real staff door**,
- * `recordProviderRate`, since that one is new, and now names Twilio explicitly (D43's
+ * `recordProviderRate`, since that one is new, and now names Twilio explicitly (the platform-economics separation's
  * provider/meter split) rather than leaving it implied by the meter.
  */
 
@@ -62,7 +62,7 @@ async function newTenant(label: string): Promise<Tenant> {
 
   const customerId = await createCustomer(db, { organizationId, name: 'A Caller' });
 
-  // Opening credit, over the same direct connection communications.test.ts already uses — D40's
+  // Opening credit, over the same direct connection communications.test.ts already uses — the messaging rules'
   // purse has no application write path at all.
   await pg.query(
     `insert into public.organization_credits (organization_id, amount_minor, currency, reason, note)
@@ -85,7 +85,7 @@ beforeAll(async () => {
   await pg.connect();
 
   // `platform_provider_rates` is GOLD's own catalogue — global, append-only, never seeded
-  // (D43's own rule) and never tenant-scoped, unlike everything else this file writes. The
+  // (the platform-economics separation's own rule) and never tenant-scoped, unlike everything else this file writes. The
   // first test below depends on nothing having priced `twilio`/`voice_minutes` yet; on a
   // shared local database that has run this file before without a `db:reset` in between, an
   // earlier run's own rate is still the latest one `app.provider_rate_at` will find, since it
@@ -157,7 +157,7 @@ async function openAndCharge(caller: Tenant, durationSeconds: number): Promise<s
   return callId as string;
 }
 
-describe('usage, cost and charge (D43)', () => {
+describe('usage, cost and charge', () => {
   it('records a usage event at zero cost before GOLD has priced the meter', async () => {
     await openAndCharge(tenant, 90);
 
@@ -210,7 +210,7 @@ describe('usage, cost and charge (D43)', () => {
   });
 
   it('lets a USD-ish provider cost and a CAD-ish customer charge coexist on one usage fact, and refuses to net them', async () => {
-    // sms_segment has no real writer yet (D43 leaves it as vocabulary), so this event is
+    // sms_segment has no real writer yet (the platform-economics separation leaves it as vocabulary), so this event is
     // written directly, the same way a future provider-sync job would report a reading GOLD
     // did not itself dial — the point under test is the row's shape, not who wrote it.
     const eventId = randomUUID();

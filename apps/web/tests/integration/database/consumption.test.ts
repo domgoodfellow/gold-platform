@@ -22,14 +22,14 @@ import { createWorkItem } from '@/lib/domain/work-items/work-items';
 import { asPlatformStaff, foundBusiness, newAccountEmail } from '@/tests/support/founding';
 
 /**
- * What a job involves, what it took, and what it cost — and I10.
+ * What a job involves, what it took, and what it cost — and the minor-units money rule.
  *
  * The money assertions are the load-bearing ones. "Money is integer minor units, and currency
  * is per-tenant configuration" is easy to state and easy to lose: it goes first when
  * somebody writes `amount / 100` into a query, or reads the organization's *current* currency
  * to render a two-year-old cost. Both are asserted against here — the amount is an integer
  * everywhere but the formatter, and the currency is snapshotted onto the row rather than
- * joined, so changing what a business trades in does not reinterpret its history (I8).
+ * joined, so changing what a business trades in does not reinterpret its history.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -113,7 +113,7 @@ describe('checklists, time and cost', () => {
     // There is no neutral currency, so the platform never picks one. Contrast the timezone,
     // which coalesces to UTC because UTC is the absence of an assumption.
     //
-    // **Asked of the provisioning door**, because since D29 that is the door with a key cut
+    // **Asked of the provisioning door**, because since the one-creation-path rule that is the door with a key cut
     // for it — `create_organization` holds no grant, so asking it this question would test a
     // missing privilege rather than a missing currency.
     const { error } = await (await asPlatformStaff()).rpc('provision_organization', {
@@ -180,7 +180,7 @@ describe('checklists, time and cost', () => {
     expect(unticked.doneBy).toBeNull();
   });
 
-  it('refuses a tick attributed to somebody else (I11)', async () => {
+  it('refuses a tick attributed to somebody else', async () => {
     const [first] = await listChecklistItems(alice.db, {
       organizationId: alice.organizationId,
       workItemId: alice.workItemId,
@@ -226,7 +226,7 @@ describe('checklists, time and cost', () => {
     expect(error).not.toBeNull();
   });
 
-  it('cannot hang a step off another tenant\'s work item (I18)', async () => {
+  it('cannot hang a step off another tenant\'s work item', async () => {
     await expect(
       addChecklistItem(bob.db, { workItemId: alice.workItemId, label: 'Borrowed' }),
     ).rejects.toMatchObject({ code: 'checklists.work_item_not_found' });
@@ -255,7 +255,7 @@ describe('checklists, time and cost', () => {
   });
 
   it('allows overlapping time entries, unlike scheduled windows', async () => {
-    // Deliberate. I7 stops a resource being committed to two future jobs; a timesheet is a
+    // Deliberate. The no-double-booking constraint stops a resource being committed to two future jobs; a timesheet is a
     // record of what happened, and refusing an overlap would mean refusing to record it.
     await expect(
       recordTime(alice.db, {
@@ -277,7 +277,7 @@ describe('checklists, time and cost', () => {
     ).rejects.toMatchObject({ code: 'time_entries.window_backwards' });
   });
 
-  it('records a cost in integer minor units, in the tenant\'s own currency (I10)', async () => {
+  it('records a cost in integer minor units, in the tenant\'s own currency', async () => {
     await recordCost(alice.db, {
       workItemId: alice.workItemId,
       description: 'Replacement valve',
@@ -440,7 +440,7 @@ describe('checklists, time and cost', () => {
     expect(formatMoney(100, 'JPY')).not.toContain('1.00');
   });
 
-  it('refuses time and cost to a member without the capability (I12, I16)', async () => {
+  it('refuses time and cost to a member without the capability', async () => {
     const limited = await createRole(bob.db, {
       organizationId: bob.organizationId,
       name: 'No Recording',

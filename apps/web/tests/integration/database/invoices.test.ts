@@ -32,10 +32,10 @@ import { getOrganization, updateOrganization } from '@/lib/domain/tenancy/organi
  *
  * The claims worth holding here are all about things the schema deliberately does *not* have.
  * An invoice has no total column, so re-pricing the catalogue or amending the quote must move
- * nothing on an issued document â€” which is I8 applied one level up from where the priced line
+ * nothing on an issued document â€” which is the preserved-history rule applied one level up from where the priced line
  * already applies it. An invoice has no `paid` flag, so settlement has to be arithmetic that
  * cannot disagree with the payments it was derived from. And a second invoice for one job is
- * refused by a unique index rather than by a check before the insert, for the reason I6 gives
+ * refused by a unique index rather than by a check before the insert, for the reason the advisory-availability rule gives
  * about checking before writing.
  *
  * The last one is the point of the suite: every guarantee below is either a constraint or a
@@ -153,7 +153,7 @@ describe('invoicing a job', () => {
     );
   });
 
-  it('copies the quote onto the invoice and totals it through the one calculation (I4)', async () => {
+  it('copies the quote onto the invoice and totals it through the one calculation', async () => {
     const job = await quotedJob(alice, 'Winter changeover', 2);
     await issueInvoice(alice.db, { workItemId: job });
 
@@ -173,7 +173,7 @@ describe('invoicing a job', () => {
     expect(standing.total).toEqual(priceWorkItem(invoice!.lines));
   });
 
-  it('does not move when the catalogue is re-priced, nor when the quote is amended (I8)', async () => {
+  it('does not move when the catalogue is re-priced, nor when the quote is amended', async () => {
     const job = await quotedJob(alice, 'Priced before the rise');
     await issueInvoice(alice.db, { workItemId: job });
 
@@ -245,7 +245,7 @@ describe('invoicing a job', () => {
     }
   });
 
-  it('numbers invoices per business, so two tenants both have a number 1 (I2)', async () => {
+  it('numbers invoices per business, so two tenants both have a number 1', async () => {
     const mine = await quotedJob(alice, 'Numbering, mine');
     const theirs = await quotedJob(bob, 'Numbering, theirs');
 
@@ -406,7 +406,7 @@ describe('money arriving', () => {
   it('takes the invoiceâ€™s currency and never the callerâ€™s', async () => {
     // `record_payment` reads the currency off the invoice. There is no argument for it, so a
     // caller cannot assert that a job priced in CAD was paid in something else â€” which would
-    // need a rate, and a rate has a date (`vision.md`: not accounting software).
+    // need a rate, and a rate has a date (`docs/product.md`: not accounting software).
     const job = await quotedJob(alice, 'Currency is not an argument');
     const invoiceId = await issueInvoice(alice.db, { workItemId: job });
     await recordPayment(alice.db, { invoiceId, amountMinor: 100 });
@@ -455,7 +455,7 @@ describe('money arriving', () => {
     );
 
     // A role holding everything except the two new capabilities. The guard is the RLS policy
-    // inside `record_payment`, not the absence of a button (I12).
+    // inside `record_payment`, not the absence of a button.
     const roleId = await createRole(alice.db, {
       organizationId: alice.organizationId,
       name: 'Technician',
@@ -589,7 +589,7 @@ describe('money arriving from a processor', () => {
     )) as { id: string };
 
     // Idempotent by constraint rather than by a check before the insert, which would race
-    // identically (I6) â€” and here the race costs a refund rather than a double booking.
+    // identically â€” and here the race costs a refund rather than a double booking.
     expect(second.id).toBe(first.id);
 
     const invoice = await getInvoiceForWorkItem(alice.db, {
@@ -612,7 +612,7 @@ describe('money arriving from a processor', () => {
     ).rejects.toThrow(/no payment was requested/i);
   });
 
-  it('attributes the write to the integration actor, so I11 keeps one shape', async () => {
+  it('attributes the write to the integration actor, so actor attribution keeps one shape', async () => {
     const job = await quotedJob(alice, 'Attributed to a machine');
     const invoiceId = await issueInvoice(alice.db, { workItemId: job });
     const requestId = await requestPayment(alice, invoiceId, 12_000);
@@ -631,7 +631,7 @@ describe('money arriving from a processor', () => {
       .single();
 
     // A real `auth.users` row rather than a null actor or a sentinel outside the table. That
-    // choice is D26's, and it is what let I11 stay a single claim.
+    // choice is the authoritative-webhook rule's, and it is what let actor attribution stay a single claim.
     expect(data!.created_by).toBe('00000000-0000-4000-8000-0000000000a1');
   });
 });
@@ -681,7 +681,7 @@ describe('the organization-wide financial reads', () => {
     expect(standing.settled).toBe(false);
   });
 
-  it('keeps quoted work and invoices at the amounts they were priced, whatever the price book says now (I8)', async () => {
+  it('keeps quoted work and invoices at the amounts they were priced, whatever the price book says now', async () => {
     const job = await quotedJob(alice, 'Quoted before the rise', 2);
     const before = (await listPricedWork(alice.db, { organizationId: alice.organizationId })).find((entry) => entry.workItemId === job)!;
     expect(priceWorkItem(before.lines)).toEqual({ totalMinor: 24_000, currency: 'CAD' });

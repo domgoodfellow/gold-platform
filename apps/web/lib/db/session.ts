@@ -14,9 +14,9 @@ import type { Database } from './types';
  * proxy (`proxy.ts`), and this is what it calls.
  *
  * The identity it returns is for deciding where to send someone, never for deciding what they
- * may do. A redirect from the proxy is not the authorization boundary (constraints.md,
+ * may do. A redirect from the proxy is not the authorization boundary (`docs/security.md`,
  * Security) — the server-side guard and RLS are. It is a `SessionIdentity`, not a bare user id,
- * because an anonymous Supabase session (D22 — booking, the portal) resolves a real user here
+ * because an anonymous Supabase session (the anonymous-session model — booking, the portal) resolves a real user here
  * exactly as a registered one does, and the proxy must not treat the two alike.
  */
 export async function updateSession(

@@ -17,7 +17,7 @@ import { foundBusiness } from '@/tests/support/founding';
  *
  * The relationship worth testing is customer-owned equipment: an asset frequently belongs to
  * the tenant's customer rather than to the tenant, which makes `assets.customer_id` a
- * cross-entity reference and therefore another I18 surface. Work items gain an asset in this
+ * cross-entity reference and therefore another the same-organization reference rule surface. Work items gain an asset in this
  * slice too, so that reference is exercised as well.
  */
 
@@ -139,7 +139,7 @@ describe('assets', () => {
     expect(own?.location).toBeNull();
   });
 
-  it('cannot be owned by another tenant\'s customer (I18)', async () => {
+  it('cannot be owned by another tenant\'s customer', async () => {
     const { error } = await alice.db.from('assets').insert({
       organization_id: alice.organizationId,
       name: 'Borrowed owner',
@@ -149,7 +149,7 @@ describe('assets', () => {
     expect(error?.code).toBe('23503');
   });
 
-  it('cannot sit at another tenant\'s location (I18)', async () => {
+  it('cannot sit at another tenant\'s location', async () => {
     const { error } = await alice.db.from('assets').insert({
       organization_id: alice.organizationId,
       name: 'Borrowed site',
@@ -185,7 +185,7 @@ describe('assets', () => {
     expect(job?.resources).toEqual([]);
   });
 
-  it('cannot make a work item about another tenant\'s asset (I18)', async () => {
+  it('cannot make a work item about another tenant\'s asset', async () => {
     const { error } = await alice.db.from('work_items').insert({
       organization_id: alice.organizationId,
       title: 'Borrowed subject',
@@ -244,7 +244,7 @@ describe('assets', () => {
     ).rejects.toMatchObject({ code: 'fields.unknown' });
   });
 
-  it('refuses assets to a member without the capability (I12)', async () => {
+  it('refuses assets to a member without the capability', async () => {
     const limited = await createRole(bob.db, {
       organizationId: bob.organizationId,
       name: 'No Assets',
@@ -267,7 +267,7 @@ describe('assets', () => {
     ).rejects.toMatchObject({ code: 'assets.forbidden' });
   });
 
-  it('records assets on the timeline (I11)', async () => {
+  it('records assets on the timeline', async () => {
     const { data, error } = await alice.db
       .from('events')
       .select('action, actor_id')

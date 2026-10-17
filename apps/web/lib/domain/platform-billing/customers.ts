@@ -47,7 +47,7 @@ export async function getPlatformBillingCustomer(
  * Provision this organization's Stripe Customer if it does not already have one for this
  * deployment's environment, and return it either way.
  *
- * **Ask, then correct — the same order `payment_requests` uses for a one-off request (I6),
+ * **Ask, then correct — the same order `payment_requests` uses for a one-off request,
  * applied to provisioning.** A placeholder row is written first, under the caller's own
  * `billing.manage`-gated insert; the provider is asked only once that succeeds, and the row is
  * then corrected with its real reference. Calling the provider before proving authorization
@@ -95,7 +95,7 @@ export async function ensurePlatformBillingCustomer(
         );
       }
       if (insertError.code === '23505') {
-        // Lost the race to a concurrent first-time provision (I6) — the row it wrote is the
+        // Lost the race to a concurrent first-time provision — the row it wrote is the
         // answer, unless that row is itself still pending, in which case falling through to
         // retry the provider call below is exactly right rather than returning a fake reference.
         const winner = await getPlatformBillingCustomer(db, { organizationId: input.organizationId });

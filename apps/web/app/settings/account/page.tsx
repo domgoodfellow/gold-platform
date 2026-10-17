@@ -6,7 +6,7 @@ import { PersonalSettingsShell } from '@/features/account/personal-settings-shel
 
 export const dynamic = 'force-dynamic';
 
-/** Personal settings → Profile. The person's identity, which no business owns (D45). */
+/** Personal settings → Profile. The person's identity, which no business owns. */
 export default async function ProfilePage({ searchParams }: PageProps<'/settings/account'>) {
   const { org, emailChange } = await searchParams;
 

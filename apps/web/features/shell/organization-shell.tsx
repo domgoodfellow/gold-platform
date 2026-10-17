@@ -43,7 +43,7 @@ export async function OrganizationShell({
   // a wider, cross-tenant answering scope it does not have.
 
   // `requireOrganization` already proved a session exists; this is a second, deliberately
-  // separate read of the same session for the one extra fact the shell shows (I11's minimal
+  // separate read of the same session for the one extra fact the shell shows (actor attribution's minimal
   // `Actor` shape carries only an id).
   // Read here rather than per-screen, since a brand belongs to the shell — every page inside
   // inherits these roles and never has to know whose colour it's rendering.

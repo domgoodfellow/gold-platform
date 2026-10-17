@@ -5,12 +5,12 @@ import { DomainError } from '@/lib/domain/errors';
  * The one place `apps/web` calls a migrated FastAPI domain command over HTTP.
  *
  * **Forwards the caller's own token, and mints nothing** — the same authorization story
- * `lib/adapters/answering/gold-api.ts` already tells for the Ask feature (D17, D34), extended
+ * `lib/adapters/answering/gold-api.ts` already tells for the Ask feature, extended
  * from a read to a write. `apps/api`'s handler holds no role of its own; what it may do is
  * exactly what the token's own session may do, decided by RLS a moment later.
  *
  * **Not the answering-capability pattern.** `answeringProvider()` returns `null` when
- * unconfigured, because a deployment with no assistant is an ordinary, working deployment (D31).
+ * unconfigured, because a deployment with no assistant is an ordinary, working deployment.
  * A migrated command has no such fallback — `updateCustomer`'s TypeScript implementation is not
  * kept in parallel as one (CLAUDE.md's rule against a second authoritative implementation) — so
  * an unconfigured deployment fails the action loudly rather than silently doing nothing.

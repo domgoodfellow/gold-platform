@@ -6,7 +6,7 @@ import { callDomainCommand } from './client';
  * **Preview and runtime call the same function.** These wrappers exist so the Configure screen's
  * "Test route" and the dialer's AUTO/MANUAL identity both reach the one resolver over HTTP,
  * exactly as `wrap_up.ts` reaches `wrap_up_call` — never a second, TS-side approximation of
- * either decision (D30: the two runtimes cannot call each other, so there is nowhere else for
+ * either decision (the runtime-boundary rule: the two runtimes cannot call each other, so there is nowhere else for
  * this logic to live that both a live call and a preview screen could reach).
  */
 

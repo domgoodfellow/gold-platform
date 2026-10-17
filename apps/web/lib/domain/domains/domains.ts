@@ -22,7 +22,7 @@ import { CONFLICT_MESSAGE, PROVIDER_UNAVAILABLE_MESSAGE, type DomainSurface } fr
  * **A custom domain has two halves and this file sequences them.** Naming it is the business's
  * own act, checked by the database (`begin_custom_domain_connection`: `organization.manage`, a
  * well-formed name, not claimed anywhere). Registering and verifying it is the hosting provider's
- * answer, which only `apps/api` can ask for and record (D54). What a person sees afterwards is read
+ * answer, which only `apps/api` can ask for and record. What a person sees afterwards is read
  * back from the row, so the answer survives the dialog closing.
  */
 

@@ -25,7 +25,7 @@ import { foundBusiness } from '@/tests/support/founding';
 /**
  * The edit paths that shipped write-once, and the two claims that make them safe.
  *
- * D19 set the precedent for deferring an edit path until something needs one. What needed
+ * The no-mirrored-profile rule set the precedent for deferring an edit path until something needs one. What needed
  * these is a business that picked the wrong timezone at signup, or typed its board column
  * wrong, and had no recourse short of a migration.
  *
@@ -33,15 +33,15 @@ import { foundBusiness } from '@/tests/support/founding';
  * discovered:
  *
  *   * **Changing the currency does not reinterpret history.** Every amount carries the
- *     currency it was recorded in, snapshotted at insert (I8). This file records a cost in
+ *     currency it was recorded in, snapshotted at insert. This file records a cost in
  *     one currency, changes the organization's, and asserts the old row is unmoved.
  *   * **Changing the timezone does not move a booking.** A scheduled window is an absolute
- *     instant (I9); only its rendering changes.
+ *     instant; only its rendering changes.
  *
  * And one that looks dangerous and is not, for a different reason: renaming a status moves no
- * work, because a job references its status by id. That is what D6 buys by making the
+ * work, because a job references its status by id. That is what the tenant-vocabulary rule buys by making the
  * tenant's word data rather than an enum, and it is worth an assertion because the whole
- * argument for D6 rests on it.
+ * argument for the tenant-vocabulary rule rests on it.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -150,7 +150,7 @@ describe('editing configuration that shipped write-once', () => {
     expect(item.id).toBe(alice.workItemId);
   });
 
-  it('renames a status without moving the work sitting in it (D6)', async () => {
+  it('renames a status without moving the work sitting in it', async () => {
     await updateWorkItemStatus(alice.db, {
       id: alice.statusId,
       name: 'Scheduled',
@@ -242,7 +242,7 @@ describe('editing configuration that shipped write-once', () => {
     expect(organization!.currency).toBe('USD');
   });
 
-  it('does not move a booking when the timezone changes (I9)', async () => {
+  it('does not move a booking when the timezone changes', async () => {
     // The instant is absolute. Alice now reads it as a New York time rather than an
     // Amsterdam one, and it is the same moment.
     const [item] = await listWorkItems(alice.db, {
@@ -252,7 +252,7 @@ describe('editing configuration that shipped write-once', () => {
     expect(item.window?.startsAt).toBe(BOOKED);
   });
 
-  it('does not reinterpret a recorded cost when the currency changes (I8)', async () => {
+  it('does not reinterpret a recorded cost when the currency changes', async () => {
     // Recorded while Bob traded in EUR.
     await recordCost(bob.db, {
       workItemId: bob.workItemId,
@@ -332,7 +332,7 @@ describe('editing configuration that shipped write-once', () => {
     expect(theirs!.name).toBe('Bob Ltd');
   });
 
-  it('requires organization.manage, which field.manage does not imply (I12, I16)', async () => {
+  it('requires organization.manage, which field.manage does not imply', async () => {
     const limited = await createRole(bob.db, {
       organizationId: bob.organizationId,
       name: 'Configurer',
@@ -374,7 +374,7 @@ describe('editing configuration that shipped write-once', () => {
     expect(unchanged!.currency).toBe('GBP');
   });
 
-  it('records every edit on the timeline (I11)', async () => {
+  it('records every edit on the timeline', async () => {
     const { data, error } = await alice.db
       .from('events')
       .select('action, actor_id')

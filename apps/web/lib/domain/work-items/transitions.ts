@@ -3,16 +3,16 @@ import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
- * Which moves between statuses a tenant allows, per work item type. This is I13.
+ * Which moves between statuses a tenant allows, per work item type. This is the status-transition rule.
  *
  * Nothing here decides what a move *means*. A transition is a pair of status ids the tenant
  * wired together, and the platform's only opinion is that a move nobody configured is not a
  * move — see the migration for why an unconfigured type is frozen rather than unconstrained.
  *
  * The guarantee is `app.check_status_transition`, a trigger, so a direct PostgREST update is
- * refused exactly as a form is (I12). What this file adds is the *sentence*: the trigger can
+ * refused exactly as a form is. What this file adds is the *sentence*: the trigger can
  * only name uuids, and a person needs to be told which column they tried to move to. That is
- * the same division of labour `parseCustom` has with the custom-fields trigger for I17.
+ * the same division of labour `parseCustom` has with the custom-fields trigger for the custom-field registry rule.
  */
 export type WorkItemTransition = {
   id: string;
@@ -94,7 +94,7 @@ export async function createWorkItemTransition(
       throw new DomainError('That move is already allowed.', 'transitions.already_allowed');
     }
     // A three-column reference refusing a status that is not in this organization, or is in
-    // it but belongs to another type (I20). From the caller's position both are the same
+    // it but belongs to another type. From the caller's position both are the same
     // fact: not a status on this board.
     if (error.code === '23503') {
       throw new DomainError(

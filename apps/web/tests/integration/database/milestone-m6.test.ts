@@ -47,11 +47,11 @@ import { foundBusiness } from '@/tests/support/founding';
  * **Three structural claims sit beside the run, and they are the ones that decay silently.**
  *
  *   * *An automation may not do what a person may not do.* The same trigger that refuses a
- *     technician an illegal status change refuses a rule (I13), and the same exclusion
- *     constraint that refuses a double booking refuses a rule's reschedule (I7).
+ *     technician an illegal status change refuses a rule, and the same exclusion
+ *     constraint that refuses a double booking refuses a rule's reschedule.
  *   * *An automation computes nothing the domain layer owns.* The action catalogue is read out
  *     of the database and asserted to contain nothing that prices or searches for a slot — which
- *     is I4 and I5 held from a direction they have never been pushed from before.
+ *     is the one-calculation rule and the single availability model held from a direction they have never been pushed from before.
  *   * *The thing that turns the clock can reach almost nothing.* `automation_runner` holds no
  *     grant on any table, asserted from `information_schema` rather than from a migration.
  *
@@ -110,7 +110,7 @@ describe('M6 — a business that runs itself', () => {
 
     // **A business already live on this platform**, which is the criterion's own framing and
     // the reason this test does not stand up a second tenant built to need weather. GOLD
-    // provisions it; its owner gives it its shape (D29).
+    // provisions it; its owner gives it its shape.
     organizationId = await foundBusiness({
       ownerEmail: owner.email,
       name: `Tyre Fitters ${randomUUID().slice(0, 6)}`,
@@ -159,7 +159,7 @@ describe('M6 — a business that runs itself', () => {
     });
 
     // They can see the rules and cannot write one. A job that moves on its own must never be a
-    // mystery to the person watching it (I12), and writing the rules is a separate authority.
+    // mystery to the person watching it, and writing the rules is a separate authority.
     await expect(
       createAutomationRule(technician.db, {
         organizationId,
@@ -292,7 +292,7 @@ describe('M6 — a business that runs itself', () => {
   it('refuses a rule what it refuses a person, and records the refusal', async () => {
     // **The claim that separates a runtime from a back door.** "On the way" cannot follow
     // "Postponed" in this business's own lifecycle, and a rule saying otherwise is refused by
-    // `app.check_status_transition` — the same trigger that refuses a technician (I13).
+    // `app.check_status_transition` — the same trigger that refuses a technician.
     const ruleId = await createAutomationRule(owner.db, {
       organizationId,
       name: 'Skip ahead',
@@ -324,11 +324,11 @@ describe('M6 — a business that runs itself', () => {
     expect(survived?.status.id).toBe(statusIds[3]);
   });
 
-  it('offers no action that computes what the domain layer owns (I4, I5)', async () => {
+  it('offers no action that computes what the domain layer owns', async () => {
     // **Read from the database rather than from the TypeScript list**, because the database is
-    // what a rule is actually checked against and the two could drift. D30's cost is that no
+    // what a rule is actually checked against and the two could drift. The runtime-boundary rule's cost is that no
     // action may search for a free slot or work out a price: both are single calculations this
-    // platform owns, and a second copy of either in a second runtime is what I4 and I5 forbid.
+    // platform owns, and a second copy of either in a second runtime is what the one-calculation rule and the single availability model forbid.
     const client = new Client({ connectionString: CONNECTION });
     await client.connect();
     try {
@@ -354,7 +354,7 @@ describe('M6 — a business that runs itself', () => {
   });
 
   it('turns the clock with a role that can reach almost nothing', async () => {
-    // I21's shape on a fourth axis, asserted the way `payment_webhook`'s is: the difference
+    // the no-grant-rather-than-policy rule's shape on a fourth axis, asserted the way `payment_webhook`'s is: the difference
     // between a policy declining and a privilege not existing is the whole guarantee, and only
     // one of them survives a careless policy author.
     const client = new Client({ connectionString: CONNECTION });
@@ -374,7 +374,7 @@ describe('M6 — a business that runs itself', () => {
     // M3's structural claim, extended rather than replaced. `configureBusiness` now writes rules
     // as well, and the assertion that made it worth having is unchanged: no word belonging to
     // any tenant appears in it. A branch on business shape here would be the per-client app
-    // studio `vision.md` refuses, arriving as a helper.
+    // studio `docs/product.md` refuses, arriving as a helper.
     const source = readFileSync(CONFIGURE, 'utf8');
 
     for (const word of ['Fitting', 'Booked', 'Postponed', 'Tyre', 'wind', 'weather']) {

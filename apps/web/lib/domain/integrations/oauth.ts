@@ -2,7 +2,7 @@ import { callDomainCommand, requireAccessToken } from '@/lib/api/client';
 import type { Db } from '@/lib/db/types';
 
 /**
- * A business's own OAuth connection, relayed to `apps/api` (D56).
+ * A business's own OAuth connection, relayed to `apps/api`.
  *
  * **This runtime holds no token, no client secret and no state-signing secret, and never sees a
  * credential.** It forwards the caller's own token and a browser's one-time values; the API proves

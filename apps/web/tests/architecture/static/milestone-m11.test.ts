@@ -7,9 +7,9 @@ const SIDEBAR_PRIMITIVE = fileURLToPath(
 );
 
 /**
- * M11 — the interface, second pass. `roadmap.md`'s criterion: an operator can drive the whole
+ * M11 — the interface, second pass. Its criterion: an operator can drive the whole
  * application from a keyboard and always see where they are, no destructive action completes
- * without a confirmation, and `ui-spec.md` §4's exception list is empty of anything new. Like
+ * without a confirmation, and `docs/ui-system.md`'s exception list is empty of anything new. Like
  * the other milestone tests this one turns on absences read off disk, not a happy path — no
  * database, because there is no policy here to prove.
  */
@@ -31,7 +31,7 @@ function tsxFilesUnder(dir: string): string[] {
 
 describe('M11 — a control spelled by hand', () => {
   it('has no raw <button> or <select> under app/ — Button, ButtonLink and SelectInput replace both, with no exception', () => {
-    // ui-spec.md §4's six exceptions are all <input> pickers (file, color, date) and one
+    // `docs/ui-system.md`'s six exceptions are all <input> pickers (file, color, date) and one
     // ternary-classed button on the booking page whose element is still a shared Button — none
     // of them is a raw <button> or <select> tag, so this check names no exception at all.
     // The one further exception: `global-error.tsx` replaces the whole document on a root-layout
@@ -49,7 +49,7 @@ describe('M11 — a control spelled by hand', () => {
   });
 
   it('has none of the local style constants the control set replaced', () => {
-    // `ui-spec.md` §4 names the eight spellings one extraction attempt after another produced —
+    // `docs/ui-system.md` names the eight spellings one extraction attempt after another produced —
     // INPUT_CLASS in ten files, then INPUT, CELL, FIELD, BUTTON, SMALL_INPUT, SELECT_CLASS,
     // COORDINATE_INPUT. A regression here is a ninth.
     const NAMES = ['INPUT_CLASS', 'SMALL_INPUT', 'SELECT_CLASS', 'COORDINATE_INPUT'];
@@ -74,7 +74,7 @@ describe('M11 — a control file with no focus treatment', () => {
     // `SidebarRail`) instead of a bespoke `localStorage` implementation reimplementing the same
     // rows beside it — so the control, and its focus ring, live there instead.
     SIDEBAR_PRIMITIVE,
-    // The phone bar's own rows — never `Sidebar`'s vocabulary (`ui-spec.md` §2), so they still
+    // The phone bar's own rows — never `Sidebar`'s vocabulary (`docs/ui-system.md`), so they still
     // need their own focus ring, spelled directly in the shell that owns them.
     `${APP_ROOT}/organizations/[organizationId]/org-shell.tsx`,
   ];

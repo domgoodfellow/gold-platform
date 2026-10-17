@@ -14,7 +14,7 @@ import { foundBusiness } from '@/tests/support/founding';
 
 /**
  * Slice 8: a commercial proposal for one prospective customer, built from the real, approved
- * catalogue prices and snapshotted (I8) — never a live join a later price change could reprice.
+ * catalogue prices and snapshotted — never a live join a later price change could reprice.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -107,7 +107,7 @@ describe('commercial proposals', () => {
     expect(proposed!.recommended.map((entry) => entry.featureKey)).toContain('booking');
 
     // A later change to the discovery snapshot does not reach back and change what an already
-    // built proposal shows (I8) — a fresh read of the same row still carries the old snapshot.
+    // built proposal shows — a fresh read of the same row still carries the old snapshot.
     await upsertDiscoverySnapshotAnswers(alice.db, {
       organizationId: alice.organizationId,
       customerId: aliceCustomerId,
@@ -210,7 +210,7 @@ describe('commercial proposals', () => {
     expect(sent.status).toBe('sent');
   });
 
-  it('shows each tenant only its own proposals (I1)', async () => {
+  it('shows each tenant only its own proposals', async () => {
     await buildCommercialProposal(bob.db, {
       organizationId: bob.organizationId,
       customerId: bobCustomerId,

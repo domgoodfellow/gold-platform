@@ -21,11 +21,11 @@ import { createWorkItem } from '@/lib/domain/work-items/work-items';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * D22's second surface, and the claim it exists to test.
+ * The anonymous-session model's second surface, and the claim it exists to test.
  *
  * That record says: "whichever surface goes first pays for the model; the other two inherit
  * it." Booking paid. This file is whether that was true — the portal added exactly one column
- * to the axis, `external_actors.customer_id`, which D22 predicted it would need and which is
+ * to the axis, `external_actors.customer_id`, which the anonymous-session model predicted it would need and which is
  * written by one privileged function on presentation of a token and by nothing else.
  *
  * **The two surfaces scope differently and both are here.** Booking scopes an outsider to rows
@@ -35,7 +35,7 @@ import { foundBusiness } from '@/tests/support/founding';
  * that widening it did not widen anything else.
  *
  * **The link is the credential, and that is said out loud.** Anyone holding it is that
- * customer. Proving control of an email address needs a channel, and channels are M6's.
+ * customer. Proving control of an email address needs a channel, and channels came later.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -194,7 +194,7 @@ describe('a customer, in a portal', () => {
   });
 
   it('is in no tenant at all, exactly as a booking visitor is not', async () => {
-    // The claim D22 rejected a membership row over. A recognised customer is still an
+    // The claim the anonymous-session model rejected a membership row over. A recognised customer is still an
     // outsider: nothing about being known to a business puts them inside the function every
     // capability check runs through.
     const db = await recognised(shop, shop.customerId);
@@ -358,7 +358,7 @@ describe('a customer, in a portal', () => {
 
   it('keeps a binding to exactly one tenant, even holding a second link', async () => {
     // A browser recognised by one business cannot be promoted into a customer of another. The
-    // unique index on `user_id` is what makes that structural rather than polite (D22).
+    // unique index on `user_id` is what makes that structural rather than polite.
     const db = await recognised(shop, shop.customerId);
     const theirs = await createPortalInvite(rival.db, { customerId: rival.customerId });
 

@@ -6,7 +6,7 @@ duplicating the HMAC check).
 
 **Keyword handling happens here, before anything else records the message.** STOP/START/HELP are
 the one behaviour a carrier expects an SMS platform to honour regardless of what a business has
-configured (D40's restated point: a business cannot bypass suppression, and neither can silence
+configured (the messaging rules' restated point: a business cannot bypass suppression, and neither can silence
 on this endpoint).
 """
 

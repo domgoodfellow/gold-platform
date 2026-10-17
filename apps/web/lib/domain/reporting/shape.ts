@@ -1,5 +1,5 @@
 /**
- * What any report is made of, whatever it measures. Fields stay fixed per measure (D36) —
+ * What any report is made of, whatever it measures. Fields stay fixed per measure —
  * a report gains a column from a closed list, not a query builder.
  */
 
@@ -16,7 +16,7 @@ export const MEASURE_LABELS: Record<Measure, string> = {
   'invoiced_and_incurred': 'Billed and spent',
   /** "Marked" rather than "completed" — `occurred_at` records when a status changed, not when the work stopped. */
   'work_marked_complete': 'Work marked complete',
-  /** The numerator of utilisation, not a percentage — a percentage needs `freeWindows`, the one availability calculation (I5). */
+  /** The numerator of utilisation, not a percentage — a percentage needs `freeWindows`, the one availability calculation. */
   'time_committed': 'Time committed',
 };
 
@@ -39,7 +39,7 @@ export const GROUPINGS_FOR: Record<Measure, readonly Grouping[]> = {
   'time_committed': ['customer', 'resource', 'location'],
 };
 
-/** Three optional ids rather than a filter language — nothing else needs expressing for these report sets (D36). */
+/** Three optional ids rather than a filter language — nothing else needs expressing for these report sets. */
 export type Filters = {
   customerId?: string | null;
   resourceId?: string | null;

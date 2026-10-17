@@ -2,7 +2,7 @@
  * One marker's DOM element — MapLibre positions a plain `HTMLElement`, not a React tree, so this
  * stays vanilla rather than mounting a second React root inside the map canvas. One neutral GOLD
  * marker treatment, selected or not: nothing here reads what a location is called, who it serves,
- * or anything else that would make a marker's colour a second, wordless status field (I6's
+ * or anything else that would make a marker's colour a second, wordless status field (the advisory-availability rule's
  * reasoning about colour, on this surface).
  */
 

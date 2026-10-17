@@ -5,13 +5,13 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 /**
  * Committing work to a resource and a window.
  *
- * **The overlap check is not here, and must never be.** I7 says two work items can never
+ * **The overlap check is not here, and must never be.** The no-double-booking constraint says two work items can never
  * occupy the same resource and window, and `roadmap.md` is explicit that "an
  * application-level overlap check is not this milestone". The guarantee is
  * `work_items_resource_not_double_booked`, a gist exclusion constraint, and what this file
  * does with it is turn `23P01` into a sentence.
  *
- * That is also what makes I6 true rather than aspirational. Availability shown to anyone is
+ * That is also what makes the advisory-availability rule true rather than aspirational. Availability shown to anyone is
  * advisory — it was computed before this call and the world moved on — and the re-assertion
  * is the constraint refusing the insert at commit time. No amount of checking first can
  * close that window; only a constraint held by the same transaction can.
@@ -56,7 +56,7 @@ export async function scheduleWorkItem(
 
   const { error } = await db.rpc('schedule_work_item', {
     p_work_item_id: input.workItemId,
-    // Null by design, not by omission: see the parameter above. The cast is D15's — Postgres
+    // Null by design, not by omission: see the parameter above. The cast is the forward-only migration rule's — Postgres
     // records no nullability for a function argument.
     p_resource_ids: (input.resourceIds ?? null) as string[],
     p_starts_at: starts.toISOString(),
@@ -64,7 +64,7 @@ export async function scheduleWorkItem(
   });
 
   if (error) {
-    // 23P01 is the exclusion constraint. This is I7 firing, and it is the only thing that
+    // 23P01 is the exclusion constraint. This is the no-double-booking constraint firing, and it is the only thing that
     // could have caught a race between two dispatchers looking at the same free slot.
     if (error.code === '23P01') {
       throw new DomainError(

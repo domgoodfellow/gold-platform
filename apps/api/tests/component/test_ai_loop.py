@@ -10,7 +10,7 @@ is a fact about this process:
   * it records what a tool was called with and how many rows came back, never the rows;
   * a provider that fails is a recorded failure rather than an exception reaching a person.
 
-These run in `pnpm check` from the root, after the TypeScript half. They did not until M8;
+These run in `pnpm check` from the root, after the TypeScript half. They did not always;
 `apps/api/README.md` records what changed.
 """
 
@@ -86,7 +86,7 @@ def call(name: str, **arguments) -> ToolCall:
 def test_forwards_the_callers_token_and_mints_nothing(monkeypatch) -> None:
     # The security property of this whole axis, asserted as the absence it is: there is no role
     # here, nothing is signed, and what reaches Postgres is the token `apps/web` was already
-    # holding for the person who asked (D34).
+    # holding for the person who asked.
     seen: dict = {}
 
     def fake_post(url, headers=None, json=None, timeout=None):  # noqa: A002
@@ -224,7 +224,7 @@ def test_a_provider_that_fails_is_a_recorded_failure() -> None:
     given = answer(SETTINGS, Broken(), organization_id=ORG, question="What is late?", token="t")
 
     assert given.outcome == "failed"
-    # Their words, kept verbatim (I25).
+    # Their words, kept verbatim.
     assert given.detail == "the model declined to answer this"
 
 

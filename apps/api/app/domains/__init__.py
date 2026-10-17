@@ -5,7 +5,7 @@ same way -- moving a customer's stage, writing up a call -- gets exactly one imp
 one module under this package, named after the Product it belongs to (`crm`, `communications`).
 That module decides nothing RLS or a narrow database function would not decide again a moment
 later; it exists so the decision has one caller-independent home, on the same terms `app/ai`
-already reaches Postgres on (D17, D34) rather than as a new authority of its own.
+already reaches Postgres on rather than as a new authority of its own.
 
 **What does not.** HTTP parsing and auth live in ``api``. Orchestration across authenticated
 state, machine credentials, persistence and external calls lives in ``app.services``. Vendor

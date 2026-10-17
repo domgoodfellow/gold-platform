@@ -150,7 +150,7 @@ const GAPS: Record<string, Partial<Omit<CatalogueSurfaceCoverage, 'key' | 'catal
   'studio.forms_intake.contact_forms': { domain: 'partial', gap: 'Forms are hosted, placed on the website (one optional section), offered in the portal and embeddable. Booking asks a form through its own configuration. Not built: a custom-domain address, creating a customer from a response, and form.submitted as a selectable automation trigger.' },
   'studio.website.seo_metadata': { ui: 'partial', interaction: 'configurable', gap: 'Basic metadata exists without the complete SEO surface.' },
   'studio.brand_domains.domain_binding': { domain: 'partial', ui: 'partial', interaction: 'read-only', gap: 'Sending-domain state exists; site-domain binding remains incomplete.' },
-  'studio.brand_domains.custom_domain': { domain: 'partial', ui: 'partial', interaction: 'configurable', gap: 'Connect, verify and resolve exist; entitlement is checked and recorded but not enforced (M17), and a tenant’s own published site is not yet reachable at the address.' },
+  'studio.brand_domains.custom_domain': { domain: 'partial', ui: 'partial', interaction: 'configurable', gap: 'Connect, verify and resolve exist; entitlement is checked and recorded but not enforced, and a tenant’s own published site is not yet reachable at the address.' },
 };
 
 export const CATALOGUE_SURFACE_COVERAGE: readonly CatalogueSurfaceCoverage[] = Object.entries(FEATURE_STATES).map(([key, catalogueState]) => {

@@ -151,7 +151,7 @@ describe('resources', () => {
     expect(error!.code).toBe('23514');
   });
 
-  it('refuses resources to a member without the capability (I12)', async () => {
+  it('refuses resources to a member without the capability', async () => {
     const limited = await createRole(bob.db, {
       organizationId: bob.organizationId,
       name: 'No Resources',
@@ -174,7 +174,7 @@ describe('resources', () => {
     ).rejects.toMatchObject({ code: 'resources.forbidden' });
   });
 
-  it('records resources on the timeline (I11)', async () => {
+  it('records resources on the timeline', async () => {
     const { data, error } = await alice.db
       .from('events')
       .select('action, actor_id')

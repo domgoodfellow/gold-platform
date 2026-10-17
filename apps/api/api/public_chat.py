@@ -4,7 +4,7 @@
 its owner wrote and whether it holds the Agent are all read from the database by the deployment's
 id (`resolve_public_assistant`). A request that could name its own organization or carry its own
 instructions would be telling this runtime who to spend on and what to believe, on the strength of
-a shared secret that proves who is calling and nothing about what they sent (D17, D22).
+a shared secret that proves who is calling and nothing about what they sent.
 """
 from __future__ import annotations
 import json, os

@@ -297,7 +297,7 @@ export type HandoffProposalState = { error: string | null; createdOrganizationId
 /**
  * "Create this business in GildOps" — the terminal act of the commercial funnel. Real
  * authorization is `provision_organization`'s own live platform_staff check; this action does
- * not attempt to gate it a second time, since a client-side guard would only be a courtesy (I12).
+ * not attempt to gate it a second time, since a client-side guard would only be a courtesy.
  */
 export async function handoffProposalAction(
   _previous: HandoffProposalState,

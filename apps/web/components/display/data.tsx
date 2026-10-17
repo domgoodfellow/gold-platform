@@ -3,7 +3,7 @@ import { Badge as ShadcnBadge } from '@gold/ui/components/badge';
 import { cx } from '../class-names';
 
 /**
- * Never coloured by what the value means (ui-spec §7) — the platform can't tell if a tenant's
+ * Never coloured by what the value means (`docs/ui-system.md`) — the platform can't tell if a tenant's
  * status word is good or bad. `tone="accent"` is the tenant's own colour, meaning "this one",
  * never "this one is good". `tone="danger"` is for a state the platform itself reports as failing
  * (a connection that needs attention) and never for a word a tenant wrote.
@@ -67,7 +67,7 @@ export function Detail({ label, children }: { label: ReactNode; children: ReactN
   cannot tell whether a number moving is good or bad for a business it knows nothing about.
 */
 
-/** One primary action per screen (ui-spec §6). */
+/** One primary action per screen (`docs/ui-system.md`). */
 export function Toolbar({ className, variant = 'default', ...props }: ComponentProps<'div'> & { variant?: 'default' | 'quiet' | 'outlined' }) {
   return (
     <div

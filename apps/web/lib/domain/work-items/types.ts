@@ -101,7 +101,7 @@ export async function createWorkItemType(
  *
  * Nothing moves. Every status, transition and work item references the type by id, so a
  * business that decides "Callout" was always really "Service visit" changes one row and no
- * job notices — which is what D6 buys by making the tenant's word data rather than an enum.
+ * job notices — which is what the tenant-vocabulary rule buys by making the tenant's word data rather than an enum.
  */
 export async function renameWorkItemType(
   db: Db,
@@ -336,7 +336,7 @@ export async function setTypeBookingPolicy(
  *
  * The status must belong to *this type*, and the database says so: the reference is
  * `(organization_id, id, booking_status_id)` against `work_item_statuses (organization_id,
- * type_id, id)`, which is I20's three-column shape. A booking cannot arrive in another type's
+ * type_id, id)`, which is the status-belongs-to-its-type constraint's three-column shape. A booking cannot arrive in another type's
  * column even by writing the row directly.
  *
  * The price is optional. A business may take bookings without publishing what it charges, and
@@ -376,7 +376,7 @@ export async function setTypeBookable(
   });
 
   if (error) {
-    // The three-column reference refusing a status that belongs to another type (I20), or a
+    // The three-column reference refusing a status that belongs to another type, or a
     // price book item that is not this tenant's.
     if (error.code === '23503') {
       throw new DomainError(

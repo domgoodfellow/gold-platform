@@ -118,7 +118,7 @@ describe('resource<->membership operational identity (Slice 0B)', () => {
       currency: 'EUR',
     });
 
-    // Named for what this suite needs to prove, not for the product to recognise (I12,
+    // Named for what this suite needs to prove, not for the product to recognise (the UI-is-not-authorization rule,
     // restated by role-preset-not-classification.test.ts one layer up): a role called "Full"
     // holds resource.update, a role called "Limited" does not, and nothing anywhere may branch
     // on either name.
@@ -210,7 +210,7 @@ describe('resource<->membership operational identity (Slice 0B)', () => {
     ).rejects.toMatchObject({ code: 'resources.member_not_found' });
 
     // Direct RPC, bypassing the domain layer entirely — the composite FK refuses it
-    // regardless of caller, not just the function's own error mapping (D17's shape).
+    // regardless of caller, not just the function's own error mapping (the tenant-isolation rule's shape).
     const { error } = await owner.db.rpc('set_resource_membership', {
       p_resource_id: unlinked,
       p_membership_id: strangerMembershipId,
@@ -262,7 +262,7 @@ describe('resource<->membership operational identity (Slice 0B)', () => {
       }),
     ).rejects.toMatchObject({ code: 'resources.update_forbidden' });
 
-    // Direct RPC too — RLS is the boundary, not the domain layer's own check (I12).
+    // Direct RPC too — RLS is the boundary, not the domain layer's own check.
     const { error } = await restricted.db.rpc('set_resource_membership', {
       p_resource_id: sharedResourceId,
       p_membership_id: restrictedMembershipId,
@@ -387,7 +387,7 @@ describe('resource<->membership operational identity (Slice 0B)', () => {
     // `viewer` holds no capability at all and represents no Resource, yet still sees every
     // resource in the schedule — visibility is unchanged by this slice (Slice 0A's own
     // finding, still true). Not `restricted`: test 11 deleted that membership outright, and a
-    // caller removed from the organization correctly seeing nothing is I1, not a regression.
+    // caller removed from the organization correctly seeing nothing is tenant scoping, not a regression.
     const schedule = await listSchedule(viewer.db, {
       organizationId,
       within: { startsAt: '2026-11-01T00:00:00.000Z', endsAt: '2026-11-03T00:00:00.000Z' },

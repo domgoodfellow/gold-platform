@@ -24,10 +24,10 @@
 @source "../features/appearance";
 @source "../components/operational";
 
-/* The colour roles. `docs/ui-spec.md` §3 says why each one exists; this file is where the
+/* The colour roles. `docs/ui-system.md` says why each one exists; this file is where the
    values live and is the only place they may. A role is named for what it is used for, never
    for a business meaning -- there is no `success` and no `pending`, because a status is a row
-   the tenant owns and the platform does not know what it means (D23, ui-spec §7).
+   the tenant owns and the platform does not know what it means (the UI system, `docs/ui-system.md`).
 
    Two muted levels rather than one: the screens already used `opacity-70` and `opacity-60` as
    distinct weights, so the roles record a distinction that was being made by hand. */
@@ -87,7 +87,7 @@
   --warning: #b45309;
 
   /* A state GOLD itself reports as good -- Setup ready, a connection live, a feature included. A
-     platform fact, never a tenant's word (ui-spec §7), so it is not one of the three roles a
+     platform fact, never a tenant's word (`docs/ui-system.md`), so it is not one of the three roles a
      tenant may set and `BrandStyle` never writes it. One role: the border and fill are this
      colour at low opacity, exactly as `--danger`'s are. Darker in light for text contrast on its
      own tint (>= 4.5:1), lighter in dark. */

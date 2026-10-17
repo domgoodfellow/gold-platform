@@ -1,6 +1,6 @@
 /**
  * Personal settings: the signed-in person's identity and sign-in, owned by the user and never by
- * whichever business is selected (D45). This is the one place its addresses are written, so the
+ * whichever business is selected. This is the one place its addresses are written, so the
  * menu, the sidebar and the redirect from the retired `/account` cannot disagree.
  */
 export const PERSONAL_SETTINGS_ROOT = '/settings/account';

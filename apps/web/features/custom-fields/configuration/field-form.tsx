@@ -153,7 +153,7 @@ export function CreateFieldForm({
  *
  * The same shape as `EditStatusForm` on the work board, deliberately: an operator who has
  * reordered their statuses already knows that a position is a number they type. Extracting
- * the two into a shared control is M3's job at the point a *third* screen wants it, which
+ * the two into a shared control is a job for the point a *third* screen wants it, which
  * `roadmap.md` says explicitly and which two screens do not yet justify.
  *
  * The key and the kind are rendered as text rather than as inputs. That is not a disabled

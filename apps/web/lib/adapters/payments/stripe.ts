@@ -9,14 +9,14 @@ import type {
  * Stripe, behind the capability its interface names.
  *
  * **The only file in this repository that knows Stripe exists.** Everything above it asks to
- * charge a card; this is the one place that knows how, and I15 is the test that keeps it so.
+ * charge a card; this is the one place that knows how, and the no-vendor-SDK-in-domain rule is the test that keeps it so.
  *
  * **No SDK, and that is a decision rather than an omission.** What this needs is one HTTPS call
  * and a form encoding, both stable and specified. An SDK would add a dependency whose
  * transitive surface nothing here uses, and it would want a network at import time.
  *
  * **Only the outbound half is here.** Verifying what Stripe sends back is webhook ingress and
- * lives in `apps/api` (D2, D26) — so this file makes a request and never reads a callback, and
+ * lives in `apps/api` — so this file makes a request and never reads a callback, and
  * there is exactly one HMAC implementation in the repository rather than two.
  */
 
@@ -38,7 +38,7 @@ export function stripePaymentProvider(config: {
     connectUrl(input) {
       // Standard accounts: the business onboards on Stripe, keeps its own dashboard, and is
       // the merchant of record. `read_write` is what lets this platform create a charge on
-      // their behalf; it does not give it their keys, and they can revoke it themselves (D27).
+      // their behalf; it does not give it their keys, and they can revoke it themselves.
       const query = new URLSearchParams({
         response_type: 'code',
         client_id: config.clientId,
@@ -83,7 +83,7 @@ export function stripePaymentProvider(config: {
           // **A direct charge, and this header is the whole of it.** The session is created on
           // the business's own account, so the money is theirs and never passes through a
           // balance of ours — which is what keeps this platform out of being a money
-          // transmitter (D27). Without this header the charge would land on the platform.
+          // transmitter. Without this header the charge would land on the platform.
           'Stripe-Account': input.account.accountId,
           // Our own correlation token, so a retried request produces one session rather than
           // two. The same discipline the database uses one layer down.

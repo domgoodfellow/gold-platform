@@ -3,7 +3,7 @@ import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Booking policy (I86) is a layer of its own, around feasibility and never inside it: whether a
+ * Booking policy is a layer of its own, around feasibility and never inside it: whether a
  * customer may book an interval is one question, whether the resources can do it is another, and a
  * staff member scheduling work is asked only the second.
  */

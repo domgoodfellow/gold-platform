@@ -14,7 +14,7 @@ const LINK = cx('rounded text-sm opacity-70 transition-opacity hover:opacity-100
 
 /**
  * GOLD's own footer. The contact channels come from GOLD's public profile and are omitted when
- * unset — nothing here invents an address a business has not given (I24).
+ * unset — nothing here invents an address a business has not given.
  */
 export function MarketingFooter({
   name,

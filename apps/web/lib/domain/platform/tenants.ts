@@ -6,7 +6,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
  * What the people who run GOLD can see of the businesses running on it. Never asks
  * `app.has_capability` and never takes an `organizationId` — the boundary is `platform_staff`,
  * read live under RLS (`isPlatformStaff`, below), not a Postgres role a session had to wear
- * instead of its own organization memberships (D45). No `requireStaff()` for the same reason:
+ * instead of its own organization memberships. No `requireStaff()` for the same reason:
  * nothing here is protected by a TypeScript check.
  */
 
@@ -14,9 +14,9 @@ export type Tenant = {
   id: string;
   name: string;
   createdAt: string;
-  /** Rendered in it, never converted (I9). */
+  /** Rendered in it, never converted. */
   timezone: string;
-  /** ISO 4217. Never converted, since the console never totals across tenants (I10). */
+  /** ISO 4217. Never converted, since the console never totals across tenants. */
   currency: string;
   slug: string | null;
   /** What they've switched on, alphabetical. */
@@ -194,7 +194,7 @@ export type Failure = {
   kind: string;
   organizationId: string;
   occurredAt: string;
-  /** The rule that was running, snapshotted when it ran (I8). */
+  /** The rule that was running, snapshotted when it ran. */
   subject: string;
   /** The database's or the provider's own words, never this platform's interpretation. */
   detail: string;

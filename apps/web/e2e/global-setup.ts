@@ -318,7 +318,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   await staffPage.close();
 
   // `business.member` — the colleague `run.ts` adds on a reduced, `role.manage`-less role
-  // (`businesses.ts`'s own comment: "so I12 is something to look at rather than read about").
+  // (`businesses.ts`'s own comment: "so the UI-is-not-authorization rule is something to look at rather than read about").
   // A signed-in session for them is what makes the operator-path specs able to prove a control
   // is genuinely absent for a caller who lacks the capability, not merely absent for nobody.
   const colleaguePage = await browser.newPage({ baseURL } as never);

@@ -1,13 +1,13 @@
 import type { Cost } from '@/lib/domain/work-items/consumption';
 import { priceWorkItem, type Price, type PricedLine } from '@/lib/domain/pricing/prices';
 
-/** Revenue minus cost, and nothing more — not a report engine (that's M7). Revenue comes only from `priceWorkItem` (I4); this never totals lines itself. */
+/** Revenue minus cost, and nothing more — not a report engine (that's the reporting layer). Revenue comes only from `priceWorkItem`; this never totals lines itself. */
 
 /** Deliberately not the shape `priceWorkItem` returns. */
 export type Money = { amountMinor: number; currency: string };
 
 export type JobEconomics = {
-  /** `Price`, not `Money` — `priceWorkItem`'s answer travels as its own type rather than being restated (I4). */
+  /** `Price`, not `Money` — `priceWorkItem`'s answer travels as its own type rather than being restated. */
   revenue: Price;
   /** Per currency, because costs need not share one. */
   costs: Money[];
@@ -16,7 +16,7 @@ export type JobEconomics = {
   currency: string | null;
 };
 
-/** Grouped rather than summed — `work_item_costs.currency` is snapshotted per row, so a business that changed currency has costs in more than one (I8, I10). */
+/** Grouped rather than summed — `work_item_costs.currency` is snapshotted per row, so a business that changed currency has costs in more than one. */
 export function totalCost(costs: Cost[]): Money[] {
   const byCurrency = new Map<string, number>();
 

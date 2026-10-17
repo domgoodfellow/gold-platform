@@ -11,15 +11,15 @@ import { createWorkItem } from '@/lib/domain/work-items/work-items';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
- * I5 and I6.
+ * The single availability model and the advisory-availability rule.
  *
- * I5 — "there is exactly one availability calculation" — is not provable by counting
+ * The single availability model — "there is exactly one availability calculation" — is not provable by counting
  * functions. What makes it hold is that the one calculation and the constraint that commits
  * work **agree**, so nothing has a reason to grow a second opinion. Two tests assert that
  * agreement in both directions: a window `freeWindows` reports as free can be committed, and
  * one it does not report cannot.
  *
- * I6 — "availability shown to a client is advisory; it is re-asserted server-side before work
+ * The advisory-availability rule — "availability shown to a client is advisory; it is re-asserted server-side before work
  * is committed" — is asserted as the race it describes. Availability is read, a second caller
  * takes the slot, and the first caller commits against an answer that was true when it was
  * given. Nothing in the domain layer could have prevented that, which is the point: the
@@ -228,7 +228,7 @@ describe('availability', () => {
     ]);
   });
 
-  it('agrees with the constraint: a window it calls free can be committed (I5)', async () => {
+  it('agrees with the constraint: a window it calls free can be committed', async () => {
     const within = zonedDayRange(DAY, ZONE);
     const [schedule] = await listSchedule(alice.db, {
       organizationId: alice.organizationId,
@@ -241,7 +241,7 @@ describe('availability', () => {
     ).resolves.toBeTypeOf('string');
   });
 
-  it('agrees with the constraint: a window it does not call free cannot be (I5)', async () => {
+  it('agrees with the constraint: a window it does not call free cannot be', async () => {
     const within = zonedDayRange(DAY, ZONE);
     const [schedule] = await listSchedule(alice.db, {
       organizationId: alice.organizationId,
@@ -273,7 +273,7 @@ describe('availability', () => {
     ).rejects.toMatchObject({ code: 'scheduling.double_booked' });
   });
 
-  it('is advisory: a free answer can be taken before it is acted on (I6)', async () => {
+  it('is advisory: a free answer can be taken before it is acted on', async () => {
     const within = zonedDayRange(DAY, ZONE);
 
     // 1. A dispatcher reads availability and sees 14:00 free.
@@ -309,7 +309,7 @@ describe('availability', () => {
     ).rejects.toMatchObject({ code: 'scheduling.double_booked' });
   });
 
-  it('bounds a day by the tenant\'s clock, not the server\'s (I9)', () => {
+  it('bounds a day by the tenant\'s clock, not the server\'s', () => {
     // Amsterdam is UTC+2 in September, so the tenant's day starts at 22:00 the day before.
     expect(zonedDayRange('2026-09-15', 'Europe/Amsterdam')).toEqual({
       startsAt: '2026-09-14T22:00:00.000Z',

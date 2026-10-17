@@ -10,7 +10,7 @@ business holds guided setup is asked before anything is spent.
 `submit_configuration`, whose input is the schema `apps/web` built from the domain's own lists --
 and the loop stops the moment it is called. That is the loop's existing "propose, never perform"
 shape: nothing here writes a configuration, and what comes back is a proposal a person reads, edits
-and applies under their own session (D32). `apps/web` re-narrows it into the domain's own types
+and applies under their own session. `apps/web` re-narrows it into the domain's own types
 and the domain layer remains the guarantee; a schema is a request for a shape, not validation.
 
 **The platform's rules for the model are here; the vocabulary is the caller's.** The prompt is

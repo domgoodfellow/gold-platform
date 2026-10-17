@@ -60,7 +60,7 @@ function RailRow({
 /**
  * List and Map are the same collection, differently represented — one `Location[]` from the
  * route feeds both. The rail is not decoration beside the canvas: it is the accessible, always-
- * complete reading of the dataset a map alone cannot give (I6, extended to geography) — every
+ * complete reading of the dataset a map alone cannot give (the advisory-availability rule, extended to geography) — every
  * location is in it, mapped or not, and it is how coordinate editing and the record route stay
  * reachable without touching the map canvas at all.
  */

@@ -4,18 +4,18 @@ import type { Filters, Grouping, Period } from '@/lib/domain/reporting/shape';
 
 /**
  * What a business billed and what its work consumed, grouped. Computes nothing — every figure
- * comes from `public.invoiced_and_incurred` (D35). Says "invoiced" and "incurred", never
+ * comes from `public.invoiced_and_incurred`. Says "invoiced" and "incurred", never
  * "revenue": those are the two financial facts dated by something a person chose
  * (`invoices.issued_at`, `work_item_costs.incurred_at`). A business that prices here and
  * invoices elsewhere sees an empty report — the honest answer under this design, not a gap.
  */
 
 export type FinancialGroup = {
-  /** Null when grouping by service (a line snapshots a description, holding no key back to the catalogue — I4, I8) or when work is attributed to nobody. */
+  /** Null when grouping by service (a line snapshots a description, holding no key back to the catalogue — the one-calculation rule, the preserved-history rule) or when work is attributed to nobody. */
   groupId: string | null;
   /** Null either because nothing was attributed, or because the reader may not see that row — never distinguished. */
   label: string | null;
-  /** Part of the key, never a column beside it — amounts carry the currency they were recorded in (I8, I10), so one customer can have two rows. */
+  /** Part of the key, never a column beside it — amounts carry the currency they were recorded in, so one customer can have two rows. */
   currency: string;
   invoicedMinor: number;
   /** Null when the question isn't defined — grouping by service, where a cost has no line. */
@@ -81,7 +81,7 @@ export async function readFinancialTotals(db: Db, organizationId: string, from: 
   return (data ?? []).map(row => ({ currency: row.currency, invoicedMinor: amount(row.invoiced_minor), incurredMinor: amount(row.incurred_minor), marginMinor: amount(row.margin_minor) }));
 }
 
-/** A function rather than an inline `reduce` (I4). Per currency, not one number — there's no conversion rate here (same choice as `totalCost`). */
+/** A function rather than an inline `reduce`. Per currency, not one number — there's no conversion rate here (same choice as `totalCost`). */
 export function totalsByCurrency(groups: FinancialGroup[]): PeriodTotal[] {
   const byCurrency = new Map<string, PeriodTotal>();
 

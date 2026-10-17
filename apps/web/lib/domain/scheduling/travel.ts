@@ -21,7 +21,7 @@ import type { Window } from '@/lib/domain/scheduling/window';
  * **Travel ≠ eligibility ≠ working ≠ commitment.** A resource can be eligible, open and free and
  * still be unable to arrive — that is this file's only claim, and nothing here re-derives the others.
  *
- * Advisory (I6), like the rest of feasibility: the answer is a snapshot, and a router cannot run
+ * Advisory, like the rest of feasibility: the answer is a snapshot, and a router cannot run
  * inside the database, so travel is re-asked by the server immediately before a commit and is not a
  * database constraint. This file touches no database; the vendor is behind `RoutingProvider`.
  */

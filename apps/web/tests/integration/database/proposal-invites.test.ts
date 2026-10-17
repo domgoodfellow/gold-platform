@@ -20,7 +20,7 @@ import { foundBusiness } from '@/tests/support/founding';
 
 /**
  * Slice 9: a prospect opens a secure link and reviews, then accepts or declines, their own
- * commercial proposal. Pays for nothing new on the external axis (D22) — this proves the third
+ * commercial proposal. Pays for nothing new on the external axis — this proves the third
  * kind of token over it behaves exactly like the portal's: a stranger sees rows about the
  * customer they were recognized as, and nothing about anyone else's.
  */

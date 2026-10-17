@@ -403,7 +403,7 @@ def test_an_invalid_token_never_reaches_a_domain_or_provider_call(monkeypatch) -
 
 
 def test_a_role_claim_is_exposed_but_grants_nothing_here(monkeypatch) -> None:
-    """`platform_staff` is a database fact (D45), never a JWT claim. This module exposes the
+    """`platform_staff` is a database fact, never a JWT claim. This module exposes the
     claim for inspection and does not use it to decide anything — there is no
     `is_platform_staff`, `is_admin` or similar method anywhere on `CallerContext`."""
 

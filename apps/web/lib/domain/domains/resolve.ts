@@ -10,7 +10,7 @@ import type { DomainSurface } from './domains';
  *
  * **It selects, it never authorizes.** What it returns decides which published page a stranger is
  * shown, exactly as a slug in `/book/{slug}` does; RLS and every page's own guard still decide
- * anything else (D17). Unknown, unverified and released hostnames all answer `null`, one answer,
+ * anything else. Unknown, unverified and released hostnames all answer `null`, one answer,
  * so nothing distinguishes an almost-valid name from a made-up one.
  */
 

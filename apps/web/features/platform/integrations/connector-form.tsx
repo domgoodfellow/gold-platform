@@ -47,7 +47,7 @@ const VENDOR_STATUS_LABEL: Record<string, string> = {
 /**
  * One form for both creating and editing a connector. Operational fields and public copy sit in
  * separate fieldsets on purpose: an admin can rewrite the marketing description without touching
- * anything that runs (D55). Uses the canonical `Field`/`CheckboxField` primitives rather than a
+ * anything that runs. Uses the canonical `Field`/`CheckboxField` primitives rather than a
  * second, file-local form abstraction (section 37).
  */
 export function ConnectorForm({ connector }: { connector: Connector | null }) {

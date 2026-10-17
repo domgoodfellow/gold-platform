@@ -1,4 +1,4 @@
-"""HubSpot: one sign-in, reaching contacts, companies and sales pipelines (D56).
+"""HubSpot: one sign-in, reaching contacts, companies and sales pipelines.
 
 Read-only scopes only, as for the suites: this discovers what is reachable and proves the
 connection is healthy. A scope that writes arrives with the feature that needs it.

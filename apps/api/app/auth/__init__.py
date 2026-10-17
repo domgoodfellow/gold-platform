@@ -6,8 +6,8 @@ runs — a signature check against the project's own published keys, or, for a p
 the legacy shared secret, an online check against Supabase's own Auth server. Either way, what it
 hands back, a `CallerContext`, is an identity and a token to forward, nothing else. Whether that
 identity may touch a given row is answered exactly where it always was: RLS, `app/domains/**`,
-and the platform-staff checks (docs/constraints.md, "Tenancy and access"). Folding an
-authorization decision in here would be the thing D25 already refused once for modules, on a
+and the platform-staff checks (ADR-003, ADR-026). Folding an
+authorization decision in here would be the thing the module-visibility rule already refused once for modules, on a
 different axis.
 
 **No unverified token ever becomes a `CallerContext`.** There is no mode where a token's claims
@@ -16,7 +16,7 @@ proceed — a domain command, an AI call, a Twilio/email/Stripe side effect all 
 `require_caller` returns, never before it decides.
 
 **Mints nothing.** Unlike `app.core.db` and `app.core.runner`, which sign short-lived tokens for
-machine Postgres roles because no person is present (D26), this package only ever verifies a
+machine Postgres roles because no person is present, this package only ever verifies a
 token somebody else — Supabase Auth — issued. It holds no signing key and needs none, for either
 verification mechanism it uses.
 """

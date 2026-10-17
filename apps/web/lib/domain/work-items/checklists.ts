@@ -8,7 +8,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
  * A type may carry a **template** — see `TypeChecklistItem` below — and `create_work_item`
  * copies it onto the job at creation. The copy is the point: a job holds the steps it was
  * created with for the rest of its life, so editing a template never rewrites what somebody
- * already agreed to do or unticks what they already did (I8). There is still exactly one
+ * already agreed to do or unticks what they already did. There is still exactly one
  * table a screen reads a job's steps from.
  */
 export type ChecklistItem = {
@@ -100,7 +100,7 @@ export async function addChecklistItem(
  * Tick or untick a step.
  *
  * Who ticked it is not an argument either — the policy pins `done_by` to `auth.uid()`, so a
- * caller cannot record somebody else as having done the work (I11).
+ * caller cannot record somebody else as having done the work.
  */
 export async function setChecklistItemDone(
   db: Db,

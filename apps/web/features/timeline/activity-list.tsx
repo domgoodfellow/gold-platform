@@ -31,7 +31,7 @@ export function ActivityList({
     <DividedList as="ol" className="mt-2">
       {timeline.map((entry) => (
         <li key={entry.id} className={cx('flex gap-0.5 py-2', dense ? 'flex-row items-start gap-2' : 'flex-col', !compact && 'sm:flex-row sm:gap-3')}>
-          {/* The instant, in this business's zone (I9). `formatWindow` takes a range and this
+          {/* The instant, in this business's zone. `formatWindow` takes a range and this
               is a moment, so the same rule is applied with the same zone rather than a second
               formatter deciding for itself. */}
           <time
@@ -47,8 +47,8 @@ export function ActivityList({
           </time>
           <div className={cx('min-w-0', dense ? 'flex-1 text-xs' : 'text-sm')}>
             <div>{organizationId && entry.record && ['work_item', 'resource', 'location', 'customer', 'asset'].includes(entry.record.type) ? <Link className="hover:underline" href={`/organizations/${organizationId}/${({ work_item: 'work', resource: 'resources', location: 'locations', customer: 'customers', asset: 'assets' } as Record<string, string>)[entry.record.type]}/${entry.record.id}`}>{entry.description}</Link> : entry.description}</div>
-            {/* I11 is an actor id; a name is what this tenant chose to call them, and somebody
-                who has left the business no longer has one (D19). */}
+            {/* Actor attribution is an actor id; a name is what this tenant chose to call them, and somebody
+                who has left the business no longer has one. */}
             {!dense ? <div className="text-xs text-subtle">{entry.actorName ?? 'A former member'}</div> : null}
           </div>
         </li>

@@ -6,7 +6,7 @@ import { isCapability, type Capability } from './capabilities';
 export type Member = {
   id: string;
   userId: string;
-  /** What this organization calls this person. Per-tenant, never a global profile (D19). */
+  /** What this organization calls this person. Per-tenant, never a global profile. */
   displayName: string;
   role: { id: string; name: string; capabilities: Capability[] };
   createdAt: string;
@@ -65,7 +65,7 @@ export async function listMembers(
 /**
  * Add someone who already has an account to this organization.
  *
- * Deliberately not an invitation system. D19: adding a person is a `memberships` row against
+ * Deliberately not an invitation system. The no-mirrored-profile rule: adding a person is a `memberships` row against
  * an existing `auth.users` id, and emailing a stranger to create an account is a different
  * feature with different questions. Someone without an account signs up first.
  *

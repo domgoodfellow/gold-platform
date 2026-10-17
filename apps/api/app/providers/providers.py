@@ -1,7 +1,7 @@
 """Which vendor module answers for a provider key.
 
 **The one place a provider key is turned into an implementation.** `app.domains.providers` asks
-for the operations of `provider_key` and never imports a vendor (I15). A provider with no entry
+for the operations of `provider_key` and never imports a vendor. A provider with no entry
 here has no operations, and a request for it is refused rather than guessed at.
 """
 
@@ -38,7 +38,7 @@ def domain_hosting_for(provider_key: str):
     """The module that attaches a business's hostname at `provider_key`, or `None`.
 
     `app.domains.web_delivery` asks for it by the key the domain row carries and never imports a
-    vendor (I15). The module answers `connect`, `check` and `remove`.
+    vendor. The module answers `connect`, `check` and `remove`.
     """
     if provider_key == "vercel":
         from app.providers.vercel import domains
@@ -51,7 +51,7 @@ def email_domains_for(provider_key: str):
     """The module that proves a business's sending domain at `provider_key`, or `None`.
 
     `app.services.email_provisioning` asks for it by the key the binding carries and never imports
-    a vendor (I15), exactly as `domain_hosting_for` above does for the hosting side. The module
+    a vendor, exactly as `domain_hosting_for` above does for the hosting side. The module
     answers `ensure`, `get`, `verify` and `remove`.
     """
     if provider_key == "resend":
@@ -65,7 +65,7 @@ def tenant_email_for(provider_key: str):
     """The module that sends, confirms and reads back a *business's* email at `provider_key`, or `None`.
 
     `app.services.tenant_email` asks for it by the key the sending domain's binding carries and never
-    imports a vendor (I15). Distinct from `email_domains_for` (proving a name) and from GildOps' own
+    imports a vendor. Distinct from `email_domains_for` (proving a name) and from GildOps' own
     platform sender: this is an organization's message to a person.
     """
     if provider_key == "resend":

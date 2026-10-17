@@ -74,7 +74,7 @@ export function QuotesTable({ organizationId, rows, empty, mayIssue = false }: {
       columns={[
         { key: 'work', header: 'Work', emphasis: 'primary', cell: (row) => <Link className={LINK} href={workHref(organizationId, row.workItemId)}>{row.title}</Link> },
         { key: 'customer', header: 'Customer', cell: (row) => row.customer ? <Link className="underline-offset-4 hover:underline" href={customerHref(organizationId, row.customer.id)}>{row.customer.name}</Link> : '—' },
-        // The tenant's own status word, rendered as written (ui-spec §7).
+        // The tenant's own status word, rendered as written (`docs/ui-system.md`).
         { key: 'status', header: 'Status', cell: (row) => <Badge>{row.status}</Badge> },
         { key: 'invoiced', header: 'Invoice', cell: (row) => row.invoiced ? 'Invoiced' : 'Not invoiced' },
         { key: 'lines', header: 'Lines', numeric: true, cell: (row) => row.lineCount },

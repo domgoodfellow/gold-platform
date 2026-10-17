@@ -9,7 +9,7 @@ import {
 
 /**
  * "Create this business in GildOps," from one accepted commercial proposal. Owner membership and
- * default modules are already `provisionOrganization`'s own doing (D29); `hand_off_accepted_proposal`
+ * default modules are already `provisionOrganization`'s own doing; `hand_off_accepted_proposal`
  * additionally records the commercial agreement and enters the accepted Plan and Add-ons onto
  * `organization_plan_assignments`, in the same transaction — a handed-off business is entitled to
  * what it bought the moment it exists. Initial configuration, readiness and launch are not: nothing

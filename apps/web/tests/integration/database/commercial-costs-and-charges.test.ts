@@ -156,7 +156,7 @@ afterAll(async () => {
     await pg.query(`delete from public.platform_infrastructure_cost_components where source = 'cc.test.ts'`);
     await pg.query(`delete from public.platform_plan_prices where source = 'cc.test.ts'`);
     // The retail rate row is left in place -- usage_events this run wrote still reference it
-    // (the same reason a rate is appended, never rewritten: I8), and it is scoped to a
+    // (the same reason a rate is appended, never rewritten: the preserved-history rule), and it is scoped to a
     // throwaway random currency nothing else will ever query by.
     await pg.query(`delete from public.organization_plan_assignments where plan_id in (select id from public.platform_plans where key like $1)`, [`cc_%_${RUN}`]);
     await pg.query(`delete from public.platform_plan_quotas where plan_id in (select id from public.platform_plans where key like $1)`, [`cc_%_${RUN}`]);

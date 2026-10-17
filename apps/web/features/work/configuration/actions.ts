@@ -142,7 +142,7 @@ export async function renameTypeAction(
 
   try {
     // Nothing moves. Every status, transition and work item references the type by id, which
-    // is what D6 buys by making the tenant's word data rather than an enum.
+    // is what the tenant-vocabulary rule buys by making the tenant's word data rather than an enum.
     await renameWorkItemType(db, {
       id: String(formData.get('typeId') ?? ''),
       name: String(formData.get('name') ?? ''),

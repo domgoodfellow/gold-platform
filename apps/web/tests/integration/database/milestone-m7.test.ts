@@ -192,7 +192,7 @@ describe('M7 — a business defines its own reports and dashboards', () => {
       [TALLINN, tallinn],
     ] as const) {
       // Defined: a grouping, a period and a filter — which for this report set is the whole of
-      // §17's entity, fields, filters, grouping and period (D36).
+      // §17's entity, fields, filters, grouping and period.
       const reportId = await saveReportDefinition(business.operator, {
         organizationId: business.organizationId,
         name: shape.report,
@@ -238,7 +238,7 @@ describe('M7 — a business defines its own reports and dashboards', () => {
     }
   });
 
-  it('keeps each business’s reports and dashboards entirely to itself (I1, I2)', async () => {
+  it('keeps each business’s reports and dashboards entirely to itself', async () => {
     const cebuReports = await listReportDefinitions(cebu.operator, {
       organizationId: cebu.organizationId,
     });

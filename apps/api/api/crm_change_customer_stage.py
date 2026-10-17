@@ -3,11 +3,11 @@
 **The first CRM endpoint, and the same authorization story `ai_ask.py` already tells.** There is
 no role for this handler, no grant to check and no organization to trust: `change_customer_stage`
 is `security invoker`, so what a caller may move is exactly what `customers_update` (capability
-`customer.update`) already lets their session touch, decided by RLS the ordinary way (D17, D34,
+`customer.update`) already lets their session touch, decided by RLS the ordinary way (the tenant-isolation rule, the AI-tool architecture,
 extended from a read to a write). This handler authenticates nothing itself, because there is
 nothing it could usefully check that Postgres does not check again a moment later.
 
-Vercel's Python runtime routes a file under `api/` to a path (D24). One file, one route.
+Vercel's Python runtime routes a file under `api/` to a path. One file, one route.
 """
 
 from __future__ import annotations

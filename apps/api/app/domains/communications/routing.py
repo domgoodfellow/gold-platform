@@ -1,14 +1,14 @@
 """Deciding where a call goes -- the one Communications routing resolver.
 
 **Why this lives here and not in `apps/web`'s TS domain layer.** The two runtimes cannot call
-each other (D30): a live inbound call needs this answer synchronously, from the process that is
+each other: a live inbound call needs this answer synchronously, from the process that is
 about to answer Twilio, so the resolver has to run in Python. The work order's own requirement --
 "preview MUST call the same routing resolver used by runtime execution, never a second UI
 approximation" -- is only satisfiable this way: one function, called both by the carrier's own
 webhook (a future slice; not wired in this one) and by the preview endpoint `apps/web` reaches
 over HTTP, exactly as it already reaches `wrap_up_call`.
 
-**Everything here reads Postgres under the caller's own forwarded token** (D17), the same as
+**Everything here reads Postgres under the caller's own forwarded token**, the same as
 `wrap_up_call` and `app.domains.web_delivery.domains`. Nothing is decided by a role this runtime
 mints; RLS on `communication_routes`/`communication_route_targets`/`calls`/`memberships` is what
 actually governs whether a row is visible, and a cross-organization id would simply see nothing.
@@ -103,7 +103,7 @@ def _fetch_target_member_ids(settings, token, organization_id: str, route_id: st
 
 
 def _eligible_member_ids(settings, token, organization_id: str, member_ids: list[str]) -> list[str]:
-    """Active membership and `call.place` -- the one canonical capability fact (I12), never
+    """Active membership and `call.place` -- the one canonical capability fact, never
     re-derived. Order preserved: sequential and round-robin both depend on it."""
     if not member_ids:
         return []
