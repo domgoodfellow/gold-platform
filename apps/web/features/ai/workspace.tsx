@@ -5,14 +5,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Bot,
-  BookOpen,
   Boxes,
   Activity,
   TriangleAlert,
   Plus,
   Play,
-  Wrench,
-  ArrowUpRight,
 } from "lucide-react";
 import { AppPage } from "@/components/layout/app-page";
 import { PageHeader } from "@/components/headers/page-header";
@@ -459,6 +456,7 @@ export function AiWorkspace({
           {configure}
         </>}
       />
+      <AiNav base={base} active={view} />
       {!view && (
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {[
@@ -495,7 +493,6 @@ export function AiWorkspace({
           ))}
         </div>
       )}
-      {!["agents", "deployments", "knowledge", "tools"].includes(view) && <AiNav base={base} active={view} />}
       {["", "agents", "deployments", "activity"].includes(view) && <form
         className="flex flex-wrap gap-2"
               >
@@ -642,27 +639,6 @@ export function AiWorkspace({
                 </p>
               </OperationalPanel>
             </aside>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            {[
-              ["agents", "Agents", Bot],
-              ["knowledge", "Knowledge", BookOpen],
-              ["tools", "Tools", Wrench],
-              ["evaluations", "Evaluations", Boxes],
-              ["activity", "Activity & reports", Activity],
-            ].map(([path, label, Icon]) => (
-              <Link
-                key={String(path)}
-                href={`${base}/${path}`}
-                className="flex items-center gap-3 rounded-lg border border-border p-4 text-sm font-medium"
-              >
-                {typeof Icon !== "string" && (
-                  <Icon size={20} className="text-accent-text" />
-                )}
-                {String(label)}
-                <ArrowUpRight size={13} className="ml-auto" />
-              </Link>
-            ))}
           </div>
         </>
       ) : null}
