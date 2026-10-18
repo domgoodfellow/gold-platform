@@ -24,7 +24,7 @@ export async function WorkspaceCalendarPage({ params, searchParams, workspace }:
   const today = todayInZone(organization.timezone);
   const view = parseCalendarView(q.view);
   const date = parseCalendarDate(q.on, today);
-  const scope = q.scope === 'organization' ? 'organization' : 'workspace';
+  const scope = q.scope === 'workspace' ? 'workspace' : 'organization';
   const source = scope === 'organization' ? 'all' : workspace === 'crm' ? 'follow-ups' : workspace === 'field' ? 'work' : 'events';
   const actor = await requireActor(db);
   const dates = calendarDates(view, date);
@@ -49,7 +49,7 @@ export async function WorkspaceCalendarPage({ params, searchParams, workspace }:
       filterControls={<form method="get" className="flex flex-wrap items-center gap-2">
         <input type="hidden" name="view" value={view}/><input type="hidden" name="on" value={date}/>
         <SelectInput aria-label="Calendar scope" name="scope" defaultValue={scope}>
-          <option value="workspace">This workspace</option><option value="organization">All workspaces</option>
+          <option value="workspace">This view</option><option value="organization">This business</option>
         </SelectInput>
         <Button type="submit">Apply</Button>
       </form>}>

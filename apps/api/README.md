@@ -72,6 +72,7 @@ The current Vercel configuration includes logical routes for:
 - Stripe platform-billing webhook;
 - automation scheduler tick;
 - consent-based customer service email delivery tick;
+- signed external voice-session events and restricted human fallback transfer;
 - operator AI ask;
 - AI configuration drafting;
 - CRM stage command;

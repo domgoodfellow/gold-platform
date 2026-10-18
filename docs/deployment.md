@@ -1116,3 +1116,7 @@ It does not own:
 - actual secret values.
 
 Those belong to the respective canonical documents.
+
+## Inbound voice adapter configuration
+
+Inbound execution requires the matching `TWILIO_ACCOUNT_SID`, existing `TWILIO_AUTH_TOKEN` and Supabase machine settings. The number must reach `/voice/inbound` and deliver root terminal events to `/voice/status`; without terminal carrier callbacks, call state/duration are not established. Browser receiving requires the existing browser-token/TwiML application configuration. The external voice adapter additionally needs `VOICE_AGENT_BASE_URL` (HTTPS), optional `VOICE_AGENT_STREAM_ORIGIN` (WSS), and `TELEPHONY_CALLBACK_URL` as the API origin for carrier transfer callbacks. Its credential is stored on the Platform provider account, never in business configuration. Configure runtime assignment, business deployment/budget and route explicitly. These migrations were applied locally; hosted migration/deployment, number callback changes and provider sandbox/live calls require separately scoped release authorization.

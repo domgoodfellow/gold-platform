@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { hasOrganizationPageGuard } from '@/tests/support/page-authorization';
 
 /**
  * "Every page calls `requireOrganization` for itself" (CLAUDE.md, "Tenancy and access", the UI-is-not-authorization rule).
@@ -48,7 +49,7 @@ describe('every page inside a business asks for the membership itself', () => {
     const unguarded = all
       .filter((file) => {
         const source = readFileSync(file, 'utf8');
-        if (source.includes('requireOrganization') || source.includes('requirePlatformArea(') || source.includes('requireWorkspaceConfiguration(') || source.includes('requireConfigurationTarget(') || source.includes('requireOperatingArea(')) return false;
+        if (hasOrganizationPageGuard(source)) return false;
         const pureRedirect = /\bredirect\(/.test(source) && !READS_DATA.test(source);
         // The unmatched-address catch-all only throws notFound(), so the segment's own boundary renders.
         const catchAll = /^\s*notFound\(\);/m.test(source) && !READS_DATA.test(source);
@@ -57,5 +58,12 @@ describe('every page inside a business asks for the membership itself', () => {
       .map(rel);
 
     expect(unguarded).toEqual([]);
+  });
+
+  it('recognizes only the guarded Calendar delegate and refuses additional unguarded reads', () => {
+    const delegate = "import { WorkspaceCalendarPage } from '@/features/calendar/workspace-calendar-page'; export default function Page(props) { return <WorkspaceCalendarPage {...props} workspace='crm'/>; }";
+    expect(hasOrganizationPageGuard(delegate)).toBe(true);
+    expect(hasOrganizationPageGuard(delegate.replace('workspace-calendar-page', 'unguarded-calendar'))).toBe(false);
+    expect(hasOrganizationPageGuard("import { getDb } from '@/lib/db/server'; " + delegate)).toBe(false);
   });
 });

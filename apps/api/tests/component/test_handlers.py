@@ -48,6 +48,7 @@ import api.stripe_platform_billing_webhook as platform_billing_webhook
 import api.stripe_webhook as stripe_webhook
 import api.tenant_email_send as tenant_email_send
 import api.tenant_email_webhook as tenant_email_webhook
+import api.voice_agent_events as voice_agent_events
 import api.voice_inbound as voice_inbound
 import api.voice_outbound as voice_outbound
 import api.voice_recording as voice_recording
@@ -142,7 +143,7 @@ CALLBACKS = [
         "record_call_event",
         {"CallSid": "CA1", "RecordingSid": "RE1", "RecordingUrl": "https://api.twilio.com/2010-04-01/Recordings/RE1", "RecordingStatus": "completed"},
     ),
-    (voice_inbound, "/voice/inbound", "record_inbound_call", {"CallSid": "CA1", "To": "+31000000000", "From": "+31000000009"}),
+    (voice_inbound, "/voice/inbound", "inbound_response", {"AccountSid":"AC-test", "CallSid": "CA1", "To": "+31000000000", "From": "+31000000009"}),
     (voice_outbound, "/voice/outbound", "record_call_leg", {"CallSid": "CA1", "Conference": "room-1"}),
     (sms_inbound, "/sms/inbound", "record_inbound_message", {"MessageSid": "SM1", "To": "+31000000000", "From": "+31000000001", "Body": "Thanks"}),
     (sms_status, "/sms/status", "record_message_status", {"MessageSid": "SM1", "MessageStatus": "delivered"}),
@@ -152,6 +153,7 @@ IDS = [module.__name__.split(".")[-1] for module, *_ in CALLBACKS]
 
 @pytest.fixture
 def configured(monkeypatch):
+    monkeypatch.setenv("TWILIO_ACCOUNT_SID", "AC-test")
     for module in (voice_status, voice_recording, voice_inbound, voice_outbound, sms_inbound, sms_status):
         monkeypatch.setattr(module, "load_voice_settings", lambda: SETTINGS)
 
@@ -232,40 +234,25 @@ class TestCarrierCallbacksThatAreSigned:
 
         assert self._signed(voice_status, "/voice/status", CALLBACKS[0][3]) == (200, "ignored")
 
-    def test_a_signed_inbound_call_is_recorded_for_the_number_rung_and_still_declined(self, configured, monkeypatch) -> None:
-        sink = Sink(result="a-call-row")
-        monkeypatch.setattr(voice_inbound, "record_inbound_call", sink)
+    def test_a_signed_inbound_call_executes_the_shared_router(self, configured, monkeypatch):
+        sink = Sink(result='<Response><Dial/></Response>')
+        monkeypatch.setattr(voice_inbound, 'inbound_response', sink)
+        status, body = self._signed(voice_inbound, '/voice/inbound', CALLBACKS[2][3])
+        assert status == 200 and '<Dial' in body
+        assert sink.calls[0][0][1]['To'] == '+31000000000'
 
-        status, body = self._signed(voice_inbound, "/voice/inbound", CALLBACKS[2][3])
-
-        assert status == 200
-        assert "<Reject" in body
-        (_, recorded), = sink.calls
-        # The carrier names the number it dialled and the caller; it names no business.
-        assert recorded["external_id"] == "CA1"
-        assert recorded["to_number"] == "+31000000000"
-        assert recorded["from_number"] == "+31000000009"
-        assert "organization_id" not in recorded
-
-    def test_an_inbound_call_that_cannot_be_written_down_is_still_answered_the_same_way(self, configured, monkeypatch) -> None:
+    def test_an_inbound_database_failure_requests_retry(self, configured, monkeypatch):
         def broken(*args, **kwargs):
-            raise RuntimeError("the database is away")
+            raise RuntimeError('database unavailable')
+        monkeypatch.setattr(voice_inbound, 'inbound_response', broken)
+        status, _ = self._signed(voice_inbound, '/voice/inbound', CALLBACKS[2][3])
+        assert status == 503
 
-        monkeypatch.setattr(voice_inbound, "record_inbound_call", broken)
-
-        status, body = self._signed(voice_inbound, "/voice/inbound", CALLBACKS[2][3])
-
-        assert status == 200
-        assert "<Reject" in body
-
-    def test_a_call_with_no_called_number_is_declined_without_a_write(self, configured, monkeypatch) -> None:
-        sink = Sink(result="a-call-row")
-        monkeypatch.setattr(voice_inbound, "record_inbound_call", sink)
-
-        status, body = self._signed(voice_inbound, "/voice/inbound", {"CallSid": "CA1"})
-
-        assert status == 200 and "<Reject" in body
-        assert sink.calls == []
+    def test_a_different_carrier_account_never_reaches_the_router(self, configured, monkeypatch):
+        sink = Sink()
+        monkeypatch.setattr(voice_inbound, 'inbound_response', sink)
+        status, _ = self._signed(voice_inbound, '/voice/inbound', {'CallSid':'CA1','AccountSid':'foreign'})
+        assert status == 403 and sink.calls == []
 
     def test_a_signed_outbound_leg_joins_only_the_room_it_was_given(self, configured, monkeypatch) -> None:
         sink = Sink(result="a-leg")
@@ -842,3 +829,11 @@ class TestAssistantAttachments:
     )
     def test_drops_anything_that_is_not_a_named_text_file(self, raw) -> None:
         assert ai_ask._attachments(raw) == ()
+
+
+def test_voice_agent_callback_refusal_is_propagated(monkeypatch):
+    monkeypatch.setattr(voice_agent_events,'load_voice_settings',lambda:SETTINGS)
+    sink=Sink(result=False)
+    monkeypatch.setattr(voice_agent_events,'receive_voice_event',sink)
+    status,_=call(voice_agent_events,'POST',body=b'{"session_id":"untrusted"}')
+    assert status==403 and len(sink.calls)==1

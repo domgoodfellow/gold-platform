@@ -34,7 +34,16 @@ Entries describe the product or operational change, not every file touched.
 
 ## [Unreleased]
 
-- Customer discovery and GildOps subscription proposals now appear only for platform-authorized viewers in the configured operating organization. Communications has a Dialer at the existing `/calls` address, with real open call follow-ups, customer context, retained call history and a top-bar phone entry to the existing pop-out. Calling still requires current permission, entitlement and provider readiness; no AI answering or live-provider acceptance is implied.
+### Business foundations ? 2026-10-17
+
+- Signed inbound calls now execute the canonical routing resolver, including browser membership ringing, bounded fallback and business-authored end messages. Browser receiving is explicit in the persistent Dialer. Retries preserve call identity and round-robin choice while rechecking live human authority.
+- Setup and General Settings share a versioned, organization-owned vocabulary/navigation profile. Authored headings, forms and breadcrumbs use the vocabulary resolver; the authorized business sidebar stays flat across destinations. Calendar defaults to This business and retains internal event provenance.
+- Platform pages now live at `/platform` in their own guarded shared shell. Existing operating Membership and exact platform permissions remain enforced; former organization Platform URLs render the organization not-found page.
+- Added a published-deployment voice receptionist adapter, business duration/budget controls, central voice-runtime assignment, signed session callbacks, atomic usage metering and restricted human fallback transfer. Unknown usage remains reserved; uncertain transfer effects do not retry automatically. Local implementation is separate from hosted or real-provider acceptance.
+- Replaced the agent contract with the accepted short draft and corrected Calendar authorization/navigation regression tests.
+
+
+- Customer discovery and GildOps subscription proposals now appear only for platform-authorized viewers in the configured operating organization. Communications has a Dialer at the existing `/calls` address, with real open call follow-ups, customer context, retained call history and a top-bar phone entry to the existing pop-out. Calling still requires current permission, entitlement and provider readiness; live-provider acceptance remains separate.
 
 - Customer notification delivery is safer under failure: an expired worker lease can no longer complete a send, and a late provider answer settles the job instead of a resend; a signed delivery or bounce callback that arrives before acceptance is held privately and applied once acceptance is recorded; retries keep the provider account pinned at first claim, and a delivery that may already have been sent is shown as "Delivery uncertain" rather than failed when its account changes or its retry window ends; the scheduled worker now works to a bounded time budget. Not yet exercised against a hosted environment or the real provider.
 

@@ -11,9 +11,9 @@ export function loadDemoContext(): DemoContext {
   return JSON.parse(readFileSync(file, 'utf8')) as DemoContext;
 }
 
-/** A Platform address: nested under GOLD's own organization, which is the context the operator is working in. */
+/** A canonical address in the standalone Platform control plane. */
 export function platformUrl(subpath = ''): string {
-  return `/organizations/${loadDemoContext().goldOrganizationId}/platform${subpath ? `/${subpath}` : ''}`;
+  return `/platform${subpath ? `/${subpath}` : ''}`;
 }
 
 /** GOLD's own Finance workspace — ordinary tenant Finance, like any business's. Plans & Add-ons is Platform's (`platformUrl('plans')`). */

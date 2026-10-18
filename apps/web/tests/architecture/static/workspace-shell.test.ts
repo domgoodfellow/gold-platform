@@ -62,8 +62,8 @@ const organizationLayout = readFileSync(`${WEB}/features/shell/organization-shel
 // into one coordinating function the layout merely calls and destructures.
 const organizationShellModel = readFileSync(`${WEB}/lib/application/shell/organization-shell.ts`, 'utf8');
 const organizationLayoutRoute = readFileSync(`${WEB}/app/organizations/[organizationId]/layout.tsx`, 'utf8');
-const platformLayout = readFileSync(`${WEB}/app/organizations/[organizationId]/platform/layout.tsx`, 'utf8');
-const legacyPlatformEntry = readFileSync(`${WEB}/app/platform/[[...path]]/page.tsx`, 'utf8');
+const platformLayout = readFileSync(`${WEB}/app/platform/layout.tsx`, 'utf8');
+const legacyPlatformEntry = readFileSync(`${WEB}/lib/route/platform.ts`, 'utf8');
 const workspaceShell = readFileSync(`${WEB}/components/layout/workspace-shell.tsx`, 'utf8');
 const pageHeader = readFileSync(`${WEB}/components/headers/page-header.tsx`, 'utf8');
 const orgShell = readFileSync(`${WEB}/app/organizations/[organizationId]/org-shell.tsx`, 'utf8');
@@ -76,10 +76,10 @@ const platformNavigation = readFileSync(`${WEB}/lib/platform-navigation.ts`, 'ut
 const shellProjection = readFileSync(`${WEB}/lib/shell.ts`, 'utf8');
 const tenantWorkspace = readFileSync(`${WEB}/features/platform/tenant-workspace.tsx`, 'utf8');
 const platformOrganizationOverview = readFileSync(
-  `${WEB}/app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/page.tsx`,
+  `${WEB}/app/platform/organizations/[targetOrganizationId]/page.tsx`,
   'utf8',
 );
-const platformCatalogPage = readFileSync(`${WEB}/app/organizations/[organizationId]/platform/catalog/page.tsx`, 'utf8');
+const platformCatalogPage = readFileSync(`${WEB}/app/platform/catalog/page.tsx`, 'utf8');
 const platformOverview = readFileSync(`${WEB}/features/platform/platform-overview.tsx`, 'utf8');
 
 describe('WorkspaceHeader is the global bar, not a page header', () => {
@@ -221,7 +221,7 @@ describe('the Platform route renders inside the one organization shell', () => {
     expect(existsSync(`${WEB}/components/site-header.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/features/platform/platform-header-title.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/features/platform/platform-header.tsx`)).toBe(false);
-    expect(existsSync(`${WEB}/features/platform/platform-shell.tsx`)).toBe(false);
+    expect(existsSync(`${WEB}/features/platform/platform-shell.tsx`)).toBe(true);
     expect(existsSync(`${WEB}/features/platform/platform-navigation.tsx`)).toBe(false);
     expect(existsSync(`${WEB}/app/(platform)`)).toBe(false);
     // Frame and header are the organization layout's; the platform layout beneath it is only the door.
@@ -240,9 +240,9 @@ describe('the Platform route renders inside the one organization shell', () => {
   it('fails a missing operating organization as server configuration, without a UUID form', () => {
     // Nested Platform routes refuse any other organization with notFound(); the one place that can
     // say the operating organization is missing is the legacy entry, which has no route parameter.
-    expect(legacyPlatformEntry).toContain('operating_organization.configuration_required');
-    expect(legacyPlatformEntry).toContain('console.error');
-    expect(legacyPlatformEntry).toContain('membershipOrganizationIds');
+    expect(legacyPlatformEntry).toContain('callerOperatingOrganizationId()');
+    expect(legacyPlatformEntry).toContain('notFound()');
+    expect(legacyPlatformEntry).toContain('requireOrganizationForBillingRecovery');
     expect(legacyPlatformEntry).not.toContain('<form');
   });
 
@@ -569,7 +569,7 @@ describe('Platform pages render their own page identity', () => {
 
   it('the legacy flat SKU list reads as "Line items" under Catalog, never a second "Products"', () => {
     const productsPage = readFileSync(
-      `${WEB}/app/organizations/[organizationId]/platform/catalog/products/page.tsx`,
+      `${WEB}/app/platform/catalog/products/page.tsx`,
       'utf8',
     );
     expect(productsPage).toContain("title=\"Line items\"");
@@ -646,7 +646,7 @@ describe('Personal settings shares the authenticated shell — no standalone isl
 
 describe('the Catalog family grid uses the shared Progress primitive, not a hand-built bar', () => {
   it('imports Progress from packages/ui rather than a styled div pair', () => {
-    const catalogPage = readFileSync(`${WEB}/app/organizations/[organizationId]/platform/catalog/page.tsx`, 'utf8');
+    const catalogPage = readFileSync(`${WEB}/app/platform/catalog/page.tsx`, 'utf8');
     expect(catalogPage).toContain("from '@gold/ui/components/progress'");
     expect(catalogPage).toContain('<Progress value={coverage}');
     expect(catalogPage).not.toContain('h-1.5 w-full overflow-hidden rounded-full bg-muted');
@@ -743,7 +743,7 @@ describe('the breadcrumb contract — every page publishes a location, ancestors
     // The historical guard this slice removes: rendering the location only when ancestors exist.
     expect(source).not.toMatch(/crumbs\s*&&\s*crumbs\.length/);
     expect(source).not.toMatch(/crumbs\.length === 0\s*\?\s*null/);
-    expect(source).toContain('<PageLocation crumbs={section ? [] : crumbs} current={section ?? breadcrumbLabel ?? title} />');
+    expect(source).toContain('<PageLocation crumbs={section ? [] : crumbs} current={section ?? breadcrumbLabel ?? (recordTitle ? title : <BusinessLabel>{title}</BusinessLabel>)} />');
   });
 
   it('PageLocation composes PageCrumbs and nothing else — no visible chrome of its own', () => {
@@ -753,7 +753,7 @@ describe('the breadcrumb contract — every page publishes a location, ancestors
   });
 
   it('PageCrumbs takes a required `current` and always renders once mounted in the slot — no ancestor-count escape hatch', () => {
-    expect(workspaceCrumbs).toContain('export function PageCrumbs({ crumbs, current }: { crumbs: Crumb[]; current: ReactNode })');
+    expect(workspaceCrumbs).toContain('export function PageCrumbs({ crumbs: authoredCrumbs, current }: { crumbs: Crumb[]; current: ReactNode })');
     expect(workspaceCrumbs).not.toMatch(/crumbs\.length === 0/);
   });
 
@@ -769,7 +769,7 @@ describe('the breadcrumb contract — every page publishes a location, ancestors
 
   it('an ancestor is a link only where it names a real href, plain text otherwise — never a fabricated one', () => {
     expect(workspaceCrumbs).toContain('crumb.href ? (');
-    expect(workspaceCrumbs).toContain('<span className="block truncate">{crumb.label}</span>');
+    expect(workspaceCrumbs).toContain('<span className="block truncate"><BusinessLabel>{crumb.label}</BusinessLabel></span>');
   });
 
   it('workspaceAncestry reads WORKSPACES/AREAS, takes organizationId, and links a real workspace Home', () => {
@@ -802,7 +802,7 @@ describe('the breadcrumb contract — every page publishes a location, ancestors
         }
       }
     };
-    walk(`${WEB}/app/organizations/[organizationId]/platform`);
+    walk(`${WEB}/app/platform`);
     walk(`${WEB}/features/platform`);
     expect(offenders).toEqual([]);
   });

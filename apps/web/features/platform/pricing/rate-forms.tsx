@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, SelectInput, TextInput } from '@/components/controls/inputs';
-import { PRICE_INITIAL, recordProviderRateAction, recordRetailRateAction } from '@/app/organizations/[organizationId]/platform/pricing/actions';
+import { PRICE_INITIAL, recordProviderRateAction, recordRetailRateAction } from '@/app/platform/pricing/actions';
 
 type Option = { value: string; label: string };
 

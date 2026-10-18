@@ -66,8 +66,8 @@ export const PLATFORM_DESTINATIONS: readonly PlatformDestination[] = [
  * The one way to spell a Platform address. `organizationId` is GildOps' operating organization —
  * the context the operator is working in — never the subject of the page.
  */
-export function platformHref(organizationId: string, path = ''): string {
-  return `/organizations/${organizationId}/platform${path ? `/${path}` : ''}`;
+export function platformHref(_organizationId: string, path = ''): string {
+  return `/platform${path ? `/${path}` : ''}`;
 }
 
 /** The destinations a set of permissions reaches, in registry order. */
@@ -106,7 +106,7 @@ export function platformAncestry(organizationId: string, destinationKey: string)
   return trail;
 }
 
-const PLATFORM_ROOT = /^\/organizations\/[0-9a-f-]{36}\/platform(?:\/(.*))?$/i;
+const PLATFORM_ROOT = /^\/platform(?:\/(.*))?$/i;
 
 /** The part of a pathname beneath the platform root, or `null` when the path is not a Platform address. */
 export function platformSubpath(pathname: string): string | null {

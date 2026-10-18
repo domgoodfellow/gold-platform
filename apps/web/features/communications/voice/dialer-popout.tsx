@@ -12,7 +12,7 @@ import { loadDialerAction } from '@/app/organizations/[organizationId]/calls/dia
 
 /** Only the controls move windows; the organization layout retains the telephone connection. */
 export function DialerPopoutProvider({ organizationId, children }: { organizationId: string; children: ReactNode }) {
-  const { activeCall, incoming, status } = useTelephoneDevice();
+  const { activeCall, incoming, status, register, unregister, error: deviceError } = useTelephoneDevice();
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const [draft, setDraft] = useState<PopoutCallDraft | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
@@ -143,6 +143,10 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
           </header>
           {!activeCall && !incoming ? (
             <main className="order-2 p-4">
+              <div className="mb-4 space-y-2">
+                <Button type="button" tone="secondary" disabled={status === 'connecting'} onClick={() => { if (status === 'ready') unregister(); else void register().catch(() => undefined); }}>{status === 'ready' ? 'Stop receiving calls' : 'Receive calls in this browser'}</Button>
+                {deviceError ? <p role="alert" className="text-sm text-danger">{deviceError}</p> : null}
+              </div>
               <div className="mb-4 flex items-center justify-between text-sm">
                 <span className="text-muted">Outbound call</span>
                 <Badge tone={status === 'ready' ? 'success' : status === 'error' ? 'danger' : 'neutral'}>{status === 'ready' ? 'Connected' : status === 'error' ? 'Connection failed' : status === 'connecting' ? 'Connecting' : 'Connects when you call'}</Badge>

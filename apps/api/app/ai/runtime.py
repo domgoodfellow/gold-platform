@@ -26,7 +26,8 @@ from app.core.db import read_provider_account_credential, resolve_ai_runtime_ass
 OPERATOR_ASSISTANT = "operator_assistant"
 PUBLIC_ASSISTANT = "public_assistant"
 CONFIGURATION_DRAFTING = "configuration_drafting"
-CAPABILITIES = (OPERATOR_ASSISTANT, PUBLIC_ASSISTANT, CONFIGURATION_DRAFTING)
+VOICE_RECEPTIONIST = "voice_receptionist"
+CAPABILITIES = (OPERATOR_ASSISTANT, PUBLIC_ASSISTANT, CONFIGURATION_DRAFTING, VOICE_RECEPTIONIST)
 
 
 def resolve_provider(
@@ -38,6 +39,8 @@ def resolve_provider(
     path -- indistinguishable, on purpose, from a deployment with no assignment: there is nothing
     to resolve either way, and the fallback is the same.
     """
+    if capability == VOICE_RECEPTIONIST:
+        raise RuntimeError('Voice sessions use the dedicated voice adapter')
     assignment = resolve_ai_runtime_assignment(settings, capability=capability) if settings else None
     if assignment is None:
         return answering_provider()

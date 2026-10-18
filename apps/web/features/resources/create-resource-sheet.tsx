@@ -1,4 +1,5 @@
 'use client';
+import { BusinessLabel } from '@/lib/context/business-vocabulary';
 
 import { createContext, useContext, useId, useState, type ReactNode } from 'react';
 import { UserPlus } from 'lucide-react';
@@ -49,7 +50,7 @@ export function CreateResourceSheetProvider({
       <PageDrawer open={open} onOpenChange={setOpen}>
         <PageDrawerContent className="flex flex-col gap-0 p-0">
           <PageDrawerHeader className="border-b border-border">
-            <PageDrawerTitle>New resource</PageDrawerTitle>
+            <PageDrawerTitle><BusinessLabel>New resource</BusinessLabel></PageDrawerTitle>
             <PageDrawerDescription>
               People, vehicles, equipment and facilities that work is scheduled against.
             </PageDrawerDescription>

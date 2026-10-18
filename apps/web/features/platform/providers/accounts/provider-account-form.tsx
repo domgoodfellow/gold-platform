@@ -5,8 +5,8 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
-import type { AccountFormState } from '@/app/organizations/[organizationId]/platform/providers/[providerKey]/action-states';
-import { saveProviderAccountAction } from '@/app/organizations/[organizationId]/platform/providers/[providerKey]/actions';
+import type { AccountFormState } from '@/app/platform/providers/[providerKey]/action-states';
+import { saveProviderAccountAction } from '@/app/platform/providers/[providerKey]/actions';
 
 const INITIAL: AccountFormState = { error: null, saved: false };
 

@@ -92,8 +92,8 @@ describe("Plans & Add-ons and GildOps' portfolio economics are Platform's", () =
   });
 
   it('are served from /platform, and what remains under /finance for them is only a redirect', () => {
-    expect(existsSync(join(WEB, 'app/organizations/[organizationId]/platform/plans/page.tsx'))).toBe(true);
-    expect(existsSync(join(WEB, 'app/organizations/[organizationId]/platform/economics/page.tsx'))).toBe(true);
+    expect(existsSync(join(WEB, 'app/platform/plans/page.tsx'))).toBe(true);
+    expect(existsSync(join(WEB, 'app/platform/economics/page.tsx'))).toBe(true);
     const leftovers = ['plans', 'economics'].flatMap((segment) => walk(join(FINANCE_ROUTES, segment)));
     expect(leftovers.length).toBeGreaterThan(0);
     for (const file of leftovers) {

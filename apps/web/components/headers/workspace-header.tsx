@@ -28,7 +28,7 @@ export function WorkspaceHeader({
   /** Already authorized organization-wide utility destinations. */
   utilities?: HeaderUtility[];
   /** Use 'md' when mobile navigation carries Agent. */
-  agentTrigger?: 'always' | 'md';
+  agentTrigger?: 'always' | 'md' | 'none';
   phoneAction?: ReactNode;
 }) {
   return (
@@ -68,7 +68,7 @@ export function WorkspaceHeader({
           })}
         </div>
         {phoneAction}
-        <div className={cx('items-center', agentTrigger === 'md' ? 'hidden md:flex' : 'flex')}><AgentTrigger /></div>
+        {agentTrigger !== 'none' ? <div className={cx('items-center', agentTrigger === 'md' ? 'hidden md:flex' : 'flex')}><AgentTrigger /></div> : null}
       </div>
     </header>
   );

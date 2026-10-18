@@ -5,7 +5,7 @@ each other: a live inbound call needs this answer synchronously, from the proces
 about to answer Twilio, so the resolver has to run in Python. The work order's own requirement --
 "preview MUST call the same routing resolver used by runtime execution, never a second UI
 approximation" -- is only satisfiable this way: one function, called both by the carrier's own
-webhook (a future slice; not wired in this one) and by the preview endpoint `apps/web` reaches
+webhook and by the preview endpoint `apps/web` reaches
 over HTTP, exactly as it already reaches `wrap_up_call`.
 
 **Everything here reads Postgres under the caller's own forwarded token**, the same as
@@ -52,6 +52,8 @@ class RouteDecision:
 
 
 def _get(settings: SupabaseCallerSettings, token: str, path: str, params: dict[str, str]) -> list[dict[str, Any]]:
+    if hasattr(settings, 'routing_read'):
+        return settings.routing_read(path, params)
     response = httpx.get(
         f"{settings.supabase_url}/rest/v1/{path}",
         headers={"apikey": settings.supabase_publishable_key, "Authorization": f"Bearer {token}"},
@@ -68,6 +70,8 @@ def _rpc(settings: SupabaseCallerSettings, token: str, function: str, arguments:
     here reaches Postgres through -- bare argument names, auto-prefixed with `p_`, so this file's
     RPC arguments are found by `tests/contract/test_rpc_contract.py` the same way every other
     caller's are, rather than by a second, differently-shaped RPC helper."""
+    if hasattr(settings, 'routing_command'):
+        return settings.routing_command(token, function, arguments)
     try:
         return call_command(settings, token=token, function=function, arguments=arguments)
     except CommandFailed as failure:
@@ -174,6 +178,9 @@ def _resolve_route(
         within_hours = bool(_rpc(settings, token, "organization_open_now", {"organization_id": organization_id, "at": at.isoformat()}))
     if not within_hours:
         return _resolve_fallback(settings, token, organization_id, route, from_number=from_number, at=at, visited=visited, reason="outside_business_hours")
+
+    if route['destination_type'] == 'ai_receptionist':
+        return RouteDecision(route_id, True, True, 'ai_receptionist', [], None, None, route['ring_timeout_seconds'], 'ai_receptionist', False)
 
     if route["destination_type"] == "external_number":
         return RouteDecision(route_id, True, True, "external_number", [], route["destination_external_number"], None,
@@ -332,3 +339,11 @@ def resolve_inbound_route(
         return RouteDecision(None, False, True, "none", [], None, None, None, "no_route", False,
                               ["No route names this number and this organization has no catch-all."])
     return _resolve_route(settings, token, organization_id, route, from_number=from_number, at=at, visited=frozenset())
+
+
+def resolve_inbound_fallback(settings, *, token, organization_id, number_id, from_number=None, at=None, route_id=None):
+    at = at or datetime.now(dt_timezone.utc)
+    route = _fetch_route_by_id(settings, token, organization_id, route_id) if route_id else _fetch_route_by_number(settings, token, organization_id, number_id)
+    if not route:
+        return resolve_inbound_route(settings, token=token, organization_id=organization_id, number_id=number_id, from_number=from_number, at=at)
+    return _resolve_fallback(settings, token, organization_id, route, from_number=from_number, at=at, visited=frozenset({route['id']}), reason='no_answer')

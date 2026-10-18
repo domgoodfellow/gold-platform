@@ -1730,3 +1730,7 @@ It does not own:
 - roadmap status.
 
 Those belong to the respective canonical documents.
+
+## External voice-session contract
+
+The `voice_agent` Platform provider exposes the `voice_session` runtime service for `voice_receptionist`. Credential verification calls authenticated `GET /health`, which must return `{"ready":true}` without starting a session. Its external project must implement HTTPS `POST /sessions` with stable `Idempotency-Key`, published deployment reference/revision, organization/call/session IDs, runtime, maximum duration, deadline and an empty authorized-context list. Return an opaque `session_id` and a WSS connection URL under the configured stream origin. No tenant context tools are granted. Callbacks post to `/voice/agent/events` using `x-voice-timestamp` and hex HMAC-SHA256 `x-voice-signature` over `timestamp + "." + raw_body`. Payload identifies session, external session, organization, call, event ID and connected/ended/failed/usage/transfer_requested type; duration and paired token counts are optional reported totals. Unknown usage is not estimated. Human transfer requests use only configured fallback members. This is an adapter contract, not evidence of an external implementation or a live call.

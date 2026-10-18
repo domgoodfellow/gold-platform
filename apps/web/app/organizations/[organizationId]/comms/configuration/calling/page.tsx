@@ -1,3 +1,4 @@
+import { ReceptionistForm } from '@/features/communications/voice/receptionist-form';
 import { ChannelReadiness } from '@/features/communications/channel-diagnostics';
 import { workspaceConfigCrumbs } from '@/lib/settings-nav';
 import { PageHeader } from '@/components/headers/page-header';
@@ -27,6 +28,8 @@ export default async function CallSetupSettingsPage({
     messagingSenders(db, { organizationId }),
   ]);
 
+  const {data:receptionist,error:receptionistError}=await db.from('voice_receptionist_configs').select('revision,deployment_ref,enabled,max_session_seconds,monthly_budget_seconds').eq('organization_id',organizationId).maybeSingle();
+  if(receptionistError)throw new Error(receptionistError.message);
   return (
     <SettingsPageFrame>
       <PageHeader
@@ -47,6 +50,7 @@ export default async function CallSetupSettingsPage({
             mayConfigureOutcomes={organization.capabilities.includes('field.manage')}
             role={organization.role}
           />
+      {organization.capabilities.includes('organization.manage')?<ReceptionistForm organizationId={organizationId} config={receptionist}/>:null}
       <ChannelReadiness gate={gate} organizationId={organizationId} diagnostics={senders.diagnostics} maySend={organization.capabilities.includes('message.send')} />
     </SettingsPageFrame>
   );

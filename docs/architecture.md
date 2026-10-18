@@ -569,27 +569,7 @@ It confers no authority.
 
 ### Platform runtime
 
-Platform Administration is addressed under GildOps' own organization context:
-
-```text
-/organizations/{gildOpsOrganizationId}/platform/...
-```
-
-The path expresses:
-
-- current organization context = GildOps;
-- current sub-scope = Platform Administration.
-
-`gildOpsOrganizationId` must be the configured operating organization
-(`platform_settings.operating_organization_id`), resolved in the web runtime only by
-`lib/domain/platform/operating-organization.ts`. It is never inferred from a Plan. The URL names it;
-the URL does not prove it.
-
-Authorization still depends on explicit platform authority.
-
-Platform pages must not enter tenant workspace registries.
-
-Legacy `/platform/**` compatibility routes may redirect, but they are not the canonical architecture.
+Platform Administration owns `/platform/**` and a distinct composition of the shared shell. Its server guard resolves GildOps' configured operating organization through `lib/domain/platform/operating-organization.ts`, proves Membership using the billing-recovery guard and checks exact live platform capability. The URL supplies no organization authority. Old organization-scoped Platform URLs render the ordinary organization not-found surface; there are no redirect stubs. Platform pages do not enter the tenant workspace registry.
 
 ---
 
@@ -616,15 +596,7 @@ These routes use narrow public/external access and must not inherit organization
 
 Navigation represents operator intent.
 
-The canonical organization navigation model contains:
-
-```text
-Home
-Library
-Workspaces
-```
-
-The persistent sidebar footer holds the Account/session menu: Settings, Help & documentation, Contact GildOps Support (organization-scoped) and Sign out. The context switcher lists organizations only. Platform Administration is a privileged scope drawn inside GildOps' own shell: `withAdministration` (`lib/shell.ts`) adds it to the organization projection only after `loadPlatformContext(db, organizationId)` has established the operating organization, membership and live platform permissions. Team, Connections and Agent remain workspace-header utilities; mobile Agent stays in the navigation Sheet.
+The business profile orders and labels one flat list of authorized destinations. `projectBusinessNavigation` intersects canonical `AREAS` with entitlement, permission and work-shape gates before applying profile choices; configuration cannot grant access. Organization Home, Library, domain collections and optional dashboards remain canonical destinations. Settings keeps its independent canonical navigation. The Account/session menu retains Settings, Help, Contact Support and Sign out; the switcher lists businesses only. GildOps' authorized sidebar offers entry to the separate Platform scope. Same-business navigation retains the telephone runtime; cross-scope entry opens a new tab during a call.
 
 ---
 
@@ -634,7 +606,7 @@ The workspace registry contains all canonical workspace identities.
 
 Visibility is derived from real reachable operating pages plus the relevant entitlement/permission projection.
 
-All nine workspaces have canonical Homes. Marketing, Support and tenant AI register matching Areas and authenticated pages at `/organizations/[organizationId]/marketing`, `/organizations/[organizationId]/support` and `/organizations/[organizationId]/ai`. Marketing and Support compose domain operating read models; tenant AI composes the agent-management read model. Support requires organization membership, service access and `support.read`. Its server actions delegate to transactional capability-checked database commands, while exact aggregate queries bound collection and board previews independently. Support keeps its private immutable Case evidence separate from the general tenant event feed, whose broader read and append permissions are unsuitable for internal notes. Organization workspace selection remains flat. The persistent sidebar switches its central navigation to the current workspace identity, Overview, eligible operating destinations and Back to Workspaces. `projectShell` derives both chooser entries and destinations from `WORKSPACES` and `AREAS` with the existing gates; `workspaceNavigation` resolves the most specific canonical configuration resource or Area before checking eligibility; an authorized workspace root cannot authorize a restricted child. Hidden Areas preserve deep-link ownership without becoming rows, and unavailable registered Areas cannot fall back to an eligible ancestor. URL-derived context survives refresh, history and organization changes without mutable workspace selection. Settings takes precedence with its existing contextual navigation. Only navigation content changes; the Organization layout, telephone runtime, account controls and responsive sidebar state persist. Tenant AI is separate from Platform AI Runtime and the global Agent rail.
+All nine workspaces have canonical Homes. Marketing, Support and tenant AI register matching Areas and authenticated pages at `/organizations/[organizationId]/marketing`, `/organizations/[organizationId]/support` and `/organizations/[organizationId]/ai`. Marketing and Support compose domain operating read models; tenant AI composes the agent-management read model. Support requires organization membership, service access and `support.read`. Its server actions delegate to transactional capability-checked database commands, while exact aggregate queries bound collection and board previews independently. Support keeps its private immutable Case evidence separate from the general tenant event feed, whose broader read and append permissions are unsuitable for internal notes. Business navigation remains flat across routes. `projectBusinessNavigation` derives destination rows from `AREAS` with the existing gates; `workspaceNavigation` resolves the most specific canonical configuration resource or Area before checking eligibility; an authorized workspace root cannot authorize a restricted child. Hidden Areas preserve deep-link ownership without becoming rows, and unavailable registered Areas cannot fall back to an eligible ancestor. URL-derived context survives refresh, history and organization changes without mutable workspace selection. Settings takes precedence with its existing contextual navigation. Only navigation content changes; the Organization layout, telephone runtime, account controls and responsive sidebar state persist. Tenant AI is separate from Platform AI Runtime and the global Agent rail.
 
 Do not create a separate “visible workspaces” hard-coded list.
 
@@ -662,7 +634,7 @@ Ownership and URL structure are related architectural choices, not the same axis
 
 ### Workspace Home
 
-A workspace parent destination is its Home.
+A workspace Home is an optional operational dashboard destination.
 
 Home summarizes that workspace and links into real child surfaces.
 
@@ -1497,3 +1469,7 @@ Local verification uses the repository fast suite, focused database and provider
 - The previous consolidation browser run passed all 28 Playwright checks against the production build and local API; this test-registration/documentation continuation makes no new rendered-interface claim. Browser checks cover authorized/restricted Platform entry, configuration-only entry and mutation, denied operating/direct routes, legacy query/fragment redirects, Settings return/search, personal Appearance, the operating Communications/routing workflow, and pop-out dialer draft persistence. Rendered workspace configuration screenshots were inspected at 1440, 768 and 390 pixels in light and dark modes, with reduced motion. AI Agent tools remain planned and their configuration entry is correctly denied; no catalogue state was changed for testing.
 - A component check holds one mocked telephone SDK device and active call across ordinary same-organization navigation. Actual carrier call continuity remains unverified. Cross-organization and global personal Settings links preserve the current call tab; reload/browser termination continuation is not implemented.
 - Live outbound SMS/email, provider acceptance/status callbacks, incoming messages and threaded replies remain pending authorized sandbox recipients and a configured sandbox provider environment. Configuration diagnostics and fixture records must never be described as successful delivery.
+
+## Live inbound and receptionist execution
+
+`app/domains/communications/routing.py` remains the only preview/runtime routing decision. `app/services/communications/inbound.py` composes machine-scoped snapshot reads with that resolver and the carrier adapter. `app/services/communications/voice_agent.py` composes spend admission, pinned credential lookup, external session creation, signed callbacks and canonical restricted transfer. Vendor HTTP/XML/HMAC live under `app/providers`. The external voice-agent project owns speech/agent execution; no agent internals or tenant database credentials cross this adapter. `/platform` owns its route tree and composes the shared shell independently of organization pages.

@@ -30,7 +30,7 @@ export function AiRuntimeWorkspace({
               capability={capability}
               label={AI_CAPABILITY_LABEL[capability]}
               assignment={byCapability.get(capability)}
-              services={services}
+              services={services.filter(service=>capability==='voice_receptionist'?service.providerKey==='voice_agent':service.providerKey!=='voice_agent')}
               accounts={accounts}
             />
           ))}

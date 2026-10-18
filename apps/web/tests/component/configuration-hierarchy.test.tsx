@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+vi.mock('@/features/tenancy/business-profile-settings', () => ({ BusinessProfileSettings: () => null }));
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WorkspaceConfigurationHome } from '@/features/settings/workspace-configuration';

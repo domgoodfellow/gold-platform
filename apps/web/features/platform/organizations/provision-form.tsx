@@ -5,7 +5,7 @@ import { SectionHeading } from '@/components/surfaces/section';
 import { ErrorText, FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
 import { useActionState } from 'react';
 import { CurrencyField, TimeZoneField } from '@/features/locale/locale-fields';
-import { provisionOrganizationAction, type ProvisionState } from '@/app/organizations/[organizationId]/platform/actions';
+import { provisionOrganizationAction, type ProvisionState } from '@/app/platform/actions';
 
 const INITIAL: ProvisionState = { error: null, provisioned: null };
 

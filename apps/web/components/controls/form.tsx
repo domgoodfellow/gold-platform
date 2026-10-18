@@ -1,6 +1,7 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { cx } from '../class-names';
 import { ErrorText, FieldLabel, Hint } from './inputs';
+import { BusinessLabel } from '@/lib/context/business-vocabulary';
 
 export type FieldControlProps = {
   id: string;
@@ -36,7 +37,7 @@ export function FormField({
   return (
     <div className={cx('flex flex-col gap-1', className)}>
       <FieldLabel htmlFor={id}>
-        {label}
+        <BusinessLabel>{label}</BusinessLabel>
         {optional ? <span className="ml-1 font-normal text-subtle">(optional)</span> : null}
       </FieldLabel>
       {hint ? <Hint id={hintId}>{hint}</Hint> : null}

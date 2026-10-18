@@ -1,4 +1,5 @@
 'use client';
+import { BusinessLabel } from '@/lib/context/business-vocabulary';
 
 import { createContext, useContext, useId, useState, type ReactNode } from 'react';
 import { MapPinPlus } from 'lucide-react';
@@ -43,7 +44,7 @@ export function CreateLocationSheetProvider({
       <PageDrawer open={open} onOpenChange={setOpen}>
         <PageDrawerContent className="flex flex-col gap-0 p-0">
           <PageDrawerHeader className="border-b border-border">
-            <PageDrawerTitle>New location</PageDrawerTitle>
+            <PageDrawerTitle><BusinessLabel>New location</BusinessLabel></PageDrawerTitle>
             <PageDrawerDescription>Places where this organization works.</PageDrawerDescription>
           </PageDrawerHeader>
           <div className="min-w-0">

@@ -1,3 +1,4 @@
+import { BusinessLabel } from '@/lib/context/business-vocabulary';
 import type { ReactNode } from 'react';
 import { Hint } from '@/components/controls/inputs';
 import { DefinitionList, Detail } from '@/components/display/data';
@@ -118,7 +119,7 @@ export function CustomerDetail({
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          {opportunities ? <TabsTrigger value="opportunities">Opportunities</TabsTrigger> : null}
+          {opportunities ? <TabsTrigger value="opportunities"><BusinessLabel>Opportunities</BusinessLabel></TabsTrigger> : null}
           {followUps ? <TabsTrigger value="follow-ups">Follow-ups</TabsTrigger> : null}
           {mayPropose ? <>
             <TabsTrigger value="discovery">Discovery</TabsTrigger>
@@ -127,10 +128,10 @@ export function CustomerDetail({
           </> : null}
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="work">Work</TabsTrigger>
-          <TabsTrigger value="locations">Locations</TabsTrigger>
+          <TabsTrigger value="locations"><BusinessLabel>Locations</BusinessLabel></TabsTrigger>
           {features.voice ? <TabsTrigger value="calls">Calls</TabsTrigger> : null}
           <TabsTrigger value="documents">Documents</TabsTrigger>
-          {features.billing ? <TabsTrigger value="invoices">Invoices</TabsTrigger> : null}
+          {features.billing ? <TabsTrigger value="invoices"><BusinessLabel>Invoices</BusinessLabel></TabsTrigger> : null}
           {features.portal ? <TabsTrigger value="portal">Portal</TabsTrigger> : null}
         </TabsList>
 

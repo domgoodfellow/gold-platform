@@ -11,6 +11,7 @@ import { TenantAgentRail } from '@/features/agent/tenant-agent-rail';
 import { offeredSections } from '@/features/settings/settings-map';
 import { projectSettingsNav, settingsSearchItems } from '@/lib/settings-nav';
 import { AccountAppearance } from '@/features/appearance/account-appearance';
+import { BusinessVocabulary } from '@/lib/context/business-vocabulary';
 
 /** The one frame for every organization, GildOps' own Administration included, with canonical
  * server authority resolution. Each page still enforces its own access; layouts persist across
@@ -29,7 +30,7 @@ export async function OrganizationShell({
   const locked = !access.permitted;
   // A locked business runs none of the workspace reads below — no feature resolution and no
   // Agent transcript — because none of it is drawn.
-  const { brand, email, switchable, sections, utilities, configGate } = await loadOrganizationShellModel(db, {
+  const { brand, businessProfile, email, switchable, sections, utilities, configGate } = await loadOrganizationShellModel(db, {
     organizationId,
     capabilities: organization.capabilities,
     locked,
@@ -92,6 +93,7 @@ export async function OrganizationShell({
   return (
     // `data-brand` sits here rather than on `<html>` — a brand belongs to one business, and this shell is the only thing that knows which.
     <AccountAppearance brand={brand}>
+      <BusinessVocabulary profile={businessProfile}>
       <OrganizationFrame
         organizationId={organizationId}
         name={organization.name}
@@ -120,6 +122,7 @@ export async function OrganizationShell({
         {children}
       </OrganizationFrame>
       {feedback}
+      </BusinessVocabulary>
     </AccountAppearance>
   );
 }

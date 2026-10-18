@@ -67,7 +67,7 @@ describe('Administration inside GildOps', () => {
     route.pathname = `${base}/home`;
     const { rerender } = render(view(withAdministration(business(), org, new Set(PLATFORM_CAPABILITIES))));
     expect(screen.getAllByRole('link', { name: 'Administration' })).toHaveLength(1);
-    expect(screen.getByRole('link', { name: 'Administration' })).toHaveAttribute('href', `${base}/platform`);
+    expect(screen.getByRole('link', { name: 'Administration' })).toHaveAttribute('href', `/platform`);
     expect(screen.queryByRole('link', { name: 'Providers' })).not.toBeInTheDocument();
     rerender(view(business()));
     expect(screen.queryByRole('link', { name: 'Administration' })).not.toBeInTheDocument();
@@ -75,7 +75,7 @@ describe('Administration inside GildOps', () => {
 
   it('opens a contextual hierarchy with a way back, the current page marked and keyboard disclosure', async () => {
     const user = userEvent.setup();
-    route.pathname = `${base}/platform/providers/twilio`;
+    route.pathname = `/platform/providers/twilio`;
     render(view(withAdministration(business(), org, new Set(PLATFORM_CAPABILITIES))));
     expect(screen.getByRole('link', { name: 'Back to Workspaces' })).toHaveAttribute('href', `${base}/home`);
     expect(screen.queryByRole('link', { name: 'CRM' })).not.toBeInTheDocument();
@@ -84,7 +84,7 @@ describe('Administration inside GildOps', () => {
     const expand = screen.getByRole('button', { name: 'Expand Product Registry' });
     expand.focus();
     await user.keyboard('{Enter}');
-    expect(screen.getByRole('link', { name: 'Meters' })).toHaveAttribute('href', `${base}/platform/catalog/meters`);
+    expect(screen.getByRole('link', { name: 'Meters' })).toHaveAttribute('href', `/platform/catalog/meters`);
     await user.click(screen.getByRole('button', { name: 'Collapse Infrastructure' }));
     expect(screen.queryByRole('link', { name: 'Providers' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Plans/ })).not.toBeInTheDocument();
@@ -97,8 +97,8 @@ describe('Administration inside GildOps', () => {
     expect(screen.queryByRole('link', { name: 'Administration' })).not.toBeInTheDocument();
     route.pathname = `${base}/finance`;
     rerender(view(sections));
-    expect(screen.getByRole('link', { name: 'Commercial administration' })).toHaveAttribute('href', `${base}/platform/plans`);
-    route.pathname = `${base}/platform/pricing`;
+    expect(screen.getByRole('link', { name: 'Commercial administration' })).toHaveAttribute('href', `/platform/plans`);
+    route.pathname = `/platform/pricing`;
     rerender(view(sections));
     expect(screen.getByRole('link', { name: 'Back to Workspaces' })).toBeInTheDocument();
     expect(screen.getByText('Administration')).toBeInTheDocument();
@@ -286,7 +286,7 @@ describe('persistent application controls and Settings', () => {
   it('renders every authorized Settings destination with a real icon and validates return paths', () => {
     route.pathname = `/settings/account/appearance`;
     const sections = projectSettingsNav(org, { capabilities: new Set(ALL_CAPABILITIES) });
-    sessionStorage.setItem(`gildops.lastAppPath.${org}`, `/organizations/${org}/platform/providers`);
+    sessionStorage.setItem(`gildops.lastAppPath.${org}`, `/platform/providers`);
     const { rerender } = render(wrap(<SettingsNav organizationId={org} organizationName="Test" sections={sections} search={[]} returnHrefs={[`/organizations/${org}/calls`]} />));
     for (const item of sections.flatMap(section => section.items)) {
       const link = screen.getByRole('link', { name: item.label });

@@ -23,5 +23,5 @@ export function RecordHeader({
   summary?: ReactNode;
   actions?: ReactNode;
 }) {
-  return <PageHeader title={title} crumbs={crumbs.slice(0, -1)} meta={summary} actions={actions} />;
+  return <PageHeader recordTitle title={title} crumbs={crumbs.slice(0, -1)} meta={summary} actions={actions} />;
 }

@@ -4,7 +4,7 @@ import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
-import { provisionPlanPriceAction, type ProvisionPriceState } from '@/app/organizations/[organizationId]/platform/plans/[planKey]/billing-actions';
+import { provisionPlanPriceAction, type ProvisionPriceState } from '@/app/platform/plans/[planKey]/billing-actions';
 
 const INITIAL: ProvisionPriceState = { error: null, provisioned: false };
 

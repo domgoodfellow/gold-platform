@@ -1,5 +1,6 @@
 'use client';
 
+import { NavigationActivityContext } from '@/components/navigation/activity-context';
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
 import { DialerTrigger } from '@/features/communications/voice/dialer-trigger';
 import { SIDEBAR_HEADER_HEIGHT } from '@/components/layout/workspace-geometry';
@@ -32,7 +33,7 @@ import { useWorkspaceRail } from '@/components/panels/workspace-right-rail';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useContext, useEffect, useState, type ReactNode } from 'react';
 import {
   BarChart3,
   ArrowLeft,
@@ -169,6 +170,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
  * through `NavItem.children` rather than a case built for particular groups by name.
  */
 function NavSubRow({ item, active }: { item: NavItem; active: string | null }) {
+  const retainActivity = useContext(NavigationActivityContext);
   const current = item.key === active;
   const inside = itemContains(item, active);
   const [open, setOpen] = useState(inside);
@@ -180,7 +182,7 @@ function NavSubRow({ item, active }: { item: NavItem; active: string | null }) {
 
   const link = (
     <SidebarMenuSubButton asChild isActive={current} className={cx(item.children && 'flex-1', (item.section === 'workspaces' || item.section === 'administration') && 'h-auto min-h-11 md:min-h-7')}>
-      <Link href={item.href} aria-current={current ? 'page' : undefined}>
+      <Link href={item.href} target={retainActivity && item.href.startsWith('/platform') ? '_blank' : undefined} rel={retainActivity && item.href.startsWith('/platform') ? 'noopener noreferrer' : undefined} aria-current={current ? 'page' : undefined}>
         <span>{item.label}</span>
       </Link>
     </SidebarMenuSubButton>
@@ -219,6 +221,7 @@ function NavSubRow({ item, active }: { item: NavItem; active: string | null }) {
  * A leaf is a link. A row with pages is a link and a disclosure, open while the person is inside it.
  */
 function NavRow({ item, active }: { item: NavItem; active: string | null }) {
+  const retainActivity = useContext(NavigationActivityContext);
   const Icon = NAV_ICONS[item.key];
   const current = item.key === active;
   const inside = itemContains(item, active);
@@ -233,7 +236,7 @@ function NavRow({ item, active }: { item: NavItem; active: string | null }) {
 
   const link = (
     <SidebarMenuButton asChild isActive={current} tooltip={item.label} className={item.children ? 'max-md:min-h-11' : undefined}>
-      <Link href={item.href} aria-current={current ? 'page' : undefined}>
+      <Link href={item.href} target={retainActivity && item.href.startsWith('/platform') ? '_blank' : undefined} rel={retainActivity && item.href.startsWith('/platform') ? 'noopener noreferrer' : undefined} aria-current={current ? 'page' : undefined}>
         {Icon ? <Icon aria-hidden /> : null}
         <span>{item.label}</span>
       </Link>

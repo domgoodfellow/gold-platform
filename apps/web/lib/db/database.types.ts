@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -34,60 +34,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      calendar_events: {
-        Row: {
-          created_at: string
-          created_by: string
-          ends_at: string
-          id: string
-          notes: string | null
-          organization_id: string
-          starts_at: string
-          status: string
-          title: string
-          workspace: string
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          ends_at: string
-          id?: string
-          notes?: string | null
-          organization_id: string
-          starts_at: string
-          status?: string
-          title: string
-          workspace: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          ends_at?: string
-          id?: string
-          notes?: string | null
-          organization_id?: string
-          starts_at?: string
-          status?: string
-          title?: string
-          workspace?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "calendar_events_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "calendar_events_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "platform_tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       account_appearance_preferences: {
         Row: {
           appearance: string
@@ -1195,6 +1141,60 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          created_at: string
+          created_by: string
+          ends_at: string
+          id: string
+          notes: string | null
+          organization_id: string
+          starts_at: string
+          status: string
+          title: string
+          workspace: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          ends_at: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          starts_at: string
+          status?: string
+          title: string
+          workspace: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          ends_at?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          starts_at?: string
+          status?: string
+          title?: string
+          workspace?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       call_events: {
         Row: {
           call_id: string
@@ -1867,6 +1867,7 @@ export type Database = {
           destination_type: string
           enabled: boolean
           fallback_external_number: string | null
+          fallback_message: string | null
           fallback_route_id: string | null
           fallback_type: string
           id: string
@@ -1888,6 +1889,7 @@ export type Database = {
           destination_type: string
           enabled?: boolean
           fallback_external_number?: string | null
+          fallback_message?: string | null
           fallback_route_id?: string | null
           fallback_type?: string
           id?: string
@@ -1909,6 +1911,7 @@ export type Database = {
           destination_type?: string
           enabled?: boolean
           fallback_external_number?: string | null
+          fallback_message?: string | null
           fallback_route_id?: string | null
           fallback_type?: string
           id?: string
@@ -6300,6 +6303,51 @@ export type Database = {
             foreignKeyName: "opportunity_stages_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_business_profiles: {
+        Row: {
+          labels: Json
+          navigation: Json
+          nouns: Json
+          organization_id: string
+          revision: number
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          labels?: Json
+          navigation?: Json
+          nouns?: Json
+          organization_id: string
+          revision: number
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          labels?: Json
+          navigation?: Json
+          nouns?: Json
+          organization_id?: string
+          revision?: number
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_business_profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_business_profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
           },
@@ -12400,6 +12448,233 @@ export type Database = {
           },
         ]
       }
+      voice_agent_events: {
+        Row: {
+          event_id: string
+          event_type: string
+          received_at: string
+          session_id: string
+        }
+        Insert: {
+          event_id: string
+          event_type: string
+          received_at?: string
+          session_id: string
+        }
+        Update: {
+          event_id?: string
+          event_type?: string
+          received_at?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_agent_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "voice_agent_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_agent_sessions: {
+        Row: {
+          call_id: string
+          config_revision: number
+          connection_url: string | null
+          created_at: string
+          deployment_ref: string
+          external_session_id: string | null
+          id: string
+          max_seconds: number
+          model: string
+          organization_id: string
+          provider_account_id: string
+          reported_seconds: number | null
+          route_id: string
+          state: string
+        }
+        Insert: {
+          call_id: string
+          config_revision: number
+          connection_url?: string | null
+          created_at?: string
+          deployment_ref: string
+          external_session_id?: string | null
+          id?: string
+          max_seconds: number
+          model: string
+          organization_id: string
+          provider_account_id: string
+          reported_seconds?: number | null
+          route_id: string
+          state?: string
+        }
+        Update: {
+          call_id?: string
+          config_revision?: number
+          connection_url?: string | null
+          created_at?: string
+          deployment_ref?: string
+          external_session_id?: string | null
+          id?: string
+          max_seconds?: number
+          model?: string
+          organization_id?: string
+          provider_account_id?: string
+          reported_seconds?: number | null
+          route_id?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_agent_sessions_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: false
+            referencedRelation: "voice_inbound_contexts"
+            referencedColumns: ["call_id"]
+          },
+          {
+            foreignKeyName: "voice_agent_sessions_call_same_org"
+            columns: ["organization_id", "call_id"]
+            isOneToOne: false
+            referencedRelation: "calls"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "voice_agent_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_agent_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_agent_sessions_organization_id_route_id_fkey"
+            columns: ["organization_id", "route_id"]
+            isOneToOne: false
+            referencedRelation: "communication_routes"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "voice_agent_sessions_provider_account_id_fkey"
+            columns: ["provider_account_id"]
+            isOneToOne: false
+            referencedRelation: "platform_provider_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_inbound_contexts: {
+        Row: {
+          account_sid: string
+          call_id: string
+          context: Json
+          external_id: string
+        }
+        Insert: {
+          account_sid: string
+          call_id: string
+          context: Json
+          external_id: string
+        }
+        Update: {
+          account_sid?: string
+          call_id?: string
+          context?: Json
+          external_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_inbound_contexts_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: true
+            referencedRelation: "calls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_inbound_cursors: {
+        Row: {
+          call_id: string
+          cursor_value: number
+          route_id: string
+        }
+        Insert: {
+          call_id: string
+          cursor_value: number
+          route_id: string
+        }
+        Update: {
+          call_id?: string
+          cursor_value?: number
+          route_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_inbound_cursors_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: false
+            referencedRelation: "voice_inbound_contexts"
+            referencedColumns: ["call_id"]
+          },
+          {
+            foreignKeyName: "voice_inbound_cursors_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "communication_routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_receptionist_configs: {
+        Row: {
+          deployment_ref: string
+          enabled: boolean
+          max_session_seconds: number
+          monthly_budget_seconds: number
+          organization_id: string
+          revision: number
+        }
+        Insert: {
+          deployment_ref: string
+          enabled?: boolean
+          max_session_seconds: number
+          monthly_budget_seconds: number
+          organization_id: string
+          revision?: number
+        }
+        Update: {
+          deployment_ref?: string
+          enabled?: boolean
+          max_session_seconds?: number
+          monthly_budget_seconds?: number
+          organization_id?: string
+          revision?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_receptionist_configs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_receptionist_configs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_item_checklist_items: {
         Row: {
           created_at: string
@@ -13734,6 +14009,10 @@ export type Database = {
         }
         Returns: string
       }
+      admit_voice_agent_session: {
+        Args: { p_call_id: string; p_route_id: string }
+        Returns: Json
+      }
       advance_route_round_robin: {
         Args: { p_organization_id: string; p_route_id: string }
         Returns: number
@@ -13914,6 +14193,15 @@ export type Database = {
         Args: { p_mapping_id: string; p_organization_id: string }
         Returns: string
       }
+      begin_inbound_routing: {
+        Args: {
+          p_account_sid: string
+          p_external_id: string
+          p_from_number: string
+          p_to_number: string
+        }
+        Returns: Json
+      }
       begin_platform_billing_portal_session: {
         Args: { p_organization_id: string }
         Returns: string
@@ -13931,6 +14219,14 @@ export type Database = {
           p_engagement_id: string
           p_organization_id: string
           p_relationship_id: string
+        }
+        Returns: undefined
+      }
+      bind_voice_agent_session: {
+        Args: {
+          p_connection_url: string
+          p_external_id: string
+          p_session_id: string
         }
         Returns: undefined
       }
@@ -14022,6 +14318,10 @@ export type Database = {
         Args: { p_message_id: string; p_organization_id: string }
         Returns: boolean
       }
+      claim_inbound_route_cursor: {
+        Args: { p_call_id: string; p_route_id: string }
+        Returns: number
+      }
       claim_integration_actions: {
         Args: { p_limit?: number }
         Returns: {
@@ -14050,6 +14350,10 @@ export type Database = {
         Returns: string
       }
       claim_proposal_invite: { Args: { p_token: string }; Returns: string }
+      claim_voice_agent_transfer: {
+        Args: { p_session_id: string }
+        Returns: Json
+      }
       clear_integration_credential: {
         Args: { p_connection_id: string }
         Returns: undefined
@@ -14122,6 +14426,17 @@ export type Database = {
           p_sms_outbound: boolean
           p_voice_inbound: boolean
           p_voice_outbound: boolean
+        }
+        Returns: undefined
+      }
+      configure_voice_receptionist: {
+        Args: {
+          p_budget_seconds: number
+          p_deployment_ref: string
+          p_enabled: boolean
+          p_max_seconds: number
+          p_organization_id: string
+          p_revision: number
         }
         Returns: undefined
       }
@@ -14674,6 +14989,10 @@ export type Database = {
         }[]
       }
       import_pipeline_version: { Args: never; Returns: number }
+      inbound_voice_agent_state: {
+        Args: { p_account_sid: string; p_external_id: string }
+        Returns: string
+      }
       invite_member: {
         Args: { p_email: string; p_organization_id: string; p_role_id: string }
         Returns: string
@@ -14790,6 +15109,10 @@ export type Database = {
       list_page_templates: { Args: never; Returns: Json }
       list_section_patterns: { Args: never; Returns: Json }
       list_site_templates: { Args: never; Returns: Json }
+      mark_voice_agent_uncertain: {
+        Args: { p_call_id: string }
+        Returns: undefined
+      }
       marketing_command: {
         Args: { p_command: string; p_input: Json; p_organization_id: string }
         Returns: string
@@ -16005,6 +16328,18 @@ export type Database = {
         }
         Returns: string
       }
+      record_voice_agent_event: {
+        Args: {
+          p_event_id: string
+          p_external_id: string
+          p_input_tokens?: number
+          p_output_tokens?: number
+          p_seconds: number
+          p_session_id: string
+          p_type: string
+        }
+        Returns: Json
+      }
       record_work_item_cost: {
         Args: {
           p_amount_minor: number
@@ -16023,6 +16358,15 @@ export type Database = {
           p_work_item_id: string
         }
         Returns: string
+      }
+      refresh_inbound_routing: {
+        Args: {
+          p_account_sid: string
+          p_external_id: string
+          p_from_number: string
+          p_to_number: string
+        }
+        Returns: Json
       }
       reissue_invitation: { Args: { p_id: string }; Returns: string }
       release_conversation: {
@@ -16256,6 +16600,16 @@ export type Database = {
           p_version_id: string
         }
         Returns: string
+      }
+      save_business_profile: {
+        Args: {
+          p_labels: Json
+          p_navigation: Json
+          p_nouns: Json
+          p_organization_id: string
+          p_revision: number
+        }
+        Returns: number
       }
       save_commercial_draft_scenario: {
         Args: {
@@ -17010,6 +17364,11 @@ export type Database = {
         Args: { p_resource_id: string }
         Returns: undefined
       }
+      voice_agent_session_context: {
+        Args: { p_session_id: string }
+        Returns: Json
+      }
+      voice_agent_session_overview: { Args: never; Returns: Json }
       withdraw_notification_consent: { Args: never; Returns: undefined }
       withdraw_service_disclosure: {
         Args: {

@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { simulatePackageAction, saveDraftScenarioAction, type DraftScenarioState } from '@/app/organizations/[organizationId]/platform/package-economics/actions';
+import { simulatePackageAction, saveDraftScenarioAction, type DraftScenarioState } from '@/app/platform/package-economics/actions';
 import { PageDrawer, PageDrawerContent, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Button } from '@/components/controls/button';

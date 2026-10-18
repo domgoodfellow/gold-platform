@@ -4,8 +4,8 @@ import { useActionState, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
-import { saveTelephonyAccountAction } from '@/app/organizations/[organizationId]/platform/providers/twilio/actions';
-import { ACCOUNT_FORM_INITIAL } from '@/app/organizations/[organizationId]/platform/providers/twilio/action-states';
+import { saveTelephonyAccountAction } from '@/app/platform/providers/twilio/actions';
+import { ACCOUNT_FORM_INITIAL } from '@/app/platform/providers/twilio/action-states';
 import type { TelephonyCredentialKind } from '@/lib/adapters/telephony';
 
 /**

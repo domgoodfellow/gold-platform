@@ -1,3 +1,4 @@
+import { BusinessLabel } from '@/lib/context/business-vocabulary';
 import Link from 'next/link';
 import { DataTable, type Column } from '@/components/display/table';
 import { readValue } from '@/features/custom-fields/values';
@@ -126,7 +127,7 @@ export function CustomerTable({
     <DataTable
       rows={customers}
       rowKey={(customer) => customer.id}
-      empty={empty}
+      empty={<BusinessLabel>{empty}</BusinessLabel>}
       columns={columns}
     />
   );

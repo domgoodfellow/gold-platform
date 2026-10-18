@@ -138,8 +138,8 @@ describe('ProviderIcon is distinct from ConnectorIcon (section 1, 56)', () => {
 
   it('no Platform Provider screen renders ConnectorCard', () => {
     for (const file of [
-      'app/organizations/[organizationId]/platform/providers/page.tsx',
-      'app/organizations/[organizationId]/platform/providers/[providerKey]/page.tsx',
+      'app/platform/providers/page.tsx',
+      'app/platform/providers/[providerKey]/page.tsx',
       'features/platform/providers/provider-detail.tsx',
     ]) {
       expect(read(file), file).not.toContain('ConnectorCard');
@@ -163,7 +163,7 @@ describe('ProviderIcon is distinct from ConnectorIcon (section 1, 56)', () => {
 
 describe('built-in identity has no upload control; a custom connector still can', () => {
   it('the connector editor never renders LogoForm inside the isBuiltInConnector branch, and does render it outside it', () => {
-    const source = read('app/organizations/[organizationId]/platform/integrations/[connectorKey]/page.tsx');
+    const source = read('app/platform/integrations/[connectorKey]/page.tsx');
     const conditional = source.indexOf('isBuiltInConnector(connector.key) ? (');
     expect(conditional, 'expected a real ternary on isBuiltInConnector(connector.key)').toBeGreaterThan(-1);
 
@@ -223,7 +223,7 @@ describe('ChatGPT/GPT distribution direction stays out of the component layer to
   it('no component renders a Create GPT / GPT Store control', () => {
     for (const file of [
       'features/platform/providers/provider-detail.tsx',
-      'app/organizations/[organizationId]/platform/providers/[providerKey]/page.tsx',
+      'app/platform/providers/[providerKey]/page.tsx',
     ]) {
       const source = read(file);
       expect(source, file).not.toMatch(/create gpt|gpt store|deploy gem/i);

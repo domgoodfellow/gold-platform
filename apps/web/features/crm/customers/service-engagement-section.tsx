@@ -1,4 +1,5 @@
 'use client';
+import { BusinessLabel } from '@/lib/context/business-vocabulary';
 
 import { useActionState, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Button, ButtonLink } from '@/components/controls/button';
@@ -121,7 +122,7 @@ function EngagementDrawer({ item, options }: { item?: Engagement; options: Optio
 }
 
 export function ServiceEngagementSection({ items, total, ...options }: Options & { items: Engagement[]; total: number | null }) {
-  return <Section><div className="flex flex-wrap items-center justify-between gap-3"><SectionHeading>Services</SectionHeading>{options.mayManage ? <EngagementDrawer options={options}/> : null}</div>
+  return <Section><div className="flex flex-wrap items-center justify-between gap-3"><SectionHeading><BusinessLabel>Services</BusinessLabel></SectionHeading>{options.mayManage ? <EngagementDrawer options={options}/> : null}</div>
     {items.length ? <ul className="divide-y divide-border">{items.map(item => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-4"><div><p className="font-medium">{item.name}</p><p className="text-sm capitalize text-muted">{item.status} · {SERVICE_KINDS[item.service_kind as keyof typeof SERVICE_KINDS]}</p></div><EngagementDrawer item={item} options={options}/></li>)}</ul> : <p className="text-sm text-muted">No service engagements yet.</p>}
     {total !== null && total > items.length ? <p className="text-sm text-muted">Showing {items.length} of {total} engagements.</p> : null}
   </Section>;

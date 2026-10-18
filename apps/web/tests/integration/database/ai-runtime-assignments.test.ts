@@ -187,7 +187,7 @@ describe('who may write an assignment', () => {
     const { rows } = await pg.query('select app.ai_capabilities() as capabilities');
     expect(AI_CAPABILITIES).toEqual(rows[0].capabilities);
     const python = readFileSync(new URL('../../../../api/app/ai/runtime.py', import.meta.url), 'utf8');
-    expect([...python.matchAll(/^[A-Z_]+ = "([a-z_]+)"$/gm)].map((m) => m[1]).slice(0, 3)).toEqual(rows[0].capabilities);
+    expect([...python.matchAll(/^[A-Z_]+ = "([a-z_]+)"$/gm)].map((m) => m[1]).slice(0, AI_CAPABILITIES.length)).toEqual(rows[0].capabilities);
   });
 
   it('reassigning the same capability replaces it rather than adding a second row', async () => {

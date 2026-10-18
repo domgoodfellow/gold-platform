@@ -258,10 +258,10 @@ describe('platform routes and their permission', () => {
 
   it('spells every Platform address under the organization the operator is working in, and recognises only those', () => {
     const gold = '11111111-1111-4111-8111-111111111111';
-    expect(platformHref(gold)).toBe(`/organizations/${gold}/platform`);
-    expect(platformHref(gold, 'catalog/plans')).toBe(`/organizations/${gold}/platform/catalog/plans`);
+    expect(platformHref(gold)).toBe(`/platform`);
+    expect(platformHref(gold, 'catalog/plans')).toBe(`/platform/catalog/plans`);
     expect(inPlatformScope(platformHref(gold, 'billing'))).toBe(true);
-    expect(inPlatformScope('/platform/billing')).toBe(false);
+    expect(inPlatformScope('/platform/billing')).toBe(true);
   });
 
   it('every permission reaches at least one destination, so none is a permission that opens nothing', () => {

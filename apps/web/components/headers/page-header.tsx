@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { BusinessLabel } from '@/lib/context/business-vocabulary';
 import { cx } from '../class-names';
 import { PageLocation, type PageLocationCrumb } from '../navigation/page-location';
 import { SupportTrigger } from '../panels/workspace-right-rail';
@@ -54,8 +55,10 @@ export function PageHeader({
   insights = false,
   configure = false,
   className,
+  recordTitle = false,
 }: {
   title: ReactNode;
+  recordTitle?: boolean;
   crumbs?: PageHeaderCrumb[];
   /**
    * For a page that belongs to a section the global bar can name once — Settings, Help — and whose
@@ -83,8 +86,8 @@ export function PageHeader({
   return (
     <header className={cx('flex flex-wrap items-start gap-x-4 gap-y-3', titleInBar && !meta ? 'justify-end' : 'justify-between', className ?? 'mb-6')}>
       <div className={cx('min-w-0', titleInBar && !meta ? 'sr-only' : 'flex-1 basis-64')}>
-        <PageLocation crumbs={section ? [] : crumbs} current={section ?? breadcrumbLabel ?? title} />
-        <h1 className={titleInBar ? 'sr-only' : 'text-2xl font-semibold tracking-tight'}>{title}</h1>
+        <PageLocation crumbs={section ? [] : crumbs} current={section ?? breadcrumbLabel ?? (recordTitle ? title : <BusinessLabel>{title}</BusinessLabel>)} />
+        <h1 className={titleInBar ? 'sr-only' : 'text-2xl font-semibold tracking-tight'}>{recordTitle ? title : <BusinessLabel>{title}</BusinessLabel>}</h1>
         {meta ? <div className={cx('text-sm text-muted', !titleInBar && 'mt-1')}>{meta}</div> : null}
       </div>
       {actions || activity || insights || configure ? (

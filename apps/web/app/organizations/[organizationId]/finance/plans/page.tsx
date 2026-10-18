@@ -8,12 +8,11 @@ type Search = Promise<Record<string, string | string[] | undefined>>;
  * a bookmark still lands somewhere; nothing in the application generates this link, and the
  * destination re-proves platform authority on its own.
  */
-export default async function LegacyFinancePlansRoute({ params, searchParams }: PageProps<'/organizations/[organizationId]/finance/plans'> & { searchParams: Search }) {
-  const { organizationId } = await params;
+export default async function LegacyFinancePlansRoute({ searchParams }: PageProps<'/organizations/[organizationId]/finance/plans'> & { searchParams: Search }) {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(await searchParams)) {
     for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value]) query.append(key, entry);
   }
   const search = query.size > 0 ? `?${query.toString()}` : '';
-  redirect(`/organizations/${organizationId}/platform/plans${search}`);
+  redirect(`/platform/plans${search}`);
 }

@@ -100,4 +100,8 @@ def operations_for(provider_key: str) -> dict[str, Operation] | None:
         from app.providers.resend.accounts import OPERATIONS
 
         return OPERATIONS
+    if provider_key == "voice_agent":
+        from app.providers.voice_agent.accounts import OPERATIONS
+
+        return OPERATIONS
     return None

@@ -33,12 +33,12 @@ export function RuntimeAssignmentRow({
           </DefinitionList>
         ) : (
           <p className="mt-1 text-sm text-muted">
-            Not assigned — answers using this deployment&apos;s default configuration.
+            {capability==='voice_receptionist'?'Not assigned. Calls use their configured routing fallback.':<>Not assigned ? answers using this deployment&apos;s default configuration.</>}
           </p>
         )}
       </div>
       <div className="flex shrink-0 flex-col items-end gap-2">
-        {assignment ? <Badge tone="success">Assigned</Badge> : <Badge tone="neutral">Deployment default</Badge>}
+        {assignment ? <Badge tone="success">Assigned</Badge> : <Badge tone="neutral">{capability==='voice_receptionist'?'Unavailable':'Deployment default'}</Badge>}
         <RuntimeAssignmentDrawer
           capability={capability}
           label={`${assignment ? 'Change' : 'Assign'} ${label}`}

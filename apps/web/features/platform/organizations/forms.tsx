@@ -11,7 +11,7 @@ import {
   recordPlanQuotaOverrideAction,
   registerPhoneNumberAction,
   setResourceStatusAction,
-} from '@/app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/actions';
+} from '@/app/platform/organizations/[targetOrganizationId]/actions';
 import {
   PageDrawer,
   PageDrawerContent,
@@ -28,7 +28,7 @@ import {
   REGISTER_RESOURCE_INITIAL,
   SET_RESOURCE_STATUS_INITIAL,
   TERM_INITIAL,
-} from '@/app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/action-states';
+} from '@/app/platform/organizations/[targetOrganizationId]/action-states';
 
 type Option = { value: string; label: string };
 

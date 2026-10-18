@@ -809,63 +809,23 @@ Use a small named vocabulary rather than raw spacing variation.
 
 ## Navigation model
 
-Navigation should reflect the user's mental model.
+An organization has one flat sidebar, in the business's chosen words and order. Setup and Organization General Settings edit the same versioned business profile. Absent configuration retains neutral application labels and does not manufacture a saved profile. Workspace identifiers remain internal domain and Calendar provenance; entering a destination does not replace the sidebar or expose workspace groups.
 
-Do not expose internal software architecture merely because it exists.
-
-The operator navigation is organized as:
-
-```text
-Home
-
-Library
-
-Workspaces
-  CRM
-  Communications
-  Marketing
-  Support
-  Work
-  Finance
-  Automations
-  AI
-  Studio
-
-Team / Connections / Agent are workspace-header utilities.
-Settings, Help & documentation and Contact GildOps Support are Account menu entries, with Sign out. Account owns identity and Sign out.
-Administration (Platform Administration) is one private row after the workspaces, in GildOps' own organization only, for its members who hold a platform permission. It opens a contextual navigation like a workspace's.
-```
-
-Only real, reachable and authorized destinations render.
-
----
+Authorization and entitlement filter canonical destination keys before labels/order are applied. A business profile never grants a capability, enables a module or supplies arbitrary URLs. Home and Library remain shared destinations. Settings retains its canonical ownership and account-menu entry. Platform Administration is a separate privileged scope, not a tenant workspace.
 
 ## Workspace navigation
 
-Organization navigation shows Home, Library and available workspaces as flat links to their canonical Homes. Entering a workspace replaces only the persistent sidebar's central navigation with Back to Workspaces, the workspace identity, Overview and its eligible operating Areas. Back to Workspaces returns to organization Home. Overview opens `WORKSPACES[].home`; destinations come from `AREAS`, preserving canonical URLs and entitlement, feature-readiness, permission and organization-shape gates. `sidebar: false` Areas retain ownership for deep links but do not become navigation rows. Longest canonical route matching resolves nested/detail ownership and active destinations on refresh, history navigation and organization switching. Settings retains its existing contextual sidebar; Platform retains its separate privileged navigation. The same contextual content appears in the collapsed rail and mobile Sheet, which closes after selecting a destination. The Organization shell, account footer, rails and telephone runtime persist across client navigation.
-
-On phones, the shared header presents a compact page-location control on the left and the menu trigger at the right. Desktop (md and wider) retains the full page-published breadcrumb trail. The phone uses the same current label with a semantic parent link and, where multiple authorized destinations exist, a Radix dropdown projected from the existing workspace, Settings or Platform navigation. Parent resolution prefers the nearest authorized page-published ancestor (including supported query state), then the authorized registered configuration parent or collection for a detail route, then workspace overview, then authorized shell Home. Organization Home and restricted contexts without a valid parent omit the arrow. Unresolved routes show their known label without fabricated destinations. No parent is derived by trimming a pathname or using browser history. Work overview remains /field and Work Items remains /work. The modal Sidebar Sheet owns mobile navigation and authorized context switching in its header; restricted recovery shells retain noninteractive mobile identity. Agent uses the shared rail controller through a sidebar action. Account remains in the footer. There is no persistent bottom navigation bar. The sheet dismisses on outside interaction, Escape, its close control, navigation selection and pathname/history changes, restoring focus to its trigger. Desktop switching stays in the sidebar. Marketing mobile navigation groups secondary Log in and primary Request a demo in the sheet footer.
-
-Automations Home is an operational dashboard with a compact search/period/action toolbar, four current-rule or period-execution metrics, contained attention categories, Rules preview, recent executions, execution trends, and an activity/health/failures/insights rail. Period boundaries and displayed timestamps use the Organization timezone. Exact aggregates remain separate from bounded previews; execution completion never proves message delivery. Empty organizations retain every panel. Rules and Activity use URL-backed filters and pagination; runs and deliveries have deep-linkable contextual inspectors. The existing rule-detail route is a linear Trigger → all Conditions → ordered Actions workbench with a contextual node inspector, single-pane mobile navigation, canonical diagnostics, and read-only inspection. New rules authored through the UI start disabled; enabling explains future effects and requires deliberate confirmation. Triggers remain immutable. Condition/action edits replace the configuration in one authorized database statement. Templates use the existing message-template store and focused drawers with supported placeholder insertion and a labeled sample-only preview. Workspace navigation uses the shared contextual projection; execution ownership is unchanged.
-
-Never add:
-
-- “Coming soon” child pages;
-- dead links;
-- placeholder routes;
-- configuration-only pages to make the workspace look larger.
-
----
+Workspaces group implementation and configuration ownership internally. Their existing Home URLs remain operational dashboard destinations with task labels in the flat list. Each operating page keeps its own permission guard and relevant configuration action. A page may offer local tabs or record navigation without constructing a second sidebar. Desktop, tablet and phone consume the same authorized business destination list.
 
 ### Workspace Home
 
 Work Home at `/field` is a contained operational dashboard: search/date/create/dispatch/configure toolbar, four scheduling/assignment summaries, attention tabs, resource dispatch overview, upcoming work and seven-day commitments, and a Today/status/activity/capacity rail. Counts span their stated scope; previews are bounded. Selected-day requirements and availability conflicts come from the canonical scheduling projection, while unassigned scheduled and unscheduled backlogs span all dates. Unconfigured opening hours are explicitly identified; permissive availability semantics remain unchanged. No arrival, GPS, route or productivity metrics are inferred.
 
-Dispatch at `/work/dispatch` is a queue, assignment board and selected-Work inspector. Date, type, status, resource, class, assignment state, mode and selection persist in the URL. Schedule mode displays canonical resource commitments/free windows; Map mode uses actual Work Location coordinates and the existing map renderer, with List/Schedule fallback when unavailable. Assignment, scheduling and feasibility invoke the existing Work actions. Work collection List uses database filters and pagination; Board independently reads each configured status with exact counts, bounded cards and links to the full stage collection. Work configuration uses a type-selection workbench and General, Workflow, Requirements, Checklist, Booking and Fields sections. Resources expose class/capability filters and selected-day availability and assignments. Resource availability and Work/Schedule configuration mutations refresh the operational consumers. Workspace navigation uses the shared contextual projection without parallel record authorities.
+Dispatch at `/work/dispatch` is a queue, assignment board and selected-Work inspector. Date, type, status, resource, class, assignment state, mode and selection persist in the URL. Schedule mode displays canonical resource commitments/free windows; Map mode uses actual Work Location coordinates and the existing map renderer, with List/Schedule fallback when unavailable. Assignment, scheduling and feasibility invoke the existing Work actions. Work collection List uses database filters and pagination; Board independently reads each configured status with exact counts, bounded cards and links to the full stage collection. Work configuration uses a type-selection workbench and General, Workflow, Requirements, Checklist, Booking and Fields sections. Resources expose class/capability filters and selected-day availability and assignments. Resource availability and Work/Schedule configuration mutations refresh the operational consumers. The flat business projection preserves canonical record authorities.
 
 Communications Home at `/comms` uses a compact search/date/action toolbar, four readiness summaries, a 70/30 desktop grid with attention categories, an Inbox queue and canonical CallHistory preview, and a Today/status/activity/insights rail. Previews are bounded; exact counts and selected-period call rates come from tenant-scoped database reads. Inbox filters and search survive destination links. Outstanding conversations and wrap-up are current work, while missed/recent calls use the selected organization-timezone period. Empty states retain every panel. Today shows recorded communication activity, not an invented schedule; unsupported presence, callbacks, compliance controls and response-time trends are not simulated.
 
-Dialer uses `/calls`: up to 25 real open call follow-ups in due-date order, the existing calling form and live controls, and selected customer context. Call history remains at `#call-history` with its filters and pagination. Inbox remains `/comms/inbox`; number inventory belongs to `/comms/configuration/numbers`. Communications Configuration at `/comms/configuration` owns Calling, Messaging, Numbers and Email, links to Work hours and shows recording/compliance information. A phone button beside Agent opens the existing pop-out from every organization page, including phone layouts; options load under current authorization and readiness, and unavailable calling stays disabled. Calling and messaging retain independent permissions. Routing saves wait for ordered primary/fallback members to load; a failed read cannot clear them. Overview, Dialer, Inbox and Configuration form its contextual sidebar; number reads remain addressable.
+Dialer uses `/calls`: up to 25 real open call follow-ups in due-date order, the existing calling form and live controls, and selected customer context. Call history remains at `#call-history` with its filters and pagination. Inbox remains `/comms/inbox`; number inventory belongs to `/comms/configuration/numbers`. Communications Configuration at `/comms/configuration` owns Calling, Messaging, Numbers and Email, links to Work hours and shows recording/compliance information. A phone button beside Agent opens the existing pop-out from every organization page, including phone layouts; options load under current authorization and readiness, and unavailable calling stays disabled. Calling and messaging retain independent permissions. Routing saves wait for ordered primary/fallback members to load; a failed read cannot clear them. Overview, Dialer and Inbox are eligible flat business destinations; Configuration retains page-local entry; number reads remain addressable.
 
 Finance Home uses a contained operational dashboard with four financial-state summaries, inline Needs attention categories, open invoices, recent payments, collections/performance, and a due/status/activity/insights rail. Selected-month received payments and reporting are separate from current receivables and uninvoiced priced Work. Empty organizations keep the complete composition. Quotes, Invoices and Payments use URL-backed search, status, Customer, date and pagination controls; dashboard previews are deliberately bounded, while totals come from complete database aggregates. Finance search and financial reporting have contextual routes under `/finance/search` and `/finance/reports`, while contextual support pages remain absent from the sidebar.
 
@@ -876,15 +836,15 @@ Marketing and Support use domain operating Homes at `/marketing` and `/support`;
 AI Home follows the dashboard reference with a compact action/filter toolbar, four exact KPI drilldowns, agent/deployment/activity previews and a contextual readiness, handoff and allowance rail. Empty panels retain useful actions; provider health, missing usage and unavailable runtimes are explicit. Local collection navigation stays inside the AI workspace context. Agent details use section navigation, a central draft editor and a readiness inspector; phones use a section selector and agent cards. Save checks draft concurrency, Publish creates an immutable version, and deployment version changes are deliberate. Unsaved editor changes survive section navigation and can be recovered after reload/back navigation from per-actor tab storage; recovery retains the original draft revision for conflict detection. Channel drawers never expose provider credentials. Knowledge sources are published websites; tests and evaluation verdicts are personal. Execution inspectors link to Communications rather than duplicating public transcripts. Visual targets and interaction evidence live in `docs/design/ai/`.
 
 
-CRM Home launches Customers, Opportunities and the Opportunity pipeline; the feature-gated Customer board is labeled Relationship pipeline. Its primary commercial summary counts only Opportunities whose configured stage is Open. Unstaged Opportunities have a separate count. Stage values are displayed separately per currency. Opportunity routes remain registered CRM children with `sidebar: false`, preserving the flat organization workspace chooser and remaining absent from the contextual sidebar.
+CRM Home launches Customers, Opportunities and the Opportunity pipeline; the feature-gated Customer board is labeled Relationship pipeline. Its primary commercial summary counts only Opportunities whose configured stage is Open. Unstaged Opportunities have a separate count. Stage values are displayed separately per currency. Opportunity routes remain registered CRM children with `sidebar: false`, retaining deep-link ownership without requiring workspace navigation.
 
 Opportunity creation and editing use the shared PageDrawer. The collection preserves filters and pagination in the URL. Pipeline cards share the same records and detail destinations; stage movement uses a labeled select and explicit save action. Each board stage independently previews up to ten Opportunities with exact count and per-currency totals. Unstaged is a visual column, never a stored stage. The example pipeline's column/header/card hierarchy informs the production board without runtime example imports or demo state.
 
-CRM Home is an operational dashboard: compact search/action/month toolbar, four KPI summaries, inline Needs attention categories, commercial pipeline snapshot, Recent Customers and CRM Insights, and a Today/Recent activity rail. Follow-ups use one contextual PageDrawer across Home, collection, calendar and Customer/Opportunity sections. Completion is an inline authorized action; edit/reschedule retains its originating context. Calendar is a shared interaction accessed inside a workspace, never a standalone organization sidebar row. Every workspace has a local `/calendar` child reached from its header; CRM Home and Work Home also link into their own Calendar. The workspace context remains active through date/view changes and event editing. Day and Week show a scrollable time grid with duration blocks, overlap columns and selectable half-hour slots; Month uses the shared month board. New event and slot selection open a neutral event drawer for title, start, end and notes. Existing native events can be rescheduled or cancelled through that drawer. The default scope is This workspace; All workspaces explicitly broadens it. Native events do not require a Customer or Follow-up. CRM Follow-ups and scheduled Work feed the same calendar as domain projections, using their canonical editing paths; a due-only item is identified as Due rather than claiming a duration. Source failures and bounded previews are explicit. Work's resource Schedule remains the availability and dispatch surface. Legacy `/calendar` and `/follow-ups/calendar` links redirect into CRM's contextual Calendar. Calendar uses the shared navigation, period controls, month board and time-block geometry; compact month cells link to their full day. Follow-ups and CRM search remain absent from the permanent workspace sidebar.
+CRM Home is an operational dashboard: compact search/action/month toolbar, four KPI summaries, inline Needs attention categories, commercial pipeline snapshot, Recent Customers and CRM Insights, and a Today/Recent activity rail. Follow-ups use one contextual PageDrawer across Home, collection, calendar and Customer/Opportunity sections. Completion is an inline authorized action; edit/reschedule retains its originating context. Calendar is one business destination and may also be reached from operational dashboards. Existing `/calendar` children remain compatible and Calendar is available in business navigation; CRM Home and Work Home also link into their own Calendar. The business sidebar remains stable through date/view changes and event editing. Day and Week show a scrollable time grid with duration blocks, overlap columns and selectable half-hour slots; Month uses the shared month board. New event and slot selection open a neutral event drawer for title, start, end and notes. Existing native events can be rescheduled or cancelled through that drawer. The default scope is This business; This view explicitly narrows it using internal provenance. Native events do not require a Customer or Follow-up. CRM Follow-ups and scheduled Work feed the same calendar as domain projections, using their canonical editing paths; a due-only item is identified as Due rather than claiming a duration. Source failures and bounded previews are explicit. Work's resource Schedule remains the availability and dispatch surface. Legacy `/calendar` and `/follow-ups/calendar` links redirect into CRM's contextual Calendar. Calendar uses the shared navigation, period controls, month board and time-block geometry; compact month cells link to their full day. Follow-ups is an eligible flat business destination; CRM search remains a page-local action.
 
 Customer detail hosts Opportunities and Follow-ups tabs with Customer preselected for creation. Opportunity detail prominently shows its next Follow-up and open/recent work. Organization Settings owns Opportunity stages independently of Relationship stages; both use the configuration registry.
 
-Workspace Home is the parent destination.
+An operational dashboard may link to related destinations without becoming their navigation parent.
 
 It answers:
 
@@ -952,16 +912,11 @@ Navigation requires a real surface.
 
 ## Administration navigation
 
-Platform Administration is a privileged scope within GildOps' own organization context. It is not a
-second identity: the context switcher keeps showing GildOps and the person's real role on every
-Administration page, and lists organizations only.
+Platform Administration lives at `/platform`, with its own shared-shell composition and permission-filtered navigation. The business switcher lists organizations only. GildOps' configured operating-organization Membership and exact live platform capability remain required; the URL conveys no authority. Old organization-scoped Platform addresses render the organization not-found page.
 
-Its navigation is separate from tenant workspace registration. `lib/platform-navigation.ts` is the
-one registry for the sidebar, the phone Menu, breadcrumbs and the route guard.
+`lib/platform-navigation.ts` owns destination URLs and required capabilities. The authorized GildOps business sidebar offers Administration as a way into this separate scope. Customer organizations never receive that entry.
 
-The Administration row appears after the workspaces only when the organization is the configured
-operating organization, the person is a member and they hold at least one platform permission.
-Entering it replaces the workspaces with Back to Workspaces and:
+Its standalone scope provides its own authorized navigation:
 
 ```text
 Overview
@@ -981,18 +936,7 @@ Commercial administration
   Package economics / Portfolio economics / Billing
 ```
 
-Each destination is offered only to its own permission. Groups are disclosures that open while the
-person is inside them and toggle by keyboard or touch.
-
-Two workspaces link in, staff-only, after their Configuration: Finance to Commercial administration
-and AI to AI Runtime. These are ways in, not second homes: the pages stay in Administration, their
-breadcrumbs lead with Administration, and GildOps' commercial control is never drawn as tenant
-Finance. When every part of Administration a person holds is already linked that way (commercial
-authority alone), the Administration row is omitted and its context is drawn only once they enter
-it. While GildOps' own service access is locked, the recovery sidebar keeps the Administration row
-and Administration pages keep their navigation.
-
-Administration is never listed in a customer organization's navigation.
+Each destination is offered only to its own permission. Platform's separate sidebar uses the canonical registry; tenant vocabulary does not relabel control-plane concepts. The same shared header, surfaces, focus states and responsive sidebar apply. During an active business call, entering `/platform` opens a separate tab to retain the business telephone runtime.
 
 ---
 
@@ -1006,7 +950,7 @@ Canonical behavior:
 
 ### Phone
 
-The header shows contextual page location on the left and Menu on the right. There is no persistent bottom navigation. Home and workspace destinations use the existing navigation projection inside the sidebar Sheet; organization switching stays in its header. Agent is an explicit open action in the footer beside account access.
+The header shows contextual page location on the left and Menu on the right. There is no persistent bottom navigation. Business destinations use the same flat authorized navigation inside the sidebar Sheet; organization switching stays in its header. Agent is an explicit open action in the footer beside account access.
 
 The Menu renders the same projected hierarchy used by desktop navigation.
 
@@ -1302,7 +1246,7 @@ Organization    General, Branding, Domains, Features
 Administration  Team & access, Connections, Plan & usage
 ```
 
-Opening Settings lands on the first destination the member may use. Every destination is a deep link and receives the Settings sidebar whether or not the person came through the menu. Back to app returns to the last page of the same business that was not Settings, validated as a path inside that business, otherwise Home.
+Opening Settings lands on the first destination the member may use. Every destination is a deep link and receives the Settings sidebar whether or not the person came through the menu. Back to app restores the flat business list and returns to the last page of the same business that was not Settings, validated as a path inside that business, otherwise Home.
 
 Search covers these destinations and the configuration workspaces own (from `CONFIG_TARGETS`) and routes each to its canonical owner. Settings does not list workspace configuration.
 
@@ -2198,7 +2142,7 @@ Those belong to their respective canonical documents.
 
 ## Marketing workspace
 
-Marketing Home is a compact operational dashboard: four evidence-backed KPIs, a contained attention panel with inline categories, campaign performance and active-campaign tables, recent inquiries and acquisition/source results, plus a supporting activity/readiness/insights rail. Empty organizations retain all panel geometry. Local Home/Campaigns/Audiences/Leads/Performance navigation preserves the flat organization workspace chooser and contextual workspace sidebar. Campaign detail is deep-linkable; campaign and audience editors and inquiry review use shared PageDrawer primitives. Collection search, review/status/objective/owner/source filters, date bounds and pagination persist in the URL. Table overflow is contained within its panel at narrow widths. Activation expresses Marketing lifecycle, not delivery success; unestablished consent and unavailable promotional delivery are shown explicitly.
+Marketing Home is a compact operational dashboard: four evidence-backed KPIs, a contained attention panel with inline categories, campaign performance and active-campaign tables, recent inquiries and acquisition/source results, plus a supporting activity/readiness/insights rail. Empty organizations retain all panel geometry. Local Home/Campaigns/Audiences/Leads/Performance navigation preserves the business's flat sidebar. Campaign detail is deep-linkable; campaign and audience editors and inquiry review use shared PageDrawer primitives. Collection search, review/status/objective/owner/source filters, date bounds and pagination persist in the URL. Table overflow is contained within its panel at narrow widths. Activation expresses Marketing lifecycle, not delivery success; unestablished consent and unavailable promotional delivery are shown explicitly.
 
 
 ## Persistent application controls
@@ -2208,7 +2152,7 @@ Help & documentation, Contact GildOps Support, then Sign out. Help and Contact a
 and appear only where an organization is in context. Mobile Agent remains a Sheet control. Locked
 organizations keep the Plan & usage recovery destination as their Settings entry. The no-organization
 fallback offers personal Settings without inventing an organization Help or Platform context.
-Platform Administration is neither an account action nor a switcher context: it is reached from
+Platform Administration is reached at `/platform` from
 GildOps' own navigation, only with server-resolved platform authority, and the account menu never
 links to it.
 `AccountMenu` owns the footer presentation, identity and Sign out. `settings-icons.ts` owns recognizable Settings destination icons, used with accessible
@@ -2233,15 +2177,7 @@ task; a section groups content within it; a tab switches necessary alternate vie
 a position in the same document; a drawer supports a focused temporary interaction. Headings alone
 do not earn navigation. Avoid duplicate titles, context, destinations and generic decorative icons.
 
-`projectShell` supplies authorized concerns from `CONFIG_TARGETS` and `WORKSPACE_CONFIGURE`.
-Configuration-only entry does not expose an operating Overview. `workspaceNavigation` resolves
-configuration targets before operating ancestors. CRM's persistent workspace sidebar owns one
-navigable, expandable Configuration parent whose text-only children are that workspace's
-configuration destinations, filtered by existing permissions and entitlements. Every workspace
-with configuration routes follows the same rule. The active child is selected on direct links and
-its group is open; the parent opens a landing page (CRM's lists its destinations, others open
-their first destination). Configuration pages have no additional navigation column. Operational
-shortcuts retain canonical editors.
+`CONFIG_TARGETS` and `WORKSPACE_CONFIGURE` retain canonical configuration ownership and authorization. Relevant operational pages link to their configuration roots; entering a destination does not replace the flat business sidebar. Configuration landing pages may list independent concerns. General Settings separately hosts the versioned business words/navigation editor; it does not fold that independent save into business identity.
 General Settings is one form, saved once, whose Business identity, Primary business address and
 Business contact groups are separate shared cards beneath the existing Settings sidebar; it has no
 section navigation. Settings groups use shared surfaces so Appearance shape, density and
@@ -2251,6 +2187,6 @@ existing organization boundary; missing or unauthorized concerns resolve to not-
 reads. No empty configuration root is offered. `WorkspaceConfigure` remains a shortcut to each root.
 
 
-Administration groups keep an icon and tooltip in the collapsed sidebar, linking to their first page. The business switcher changes business context only. `NavigationActivityContext` carries only a retention hint from the persistent telephone owner. During an active call, cross-business and global personal Settings links open a separate tab. Ordinary same-organization configuration, General Settings and workspace navigation reuse the existing telephone runtime. This does not provide call continuation after reload or browser termination.
+Platform uses its own authorized registry and shared responsive sidebar. The business switcher changes business context only. `NavigationActivityContext` carries only a retention hint from the persistent telephone owner. During an active call, cross-business and global personal Settings links open a separate tab. Ordinary same-organization configuration, General Settings and workspace navigation reuse the existing telephone runtime. This does not provide call continuation after reload or browser termination.
 
 Channel diagnostics reuse `messagingSenders` and the existing sender/provider facts. The UI distinguishes planned/unentitled/disabled features, missing provider/callback/relay configuration, inactive or non-SMS numbers, missing active identities, and unverified sending domains. Sender configuration does not grant `message.send`; configuration checks passing never asserts provider acceptance or delivery. Outbound email and mailbox synchronization remain separate capabilities.

@@ -42,7 +42,7 @@ describe('SMS is a channel of canonical Communications', () => {
 
   it('has no second SMS operating screen: no Text messages page, and the Inbox is the only list', () => {
     expect(AREAS.map((area) => area.label)).not.toContain('Text messages');
-    expect(AREAS.filter((area) => area.workspace === 'communications').map((area) => area.segment)).toEqual(['comms', 'calls', 'comms-inbox', 'comms-numbers']);
+    expect(AREAS.filter((area) => area.workspace === 'communications').map((area) => area.segment)).toEqual(['communications-calendar', 'comms', 'calls', 'comms-inbox', 'comms-numbers']);
   });
 
   it('opens a text in the one channel-neutral conversation screen', () => {

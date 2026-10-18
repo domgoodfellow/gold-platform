@@ -1,3 +1,4 @@
+import { BusinessLabel } from '@/lib/context/business-vocabulary';
 import { AppPage } from '@/components/layout/app-page';
 import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
 import { SupportRegistrar } from '@/components/panels/support-registrar';
@@ -170,7 +171,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
         ) : null}
         {emptyCollection ? (
           <section className="mt-6 rounded-lg border border-border bg-surface px-5 py-12 text-center" aria-labelledby="customers-empty-heading">
-            <h2 id="customers-empty-heading" className="text-base font-semibold">No customers yet</h2>
+            <h2 id="customers-empty-heading" className="text-base font-semibold"><BusinessLabel>No customers yet</BusinessLabel></h2>
             <p className="mx-auto mt-2 w-full max-w-lg text-sm text-muted">
               Add a customer directly or bring existing customer records into this organization.
             </p>

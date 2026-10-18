@@ -27,7 +27,7 @@ describe('GildOps operating context composition', () => {
       'lib/route/landing.ts',
       'lib/route/person-context.ts',
       'app/organizations/page.tsx',
-      'app/platform/[[...path]]/page.tsx',
+      'app/platform/page.tsx',
       'lib/application/shell/platform-context.ts',
     ]) {
       expect(read(path)).not.toMatch(/findGoldInternalOrganization|isGoldInternalOrganization|gold_internal'/);
@@ -46,7 +46,7 @@ describe('GildOps operating context composition', () => {
   it('renders Platform beneath the one organization shell — no second shell exists', () => {
     // The organization layout draws the shell; the Platform layout beneath it is only the door.
     expect(read('app/organizations/[organizationId]/layout.tsx')).toContain('<OrganizationShell');
-    const platformLayout = read('app/organizations/[organizationId]/platform/layout.tsx');
+    const platformLayout = read('app/platform/layout.tsx');
     expect(platformLayout).not.toMatch(/OrganizationShell|PlatformSidebar|PlatformNavBar|WorkspaceShell/);
     expect(() => read('features/platform/platform-navigation.tsx')).toThrow();
     expect(() => read('app/(platform)/platform/layout.tsx')).toThrow();

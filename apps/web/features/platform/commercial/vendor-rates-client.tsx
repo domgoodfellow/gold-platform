@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
-import { recordVendorRateAction, VENDOR_RATE_INITIAL } from '@/app/organizations/[organizationId]/platform/vendor-rates/actions';
+import { recordVendorRateAction, VENDOR_RATE_INITIAL } from '@/app/platform/vendor-rates/actions';
 import {
   PageDrawer,
   PageDrawerContent,

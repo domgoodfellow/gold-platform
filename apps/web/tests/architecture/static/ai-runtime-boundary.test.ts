@@ -82,11 +82,11 @@ describe('no model is chosen or credentialled in apps/web', () => {
 });
 
 describe('the capability list is written once per runtime and pinned to the database', () => {
-  it('names the three capabilities the database accepts', () => {
+  it('names the capabilities the database accepts', () => {
     const runtime = files.find((file) => file.path === 'lib/domain/ai/runtime.ts')!;
 
     expect(runtime.text).toContain(
-      "['operator_assistant', 'public_assistant', 'configuration_drafting'] as const",
+      "['operator_assistant', 'public_assistant', 'configuration_drafting', 'voice_receptionist'] as const",
     );
   });
 });

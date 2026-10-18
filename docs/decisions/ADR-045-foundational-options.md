@@ -1,14 +1,14 @@
 # ADR-045 — Foundational scope, terminology and voice options
 
 **Recorded:** 2026-10-17
-**Status:** Proposed — four independent decisions for owner selection; none is approved by this record.
+**Status:** Accepted. Options A2, B2, C2 and D2 selected by the owner on 2026-10-17 for implementation in the stated order.
 
 ## A. Platform Administration address
 
 1. **Keep `/organizations/{operatingOrg}/platform`.** Lowest migration cost; current guards already require configured operating identity, Membership and live platform capability. The organization shell still visually conflates organization and platform scopes despite ADR-001.
 2. **Make `/platform` the standalone control plane. Recommended.** Replace its existing redirect with actual platform pages and a distinct shell. The configured operating organization remains the owner of GildOps' CRM, not the Platform URL or an implied authorization credential. Every page/action still checks the exact live platform capability; global control-plane access must explicitly decide whether operating-organization Membership remains a prerequisite.
 
-For option 2, propose retaining the existing Membership prerequisite initially, then evaluating it separately. Inventory all callers, bookmarks, breadcrumbs and support links before an explicitly approved cutover. Update internal links atomically; retire old organization-scoped Platform pages with ordinary 404 behavior after notice. Do not add redirect stubs. The existing `/platform/[[...path]]` entry becomes the canonical implementation. This is a future breaking URL change requiring approval, not a route move in this task. Customers and organization Settings keep their existing URLs.
+For option 2, propose retaining the existing Membership prerequisite initially, then evaluating it separately. Inventory all callers, bookmarks, breadcrumbs and support links before an explicitly approved cutover. Update internal links atomically; retire old organization-scoped Platform pages with ordinary 404 behavior after notice. Do not add redirect stubs. The former `/platform/[[...path]]` redirect is replaced by canonical `/platform` routes and their shared layout. The owner approved this breaking URL change; it is implemented without compatibility redirects. Customers and organization Settings keep their existing URLs.
 
 ## B. Business terminology and one flat sidebar
 
@@ -24,14 +24,14 @@ Render one flat list for the business, without workspace entry/back rows. Worksp
 
 Keep `calendar_events.workspace` as stable internal provenance; do not put mutable labels or tenant destination keys into it. No enum/data rewrite is needed for presentation. Replace the default “This workspace” filter with “This business”; optional filters select canonical sources/destinations through a validated mapping to internal workspace keys. Existing calendar routes remain compatible, and native events retain their original provenance through label/navigation edits. Changing storage semantics would be a separate forward migration and decision.
 
-Exact `docs/ui-system.md` changes upon approval: replace **Navigation model** and **Workspace navigation** workspace-enter/sidebar-swap rules; replace **Local navigation** rules requiring contextual workspace sidebars; revise **Responsive navigation → Phone / Tablet / Desktop** to use the same flat list; revise **A1 — Workspace Home** as an optional internal dashboard destination; revise **A5 — Settings Context** back navigation to return to the business list; update **Content and terminology** to require the shared vocabulary resolver; replace **Workspace navigation → Workspace Home** CRM/Calendar “This workspace” and workspace-child entry wording; update **Marketing workspace** and the final navigation consolidation passages that restate contextual workspace selection. Preserve surface geometry, accessibility, ethical interaction, authorization and Settings ownership. Review **Administration navigation** and **A13 — Platform Administration** with decision A. This record changes none of those current rules.
+Exact `docs/ui-system.md` changes upon approval: replace **Navigation model** and **Workspace navigation** workspace-enter/sidebar-swap rules; replace **Local navigation** rules requiring contextual workspace sidebars; revise **Responsive navigation → Phone / Tablet / Desktop** to use the same flat list; revise **A1 — Workspace Home** as an optional internal dashboard destination; revise **A5 — Settings Context** back navigation to return to the business list; update **Content and terminology** to require the shared vocabulary resolver; replace **Workspace navigation → Workspace Home** CRM/Calendar “This workspace” and workspace-child entry wording; update **Marketing workspace** and the final navigation consolidation passages that restate contextual workspace selection. Preserve surface geometry, accessibility, ethical interaction, authorization and Settings ownership. Review **Administration navigation** and **A13 — Platform Administration** with decision A. The accepted implementation updates those canonical UI rules.
 
 ## C. External-project AI receptionist integration
 
 1. **Forward a call to an external telephone number.** Small boundary and straightforward fallback; little control over session context, transfer identity, spend admission or usage reconciliation.
 2. **A provider-neutral voice-session capability adapter. Recommended.** Add a proposed `ai_receptionist` route target in Communications. Its configuration references an organization-scoped AI deployment/runtime assignment, never credentials, project internals or a hardcoded vendor. ADR-015 puts vendor translation in the provider adapter; the voice-agent implementation stays in its separate project.
 
-First wire live inbound execution to the canonical routing decision: currently `/voice/inbound` records and rejects, while `resolve_inbound_route` serves preview only. A route target alone cannot answer a live call. Keep this prerequisite separate from implementing the external voice agent.
+Live inbound execution is the prerequisite: `/voice/inbound` now executes the same `resolve_inbound_route` decision as preview. A route target alone cannot answer a live call. Keep this prerequisite separate from implementing the external voice agent.
 
 The adapter contract accepts organization ID, canonical call ID, bound number ID, assigned runtime/deployment revision, allowed context references, deadline and an idempotency key derived from call plus target revision. It returns an opaque session ID and the provider-specific connection instructions encapsulated by the adapter. The external project receives only explicitly authorized business configuration and narrow tools; it cannot query arbitrary tenant records or become the business database.
 
@@ -42,7 +42,7 @@ Callbacks are signed, expiring, replay-safe and bound to organization, call, ses
 ## D. A shorter agent start-here contract
 
 1. **Keep the current expanded `CLAUDE.md`.** Explicit but costly to scan, with overlapping statements that can drift from canonical docs.
-2. **Replace it with a short routing contract. Recommended.** The 57-line draft below preserves task mode, authorization, scope and evidence requirements while pointing to the owners. Review the draft before replacing the current file; only the Phase 2 journey link was added to the live contract.
+2. **Replace it with a short routing contract. Recommended.** The 57-line draft below preserves task mode, authorization, scope and evidence requirements while pointing to the owners. The owner selected this draft for the live contract.
 
 ```markdown
 # CLAUDE.md

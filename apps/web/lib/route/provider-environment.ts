@@ -10,7 +10,7 @@
  * work order 1 §6); `RESEND_API_KEY`/`PLATFORM_EMAIL_FROM_ADDRESS` are the bootstrap fallback
  * `app.services.platform_email` tries when no account is recorded, never a second UI for it.
  */
-export const GENERIC_ACCOUNT_PROVIDER_KEYS = new Set(['openai', 'anthropic', 'google', 'vercel', 'resend']);
+export const GENERIC_ACCOUNT_PROVIDER_KEYS = new Set(['openai', 'anthropic', 'google', 'vercel', 'resend', 'voice_agent']);
 
 /**
  * Whether GildOps' own platform invitation email can send right now, and from where -- Resend's

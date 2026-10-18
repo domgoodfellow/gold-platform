@@ -13,7 +13,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 
 export type RouteWhenMode = 'always' | 'business_hours';
 export type RingStrategy = 'everyone' | 'sequential' | 'round_robin';
-export type DestinationType = 'members' | 'external_number' | 'route';
+export type DestinationType = 'members' | 'external_number' | 'route' | 'ai_receptionist';
 export type FallbackType = 'voicemail' | 'members' | 'external_number' | 'route' | 'none';
 
 export type Route = {
@@ -30,13 +30,14 @@ export type Route = {
   fallbackType: FallbackType;
   fallbackExternalNumber: string | null;
   fallbackRouteId: string | null;
+  fallbackMessage?: string | null;
   callbackAffinityEnabled: boolean;
 };
 
 export type RouteTarget = { id: string; routeId: string; slot: 'primary' | 'fallback'; memberId: string; position: number };
 
 const ROUTE_SELECT =
-  'id, name, number_id, enabled, when_mode, ring_strategy, ring_timeout_seconds, destination_type, destination_external_number, destination_route_id, fallback_type, fallback_external_number, fallback_route_id, callback_affinity_enabled';
+  'id, name, number_id, enabled, when_mode, ring_strategy, ring_timeout_seconds, destination_type, destination_external_number, destination_route_id, fallback_type, fallback_external_number, fallback_route_id, fallback_message, callback_affinity_enabled';
 
 type RouteRow = {
   id: string;
@@ -52,6 +53,7 @@ type RouteRow = {
   fallback_type: string;
   fallback_external_number: string | null;
   fallback_route_id: string | null;
+  fallback_message: string | null;
   callback_affinity_enabled: boolean;
 };
 
@@ -70,6 +72,7 @@ function toRoute(row: RouteRow): Route {
     fallbackType: row.fallback_type as FallbackType,
     fallbackExternalNumber: row.fallback_external_number,
     fallbackRouteId: row.fallback_route_id,
+    fallbackMessage: row.fallback_message,
     callbackAffinityEnabled: row.callback_affinity_enabled,
   };
 }
@@ -140,6 +143,7 @@ export type RouteInput = {
   fallbackType: FallbackType;
   fallbackExternalNumber?: string | null;
   fallbackRouteId?: string | null;
+  fallbackMessage?: string | null;
   callbackAffinityEnabled?: boolean;
 };
 
@@ -161,6 +165,7 @@ export async function createRoute(db: Db, input: { organizationId: string } & Ro
       fallback_type: input.fallbackType,
       fallback_external_number: input.fallbackExternalNumber ?? null,
       fallback_route_id: input.fallbackRouteId ?? null,
+      fallback_message: input.fallbackMessage ?? null,
       callback_affinity_enabled: input.callbackAffinityEnabled ?? false,
       created_by: actor.id,
     })
@@ -188,6 +193,7 @@ export async function updateRoute(
     fallback_type?: FallbackType;
     fallback_external_number?: string | null;
     fallback_route_id?: string | null;
+    fallback_message?: string | null;
     callback_affinity_enabled?: boolean;
   } = { updated_at: new Date().toISOString() };
   if (input.name !== undefined) patch.name = input.name.trim();
@@ -201,6 +207,7 @@ export async function updateRoute(
   if (input.destinationRouteId !== undefined) patch.destination_route_id = input.destinationRouteId;
   if (input.fallbackType !== undefined) patch.fallback_type = input.fallbackType;
   if (input.fallbackExternalNumber !== undefined) patch.fallback_external_number = input.fallbackExternalNumber;
+  if (input.fallbackMessage !== undefined) patch.fallback_message = input.fallbackMessage;
   if (input.fallbackRouteId !== undefined) patch.fallback_route_id = input.fallbackRouteId;
   if (input.callbackAffinityEnabled !== undefined) patch.callback_affinity_enabled = input.callbackAffinityEnabled;
 

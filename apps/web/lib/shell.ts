@@ -266,7 +266,7 @@ function administrationNavigation(sections: readonly ShellSection[], organizatio
 
 /** Resolve ownership before visibility, so an unavailable nested Area cannot fall back to its Home. */
 export function workspaceNavigation(sections: readonly ShellSection[], pathname: string): ContextNavigation | null {
-  const organizationId = organizationIdFromPath(pathname);
+  const organizationId = organizationIdFromPath(pathname) ?? (platformSubpath(pathname) !== null ? organizationIdFromPath(shellHomeItem(sections)?.href ?? '') : null);
   if (!organizationId) return null;
   const path = pathname.split(/[?#]/)[0].replace(/\/$/, '');
   if (platformSubpath(path) !== null) return administrationNavigation(sections, organizationId, path);
@@ -341,7 +341,7 @@ export function inPlatformScope(pathname: string): boolean {
 
 /** The business's landing item for the persistent phone Home control. */
 export function shellHomeItem(sections: readonly ShellSection[]): NavItem | undefined {
-  return sections.find((section) => section.key === 'home')?.items[0];
+  return sections.find((section) => section.key === 'home')?.items.find(item => item.key === 'home');
 }
 
 
@@ -365,10 +365,10 @@ export function pageNavigation(navigation: LocationNavigation | undefined, pathn
   const path = pathname.split(/[?#]/)[0].replace(/\/$/, '');
   const pathOrganization = organizationIdFromPath(path);
   // Personal Settings may be composed inside this organization's verified shell.
-  if (pathOrganization !== navigation.organizationId && !(path === '/settings/account' || path.startsWith('/settings/account/'))) return empty;
+  if (pathOrganization !== navigation.organizationId && !(platformSubpath(path) !== null && navigation.sections.some(section => section.key === 'administration')) && !(path === '/settings/account' || path.startsWith('/settings/account/'))) return empty;
   const { sections } = navigation;
   const cleanPath = (href: string) => href.split(/[?#]/)[0].replace(/\/$/, '');
-  const inScope = (href: string) => organizationIdFromPath(href) === navigation.organizationId || cleanPath(href) === '/settings/account' || cleanPath(href).startsWith('/settings/account/');
+  const inScope = (href: string) => (platformSubpath(href) !== null && sections.some(section => section.key === 'administration')) || organizationIdFromPath(href) === navigation.organizationId || cleanPath(href) === '/settings/account' || cleanPath(href).startsWith('/settings/account/');
   const configurationRoot = navigation.configurationHrefs?.filter((href) => inScope(href) && (path === href || path.startsWith(`${href}/`))).sort((a, b) => b.length - a.length)[0];
   const configuredWorkspace = configurationRoot ? configTargetForHref(configurationRoot)?.workspace : undefined;
   const configurationWorkspace = configuredWorkspace ? projectedItems(sections).find((item) => item.key === `workspace-${configuredWorkspace}`) : undefined;

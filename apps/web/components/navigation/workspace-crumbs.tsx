@@ -1,4 +1,5 @@
 'use client';
+import { BusinessLabel } from '@/lib/context/business-vocabulary';
 
 import { createContext, Fragment, useContext, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -8,7 +9,7 @@ import { ArrowLeft, Check, ChevronDown } from 'lucide-react';
 import { useIsMobile } from '@gold/ui/hooks/use-mobile';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@gold/ui/components/dropdown-menu';
 import { Button, ButtonLink } from '../controls/button';
-import { pageNavigation, type LocationNavigation, type PageNavigation } from '@/lib/shell';
+import { pageNavigation, projectedItems, type LocationNavigation, type PageNavigation } from '@/lib/shell';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -64,9 +65,11 @@ function MobilePageLocation({ current, navigation }: { current: ReactNode; navig
 }
 
 /** Desktop and mobile share the page's published current label and ancestors. */
-export function PageCrumbs({ crumbs, current }: { crumbs: Crumb[]; current: ReactNode }) {
+export function PageCrumbs({ crumbs: authoredCrumbs, current }: { crumbs: Crumb[]; current: ReactNode }) {
   const context = useContext(CrumbSlotContext);
   const slot = context?.slot;
+  const destinations = projectedItems(context?.navigation?.sections ?? []);
+  const crumbs = authoredCrumbs.map(crumb => { const destination = destinations.find(item => item.href === crumb.href); return destination ? {...crumb,label:destination.label} : crumb; });
   const pathname = usePathname();
   const isMobile = useIsMobile();
   const navigation = pageNavigation(context?.navigation, pathname, crumbs.map((crumb) => crumb.href));
@@ -84,10 +87,10 @@ export function PageCrumbs({ crumbs, current }: { crumbs: Crumb[]; current: Reac
                   href={crumb.href}
                   className={cx('block truncate rounded underline-offset-4 hover:text-foreground hover:underline', FOCUS_RING)}
                 >
-                  {crumb.label}
+                  <BusinessLabel>{crumb.label}</BusinessLabel>
                 </Link>
               ) : (
-                <span className="block truncate">{crumb.label}</span>
+                <span className="block truncate"><BusinessLabel>{crumb.label}</BusinessLabel></span>
               )}
             </BreadcrumbItem>
             <BreadcrumbSeparator />

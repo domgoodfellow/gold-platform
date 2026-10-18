@@ -1,4 +1,5 @@
 'use client';
+import { BusinessLabel } from '@/lib/context/business-vocabulary';
 
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import { UserPlus } from 'lucide-react';
@@ -39,7 +40,7 @@ export function CreateCustomerSheetProvider({
       <PageDrawer open={open} onOpenChange={setOpen}>
         <PageDrawerContent>
           <PageDrawerHeader>
-            <PageDrawerTitle>New customer</PageDrawerTitle>
+            <PageDrawerTitle><BusinessLabel>New customer</BusinessLabel></PageDrawerTitle>
             <PageDrawerDescription>Add the identity and contact details this business knows today.</PageDrawerDescription>
           </PageDrawerHeader>
           <div>
@@ -58,7 +59,7 @@ export function CreateCustomerSheetProvider({
 export function CreateCustomerTrigger({
   children = (
     <>
-      <UserPlus aria-hidden /> New customer
+      <UserPlus aria-hidden /> <BusinessLabel>New customer</BusinessLabel>
     </>
   ),
 }: {

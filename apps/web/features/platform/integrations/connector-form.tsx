@@ -24,7 +24,7 @@ import {
   saveConnectorAppAction,
   uploadLogoAction,
   type ConnectorState,
-} from '@/app/organizations/[organizationId]/platform/integrations/actions';
+} from '@/app/platform/integrations/actions';
 
 const INITIAL: ConnectorState = { error: null, saved: false };
 

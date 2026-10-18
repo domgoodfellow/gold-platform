@@ -26,12 +26,13 @@ type Member = { id: string; displayName: string };
 type NumberOption = { id: string; e164: string; label: string | null };
 
 const DESTINATION_LABEL: Record<DestinationType, string> = {
+  ai_receptionist: 'AI receptionist',
   members: 'Team members',
   external_number: 'An external number',
   route: 'Another route',
 };
 const FALLBACK_LABEL: Record<FallbackType, string> = {
-  voicemail: 'Voicemail',
+  voicemail: 'Message, then end',
   members: 'Team members',
   external_number: 'An external number',
   route: 'Another route',
@@ -203,6 +204,7 @@ function RouteEditor({ organizationId, route, numbers, members, routes, onDone }
   const [ringStrategy, setRingStrategy] = useState<RingStrategy>(route?.ringStrategy ?? 'everyone');
   const [ringTimeoutSeconds, setRingTimeoutSeconds] = useState(route?.ringTimeoutSeconds ?? 20);
   const [destinationExternalNumber, setDestinationExternalNumber] = useState(route?.destinationExternalNumber ?? '');
+  const [fallbackMessage, setFallbackMessage] = useState(route?.fallbackMessage ?? '');
   const [fallbackType, setFallbackType] = useState<FallbackType>(route?.fallbackType ?? 'voicemail');
   const [fallbackExternalNumber, setFallbackExternalNumber] = useState(route?.fallbackExternalNumber ?? '');
   const [callbackAffinityEnabled, setCallbackAffinityEnabled] = useState(route?.callbackAffinityEnabled ?? false);
@@ -244,6 +246,7 @@ function RouteEditor({ organizationId, route, numbers, members, routes, onDone }
       destinationExternalNumber: destinationType === 'external_number' ? destinationExternalNumber : null,
       destinationRouteId: destinationType === 'route' ? destinationRouteId || null : null,
       fallbackType,
+      fallbackMessage: fallbackMessage || null,
       fallbackExternalNumber: fallbackType === 'external_number' ? fallbackExternalNumber : null,
       fallbackRouteId: fallbackType === 'route' ? fallbackRouteId || null : null,
       callbackAffinityEnabled,
@@ -301,6 +304,7 @@ function RouteEditor({ organizationId, route, numbers, members, routes, onDone }
       <div>
         <FieldLabel htmlFor="route-destination">Send to</FieldLabel>
         <SelectInput id="route-destination" className="mt-1" value={destinationType} onChange={(event) => setDestinationType(event.target.value as DestinationType)}>
+          <option value="ai_receptionist">AI receptionist</option>
           <option value="members">Team members</option>
           <option value="external_number">An external number</option>
           <option value="route">Another route</option>
@@ -338,18 +342,19 @@ function RouteEditor({ organizationId, route, numbers, members, routes, onDone }
           <TextInput id="route-external" type="tel" className="mt-1" placeholder="+14165550142" value={destinationExternalNumber}
             onChange={(event) => setDestinationExternalNumber(event.target.value)} />
         </div>
-      ) : <SelectInput aria-label="Destination route" value={destinationRouteId} onChange={event => setDestinationRouteId(event.target.value)}><option value="">Choose route</option>{routes.filter(candidate => candidate.id !== route?.id).map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</SelectInput>}
+      ) : destinationType === 'ai_receptionist' ? <Hint>Requires an enabled receptionist, assigned runtime and available budget below. If unavailable, this route uses its fallback.</Hint> : <SelectInput aria-label="Destination route" value={destinationRouteId} onChange={event => setDestinationRouteId(event.target.value)}><option value="">Choose route</option>{routes.filter(candidate => candidate.id !== route?.id).map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</SelectInput>}
 
       <div>
         <FieldLabel htmlFor="route-fallback">If unanswered</FieldLabel>
         <SelectInput id="route-fallback" className="mt-1" value={fallbackType} onChange={(event) => setFallbackType(event.target.value as FallbackType)}>
-          <option value="voicemail">Voicemail</option>
+          <option value="voicemail">Message, then end</option>
           <option value="members">Team members</option>
           <option value="external_number">An external number</option>
           <option value="none">Nothing — the call ends</option>
           <option value="route">Another route</option>
         </SelectInput>
       </div>
+      {fallbackType === 'voicemail' ? <div><FieldLabel htmlFor="fallback-message">Message before ending</FieldLabel><TextInput id="fallback-message" maxLength={2000} value={fallbackMessage} onChange={event => setFallbackMessage(event.target.value)} /><Hint>No recording is collected. An empty message ends the call.</Hint></div> : null}
       {fallbackType === 'members' ? (
         <OrderedMemberPicker label="Fallback to" members={members} selected={fallbackMemberIds} onChange={setFallbackMemberIds} />
       ) : null}

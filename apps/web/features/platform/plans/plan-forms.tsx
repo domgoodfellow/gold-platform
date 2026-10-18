@@ -13,7 +13,7 @@ import {
   PageDrawerTrigger,
 } from '@/components/panels/page-drawer';
 import { Section, SectionHeading } from '@/components/surfaces/section';
-import { createPlanAction, type CreatePlanState } from '@/app/organizations/[organizationId]/platform/plans/actions';
+import { createPlanAction, type CreatePlanState } from '@/app/platform/plans/actions';
 import {
   grantPlanFeatureOverrideAction,
   grantPlanModuleAction,
@@ -29,7 +29,7 @@ import {
   setPlanQuotaAction,
   updatePlanAction,
   type PlanActionState,
-} from '@/app/organizations/[organizationId]/platform/plans/[planKey]/actions';
+} from '@/app/platform/plans/[planKey]/actions';
 import type { Plan, PlanMarginPolicy, PlanQuota, PlanUtilizationAssumption } from '@/lib/domain/catalogue/plans';
 
 const CREATE_INITIAL: CreatePlanState = { error: null };

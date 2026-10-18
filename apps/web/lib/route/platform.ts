@@ -14,26 +14,16 @@ import type { Organization } from '@/lib/domain/tenancy/organizations';
 import { platformDestinationsFor, platformHref } from '@/lib/platform-navigation';
 import { requireOrganizationForBillingRecovery } from '@/lib/route/organization';
 
-/**
- * The guard for the whole `/organizations/{id}/platform/**` namespace, proving three facts and
- * refusing with `notFound()` unless all three hold:
- *
- *   the caller is a member of the requested organization (the membership guard — a non-member and
- *     a missing organization are indistinguishable);
- *   that organization is GildOps' operating organization, as `platform_settings` designates it —
- *     never its Plan, its name or the caller's platform authority;
- *   the caller holds at least one platform permission on their own `platform_staff` row.
- *
- * Platform being nested under an organization is application context, not ownership: nothing
- * below this filters platform data by that organization. It uses the billing-recovery membership
- * guard because the platform console must stay reachable while GildOps' own service access is locked.
- * A route naming another organization — even for platform staff — is a 404, the same answer as for
- * anybody else.
+/** The standalone control plane resolves the configured operating organization on the server.
+ * Membership, operating identity and exact live Platform capabilities remain independent proofs.
+ * Billing recovery keeps this scope reachable when the operating business itself is locked.
  */
 export const requirePlatformScope = cache(
   async (
-    organizationId: string,
+    requestedOrganizationId?: string,
   ): Promise<{ db: Db; organization: Organization; permissions: ReadonlySet<PlatformCapability> }> => {
+    const organizationId=requestedOrganizationId??await callerOperatingOrganizationId();
+    if(!organizationId)notFound();
     const { db, organization } = await requireOrganizationForBillingRecovery(organizationId);
     if (!(await isOperatingOrganization(db, { organizationId }))) notFound();
 
@@ -42,6 +32,11 @@ export const requirePlatformScope = cache(
     return { db, organization, permissions };
   },
 );
+
+export async function platformParams<T>(params:Promise<T>):Promise<T & {organizationId:string}> {
+  const scope=await requirePlatformScope();
+  return {...await params,organizationId:scope.organization.id};
+}
 
 /**
  * The guard a Platform area runs for itself, after the scope guard. The navigation already hides
@@ -87,7 +82,7 @@ export async function callerPlatformHref(path = ''): Promise<string | null> {
  * keep in step with the routes.
  */
 export function revalidatePlatform(): void {
-  revalidatePath('/organizations/[organizationId]/platform', 'layout');
+  revalidatePath('/platform', 'layout');
 }
 
 /**

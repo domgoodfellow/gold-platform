@@ -17,10 +17,11 @@ import { DomainError } from '@/lib/domain/errors';
  * through, and `record_ai_runtime_assignment` is the one door that writes.
  */
 
-export const AI_CAPABILITIES = ['operator_assistant', 'public_assistant', 'configuration_drafting'] as const;
+export const AI_CAPABILITIES = ['operator_assistant', 'public_assistant', 'configuration_drafting', 'voice_receptionist'] as const;
 export type AiCapability = (typeof AI_CAPABILITIES)[number];
 
 export const AI_CAPABILITY_LABEL: Record<AiCapability, string> = {
+  voice_receptionist: 'Voice receptionist',
   operator_assistant: 'Operator assistant',
   public_assistant: 'Public assistant',
   configuration_drafting: 'Configuration drafting',
@@ -100,4 +101,11 @@ export async function recordAiRuntimeAssignment(
     p_model: model,
   });
   if (error) throw writeError(error);
+}
+
+export type VoiceSessionOperation={id:string;organization_id:string;call_id:string;state:string;reported_seconds:number|null;max_seconds:number;created_at:string;provider_account_label:string};
+export async function voiceSessionOperations(db:Db):Promise<VoiceSessionOperation[]> {
+  const {data,error}=await db.rpc('voice_agent_session_overview');
+  if(error)throw new DomainError(error.message,'ai.voice_operations_failed');
+  return data as unknown as VoiceSessionOperation[];
 }

@@ -22,7 +22,7 @@ const allMigrations = () =>
 
 describe('platform control-plane scope boundaries', () => {
   it('owns global rates in Pricing without an organization id', () => {
-    const page = source('app/organizations/[organizationId]/platform/pricing/page.tsx');
+    const page = source('app/platform/pricing/page.tsx');
     expect(page).toContain('listProviderRates(db)');
     expect(page).toContain('listRetailRates(db)');
     // The only organization the route names is GOLD's own, as the context the page is drawn in.
@@ -31,8 +31,8 @@ describe('platform control-plane scope boundaries', () => {
   });
 
   it('keeps tenant commercial and provider tasks in their tenant routes', () => {
-    const commercial = source('app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/commercial/page.tsx');
-    const providers = source('app/organizations/[organizationId]/platform/organizations/[targetOrganizationId]/providers/page.tsx');
+    const commercial = source('app/platform/organizations/[targetOrganizationId]/commercial/page.tsx');
+    const providers = source('app/platform/organizations/[targetOrganizationId]/providers/page.tsx');
     // Phase C (Slice 9) moved the commercial route's read into its application-layer loader; the
     // page itself now only resolves params, guards and renders the Screen with that loader's model.
     const commercialModel = source('lib/application/platform/organization-commercial.ts');
@@ -49,8 +49,8 @@ describe('platform control-plane scope boundaries', () => {
   });
 
   it('guards all platform child routes in the shared layout', () => {
-    const layout = source('app/organizations/[organizationId]/platform/layout.tsx');
-    expect(layout).toContain('requirePlatformScope(organizationId)');
+    const layout = source('app/platform/layout.tsx');
+    expect(layout).toContain('requirePlatformScope()');
     const guard = source('lib/route/platform.ts');
     // Platform authority is the caller's own platform_staff row, read live; none means no Platform.
     expect(guard).toContain('platformPermissions(db)');
@@ -89,7 +89,7 @@ describe('platform control-plane scope boundaries', () => {
         else if (/\.tsx?$/.test(entry.name)) files.push(path);
       }
     };
-    walk(resolve(root, 'app/organizations/[organizationId]/platform'));
+    walk(resolve(root, 'app/platform'));
     walk(resolve(root, 'features/platform'));
     expect(files.length).toBeGreaterThan(30);
     const offenders = files.filter((file) => {

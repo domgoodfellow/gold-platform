@@ -465,4 +465,4 @@ def test_the_usage_door_is_called_as_the_machine_role_with_the_names_the_databas
 def test_the_python_capability_list_is_the_one_the_database_accepts() -> None:
     from app.ai.runtime import CAPABILITIES
 
-    assert CAPABILITIES == ("operator_assistant", "public_assistant", "configuration_drafting")
+    assert CAPABILITIES == ("operator_assistant", "public_assistant", "configuration_drafting", "voice_receptionist")

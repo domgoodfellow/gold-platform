@@ -1764,3 +1764,7 @@ It does not own:
 - historical rationale.
 
 When a new concept is introduced, define it here if it becomes part of the durable product language.
+
+## Business Profile and voice session
+
+`organization_business_profiles` owns versioned business nouns, labels and destination keys. It is organization configuration, not permission or record identity. `voice_receptionist_configs` references a published external deployment with explicit duration and monthly voice budget. `voice_agent_sessions` pins the admitted call, organization, route, provider account, runtime and deployment revision; provider-reported usage and signed events belong to that session. Unknown duration reserves the maximum admitted duration. An uncertain carrier transfer is not a completed transfer.

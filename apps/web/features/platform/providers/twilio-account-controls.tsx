@@ -10,8 +10,8 @@ import {
   reconcileTelephonyAction,
   setAccountStatusAction,
   verifyTelephonyAccountAction,
-} from '@/app/organizations/[organizationId]/platform/providers/twilio/actions';
-import { ACCOUNT_COMMAND_INITIAL, RECONCILE_INITIAL } from '@/app/organizations/[organizationId]/platform/providers/twilio/action-states';
+} from '@/app/platform/providers/twilio/actions';
+import { ACCOUNT_COMMAND_INITIAL, RECONCILE_INITIAL } from '@/app/platform/providers/twilio/action-states';
 
 /** One account-scoped command: a hidden id, a button, the refusal in words, a toast on success. */
 function useCommand(action: typeof verifyTelephonyAccountAction, success: string) {

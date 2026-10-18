@@ -1,4 +1,5 @@
 'use client';
+import { BusinessLabel } from '@/lib/context/business-vocabulary';
 
 import { SelectInput } from '@/components/controls/inputs';
 import { Field, FieldLabel } from '@gold/ui/components/field';
@@ -58,7 +59,7 @@ export function LinkCustomerLocationForm({ organizationId, customers, locationId
       {locationId ? <input type="hidden" name="locationId" value={locationId} /> : null}
 
       <Field className="min-w-40 flex-1 gap-1">
-        <FieldLabel htmlFor={customerFieldId}>Customer</FieldLabel>
+        <FieldLabel htmlFor={customerFieldId}><BusinessLabel>Customer</BusinessLabel></FieldLabel>
         <SelectInput id={customerFieldId} name="customerId" className="flex-1">
           {customers.map((customer) => (
             <option key={customer.id} value={customer.id}>

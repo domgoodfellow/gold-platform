@@ -27,6 +27,7 @@ const TRUST = {
   'cron-secret': /cron_secret/i,
   'bearer-token': /require_caller\(/,
   'shared-key': /x-gold-public-chat-key/,
+  'voice-agent-signature': /receive_voice_event\(/,
   'runtime-signature': /verifyRequest\(/,
 } as const;
 
@@ -48,6 +49,7 @@ const INVENTORY: { file: string; route: string; trust: keyof typeof TRUST; runti
   { file: 'provider_operations', route: '/providers/operate', trust: 'bearer-token' },
   { file: 'organization_domains', route: '/organizations/domains', trust: 'bearer-token' },
   { file: 'organization_email_domains', route: '/organizations/email-domains', trust: 'bearer-token' },
+  { file: 'voice_agent_events', route: '/voice/agent/events', trust: 'voice-agent-signature' },
   { file: 'voice_inbound', route: '/voice/inbound', trust: 'twilio-signature' },
   { file: 'voice_outbound', route: '/voice/outbound', trust: 'twilio-signature' },
   { file: 'voice_status', route: '/voice/status', trust: 'twilio-signature' },

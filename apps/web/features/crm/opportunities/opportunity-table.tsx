@@ -1,3 +1,4 @@
+import { BusinessLabel } from '@/lib/context/business-vocabulary';
 import Link from 'next/link';
 import type { Opportunity } from '@/lib/domain/opportunities/opportunities';
 import { formatOpportunityValue } from '@/lib/domain/opportunities/money';
@@ -7,7 +8,7 @@ import { FollowUpSheet,type FollowUpOptions } from '@/features/crm/follow-ups/fo
 export function OpportunityTable({ organizationId, opportunities, timezone = 'UTC',followUpOptions }: { organizationId: string; opportunities: Opportunity[]; timezone?: string;followUpOptions?:FollowUpOptions }) {
   if (!opportunities.length) return <EmptyState>No opportunities match this view.</EmptyState>;
   return <div className="overflow-x-auto rounded-lg border border-border">
-    <table className="w-full text-left text-sm"><caption className="sr-only">Opportunities</caption>
+    <table className="w-full text-left text-sm"><caption className="sr-only"><BusinessLabel>Opportunities</BusinessLabel></caption>
       <thead className="bg-surface text-muted"><tr>{['Opportunity', 'Customer', 'Stage', 'Value', 'Next follow-up', 'Owner', 'Expected close'].map((label) => <th key={label} scope="col" className="whitespace-nowrap px-4 py-3 font-medium">{label}</th>)}</tr></thead>
       <tbody className="divide-y divide-border">{opportunities.map((item) => <tr key={item.id}>
         <td className="px-4 py-3"><Link href={`/organizations/${organizationId}/opportunities/${item.id}`} className="font-medium underline underline-offset-4">{item.title}</Link></td>

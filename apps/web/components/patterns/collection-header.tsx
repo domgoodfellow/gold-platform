@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { cx } from '../class-names';
 import { PageLocation, type PageLocationCrumb } from '../navigation/page-location';
 import { SupportTrigger } from '../panels/workspace-right-rail';
+import { BusinessLabel } from '@/lib/context/business-vocabulary';
 
 /**
  * Collection/Board: compact identity and controls, then the collection or board itself promptly —
@@ -32,8 +33,8 @@ export function CollectionHeader({
   return (
     <header className={cx('flex flex-wrap items-center justify-between gap-x-4 gap-y-2', className ?? 'mb-4')}>
       <div className="min-w-0 flex-1 basis-64">
-        <PageLocation crumbs={crumbs} current={breadcrumbLabel ?? title} />
-        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+        <PageLocation crumbs={crumbs} current={breadcrumbLabel ?? <BusinessLabel>{title}</BusinessLabel>} />
+        <h1 className="text-xl font-semibold tracking-tight"><BusinessLabel>{title}</BusinessLabel></h1>
       </div>
       {actions || activity || insights || configure ? (
         <div className="flex flex-wrap items-center gap-2">

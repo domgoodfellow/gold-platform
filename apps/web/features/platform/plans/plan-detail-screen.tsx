@@ -34,7 +34,7 @@ export function PlanDetailScreen({ organizationId, model }: { organizationId: st
     <>
       <RecordHeader
         title={plan.label}
-        crumbs={[...platformAncestry(organizationId, 'plans'), { label: 'Plans & Add-ons', href: `/organizations/${organizationId}/platform/plans` }, { label: plan.label }]}
+        crumbs={[...platformAncestry(organizationId, 'plans'), { label: 'Plans & Add-ons', href: `/platform/plans` }, { label: plan.label }]}
         summary={plan.description}
         actions={<div className="flex gap-2"><ButtonLink href={`${platformHref(organizationId, 'package-economics')}?source=plan_default&id=${plan.id}`} tone="secondary" size="small">Simulate</ButtonLink><EditPlanSheet plan={plan} /></div>}
       />

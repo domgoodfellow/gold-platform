@@ -137,6 +137,10 @@
     ]
   },
   "files": {
+    "apps/web/e2e/business-foundations.spec.ts": {"category":"playwright-acceptance","concerns":["tenancy","navigation","platform"]},
+    "apps/web/tests/integration/database/business-foundations.test.ts": {"category":"database-integration","concerns":["tenancy","communications","security","ai"]},
+    "apps/api/tests/component/test_live_inbound.py": {"category":"python-component","concerns":["communications","security","ai"]},
+    "apps/web/tests/unit/business-profile.test.ts": {"category":"unit","concerns":["tenancy","navigation"]},
     "apps/web/e2e/dialer-workspace.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": ["communications", "crm", "tenant-isolation", "responsive", "calling"]

@@ -335,7 +335,7 @@ Platform Administration owns cross-organization and SaaS concerns such as:
 
 GildOps' own business uses the ordinary organization product like any other customer.
 
-The fact that Platform Administration is rendered within GildOps' organization context does not make the control plane tenant-owned.
+Platform Administration is rendered at `/platform` in its own guarded shell. GildOps' ordinary business remains organization-scoped; the control plane is platform-owned.
 
 ---
 
@@ -917,3 +917,7 @@ For those, use the canonical document responsible for that concern, including `d
 Workspace Configuration is a single contextual navigation destination wherever implemented configuration is accessible. Its own page sections remain reachable when the application sidebar collapses. A configuration-only member may enter a configuration area without gaining operating capabilities; the underlying domain's existing prerequisites still apply. Communications owns calling, numbers, messaging and sender readiness; CRM owns relationship/opportunity stages and customer fields; Finance owns pricing/payment policies; Work owns its types/workflows and scheduling hours. AI retains its agent configuration owners. Marketing and Automations do not invent policy editors for operational features. Studio links to shared organization branding and domain owners.
 
 Platform Administration remains independently authorized system administration. GildOps staff reach it from GildOps' own navigation (the Administration row, and staff-only links from Finance and AI), outside tenant workspace selection, while GildOps stays the selected organization. Switching away from a business with an active call opens a separate context so its telephone retains its business scope. Personal Settings remain user-owned. Channel configuration and sending are distinct: precise blockers describe what is missing, and actual message delivery requires provider-confirmed evidence. Outbound email does not promise mailbox synchronization.
+
+## Business vocabulary and destination choices
+
+An organization may save singular/plural nouns, authored destination labels and an ordered flat sidebar in one versioned business profile. Setup and General Settings edit the same record. An absent profile retains neutral labels; it does not assert onboarding completion. Canonical permissions, entitlements, routes and stored record names remain independent. Platform lives at `/platform` with its own privileged shell.

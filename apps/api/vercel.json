@@ -123,6 +123,10 @@
     {
       "source": "/webhooks/tenant-email",
       "destination": "/api/tenant_email_webhook"
+    },
+    {
+      "source": "/voice/agent/events",
+      "destination": "/api/voice_agent_events"
     }
   ],
   "crons": [

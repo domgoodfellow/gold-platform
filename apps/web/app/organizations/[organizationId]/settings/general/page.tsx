@@ -4,6 +4,7 @@ import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/setti
 import { requireOrganization } from '@/lib/route/organization';
 import { OrganizationSettingsForm } from '@/features/tenancy/organization-settings-form';
 import { getOrganizationIdentity, missingIdentity } from '@/lib/domain/tenancy/identity';
+import { BusinessProfileSettings } from '@/features/tenancy/business-profile-settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +43,7 @@ export default async function GeneralSettingsPage({
           <Link href={`/organizations/${organizationId}/settings/access`} className="text-accent-text hover:underline">who has access</Link>.
         </Hint>
       )}
+      {mayManage ? <BusinessProfileSettings organizationId={organizationId}/> : null}
     </SettingsPageFrame>
   );
 }

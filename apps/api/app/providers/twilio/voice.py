@@ -236,6 +236,19 @@ def say_and_hang_up(message: str) -> str:
     )
 
 
+def dial_route_twiml(decision, *, action: str) -> str:
+    from xml.etree.ElementTree import Element, SubElement, tostring
+    response = Element('Response')
+    dial = SubElement(response, 'Dial', {'action': action, 'method': 'POST', 'answerOnBridge': 'true', 'timeout': str(decision.ring_timeout_seconds or 20), 'sequential': 'true' if decision.ring_strategy in ('sequential', 'round_robin') else 'false', 'record': 'do-not-record'})
+    if decision.target_type == 'members':
+        for member_id in decision.member_ids[:10]:
+            client = SubElement(dial, 'Client')
+            SubElement(client, 'Identity').text = member_id
+    elif decision.external_number:
+        SubElement(dial, 'Number').text = decision.external_number
+    return tostring(response, encoding='unicode')
+
+
 def recording_download_url(url: str) -> str:
     """The audio itself, rather than the page about it.
 
@@ -244,3 +257,23 @@ def recording_download_url(url: str) -> str:
     vendor, which is exactly what must not travel upward.
     """
     return f"{quote(url, safe=':/?&=')}.mp3"
+
+
+def voice_stream_twiml(connection_url: str, session_id: str, action: str | None = None) -> str:
+    from xml.etree.ElementTree import Element, SubElement, tostring
+    response = Element('Response')
+    stream = SubElement(SubElement(response, 'Connect'), 'Stream', {'url': connection_url})
+    SubElement(stream, 'Parameter', {'name': 'session_id', 'value': session_id})
+    if action:
+        SubElement(response, 'Redirect', {'method':'POST'}).text = action
+    return tostring(response, encoding='unicode')
+
+
+def redirect_inbound_call(*, account_sid, auth_token, external_id, twiml):
+    import re
+    import httpx
+    if not re.fullmatch(r'AC[0-9a-fA-F]{32}', account_sid) or not re.fullmatch(r'CA[0-9a-fA-F]{32}', external_id):
+        raise ValueError('Invalid carrier binding')
+    response = httpx.post(f'https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Calls/{external_id}.json', auth=(account_sid, auth_token), data={'Twiml': twiml}, timeout=5.0, follow_redirects=False)
+    if response.status_code != 200:
+        raise RuntimeError('Carrier transfer was not acknowledged')
