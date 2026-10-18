@@ -26,7 +26,7 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
   const canCreate = modules.has('billing') && may(kind === 'invoices' ? 'invoice.issue' : kind === 'quotes' ? 'work_item.price' : 'payment.record');
   const page = filter.page ?? 1;
   const href = (next: number) => { const p = new URLSearchParams(); for (const [k,v] of Object.entries(query)) if (typeof v === 'string' && k !== 'page') p.set(k,v); p.set('page', String(next)); return `${base}/${kind}?${p}`; };
-  return <AppPage><CollectionHeader title={title} crumbs={[{ label: 'Finance', href: base }]} actions={canCreate ? <FinanceWorkflow organizationId={organizationId} kind={workflow} mayCreateWork={may('work_item.create')} /> : undefined} />
+  return <AppPage><CollectionHeader title={title} crumbs={[{ label: 'Finance', href: base }]} actions={canCreate ? <FinanceWorkflow organizationId={organizationId} kind={workflow} initiallyOpen={query.create === '1'} mayCreateWork={may('work_item.create')} /> : undefined} />
     <ViewNav label="Finance collections" className="mb-4" items={['quotes','invoices','payments'].map(k => ({ key: k, label: k[0].toUpperCase() + k.slice(1), href: `${base}/${k}`, current: k === kind }))} />
     <form className="mb-4 flex flex-wrap items-end gap-3">
       <FormField id="finance-search" label="Search">{field => <TextInput {...field} name="q" type="search" defaultValue={filter.q} placeholder="Customer, record or reference" />}</FormField>

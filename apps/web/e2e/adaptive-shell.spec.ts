@@ -17,7 +17,7 @@ import { COLLEAGUE_STORAGE_STATE, loadDemoContext, OWNER_STORAGE_STATE, platform
  */
 
 const accountMenu = async (page: import('@playwright/test').Page) => {
-  await page.getByRole('button', { name: /Signed in/ }).filter({ visible: true }).click();
+  await page.locator('[data-slot=sidebar-footer] .group\\/account-menu').filter({ visible: true }).click();
   return page.getByRole('menu');
 };
 const sidebar = (page: import('@playwright/test').Page) => page.locator('[data-slot="sidebar-container"] nav[aria-label="This business"]');

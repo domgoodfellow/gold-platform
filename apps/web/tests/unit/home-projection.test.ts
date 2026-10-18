@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { homePeriod, homeQuery, prioritize, emptySource, type HomeAttentionItem } from '@/lib/application/home/contracts';
-import { isolateSource } from '@/lib/application/home/load';
+import { homePeriod, homeQuery, prioritize, emptySource, type HomeAttentionItem, type HomeResult } from '@/lib/application/home/contracts';
+import { assignSetupHealth, isolateSource } from '@/lib/application/home/load';
 import { calendarDate } from '@/lib/domain/scheduling/window';
 import { counted } from '@/lib/domain/counted';
 import { parseCallParams, callFilterFromParams } from '@/features/communications/voice/call-filters';
@@ -35,6 +35,27 @@ describe('Home semantic projections', () => {
   it('isolates source errors without replacing failures with zero metrics', async () => {
     expect(await isolateSource('Finance', async () => { throw new Error('unavailable'); })).toEqual({ source: 'Finance', state: 'unavailable' });
     expect(await isolateSource('CRM', async () => emptySource('CRM'))).toMatchObject({ state: 'ready', data: { metrics: [], attention: [] } });
+  });
+  it('groups shared setup reasons by configuration owner and deduplicates messages', () => {
+    const results: HomeResult[] = ['CRM', 'Communications', 'Finance', 'Studio'].map(source => ({ source: source as HomeResult['source'], state: 'ready', data: emptySource(source as HomeResult['source']) }));
+    const feature = (featureKey: string, setupHref: string, reason: string) => ({ featureKey, setupHref, reason, entitled: true, activation: 'active' as const, readiness: 'setup_required' as const });
+    assignSetupHealth(results, [
+      feature('customer_profile', '/organizations/a/comms/configuration/calling', 'No calling number'),
+      feature('booking_intake', '/organizations/a/settings/domains', 'No public address'),
+      feature('price_book', '/organizations/a/finance/configuration/pricing', 'Nothing is priced yet'),
+      feature('invoices', '/organizations/a/finance/configuration/pricing', 'Nothing is priced yet'),
+    ], new Set(['organization.manage']));
+    const health = results.flatMap(result => result.state === 'ready' ? result.data.health : []);
+    expect(health.map(item => [item.source, item.detail])).toEqual(expect.arrayContaining([
+      ['Communications', 'No calling number'], ['Studio', 'No public address'], ['Finance', 'Nothing is priced yet'],
+    ]));
+    expect(health).toHaveLength(3);
+    expect(health.some(item => item.source === 'CRM')).toBe(false);
+  });
+  it('does not offer setup destinations that the actor cannot configure', () => {
+    const results: HomeResult[] = [{ source: 'Finance', state: 'ready', data: emptySource('Finance') }];
+    assignSetupHealth(results, [{ featureKey: 'price_book', setupHref: '/organizations/a/finance/configuration/pricing', reason: 'No prices', entitled: true, activation: 'active', readiness: 'setup_required' }], new Set());
+    expect(results[0].state === 'ready' && results[0].data.health).toEqual([]);
   });
   it('preserves exact Home period and actionable missed-call filters in Communications', () => {
     const { params } = parseCallParams({ from: '2026-10-01', to: '2026-11-01', followup: '1', wrap: 'needed' });

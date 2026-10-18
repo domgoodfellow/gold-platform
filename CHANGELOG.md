@@ -32,6 +32,10 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-10-18
+
+- Simplified organization Home around attention, priorities, a tabbed Schedule and Business performance. Moved setup/workspace updates to shell notifications, unified create actions with Cmd/Ctrl+K, corrected configuration ownership and duplicate health messages, and reduced explanatory copy.
+
 ## [Unreleased]
 
 ### Business foundations ? 2026-10-17

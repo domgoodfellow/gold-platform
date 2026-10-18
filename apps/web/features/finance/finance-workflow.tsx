@@ -14,8 +14,8 @@ import { formatMoney } from '@/lib/domain/work-items/consumption';
 
 type Kind = 'invoice' | 'quote' | 'payment';
 const labels = { invoice: 'New invoice', quote: 'New quote', payment: 'Record payment' };
-export function FinanceWorkflow({ organizationId, kind, workItemId, compact = false, mayCreateWork = false }: { organizationId: string; kind: Kind; workItemId?: string; compact?: boolean; mayCreateWork?: boolean }) {
-  const [open, setOpen] = useState(false);
+export function FinanceWorkflow({ organizationId, kind, workItemId, compact = false, mayCreateWork = false, initiallyOpen = false }: { organizationId: string; kind: Kind; workItemId?: string; compact?: boolean; mayCreateWork?: boolean; initiallyOpen?: boolean }) {
+  const [open, setOpen] = useState(initiallyOpen);
   return <PageDrawer open={open} onOpenChange={setOpen}>
     <PageDrawerTrigger asChild><Button tone={kind === 'invoice' && !compact ? 'primary' : 'secondary'} size={compact ? 'tiny' : 'small'}>{kind === 'payment' ? <CreditCard aria-hidden className="size-4" /> : <Plus aria-hidden className="size-4" />}{labels[kind]}</Button></PageDrawerTrigger>
     <PageDrawerContent><PageDrawerHeader><PageDrawerTitle>{labels[kind]}</PageDrawerTitle></PageDrawerHeader>{open ? <WorkflowBody organizationId={organizationId} kind={kind} initialId={workItemId} mayCreateWork={mayCreateWork} /> : null}</PageDrawerContent>

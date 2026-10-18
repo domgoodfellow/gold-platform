@@ -1,10 +1,10 @@
 import type { Db } from '@/lib/db/types';
 import type { Organization } from '@/lib/domain/tenancy/organizations';
-import { availableFeatureKeys, activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
+import { availableFeatureKeys, activeModuleKeys, organizationResolvedFeatureStates, type ResolvedFeatureState } from '@/lib/domain/catalogue/organization-plans';
 import { currentMembershipId } from '@/lib/domain/reception/inbox';
 import { hasSchedulableWork } from '@/lib/domain/work-items/types';
 import { todayInZone } from '@/lib/domain/scheduling/window';
-import { areaAvailable, areaHref, WORKSPACES } from '@/lib/navigation';
+import { areaAvailable, areaHref, WORKSPACES, configTargetForHref } from '@/lib/navigation';
 import { DomainError } from '@/lib/domain/errors';
 import { homePeriod, homeQuery, type HomeData, type HomeResult, type HomeSource, type HomeSourceData } from './contracts';
 import { readCrm, readWork, readSupportHome, readMarketingHome, readCommunications, readFinanceHome, readAutomationHome, readAiHome, readStudioHome, type ReadContext } from './reads';
@@ -56,13 +56,7 @@ export async function loadHome(db: Db, organization: Organization, rawQuery: Rec
     }
     result.data.activity.push(...(events.data ?? []).map(e => ({ key: `${source}:event:${e.id}`, source, title: e.action.replaceAll('_', ' ').replace('.', ' · '), at: e.occurred_at, href: href(e.entity_type, e.entity_id) })));
   }));
-  for (const result of results) if (result.state === 'ready') {
-    const workspace = WORKSPACES.find(w => w.label === result.source);
-    const configured = featureStates.filter(f => workspace && (workspace.featureKeys as readonly string[]).includes(f.featureKey) && f.entitled && f.activation === 'active');
-    const setup = configured.filter(f => f.readiness === 'setup_required');
-    for (const f of setup) if (f.setupHref && capabilities.has('organization.manage')) result.data.health.push({ key: `feature:${f.featureKey}`, source: result.source, state: 'Configuration required', detail: f.reason ?? f.featureKey.replaceAll('_', ' '), href: f.setupHref, warning: true });
-    if (result.data.health.length === 0) result.data.health.push({ key: `${result.source}:read`, source: result.source, state: 'Read available', detail: 'Authorized records loaded. Live provider health is not inferred.', href: areaHref(organizationId, workspace?.home ?? 'home'), warning: false });
-  }
+  assignSetupHealth(results, featureStates, capabilities);
   const priorities = ['scheduled', 'opportunities', 'cases', 'overdue-invoices', 'inbox', 'inquiries', 'failed-runs', 'missed', 'active-work'];
   const metrics = results.flatMap(r => r.state === 'ready' ? r.data.metrics : []);
   const kpis = metrics.sort((a, b) => priorities.indexOf(a.key) - priorities.indexOf(b.key)).slice(0, 4);
@@ -70,13 +64,13 @@ export async function loadHome(db: Db, organization: Organization, rawQuery: Rec
   const quickActions: HomeData['quickActions'] = [];
   const add = (key: string, capability: string, label: string, href: string, description: string) => { if (capabilities.has(capability)) quickActions.push({ key, label, href, description }); };
   add('customer', 'customer.create', 'New customer', `${base}/customers?create=1`, 'Open CRM and add a customer');
-  add('work', 'work_item.create', 'New Work', `${base}/work?create=1`, 'Open the canonical Work creation drawer');
-  if (available('support')) add('case', 'support.case.create', 'New Case', `${base}/support/cases?create=1`, 'Open Cases and create a problem or request');
+  add('work', 'work_item.create', 'New work', `${base}/work?create=1`, 'Create and assign Work');
+  if (available('support')) add('case', 'support.case.create', 'New case', `${base}/support/cases?create=1`, 'Open Cases and create a problem or request');
   if (available('marketing')) add('campaign', 'marketing.manage', 'New campaign', `${base}/marketing/campaigns?create=1`, 'Open Campaigns and create a draft');
-  if (available('finance-invoices')) add('invoice', 'invoice.issue', 'New invoice', `${base}/finance/invoices`, 'Open Finance and issue an invoice');
+  if (available('finance-invoices')) add('invoice', 'invoice.issue', 'New invoice', `${base}/finance/invoices?create=1`, 'Open Finance and issue an invoice');
   if (available('comms-inbox')) add('message', 'message.send', 'Compose message', `${base}/comms/inbox/new`, 'Open Inbox and compose through the configured channel');
-  if (available('automations')) add('rule', 'automation.manage', 'New automation', `${base}/automations/rules?create=1`, 'Open the canonical rule builder');
-  add('form', 'organization.manage', 'New Form', `${base}/studio/forms?create=1`, 'Open Forms and create a draft');
+  if (available('automations')) add('rule', 'automation.manage', 'New automation', `${base}/automations/rules?create=1`, 'Create an automation');
+  add('form', 'organization.manage', 'New form', `${base}/studio/forms?create=1`, 'Open Forms and create a draft');
   const search = [{ label: 'CRM', href: `${base}/sales/search` }, { label: 'Work', href: `${base}/work` }, ...results.filter(r => !['CRM', 'Work', 'Studio', 'AI', 'Finance', 'Automations'].includes(r.source)).map(r => ({ label: r.source, href: r.source === 'Support' ? `${base}/support/cases` : r.source === 'Marketing' ? `${base}/marketing/leads` : available('comms-inbox') ? `${base}/comms/inbox` : `${base}/calls` }))];
   const agentPrompts = capabilities.has('assistant.ask') && enabled.has('assistant') ? [
     ...(schedulable ? ['Which Work is at risk?', 'What is scheduled tomorrow?'] : []),
@@ -84,4 +78,23 @@ export async function loadHome(db: Db, organization: Organization, rawQuery: Rec
     ...(capabilities.has('report.read') && available('finance-invoices') ? ['What was invoiced this month?'] : []),
   ] : [];
   return { organizationId, membershipId, date, timezone: organization.timezone, refreshedAt: now, query, period, results, kpis, quickActions, search, agentPrompts };
+}
+
+/** Destination ownership and message deduplication belong to the read projection, not the UI. */
+export function assignSetupHealth(results: HomeResult[], features: readonly Pick<ResolvedFeatureState, 'featureKey' | 'entitled' | 'activation' | 'readiness' | 'setupHref' | 'reason'>[], capabilities: ReadonlySet<string>) {
+  // Configuration destinations own cross-workspace setup issues, even when several features depend on them.
+  for (const result of results) if (result.state === 'ready') {
+    const workspace = WORKSPACES.find(w => w.label === result.source);
+    const setup = features.filter(f => workspace && (workspace.featureKeys as readonly string[]).includes(f.featureKey) && f.entitled && f.activation === 'active' && f.readiness === 'setup_required');
+    for (const f of setup) if (f.setupHref) {
+      const target = configTargetForHref(f.setupHref);
+      if (target ? !target.permission.some(permission => capabilities.has(permission)) : !capabilities.has('organization.manage')) continue;
+      const owner = WORKSPACES.find(w => w.key === target?.workspace)?.label ?? result.source;
+      const destination = results.find(r => r.source === owner);
+      if (destination?.state === 'ready') destination.data.health.push({ key: `feature:${f.featureKey}`, source: owner, state: 'Needs setup', detail: f.reason ?? f.featureKey.replaceAll('_', ' '), href: f.setupHref, warning: true });
+    }
+  }
+  for (const result of results) if (result.state === 'ready') {
+    result.data.health = [...new Map(result.data.health.map(h => [`${h.source}:${h.detail.trim().toLowerCase()}`, h])).values()];
+  }
 }

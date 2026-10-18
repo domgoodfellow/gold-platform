@@ -1,5 +1,7 @@
 'use client';
 
+import { CommandCenterProvider, CommandPalette, NotificationBell, SearchEntry } from '@/features/home/command-center';
+
 import { NavigationActivityContext } from '@/components/navigation/activity-context';
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
 import { DialerTrigger } from '@/features/communications/voice/dialer-trigger';
@@ -93,7 +95,7 @@ import {
 /** Renderers share the selected projection and decide no destination eligibility. */
 
 /**
- * One icon per area, keyed by segment rather than declared on `Area` itself — icon choice is how
+ * One icon per area, keyed by segment rather than declared on `Area` itself â€” icon choice is how
  * the shell draws the IA, not part of what the IA is (`navigation.ts` stays segments, labels,
  * groups, modules). `navigation.test.ts` asserts every sidebar `AREAS` entry has one here, so a new
  * area without an icon fails at the gate rather than rendering blank in the rail.
@@ -227,7 +229,7 @@ function NavRow({ item, active }: { item: NavItem; active: string | null }) {
   const inside = itemContains(item, active);
   const [open, setOpen] = useState(inside);
   // Opens on the render that moves the person inside, not in an effect after it: the branch is
-  // never drawn closed for a frame first. Leaving does not close it — that is theirs to do.
+  // never drawn closed for a frame first. Leaving does not close it â€” that is theirs to do.
   const [wasInside, setWasInside] = useState(inside);
   if (inside !== wasInside) {
     setWasInside(inside);
@@ -270,8 +272,8 @@ function NavRow({ item, active }: { item: NavItem; active: string | null }) {
 }
 
 /**
- * Every breakpoint draws the same resolved sections: the business's rows, or — once somebody has
- * entered a workspace or Administration — that context with a way back.
+ * Every breakpoint draws the same resolved sections: the business's rows, or â€” once somebody has
+ * entered a workspace or Administration â€” that context with a way back.
  */
 export function OrgNav({ sections }: { sections: ShellSection[] }) {
   const pathname = usePathname();
@@ -304,8 +306,14 @@ export function OrgNav({ sections }: { sections: ShellSection[] }) {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <SidebarMenu><SidebarMenuItem><SearchEntry /></SidebarMenuItem></SidebarMenu>
       </SidebarGroup> : null}
-      {navigation.map((section) => group(section))}
+      {!context ? <SidebarGroup><SidebarMenu>
+        {navigation.flatMap(section => section.items).filter(item => item.key === 'home').map(item => <NavRow key={item.key} item={item} active={active} />)}
+        <SidebarMenuItem><SearchEntry /></SidebarMenuItem>
+        {navigation.flatMap(section => section.items).filter(item => item.key === 'library').map(item => <NavRow key={item.key} item={item} active={active} />)}
+      </SidebarMenu></SidebarGroup> : null}
+      {navigation.map(section => context ? section : { ...section, label: section.key === 'home' ? 'Workspaces' : section.label, items: section.items.filter(item => !['home', 'library'].includes(item.key)) }).filter(section => section.items.length).map(section => group(section))}
     </nav>
   );
 }
@@ -345,8 +353,12 @@ export function OrgSidebar({
   settings,
   email,
   signOutAction,
+  displayName,
+  setupRemaining,
   ...props
 }: {
+  displayName?: string;
+  setupRemaining?: number | null;
   mark: ReactNode;
   name: string;
   organizations: SwitchableOrganization[];
@@ -354,7 +366,7 @@ export function OrgSidebar({
   sections: ShellSection[];
   /** Present while the person is inside Settings: the destinations that replace the workspaces. */
   settings?: { organizationId: string; sections: ShellSection[]; search: SettingsSearchItem[] } | null;
-  /** True only while the business is in SETUP — the layout decides, from `operationalState`. */
+  /** True only while the business is in SETUP â€” the layout decides, from `operationalState`. */
   email: string;
   signOutAction: () => Promise<void>;
 } & React.ComponentProps<typeof Sidebar>) {
@@ -364,6 +376,7 @@ export function OrgSidebar({
         <ContextSwitcher mark={mark} current={current} organizations={organizations} />
       </SidebarHeader>
       <SidebarContent>
+        {setupRemaining !== undefined ? <Link href={`/organizations/${current.kind === 'business' ? current.organizationId : ''}/setup`} className="mx-3 mt-2 w-fit rounded-md border border-sidebar-border px-2 py-1 text-xs group-data-[collapsible=icon]:hidden">{setupRemaining === null ? 'Setup · Review' : `Setup · ${setupRemaining} left`}</Link> : null}
         {settings ? (
           <SettingsNav organizationId={settings.organizationId} organizationName={name} sections={settings.sections} search={settings.search} returnHrefs={sections.flatMap((section) => section.items.flatMap((item) => [item.href, ...(item.activeHrefs ?? []), ...(item.destinations ?? []).map((destination) => destination.href)]))} />
         ) : (
@@ -372,7 +385,7 @@ export function OrgSidebar({
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border">
         <MobileAgentEntry />
-        <AccountMenu email={email} signOutAction={signOutAction} />
+        <AccountMenu email={email} signOutAction={signOutAction} displayName={displayName} role={current.kind === 'business' ? current.role : undefined} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
@@ -382,8 +395,8 @@ export function OrgSidebar({
 /**
  * The sidebar while the business's commercial service access is locked: identity and context
  * switching, one row to where recovery lives, GildOps staff's Administration entry (which stays
- * reachable while GildOps' own service is locked), and the account menu. Not the enforcement —
- * every page and action refuses on its own — only the shell agreeing with them, so a locked person
+ * reachable while GildOps' own service is locked), and the account menu. Not the enforcement â€”
+ * every page and action refuses on its own â€” only the shell agreeing with them, so a locked person
  * is not offered twelve doors that all lead to the same locked screen.
  */
 export function LockedOrgSidebar({
@@ -454,13 +467,17 @@ export function LockedOrgSidebar({
 }
 
 /**
- * Layouts persist across client navigation. The identity is always this organization's own —
+ * Layouts persist across client navigation. The identity is always this organization's own â€”
  * Administration inside GildOps changes the navigation, never who the person is working as.
  */
 export function OrganizationFrame({
   organizationId, name, role, mark, organizations, sections, utilities, settings, settingsSearch,
-  locked, email, signOutAction, agent, children,
+  locked, email, signOutAction, agent, children, displayName = '', setup, setupRemaining, setupMessages = [],
 }: {
+  displayName?: string;
+  setup?: ReactNode;
+  setupMessages?: string[];
+  setupRemaining?: number | null;
   organizationId: string;
   name: string;
   role: string;
@@ -498,21 +515,21 @@ export function OrganizationFrame({
   const calendarWorkspace = calendarContext?.workspace.key.startsWith('workspace-') ? calendarContext.workspace : null;
 
   return (
-    <WorkspaceShell
+    <CommandCenterProvider key={organizationId} organizationId={organizationId} displayName={displayName}><WorkspaceShell
       locationNavigation={{ organizationId, sections: recovery ? [] : settingsContext ? settings : sections, configurationHrefs: recovery ? [] : settingsSearch.map((item) => item.href) }}
-      sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} role={role} administration={administration} {...shared} /> : <OrgSidebar {...shared} current={current} sections={sections} settings={settingsContext ? { organizationId, sections: settings, search: settingsSearch } : null} />}
+      sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} role={role} administration={administration} {...shared} /> : <OrgSidebar {...shared} displayName={displayName} setupRemaining={setup ? setupRemaining : undefined} current={current} sections={sections} settings={settingsContext ? { organizationId, sections: settings, search: settingsSearch } : null} />}
       header={
         <WorkspaceHeader
           navigationTrigger="always"
           agentTrigger="md"
           phoneAction={recovery ? undefined : <DialerTrigger />}
           utilities={utilities}
-          beforeActions={calendarWorkspace ? <Link href={`${calendarWorkspace.href}/calendar`} aria-label={`${calendarWorkspace.label} calendar`} className="inline-flex min-h-9 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-hover"><CalendarDays aria-hidden size={16}/><span className="hidden sm:inline">Calendar</span></Link> : null}
+          beforeActions={<>{!recovery ? <><CommandPalette /><NotificationBell setupMessages={setupMessages} setup={setup} setupHref={`/organizations/${organizationId}/setup`} /></> : null}{calendarWorkspace ? <Link href={`${calendarWorkspace.href}/calendar`} aria-label={`${calendarWorkspace.label} calendar`} className="inline-flex min-h-9 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-hover"><CalendarDays aria-hidden size={16}/><span className="hidden sm:inline">Calendar</span></Link> : null}</>}
         />
       }
       agent={agent}
     >
       {children}
-    </WorkspaceShell>
+    </WorkspaceShell></CommandCenterProvider>
   );
 }

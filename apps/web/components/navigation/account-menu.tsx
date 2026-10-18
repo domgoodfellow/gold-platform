@@ -31,12 +31,14 @@ import { settingsLandingHref } from '@/lib/route/settings';
 type AccountMenuProps = {
   /** The signed-in Supabase Auth email. Every caller resolves it the same way: `db.auth.getUser()`. */
   email: string;
+  displayName?: string;
+  role?: string;
   signOutAction: () => Promise<void>;
   /** A locked organization keeps one Settings destination, Plan & usage, as its recovery route. */
   locked?: boolean;
 };
 
-function AccountMenuContent({ email, signOutAction, locked = false }: AccountMenuProps) {
+function AccountMenuContent({ email, signOutAction, locked = false, displayName }: AccountMenuProps) {
   // The business being left, so Settings, Help and Contact open for the right one. Read from the path
   // rather than passed in: this menu is shared by shells that have no organization at all.
   const pathname = usePathname();
@@ -50,7 +52,7 @@ function AccountMenuContent({ email, signOutAction, locked = false }: AccountMen
           <AvatarFallback className="rounded-lg">{email.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
         <div className="grid min-w-0 flex-1 text-sm leading-tight">
-          <span className="truncate font-medium">Signed in</span>
+          <span className="truncate font-medium">{displayName || 'Account'}</span>
           <span className="truncate text-xs text-muted-foreground">{email}</span>
         </div>
       </DropdownMenuLabel>
@@ -77,7 +79,7 @@ function AccountMenuContent({ email, signOutAction, locked = false }: AccountMen
  * to the right, beside the icon rail; expanded, it opens above its own trigger, attached to the
  * footer it sits in, rather than floating off to the side of a full-width row.
  */
-export function AccountMenu({ email, signOutAction, locked }: AccountMenuProps) {
+export function AccountMenu({ email, signOutAction, locked, displayName, role }: AccountMenuProps) {
   const { isMobile, state } = useSidebar();
   const side = isMobile ? 'bottom' : state === 'collapsed' ? 'right' : 'top';
 
@@ -97,8 +99,8 @@ export function AccountMenu({ email, signOutAction, locked }: AccountMenuProps) 
                 </AvatarFallback>
               </Avatar>
               <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{email}</span>
-                <span className="truncate text-xs text-sidebar-foreground/70">Signed in</span>
+                <span className="truncate font-medium">{displayName || email}</span>
+                <span className="truncate text-xs text-sidebar-foreground/70">{role || 'Personal settings'}</span>
               </div>
               {/* Points the way the menu opens, and turns over while it is open. */}
               {side === 'right' ? (
@@ -114,7 +116,7 @@ export function AccountMenu({ email, signOutAction, locked }: AccountMenuProps) 
             sideOffset={8}
             className={cx('min-w-56', side === 'top' && 'w-(--radix-dropdown-menu-trigger-width)')}
           >
-            <AccountMenuContent email={email} signOutAction={signOutAction} locked={locked} />
+            <AccountMenuContent email={email} signOutAction={signOutAction} locked={locked} displayName={displayName} role={role} />
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
