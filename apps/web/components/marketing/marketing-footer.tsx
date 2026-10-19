@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import Link from 'next/link';
 import { Mail, Phone } from 'lucide-react';
 import { FOCUS_RING, cx } from '@/components/class-names';
@@ -46,7 +47,7 @@ export function MarketingFooter({
                 {contactPhone ? (
                   <li>
                     <a href={`tel:${contactPhone.replace(/[^\d+]/g, '')}`} className={cx('inline-flex items-center gap-2', LINK)}>
-                      <Phone aria-hidden size={14} />{contactPhone}
+                      <Phone aria-hidden size={14} />{formatPhoneForDisplay(contactPhone)}
                     </a>
                   </li>
                 ) : null}

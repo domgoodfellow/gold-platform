@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import { BusinessLabel } from '@/lib/context/business-vocabulary';
 import type { ReactNode } from 'react';
 import { Hint } from '@/components/controls/inputs';
@@ -140,7 +141,7 @@ export function CustomerDetail({
             <SectionHeading>Contact information</SectionHeading>
             <DefinitionList className="mt-3">
               <Detail label="Email">{customer.email ? <a href={`mailto:${customer.email}`} className="underline underline-offset-4">{customer.email}</a> : 'Not recorded'}</Detail>
-              <Detail label="Phone">{customer.phone ? <a href={`tel:${customer.phone}`} className="underline underline-offset-4">{customer.phone}</a> : 'Not recorded'}</Detail>
+              <Detail label="Phone">{customer.phone ? <a href={`tel:${customer.phone}`} className="underline underline-offset-4">{formatPhoneForDisplay(customer.phone)}</a> : 'Not recorded'}</Detail>
               <Detail label="Stage">{stage?.name ?? 'No stage'}</Detail>
             </DefinitionList>
             <CustomFieldValues definitions={definitions} custom={customer.custom} />

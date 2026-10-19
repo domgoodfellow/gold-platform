@@ -1,5 +1,6 @@
 'use client';
 
+import { PhoneInput } from '@/components/controls/phone-input';
 import { useEffect, useId, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -123,7 +124,7 @@ export function LeadInspector({ organizationId, timezone, inquiryId, mayManage, 
         <Button tone="secondary" size="small" disabled={!customer || pending} onClick={() => change('inquiry.link', { customer })}>Link selected Customer</Button>
         {mayCreateCustomer && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={create} onChange={e => { setCreate(e.target.checked); setCustomer(''); }} />Explicitly create a new CRM Customer</label>}
         <form id={formId} className="grid gap-3" onSubmit={e => { e.preventDefault(); const f = new FormData(e.currentTarget); change('inquiry.handoff', { customer: customer || detail.customer_id, create, name: String(f.get('name') ?? ''), email: String(f.get('email') ?? ''), phone: String(f.get('phone') ?? '') }); }}>
-          {create && <><p className="text-xs text-muted">Enter the contact fields you have reviewed. Other answers stay in Studio.</p><Field label="Customer name"><TextInput name="name" required maxLength={200} /></Field><Field label="Email"><TextInput name="email" type="email" /></Field><Field label="Phone"><TextInput name="phone" type="tel" /></Field></>}
+          {create && <><p className="text-xs text-muted">Enter the contact fields you have reviewed. Other answers stay in Studio.</p><Field label="Customer name"><TextInput name="name" required maxLength={200} /></Field><Field label="Email"><TextInput name="email" type="email" /></Field><Field label="Phone"><PhoneInput name="phone" type="tel" /></Field></>}
           <Button disabled={pending || (!create && !customer && !detail.customer_id)}>{pending ? 'Saving…' : create ? 'Create Customer and hand off' : 'Confirm CRM handoff'}</Button>
         </form></section></>}
     </div>}

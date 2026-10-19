@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { NavigationItem, PublicWebsiteSnapshot, WebsitePage } from '@gold/schemas';
@@ -44,7 +45,7 @@ export function SiteView({ site, page, context, logoSrc = null, linkBase = '', b
   banner?: ReactNode;
 }) {
   const profile = site.profile;
-  const contacts = [profile.contactPhone, profile.contactEmail, profile.address].filter(Boolean);
+  const contacts = [profile.contactPhone ? formatPhoneForDisplay(profile.contactPhone) : null, profile.contactEmail, profile.address].filter(Boolean);
   const home = site.pages.find((entry) => entry.isHome);
 
   return (

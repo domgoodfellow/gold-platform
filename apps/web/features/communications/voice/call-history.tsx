@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { PhoneIncoming, PhoneOutgoing } from 'lucide-react';
@@ -34,7 +35,7 @@ export function CallHistory({
   const businessNumber = (call: Call) => {
     const e164 = call.direction === 'outbound' ? call.fromNumber : call.toNumber;
     const known = call.phoneNumberId ? numbers?.get(call.phoneNumberId) : undefined;
-    return known?.label ?? known?.e164 ?? e164 ?? '—';
+    return known?.label ?? formatPhoneForDisplay(known?.e164 ?? e164 ?? '—');
   };
 
   return (

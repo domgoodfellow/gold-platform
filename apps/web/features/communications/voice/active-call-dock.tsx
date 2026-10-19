@@ -1,5 +1,7 @@
 'use client';
 
+import { PhoneInput } from '@/components/controls/phone-input';
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowRightLeft, ExternalLink, Grid3x3, Mic, MicOff, Pause, Phone, PhoneOff, Play, UserPlus, UserX } from 'lucide-react';
@@ -7,7 +9,7 @@ import { Button } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
 import { StatePill } from '@/components/operational/primitives';
 import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
-import { ErrorText, TextInput } from '@/components/controls/inputs';
+import { ErrorText } from '@/components/controls/inputs';
 import { MOBILE_NAV_HEIGHT_STYLE } from '@/components/layout/workspace-geometry';
 import {
   addParticipantAction,
@@ -196,7 +198,7 @@ export function ActiveCallDock({ organizationId, placement = 'dock' }: { organiz
                   <StatePill tone={connected ? 'success' : 'neutral'}>{CALL_STATE_LABEL[activeCall.status]}</StatePill>
                   {status !== 'ready' ? <StatePill tone="danger">Dialer {status}</StatePill> : null}
                 </div>
-                <p className="mt-1 truncate text-2xl font-semibold tracking-tight">{activeCall.contactLabel ?? 'Call'}</p>
+                <p className="mt-1 truncate text-2xl font-semibold tracking-tight">{formatPhoneForDisplay(activeCall.contactLabel ?? 'Call')}</p>
                 <p className="text-sm text-muted">{activeCall.direction === 'outgoing' ? 'Outgoing' : 'Incoming'}</p>
               </div>
             </div>
@@ -205,7 +207,7 @@ export function ActiveCallDock({ organizationId, placement = 'dock' }: { organiz
         ) : (
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium">{activeCall.contactLabel ?? 'Call'}</span>
+              <span className="font-medium">{formatPhoneForDisplay(activeCall.contactLabel ?? 'Call')}</span>
               <Badge tone={connected ? 'success' : 'neutral'}>{CALL_STATE_LABEL[activeCall.status]}</Badge>
               {status !== 'ready' ? <Badge tone="danger">Dialer {status}</Badge> : null}
             </div>
@@ -301,7 +303,7 @@ export function ActiveCallDock({ organizationId, placement = 'dock' }: { organiz
 
       {panel === 'add' || panel === 'transfer' ? (
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <TextInput
+          <PhoneInput
             value={number}
             onChange={(event) => setNumber(event.target.value)}
             type="tel"

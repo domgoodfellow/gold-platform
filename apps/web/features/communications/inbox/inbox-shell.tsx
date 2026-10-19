@@ -1,5 +1,6 @@
 'use client';
 
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -202,12 +203,12 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
                     <div className="flex items-center justify-between gap-2">
                       <span className="flex min-w-0 items-center gap-1.5">
                         <ChannelIcon className="h-3.5 w-3.5 shrink-0 text-muted" aria-label={item.channel === 'email' ? 'Email' : 'SMS'} role="img" />
-                        <span className={`truncate ${item.unread ? 'font-semibold' : 'font-medium'}`}>{item.title}</span>
+                        <span className={`truncate ${item.unread ? 'font-semibold' : 'font-medium'}`}>{item.channel === 'sms' ? formatPhoneForDisplay(item.title) : item.title}</span>
                         {item.unread ? <span className="h-2 w-2 shrink-0 rounded-full bg-accent" role="img" aria-label="Unread" /> : null}
                       </span>
                       <span className="shrink-0 text-xs text-muted">{relativeTime(item.lastActivityAt)}</span>
                     </div>
-                    {item.customer ? <div className="truncate text-xs text-muted">{item.externalAddress}</div> : null}
+                    {item.customer ? <div className="truncate text-xs text-muted">{item.channel === 'sms' ? formatPhoneForDisplay(item.externalAddress) : item.externalAddress}</div> : null}
                     {item.subject ? <div className={`truncate text-sm ${item.unread ? 'font-medium' : ''}`}>{item.subject}</div> : null}
                     <div className="truncate text-sm text-muted">{item.preview || '—'}</div>
                     <div className="mt-1 flex items-center gap-2 text-xs text-muted">

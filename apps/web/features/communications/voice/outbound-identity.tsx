@@ -1,8 +1,9 @@
 'use client';
 
+import { PhoneInput } from '@/components/controls/phone-input';
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
+import { ErrorText, Hint } from '@/components/controls/inputs';
 import {
   setCallingNumberAction,
   type FormState,
@@ -33,7 +34,7 @@ export function OutboundIdentity({
       <input type="hidden" name="organizationId" value={organizationId} />
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex flex-col gap-1 text-xs text-muted">Organization fallback number
-        <TextInput
+        <PhoneInput
           name="number"
           type="tel"
           defaultValue={number ?? ''}

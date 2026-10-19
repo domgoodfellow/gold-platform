@@ -1,5 +1,6 @@
 'use client';
 
+import { PhoneInput } from '@/components/controls/phone-input';
 import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
 import { useActionState, useId, useState } from 'react';
@@ -117,7 +118,7 @@ export function BookingForm({
           {/* Either reaches you, and the domain layer insists on one of them — a booking
               nobody can be contacted about is not a booking. */}
           <TextInput name="email" type="email" placeholder="Email" className="w-full" />
-          <TextInput name="phone" type="tel" placeholder="Phone" className="w-full" />
+          <PhoneInput name="phone" type="tel" placeholder="Phone" className="w-full" />
 
           {intake ? (
             <fieldset className="mt-2 flex flex-col gap-4 border-t border-border pt-4" disabled={pending}>

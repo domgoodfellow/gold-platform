@@ -106,9 +106,9 @@ describe('customer directory table', () => {
   it('displays a Canadian number grouped while the dial link keeps the stored value', () => {
     const { container } = renderTable();
 
-    const link = within(wideTable(container)).getByRole('link', { name: '+1 416 555 0176' });
+    const link = within(wideTable(container)).getByRole('link', { name: '(416)555-0176' });
     expect(link.getAttribute('href')).toBe('tel:+14165550176');
-    expect(rowCells(container, 'Brightline Electric')).toContain('+1 613 555 0199');
+    expect(rowCells(container, 'Brightline Electric')).toContain('(613)555-0199');
   });
 
   it('shows a dash for a missing phone, a missing industry and a missing location rather than inventing one', () => {

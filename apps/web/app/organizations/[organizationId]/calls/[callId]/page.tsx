@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AppPage } from '@/components/layout/app-page';
@@ -85,14 +86,14 @@ export default async function CallDetailPage({
           <Detail label="Answered">{call.answeredAt ? formatCallTime(call.answeredAt, timeZone) : null}</Detail>
           <Detail label="Ended">{call.endedAt ? formatCallTime(call.endedAt, timeZone) : null}</Detail>
           <Detail label="Duration">{call.answeredAt ? formatCallDuration(call.durationSeconds) : null}</Detail>
-          <Detail label="Their number">{call.externalNumber ?? 'Withheld'}</Detail>
+          <Detail label="Their number">{call.externalNumber ? formatPhoneForDisplay(call.externalNumber) : 'Withheld'}</Detail>
           <Detail label="Our number">
             {number ? (
               <Link href={`/organizations/${organizationId}/comms/configuration/numbers/${number.id}`} className="underline underline-offset-4">
-                {number.label ? `${number.label} (${number.e164})` : number.e164}
+                {number.label ? `${number.label} (${formatPhoneForDisplay(number.e164)})` : formatPhoneForDisplay(number.e164)}
               </Link>
             ) : (
-              businessNumber
+              businessNumber ? formatPhoneForDisplay(businessNumber) : null
             )}
           </Detail>
           <Detail label="Handled by">{call.handledBy.map((member) => member.name).join(', ')}</Detail>
@@ -109,7 +110,7 @@ export default async function CallDetailPage({
           </p>
         ) : (
           <div className="mt-2 flex flex-col gap-2">
-            <p className="text-sm">Unknown caller{call.externalNumber ? ` — ${call.externalNumber}` : ''}. No customer holds this number, or more than one does.</p>
+            <p className="text-sm">Unknown caller{call.externalNumber ? ` — ${formatPhoneForDisplay(call.externalNumber)}` : ''}. No customer holds this number, or more than one does.</p>
             {mayCall ? <LinkCustomerForm organizationId={organizationId} callId={call.id} customers={customers.map((customer) => ({ id: customer.id, name: customer.name }))} /> : null}
           </div>
         )}

@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import { Hint } from '@/components/controls/inputs';
 import { PageHeading } from '@/components/surfaces/section';
 import type { PublicProfile } from '@/lib/domain/tenancy/profile';
@@ -14,7 +15,7 @@ export function PublicHeader({
   profile: PublicProfile;
   logoUrl?: string | null;
 }) {
-  const contacts = [profile.contactPhone, profile.contactEmail, profile.address].filter(Boolean);
+  const contacts = [profile.contactPhone ? formatPhoneForDisplay(profile.contactPhone) : null, profile.contactEmail, profile.address].filter(Boolean);
 
   return (
     <header>

@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import type { Metadata } from 'next';
 import { Mail, Phone } from 'lucide-react';
 import { CtaBand } from '@/components/marketing/cta-band';
@@ -20,7 +21,7 @@ export default async function ContactPage() {
   // Only channels GOLD has actually configured; nothing is filled in on its behalf.
   const methods = [
     profile.contactEmail ? { icon: Mail, label: 'Email', value: profile.contactEmail, href: `mailto:${profile.contactEmail}` } : null,
-    profile.contactPhone ? { icon: Phone, label: 'Phone', value: profile.contactPhone, href: `tel:${profile.contactPhone.replace(/[^\d+]/g, '')}` } : null,
+    profile.contactPhone ? { icon: Phone, label: 'Phone', value: formatPhoneForDisplay(profile.contactPhone), href: `tel:${profile.contactPhone.replace(/[^\d+]/g, '')}` } : null,
   ].filter((method) => method !== null);
 
   return (

@@ -1,8 +1,9 @@
 'use client';
 
+import { PhoneInput } from '@/components/controls/phone-input';
 import { useActionState, useState } from 'react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, SelectInput } from '@/components/controls/inputs';
 import {
   recordCallAction,
   type FormState,
@@ -48,7 +49,7 @@ export function CallCustomerForm({
   return (
     <div className="mt-2 flex flex-col gap-3">
       <div className="flex flex-col gap-2 sm:flex-row">
-        <TextInput
+        <PhoneInput
           value={toNumber}
           onChange={(event) => setToNumber(event.target.value)}
           type="tel"
@@ -71,7 +72,7 @@ export function CallCustomerForm({
           <option value="outbound">We called them</option>
           <option value="inbound">They called us</option>
         </SelectInput>
-        <TextInput
+        <PhoneInput
           name="fromNumber"
           type="tel"
           required
@@ -79,7 +80,7 @@ export function CallCustomerForm({
           aria-label="From"
           className="flex-1"
         />
-        <TextInput
+        <PhoneInput
           name="toNumber"
           type="tel"
           required

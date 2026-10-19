@@ -1,5 +1,7 @@
 'use client';
 
+import { formatPhoneForDisplay } from '@/lib/display/phone';
+import { PhoneInput } from '@/components/controls/phone-input';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { Paperclip, Send, X } from 'lucide-react';
@@ -112,7 +114,7 @@ export function NewConversation({
             <span className="w-14 text-muted">From</span>
             {channel === 'sms' ? (
               <SelectInput size="small" value={numberId} onChange={(event) => setNumberId(event.target.value)} aria-label="Send from">
-                {numbers.map((number) => <option key={number.id} value={number.id}>{number.label ? `${number.label} · ${number.e164}` : number.e164}</option>)}
+                {numbers.map((number) => <option key={number.id} value={number.id}>{number.label ? `${number.label} · ${formatPhoneForDisplay(number.e164)}` : formatPhoneForDisplay(number.e164)}</option>)}
               </SelectInput>
             ) : (
               <SelectInput size="small" value={senderId} onChange={(event) => setSenderId(event.target.value)} aria-label="Send from">
@@ -122,7 +124,7 @@ export function NewConversation({
           </label>
           <label className="flex items-center gap-2 text-sm">
             <span className="w-14 text-muted">To</span>
-            <TextInput size="small" type={channel === 'email' ? 'email' : 'text'} placeholder={channel === 'email' ? 'person@example.com' : '+14165550142'} value={to} onChange={(event) => setTo(event.target.value)} className="min-w-0 flex-1" aria-label="To" />
+            {channel === 'email' ? <TextInput size="small" type="email" placeholder="person@example.com" value={to} onChange={(event) => setTo(event.target.value)} className="min-w-0 flex-1" aria-label="To" /> : <PhoneInput size="small" placeholder="+14165550142" value={to} onChange={(event) => setTo(event.target.value)} className="min-w-0 flex-1" aria-label="To" />}
           </label>
           {channel === 'email' ? (
             <label className="flex items-center gap-2 text-sm">

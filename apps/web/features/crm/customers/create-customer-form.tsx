@@ -1,5 +1,6 @@
 'use client';
 
+import { PhoneInput } from '@/components/controls/phone-input';
 import { Button } from '@/components/controls/button';
 import { FormActions, FormError, FormField } from '@/components/controls/form';
 import { TextInput } from '@/components/controls/inputs';
@@ -40,7 +41,7 @@ export function CreateCustomerForm({
           {(field) => <TextInput {...field} name="email" type="email" />}
         </FormField>
         <FormField id="new-customer-phone" label="Phone" optional className="flex-1">
-          {(field) => <TextInput {...field} name="phone" type="tel" />}
+          {(field) => <PhoneInput {...field} name="phone" type="tel" />}
         </FormField>
       </div>
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { PhoneInput } from '@/components/controls/phone-input';
 import Link from 'next/link';
 import { useActionState, useState } from 'react';
 import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
@@ -106,7 +107,7 @@ export function OrganizationSettingsForm({
             {(field) => <TextInput {...field} name="contactEmail" type="email" maxLength={200} defaultValue={identity.contactEmail ?? ''} />}
           </FormField>
           <FormField id="org-contact-phone" label="Phone" optional>
-            {(field) => <TextInput {...field} name="contactPhone" type="tel" maxLength={50} defaultValue={identity.contactPhone ?? ''} />}
+            {(field) => <PhoneInput {...field} name="contactPhone" type="tel" maxLength={50} defaultValue={identity.contactPhone ?? ''} />}
           </FormField>
         </div>
         <FormField id="org-website" label="Website" optional>

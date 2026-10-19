@@ -94,6 +94,16 @@ Each level has a different responsibility.
 
 ---
 
+### Phone number presentation
+
+`apps/web/lib/display/phone.ts` owns phone display formatting. Complete North American numbers
+read as `(416)555-0176`, including stored `+1`, eleven-digit and ten-digit forms. International,
+partial and extension-bearing values keep their existing spelling; do not guess another country's
+grouping. Apply formatting to visible text only: stored values, `tel:` links, identifiers and
+calling/messaging payloads retain their original values. `PhoneInput` shows formatted text at rest,
+reveals the original value while editing and submits that original value. Country-code entry
+requirements continue to apply where required by the existing form.
+
 ### Design tokens
 
 Design tokens define reusable visual roles such as:

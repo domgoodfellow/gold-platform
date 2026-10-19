@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import { callStatusLabel, type Call, type CallDetail } from '@/lib/domain/reception/calls';
 
 /** Small presentation helpers shared by the Calls screens. No rule lives here — only words and shapes. */
@@ -36,7 +37,7 @@ export const NAMELESS_LABEL = {
 
 /** Who the call was with: the customer's name, else the number, else honesty about not knowing. */
 export function callerName(call: Pick<Call, 'customerName' | 'externalNumber'>): string {
-  return call.customerName ?? call.externalNumber ?? 'Withheld number';
+  return call.customerName ?? (call.externalNumber ? formatPhoneForDisplay(call.externalNumber) : 'Withheld number');
 }
 
 /** The platform's own word for a state it reports; a failure is the only thing coloured. */

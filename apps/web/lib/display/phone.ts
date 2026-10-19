@@ -7,6 +7,7 @@
  */
 export function formatPhoneForDisplay(stored: string): string {
   const value = stored.trim();
-  const match = /^\+1(\d{3})(\d{3})(\d{4})$/.exec(value);
-  return match ? `+1 ${match[1]} ${match[2]} ${match[3]}` : value;
+  const compact = value.replace(/[\s().-]/g, '');
+  const match = /^(?:\+1|1)?(\d{3})(\d{3})(\d{4})$/.exec(compact);
+  return match ? `(${match[1]})${match[2]}-${match[3]}` : value;
 }

@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import Link from 'next/link';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
@@ -22,7 +23,7 @@ export function NumberList({ organizationId, numbers, assignedCount }: {
           emphasis: 'primary',
           cell: (number) => (
             <Link href={`/organizations/${organizationId}/comms/configuration/numbers/${number.id}`} className="underline underline-offset-4">
-              {number.label ? `${number.label} (${number.e164})` : number.e164}
+              {number.label ? `${number.label} (${formatPhoneForDisplay(number.e164)})` : formatPhoneForDisplay(number.e164)}
             </Link>
           ),
         },

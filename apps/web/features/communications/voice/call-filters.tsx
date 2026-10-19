@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/controls/button';
@@ -150,7 +151,7 @@ export function CallFilters({
           {numbers.length > 1 ? (
             <SelectInput name="number" defaultValue={params.number ?? ''} aria-label="Number" size="small">
               <option value="">Every number</option>
-              {numbers.map((number) => <option key={number.id} value={number.id}>{number.label ?? number.e164}</option>)}
+              {numbers.map((number) => <option key={number.id} value={number.id}>{number.label ?? formatPhoneForDisplay(number.e164)}</option>)}
             </SelectInput>
           ) : null}
           {members.length > 1 ? (

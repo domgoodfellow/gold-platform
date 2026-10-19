@@ -113,7 +113,7 @@ test('Dialer console keeps its operating composition empty, populated, focused a
       await page.goto(`/organizations/${populated}/calls`);
       await expect(page.getByRole('group', { name: 'Presentation' })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Sarah Mitchell', level: 2 })).toBeVisible();
-      await expect(page.getByRole('textbox', { name: 'Number to call' })).toHaveValue('+14385550194');
+      await expect(page.getByRole('textbox', { name: 'Number to call' })).toHaveValue('(438)555-0194');
       if (desktop) await expect(page.getByRole('region', { name: 'Customer' })).toContainText('sarah@northshore.example.test');
       desktop = await page.locator('[data-presentation]').filter({ visible: true }).evaluate(element => element.clientWidth >= 1024);
       const toolbar = page.getByRole('group', { name: 'Dialer toolbar', exact: true });
@@ -127,7 +127,7 @@ test('Dialer console keeps its operating composition empty, populated, focused a
         await page.getByRole('group', { name: 'Dialer region', exact: true }).getByRole('button', { name: 'Queue', exact: true }).click();
         await expect(page.getByRole('region', { name: 'Call queue', exact: true })).toBeVisible();
         await page.getByRole('button', { name: /Mike Chen/ }).click();
-        await expect(page.getByRole('textbox', { name: 'Number to call' })).toHaveValue('+14385550123');
+        await expect(page.getByRole('textbox', { name: 'Number to call' })).toHaveValue('(438)555-0123');
       }
       expect(await page.getByRole('textbox', { name: 'Number to call' }).evaluate(element => element.getBoundingClientRect().width <= 576)).toBe(true);
       await page.screenshot({ path: testInfo.outputPath(`populated-${name}.png`) });
@@ -157,7 +157,7 @@ test('Dialer console keeps its operating composition empty, populated, focused a
     await expect(page.getByRole('region', { name: 'Call queue' })).toBeHidden();
     await expect(page.getByRole('region', { name: 'Customer' })).toBeHidden();
     await expect(page.locator('#call-history:visible')).toHaveCount(0);
-    await expect(page.getByRole('textbox', { name: 'Number to call' })).toHaveValue('+14385550194');
+    await expect(page.getByRole('textbox', { name: 'Number to call' })).toHaveValue('(438)555-0194');
     await page.screenshot({ path: testInfo.outputPath('focus-wide.png') });
     await page.getByRole('button', { name: 'Standard', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Call queue' })).toBeVisible();

@@ -1,9 +1,11 @@
 'use client';
 
+import { PhoneInput } from '@/components/controls/phone-input';
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Delete, ExternalLink, Phone } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, FieldLabel, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, FieldLabel, Hint, SelectInput } from '@/components/controls/inputs';
 import { useDial } from './use-dial';
 import { useDialerPopout } from './dialer-popout-context';
 import { useTelephoneDevice } from './telephone-device';
@@ -100,14 +102,14 @@ export function NewCallForm({
           <div className="flex min-w-0 flex-col gap-3">
             <div className="flex flex-col gap-1">
               <FieldLabel htmlFor={`${id}-to`}>Number to call</FieldLabel>
-              <TextInput id={`${id}-to`} value={toNumber} onChange={(event) => setToNumber(event.target.value)} type="tel" inputMode="tel" required disabled={busy} className="h-11 text-lg font-medium tabular-nums" placeholder="+14165550142" pattern="\+[1-9][0-9]{7,14}" title="With a country code, like +14165550142" />
+              <PhoneInput id={`${id}-to`} value={toNumber} onChange={(event) => setToNumber(event.target.value)} type="tel" inputMode="tel" required disabled={busy} className="h-11 text-lg font-medium tabular-nums" placeholder="+14165550142" pattern="\+[1-9][0-9]{7,14}" title="With a country code, like +14165550142" />
             </div>
             <div className="flex flex-col gap-1">
               <FieldLabel htmlFor={`${id}-from`}>Call from</FieldLabel>
               <SelectInput id={`${id}-from`} value={phoneNumberId} onChange={(event) => setPhoneNumberId(event.target.value)} disabled={unavailable || busy} className="w-full">
-                <option value="" disabled={!defaultNumber}>{defaultNumber ? `My usual number (${defaultNumber.label ?? defaultNumber.e164})` : unavailable ? 'No outbound number' : 'Select a number'}</option>
+                <option value="" disabled={!defaultNumber}>{defaultNumber ? `My usual number (${defaultNumber.label ?? formatPhoneForDisplay(defaultNumber.e164)})` : unavailable ? 'No outbound number' : 'Select a number'}</option>
                 {numbers.map((number) => (
-                  <option key={number.id} value={number.id}>{number.label ? `${number.label} (${number.e164})` : number.e164}</option>
+                  <option key={number.id} value={number.id}>{number.label ? `${number.label} (${formatPhoneForDisplay(number.e164)})` : formatPhoneForDisplay(number.e164)}</option>
                 ))}
               </SelectInput>
             </div>
@@ -132,7 +134,7 @@ export function NewCallForm({
     >
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor={`${id}-to`}>Number to call</FieldLabel>
-        <TextInput
+        <PhoneInput
           id={`${id}-to`}
           value={toNumber}
           onChange={(event) => setToNumber(event.target.value)}
@@ -150,9 +152,9 @@ export function NewCallForm({
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor={`${id}-from`}>Call from</FieldLabel>
         <SelectInput id={`${id}-from`} value={phoneNumberId} onChange={(event) => setPhoneNumberId(event.target.value)} disabled={unavailable || busy}>
-          <option value="" disabled={!defaultNumber}>{defaultNumber ? `My usual number (${defaultNumber.label ?? defaultNumber.e164})` : 'Select a number'}</option>
+          <option value="" disabled={!defaultNumber}>{defaultNumber ? `My usual number (${defaultNumber.label ?? formatPhoneForDisplay(defaultNumber.e164)})` : 'Select a number'}</option>
           {numbers.map((number) => (
-            <option key={number.id} value={number.id}>{number.label ? `${number.label} (${number.e164})` : number.e164}</option>
+            <option key={number.id} value={number.id}>{number.label ? `${number.label} (${formatPhoneForDisplay(number.e164)})` : formatPhoneForDisplay(number.e164)}</option>
           ))}
         </SelectInput>
         {unavailable ? <Hint>Calling is unavailable. Check number assignments and calling setup.</Hint> : null}

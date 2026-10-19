@@ -1,5 +1,6 @@
 'use client';
 
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import Link from 'next/link';
 import { DividedList, EmptyState, GroupHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
@@ -44,7 +45,7 @@ export function VoiceSettingsContent({ organizationId, number, outcomes, routes,
           </section>
           <section id="caller-identity" className="scroll-mt-20 rounded-lg border border-border bg-surface p-4">
             <GroupHeading>Caller identity</GroupHeading>
-            {mayManageIdentity ? <OutboundIdentity organizationId={organizationId} number={number} /> : <Hint className="mt-2">{number ?? 'None set.'} Your role, {role}, cannot change it.</Hint>}
+            {mayManageIdentity ? <OutboundIdentity organizationId={organizationId} number={number} /> : <Hint className="mt-2">{number ? formatPhoneForDisplay(number) : 'None set.'} Your role, {role}, cannot change it.</Hint>}
           </section>
           <section id="business-hours" className="scroll-mt-20 rounded-lg border border-border bg-surface p-4">
             <GroupHeading>Business hours</GroupHeading>

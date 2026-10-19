@@ -1,5 +1,7 @@
 'use client';
 
+import { PhoneInput } from '@/components/controls/phone-input';
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { Button } from '@/components/controls/button';
@@ -104,7 +106,7 @@ export function RoutingSection({
                     {!route.enabled ? <Badge>Disabled</Badge> : null}
                   </div>
                   <div className="text-sm text-muted">
-                    {number ? (number.label ? `${number.e164} (${number.label})` : number.e164) : 'Organization default'}
+                    {number ? (number.label ? `${formatPhoneForDisplay(number.e164)} (${number.label})` : formatPhoneForDisplay(number.e164)) : 'Organization default'}
                     {' · '}
                     {DESTINATION_LABEL[route.destinationType]}
                     {route.destinationType === 'members' ? ` · ${route.ringStrategy === 'everyone' ? 'Everyone' : route.ringStrategy === 'sequential' ? 'Sequential' : 'Round robin'}` : ''}
@@ -288,7 +290,7 @@ function RouteEditor({ organizationId, route, numbers, members, routes, onDone }
         <SelectInput id="route-number" className="mt-1" value={numberId} onChange={(event) => setNumberId(event.target.value)}>
           <option value="">Organization default</option>
           {numbers.map((number) => (
-            <option key={number.id} value={number.id}>{number.label ? `${number.e164} (${number.label})` : number.e164}</option>
+            <option key={number.id} value={number.id}>{number.label ? `${formatPhoneForDisplay(number.e164)} (${number.label})` : formatPhoneForDisplay(number.e164)}</option>
           ))}
         </SelectInput>
       </div>
@@ -339,7 +341,7 @@ function RouteEditor({ organizationId, route, numbers, members, routes, onDone }
       ) : destinationType === 'external_number' ? (
         <div>
           <FieldLabel htmlFor="route-external">Number</FieldLabel>
-          <TextInput id="route-external" type="tel" className="mt-1" placeholder="+14165550142" value={destinationExternalNumber}
+          <PhoneInput id="route-external" type="tel" className="mt-1" placeholder="+14165550142" value={destinationExternalNumber}
             onChange={(event) => setDestinationExternalNumber(event.target.value)} />
         </div>
       ) : destinationType === 'ai_receptionist' ? <Hint>Requires an enabled receptionist, assigned runtime and available budget below. If unavailable, this route uses its fallback.</Hint> : <SelectInput aria-label="Destination route" value={destinationRouteId} onChange={event => setDestinationRouteId(event.target.value)}><option value="">Choose route</option>{routes.filter(candidate => candidate.id !== route?.id).map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</SelectInput>}
@@ -359,7 +361,7 @@ function RouteEditor({ organizationId, route, numbers, members, routes, onDone }
         <OrderedMemberPicker label="Fallback to" members={members} selected={fallbackMemberIds} onChange={setFallbackMemberIds} />
       ) : null}
       {fallbackType === 'external_number' ? (
-        <TextInput type="tel" placeholder="+14165550142" value={fallbackExternalNumber} onChange={(event) => setFallbackExternalNumber(event.target.value)} />
+        <PhoneInput type="tel" placeholder="+14165550142" value={fallbackExternalNumber} onChange={(event) => setFallbackExternalNumber(event.target.value)} />
       ) : null}
       {fallbackType === 'route' ? <SelectInput aria-label="Fallback route" value={fallbackRouteId} onChange={event => setFallbackRouteId(event.target.value)}><option value="">Choose route</option>{routes.filter(candidate => candidate.id !== route?.id).map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</SelectInput> : null}
 
@@ -389,7 +391,7 @@ function RouteEditor({ organizationId, route, numbers, members, routes, onDone }
         <GroupHeading>Test route</GroupHeading>
         <Hint className="mt-1">Tests saved routing for the selected number. Save changes before testing.</Hint>
         <div className="mt-2 flex items-center gap-2">
-          <TextInput aria-label="Routing test caller number" placeholder="+14165558821" size="small" value={previewNumber} onChange={(event) => setPreviewNumber(event.target.value)} className="w-40" />
+          <PhoneInput aria-label="Routing test caller number" placeholder="+14165558821" size="small" value={previewNumber} onChange={(event) => setPreviewNumber(event.target.value)} className="w-40" />
           <Button type="button" tone="secondary" size="small" onClick={testRoute} disabled={previewing}>Test route</Button>
         </div>
         {preview ? (
@@ -399,7 +401,7 @@ function RouteEditor({ organizationId, route, numbers, members, routes, onDone }
             {preview.memberIds.length > 0 ? (
               <div className="mt-1">{preview.memberIds.map((id) => members.find((member) => member.id === id)?.displayName ?? id).join(', ')}</div>
             ) : null}
-            {preview.externalNumber ? <div className="mt-1">{preview.externalNumber}</div> : null}
+            {preview.externalNumber ? <div className="mt-1">{formatPhoneForDisplay(preview.externalNumber)}</div> : null}
             {preview.warnings.map((warning) => <Hint key={warning} className="mt-1">{warning}</Hint>)}
           </div>
         ) : null}

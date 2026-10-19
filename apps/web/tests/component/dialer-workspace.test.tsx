@@ -24,9 +24,9 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); telephone.value = { ...telephon
 describe('dialer workspace', () => {
   it('selects a real follow-up, shows its context and binds the call to that customer', async () => {
     render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101'), entry('bob', 'Bob', '+14165550102')]} />);
-    expect(screen.getByLabelText('Number to call')).toHaveValue('+14165550101');
+    expect(screen.getByLabelText('Number to call')).toHaveValue('(416)555-0101');
     fireEvent.click(screen.getByRole('button', { name: /Bob/ }));
-    expect(screen.getByLabelText('Number to call')).toHaveValue('+14165550102');
+    expect(screen.getByLabelText('Number to call')).toHaveValue('(416)555-0102');
     expect(screen.getByRole('heading', { name: 'Bob', level: 2 })).toBeVisible();
     expect(screen.getByText('Recorded notes for Bob')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Call' }));
@@ -98,7 +98,7 @@ describe('dialer console presentation', () => {
   it('selecting a queue row fills the number without dialing', () => {
     render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101'), entry('bob', 'Bob', '+14165550102')]} />);
     fireEvent.click(screen.getByRole('button', { name: /Bob/ }));
-    expect(screen.getByLabelText('Number to call')).toHaveValue('+14165550102');
+    expect(screen.getByLabelText('Number to call')).toHaveValue('(416)555-0102');
     expect(dial).not.toHaveBeenCalled();
   });
   it('searches only the loaded follow-ups and says so when that is not the whole queue', () => {
@@ -112,7 +112,7 @@ describe('dialer console presentation', () => {
   });
   it('dials a number handed over by a link, with no follow-up selected', () => {
     render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101')]} prefill="+14165550199" />);
-    expect(screen.getByLabelText('Number to call')).toHaveValue('+14165550199');
+    expect(screen.getByLabelText('Number to call')).toHaveValue('(416)555-0199');
     expect(screen.getByRole('heading', { name: 'New call' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Start calling' })).toBeDisabled();
   });
@@ -191,7 +191,7 @@ describe('dialer toolbar composition', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Focus' }));
     // The provider invokes this callback when the popup closes.
     act(() => draft.onReturn({ toNumber: '+14165550188', phoneNumberId: 'other-line' }));
-    expect(screen.getByLabelText('Number to call')).toHaveValue('+14165550188');
+    expect(screen.getByLabelText('Number to call')).toHaveValue('(416)555-0188');
     expect(screen.getByLabelText('Call from')).toHaveValue('other-line');
     fireEvent.click(screen.getByRole('button', { name: 'Call' }));
     await waitFor(() => expect(dial).toHaveBeenCalledWith(expect.objectContaining({ toNumber: '+14165550188', customerId: undefined, phoneNumberId: 'other-line' })));

@@ -1,5 +1,6 @@
 'use client';
 
+import { PhoneInput } from '@/components/controls/phone-input';
 import { useId, type ReactNode } from 'react';
 import type { FormDefinition, FormField as FormFieldDefinition } from '@gold/schemas';
 import { Checkbox } from '@gold/ui/components/checkbox';
@@ -118,8 +119,10 @@ function RenderedField({ field, id, value, error, disabled, onChange }: FieldPro
                 {field.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </SelectInput>
             );
+          case 'phone':
+            return <PhoneInput {...control} value={text} disabled={disabled} placeholder={field.placeholder} autoComplete="tel" onChange={(event) => onChange(event.target.value)} />;
           default: {
-            const type = field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text';
+            const type = field.type === 'email' ? 'email' : field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text';
             return (
               <TextInput
                 {...control}
@@ -132,7 +135,7 @@ function RenderedField({ field, id, value, error, disabled, onChange }: FieldPro
                 max={field.type === 'number' ? field.max : undefined}
                 step={field.type === 'number' ? 'any' : undefined}
                 maxLength={field.type === 'short_text' ? field.maxLength ?? 500 : undefined}
-                autoComplete={field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : undefined}
+                autoComplete={field.type === 'email' ? 'email' : undefined}
                 onChange={(event) => onChange(event.target.value)}
               />
             );

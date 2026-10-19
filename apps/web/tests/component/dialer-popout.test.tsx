@@ -89,7 +89,7 @@ describe('compact dialer pop-out', () => {
     expect(popup.getByLabelText('Number to call')).toHaveValue('+15145550123');
     expect(popup.getByLabelText('Call from')).toHaveValue('');
     fireEvent.click(popup.getByRole('button', { name: 'Return to GildOps' }));
-    await waitFor(() => expect(screen.getByLabelText('Number to call')).toHaveValue('+15145550123'));
+    await waitFor(() => expect(screen.getByLabelText('Number to call')).toHaveValue('(514)555-0123'));
     expect(child.close).toHaveBeenCalledTimes(1);
     expect(device.hangUp).not.toHaveBeenCalled();
     expect(device.register).not.toHaveBeenCalled();

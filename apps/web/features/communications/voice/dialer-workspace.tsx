@@ -1,5 +1,6 @@
 'use client';
 
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ArrowDownLeft, CircleAlert, ExternalLink, Lock, Phone, PanelLeft, PanelRight, Search, Settings2 } from 'lucide-react';
@@ -172,7 +173,7 @@ export function DialerWorkspace({
   // --- Calling readiness -------------------------------------------------------------------
   const BlockerIcon = blocker ? BLOCKER_ICON[blocker.kind] : null;
   const fromLabel = options.defaultNumber
-    ? options.defaultNumber.label ? `${options.defaultNumber.label} · ${options.defaultNumber.e164}` : options.defaultNumber.e164
+    ? options.defaultNumber.label ? `${options.defaultNumber.label} · ${formatPhoneForDisplay(options.defaultNumber.e164)}` : formatPhoneForDisplay(options.defaultNumber.e164)
     : options.numbers.length ? 'Choose a line when you call' : blocker && blocker.setup !== 'phone-numbers' ? 'Not available' : 'No outbound number';
   const readiness = (
     <section aria-label="Calling readiness" className="shrink-0">
@@ -332,7 +333,7 @@ export function DialerWorkspace({
                       {isDue(followUp.dueAt) ? <span className="shrink-0 text-xs font-medium text-warning">Due now</span> : <span className="shrink-0 text-xs tabular-nums text-muted">{dueLabel(followUp.dueAt)}</span>}
                     </span>
                     <span className="block truncate text-xs text-muted">{followUp.title}</span>
-                    <span className="block truncate text-xs tabular-nums text-muted">{customer?.phone ?? 'No phone number'}{followUp.ownerName ? ` · ${followUp.ownerName}` : ''}</span>
+                    <span className="block truncate text-xs tabular-nums text-muted">{customer?.phone ? formatPhoneForDisplay(customer.phone) : 'No phone number'}{followUp.ownerName ? ` · ${followUp.ownerName}` : ''}</span>
                   </span>
                 </button>
               </li>;
@@ -363,7 +364,7 @@ export function DialerWorkspace({
           </div>
           <dl className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
             <dt className="text-muted">Phone</dt>
-            <dd className={cx('truncate tabular-nums', !selected.customer.phone && 'text-muted')}>{selected.customer.phone ?? 'Not recorded'}</dd>
+            <dd className={cx('truncate tabular-nums', !selected.customer.phone && 'text-muted')}>{selected.customer.phone ? formatPhoneForDisplay(selected.customer.phone) : 'Not recorded'}</dd>
             <dt className="text-muted">Email</dt>
             <dd className={cx('truncate', !selected.customer.email && 'text-muted')}>{selected.customer.email ?? 'Not recorded'}</dd>
           </dl>
@@ -410,7 +411,7 @@ export function DialerWorkspace({
       {REGIONS.map(({ key, label }) => <button key={key} type="button" data-slot="tabs-trigger" aria-pressed={region === key} className={cx(tabTriggerStyles, 'flex-1')} onClick={() => setRegion(key)}>{label}</button>)}
     </div> : null}
     {live && !focus && region !== 'call' ? <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface p-3 text-sm @min-[64rem]/dialer:hidden">
-      <span>{incoming ? 'Incoming call' : `On a call with ${activeCall?.contactLabel ?? 'a caller'}`}</span>
+      <span>{incoming ? 'Incoming call' : `On a call with ${formatPhoneForDisplay(activeCall?.contactLabel ?? 'a caller')}`}</span>
       <Button type="button" tone="secondary" size="small" onClick={() => setRegion('call')}>Show call controls</Button>
     </div> : null}
 

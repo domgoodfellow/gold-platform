@@ -1,5 +1,6 @@
 'use client';
 
+import { PhoneInput } from '@/components/controls/phone-input';
 import { ErrorText, TextArea, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
 import { useActionState } from 'react';
@@ -72,7 +73,7 @@ export function ProfileForm({
       <div className="flex flex-col gap-2 sm:flex-row">
         <label className="flex flex-1 flex-col gap-1 text-sm">
           <span>Phone</span>
-          <TextInput
+          <PhoneInput
             name="contactPhone"
             type="tel"
             maxLength={50}

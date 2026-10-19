@@ -1451,6 +1451,7 @@
       "category": "component",
       "concerns": ["ui", "responsive"]
     },
+    "apps/web/tests/component/phone-input.test.tsx": {"category": "component", "concerns": ["ui", "communications"], "note": "Formatted phone previews preserve original form values, native validation, editing and reset."},
     "apps/web/tests/unit/phone-display.test.ts": {
       "category": "unit",
       "concerns": ["customers", "locale"]

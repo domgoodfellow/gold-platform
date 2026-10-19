@@ -1,5 +1,6 @@
 'use client';
 
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -56,7 +57,7 @@ export function ConversationDetailView({
   const params = useSearchParams();
   const { conversation } = detail;
   const isEmail = conversation.channel === 'email';
-  const externalAddress = conversation.channel === 'email' ? conversation.externalEmail : conversation.externalNumber;
+  const externalAddress = conversation.channel === 'email' ? conversation.externalEmail : formatPhoneForDisplay(conversation.externalNumber);
   const title = detail.resolution.state === 'resolved' ? detail.resolution.customer.name : externalAddress;
 
   const [error, setError] = useState<string | null>(null);
@@ -328,7 +329,7 @@ function CustomerPanel({
       {candidates.map((candidate) => (
         <div key={candidate.id} className="flex flex-wrap items-center gap-2 pl-2">
           <span className="font-medium">{candidate.name}</span>
-          <span className="text-muted">{candidate.email ?? candidate.phone ?? ''}</span>
+          <span className="text-muted">{candidate.email ?? (candidate.phone ? formatPhoneForDisplay(candidate.phone) : '')}</span>
           {mayHandle ? <Button type="button" size="small" onClick={() => onLink(candidate.id)}>Link</Button> : null}
         </div>
       ))}
@@ -344,7 +345,7 @@ function CustomerPanel({
             {results.map((candidate) => (
               <li key={candidate.id} className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">{candidate.name}</span>
-                <span className="text-muted">{candidate.email ?? candidate.phone ?? ''}</span>
+                <span className="text-muted">{candidate.email ?? (candidate.phone ? formatPhoneForDisplay(candidate.phone) : '')}</span>
                 <Button type="button" size="small" onClick={() => onLink(candidate.id)}>Link</Button>
               </li>
             ))}

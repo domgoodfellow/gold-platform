@@ -61,7 +61,7 @@ test('Dialer uses tenant call follow-ups and the global pop-out survives navigat
       await expect(page.getByRole('button', { name: 'Call', exact: true })).toBeDisabled();
       await region('Queue');
       await page.getByRole('button', { name: /Alice Plumbing.*Discuss/ }).click();
-      await expect(page.getByRole('textbox', { name: 'Number to call', exact: true })).toHaveValue('+14165550101');
+      await expect(page.getByRole('textbox', { name: 'Number to call', exact: true })).toHaveValue('(416)555-0101');
       await region('Customer');
       await expect(page.getByRole('link', { name: 'Alice Plumbing', exact: true })).toHaveAttribute('href', `${base}/customers/${alice}`);
       await page.getByRole('link', { name: 'Call history', exact: true }).click();

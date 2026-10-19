@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay } from '@/lib/display/phone';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AppPage } from '@/components/layout/app-page';
@@ -68,7 +69,7 @@ export default async function PhoneNumberDetailPage({
   return (
     <AppPage>
       <PageHeader
-        title={number.label ? `${number.label} (${number.e164})` : number.e164}
+        title={number.label ? `${number.label} (${formatPhoneForDisplay(number.e164)})` : formatPhoneForDisplay(number.e164)}
         crumbs={[...workspaceConfigCrumbs(organizationId, 'phone-numbers', gate), { label: areaLabel('comms-numbers'), href: `/organizations/${organizationId}/comms/configuration/numbers` }]}
         meta={<Badge tone={READINESS_TONE[number.readiness]}>{READINESS_LABEL[number.readiness]}</Badge>}
       />
@@ -76,7 +77,7 @@ export default async function PhoneNumberDetailPage({
       <section>
         <GroupHeading>This number</GroupHeading>
         <DefinitionList className="mt-2">
-          <Detail label="Number">{number.e164}</Detail>
+          <Detail label="Number">{formatPhoneForDisplay(number.e164)}</Detail>
           <Detail label="Name">{number.label}</Detail>
           <Detail label="Used for"><Badge>{PURPOSE_LABEL[number.purpose]}</Badge></Detail>
           <Detail label="Source"><Badge>{ORIGIN_LABEL[number.origin]}</Badge></Detail>
@@ -145,7 +146,7 @@ export default async function PhoneNumberDetailPage({
               {recent.items.map((call) => (
                 <li key={call.id}>
                   <Link href={`${callsBase}/${call.id}`} className="underline underline-offset-4">
-                    {call.customerName ?? call.externalNumber ?? 'Withheld number'}
+                    {call.customerName ?? (call.externalNumber ? formatPhoneForDisplay(call.externalNumber) : 'Withheld number')}
                   </Link>
                   <span className="ml-2 text-muted">{call.direction === 'inbound' ? 'Inbound' : 'Outbound'}</span>
                 </li>

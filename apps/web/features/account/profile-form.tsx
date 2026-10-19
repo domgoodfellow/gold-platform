@@ -1,5 +1,6 @@
 'use client';
 
+import { PhoneInput } from '@/components/controls/phone-input';
 import { useActionState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@gold/ui/components/avatar';
 import { Button } from '@/components/controls/button';
@@ -66,7 +67,7 @@ export function PersonalProfileForm({ profile, email }: { profile: AccountProfil
           {contacts.map(({ name, label, autoComplete, maxLength }) => (
             <FormField key={name} id={name} label={label}
               hint={name === 'phone_e164' ? 'Include + and country code, without spaces: +14165550142.' : undefined}>
-              {(field) => <TextInput {...field} name={name} defaultValue={profile[name] ?? ''} maxLength={maxLength} autoComplete={autoComplete} type={name === 'phone_e164' ? 'tel' : 'text'} />}
+              {(field) => name === 'phone_e164' ? <PhoneInput {...field} name={name} defaultValue={profile[name] ?? ''} maxLength={maxLength} autoComplete={autoComplete} /> : <TextInput {...field} name={name} defaultValue={profile[name] ?? ''} maxLength={maxLength} autoComplete={autoComplete} />}
             </FormField>
           ))}
         </div>

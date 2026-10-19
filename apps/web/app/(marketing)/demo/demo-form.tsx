@@ -1,5 +1,6 @@
 'use client';
 
+import { PhoneInput } from '@/components/controls/phone-input';
 import Link from 'next/link';
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
@@ -63,7 +64,7 @@ export function DemoForm({
 
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="phone">Phone (optional)</FieldLabel>
-        <TextInput id="phone" name="phone" type="tel" maxLength={PUBLIC_INTAKE_LIMITS.phone} autoComplete="tel" />
+        <PhoneInput id="phone" name="phone" type="tel" maxLength={PUBLIC_INTAKE_LIMITS.phone} autoComplete="tel" />
       </div>
 
       <div className="flex flex-col gap-1">

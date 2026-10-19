@@ -1,5 +1,6 @@
 'use client';
 
+import { PhoneInput } from '@/components/controls/phone-input';
 import { useActionState, useEffect } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, SelectInput, TextInput } from '@/components/controls/inputs';
@@ -71,7 +72,7 @@ export function EditCustomerForm({
           aria-label="Email"
           className="flex-1"
         />
-        <TextInput
+        <PhoneInput
           name="phone"
           type="tel"
           maxLength={50}
