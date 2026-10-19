@@ -40,7 +40,7 @@ async function capture(page: Page, name: string, section?: string) {
   }
 }
 test.use({ storageState: { cookies: [], origins: [] }, actionTimeout: 15000 });
-test('Global Home operational queues, owning actions, Agent and responsive surfaces', async ({ page, browser }) => {
+test('Global Home operational queues, owning actions, Agent and responsive surfaces', async ({ page, browser, baseURL }) => {
   test.setTimeout(300000);
   config({ path: path.resolve(__dirname, '../../../.env.test') });
   const url = process.env.SUPABASE_URL!;
@@ -92,6 +92,26 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
     await expect(page.getByText('Some sources are temporarily unavailable')).toHaveCount(0);
     await expect(page.getByText('12 Urgent Cases', { exact: true }).filter({ visible: true })).toBeVisible();
     await capture(page, '02-populated-desktop'); await capture(page, '05-full-feature');
+    const businessNav = () => page.getByRole('navigation', { name: 'This business', exact: true }).filter({ visible: true });
+    for (const width of [1440, 768, 390]) {
+      await page.setViewportSize({ width, height: 1050 });
+      await visit();
+      if (width < 768) await page.getByRole('button', { name: /^(Toggle Sidebar|Menu)$/ }).click();
+      for (const name of ['CRM', 'Communications', 'Marketing', 'Support', 'Work', 'Finance', 'Automations', 'AI', 'Studio']) await expect(businessNav().getByRole('link', { name, exact: true })).toBeVisible();
+      for (const name of ['Customers', 'Invoices', 'Payments', 'Dialer']) await expect(businessNav().getByRole('link', { name, exact: true })).toHaveCount(0);
+      await page.screenshot({ path: path.join(shots, `restored-workspaces-${width}.png`), animations: 'disabled' });
+      await businessNav().getByRole('link', { name: 'CRM', exact: true }).click();
+      await expect(page).toHaveURL(`${org}/sales`);
+      if (width < 768) await page.getByRole('button', { name: /^(Toggle Sidebar|Menu)$/ }).click();
+      await expect(businessNav().getByRole('link', { name: 'Customers', exact: true })).toBeVisible();
+      await expect(businessNav().getByRole('link', { name: 'Invoices', exact: true })).toHaveCount(0);
+      await expect(businessNav().getByRole('link', { name: 'Back to Workspaces', exact: true })).toBeVisible();
+      await page.screenshot({ path: path.join(shots, `restored-crm-${width}.png`), animations: 'disabled' });
+      await businessNav().getByRole('link', { name: 'Back to Workspaces', exact: true }).click();
+    }
+    await page.setViewportSize({ width: 1440, height: 1050 });
+    await visit();
+
     const attentionLink = page.getByRole('region', { name: 'Needs attention', exact: true }).getByRole('link', { name: /^Open Home overdue follow-up/ }).first();
     const rowBounds = await attentionLink.boundingBox();
     expect(rowBounds!.width).toBeGreaterThan(500);
@@ -191,9 +211,9 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
     const role = await createRole(db, { organizationId, name: 'Home browser reader', capabilities: [] });
     await addMember(db, { organizationId, email, roleId: role });
     const context = await browser.newContext({ storageState: { cookies: [], origins: [] }, viewport: { width: 1440, height: 1050 } }), restricted = await context.newPage();
-    await restricted.goto('http://localhost:3000/login'); await restricted.getByLabel('Email', { exact: true }).fill(email); await restricted.getByLabel('Password', { exact: true }).fill(DEMO_PASSWORD); await restricted.getByRole('button', { name: 'Log in', exact: true }).click();
+    await restricted.goto(new URL('/login', baseURL).href); await restricted.getByLabel('Email', { exact: true }).fill(email); await restricted.getByLabel('Password', { exact: true }).fill(DEMO_PASSWORD); await restricted.getByRole('button', { name: 'Log in', exact: true }).click();
     await restricted.waitForURL(url => !url.pathname.endsWith('/login'));
-    await restricted.goto(`http://localhost:3000${home}`); await expect(restricted.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
+    await restricted.goto(new URL(home, baseURL).href); await expect(restricted.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
     await expect(restricted.getByText('Home urgent Case', { exact: false })).toHaveCount(0);
     await capture(restricted, '16-restricted-role');
     await context.close();

@@ -37,7 +37,7 @@ Status describes repository implementation, not hosted/provider acceptance. **Bu
 
 ## Business configuration
 
-Both acquisition paths reach the same versioned business profile editor in Setup and Organization General Settings. It controls authored vocabulary, labels and the ordered flat sidebar. Missing configuration keeps neutral defaults without asserting that setup was completed. Permissions and entitlements always filter the chosen destinations. `/platform` has its own guarded shell; GildOps operating-organization Membership and exact live platform permissions remain required. Old organization Platform URLs render the organization not-found page.
+Both acquisition paths reach the same versioned business profile editor in Setup and Organization General Settings. It controls authored vocabulary, labels and the ordered workspace page labels. Missing configuration keeps neutral defaults without asserting that setup was completed. Permissions and entitlements always filter the chosen destinations. `/platform` has its own guarded shell; GildOps operating-organization Membership and exact live platform permissions remain required. Old organization Platform URLs render the organization not-found page.
 
 ## Gaps
 

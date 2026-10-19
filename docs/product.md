@@ -920,4 +920,4 @@ Platform Administration remains independently authorized system administration. 
 
 ## Business vocabulary and destination choices
 
-An organization may save singular/plural nouns, authored destination labels and an ordered flat sidebar in one versioned business profile. Setup and General Settings edit the same record. An absent profile retains neutral labels; it does not assert onboarding completion. Canonical permissions, entitlements, routes and stored record names remain independent. Platform lives at `/platform` with its own privileged shell.
+An organization may save singular/plural nouns, authored destination labels and an ordered workspace page labels in one versioned business profile. Setup and General Settings edit the same record. An absent profile retains neutral labels; it does not assert onboarding completion. Canonical permissions, entitlements, routes and stored record names remain independent. Platform lives at `/platform` with its own privileged shell.

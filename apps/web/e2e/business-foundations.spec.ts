@@ -30,7 +30,7 @@ async function fixture(browser:Browser,platform=false){
  return {context,db,organizationId,cleanup:async()=>{}};
 }
 
-test('business vocabulary and one sidebar persist across destinations and responsive widths',async({browser})=>{
+test('business vocabulary stays within contextual workspaces across responsive widths',async({browser})=>{
   test.setTimeout(120_000);
   const {context,db,organizationId}=await fixture(browser);
   const {data:before,error}=await db.from('organization_business_profiles').select('*').eq('organization_id',organizationId).maybeSingle();if(error)throw error;
@@ -47,13 +47,13 @@ test('business vocabulary and one sidebar persist across destinations and respon
     await expect(page.getByRole('heading',{name:'No patients yet',exact:true})).toBeVisible();
     const nav=()=>page.getByRole('navigation',{name:'This business'});
     await expect(nav().getByRole('link',{name:'Patients',exact:true})).toBeVisible();
-    const links=await nav().getByRole('link').evaluateAll(elements=>elements.map(e=>e.getAttribute('href')));
     for(const width of [1440,768,390]){
       await page.setViewportSize({width,height:900});
       await page.goto(`/organizations/${organizationId}/calls`);
       if(width<768)await page.getByRole('button',{name:'Toggle Sidebar'}).click();
-      await expect(nav().getByRole('link',{name:'Patients',exact:true})).toBeVisible();
-      expect(await nav().getByRole('link').evaluateAll(elements=>elements.map(e=>e.getAttribute('href')))).toEqual(links);
+      await expect(nav().getByRole('link',{name:'Dialer',exact:true})).toBeVisible();
+      await expect(nav().getByRole('link',{name:'Patients',exact:true})).toHaveCount(0);
+      await expect(nav().getByRole('link',{name:'Back to Workspaces',exact:true})).toBeVisible();
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
       await page.screenshot({path:`.artifacts/business-foundations-${width}.png`,fullPage:true});
     }

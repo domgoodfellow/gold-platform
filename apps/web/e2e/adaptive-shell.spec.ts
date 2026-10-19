@@ -24,33 +24,34 @@ const sidebar = (page: import('@playwright/test').Page) => page.locator('[data-s
 
 test.describe('a tenant owner', () => {
   test.use({ storageState: OWNER_STORAGE_STATE });
-  test('keeps one destination list through navigation, refresh and history', async ({page}) => {
+  test('keeps workspace selection and contextual destinations through navigation, refresh and history', async ({page}) => {
     const {organizationId}=loadDemoContext();const base=`/organizations/${organizationId}`;
     await page.goto(`${base}/home`);
     const links=await sidebar(page).getByRole('link').evaluateAll(elements=>elements.map(element=>element.getAttribute('href')));
     await page.locator('[data-slot="sidebar-container"]').evaluate(element=>element.setAttribute('data-persistence-probe','retained'));
-    for(const path of ['customers','sales','calls','field','finance','ai']) {
+    for(const path of ['sales','comms','field','finance','ai']) {
       if(!links.includes(`${base}/${path}`))continue;
       await sidebar(page).locator(`a[href="${base}/${path}"]`).click();
       await expect(page).toHaveURL(`${base}/${path}`);
-      expect(await sidebar(page).getByRole('link').evaluateAll(elements=>elements.map(element=>element.getAttribute('href')))).toEqual(links);
-      await expect(sidebar(page).getByRole('link',{name:'Back to Workspaces'})).toHaveCount(0);
+      await expect(sidebar(page).getByRole('link',{name:'Back to Workspaces'})).toBeVisible();
       await expect(page.locator('[data-persistence-probe="retained"]')).toHaveCount(1);
       await page.goBack();await page.goForward();await page.reload();
+      await expect(sidebar(page).getByRole('link',{name:'Back to Workspaces'})).toBeVisible();
+      await page.goto(`${base}/home`);
       expect(await sidebar(page).getByRole('link').evaluateAll(elements=>elements.map(element=>element.getAttribute('href')))).toEqual(links);
     }
     await expect(sidebar(page).getByRole('link',{name:'Administration',exact:true})).toHaveCount(0);
   });
-  for(const width of [1440,768,390]) test(`flat business navigation at ${width}px`,async({page},info)=>{
+  for(const width of [1440,768,390]) test(`contextual workspace navigation at ${width}px`,async({page},info)=>{
     await page.setViewportSize({width,height:900});await page.goto(`/organizations/${loadDemoContext().organizationId}/customers`);
-    if(width<768)await page.getByRole('button',{name:'Toggle Sidebar'}).click();
+    if(width<768)await page.getByRole('button',{name:/^(Toggle Sidebar|Menu)$/}).click();
     const nav=page.getByRole('navigation',{name:'This business'}).filter({visible:true});
-    await expect(nav.getByRole('link',{name:'Home',exact:true})).toBeVisible();
-    await expect(nav.getByRole('link',{name:'Library',exact:true})).toBeVisible();
-    await expect(nav.getByRole('link',{name:'Back to Workspaces'})).toHaveCount(0);
+    await expect(nav.getByRole('link',{name:'Customers',exact:true})).toBeVisible();
+    await expect(nav.getByRole('link',{name:'Back to Workspaces'})).toBeVisible();
+    await expect(nav.getByRole('link',{name:'Invoices',exact:true})).toHaveCount(0);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     await page.screenshot({path:info.outputPath(`business-${width}.png`)});
-    if(width<768){await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.getByRole('button',{name:'Toggle Sidebar'})).toBeFocused();}
+    if(width<768){await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.getByRole('button',{name:/^(Toggle Sidebar|Menu)$/})).toBeFocused();}
   });
   test('refuses Platform content to a tenant owner',async({page})=>{
     await page.goto('/platform/providers');
@@ -66,7 +67,7 @@ test.describe('a tenant colleague with a reduced role', () => {
     const { organizationId } = loadDemoContext();
     await page.goto(`/organizations/${organizationId}/home`);
     const nav = sidebar(page);
-    await expect(nav.getByRole('link', { name: 'Work overview', exact: true })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Work', exact: true })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Team', exact: true })).toHaveCount(0);
     await expect(nav.getByRole('link', { name: 'Plan & usage', exact: true })).toHaveCount(0);
     await expect(nav.getByText('Platform', { exact: true })).toHaveCount(0);
@@ -104,7 +105,7 @@ test.describe('GildOps platform staff',()=>{
   });
   for(const width of [768,390])test(`Platform navigation at ${width}px`,async({page},info)=>{
     await page.setViewportSize({width,height:900});await page.goto(platformUrl('providers'));
-    if(width<768)await page.getByRole('button',{name:'Toggle Sidebar'}).click();
+    if(width<768)await page.getByRole('button',{name:/^(Toggle Sidebar|Menu)$/}).click();
     const nav=page.getByRole('navigation',{name:'Platform Administration'}).filter({visible:true});
     await expect(nav.getByRole('link',{name:'Providers',exact:true})).toHaveAttribute('aria-current','page');
     await expect(nav.getByRole('link',{name:'Failures',exact:true})).toBeVisible();
@@ -135,7 +136,7 @@ test.describe('account menu and icon-bearing Settings', () => {
       await open();
       const settings = page.getByRole('navigation', { name: 'Settings', exact: true });
       await expect(settings).toBeVisible();
-      if (width >= 768) await page.locator('header').getByRole('button', { name: 'Toggle Sidebar', exact: true }).click();
+      if (width >= 768) await page.locator('header').getByRole('button', { name: /^(Toggle Sidebar|Menu)$/ }).click();
       for (const label of ['Profile', 'Security & sign-in', 'Appearance', 'General', 'Branding', 'Domains', 'Features', 'Team & access', 'Connections', 'Plan & usage']) {
         const link = settings.getByRole('link', { name: label, exact: true });
         await expect(link).toBeVisible();
@@ -148,7 +149,7 @@ test.describe('account menu and icon-bearing Settings', () => {
       await open();
       await settings.getByRole('link', { name: 'Back to app', exact: true }).click();
       await expect(page).toHaveURL(`/organizations/${organizationId}/customers`);
-      if (width >= 768) await page.locator('header').getByRole('button', { name: 'Toggle Sidebar', exact: true }).click();
+      if (width >= 768) await page.locator('header').getByRole('button', { name: /^(Toggle Sidebar|Menu)$/ }).click();
       await page.goto(`/organizations/${organizationId}/comms`);
       await open();
       const business = page.getByRole('navigation', { name: 'This business' });
@@ -166,7 +167,7 @@ test.describe('account menu and icon-bearing Settings', () => {
       await business.getByRole('link', { name: 'Calls', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Calls', exact: true })).toBeVisible();
 
-      if (width >= 768) await page.locator('header').getByRole('button', { name: 'Toggle Sidebar', exact: true }).click();
+      if (width >= 768) await page.locator('header').getByRole('button', { name: /^(Toggle Sidebar|Menu)$/ }).click();
     }
   });
 });

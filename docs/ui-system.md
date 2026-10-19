@@ -809,13 +809,13 @@ Use a small named vocabulary rather than raw spacing variation.
 
 ## Navigation model
 
-An organization has one flat sidebar, in the business's chosen words and order. Setup and Organization General Settings edit the same versioned business profile. Absent configuration retains neutral application labels and does not manufacture a saved profile. Workspace identifiers remain internal domain and Calendar provenance; entering a destination does not replace the sidebar or expose workspace groups.
+Organization-level navigation shows Home, Search and Library together, followed by one eligible row per workspace. Entering a workspace replaces the central navigation with its own Overview, operating destinations and Configuration, with Back to Workspaces returning Home. `projectBusinessNavigation` decorates the canonical `projectShell` hierarchy with saved business words and destination order; it must never flatten workspace pages into the organization-level list. Saved vocabulary cannot remove workspace ownership, grant access or change canonical routes.
 
 Authorization and entitlement filter canonical destination keys before labels/order are applied. A business profile never grants a capability, enables a module or supplies arbitrary URLs. Home and Library remain shared destinations. Settings retains its canonical ownership and account-menu entry. Platform Administration is a separate privileged scope, not a tenant workspace.
 
 ## Workspace navigation
 
-Workspaces group implementation and configuration ownership internally. Their existing Home URLs remain operational dashboard destinations with task labels in the flat list. Each operating page keeps its own permission guard and relevant configuration action. A page may offer local tabs or record navigation without constructing a second sidebar. Desktop, tablet and phone consume the same authorized business destination list.
+Workspaces group operating destinations and configuration by canonical ownership. Each workspace Home remains an operational dashboard. Desktop, tablet and phone consume the same authorized hierarchy, and record/detail/calendar routes retain their workspace context.
 
 ### Workspace Home
 
@@ -840,7 +840,7 @@ CRM Home launches Customers, Opportunities and the Opportunity pipeline; the fea
 
 Opportunity creation and editing use the shared PageDrawer. The collection preserves filters and pagination in the URL. Pipeline cards share the same records and detail destinations; stage movement uses a labeled select and explicit save action. Each board stage independently previews up to ten Opportunities with exact count and per-currency totals. Unstaged is a visual column, never a stored stage. The example pipeline's column/header/card hierarchy informs the production board without runtime example imports or demo state.
 
-CRM Home is an operational dashboard: compact search/action/month toolbar, four KPI summaries, inline Needs attention categories, commercial pipeline snapshot, Recent Customers and CRM Insights, and a Today/Recent activity rail. Follow-ups use one contextual PageDrawer across Home, collection, calendar and Customer/Opportunity sections. Completion is an inline authorized action; edit/reschedule retains its originating context. Calendar is one business destination and may also be reached from operational dashboards. Existing `/calendar` children remain compatible and Calendar is available in business navigation; CRM Home and Work Home also link into their own Calendar. The business sidebar remains stable through date/view changes and event editing. Day and Week show a scrollable time grid with duration blocks, overlap columns and selectable half-hour slots; Month uses the shared month board. New event and slot selection open a neutral event drawer for title, start, end and notes. Existing native events can be rescheduled or cancelled through that drawer. The default scope is This business; This view explicitly narrows it using internal provenance. Native events do not require a Customer or Follow-up. CRM Follow-ups and scheduled Work feed the same calendar as domain projections, using their canonical editing paths; a due-only item is identified as Due rather than claiming a duration. Source failures and bounded previews are explicit. Work's resource Schedule remains the availability and dispatch surface. Legacy `/calendar` and `/follow-ups/calendar` links redirect into CRM's contextual Calendar. Calendar uses the shared navigation, period controls, month board and time-block geometry; compact month cells link to their full day. Follow-ups is an eligible flat business destination; CRM search remains a page-local action.
+CRM Home is an operational dashboard: compact search/action/month toolbar, four KPI summaries, inline Needs attention categories, commercial pipeline snapshot, Recent Customers and CRM Insights, and a Today/Recent activity rail. Follow-ups use one contextual PageDrawer across Home, collection, calendar and Customer/Opportunity sections. Completion is an inline authorized action; edit/reschedule retains its originating context. Calendar is one business destination and may also be reached from operational dashboards. Existing `/calendar` children remain compatible and Calendar is available in business navigation; CRM Home and Work Home also link into their own Calendar. The business sidebar remains stable through date/view changes and event editing. Day and Week show a scrollable time grid with duration blocks, overlap columns and selectable half-hour slots; Month uses the shared month board. New event and slot selection open a neutral event drawer for title, start, end and notes. Existing native events can be rescheduled or cancelled through that drawer. The default scope is This business; This view explicitly narrows it using internal provenance. Native events do not require a Customer or Follow-up. CRM Follow-ups and scheduled Work feed the same calendar as domain projections, using their canonical editing paths; a due-only item is identified as Due rather than claiming a duration. Source failures and bounded previews are explicit. Work's resource Schedule remains the availability and dispatch surface. Legacy `/calendar` and `/follow-ups/calendar` links redirect into CRM's contextual Calendar. Calendar uses the shared navigation, period controls, month board and time-block geometry; compact month cells link to their full day. Follow-ups remains a contextual CRM destination; CRM search remains a page-local action.
 
 Customer detail hosts Opportunities and Follow-ups tabs with Customer preselected for creation. Opportunity detail prominently shows its next Follow-up and open/recent work. Organization Settings owns Opportunity stages independently of Relationship stages; both use the configuration registry.
 
@@ -952,7 +952,7 @@ Canonical behavior:
 
 ### Phone
 
-The header shows contextual page location on the left and Menu on the right. There is no persistent bottom navigation. Business destinations use the same flat authorized navigation inside the sidebar Sheet; organization switching stays in its header. Agent is an explicit open action in the footer beside account access.
+The header shows contextual page location on the left and Menu on the right. There is no persistent bottom navigation. Business destinations use the same authorized workspace hierarchy inside the sidebar Sheet; organization switching stays in its header. Agent is an explicit open action in the footer beside account access.
 
 The Menu renders the same projected hierarchy used by desktop navigation.
 
@@ -1248,7 +1248,7 @@ Organization    General, Branding, Domains, Features
 Administration  Team & access, Connections, Plan & usage
 ```
 
-Opening Settings lands on the first destination the member may use. Every destination is a deep link and receives the Settings sidebar whether or not the person came through the menu. Back to app restores the flat business list and returns to the last page of the same business that was not Settings, validated as a path inside that business, otherwise Home.
+Opening Settings lands on the first destination the member may use. Every destination is a deep link and receives the Settings sidebar whether or not the person came through the menu. Back to app restores the appropriate workspace context and returns to the last page of the same business that was not Settings, validated as a path inside that business, otherwise Home.
 
 Search covers these destinations and the configuration workspaces own (from `CONFIG_TARGETS`) and routes each to its canonical owner. Settings does not list workspace configuration.
 
@@ -2144,7 +2144,7 @@ Those belong to their respective canonical documents.
 
 ## Marketing workspace
 
-Marketing Home is a compact operational dashboard: four evidence-backed KPIs, a contained attention panel with inline categories, campaign performance and active-campaign tables, recent inquiries and acquisition/source results, plus a supporting activity/readiness/insights rail. Empty organizations retain all panel geometry. Local Home/Campaigns/Audiences/Leads/Performance navigation preserves the business's flat sidebar. Campaign detail is deep-linkable; campaign and audience editors and inquiry review use shared PageDrawer primitives. Collection search, review/status/objective/owner/source filters, date bounds and pagination persist in the URL. Table overflow is contained within its panel at narrow widths. Activation expresses Marketing lifecycle, not delivery success; unestablished consent and unavailable promotional delivery are shown explicitly.
+Marketing Home is a compact operational dashboard: four evidence-backed KPIs, a contained attention panel with inline categories, campaign performance and active-campaign tables, recent inquiries and acquisition/source results, plus a supporting activity/readiness/insights rail. Empty organizations retain all panel geometry. Local Home/Campaigns/Audiences/Leads/Performance navigation preserves the business's contextual workspace sidebar. Campaign detail is deep-linkable; campaign and audience editors and inquiry review use shared PageDrawer primitives. Collection search, review/status/objective/owner/source filters, date bounds and pagination persist in the URL. Table overflow is contained within its panel at narrow widths. Activation expresses Marketing lifecycle, not delivery success; unestablished consent and unavailable promotional delivery are shown explicitly.
 
 
 ## Persistent application controls
@@ -2179,7 +2179,7 @@ task; a section groups content within it; a tab switches necessary alternate vie
 a position in the same document; a drawer supports a focused temporary interaction. Headings alone
 do not earn navigation. Avoid duplicate titles, context, destinations and generic decorative icons.
 
-`CONFIG_TARGETS` and `WORKSPACE_CONFIGURE` retain canonical configuration ownership and authorization. Relevant operational pages link to their configuration roots; entering a destination does not replace the flat business sidebar. Configuration landing pages may list independent concerns. General Settings separately hosts the versioned business words/navigation editor; it does not fold that independent save into business identity.
+`CONFIG_TARGETS` and `WORKSPACE_CONFIGURE` retain canonical configuration ownership and authorization. Relevant operational pages link to their configuration roots; entering a workspace shows its own eligible destinations and Configuration, with Back to Workspaces returning to organization-level selection. Configuration landing pages may list independent concerns. General Settings separately hosts the versioned business words/navigation editor; it does not fold that independent save into business identity.
 General Settings is one form, saved once, whose Business identity, Primary business address and
 Business contact groups are separate shared cards beneath the existing Settings sidebar; it has no
 section navigation. Settings groups use shared surfaces so Appearance shape, density and
