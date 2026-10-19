@@ -2,6 +2,7 @@ import { organizationIdFromPath } from '@/lib/route/platform-context';
 import { settingsScopeHref } from '@/lib/route/settings';
 import {
   AREAS,
+  CONFIG_TARGETS,
   WORKSPACES,
   areaEntitled,
   areaHref,
@@ -108,6 +109,12 @@ function areaItem(organizationId: string, area: Area, section: ShellSectionKey):
   };
 }
 
+/** A workspace page, which also stays selected while somebody edits the configuration behind it. */
+function destinationItem(organizationId: string, area: Area): NavItem {
+  const editors = CONFIG_TARGETS.filter((target) => target.destination === area.segment).map((target) => `/organizations/${organizationId}/${target.path}`);
+  return { ...areaItem(organizationId, area, 'workspaces'), ...(editors.length ? { activeHrefs: editors } : {}) };
+}
+
 /**
  * Adds Platform Administration to GildOps' own organization shell. The caller has already
  * established that this organization is the operating organization, that the person is a member
@@ -200,16 +207,18 @@ export function projectShell(input: ShellInput): ShellSection[] {
     const areas = AREAS.filter((area) => area.workspace === workspace.key && operable(area));
     const home = workspace.home ? areas.find((area) => area.segment === workspace.home) : undefined;
     const concerns = workspaceConfigureItems(organizationId, workspace.key, { enabledModules, featureAvailability, capabilities, schedulableWork });
-    if (!home && concerns.length === 0) return [];
+    // A door that edits one destination's page is that destination's, not a branch of its own.
+    const branch = concerns.filter(concern => !configTargetForHref(concern.href)?.destination);
+    if (!home && branch.length === 0) return [];
     const configurationHref = workspaceConfigurationHref(organizationId, workspace.key);
-    const configuration: NavItem | undefined = concerns.length ? {
+    const configuration: NavItem | undefined = branch.length ? {
       key: 'workspace-configuration', label: 'Configuration', href: configurationHref,
-      activeHrefs: concerns.filter(concern => {
+      activeHrefs: branch.filter(concern => {
         const target = configTargetForHref(concern.href);
         return target?.workspace === workspace.key && !target.treatment;
       }).map(concern => concern.href.split('#')[0]),
       section: 'workspaces',
-      children: concerns.map(concern => ({ ...concern, section: 'workspaces' as const })),
+      children: branch.map(concern => ({ ...concern, section: 'workspaces' as const })),
     } : undefined;
     return [{
       key: `workspace-${workspace.key}`,
@@ -219,7 +228,7 @@ export function projectShell(input: ShellInput): ShellSection[] {
       activeHrefs: [...AREAS.filter((area) => area.workspace === workspace.key && area.group === 'workspaces' && eligible(area)).map((area) => areaHref(organizationId, area.segment)), ...(configuration ? [configurationHref, ...(configuration.activeHrefs ?? [])] : [])],
       configuration,
       configurationOnly: !home,
-      destinations: areas.filter((area) => area.segment !== home?.segment).map((area) => areaItem(organizationId, area, 'workspaces')),
+      destinations: areas.filter((area) => area.segment !== home?.segment).map((area) => destinationItem(organizationId, area)),
     }];
   });
 
@@ -278,6 +287,13 @@ export function workspaceNavigation(sections: readonly ShellSection[], pathname:
   if (!configurationOwner && (!owner?.workspace || owner.group !== 'workspaces')) return null;
   const workspace = projectedItems(sections).find((item) => item.key === `workspace-${configurationOwner ?? owner?.workspace}`);
   if (!workspace?.destinations) return null;
+  if (configurationOwner && !workspace.configuration) {
+    // Configuration with no branch of its own belongs to the destination that edits it. The root is
+    // the workspace's own only when it has such destinations; otherwise it is not this workspace's to show.
+    const editors = workspace.destinations.filter((item) => item.activeHrefs?.length);
+    const editedFrom = editors.some((item) => (item.activeHrefs ?? []).some((href) => path === href || path.startsWith(`${href}/`)));
+    return editedFrom || (editors.length > 0 && path === workspaceConfigurationHref(organizationId, configurationOwner)) ? workspaceContext(workspace, organizationId) : null;
+  }
   if (configurationOwner && workspace.configuration) {
     const target = workspaceConfigurationTarget(path);
     const registered = target ? `/organizations/${organizationId}/${target.path}` : workspace.configuration.href;

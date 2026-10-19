@@ -32,6 +32,10 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-10-19
+
+- Support's Cases, Queues, Service levels and Reports are now destinations in the workspace's sidebar beside Overview, and the duplicate tab strip and Views menu are gone. Configure opens a side panel with queues and service levels instead of a configuration landing page; existing configuration addresses still open directly. Service levels is an operating view for everyone with Support read access, and editing stays with Support configuration permission.
+
 ## 2026-10-18
 
 - Restored workspace-level sidebar selection and contextual workspace destinations. Business vocabulary and page ordering now decorate the canonical navigation projection instead of flattening every workspace page into Home.

@@ -488,3 +488,62 @@ describe('workspace calendars', () => {
     }
   });
 });
+
+describe('Support workspace navigation', () => {
+  const base = `/organizations/${ORG}/support`;
+  const operating = ['workspace-overview', 'support-cases', 'support-queue-workbench', 'support-service-levels-view', 'support-reports'];
+  const readOnly = () => project(['support.read'], { enabledModules: new Set(), featureAvailability: new Set() });
+  it('shows the workspace row on Home, not its pages', () => {
+    const sections = project();
+    const top = sections.flatMap((section) => section.items.map((item) => item.key));
+    expect(top).toContain('workspace-support');
+    expect(top).not.toContain('support-cases');
+    expect(top).not.toContain('support-queue-workbench');
+  });
+  it('replaces the directory with exactly the operating destinations when somebody enters Support', () => {
+    expect(workspaceNavigation(project(), base)!.sections[0].items.map((item) => item.key)).toEqual(operating);
+    expect(workspaceNavigation(readOnly(), base)!.sections[0].items.map((item) => item.key)).toEqual(operating);
+    expect(workspaceNavigation(project(), base)!.backHref).toBe(`/organizations/${ORG}/home`);
+  });
+  it.each([
+    [base, 'workspace-overview'],
+    [`${base}/cases`, 'support-cases'],
+    [`${base}/cases/case-1`, 'support-cases'],
+    [`${base}/queues`, 'support-queue-workbench'],
+    [`${base}/service-levels`, 'support-service-levels-view'],
+    [`${base}/reports`, 'support-reports'],
+    [`${base}/configuration/queues`, 'support-queue-workbench'],
+    [`${base}/configuration/service-levels`, 'support-service-levels-view'],
+  ])('selects the destination that owns %s', (path, key) => {
+    const context = workspaceNavigation(project(), path)!;
+    expect(context, path).not.toBeNull();
+    expect(activeItemKey(context.sections, path)).toBe(key);
+  });
+  it('keeps Support selected across detail, configuration and refresh, since each is the same address', () => {
+    const sections = project();
+    expect(workspaceNavigation(sections, `${base}/cases/case-1?from=2026-01-01`)!.sections).toEqual(workspaceNavigation(sections, `${base}/cases`)!.sections);
+  });
+  it('draws no separate Configuration branch: Queues and Service levels are destinations', () => {
+    const row = projectedItems(project()).find((item) => item.key === 'workspace-support')!;
+    expect(row.configuration).toBeUndefined();
+    expect(keys(project())).not.toContain('workspace-configuration');
+  });
+  it('keeps configuration deep links on their destination for a member who may configure', () => {
+    const sections = project();
+    const destinations = projectedItems(sections).find((item) => item.key === 'workspace-support')!.destinations!;
+    expect(destinations.find((item) => item.key === 'support-queue-workbench')?.activeHrefs).toEqual([`/organizations/${ORG}/support/configuration/queues`]);
+    expect(destinations.find((item) => item.key === 'support-service-levels-view')?.activeHrefs).toEqual([`/organizations/${ORG}/support/configuration/service-levels`]);
+  });
+  it('gives a read-only member no configuration context beyond the operating views', () => {
+    const sections = readOnly();
+    expect(keys(sections)).toContain('workspace-support');
+    expect(workspaceNavigation(sections, base)!.sections[0].items.map((item) => item.key)).toEqual(operating);
+    expect(workspaceNavigation(sections, `${base}/configuration/queues`)!.sections[0].items.map((item) => item.key)).toEqual(operating);
+  });
+  it('does not reveal Support to a member without support.read', () => {
+    const none = project([], { enabledModules: new Set(), featureAvailability: new Set() });
+    expect(keys(none)).not.toContain('workspace-support');
+    expect(workspaceNavigation(none, base)).toBeNull();
+    expect(workspaceNavigation(none, `${base}/cases`)).toBeNull();
+  });
+});

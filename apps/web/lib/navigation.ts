@@ -380,7 +380,14 @@ export const AREAS: readonly Area[] = [
   { segment: 'comms-inbox', label: 'Inbox', group: 'workspaces', workspace: 'communications', route: 'comms/inbox', module: 'reception', relevantCapabilities: ['message.send'], featureKeys: ['inbound_sms', 'outbound_sms', 'sending'] },
   { segment: 'comms-numbers', label: 'Numbers', group: 'workspaces', workspace: 'communications', route: 'comms/configuration/numbers', sidebar: false, module: 'reception', relevantCapabilities: ['call.place', 'message.send'], featureKeys: ['number_inventory', 'caller_id'] },
   { segment: 'marketing', label: 'Marketing', group: 'workspaces', workspace: 'marketing', relevantCapabilities: ['marketing.read', 'marketing.manage'] },
+  // Support's operating destinations, beneath its Overview (the workspace's own Home above). Each is
+  // a read view; the queue and service-level configuration behind Configure keeps its own
+  // `CONFIG_TARGETS` keys, so these segments never collide with them.
   { segment: 'support', label: 'Support', group: 'workspaces', workspace: 'support', relevantCapabilities: ['support.read'] },
+  { segment: 'support-cases', label: 'Cases', group: 'workspaces', workspace: 'support', route: 'support/cases', relevantCapabilities: ['support.read'] },
+  { segment: 'support-queue-workbench', label: 'Queues', group: 'workspaces', workspace: 'support', route: 'support/queues', relevantCapabilities: ['support.read'] },
+  { segment: 'support-service-levels-view', label: 'Service levels', group: 'workspaces', workspace: 'support', route: 'support/service-levels', relevantCapabilities: ['support.read'] },
+  { segment: 'support-reports', label: 'Reports', group: 'workspaces', workspace: 'support', route: 'support/reports', relevantCapabilities: ['support.read'] },
   { segment: 'ai', label: 'AI', group: 'workspaces', workspace: 'ai' },
   // Finance: how this business prices, bills, gets paid and understands what its work earns —
   // tenant Financial Operations, customer to business, and nothing a business pays GildOps (that is
@@ -485,6 +492,12 @@ export type ConfigTarget = {
    * one registered destination: same path, same entitlement and permission gate.
    */
   directory?: false;
+  /**
+   * The workspace destination (`AREAS` segment) whose page this door is the configuration of. That
+   * destination counts this address as its own, so the sidebar draws no separate Configuration branch
+   * for it: Support's Queues and Service levels are operating pages, and their editors open from Configure.
+   */
+  destination?: string;
 };
 
 export const CONFIG_TARGETS: readonly ConfigTarget[] = [
@@ -523,8 +536,8 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   // Workspace-owned doors: reached from their workspace's Configure control, not listed in the Settings directory.
   { key: 'phone-numbers', scope: 'organization', workspace: 'communications', path: 'comms/configuration/numbers', entitledBy: 'calls', permission: ['organization.manage'], directory: false },
   { key: 'forms', treatment: 'operating', scope: 'organization', workspace: 'studio', path: 'studio/forms', permission: ['organization.manage'], directory: false },
-  { key: 'support-queues', scope: 'organization', workspace: 'support', path: 'support/configuration/queues', permission: ['support.configure'], requiresAll: ['support.read'], directory: false },
-  { key: 'support-service-levels', scope: 'organization', workspace: 'support', path: 'support/configuration/service-levels', permission: ['support.configure'], requiresAll: ['support.read'], directory: false },
+  { key: 'support-queues', scope: 'organization', workspace: 'support', path: 'support/configuration/queues', permission: ['support.configure'], requiresAll: ['support.read'], directory: false, destination: 'support-queue-workbench' },
+  { key: 'support-service-levels', scope: 'organization', workspace: 'support', path: 'support/configuration/service-levels', permission: ['support.configure'], requiresAll: ['support.read'], directory: false, destination: 'support-service-levels-view' },
   { key: 'automation-messages', treatment: 'operating', scope: 'organization', workspace: 'automations', path: 'automations/messages', entitledBy: 'automations', permission: ['automation.manage'], directory: false },
   { key: 'ai-deployments', scope: 'organization', workspace: 'ai', path: 'ai/deployments', featureKeys: ['agent_tools'], permission: ['organization.manage'], directory: false },
   { key: 'ai-knowledge', scope: 'organization', workspace: 'ai', path: 'ai/knowledge', featureKeys: ['agent_tools'], permission: ['organization.manage'], directory: false },

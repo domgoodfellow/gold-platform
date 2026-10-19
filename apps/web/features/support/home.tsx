@@ -1,7 +1,6 @@
 "use client";
 
 import { tabListStyles, tabTriggerStyles } from '@gold/ui/components/tab-styles';
-import { NavigationList } from '@/components/navigation/navigation-list';
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -40,29 +39,6 @@ import {
   type SupportCase,
   type SupportData,
 } from "@/lib/domain/support/support";
-
-export function SupportViews({
-  href,
-}: {
-  href: (path: string, filters?: Record<string, string>) => string;
-}) {
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button tone="secondary" className="h-9 gap-2 rounded-md px-3 text-xs">
-          <Layers className="size-4" />
-          Views
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-56 p-1.5">
-        <NavigationList label="Support destinations" density="compact" items={[
-          ['', 'Overview'], ['cases', 'All Cases'], ['cases?view=board', 'Status board'],
-          ['queues', 'Queue workbench'], ['service-levels', 'Service levels'], ['reports', 'Support reports'],
-        ].map(([path, title]) => ({ key: path, title, href: path.includes('?') ? href('cases', { view: 'board' }) : href(path) }))} />
-      </PopoverContent>
-    </Popover>
-  );
-}
 
 export function SupportHome({
   data,
@@ -180,9 +156,9 @@ export function SupportHome({
     ["new", "open", "waiting"].includes(c.status),
   );
   return (
-    <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid min-w-0 items-start gap-4 @4xl:grid-cols-[minmax(0,1fr)_320px] @6xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0 space-y-3">
-        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 @3xl:grid-cols-4">
           {metrics.map((m) => (
             <MetricTile key={m.label} {...m} href={href("cases", m.filters)} />
           ))}
@@ -355,7 +331,7 @@ export function SupportHome({
             </Link>
           </div>
         </section>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 @3xl:grid-cols-2">
           <OperationalPanel
             title="Resolution performance"
             href={href("reports")}
@@ -431,7 +407,7 @@ export function SupportHome({
           <h2 className="mb-2 text-sm font-semibold tracking-tight">
             Support tools & resources
           </h2>
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 @3xl:grid-cols-4">
             <ResourceTile
               href={href("cases")}
               title="Cases"

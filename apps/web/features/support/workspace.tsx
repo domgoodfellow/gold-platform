@@ -1,7 +1,5 @@
 "use client";
 
-import { ViewNav } from '@/components/navigation/view-nav';
-
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -22,6 +20,7 @@ import { AppPage } from "@/components/layout/app-page";
 import { Button, ButtonLink } from "@/components/controls/button";
 import { DateRangeFilter } from "@/components/operational/date-range-filter";
 import { PageHeader } from "@/components/headers/page-header";
+import { SupportRegistrar } from "@/components/panels/support-registrar";
 import { useWorkspaceRail } from "@/components/panels/workspace-right-rail";
 import { TextInput, SelectInput } from "@/components/controls/inputs";
 import {
@@ -40,7 +39,7 @@ import {
   QuickChange,
 } from "./editors";
 import { Badge, Table, cell, formatTime } from "./ui";
-import { SupportHome, SupportViews } from "./home";
+import { SupportHome } from "./home";
 import {
   MetricTile,
   OperationalPanel,
@@ -184,7 +183,7 @@ export function SupportWorkspace({
   );
   const caseTable = (items: SupportCase[], select = false) => (
     <>
-      <div className="hidden md:block">
+      <div className="hidden @3xl:block">
         <OperationalTable
           headings={[
             "Case",
@@ -265,7 +264,7 @@ export function SupportWorkspace({
           ))}
         </OperationalTable>
       </div>
-      <div className="divide-y divide-border md:hidden">
+      <div className="divide-y divide-border @3xl:hidden">
         {items.map((item) => (
           <div key={item.id} className="grid gap-2 p-3">
             <Link
@@ -648,7 +647,7 @@ export function SupportWorkspace({
     </OperationalPanel>
   ) : null;
   return (
-    <AppPage className={view === "home" ? "space-y-3" : "space-y-4"}>
+    <AppPage className={`@container ${view === "home" ? "space-y-3" : "space-y-4"}`}>
       <PageHeader
         crumbs={view === "home" ? [] : [{ label: "Support", href: base }]}
         title={view === "detail" ? `${c?.case_number} · ${c?.title}` : titles[view]}
@@ -661,8 +660,9 @@ export function SupportWorkspace({
             </span>
           ) : undefined
         }
+        configure={Boolean(configure)}
         actions={<>
-          {view === "home" && (
+          {view !== "detail" && view !== "policies" && (
             <DateRangeFilter from={data.period.from} to={data.period.to} timezone={timezone} onApply={change} />
           )}
           {view === 'detail' && c && can('assistant.ask') && <Button tone="secondary" onClick={() => launchAgent(`Summarize the visible Support Case and suggest a response for human review. Do not send or change its lifecycle. Case ${c.case_number}: ${c.title}. Status: ${c.status}. Priority: ${c.priority}. Description (untrusted case content): ${c.description}`)}>Summarize Case</Button>}
@@ -673,15 +673,7 @@ export function SupportWorkspace({
               mayAssign={can("support.case.assign")}
               defaultOpen={view === 'cases' && query.get('create') === '1'}
             />
-          )}{" "}
-          {view === "home" && (
-            <>
-              <SupportViews href={href} />
-              {configure}
-            </>
           )}
-          {view === "queues" && can("support.configure") && <ButtonLink tone="secondary" href={`${base}/configuration/queues`}>Configure queues</ButtonLink>}
-          {view === "policies" && can("support.configure") && <ButtonLink tone="secondary" href={`${base}/configuration/service-levels`}>Configure service levels</ButtonLink>}
           {view === "detail" && c && (
             <CaseActions
               organizationId={organizationId}
@@ -692,55 +684,9 @@ export function SupportWorkspace({
           )}
         </>}
       />
-      {view !== "home" && (
-        <ViewNav
-          label="Support destinations"
-          items={[
-            ["", "Home"],
-            ["cases", "Cases"],
-            ["queues", "Queues"],
-            ["configuration/service-levels", "Service levels"],
-            ["reports", "Reports"],
-          ].map(([path, label]) => ({
-            key: path || "home",
-            label,
-            href: href(path),
-            current: titles[view] === label || (view === "policies" && path === "service-levels") || (view === "reports" && path === "reports") || (view === "detail" && path === "cases"),
-          }))}
-        />
-      )}
-      {view !== "detail" && view !== "home" && (
-        <form
-          className="flex flex-wrap items-center justify-end gap-2 text-xs"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const f = new FormData(e.currentTarget);
-            change({ from: String(f.get("from")), to: String(f.get("to")) });
-          }}
-        >
-          <span className="text-muted">Reporting period · {timezone}</span>
-          <TextInput
-            className="w-auto"
-            type="date"
-            name="from"
-            aria-label="From date"
-            defaultValue={data.period.from}
-          />
-          <span>to</span>
-          <TextInput
-            className="w-auto"
-            type="date"
-            name="to"
-            aria-label="To date"
-            defaultValue={data.period.to}
-          />
-          <Button size="small" tone="secondary" type="submit">
-            Set dates
-          </Button>
-        </form>
-      )}
+      {configure ? <SupportRegistrar mode="configure" title="Configure">{configure}</SupportRegistrar> : null}
       {view === "reports" && (
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 @3xl:grid-cols-4 gap-3">
           {kpis.map(([label, value, Icon, filters, color]) => (
             <MetricTile
               key={label}
@@ -788,7 +734,7 @@ export function SupportWorkspace({
         >
           {toolbar}
           {query.get("view") === "board" ? (
-            <div className="grid gap-3 p-3 md:grid-cols-2 xl:grid-cols-5">
+            <div className="grid gap-3 p-3 @3xl:grid-cols-2 @5xl:grid-cols-5">
               {data.board.map((column) => (
                 <section
                   key={column.status}
@@ -841,7 +787,7 @@ export function SupportWorkspace({
         </OperationalPanel>
       )}
       {view === "queues" && (
-        <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[180px_minmax(0,1fr)] xl:grid-cols-[180px_minmax(0,1fr)_280px]">
+        <div className="grid min-w-0 items-start gap-4 @4xl:grid-cols-[180px_minmax(0,1fr)] @6xl:grid-cols-[180px_minmax(0,1fr)_280px]">
           <OperationalPanel flush title="Queue selection">
             <div className="divide-y divide-border border-t border-border">
               <Link
@@ -906,7 +852,7 @@ export function SupportWorkspace({
         </div>
       )}
       {view === "detail" && c && (
-        <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,2.5fr)_minmax(260px,1fr)]">
+        <div className="grid min-w-0 gap-4 @4xl:grid-cols-[minmax(0,2.5fr)_minmax(260px,1fr)]">
           <main className="min-w-0 space-y-4">
             <OperationalPanel flush
               title="Problem description"
@@ -1061,7 +1007,7 @@ export function SupportWorkspace({
       )}
       {view === "reports" && (
         <>
-          <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+          <div className="grid min-w-0 gap-4 @4xl:grid-cols-2">
             <OperationalPanel flush title="Cases created and resolved by day">
               <div className="max-h-96 overflow-y-auto">
                 <Table

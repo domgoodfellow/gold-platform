@@ -82,10 +82,10 @@ test("Support setup, case execution, cross-domain origins, reporting and respons
     page.getByRole("heading", { name: "Needs attention", exact: true }),
   ).toBeVisible();
   await capture(page, "home-empty");
-  await page.getByRole("button", { name: "Views", exact: true }).click();
-  await page
-    .getByRole("link", { name: "Queue workbench", exact: true })
-    .click();
+  // Destinations come from the contextual sidebar; configuration opens from Configure in the page header.
+  const sidebar = () => page.getByRole("navigation", { name: "This business" });
+  await sidebar().getByRole("link", { name: "Queues", exact: true }).click();
+  await page.getByRole("button", { name: "Configure", exact: true }).click();
   await page.getByRole("button", { name: "+ New queue", exact: true }).click();
   await page
     .getByLabel("Queue name", { exact: true })
@@ -97,7 +97,8 @@ test("Support setup, case execution, cross-domain origins, reporting and respons
   await expect(
     page.getByText("Emergency Service", { exact: true }).first(),
   ).toBeVisible();
-  await page.getByRole("link", { name: "Service levels", exact: true }).click();
+  await sidebar().getByRole("link", { name: "Service levels", exact: true }).click();
+  await page.getByRole("button", { name: "Configure", exact: true }).click();
   await page.getByRole("button", { name: "+ New policy", exact: true }).click();
   await page
     .getByLabel("Policy name", { exact: true })

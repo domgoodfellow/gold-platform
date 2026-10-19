@@ -185,13 +185,48 @@ describe('the operator shell navigation', () => {
     expect(readdirSync(`${ROUTES}/${key}`)).toContain('page.tsx');
   });
 
-  it.each([
-    ['support', ['support.read']],
-    ['marketing', ['marketing.read', 'marketing.manage']],
-  ])('%s retains one flat workspace row with its read authority', (key, capabilities) => {
-    expect(AREAS.filter((area) => area.workspace === key && area.sidebar !== false)).toEqual([
-      { segment: key, label: areaLabel(key as string), group: 'workspaces', workspace: key, relevantCapabilities: capabilities },
+  it('retains one flat workspace row for Marketing with its read authority', () => {
+    expect(AREAS.filter((area) => area.workspace === 'marketing' && area.sidebar !== false)).toEqual([
+      { segment: 'marketing', label: areaLabel('marketing'), group: 'workspaces', workspace: 'marketing', relevantCapabilities: ['marketing.read', 'marketing.manage'] },
     ]);
+  });
+
+  it('gives Support an Overview and four operating destinations, each read-gated', () => {
+    // Support is a workspace with several pages, so it is no longer a single flat row: its Home is the
+    // workspace's landing and the destinations below it are the sidebar's contextual list.
+    const support = AREAS.filter((area) => area.workspace === 'support' && area.sidebar !== false);
+    expect(support.map((area) => [area.segment, area.route ?? area.segment, area.label])).toEqual([
+      ['support', 'support', 'Support'],
+      ['support-cases', 'support/cases', 'Cases'],
+      ['support-queue-workbench', 'support/queues', 'Queues'],
+      ['support-service-levels-view', 'support/service-levels', 'Service levels'],
+      ['support-reports', 'support/reports', 'Reports'],
+    ]);
+    for (const area of support) expect(area.relevantCapabilities, area.segment).toEqual(['support.read']);
+  });
+  it('draws Support destinations once, from the sidebar, with Configure as a panel rather than a landing page', () => {
+    // Regression guard: the duplicate tab strip, the Views menu and the service-levels redirect each
+    // gave a second route to the same destination. Configure opens the rail registrar, never a page.
+    const workspace = readFileSync(`${WEB_ROOT}/features/support/workspace.tsx`, 'utf8');
+    expect(workspace).not.toContain('ViewNav');
+    expect(readFileSync(`${WEB_ROOT}/features/support/home.tsx`, 'utf8')).not.toContain('SupportViews');
+    expect(workspace).toContain('<SupportRegistrar mode="configure"');
+    expect(workspace).not.toContain('Configure queues');
+    const serviceLevels = readFileSync(`${ROUTES}/support/service-levels/page.tsx`, 'utf8');
+    expect(serviceLevels).toContain('view="policies"');
+    expect(serviceLevels).not.toContain('redirect(');
+  });
+
+
+  it('keeps every configuration door that edits a destination on that destination, with no branch of its own', () => {
+    // A configuration page's address is a destination's only when a registered destination names it; the
+    // destination must be a real Area of the same workspace, or the sidebar would select nothing.
+    for (const target of CONFIG_TARGETS.filter((candidate) => candidate.destination)) {
+      const area = AREAS.find((candidate) => candidate.segment === target.destination);
+      expect(area, `${target.key} edits a destination that is not an Area`).toBeDefined();
+      expect(area?.workspace).toBe(target.workspace);
+    }
+    expect(CONFIG_TARGETS.filter((candidate) => candidate.destination).map((candidate) => candidate.key)).toEqual(['support-queues', 'support-service-levels']);
   });
 
   it('uses the nine stable canonical workspace identities and default labels', () => {
@@ -294,7 +329,7 @@ describe('the operator shell navigation', () => {
       'library',
       'sales', 'customers', 'pipeline',
       'comms', 'calls', 'comms-inbox',
-      'marketing', 'support', 'ai',
+      'marketing', 'support', 'support-cases', 'support-queue-workbench', 'support-service-levels-view', 'support-reports', 'ai',
       'finance', 'finance-quotes', 'finance-invoices', 'finance-payments',
       'automations', 'automation-rules', 'automation-messages', 'automation-activity',
       'field', 'work', 'schedule', 'resources', 'locations', 'assets',
