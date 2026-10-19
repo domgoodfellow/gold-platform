@@ -1,10 +1,10 @@
 'use client';
 
-import { CommandCenterProvider, CommandPalette, NotificationBell, SearchEntry } from '@/features/home/command-center';
+import { CommandCenterProvider, CommandPalette, SearchEntry } from '@/features/home/command-center';
+import { LibraryMenu } from '@/features/library/library-nav';
 
 import { NavigationActivityContext } from '@/components/navigation/activity-context';
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
-import { DialerTrigger } from '@/features/communications/voice/dialer-trigger';
 import { SIDEBAR_HEADER_HEIGHT } from '@/components/layout/workspace-geometry';
 import { WorkspaceShell } from '@/components/layout/workspace-shell';
 import { AccountMenu } from '@/components/navigation/account-menu';
@@ -38,7 +38,6 @@ import { usePathname } from 'next/navigation';
 import { useContext, useEffect, useState, type ReactNode } from 'react';
 import {
   BarChart3,
-  ArrowLeft,
   Bot,
   Blocks,
   Building2,
@@ -83,6 +82,7 @@ import {
 } from 'lucide-react';
 import {
   activeItemKey,
+  shellHomeItem,
   topLevelSections,
   workspaceNavigation,
   type HeaderUtility,
@@ -272,14 +272,36 @@ function NavRow({ item, active }: { item: NavItem; active: string | null }) {
 }
 
 /**
- * Every breakpoint draws the same resolved sections: the business's rows, or â€” once somebody has
- * entered a workspace or Administration â€” that context with a way back.
+ * Home, Search and Library: the same three controls at every depth of the organization, drawn once
+ * by this component for the business's own rows and for any workspace or Administration context.
  */
-export function OrgNav({ sections }: { sections: ShellSection[] }) {
+function PrimaryNavigation({ organizationId, home, library, active }: { organizationId: string; home?: NavItem; library?: NavItem; active: string | null }) {
+  return (
+    <SidebarGroup>
+      <SidebarMenu>
+        {home ? <NavRow item={home} active={active} /> : null}
+        <SidebarMenuItem><SearchEntry /></SidebarMenuItem>
+        {library ? <LibraryMenu organizationId={organizationId} label={library.label} /> : null}
+      </SidebarMenu>
+    </SidebarGroup>
+  );
+}
+
+/**
+ * Every breakpoint draws the same resolved sections: the primary controls, then either the business's
+ * workspace directory or, once somebody has entered a workspace or Administration, that context's own
+ * destinations. Leaving a context is Home's job, so no separate "back" row is drawn.
+ */
+export function OrgNav({ sections, organizationId }: { sections: ShellSection[]; organizationId: string }) {
   const pathname = usePathname();
   const context = workspaceNavigation(sections, pathname);
-  const navigation = context?.sections ?? topLevelSections(sections);
-  const active = activeItemKey(navigation, pathname);
+  const topLevel = topLevelSections(sections);
+  const home = shellHomeItem(sections);
+  const library = topLevel.flatMap((section) => section.items).find((item) => item.key === 'library');
+  const navigation = context?.sections ?? topLevel
+    .map((section) => ({ ...section, label: section.key === 'home' ? 'Workspaces' : section.label, items: section.items.filter((item) => !['home', 'library'].includes(item.key)) }))
+    .filter((section) => section.items.length);
+  const active = activeItemKey([...sections.filter((section) => section.key === 'home'), ...navigation], pathname);
   const { setOpenMobile } = useSidebar();
 
   const group = (section: ShellSection) => (
@@ -298,22 +320,8 @@ export function OrgNav({ sections }: { sections: ShellSection[] }) {
     <nav aria-label="This business" className="flex flex-1 flex-col" onClick={(event) => {
       if ((event.target as Element).closest('a[href]')) setOpenMobile(false);
     }}>
-      {context ? <SidebarGroup>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Back to Workspaces">
-              <Link href={context.backHref}><ArrowLeft aria-hidden /><span>Back to Workspaces</span></Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-        <SidebarMenu><SidebarMenuItem><SearchEntry /></SidebarMenuItem></SidebarMenu>
-      </SidebarGroup> : null}
-      {!context ? <SidebarGroup><SidebarMenu>
-        {navigation.flatMap(section => section.items).filter(item => item.key === 'home').map(item => <NavRow key={item.key} item={item} active={active} />)}
-        <SidebarMenuItem><SearchEntry /></SidebarMenuItem>
-        {navigation.flatMap(section => section.items).filter(item => item.key === 'library').map(item => <NavRow key={item.key} item={item} active={active} />)}
-      </SidebarMenu></SidebarGroup> : null}
-      {navigation.map(section => context ? section : { ...section, label: section.key === 'home' ? 'Workspaces' : section.label, items: section.items.filter(item => !['home', 'library'].includes(item.key)) }).filter(section => section.items.length).map(section => group(section))}
+      <PrimaryNavigation organizationId={organizationId} home={home} library={library} active={active} />
+      {navigation.map(group)}
     </nav>
   );
 }
@@ -354,11 +362,14 @@ export function OrgSidebar({
   email,
   signOutAction,
   displayName,
-  setupRemaining,
+  setupPending,
+  organizationId,
   ...props
 }: {
+  organizationId: string;
   displayName?: string;
-  setupRemaining?: number | null;
+  /** True while the business is in SETUP: the switcher says so, quietly, beneath its name. */
+  setupPending?: boolean;
   mark: ReactNode;
   name: string;
   organizations: SwitchableOrganization[];
@@ -373,14 +384,13 @@ export function OrgSidebar({
   return (
     <Sidebar collapsible="icon" mobileSide="right" {...props}>
       <SidebarHeader className={cx(SIDEBAR_HEADER_HEIGHT, 'justify-center border-b border-sidebar-border pr-12 md:pr-2')}>
-        <ContextSwitcher mark={mark} current={current} organizations={organizations} />
+        <ContextSwitcher mark={mark} current={current} organizations={organizations} setupPending={setupPending} />
       </SidebarHeader>
       <SidebarContent>
-        {setupRemaining !== undefined ? <Link href={`/organizations/${current.kind === 'business' ? current.organizationId : ''}/setup`} className="mx-3 mt-2 w-fit rounded-md border border-sidebar-border px-2 py-1 text-xs group-data-[collapsible=icon]:hidden">{setupRemaining === null ? 'Setup · Review' : `Setup · ${setupRemaining} left`}</Link> : null}
         {settings ? (
           <SettingsNav organizationId={settings.organizationId} organizationName={name} sections={settings.sections} search={settings.search} returnHrefs={sections.flatMap((section) => section.items.flatMap((item) => [item.href, ...(item.activeHrefs ?? []), ...(item.destinations ?? []).map((destination) => destination.href)]))} />
         ) : (
-          <OrgNav sections={sections} />
+          <OrgNav sections={sections} organizationId={organizationId} />
         )}
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border">
@@ -472,12 +482,10 @@ export function LockedOrgSidebar({
  */
 export function OrganizationFrame({
   organizationId, name, role, mark, organizations, sections, utilities, settings, settingsSearch,
-  locked, email, signOutAction, agent, children, displayName = '', setup, setupRemaining, setupMessages = [],
+  locked, email, signOutAction, agent, children, displayName = '', setupPending = false,
 }: {
   displayName?: string;
-  setup?: ReactNode;
-  setupMessages?: string[];
-  setupRemaining?: number | null;
+  setupPending?: boolean;
   organizationId: string;
   name: string;
   role: string;
@@ -517,14 +525,13 @@ export function OrganizationFrame({
   return (
     <CommandCenterProvider key={organizationId} organizationId={organizationId} displayName={displayName}><WorkspaceShell
       locationNavigation={{ organizationId, sections: recovery ? [] : settingsContext ? settings : sections, configurationHrefs: recovery ? [] : settingsSearch.map((item) => item.href) }}
-      sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} role={role} administration={administration} {...shared} /> : <OrgSidebar {...shared} displayName={displayName} setupRemaining={setup ? setupRemaining : undefined} current={current} sections={sections} settings={settingsContext ? { organizationId, sections: settings, search: settingsSearch } : null} />}
+      sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} role={role} administration={administration} {...shared} /> : <OrgSidebar {...shared} organizationId={organizationId} displayName={displayName} setupPending={setupPending} current={current} sections={sections} settings={settingsContext ? { organizationId, sections: settings, search: settingsSearch } : null} />}
       header={
         <WorkspaceHeader
           navigationTrigger="always"
           agentTrigger="md"
-          phoneAction={recovery ? undefined : <DialerTrigger />}
           utilities={utilities}
-          beforeActions={<>{!recovery ? <><CommandPalette /><NotificationBell setupMessages={setupMessages} setup={setup} setupHref={`/organizations/${organizationId}/setup`} /></> : null}{calendarWorkspace ? <Link href={`${calendarWorkspace.href}/calendar`} aria-label={`${calendarWorkspace.label} calendar`} className="inline-flex min-h-9 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-hover"><CalendarDays aria-hidden size={16}/><span className="hidden sm:inline">Calendar</span></Link> : null}</>}
+          beforeActions={<>{!recovery ? <CommandPalette /> : null}{calendarWorkspace ? <Link href={`${calendarWorkspace.href}/calendar`} aria-label={`${calendarWorkspace.label} calendar`} className="inline-flex min-h-9 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-hover"><CalendarDays aria-hidden size={16}/><span className="hidden sm:inline">Calendar</span></Link> : null}</>}
         />
       }
       agent={agent}

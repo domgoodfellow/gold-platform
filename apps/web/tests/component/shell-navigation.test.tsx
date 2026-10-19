@@ -61,7 +61,7 @@ describe('Administration inside GildOps', () => {
   const org = '11111111-1111-4111-8111-111111111111';
   const base = `/organizations/${org}`;
   const business = () => projectShell({ organizationId: org, enabledModules: new Set(['reception', 'billing']), featureAvailability: new Set(AREAS.flatMap((area) => area.featureKeys ?? [])), capabilities: new Set(ALL_CAPABILITIES) });
-  const view = (sections: ReturnType<typeof business>) => <TooltipProvider><SidebarProvider><OrgNav sections={sections} /></SidebarProvider></TooltipProvider>;
+  const view = (sections: ReturnType<typeof business>) => <TooltipProvider><SidebarProvider><OrgNav sections={sections} organizationId={org} /></SidebarProvider></TooltipProvider>;
 
   it('is one private row among the workspaces, and absent without platform authority', () => {
     route.pathname = `${base}/home`;
@@ -77,7 +77,7 @@ describe('Administration inside GildOps', () => {
     const user = userEvent.setup();
     route.pathname = `/platform/providers/twilio`;
     render(view(withAdministration(business(), org, new Set(PLATFORM_CAPABILITIES))));
-    expect(screen.getByRole('link', { name: 'Back to Workspaces' })).toHaveAttribute('href', `${base}/home`);
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', `${base}/home`);
     expect(screen.queryByRole('link', { name: 'CRM' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Providers' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByRole('link', { name: 'Meters' })).not.toBeInTheDocument();
@@ -100,7 +100,7 @@ describe('Administration inside GildOps', () => {
     expect(screen.getByRole('link', { name: 'Commercial administration' })).toHaveAttribute('href', `/platform/plans`);
     route.pathname = `/platform/pricing`;
     rerender(view(sections));
-    expect(screen.getByRole('link', { name: 'Back to Workspaces' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
     expect(screen.getByText('Administration')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Pricing' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByRole('link', { name: 'Invoices' })).not.toBeInTheDocument();
@@ -149,7 +149,7 @@ describe('contextual sidebar rendering', () => {
     const org = '11111111-1111-4111-8111-111111111111';
     const sections = projectShell({ organizationId: org, enabledModules: new Set(['reception']), featureAvailability: new Set(AREAS.flatMap(area => area.featureKeys ?? [])), capabilities: new Set(ALL_CAPABILITIES) });
     route.pathname = `/organizations/${org}/sales/configuration/relationship-stages`;
-    render(<TooltipProvider><SidebarProvider><OrgNav sections={sections} /></SidebarProvider></TooltipProvider>);
+    render(<TooltipProvider><SidebarProvider><OrgNav sections={sections} organizationId={org} /></SidebarProvider></TooltipProvider>);
     const parent = screen.getByRole('link', { name: 'Configuration' });
     expect(parent).toHaveAttribute('href', `/organizations/${org}/sales/configuration`);
     expect(parent).not.toHaveAttribute('aria-current');
@@ -174,7 +174,7 @@ describe('contextual sidebar rendering', () => {
       useEffect(() => { mounted(); return unmounted; }, []);
       return <button data-testid="runtime" onClick={() => void device.connectToRoom('test-room', { callId: 'call-1', contactLabel: 'Local SDK fixture' })}>{device.status} {device.activeCall?.callId}</button>;
     }
-    const view = () => <TelephoneDeviceProvider organizationId={org}><TooltipProvider><SidebarProvider><RuntimeProbe /><OrgNav sections={sections} /></SidebarProvider></TooltipProvider></TelephoneDeviceProvider>;
+    const view = () => <TelephoneDeviceProvider organizationId={org}><TooltipProvider><SidebarProvider><RuntimeProbe /><OrgNav sections={sections} organizationId={org} /></SidebarProvider></TooltipProvider></TelephoneDeviceProvider>;
     route.pathname = `/organizations/${org}/home`;
     const { rerender } = render(view());
     telephone.created.mockClear();
@@ -188,7 +188,7 @@ describe('contextual sidebar rendering', () => {
     rerender(view());
     expect(screen.getByRole('link', { name: 'Customers' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Overview' })).not.toHaveAttribute('aria-current');
-    expect(screen.getByRole('link', { name: 'Back to Workspaces' })).toHaveAttribute('href', `/organizations/${org}/home`);
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', `/organizations/${org}/home`);
     route.pathname = `/organizations/${org}/calls`;
     rerender(view());
     expect(screen.getByRole('link', { name: 'Dialer' })).toHaveAttribute('aria-current', 'page');
@@ -196,7 +196,7 @@ describe('contextual sidebar rendering', () => {
     for (const path of ['comms/configuration/calling', 'settings/general']) { route.pathname = `/organizations/${org}/${path}`; rerender(view()); expect(runtime).toHaveTextContent('call-1'); }
     route.pathname = `/organizations/${org}/home`;
     rerender(view());
-    expect(screen.getByRole('link', { name: 'Library' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Library' })).toBeInTheDocument();
     expect(screen.getByTestId('runtime')).toBe(runtime);
     expect(mounted).toHaveBeenCalledTimes(1);
     expect(unmounted).not.toHaveBeenCalled();

@@ -1,10 +1,9 @@
 import { CollectionHeader } from '@/components/patterns/collection-header';
 import { ButtonLink } from '@/components/controls/button';
 import { Section, SectionHeading } from '@/components/surfaces/section';
-import { LibraryNav } from '@/features/library/library-nav';
 import { SourcesTable } from '@/features/integrations/sources/sources-table';
 import { ImportRunsTable } from '@/features/integrations/imports/import-runs-table';
-import { libraryNewImportHref } from '@/lib/route/library';
+import { libraryHref, libraryNewImportHref } from '@/lib/route/library';
 import { listResources } from '@/lib/domain/integrations/resources';
 import { listConnections } from '@/lib/domain/integrations/connections';
 import { listImportRuns } from '@/lib/domain/integrations/import-runs';
@@ -37,7 +36,7 @@ export default async function LibrarySourcesPage({
     <>
       <CollectionHeader
         title="Sources"
-        crumbs={[{ label: 'Library', href: `/organizations/${organizationId}/library` }]}
+        crumbs={[{ label: 'Library', href: libraryHref(organizationId, 'files') }]}
         actions={
           mayImport ? (
             <ButtonLink href={libraryNewImportHref(organizationId)} tone="primary" size="small">
@@ -46,7 +45,6 @@ export default async function LibrarySourcesPage({
           ) : null
         }
       />
-      <LibraryNav organizationId={organizationId} active="sources" />
 
       <Section className="mt-6" aria-labelledby="sources-heading">
         <SectionHeading id="sources-heading">Sources</SectionHeading>

@@ -311,8 +311,8 @@ Segmented is the compact navigation default: appearance-aware background, select
 and control height. Line is an explicit underline variant with no selected fill. Global selected
 styles are scoped to `data-variant`; do not rebuild either variant in a feature. Native button
 filters retain their existing state and keyboard semantics. Wrap longer navigation sets; do not
-clip items or introduce a horizontal tab scrollbar. Library sections expose all nine destinations;
-Library Home uses only the compact responsive destination directory to avoid duplicate navigation.
+clip items or introduce a horizontal tab scrollbar. Library destinations live in the sidebar Library popover;
+section pages render no second tab strip.
 
 ### Configure and readiness
 
@@ -809,7 +809,7 @@ Use a small named vocabulary rather than raw spacing variation.
 
 ## Navigation model
 
-Organization-level navigation shows Home, Search and Library together, followed by one eligible row per workspace. Entering a workspace replaces the central navigation with its own Overview, operating destinations and Configuration, with Back to Workspaces returning Home. `projectBusinessNavigation` decorates the canonical `projectShell` hierarchy with saved business words and destination order; it must never flatten workspace pages into the organization-level list. Saved vocabulary cannot remove workspace ownership, grant access or change canonical routes.
+Organization-level navigation shows Home, Search and Library together, followed by one eligible row per workspace. Entering a workspace replaces the workspace directory with its own Overview, operating destinations and Configuration; Home, Search and Library stay in place above it, so Home is the one way back to the directory and no separate back row is drawn. `projectBusinessNavigation` decorates the canonical `projectShell` hierarchy with saved business words and destination order; it must never flatten workspace pages into the organization-level list. Saved vocabulary cannot remove workspace ownership, grant access or change canonical routes.
 
 Authorization and entitlement filter canonical destination keys before labels/order are applied. A business profile never grants a capability, enables a module or supplies arbitrary URLs. Home and Library remain shared destinations. Settings retains its canonical ownership and account-menu entry. Platform Administration is a separate privileged scope, not a tenant workspace.
 
@@ -873,9 +873,9 @@ Global Home uses a greeting/date header with Customize and a compact Quick actio
 
 All/Mine/Urgent/Overdue and reporting periods live in the URL. Mine uses Membership and linked Resource ownership, never a display name or inferred assignment. Exact category totals are independent of five-record previews and may overlap. Source failures say unavailable and unknown; successful empty reads say empty. Current queue and schedule scopes are distinct from Today/rolling-seven-day/calendar-month reporting scopes. Monetary figures and payment series remain separate by stored currency. `--warning` denotes an operational exception requiring review; it does not denote provider health.
 
-Quick actions and the organization command palette consume one authorized action list. Actions are grouped by workspace and open owning drawers; invoices open the existing Finance workflow through its collection create query. Search is a command palette opened by the sidebar or Cmd/Ctrl+K, with create actions, authorized workspace destinations and supported Agent prompts. The AI workspace manages assistants; the header Agent opens the global conversation rail. Home, Search and Library form one sidebar cluster. Account footers show a saved personal name when available and the organization role.
+Quick actions and the organization command palette consume one authorized action list. Actions are grouped by workspace and open owning drawers; invoices open the existing Finance workflow through its collection create query. Search is a command palette opened from the sidebar's Search row, which matches the other primary controls in size and state; it has no keyboard shortcut and no visible shortcut hint. It offers create actions, authorized workspace destinations and supported Agent prompts. The AI workspace manages assistants; the header Agent opens the global conversation rail. Home, Search and Library form one sidebar cluster. Account footers show a saved personal name when available and the organization role.
 
-Setup and workspace updates live behind the shell notification bell, with a persistent setup count below organization identity. Setup remains available after closing notifications; launch uses the existing server-checked command. Configuration notifications follow the canonical configuration target's workspace and deduplicate repeated messages. Read failures remain unavailable, and configuration never implies live provider operation. Published website status uses a neutral success presentation even when draft changes also exist. Optional performance/activity panels have browser-local, actor-and-Organization-scoped preferences; core attention and priorities stay visible.
+Setup is onboarding status, not navigation. Organization Home shows one setup banner while the business is in SETUP, computed from `computeSetupOverview`: the count is required blockers only, so recommended and optional areas never block launch. Someone who cannot launch sees the same facts as information with no instruction to act. Live businesses show no banner. The organization switcher carries a quiet "Setup pending" line beneath the business name while setup is open. The checklist, optional recommendations and launch controls stay on the Setup page, and launch uses the existing server-checked command. The shell has no notification bell, notification dialog or setup count. Configuration notifications follow the canonical configuration target's workspace and deduplicate repeated messages. Read failures remain unavailable, and configuration never implies live provider operation. Published website status uses a neutral success presentation even when draft changes also exist. Optional performance/activity panels have browser-local, actor-and-Organization-scoped preferences; core attention and priorities stay visible.
 
 It may surface important facts from several domains.
 
@@ -895,6 +895,8 @@ It should not replicate every workspace dashboard.
 ## Library navigation
 
 Library is shared infrastructure, separate from the Workspace list.
+
+Library is one control in the primary sidebar group. It is a trigger, not a link: it opens an anchored popover whose entries come from `LIBRARY_SECTIONS` and link to each section's route, with the current section marked. `/organizations/{id}/library` redirects to Files, and section pages render no tab strip or overview directory. Section crumbs point at Files.
 
 Its navigation may expose real Library capabilities such as:
 

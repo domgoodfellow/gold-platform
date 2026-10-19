@@ -147,11 +147,11 @@ describe('the projection is the only eligibility rule', () => {
   });
 
   it('draws every section from the same list on desktop, tablet and phone', () => {
-    expect(renderers).toContain('export function OrgNav({ sections }');
+    expect(renderers).toContain('export function OrgNav({ sections, organizationId }');
     // The phone Menu is the sidebar's own Sheet: the one `OrgSidebar` receives `sections` and draws `OrgNav`
     // for both breakpoints, without a separate phone navigation list.
     expect(renderers).not.toContain('export function OrgNavBar');
-    expect(renderers).toContain('<OrgNav sections={sections} />');
+    expect(renderers).toContain('<OrgNav sections={sections} organizationId={organizationId} />');
     expect(renderers).not.toMatch(/projectPhone|MoreMenu|overflow-x/);
   });
 });

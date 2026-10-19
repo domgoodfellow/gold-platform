@@ -6,7 +6,6 @@ import { Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { DocumentUploadForm, type UploadDocumentState } from '@/features/documents/upload-form';
-import { LibraryNav } from '@/features/library/library-nav';
 import {
   FILE_FAMILIES,
   FILE_PAGE_SIZE,
@@ -22,6 +21,7 @@ import {
   libraryFileFilter,
 } from '@/lib/domain/documents/library-files';
 import type { Db } from '@/lib/db/types';
+import { libraryHref } from '@/lib/route/library';
 
 const USAGE_LABELS = {
   any: 'Any record',
@@ -94,9 +94,8 @@ export async function LibraryFilesCollection({
     <AppPage>
       <CollectionHeader
         title="Files"
-        crumbs={[{ label: 'Library', href: `/organizations/${organizationId}/library` }]}
+        crumbs={[{ label: 'Library', href: libraryHref(organizationId, 'files') }]}
       />
-      <LibraryNav organizationId={organizationId} active="files" />
 
       <p className="mt-4 text-sm text-muted">
         {summary.fileCount} {summary.fileCount === 1 ? 'file' : 'files'} · {formatFileSize(summary.totalBytes)}

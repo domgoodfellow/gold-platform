@@ -53,7 +53,7 @@ test('business vocabulary stays within contextual workspaces across responsive w
       if(width<768)await page.getByRole('button',{name:'Toggle Sidebar'}).click();
       await expect(nav().getByRole('link',{name:'Dialer',exact:true})).toBeVisible();
       await expect(nav().getByRole('link',{name:'Patients',exact:true})).toHaveCount(0);
-      await expect(nav().getByRole('link',{name:'Back to Workspaces',exact:true})).toBeVisible();
+      await expect(nav().getByRole('link',{name:'Home',exact:true})).toBeVisible();
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
       await page.screenshot({path:`.artifacts/business-foundations-${width}.png`,fullPage:true});
     }

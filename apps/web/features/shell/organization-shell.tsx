@@ -1,7 +1,3 @@
-import Link from 'next/link';
-import { computeSetupOverview } from '@/lib/domain/tenancy/lifecycle';
-import { configTargetForHref } from '@/lib/navigation';
-import { LaunchForm } from '@/features/setup/launch-form';
 import { getPersonalProfile, profileName } from '@/lib/domain/identity/profile';
 import { WORKSPACES, workspaceConfigureItems, configTarget } from '@/lib/navigation';
 import type { ReactNode } from 'react';
@@ -40,21 +36,10 @@ export async function OrganizationShell({
     capabilities: organization.capabilities,
     locked,
   });
-  const [profile, overview] = await Promise.all([
-    getPersonalProfile(db).catch(() => null),
-    !locked && organization.operationalState === 'setup' ? computeSetupOverview(db, { organizationId }).catch(() => null) : null,
-  ]);
+  const profile = await getPersonalProfile(db).catch(() => null);
   const displayName = profile ? profileName(profile) : '';
-  const setupAreas = overview?.areas.filter(area => area.state === 'incomplete').filter(area => {
-    const target = configTargetForHref(area.area.href);
-    return !target || target.permission.some(capability => organization.capabilities.includes(capability));
-  }) ?? [];
-  const setup = !locked && organization.operationalState === 'setup' ? <section aria-label="Organization setup" className="space-y-3">
-    <h3 className="text-sm font-semibold">Organization setup</h3>
-    {overview ? <><ul className="space-y-2">{setupAreas.map(area => <li key={area.key}><Link className="block rounded-md border border-border p-3 text-sm hover:bg-hover" href={area.area.href}>{area.label}<span className="mt-1 block text-xs text-muted">{area.message}</span></Link></li>)}</ul>
-    {overview.blockers.length === 0 && organization.capabilities.includes('organization.manage') ? <LaunchForm organizationId={organizationId} /> : null}</> : <p className="text-sm text-muted">Setup status is unavailable.</p>}
-    <Link className="inline-block py-2 text-sm underline" href={`/organizations/${organizationId}/setup`}>Review setup</Link>
-  </section> : null;
+  // Setup is onboarding status, drawn on organization Home and flagged in the switcher, not in the shell's navigation.
+  const setupPending = !locked && organization.operationalState === 'setup';
   // The shell loads a bounded list of titles and one transcript — the most recent conversation.
   // Any other transcript is fetched when somebody opens it from History.
 
@@ -117,9 +102,7 @@ export async function OrganizationShell({
       <OrganizationFrame
         organizationId={organizationId}
         displayName={displayName}
-        setup={setup}
-        setupMessages={setupAreas.map(area => area.message)}
-        setupRemaining={overview ? setupAreas.length : null}
+        setupPending={setupPending}
         name={organization.name}
         role={organization.role}
         mark={mark}

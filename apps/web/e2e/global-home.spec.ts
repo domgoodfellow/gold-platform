@@ -105,9 +105,9 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
       if (width < 768) await page.getByRole('button', { name: /^(Toggle Sidebar|Menu)$/ }).click();
       await expect(businessNav().getByRole('link', { name: 'Customers', exact: true })).toBeVisible();
       await expect(businessNav().getByRole('link', { name: 'Invoices', exact: true })).toHaveCount(0);
-      await expect(businessNav().getByRole('link', { name: 'Back to Workspaces', exact: true })).toBeVisible();
+      await expect(businessNav().getByRole('link', { name: 'Home', exact: true })).toBeVisible();
       await page.screenshot({ path: path.join(shots, `restored-crm-${width}.png`), animations: 'disabled' });
-      await businessNav().getByRole('link', { name: 'Back to Workspaces', exact: true }).click();
+      await businessNav().getByRole('link', { name: 'Home', exact: true }).click();
     }
     await page.setViewportSize({ width: 1440, height: 1050 });
     await visit();
@@ -131,11 +131,7 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
     await expect(page.getByRole('tab', { name: 'Next 7 days', exact: true })).toHaveAttribute('aria-selected', 'true');
     await page.getByRole('tab', { name: 'Today', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Workspace health', exact: true })).toHaveCount(0);
-    await page.getByRole('button', { name: 'Notifications', exact: true }).click();
-    await expect(page.getByRole('dialog', { name: 'Notifications', exact: true })).toBeVisible();
-    await page.getByRole('dialog', { name: 'Notifications', exact: true }).getByRole('link', { name: 'Review setup', exact: true }).click();
-    await expect(page).toHaveURL(/\/setup$/);
-    await expect(page.getByRole('dialog', { name: 'Notifications', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Notifications', exact: true })).toHaveCount(0);
     await visit();
     await page.getByRole('link', { name: 'This month', exact: true }).click();
     await expect(page).toHaveURL(/when=month/);

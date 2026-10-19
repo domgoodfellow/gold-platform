@@ -38,7 +38,7 @@ function Harness({ locked = false, choices = organizations }) {
     <AppShell header={<WorkspaceHeader navigationTrigger="always" agentTrigger="md" />}
       sidebar={locked
         ? <LockedOrgSidebar {...shared} organizationId="org-1" />
-        : <OrgSidebar {...shared} current={{ kind: 'business', organizationId: 'org-1', name: shared.name, role: shared.role }} sections={sections} />}>
+        : <OrgSidebar {...shared} organizationId="org-1" current={{ kind: 'business', organizationId: 'org-1', name: shared.name, role: shared.role }} sections={sections} />}>
       <AgentState />
     </AppShell>
   </WorkspaceRailProvider></TooltipProvider>;

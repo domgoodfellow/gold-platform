@@ -145,7 +145,7 @@ describe('phone navigation uses the one projected sidebar', () => {
   const bar = shell.slice(shell.indexOf('export function OrgSidebar('), shell.indexOf('export function LockedOrgSidebar('));
 
   it('a business’s bar renders the projection it is given — it decides no eligibility of its own', () => {
-    expect(bar).toContain('<OrgNav sections={sections} />');
+    expect(bar).toContain('<OrgNav sections={sections} organizationId={organizationId} />');
     expect(bar).not.toMatch(/visibleAreas\(|areasIn\(|PlatformPhoneNavMenu|PLATFORM_NAV|inPlatformContext|capabilit/);
   });
 

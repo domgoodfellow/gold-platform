@@ -78,12 +78,12 @@ describe('Home, structural composition (source scan)', () => {
   const source = `${readFileSync(TODAY, 'utf8')}
 ${readFileSync(TODAY_FEATURE, 'utf8')}`;
 
-  it('surfaces the shared readiness model without mixing it into operational attention', () => {
-    // A setup business is entered through Setup and the sidebar keeps one Setup row, so a notice,
-    // a count or a readiness query here would be a second, competing setup affordance.
+  it('shows the setup status as one banner on Home, never mixed into operational attention', () => {
+    // The banner is Home's one setup affordance, and it reads the authoritative overview only while the business is in SETUP.
+    // Counts come from computeSetupOverview, so a count here can never disagree with the Setup page.
     expect(source).toContain('computeSetupOverview');
-    expect(source).toContain('<OrganizationReadiness');
-    expect(source).toContain('readiness={readiness}');
+    expect(source).toContain('<SetupBanner');
+    expect(source).toContain('overview={overview}');
     expect(source).not.toContain('setupNotice');
   });
 

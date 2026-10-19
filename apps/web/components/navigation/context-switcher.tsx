@@ -41,6 +41,8 @@ type SwitcherProps = {
   mark: ReactNode;
   current: SwitcherContext;
   organizations: SwitchableOrganization[];
+  /** Subordinate to the name: a status line for the current business only, never a header control. */
+  setupPending?: boolean;
 };
 
 /**
@@ -103,7 +105,7 @@ function ContextSwitcherMenuContent({
   );
 }
 
-export function ContextSwitcher({ mark, current, organizations }: SwitcherProps) {
+export function ContextSwitcher({ mark, current, organizations, setupPending = false }: SwitcherProps) {
   const view = deriveSwitcherView(current, organizations);
 
   // Nowhere else to go: a label, not a menu with nothing in it. `asChild` swaps the underlying
@@ -124,6 +126,7 @@ export function ContextSwitcher({ mark, current, organizations }: SwitcherProps)
               <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded">{mark}</span>
               <span className="min-w-0 flex-1 truncate text-center text-sm font-semibold group-data-[collapsible=icon]:hidden">
                 {view.triggerName}
+                {setupPending ? <span className="block truncate text-center text-xs font-normal text-muted">Setup pending</span> : null}
               </span>
               {/* Balances the mark's width on the other side, so the centered name lands in the
                   middle of the whole row rather than the middle of the space left of it. */}
@@ -152,6 +155,7 @@ export function ContextSwitcher({ mark, current, organizations }: SwitcherProps)
               <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded">{mark}</span>
               <span className="min-w-0 flex-1 truncate text-center text-sm font-semibold group-data-[collapsible=icon]:hidden">
                 {view.triggerName}
+                {setupPending ? <span className="block truncate text-center text-xs font-normal text-muted">Setup pending</span> : null}
               </span>
               <span className="flex size-8 shrink-0 items-center justify-center group-data-[collapsible=icon]:hidden">
                 <ChevronsUpDown aria-hidden className="size-3.5 shrink-0" />

@@ -33,10 +33,10 @@ test.describe('a tenant owner', () => {
       if(!links.includes(`${base}/${path}`))continue;
       await sidebar(page).locator(`a[href="${base}/${path}"]`).click();
       await expect(page).toHaveURL(`${base}/${path}`);
-      await expect(sidebar(page).getByRole('link',{name:'Back to Workspaces'})).toBeVisible();
+      await expect(sidebar(page).getByRole('link',{name:'Home'})).toBeVisible();
       await expect(page.locator('[data-persistence-probe="retained"]')).toHaveCount(1);
       await page.goBack();await page.goForward();await page.reload();
-      await expect(sidebar(page).getByRole('link',{name:'Back to Workspaces'})).toBeVisible();
+      await expect(sidebar(page).getByRole('link',{name:'Home'})).toBeVisible();
       await page.goto(`${base}/home`);
       expect(await sidebar(page).getByRole('link').evaluateAll(elements=>elements.map(element=>element.getAttribute('href')))).toEqual(links);
     }
@@ -47,7 +47,7 @@ test.describe('a tenant owner', () => {
     if(width<768)await page.getByRole('button',{name:/^(Toggle Sidebar|Menu)$/}).click();
     const nav=page.getByRole('navigation',{name:'This business'}).filter({visible:true});
     await expect(nav.getByRole('link',{name:'Customers',exact:true})).toBeVisible();
-    await expect(nav.getByRole('link',{name:'Back to Workspaces'})).toBeVisible();
+    await expect(nav.getByRole('link',{name:'Home'})).toBeVisible();
     await expect(nav.getByRole('link',{name:'Invoices',exact:true})).toHaveCount(0);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     await page.screenshot({path:info.outputPath(`business-${width}.png`)});

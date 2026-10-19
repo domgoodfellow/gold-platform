@@ -12,7 +12,6 @@ export default async function LibraryTrashPage({
   return (
     <LibrarySectionPage
       organizationId={organizationId}
-      active="trash"
       label="Trash"
       description="Archived Library content."
       empty="Nothing archived."

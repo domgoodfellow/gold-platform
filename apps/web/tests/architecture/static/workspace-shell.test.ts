@@ -206,7 +206,7 @@ describe('the Business mobile navigation', () => {
     expect(organizationLayout).toContain('navigationTrigger="always"');
     expect(organizationLayout).not.toContain('CompactContextSwitcher');
     expect(organizationLayout).not.toContain('bottomBar=');
-    expect(organizationLayout).toContain('<NotificationBell');
+    expect(organizationLayout).not.toContain('<NotificationBell');
     expect(organizationLayout).toContain('{calendarWorkspace ? <Link');
   });
   it('reuses authorized switcher choices and keeps recovery mobile identity inert', () => {
@@ -709,8 +709,8 @@ describe('the sidebar draws the selected application context', () => {
 
   it('draws Administration as projected sections, never a pinned block of its own', () => {
     expect(orgShell).not.toContain('ADMINISTRATION_SECTIONS');
-    expect(orgShell).toContain('navigation.map(section => context ? section');
-    expect(orgShell).toContain('.map(section => group(section))');
+    expect(orgShell).toContain('const navigation = context?.sections ?? topLevel');
+    expect(orgShell).toContain('{navigation.map(group)}');
     expect(orgShell).not.toMatch(/absolute|fixed bottom|top-\[/);
   });
 

@@ -136,8 +136,10 @@ describe('AI drafting — an accelerator the cockpit does not depend on', () => 
 
 describe('the shell — one lifecycle treatment at every width, gone at LIVE', () => {
   it('reads the lifecycle state once and hands both renderings the same progress', () => {
-    expect(LAYOUT).not.toContain("organization.operationalState === 'setup'");
+    // The layout reads the lifecycle once, as a flag for the switcher; Home reads it for the banner.
+    expect(LAYOUT).toContain("const setupPending = !locked && organization.operationalState === 'setup';");
     expect(LAYOUT).not.toContain('setup={setup}');
+    expect(LAYOUT).not.toContain('computeSetupOverview');
     // Platform Administration is not a business, so it has no lifecycle treatment at all.
     expect(PLATFORM_LAYOUT).not.toMatch(/SetupEntry|SetupNavLink|setup={/);
   });
@@ -159,10 +161,10 @@ describe('the shell — one lifecycle treatment at every width, gone at LIVE', (
 });
 
 describe('Home — the operating cockpit, not a second onboarding dashboard', () => {
-  it('carries no setup chrome of its own — the sidebar row and Setup itself are the lifecycle', () => {
-    // A setup business enters through Setup (`organizationHomeHref`), and the sidebar keeps one
-    // row for it; a third sentence on Home would be the competing affordance this replaced.
-    expect(HOME_FEATURE).toContain('readiness?: ReactNode');
-    expect(HOME_FEATURE).toContain('{readiness}');
+  it('carries one setup banner, supplied by the page that knows the lifecycle, and no sidebar row for it', () => {
+    // Setup is onboarding status: the banner appears on Home only while the business is in SETUP,
+    // and the Setup page keeps the checklist and launch controls. Nothing in the navigation names it.
+    expect(HOME_FEATURE).toContain('setup?: ReactNode');
+    expect(HOME_FEATURE).toContain('{setup}');
   });
 });

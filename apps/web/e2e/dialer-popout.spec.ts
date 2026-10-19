@@ -18,7 +18,7 @@ test('compact dialer preserves its draft across workspace navigation and window 
   await page.locator(`a[href="/organizations/${organizationId}/comms"]`).first().click();
   await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/comms$`));
   await expect(popup.getByLabel('Number to call')).toHaveValue('+15145550123');
-  await page.getByRole('navigation', { name: 'This business' }).first().getByRole('link', { name: 'Back to Workspaces' }).click();
+  await page.getByRole('navigation', { name: 'This business' }).first().getByRole('link', { name: 'Home' }).click();
   await page.getByRole('navigation', { name: 'This business' }).first().getByRole('link', { name: 'CRM', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/sales$`));
   await expect(popup.getByLabel('Number to call')).toHaveValue('+15145550123');

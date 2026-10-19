@@ -12,7 +12,6 @@ export default async function LibraryMediaPage({
   return (
     <LibrarySectionPage
       organizationId={organizationId}
-      active="media"
       label="Media"
       description="Images, video and audio reusable across this business's workspaces."
       empty="No media in Library yet."

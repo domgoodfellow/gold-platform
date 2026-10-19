@@ -716,8 +716,9 @@ describe('a switch leads to its inputs', () => {
     const shell = readFileSync(`${ROUTES}/org-shell.tsx`, 'utf8');
 
     expect(layout).toContain("!locked && organization.operationalState === 'setup'");
-    expect(layout).toContain('setup={setup}');
-    expect(layout).toContain('computeSetupOverview');
+    expect(layout).toContain('setupPending={setupPending}');
+    expect(layout).not.toContain('computeSetupOverview');
+    expect(readFileSync(fileURLToPath(new URL('../../../app/organizations/[organizationId]/home/page.tsx', import.meta.url)), 'utf8')).toContain('computeSetupOverview');
     expect(shell).not.toContain('export function SetupEntry');
     expect(shell).not.toContain('export function SetupNavLink');
     // One treatment, not several: the header badge this replaced must not come back.
@@ -827,7 +828,7 @@ describe('an area hidden from the sidebar', () => {
     // capability layer, the configuration targets, platform authority) is decided in `projectShell`.
     expect(projection, 'projectShell should filter on the sidebar flag').toContain('area.sidebar !== false');
     expect(shell, 'the desktop rendering should take the projection, not filter AREAS itself').toContain('sections: ShellSection[]');
-    expect(shell, 'the phone menu takes the same sidebar projection').toContain('<OrgNav sections={sections} />');
+    expect(shell, 'the phone menu takes the same sidebar projection').toContain('<OrgNav sections={sections} organizationId={organizationId} />');
     expect(shell, 'no renderer keeps its own eligibility filter').not.toMatch(/AREAS[.]filter|visibleAreas[(]|areasIn[(]/);
     expect(shell).toContain("from '@/lib/shell'");
   });
@@ -866,8 +867,8 @@ describe('Guided Setup is no longer a permanent sidebar destination', () => {
 
   it('still gets its SETUP-only shell treatment, and no second row in Configuration', () => {
     const layout = readFileSync(fileURLToPath(new URL('../../../features/shell/organization-shell.tsx', import.meta.url)), 'utf8');
-    expect(layout).toContain('setup={setup}');
-    expect(layout).toContain('computeSetupOverview');
+    expect(layout).toContain('setupPending={setupPending}');
+    expect(layout).not.toContain('computeSetupOverview');
 
     // `OrgNav` — the ordinary Configuration-group renderer — is generic over `AREAS`/`areasIn`
     // and must not special-case 'setup' itself; if it did, that would be the second,

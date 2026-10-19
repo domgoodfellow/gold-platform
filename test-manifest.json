@@ -2889,6 +2889,18 @@
       "category": "component",
       "concerns": ["work", "configuration", "security"]
     },
+    "apps/web/tests/component/library-menu.test.tsx": {
+      "category": "component",
+      "concerns": ["navigation", "ui", "accessibility"]
+    },
+    "apps/web/tests/component/setup-banner.test.tsx": {
+      "category": "component",
+      "concerns": ["navigation", "setup"]
+    },
+    "apps/web/tests/architecture/static/primary-navigation.test.ts": {
+      "category": "architecture-static",
+      "concerns": ["navigation", "ui"]
+    },
     "apps/web/tests/component/shell-navigation.test.tsx": {
       "category": "component",
       "concerns": ["navigation", "security"]
