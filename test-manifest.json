@@ -145,6 +145,11 @@
       "category": "playwright-acceptance",
       "concerns": ["communications", "crm", "tenant-isolation", "responsive", "calling"]
     },
+    "apps/web/e2e/dialer-console.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": ["communications", "crm", "responsive", "calling", "readiness"],
+      "note": "Rendered Dialer console: empty and populated businesses at wide, desktop, tablet and phone; Focus, Pop-out, history and a live call through the development test telephone. Never places a call."
+    },
     "apps/web/tests/unit/calling-options.test.ts": {
       "category": "unit",
       "concerns": ["communications", "authorization", "readiness"]

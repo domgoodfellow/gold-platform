@@ -150,7 +150,9 @@ export function PanelState({
 /**
  * The standard section: a titled container with an optional count, destination link and action.
  * `flush` lets a table or list run edge to edge; otherwise the body is padded. `density` changes
- * spacing only, never the heading size, so adjacent panels read as one family.
+ * spacing only, never the heading size, so adjacent panels read as one family. `fill` makes the
+ * panel take its container's height with the heading fixed and only the body scrolling, for a
+ * console region that must keep its shape whatever it holds.
  */
 export function OperationalPanel({
   variant = 'default',
@@ -164,6 +166,7 @@ export function OperationalPanel({
   action,
   flush = false,
   density = "standard",
+  fill = false,
   children,
   className,
 }: {
@@ -178,20 +181,22 @@ export function OperationalPanel({
   action?: ReactNode;
   flush?: boolean;
   density?: "compact" | "standard";
+  fill?: boolean;
   children: ReactNode;
   className?: string;
 }) {
   const compact = density === "compact";
+  const padding = flush ? undefined : compact ? "p-3" : "p-4";
   return (
     <section
       aria-label={title}
       data-slot="operational-panel"
       data-surface-variant={variant}
-      className={cx("min-w-0 overflow-hidden rounded-lg border border-border bg-surface", surfaceVariants[variant], className)}
+      className={cx("min-w-0 overflow-hidden rounded-lg border border-border bg-surface", fill && "flex min-h-0 flex-col", surfaceVariants[variant], className)}
     >
       <div
         className={cx(
-          "flex flex-wrap items-center justify-between gap-2 border-b border-border",
+          "flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border",
           compact ? "min-h-10 px-3 py-1.5" : "min-h-12 px-4 py-2.5",
         )}
       >
@@ -222,7 +227,7 @@ export function OperationalPanel({
           ) : null}
         </div>
       </div>
-      <div className={flush ? undefined : compact ? "p-3" : "p-4"}>{children}</div>
+      <div className={fill ? cx("flex min-h-0 flex-1 flex-col overflow-y-auto", padding) : padding}>{children}</div>
     </section>
   );
 }

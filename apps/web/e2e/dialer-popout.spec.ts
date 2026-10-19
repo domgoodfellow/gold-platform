@@ -8,7 +8,7 @@ test('compact dialer preserves its draft across workspace navigation and window 
   await page.goto(`/organizations/${organizationId}/calls`);
   await page.getByLabel('Number to call', { exact: true }).fill('+1514555012');
   const popupPromise = page.waitForEvent('popup');
-  await page.getByRole('button', { name: 'Pop out dialer', exact: true }).click();
+  await page.getByRole('group', { name: 'Dialer toolbar' }).getByRole('button', { name: 'Pop out dialer' }).click();
   const popup = await popupPromise;
   await expect(popup.getByRole('heading', { name: 'Dialer', exact: true })).toBeVisible();
   await popup.getByRole('button', { name: 'Dial 3', exact: true }).click();

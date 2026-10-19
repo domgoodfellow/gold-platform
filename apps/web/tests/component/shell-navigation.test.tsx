@@ -339,9 +339,15 @@ describe('workspace header controls', () => {
   });
 
   it('publishes one collection heading without repeating its global-header identity', () => {
-    render(<CollectionHeader title="Invoices" navigation actions={<button>Create invoice</button>} />);
+    render(<CollectionHeader title="Invoices" actions={<button>Create invoice</button>} />);
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByRole('heading', { name: 'Invoices' }).parentElement).toHaveClass('sr-only');
     expect(screen.getByRole('button', { name: 'Create invoice' })).toBeVisible();
   });
+});
+
+
+it('keeps distinct collection detail headings visible when a shorter location label is published', () => {
+  render(<CollectionHeader title="Invoice #123" breadcrumbLabel="Invoice" />);
+  expect(screen.getByRole('heading', { name: 'Invoice #123', level: 1 }).parentElement).not.toHaveClass('sr-only');
 });

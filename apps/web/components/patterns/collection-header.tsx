@@ -34,9 +34,10 @@ export function CollectionHeader({
   configure?: boolean;
   className?: string;
 }) {
+  const titleInBar = breadcrumbLabel === undefined && typeof title === 'string';
   return (
     <header className={cx('@container/page-header flex flex-wrap items-center justify-between gap-x-4 gap-y-2', className ?? 'mb-4')}>
-      <div className={cx("min-w-0 flex-1 basis-64", navigation && breadcrumbLabel === undefined && typeof title === "string" && "sr-only")}>
+      <div className={cx("min-w-0 flex-1 basis-64", titleInBar && 'sr-only')}>
         <PageLocation crumbs={crumbs} current={breadcrumbLabel ?? <BusinessLabel>{title}</BusinessLabel>} />
         <h1 className="text-xl font-semibold tracking-tight"><BusinessLabel>{title}</BusinessLabel></h1>
       </div>

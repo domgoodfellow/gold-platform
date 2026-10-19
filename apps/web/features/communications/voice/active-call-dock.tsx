@@ -5,6 +5,8 @@ import { createPortal } from 'react-dom';
 import { ArrowRightLeft, ExternalLink, Grid3x3, Mic, MicOff, Pause, Phone, PhoneOff, Play, UserPlus, UserX } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
+import { StatePill } from '@/components/operational/primitives';
+import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
 import { ErrorText, TextInput } from '@/components/controls/inputs';
 import { MOBILE_NAV_HEIGHT_STYLE } from '@/components/layout/workspace-geometry';
 import {
@@ -37,6 +39,11 @@ function elapsed(startedAt: number, now: number): string {
   return `${minutes}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
+function initials(label: string | null): string {
+  const words = (label ?? '').replace(/[^\p{L}\s]/gu, '').trim().split(/\s+/).filter(Boolean);
+  return words.length ? words.slice(0, 2).map((word) => word[0]).join('').toUpperCase() : '#';
+}
+
 function legState(participant: Participant): string {
   if (participant.onHold) return 'On hold';
   return participant.status === 'in_progress' ? 'Connected' : 'Ringing';
@@ -65,7 +72,8 @@ type Panel = 'keypad' | 'add' | 'transfer' | null;
 export function ActiveCallDock({ organizationId, placement = 'dock' }: { organizationId: string; placement?: 'dock' | 'inline' }) {
   const { status, error, activeCall, incoming, hangUp, toggleMute, sendDigits } = useTelephoneDevice();
   const popout = useDialerPopout();
-  const [now, setNow] = useState(() => Date.now());
+  // The server and hydration render share a placeholder; the browser clock starts after mount.
+  const [now, setNow] = useState<number | null>(null);
   const [roster, setRoster] = useState<Roster>({ participants: [], ownMembershipId: null });
   const [number, setNumber] = useState('');
   const [pending, setPending] = useState<string | null>(null);
@@ -81,8 +89,9 @@ export function ActiveCallDock({ organizationId, placement = 'dock' }: { organiz
 
   useEffect(() => {
     if (!activeCall) return undefined;
+    const firstTick = setTimeout(() => setNow(Date.now()), 0);
     const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
+    return () => { clearTimeout(firstTick); clearInterval(interval); };
   }, [activeCall]);
 
   const activeCallId = activeCall?.callId ?? null;
@@ -114,16 +123,19 @@ export function ActiveCallDock({ organizationId, placement = 'dock' }: { organiz
     );
   }
 
+  // On the Dialer page itself the live call is the console's main surface, not a strip.
+  const onConsole = placement === 'inline' && !container;
+
   if (incoming) {
     return renderSurface(
       <div
         style={placement === 'dock' ? MOBILE_NAV_HEIGHT_STYLE : undefined}
         className={`${surfaceClass} flex flex-wrap items-center justify-between gap-3`}
       >
-        <span className="font-medium">Incoming call</span>
+        <span className={onConsole ? 'text-lg font-semibold' : 'font-medium'}>Incoming call</span>
         <div className="flex gap-2">
-          <Button tone="primary" onClick={incoming.accept}><Phone aria-hidden /> Answer</Button>
-          <Button tone="danger" onClick={incoming.reject}><PhoneOff aria-hidden /> Decline</Button>
+          <Button tone="primary" className={onConsole ? 'h-11 px-5' : undefined} onClick={incoming.accept}><Phone aria-hidden /> Answer</Button>
+          <Button tone="danger" className={onConsole ? 'h-11 px-5' : undefined} onClick={incoming.reject}><PhoneOff aria-hidden /> Decline</Button>
         </div>
       </div>
     );
@@ -166,33 +178,53 @@ export function ActiveCallDock({ organizationId, placement = 'dock' }: { organiz
   };
 
   const connected = activeCall.status === 'in_progress';
+  const controlSize = onConsole ? 'default' : 'small';
+  const tile = onConsole ? 'h-16 flex-col gap-1 text-xs [&_svg]:size-5' : undefined;
 
   return renderSurface(
     <div
       style={placement === 'dock' ? MOBILE_NAV_HEIGHT_STYLE : undefined}
       className={surfaceClass}
     >
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium">{activeCall.contactLabel ?? 'Call'}</span>
-            <Badge tone={connected ? 'success' : 'neutral'}>{CALL_STATE_LABEL[activeCall.status]}</Badge>
-            {status !== 'ready' ? <Badge tone="danger">Dialer {status}</Badge> : null}
+      <div className={onConsole ? 'flex flex-col gap-5' : 'flex flex-wrap items-center justify-between gap-x-4 gap-y-2'}>
+        {onConsole ? (
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-4">
+              <Avatar className="size-14 shrink-0"><AvatarFallback className="bg-secondary text-lg font-semibold text-muted">{initials(activeCall.contactLabel)}</AvatarFallback></Avatar>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatePill tone={connected ? 'success' : 'neutral'}>{CALL_STATE_LABEL[activeCall.status]}</StatePill>
+                  {status !== 'ready' ? <StatePill tone="danger">Dialer {status}</StatePill> : null}
+                </div>
+                <p className="mt-1 truncate text-2xl font-semibold tracking-tight">{activeCall.contactLabel ?? 'Call'}</p>
+                <p className="text-sm text-muted">{activeCall.direction === 'outgoing' ? 'Outgoing' : 'Incoming'}</p>
+              </div>
+            </div>
+            <p className="text-3xl font-semibold tabular-nums tracking-tight" aria-label="Call duration">{now === null ? '\u2014' : elapsed(activeCall.startedAt, now)}</p>
           </div>
-          <div className="text-sm text-muted">
-            {elapsed(activeCall.startedAt, now)} · {activeCall.direction === 'outgoing' ? 'Outgoing' : 'Incoming'}
+        ) : (
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">{activeCall.contactLabel ?? 'Call'}</span>
+              <Badge tone={connected ? 'success' : 'neutral'}>{CALL_STATE_LABEL[activeCall.status]}</Badge>
+              {status !== 'ready' ? <Badge tone="danger">Dialer {status}</Badge> : null}
+            </div>
+            <div className="text-sm text-muted">
+              {now === null ? '\u2014' : elapsed(activeCall.startedAt, now)} · {activeCall.direction === 'outgoing' ? 'Outgoing' : 'Incoming'}
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className={container ? 'grid w-full grid-cols-2 gap-2' : 'flex flex-wrap items-center gap-2'}>
-          <Button tone="secondary" size="small" onClick={toggleMute} aria-pressed={activeCall.muted}>
+        <div role={onConsole ? 'group' : undefined} aria-label={onConsole ? 'Call controls' : undefined} className={onConsole ? 'grid grid-cols-3 gap-2 sm:grid-cols-6' : container ? 'grid w-full grid-cols-2 gap-2' : 'flex flex-wrap items-center gap-2'}>
+          <Button tone="secondary" size={controlSize} className={tile} onClick={toggleMute} aria-pressed={activeCall.muted}>
             {activeCall.muted ? <MicOff aria-hidden /> : <Mic aria-hidden />} {activeCall.muted ? 'Unmute' : 'Mute'}
           </Button>
 
           {callId && customer ? (
             <Button
               tone="secondary"
-              size="small"
+              size={controlSize}
+              className={tile}
               aria-pressed={customer.onHold}
               disabled={pending === 'hold' || !customer.connectable}
               onClick={() => run('hold', () => holdParticipantAction(organizationId, { callId, participantId: customer.id, hold: !customer.onHold }))}
@@ -201,25 +233,25 @@ export function ActiveCallDock({ organizationId, placement = 'dock' }: { organiz
             </Button>
           ) : null}
 
-          <Button tone="secondary" size="small" aria-pressed={panel === 'keypad'} onClick={() => setPanel(panel === 'keypad' ? null : 'keypad')}>
+          <Button tone="secondary" size={controlSize} className={tile} aria-pressed={panel === 'keypad'} onClick={() => setPanel(panel === 'keypad' ? null : 'keypad')}>
             <Grid3x3 aria-hidden /> Keypad
           </Button>
-          <Button tone="secondary" size="small" aria-pressed={panel === 'add'} onClick={() => setPanel(panel === 'add' ? null : 'add')}>
+          <Button tone="secondary" size={controlSize} className={tile} aria-pressed={panel === 'add'} onClick={() => setPanel(panel === 'add' ? null : 'add')}>
             <UserPlus aria-hidden /> Add
           </Button>
-          <Button tone="secondary" size="small" aria-pressed={panel === 'transfer'} onClick={() => setPanel(panel === 'transfer' ? null : 'transfer')}>
+          <Button tone="secondary" size={controlSize} className={tile} aria-pressed={panel === 'transfer'} onClick={() => setPanel(panel === 'transfer' ? null : 'transfer')}>
             <ArrowRightLeft aria-hidden /> Transfer
           </Button>
 
-          <Button tone="danger" size="small" disabled={pending === 'leave'} onClick={leaveOrEnd}>
+          <Button tone="danger" size={controlSize} className={tile} disabled={pending === 'leave'} onClick={leaveOrEnd}>
             <PhoneOff aria-hidden /> {staying ? 'Leave call' : 'End call'}
           </Button>
-          {!container && popout ? <Button tone="secondary" size="small" data-dialer-popout-trigger onClick={() => popout.open()}><ExternalLink aria-hidden /> Pop out dialer</Button> : null}
+          {!container && popout && !onConsole ? <Button tone="secondary" size="small" data-dialer-popout-trigger onClick={() => popout.open()}><ExternalLink aria-hidden /> Pop out dialer</Button> : null}
         </div>
       </div>
 
       {live.length > 0 ? (
-        <ul className="mt-2 flex flex-wrap gap-2 text-sm" aria-label="Who is on this call">
+        <ul className={onConsole ? 'mt-4 flex flex-wrap gap-2 text-sm' : 'mt-2 flex flex-wrap gap-2 text-sm'} aria-label="Who is on this call">
           {live.map((participant) => (
             <li key={participant.id} className="flex items-center gap-2 rounded border border-border px-2 py-1">
               <span>{participant.membershipId !== null && participant.membershipId === roster.ownMembershipId ? 'You' : PARTY_LABEL[participant.party]}</span>
@@ -258,9 +290,9 @@ export function ActiveCallDock({ organizationId, placement = 'dock' }: { organiz
       ) : null}
 
       {panel === 'keypad' ? (
-        <div className="mt-3 grid w-48 grid-cols-3 gap-1">
+        <div className={onConsole ? 'mt-4 grid w-full max-w-60 grid-cols-3 gap-1.5' : 'mt-3 grid w-48 grid-cols-3 gap-1'}>
           {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map((digit) => (
-            <Button key={digit} type="button" tone="secondary" size="small" onClick={() => sendDigits(digit)}>
+            <Button key={digit} type="button" tone="secondary" size={controlSize} className={onConsole ? 'h-10 tabular-nums' : undefined} onClick={() => sendDigits(digit)}>
               {digit}
             </Button>
           ))}

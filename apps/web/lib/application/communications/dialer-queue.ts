@@ -1,12 +1,30 @@
 import type { Db } from '@/lib/db/types';
 import { getCustomer, type Customer } from '@/lib/domain/customers/customers';
 import { listFollowUps, type FollowUp } from '@/lib/domain/follow-ups/follow-ups';
+import { listCallPage, type Call } from '@/lib/domain/reception/calls';
 
-export type DialerQueueEntry = { followUp: FollowUp; customer: Customer | null };
+/** How many of a queued customer's most recent recorded calls the Dialer shows beside them. */
+export const RECENT_CALLS_PER_CUSTOMER = 3;
 
+export type DialerQueueEntry = { followUp: FollowUp; customer: Customer | null; recentCalls: Call[] };
+
+/**
+ * The first page of open call follow-ups, earliest due first, with each customer read once and
+ * their few most recent recorded calls. Bounded by the page: at most 25 customers, each read in
+ * the same organization under the caller's own access.
+ */
 export async function loadDialerQueue(db: Db, organizationId: string): Promise<{ items: DialerQueueEntry[]; total: number }> {
   const followUps = await listFollowUps(db, { organizationId, status: 'open', kind: 'call', limit: 25 });
   const ids = [...new Set(followUps.map(item => item.customerId))];
-  const customers = new Map(await Promise.all(ids.map(async customerId => [customerId, await getCustomer(db, { organizationId, customerId })] as const)));
-  return { items: followUps.map(followUp => ({ followUp, customer: customers.get(followUp.customerId) ?? null })), total: followUps.total };
+  const context = new Map(await Promise.all(ids.map(async customerId => {
+    const [customer, calls] = await Promise.all([
+      getCustomer(db, { organizationId, customerId }),
+      listCallPage(db, { organizationId, filter: { customerId }, limit: RECENT_CALLS_PER_CUSTOMER }),
+    ]);
+    return [customerId, { customer, recentCalls: calls.items }] as const;
+  })));
+  return {
+    items: followUps.map(followUp => ({ followUp, customer: context.get(followUp.customerId)?.customer ?? null, recentCalls: context.get(followUp.customerId)?.recentCalls ?? [] })),
+    total: followUps.total,
+  };
 }

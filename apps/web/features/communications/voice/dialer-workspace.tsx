@@ -1,14 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { ArrowDownLeft, CircleAlert, ExternalLink, Lock, Phone, PanelLeft, PanelRight, Search, Settings2 } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@gold/ui/components/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
+import { tabListStyles, tabTriggerStyles } from '@gold/ui/components/tab-styles';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { Hint, TextInput } from '@/components/controls/inputs';
-import { cx } from '@/components/class-names';
-import { tabListStyles, tabTriggerStyles } from '@gold/ui/components/tab-styles';
-import { Section, SectionHeading } from '@/components/surfaces/section';
-import type { CallingOptions } from '@/lib/application/communications/calling-options';
+import { cx, FOCUS_RING } from '@/components/class-names';
+import { IconWell, OperationalPanel, OwnerIdentity, PanelState, StatePill, type StatusTone } from '@/components/operational/primitives';
+import { ReadinessBadge } from '@/components/operational/readiness-badge';
+import type { CallingBlocker, CallingOptions } from '@/lib/application/communications/calling-options';
 import type { DialerQueueEntry } from '@/lib/application/communications/dialer-queue';
 import { ActiveCallDock } from './active-call-dock';
 import { NewCallForm } from './new-call-form';
@@ -16,36 +19,63 @@ import { useTelephoneDevice, type DeviceStatus } from './telephone-device';
 import { useDialerPopout } from './dialer-popout-context';
 
 type Mode = 'standard' | 'focus';
-type Panel = 'queue' | 'call' | 'context';
+type Region = 'queue' | 'call' | 'context';
+type Draft = { toNumber: string; phoneNumberId: string };
 
 const FORM_ID = 'dialer-call-form';
-const DEVICE_LABEL: Record<DeviceStatus, string> = {
-  offline: 'Connects when you call',
-  connecting: 'Connecting',
-  ready: 'Connected',
-  error: 'Connection failed',
+const DEVICE: Record<DeviceStatus, { label: string; tone: StatusTone }> = {
+  offline: { label: 'Not connected', tone: 'neutral' },
+  connecting: { label: 'Connecting', tone: 'neutral' },
+  ready: { label: 'Connected', tone: 'success' },
+  error: { label: 'Connection failed', tone: 'danger' },
 };
-const PANELS: { key: Panel; label: string }[] = [
+const BLOCKER_STATE = { restricted: 'restricted', 'not-configured': 'configuration-required', unavailable: 'unavailable' } as const;
+const BLOCKER_ICON = { restricted: Lock, 'not-configured': Settings2, unavailable: CircleAlert } as const;
+const REGIONS: { key: Region; label: string }[] = [
   { key: 'queue', label: 'Queue' },
   { key: 'call', label: 'Calling' },
   { key: 'context', label: 'Customer' },
 ];
 
+function initials(name: string): string {
+  const words = name.replace(/[^\p{L}\s]/gu, '').trim().split(/\s+/).filter(Boolean);
+  return words.length ? words.slice(0, 2).map(word => word[0]).join('').toUpperCase() : '#';
+}
+
 /**
- * The Dialer's operating console: queue, calling and customer context as three regions of one page.
- * Standard is the default and shows every region the operator has not hidden; Focus keeps only the
- * calling region. Pop-out moves the live controls into a separate window through the same telephone.
+ * The Dialer's operating console (`docs/ui-system.md`, A11): the call queue, the calling console
+ * and the customer context, with the call history and its summary figures last.
+ * The composition holds whatever the data: an empty queue, no outbound number or no selection
+ * each say what is absent and why in their own region rather than collapsing the layout.
+ *
+ * **Presentation.** Standard shows every region the operator has not hidden; Focus keeps only the
+ * calling console and its workflow; Pop-out moves the live controls into the separate window
+ * through the same telephone. Regions are hidden, never unmounted, so a live call's controls keep
+ * their state when the presentation changes.
  *
  * **Choosing a queue row never dials.** It fills the number and the customer context. A live call
- * keeps its own controls: the dock shows the call, not whichever row is highlighted.
+ * keeps its own controls: the console shows the call, not whichever row is highlighted.
  *
- * **The queue search covers only the follow-ups loaded here** (the first page, earliest due first),
- * so it says so rather than pretending to search the whole queue.
+ * **The queue search covers only the follow-ups loaded here** (the first page, earliest due
+ * first), and says so when that is not the whole queue.
  *
- * `history` is the page's own call history and counters. It sits beneath the console and leaves
- * Focus mode with everything else that is not the call.
+ * Server-drawn pieces are passed in by the route: `wrapUp`,
+ * `recentCalls` per customer and the page `actions`. The route draws call history after the
+ * console itself; the console's root publishes `data-presentation` so Focus can hide it.
  */
-export function DialerWorkspace({ organizationId, timezone, queue, queueTotal, queueAvailable, options, prefill = '', history }: {
+export function DialerWorkspace({
+  organizationId,
+  timezone,
+  queue,
+  queueTotal,
+  queueAvailable,
+  options,
+  prefill = '',
+  actions,
+  wrapUp,
+  recentCalls = {},
+  setupHref = null,
+}: {
   organizationId: string;
   timezone: string;
   queue: DialerQueueEntry[];
@@ -54,21 +84,28 @@ export function DialerWorkspace({ organizationId, timezone, queue, queueTotal, q
   options: CallingOptions;
   /** A number to dial, from a link such as Call back. Chosen over a queue row only when no row is selected. */
   prefill?: string;
-  history?: ReactNode;
+  actions?: ReactNode;
+  wrapUp?: ReactNode;
+  /** Each queued customer's recent calls, drawn on the server, by customer id. */
+  recentCalls?: Record<string, ReactNode>;
+  /** Where the business fixes a calling blocker it owns, when the viewer may configure it. */
+  setupHref?: string | null;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(prefill ? null : queue[0]?.followUp.id ?? null);
   const [mode, setMode] = useState<Mode>('standard');
   const [showQueue, setShowQueue] = useState(true);
   const [showContext, setShowContext] = useState(true);
-  const [panel, setPanel] = useState<Panel>('call');
+  const [region, setRegion] = useState<Region>('call');
   const [search, setSearch] = useState('');
   const [dueOnly, setDueOnly] = useState(false);
   const [now] = useState(() => Date.now());
+  const [returned, setReturned] = useState<(Draft & { at: number }) | null>(null);
+  const draft = useRef<Draft>({ toNumber: '', phoneNumberId: '' });
+  const onDraftChange = useCallback((next: Draft) => { draft.current = next; }, []);
   const selected = queue.find(entry => entry.followUp.id === selectedId);
-  const { activeCall, incoming, status } = useTelephoneDevice();
+  const { activeCall, incoming, status, register, unregister, error: deviceError } = useTelephoneDevice();
   const popout = useDialerPopout();
   const setInlineHost = popout?.setInlineHost;
-  const date = new Intl.DateTimeFormat('en', { timeZone: timezone, dateStyle: 'medium', timeStyle: 'short' });
 
   // While this page is open it draws the live controls itself, so the organization dock steps aside.
   useEffect(() => {
@@ -76,110 +113,318 @@ export function DialerWorkspace({ organizationId, timezone, queue, queueTotal, q
     return () => setInlineHost?.(false);
   }, [setInlineHost]);
 
-  const focus = mode === 'focus';
+  const poppedOut = !!popout?.container;
+  const focus = mode === 'focus' && !poppedOut;
   const queueShown = showQueue && !focus;
   const contextShown = showContext && !focus;
-  const columns = [queueShown && 'minmax(15rem,1fr)', 'minmax(0,2fr)', contextShown && 'minmax(15rem,1fr)'].filter(Boolean).join(' ');
+  const live = activeCall !== null || incoming !== null;
+  const blocker = options.blocker ?? (options.unavailableReason ? { kind: 'unavailable', reason: options.unavailableReason, setup: null } satisfies CallingBlocker : null);
+  const customerName = selected ? selected.customer?.name ?? selected.followUp.customerName : null;
+  const customerPhone = selected?.customer?.phone ?? null;
+  const formNumber = returned?.toNumber ?? customerPhone ?? prefill;
+  const formCustomer = selected?.customer && formNumber === customerPhone ? selected.customer : undefined;
+  const columns = [queueShown && 'minmax(14rem,1fr)', 'minmax(0,2fr)', contextShown && 'minmax(14rem,1fr)'].filter(Boolean).join(' ');
+
+  const dayKey = (value: Date | number) => new Intl.DateTimeFormat('en-CA', { timeZone: timezone, dateStyle: 'short' }).format(value);
+  const timeOf = new Intl.DateTimeFormat('en', { timeZone: timezone, hour: 'numeric', minute: '2-digit' });
+  const dayOf = new Intl.DateTimeFormat('en', { timeZone: timezone, month: 'short', day: 'numeric' });
+  const fullDate = new Intl.DateTimeFormat('en', { timeZone: timezone, dateStyle: 'medium', timeStyle: 'short' });
+  const isDue = (dueAt: string) => new Date(dueAt).getTime() <= now;
+  const dueLabel = (dueAt: string) => {
+    const due = new Date(dueAt);
+    return dayKey(due) === dayKey(now) ? timeOf.format(due) : dayOf.format(due);
+  };
+
   const needle = search.trim().toLowerCase();
+  const dueCount = queue.filter(({ followUp }) => isDue(followUp.dueAt)).length;
   const visible = queue.filter(({ followUp, customer }) => {
-    if (dueOnly && new Date(followUp.dueAt).getTime() > now) return false;
+    if (dueOnly && !isDue(followUp.dueAt)) return false;
     if (!needle) return true;
     return [followUp.customerName, followUp.title, followUp.ownerName, customer?.phone].filter(Boolean).join(' ').toLowerCase().includes(needle);
   });
-  const panelClass = (active: boolean, shownOnDesktop: boolean) => cx(active ? 'block' : 'hidden', shownOnDesktop ? 'lg:block' : 'lg:hidden');
-  const live = activeCall !== null || incoming !== null;
+  const otherOpen = selected ? queue.filter(entry => entry.followUp.customerId === selected.followUp.customerId && entry.followUp.id !== selected.followUp.id) : [];
 
-  return <div className="mt-6 space-y-6">
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <div role="group" aria-label="Presentation" data-slot="tabs-list" data-variant="segmented" className={tabListStyles()}>
-        <button type="button" data-slot="tabs-trigger" aria-pressed={mode === 'standard'} className={tabTriggerStyles} onClick={() => setMode('standard')}>Standard</button>
-        <button type="button" data-slot="tabs-trigger" aria-pressed={focus} className={tabTriggerStyles} onClick={() => setMode('focus')}>Focus</button>
-        {popout ? <button type="button" data-slot="tabs-trigger" data-dialer-popout-trigger aria-pressed={popout.container !== null} className={tabTriggerStyles} onClick={() => popout.open()}><ExternalLink aria-hidden className="size-4" /> Pop-out</button> : null}
+  const choose = (id: string) => {
+    setSelectedId(id);
+    setReturned(null);
+    setRegion('call');
+  };
+  const choosePresentation = (next: Mode) => {
+    if (poppedOut) popout?.close();
+    setMode(next);
+  };
+  const openPopout = () => {
+    if (!popout) return;
+    const current = draft.current;
+    const forCustomer = selected && current.toNumber === (customerPhone ?? '');
+    popout.open({
+      numbers: options.numbers,
+      defaultNumber: options.defaultNumber,
+      toNumber: current.toNumber,
+      phoneNumberId: current.phoneNumberId,
+      customerId: forCustomer ? selected.customer?.id : undefined,
+      customerName: forCustomer ? customerName ?? undefined : undefined,
+      onReturn: (back) => setReturned({ ...back, at: Date.now() }),
+    });
+  };
+  const regionClass = (key: Region, shownOnDesktop: boolean) => cx(!focus && region === key ? 'flex' : 'hidden', shownOnDesktop ? '@min-[64rem]/dialer:flex' : '@min-[64rem]/dialer:hidden');
+
+  // --- Calling readiness -------------------------------------------------------------------
+  const BlockerIcon = blocker ? BLOCKER_ICON[blocker.kind] : null;
+  const fromLabel = options.defaultNumber
+    ? options.defaultNumber.label ? `${options.defaultNumber.label} · ${options.defaultNumber.e164}` : options.defaultNumber.e164
+    : options.numbers.length ? 'Choose a line when you call' : blocker && blocker.setup !== 'phone-numbers' ? 'Not available' : 'No outbound number';
+  const readiness = (
+    <section aria-label="Calling readiness" className="shrink-0">
+      <dl className="grid grid-cols-3 overflow-hidden [&>div]:min-w-0 [&>div]:px-3 [&>div]:py-2 sm:[&>div]:px-4">
+        <div>
+          <dt className="text-xs text-muted">Calling from</dt>
+          <dd className={cx('mt-0.5 truncate text-sm font-medium tabular-nums', !options.defaultNumber && !options.numbers.length && 'text-muted')}>{fromLabel}</dd>
+        </div>
+        <div className="border-l border-border">
+          <dt className="truncate text-xs text-muted">Browser phone</dt>
+          <dd className="mt-1 flex flex-wrap items-center gap-2">
+            <StatePill tone={DEVICE[status].tone}>{DEVICE[status].label}</StatePill>
+            {!blocker ? <Button type="button" tone="text" size="tiny" disabled={status === 'connecting'} onClick={() => { if (status === 'ready') unregister(); else void register().catch(() => undefined); }}>{status === 'ready' ? 'Stop receiving calls' : 'Receive calls here'}</Button> : null}
+          </dd>
+        </div>
+        <div className="border-l border-border">
+          <dt className="text-xs text-muted">Calling</dt>
+          <dd className="mt-1"><ReadinessBadge state={blocker ? BLOCKER_STATE[blocker.kind] : 'configured'} /></dd>
+        </div>
+      </dl>
+      {blocker && BlockerIcon ? (
+        <div role="status" data-state={blocker.kind} className={cx('flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border px-4 py-2 text-sm', blocker.kind === 'restricted' ? 'text-muted' : blocker.kind === 'unavailable' ? 'bg-danger/5' : 'bg-warning/5')}>
+          <BlockerIcon aria-hidden className={cx('size-4 shrink-0', blocker.kind === 'unavailable' ? 'text-danger' : blocker.kind === 'not-configured' ? 'text-warning' : 'text-muted')} />
+          <p className="min-w-0 flex-1">{blocker.reason}</p>
+          {blocker.setup && setupHref ? <ButtonLink href={setupHref} tone="secondary" size="small">Set up numbers</ButtonLink> : null}
+        </div>
+      ) : null}
+      {deviceError ? <p role="alert" className="border-t border-border px-4 py-2 text-sm text-danger">{deviceError}</p> : null}
+    </section>
+  );
+
+  // --- Calling surface -----------------------------------------------------------------------
+  const identity = selected ? (
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <Avatar className="size-10 shrink-0"><AvatarFallback className="bg-secondary text-sm font-semibold text-muted">{initials(customerName ?? '')}</AvatarFallback></Avatar>
+        <div className="min-w-0">
+          <h2 className="truncate text-xl font-semibold tracking-tight">{customerName}</h2>
+          <p className="truncate text-sm text-muted">{selected.followUp.title}</p>
+          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            {isDue(selected.followUp.dueAt) ? <StatePill tone="warning">Due now</StatePill> : <span className="text-muted">Due {dueLabel(selected.followUp.dueAt)}</span>}
+          </p>
+        </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" tone="secondary" size="small" aria-pressed={queueShown} disabled={focus} onClick={() => setShowQueue(value => !value)}>Call queue</Button>
-        <Button type="button" tone="secondary" size="small" aria-pressed={contextShown} disabled={focus} onClick={() => setShowContext(value => !value)}>Customer context</Button>
+      <Button type="button" tone="secondary" size="small" aria-label="Dial another number" onClick={() => { setSelectedId(null); setReturned(null); }}>New number</Button>
+    </div>
+  ) : (
+    <h2 className="text-base font-semibold tracking-tight">New call</h2>
+  );
+
+  const callSurface = poppedOut ? (
+    <section aria-label="Calling console" className="flex min-h-72 flex-col items-center justify-center gap-3 border-t border-border p-5 text-center">
+      <IconWell icon={ExternalLink} round />
+      <p className="text-base font-semibold">{live ? 'This call is in the separate dialer window.' : 'The dialer is open in a separate window.'}</p>
+      <p className="max-w-sm text-sm text-muted">Keep this window open while calling. Choose Standard or Focus to bring the dialer back here.</p>
+      <div className="flex flex-wrap justify-center gap-2">
+        <Button type="button" tone="secondary" onClick={() => popout?.close()}><ArrowDownLeft aria-hidden /> Return to GildOps</Button>
+      </div>
+    </section>
+  ) : live ? (
+    <section aria-label="Calling console" className="border-t border-border [&>div]:rounded-none [&>div]:border-0 [&>div]:p-5">
+      <ActiveCallDock organizationId={organizationId} placement="inline" />
+    </section>
+  ) : (
+    <section aria-label="Calling console" className="flex flex-col gap-4 border-t border-border p-4 @sm/dialer:p-5">
+      {identity}
+      {selected && !customerPhone ? <Hint>No customer phone number is recorded. Open the customer to add one, or dial another number.</Hint> : null}
+      <NewCallForm
+        key={returned ? `returned-${returned.at}` : selected?.followUp.id ?? `manual-${prefill}`}
+        formId={FORM_ID}
+        presentation="console"
+        onDraftChange={onDraftChange}
+        organizationId={organizationId}
+        numbers={options.numbers}
+        defaultNumber={options.defaultNumber}
+        toNumber={formNumber}
+        phoneNumberId={returned?.phoneNumberId}
+        customerId={formCustomer?.id}
+        customerName={formCustomer?.name}
+      />
+    </section>
+  );
+
+  const workflow = (
+    <section aria-label="Call workflow" className="shrink-0 border-t border-border">
+      <Tabs defaultValue="follow-up">
+        <TabsList variant="line" aria-label="Call workflow" className="w-full px-3">
+          <TabsTrigger value="follow-up">Follow-up</TabsTrigger>
+          <TabsTrigger value="wrap-up">Wrap-up</TabsTrigger>
+        </TabsList>
+        <TabsContent value="follow-up" className="p-4">
+          {selected ? (
+            <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[8rem_minmax(0,1fr)]">
+              <dt className="text-muted">Follow-up</dt>
+              <dd className="font-medium">{selected.followUp.title}</dd>
+              <dt className="text-muted">Due</dt>
+              <dd className="tabular-nums">{fullDate.format(new Date(selected.followUp.dueAt))}</dd>
+              <dt className="text-muted">Owner</dt>
+              <dd><OwnerIdentity name={selected.followUp.ownerName} /></dd>
+              <dt className="text-muted">Notes</dt>
+              <dd className={cx('whitespace-pre-wrap', !selected.followUp.notes && 'text-muted')}>{selected.followUp.notes ?? 'No notes recorded.'}</dd>
+              {selected.followUp.opportunityId ? <>
+                <dt className="text-muted">Opportunity</dt>
+                <dd><Link className="underline underline-offset-4" href={`/organizations/${organizationId}/opportunities/${selected.followUp.opportunityId}`}>{selected.followUp.opportunityTitle ?? 'Open opportunity'}</Link></dd>
+              </> : null}
+            </dl>
+          ) : <p className="text-sm text-muted">A number dialled directly has no follow-up. Choose one in the queue to see its notes here.</p>}
+        </TabsContent>
+        <TabsContent value="wrap-up" className="p-4">
+          {wrapUp ?? <PanelState kind="restricted">Your role cannot wrap up calls.</PanelState>}
+        </TabsContent>
+      </Tabs>
+    </section>
+  );
+
+  // --- Queue -----------------------------------------------------------------------------------
+  const partial = queueTotal > queue.length;
+  const queuePanel = (
+    <OperationalPanel
+      title="Call queue"
+      count={queueAvailable ? queueTotal : undefined}
+      density="compact"
+      flush
+      fill={queueAvailable && queue.length > 0}
+      href={queueAvailable ? `/organizations/${organizationId}/follow-ups?status=open&kind=call` : undefined}
+      hrefLabel="All call follow-ups"
+      className="min-h-0 flex-1"
+    >
+      {!queueAvailable ? <PanelState kind="not-configured">Follow-ups are not included for this business, so there is no call queue.</PanelState> : queue.length === 0 ? (
+        <div className="space-y-3 p-3">
+          <p className="text-sm text-muted">No open call follow-ups. A call follow-up added to a customer joins this queue, earliest due first.</p>
+          <ButtonLink href={`/organizations/${organizationId}/follow-ups`} tone="secondary" size="small">Open follow-ups</ButtonLink>
+        </div>
+      ) : <>
+        <div className="shrink-0 space-y-2 border-b border-border p-3">
+          <div className="relative">
+            <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted" />
+            <TextInput type="search" aria-label="Search loaded call follow-ups" placeholder="Search name, follow-up or number" value={search} onChange={event => setSearch(event.target.value)} className="pl-8" />
+          </div>
+          <div role="group" aria-label="Queue filter" data-slot="tabs-list" data-variant="segmented" className={cx(tabListStyles(), 'w-full')}>
+            <button type="button" data-slot="tabs-trigger" aria-pressed={!dueOnly} className={cx(tabTriggerStyles, 'flex-1')} onClick={() => setDueOnly(false)}>All <span className="text-xs tabular-nums text-muted">{queue.length}</span></button>
+            <button type="button" data-slot="tabs-trigger" aria-pressed={dueOnly} className={cx(tabTriggerStyles, 'flex-1')} onClick={() => setDueOnly(true)}>Due now <span className="text-xs tabular-nums text-muted">{dueCount}</span></button>
+          </div>
+          {partial ? <Hint>Searches the {queue.length} follow-ups loaded here, not the whole queue.</Hint> : null}
+        </div>
+        {visible.length === 0 ? <PanelState>No loaded follow-ups match.</PanelState> : (
+          <ul className="min-h-0 flex-1 divide-y divide-border overflow-y-auto" aria-label="Call follow-ups">
+            {visible.map(({ followUp, customer }) => {
+              const name = customer?.name ?? followUp.customerName;
+              const chosen = selectedId === followUp.id;
+              return <li key={followUp.id}>
+                <button type="button" aria-pressed={chosen} onClick={() => choose(followUp.id)} className={cx('flex w-full items-start gap-3 border-l-2 px-3 py-2.5 text-left transition-colors', chosen ? 'border-accent bg-selected' : 'border-transparent hover:bg-hover', FOCUS_RING)}>
+                  <Avatar className="mt-0.5 size-9 shrink-0"><AvatarFallback className="bg-secondary text-xs font-semibold text-muted">{initials(name)}</AvatarFallback></Avatar>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="truncate text-sm font-semibold">{name}</span>
+                      {isDue(followUp.dueAt) ? <span className="shrink-0 text-xs font-medium text-warning">Due now</span> : <span className="shrink-0 text-xs tabular-nums text-muted">{dueLabel(followUp.dueAt)}</span>}
+                    </span>
+                    <span className="block truncate text-xs text-muted">{followUp.title}</span>
+                    <span className="block truncate text-xs tabular-nums text-muted">{customer?.phone ?? 'No phone number'}{followUp.ownerName ? ` · ${followUp.ownerName}` : ''}</span>
+                  </span>
+                </button>
+              </li>;
+            })}
+          </ul>
+        )}
+        {partial ? <p className="shrink-0 border-t border-border px-3 py-2 text-xs text-muted">Showing the first {queue.length} of {queueTotal} open call follow-ups, earliest due first.</p> : null}
+        <div className="shrink-0 border-t border-border p-3">
+          <Button type="submit" form={FORM_ID} className="w-full" disabled={live || poppedOut || !customerPhone || !!blocker}><Phone aria-hidden /> Start calling</Button>
+        </div>
+      </>}
+    </OperationalPanel>
+  );
+
+  // --- Customer context ----------------------------------------------------------------------------
+  const contextPanel = (
+    <OperationalPanel title="Customer" density="compact" fill={!!selected} className="min-h-0 flex-1">
+      {!selected ? (
+        <p className="text-sm text-muted">{queue.length ? 'Choose a follow-up in the queue to see the customer, their contact details and recent calls.' : 'Customer details appear here when you call from a follow-up in the queue.'}</p>
+      ) : !selected.customer ? <PanelState kind="unavailable">Customer details are unavailable.</PanelState> : (
+        <div className="space-y-5">
+          <div className="flex items-center gap-3">
+            <Avatar className="size-10 shrink-0"><AvatarFallback className="bg-secondary text-sm font-semibold text-muted">{initials(selected.customer.name)}</AvatarFallback></Avatar>
+            <div className="min-w-0">
+              <Link className="block truncate font-semibold underline-offset-4 hover:underline" href={`/organizations/${organizationId}/customers/${selected.customer.id}`}>{selected.customer.name}</Link>
+              <p className="truncate text-xs text-muted">{selected.followUp.title}</p>
+            </div>
+          </div>
+          <dl className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
+            <dt className="text-muted">Phone</dt>
+            <dd className={cx('truncate tabular-nums', !selected.customer.phone && 'text-muted')}>{selected.customer.phone ?? 'Not recorded'}</dd>
+            <dt className="text-muted">Email</dt>
+            <dd className={cx('truncate', !selected.customer.email && 'text-muted')}>{selected.customer.email ?? 'Not recorded'}</dd>
+          </dl>
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Other open call follow-ups</h3>
+            {otherOpen.length ? <ul className="space-y-1">{otherOpen.map(entry => <li key={entry.followUp.id}>
+              <button type="button" onClick={() => choose(entry.followUp.id)} className={cx('-mx-2 flex w-[calc(100%+1rem)] items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-hover', FOCUS_RING)}>
+                <span className="truncate">{entry.followUp.title}</span>
+                <span className="shrink-0 text-xs tabular-nums text-muted">{dueLabel(entry.followUp.dueAt)}</span>
+              </button>
+            </li>)}</ul> : <p className="text-sm text-muted">None in the loaded queue.</p>}
+          </div>
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Recent calls</h3>
+            {recentCalls[selected.customer.id] ?? <p className="text-sm text-muted">No recorded calls with this customer yet.</p>}
+          </div>
+          <ButtonLink href={`/organizations/${organizationId}/customers/${selected.customer.id}`} tone="secondary" size="small" className="w-full">Open customer</ButtonLink>
+        </div>
+      )}
+    </OperationalPanel>
+  );
+
+  return <div data-presentation={focus ? 'focus' : poppedOut ? 'pop-out' : 'standard'} className="peer @container/dialer flex flex-col gap-3">
+    <div role="group" aria-label="Dialer toolbar" className="flex flex-wrap items-center gap-2" onClickCapture={event => {
+      if ((event.target as Element).closest('a[href="#call-history"]')) choosePresentation('standard');
+    }}>
+      <div role="group" aria-label="Presentation" data-slot="tabs-list" data-variant="segmented" className={tabListStyles()}>
+        <button type="button" data-slot="tabs-trigger" aria-pressed={mode === 'standard'} className={tabTriggerStyles} onClick={() => choosePresentation('standard')}>Standard</button>
+        <button type="button" data-slot="tabs-trigger" aria-pressed={mode === 'focus'} className={tabTriggerStyles} onClick={() => choosePresentation('focus')}>Focus</button>
+      </div>
+      <div role="group" aria-label="Panel visibility" className="hidden items-center gap-2 @min-[64rem]/dialer:flex">
+        <Button type="button" tone="secondary" size="small" aria-label="Queue panel" aria-pressed={queueShown} disabled={focus} onClick={() => setShowQueue(value => !value)}><PanelLeft aria-hidden /> Call queue</Button>
+        <Button type="button" tone="secondary" size="small" aria-label="Context panel" aria-pressed={contextShown} disabled={focus} onClick={() => setShowContext(value => !value)}><PanelRight aria-hidden /> Customer context</Button>
+      </div>
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+        {popout ? <Button type="button" tone="secondary" aria-label={poppedOut ? 'Show dialer window' : 'Pop out dialer'} data-dialer-popout-trigger onClick={openPopout}><ExternalLink aria-hidden /> {poppedOut ? 'Show dialer window' : 'Pop out'}</Button> : null}
+        {actions}
       </div>
     </div>
+    {popout?.error ? <p role="alert" className="text-sm text-danger">{popout.error}</p> : null}
 
     {/* Below desktop width one region is shown at a time; a live call is never out of reach. */}
-    <div role="group" aria-label="Dialer region" className="flex gap-1 lg:hidden">
-      {PANELS.map(({ key, label }) => <Button key={key} type="button" tone="secondary" size="small" aria-pressed={panel === key} onClick={() => setPanel(key)}>{label}</Button>)}
-    </div>
-    {live && panel !== 'call' ? <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-3 text-sm lg:hidden">
+    {!focus ? <div role="group" aria-label="Dialer region" data-slot="tabs-list" data-variant="segmented" className={cx(tabListStyles(), 'w-full @min-[64rem]/dialer:hidden')}>
+      {REGIONS.map(({ key, label }) => <button key={key} type="button" data-slot="tabs-trigger" aria-pressed={region === key} className={cx(tabTriggerStyles, 'flex-1')} onClick={() => setRegion(key)}>{label}</button>)}
+    </div> : null}
+    {live && !focus && region !== 'call' ? <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface p-3 text-sm @min-[64rem]/dialer:hidden">
       <span>{incoming ? 'Incoming call' : `On a call with ${activeCall?.contactLabel ?? 'a caller'}`}</span>
-      <Button type="button" tone="secondary" size="small" onClick={() => setPanel('call')}>Show call controls</Button>
+      <Button type="button" tone="secondary" size="small" onClick={() => setRegion('call')}>Show call controls</Button>
     </div> : null}
 
-    <div className="grid min-w-0 gap-4 lg:gap-6 lg:grid-cols-(--dialer-columns)" style={{ '--dialer-columns': columns } as CSSProperties}>
-      <Section className={panelClass(panel === 'queue', queueShown)}>
-        <div className="flex items-baseline justify-between gap-2">
-          <SectionHeading>Call queue</SectionHeading>
-          {queueAvailable ? <span className="text-sm text-muted">{queueTotal} open</span> : null}
-        </div>
-        {!queueAvailable ? <Hint className="mt-3">Call follow-ups are unavailable for this business.</Hint> : queue.length === 0 ? <Hint className="mt-3">No open call follow-ups.</Hint> : <>
-          <div className="mt-3 flex flex-col gap-2">
-            <TextInput type="search" aria-label="Search loaded call follow-ups" placeholder="Search loaded follow-ups" value={search} onChange={event => setSearch(event.target.value)} />
-            <div role="group" aria-label="Queue filter" className="flex gap-1">
-              <Button type="button" tone="secondary" size="small" aria-pressed={!dueOnly} onClick={() => setDueOnly(false)}>All</Button>
-              <Button type="button" tone="secondary" size="small" aria-pressed={dueOnly} onClick={() => setDueOnly(true)}>Due now</Button>
-            </div>
-            <Hint>Searches the {queue.length} follow-ups loaded here, not the whole queue.</Hint>
-          </div>
-          {visible.length === 0 ? <Hint className="mt-3">No loaded follow-ups match.</Hint> : <ul className="mt-3 space-y-2">
-            {visible.map(({ followUp, customer }) => <li key={followUp.id}>
-              <button type="button" aria-pressed={selectedId === followUp.id} onClick={() => setSelectedId(followUp.id)} className="flex min-h-11 w-full flex-col gap-1 rounded-md border border-border p-3 text-left hover:bg-hover aria-pressed:bg-selected focus-visible:outline-2 focus-visible:outline-offset-2">
-                <span className="font-medium">{followUp.customerName}</span>
-                <span className="text-sm">{followUp.title}</span>
-                <span className="text-xs text-muted">{date.format(new Date(followUp.dueAt))}{followUp.ownerName ? ` · ${followUp.ownerName}` : ''}{customer?.phone ? ` · ${customer.phone}` : ''}</span>
-              </button>
-            </li>)}
-          </ul>}
-          {queueTotal > queue.length ? <Hint className="mt-3">Showing the first {queue.length} of {queueTotal} open call follow-ups, earliest due first.</Hint> : null}
-          {selected?.customer?.phone ? <Button type="submit" form={FORM_ID} className="mt-4 w-full" disabled={live}>Start calling</Button> : null}
-        </>}
-        {queueAvailable ? <div className="mt-3"><ButtonLink tone="text" href={`/organizations/${organizationId}/follow-ups?status=open&kind=call`}>All call follow-ups</ButtonLink></div> : null}
-      </Section>
-
-      <Section className={panelClass(panel === 'call', true)}>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <SectionHeading>{selected ? `Call ${selected.customer?.name ?? selected.followUp.customerName}` : 'New call'}</SectionHeading>
-          {selected ? <Button type="button" tone="text" onClick={() => setSelectedId(null)}>Dial another number</Button> : null}
-        </div>
-        <dl className="mb-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-          <div><dt className="text-muted">Calling from</dt><dd>{options.defaultNumber ? options.defaultNumber.label ?? options.defaultNumber.e164 : options.numbers.length ? 'Choose a number below' : 'No outbound number'}</dd></div>
-          <div><dt className="text-muted">Browser telephone</dt><dd>{DEVICE_LABEL[status ?? 'offline']}</dd></div>
-        </dl>
-        <ActiveCallDock organizationId={organizationId} placement="inline" />
-        {options.unavailableReason ? <Hint className="mb-3">{options.unavailableReason}</Hint> : null}
-        {selected && !selected.customer?.phone ? <Hint className="mb-3">No customer phone number is recorded. Open the customer to add one, or dial another number.</Hint> : null}
-        <NewCallForm
-          key={selected?.followUp.id ?? `manual-${prefill}`}
-          formId={FORM_ID}
-          organizationId={organizationId}
-          numbers={options.numbers}
-          defaultNumber={options.defaultNumber}
-          toNumber={selected?.customer?.phone ?? prefill}
-          customerId={selected?.customer?.id}
-          customerName={selected?.customer?.name}
-        />
-      </Section>
-
-      <Section className={panelClass(panel === 'context', contextShown)}>
-        <SectionHeading>Customer context</SectionHeading>
-        {selected ? <div className="mt-3 space-y-3">
-          <Link className="font-medium underline underline-offset-4" href={`/organizations/${organizationId}/customers/${selected.followUp.customerId}`}>{selected.customer?.name ?? selected.followUp.customerName}</Link>
-          {selected.customer ? <dl className="space-y-2 text-sm">
-            <div><dt className="text-muted">Phone</dt><dd>{selected.customer.phone ?? 'Not recorded'}</dd></div>
-            <div><dt className="text-muted">Email</dt><dd>{selected.customer.email ?? 'Not recorded'}</dd></div>
-          </dl> : <Hint>Customer details are unavailable.</Hint>}
-          <p className="text-sm font-medium">{selected.followUp.title}</p>
-          {selected.followUp.notes ? <p className="whitespace-pre-wrap text-sm">{selected.followUp.notes}</p> : null}
-          {selected.followUp.opportunityId ? <Link className="block text-sm underline underline-offset-4" href={`/organizations/${organizationId}/opportunities/${selected.followUp.opportunityId}`}>{selected.followUp.opportunityTitle ?? 'Open opportunity'}</Link> : null}
-        </div> : <Hint className="mt-3">Select a call follow-up to see the customer and its recorded context.</Hint>}
-      </Section>
+    <div
+      className="grid min-w-0 gap-3 @min-[64rem]/dialer:max-h-[calc(100dvh-10rem)] @min-[64rem]/dialer:grid-cols-(--dialer-columns)"
+      style={{ '--dialer-columns': columns } as CSSProperties}
+    >
+      <div className={cx(regionClass('queue', queueShown), 'min-h-0 min-w-0 flex-col', !queue.length && 'self-start')}>{queuePanel}</div>
+      <div className={cx(focus ? 'flex' : region === 'call' ? 'flex' : 'hidden', 'min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface @min-[64rem]/dialer:flex @min-[64rem]/dialer:overflow-y-auto', focus && 'mx-auto w-full max-w-4xl')}>
+        {readiness}
+        {callSurface}
+        {workflow}
+      </div>
+      <div className={cx(regionClass('context', contextShown), 'min-h-0 min-w-0 flex-col', !selected && 'self-start')}>{contextPanel}</div>
     </div>
-
-    {focus ? null : history}
   </div>;
 }

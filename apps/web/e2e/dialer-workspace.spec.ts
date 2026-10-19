@@ -47,7 +47,10 @@ test('Dialer uses tenant call follow-ups and the global pop-out survives navigat
     for (const width of [1440, 768, 390]) {
       await page.setViewportSize({ width, height: 1000 });
       await page.goto(`${base}/calls`);
-      await expect(page.getByRole('heading', { name: 'Dialer', exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Dialer', exact: true })).toHaveCount(1);
+      // Below desktop width one region is shown at a time; choosing a row returns to Calling.
+      const region = async (name: 'Queue' | 'Customer') => { const switcher = page.getByRole('group', { name: 'Dialer region' }); if (await switcher.isVisible()) await switcher.getByRole('button', { name, exact: true }).click(); };
+      await region('Queue');
       await expect(page.getByRole('button', { name: /Alice Plumbing.*Discuss/ })).toBeVisible();
       await expect(page.getByText('Excluded email follow-up')).toHaveCount(0);
       await expect(page.getByText('Excluded completed call')).toHaveCount(0);
@@ -56,15 +59,18 @@ test('Dialer uses tenant call follow-ups and the global pop-out survives navigat
       await expect(page.getByText(/No customer phone number is recorded/).filter({ visible: true })).toHaveCount(1);
       await expect(page.getByText(/No customer phone number is recorded/).filter({ visible: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Call', exact: true })).toBeDisabled();
+      await region('Queue');
       await page.getByRole('button', { name: /Alice Plumbing.*Discuss/ }).click();
       await expect(page.getByRole('textbox', { name: 'Number to call', exact: true })).toHaveValue('+14165550101');
+      await region('Customer');
       await expect(page.getByRole('link', { name: 'Alice Plumbing', exact: true })).toHaveAttribute('href', `${base}/customers/${alice}`);
       await page.getByRole('link', { name: 'Call history', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Call history', exact: true })).toBeVisible();
       await page.screenshot({ path: testInfo.outputPath(`dialer-${width}.png`), fullPage: true });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-      const phone = page.getByRole('button', { name: 'Open dialer', exact: true });
-      await expect(phone).toBeVisible(); const box = await phone.boundingBox(); expect(box!.width).toBeGreaterThanOrEqual(44); expect(box!.height).toBeGreaterThanOrEqual(44);
+      // The Dialer toolbar action opens the shared pop-out; the global telephone utility remains independent.
+      const phone = page.getByRole('group', { name: 'Dialer toolbar' }).getByRole('button', { name: 'Pop out dialer' });
+      await expect(phone).toBeVisible(); const box = await phone.boundingBox();
       expect(box!.x + box!.width).toBeLessThanOrEqual(width);
       if (width >= 768) { const agent = await page.getByRole('button', { name: 'Agent', exact: true }).boundingBox(); expect(agent!.x + agent!.width).toBeLessThanOrEqual(width); }
       const popupEvent = page.waitForEvent('popup');
@@ -76,7 +82,6 @@ test('Dialer uses tenant call follow-ups and the global pop-out survives navigat
       await page.getByRole('link', { name: 'Alice Plumbing', exact: true }).click();
       await expect(page).toHaveURL(`${testInfo.project.use.baseURL ?? 'http://localhost:3000'}${base}/customers/${alice}`);
       await expect(popup.getByLabel('Number to call')).toHaveValue('+14165550199');
-      await expect(page.getByRole('button', { name: 'Open dialer', exact: true })).toBeVisible();
       await popup.getByRole('button', { name: 'Return to GildOps', exact: true }).click();
       await expect.poll(() => popup.isClosed()).toBe(true);
     }

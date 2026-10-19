@@ -9,7 +9,7 @@ export async function loadDialerAction(organizationId: string): Promise<CallingO
     const { db, organization } = await requireOrganization(organizationId);
     return await loadCallingOptions(db, { organizationId, mayCall: organization.capabilities.includes('call.place') });
   } catch (error) {
-    if (error instanceof DomainError) return { numbers: [], defaultNumber: null, unavailableReason: error.message };
+    if (error instanceof DomainError) return { numbers: [], defaultNumber: null, unavailableReason: error.message, blocker: { kind: 'unavailable', reason: error.message, setup: null } };
     throw error;
   }
 }
