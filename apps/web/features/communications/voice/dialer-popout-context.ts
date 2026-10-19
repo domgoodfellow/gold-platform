@@ -19,6 +19,9 @@ export const DialerPopoutContext = createContext<{
   open: (draft?: PopoutCallDraft) => void;
   close: () => void;
   updateDraft: (draft: { toNumber: string; phoneNumberId: string }) => void;
+  /** True while the Dialer page itself draws the live call controls, so the organization dock steps aside. */
+  inlineHost: boolean;
+  setInlineHost: (hosted: boolean) => void;
 } | null>(null);
 
 export function useDialerPopout() {

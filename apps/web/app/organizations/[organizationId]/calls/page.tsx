@@ -25,7 +25,9 @@ export const dynamic = 'force-dynamic';
 export default async function CallsPage({ params, searchParams }: PageProps<'/organizations/[organizationId]/calls'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOperatingArea(organizationId, 'calls');
-  const { params: callParams, cursor } = parseCallParams(await searchParams);
+  const query = await searchParams;
+  const { params: callParams, cursor } = parseCallParams(query);
+  const prefill = typeof query.to === 'string' && /^\+[1-9][0-9]{7,14}$/.test(query.to) ? query.to : '';
   const day = zonedDayRange(todayInZone(organization.timezone), organization.timezone);
   const mayCall = organization.capabilities.includes('call.place');
   const base = `/organizations/${organizationId}/calls`;
@@ -57,9 +59,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
         </>
       }
     />
-      <DialerWorkspace organizationId={organizationId} timezone={organization.timezone} queue={queue.items} queueTotal={queue.total} queueAvailable={queueAvailable} options={options} />
-
-      <section id="call-history" className="mt-8 scroll-mt-20" aria-labelledby="call-history-heading">
+      <DialerWorkspace organizationId={organizationId} timezone={organization.timezone} queue={queue.items} queueTotal={queue.total} queueAvailable={queueAvailable} options={options} prefill={prefill} history={<section id="call-history" className="mt-8 scroll-mt-20" aria-labelledby="call-history-heading">
         <VoiceCounters organizationId={organizationId} counts={counts} todaysCalls={todays.items} />
         <SectionHeading id="call-history-heading">Call history</SectionHeading>
         <div className="mt-3">
@@ -84,7 +84,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
           {cursor ? <ButtonLink href={callsHref(base, callParams)} scroll={false} tone="secondary" size="small">Newest calls</ButtonLink> : null}
           {page.nextCursor ? <ButtonLink href={callsHref(base, callParams, page.nextCursor)} scroll={false} tone="secondary" size="small">Older calls</ButtonLink> : null}
         </nav>
-      </section>
+      </section>} />
 
     </AppPage>
   );

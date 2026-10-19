@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActiveCallDock } from '@/features/communications/voice/active-call-dock';
+import { DialerPopoutContext } from '@/features/communications/voice/dialer-popout-context';
 import {
   TelephoneDeviceContext,
   type ActiveCall,
@@ -244,5 +245,25 @@ describe('the live call bar', () => {
       await user.click(screen.getByRole('button', { name: '#' }));
       expect(device.sendDigits.mock.calls).toEqual([['5'], ['#']]);
     });
+  });
+});
+
+describe('one live presentation owns the call', () => {
+  it('the organization dock steps aside while the Dialer page draws the controls itself', () => {
+    actions.listCallParticipantsAction.mockResolvedValue({ ok: true, data: { participants: [own, caller], ownMembershipId: ME } });
+    const value = {
+      status: 'ready', error: null,
+      activeCall: { status: 'in_progress', direction: 'outgoing', muted: false, startedAt: Date.now(), callId: CALL, contactLabel: 'Ada Lovelace' },
+      incoming: null, register: vi.fn(), unregister: vi.fn(), connectToRoom: vi.fn(), ...device,
+    } as TelephoneDeviceContextValue;
+    const popout = { container: null, error: null, open: vi.fn(), close: vi.fn(), updateDraft: vi.fn(), inlineHost: true, setInlineHost: vi.fn() };
+    const { container } = render(
+      <TelephoneDeviceContext.Provider value={value}>
+        <DialerPopoutContext.Provider value={popout}>
+          <ActiveCallDock organizationId={ORG} />
+        </DialerPopoutContext.Provider>
+      </TelephoneDeviceContext.Provider>,
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 });

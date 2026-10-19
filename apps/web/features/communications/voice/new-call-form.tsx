@@ -25,6 +25,7 @@ export function NewCallForm({
   customerId,
   customerName,
   compact = false,
+  formId,
 }: {
   organizationId: string;
   /** Numbers that could ring out: active, ready and enabled for outbound calls. */
@@ -36,6 +37,8 @@ export function NewCallForm({
   customerId?: string;
   customerName?: string;
   compact?: boolean;
+  /** Lets a control outside the form submit it, such as the queue's Start calling. */
+  formId?: string;
 }) {
   const { dial, dialing, error } = useDial(organizationId);
   const { activeCall, incoming } = useTelephoneDevice();
@@ -63,6 +66,7 @@ export function NewCallForm({
 
   return (
     <form
+      id={formId}
       className="flex flex-col gap-3"
       onSubmit={(event) => {
         event.preventDefault();

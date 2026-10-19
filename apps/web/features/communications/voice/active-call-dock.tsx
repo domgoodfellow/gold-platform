@@ -62,7 +62,7 @@ type Panel = 'keypad' | 'add' | 'transfer' | null;
  * **Not verified against a live carrier.** Mute and the keypad act on this browser's own
  * telephone; hold, add, transfer and removal go through the server to the carrier.
  */
-export function ActiveCallDock({ organizationId }: { organizationId: string }) {
+export function ActiveCallDock({ organizationId, placement = 'dock' }: { organizationId: string; placement?: 'dock' | 'inline' }) {
   const { status, error, activeCall, incoming, hangUp, toggleMute, sendDigits } = useTelephoneDevice();
   const popout = useDialerPopout();
   const [now, setNow] = useState(() => Date.now());
@@ -74,8 +74,10 @@ export function ActiveCallDock({ organizationId }: { organizationId: string }) {
   const container = popout?.container;
   const surfaceClass = container
     ? 'order-2 m-4 rounded-lg border border-border bg-surface p-4'
-    : 'fixed inset-x-0 bottom-(--mobile-nav-height) z-50 max-h-[70dvh] overflow-y-auto border-t border-border bg-surface px-4 py-3 shadow-lg md:bottom-0 md:px-6';
-  const renderSurface = (content: ReactNode) => container ? createPortal(content, container) : content;
+    : placement === 'inline'
+      ? 'rounded-lg border border-border bg-surface p-4'
+      : 'fixed inset-x-0 bottom-(--mobile-nav-height) z-50 max-h-[70dvh] overflow-y-auto border-t border-border bg-surface px-4 py-3 shadow-lg md:bottom-0 md:px-6';
+  const renderSurface = (content: ReactNode) => container && placement === 'dock' ? createPortal(content, container) : content;
 
   useEffect(() => {
     if (!activeCall) return undefined;
@@ -100,10 +102,22 @@ export function ActiveCallDock({ organizationId }: { organizationId: string }) {
     };
   }, [organizationId, activeCallId]);
 
+  // One live presentation owns the call: the pop-out window when it is open, else the Dialer page when it is hosting, else the dock.
+  if (placement === 'dock' && !container && popout?.inlineHost) return null;
+  if (placement === 'inline' && container) {
+    if (!incoming && !activeCall) return null;
+    return (
+      <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-4 text-sm">
+        <p>{incoming ? 'An incoming call' : 'This call'} is in the separate dialer window.</p>
+        <Button tone="secondary" size="small" onClick={() => popout?.open()}><ExternalLink aria-hidden /> Show dialer window</Button>
+      </div>
+    );
+  }
+
   if (incoming) {
     return renderSurface(
       <div
-        style={MOBILE_NAV_HEIGHT_STYLE}
+        style={placement === 'dock' ? MOBILE_NAV_HEIGHT_STYLE : undefined}
         className={`${surfaceClass} flex flex-wrap items-center justify-between gap-3`}
       >
         <span className="font-medium">Incoming call</span>
@@ -155,7 +169,7 @@ export function ActiveCallDock({ organizationId }: { organizationId: string }) {
 
   return renderSurface(
     <div
-      style={MOBILE_NAV_HEIGHT_STYLE}
+      style={placement === 'dock' ? MOBILE_NAV_HEIGHT_STYLE : undefined}
       className={surfaceClass}
     >
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">

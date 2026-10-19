@@ -5,14 +5,14 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { MoreHorizontal, Phone } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@gold/ui/components/dropdown-menu';
-import { Button } from '@/components/controls/button';
-import { PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
-import { NewCallForm } from '@/features/communications/voice/new-call-form';
+import { Button, ButtonLink } from '@/components/controls/button';
 import { claimAction, markReadAction } from '@/app/organizations/[organizationId]/comms/inbox/actions';
 import type { InboxItem } from '@/lib/domain/reception/inbox';
 
-export function NewCallButton({ organizationId, number, toNumber = '', compact = false }: { organizationId: string; number: { id: string; e164: string; label: string | null } | null; toNumber?: string; compact?: boolean }) {
-  return <PageDrawer><PageDrawerTrigger asChild><Button tone={compact ? 'secondary' : 'primary'} size="small"><Phone aria-hidden />{compact ? 'Call back' : 'New call'}</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>New call</PageDrawerTitle><PageDrawerDescription>{number ? 'Call from your assigned outbound number using the existing browser dialer.' : 'Calling is unavailable. A ready assigned number, calling feature, and connection are required.'}</PageDrawerDescription></PageDrawerHeader><div><NewCallForm organizationId={organizationId} numbers={number ? [number] : []} defaultNumber={number} toNumber={toNumber} /></div></PageDrawerContent></PageDrawer>;
+export function NewCallButton({ organizationId, toNumber = '', compact = false }: { organizationId: string; toNumber?: string; compact?: boolean }) {
+  // The Dialer is the one place to place a call; a number is carried across so it is already filled in.
+  const href = `/organizations/${organizationId}/calls${toNumber ? `?to=${encodeURIComponent(toNumber)}` : ''}`;
+  return <ButtonLink href={href} tone={compact ? 'secondary' : 'primary'} size="small"><Phone aria-hidden />{compact ? 'Call back' : 'New call'}</ButtonLink>;
 }
 
 export function ConversationActions({ organizationId, item }: { organizationId: string; item: InboxItem }) {

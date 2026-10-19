@@ -16,6 +16,7 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const [draft, setDraft] = useState<PopoutCallDraft | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  const [inlineHost, setInlineHost] = useState(false);
   const [loading, setLoading] = useState(false);
   const [unavailableReason, setUnavailableReason] = useState<string | null>(null);
   const opener = useRef<HTMLElement | null>(null);
@@ -133,7 +134,7 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
   }, [container, close]);
 
   return (
-    <DialerPopoutContext.Provider value={{ container, error, open, close, updateDraft }}>
+    <DialerPopoutContext.Provider value={{ container, error, open, close, updateDraft, inlineHost, setInlineHost }}>
       {children}
       {container ? createPortal(
         <>

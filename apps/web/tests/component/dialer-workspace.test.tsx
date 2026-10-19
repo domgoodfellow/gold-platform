@@ -48,3 +48,45 @@ describe('dialer workspace', () => {
     expect(screen.queryByRole('link', { name: 'All call follow-ups' })).not.toBeInTheDocument();
   });
 });
+
+describe('dialer console presentation', () => {
+  it('opens in Standard with every region, and Focus keeps only the calling region until Standard is chosen again', () => {
+    render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101')]} />);
+    expect(screen.getByRole('button', { name: 'Standard' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Call queue' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Customer context' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Focus' }));
+    expect(screen.getByRole('button', { name: 'Focus' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Call queue' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Customer context' })).toBeDisabled();
+    expect(screen.getByLabelText('Number to call')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Standard' }));
+    expect(screen.getByRole('button', { name: 'Call queue' })).toBeEnabled();
+  });
+  it('selecting a queue row fills the number without dialing', () => {
+    dial.mockClear();
+    render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101'), entry('bob', 'Bob', '+14165550102')]} />);
+    fireEvent.click(screen.getByRole('button', { name: /Bob/ }));
+    expect(screen.getByLabelText('Number to call')).toHaveValue('+14165550102');
+    expect(dial).not.toHaveBeenCalled();
+  });
+  it('searches only the loaded follow-ups and says so', () => {
+    render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101'), entry('bob', 'Bob', '+14165550102')]} />);
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search loaded call follow-ups' }), { target: { value: 'bob' } });
+    expect(screen.queryByRole('button', { name: /Alice/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Bob/ })).toBeVisible();
+    expect(screen.getByText('Searches the 2 follow-ups loaded here, not the whole queue.')).toBeVisible();
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search loaded call follow-ups' }), { target: { value: 'nobody' } });
+    expect(screen.getByText('No loaded follow-ups match.')).toBeVisible();
+  });
+  it('dials a number handed over by a link, with no follow-up selected', () => {
+    render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101')]} prefill="+14165550199" />);
+    expect(screen.getByLabelText('Number to call')).toHaveValue('+14165550199');
+    expect(screen.getByRole('heading', { name: 'New call' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Start calling' })).not.toBeInTheDocument();
+  });
+  it('offers Start calling for the selected customer, which submits the call form', () => {
+    render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101')]} />);
+    expect(screen.getByRole('button', { name: 'Start calling' })).toHaveAttribute('form', 'dialer-call-form');
+  });
+});
