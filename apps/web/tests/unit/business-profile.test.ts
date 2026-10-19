@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { businessLabel, type BusinessProfile } from '@/lib/domain/tenancy/business-profile';
 import { workspaceNavigation } from '@/lib/shell';
-import { projectBusinessNavigation } from '@/lib/application/shell/business-navigation';
+import { businessDestinations, projectBusinessNavigation } from '@/lib/application/shell/business-navigation';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { AREAS } from '@/lib/navigation';
 const profile:BusinessProfile={revision:1,nouns:{customer:{singular:'Patient',plural:'Patients'}},navigation:['customers','calls','calendar'],labels:{calls:'Phone desk',work:'Appointments',sales:'Relationship overview',finance:'Money overview'}};
@@ -23,6 +23,9 @@ describe('business vocabulary and navigation',()=>{
     expect(workspaceNavigation(sections, '/organizations/11111111-1111-4111-8111-111111111111/customers')!.sections[0].items.find(item => item.key === 'customers')!.label).toBe('Patients');
     expect(workspaceNavigation(sections, '/organizations/11111111-1111-4111-8111-111111111111/calls')!.sections[0].items.find(item => item.key === 'calls')!.label).toBe('Phone desk');
     expect(workspaceNavigation(sections, '/organizations/11111111-1111-4111-8111-111111111111/finance/invoices')!.workspace.label).toBe('Finance');
+    const destinations = businessDestinations(input);
+    expect(destinations.find(item => item.key === 'customers')!.workspace).toBe('CRM');
+    expect(destinations.find(item => item.key === 'calls')!.workspace).toBe('Communications');
     const restricted = projectBusinessNavigation({ ...input, capabilities: new Set() }, profile);
     expect(restricted.find(section => section.key === 'workspaces')!.items.flatMap(item => item.destinations ?? []).map(item => item.key)).not.toContain('calls');
   });

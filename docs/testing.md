@@ -129,8 +129,8 @@ replacement-token fencing, and the unreclaimed-expiry / early-callback gaps reco
 establish hosted schedule, credentials, domain readiness or delivery. The provider tier reported
 NOT CONFIGURED.
 
-All five isolated Playwright configurations (`playwright.batch-a.config.ts` through
-`playwright.batch-e.config.ts`) then passed one journey each against the local production build
+The five batch specs (service engagements, Portal composition, disclosures, reviews and
+notifications) then each passed one journey against the local production build
 and loopback HTTPS fixture: CRM relationships, Portal, disclosures, reviews/Support and
 notifications. The notification journey included desktop/tablet/phone controls, consent,
 withdrawal and simulated provider evidence. No real email or hosted mutation occurred.
@@ -144,14 +144,13 @@ credentials and last-moment authorization refusal offline. Existing tenant-email
 and invitation suites remain the provider regression authority. Simulated callbacks prove local
 correlation, never live delivery.
 
-`playwright.batch-e.config.ts` runs isolated `service-notifications.spec.ts` fixtures with the
-existing local HTTPS Portal proxy. It exercises mailbox confirmation, unchecked consent, optional
+`e2e/service-notifications.spec.ts` runs its fixtures with the existing local HTTPS Portal proxy. It exercises mailbox confirmation, unchecked consent, optional
 review delivery, provider-fixture acceptance/delivery, retry, withdrawal, another Customer and
 1440/768/390px layouts. Tracing is off for this journey so confirmation codes and bearer links
-are not recorded in traces. Screenshots remain in ignored test output. Run Batches A–D separately
-with their existing isolated configurations for service/Portal/form/payment/hostname compatibility.
+are not recorded in traces. Screenshots remain in ignored test output. Run each batch spec on its own
+(`pnpm --filter @gold/web exec playwright test e2e/<spec>.spec.ts`) for service/Portal/form/payment/hostname compatibility.
 
-`apps/web/e2e/service-engagements.spec.ts` creates its own local accounts and tenant fixtures through the isolated `playwright.batch-a.config.ts`, without the normal demo global setup. It refuses non-loopback database/API URLs. Run `pnpm --filter @gold/web exec playwright test --config playwright.batch-a.config.ts` against the local web server; `E2E_BASE_URL` selects its address. The journey covers verified tenant-manager linking, accepted-proposal handoff/retry, Website/AI/Automation references, foreign artifact refusal, historical lifecycle and desktop/tablet/phone keyboard/touch behavior. Configuration status is not evidence of a live AI/provider deployment.
+`apps/web/e2e/service-engagements.spec.ts` creates its own local accounts and tenant fixtures. It refuses non-loopback database/API URLs. Run `pnpm --filter @gold/web exec playwright test e2e/service-engagements.spec.ts` against the local web server; `E2E_BASE_URL` selects its address. The journey covers verified tenant-manager linking, accepted-proposal handoff/retry, Website/AI/Automation references, foreign artifact refusal, historical lifecycle and desktop/tablet/phone keyboard/touch behavior. Configuration status is not evidence of a live AI/provider deployment.
 
 Baseline reconciliation keeps the assertions authoritative: capability mapping includes native adapters and reviewed imported-library metadata; machine grants name the existing sync/library functions explicitly; planned-connector refusal uses a genuinely planned fixture. Provider and Connector may share a vendor key while their foreign keys remain attached to their separate canonical authorities. Palette checks cover grouped public/root selectors and forced appearance scopes without changing theme colors.
 
@@ -1364,9 +1363,9 @@ unchanged lifecycle copy, module publication/removal, activation/entitlement, se
 invitation revocation. `service-disclosure-editor.test.tsx` covers draft/published preview, explicit confirmation,
 read-only controls, lifecycle review and shared List/Cards/Summary presentations with safe text.
 
-The isolated `playwright.batch-c.config.ts` runs `e2e/service-disclosures.spec.ts` against loopback
-Supabase and an explicitly loopback-configured app, without demo global setup. Run
-`pnpm --filter @gold/web exec playwright test --config playwright.batch-c.config.ts` with
+`e2e/service-disclosures.spec.ts` runs against loopback Supabase and an explicitly
+loopback-configured app. Run
+`pnpm --filter @gold/web exec playwright test e2e/service-disclosures.spec.ts` with
 `E2E_BASE_URL` selecting the app. Separate browser contexts exercise seller approval, different
 customer and tenant Portal identities, draft isolation, withdrawal, direct RPC denial and Portal
 module removal. It captures engagement and Portal surfaces at 1440, 1024 and 390 pixels and checks
@@ -1383,7 +1382,7 @@ Run the hostname acceptance against a locally configured production build to ver
 
 `service-reviews.test.ts` exercises real local PostgreSQL revision/target ownership, operator authority, Portal customer isolation, forced RLS/direct-write denial, immutable decisions/attribution, duplicate release/response refusal, conflicting concurrent finals, supersession/withdrawal, ended relationships, activation/entitlement/module removal and expired/revoked invitations. Change-request tests verify one unassigned normal-priority canonical Support Case, protected original-source reads, no prose duplication in events, independent Support resolution and no tenant artifact/Membership mutation. `service-review-response.test.tsx` covers explicit confirmation, cancellation focus, bounded text, failed submissions and terminal/unavailable states.
 
-The isolated `playwright.batch-d.config.ts` runs `e2e/service-reviews.spec.ts` using loopback Supabase and the local TLS fixture. It exercises operator review release, Portal approval and change request, CRM/Support follow-up, superseded stale response, customer isolation and revocation, with 1440/1024/390 pixel screenshots, keyboard and touch checks. Existing Batch A–C journeys retain their own configs. Fresh local verification uses the disposable-local `pnpm db:reset`, generated types and `pnpm check`; browser evidence requires inspecting captures, and does not establish hosted migration or provider readiness.
+`e2e/service-reviews.spec.ts` runs using loopback Supabase and the local TLS fixture. It exercises operator review release, Portal approval and change request, CRM/Support follow-up, superseded stale response, customer isolation and revocation, with 1440/1024/390 pixel screenshots, keyboard and touch checks. Fresh local verification uses the disposable-local `pnpm db:reset`, generated types and `pnpm check`; browser evidence requires inspecting captures, and does not establish hosted migration or provider readiness.
 
 ### Batch B Portal verification
 
@@ -1400,4 +1399,4 @@ evidence, not provider DNS/TLS provisioning. Never use a hosted database for thi
 
 `portal-composition.test.ts` exercises private drafts, immutable attributed releases, review and current entitlement requirements, stale/concurrent saves, restore/unpublish/default compatibility, hidden Form/payment command refusal, managed and provider-verified custom Portal origin binding, revocation and typed deliverable tenant authority. Unit tests validate bounded pages/modules/navigation, template independence and historical normalization; component tests verify review readiness, safe text, page paths/navigation, permitted duplication and truthful availability.
 
-Run isolated `e2e/portal-composition.spec.ts` with `pnpm --filter @gold/web exec playwright test --config playwright.batch-b.config.ts` against a loopback-configured local app (`E2E_BASE_URL` selects its port). Canonically provisioned local accounts exercise legacy/default transition, review/publication, Work/invoices, exact customer/Form revision attribution, refusal of shape-compatible stale Form revisions, same-context operator/Portal/proposal/public Form sessions, draft isolation, unpublish/restore, custom-origin root/exchange/action/reload, copied-cookie hostname rejection and release/revocation. Browser DNS mapping and local provider-record fixtures prove application behavior, not real DNS/TLS/provider readiness. Inspect 1440×900, 1024×900 and 390×844 screenshots and overflow/focus assertions. Component/database checks additionally preserve full legacy record lists and history paging beyond 50 revisions. Release gate: disposable-local `pnpm db:reset`, `pnpm db:types`, `pnpm check`, followed by selected existing Website/Form/distribution/hostname/proposal/navigation regressions.
+Run `e2e/portal-composition.spec.ts` with `pnpm --filter @gold/web exec playwright test e2e/portal-composition.spec.ts` against a loopback-configured local app. Its `*.example.test` hostnames need a Chromium host-resolver mapping, which the removed `playwright.batch-b.config.ts` supplied; re-add it before expecting this journey to pass (`E2E_BASE_URL` selects its port). Canonically provisioned local accounts exercise legacy/default transition, review/publication, Work/invoices, exact customer/Form revision attribution, refusal of shape-compatible stale Form revisions, same-context operator/Portal/proposal/public Form sessions, draft isolation, unpublish/restore, custom-origin root/exchange/action/reload, copied-cookie hostname rejection and release/revocation. Browser DNS mapping and local provider-record fixtures prove application behavior, not real DNS/TLS/provider readiness. Inspect 1440×900, 1024×900 and 390×844 screenshots and overflow/focus assertions. Component/database checks additionally preserve full legacy record lists and history paging beyond 50 revisions. Release gate: disposable-local `pnpm db:reset`, `pnpm db:types`, `pnpm check`, followed by selected existing Website/Form/distribution/hostname/proposal/navigation regressions.

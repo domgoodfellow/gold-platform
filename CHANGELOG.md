@@ -35,6 +35,7 @@ Entries describe the product or operational change, not every file touched.
 ## 2026-10-18
 
 - Restored workspace-level sidebar selection and contextual workspace destinations. Business vocabulary and page ordering now decorate the canonical navigation projection instead of flattening every workspace page into Home.
+- Business words and navigation settings now group pages under their workspace, and moving a page only reorders it within that workspace.
 
 - Simplified organization Home around attention, priorities, a tabbed Schedule and Business performance. Moved setup/workspace updates to shell notifications, unified create actions with Cmd/Ctrl+K, corrected configuration ownership and duplicate health messages, and reduced explanatory copy.
 

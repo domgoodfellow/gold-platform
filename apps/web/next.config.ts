@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
   // An email's files also arrive as a server action's body, up to 25 MB across all of them (`MAX_ATTACHMENT_TOTAL_BYTES`);
   // the limit leaves room for the form around that. Each surface still enforces its own, smaller cap.
   experimental: { serverActions: { bodySizeLimit: "30mb" } },
+  // `next dev` would otherwise write AGENTS.md and CLAUDE.md into this folder whenever it sees an agent.
+  // The repository's agent contract lives in the root CLAUDE.md.
+  agentRules: false,
   transpilePackages: ["@gold/ui", "@gold/types", "@gold/schemas", "@gold/config"],
   // `/account` was a second, orphaned settings surface. Personal settings has one address
   // (`lib/route/personal-settings.ts`); an old link or bookmark lands there.
