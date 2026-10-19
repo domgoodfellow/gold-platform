@@ -113,7 +113,7 @@ test('a custom brand colours primary actions while shared view selection and sem
         expect(danger, `${name} ${scheme} danger role unchanged`).not.toBe('#0f766e');
       }
       await page.goto(`/organizations/${ctx.organizationId}/ai`);
-      const current = page.locator('nav[aria-label="AI workspace"] a[aria-current="page"]');
+      const current = page.locator('nav[aria-label="AI destinations"] a[aria-current="page"]');
       await expect(current.locator('..')).toHaveAttribute('data-variant', 'segmented');
       await expect(current).toHaveCSS('border-bottom-width', '0px');
       await expect(current).toHaveCSS('font-weight', '600');

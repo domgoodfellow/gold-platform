@@ -1,14 +1,12 @@
 'use client';
 
-import { ViewNav } from '@/components/navigation/view-nav';
-
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Megaphone, Users, UserCheck, Target, Activity, FileText, ChartNoAxesCombined } from 'lucide-react';
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
-import { Button, ButtonLink } from '@/components/controls/button';
+import { Button } from '@/components/controls/button';
 import { MetricTile, OperationalPanel, PanelState, StatePill } from '@/components/operational/primitives';
 import { TextInput, SelectInput } from '@/components/controls/inputs';
 import { OBJECTIVES, type MarketingData, type Campaign, type Inquiry } from '@/lib/domain/marketing/marketing';
@@ -50,6 +48,7 @@ export function MarketingWorkspace({ organizationId, timezone, data, view, mayMa
   const toolbar=view==='campaigns'||view==='leads'?<form key={query.toString()} className="flex flex-wrap items-end gap-2" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget),p=new URLSearchParams(query);for(const[k,v]of f){if(v)p.set(k,String(v));else p.delete(k);}p.delete('page');router.push(`${pathname}?${p}`);}}>{view==='campaigns'&&<><SelectInput aria-label="Campaign status" name="status" defaultValue={query.get('status')??''}><option value="">All statuses</option>{['draft','active','paused','completed','archived'].map(s=><option key={s} value={s}>{s}</option>)}</SelectInput><SelectInput aria-label="Objective" name="objective" defaultValue={query.get('objective')??''}><option value="">All objectives</option>{Object.entries(OBJECTIVES).map(([k,v])=><option key={k} value={k}>{v}</option>)}</SelectInput><SelectInput aria-label="Owner" name="owner" defaultValue={query.get('owner')??''}><option value="">All owners</option>{data.members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</SelectInput></>}{view==='leads'&&<><SelectInput aria-label="Review status" name="status" defaultValue={query.get('status')??''}><option value="">All review states</option>{['new','in_review','handed_off','disqualified'].map(s=><option key={s} value={s}>{s.replaceAll('_',' ')}</option>)}</SelectInput><SelectInput aria-label="Campaign filter" name="campaign" defaultValue={query.get('campaign')??''}><option value="">All campaigns</option>{data.campaign_options.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</SelectInput><TextInput className="max-w-40" name="source" aria-label="Source filter" placeholder="Source" defaultValue={query.get('source')??''}/></>}<Button size="small" tone="secondary">Apply</Button>{query.size>0&&<Link href={pathname} className="p-2 text-xs text-accent-text">Clear</Link>}</form>:null;
   return <AppPage className="@container/marketing space-y-4 pb-8">
     <PageHeader
+      navigation
       crumbs={view === 'home' ? [] : [{ label: 'Marketing', href: base }, ...(view === 'detail' ? [{ label: 'Campaigns', href: `${base}/campaigns` }] : [])]}
       title={({home:'Marketing',campaigns:'Campaigns',audiences:'Audiences',leads:'Leads',performance:'Performance',detail:campaign?.name??'Campaign'})[view]}
       meta={view==='detail'&&campaign?OBJECTIVES[campaign.objective]:undefined}
@@ -57,11 +56,9 @@ export function MarketingWorkspace({ organizationId, timezone, data, view, mayMa
         {dateForm}
         {mayManage&&view!=='audiences'&&<CampaignEditor organizationId={organizationId} members={data.members} defaultOpen={view === 'campaigns' && query.get('create') === '1'}/>}
         {view==='audiences'&&mayManage&&<AudienceEditor organizationId={organizationId} stages={data.stages} mayManage={mayManage}/>}
-        <ButtonLink tone="secondary" href={view==='leads'?base:href('leads')}>{view==='leads'?'Marketing Home':'View leads'}</ButtonLink>
         {configure}
       </>}
     />
-    <ViewNav label="Marketing destinations" items={[['','Home'],['campaigns','Campaigns'],['audiences','Audiences'],['leads','Leads'],['performance','Performance']].map(([path,label])=>({key:path||'home',label,href:path?`${base}/${path}`:base,current:view===(path||'home')}))} />
     {toolbar}
     {['home','performance','detail'].includes(view)&&<div className="grid grid-cols-2 gap-3 @min-[56rem]/marketing:grid-cols-4">{metrics.map(({Icon,...m})=><MetricTile key={m.label} label={m.label} value={m.value} detail={m.note} icon={Icon} href={m.url} />)}</div>}
     {view==='home'&&<div className="grid min-w-0 items-start gap-4 @min-[64rem]/marketing:grid-cols-[minmax(0,1fr)_280px]"><div className="grid min-w-0 gap-4">

@@ -380,6 +380,11 @@ export const AREAS: readonly Area[] = [
   { segment: 'comms-inbox', label: 'Inbox', group: 'workspaces', workspace: 'communications', route: 'comms/inbox', module: 'reception', relevantCapabilities: ['message.send'], featureKeys: ['inbound_sms', 'outbound_sms', 'sending'] },
   { segment: 'comms-numbers', label: 'Numbers', group: 'workspaces', workspace: 'communications', route: 'comms/configuration/numbers', sidebar: false, module: 'reception', relevantCapabilities: ['call.place', 'message.send'], featureKeys: ['number_inventory', 'caller_id'] },
   { segment: 'marketing', label: 'Marketing', group: 'workspaces', workspace: 'marketing', relevantCapabilities: ['marketing.read', 'marketing.manage'] },
+  // Marketing's operating pages. Reading a collection is `marketing.read`; changing one stays `marketing.manage`, enforced by its own command.
+  { segment: 'marketing-campaigns', label: 'Campaigns', group: 'workspaces', workspace: 'marketing', route: 'marketing/campaigns', relevantCapabilities: ['marketing.read', 'marketing.manage'] },
+  { segment: 'marketing-audiences', label: 'Audiences', group: 'workspaces', workspace: 'marketing', route: 'marketing/audiences', relevantCapabilities: ['marketing.read', 'marketing.manage'] },
+  { segment: 'marketing-leads', label: 'Leads', group: 'workspaces', workspace: 'marketing', route: 'marketing/leads', relevantCapabilities: ['marketing.read', 'marketing.manage'] },
+  { segment: 'marketing-performance', label: 'Performance', group: 'workspaces', workspace: 'marketing', route: 'marketing/performance', relevantCapabilities: ['marketing.read', 'marketing.manage'] },
   // Support's operating destinations, beneath its Overview (the workspace's own Home above). Each is
   // a read view; the queue and service-level configuration behind Configure keeps its own
   // `CONFIG_TARGETS` keys, so these segments never collide with them.
@@ -389,6 +394,10 @@ export const AREAS: readonly Area[] = [
   { segment: 'support-service-levels-view', label: 'Service levels', group: 'workspaces', workspace: 'support', route: 'support/service-levels', relevantCapabilities: ['support.read'] },
   { segment: 'support-reports', label: 'Reports', group: 'workspaces', workspace: 'support', route: 'support/reports', relevantCapabilities: ['support.read'] },
   { segment: 'ai', label: 'AI', group: 'workspaces', workspace: 'ai' },
+  // AI's member pages. Agents, Channel deployments, Knowledge and Tools are configuration (`CONFIG_TARGETS` ai-*,
+  // `organization.manage`), so they stay in AI's Configuration branch rather than becoming destinations.
+  { segment: 'ai-activity', label: 'Agent activity', group: 'workspaces', workspace: 'ai', route: 'ai/activity' },
+  { segment: 'ai-evaluations', label: 'Evaluations', group: 'workspaces', workspace: 'ai', route: 'ai/evaluations' },
   // Finance: how this business prices, bills, gets paid and understands what its work earns —
   // tenant Financial Operations, customer to business, and nothing a business pays GildOps (that is
   // Settings → Plan & usage, and Platform for GildOps' own control plane). Home is kernel, like

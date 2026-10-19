@@ -1,6 +1,5 @@
 "use client";
 
-import { ViewNav } from '@/components/navigation/view-nav';
 import type { ReactNode } from "react";
 import { Bot } from "lucide-react";
 import { StatePill } from "@/components/operational/primitives";
@@ -21,28 +20,6 @@ export function AgentIcon() {
     <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary text-muted">
       <Bot size={18} />
     </span>
-  );
-}
-const AI_VIEWS: [string, string][] = [
-  ["", "Overview"],
-  ["agents", "Agents"],
-  ["deployments", "Channels"],
-  ["knowledge", "Knowledge"],
-  ["tools", "Tools"],
-  ["activity", "Activity"],
-  ["evaluations", "Evaluations"],
-];
-export function AiNav({ base, active }: { base: string; active: string }) {
-  return (
-    <ViewNav
-      label="AI workspace"
-      items={AI_VIEWS.map(([path, label]) => ({
-        key: path || "overview",
-        label,
-        href: `${base}${path ? `/${path}` : ""}`,
-        current: active === path,
-      }))}
-    />
   );
 }
 export function Field({

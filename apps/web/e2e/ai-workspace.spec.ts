@@ -170,10 +170,8 @@ test("AI agent lifecycle, workbench, channel policies and responsive destination
     page.getByRole("textbox", { name: "Message to the Agent" }),
   ).toBeVisible();
   await capture(page, "operator-rail");
-  await page
-    .getByRole("navigation", { name: "AI workspace" })
-    .getByRole("link", { name: "Agents", exact: true })
-    .click();
+  // Agents is configuration, so it is reached from the header's Test agent link, not the destination strip.
+  await page.getByRole("link", { name: "Test agent" }).click();
   await expect(
     page.getByRole("textbox", { name: "Message to the Agent" }),
   ).toBeVisible();

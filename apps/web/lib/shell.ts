@@ -421,3 +421,22 @@ export function pageNavigation(navigation: LocationNavigation | undefined, pathn
   }
   return { parentHref, activeKey, groups };
 }
+
+/**
+ * The current workspace's operating destinations, for a page header's compact strip. The same
+ * authorized projection the sidebar draws, so labels, order, visibility and active state cannot drift
+ * from it: Overview and the workspace's pages, never its Configuration branch or a staff-only link.
+ * Null outside a workspace, in another organization, with fewer than two destinations, or on a page
+ * none of them owns (a configuration page keeps the sidebar as its only navigation).
+ */
+export function headerDestinations(navigation: LocationNavigation | undefined, pathname: string): { label: string; items: NavItem[]; activeKey: string } | null {
+  if (!navigation) return null;
+  const path = pathname.split(/[?#]/)[0].replace(/\/$/, '');
+  if (organizationIdFromPath(path) !== navigation.organizationId) return null;
+  const context = workspaceNavigation(navigation.sections, path);
+  if (!context?.workspace.key.startsWith('workspace-')) return null;
+  const items = context.sections[0].items.filter((item) => !item.children && !item.key.startsWith('platform-'));
+  if (items.length < 2) return null;
+  const activeKey = activeItemKey([{ key: 'workspaces', label: null, items }], path);
+  return activeKey ? { label: context.workspace.label, items, activeKey } : null;
+}

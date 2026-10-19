@@ -816,6 +816,21 @@ Authorization and entitlement filter canonical destination keys before labels/or
 
 Workspaces group operating destinations and configuration by canonical ownership. Each workspace Home remains an operational dashboard. Desktop, tablet and phone consume the same authorized hierarchy, and record/detail/calendar routes retain their workspace context.
 
+### Header destination strip
+
+A workspace page may show its destinations as a compact strip at the start of its header action row: `PageHeader navigation` or `CollectionHeader navigation`. The strip is a presentation of the projection the sidebar draws (`headerDestinations` in `lib/shell.ts`). It contains Overview and the workspace's operating destinations, with the same labels, order, visibility and active item. It never includes the Configuration branch or staff-only links, and no page keeps a destination list of its own.
+
+The strip is drawn only when there are at least two destinations and the current page belongs to one of them. Configuration pages keep the sidebar as their navigation. The header is a container: the strip appears only when the header is at least 56rem wide. That covers both the viewport and an open Agent or Configure panel. Below that width the sidebar and the phone location menu are the navigation, and actions stay right-aligned. With a strip present, actions wrap within their own group instead of dropping the strip onto a row of its own.
+
+The strip is used by Marketing, AI, Finance (Home and collections), Communications Home, Studio Home and Support (all but Case detail). Local view controls stay inside their own panels: list/board, dispatch mode, attention categories, invoice filters and inbox queue filters.
+
+Destinations by workspace:
+
+- **Marketing:** Campaigns, Audiences, Leads and Performance (`marketing.read` or `marketing.manage`; changes still need `marketing.manage`).
+- **AI:** Agent activity and Evaluations, for any member. Agents, Channel deployments, Knowledge and Tools stay `organization.manage` configuration targets in AI's Configuration branch.
+- **Finance:** Services & Pricing stays under Configure. Financial reports is a header action for `report.read`.
+- **Communications:** Numbers and Configuration stay under Configure.
+
 ### Workspace Home
 
 Work Home at `/field` is a contained operational dashboard: search/date/create/dispatch/configure toolbar, four scheduling/assignment summaries, attention tabs, resource dispatch overview, upcoming work and seven-day commitments, and a Today/status/activity/capacity rail. Counts span their stated scope; previews are bounded. Selected-day requirements and availability conflicts come from the canonical scheduling projection, while unassigned scheduled and unscheduled backlogs span all dates. Unconfigured opening hours are explicitly identified; permissive availability semantics remain unchanged. No arrival, GPS, route or productivity metrics are inferred.

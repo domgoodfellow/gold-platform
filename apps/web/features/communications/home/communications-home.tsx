@@ -57,6 +57,7 @@ export function CommunicationsHome({ organizationId, timezone, data, configure }
   return <AppPage data-communications-dashboard className="@container/comms space-y-3 pb-14 md:pb-0">
     <PageHeader
       title="Communications"
+      navigation
       actions={<>
         <form action={home} className="flex items-center gap-1"><SelectInput aria-label="Communication date range" name="when" defaultValue={params.when} className="h-9 w-28"><option value="today">Today</option><option value="week">Last 7 days</option><option value="month">Last 30 days</option></SelectInput><Button tone="secondary" size="small" type="submit">Apply</Button></form>
         {mayMessage ? <ButtonLink tone="primary" href={inbox}><MessageSquare aria-hidden /> Open inbox</ButtonLink> : null}
@@ -65,11 +66,6 @@ export function CommunicationsHome({ organizationId, timezone, data, configure }
         {configure}
       </>}
     />
-    <ViewNav label="Communications destinations" views={[
-      ...(mayCall ? [{ key: 'calls', label: 'Calls', href: calls }] : []),
-      ...(mayMessage ? [{ key: 'inbox', label: 'Inbox', href: inbox }] : []),
-      { key: 'numbers', label: 'Numbers', href: `${home}/numbers` }, { key: 'configuration', label: 'Configuration', href: config },
-    ]} />
     <div className="grid overflow-hidden rounded-lg border border-border bg-surface grid-cols-2 @min-[64rem]/comms:grid-cols-4">{stateTiles.map(tile => <Link key={tile.title} href={tile.href} className="flex min-w-0 items-center gap-2 border-border p-3 hover:bg-hover border-r"><span className={`hidden size-8 shrink-0 items-center justify-center rounded-full @min-[36rem]/comms:flex ${tile.state === 'operational' ? 'bg-success/10 text-success' : 'bg-hover text-muted'}`}><tile.icon aria-hidden className="size-4" /></span><div className="min-w-0 flex-1"><div className="mb-1 flex flex-wrap items-center gap-2"><span className="text-xs text-muted">{tile.title}</span>{tile.state ? <ReadinessBadge state={tile.state} /> : null}</div><p className="break-words text-sm font-medium">{tile.value}</p><p className="mt-1 text-xs leading-tight text-muted">{tile.context}</p></div><ChevronRight aria-hidden className="hidden size-3.5 shrink-0 text-muted @min-[36rem]/comms:block" /></Link>)}</div>
     <div className="grid min-w-0 gap-3 @min-[58rem]/comms:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]"><div className="min-w-0 space-y-3">
       <OperationalPanel density="compact" title="Needs attention" href={attentionHref}><ViewNav label="Attention categories" scroll={false} className="mb-1" items={attentionTabs.map(tab => ({ key: tab.key, label: `${tab.label} (${tab.count})`, href: link({ attention: tab.key }), current: attention === tab.key }))} />

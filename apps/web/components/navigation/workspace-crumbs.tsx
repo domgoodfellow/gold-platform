@@ -32,6 +32,11 @@ export function WorkspaceCrumbsProvider({ children, navigation }: { children: Re
 }
 
 /** The place in the workspace bar where the current page's trail appears. */
+/** The authorized navigation projection this shell was given, for a page control that presents part of it. */
+export function useLocationNavigation(): LocationNavigation | undefined {
+  return useContext(CrumbSlotContext)?.navigation;
+}
+
 export function WorkspaceCrumbSlot() {
   const context = useContext(CrumbSlotContext);
   return <div ref={context?.setSlot} className="min-w-0 flex-1 md:flex-initial" />;

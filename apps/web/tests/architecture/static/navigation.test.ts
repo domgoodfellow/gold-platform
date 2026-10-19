@@ -36,7 +36,16 @@ import type { Capability } from '@/lib/domain/tenancy/capabilities';
  */
 
 const ROUTES = fileURLToPath(new URL('../../../app/organizations/[organizationId]', import.meta.url));
+
 const WEB_ROOT = fileURLToPath(new URL('../../..', import.meta.url));
+
+/** A route's own page, or the dynamic sibling (`ai/[view]`) that serves it. */
+function routeHasPage(route: string): boolean {
+  if (existsSync(`${ROUTES}/${route}/page.tsx`)) return true;
+  const parent = route.split('/').slice(0, -1).join('/');
+  if (!parent || !existsSync(`${ROUTES}/${parent}`)) return false;
+  return readdirSync(`${ROUTES}/${parent}`).some((entry) => /^\[[^.\]]+\]$/.test(entry) && existsSync(`${ROUTES}/${parent}/${entry}/page.tsx`));
+}
 
 /** Direct child route directories that render a page — the areas of one business. */
 function routeSegmentsOnDisk(): string[] {
@@ -58,7 +67,7 @@ describe('the operator shell navigation', () => {
   it('points every entry at a route that exists', () => {
     for (const area of AREAS) {
       expect(
-        existsSync(`${ROUTES}/${area.route ?? area.segment}/page.tsx`),
+        routeHasPage(area.route ?? area.segment),
         `navigation names "${area.segment}", which has no page`,
       ).toBe(true);
     }
@@ -172,11 +181,21 @@ describe('the operator shell navigation', () => {
     }
   });
 
-  it.each(['ai'])('%s has one guarded starting Home and no invented child destinations', (key) => {
+  it.each(['ai'])('%s offers its guarded Home and member pages, and keeps agent configuration behind its configuration targets', (key) => {
     expect(WORKSPACES.find((workspace) => workspace.key === key)?.home).toBe(key);
-    expect(AREAS.filter((area) => area.workspace === key && area.sidebar !== false)).toEqual([
-      { segment: key, label: areaLabel(key), group: 'workspaces', workspace: key },
+    // Activity and Evaluations are read by any member; Agents, Channel deployments, Knowledge and Tools
+    // are `organization.manage` configuration, so a read-only member is never sent to them.
+    expect(AREAS.filter((area) => area.workspace === key && area.sidebar !== false).map((area) => [area.segment, area.route ?? area.segment, area.label])).toEqual([
+      ['ai', 'ai', areaLabel(key)], ['ai-activity', 'ai/activity', 'Agent activity'], ['ai-evaluations', 'ai/evaluations', 'Evaluations'],
     ]);
+    for (const view of ['agents', 'deployments', 'knowledge', 'tools']) {
+      expect(AREAS.some((area) => area.route === `ai/${view}`), view).toBe(false);
+      expect(CONFIG_TARGETS.find((target) => target.key === `ai-${view}`)?.permission, view).toEqual(['organization.manage']);
+    }
+    const views = readFileSync(`${ROUTES}/${key}/[view]/page.tsx`, 'utf8');
+    expect(views).toContain('requireConfigurationTarget(organizationId, `ai-${view}`)');
+    expect(views).toContain('"activity"');
+    expect(views).toContain('"evaluations"');
     const page = readFileSync(`${ROUTES}/${key}/page.tsx`, 'utf8');
     expect(page).toContain('await requireOrganization(organizationId)');
     expect(page).toContain('<AiWorkspace');
@@ -185,10 +204,24 @@ describe('the operator shell navigation', () => {
     expect(readdirSync(`${ROUTES}/${key}`)).toContain('page.tsx');
   });
 
-  it('retains one flat workspace row for Marketing with its read authority', () => {
-    expect(AREAS.filter((area) => area.workspace === 'marketing' && area.sidebar !== false)).toEqual([
-      { segment: 'marketing', label: areaLabel('marketing'), group: 'workspaces', workspace: 'marketing', relevantCapabilities: ['marketing.read', 'marketing.manage'] },
+  it('gives Marketing its Home and four existing operating pages, each read-gated', () => {
+    const marketing = AREAS.filter((area) => area.workspace === 'marketing' && area.sidebar !== false);
+    expect(marketing.map((area) => [area.segment, area.route ?? area.segment, area.label])).toEqual([
+      ['marketing', 'marketing', 'Marketing'],
+      ['marketing-campaigns', 'marketing/campaigns', 'Campaigns'],
+      ['marketing-audiences', 'marketing/audiences', 'Audiences'],
+      ['marketing-leads', 'marketing/leads', 'Leads'],
+      ['marketing-performance', 'marketing/performance', 'Performance'],
     ]);
+    for (const area of marketing) expect(area.relevantCapabilities, area.segment).toEqual(['marketing.read', 'marketing.manage']);
+  });
+
+  it('draws workspace destinations once: no page keeps its own destination list', () => {
+    // The header strip presents the projection; these pages once hardcoded their own lists.
+    for (const file of ['features/marketing/workspace.tsx', 'features/finance/home/finance-home.tsx', 'features/finance/collections/finance-collection.tsx', 'features/communications/home/communications-home.tsx', 'features/studio/studio-home.tsx', 'features/ai/workspace.tsx', 'features/ai/ui.tsx']) {
+      const source = readFileSync(`${WEB_ROOT}/${file}`, 'utf8');
+      expect(source, file).not.toMatch(/destinations"|Finance collections|AiNav|AI_VIEWS/);
+    }
   });
 
   it('gives Support an Overview and four operating destinations, each read-gated', () => {
@@ -329,7 +362,7 @@ describe('the operator shell navigation', () => {
       'library',
       'sales', 'customers', 'pipeline',
       'comms', 'calls', 'comms-inbox',
-      'marketing', 'support', 'support-cases', 'support-queue-workbench', 'support-service-levels-view', 'support-reports', 'ai',
+      'marketing', 'marketing-campaigns', 'marketing-audiences', 'marketing-leads', 'marketing-performance', 'support', 'support-cases', 'support-queue-workbench', 'support-service-levels-view', 'support-reports', 'ai', 'ai-activity', 'ai-evaluations',
       'finance', 'finance-quotes', 'finance-invoices', 'finance-payments',
       'automations', 'automation-rules', 'automation-messages', 'automation-activity',
       'field', 'work', 'schedule', 'resources', 'locations', 'assets',
@@ -979,7 +1012,7 @@ describe('the organization shell taxonomy', () => {
     }
     // And every workspace row has a page behind it — no placeholder route to satisfy a list.
     for (const area of inSidebar) {
-      expect(existsSync(`${ROUTES}/${area.route ?? area.segment}/page.tsx`)).toBe(true);
+      expect(routeHasPage(area.route ?? area.segment), area.segment).toBe(true);
     }
     // Retired workspace identities must not return as sidebar destinations.
     for (const absent of ['service']) {

@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { ViewNav } from '@/components/navigation/view-nav';
+import { ButtonLink } from '@/components/controls/button';
 import { tabListStyles, tabTriggerStyles } from '@gold/ui/components/tab-styles';
 import { cx } from '@/components/class-names';
 import { useRouter } from 'next/navigation';
@@ -39,17 +39,12 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
     { label: 'Payment readiness', icon: Settings2, value: <span className="text-lg">{readiness}</span>, context: setup.length ? `${setup.length} configuration items` : 'Services, currency & payment acceptance', href: `${base}/finance/configuration/pricing#getting-paid` },
   ];
   return <AppPage className="@container/finance space-y-3 pb-16 md:pb-0">
-    <PageHeader title="Finance" actions={<>
+    <PageHeader title="Finance" navigation actions={<>
       <TextInput type="month" aria-label="Reporting month" value={period.month} onChange={e => { if (e.target.value) router.push(`${finance}?month=${e.target.value}`); }} className="h-9 w-44 sm:w-40" />
       {may('invoice.issue') ? <FinanceWorkflow organizationId={organizationId} kind="invoice" /> : null}{may('work_item.price') ? <FinanceWorkflow organizationId={organizationId} kind="quote" mayCreateWork={may('work_item.create')} /> : null}{may('payment.record') ? <FinanceWorkflow organizationId={organizationId} kind="payment" /> : null}
+      {may('report.read') ? <ButtonLink tone="secondary" href={`${finance}/reports`}>Financial reports</ButtonLink> : null}
       {configure}
     </>} />
-
-    <ViewNav label="Finance destinations" views={[
-      ...[['Quotes','quotes'],['Invoices','invoices'],['Payments','payments']].map(([label, path]) => ({ key: path, label, href: `${finance}/${path}` })),
-      { key: 'pricing', label: 'Services & Pricing', href: `${base}/finance/configuration/pricing` },
-      ...(may('report.read') ? [{ key: 'reports', label: 'Financial reports', href: `${finance}/reports` }] : []),
-    ]} />
     <div className="grid grid-cols-2 gap-3 @min-[60rem]/finance:grid-cols-4">{kpis.map(k => <MetricTile key={k.label} label={k.label} value={k.value} detail={k.context} icon={k.icon} href={k.href} />)}</div>
     <div className="grid min-w-0 gap-3 @min-[60rem]/finance:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]"><div className="min-w-0 space-y-3">
       <OperationalPanel density="compact" title="Needs attention" count={open.total + quotes.total + setup.length} href={attentionHref}>

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { cx } from '../class-names';
 import { PageLocation, type PageLocationCrumb } from '../navigation/page-location';
 import { SupportTrigger } from '../panels/workspace-right-rail';
+import { WorkspaceDestinationNav } from '../navigation/workspace-destination-nav';
 import { BusinessLabel } from '@/lib/context/business-vocabulary';
 
 /**
@@ -14,6 +15,7 @@ export function CollectionHeader({
   title,
   crumbs,
   breadcrumbLabel,
+  navigation = false,
   actions,
   activity = false,
   insights = false,
@@ -23,6 +25,8 @@ export function CollectionHeader({
   title: ReactNode;
   crumbs?: PageLocationCrumb[];
   breadcrumbLabel?: ReactNode;
+  /** The current workspace's destinations in the action row, as on `PageHeader`. */
+  navigation?: boolean;
   /** Board/collection controls, in reading order — a stage-settings control, a create trigger. */
   actions?: ReactNode;
   activity?: boolean;
@@ -31,13 +35,14 @@ export function CollectionHeader({
   className?: string;
 }) {
   return (
-    <header className={cx('flex flex-wrap items-center justify-between gap-x-4 gap-y-2', className ?? 'mb-4')}>
+    <header className={cx('@container/page-header flex flex-wrap items-center justify-between gap-x-4 gap-y-2', className ?? 'mb-4')}>
       <div className="min-w-0 flex-1 basis-64">
         <PageLocation crumbs={crumbs} current={breadcrumbLabel ?? <BusinessLabel>{title}</BusinessLabel>} />
         <h1 className="text-xl font-semibold tracking-tight"><BusinessLabel>{title}</BusinessLabel></h1>
       </div>
+      {navigation ? <div className="hidden min-w-0 @4xl/page-header:block"><WorkspaceDestinationNav /></div> : null}
       {actions || activity || insights || configure ? (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={cx('ml-auto flex flex-wrap items-center gap-2', navigation && 'min-w-0 flex-1 basis-80 justify-end')}>
           {actions}
           {activity ? <SupportTrigger mode="activity" /> : null}
           {insights ? <SupportTrigger mode="insights" /> : null}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AREAS, WORKSPACES, configTarget, configTargetOffered, workspaceAncestry, areaLabel } from '@/lib/navigation';
+import { headerDestinations } from '@/lib/shell';
 import { SHELL_SECTION_ORDER, pageNavigation, workspaceNavigation, activeItemKey, inPlatformScope, itemContains, projectedItems, projectShell, projectHeaderUtilities, shellHomeItem, topLevelSections, withAdministration, type ShellInput, type ShellSection } from '@/lib/shell';
 import { PLATFORM_CAPABILITIES } from '@/lib/domain/platform/permissions';
 import { platformAncestry, platformDestinationsFor, platformHref, platformRouteRequires } from '@/lib/platform-navigation';
@@ -370,8 +371,10 @@ describe('responsive page-location projection', () => {
     expect(pageNavigation(limited, `${base}/assets`, []).groups).toEqual([]);
     expect(pageNavigation(limited, `${base}/field`, []).groups.flatMap((group) => group.items).some((item) => item.key === 'assets')).toBe(false);
   });
-  it('a single-destination workspace has only its real overview', () => {
-    expect(pageNavigation(navigation, `${base}/marketing`, []).groups.flatMap((group) => group.items)).toHaveLength(1);
+  it('offers Marketing its overview and four operating pages, and keeps a campaign under Campaigns', () => {
+    const location = pageNavigation(navigation, `${base}/marketing/campaigns/campaign-1`, []);
+    expect(location.groups.flatMap((group) => group.items).map((item) => item.key)).toEqual(['workspace-overview', 'marketing-campaigns', 'marketing-audiences', 'marketing-leads', 'marketing-performance']);
+    expect(location.activeKey).toBe('marketing-campaigns');
   });
   it('uses the restricted Settings projection without adding tenant workspaces', () => {
     const settings = { organizationId: ORG, sections: projectSettingsNav(ORG, gate([])) };
@@ -545,5 +548,40 @@ describe('Support workspace navigation', () => {
     expect(keys(none)).not.toContain('workspace-support');
     expect(workspaceNavigation(none, base)).toBeNull();
     expect(workspaceNavigation(none, `${base}/cases`)).toBeNull();
+  });
+});
+
+describe('header destination strip', () => {
+  const base = `/organizations/${ORG}`;
+  const strip = (capabilities: readonly Capability[], path: string) => headerDestinations({ organizationId: ORG, sections: project(capabilities) }, `${base}/${path}`);
+  const keysOf = (result: ReturnType<typeof strip>) => result?.items.map((item) => item.key);
+  it('presents exactly the sidebar destinations of the entered workspace, with the same active item', () => {
+    const path = `${base}/marketing/leads`;
+    const context = workspaceNavigation(project(), path)!;
+    const result = strip(ALL_CAPABILITIES, 'marketing/leads');
+    expect(keysOf(result)).toEqual(context.sections[0].items.map((item) => item.key));
+    expect(result?.items.map((item) => item.label)).toEqual(context.sections[0].items.map((item) => item.label));
+    expect(result?.activeKey).toBe(activeItemKey(context.sections, path));
+    expect(result?.activeKey).toBe('marketing-leads');
+  });
+  it('gives a read-only AI member only the member pages, and shows no strip on agent configuration', () => {
+    expect(keysOf(strip([], 'ai'))).toEqual(['workspace-overview', 'ai-activity', 'ai-evaluations']);
+    expect(strip(ALL_CAPABILITIES, 'ai/evaluations')?.activeKey).toBe('ai-evaluations');
+    expect(strip(ALL_CAPABILITIES, 'ai/agents')).toBeNull();
+  });
+  it('keeps calling-only and messaging-only Communications distinct', () => {
+    expect(keysOf(strip(['call.place'], 'comms'))).toEqual(['workspace-overview', 'calls']);
+    expect(keysOf(strip(['message.send'], 'comms'))).toEqual(['workspace-overview', 'comms-inbox']);
+  });
+  it('draws no strip where only an overview exists, outside a workspace, or for another organization', () => {
+    expect(strip([], 'studio')).toBeNull();
+    expect(strip(ALL_CAPABILITIES, 'home')).toBeNull();
+    expect(headerDestinations({ organizationId: ORG, sections: project() }, '/organizations/other/marketing')).toBeNull();
+    expect(headerDestinations(undefined, `${base}/marketing`)).toBeNull();
+  });
+  it('keeps detail routes on their destination for Finance and Support, and Studio pages for managers only', () => {
+    expect(strip(ALL_CAPABILITIES, 'finance/invoices/invoice-1')?.activeKey).toBe('finance-invoices');
+    expect(strip(ALL_CAPABILITIES, 'support/cases/case-1')?.activeKey).toBe('support-cases');
+    expect(keysOf(strip(ALL_CAPABILITIES, 'studio'))).toEqual(['workspace-overview', 'studio-website', 'studio-portal', 'studio-forms', 'studio-templates']);
   });
 });

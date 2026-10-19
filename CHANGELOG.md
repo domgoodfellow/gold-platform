@@ -34,6 +34,7 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-10-19
 
+- Marketing's Campaigns, Audiences, Leads and Performance, and AI's Agent activity and Evaluations, are now sidebar destinations. Workspace pages show their destinations in the header action row, drawn from the same navigation as the sidebar, instead of separate tab strips beneath the header. A read-only member is no longer shown links to AI configuration or Studio pages they cannot open.
 - The Dialer is now a full calling console at Communications → Dialer, opening in Standard with the queue, calling and customer context side by side. Focus keeps only the calling region, and Pop-out moves the same live controls into the separate window. Call back and New call open the Dialer with the number filled in instead of a drawer.
 - Support's Cases, Queues, Service levels and Reports are now destinations in the workspace's sidebar beside Overview, and the duplicate tab strip and Views menu are gone. Configure opens a side panel with queues and service levels instead of a configuration landing page; existing configuration addresses still open directly. Service levels is an operating view for everyone with Support read access, and editing stays with Support configuration permission.
 

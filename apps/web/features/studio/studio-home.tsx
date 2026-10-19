@@ -1,5 +1,4 @@
 import { NavigationList } from '@/components/navigation/navigation-list';
-import { ViewNav } from '@/components/navigation/view-nav';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ArrowUpRight, ClipboardList, FileText, Globe, Layers, ShieldCheck } from 'lucide-react';
@@ -29,13 +28,12 @@ export function StudioHome({ organizationId, timezone, mayManage, overview: data
   ];
   const attentionHref = (key: string) => key.startsWith('website') ? website : key.startsWith('form') ? forms : key === 'brand-logo' ? `${base}/settings/branding` : key === 'profile-incomplete' ? `${base}/settings/public-profile` : key === 'no-bookable-type' ? `${base}/work/configuration` : `${base}/settings/organization`;
   return <AppPage className="@container/studio space-y-3">
-    <PageHeader title="Studio" actions={<>
+    <PageHeader title="Studio" navigation actions={<>
       {mayManage ? <><NewFormDrawer organizationId={organizationId} /><ButtonLink tone="secondary" href={website}>Edit website</ButtonLink></> : null}
       {preview ? <ButtonLink tone="secondary" href={`/preview/${organizationId}/${preview.id}`} target="_blank">Preview</ButtonLink> : null}
       {data.publicUrl ? <ButtonLink tone="secondary" href={data.publicUrl} target="_blank" rel="noreferrer">View site <ArrowUpRight aria-hidden className="size-4" /></ButtonLink> : null}
       {configure}
     </>} />
-    <ViewNav label="Studio destinations" views={[[website, 'Website'], [`${studio}/portal`, 'Customer portal'], [forms, 'Forms'], [templates, 'Templates']].map(([href, label]) => ({ key: href, label, href }))} />
     <div className="grid gap-3 sm:grid-cols-2 @min-[64rem]/studio:grid-cols-4">
       {cards.map(({ title, value, note, icon, href }) => <MetricTile key={title} label={title} value={value} detail={note} icon={icon} href={href} />)}
     </div>

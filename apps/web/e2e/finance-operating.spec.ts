@@ -34,7 +34,9 @@ test.describe('Finance operating journey', () => {
     await page.goto(finance);
     await expect(page.getByRole('region',{name:'Open invoices',exact:true}).getByText('No invoices issued yet.')).toBeVisible();
     await page.screenshot({path:testInfo.outputPath('finance-empty-desktop.png'),fullPage:true,caret:'initial'});
-    await page.getByRole('navigation',{name:'Finance destinations'}).getByRole('link',{name:'Services & Pricing'}).click();
+    // Services & Pricing is configuration: it is reached through Configure, not the destination strip.
+    await page.locator('main').getByRole('link',{name:'Configuration',exact:true}).click();
+    await page.locator('main').getByRole('link',{name:'Services & pricing',exact:true}).click();
     await page.getByRole('button',{name:'Add price item',exact:true}).click();
     let drawer = page.getByRole('dialog',{name:'Add price item',exact:true});
     await drawer.getByRole('textbox',{name:'Name',exact:true}).fill('Service visit');

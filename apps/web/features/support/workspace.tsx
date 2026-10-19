@@ -661,6 +661,7 @@ export function SupportWorkspace({
           ) : undefined
         }
         configure={Boolean(configure)}
+        navigation={view !== "detail"}
         actions={<>
           {view !== "detail" && view !== "policies" && (
             <DateRangeFilter from={data.period.from} to={data.period.to} timezone={timezone} onApply={change} />

@@ -41,7 +41,9 @@ test.describe('an owner', () => {
     await expect(page.getByRole('button', { name: 'Expand Studio' })).toHaveCount(0);
     await page.getByRole('dialog').getByRole('link', { name: 'Studio', exact: true }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await page.getByRole('navigation', { name: 'Studio destinations' }).getByRole('link', { name: 'Templates', exact: true }).click();
+    // On a phone the header strip is hidden; the menu now lists Studio's own pages.
+    await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();
+    await page.getByRole('dialog').getByRole('link', { name: 'Templates', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/studio/templates$`));
   });
 });

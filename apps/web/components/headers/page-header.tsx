@@ -3,6 +3,7 @@ import { BusinessLabel } from '@/lib/context/business-vocabulary';
 import { cx } from '../class-names';
 import { PageLocation, type PageLocationCrumb } from '../navigation/page-location';
 import { SupportTrigger } from '../panels/workspace-right-rail';
+import { WorkspaceDestinationNav } from '../navigation/workspace-destination-nav';
 
 export type PageHeaderCrumb = PageLocationCrumb;
 
@@ -50,6 +51,7 @@ export function PageHeader({
   section,
   breadcrumbLabel,
   meta,
+  navigation = false,
   actions,
   activity = false,
   insights = false,
@@ -71,6 +73,13 @@ export function PageHeader({
   breadcrumbLabel?: ReactNode;
   /** Short, secondary facts about the record — a schedule window, a status — under the title. */
   meta?: ReactNode;
+  /**
+   * Draws the current workspace's destinations at the start of the action row, from the same
+   * authorized projection as the sidebar. Hidden when the header itself is too narrow (an open
+   * Agent or Configure panel narrows it without changing the viewport); the sidebar and the phone
+   * location menu still reach every destination.
+   */
+  navigation?: boolean;
   /** Business actions, in reading order. Never Configure — see `configure`. */
   actions?: ReactNode;
   /** Offers the Activity mode: what recently changed here. Only where a domain-level read exists. */
@@ -84,14 +93,15 @@ export function PageHeader({
 }) {
   const titleInBar = !section && breadcrumbLabel === undefined && typeof title === 'string';
   return (
-    <header className={cx('flex flex-wrap items-start gap-x-4 gap-y-3', titleInBar && !meta ? 'justify-end' : 'justify-between', className ?? 'mb-6')}>
+    <header className={cx('@container/page-header flex flex-wrap items-start gap-x-4 gap-y-3', titleInBar && !meta && !navigation ? 'justify-end' : 'justify-between', className ?? 'mb-6')}>
       <div className={cx('min-w-0', titleInBar && !meta ? 'sr-only' : 'flex-1 basis-64')}>
         <PageLocation crumbs={section ? [] : crumbs} current={section ?? breadcrumbLabel ?? (recordTitle ? title : <BusinessLabel>{title}</BusinessLabel>)} />
         <h1 className={titleInBar ? 'sr-only' : 'text-2xl font-semibold tracking-tight'}>{recordTitle ? title : <BusinessLabel>{title}</BusinessLabel>}</h1>
         {meta ? <div className={cx('text-sm text-muted', !titleInBar && 'mt-1')}>{meta}</div> : null}
       </div>
+      {navigation ? <div className="hidden min-w-0 @4xl/page-header:block"><WorkspaceDestinationNav /></div> : null}
       {actions || activity || insights || configure ? (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={cx('ml-auto flex flex-wrap items-center gap-2', navigation && 'min-w-0 flex-1 basis-80 justify-end')}>
           {actions}
           {activity ? <SupportTrigger mode="activity" /> : null}
           {insights ? <SupportTrigger mode="insights" /> : null}

@@ -34,7 +34,7 @@ import {
   type Channel,
 } from "@/lib/domain/ai/agents";
 import { saveAgent } from "./actions";
-import { AgentIcon, AiNav, Badge, Field, cell } from "./ui";
+import { AgentIcon, Badge, Field, cell } from "./ui";
 import { MetricTile, OperationalPanel, PanelState } from "@/components/operational/primitives";
 
 export function NewAgent({
@@ -439,6 +439,7 @@ export function AiWorkspace({
     <AppPage className="space-y-4">
       <PageHeader
         title={title}
+        navigation
         actions={<>
           {(!view || view === "activity") && <SelectInput
           aria-label="Date range"
@@ -449,14 +450,13 @@ export function AiWorkspace({
           <option value="7">Last 7 days</option>
         </SelectInput>}
           <NewAgent organizationId={organizationId} canManage={canManage} />
-          <ButtonLink tone="secondary" href={`${base}/agents`}>
+          {canManage ? <ButtonLink tone="secondary" href={`${base}/agents`}>
             <Play aria-hidden />
             Test agent
-          </ButtonLink>
+          </ButtonLink> : null}
           {configure}
         </>}
       />
-      <AiNav base={base} active={view} />
       {!view && (
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {[
