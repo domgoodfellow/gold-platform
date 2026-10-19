@@ -2,6 +2,7 @@
 
 **Recorded:** 2026-10-17
 **Status:** Accepted. Options A2, B2, C2 and D2 selected by the owner on 2026-10-17 for implementation in the stated order.
+**Superseded in part by:** ADR-046 (2026-10-19) — only Part B's flat-sidebar rendering ("Render one flat list for the business…" and the listed `docs/ui-system.md` navigation changes). The business profile itself remains accepted.
 
 ## A. Platform Administration address
 

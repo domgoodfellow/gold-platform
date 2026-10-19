@@ -556,22 +556,9 @@ Purpose:
 
 > Detect unintended visual change in a deliberately small set of representative canonical surfaces.
 
-Current baselines cover representative patterns such as:
+The intended set is one representative of each pattern (Workspace Home, collection/board, Organization Settings, authenticated state/not-found, record/detail, Platform control plane) at 1440×900, 1024×800 and 390×844.
 
-- Workspace Home;
-- collection/board;
-- Organization Settings;
-- authenticated state/not-found;
-- record/detail;
-- Platform control plane;
-
-at:
-
-```text
-1440×900
-1024×800
-390×844
-```
+**Current state: the committed baselines provide no protection.** Five of the six images under `apps/web/e2e/visual/*-snapshots/` are the same capture of the Log in page, all are single Windows captures, and `playwright.visual.config.ts` reads baselines from `__screenshots__/`, not from those folders. Until the set is recaptured from a signed-in session and reviewed against the approved design, a visual run is not evidence of anything.
 
 Visual regression is **not** a default correctness gate.
 
@@ -849,7 +836,15 @@ Runs:
 - expose local test environment;
 - run real database architecture/integration tier.
 
-These two jobs are the ordinary merge gate.
+#### `contract`
+
+- runs `scripts/contract-guard.mjs` over the pull request (rationale read from its description) or over each pushed commit (rationale read from its message);
+- lists every changed path matched by `.github/CODEOWNERS`, the protected contract paths;
+- fails when those paths change without a `Contract-Change:` line, when it cites an ADR that does not exist or is not in force, or when tests are removed, skipped or a feature/component is newly mocked without a `Coverage-Change:` line.
+
+The check proves that a rationale was written, not that the change was authorized or correct. Authorization is a person's review.
+
+These jobs are the ordinary merge gate only where GitHub branch protection requires them. Without branch protection every job, including `contract`, reports a failure but blocks nothing; on a direct push to `main` it reports after the commit has landed.
 
 ---
 
@@ -1061,9 +1056,26 @@ fix
 prove test passes
 ```
 
-Do not preserve tests for behavior that the product has intentionally removed.
+Do not preserve tests for behavior that the product has intentionally removed, where the removal is an approved contract change (`docs/decisions/README.md` → *Contract-change protocol*). An implementation that no longer satisfies a test is not, by itself, that approval.
 
-Obsolete tests are documentation bugs.
+---
+
+## Test-change discipline
+
+Existing regression expectations are presumed protective. A failing test starts an investigation of the code and the contract before anyone edits the expectation.
+
+- **Removing or weakening an assertion** requires naming the behavior it protected and the approved change that retired it. A material change to established behavior needs an explicitly approved contract change; a passing suite after the edit is not that approval.
+- **Equivalence:** a source-string assertion (`toContain` on a file's text) is not equivalent coverage for rendered or behavioral checks. Do not replace one with the other.
+- **Mocks:** mocking a newly introduced component must not hide it from a page-level composition test. If a page's composition contract is under test, the new part is rendered or the contract is explicitly updated.
+- **Snapshots:** a changed visual baseline is accepted only after comparing it with the approved design, never because the run produced a new image.
+- **Shared components:** a change to a shared component is checked against representative consumers of each archetype it serves, not only the page that motivated it.
+
+Two families of tests serve different purposes and are not substitutes:
+
+- **Architectural enforcement** (`architecture-static`, `architecture-db`): dependency direction, registries, ownership boundaries, guards. These keep useful structure; many read source text by design.
+- **User-visible behavior** (`component`, `playwright-acceptance`, `playwright-visual`): what a person sees and can do. Only these establish UI behavior.
+
+`scripts/contract-guard.mjs` (CI job `contract`) requires a written `Coverage-Change:` rationale when a change removes or skips test cases or newly mocks a `@/features/` or `@/components/` module, and a `Contract-Change:` rationale when protected paths change. It counts declarations; it cannot judge whether the rationale is true.
 
 ---
 
@@ -1284,7 +1296,7 @@ This exposes gaps before completion.
 - do not snapshot huge unstable objects without a reason;
 - do not test private implementation details that may change safely;
 - keep test environment isolated from production;
-- remove stale tests when the requirement is gone;
+- remove stale tests only when the requirement is gone by an approved change (*Test-change discipline*);
 - keep `test-manifest.json` synchronized.
 
 ---

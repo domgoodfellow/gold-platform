@@ -5,6 +5,7 @@
   "scripts": {
     "check": "pnpm -r --stream check && pnpm check:api",
     "check:api": "python -m pytest apps/api/tests -q",
+    "check:contract": "node scripts/contract-guard.mjs --base origin/main",
     "check:fast": "pnpm --filter @gold/web typecheck && pnpm --filter @gold/web lint && pnpm test:fast && pnpm --filter @gold/web build",
     "test:fast": "node scripts/test.mjs fast",
     "test:local": "node scripts/test.mjs local",

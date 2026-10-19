@@ -941,7 +941,16 @@
         "build",
         "test-strategy"
       ],
-      "note": "Holds three CI properties by text; the workflow itself has not run on GitHub."
+      "note": "Holds CI properties by text, including the contract job; the workflow itself has not run on GitHub."
+    },
+    "apps/web/tests/architecture/static/contract-documents.test.ts": {
+      "category": "architecture-static",
+      "concerns": [
+        "architecture",
+        "navigation",
+        "test-strategy"
+      ],
+      "note": "Document consistency only: ADR index and supersession links, one navigation model, protected paths. Not evidence of application behavior."
     },
     "apps/web/tests/architecture/static/communications-workspace-boundary.test.ts": {
       "category": "architecture-static",
@@ -2611,6 +2620,14 @@
         "ui",
         "security"
       ]
+    },
+    "apps/web/tests/unit/contract-guard.test.ts": {
+      "category": "unit",
+      "concerns": [
+        "test-strategy",
+        "build"
+      ],
+      "note": "Rules of scripts/contract-guard.mjs without git; the CI job itself has not run on GitHub."
     },
     "apps/web/tests/unit/forms-definition.test.ts": {
       "category": "unit",

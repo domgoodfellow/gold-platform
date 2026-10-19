@@ -1,0 +1,47 @@
+# Protected contract paths.
+#
+# These files define or protect approved architecture, product and UI contracts
+# (docs/decisions/README.md → Authority model). This list is also the input to
+# scripts/contract-guard.mjs: a commit or pull request that changes any of them
+# must carry a `Contract-Change:` line.
+#
+# GitHub requires a code-owner review for these paths only when branch protection
+# on `main` enables "Require review from Code Owners". Without that setting this
+# file only requests a review; it blocks nothing.
+
+# Agent contract and decision records
+/CLAUDE.md                                                    @domgoodfellow
+/docs/decisions/                                              @domgoodfellow
+
+# Canonical contract documents
+/docs/product.md                                              @domgoodfellow
+/docs/architecture.md                                         @domgoodfellow
+/docs/ui-system.md                                            @domgoodfellow
+/docs/testing.md                                              @domgoodfellow
+/apps/web/components/README.md                                @domgoodfellow
+/apps/web/features/README.md                                  @domgoodfellow
+
+# Gates and their configuration
+/.github/                                                     @domgoodfellow
+/scripts/contract-guard.mjs                                   @domgoodfellow
+/test-manifest.json                                           @domgoodfellow
+/apps/web/playwright.visual.config.ts                         @domgoodfellow
+/apps/web/e2e/visual/                                         @domgoodfellow
+
+# Regression tests for navigation, page identity, composition and layer boundaries
+/apps/web/tests/architecture/static/navigation.test.ts        @domgoodfellow
+/apps/web/tests/architecture/static/primary-navigation.test.ts @domgoodfellow
+/apps/web/tests/architecture/static/workspace-shell.test.ts   @domgoodfellow
+/apps/web/tests/architecture/static/adaptive-shell.test.ts    @domgoodfellow
+/apps/web/tests/architecture/static/feature-ownership-boundary.test.ts @domgoodfellow
+/apps/web/tests/architecture/static/application-layer-boundary.test.ts @domgoodfellow
+/apps/web/tests/architecture/static/contract-documents.test.ts @domgoodfellow
+/apps/web/tests/architecture/static/ci-workflow.test.ts       @domgoodfellow
+/apps/web/tests/architecture/static/test-manifest.test.ts     @domgoodfellow
+/apps/web/tests/component/shell-navigation.test.tsx           @domgoodfellow
+/apps/web/tests/component/configuration-hierarchy.test.tsx    @domgoodfellow
+/apps/web/tests/unit/shell-projection.test.ts                 @domgoodfellow
+/apps/web/tests/unit/business-profile.test.ts                 @domgoodfellow
+/apps/web/tests/unit/contract-guard.test.ts                   @domgoodfellow
+/apps/web/e2e/adaptive-shell.spec.ts                          @domgoodfellow
+/apps/web/e2e/business-foundations.spec.ts                    @domgoodfellow

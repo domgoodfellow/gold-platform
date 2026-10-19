@@ -26,6 +26,54 @@ A current rule must still appear in the document that owns the concern.
 
 ---
 
+## Authority model
+
+Each kind of rule has one owner. Another document may link to it, but must not restate it in its own words.
+
+| Owner | Defines | Does not define |
+| --- | --- | --- |
+| `docs/product.md` | Approved product behavior and information architecture: scopes, workspaces, which destinations exist and how they are grouped | Presentation details, module layout |
+| `docs/ui-system.md` | Presentation, interaction and composition contracts: archetypes, page identity, surfaces, responsive behavior, accessibility | Which destinations exist or how they are grouped |
+| `docs/architecture.md` | Layers, dependency direction, module ownership, including which projection modules own navigation data | Product behavior, presentation |
+| Other canonical docs (see `CLAUDE.md`) | Their named concern | Concerns owned above |
+| ADRs (this directory) | Why a durable choice was made, its tradeoffs and what it displaced; supersession history | Current detail beyond the decision itself |
+| `CLAUDE.md` | How agents interpret, implement and change these contracts | Product, UI or architecture rules |
+| Tests (`test-manifest.json`) | Executable checks derived from approved contracts | New contracts. A test that passes after its expectation was edited proves nothing about authorization |
+
+When two owners disagree, neither silently wins. Use the protocol below.
+
+---
+
+## Contract-change protocol
+
+**Ordinary implementation** preserves approved contracts:
+
+1. identify the applicable contract and its owner (table above);
+2. inspect current callers and the regression tests that protect the behavior;
+3. implement within the contract;
+4. add coverage for new behavior;
+5. verify that existing protected behavior still holds.
+
+An implementation that differs from a contract is not a reason to change the contract.
+
+**Regression correction:** when code violates an approved contract, correct the code. Do not rewrite the contract to describe the defect.
+
+**Intentional change:** when a proposed implementation conflicts with an approved contract or Accepted ADR:
+
+1. identify and explain the conflict;
+2. stop the conflicting implementation;
+3. present the proposed decision, alternatives and consequences;
+4. obtain explicit owner authorization for the changed behavior;
+5. record it: a superseding ADR when the decision is material (see *When to create an ADR*), otherwise the owning canonical document;
+6. update implementation and tests against the newly approved contract;
+7. provide evidence of the changed behavior (rendered evidence for user-visible change).
+
+A contradiction between documents is not permission to follow the most convenient one. Canonical documentation changes only to correct a factual inaccuracy or to record an explicitly approved change.
+
+Commits and pull requests that touch protected contract paths (listed in `.github/CODEOWNERS`) carry a `Contract-Change:` line; removed or skipped tests and newly mocked features carry a `Coverage-Change:` line. `scripts/contract-guard.mjs` checks for them. See `docs/testing.md` → *Test-change discipline* and *CI contract*.
+
+---
+
 ## When to create an ADR
 
 Create an ADR when a decision:
@@ -98,7 +146,7 @@ It is not a duplicate specification.
 | ADR-003 | Platform authority is explicit and independent | [`ADR-003-platform-authority.md`](ADR-003-platform-authority.md) |
 | ADR-004 | Canonical operator workspaces | [`ADR-004-operator-workspaces.md`](ADR-004-operator-workspaces.md) |
 | ADR-005 | Workspace taxonomy is independent of the commercial catalogue | [`ADR-005-workspace-catalogue-separation.md`](ADR-005-workspace-catalogue-separation.md) |
-| ADR-006 | Workspace visibility requires a real surface and Home is the parent | [`ADR-006-workspace-visibility-home.md`](ADR-006-workspace-visibility-home.md) |
+| ADR-006 | Workspace visibility requires a real surface and Home is the parent. **Superseded by ADR-046** | [`ADR-006-workspace-visibility-home.md`](ADR-006-workspace-visibility-home.md) |
 | ADR-007 | Insights, Library and Settings are shared surfaces, not operator workspaces | [`ADR-007-shared-surfaces.md`](ADR-007-shared-surfaces.md) |
 | ADR-008 | One canonical owner per business fact | [`ADR-008-canonical-ownership.md`](ADR-008-canonical-ownership.md) |
 | ADR-009 | CRM, Communications and Support own different lifecycles | [`ADR-009-crm-communications-support.md`](ADR-009-crm-communications-support.md) |
@@ -137,6 +185,8 @@ It is not a duplicate specification.
 | ADR-040 | Opportunities close independently of Customer relationships | [`ADR-040-independent-opportunities.md`](ADR-040-independent-opportunities.md) |
 | ADR-041 | Import open-source connector packages | [`ADR-041-imported-open-source-connectors.md`](ADR-041-imported-open-source-connectors.md) |
 | ADR-042 | Studio customer Portal publication and host delivery | [`ADR-042-studio-customer-portal-publication.md`](ADR-042-studio-customer-portal-publication.md) |
+| ADR-045 | Foundational scope, terminology and voice options. **Part B flat-sidebar rendering superseded by ADR-046** | [`ADR-045-foundational-options.md`](ADR-045-foundational-options.md) |
+| ADR-046 | Entered workspaces use contextual navigation over one canonical projection | [`ADR-046-contextual-workspace-navigation.md`](ADR-046-contextual-workspace-navigation.md) |
 
 ---
 
@@ -179,12 +229,4 @@ Git preserves the original decision text and chronology.
 
 ## Review rule
 
-When requested work conflicts with an Accepted ADR:
-
-1. identify the conflict;
-2. determine whether the implementation or architecture should change;
-3. if architecture changes, create a new ADR that supersedes the old one;
-4. update the canonical documentation;
-5. then implement the new architecture.
-
-The goal is explicit evolution, not frozen architecture.
+When requested work conflicts with an Accepted ADR, follow the *Contract-change protocol* above. The goal is explicit evolution, not frozen architecture.

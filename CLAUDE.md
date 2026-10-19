@@ -16,10 +16,10 @@ This file is the agent operating contract. Canonical concern docs own detail.
 
 | Concern | Read |
 | --- | --- |
-| Product, tenant language and scopes | docs/product.md |
+| Product behavior, information architecture, tenant language and scopes | docs/product.md |
 | Canonical concepts and ownership | docs/domain-model.md |
-| Runtime and code boundaries | docs/architecture.md |
-| Screens, navigation and accessibility | docs/ui-system.md |
+| Layers, dependencies and module ownership | docs/architecture.md |
+| Presentation, interaction, composition and accessibility | docs/ui-system.md |
 | Identity, authorization and trust | docs/security.md |
 | Persistence and migrations | docs/data.md |
 | Providers and organization Connections | docs/integrations.md |
@@ -28,6 +28,16 @@ This file is the agent operating contract. Canonical concern docs own detail.
 | Local setup and hosted release | docs/development.md; docs/deployment.md |
 | Reliability and current sequencing | docs/operations.md; docs/roadmap.md |
 | Decisions and shipped changes | docs/decisions/README.md; CHANGELOG.md |
+
+## Contracts and change control
+
+Authority model and change protocol: docs/decisions/README.md. Test discipline: docs/testing.md.
+Before changing a feature, read its contract and identify the owner of the affected behavior.
+Preserve accepted decisions. If code violates a contract, fix the code, not the contract.
+If documents contradict each other or the request, stop and report; never pick one in code.
+Changing established user-facing behavior needs explicit owner authorization before editing.
+Never remove, skip, mock away or rewrite a test just to make the suite pass.
+Commits touching .github/CODEOWNERS paths need a `Contract-Change:` line; coverage cuts, `Coverage-Change:`.
 
 ## Work method
 
@@ -49,7 +59,7 @@ Run proportionate focused checks; pnpm check is the broad repository gate.
 Test database invariants against local PostgreSQL, including negative authorization cases.
 Inspect rendered UI at desktop/tablet/phone and verify relevant interactions/states.
 Distinguish mocks, local runtime, hosted evidence, provider sandbox and production.
-Update existing canonical docs when truth changes; replace stale text instead of growing it.
+Update canonical docs only for factual corrections or approved changes; replace stale text.
 Create new docs/directories/reports only when explicitly requested; return results in chat.
 Record meaningful shipped changes in CHANGELOG.md; do not write implementation diaries.
 Review the intended diff and checks before an authorized commit; report push separately.

@@ -30,6 +30,13 @@ describe('the CI workflow', () => {
     expect(code).toMatch(/export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=/);
   });
 
+  it('runs the contract guard on pull requests and pushes, with the history it compares', () => {
+    const contract = code.slice(code.indexOf('\n  contract:'), code.indexOf('\n  e2e:'));
+    expect(contract).toMatch(/github\.event_name == 'pull_request' \|\| github\.event_name == 'push'/);
+    expect(contract).toMatch(/fetch-depth: 0/);
+    expect(contract).toMatch(/node scripts\/contract-guard\.mjs/);
+  });
+
   it('makes the manual smoke job fail at once when it has no deployment or no account', () => {
     const smoke = code.slice(code.indexOf('\n  smoke:'));
 

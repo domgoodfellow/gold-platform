@@ -34,6 +34,8 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-10-19
 
+- Workspace navigation has one approved contract (ADR-046, superseding ADR-006 and ADR-045's flat sidebar); product, architecture and UI documents now each own one part of it. A new `contract` CI job lists changes to protected contract paths (`.github/CODEOWNERS`) and requires a `Contract-Change:` rationale for them and a `Coverage-Change:` rationale for removed, skipped or newly mocked tests. It blocks merges only where branch protection requires it.
+
 - North American phone numbers now display as `(416)555-0176` across Customers, Communications, public contact details and phone fields at rest. Editing, dialing, messaging and telephone links retain the original number.
 
 - Marketing's Campaigns, Audiences, Leads and Performance, and AI's Agent activity and Evaluations, are now sidebar destinations. Workspace pages show their destinations in the header action row, drawn from the same navigation as the sidebar, instead of separate tab strips beneath the header. A read-only member is no longer shown links to AI configuration or Studio pages they cannot open. Header shortcuts yield to actions when the actual canvas cannot fit both, including long labels and docked panels; Finance collections keep one heading without repeating their global-header title.

@@ -158,15 +158,19 @@ The product must not expose:
 - placeholder children;
 - configuration pages pretending to be operating workspaces.
 
-The workspace-row body opens the workspace's canonical **Home**.
+### Workspace navigation
 
-Tenant workspace navigation is flat: the row opens Home, with no chevron or child rows. Contextual pages are reached from the workspace's operating surfaces.
+This is the approved information architecture (ADR-046). `docs/ui-system.md` owns its presentation; `docs/architecture.md` owns the projection modules.
 
-Marketing (`/marketing`) is an operational workspace for Campaigns, dynamic Audiences, attributed acquisition inquiries, explicit CRM handoff and Performance. It requires `marketing.read` or `marketing.manage`, retains organization service-access enforcement, and introduces no independently sellable module gate. Its local destinations preserve the flat global workspace switcher. Support (`/support`) operates Cases, queue assignment, priority, escalation, internal notes, elapsed resolution targets and reporting under six dedicated capabilities. CRM, Inbox, Call and Work contexts can explicitly create or inspect related Cases without changing their own lifecycle. Tenant AI (`/ai`) retains an authenticated starting Home.
+- Outside a workspace, the organization sidebar shows the shared destinations (Home, Search, Library) and the workspace directory, one row per eligible workspace. The row opens the workspace's canonical **Home**.
+- Entering a workspace changes the contextual sidebar to that workspace's navigation: its Home, its eligible operating destinations and its applicable configuration entry points.
+- Inside the workspace, Home appears as **Overview**. Overview is a label for the Home route, not a separate page or domain authority.
+- Workspace destinations are never flattened into the organization-level list.
+- Labels, routes, hierarchy, visibility and permissions derive from the canonical projections. A business profile may relabel and reorder a workspace's own destinations; it never grants access, adds destinations or moves a destination to another workspace.
+- The page header communicates location and offers page-specific actions; it never defines workspace navigation of its own.
+- Phone, tablet and desktop present the same authorized hierarchy.
 
-Home is not repeated as a child.
-
-**Overview** is not a second competing architectural page type.
+Marketing (`/marketing`) is an operational workspace for Campaigns, dynamic Audiences, attributed acquisition inquiries, explicit CRM handoff and Performance. It requires `marketing.read` or `marketing.manage`, retains organization service-access enforcement, and introduces no independently sellable module gate. Its destinations belong to its entered-workspace navigation. Support (`/support`) operates Cases, queue assignment, priority, escalation, internal notes, elapsed resolution targets and reporting under six dedicated capabilities. CRM, Inbox, Call and Work contexts can explicitly create or inspect related Cases without changing their own lifecycle. Tenant AI (`/ai`) retains an authenticated starting Home.
 
 ---
 

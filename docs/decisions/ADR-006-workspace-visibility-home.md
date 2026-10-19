@@ -1,7 +1,8 @@
 # ADR-006 — Workspace visibility requires a real surface and Home is the parent
 
 **Recorded:** 2026-10-07
-**Status:** Accepted
+**Status:** Superseded
+**Superseded by:** ADR-046 (2026-10-19). Its real-surface visibility rule is carried forward there; the chevron disclosure and "Home is not repeated as a child" are replaced.
 **Origin:** Formalizes architecture already present before the documentation reset; exact implementation history remains in Git.
 
 ## Context

@@ -1,6 +1,7 @@
 # The execution tiers of docs/testing.md, as jobs.
 #
 #   pull requests  fast + local     together they are `pnpm check`, split so a failure names its tier
+#                  contract         protected contract paths and coverage reductions carry a rationale
 #   nightly/manual  e2e             Playwright acceptance against a freshly seeded local stack
 #   manual          smoke           the deployment check, against a URL that must be given
 #
@@ -89,6 +90,23 @@ jobs:
             echo "SUPABASE_DB_URL=$DB_URL"
           } > .env.test
       - run: pnpm test:local
+
+  # Lists changes to protected contract paths (.github/CODEOWNERS) and fails when they, or removed,
+  # skipped or newly mocked tests, carry no written rationale (docs/testing.md, "Test-change
+  # discipline"). It checks that a reason exists, not that the change was approved; it blocks a merge
+  # only if branch protection requires it. Node built-ins and git only, so nothing is installed.
+  contract:
+    name: contract (protected paths and coverage changes carry a rationale)
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/contract-guard.mjs
 
   e2e:
     name: e2e (Playwright acceptance, freshly seeded local stack)
