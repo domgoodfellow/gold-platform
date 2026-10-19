@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { useEffect, type ReactNode } from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SidebarProvider } from '@gold/ui/components/sidebar';
@@ -17,6 +17,8 @@ import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { TooltipProvider } from '@gold/ui/components/tooltip';
 import { CompactContextSwitcher } from '@/components/navigation/context-switcher';
 import { WorkspaceCrumbsProvider, WorkspaceCrumbSlot, PageCrumbs } from '@/components/navigation/workspace-crumbs';
+import { PageHeader } from '@/components/headers/page-header';
+import { CollectionHeader } from '@/components/patterns/collection-header';
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
 import { WorkspaceRailProvider } from '@/components/panels/workspace-right-rail';
 
@@ -298,5 +300,48 @@ describe('persistent application controls and Settings', () => {
     sessionStorage.setItem(`gildops.lastAppPath.${org}`, `/organizations/${org}/calls/record`);
     rerender(wrap(<SettingsNav organizationId={org} organizationName="Test" sections={sections} search={[]} returnHrefs={[`/organizations/${org}/calls`]} />));
     expect(screen.getByRole('link', { name: 'Back to app' })).toHaveAttribute('href', `/organizations/${org}/calls/record`);
+  });
+});
+
+
+describe('workspace header controls', () => {
+  it('hides only optional destinations when actions or the page canvas need the space', () => {
+    route.pathname = '/organizations/11111111-1111-4111-8111-111111111111/marketing';
+    let available = 1200;
+    let actionWidth = 200;
+    let resize: () => void = () => {};
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: () => void) { resize = callback; }
+      observe() {} disconnect() {}
+    });
+    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function(this: HTMLElement) {
+      const width = this.hasAttribute('data-header-controls') ? available : this.hasAttribute('data-action') ? actionWidth : this.querySelector('nav') ? 500 : 0;
+      return { width, height: 40, x: 0, y: 0, top: 0, left: 0, right: width, bottom: 40, toJSON() {} };
+    });
+    const sections = projectShell({ organizationId: '11111111-1111-4111-8111-111111111111', enabledModules: new Set(), featureAvailability: new Set(), capabilities: new Set(ALL_CAPABILITIES) });
+    const { container } = render(<WorkspaceCrumbsProvider navigation={{ organizationId: '11111111-1111-4111-8111-111111111111', sections }}>
+      <PageHeader title="Marketing" navigation actions={<button data-action>Create</button>} />
+    </WorkspaceCrumbsProvider>);
+    expect(screen.getByRole('navigation', { name: 'Marketing destinations' })).toBeInTheDocument();
+    actionWidth = 750;
+    act(() => resize());
+    expect(screen.queryByRole('navigation', { name: 'Marketing destinations' })).not.toBeInTheDocument();
+    expect(container.querySelector('[inert]')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByRole('button', { name: 'Create' })).toBeVisible();
+    actionWidth = 200;
+    available = 720;
+    act(() => resize());
+    expect(screen.queryByRole('navigation', { name: 'Marketing destinations' })).not.toBeInTheDocument();
+    available = 1200;
+    act(() => resize());
+    expect(screen.getByRole('navigation', { name: 'Marketing destinations' })).toBeInTheDocument();
+    rect.mockRestore();
+  });
+
+  it('publishes one collection heading without repeating its global-header identity', () => {
+    render(<CollectionHeader title="Invoices" navigation actions={<button>Create invoice</button>} />);
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: 'Invoices' }).parentElement).toHaveClass('sr-only');
+    expect(screen.getByRole('button', { name: 'Create invoice' })).toBeVisible();
   });
 });

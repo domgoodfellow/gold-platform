@@ -3,7 +3,7 @@ import { BusinessLabel } from '@/lib/context/business-vocabulary';
 import { cx } from '../class-names';
 import { PageLocation, type PageLocationCrumb } from '../navigation/page-location';
 import { SupportTrigger } from '../panels/workspace-right-rail';
-import { WorkspaceDestinationNav } from '../navigation/workspace-destination-nav';
+import { HeaderControls } from './header-controls';
 
 export type PageHeaderCrumb = PageLocationCrumb;
 
@@ -99,14 +99,13 @@ export function PageHeader({
         <h1 className={titleInBar ? 'sr-only' : 'text-2xl font-semibold tracking-tight'}>{recordTitle ? title : <BusinessLabel>{title}</BusinessLabel>}</h1>
         {meta ? <div className={cx('text-sm text-muted', !titleInBar && 'mt-1')}>{meta}</div> : null}
       </div>
-      {navigation ? <div className="hidden min-w-0 @4xl/page-header:block"><WorkspaceDestinationNav /></div> : null}
-      {actions || activity || insights || configure ? (
-        <div className={cx('ml-auto flex flex-wrap items-center gap-2', navigation && 'min-w-0 flex-1 basis-80 justify-end')}>
+      {navigation || actions || activity || insights || configure ? (
+        <HeaderControls navigation={navigation}>
           {actions}
           {activity ? <SupportTrigger mode="activity" /> : null}
           {insights ? <SupportTrigger mode="insights" /> : null}
           {configure ? <SupportTrigger mode="configure" /> : null}
-        </div>
+        </HeaderControls>
       ) : null}
     </header>
   );

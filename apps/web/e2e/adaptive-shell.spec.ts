@@ -24,6 +24,77 @@ const sidebar = (page: import('@playwright/test').Page) => page.locator('[data-s
 
 test.describe('a tenant owner', () => {
   test.use({ storageState: OWNER_STORAGE_STATE });
+  for (const path of ['marketing', 'finance/invoices', 'ai', 'comms', 'support', 'studio']) for (const width of [1440, 768, 390]) test(`shared workspace header ${path} fits its canvas at ${width}px`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 1000 });
+    const { organizationId } = loadDemoContext();
+    const base = `/organizations/${organizationId}`;
+    {
+      await page.goto(`${base}/home`);
+      if (width === 390) await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();
+      const home = path.split('/')[0];
+      test.skip(!await page.getByRole('navigation', { name: 'This business', exact: true }).filter({ visible: true }).locator(`a[href="${base}/${home}"]`).count(), 'Existing local tenant does not have an operating Home for this workspace.');
+      await page.goto(`${base}/${path}`);
+      const row = page.locator('[data-header-controls]').first();
+      await expect(row).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+      const strip = row.getByRole('navigation');
+      if (width < 896) await expect(strip).toHaveCount(0);
+      else if (await strip.count()) {
+        const links = await strip.getByRole('link').evaluateAll(elements => elements.map(element => element.getAttribute('href')));
+        const sidebarLinks = await sidebar(page).getByRole('link').evaluateAll(elements => elements.map(element => element.getAttribute('href')));
+        expect(sidebarLinks.filter(href => links.includes(href))).toEqual(links);
+        await expect(strip.locator('[aria-current="page"]')).toHaveCount(1);
+        const bounds = await row.evaluate(element => {
+          const nav = element.querySelector('nav')!.getBoundingClientRect();
+          const actions = element.lastElementChild!.getBoundingClientRect();
+          return { navigationBottom: nav.bottom, navigationTop: nav.top, actionsTop: actions.top, actionsBottom: actions.bottom, overlap: nav.right > actions.left };
+        });
+        expect(bounds.overlap).toBe(false);
+        expect(bounds.navigationTop).toBeLessThan(bounds.actionsBottom);
+        expect(bounds.actionsTop).toBeLessThan(bounds.navigationBottom);
+      }
+      expect(await row.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+      await page.screenshot({ path: info.outputPath(`${path.replaceAll('/', '-')}-${width}.png`) });
+      if (width === 1440) {
+        // Models either docked panel narrowing the canvas without a viewport resize.
+        await row.locator('..').evaluate(element => { element.style.width = '720px'; element.style.maxWidth = '100%'; });
+        await expect(strip).toHaveCount(0);
+        expect(await row.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+      }
+      if (width === 390) {
+        await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();
+        await expect(page.getByRole('navigation', { name: 'This business', exact: true }).filter({ visible: true }).getByRole('link', { name: 'Overview', exact: true })).toBeVisible();
+      }
+    }
+  });
+
+  test('workspace header responds to docked Agent and Configure panels', async ({ page }, info) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    const base = `/organizations/${loadDemoContext().organizationId}`;
+    await page.goto(`${base}/marketing`);
+    const row = page.locator('[data-header-controls]').first();
+    await expect(row.getByRole('navigation')).toBeVisible();
+    const label = row.locator('nav a').last();
+    const original = await label.textContent();
+    await label.evaluate(element => { element.textContent = 'A much longer business-authored destination label that must yield to essential page actions'; });
+    await expect(row.getByRole('navigation')).toHaveCount(0);
+    expect(await row.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    await label.evaluate((element, text) => { element.textContent = text; }, original);
+    await expect(row.getByRole('navigation')).toBeVisible();
+    await page.getByRole('button', { name: 'Agent', exact: true }).filter({ visible: true }).click();
+    await expect(page.getByRole('button', { name: 'Close Agent', exact: true })).toBeVisible();
+    await expect(row.getByRole('navigation')).toHaveCount(0);
+    expect(await row.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    await page.screenshot({ path: info.outputPath('marketing-agent-open.png') });
+    await page.getByRole('button', { name: 'Close Agent', exact: true }).click();
+    await expect(row.getByRole('navigation')).toBeVisible();
+    await page.goto(`${base}/support`);
+    await page.getByRole('button', { name: 'Configure', exact: true }).click();
+    await expect(page.getByRole('complementary', { name: 'Page panel', exact: true })).toBeVisible();
+    await expect(row.getByRole('navigation')).toHaveCount(0);
+    expect(await row.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    await page.screenshot({ path: info.outputPath('support-configure-open.png') });
+  });
   test('keeps workspace selection and contextual destinations through navigation, refresh and history', async ({page}) => {
     const {organizationId}=loadDemoContext();const base=`/organizations/${organizationId}`;
     await page.goto(`${base}/home`);
