@@ -1,6 +1,7 @@
 import { CollectionHeader } from '@/components/patterns/collection-header';
 import { ButtonLink } from '@/components/controls/button';
 import { Section, SectionHeading } from '@/components/surfaces/section';
+import { LibraryNav } from '@/features/library/library-nav';
 import { SourcesTable } from '@/features/integrations/sources/sources-table';
 import { ImportRunsTable } from '@/features/integrations/imports/import-runs-table';
 import { libraryHref, libraryNewImportHref } from '@/lib/route/library';
@@ -45,6 +46,7 @@ export default async function LibrarySourcesPage({
           ) : null
         }
       />
+      <LibraryNav organizationId={organizationId} active="sources" />
 
       <Section className="mt-6" aria-labelledby="sources-heading">
         <SectionHeading id="sources-heading">Sources</SectionHeading>

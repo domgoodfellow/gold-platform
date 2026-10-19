@@ -75,23 +75,21 @@ describe('Library', () => {
     }
   });
 
-  it('renders no redundant tab bar on any section page', () => {
+  it('keeps the section tab strip on every section page, and none on the root redirect', () => {
+    expect(read(`${LIBRARY}/page.tsx`)).not.toContain('LibraryNav');
     for (const page of [
-      `${LIBRARY}/page.tsx`,
-      `${LIBRARY}/files/page.tsx`,
       `${LIBRARY}/sources/page.tsx`,
       `${LIBRARY}/media/page.tsx`,
       `${LIBRARY}/templates/page.tsx`,
       `${LIBRARY}/knowledge/page.tsx`,
       `${LIBRARY}/collections/page.tsx`,
       `${LIBRARY}/trash/page.tsx`,
-      'features/library/library-section-page.tsx',
-      'features/library/files/library-files.tsx',
     ]) {
       const source = read(page);
-      expect(source, page).not.toContain('LibraryNav');
-      expect(source, page).not.toContain('ViewNav');
+      expect(source.includes('LibraryNav') || source.includes('LibrarySectionPage'), page).toBe(true);
     }
+    expect(read('features/library/library-section-page.tsx')).toContain('<LibraryNav');
+    expect(read('features/library/files/library-files.tsx')).toContain('<LibraryNav');
   });
 
   it('builds its popover from the one registry, not a second destination list', () => {

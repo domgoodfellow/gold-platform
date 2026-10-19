@@ -12,6 +12,7 @@ export default async function LibraryTemplatesPage({
   return (
     <LibrarySectionPage
       organizationId={organizationId}
+      active="templates"
       label="Templates"
       description="Reusable templates shared across this business's workspaces."
       empty="No shared templates yet."

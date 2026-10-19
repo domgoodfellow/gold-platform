@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/headers/page-header';
 import { getImportRun, listStagingRows, type StagingRowStatus } from '@/lib/domain/integrations/import-runs';
 import { libraryHref } from '@/lib/route/library';
+import { LibraryNav } from '@/features/library/library-nav';
 import { requireOrganization } from '@/lib/route/organization';
 import { ImportRunDetail } from '@/features/integrations/imports/import-run-detail';
 import { ErrorText } from '@/components/controls/inputs';
@@ -26,6 +27,7 @@ export default async function ImportRunPage({
   return (
     <>
       <PageHeader title="Import" crumbs={[{ label: 'Imports', href: libraryHref(organizationId, 'sources') }]} />
+      <LibraryNav organizationId={organizationId} active="sources" />
       {typeof stageError === 'string' ? <ErrorText>{stageError}</ErrorText> : null}
       <ImportRunDetail
         organizationId={organizationId}

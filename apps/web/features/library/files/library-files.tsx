@@ -6,6 +6,7 @@ import { Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { DocumentUploadForm, type UploadDocumentState } from '@/features/documents/upload-form';
+import { LibraryNav } from '@/features/library/library-nav';
 import {
   FILE_FAMILIES,
   FILE_PAGE_SIZE,
@@ -96,6 +97,7 @@ export async function LibraryFilesCollection({
         title="Files"
         crumbs={[{ label: 'Library', href: libraryHref(organizationId, 'files') }]}
       />
+      <LibraryNav organizationId={organizationId} active="files" />
 
       <p className="mt-4 text-sm text-muted">
         {summary.fileCount} {summary.fileCount === 1 ? 'file' : 'files'} · {formatFileSize(summary.totalBytes)}

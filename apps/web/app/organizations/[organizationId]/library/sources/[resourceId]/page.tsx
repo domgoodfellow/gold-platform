@@ -1,6 +1,7 @@
 import {notFound} from 'next/navigation';
 import {CollectionHeader} from '@/components/patterns/collection-header';
 import {libraryHref} from '@/lib/route/library';
+import { LibraryNav } from '@/features/library/library-nav';
 import {requireOrganization} from '@/lib/route/organization';
 import {getResourceSync,listResourceRecords,listResources} from '@/lib/domain/integrations/resources';
 import {SourceRecordPreview} from '@/features/integrations/sources/record-preview';
@@ -15,6 +16,7 @@ export default async function SourcePage({params}:{params:Promise<{organizationI
   const supported=['google_calendar','google_drive_folder','google_drive','google_sheet','microsoft_calendar','microsoft_drive_folder','microsoft_drive','microsoft_workbook'].includes(resource.resourceType);
   return <>
     <CollectionHeader title={resource.displayName} crumbs={[{label:'Sources',href:libraryHref(organizationId,'sources')}]}/>
+    <LibraryNav organizationId={organizationId} active="sources" />
     <p className="mt-4 text-sm text-muted">{resource.resourceType.replaceAll('_',' ')} · {resource.status.replaceAll('_',' ')}</p>
     <section className="mt-6"><h2 className="font-medium">Synchronization</h2>
       <p className="mt-1 text-sm">{sync?`${sync.enabled?'Enabled':'Disabled'} · ${sync.state}`:'Not enabled'}</p>

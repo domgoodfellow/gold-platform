@@ -6,8 +6,16 @@ import { useRef, useState } from 'react';
 import { Library } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@gold/ui/components/popover';
 import { SidebarMenuButton, SidebarMenuItem, useSidebar } from '@gold/ui/components/sidebar';
+import { ViewNav } from '@/components/navigation/view-nav';
 import { cx, FOCUS_RING } from '@/components/class-names';
-import { activeLibrarySection, LIBRARY_SECTIONS, libraryHref } from '@/lib/route/library';
+import { activeLibrarySection, LIBRARY_SECTIONS, LIBRARY_TABS, libraryHref, type LibrarySectionKey } from '@/lib/route/library';
+
+/** The section tab strip every Library page renders, so a section is one click away from any other. */
+export function LibraryNav({ organizationId, active }: { organizationId: string; active: LibrarySectionKey }) {
+  return <ViewNav label="Library" current={active} className="mb-6" views={LIBRARY_TABS.map(section => ({
+    key: section.key, label: section.label, href: libraryHref(organizationId, section.key),
+  }))} />;
+}
 
 /**
  * Library's one control in the primary sidebar group. It is a trigger, not a link: it opens an anchored

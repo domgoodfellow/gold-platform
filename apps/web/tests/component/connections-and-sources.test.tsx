@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ConnectedApps } from '@/features/integrations/connections/connected-apps';
 import { IntegrationsNav } from '@/features/integrations/integrations-nav';
+import { LibraryNav } from '@/features/library/library-nav';
 import { libraryHref, libraryImportHref, libraryNewImportHref, librarySourceHref } from '@/lib/route/library';
 import type { Connector } from '@/lib/domain/integrations/connectors';
 import type { IntegrationConnection } from '@/lib/domain/integrations/connections';
@@ -73,6 +74,12 @@ describe('Library owns Sources and Imports', () => {
     expect(libraryImportHref('org', 'run', '?status=failed')).toBe('/organizations/org/library/imports/run?status=failed');
     expect(libraryNewImportHref('org', 'r1')).toBe('/organizations/org/library/imports/new?resourceId=r1');
     expect(libraryNewImportHref('org')).toBe('/organizations/org/library/imports/new');
+  });
+  it('keeps Sources as the one Library section for data coming in, with no separate Imports tab', () => {
+    render(<LibraryNav organizationId="org" active="sources" />);
+    expect(screen.getByRole('link', { name: 'Sources' })).toHaveAttribute('href', '/organizations/org/library/sources');
+    expect(screen.getByRole('link', { name: 'Sources' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('link', { name: 'Imports' })).not.toBeInTheDocument();
   });
   const redirectOf = async (call: () => Promise<unknown>) => {
     try { await call(); } catch (error) { return (error as Error).message.replace('REDIRECT:', ''); }

@@ -6,6 +6,7 @@ import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { suggestMapping } from '@/lib/domain/integrations/mappings';
 import { downloadImportFile } from '@/lib/domain/integrations/resources';
 import { libraryHref } from '@/lib/route/library';
+import { LibraryNav } from '@/features/library/library-nav';
 import { requireOrganization } from '@/lib/route/organization';
 import { UploadSourceForm } from '@/features/integrations/imports/upload-source-form';
 import { MappingEditor } from '@/features/integrations/imports/mapping-editor';
@@ -27,6 +28,7 @@ export default async function NewImportPage({
     return (
       <>
         <PageHeader title="Import customers" crumbs={[{ label: 'Imports', href: libraryHref(organizationId, 'sources') }]} />
+        <LibraryNav organizationId={organizationId} active="sources" />
         <Alert>
           <Lock aria-hidden />
           <AlertTitle>Your role, {organization.role}, cannot import data</AlertTitle>
@@ -40,6 +42,7 @@ export default async function NewImportPage({
     return (
       <>
         <PageHeader title="Import customers" crumbs={[{ label: 'Imports', href: libraryHref(organizationId, 'sources') }]} />
+        <LibraryNav organizationId={organizationId} active="sources" />
         <Hint className="mb-4 block">
           Upload a CSV export. GildOps reads the header row and shows you a mapping to review before anything is written.
         </Hint>
@@ -61,6 +64,7 @@ export default async function NewImportPage({
   return (
     <>
       <PageHeader title="Map your columns" crumbs={[{ label: 'Imports', href: libraryHref(organizationId, 'sources') }]} />
+      <LibraryNav organizationId={organizationId} active="sources" />
       <MappingEditor
         organizationId={organizationId}
         resourceId={resourceId}

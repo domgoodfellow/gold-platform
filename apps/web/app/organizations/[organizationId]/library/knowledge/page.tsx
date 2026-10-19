@@ -12,6 +12,7 @@ export default async function LibraryKnowledgePage({
   return (
     <LibrarySectionPage
       organizationId={organizationId}
+      active="knowledge"
       label="Knowledge"
       description="Content made available to the Agent and other retrieval-aware surfaces."
       empty="No knowledge sources yet."

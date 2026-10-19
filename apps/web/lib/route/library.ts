@@ -31,6 +31,9 @@ export const LIBRARY_SECTIONS: readonly LibrarySection[] = [
   { key: 'trash', label: 'Trash', path: 'trash' },
 ] as const;
 
+/** The section tab strip on each Library page: every destination, in registry order. */
+export const LIBRARY_TABS: readonly LibrarySection[] = LIBRARY_SECTIONS;
+
 /** The section that `/organizations/{id}/library` redirects to: the first destination. */
 export const LIBRARY_DEFAULT_SECTION: LibrarySectionKey = 'files';
 

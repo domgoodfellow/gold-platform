@@ -12,6 +12,7 @@ export default async function LibraryCollectionsPage({
   return (
     <LibrarySectionPage
       organizationId={organizationId}
+      active="collections"
       label="Collections"
       description="Groups of Library content, for organizing files, media, templates and knowledge together."
       empty="No collections yet."

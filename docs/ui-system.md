@@ -311,8 +311,7 @@ Segmented is the compact navigation default: appearance-aware background, select
 and control height. Line is an explicit underline variant with no selected fill. Global selected
 styles are scoped to `data-variant`; do not rebuild either variant in a feature. Native button
 filters retain their existing state and keyboard semantics. Wrap longer navigation sets; do not
-clip items or introduce a horizontal tab scrollbar. Library destinations live in the sidebar Library popover;
-section pages render no second tab strip.
+clip items or introduce a horizontal tab scrollbar. Library destinations are reached from the sidebar Library popover and from the tab strip on each Library section page.
 
 ### Configure and readiness
 
@@ -896,7 +895,7 @@ It should not replicate every workspace dashboard.
 
 Library is shared infrastructure, separate from the Workspace list.
 
-Library is one control in the primary sidebar group. It is a trigger, not a link: it opens an anchored popover whose entries come from `LIBRARY_SECTIONS` and link to each section's route, with the current section marked. `/organizations/{id}/library` redirects to Files, and section pages render no tab strip or overview directory. Section crumbs point at Files.
+Library is one control in the primary sidebar group. It is a trigger, not a link: it opens an anchored popover whose entries come from `LIBRARY_SECTIONS` and link to each section's route, with the current section marked. `/organizations/{id}/library` redirects to Files. Each section page keeps its tab strip, so the sections stay one click apart, and its crumb points at Files.
 
 Its navigation may expose real Library capabilities such as:
 
