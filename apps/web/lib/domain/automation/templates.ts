@@ -50,7 +50,7 @@ export type MessageDelivery = {
   recipient: string;
   subjectLine: string;
   body: string;
-  state: 'queued' | 'sent' | 'failed';
+  state: 'queued' | 'sending' | 'sent' | 'failed';
   detail: string | null;
   queuedAt: string;
   sentAt: string | null;
@@ -265,7 +265,7 @@ export async function listMessageDeliveries(
 
   if (input.since) query = query.gte('queued_at', input.since);
   if (input.until) query = query.lt('queued_at', input.until);
-  if (input.state && ['queued', 'sent', 'failed'].includes(input.state))
+  if (input.state && ['queued', 'sending', 'sent', 'failed'].includes(input.state))
     query = query.eq('state', input.state);
   if (input.search)
     query = query.ilike('rule_name', `%${input.search.replace(/[%_]/g, '')}%`);
@@ -286,7 +286,7 @@ export async function listMessageDeliveries(
     recipient: row.recipient,
     subjectLine: row.subject_line,
     body: row.body,
-    state: row.state as 'queued' | 'sent' | 'failed',
+    state: row.state as 'queued' | 'sending' | 'sent' | 'failed',
     detail: row.detail,
     queuedAt: row.queued_at,
     sentAt: row.sent_at,

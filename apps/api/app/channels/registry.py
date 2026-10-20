@@ -4,10 +4,14 @@
 `apps/web/lib/adapters/payments/registry.ts` makes and for the reason recorded there: a contract
 that names a vendor is a contract shaped by one.
 
-`None` for a channel this deployment cannot send on, rather than a throw. A deployment
-configured for email and not for text messages is a complete deployment — and a business that
-writes a text-message rule on it gets a failed delivery saying so, rather than silence
-(the no-dead-end rule, `docs/ui-system.md`).
+`None` for a channel this deployment cannot send on, rather than a throw. A business that
+writes a text-message rule on a deployment without text messaging gets a failed delivery saying
+so, rather than silence (the no-dead-end rule, `docs/ui-system.md`).
+
+**There is no email channel here, deliberately.** A business's email is sent from its own verified
+sender, through the provider account that holds that sender's domain
+(`app.organization_email_sender`, used by `api/automation_tick.py`), never from one address this
+deployment holds for everybody.
 """
 
 from __future__ import annotations
@@ -18,15 +22,6 @@ from app.channels import Sender
 
 
 def sender_for(channel: str) -> Sender | None:
-    if channel == "email":
-        api_key = os.environ.get("RESEND_API_KEY")
-        sender = os.environ.get("MESSAGE_FROM_ADDRESS")
-        if not api_key or not sender:
-            return None
-        from app.providers.resend.email import resend_sender
-
-        return resend_sender(api_key=api_key, sender=sender)
-
     if channel == "sms":
         account = os.environ.get("TWILIO_ACCOUNT_SID")
         token = os.environ.get("TWILIO_AUTH_TOKEN")

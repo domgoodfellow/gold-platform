@@ -8,7 +8,7 @@ import {
   addEmailAddressAction,
   setEmailReceivingAction,
   type EmailDomainState,
-} from '@/app/organizations/[organizationId]/comms/configuration/email/actions';
+} from '@/app/organizations/[organizationId]/settings/email/actions';
 import type { EmailIdentityView } from '@/lib/domain/email/identities';
 
 const INITIAL: EmailDomainState = { error: null, notice: null, done: false };
@@ -35,7 +35,7 @@ function ReceivingToggle({ organizationId, identity }: { organizationId: string;
   );
 }
 
-function AddAddressForm({ organizationId, domains }: { organizationId: string; domains: { resourceId: string; domain: string; ready: boolean }[] }) {
+export function AddAddressForm({ organizationId, domains }: { organizationId: string; domains: { resourceId: string; domain: string; ready: boolean }[] }) {
   const [state, run, pending] = useActionState(addEmailAddressAction, INITIAL);
   const usable = domains.filter((domain) => domain.ready);
 
@@ -78,10 +78,13 @@ export function EmailAddresses({
   organizationId,
   identities,
   domains,
+  allowAdding = true,
 }: {
   organizationId: string;
   identities: EmailIdentityView[];
   domains: { resourceId: string; domain: string; ready: boolean }[];
+  /** Addresses are added in Email sending settings; the Inbox email page only switches receiving. */
+  allowAdding?: boolean;
 }) {
   return (
     <Section className="mt-8">
@@ -124,7 +127,7 @@ export function EmailAddresses({
         </div>
       )}
 
-      <AddAddressForm organizationId={organizationId} domains={domains} />
+      {allowAdding ? <AddAddressForm organizationId={organizationId} domains={domains} /> : null}
     </Section>
   );
 }

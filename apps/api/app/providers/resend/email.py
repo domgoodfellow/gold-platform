@@ -1,7 +1,7 @@
-"""Email, behind the capability its Protocol names.
+"""Email through Resend: GildOps' own transactional mail, and a business's own mail.
 
-**One of two modules in this repository that knows this provider exists**, the other being the
-registry that chooses it. No SDK, for the reason the Stripe adapter gives: what this needs is one
+**One of the few modules in this repository that knows this provider exists**, alongside
+`app.providers.providers`, which chooses it. No SDK, for the reason the Stripe adapter gives: what this needs is one
 HTTPS call and a JSON body, both stable and specified.
 
 **The body is sent exactly as it arrives.** No greeting, no signature, no footer, no HTML
@@ -14,52 +14,13 @@ from __future__ import annotations
 
 import httpx
 
-from app.channels import Message, Sender, Sent
-
 API = "https://api.resend.com/emails"
 
 
-def resend_sender(*, api_key: str, sender: str) -> Sender:
-    class _Sender:
-        def send(self, message: Message) -> Sent:
-            response = httpx.post(
-                API,
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    # The address is this deployment's, not this tenant's. A per-tenant sending
-                    # identity means proving a domain per tenant, which is a real feature and a
-                    # different one; until then the business's own name is in the words it wrote.
-                    "from": sender,
-                    "to": [message.recipient],
-                    "subject": message.subject_line,
-                    "text": message.body,
-                },
-                timeout=15.0,
-            )
-
-            if response.status_code >= 500:
-                # Their problem and probably temporary. Raised, so the caller leaves the message
-                # queued and tries again rather than recording a failure that was not one.
-                raise RuntimeError(f"the mail provider answered {response.status_code}")
-
-            if response.status_code >= 400:
-                # A bad address, a rejected domain: something a business can see and fix, so it
-                # is recorded rather than retried forever.
-                return Sent(ok=False, detail=_reason(response))
-
-            return Sent(ok=True)
-
-    return _Sender()
-
-
 def send_platform_email(*, api_key: str, sender: str, to: str, subject: str, text: str) -> dict:
-    """GOLD's own transactional email -- an invitation, never a tenant's own message (the same
-    split `resend_sender` above draws, one axis over). Returns Resend's own message id so a later
-    webhook can be correlated back to this one send; `resend_sender`'s `Sent` carries none because
-    no channel delivery needs that correlation today.
+    """GOLD's own transactional email -- an invitation, never a tenant's own message (that is
+    `send_tenant_email` below, from the business's own verified sender). Returns Resend's own
+    message id so a later webhook can be correlated back to this one send.
 
     **A 2xx with no message id is not a successful send.** Nothing could ever correlate a later
     `email.sent`/`email.bounced`/... callback back to it, which makes it operationally identical to
@@ -94,6 +55,15 @@ def send_platform_email(*, api_key: str, sender: str, to: str, subject: str, tex
             "detail": "Resend answered with no message id, so this send cannot be correlated with its own delivery.",
         }
     return {"ok": True, "external_id": str(message_id), "detail": None}
+
+
+def _name(response: httpx.Response) -> str | None:
+    """The provider's own error name, when it gave one."""
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    return str(body.get("name")) if isinstance(body, dict) and body.get("name") else None
 
 
 def _reason(response: httpx.Response) -> str:
@@ -165,6 +135,12 @@ def send_tenant_email(
 
     if response.status_code >= 500 or response.status_code == 429:
         return {"ok": False, "external_id": None, "retryable": True, "detail": _reason(response)}
+    if response.status_code == 409:
+        # The idempotency key answered, not the message. Another attempt with this key is still in
+        # flight (try again shortly), or this key was already used for a different request, which
+        # means an earlier attempt may have been sent: uncertain, never a refusal to resend.
+        concurrent = _name(response) == "concurrent_idempotent_requests"
+        return {"ok": False, "external_id": None, "retryable": concurrent, "uncertain": not concurrent, "detail": _reason(response)}
     if response.status_code >= 400:
         return {"ok": False, "external_id": None, "retryable": False, "detail": _reason(response)}
 

@@ -800,22 +800,27 @@ def record_email_domain_provisioning(
     dns_records: list[dict] | None = None,
     error_code: str | None = None,
     error_message: str | None = None,
+    provider_account_id: str | None = None,
 ) -> None:
     """What the provider said about a sending domain the tenant already named. Creates nothing: a
-    resource that does not exist is a refusal, not a new row."""
+    resource that does not exist is a refusal, not a new row. `provider_account_id` is the account
+    that answered, recorded on the domain's binding when none is recorded yet."""
+    payload = {
+        "p_organization_id": organization_id,
+        "p_resource_id": resource_id,
+        "p_status": status,
+        "p_provider_domain_id": provider_domain_id,
+        "p_provider_status": provider_status,
+        "p_dns_records": dns_records,
+        "p_error_code": error_code,
+        "p_error_message": error_message,
+    }
+    if provider_account_id:
+        payload["p_provider_account_id"] = provider_account_id
     response = httpx.post(
         f"{settings.supabase_url}/rest/v1/rpc/record_email_domain_provisioning",
         headers=_provider_headers(settings),
-        json={
-            "p_organization_id": organization_id,
-            "p_resource_id": resource_id,
-            "p_status": status,
-            "p_provider_domain_id": provider_domain_id,
-            "p_provider_status": provider_status,
-            "p_dns_records": dns_records,
-            "p_error_code": error_code,
-            "p_error_message": error_message,
-        },
+        json=payload,
         timeout=10.0,
     )
     if response.status_code >= 400:
@@ -1196,6 +1201,23 @@ def store_inbound_attachment(settings, *, path: str, content: bytes, content_typ
         timeout=60.0,
     )
     return response.status_code < 400
+
+
+def email_sender_account(settings: ProviderOperationsSettings, *, organization_id: str, email_identity_id: str | None) -> dict:
+    """Whether this business may send from this address now, and through which provider account.
+
+    `state` is `ready`, `refused` (the business must fix its sender; `detail` says how) or
+    `unavailable` (the platform's account cannot answer right now). Resolved by
+    `app.organization_email_sender`, the one path every business email takes.
+    """
+    rows = _rpc(
+        settings,
+        _provider_headers(settings),
+        function="email_sender_account",
+        payload={"p_organization_id": organization_id, "p_email_identity_id": email_identity_id},
+    )
+    row = rows[0] if isinstance(rows, list) and rows else {}
+    return {"state": row.get("state") or "unavailable", "detail": row.get("detail"), "provider_key": row.get("provider_key"), "provider_account_id": row.get("provider_account_id")}
 
 
 def claim_email_for_send(settings: ProviderOperationsSettings, *, organization_id: str, message_id: str) -> bool:

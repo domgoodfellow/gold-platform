@@ -6,7 +6,7 @@ import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
 import {
   requestSendingDomainAction,
   type EmailDomainState,
-} from '@/app/organizations/[organizationId]/comms/configuration/email/actions';
+} from '@/app/organizations/[organizationId]/settings/email/actions';
 
 const INITIAL: EmailDomainState = { error: null, notice: null, done: false };
 

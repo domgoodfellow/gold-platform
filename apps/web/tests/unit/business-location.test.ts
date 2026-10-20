@@ -88,7 +88,7 @@ describe('the Settings context', () => {
     const sections = projectSettingsNav(ORG, everything);
     expect(sections.map((section) => [section.label, section.items.map((item) => item.label)])).toEqual([
       ['Personal', ['Profile', 'Security & sign-in', 'Appearance']],
-      ['Organization', ['General', 'Branding', 'Domains', 'Features']],
+      ['Organization', ['General', 'Branding', 'Domains', 'Email sending', 'Features']],
       ['Administration', ['Team & access', 'Connections', 'Plan & usage']],
     ]);
   });

@@ -7,8 +7,9 @@ this file or reads that secret (`app/auth` handles people, with no signing key o
 **The second writer with no human caller**, and it is deliberately built the same way as the
 first: its own Postgres role, its own three `execute` grants, and emphatically not
 service-role. `automation_runner` holds no grant on any table at all, so nothing here can read a
-customer or a job even by accident — what it gets back from `queued_messages` is an address and
-the finished words, and what it can say back is whether the sending worked.
+customer or a job even by accident — what it gets back from `claim_message_deliveries` is an
+address, the finished words and, for an email, the business's own resolved sender, and what it can
+say back is what the provider answered.
 
 Identity still arrives as a JWT. The `sub` is the automation actor from
 `20260831000002_automations.sql` — a real `auth.users` row with no password and no address — so
@@ -50,11 +51,19 @@ class Place:
 
 @dataclass(frozen=True)
 class QueuedMessage:
+    """One claimed delivery. For an email, the sender was resolved by the database from this
+    business's own verified addresses (`app.organization_email_sender`), together with the provider
+    account that holds its sending domain; this runtime never chooses a From address."""
+
     id: str
     channel: str
     recipient: str
     subject_line: str
     body: str
+    from_address: str | None = None
+    from_name: str | None = None
+    provider_key: str | None = None
+    provider_account_id: str | None = None
 
 
 def _post(settings: RunnerSettings, function: str, payload: dict) -> httpx.Response:
@@ -85,10 +94,13 @@ def run_due_automations(settings: RunnerSettings) -> int:
     return int(response.json() or 0)
 
 
-def queued_messages(settings: RunnerSettings, limit: int = 50) -> list[QueuedMessage]:
-    response = _post(settings, "queued_messages", {"p_limit": limit})
+def claim_deliveries(settings: RunnerSettings, limit: int = 50) -> list[QueuedMessage]:
+    """Take queued deliveries, each exactly once. A claimed delivery must be finished with
+    `finish_delivery`; one that never is goes back to the queue (an email) or is failed as
+    uncertain (a text message) by the database after ten minutes."""
+    response = _post(settings, "claim_message_deliveries", {"p_limit": limit})
     if response.status_code >= 400:
-        raise RuntimeError(f"queued_messages failed: {response.status_code}")
+        raise RuntimeError(f"claim_message_deliveries failed: {response.status_code}")
 
     return [
         QueuedMessage(
@@ -97,13 +109,25 @@ def queued_messages(settings: RunnerSettings, limit: int = 50) -> list[QueuedMes
             recipient=row["recipient"],
             subject_line=row["subject_line"],
             body=row["body"],
+            from_address=row.get("from_address"),
+            from_name=row.get("from_name"),
+            provider_key=row.get("provider_key"),
+            provider_account_id=row.get("provider_account_id"),
         )
         for row in response.json() or []
     ]
 
 
-def record_delivery(settings: RunnerSettings, *, message_id: str, sent: bool, detail: str) -> None:
-    """Say whether one went.
+def finish_delivery(
+    settings: RunnerSettings,
+    *,
+    message_id: str,
+    outcome: str,
+    external_id: str | None = None,
+    detail: str | None = None,
+) -> None:
+    """Say what happened to one claimed delivery: `accepted` (the provider took it, which is not
+    the same as it arriving), `rejected`, `failed`, or `retry` (back to the queue).
 
     Takes no organization id, exactly as `record_provider_payment` does not: the row already
     knows which business it belongs to, so the caller supplies what happened and never where it
@@ -111,11 +135,11 @@ def record_delivery(settings: RunnerSettings, *, message_id: str, sent: bool, de
     """
     response = _post(
         settings,
-        "record_message_delivery",
-        {"p_id": message_id, "p_sent": sent, "p_detail": detail},
+        "finish_message_delivery",
+        {"p_id": message_id, "p_outcome": outcome, "p_external_id": external_id, "p_detail": detail},
     )
     if response.status_code >= 400:
-        raise RuntimeError(f"record_message_delivery failed: {response.status_code}")
+        raise RuntimeError(f"finish_message_delivery failed: {response.status_code}")
 
 
 def places_to_watch(settings: RunnerSettings) -> list[Place]:

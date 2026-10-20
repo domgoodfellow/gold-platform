@@ -443,7 +443,7 @@ describe('workspace Configuration authority', () => {
     expect(workspaceNavigation(sections, `/organizations/${ORG}/comms/configuration/numbers`)).toBeNull();
   });
   it('keeps Configuration active on its authorized legacy and canonical section addresses', () => {
-    for (const [suffix, active] of [['comms/configuration', 'workspace-configuration'], ['comms/configuration/calling', 'call-setup'], ['comms/configuration/email', 'email']]) {
+    for (const [suffix, active] of [['comms/configuration', 'workspace-configuration'], ['comms/configuration/calling', 'call-setup'], ['comms/configuration/email', 'inbox-email']]) {
       const path = `/organizations/${ORG}/${suffix}`;
       const context = workspaceNavigation(project(), path)!;
       expect(context.workspace.key).toBe('workspace-communications');

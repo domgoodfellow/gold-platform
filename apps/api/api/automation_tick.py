@@ -11,7 +11,9 @@ Two things happen here and they are separate on purpose:
     is no queue in this process, because the no-queue scheduling rule forbids anything that must survive between
     invocations from living anywhere but Postgres.
   * **What is waiting to be sent** — the queue that does exist, drained one message at a time so
-    that one bad address cannot stop the rest.
+    that one bad address cannot stop the rest. Each delivery is claimed once before it is sent. An
+    email goes out from the business's own verified sender, resolved by the database and pinned to
+    the provider account that holds its domain, never from an address of this deployment's.
 
 **Nothing here decides anything.** It cannot: `automation_runner` holds no grant on any table,
 so what comes back is an address and the finished words a business wrote, and what can go back
@@ -21,20 +23,27 @@ is whether the sending worked.
 from __future__ import annotations
 
 import json
+from email.utils import formataddr
 from http.server import BaseHTTPRequestHandler
 
 from app.channels import Message
 from app.channels.registry import sender_for, unconfigured_reason
 from app.conditions.registry import conditions_provider
-from app.core.config import load_integration_settings, load_runner_settings
+from app.core import db
+from app.core.config import load_integration_settings, load_provider_operations_settings, load_runner_settings
 from app.core.runner import (
     QueuedMessage,
+    claim_deliveries,
+    finish_delivery,
     places_to_watch,
-    queued_messages,
-    record_delivery,
     record_external_readings,
     run_due_automations,
 )
+from app.providers.providers import tenant_email_for
+
+# Recorded on the Automations screen; neither names a provider or this deployment's configuration.
+EMAIL_NOT_SET_UP = "Email sending is not set up on this deployment yet."
+EMAIL_ACCOUNT_UNAVAILABLE = "Email sending for this business's sender address is unavailable on this platform right now."
 
 
 def _hour(moment: str) -> str:
@@ -163,41 +172,73 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
         sent = 0
         failed = 0
         held = 0
+        # Only needed to read the provider account a business's email is pinned to.
+        providers = load_provider_operations_settings()
 
-        for message in queued_messages(settings):
-            outcome = self._send(message)
+        for message in claim_deliveries(settings):
+            if message.channel == "email":
+                outcome, external_id, detail = self._send_email(message, providers)
+            else:
+                outcome, external_id, detail = self._send_text(message)
 
-            if outcome is None:
-                # The provider is unreachable rather than unwilling. Left queued, so the next
-                # tick tries again — recording a failure here would tell a business its message
-                # was refused when nobody had yet seen it.
-                held += 1
-                continue
-
-            record_delivery(
-                settings,
-                message_id=message.id,
-                sent=outcome.ok,
-                detail=outcome.detail,
-            )
-            if outcome.ok:
+            # Every claimed delivery is finished, including one that goes back to the queue: an
+            # unreachable provider is "try again next tick", never a refusal a business must fix.
+            finish_delivery(settings, message_id=message.id, outcome=outcome, external_id=external_id, detail=detail)
+            if outcome == "accepted":
                 sent += 1
+            elif outcome == "retry":
+                held += 1
             else:
                 failed += 1
 
         return sent, failed, held
 
-    def _send(self, message: QueuedMessage):
+    def _send_email(self, message: QueuedMessage, providers) -> tuple[str, str | None, str | None]:
+        """A business's email, from the sender the database resolved and through the account that
+        holds its domain. No fallback: without that account's credential nothing is sent, and the
+        deployment's own key or address is never used in its place."""
+        provider = tenant_email_for(message.provider_key) if message.provider_key else None
+        if provider is None or providers is None or not message.provider_account_id or not message.from_address:
+            return "failed", None, EMAIL_NOT_SET_UP
+        try:
+            credential = db.read_provider_account_credential(providers, account_id=message.provider_account_id)
+        except Exception:  # noqa: BLE001 - not reading it is "try again", not a refusal
+            return "retry", None, None
+        if not credential or not credential.get("secret"):
+            return "failed", None, EMAIL_ACCOUNT_UNAVAILABLE
+
+        result = provider.send_tenant_email(
+            api_key=credential["secret"],
+            # The delivery's own id, so a retry after a lost answer is the same send, not a second one.
+            idempotency_key=message.id,
+            sender=formataddr((message.from_name or "", message.from_address)),
+            to=[message.recipient],
+            subject=message.subject_line,
+            # Verbatim. Nothing in this process may add to what a business wrote.
+            text=message.body,
+            html=None,
+            in_reply_to=None,
+            references=[],
+            attachments=[],
+        )
+        if result["ok"]:
+            return "accepted", result["external_id"], None
+        if result.get("uncertain"):
+            # An earlier attempt under this delivery's key may have been sent: never sent again.
+            return "uncertain", None, result["detail"]
+        if result["retryable"]:
+            return "retry", None, None
+        return "rejected", None, result["detail"]
+
+    def _send_text(self, message: QueuedMessage) -> tuple[str, str | None, str | None]:
         sender = sender_for(message.channel)
         if sender is None:
             # A channel this deployment cannot send on. Recorded as a failure with a sentence
             # saying whose problem it is — not silence, which is what the no-dead-end rule exists to forbid.
-            from app.channels import Sent
-
-            return Sent(ok=False, detail=unconfigured_reason(message.channel))
+            return "failed", None, unconfigured_reason(message.channel)
 
         try:
-            return sender.send(
+            outcome = sender.send(
                 Message(
                     recipient=message.recipient,
                     subject_line=message.subject_line,
@@ -206,7 +247,8 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
                 )
             )
         except Exception:  # noqa: BLE001 - the provider being down is not this platform's error
-            return None
+            return "retry", None, None
+        return ("accepted", None, None) if outcome.ok else ("rejected", None, outcome.detail)
 
     def _reply(self, status: int, body: dict) -> None:
         payload = json.dumps(body).encode()

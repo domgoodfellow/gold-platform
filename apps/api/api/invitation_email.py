@@ -59,7 +59,9 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             self._reply(failure.status, {"error": str(failure), "code": failure.code})
             return
 
-        self._reply(200, {"sent": result["sent"], "external_id": result["external_id"]})
+        # The reason travels with a send that did not happen, so a manager is told why rather than
+        # being handed a link with no explanation. It is GildOps' own sentence or the provider's.
+        self._reply(200, {"sent": result["sent"], "external_id": result["external_id"], "detail": None if result["sent"] else result.get("detail")})
 
     def _reply(self, status: int, body: dict) -> None:
         payload = json.dumps(body).encode()

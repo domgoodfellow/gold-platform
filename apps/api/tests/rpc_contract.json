@@ -252,6 +252,16 @@
         "p_organization_id"
       ]
     },
+    "email_sender_account": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_email_identity_id",
+        "p_organization_id"
+      ]
+    },
     "clear_integration_credential": {
       "role": "integration_operator",
       "callers": [
@@ -361,7 +371,7 @@
       ],
       "sends": []
     },
-    "queued_messages": {
+    "claim_message_deliveries": {
       "role": "automation_runner",
       "callers": [
         "app/core/runner.py"
@@ -466,6 +476,7 @@
         "p_error_code",
         "p_error_message",
         "p_organization_id",
+        "p_provider_account_id",
         "p_provider_domain_id",
         "p_provider_status",
         "p_resource_id",
@@ -475,6 +486,7 @@
         "p_dns_records",
         "p_error_code",
         "p_error_message",
+        "p_provider_account_id",
         "p_provider_domain_id",
         "p_provider_status"
       ]
@@ -649,15 +661,16 @@
         "p_resource_type"
       ]
     },
-    "record_message_delivery": {
+    "finish_message_delivery": {
       "role": "automation_runner",
       "callers": [
         "app/core/runner.py"
       ],
       "sends": [
         "p_detail",
+        "p_external_id",
         "p_id",
-        "p_sent"
+        "p_outcome"
       ]
     },
     "record_message_status": {

@@ -12,10 +12,11 @@ import {
   type SendingDomainOutcome,
 } from '@/lib/domain/email/sending-domains';
 import { createEmailIdentity, setEmailIdentityReceiving } from '@/lib/domain/email/identities';
+import { setDefaultEmailSender } from '@/lib/domain/email/sender';
 import { requireOrganization } from '@/lib/route/organization';
 
 /**
- * The Email page's server actions. Each proves the business and its service access first
+ * Email sending settings' server actions, and the Inbox email page's receiving switch. Each proves the business and its service access first
  * (`requireOrganization`), then calls the domain layer, which decides everything else; a refusal
  * comes back as a sentence, never as a thrown page.
  */
@@ -28,6 +29,7 @@ function words(error: unknown): string {
 }
 
 function refresh(organizationId: string) {
+  revalidatePath(`/organizations/${organizationId}/settings/email`);
   revalidatePath(`/organizations/${organizationId}/comms/configuration/email`);
 }
 
@@ -181,6 +183,19 @@ export async function setEmailReceivingAction(_previous: EmailDomainState, form:
     });
     refresh(organizationId);
     return { error: null, notice: null, done: true };
+  } catch (error) {
+    return { error: words(error), notice: null, done: false };
+  }
+}
+
+/** The business's default sender: one of its own ready addresses (`set_default_email_sender`). */
+export async function setDefaultEmailSenderAction(_previous: EmailDomainState, form: FormData): Promise<EmailDomainState> {
+  const organizationId = String(form.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  try {
+    await setDefaultEmailSender(await getDb(), { organizationId, emailIdentityId: String(form.get('emailIdentityId') ?? '') });
+    refresh(organizationId);
+    return { error: null, notice: 'Default sender saved.', done: true };
   } catch (error) {
     return { error: words(error), notice: null, done: false };
   }

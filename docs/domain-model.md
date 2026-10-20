@@ -633,6 +633,17 @@ It is distinct from the sending domain that proves the organization controls the
 
 One sending domain may support one or more email identities according to provider/domain policy.
 
+An organization may name one ready identity as its default sender. Every email the organization
+originates — Inbox, automation messages including booking confirmations, and service notifications —
+resolves its sender through one path: an explicit identity (a conversation's address or a
+Customer's chosen notification sender) must belong to the organization and be ready, otherwise the
+default applies, otherwise the email is refused with the reason. The send uses the platform provider
+account recorded as holding that identity's sending domain: domain setup records the account that
+answered for the domain, and a domain with no recorded account cannot send until it is checked again.
+No other account, and no installation credential, is used in its place. GildOps' own transactional sender and
+installation credentials never stand in for an organization's sender. A refused confirmation never
+undoes the booking or change that requested it.
+
 ---
 
 ### Routing policy

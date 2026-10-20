@@ -87,7 +87,7 @@ def send_invitation_email(
         if api_key and sender:
             result = send_platform_email(api_key=api_key, sender=sender, to=to, subject=subject, text=text)
         else:
-            result = {"ok": False, "external_id": None, "detail": "platform email is not configured on this deployment"}
+            result = {"ok": False, "external_id": None, "detail": "GildOps' invitation email is not set up on this deployment yet."}
 
     db.record_invitation_delivery(
         settings,
@@ -102,4 +102,4 @@ def send_invitation_email(
         detail=result.get("detail"),
     )
 
-    return {"sent": result["ok"], "external_id": result.get("external_id")}
+    return {"sent": result["ok"], "external_id": result.get("external_id"), "detail": result.get("detail")}

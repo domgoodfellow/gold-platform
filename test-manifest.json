@@ -307,6 +307,11 @@
       "concerns": ["navigation", "permissions", "entitlements"],
       "note": "Work Home's Manage Work shortcuts are chosen from the workspace navigation projection: registered addresses, sidebar labels, business labels, and absent when unavailable."
     },
+    "apps/web/e2e/team-invitations.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": ["permissions", "security", "communications", "responsive"],
+      "note": "Phase 3B: invite, sign up with the emailed code, accept with the chosen role; existing account joins a second business; another account is refused; refused, unconfigured and unreachable mail service shown with reasons; resend, revoke and expiry; Email sending settings states, default change, widths and access. Run with playwright.invitations.config.ts. A stand-in for apps/api's invitation email listens on the local GOLD_API_URL; the local mail catcher supplies sign-up codes. Disposable local businesses only."
+    },
     "apps/web/e2e/workspace-navigation.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": ["navigation", "responsive", "accessibility", "permissions"],
@@ -1987,6 +1992,11 @@
         "security"
       ],
       "note": "Email as a channel of messages: queueing, the provider doors, delivery events, inbound threading and attachments, against real RLS and Storage."
+    },
+    "apps/web/tests/integration/database/email-sender.test.ts": {
+      "category": "database-integration",
+      "concerns": ["communications", "automations", "security"],
+      "note": "Phase 3A organization sender: a business's email is queued and claimed only from its own ready address and the account holding its domain; missing, unverified, foreign and stale senders refuse with a reason; bookings stand; each delivery is claimed once; retries keep the idempotency id."
     },
     "apps/web/tests/integration/database/email-send.test.ts": {
       "category": "database-integration",

@@ -46,7 +46,7 @@ describe('a deployment with apps/api configured', () => {
       invitation_id: 'inv-1',
       link: 'https://app.test/organizations/accept-invite/tok',
     });
-    expect(receipt).toEqual({ sent: true, externalId: 're_abc123' });
+    expect(receipt).toEqual({ sent: true, externalId: 're_abc123', detail: null });
   });
 
   it('never carries a subject or a body — only an invitation id and the link', async () => {
@@ -65,11 +65,12 @@ describe('a deployment with apps/api configured', () => {
 
   it('surfaces a refusal from apps/api as sent: false material to the caller, not a thrown error', async () => {
     vi.stubEnv('GOLD_API_URL', 'https://api.example.test');
-    vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ sent: false, external_id: null }), { status: 200 }));
+    vi.stubGlobal('fetch', async () => new Response(JSON.stringify({ sent: false, external_id: null, detail: 'GildOps’ invitation email is not set up on this deployment yet.' }), { status: 200 }));
 
     const sender = await platformEmailSender({ token: 't' });
     const receipt = await sender!.sendInvitationEmail({ organizationId: 'o', invitationId: 'i', link: 'https://x.test/y' });
 
-    expect(receipt).toEqual({ sent: false, externalId: null });
+    // The reason travels with the refusal (Phase 3B), so the manager is told why it was not emailed.
+    expect(receipt).toEqual({ sent: false, externalId: null, detail: 'GildOps’ invitation email is not set up on this deployment yet.' });
   });
 });

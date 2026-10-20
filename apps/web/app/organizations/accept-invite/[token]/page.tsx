@@ -57,6 +57,11 @@ export default async function AcceptInvitePage({
       <Hint className="mt-2">
         Accepting will add you to the business that invited you, with the role they chose.
       </Hint>
+      {/* An invitation works only for the address it was sent to, so say which account this is. */}
+      <Hint className="mt-2">
+        You&rsquo;re signed in as {(await db.auth.getUser()).data.user?.email ?? 'this account'}. If the
+        invitation was sent to a different address, sign in with that address instead.
+      </Hint>
       <AcceptInvitationForm token={token} />
     </AccountAppearance>
   );

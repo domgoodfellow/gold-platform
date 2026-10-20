@@ -1432,7 +1432,8 @@ Classification precedes route migration. A legacy URL is compatibility only, nev
 | Calling, routing, outcomes | Communications configuration; existing identity/routing/outcome permissions | settings/calls | comms/configuration/calling |
 | Number inventory and assignments | Communications configuration; operator record reads remain distinct from management | comms/numbers and number records | comms/configuration/numbers and number records |
 | Messaging/visitor communication profile | Communications configuration | settings/communications | comms/configuration/messaging |
-| Sending domains and identities | Communications configuration; organization.manage | settings/email | comms/configuration/email |
+| Sending domains, sender addresses and default sender | Organization Settings (Email sending), shared with Communications; organization.manage | comms/configuration/email | settings/email |
+| Which addresses receive into the Inbox | Communications configuration (Inbox email); organization.manage | settings/email | comms/configuration/email |
 | Relationship/opportunity stages | CRM configuration; field.manage | settings/sales-stages, settings/opportunity-stages | sales/configuration/relationship-stages and opportunity-stages |
 | Customer-specific fields | CRM configuration over the shared field engine | settings/custom-fields?entity=customer | sales/configuration/fields, retaining the single field engine |
 | Work types/stages/checklists/fields | Work configuration; field.manage | work/configuration | retain owner and integrate section navigation |

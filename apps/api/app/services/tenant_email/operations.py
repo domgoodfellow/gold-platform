@@ -8,10 +8,12 @@ this person may see, and therefore send, this message at all), and never accepts
 address, a subject or a body from the request. There is no way to point it at somebody else's
 message or at an address the business does not hold.
 
-**The provider is chosen by what is under the address, not named here.** An identity on a sending
-domain carries that domain's provider resource, and the resource's binding says which provider
-answers. This file sequences the work and speaks GildOps' vocabulary only; `app.providers` turns the
-key into a module.
+**The provider is chosen by what is under the address, not named here.** The database resolves the
+address the conversation is on (`email_sender_account`, the same `app.organization_email_sender`
+every business email uses): it must still be this business's and ready at send time, and the answer
+names the provider and the account that holds its sending domain. Only that account's credential is
+used, never the deployment's own key. This file sequences the work and speaks GildOps' vocabulary
+only; `app.providers` turns the key into a module.
 
 **Every outcome is recorded before it is returned**, through the one door that may say what a
 provider answered (`provider_operator`): accepted, refused (a fact about the message), failed (nothing
@@ -24,7 +26,6 @@ case where the answer was lost.
 from __future__ import annotations
 
 import base64
-import os
 from email.utils import formataddr
 
 import httpx
@@ -59,30 +60,20 @@ def _one(settings: ProviderOperationsSettings, token: str, path: str, params: di
     return rows[0] if rows else None
 
 
-def _provider_key(settings: ProviderOperationsSettings, token: str, organization_id: str, message: dict) -> str | None:
-    """Which provider answers for the address this message is spoken through, read from the
-    provider resource beneath it -- or `None` when nothing the platform operates sits beneath it."""
+def _sender_identity(settings: ProviderOperationsSettings, token: str, organization_id: str, message: dict) -> str | None:
+    """The address this message's conversation is on, read under the caller's own token."""
     conversation = _one(settings, token, "conversations", {"id": f"eq.{message['conversation_id']}", "organization_id": f"eq.{organization_id}", "select": "email_identity_id"})
-    if not conversation or not conversation.get("email_identity_id"):
-        return None
-    identity = _one(settings, token, "email_identities", {"id": f"eq.{conversation['email_identity_id']}", "organization_id": f"eq.{organization_id}", "select": "sending_domain_resource_id"})
-    if not identity or not identity.get("sending_domain_resource_id"):
-        return None
-    resource = _one(settings, token, "organization_provider_resources", {"id": f"eq.{identity['sending_domain_resource_id']}", "organization_id": f"eq.{organization_id}", "select": "binding_id"})
-    if not resource:
-        return None
-    binding = _one(settings, token, "organization_provider_bindings", {"id": f"eq.{resource['binding_id']}", "organization_id": f"eq.{organization_id}", "select": "provider_key"})
-    return binding.get("provider_key") if binding else None
+    return conversation.get("email_identity_id") if conversation else None
 
 
-def _credential(settings: ProviderOperationsSettings, organization_id: str) -> str | None:
-    """The API key that answers for this business's mail: its provider account first, the
-    deployment's own bootstrap key otherwise -- the order the invitation sender already uses."""
-    account_id = db.email_domain_provider_account(settings, organization_id=organization_id)
-    credential = db.read_provider_account_credential(settings, account_id=account_id) if account_id else None
-    if credential and credential.get("secret"):
-        return str(credential["secret"])
-    return os.environ.get("RESEND_API_KEY") or None
+def _credential(settings: ProviderOperationsSettings, account_id: str | None) -> str | None:
+    """The secret of the one account that holds this sender's domain, or `None`. No other account's
+    key, and no deployment-wide key, may stand in for it: a domain verified in one account cannot be
+    sent from through another."""
+    if not account_id:
+        return None
+    credential = db.read_provider_account_credential(settings, account_id=account_id)
+    return str(credential["secret"]) if credential and credential.get("secret") else None
 
 
 def _attachments(settings: ProviderOperationsSettings, token: str, organization_id: str, message_id: str) -> list[dict]:
@@ -141,9 +132,9 @@ def send_queued_email(
     if details is None:
         raise NotFoundError("No such email.")
 
-    provider_key = _provider_key(settings, token, organization_id, message)
-    provider = tenant_email_for(provider_key) if provider_key else None
-    api_key = _credential(settings, organization_id) if provider is not None else None
+    sender = db.email_sender_account(settings, organization_id=organization_id, email_identity_id=_sender_identity(settings, token, organization_id, message))
+    provider = tenant_email_for(sender["provider_key"]) if sender["state"] == "ready" and sender.get("provider_key") else None
+    api_key = _credential(settings, sender.get("provider_account_id")) if provider is not None else None
 
     # Taken exactly once. From here on, every path ends in a recorded outcome.
     if not db.claim_email_for_send(settings, organization_id=organization_id, message_id=message_id):
@@ -151,6 +142,12 @@ def send_queued_email(
 
     def record(outcome: str, **kwargs) -> None:
         db.record_email_send_result(settings, organization_id=organization_id, message_id=message_id, outcome=outcome, **kwargs)
+
+    if sender["state"] == "refused":
+        # The address is no longer this business's to send from (unverified, disabled, or not
+        # its own): a fact the business must fix, so it is not retried and the reason is shown.
+        record("failed", detail=sender["detail"])
+        return {"status": "rejected", "external_id": None, "detail": sender["detail"]}
 
     if provider is None or not api_key:
         record("retry", detail="Email sending is not set up on this deployment yet.")

@@ -5849,11 +5849,21 @@ export type Database = {
       }
       message_deliveries: {
         Row: {
+          attempts: number
           body: string
           channel: string
+          claimed_at: string | null
           detail: string | null
+          email_identity_id: string | null
+          external_id: string | null
+          first_attempt_at: string | null
+          from_address: string | null
+          from_name: string | null
           id: string
           organization_id: string
+          provider_detail: string | null
+          provider_state: string | null
+          provider_state_at: string | null
           queued_at: string
           recipient: string
           rule_id: string
@@ -5865,11 +5875,21 @@ export type Database = {
           subject_type: string
         }
         Insert: {
+          attempts?: number
           body: string
           channel: string
+          claimed_at?: string | null
           detail?: string | null
+          email_identity_id?: string | null
+          external_id?: string | null
+          first_attempt_at?: string | null
+          from_address?: string | null
+          from_name?: string | null
           id?: string
           organization_id: string
+          provider_detail?: string | null
+          provider_state?: string | null
+          provider_state_at?: string | null
           queued_at?: string
           recipient: string
           rule_id: string
@@ -5881,11 +5901,21 @@ export type Database = {
           subject_type: string
         }
         Update: {
+          attempts?: number
           body?: string
           channel?: string
+          claimed_at?: string | null
           detail?: string | null
+          email_identity_id?: string | null
+          external_id?: string | null
+          first_attempt_at?: string | null
+          from_address?: string | null
+          from_name?: string | null
           id?: string
           organization_id?: string
+          provider_detail?: string | null
+          provider_state?: string | null
+          provider_state_at?: string | null
           queued_at?: string
           recipient?: string
           rule_id?: string
@@ -5897,6 +5927,13 @@ export type Database = {
           subject_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "message_deliveries_email_identity_fk"
+            columns: ["organization_id", "email_identity_id"]
+            isOneToOne: false
+            referencedRelation: "email_identities"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "message_deliveries_organization_id_fkey"
             columns: ["organization_id"]
@@ -6671,6 +6708,49 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_providers"
             referencedColumns: ["key"]
+          },
+        ]
+      }
+      organization_email_sending: {
+        Row: {
+          default_email_identity_id: string
+          organization_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          default_email_identity_id: string
+          organization_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          default_email_identity_id?: string
+          organization_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_email_sending_organization_id_default_email_i_fkey"
+            columns: ["organization_id", "default_email_identity_id"]
+            isOneToOne: false
+            referencedRelation: "email_identities"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "organization_email_sending_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_email_sending_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -14340,6 +14420,20 @@ export type Database = {
         Args: { p_resource_id: string }
         Returns: Json
       }
+      claim_message_deliveries: {
+        Args: { p_limit?: number }
+        Returns: {
+          body: string
+          channel: string
+          from_address: string
+          from_name: string
+          id: string
+          provider_account_id: string
+          provider_key: string
+          recipient: string
+          subject_line: string
+        }[]
+      }
       claim_operator_email_for_send: {
         Args: { p_message_id: string; p_organization_id: string }
         Returns: boolean
@@ -14822,6 +14916,15 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: string
       }
+      email_sender_account: {
+        Args: { p_email_identity_id: string; p_organization_id: string }
+        Returns: {
+          detail: string
+          provider_account_id: string
+          provider_key: string
+          state: string
+        }[]
+      }
       end_client_tenant_relationship: {
         Args: { p_organization_id: string; p_relationship_id: string }
         Returns: undefined
@@ -14889,6 +14992,15 @@ export type Database = {
           p_id: string
           p_outcome: string
           p_retry?: boolean
+        }
+        Returns: undefined
+      }
+      finish_message_delivery: {
+        Args: {
+          p_detail?: string
+          p_external_id?: string
+          p_id: string
+          p_outcome: string
         }
         Returns: undefined
       }
@@ -15250,6 +15362,26 @@ export type Database = {
           plan_key: string
           service_class: string
           unit: string
+        }[]
+      }
+      organization_email_sender_status: {
+        Args: { p_organization_id: string }
+        Returns: {
+          address: string
+          detail: string
+          email_identity_id: string
+          state: string
+        }[]
+      }
+      organization_email_senders: {
+        Args: { p_organization_id: string }
+        Returns: {
+          address: string
+          detail: string
+          display_name: string
+          email_identity_id: string
+          is_default: boolean
+          state: string
         }[]
       }
       organization_integration_connections: {
@@ -15860,6 +15992,7 @@ export type Database = {
           p_error_code?: string
           p_error_message?: string
           p_organization_id: string
+          p_provider_account_id?: string
           p_provider_domain_id?: string
           p_provider_status?: string
           p_resource_id: string
@@ -16771,6 +16904,10 @@ export type Database = {
           p_email_identity_id: string
           p_organization_id: string
         }
+        Returns: undefined
+      }
+      set_default_email_sender: {
+        Args: { p_email_identity_id: string; p_organization_id: string }
         Returns: undefined
       }
       set_default_provider_account: {

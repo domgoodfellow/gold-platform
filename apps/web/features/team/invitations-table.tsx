@@ -31,11 +31,11 @@ export function InvitationsTable({
         {
           key: 'delivery',
           header: 'Delivery',
-          cell: (invitation) => <InvitationDeliveryBadge state={deliveryStatus.get(invitation.id)?.state ?? null} />,
+          cell: (invitation) => <InvitationDeliveryBadge state={deliveryStatus.get(invitation.id)?.state ?? null} detail={deliveryStatus.get(invitation.id)?.detail ?? null} />,
         },
         {
           key: 'lastSent',
-          header: 'Last sent',
+          header: 'Last attempt',
           visibility: 'card-only',
           cell: (invitation) => when(deliveryStatus.get(invitation.id)?.occurredAt ?? null),
         },

@@ -32,7 +32,7 @@ export function ServiceNotificationSection({ organizationId, customerId, details
       <FormField id={`${id}-sender`} label="Communications email identity">{p => <SelectInput {...p} className="w-full [&>select]:min-h-11 sm:[&>select]:min-h-0" name="emailIdentityId" defaultValue={details.notificationConfig?.senderId ?? ''} required><option value="" disabled>Choose a ready sender</option>{details.emailIdentities.map(i => <option key={i.id} value={i.id}>{i.address}</option>)}</SelectInput>}</FormField>
       <Button className="min-h-11 sm:min-h-0" type="submit" disabled={pending}>Save notification sender</Button>
     </form> : <p className="text-sm text-muted">{details.maySend ? 'No ready email identity. Configure Communications email before requesting confirmation.' : 'Email sending permission is required to configure delivery.'}</p>}
-    <ButtonLink className="min-h-11 sm:min-h-0" tone="text" href={`/organizations/${organizationId}/comms/configuration/email`}>Configure Communications email</ButtonLink>
+    <ButtonLink className="min-h-11 sm:min-h-0" tone="text" href={`/organizations/${organizationId}/settings/email`}>Email sending settings</ButtonLink>
     <details className="mt-3"><summary className="min-h-11 cursor-pointer py-2 text-sm">Delivery history ({details.notifications.length})</summary>
       {!details.notifications.length ? <p className="text-sm">No notification intent recorded.</p> : <ol className="space-y-4">{details.notifications.map(n => <li key={n.id} className="space-y-1 border-t border-border pt-3 text-sm">
         <p>{NOTIFICATION_PURPOSES[n.purpose]} — {NOTIFICATION_STATES[n.state] ?? 'Unavailable'}</p><p className="text-xs text-muted">{new Date(n.createdAt).toLocaleString('en-GB', { timeZone: details.timezone })}</p>

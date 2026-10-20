@@ -1,7 +1,7 @@
 import { callDomainCommand } from '@/lib/api/client';
 import type { PlatformEmailReceipt, PlatformEmailSender } from './index';
 
-type Answer = { sent: boolean; external_id: string | null };
+type Answer = { sent: boolean; external_id: string | null; detail?: string | null };
 
 /**
  * Platform email, through `apps/api`'s `/invitation_email` — the same relay shape
@@ -18,7 +18,7 @@ export function goldApiPlatformEmailSender(input: { token: string }): PlatformEm
         token: input.token,
         body: { organization_id: target.organizationId, invitation_id: target.invitationId, link: target.link },
       });
-      return { sent: answer.sent, externalId: answer.external_id };
+      return { sent: answer.sent, externalId: answer.external_id, detail: answer.sent ? null : (answer.detail ?? null) };
     },
   };
 }

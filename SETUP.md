@@ -345,7 +345,7 @@ Support sessions are an audit record and do not widen access to tenant operation
 | Project | Variable | Why |
 |---|---|---|
 | API | `SUPABASE_JWT_SECRET` | Do not enter casually. If you choose to enable current machine-role flows before migration, enter it only as `TEMPORARY LEGACY REQUIREMENT`. |
-| API Preview | `TWILIO_AUTH_TOKEN`, `RESEND_API_KEY`, `MESSAGE_FROM_NUMBER`, `MESSAGE_FROM_ADDRESS` | Shared hosted Supabase means Preview could send against real data unless a separate staging project/provider setup exists. |
+| API Preview | `TWILIO_AUTH_TOKEN`, `RESEND_API_KEY`, `MESSAGE_FROM_NUMBER` | Shared hosted Supabase means Preview could send against real data unless a separate staging project/provider setup exists. |
 | Web Preview | `TWILIO_AUTH_TOKEN`, `TWILIO_API_KEY_SECRET`, `TWILIO_API_KEY_SID`, `TWILIO_TWIML_APP_SID`, `TELEPHONY_CALLBACK_URL` | Same shared-data caution, plus callbacks need stable Preview URLs. |
 | Both | Tenant Stripe/Twilio/Resend credentials | TENANT CONFIG - NOT VERCEL. Store tenant provider IDs/resources through GOLD provider binding flows, not Vercel env. |
 
@@ -363,8 +363,8 @@ Support sessions are an audit record and do not widen access to tenant operation
 | Web | `STRIPE_SECRET_KEY` | Production | READY TO CONFIGURE | YES | YES | Stripe live API key, `sk_live_...` | YES, when going live | Keep separate from test key. |
 | Web | `STRIPE_CONNECT_CLIENT_ID` | Preview | READY TO CONFIGURE - TEST/NON-PRODUCTION ONLY | NO | NO | Stripe Connect test/sandbox client ID, `ca_...` | YES | Pair with test secret key. |
 | Web | `STRIPE_CONNECT_CLIENT_ID` | Production | READY TO CONFIGURE | NO | NO | Stripe Connect live client ID, `ca_...` | YES, when going live | Pair with live secret key. |
-| Web | `RESEND_API_KEY` | Preview + Production | READY TO CONFIGURE | YES | YES | Resend Dashboard | OPTIONAL | GOLD's own platform email (organization invitations) — a separate concern from the API project's `RESEND_API_KEY`, which is a tenant's own channel. Same account may issue both in practice. |
-| Web | `PLATFORM_EMAIL_FROM_ADDRESS` | Preview + Production | READY TO CONFIGURE | NO | NO | Verified sender/domain | OPTIONAL | Pair with Web's `RESEND_API_KEY`. Unconfigured means invitations still work — the copyable link is always shown regardless. |
+| Web | `RESEND_API_KEY` | Preview + Production | NOT USED FOR SENDING | YES | YES | Resend Dashboard | NO | The web never sends email. It reads this only to show a status on Platform → Providers, so that status does not prove the API can send. Invitation email is sent by the API project (rows below). |
+| Web | `PLATFORM_EMAIL_FROM_ADDRESS` | Preview + Production | NOT USED FOR SENDING | NO | NO | Verified sender/domain | NO | Read only for the same Platform → Providers status. Set it in the API project, where invitations are sent. |
 | Web | `TWILIO_ACCOUNT_SID` | Production | READY TO CONFIGURE | NO | NO | Twilio Console | OPTIONAL | Needed for telephony provisioning/browser calling. |
 | Web | `TWILIO_AUTH_TOKEN` | Production | READY TO CONFIGURE | YES | YES | Twilio Console | OPTIONAL | Sensitive. |
 | Web | `TWILIO_API_KEY_SID` | Production | READY TO CONFIGURE | NO | NO | Twilio Console | OPTIONAL | Browser Voice SDK. |
@@ -381,8 +381,8 @@ Support sessions are an audit record and do not widen access to tenant operation
 | API | `STRIPE_PLATFORM_BILLING_WEBHOOK_SECRET` | Production | READY TO CONFIGURE | YES | YES | Stripe live webhook destination scoped to **Your account**, `whsec_...` | YES, when going live | Separate endpoint/secret from Preview, and from `STRIPE_WEBHOOK_SECRET`. |
 | API | `CRON_SECRET` | Production | READY TO CONFIGURE | YES | YES | Generate 32+ random bytes | YES, when automations go live | Vercel Cron normally targets Production. |
 | API | `CRON_SECRET` | Preview | NOT REQUIRED | YES | N/A | None | NO | No scheduled Preview cron by default. |
-| API | `RESEND_API_KEY` | Production | READY TO CONFIGURE | YES | YES | Resend Dashboard | OPTIONAL | Email sending. |
-| API | `MESSAGE_FROM_ADDRESS` | Production | READY TO CONFIGURE | NO | NO | Verified sender/domain | OPTIONAL | Pair with Resend. |
+| API | `RESEND_API_KEY` | Production | READY TO CONFIGURE | YES | YES | Resend Dashboard | OPTIONAL | Bootstrap fallback for GildOps' invitation email only, used when no default Resend platform account holds a credential. A business's email uses the Platform provider account recorded as holding its sending domain, never this key. |
+| API | `PLATFORM_EMAIL_FROM_ADDRESS` | Preview + Production | READY TO CONFIGURE | NO | NO | An address on a domain verified in GildOps' Resend account | YES, for invitation email | The From address of GildOps' invitation email. Without it, invitations are created but not emailed, and the manager is told so. |
 | API | `TWILIO_ACCOUNT_SID` | Production | READY TO CONFIGURE | NO | NO | Twilio Console | OPTIONAL | SMS/callback support. |
 | API | `TWILIO_AUTH_TOKEN` | Production | READY TO CONFIGURE | YES | YES | Twilio Console | OPTIONAL | Also verifies voice callbacks. |
 | API | `MESSAGE_FROM_NUMBER` | Production | READY TO CONFIGURE | NO | NO | Twilio phone number | OPTIONAL | SMS sender fallback. |

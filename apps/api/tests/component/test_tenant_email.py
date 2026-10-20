@@ -84,6 +84,16 @@ class TestProviderProtocol:
         self._post(monkeypatch, Response(status, {"message": "try later"}))
         assert self._send()["retryable"] is True
 
+    def test_a_key_still_in_flight_is_retried_and_never_called_uncertain(self, monkeypatch) -> None:
+        self._post(monkeypatch, Response(409, {"name": "concurrent_idempotent_requests", "message": "in progress"}))
+        result = self._send()
+        assert result["ok"] is False and result["retryable"] is True and result["uncertain"] is False
+
+    def test_a_key_already_used_for_a_different_request_is_uncertain_not_a_refusal(self, monkeypatch) -> None:
+        self._post(monkeypatch, Response(409, {"name": "invalid_idempotent_request", "message": "payload differs"}))
+        result = self._send()
+        assert result["ok"] is False and result["retryable"] is False and result["uncertain"] is True
+
     def test_an_unreachable_provider_is_retryable(self, monkeypatch) -> None:
         self._post(monkeypatch, raises=resend_email.httpx.ConnectError("down"))
         result = self._send()
@@ -173,11 +183,14 @@ class TestEventParsing:
 class World:
     """The database as the caller's token sees it, and the doors this runtime writes through."""
 
-    def __init__(self, monkeypatch, *, status="queued", visible=True, provider="resend", credential="secret", send=None, files=()) -> None:
+    def __init__(self, monkeypatch, *, status="queued", visible=True, provider="resend", credential="secret", send=None, files=(), sender="ready", sender_detail=None) -> None:
         self.status = status
         self.visible = visible
         self.provider_key = provider
         self.credential = credential
+        self.sender = sender
+        self.sender_detail = sender_detail
+        self.resolved: list[dict] = []
         self.claimed = True
         self.recorded: list[dict] = []
         self.claims = 0
@@ -190,12 +203,18 @@ class World:
         )
         monkeypatch.setattr(ops, "caller_rest", self._rest)
         monkeypatch.setattr(ops, "tenant_email_for", lambda key: self.module if key == "resend" else None)
-        monkeypatch.setattr(ops.db, "email_domain_provider_account", lambda s, **kw: "acct" if self.credential else None)
+        monkeypatch.setattr(ops.db, "email_sender_account", self._sender_account)
         monkeypatch.setattr(ops.db, "read_provider_account_credential", lambda s, **kw: {"secret": self.credential} if self.credential else None)
         monkeypatch.setattr(ops.db, "claim_email_for_send", self._claim)
         monkeypatch.setattr(ops.db, "record_email_send_result", lambda s, **kw: self.recorded.append(kw))
         monkeypatch.setattr(ops.httpx, "get", lambda url, **kw: Response(200, content=b"file-bytes"))
         monkeypatch.delenv("RESEND_API_KEY", raising=False)
+
+    def _sender_account(self, s, **kw):
+        self.resolved.append(kw)
+        if self.sender != "ready":
+            return {"state": self.sender, "detail": self.sender_detail, "provider_key": None, "provider_account_id": None}
+        return {"state": "ready", "detail": None, "provider_key": self.provider_key, "provider_account_id": "acct"}
 
     def _claim(self, s, **kw):
         self.claims += 1
@@ -212,12 +231,6 @@ class World:
                                    "html_body": None, "in_reply_to": "<prev@x>", "reference_ids": ["<prev@x>"]}])
         if path == "conversations":
             return Response(200, [{"email_identity_id": "ident"}])
-        if path == "email_identities":
-            return Response(200, [{"sending_domain_resource_id": "res"}])
-        if path == "organization_provider_resources":
-            return Response(200, [{"binding_id": "bind"}])
-        if path == "organization_provider_bindings":
-            return Response(200, [{"provider_key": self.provider_key}])
         if path == "message_attachments":
             return Response(200, [{"filename": "n.txt", "content_type": "text/plain", "size_bytes": 10, "storage_path": f"{ORG}/outbound/x/n.txt"}] * len(self.files))
         raise AssertionError(path)
@@ -271,6 +284,32 @@ class TestSendingAQueuedMessage:
 
     def test_an_address_with_no_provider_beneath_it_cannot_send(self, monkeypatch) -> None:
         world = World(monkeypatch, provider="unknown_provider")
+        with pytest.raises(ProviderUnavailableError):
+            run(world)
+        assert world.sends == []
+
+    def test_the_sender_is_resolved_again_at_send_time_from_the_conversations_own_address(self, monkeypatch) -> None:
+        world = World(monkeypatch)
+        run(world)
+        assert world.resolved == [dict(organization_id=ORG, email_identity_id="ident")]
+
+    def test_a_sender_that_is_no_longer_ready_is_refused_with_its_reason_and_never_sent(self, monkeypatch) -> None:
+        reason = "The sender address hello@acme.test is not verified for sending. Finish its domain setup in Email sending settings."
+        world = World(monkeypatch, sender="refused", sender_detail=reason)
+        result = run(world)
+        assert result == {"status": "rejected", "external_id": None, "detail": reason}
+        assert world.sends == []
+        assert world.recorded == [dict(organization_id=ORG, message_id=MESSAGE, outcome="failed", detail=reason)]
+
+    def test_an_unavailable_platform_account_returns_the_message_to_the_queue(self, monkeypatch) -> None:
+        world = World(monkeypatch, sender="unavailable", sender_detail="Email sending for hello@acme.test is unavailable on this platform right now.")
+        with pytest.raises(ProviderUnavailableError):
+            run(world)
+        assert world.sends == [] and [r["outcome"] for r in world.recorded] == ["retry"]
+
+    def test_the_deployments_own_key_never_stands_in_for_the_senders_account(self, monkeypatch) -> None:
+        world = World(monkeypatch, credential=None)
+        monkeypatch.setenv("RESEND_API_KEY", "deployment-key")
         with pytest.raises(ProviderUnavailableError):
             run(world)
         assert world.sends == []

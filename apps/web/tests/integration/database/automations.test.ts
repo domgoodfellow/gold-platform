@@ -47,6 +47,7 @@ import {
 } from '@/lib/domain/work-items/work-items';
 import { foundBusiness } from '@/tests/support/founding';
 import { getAutomationSummary } from '@/lib/domain/automation/monitoring';
+import { readyEmailSender } from '@/tests/support/email-sender';
 
 /**
  * The automation runtime, and the four claims that make it worth having.
@@ -666,9 +667,14 @@ describe('the clock', () => {
             )
           order by p.proname`,
       );
-      // Five, and the list is exhaustive rather than a sample: what makes this assertion worth
-      // anything is that adding a sixth fails here, so somebody has to argue for it.
+      // Exhaustive rather than a sample: what makes this assertion worth anything is that adding
+      // one fails here, so somebody has to argue for it. Phase 3A added a claim (each delivery taken
+      // once, an email with the business's own resolved sender) and an outcome that can return it to
+      // the queue. `queued_messages`/`record_message_delivery` remain, for text messages only, until
+      // the runtime that calls them is replaced; a later migration removes them.
       expect(functions.map((row) => row.proname)).toEqual([
+        'claim_message_deliveries',
+        'finish_message_delivery',
         'places_to_watch',
         'queued_messages',
         'record_external_readings',
@@ -689,6 +695,10 @@ describe('what a rule says', () => {
   let customerId: string;
 
   beforeAll(async () => {
+    // An email is queued only from the business's own verified sender (Phase 3A).
+    const pg = new Client({ connectionString: CONNECTION });
+    await pg.connect();
+    try { await readyEmailSender(pg, one.db, one.organizationId); } finally { await pg.end(); }
     templateId = await createMessageTemplate(one.db, {
       organizationId: one.organizationId,
       name: 'Booking confirmation',

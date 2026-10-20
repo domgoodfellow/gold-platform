@@ -116,7 +116,7 @@ describe('every location is a real page, and every shell page has a location', (
     const expected = [
       'organizations/[organizationId]', 'organizations/[organizationId]/[...unmatched]', 'platform/[...unmatched]',
       ...['comms/numbers', 'comms/numbers/[phoneNumberId]', 'finance/economics', 'finance/economics/[targetOrganizationId]', 'finance/plans', 'finance/plans/[planKey]', 'insights/reports', 'integrations/[connectionId]', 'integrations/imports', 'integrations/imports/[runId]', 'integrations/imports/new', 'integrations/sources', 'integrations/sources/[resourceId]',
-        'settings/calls', 'settings/commerce', 'settings/communications', 'settings/connections/apps', 'settings/data-automation', 'settings/email', 'settings/opportunity-stages', 'settings/organization', 'settings/people', 'settings/pricing', 'settings/sales-stages', 'settings/website'].map((path) => `organizations/[organizationId]/${path}`),
+        'settings/calls', 'settings/commerce', 'settings/communications', 'settings/connections/apps', 'settings/data-automation', 'settings/opportunity-stages', 'settings/organization', 'settings/people', 'settings/pricing', 'settings/sales-stages', 'settings/website'].map((path) => `organizations/[organizationId]/${path}`),
     ];
     expect(uncovered.sort()).toEqual(expected.sort());
   });

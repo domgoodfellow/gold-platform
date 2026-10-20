@@ -6,7 +6,7 @@ import type { InvitationDeliveryState } from '@/lib/domain/tenancy/invitations';
  * split `DomainStateBadge` draws for a hosting provider's states.
  */
 const BADGE: Record<InvitationDeliveryState, { label: string; tone: 'neutral' | 'success' | 'danger' }> = {
-  queued: { label: 'Sending', tone: 'neutral' },
+  queued: { label: 'Accepted for delivery', tone: 'neutral' },
   sent: { label: 'Sent', tone: 'neutral' },
   delivered: { label: 'Delivered', tone: 'success' },
   delayed: { label: 'Delivery delayed', tone: 'neutral' },
@@ -15,8 +15,15 @@ const BADGE: Record<InvitationDeliveryState, { label: string; tone: 'neutral' | 
   suppressed: { label: 'Suppressed', tone: 'danger' },
 };
 
-export function InvitationDeliveryBadge({ state }: { state: InvitationDeliveryState | null }) {
-  if (state === null) return <span className="text-sm text-muted">Not sent</span>;
+export function InvitationDeliveryBadge({ state, detail = null }: { state: InvitationDeliveryState | null; detail?: string | null }) {
+  if (state === null) return <span className="text-sm text-muted">Not emailed</span>;
   const badge = BADGE[state];
-  return <Badge tone={badge.tone}>{badge.label}</Badge>;
+  // Why it did not go, where there is a reason: a manager can act on it, or choose to share the link.
+  const reason = badge.tone === 'danger' && detail ? detail : null;
+  return (
+    <span className="flex flex-col items-start gap-1">
+      <Badge tone={badge.tone}>{badge.label}</Badge>
+      {reason ? <span className="text-xs text-muted">{reason}</span> : null}
+    </span>
+  );
 }

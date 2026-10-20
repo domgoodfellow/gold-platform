@@ -1,4 +1,4 @@
-import { Building2, CreditCard, Globe, Palette, Plug, Settings2, ShieldCheck, SlidersHorizontal, UserRound, UsersRound } from 'lucide-react';
+import { Building2, CreditCard, Globe, Mail, Palette, Plug, Settings2, ShieldCheck, SlidersHorizontal, UserRound, UsersRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export const SETTINGS_ICONS: Record<string, LucideIcon> = {
@@ -8,6 +8,7 @@ export const SETTINGS_ICONS: Record<string, LucideIcon> = {
   'settings-general': Building2,
   'settings-branding': Palette,
   'settings-domains': Globe,
+  'settings-email': Mail,
   'settings-features': Settings2,
   'settings-access': UsersRound,
   'settings-connections': Plug,

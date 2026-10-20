@@ -365,6 +365,29 @@ class TestProcessorWebhooks:
         assert call(module, "POST", body=b"{}")[0] == 404
 
 
+class TestInvitationEmail:
+    """The send endpoint says why an invitation was not emailed, so a manager is never handed a
+    bare link with no reason."""
+
+    def _armed(self, monkeypatch, result):
+        monkeypatch.setattr(invitation_email, "load_provider_operations_settings", lambda: SETTINGS)
+        monkeypatch.setattr(invitation_email, "require_caller", lambda headers, **kw: SimpleNamespace(token="caller-token"))
+        monkeypatch.setattr(invitation_email, "send_invitation_email", lambda settings, **kw: result)
+
+    def test_a_send_that_did_not_happen_carries_its_reason(self, monkeypatch) -> None:
+        self._armed(monkeypatch, {"sent": False, "external_id": None, "detail": "GildOps' invitation email is not set up on this deployment yet."})
+        body = json.dumps({"organization_id": "o", "invitation_id": "i", "link": "https://app.test/x"}).encode()
+        status, text = call(invitation_email, "POST", headers={"authorization": "Bearer t"}, body=body)
+        assert status == 200
+        assert json.loads(text) == {"sent": False, "external_id": None, "detail": "GildOps' invitation email is not set up on this deployment yet."}
+
+    def test_an_accepted_send_carries_no_reason(self, monkeypatch) -> None:
+        self._armed(monkeypatch, {"sent": True, "external_id": "re_1", "detail": None})
+        body = json.dumps({"organization_id": "o", "invitation_id": "i", "link": "https://app.test/x"}).encode()
+        status, text = call(invitation_email, "POST", headers={"authorization": "Bearer t"}, body=body)
+        assert status == 200 and json.loads(text) == {"sent": True, "external_id": "re_1", "detail": None}
+
+
 class TestInvitationEmailWebhook:
     """`verify_signature`'s own correctness (every header, every failure mode, the timestamp
     tolerance) is `test_resend_webhook.py`'s subject; this proves only that the handler calls it

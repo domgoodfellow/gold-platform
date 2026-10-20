@@ -536,7 +536,11 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   // it is `organization.manage` like Domains rather than a messaging capability — and it is its
   // own destination rather than a block inside Communications, because a lifecycle with DNS
   // records, a review step and a verification check is not a field on somebody else's page.
-  { key: 'email', scope: 'organization', workspace: 'communications', path: 'comms/configuration/email', permission: ['organization.manage'] },
+  // Email sending is organization-wide (Inbox, automations and service notifications all send
+  // from it), so it lives in Settings and Communications links to it, as Studio does to Domains.
+  { key: 'email', treatment: 'shared', scope: 'organization', workspace: 'communications', path: 'settings/email', permission: ['organization.manage'] },
+  // Which addresses receive into the Inbox: Inbox behaviour, so it stays with Communications.
+  { key: 'inbox-email', scope: 'organization', workspace: 'communications', path: 'comms/configuration/email', permission: ['organization.manage'], directory: false },
   { key: 'integrations', scope: 'connections', path: 'settings/connections', entitledBy: 'integrations', permission: ['integration.manage'] },
   // Its own permission and no entitlement: handing over a private value is not connecting an app, and a business that has switched integrations off still owns what it stored.
   { key: 'secrets', scope: 'connections', path: 'settings/secrets', permission: ['secret.manage'] },
@@ -804,7 +808,8 @@ export const WORKSPACE_CONFIGURE: Partial<Record<WorkspaceKey, readonly Workspac
     { target: 'call-setup', label: 'Calling & routing' },
     { target: 'communications', label: 'Messaging' },
     { target: 'phone-numbers', label: 'Numbers & assignments' },
-    { target: 'email', label: 'Email' },
+    { target: 'email', label: 'Email sending' },
+    { target: 'inbox-email', label: 'Inbox email' },
     { target: 'schedule-configuration', label: 'Business hours' },
     { target: 'call-setup', label: 'Recording & compliance (information)', hash: '#recording' },
   ],

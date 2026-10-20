@@ -98,12 +98,39 @@ export async function addMemberAction(
   return { error: null, created: true };
 }
 
+/**
+ * What happened to the invitation email, as far as GildOps can know at this moment. `accepted`
+ * means GildOps' mail service took it for delivery, never that it arrived: arrival is reported
+ * later, under Pending invitations. When it was not accepted, `reason` says why in plain words.
+ */
+export type InvitationEmailOutcome = { accepted: boolean; reason: string | null };
+
 export type InviteMemberState = {
   error: string | null;
   link: string | null;
-  /** `null` until a send was attempted; distinguishes "created and sent" from "created, copy this link" (work order 1 §10). */
-  emailSent: boolean | null;
+  /** `null` until a send was attempted; distinguishes "created and emailed" from "created, not emailed" (work order 1 §10). */
+  email: InvitationEmailOutcome | null;
 };
+
+/**
+ * One attempt to email an invitation from GildOps' own platform sender — never the business's
+ * own sending address, which a team invitation does not need. Every way it can fail comes back as
+ * a reason the manager is shown, rather than being swallowed into a bare link.
+ */
+async function emailInvitation(db: Awaited<ReturnType<typeof getDb>>, input: { organizationId: string; invitationId: string; link: string }): Promise<InvitationEmailOutcome> {
+  if (!input.invitationId) return { accepted: false, reason: 'The invitation was created, but GildOps could not find it again to email it.' };
+  const sender = await platformEmailSender({ token: await requireAccessToken(db) });
+  if (!sender) return { accepted: false, reason: 'Invitation email is not set up on this deployment yet.' };
+  try {
+    const receipt = await sender.sendInvitationEmail(input);
+    return receipt.sent ? { accepted: true, reason: null } : { accepted: false, reason: receipt.detail ?? 'GildOps’ mail service did not accept the invitation.' };
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { accepted: false, reason: error.code === 'api.unreachable' ? 'GildOps’ mail service could not be reached.' : 'GildOps’ mail service could not take the invitation right now.' };
+    }
+    throw error;
+  }
+}
 
 export async function inviteMemberAction(
   _previous: InviteMemberState,
@@ -119,7 +146,7 @@ export async function inviteMemberAction(
     roleId: formData.get('roleId'),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'That invitation is not valid.', link: null, emailSent: null };
+    return { error: parsed.error.issues[0]?.message ?? 'That invitation is not valid.', link: null, email: null };
   }
 
   let token: string;
@@ -130,7 +157,7 @@ export async function inviteMemberAction(
     invitationId = pending.find((invitation) => invitation.email === parsed.data.email)?.id ?? '';
   } catch (error) {
     if (error instanceof DomainError) {
-      return { error: error.message, link: null, emailSent: null };
+      return { error: error.message, link: null, email: null };
     }
     throw error;
   }
@@ -143,24 +170,15 @@ export async function inviteMemberAction(
   // then rather than guessing at it now.
   const link = `${await requestOrigin()}/organizations/accept-invite/${token}`;
 
-  // Best-effort: an invite that could not be emailed is still a real invite. The link is always
-  // shown regardless, exactly as `create_portal_invite`'s own token is shown so it can be resent.
-  let emailSent = false;
-  if (invitationId) {
-    try {
-      const sender = await platformEmailSender({ token: await requireAccessToken(db) });
-      const receipt = await sender?.sendInvitationEmail({ organizationId, invitationId, link });
-      emailSent = receipt?.sent ?? false;
-    } catch {
-      // Swallowed on purpose — the copyable link below is the fallback, not a second attempt.
-    }
-  }
+  // An invite that could not be emailed is still a real invite. The link is returned so a manager
+  // may choose to share it themselves; it is never presented as having been emailed.
+  const email = await emailInvitation(db, { organizationId, invitationId, link });
 
   revalidatePath(`/organizations/${organizationId}/settings/access`);
-  return { error: null, link, emailSent };
+  return { error: null, link, email };
 }
 
-export type ReissueInvitationState = { error: string | null; link: string | null; emailSent: boolean | null };
+export type ReissueInvitationState = { error: string | null; link: string | null; email: InvitationEmailOutcome | null };
 
 /**
  * Resend: a fresh token, a fresh link, a fresh send attempt — never the original plaintext, which
@@ -180,24 +198,16 @@ export async function reissueInvitationAction(
     token = await reissueInvitation(db, { id: invitationId });
   } catch (error) {
     if (error instanceof DomainError) {
-      return { error: error.message, link: null, emailSent: null };
+      return { error: error.message, link: null, email: null };
     }
     throw error;
   }
 
   const link = `${await requestOrigin()}/organizations/accept-invite/${token}`;
-
-  let emailSent = false;
-  try {
-    const sender = await platformEmailSender({ token: await requireAccessToken(db) });
-    const receipt = await sender?.sendInvitationEmail({ organizationId, invitationId, link });
-    emailSent = receipt?.sent ?? false;
-  } catch {
-    // Swallowed on purpose, the same reason inviteMemberAction's own send is.
-  }
+  const email = await emailInvitation(db, { organizationId, invitationId, link });
 
   revalidatePath(`/organizations/${organizationId}/settings/access`);
-  return { error: null, link, emailSent };
+  return { error: null, link, email };
 }
 
 export type AssignRoleState = { error: string | null };

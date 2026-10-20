@@ -253,9 +253,21 @@ def test_provisioning_records_the_provider_s_own_id_and_the_records_it_asked_for
             "dns_records": [{"type": "TXT", "name": "resend._domainkey.acme.ca", "value": "p=MIG", "purpose": "DKIM", "status": "pending"}],
             "error_code": None,
             "error_message": None,
+            # The account that answered is recorded as the one holding the domain (Phase 3B).
+            "provider_account_id": ACCOUNT,
         }
     ]
     assert answer["state"] == "pending" and answer["records_verified"] == 0
+
+
+def test_a_provider_failure_records_no_account_as_holding_the_domain(monkeypatch) -> None:
+    world = World(monkeypatch)
+    world.answers(monkeypatch, ensure=HostnameUnavailable("that name is not allowed"))
+
+    with pytest.raises(DomainRejectedError):
+        provision()
+
+    assert [row.get("provider_account_id") for row in world.recorded] == [None]
 
 
 def test_a_retry_resumes_from_the_id_already_recorded_rather_than_creating_a_second_domain(monkeypatch) -> None:

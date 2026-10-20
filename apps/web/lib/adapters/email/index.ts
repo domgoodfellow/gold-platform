@@ -14,6 +14,8 @@ export type PlatformEmailReceipt = {
   sent: boolean;
   /** Resend's own id for the message, or `null` when it never reached the provider. Opaque above this boundary. */
   externalId: string | null;
+  /** Why it was not sent, in GildOps' or the provider's own words; `null` when it was. */
+  detail: string | null;
 };
 
 export type PlatformEmailSender = {

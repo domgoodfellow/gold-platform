@@ -10,7 +10,8 @@ for (const width of [1440, 768, 390]) test(`canonical workspace configuration at
  const screens = [
   ['comms/configuration/calling', 'Calling & routing'],
   ['comms/configuration/messaging', 'Messaging'],
-  ['comms/configuration/email', 'Email'],
+  ['comms/configuration/email', 'Inbox email'],
+  ['settings/email', 'Email sending'],
   ['comms/configuration/numbers', 'Numbers'],
   ['settings/general', 'General'],
   ['sales/configuration', 'Configuration'],

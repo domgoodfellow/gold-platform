@@ -126,7 +126,9 @@ def _credential(settings: ProviderOperationsSettings, organization_id: str) -> d
     credential = db.read_provider_account_credential(settings, account_id=account_id)
     if credential is None or not credential.get("secret"):
         return None
-    return credential
+    # Which account this is travels with it, so the account that answers about a domain is the
+    # one recorded as holding it (`record_email_domain_provisioning`'s `p_provider_account_id`).
+    return {**credential, "account_id": account_id}
 
 
 def _record(
@@ -140,6 +142,7 @@ def _record(
     dns_records: list[dict] | None = None,
     error_code: str | None = None,
     error_message: str | None = None,
+    provider_account_id: str | None = None,
 ) -> None:
     db.record_email_domain_provisioning(
         settings,
@@ -151,6 +154,7 @@ def _record(
         dns_records=dns_records,
         error_code=error_code,
         error_message=error_message,
+        provider_account_id=provider_account_id,
     )
 
 
@@ -301,6 +305,8 @@ def provision_domain(
         provider_domain_id=status.external_id,
         provider_status=status.provider_status,
         dns_records=provider.record_views(status),
+        # The account that just answered for this domain is the one that holds it.
+        provider_account_id=credential.get("account_id"),
     )
     return _view(row, status, provider, dns_settings=dns_settings, token=token, organization_id=organization_id)
 
@@ -352,6 +358,8 @@ def check_domain(
         provider_domain_id=status.external_id,
         provider_status=status.provider_status,
         dns_records=provider.record_views(status),
+        # The account that just answered for this domain is the one that holds it.
+        provider_account_id=credential.get("account_id"),
     )
     return _view(row, status, provider, dns_settings=dns_settings, token=token, organization_id=organization_id)
 
@@ -413,6 +421,8 @@ def apply_dns(
         provider_domain_id=status.external_id,
         provider_status=status.provider_status,
         dns_records=provider.record_views(status),
+        # The account that just answered for this domain is the one that holds it.
+        provider_account_id=credential.get("account_id"),
     )
     return _view(
         row, status, provider, dns_settings=dns_settings, token=token, organization_id=organization_id, dns_outcome=outcome

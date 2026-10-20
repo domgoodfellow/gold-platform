@@ -107,6 +107,7 @@ export function ActivityView({
           >
             <option value="">All delivery states</option>
             <option value="queued">Queued</option>
+            <option value="sending">Sending</option>
             <option value="sent">Sent</option>
             <option value="failed">Failed</option>
           </SelectInput>
@@ -378,8 +379,9 @@ export function ActivityView({
                 </div>
                 <p className="text-xs text-subtle">
                   Content was snapshotted when queued. Template edits do not
-                  change it. Sent indicates the recorded sender outcome;
-                  recipient receipt is not tracked.
+                  change it. Sent means the email provider accepted the message
+                  from this business's own sender address; whether it reached the
+                  recipient is not tracked.
                 </p>
               </>
             )}

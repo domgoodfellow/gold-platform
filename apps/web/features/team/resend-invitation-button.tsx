@@ -2,15 +2,15 @@
 
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
-import { CopyField } from '@/components/controls/copy-field';
 import { ErrorText, Hint } from '@/components/controls/inputs';
+import { InvitationResult } from '@/features/team/invite-member-form';
 import type { PendingInvitation } from '@/lib/domain/tenancy/invitations';
 import {
   reissueInvitationAction,
   type ReissueInvitationState,
 } from '@/app/organizations/[organizationId]/settings/access/actions';
 
-const INITIAL: ReissueInvitationState = { error: null, link: null, emailSent: null };
+const INITIAL: ReissueInvitationState = { error: null, link: null, email: null };
 
 /**
  * A fresh token, a fresh link, a fresh send attempt. Never offers the original link again —
@@ -29,8 +29,8 @@ export function ResendInvitationButton({
   if (state.link) {
     return (
       <div className="flex flex-col gap-2">
-        <Hint>{state.emailSent ? 'Sent. The previous link no longer works.' : 'Created. The previous link no longer works — copy this one:'}</Hint>
-        <CopyField value={state.link} label="New invitation link" copiedMessage="Invitation link copied" size="small" />
+        <Hint>The previous link no longer works.</Hint>
+        <InvitationResult link={state.link} email={state.email} label="New invitation link" />
       </div>
     );
   }

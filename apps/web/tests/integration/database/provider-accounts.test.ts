@@ -249,7 +249,7 @@ describe('a credential goes in and never comes out', () => {
     expect(rows[0]).toEqual({ decrypted: false, secrets: false });
   });
 
-  it('gives the machine role no table grant and exactly sixteen executes', async () => {
+  it('gives the machine role no table grant and exactly seventeen executes', async () => {
     const tables = await pg.query(`select table_name from information_schema.role_table_grants where grantee = 'provider_operator'`);
     expect(tables.rows).toEqual([]);
 
@@ -274,11 +274,15 @@ describe('a credential goes in and never comes out', () => {
     // (or a handoff) on that visitor's open thread. Both derive the organization from the thread
     // or deployment, set `search_path = ''`, refuse a closed thread or a disabled deployment,
     // and are granted to this role alone — never to a signed-in or anonymous caller.
+    // `email_sender_account` joined with the organization sender (Phase 3A): before sending an Inbox
+    // email, apps/api asks the one sender resolution whether the address is still this business's
+    // and ready, and which recorded account holds its domain. It answers rather than raises.
     expect(functions.rows.map((row) => row.proname)).toEqual([
       'claim_email_for_send',
       'custom_domain_provider_account',
       'default_platform_provider_account',
       'email_domain_provider_account',
+      'email_sender_account',
       'read_provider_account_credential',
       'record_ai_usage',
       'record_custom_domain_registration',

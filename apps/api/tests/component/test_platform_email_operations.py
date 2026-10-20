@@ -132,9 +132,9 @@ def test_neither_account_nor_environment_is_a_recorded_failure_not_an_exception(
 
     result = send()
 
-    assert result == {"sent": False, "external_id": None}
+    assert result == {"sent": False, "external_id": None, "detail": "GildOps' invitation email is not set up on this deployment yet."}
     assert world.deliveries[0]["state"] == "failed"
-    assert "not configured" in world.deliveries[0]["detail"]
+    assert "not set up" in world.deliveries[0]["detail"]
     assert world.sends == []  # never reaches the vendor at all
 
 
@@ -144,6 +144,6 @@ def test_a_provider_refusal_is_recorded_as_failed_with_its_own_words(monkeypatch
 
     result = send()
 
-    assert result == {"sent": False, "external_id": None}
+    assert result == {"sent": False, "external_id": None, "detail": "Resend refused the request (422): invalid `to` field"}
     assert world.deliveries[0]["state"] == "failed"
     assert "invalid" in world.deliveries[0]["detail"]
