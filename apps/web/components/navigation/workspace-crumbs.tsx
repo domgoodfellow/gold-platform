@@ -147,7 +147,7 @@ export function WorkspaceCrumbSlot() {
 
 export function MobilePageLocation({ current, navigation }: { current: ReactNode; navigation: PageNavigation }) {
   const [open, setOpen] = useState(false);
-  const interactive = navigation.groups.reduce((count, group) => count + group.items.length, 0) > 1;
+  const interactive = navigation.groups.reduce((count, group) => count + group.items.length + (group.href ? 1 : 0), 0) > 1;
   return <nav aria-label="Page location" className="flex min-w-0 items-center gap-1 md:hidden">
     {navigation.parentHref ? <ButtonLink href={navigation.parentHref} tone="ghost" aria-label="Back to parent" className="size-10 shrink-0 p-0"><ArrowLeft aria-hidden size={18} /></ButtonLink> : null}
     {interactive ? <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -159,7 +159,15 @@ export function MobilePageLocation({ current, navigation }: { current: ReactNode
       <DropdownMenuContent align="start" className="max-h-[min(70dvh,28rem)] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto">
         {navigation.groups.map((group, index) => <Fragment key={index}>
           {index > 0 ? <DropdownMenuSeparator /> : null}
-          {group.label ? <DropdownMenuLabel>{group.label}</DropdownMenuLabel> : null}
+          {group.label && group.href ? (
+            // A workspace's heading is its Home (ADR-047), so here it is a destination, not a caption.
+            <DropdownMenuItem asChild>
+              <Link href={group.href} aria-label={`${group.label} home`} aria-current={group.current ? 'page' : undefined} className={cx('min-h-10 min-w-0 font-semibold', group.current && 'bg-selected text-foreground')}>
+                <span className="min-w-0 flex-1 whitespace-normal break-words">{group.label}</span>
+                {group.current ? <Check aria-hidden size={16} /> : null}
+              </Link>
+            </DropdownMenuItem>
+          ) : group.label ? <DropdownMenuLabel>{group.label}</DropdownMenuLabel> : null}
           {group.items.map((item) => <DropdownMenuItem key={item.key} asChild>
             <Link href={item.href} aria-current={item.key === navigation.activeKey ? 'page' : undefined} className={cx('min-h-10 min-w-0', item.key === navigation.activeKey && 'bg-selected text-foreground font-medium')}>
               <span className="min-w-0 flex-1 whitespace-normal break-words">{item.label}</span>

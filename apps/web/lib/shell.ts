@@ -47,6 +47,11 @@ export type NavItem = {
   /** Eligible operating destinations, rendered only after entering this workspace. */
   destinations?: NavItem[];
   configuration?: NavItem;
+  /**
+   * The workspace's registered Calendar destination (`AREAS`, `{home}/calendar`), offered as a shortcut
+   * only while its Home is usable and the calendar area is available. Never built from a string.
+   */
+  calendar?: NavItem;
   /** A staff-only link into Administration, drawn after this workspace's Configuration. */
   administration?: NavItem;
   /**
@@ -74,6 +79,11 @@ export type ShellSection = {
   key: ShellSectionKey;
   /** `null` draws no heading — Home names itself. */
   label: string | null;
+  /**
+   * The heading's own destination: an entered workspace's canonical Home (ADR-047). Present only
+   * when this person may operate that Home, so a configuration-only member's heading is not a link.
+   */
+  href?: string;
   items: NavItem[];
 };
 
@@ -221,6 +231,12 @@ export function projectShell(input: ShellInput): ShellSection[] {
       section: 'workspaces',
       children: branch.map(concern => ({ ...concern, section: 'workspaces' as const })),
     } : undefined;
+    // The registered calendar beneath this workspace's Home, only while that Home is usable.
+    const calendarRoute = home ? `${home.route ?? home.segment}/calendar` : null;
+    const calendarArea = calendarRoute ? AREAS.find((area) => area.workspace === workspace.key && (area.route ?? area.segment) === calendarRoute) : undefined;
+    const calendar: NavItem | undefined = calendarArea && eligible(calendarArea)
+      ? { key: calendarArea.segment, label: calendarArea.label, href: areaHref(organizationId, calendarArea.segment), section: 'workspaces' }
+      : undefined;
     return [{
       key: `workspace-${workspace.key}`,
       label: workspace.label,
@@ -228,6 +244,7 @@ export function projectShell(input: ShellInput): ShellSection[] {
       section: 'workspaces',
       activeHrefs: [...AREAS.filter((area) => area.workspace === workspace.key && area.group === 'workspaces' && eligible(area)).map((area) => areaHref(organizationId, area.segment)), ...(configuration ? [configurationHref, ...(configuration.activeHrefs ?? [])] : [])],
       configuration,
+      ...(calendar ? { calendar } : {}),
       configurationOnly: !home,
       destinations: areas.filter((area) => area.segment !== home?.segment).map((area) => destinationItem(organizationId, area)),
     }];
@@ -250,8 +267,8 @@ function workspaceContext(workspace: NavItem, organizationId: string): ContextNa
   return {
     workspace,
     backHref: areaHref(organizationId, 'home'),
-    sections: [{ key: 'workspaces', label: workspace.label, items: [
-      ...(!workspace.configurationOnly ? [{ key: 'workspace-overview', label: 'Overview', href: workspace.href, section: 'workspaces' as const, exact: true }] : []),
+    // The workspace heading is the way to its Home; no child repeats the Home route (ADR-047).
+    sections: [{ key: 'workspaces', label: workspace.label, ...(!workspace.configurationOnly ? { href: workspace.href } : {}), items: [
       ...(workspace.destinations ?? []),
       ...(workspace.configuration ? [workspace.configuration] : []),
       ...(workspace.administration ? [workspace.administration] : []),
@@ -374,7 +391,8 @@ export type LocationNavigation = {
 export type PageNavigation = {
   parentHref?: string;
   activeKey: string | null;
-  groups: { label: string | null; items: NavItem[] }[];
+  /** `href` is the group heading's own destination (a workspace Home); `current` marks it as this page. */
+  groups: { label: string | null; href?: string; current?: boolean; items: NavItem[] }[];
 };
 
 /** Page-published ancestors and the authorized shell projection share one semantic location. */
@@ -415,31 +433,14 @@ export function pageNavigation(navigation: LocationNavigation | undefined, pathn
   const groups: PageNavigation['groups'] = [];
   // Dropdowns stay in the owning context (a workspace or Administration); Settings uses its own supplied projection.
   if (workspace || sections.some((section) => section.key.startsWith('settings-'))) {
-    const append = (items: NavItem[], label: string | null) => {
+    const append = (items: NavItem[], label: string | null, href?: string) => {
       const leaves = items.filter((item) => inScope(item.href) && !item.children).map((item) => ({ ...item, children: undefined }));
-      if (leaves.length) groups.push({ label, items: leaves });
+      // A workspace heading is its Home: the group keeps it even when the workspace has no other page.
+      const heading = href && inScope(href) ? { href, current: cleanPath(href) === path } : {};
+      if (leaves.length || 'href' in heading) groups.push({ label, ...heading, items: leaves });
       for (const item of items) if (item.children) append(item.children, item.label);
     };
-    for (const section of scoped) append(section.items, section.label);
+    for (const section of scoped) append(section.items, section.label, section.href);
   }
   return { parentHref, activeKey, groups };
-}
-
-/**
- * The current workspace's operating destinations, for a page header's compact strip. The same
- * authorized projection the sidebar draws, so labels, order, visibility and active state cannot drift
- * from it: Overview and the workspace's pages, never its Configuration branch or a staff-only link.
- * Null outside a workspace, in another organization, with fewer than two destinations, or on a page
- * none of them owns (a configuration page keeps the sidebar as its only navigation).
- */
-export function headerDestinations(navigation: LocationNavigation | undefined, pathname: string): { label: string; items: NavItem[]; activeKey: string } | null {
-  if (!navigation) return null;
-  const path = pathname.split(/[?#]/)[0].replace(/\/$/, '');
-  if (organizationIdFromPath(path) !== navigation.organizationId) return null;
-  const context = workspaceNavigation(navigation.sections, path);
-  if (!context?.workspace.key.startsWith('workspace-')) return null;
-  const items = context.sections[0].items.filter((item) => !item.children && !item.key.startsWith('platform-'));
-  if (items.length < 2) return null;
-  const activeKey = activeItemKey([{ key: 'workspaces', label: null, items }], path);
-  return activeKey ? { label: context.workspace.label, items, activeKey } : null;
 }

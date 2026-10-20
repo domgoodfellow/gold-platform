@@ -164,7 +164,7 @@ This is the approved information architecture (ADR-046). `docs/ui-system.md` own
 
 - Outside a workspace, the organization sidebar shows the shared destinations (Home, Search, Library) and the workspace directory, one row per eligible workspace. The row opens the workspace's canonical **Home**.
 - Entering a workspace changes the contextual sidebar to that workspace's navigation: its Home, its eligible operating destinations and its applicable configuration entry points.
-- Inside the workspace, the workspace heading links to its canonical Home and shows as current there. No child row or header-strip item repeats the Home route (ADR-047, amending ADR-046 point 3). This is the approved target; the current sidebar and strip still show the Home as an Overview row until the navigation slice ships.
+- Inside the workspace, the workspace heading links to its canonical Home and shows as current there. No child row repeats the Home route (ADR-047, amending ADR-046 point 3). The page header never reproduces the workspace's destinations; the sidebar owns them (ADR-048). A member who may only configure the workspace gets no operating Home link.
 - Workspace destinations are never flattened into the organization-level list.
 - Labels, routes, hierarchy, visibility and permissions derive from the canonical projections. A business profile may relabel and reorder a workspace's own destinations; it never grants access, adds destinations or moves a destination to another workspace.
 - The page header communicates location and offers page-specific actions; it never defines workspace navigation of its own.

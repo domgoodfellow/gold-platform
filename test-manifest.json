@@ -298,6 +298,15 @@
       "category": "component",
       "concerns": ["navigation", "page-identity", "crm", "accessibility"]
     },
+    "apps/web/tests/component/workspace-heading.test.tsx": {
+      "category": "component",
+      "concerns": ["navigation", "accessibility", "permissions"]
+    },
+    "apps/web/e2e/workspace-navigation.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": ["navigation", "responsive", "accessibility", "permissions"],
+      "note": "Workspace navigation (ADR-047, ADR-048): heading link, no Overview child, phone menu, header without destinations, registered Calendar shortcut, heading distinct when collapsed, configuration-only and entitlement cases at 320-1440. Disposable local tenants only."
+    },
     "apps/web/e2e/page-location.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": ["navigation", "page-identity", "crm", "responsive", "accessibility"],

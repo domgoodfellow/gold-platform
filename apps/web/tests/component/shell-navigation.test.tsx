@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { useEffect, type ReactNode } from 'react';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SidebarProvider } from '@gold/ui/components/sidebar';
@@ -189,7 +189,10 @@ describe('contextual sidebar rendering', () => {
     route.pathname = `/organizations/${org}/customers/123`;
     rerender(view());
     expect(screen.getByRole('link', { name: 'Customers' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Overview' })).not.toHaveAttribute('aria-current');
+    // ADR-047: the workspace heading is the way to CRM's Home, and it is not current on a child page.
+    expect(screen.queryByRole('link', { name: 'Overview' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'CRM home' })).toHaveAttribute('href', `/organizations/${org}/sales`);
+    expect(screen.getByRole('link', { name: 'CRM home' })).not.toHaveAttribute('aria-current');
     expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', `/organizations/${org}/home`);
     route.pathname = `/organizations/${org}/calls`;
     rerender(view());
@@ -223,7 +226,10 @@ describe('responsive breadcrumb interaction', () => {
     const trigger = screen.getByRole('button', { name: 'Navigate within current section' });
     await userEvent.click(trigger);
     expect(screen.getByRole('menuitem', { name: 'Schedule' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('menuitem', { name: 'Overview' })).toHaveAttribute('href', `${base}/field`);
+    // ADR-047: the phone menu reaches Work's Home through its heading, not an Overview item.
+    expect(screen.queryByRole('menuitem', { name: 'Overview' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Work home' })).toHaveAttribute('href', `${base}/field`);
+    expect(screen.getByRole('menuitem', { name: 'Work home' })).not.toHaveAttribute('aria-current');
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
     expect(trigger).toHaveFocus();
@@ -305,37 +311,21 @@ describe('persistent application controls and Settings', () => {
 
 
 describe('workspace header controls', () => {
-  it('hides only optional destinations when actions or the page canvas need the space', () => {
-    route.pathname = '/organizations/11111111-1111-4111-8111-111111111111/marketing';
-    let available = 1200;
-    let actionWidth = 200;
-    let resize: () => void = () => {};
-    vi.stubGlobal('ResizeObserver', class {
-      constructor(callback: () => void) { resize = callback; }
-      observe() {} disconnect() {}
-    });
-    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function(this: HTMLElement) {
-      const width = this.hasAttribute('data-header-controls') ? available : this.hasAttribute('data-action') ? actionWidth : this.querySelector('nav') ? 500 : 0;
-      return { width, height: 40, x: 0, y: 0, top: 0, left: 0, right: width, bottom: 40, toJSON() {} };
-    });
-    const sections = projectShell({ organizationId: '11111111-1111-4111-8111-111111111111', enabledModules: new Set(), featureAvailability: new Set(), capabilities: new Set(ALL_CAPABILITIES) });
-    const { container } = render(<WorkspaceCrumbsProvider navigation={{ organizationId: '11111111-1111-4111-8111-111111111111', sections }}>
-      <PageHeader title="Marketing" navigation actions={<button data-action>Create</button>} />
-    </WorkspaceCrumbsProvider>);
-    expect(screen.getByRole('navigation', { name: 'Marketing destinations' })).toBeInTheDocument();
-    actionWidth = 750;
-    act(() => resize());
-    expect(screen.queryByRole('navigation', { name: 'Marketing destinations' })).not.toBeInTheDocument();
-    expect(container.querySelector('[inert]')).toHaveAttribute('aria-hidden', 'true');
-    expect(screen.getByRole('button', { name: 'Create' })).toBeVisible();
-    actionWidth = 200;
-    available = 720;
-    act(() => resize());
-    expect(screen.queryByRole('navigation', { name: 'Marketing destinations' })).not.toBeInTheDocument();
-    available = 1200;
-    act(() => resize());
-    expect(screen.getByRole('navigation', { name: 'Marketing destinations' })).toBeInTheDocument();
-    rect.mockRestore();
+  // ADR-048 retired the header destination strip: the entered-workspace sidebar owns workspace
+  // navigation. The test that measured the strip yielding space to actions is replaced by the
+  // contract that replaced it — actions and page-support modes, in order, and no destination list.
+  it('carries the page actions and support modes in order, and never the workspace destinations', () => {
+    const org = '11111111-1111-4111-8111-111111111111';
+    route.pathname = `/organizations/${org}/marketing`;
+    const sections = projectShell({ organizationId: org, enabledModules: new Set(), featureAvailability: new Set(), capabilities: new Set(ALL_CAPABILITIES) });
+    const { container } = render(<WorkspaceRailProvider><WorkspaceCrumbsProvider navigation={{ organizationId: org, sections }}>
+      <PageHeader title="Marketing" actions={<button>Create</button>} activity insights configure />
+    </WorkspaceCrumbsProvider></WorkspaceRailProvider>);
+    const row = container.querySelector('[data-header-controls]') as HTMLElement;
+    expect(within(row).queryByRole('navigation')).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Marketing destinations' })).toBeNull();
+    for (const destination of ['Campaigns', 'Audiences', 'Leads', 'Performance']) expect(within(row).queryByRole('link', { name: destination })).toBeNull();
+    expect(within(row).getAllByRole('button').map((button) => button.textContent)).toEqual(['Create', 'Activity', 'Insights', 'Configure']);
   });
 
   it('publishes one collection heading without repeating its global-header identity', () => {

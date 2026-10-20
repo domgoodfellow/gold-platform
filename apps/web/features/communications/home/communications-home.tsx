@@ -58,7 +58,6 @@ export function CommunicationsHome({ organizationId, timezone, data, configure }
   return <AppPage data-communications-dashboard className="@container/comms space-y-3 pb-14 md:pb-0">
     <PageHeader
       title="Communications"
-      navigation
       actions={<>
         <form action={home} className="flex items-center gap-1"><SelectInput aria-label="Communication date range" name="when" defaultValue={params.when} className="h-9 w-28"><option value="today">Today</option><option value="week">Last 7 days</option><option value="month">Last 30 days</option></SelectInput><Button tone="secondary" size="small" type="submit">Apply</Button></form>
         {mayMessage ? <ButtonLink tone="primary" href={inbox}><MessageSquare aria-hidden /> Open inbox</ButtonLink> : null}

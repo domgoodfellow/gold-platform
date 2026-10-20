@@ -54,7 +54,6 @@ export function PageHeader({
   section,
   breadcrumbLabel,
   meta,
-  navigation = false,
   actions,
   activity = false,
   insights = false,
@@ -83,13 +82,6 @@ export function PageHeader({
   breadcrumbLabel?: ReactNode;
   /** Short, secondary facts about the record — a schedule window, a status — under the title. */
   meta?: ReactNode;
-  /**
-   * Draws the current workspace's destinations at the start of the action row, from the same
-   * authorized projection as the sidebar. Hidden when the header itself is too narrow (an open
-   * Agent or Configure panel narrows it without changing the viewport); the sidebar and the phone
-   * location menu still reach every destination.
-   */
-  navigation?: boolean;
   /** Business actions, in reading order. Never Configure — see `configure`. */
   actions?: ReactNode;
   /** Offers the Activity mode: what recently changed here. Only where a domain-level read exists. */
@@ -103,7 +95,7 @@ export function PageHeader({
 }) {
   const titleInBar = location !== undefined || (!section && breadcrumbLabel === undefined && typeof title === 'string');
   return (
-    <header className={cx('@container/page-header flex flex-wrap items-start gap-x-4 gap-y-3', titleInBar && !meta && !navigation ? 'justify-end' : 'justify-between', className ?? 'mb-6')}>
+    <header className={cx('@container/page-header flex flex-wrap items-start gap-x-4 gap-y-3', titleInBar && !meta ? 'justify-end' : 'justify-between', className ?? 'mb-6')}>
       <div className={cx('min-w-0', titleInBar && !meta ? 'sr-only' : 'flex-1 basis-64')}>
         {location ? (
           <>
@@ -118,8 +110,8 @@ export function PageHeader({
         )}
         {meta ? <div className={cx('text-sm text-muted', !titleInBar && 'mt-1')}>{meta}</div> : null}
       </div>
-      {navigation || actions || activity || insights || configure ? (
-        <HeaderControls navigation={navigation}>
+      {actions || activity || insights || configure ? (
+        <HeaderControls>
           {actions}
           {activity ? <SupportTrigger mode="activity" /> : null}
           {insights ? <SupportTrigger mode="insights" /> : null}

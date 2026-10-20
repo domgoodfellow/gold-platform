@@ -216,6 +216,14 @@ describe('the operator shell navigation', () => {
     for (const area of marketing) expect(area.relevantCapabilities, area.segment).toEqual(['marketing.read', 'marketing.manage']);
   });
 
+  it('keeps workspace destinations out of page headers: the sidebar owns them (ADR-048)', () => {
+    for (const file of ['components/headers/header-controls.tsx', 'components/headers/page-header.tsx', 'components/patterns/collection-header.tsx', 'components/patterns/workspace-home.tsx']) {
+      const source = readFileSync(`${WEB_ROOT}/${file}`, 'utf8');
+      expect(source, file).not.toMatch(/headerDestinations|WorkspaceDestinationNav|useLocationNavigation|projectedItems|workspaceNavigation/);
+    }
+    expect(existsSync(`${WEB_ROOT}/components/navigation/workspace-destination-nav.tsx`)).toBe(false);
+  });
+
   it('draws workspace destinations once: no page keeps its own destination list', () => {
     // The header strip presents the projection; these pages once hardcoded their own lists.
     for (const file of ['features/marketing/workspace.tsx', 'features/finance/home/finance-home.tsx', 'features/finance/collections/finance-collection.tsx', 'features/communications/home/communications-home.tsx', 'features/studio/studio-home.tsx', 'features/ai/workspace.tsx', 'features/ai/ui.tsx']) {

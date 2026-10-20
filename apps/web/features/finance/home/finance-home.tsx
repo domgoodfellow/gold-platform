@@ -39,7 +39,7 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
     { label: 'Payment readiness', icon: Settings2, value: <span className="text-lg">{readiness}</span>, context: setup.length ? `${setup.length} configuration items` : 'Services, currency & payment acceptance', href: `${base}/finance/configuration/pricing#getting-paid` },
   ];
   return <AppPage className="@container/finance space-y-3 pb-16 md:pb-0">
-    <PageHeader title="Finance" navigation actions={<>
+    <PageHeader title="Finance" actions={<>
       <TextInput type="month" aria-label="Reporting month" value={period.month} onChange={e => { if (e.target.value) router.push(`${finance}?month=${e.target.value}`); }} className="h-9 w-44 sm:w-40" />
       {may('invoice.issue') ? <FinanceWorkflow organizationId={organizationId} kind="invoice" /> : null}{may('work_item.price') ? <FinanceWorkflow organizationId={organizationId} kind="quote" mayCreateWork={may('work_item.create')} /> : null}{may('payment.record') ? <FinanceWorkflow organizationId={organizationId} kind="payment" /> : null}
       {may('report.read') ? <ButtonLink tone="secondary" href={`${finance}/reports`}>Financial reports</ButtonLink> : null}

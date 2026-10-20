@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { AREAS, WORKSPACES, configTarget, configTargetOffered, workspaceAncestry, areaLabel } from '@/lib/navigation';
-import { headerDestinations } from '@/lib/shell';
 import { SHELL_SECTION_ORDER, pageNavigation, workspaceNavigation, activeItemKey, inPlatformScope, itemContains, projectedItems, projectShell, projectHeaderUtilities, shellHomeItem, topLevelSections, withAdministration, type ShellInput, type ShellSection } from '@/lib/shell';
 import { PLATFORM_CAPABILITIES } from '@/lib/domain/platform/permissions';
 import { platformAncestry, platformDestinationsFor, platformHref, platformRouteRequires } from '@/lib/platform-navigation';
@@ -292,10 +291,13 @@ describe('contextual workspace navigation', () => {
     expect(context.workspace.key).toBe(`workspace-${workspace.key}`);
     expect(context.backHref).toBe(`/organizations/${ORG}/home`);
     expect(context.sections[0].label).toBe(workspace.label);
-    expect(context.sections[0].items[0]).toMatchObject({ label: 'Overview', href: `/organizations/${ORG}/${workspace.home}`, exact: true });
-    expect(activeItemKey(context.sections, `/organizations/${ORG}/${workspace.home}`)).toBe('workspace-overview');
+    // ADR-047: the workspace heading is the way to its Home; no child (formerly Overview) repeats the Home route.
+    const home = `/organizations/${ORG}/${workspace.home}`;
+    expect(context.sections[0].href).toBe(home);
+    expect(context.sections[0].items.some((item) => item.href === home)).toBe(false);
+    expect(activeItemKey(context.sections, home)).toBeNull();
     const expected = AREAS.filter((area) => area.workspace === workspace.key && area.sidebar !== false && area.segment !== workspace.home);
-    expect(context.sections[0].items.slice(1).filter(item => item.key !== 'workspace-configuration').map((item) => item.key)).toEqual(expected.map((area) => area.segment));
+    expect(context.sections[0].items.filter(item => item.key !== 'workspace-configuration' && !item.key.startsWith('platform-')).map((item) => item.key)).toEqual(expected.map((area) => area.segment));
   });
   it.each([
     ['customers/123', 'crm', 'customers'], ['customers/pipeline', 'crm', 'pipeline'],
@@ -321,7 +323,9 @@ describe('contextual workspace navigation', () => {
     for (const path of ['comms', 'calls/123', 'customers/pipeline', 'finance/invoices/123', 'schedule', 'studio/forms', 'support', 'automations/rules']) {
       expect(workspaceNavigation(reduced, `/organizations/${ORG}/${path}`), path).toBeNull();
     }
-    expect(workspaceNavigation(reduced, `/organizations/${ORG}/field`)!.sections[0].items.map((item) => item.key)).toEqual(['workspace-overview', 'work']);
+    // ADR-047: Work's Home is its heading, not an Overview child.
+    expect(workspaceNavigation(reduced, `/organizations/${ORG}/field`)!.sections[0]).toMatchObject({ href: `/organizations/${ORG}/field` });
+    expect(workspaceNavigation(reduced, `/organizations/${ORG}/field`)!.sections[0].items.map((item) => item.key)).toEqual(['work']);
   });
   it('does not carry workspace selection into another organization or organization Home', () => {
     expect(workspaceNavigation(project(), '/organizations/other/customers/123')).toBeNull();
@@ -343,7 +347,9 @@ describe('responsive page-location projection', () => {
     const location = pageNavigation(navigation, `${base}/schedule`, []);
     expect(location.parentHref).toBe(`${base}/field`);
     expect(location.groups[0].label).toBe('Work');
-    expect(location.groups[0].items[0].href).toBe(`${base}/field`);
+    // ADR-047: Work's Home is the group heading's own link, not its first item.
+    expect(location.groups[0]).toMatchObject({ href: `${base}/field`, current: false });
+    expect(location.groups[0].items.some((item) => item.href === `${base}/field`)).toBe(false);
     expect(location.groups[0].items.some((item) => item.href === `${base}/work`)).toBe(true);
     expect(location.activeKey).toBe('schedule');
   });
@@ -371,9 +377,11 @@ describe('responsive page-location projection', () => {
     expect(pageNavigation(limited, `${base}/assets`, []).groups).toEqual([]);
     expect(pageNavigation(limited, `${base}/field`, []).groups.flatMap((group) => group.items).some((item) => item.key === 'assets')).toBe(false);
   });
-  it('offers Marketing its overview and four operating pages, and keeps a campaign under Campaigns', () => {
+  it('offers Marketing its Home as the heading and four operating pages, and keeps a campaign under Campaigns', () => {
     const location = pageNavigation(navigation, `${base}/marketing/campaigns/campaign-1`, []);
-    expect(location.groups.flatMap((group) => group.items).map((item) => item.key)).toEqual(['workspace-overview', 'marketing-campaigns', 'marketing-audiences', 'marketing-leads', 'marketing-performance']);
+    // ADR-047: Marketing's Home is the group heading, not an Overview item.
+    expect(location.groups[0]).toMatchObject({ label: 'Marketing', href: `${base}/marketing`, current: false });
+    expect(location.groups.flatMap((group) => group.items).map((item) => item.key)).toEqual(['marketing-campaigns', 'marketing-audiences', 'marketing-leads', 'marketing-performance']);
     expect(location.activeKey).toBe('marketing-campaigns');
   });
   it('uses the restricted Settings projection without adding tenant workspaces', () => {
@@ -414,6 +422,8 @@ describe('workspace Configuration authority', () => {
     expect(row.configurationOnly).toBe(true);
     const context = workspaceNavigation(sections, row.href)!;
     expect(context.sections[0].items.map(item => item.key)).toEqual(['workspace-configuration']);
+    // ADR-047: the heading links to the operating Home only for someone who may use it.
+    expect(context.sections[0].href).toBeUndefined();
     expect(workspaceNavigation(sections, `/organizations/${ORG}/calls`)).toBeNull();
     expect(workspaceNavigation(sections, `/organizations/${ORG}/comms/inbox`)).toBeNull();
     expect(activeItemKey(context.sections, `/organizations/${ORG}/comms/configuration/calling`)).toBe('call-setup');
@@ -494,7 +504,8 @@ describe('workspace calendars', () => {
 
 describe('Support workspace navigation', () => {
   const base = `/organizations/${ORG}/support`;
-  const operating = ['workspace-overview', 'support-cases', 'support-queue-workbench', 'support-service-levels-view', 'support-reports'];
+  // ADR-047: Support's Home is its heading, so the operating destinations no longer begin with an Overview child.
+  const operating = ['support-cases', 'support-queue-workbench', 'support-service-levels-view', 'support-reports'];
   const readOnly = () => project(['support.read'], { enabledModules: new Set(), featureAvailability: new Set() });
   it('shows the workspace row on Home, not its pages', () => {
     const sections = project();
@@ -507,9 +518,9 @@ describe('Support workspace navigation', () => {
     expect(workspaceNavigation(project(), base)!.sections[0].items.map((item) => item.key)).toEqual(operating);
     expect(workspaceNavigation(readOnly(), base)!.sections[0].items.map((item) => item.key)).toEqual(operating);
     expect(workspaceNavigation(project(), base)!.backHref).toBe(`/organizations/${ORG}/home`);
+    expect(workspaceNavigation(project(), base)!.sections[0].href).toBe(base);
   });
   it.each([
-    [base, 'workspace-overview'],
     [`${base}/cases`, 'support-cases'],
     [`${base}/cases/case-1`, 'support-cases'],
     [`${base}/queues`, 'support-queue-workbench'],
@@ -551,37 +562,55 @@ describe('Support workspace navigation', () => {
   });
 });
 
-describe('header destination strip', () => {
+// ADR-048 retired the header destination strip; the entered-workspace sidebar owns workspace
+// navigation. The strip's own presentation tests went with it. What they also protected — which
+// destinations each role reaches and which one is current — is kept here against the projection
+// the sidebar draws.
+describe('entered-workspace destinations by role', () => {
   const base = `/organizations/${ORG}`;
-  const strip = (capabilities: readonly Capability[], path: string) => headerDestinations({ organizationId: ORG, sections: project(capabilities) }, `${base}/${path}`);
-  const keysOf = (result: ReturnType<typeof strip>) => result?.items.map((item) => item.key);
-  it('presents exactly the sidebar destinations of the entered workspace, with the same active item', () => {
-    const path = `${base}/marketing/leads`;
-    const context = workspaceNavigation(project(), path)!;
-    const result = strip(ALL_CAPABILITIES, 'marketing/leads');
-    expect(keysOf(result)).toEqual(context.sections[0].items.map((item) => item.key));
-    expect(result?.items.map((item) => item.label)).toEqual(context.sections[0].items.map((item) => item.label));
-    expect(result?.activeKey).toBe(activeItemKey(context.sections, path));
-    expect(result?.activeKey).toBe('marketing-leads');
-  });
-  it('gives a read-only AI member only the member pages, and shows no strip on agent configuration', () => {
-    expect(keysOf(strip([], 'ai'))).toEqual(['workspace-overview', 'ai-activity', 'ai-evaluations']);
-    expect(strip(ALL_CAPABILITIES, 'ai/evaluations')?.activeKey).toBe('ai-evaluations');
-    expect(strip(ALL_CAPABILITIES, 'ai/agents')).toBeNull();
+  const destinations = (capabilities: readonly Capability[], path: string) => {
+    const context = workspaceNavigation(project(capabilities), `${base}/${path}`);
+    return context?.sections[0].items.filter((item) => !item.children && !item.key.startsWith('platform-')).map((item) => item.key);
+  };
+  it('gives a read-only AI member only the member pages, and keeps agent configuration out of its pages', () => {
+    expect(destinations([], 'ai')).toEqual(['ai-activity', 'ai-evaluations']);
+    expect(activeItemKey(workspaceNavigation(project(), `${base}/ai/evaluations`)!.sections, `${base}/ai/evaluations`)).toBe('ai-evaluations');
   });
   it('keeps calling-only and messaging-only Communications distinct', () => {
-    expect(keysOf(strip(['call.place'], 'comms'))).toEqual(['workspace-overview', 'calls']);
-    expect(keysOf(strip(['message.send'], 'comms'))).toEqual(['workspace-overview', 'comms-inbox']);
-  });
-  it('draws no strip where only an overview exists, outside a workspace, or for another organization', () => {
-    expect(strip([], 'studio')).toBeNull();
-    expect(strip(ALL_CAPABILITIES, 'home')).toBeNull();
-    expect(headerDestinations({ organizationId: ORG, sections: project() }, '/organizations/other/marketing')).toBeNull();
-    expect(headerDestinations(undefined, `${base}/marketing`)).toBeNull();
+    expect(destinations(['call.place'], 'comms')).toEqual(['calls']);
+    expect(destinations(['message.send'], 'comms')).toEqual(['comms-inbox']);
   });
   it('keeps detail routes on their destination for Finance and Support, and Studio pages for managers only', () => {
-    expect(strip(ALL_CAPABILITIES, 'finance/invoices/invoice-1')?.activeKey).toBe('finance-invoices');
-    expect(strip(ALL_CAPABILITIES, 'support/cases/case-1')?.activeKey).toBe('support-cases');
-    expect(keysOf(strip(ALL_CAPABILITIES, 'studio'))).toEqual(['workspace-overview', 'studio-website', 'studio-portal', 'studio-forms', 'studio-templates']);
+    expect(activeItemKey(workspaceNavigation(project(), `${base}/finance/invoices/invoice-1`)!.sections, `${base}/finance/invoices/invoice-1`)).toBe('finance-invoices');
+    expect(activeItemKey(workspaceNavigation(project(), `${base}/support/cases/case-1`)!.sections, `${base}/support/cases/case-1`)).toBe('support-cases');
+    expect(destinations(ALL_CAPABILITIES, 'studio')).toEqual(['studio-website', 'studio-portal', 'studio-forms', 'studio-templates']);
+    expect(destinations([], 'studio')).toEqual([]);
+  });
+});
+
+describe('workspace Calendar shortcut', () => {
+  const base = `/organizations/${ORG}`;
+  const registered = new Set(AREAS.map((area) => `${base}/${area.route ?? area.segment}`));
+  it.each(WORKSPACES)('offers $label its registered calendar, beneath its Home', (workspace) => {
+    const row = projectedItems(project()).find((item) => item.key === `workspace-${workspace.key}`);
+    if (!row || row.configurationOnly) return;
+    expect(row.calendar, workspace.key).toBeDefined();
+    expect(row.calendar!.href).toBe(`${row.href}/calendar`);
+    // Never built from a string: the address is a registered destination.
+    expect(registered.has(row.calendar!.href)).toBe(true);
+  });
+  it('offers no calendar to a workspace whose Home this person cannot use', () => {
+    const row = projectedItems(project(['field.manage'])).find((item) => item.key === 'workspace-communications')!;
+    expect(row.configurationOnly).toBe(true);
+    expect(row.calendar).toBeUndefined();
+  });
+  it('offers no calendar for a workspace that is not part of the business', () => {
+    const reduced = project([], { enabledModules: new Set(), featureAvailability: new Set() });
+    expect(projectedItems(reduced).find((item) => item.key === 'workspace-communications')?.calendar).toBeUndefined();
+  });
+  it('reaches the calendar from inside the workspace and keeps the workspace context there', () => {
+    const context = workspaceNavigation(project(), `${base}/sales/calendar`)!;
+    expect(context.workspace.key).toBe('workspace-crm');
+    expect(context.workspace.calendar?.href).toBe(`${base}/sales/calendar`);
   });
 });

@@ -34,9 +34,9 @@ The Batch 1 review found that page location and page titles had no single owner:
 
 - `lib/route/page-location.ts` is the resolver. Header components adopt it one archetype at a time; until a page is migrated, its existing crumbs remain.
 - Pages stop writing ancestors. `workspaceAncestry`, `workspaceConfigCrumbs` and `platformAncestry` are retired once every caller has moved.
-- The Overview row, the Home strip item and the Settings visible title change only when their slices ship; this record states the target.
+- The workspace heading replaced the Overview row and the Home strip item in Slice 2A. The Settings visible titles change only when their slice ships.
 - Migration status is recorded in `docs/ui-system.md` → *Page location contract*. The first adopters are the CRM operating pages (`RESOLVED_LOCATION_ROUTES`).
-- Known gaps at acceptance: the sidebar still relabels destinations by displayed word (`businessLabel`); the header Calendar link is header-owned navigation (Batch 2); the Overview row, the Settings visible titles and the Library placeholders remain until their slices ship.
+- Known gaps at acceptance: the sidebar still relabels destinations by displayed word (`businessLabel`); the header Calendar link is header-owned navigation (Batch 2); the Settings visible titles and the Library placeholders remain until their slices ship.
 
 ## Rejected alternatives
 

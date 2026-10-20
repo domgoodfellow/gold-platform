@@ -151,7 +151,6 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
 /** Every item the projection can produce: the areas and the Administration destinations. */
 export const NAV_ICONS: Record<string, LucideIcon> = {
   ...AREA_ICONS,
-  'workspace-overview': LayoutDashboard,
   'workspace-configuration': Settings,
   // Workspace destinations share their icons across sidebar, rail and phone Menu.
   'workspace-crm': Users,
@@ -300,6 +299,26 @@ function PrimaryNavigation({ organizationId, home, library, active }: { organiza
 }
 
 /**
+ * The heading of an entered workspace, which is also the way to its canonical Home (ADR-047): the
+ * workspace's own icon and name, set apart as the group's heading rather than drawn as one of its
+ * pages, current while the Home is open. Its accessible name says where it goes.
+ */
+function WorkspaceHeading({ workspace, href, label, current }: { workspace: NavItem; href: string; label: string; current: boolean }) {
+  const Icon = NAV_ICONS[workspace.key];
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={current} tooltip={`${label} home`} className="font-semibold">
+        <Link href={href} aria-label={`${label} home`} aria-current={current ? 'page' : undefined}>
+          {/* An outlined tile marks the workspace level, so a page sharing its glyph (CRM and Customers) never reads as the same row. Outlined, not filled: a filled tile would look selected when it is not. */}
+          {Icon ? <span aria-hidden data-workspace-tile className="-m-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border border-sidebar-border"><Icon className="size-3.5!" /></span> : null}
+          <span>{label}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+/**
  * Every breakpoint draws the same resolved sections: the primary controls, then either the business's
  * workspace directory or, once somebody has entered a workspace or Administration, that context's own
  * destinations. Leaving a context is Home's job, so no separate "back" row is drawn.
@@ -318,7 +337,13 @@ export function OrgNav({ sections, organizationId }: { sections: ShellSection[];
 
   const group = (section: ShellSection) => (
     <SidebarGroup key={section.key} className={!context && section.key === 'administration' ? 'border-t border-sidebar-border' : undefined}>
-      {section.label ? <SidebarGroupLabel>{section.label}</SidebarGroupLabel> : null}
+      {section.label && section.href && context ? (
+        // An entered workspace's heading is its Home (ADR-047): a row, so it keeps its icon in the collapsed rail.
+        // The divider sets the heading apart from the workspace's own pages, expanded or collapsed.
+        <SidebarMenu data-workspace-heading className="mb-2 border-b border-sidebar-border pb-2">
+          <WorkspaceHeading workspace={context.workspace} href={section.href} label={section.label} current={pathname.split(/[?#]/)[0].replace(/\/$/, '') === section.href} />
+        </SidebarMenu>
+      ) : section.label ? <SidebarGroupLabel>{section.label}</SidebarGroupLabel> : null}
       <SidebarGroupContent>
         <SidebarMenu>
           {section.items.map((item) => (
@@ -534,7 +559,8 @@ export function OrganizationFrame({
   const administration = sections.find((section) => section.key === 'administration')?.items[0];
   const shared = { mark, name, organizations, email, signOutAction };
   const calendarContext = !recovery && !settingsContext ? workspaceNavigation(sections, pathname) : null;
-  const calendarWorkspace = calendarContext?.workspace.key.startsWith('workspace-') ? calendarContext.workspace : null;
+  // The workspace's registered Calendar, from the projection: absent for a workspace whose Home this person cannot use.
+  const calendarWorkspace = calendarContext?.workspace.key.startsWith('workspace-') && calendarContext.workspace.calendar ? calendarContext.workspace : null;
 
   return (
     <CommandCenterProvider key={organizationId} organizationId={organizationId} displayName={displayName}><WorkspaceShell
@@ -545,7 +571,7 @@ export function OrganizationFrame({
           navigationTrigger="always"
           agentTrigger="md"
           utilities={utilities}
-          beforeActions={<>{!recovery ? <CommandPalette /> : null}{calendarWorkspace ? <Link href={`${calendarWorkspace.href}/calendar`} aria-label={`${calendarWorkspace.label} calendar`} className="inline-flex min-h-9 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-hover"><CalendarDays aria-hidden size={16}/><span className="hidden sm:inline">Calendar</span></Link> : null}</>}
+          beforeActions={<>{!recovery ? <CommandPalette /> : null}{calendarWorkspace?.calendar ? <Link href={calendarWorkspace.calendar.href} aria-label={`${calendarWorkspace.label} calendar`} className={cx('inline-flex min-h-9 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-hover', FOCUS_RING)}><CalendarDays aria-hidden size={16}/><span className="hidden sm:inline">Calendar</span></Link> : null}</>}
         />
       }
       agent={agent}

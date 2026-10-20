@@ -439,7 +439,6 @@ export function AiWorkspace({
     <AppPage className="space-y-4">
       <PageHeader
         title={title}
-        navigation
         actions={<>
           {(!view || view === "activity") && <SelectInput
           aria-label="Date range"

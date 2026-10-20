@@ -37,33 +37,22 @@ test.describe('a tenant owner', () => {
       const row = page.locator('[data-header-controls]').first();
       await expect(row).toBeVisible();
       await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
-      const strip = row.getByRole('navigation');
-      if (width < 896) await expect(strip).toHaveCount(0);
-      else if (await strip.count()) {
-        const links = await strip.getByRole('link').evaluateAll(elements => elements.map(element => element.getAttribute('href')));
-        const sidebarLinks = await sidebar(page).getByRole('link').evaluateAll(elements => elements.map(element => element.getAttribute('href')));
-        expect(sidebarLinks.filter(href => links.includes(href))).toEqual(links);
-        await expect(strip.locator('[aria-current="page"]')).toHaveCount(1);
-        const bounds = await row.evaluate(element => {
-          const nav = element.querySelector('nav')!.getBoundingClientRect();
-          const actions = element.lastElementChild!.getBoundingClientRect();
-          return { navigationBottom: nav.bottom, navigationTop: nav.top, actionsTop: actions.top, actionsBottom: actions.bottom, overlap: nav.right > actions.left };
-        });
-        expect(bounds.overlap).toBe(false);
-        expect(bounds.navigationTop).toBeLessThan(bounds.actionsBottom);
-        expect(bounds.actionsTop).toBeLessThan(bounds.navigationBottom);
-      }
+      // ADR-048: the header no longer reproduces the sidebar's destinations; the sidebar owns them.
+      await expect(row.getByRole('navigation')).toHaveCount(0);
       expect(await row.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
       await page.screenshot({ path: info.outputPath(`${path.replaceAll('/', '-')}-${width}.png`) });
       if (width === 1440) {
         // Models either docked panel narrowing the canvas without a viewport resize.
         await row.locator('..').evaluate(element => { element.style.width = '720px'; element.style.maxWidth = '100%'; });
-        await expect(strip).toHaveCount(0);
+        await expect(row.getByRole('navigation')).toHaveCount(0);
         expect(await row.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
       }
       if (width === 390) {
         await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();
-        await expect(page.getByRole('navigation', { name: 'This business', exact: true }).filter({ visible: true }).getByRole('link', { name: 'Overview', exact: true })).toBeVisible();
+        // ADR-047: the phone menu reaches the workspace Home through its heading; there is no Overview child.
+        const phoneNav = page.getByRole('navigation', { name: 'This business', exact: true }).filter({ visible: true });
+        await expect(phoneNav.getByRole('link', { name: / home$/ })).toBeVisible();
+        await expect(phoneNav.getByRole('link', { name: 'Overview', exact: true })).toHaveCount(0);
       }
     }
   });
@@ -304,7 +293,8 @@ test.describe('configuration-only permissions in the rendered application', () =
     await page.goto(`/organizations/${organizationId}/comms/configuration/calling`);
     await expect(page).toHaveURL(`/organizations/${organizationId}/comms/configuration/calling`);
     const nav = sidebar(page);
-    for (const label of ['Overview', 'Calls', 'Inbox', 'Numbers']) await expect(nav.getByRole('link', { name: label, exact: true })).toHaveCount(0);
+    // ADR-047: no operating Home link either, for a member who may only configure Communications.
+    for (const label of ['Overview', 'Communications home', 'Calls', 'Inbox', 'Numbers']) await expect(nav.getByRole('link', { name: label, exact: true })).toHaveCount(0);
     await expect(nav.getByRole('link', { name: 'Configuration', exact: true })).toHaveCount(0);
     const name = `Configuration acceptance ${randomUUID()}`;
     try {

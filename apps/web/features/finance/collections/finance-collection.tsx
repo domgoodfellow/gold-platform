@@ -25,7 +25,7 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
   const canCreate = modules.has('billing') && may(kind === 'invoices' ? 'invoice.issue' : kind === 'quotes' ? 'work_item.price' : 'payment.record');
   const page = filter.page ?? 1;
   const href = (next: number) => { const p = new URLSearchParams(); for (const [k,v] of Object.entries(query)) if (typeof v === 'string' && k !== 'page') p.set(k,v); p.set('page', String(next)); return `${base}/${kind}?${p}`; };
-  return <AppPage><CollectionHeader title={title} navigation crumbs={[{ label: 'Finance', href: base }]} actions={canCreate ? <FinanceWorkflow organizationId={organizationId} kind={workflow} initiallyOpen={query.create === '1'} mayCreateWork={may('work_item.create')} /> : undefined} />
+  return <AppPage><CollectionHeader title={title} crumbs={[{ label: 'Finance', href: base }]} actions={canCreate ? <FinanceWorkflow organizationId={organizationId} kind={workflow} initiallyOpen={query.create === '1'} mayCreateWork={may('work_item.create')} /> : undefined} />
     <form className="mb-4 flex flex-wrap items-end gap-3">
       <FormField id="finance-search" label="Search">{field => <TextInput {...field} name="q" type="search" defaultValue={filter.q} placeholder="Customer, record or reference" />}</FormField>
       {kind !== 'payments' ? <FormField id="finance-status" label="Status">{field => <SelectInput {...field} name="status" defaultValue={filter.status}><option value="">All</option>{(kind === 'invoices' ? [['outstanding','Outstanding'],['overdue','Overdue'],['settled','Settled']] : [['not-invoiced','Not invoiced'],['invoiced','Invoiced']]).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</SelectInput>}</FormField> : null}

@@ -18,7 +18,6 @@ export function CollectionHeader({
   crumbs,
   breadcrumbLabel,
   location,
-  navigation = false,
   actions,
   activity = false,
   insights = false,
@@ -35,8 +34,6 @@ export function CollectionHeader({
    */
   location?: { records?: Readonly<Record<string, RecordLabel>> };
   breadcrumbLabel?: ReactNode;
-  /** The current workspace's destinations in the action row, as on `PageHeader`. */
-  navigation?: boolean;
   /** Board/collection controls, in reading order — a stage-settings control, a create trigger. */
   actions?: ReactNode;
   activity?: boolean;
@@ -60,8 +57,8 @@ export function CollectionHeader({
           </>
         )}
       </div>
-      {navigation || actions || activity || insights || configure ? (
-        <HeaderControls navigation={navigation}>
+      {actions || activity || insights || configure ? (
+        <HeaderControls>
           {actions}
           {activity ? <SupportTrigger mode="activity" /> : null}
           {insights ? <SupportTrigger mode="insights" /> : null}

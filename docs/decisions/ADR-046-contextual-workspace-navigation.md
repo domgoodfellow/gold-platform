@@ -3,7 +3,7 @@
 **Date:** 2026-10-19
 **Status:** Accepted (approved by the owner on 2026-10-19 as the target workspace navigation model)
 **Supersedes:** ADR-006; ADR-045 Part B, only its flat-sidebar rendering
-**Superseded in part by:** ADR-047 (2026-10-19) — point 3 only: the workspace heading links to Home and no Overview child repeats it
+**Superseded in part by:** ADR-047 (2026-10-19) — point 3 only: the workspace heading links to Home and no Overview child repeats it; ADR-048 (2026-10-20) — point 6 only: the page header no longer presents the destinations
 
 ## Context
 

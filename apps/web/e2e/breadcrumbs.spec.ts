@@ -122,7 +122,8 @@ test.describe('responsive page location', () => {
     await trigger.focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('menuitem', { name: 'Resources', exact: true })).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByRole('menuitem', { name: 'Overview', exact: true })).toHaveAttribute('href', `${base}/field`);
+    // ADR-047: Work's Home is reached from its heading in the menu, not an Overview item.
+    await expect(page.getByRole('menuitem', { name: 'Work home', exact: true })).toHaveAttribute('href', `${base}/field`);
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Escape');
     await expect(page.getByRole('menu')).toHaveCount(0);
@@ -132,7 +133,7 @@ test.describe('responsive page location', () => {
     await page.mouse.click(10, 600);
     await expect(page.getByRole('menu')).toHaveCount(0);
     await trigger.click();
-    await page.getByRole('menuitem', { name: 'Overview', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Work home', exact: true }).click();
     await expect(page).toHaveURL(`${base}/field`);
     await expect(page.getByRole('menu')).toHaveCount(0);
   });

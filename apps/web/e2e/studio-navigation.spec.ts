@@ -27,7 +27,8 @@ test.describe('an owner', () => {
     await destinations.getByRole('link', { name: 'Forms', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/studio/forms$`));
 
-    await nav.getByRole('link', { name: 'Overview', exact: true }).click();
+    // ADR-047: the Studio heading is the way back to Studio's Home.
+    await nav.getByRole('link', { name: 'Studio home', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/studio$`));
   });
 

@@ -186,8 +186,9 @@ It is not a duplicate specification.
 | ADR-041 | Import open-source connector packages | [`ADR-041-imported-open-source-connectors.md`](ADR-041-imported-open-source-connectors.md) |
 | ADR-042 | Studio customer Portal publication and host delivery | [`ADR-042-studio-customer-portal-publication.md`](ADR-042-studio-customer-portal-publication.md) |
 | ADR-045 | Foundational scope, terminology and voice options. **Part B flat-sidebar rendering superseded by ADR-046** | [`ADR-045-foundational-options.md`](ADR-045-foundational-options.md) |
-| ADR-046 | Entered workspaces use contextual navigation over one canonical projection. **Point 3 (Overview) superseded by ADR-047** | [`ADR-046-contextual-workspace-navigation.md`](ADR-046-contextual-workspace-navigation.md) |
+| ADR-046 | Entered workspaces use contextual navigation over one canonical projection. **Point 3 (Overview) superseded by ADR-047; point 6 (header presentation) by ADR-048** | [`ADR-046-contextual-workspace-navigation.md`](ADR-046-contextual-workspace-navigation.md) |
 | ADR-047 | One page location and identity contract | [`ADR-047-page-location-and-identity.md`](ADR-047-page-location-and-identity.md) |
+| ADR-048 | The sidebar owns workspace navigation; the header owns page identity and actions | [`ADR-048-sidebar-owns-workspace-navigation.md`](ADR-048-sidebar-owns-workspace-navigation.md) |
 
 ---
 
