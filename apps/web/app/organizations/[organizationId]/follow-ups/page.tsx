@@ -10,7 +10,6 @@ import { listFollowUps,type FollowUpKind,type FollowUpStatus } from '@/lib/domai
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { requireOrganization } from '@/lib/route/organization';
 import { followUpsAvailable,dueFilter } from '@/lib/application/crm/follow-ups';
-import { workspaceAncestry } from '@/lib/navigation';
 import { listCustomers,getCustomer } from '@/lib/domain/customers/customers';
 import { listOpportunities,getOpportunity } from '@/lib/domain/opportunities/opportunities';
 import { zonedDayRange,shiftDate } from '@/lib/domain/scheduling/window';
@@ -31,7 +30,7 @@ export default async function FollowUpsPage({params,searchParams}:{params:Promis
   const options={organizationId,timezone:organization.timezone,members,mayManage:organization.capabilities.includes('follow_up.manage')};
   const href=`/organizations/${organizationId}/follow-ups`;
   const pageHref=(p:number)=>{const state=new URLSearchParams();for(const [key,value] of Object.entries(q))if(value && key!=='page')state.set(key,value);state.set('page',String(p));return `${href}?${state}`;};
-  return <AppPage><CollectionHeader title="Follow-ups" crumbs={workspaceAncestry(organizationId,'follow-ups')} actions={<><ButtonLink href={`${href}/calendar`}>Calendar</ButtonLink>{options.mayManage?<FollowUpSheet {...options}/>:null}</>}/>
+  return <AppPage><CollectionHeader location={{}} actions={<><ButtonLink href={`${href}/calendar`}>Calendar</ButtonLink>{options.mayManage?<FollowUpSheet {...options}/>:null}</>}/>
     <form method="get" role="search" className="mb-5 grid grid-cols-2 items-end gap-3 sm:grid-cols-3 xl:grid-cols-6">
       <FormField id="follow-up-q" label="Search follow-ups" className="col-span-2 sm:col-span-1">{p=><TextInput {...p} name="q" type="search" defaultValue={q.q}/>}</FormField>
       <FormField id="follow-up-status" label="Status">{p=><SelectInput {...p} name="status" defaultValue={q.status??'open'}>{['open','completed','cancelled','all'].map(v=><option key={v} value={v}>{v}</option>)}</SelectInput>}</FormField>

@@ -9,7 +9,7 @@ import { listOpportunities, listOpportunityStages, type OpportunityKind } from '
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { getCustomer } from '@/lib/domain/customers/customers';
 import { requireOrganization } from '@/lib/route/organization';
-import { areaHref, workspaceAncestry } from '@/lib/navigation';
+import { areaHref } from '@/lib/navigation';
 import { followUpsAvailable } from '@/lib/application/crm/follow-ups';
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +26,7 @@ export default async function OpportunitiesPage({ params, searchParams }: { para
   const followUpsEnabled=await followUpsAvailable(db,organizationId);
   const pageHref = (next: number) => { const state = new URLSearchParams(); for (const key of ['q', 'stage', 'owner', 'kind', 'customer','next','closeFrom','closeBefore']) if (value(key)) state.set(key, value(key)); state.set('page', String(next)); return `${href}?${state}`; };
   return <AppPage>
-    <CollectionHeader title="Opportunities" crumbs={workspaceAncestry(organizationId, 'opportunities')} actions={<><ButtonLink href={areaHref(organizationId, 'opportunity-pipeline')}>Opportunity pipeline</ButtonLink>{organization.capabilities.includes('opportunity.create') ? <OpportunitySheet organizationId={organizationId} stages={stages} members={members} defaultCurrency={organization.currency ?? ''} customer={customer ?? undefined} /> : null}</>} />
+    <CollectionHeader location={{}} actions={<><ButtonLink href={areaHref(organizationId, 'opportunity-pipeline')}>Opportunity pipeline</ButtonLink>{organization.capabilities.includes('opportunity.create') ? <OpportunitySheet organizationId={organizationId} stages={stages} members={members} defaultCurrency={organization.currency ?? ''} customer={customer ?? undefined} /> : null}</>} />
     <form method="get" className="mb-4 grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-5" role="search">
       <FormField id="opportunity-search" label="Search opportunities">{(props) => <TextInput {...props} name="q" type="search" defaultValue={value('q')} />}</FormField>
       <FormField id="opportunity-kind" label="Classification">{(props) => <SelectInput {...props} name="kind" defaultValue={kind ?? ''}><option value="">All</option><option value="open">Open</option><option value="won">Won</option><option value="lost">Lost</option></SelectInput>}</FormField>

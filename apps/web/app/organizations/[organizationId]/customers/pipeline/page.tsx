@@ -7,7 +7,6 @@ import { WorkspaceConfigure } from '@/features/settings/workspace-configure';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
-import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -29,8 +28,7 @@ export default async function PipelinePage({ params }: PageProps<'/organizations
   return (
     <AppPage>
       <CollectionHeader
-        title={areaLabel('pipeline')}
-        crumbs={workspaceAncestry(organizationId, 'pipeline')}
+        location={{}}
         actions={
           reception ? (
             <WorkspaceConfigure organizationId={organizationId} workspace="crm" />

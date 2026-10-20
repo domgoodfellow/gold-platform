@@ -290,6 +290,19 @@
       "category": "unit",
       "concerns": ["settings", "configuration", "permissions"]
     },
+    "apps/web/tests/unit/page-location.test.ts": {
+      "category": "unit",
+      "concerns": ["navigation", "page-identity", "permissions"]
+    },
+    "apps/web/tests/component/resolved-page-location.test.tsx": {
+      "category": "component",
+      "concerns": ["navigation", "page-identity", "crm", "accessibility"]
+    },
+    "apps/web/e2e/page-location.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": ["navigation", "page-identity", "crm", "responsive", "accessibility"],
+      "note": "Customers pilot (ADR-047): rendered location at 320–1440 with Configure and Agent open, loading, missing and another business's record, plus regression captures of unmigrated routes. Disposable local tenants only."
+    },
     "apps/web/tests/unit/readiness-evidence.test.ts": {
       "category": "unit",
       "concerns": ["readiness", "setup"]

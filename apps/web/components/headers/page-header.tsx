@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { BusinessLabel } from '@/lib/context/business-vocabulary';
 import { cx } from '../class-names';
 import { PageLocation, type PageLocationCrumb } from '../navigation/page-location';
+import { LocationHeading, PageLocationRecords } from '../navigation/workspace-crumbs';
+import type { RecordLabel } from '@/lib/route/page-location';
 import { SupportTrigger } from '../panels/workspace-right-rail';
 import { HeaderControls } from './header-controls';
 
@@ -47,6 +49,7 @@ export type PageHeaderCrumb = PageLocationCrumb;
  */
 export function PageHeader({
   title,
+  location,
   crumbs,
   section,
   breadcrumbLabel,
@@ -59,7 +62,14 @@ export function PageHeader({
   className,
   recordTitle = false,
 }: {
-  title: ReactNode;
+  /** Required unless `location` is given. */
+  title?: ReactNode;
+  /**
+   * The route's location comes from `resolveLocation` (ADR-047): the bar shows it, and this header
+   * renders only the resolver-named `h1` and hands up the record labels. Replaces `title`, `crumbs`,
+   * `section` and `breadcrumbLabel`.
+   */
+  location?: { records?: Readonly<Record<string, RecordLabel>> };
   recordTitle?: boolean;
   crumbs?: PageHeaderCrumb[];
   /**
@@ -91,12 +101,21 @@ export function PageHeader({
   /** Replaces the default bottom margin (`mb-6`) where the parent already spaces its children. */
   className?: string;
 }) {
-  const titleInBar = !section && breadcrumbLabel === undefined && typeof title === 'string';
+  const titleInBar = location !== undefined || (!section && breadcrumbLabel === undefined && typeof title === 'string');
   return (
     <header className={cx('@container/page-header flex flex-wrap items-start gap-x-4 gap-y-3', titleInBar && !meta && !navigation ? 'justify-end' : 'justify-between', className ?? 'mb-6')}>
       <div className={cx('min-w-0', titleInBar && !meta ? 'sr-only' : 'flex-1 basis-64')}>
-        <PageLocation crumbs={section ? [] : crumbs} current={section ?? breadcrumbLabel ?? (recordTitle ? title : <BusinessLabel>{title}</BusinessLabel>)} />
-        <h1 className={titleInBar ? 'sr-only' : 'text-2xl font-semibold tracking-tight'}>{recordTitle ? title : <BusinessLabel>{title}</BusinessLabel>}</h1>
+        {location ? (
+          <>
+            {location.records ? <PageLocationRecords records={location.records} /> : null}
+            <LocationHeading required />
+          </>
+        ) : (
+          <>
+            <PageLocation crumbs={section ? [] : crumbs} current={section ?? breadcrumbLabel ?? (recordTitle ? title : <BusinessLabel>{title}</BusinessLabel>)} />
+            <h1 className={titleInBar ? 'sr-only' : 'text-2xl font-semibold tracking-tight'}>{recordTitle ? title : <BusinessLabel>{title}</BusinessLabel>}</h1>
+          </>
+        )}
         {meta ? <div className={cx('text-sm text-muted', !titleInBar && 'mt-1')}>{meta}</div> : null}
       </div>
       {navigation || actions || activity || insights || configure ? (

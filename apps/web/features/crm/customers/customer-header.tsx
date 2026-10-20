@@ -15,8 +15,8 @@ export function CustomerHeader({ organizationId, customer, stage, definitions, s
 }) {
   return (
     <RecordHeader
-      title={customer.name}
-      crumbs={[{ label: 'Customers', href: `/organizations/${organizationId}/customers` }, { label: customer.name }]}
+      // The resolver owns this route's location (ADR-047); the page supplies only the name it was allowed to read.
+      location={{ records: { customerId: { state: 'ready', label: customer.name } } }}
       summary={stage ? `Relationship stage: ${stage.name}` : 'No relationship stage'}
       actions={<>{mayCall ? <CallCustomerSheet organizationId={organizationId} customer={customer} /> : null}{mayEdit ? <EditCustomerSheet organizationId={organizationId} customer={customer} definitions={definitions} stages={stages} /> : null}</>}
     />

@@ -25,7 +25,7 @@ export default async function OpportunityPage({ params }: { params: Promise<{ or
   const followUpsEnabled = await followUpsAvailable(db, organizationId);
   const followUps = followUpsEnabled ? await relatedFollowUps(db, organizationId, item.customerId, opportunityId) : null;
   return <AppPage>
-    <RecordHeader title={item.title} crumbs={[{ label: 'CRM', href: `/organizations/${organizationId}/sales` }, { label: 'Opportunities', href: `/organizations/${organizationId}/opportunities` }, { label: item.title }]} summary={item.stage ? `${item.stage.name} · ${item.stage.kind}` : 'Unstaged'} actions={mayUpdate ? <OpportunitySheet organizationId={organizationId} stages={stages} members={members} defaultCurrency={organization.currency ?? ''} opportunity={item} /> : undefined} />
+    <RecordHeader location={{ records: { opportunityId: { state: 'ready', label: item.title } } }} summary={item.stage ? `${item.stage.name} · ${item.stage.kind}` : 'Unstaged'} actions={mayUpdate ? <OpportunitySheet organizationId={organizationId} stages={stages} members={members} defaultCurrency={organization.currency ?? ''} opportunity={item} /> : undefined} />
     <Section><SectionHeading>Details</SectionHeading><dl className="mt-4 grid gap-4 sm:grid-cols-2">
       <div><dt className="text-sm text-muted">Customer</dt><dd><Link className="underline underline-offset-4" href={`/organizations/${organizationId}/customers/${item.customerId}`}>{item.customerName}</Link></dd></div>
       <div><dt className="text-sm text-muted">Value</dt><dd>{item.amountMinor !== null && item.currency ? formatOpportunityValue(item.amountMinor, item.currency) : 'Not set'}</dd></div>

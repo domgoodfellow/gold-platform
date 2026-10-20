@@ -10,6 +10,7 @@ import { WorkspaceShell } from '@/components/layout/workspace-shell';
 import { AccountMenu } from '@/components/navigation/account-menu';
 import { SettingsNav } from '@/components/navigation/settings-nav';
 import { inSettingsContext, type SettingsSearchItem } from '@/lib/settings-nav';
+import type { SerializedLocationAccess } from '@/lib/route/page-location';
 import { lastAppPathKey } from '@/lib/route/app-return';
 import { ContextIdentity, ContextSwitcher, type SwitchableOrganization, type SwitcherContext } from '@/components/navigation/context-switcher';
 import {
@@ -493,9 +494,11 @@ export function LockedOrgSidebar({
  */
 export function OrganizationFrame({
   organizationId, name, role, mark, organizations, sections, utilities, settings, settingsSearch,
-  locked, email, signOutAction, agent, children, displayName = '', setupPending = false,
+  locked, email, signOutAction, agent, children, displayName = '', setupPending = false, locationAccess,
 }: {
   displayName?: string;
+  /** The shell's entitlement and permission facts, for pages whose location the resolver owns. */
+  locationAccess?: SerializedLocationAccess;
   setupPending?: boolean;
   organizationId: string;
   name: string;
@@ -535,7 +538,7 @@ export function OrganizationFrame({
 
   return (
     <CommandCenterProvider key={organizationId} organizationId={organizationId} displayName={displayName}><WorkspaceShell
-      locationNavigation={{ organizationId, sections: recovery ? [] : settingsContext ? settings : sections, configurationHrefs: recovery ? [] : settingsSearch.map((item) => item.href) }}
+      locationNavigation={{ organizationId, sections: recovery ? [] : settingsContext ? settings : sections, configurationHrefs: recovery ? [] : settingsSearch.map((item) => item.href), ...(recovery || !locationAccess ? {} : { access: locationAccess }) }}
       sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} role={role} administration={administration} {...shared} /> : <OrgSidebar {...shared} organizationId={organizationId} displayName={displayName} setupPending={setupPending} current={current} sections={sections} settings={settingsContext ? { organizationId, sections: settings, search: settingsSearch } : null} />}
       header={
         <WorkspaceHeader

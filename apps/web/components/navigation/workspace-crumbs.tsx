@@ -1,7 +1,7 @@
 'use client';
-import { BusinessLabel } from '@/lib/context/business-vocabulary';
+import { BusinessLabel, useBusinessProfile } from '@/lib/context/business-vocabulary';
 
-import { createContext, Fragment, useContext, useState, type ReactNode } from 'react';
+import { createContext, Fragment, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -18,18 +18,119 @@ import {
   BreadcrumbSeparator,
 } from '@gold/ui/components/breadcrumb';
 import { cx, FOCUS_RING } from '../class-names';
+import { adoptsResolvedLocation, locationAccessFrom, resolveLocation, type LocationAccess, type RecordLabel, type ResolvedLocation } from '@/lib/route/page-location';
+// A deliberate two-way import: the slot hosts the resolver-owned renderer, which reads this file's context.
+import { ResolvedPageLocation } from './resolved-page-location';
 
 export type Crumb = { label: ReactNode; href?: string };
 
-type SlotContext = { slot: HTMLElement | null; setSlot: (element: HTMLElement | null) => void; navigation?: LocationNavigation };
+/**
+ * What a page hands up about its own address, and nothing about any other: server-loaded record
+ * labels, or that the page refused (`notFound`).
+ */
+type PageReport = { pathname: string; records: Readonly<Record<string, RecordLabel>>; notFound?: boolean };
+
+type SlotContext = {
+  slot: HTMLElement | null;
+  setSlot: (element: HTMLElement | null) => void;
+  navigation?: LocationNavigation;
+  /** The one resolved location for this address, or null where the page still publishes its own. */
+  location: ResolvedLocation | null;
+  setReport: Dispatch<SetStateAction<PageReport | null>>;
+};
 
 const CrumbSlotContext = createContext<SlotContext | null>(null);
 
-/** Hosts the slot the workspace bar exposes; the page still owns what is written into it. */
+/**
+ * Without the shell's access facts, a gated ancestor is never offered as a link: only the kernel
+ * destinations every member has (Home, a workspace Home, Customers) still link. A link is never assumed.
+ */
+const NO_ACCESS: LocationAccess = { gate: { enabledModules: new Set(), featureAvailability: new Set(), capabilities: new Set() }, platform: new Set() };
+
+/**
+ * Hosts the workspace bar's location. Two systems coexist while pages migrate (ADR-047): on a route
+ * `adoptsResolvedLocation` names, the location is resolved **once, here**, and the bar, the phone's
+ * Up control and the page's `h1` all read that one answer; the page only hands up its record labels.
+ * On every other route the page still publishes its own crumbs into the slot. A route is in exactly
+ * one of the two.
+ */
 export function WorkspaceCrumbsProvider({ children, navigation }: { children: ReactNode; navigation?: LocationNavigation }) {
   const [slot, setSlot] = useState<HTMLElement | null>(null);
-  return <CrumbSlotContext.Provider value={{ slot, setSlot, navigation }}>{children}</CrumbSlotContext.Provider>;
+  const [report, setReport] = useState<PageReport | null>(null);
+  const pathname = usePathname();
+  const vocabulary = useBusinessProfile();
+  // A report about another address — the page just left — is never read.
+  const current = report?.pathname === pathname ? report : null;
+  const location = useMemo(() => {
+    if (!adoptsResolvedLocation(pathname)) return null;
+    const resolved = resolveLocation({
+      pathname,
+      access: navigation?.access ? locationAccessFrom(navigation.access) : NO_ACCESS,
+      vocabulary,
+      records: current?.records,
+      ...(current?.notFound ? { state: 'not-found' as const } : {}),
+      navigation: navigation?.sections,
+    });
+    return resolved.status === 'resolved' ? resolved : null;
+  }, [pathname, navigation, vocabulary, current]);
+  useIncompleteLocationDiagnostic(location);
+  return <CrumbSlotContext.Provider value={{ slot, setSlot, navigation, location, setReport }}>{children}</CrumbSlotContext.Provider>;
 }
+
+/**
+ * Development only: a migrated record route whose page never handed up its label. Reported once
+ * the page has had its chance to report, so the moment before a page's first report is not noise.
+ */
+function useIncompleteLocationDiagnostic(location: ResolvedLocation | null) {
+  const incomplete = location?.incomplete.join(',') ?? '';
+  const id = location?.id;
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production' || !incomplete) return;
+    const timer = setTimeout(() => console.warn(`Page location "${id}" is incomplete: no label was supplied for ${incomplete}. The bar shows the record's kind instead.`), 1000);
+    return () => clearTimeout(timer);
+  }, [id, incomplete]);
+}
+
+/** The current page's one resolved location, or null on a route that still publishes its own. */
+export function useResolvedLocation(): ResolvedLocation | null {
+  return useContext(CrumbSlotContext)?.location ?? null;
+}
+
+/**
+ * Hands this page's server-loaded record labels to the bar, for its own address only. A loading
+ * boundary hands up `{ state: 'loading' }`, a not-found boundary `{ state: 'missing' }` or
+ * `notFound`; a label is only ever the record the page itself was allowed to read.
+ */
+export function PageLocationRecords({ records = {}, notFound = false }: { records?: Readonly<Record<string, RecordLabel>>; notFound?: boolean }) {
+  const setReport = useContext(CrumbSlotContext)?.setReport;
+  const pathname = usePathname();
+  const handed = useRef<PageReport | null>(null);
+  const key = JSON.stringify(records);
+  useLayoutEffect(() => {
+    if (!setReport) return;
+    const mine: PageReport = { pathname, records: JSON.parse(key) as PageReport['records'], ...(notFound ? { notFound } : {}) };
+    handed.current = mine;
+    setReport(mine);
+    // Only withdraw what this component handed up, so a page arriving in the same commit keeps its own.
+    return () => setReport((current) => (current === handed.current ? null : current));
+  }, [setReport, pathname, key, notFound]);
+  return null;
+}
+
+/**
+ * The page's one `h1`, named by the same resolved location the bar shows; the bar already shows it,
+ * so it is visually hidden. Renders nothing on a route that still publishes its own identity.
+ */
+export function LocationHeading({ required = false }: { required?: boolean }) {
+  const location = useResolvedLocation();
+  const pathname = usePathname();
+  useEffect(() => {
+    // A header that asked for the resolver's location on a route not yet migrated would have no heading and no location.
+    if (required && !location && process.env.NODE_ENV !== 'production') console.warn(`A header uses the resolved page location on "${pathname}", which is not in RESOLVED_LOCATION_ROUTES.`);
+  }, [required, location, pathname]);
+  return location ? <h1 className="sr-only">{location.headingName}</h1> : null;
+}
+
 
 /** The place in the workspace bar where the current page's trail appears. */
 /** The authorized navigation projection this shell was given, for a page control that presents part of it. */
@@ -39,10 +140,12 @@ export function useLocationNavigation(): LocationNavigation | undefined {
 
 export function WorkspaceCrumbSlot() {
   const context = useContext(CrumbSlotContext);
-  return <div ref={context?.setSlot} className="min-w-0 flex-1 md:flex-initial" />;
+  const pathname = usePathname();
+  // A resolver-owned route draws its location here directly, so it stays in place while the page loads.
+  return <div ref={context?.setSlot} className="min-w-0 flex-1 md:flex-initial">{adoptsResolvedLocation(pathname) ? <ResolvedPageLocation /> : null}</div>;
 }
 
-function MobilePageLocation({ current, navigation }: { current: ReactNode; navigation: PageNavigation }) {
+export function MobilePageLocation({ current, navigation }: { current: ReactNode; navigation: PageNavigation }) {
   const [open, setOpen] = useState(false);
   const interactive = navigation.groups.reduce((count, group) => count + group.items.length, 0) > 1;
   return <nav aria-label="Page location" className="flex min-w-0 items-center gap-1 md:hidden">
@@ -78,7 +181,8 @@ export function PageCrumbs({ crumbs: authoredCrumbs, current }: { crumbs: Crumb[
   const pathname = usePathname();
   const isMobile = useIsMobile();
   const navigation = pageNavigation(context?.navigation, pathname, crumbs.map((crumb) => crumb.href));
-  if (!slot) return null;
+  // On a resolver-owned route the bar already shows the location; a page-authored trail never competes with it.
+  if (!slot || adoptsResolvedLocation(pathname)) return null;
   return createPortal(
     <>
     <MobilePageLocation key={`${pathname}:${isMobile}`} current={current} navigation={navigation} />

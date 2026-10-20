@@ -26,6 +26,7 @@ import {
   type PlatformDestination,
 } from '@/lib/platform-navigation';
 import type { PlatformCapability } from '@/lib/domain/platform/permissions';
+import type { SerializedLocationAccess } from '@/lib/route/page-location';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 
 /** One eligibility projection for all breakpoints. Business Home is the operational cockpit;
@@ -366,6 +367,8 @@ export type LocationNavigation = {
   sections: readonly ShellSection[];
   /** Authorized configuration destinations already projected by the server. */
   configurationHrefs?: readonly string[];
+  /** The shell's own entitlement and permission facts, for `resolveLocation`'s ancestor links. */
+  access?: SerializedLocationAccess;
 };
 
 export type PageNavigation = {

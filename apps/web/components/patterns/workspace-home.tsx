@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { AppPage } from '../layout/app-page';
 import { PageLocation, type PageLocationCrumb } from '../navigation/page-location';
 import { SupportTrigger } from '../panels/workspace-right-rail';
+import { LocationHeading } from '../navigation/workspace-crumbs';
 
 /**
  * Workspace Home: what is happening here, what can I do, where can I go next (`docs/ui-system.md`
@@ -14,13 +15,17 @@ import { SupportTrigger } from '../panels/workspace-right-rail';
 export function WorkspaceHome({
   title,
   crumbs,
+  location,
   actions,
   insights = false,
   configure = false,
   children,
 }: {
-  title: ReactNode;
+  /** Required unless `location` is given. */
+  title?: ReactNode;
   crumbs?: PageLocationCrumb[];
+  /** The route's location and heading come from `resolveLocation` (ADR-047); replaces `title` and `crumbs`. */
+  location?: Record<string, never>;
   actions?: ReactNode;
   insights?: boolean;
   configure?: boolean;
@@ -31,9 +36,9 @@ export function WorkspaceHome({
   const titleInBar = typeof title === 'string';
   return (
     <AppPage>
-      <PageLocation crumbs={crumbs} current={title} />
+      {location ? null : <PageLocation crumbs={crumbs} current={title} />}
       <div className="mb-6 flex flex-wrap items-center justify-end gap-x-4 gap-y-3">
-        <h1 className={titleInBar ? 'sr-only' : 'mr-auto text-2xl font-semibold tracking-tight'}>{title}</h1>
+        {location ? <LocationHeading required /> : <h1 className={titleInBar ? 'sr-only' : 'mr-auto text-2xl font-semibold tracking-tight'}>{title}</h1>}
         {actions || insights || configure ? (
           <div className="flex flex-wrap items-center gap-2">
             {actions}

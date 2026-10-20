@@ -27,7 +27,7 @@ import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { activeModuleKeys, availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { todayInZone } from '@/lib/domain/scheduling/window';
-import { areaAvailable, areaLabel, workspaceAncestry } from '@/lib/navigation';
+import { areaAvailable } from '@/lib/navigation';
 import { CustomersInsights } from '@/features/insights/workspace-insights';
 import { WorkspaceActivity } from '@/features/timeline/workspace-activity';
 import { requireOrganization } from '@/lib/route/organization';
@@ -116,8 +116,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
     <AppPage>
       <CreateCustomerSheetProvider organizationId={organizationId} definitions={definitions} defaultOpen={mayCreate && query.create === '1'}>
         <CollectionHeader
-          title={areaLabel('customers')}
-          crumbs={workspaceAncestry(organizationId, 'customers')}
+          location={{}}
           actions={!emptyCollection ? (
             <>
               {mayImport ? (

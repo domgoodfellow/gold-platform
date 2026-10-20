@@ -13,6 +13,7 @@ import { offeredSections } from '@/features/settings/settings-map';
 import { projectSettingsNav, settingsSearchItems } from '@/lib/settings-nav';
 import { AccountAppearance } from '@/features/appearance/account-appearance';
 import { BusinessVocabulary } from '@/lib/context/business-vocabulary';
+import { serializeLocationAccess } from '@/lib/route/page-location';
 
 /** The one frame for every organization, GildOps' own Administration included, with canonical
  * server authority resolution. Each page still enforces its own access; layouts persist across
@@ -108,6 +109,7 @@ export async function OrganizationShell({
         mark={mark}
         organizations={switchable}
         sections={sections}
+        locationAccess={locked ? undefined : serializeLocationAccess(configGate)}
         utilities={utilities}
         settings={settings}
         settingsSearch={settingsSearch}

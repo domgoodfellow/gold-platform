@@ -4,6 +4,8 @@ import { PageLocation, type PageLocationCrumb } from '../navigation/page-locatio
 import { SupportTrigger } from '../panels/workspace-right-rail';
 import { HeaderControls } from '../headers/header-controls';
 import { BusinessLabel } from '@/lib/context/business-vocabulary';
+import { LocationHeading, PageLocationRecords } from '../navigation/workspace-crumbs';
+import type { RecordLabel } from '@/lib/route/page-location';
 
 /**
  * Collection/Board: compact identity and controls, then the collection or board itself promptly —
@@ -15,6 +17,7 @@ export function CollectionHeader({
   title,
   crumbs,
   breadcrumbLabel,
+  location,
   navigation = false,
   actions,
   activity = false,
@@ -22,8 +25,15 @@ export function CollectionHeader({
   configure = false,
   className,
 }: {
-  title: ReactNode;
+  /** Required unless `location` is given. */
+  title?: ReactNode;
   crumbs?: PageLocationCrumb[];
+  /**
+   * The route's location comes from `resolveLocation` (ADR-047): the bar shows it and this header
+   * renders only the resolver-named `h1` and hands up any record labels. Replaces `title`, `crumbs`
+   * and `breadcrumbLabel`.
+   */
+  location?: { records?: Readonly<Record<string, RecordLabel>> };
   breadcrumbLabel?: ReactNode;
   /** The current workspace's destinations in the action row, as on `PageHeader`. */
   navigation?: boolean;
@@ -34,12 +44,21 @@ export function CollectionHeader({
   configure?: boolean;
   className?: string;
 }) {
-  const titleInBar = breadcrumbLabel === undefined && typeof title === 'string';
+  const titleInBar = location !== undefined || (breadcrumbLabel === undefined && typeof title === 'string');
   return (
     <header className={cx('@container/page-header flex flex-wrap items-center justify-between gap-x-4 gap-y-2', className ?? 'mb-4')}>
       <div className={cx("min-w-0 flex-1 basis-64", titleInBar && 'sr-only')}>
-        <PageLocation crumbs={crumbs} current={breadcrumbLabel ?? <BusinessLabel>{title}</BusinessLabel>} />
-        <h1 className="text-xl font-semibold tracking-tight"><BusinessLabel>{title}</BusinessLabel></h1>
+        {location ? (
+          <>
+            {location.records ? <PageLocationRecords records={location.records} /> : null}
+            <LocationHeading required />
+          </>
+        ) : (
+          <>
+            <PageLocation crumbs={crumbs} current={breadcrumbLabel ?? <BusinessLabel>{title}</BusinessLabel>} />
+            <h1 className="text-xl font-semibold tracking-tight"><BusinessLabel>{title}</BusinessLabel></h1>
+          </>
+        )}
       </div>
       {navigation || actions || activity || insights || configure ? (
         <HeaderControls navigation={navigation}>

@@ -164,7 +164,7 @@ This is the approved information architecture (ADR-046). `docs/ui-system.md` own
 
 - Outside a workspace, the organization sidebar shows the shared destinations (Home, Search, Library) and the workspace directory, one row per eligible workspace. The row opens the workspace's canonical **Home**.
 - Entering a workspace changes the contextual sidebar to that workspace's navigation: its Home, its eligible operating destinations and its applicable configuration entry points.
-- Inside the workspace, Home appears as **Overview**. Overview is a label for the Home route, not a separate page or domain authority.
+- Inside the workspace, the workspace heading links to its canonical Home and shows as current there. No child row or header-strip item repeats the Home route (ADR-047, amending ADR-046 point 3). This is the approved target; the current sidebar and strip still show the Home as an Overview row until the navigation slice ships.
 - Workspace destinations are never flattened into the organization-level list.
 - Labels, routes, hierarchy, visibility and permissions derive from the canonical projections. A business profile may relabel and reorder a workspace's own destinations; it never grants access, adds destinations or moves a destination to another workspace.
 - The page header communicates location and offers page-specific actions; it never defines workspace navigation of its own.
@@ -205,6 +205,8 @@ Its product role is to provide reusable organization-level access to artifacts s
 - trash/archive.
 
 Library is **not** an operator workspace.
+
+A Library section appears in production navigation only once it has working behaviour; a section without it keeps its route but is not offered (ADR-047). This is the approved target; the placeholder sections are still listed today.
 
 A file can relate to a customer, work item, asset, invoice or other record without becoming owned by that record's workspace.
 

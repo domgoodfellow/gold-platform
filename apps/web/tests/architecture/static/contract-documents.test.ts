@@ -56,8 +56,24 @@ describe('the workspace navigation contract (ADR-046)', () => {
   });
 
   it('no canonical document still describes the superseded flat or back-row models', () => {
-    const superseded = [/navigation is flat/i, /\bflat (list|sidebar|business|global|organization)\b/i, /\b(stays|remains) flat\b/i, /Back to Workspaces/, /Home is not repeated as a child/i];
+    // ADR-006's "Home is not repeated as a child" was listed here while ADR-046 made Home an Overview
+    // child. ADR-047 (2026-10-19) restored that rule, so the phrase is no longer a superseded model;
+    // the retired model is now ADR-046 point 3's Overview child, guarded below.
+    const superseded = [/navigation is flat/i, /\bflat (list|sidebar|business|global|organization)\b/i, /\b(stays|remains) flat\b/i, /Back to Workspaces/];
     const found = canonical.flatMap((path) => superseded.filter((pattern) => pattern.test(read(path))).map((pattern) => `${path}: ${pattern}`));
+    expect(found).toEqual([]);
+  });
+});
+
+describe('the workspace Home contract (ADR-047, amending ADR-046 point 3)', () => {
+  it('is stated in product.md and presented in ui-system.md, each citing ADR-047', () => {
+    expect(read('docs/product.md')).toMatch(/### Workspace navigation[\s\S]*?workspace heading links to its canonical Home[^\n]*ADR-047/);
+    expect(read('docs/ui-system.md')).toMatch(/## Navigation model[\s\S]*?workspace heading[^\n]*ADR-047/);
+  });
+
+  it('no canonical document states the superseded Overview child as the current rule', () => {
+    const retired = [/Home appears as \*\*Overview\*\*/, /appears as Overview inside the entered workspace/i];
+    const found = ['docs/product.md', 'docs/architecture.md', 'docs/ui-system.md'].flatMap((path) => retired.filter((pattern) => pattern.test(read(path))).map((pattern) => `${path}: ${pattern}`));
     expect(found).toEqual([]);
   });
 });

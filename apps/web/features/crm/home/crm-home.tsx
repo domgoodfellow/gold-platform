@@ -36,7 +36,7 @@ export function CrmHome({organizationId,timezone,month,summary,customers,custome
     {label:'Open opportunities',value:summary.open,context:'In stages classified Open',href:`${base}/opportunities?kind=open`,icon:CircleDollarSign},
     {label:'Follow-ups due today',value:followUpsEnabled?summary.today:'Unavailable',context:timezone,href:followUpsEnabled?`${base}/follow-ups?status=open&due=today`:undefined,icon:CalendarClock},
     {label:'Forecast this month',value:<CurrencyValues values={summary.forecast}/>,context:'Open · unweighted expected close',href:`${base}/opportunities?kind=open&closeFrom=${month}&closeBefore=${nextMonth.toISOString().slice(0,10)}`,icon:TrendingUp}];
-  return <WorkspaceHome title="CRM" actions={<>{mayConfigure ? <ConfigureLink href={workspaceConfigurationHref(organizationId, 'crm')} label="Configuration" /> : null}
+  return <WorkspaceHome location={{}} actions={<>{mayConfigure ? <ConfigureLink href={workspaceConfigurationHref(organizationId, 'crm')} label="Configuration" /> : null}
     <form method="get" className="flex items-center gap-1"><TextInput aria-label="Reporting month" name="month" type="month" defaultValue={month.slice(0,7)} className="w-40"/><Button type="submit" tone="text" size="small">Apply</Button></form>
     {mayCreate?<CreateCustomerTrigger/>:null}{mayCreateOpportunity?<OpportunitySheet {...opportunityOptions}/>:null}
   </>}>

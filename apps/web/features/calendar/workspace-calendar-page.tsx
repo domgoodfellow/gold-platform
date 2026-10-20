@@ -39,7 +39,8 @@ export async function WorkspaceCalendarPage({ params, searchParams, workspace }:
   const filters = { scope };
   const newEventStart = localDateTimeToInstant(`${date}T09:00`, organization.timezone);
   return <AppPage className="flex h-full min-h-0 flex-1 flex-col">
-    <CollectionHeader title="Calendar" crumbs={workspaceAncestry(organizationId, workspace === 'crm' ? 'calendar' : workspace === 'field' ? 'work-calendar' : `${workspace}-calendar`)} actions={<>
+    {/* CRM's calendar takes its location from the resolver (ADR-047); the other workspaces' calendars have not migrated yet. */}
+    <CollectionHeader {...(workspace === 'crm' ? { location: {} } : { title: 'Calendar', crumbs: workspaceAncestry(organizationId, workspace === 'field' ? 'work-calendar' : `${workspace}-calendar`) })} actions={<>
       {workspace === 'field' ? <ButtonLink href={`${base}/schedule`}>Resource schedule</ButtonLink> : null}
       <EventSheet organizationId={organizationId} workspace={workspace} timezone={organization.timezone} startsAt={newEventStart}/>
     </>}/>
