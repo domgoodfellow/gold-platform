@@ -5,9 +5,16 @@ import { createClient } from '@supabase/supabase-js';
 import { provisionOrganization } from '../lib/domain/platform/provision';
 import { DEMO_PASSWORD } from '../scripts/demo/businesses';
 
-/** What `global-setup.ts` wrote, for a spec to read without re-deriving it via the UI. */
+/**
+ * Where the context and signed-in browser states live. The demo setup writes them beside this file;
+ * the isolated setup (`isolated-setup.ts`) writes its own, for disposable businesses, into
+ * `E2E_FIXTURE_DIR` so a run never reads or overwrites the shared demo ones.
+ */
+const FIXTURE_DIR = process.env.E2E_FIXTURE_DIR ?? __dirname;
+
+/** What `global-setup.ts` (or `isolated-setup.ts`) wrote, for a spec to read without re-deriving it via the UI. */
 export function loadDemoContext(): DemoContext {
-  const file = path.join(__dirname, '.demo-context.json');
+  const file = path.join(FIXTURE_DIR, '.demo-context.json');
   return JSON.parse(readFileSync(file, 'utf8')) as DemoContext;
 }
 
@@ -21,10 +28,10 @@ export function financeUrl(subpath = ''): string {
   return `/organizations/${loadDemoContext().goldOrganizationId}/finance${subpath ? `/${subpath}` : ''}`;
 }
 
-export const OWNER_STORAGE_STATE = path.join(__dirname, '.auth', 'owner.json');
-export const STAFF_STORAGE_STATE = path.join(__dirname, '.auth', 'staff.json');
+export const OWNER_STORAGE_STATE = path.join(FIXTURE_DIR, '.auth', 'owner.json');
+export const STAFF_STORAGE_STATE = path.join(FIXTURE_DIR, '.auth', 'staff.json');
 /** The demo's own reduced-role colleague (`business.member` in `scripts/demo/businesses.ts`) — signed in with no `role.manage` and no `customer.create`. */
-export const COLLEAGUE_STORAGE_STATE = path.join(__dirname, '.auth', 'colleague.json');
+export const COLLEAGUE_STORAGE_STATE = path.join(FIXTURE_DIR, '.auth', 'colleague.json');
 
 /** Local acceptance tenants use the same staff provisioning door as real organizations. */
 export async function provisionBrowserOrganization(name: string) {
