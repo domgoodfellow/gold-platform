@@ -415,5 +415,43 @@ describe('invitation reissue and delivery', () => {
       const status = await listInvitationDeliveryStatus(admin.db, { organizationId });
       expect(status.get(invitation.id)).toMatchObject({ state: 'bounced', detail: 'mailbox full' });
     });
+
+    // Phase 3C: the provider's clock and GildOps' own are never compared with each other.
+    it('shows a provider report even when its own time is earlier than GildOps recorded the send', async () => {
+      const invitee = `chrono-skew-${randomUUID().slice(0, 8)}@example.test`;
+      await inviteMember(admin.db, { organizationId, email: invitee, roleId });
+      const invitation = (await listPendingInvitations(admin.db, { organizationId })).find((i) => i.email === invitee)!;
+      const messageId = `re_chrono_skew_${randomUUID()}`;
+      await asProviderOperator(() =>
+        pg.query(`select public.record_invitation_delivery($1, $2, $3, 'queued', $4, null)`, [organizationId, invitation.id, invitee, messageId]),
+      );
+      await asInvitationEmailWebhook(() =>
+        pg.query(
+          `select public.record_invitation_delivery_event($1, 'delivered', null, '{}'::jsonb, $2, $3::timestamptz)`,
+          [messageId, `hash-skew-${randomUUID()}`, new Date(Date.now() - 60_000).toISOString()],
+        ),
+      );
+      expect((await listInvitationDeliveryStatus(admin.db, { organizationId })).get(invitation.id)?.state).toBe('delivered');
+    });
+
+    it('lets a resend supersede what the provider said about the attempt before it', async () => {
+      const invitee = `chrono-resend-${randomUUID().slice(0, 8)}@example.test`;
+      await inviteMember(admin.db, { organizationId, email: invitee, roleId });
+      const invitation = (await listPendingInvitations(admin.db, { organizationId })).find((i) => i.email === invitee)!;
+      const first = `re_chrono_first_${randomUUID()}`;
+      await asProviderOperator(() =>
+        pg.query(`select public.record_invitation_delivery($1, $2, $3, 'queued', $4, null)`, [organizationId, invitation.id, invitee, first]),
+      );
+      await asInvitationEmailWebhook(() =>
+        pg.query(
+          `select public.record_invitation_delivery_event($1, 'bounced', 'mailbox full', '{}'::jsonb, $2, $3::timestamptz)`,
+          [first, `hash-first-${randomUUID()}`, new Date(Date.now() + 60_000).toISOString()],
+        ),
+      );
+      await asProviderOperator(() =>
+        pg.query(`select public.record_invitation_delivery($1, $2, $3, 'queued', $4, null)`, [organizationId, invitation.id, invitee, `re_chrono_second_${randomUUID()}`]),
+      );
+      expect((await listInvitationDeliveryStatus(admin.db, { organizationId })).get(invitation.id)?.state).toBe('queued');
+    });
   });
 });

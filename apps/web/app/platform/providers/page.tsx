@@ -15,7 +15,7 @@ import { listProviderBindingSummary } from '@/lib/domain/providers/bindings';
 import { listProviderServices } from '@/lib/domain/providers/services';
 import { CREDENTIAL_LABEL, providerStages } from '@/lib/domain/providers/stages';
 import { listAiRuntimeAssignments } from '@/lib/domain/ai/runtime';
-import { GENERIC_ACCOUNT_PROVIDER_KEYS, platformEmailOperationalStatus } from '@/lib/route/provider-environment';
+import { GENERIC_ACCOUNT_PROVIDER_KEYS, platformEmailReadiness } from '@/lib/route/provider-environment';
 import { ProviderIcon } from '@/features/platform/providers/provider-icon';
 
 export const dynamic = 'force-dynamic';
@@ -32,6 +32,8 @@ export default async function ProvidersPage({ params }: PageProps<'/platform/pro
     listProviderServices(db),
     listAiRuntimeAssignments(db),
   ]);
+  // Asked of the API, which sends invitations, never read from this web project's own settings.
+  const platformEmail = providers.some((provider) => provider.key === 'resend') ? await platformEmailReadiness(db) : null;
 
   // Six separate facts per provider (`stages.ts`): a catalogue row says none of the others. An
   // account adapter exists only for the providers this deployment built account handling for.
@@ -47,7 +49,7 @@ export default async function ProvidersPage({ params }: PageProps<'/platform/pro
         providerKey === twilioKey
           ? telephonyBootstrapConfigured()
           : providerKey === 'resend'
-            ? platformEmailOperationalStatus(own.find((account) => account.isDefault) ?? own[0] ?? null).source === 'environment'
+            ? platformEmail?.credentialSource === 'environment'
             : false,
     });
   };

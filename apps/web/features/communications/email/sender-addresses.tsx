@@ -63,10 +63,12 @@ export function SenderAddresses({
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="break-all text-sm font-medium">{sender.address}</span>
                   {sender.isDefault ? <Badge tone="accent">Default</Badge> : null}
+                  {sender.isReplyTo ? <Badge>Replies go here</Badge> : null}
                 </div>
                 {sender.displayName ? <div className="text-xs text-muted">Shown as {sender.displayName}</div> : null}
                 <div className="mt-1 text-sm">{STATE_LABEL[sender.state]}</div>
                 {sender.detail ? <div className="text-xs text-muted">{sender.detail}</div> : null}
+                <div className="text-xs text-muted">{sender.receivesInInbox ? 'Receives into the Inbox' : 'Does not receive into the Inbox'}</div>
               </div>
               {sender.state === 'ready' && !sender.isDefault ? <MakeDefault organizationId={organizationId} sender={sender} /> : null}
             </li>

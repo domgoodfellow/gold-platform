@@ -307,6 +307,11 @@
       "concerns": ["navigation", "permissions", "entitlements"],
       "note": "Work Home's Manage Work shortcuts are chosen from the workspace navigation projection: registered addresses, sidebar labels, business labels, and absent when unavailable."
     },
+    "apps/web/e2e/email-production.spec.ts": {
+      "category": "playwright-acceptance",
+      "concerns": ["communications", "security", "permissions", "providers", "responsive"],
+      "note": "Phase 3C, real Web to API: starts apps/api locally with local-only Supabase settings and a fake Resend on a loopback port (RESEND_API_BASE, honoured only for loopback). Invitation wording and delivery report, new-account sign-up with code and context, existing and wrong account, provider refusal, missing platform sender, unreachable API, test send with rate limit and refusal, received mail read through its own account, tagged report settling an uncertain delivery, staff-only readiness. Run with playwright.email.config.ts. Disposable local businesses only."
+    },
     "apps/web/e2e/team-invitations.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": ["permissions", "security", "communications", "responsive"],
@@ -505,6 +510,11 @@
         "providers"
       ],
       "note": "Translation against a mocked SDK boundary, mirroring the Anthropic/dialect adapters' shape."
+    },
+    "apps/api/tests/component/test_email_test_send_and_readiness.py": {
+      "category": "python-component",
+      "concerns": ["providers", "security", "communications"],
+      "note": "Phase 3C: a test email goes only from the resolved sender, through the recorded account, to the caller's own address; refusals, uncertainty and provider rejection are recorded. Platform email readiness states from API settings and a read-only domain listing, never returning a key or address."
     },
     "apps/api/tests/component/test_platform_email_operations.py": {
       "category": "python-component",

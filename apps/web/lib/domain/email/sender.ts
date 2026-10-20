@@ -1,4 +1,5 @@
 import type { Db } from '@/lib/db/types';
+import { callDomainCommand, requireAccessToken } from '@/lib/api/client';
 import { DomainError } from '@/lib/domain/errors';
 
 /**
@@ -18,6 +19,11 @@ export type EmailSender = {
   /** What to do next, when the address cannot send yet. */
   detail: string | null;
   isDefault: boolean;
+  /** On a domain this business has proved, so replies may be sent to it. */
+  canTakeReplies: boolean;
+  isReplyTo: boolean;
+  /** Mail sent to it arrives in the Communications Inbox (Inbox email). */
+  receivesInInbox: boolean;
 };
 
 export type EmailSendingStatus =
@@ -42,6 +48,9 @@ export async function listEmailSenders(db: Db, organizationId: string): Promise<
     state: row.state as EmailSenderState,
     detail: row.detail,
     isDefault: row.is_default,
+    canTakeReplies: row.can_take_replies,
+    isReplyTo: row.is_reply_to,
+    receivesInInbox: row.receives_in_inbox,
   }));
 }
 
@@ -52,4 +61,42 @@ export async function setDefaultEmailSender(db: Db, input: { organizationId: str
     const message = error.code === '42501' ? 'You cannot choose the sender address for this business.' : error.message;
     throw new DomainError(message, 'email_sender.default_refused');
   }
+}
+
+/** Where replies go: one of this business's addresses on a proved domain, or `null` for the From address. */
+export async function setEmailReplyTo(db: Db, input: { organizationId: string; emailIdentityId: string | null }): Promise<void> {
+  const { error } = await db.rpc('set_email_reply_to', { p_organization_id: input.organizationId, p_email_identity_id: input.emailIdentityId as string });
+  if (error) {
+    const message = error.code === '42501' ? 'You cannot choose where replies go for this business.' : error.message;
+    throw new DomainError(message, 'email_sender.reply_to_refused');
+  }
+}
+
+export type EmailTestSend = {
+  id: string;
+  recipient: string;
+  fromAddress: string;
+  state: 'sending' | 'sent' | 'failed' | 'uncertain';
+  /** What the provider later reported, when it did. */
+  providerState: string | null;
+  detail: string | null;
+  createdAt: string;
+};
+
+export async function listEmailTestSends(db: Db, organizationId: string): Promise<EmailTestSend[]> {
+  const { data, error } = await db.from('email_test_sends').select('id, recipient, from_address, state, provider_state, detail, created_at')
+    .eq('organization_id', organizationId).order('created_at', { ascending: false }).limit(3);
+  if (error) throw new DomainError(error.message, 'email_sender.tests_failed');
+  return (data ?? []).map((row) => ({ id: row.id, recipient: row.recipient, fromAddress: row.from_address, state: row.state as EmailTestSend['state'], providerState: row.provider_state, detail: row.detail, createdAt: row.created_at }));
+}
+
+export type EmailTestOutcome = { state: 'sent' | 'failed' | 'uncertain'; recipient: string; detail: string | null };
+
+/**
+ * One test email from the default sender to the caller's own confirmed address, sent by apps/api
+ * (`/email/test-send`). Who may, to whom, from which address and how often are the database's
+ * decisions; a refusal comes back as its own sentence.
+ */
+export async function sendTestEmail(db: Db, organizationId: string): Promise<EmailTestOutcome> {
+  return callDomainCommand<EmailTestOutcome>('/email/test-send', { token: await requireAccessToken(db), body: { organization_id: organizationId }, timeoutMs: 30_000 });
 }

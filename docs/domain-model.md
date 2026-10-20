@@ -644,6 +644,14 @@ No other account, and no installation credential, is used in its place. GildOps'
 installation credentials never stand in for an organization's sender. A refused confirmation never
 undoes the booking or change that requested it.
 
+An organization may also name where replies go: only one of its own identities on a domain it has
+verified, never a typed address. Mail received at an identity is read only through the account
+recorded as holding that identity's domain; until that account is confirmed, the provider retries.
+An automation delivery that may have reached the provider but was never confirmed is Uncertain: it is
+shown to the organization and never sent again automatically. A provider report tagged with the
+delivery records it as sent, so a late report settles it without a second send. A manager may send a
+test email from the default sender to their own confirmed sign-in address, a few times an hour.
+
 ---
 
 ### Routing policy

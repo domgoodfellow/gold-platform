@@ -3,10 +3,11 @@ import { Hint } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { AddSendingDomainForm } from '@/features/communications/email/add-sending-domain-form';
 import { SenderAddresses } from '@/features/communications/email/sender-addresses';
+import { ReplyToForm, TestSendForm } from '@/features/communications/email/reply-to-and-test';
 import { SendingDomains } from '@/features/communications/email/sending-domains';
 import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/settings-page-frame';
 import { isDnsAutomated, listConnectedDnsZones } from '@/lib/domain/domains/dns-zones';
-import { emailSendingStatus, listEmailSenders, type EmailSender, type EmailSendingStatus } from '@/lib/domain/email/sender';
+import { emailSendingStatus, listEmailSenders, listEmailTestSends, type EmailSender, type EmailSendingStatus } from '@/lib/domain/email/sender';
 import { listSendingDomains } from '@/lib/domain/email/sending-domains';
 import { requireConfigurationTarget } from '@/lib/route/workspace-configuration';
 
@@ -28,11 +29,12 @@ export default async function EmailSendingSettingsPage({ params }: PageProps<'/o
   const { db } = await requireConfigurationTarget(organizationId, 'email');
   const header = <SettingsPageHeader title="Email sending" />;
 
-  const [status, senders, domains, zones] = await Promise.all([
+  const [status, senders, domains, zones, tests] = await Promise.all([
     emailSendingStatus(db, organizationId),
     listEmailSenders(db, organizationId),
     listSendingDomains(db, organizationId),
     listConnectedDnsZones(db, organizationId),
+    listEmailTestSends(db, organizationId),
   ]);
 
   return (
@@ -50,7 +52,8 @@ export default async function EmailSendingSettingsPage({ params }: PageProps<'/o
         <Hint className="mt-1 max-w-prose">
           Prove that you own a domain by adding a few DNS records at the company that manages it. If that is an account this
           business has connected, GildOps can publish them for you after you have read them. Your website address is not
-          automatically verified for email.
+          automatically verified for email. Verifying a domain lets you send from it; it does not create a mailbox:
+          replies and other mail to your addresses still go wherever the domain&rsquo;s mail records point today.
         </Hint>
         <AddSendingDomainForm organizationId={organizationId} />
       </Section>
@@ -65,6 +68,9 @@ export default async function EmailSendingSettingsPage({ params }: PageProps<'/o
         senders={senders}
         domains={domains.map((domain) => ({ resourceId: domain.resourceId, domain: domain.domain, ready: domain.state === 'ready' }))}
       />
+
+      <ReplyToForm organizationId={organizationId} senders={senders} hasDefault={status.state !== 'missing'} />
+      <TestSendForm organizationId={organizationId} ready={status.state === 'ready'} tests={tests} />
 
       <Hint className="mt-8">
         Which addresses receive replies into the Inbox is set in{' '}

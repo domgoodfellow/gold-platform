@@ -35,7 +35,9 @@ from app.providers.providers import (
     UpstreamRefused,
 )
 
-API = "https://api.resend.com"
+from app.providers.resend.base import api_base
+
+API = api_base()
 
 # Resend's own status words, as GildOps' resource states. `partially_verified` is `active` because
 # Resend's own documentation says a domain in that state sends normally -- one of two sending

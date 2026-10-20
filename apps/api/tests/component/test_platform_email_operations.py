@@ -56,8 +56,13 @@ class World:
         assert token == "caller-token"
         self.rest.append((method, path))
         if method == "GET" and path == "organization_invitations":
-            row = {"id": INVITATION, "email": "person@example.test", "organization_id": ORG}
+            row = {"id": INVITATION, "email": "person@example.test", "organization_id": ORG, "role_id": "role-1", "expires_at": "2026-10-27T15:04:00+00:00"}
             return Response(200, [row] if self.visible else [])
+        if method == "GET" and path == "organizations":
+            return Response(200, [{"name": "Pneu3L Tyres"}])
+        if method == "GET" and path == "roles":
+            assert kwargs["params"]["organization_id"] == f"eq.{ORG}"
+            return Response(200, [{"name": "Dispatcher"}])
         raise AssertionError(f"unexpected call {method} {path}")
 
     def answers(self, monkeypatch, result: dict) -> None:
@@ -147,3 +152,16 @@ def test_a_provider_refusal_is_recorded_as_failed_with_its_own_words(monkeypatch
     assert result == {"sent": False, "external_id": None, "detail": "Resend refused the request (422): invalid `to` field"}
     assert world.deliveries[0]["state"] == "failed"
     assert "invalid" in world.deliveries[0]["detail"]
+
+
+def test_the_email_names_the_business_role_address_and_expiry_and_explains_the_separate_code(monkeypatch) -> None:
+    world = World(monkeypatch, credential={"secret": "k"}, env={"PLATFORM_EMAIL_FROM_ADDRESS": "hello@gildops.test"})
+    world.answers(monkeypatch, {"ok": True, "external_id": "re_1", "detail": None})
+
+    send()
+
+    sent = world.sends[0]
+    assert sent["subject"] == "Pneu3L Tyres invited you to join them on GildOps"
+    assert "Pneu3L Tyres has invited you to join their team on GildOps as Dispatcher." in sent["text"]
+    assert "This invitation is for person@example.test and expires on 27 October 2026 at 15:04 UTC." in sent["text"]
+    assert "separate verification code" in sent["text"] and LINK in sent["text"]

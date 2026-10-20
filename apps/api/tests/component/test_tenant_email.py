@@ -361,22 +361,28 @@ class TestSendingAQueuedMessage:
 
 
 class Inbound:
-    def __init__(self, monkeypatch, *, result=None, credential="secret", content="ok", attachments=(), download=b"bytes") -> None:
+    def __init__(self, monkeypatch, *, result=None, credential="secret", content="ok", attachments=(), download=b"bytes", receiving="ready") -> None:
         self.result = {"message_id": "m1", "organization_id": ORG, "attachments": [], "duplicate": False} if result is None else result
+        self.receiving = receiving
+        self.credential_reads: list[str] = []
+        self.fetches = 0
         self.recorded_inbound: list[dict] = []
         self.stored: list[dict] = []
         self.stored_state: list[dict] = []
         self.provider = SimpleNamespace(
             fetch_received_email=lambda **kw: (
+                setattr(self, "fetches", self.fetches + 1),
                 {"text": "Hello", "html": "<p>Hello</p>", "message_id": "<in@x>", "in_reply_to": "<out@x>", "references": ["<out@x>"], "authentication": None}
-                if content == "ok" else None
-            ),
+                if content == "ok" else None,
+            )[1],
             list_received_attachments=lambda **kw: list(attachments),
             download_attachment=lambda url, max_bytes: download,
         )
         monkeypatch.delenv("RESEND_API_KEY", raising=False)
-        monkeypatch.setattr(inbound.db, "default_platform_provider_account", lambda s, **kw: "acct")
-        monkeypatch.setattr(inbound.db, "read_provider_account_credential", lambda s, **kw: {"secret": credential} if credential else None)
+        monkeypatch.setattr(inbound.db, "email_receiving_account", lambda s, **kw: {"state": self.receiving, "provider_account_id": "acct-of-the-domain" if self.receiving == "ready" else None})
+        monkeypatch.setattr(inbound.db, "read_provider_account_credential", lambda s, **kw: (self.credential_reads.append(kw["account_id"]), {"secret": credential} if credential else None)[1])
+        # Neither the platform default account nor the deployment key may be consulted.
+        monkeypatch.setattr(inbound.db, "default_platform_provider_account", lambda s, **kw: (_ for _ in ()).throw(AssertionError("default account consulted")))
         monkeypatch.setattr(inbound.db, "record_inbound_email", lambda s, **kw: (self.recorded_inbound.append(kw), self.result)[1])
         monkeypatch.setattr(inbound.db, "store_inbound_attachment", lambda s, **kw: (self.stored.append(kw), True)[1])
         monkeypatch.setattr(inbound.db, "record_inbound_attachment_stored", lambda s, **kw: self.stored_state.append(kw))
@@ -387,6 +393,26 @@ class Inbound:
 
 
 class TestReceivingMail:
+    def test_reads_the_message_only_through_the_account_recorded_for_the_receiving_address(self, monkeypatch) -> None:
+        world = Inbound(monkeypatch)
+        monkeypatch.setenv("RESEND_API_KEY", "deployment-key")
+        assert world.run() == "recorded"
+        assert world.credential_reads == ["acct-of-the-domain"]
+
+    @pytest.mark.parametrize("state", ["unknown", "ambiguous"])
+    def test_an_address_nobody_here_receives_at_is_ignored_without_reading_it(self, monkeypatch, state) -> None:
+        world = Inbound(monkeypatch, receiving=state)
+        assert world.run() == "ignored"
+        assert world.fetches == 0 and world.credential_reads == [] and world.recorded_inbound == []
+
+    @pytest.mark.parametrize("state", ["unrecorded", "unavailable"])
+    def test_an_address_whose_account_is_not_confirmed_is_retried_never_read_another_way(self, monkeypatch, state) -> None:
+        world = Inbound(monkeypatch, receiving=state)
+        monkeypatch.setenv("RESEND_API_KEY", "deployment-key")
+        with pytest.raises(RuntimeError):
+            world.run()
+        assert world.fetches == 0 and world.recorded_inbound == []
+
     def test_hands_the_database_the_body_and_the_threading_headers_and_nothing_to_choose_a_business_by(self, monkeypatch) -> None:
         world = Inbound(monkeypatch)
         assert world.run() == "recorded"

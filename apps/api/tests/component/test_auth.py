@@ -137,6 +137,28 @@ def test_a_valid_asymmetric_token_is_accepted(monkeypatch, keypair) -> None:
     assert verified.claims["sub"] == USER_ID
 
 
+def test_a_token_stamped_a_moment_ahead_by_the_issuers_clock_is_accepted(monkeypatch, keypair) -> None:
+    # Supabase Auth's clock a fraction of a second (here five seconds) ahead of this runtime's must
+    # not refuse a token used right after sign-in.
+    private_key, public_key = keypair
+    _patch_jwk_client(monkeypatch, public_key)
+
+    token = _sign_asymmetric(private_key, _claims(iat=int(time.time()) + 5))
+
+    assert verify_access_token(token, supabase_url=SUPABASE_URL, supabase_publishable_key=PUBLISHABLE_KEY).claims["sub"] == USER_ID
+
+
+@pytest.mark.parametrize("claims", [{"iat": int(time.time()) + 120}, {"exp": int(time.time()) - 45}])
+def test_the_clock_tolerance_is_small_and_never_revives_an_expired_token(monkeypatch, keypair, claims) -> None:
+    private_key, public_key = keypair
+    _patch_jwk_client(monkeypatch, public_key)
+
+    token = _sign_asymmetric(private_key, _claims(**claims))
+
+    with pytest.raises(AuthError):
+        verify_access_token(token, supabase_url=SUPABASE_URL, supabase_publishable_key=PUBLISHABLE_KEY)
+
+
 def test_an_expired_asymmetric_token_is_rejected(monkeypatch, keypair) -> None:
     private_key, public_key = keypair
     _patch_jwk_client(monkeypatch, public_key)

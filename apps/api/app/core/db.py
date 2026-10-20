@@ -1220,6 +1220,25 @@ def email_sender_account(settings: ProviderOperationsSettings, *, organization_i
     return {"state": row.get("state") or "unavailable", "detail": row.get("detail"), "provider_key": row.get("provider_key"), "provider_account_id": row.get("provider_account_id")}
 
 
+def email_receiving_account(settings, *, to_addresses: list[str]) -> dict:
+    """Which recorded account may read mail sent to these addresses (`email_receiving_account`):
+    `ready` with its id, or `unknown`, `ambiguous`, `unrecorded`, `unavailable`."""
+    rows = _rpc(settings, _provider_headers(settings), function="email_receiving_account", payload={"p_to_addresses": to_addresses})
+    row = rows[0] if isinstance(rows, list) and rows else {}
+    return {"state": row.get("state") or "unknown", "provider_account_id": row.get("provider_account_id")}
+
+
+def email_test_send_account(settings: ProviderOperationsSettings, *, organization_id: str, test_id: str) -> dict:
+    """Which recorded account sends this test email, resolved again now."""
+    rows = _rpc(settings, _provider_headers(settings), function="email_test_send_account", payload={"p_organization_id": organization_id, "p_id": test_id})
+    row = rows[0] if isinstance(rows, list) and rows else {}
+    return {"state": row.get("state") or "unavailable", "detail": row.get("detail"), "provider_key": row.get("provider_key"), "provider_account_id": row.get("provider_account_id")}
+
+
+def finish_email_test_send(settings: ProviderOperationsSettings, *, organization_id: str, test_id: str, outcome: str, external_id: str | None = None, detail: str | None = None) -> None:
+    _rpc(settings, _provider_headers(settings), function="finish_email_test_send", payload={"p_organization_id": organization_id, "p_id": test_id, "p_outcome": outcome, "p_external_id": external_id, "p_detail": detail})
+
+
 def claim_email_for_send(settings: ProviderOperationsSettings, *, organization_id: str, message_id: str) -> bool:
     """Take a queued email for sending, exactly once. False when something else already has it."""
     return bool(

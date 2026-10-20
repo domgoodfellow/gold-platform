@@ -109,7 +109,7 @@ DELIVERY = "11111111-1111-4111-8111-111111111111"
 def _email(**overrides) -> QueuedMessage:
     values = dict(
         id=DELIVERY, channel="email", recipient="ana@example.test", subject_line="Booked",
-        body="Hello Ana, your van is booked.", from_address="hello@pneu3l.test", from_name="Pneu3L",
+        body="Hello Ana, your van is booked.", from_address="hello@pneu3l.test", from_name="Pneu3L", reply_to="office@pneu3l.test",
         provider_key="resend", provider_account_id="acct-of-the-domain",
     )
     values.update(overrides)
@@ -157,6 +157,9 @@ def test_an_automation_email_goes_from_the_businesss_own_sender_through_its_doma
     assert sent["sender"] == "Pneu3L <hello@pneu3l.test>"
     assert sent["api_key"] == "domain-secret" and world.reads == ["acct-of-the-domain"]
     assert sent["idempotency_key"] == DELIVERY
+    # Replies go where the business chose; the tag lets a delivery report find this delivery.
+    assert sent["reply_to"] == "office@pneu3l.test"
+    assert sent["tags"] == [{"name": "gildops_delivery", "value": DELIVERY}]
     assert sent["to"] == ["ana@example.test"] and sent["text"] == "Hello Ana, your van is booked."
     assert world.finished == [dict(message_id=DELIVERY, outcome="accepted", external_id="re_1", detail=None)]
 

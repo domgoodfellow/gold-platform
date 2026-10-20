@@ -1,7 +1,7 @@
 
 export function AutomationState({ value }: { value: string }) {
   const color =
-    value === 'failed'
+    value === 'failed' || value === 'uncertain'
       ? 'bg-danger/10 text-danger'
       : value === 'done' || value === 'sent' || value === 'Enabled'
         ? 'bg-success/10 text-success'

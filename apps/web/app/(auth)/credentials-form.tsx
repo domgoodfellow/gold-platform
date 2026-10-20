@@ -27,6 +27,8 @@ type Props = {
   successMessage?: ReactNode;
   /** Where somebody who has forgotten the password goes. Sits in the Password label row, at the right. */
   recoveryHref?: string;
+  /** The address an invitation was sent to, offered as the email to use. Still editable. */
+  defaultEmail?: string;
 };
 
 /**
@@ -50,6 +52,7 @@ export function CredentialsForm({
   collectProfile = false,
   successMessage,
   recoveryHref,
+  defaultEmail,
 }: Props) {
   const [state, formAction, pending] = useActionState(action, INITIAL);
 
@@ -71,7 +74,7 @@ export function CredentialsForm({
       </> : null}
       {wantsEmail ? (
         <FormField id="email" label="Email">
-          {(field) => <TextInput {...field} name="email" type="email" required autoComplete="email" />}
+          {(field) => <TextInput {...field} name="email" type="email" required autoComplete="email" defaultValue={defaultEmail} />}
         </FormField>
       ) : null}
 

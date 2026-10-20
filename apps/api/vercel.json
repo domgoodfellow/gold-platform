@@ -113,6 +113,14 @@
       "destination": "/api/invitation_email"
     },
     {
+      "source": "/email/test-send",
+      "destination": "/api/email_test_send"
+    },
+    {
+      "source": "/platform/email-readiness",
+      "destination": "/api/platform_email_readiness"
+    },
+    {
       "source": "/webhooks/invitation-email",
       "destination": "/api/invitation_email_webhook"
     },

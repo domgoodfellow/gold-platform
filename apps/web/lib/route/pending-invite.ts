@@ -29,6 +29,12 @@ export async function storePendingInvite(token: string): Promise<void> {
   });
 }
 
+/** The pending invite's token without clearing it, so a sign-in or sign-up screen can say what it is for. */
+export async function readPendingInviteToken(): Promise<string | null> {
+  const token = (await cookies()).get(COOKIE_NAME)?.value;
+  return token && TOKEN_SHAPE.test(token) ? token : null;
+}
+
 /**
  * Reads and clears the pending invite, if any. Called once, right after a sign-in or sign-up
  * actually succeeds — never before, since a failed attempt should leave the cookie in place for

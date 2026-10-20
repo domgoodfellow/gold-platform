@@ -34,7 +34,9 @@ import api.crm_change_customer_stage as crm_change_customer_stage
 import api.integration_operations as integration_operations
 import api.app_library as app_library
 import api.integration_sync_tick as integration_sync_tick
+import api.email_test_send as email_test_send
 import api.invitation_email as invitation_email
+import api.platform_email_readiness as platform_email_readiness
 import api.invitation_email_webhook as invitation_email_webhook
 import api.organization_domains as organization_domains
 import api.organization_email_domains as organization_email_domains
@@ -561,6 +563,8 @@ PEOPLE = [
     (organization_domains, "load_provider_operations_settings", "run_domain_command"),
     (organization_email_domains, "load_provider_operations_settings", "run_email_domain_command"),
     (invitation_email, "load_provider_operations_settings", "send_invitation_email"),
+    (email_test_send, "load_provider_operations_settings", "send_test_email"),
+    (platform_email_readiness, "load_provider_operations_settings", "platform_email_readiness"),
 ]
 
 

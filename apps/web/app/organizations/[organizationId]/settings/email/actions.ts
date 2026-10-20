@@ -12,7 +12,7 @@ import {
   type SendingDomainOutcome,
 } from '@/lib/domain/email/sending-domains';
 import { createEmailIdentity, setEmailIdentityReceiving } from '@/lib/domain/email/identities';
-import { setDefaultEmailSender } from '@/lib/domain/email/sender';
+import { sendTestEmail, setDefaultEmailSender, setEmailReplyTo } from '@/lib/domain/email/sender';
 import { requireOrganization } from '@/lib/route/organization';
 
 /**
@@ -197,6 +197,38 @@ export async function setDefaultEmailSenderAction(_previous: EmailDomainState, f
     refresh(organizationId);
     return { error: null, notice: 'Default sender saved.', done: true };
   } catch (error) {
+    return { error: words(error), notice: null, done: false };
+  }
+}
+
+/** Where replies go (`set_email_reply_to`): one of the business's addresses on a proved domain, or the From address. */
+export async function setEmailReplyToAction(_previous: EmailDomainState, form: FormData): Promise<EmailDomainState> {
+  const organizationId = String(form.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  try {
+    const chosen = String(form.get('emailIdentityId') ?? '');
+    await setEmailReplyTo(await getDb(), { organizationId, emailIdentityId: chosen || null });
+    refresh(organizationId);
+    return { error: null, notice: chosen ? 'Replies will go to the chosen address.' : 'Replies will go to the From address.', done: true };
+  } catch (error) {
+    return { error: words(error), notice: null, done: false };
+  }
+}
+
+/** One test email to the caller's own address. What happened is said plainly, never as "delivered". */
+export async function sendTestEmailAction(_previous: EmailDomainState, form: FormData): Promise<EmailDomainState> {
+  const organizationId = String(form.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  try {
+    const outcome = await sendTestEmail(await getDb(), organizationId);
+    refresh(organizationId);
+    if (outcome.state === 'sent') return { error: null, notice: `Test email accepted for delivery to ${outcome.recipient}. Check that inbox; whether it arrived is shown below once the provider reports it.`, done: true };
+    if (outcome.state === 'uncertain') return { error: `The test may or may not have been sent: ${outcome.detail ?? 'the provider did not confirm it'}. Check ${outcome.recipient} before trying again.`, notice: null, done: false };
+    return { error: `The test email was not sent: ${outcome.detail ?? 'the provider did not say why'}`, notice: null, done: false };
+  } catch (error) {
+    if (error instanceof DomainError && (error.code === 'api.unreachable' || error.code === 'api.unconfigured')) {
+      return { error: 'GildOps’ email service could not be reached, so no test was sent.', notice: null, done: false };
+    }
     return { error: words(error), notice: null, done: false };
   }
 }

@@ -231,7 +231,7 @@ export async function readAutomationHome(c: ReadContext): Promise<HomeSourceData
   const d = emptySource('Automations'), base = `/organizations/${c.organizationId}/automations`;
   const [runs, deliveries, rules] = await Promise.all([
     c.db.from('automation_runs').select('id,rule_name,occurred_at', { count: 'exact' }).eq('organization_id', c.organizationId).eq('outcome', 'failed').gte('occurred_at', c.period.since).lt('occurred_at', c.period.until).order('occurred_at', { ascending: false }).order('id').limit(LIMIT),
-    c.db.from('message_deliveries').select('id,rule_name,channel,queued_at', { count: 'exact' }).eq('organization_id', c.organizationId).eq('state', 'failed').gte('queued_at', c.period.since).lt('queued_at', c.period.until).order('queued_at', { ascending: false }).order('id').limit(LIMIT),
+    c.db.from('message_deliveries').select('id,rule_name,channel,queued_at', { count: 'exact' }).eq('organization_id', c.organizationId).in('state', ['failed', 'uncertain']).gte('queued_at', c.period.since).lt('queued_at', c.period.until).order('queued_at', { ascending: false }).order('id').limit(LIMIT),
     c.db.from('automation_rules').select('id,name,created_at,actions:automation_actions!automation_actions_rule_same_org(id)', { count: 'exact' }).eq('organization_id', c.organizationId).eq('enabled', true).is('actions', null).order('created_at', { ascending: false }).order('id').limit(LIMIT),
   ]);
   const runRows = checked(runs), messageRows = checked(deliveries);

@@ -1,3 +1,4 @@
+import { pendingInvitation } from '@/lib/route/pending-invitation';
 import { AuthDivider, AuthHeading, AuthSecondaryAction } from '../auth-parts';
 import { CredentialsForm } from '../credentials-form';
 import { GoogleAuthButton } from '../google-auth-button';
@@ -5,10 +6,15 @@ import { signUpAction } from './actions';
 
 export const metadata = { title: 'Create an account · GildOps' };
 
-export default function SignUpPage() {
+export default async function SignUpPage() {
+  const invitation = await pendingInvitation();
   return (
     <>
-      <AuthHeading title="Create an account" />
+      <AuthHeading title="Create an account">
+        {invitation
+          ? `Use ${invitation.email}, the address ${invitation.businessName} invited. We'll email you a code to confirm it, then bring you back to accept.`
+          : null}
+      </AuthHeading>
 
       <CredentialsForm
         action={signUpAction}
@@ -18,6 +24,7 @@ export default function SignUpPage() {
         passwordAutoComplete="new-password"
         collectProfile
         confirmPassword
+        defaultEmail={invitation?.email}
       />
 
       <AuthDivider />

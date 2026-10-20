@@ -14,7 +14,9 @@ from __future__ import annotations
 
 import httpx
 
-API = "https://api.resend.com/emails"
+from app.providers.resend.base import api_base
+
+API = f"{api_base()}/emails"
 
 
 def send_platform_email(*, api_key: str, sender: str, to: str, subject: str, text: str) -> dict:
@@ -97,6 +99,8 @@ def send_tenant_email(
     references: list[str],
     attachments: list[dict],
     timeout: float = 30.0,
+    reply_to: str | None = None,
+    tags: list[dict] | None = None,
 ) -> dict:
     """One tenant email. `{"ok", "external_id", "detail", "retryable"}` is the whole answer.
 
@@ -118,6 +122,12 @@ def send_tenant_email(
         body["headers"] = headers
     if attachments:
         body["attachments"] = attachments
+    if reply_to:
+        body["reply_to"] = reply_to
+    if tags:
+        # Echoed back on every delivery report, so a report can name the send it is about even
+        # when the answer to the send itself was lost.
+        body["tags"] = tags
 
     try:
         response = httpx.post(

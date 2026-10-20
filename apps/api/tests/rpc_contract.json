@@ -1,6 +1,123 @@
 {
   "_about": "The named arguments apps/api sends to each database function, and the role it sends them as. `sends` is every name Python may send; `optional` is the subset it may leave out. Checked against Python by tests/contract/test_rpc_contract.py and against pg_proc by apps/web/tests/architecture/database/python-rpc-surface.test.ts. Change a database function's parameters, or a Python payload, and update this file with it. A function with `naming: bare` is called by a domain command that names its arguments without the `p_` prefix; app/core/caller.py adds it.",
   "functions": {
+    "begin_email_test_send": {
+      "role": "authenticated",
+      "callers": [
+        "app/services/tenant_email/test_send.py"
+      ],
+      "sends": [
+        "p_organization_id"
+      ]
+    },
+    "email_test_send_account": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_id",
+        "p_organization_id"
+      ]
+    },
+    "finish_email_test_send": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_detail",
+        "p_external_id",
+        "p_id",
+        "p_organization_id",
+        "p_outcome"
+      ]
+    },
+    "email_receiving_account": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_to_addresses"
+      ]
+    },
+    "platform_email_readiness_facts": {
+      "role": "authenticated",
+      "callers": [
+        "app/services/platform_email/readiness.py"
+      ],
+      "sends": []
+    },
+    "admit_voice_agent_session": {
+      "role": "provider_operator",
+      "callers": [
+        "app/services/communications/voice_agent.py"
+      ],
+      "naming": "bare",
+      "sends": [
+        "p_call_id",
+        "p_route_id"
+      ]
+    },
+    "voice_agent_session_context": {
+      "role": "provider_operator",
+      "callers": [
+        "app/services/communications/voice_agent.py"
+      ],
+      "naming": "bare",
+      "sends": [
+        "p_session_id"
+      ]
+    },
+    "bind_voice_agent_session": {
+      "role": "provider_operator",
+      "callers": [
+        "app/services/communications/voice_agent.py"
+      ],
+      "naming": "bare",
+      "sends": [
+        "p_connection_url",
+        "p_external_id",
+        "p_session_id"
+      ]
+    },
+    "record_voice_agent_event": {
+      "role": "provider_operator",
+      "callers": [
+        "app/services/communications/voice_agent.py"
+      ],
+      "naming": "bare",
+      "sends": [
+        "p_event_id",
+        "p_external_id",
+        "p_input_tokens",
+        "p_output_tokens",
+        "p_seconds",
+        "p_session_id",
+        "p_type"
+      ]
+    },
+    "mark_voice_agent_uncertain": {
+      "role": "provider_operator",
+      "callers": [
+        "app/services/communications/voice_agent.py"
+      ],
+      "naming": "bare",
+      "sends": [
+        "p_call_id"
+      ]
+    },
+    "claim_voice_agent_transfer": {
+      "role": "provider_operator",
+      "callers": [
+        "app/services/communications/voice_agent.py"
+      ],
+      "naming": "bare",
+      "sends": [
+        "p_session_id"
+      ]
+    },
     "claim_customer_notification": {"role": "customer_notification_worker", "callers": ["app/services/tenant_email/notifications.py"], "sends": []},
     "authorize_customer_notification_send": {"role": "customer_notification_worker", "callers": ["app/services/tenant_email/notifications.py"], "sends": ["p_job_id", "p_lease_id"]},
     "finish_customer_notification": {"role": "customer_notification_worker", "callers": ["app/services/tenant_email/notifications.py"], "sends": ["p_job_id", "p_lease_id", "p_outcome", "p_external_id"]},

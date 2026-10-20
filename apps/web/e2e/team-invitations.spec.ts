@@ -187,8 +187,9 @@ test('an existing account joins another business without a new account, and nobo
   // Somebody signed in with a different address is refused.
   await signIn(page, stranger);
   await page.goto(new URL(link).pathname);
-  await page.getByRole('button', { name: 'Accept invitation' }).click();
-  await expect(page.locator('p[role="alert"]')).toContainText('That invitation is not valid, or was sent to a different address');
+  // Phase 3C: the page says whose invitation it is and offers no Accept to the wrong account.
+  await expect(page.getByText(`This invitation works only for ${existing.email}.`)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Accept invitation' })).toHaveCount(0);
   expect((await pg.query('select count(*)::int n from memberships where organization_id=$1 and user_id=$2', [orgA, stranger.id])).rows[0].n).toBe(0);
 
   await signIn(page, existing);
@@ -250,15 +251,17 @@ test('resending replaces the link, and revoked or expired invitations no longer 
   await pg.query('update auth.users set email=$1 where id=$2', [invitee, invited.id]);
   await signIn(page, { email: invitee, password: invited.password });
   await page.goto(new URL(first).pathname);
-  await page.getByRole('button', { name: 'Accept invitation' }).click();
-  await expect(page.locator('p[role="alert"]')).toContainText('That invitation is not valid');
+  // Phase 3C: a dead link has its own page, saying only that it cannot be used.
+  await expect(page.getByRole('heading', { name: 'This invitation can’t be used' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Accept invitation' })).toHaveCount(0);
 
   // Expired: the current link stops working once its time has passed.
   const current = sent.at(-1)!.link;
   await pg.query("update public.organization_invitations set expires_at=now()-interval '1 minute' where organization_id=$1 and email=$2 and accepted_at is null and revoked_at is null", [orgA, invitee]);
   await page.goto(new URL(current).pathname);
-  await page.getByRole('button', { name: 'Accept invitation' }).click();
-  await expect(page.locator('p[role="alert"]')).toContainText('That invitation is not valid');
+  // Phase 3C: a dead link has its own page, saying only that it cannot be used.
+  await expect(page.getByRole('heading', { name: 'This invitation can’t be used' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Accept invitation' })).toHaveCount(0);
 
   // Revoked: a fresh invitation, revoked by the manager, cannot be accepted.
   await signIn(page, owner);
@@ -274,8 +277,9 @@ test('resending replaces the link, and revoked or expired invitations no longer 
   await pg.query('update auth.users set email=$1 where id=$2', [revokee, revokedAccount.id]);
   await signIn(page, { email: revokee, password: revokedAccount.password });
   await page.goto(new URL(revoked).pathname);
-  await page.getByRole('button', { name: 'Accept invitation' }).click();
-  await expect(page.locator('p[role="alert"]')).toContainText('That invitation is not valid');
+  // Phase 3C: a dead link has its own page, saying only that it cannot be used.
+  await expect(page.getByRole('heading', { name: 'This invitation can’t be used' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Accept invitation' })).toHaveCount(0);
 });
 
 test('Email sending settings say what is missing, then which address sends, at every width', async ({ page }) => {

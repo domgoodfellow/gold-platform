@@ -12,7 +12,8 @@ import { getDb } from '@/lib/db/server';
 import { listProviders } from '@/lib/domain/commercial/catalogue';
 import { listProviderServicesFor } from '@/lib/domain/providers/services';
 import { getDefaultProviderAccount } from '@/lib/domain/providers/accounts';
-import { GENERIC_ACCOUNT_PROVIDER_KEYS, platformEmailOperationalStatus } from '@/lib/route/provider-environment';
+import { GENERIC_ACCOUNT_PROVIDER_KEYS, platformEmailReadiness } from '@/lib/route/provider-environment';
+import { PlatformEmailReadinessSection } from '@/features/platform/providers/platform-email-readiness';
 import { AI_CAPABILITY_LABEL, listAiRuntimeAssignments } from '@/lib/domain/ai/runtime';
 import { telephonyProviderKey } from '@/lib/adapters/telephony';
 import { ProviderDetail } from '@/features/platform/providers/provider-detail';
@@ -64,15 +65,16 @@ export default async function ProviderDetailPage({
     isAiRuntimeProvider ? listAiRuntimeAssignments(db) : Promise.resolve([]),
   ]);
   const runtimeUsage = runtimeAssignments.filter((assignment) => assignment.providerKey === providerKey);
+  // Asked of the API, which sends invitations, never read from this web project's own settings.
+  const platformEmail = providerKey === 'resend' ? await platformEmailReadiness(db) : null;
   // Readiness is asked of the same facts the Providers list reads, so the two cannot disagree.
   const stages = providerStages({
     accountAdapter: hasAccountModel,
     accounts: hasAccountModel ? (await listProviderAccounts(db)).filter((candidate) => candidate.providerKey === providerKey) : [],
     services,
     runtimeAssignments: runtimeUsage.length,
-    deploymentCredential: providerKey === 'resend' && platformEmailOperationalStatus(account).source === 'environment',
+    deploymentCredential: providerKey === 'resend' && platformEmail?.credentialSource === 'environment',
   });
-  const platformEmail = providerKey === 'resend' ? platformEmailOperationalStatus(account) : null;
 
   return (
     <AppPage>
@@ -96,27 +98,7 @@ export default async function ProviderDetailPage({
           <ProviderStagesSection stages={stages} />
           {hasAccountModel ? <ProviderAccountSummary account={account} /> : null}
 
-          {platformEmail ? (
-            <Section>
-              <SectionHeading>Platform email</SectionHeading>
-              <DefinitionList>
-                <Detail label="Status">
-                  {platformEmail.canSend ? <Badge tone="success">Can send</Badge> : <Badge tone="danger">Cannot send</Badge>}
-                </Detail>
-                <Detail label="Answering from">
-                  {platformEmail.source === 'account'
-                    ? 'This GildOps account'
-                    : platformEmail.source === 'environment'
-                      ? 'Deployment environment (bootstrap fallback)'
-                      : 'Nothing configured'}
-                </Detail>
-                <Detail label="Sender identity in use">{platformEmail.senderAddress ?? 'Not set (PLATFORM_EMAIL_FROM_ADDRESS)'}</Detail>
-              </DefinitionList>
-              <p className="mt-2 text-sm text-muted">
-                An invitation this platform sends. Never a tenant&rsquo;s own customer communication — see Communications for that.
-              </p>
-            </Section>
-          ) : null}
+          {platformEmail ? <PlatformEmailReadinessSection readiness={platformEmail} /> : null}
 
           {isAiRuntimeProvider ? (
             <Section>

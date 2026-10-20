@@ -58,6 +58,8 @@ const INVENTORY: { file: string; route: string; trust: keyof typeof TRUST; runti
   { file: 'sms_status', route: '/sms/status', trust: 'twilio-signature' },
   { file: 'public_chat', route: '/public_chat', trust: 'shared-key' },
   { file: 'invitation_email', route: '/invitations/email', trust: 'bearer-token' },
+  { file: 'email_test_send', route: '/email/test-send', trust: 'bearer-token' },
+  { file: 'platform_email_readiness', route: '/platform/email-readiness', trust: 'bearer-token' },
   { file: 'invitation_email_webhook', route: '/webhooks/invitation-email', trust: 'twilio-signature' },
   { file: 'tenant_email_send', route: '/communications/email/send', trust: 'bearer-token' },
   { file: 'tenant_email_webhook', route: '/webhooks/tenant-email', trust: 'twilio-signature' },

@@ -18,7 +18,6 @@ content type. A file over the limit is recorded as rejected, with the reason, ra
 
 from __future__ import annotations
 
-import os
 import re
 import uuid
 from datetime import datetime
@@ -43,13 +42,19 @@ def handle_received(
 ) -> str:
     """One verified `received` event. Returns `recorded`, `duplicate` or `ignored`; raises when the
     message could not be read from the provider, so the provider retries rather than losing it."""
-    account_id = db.default_platform_provider_account(settings, provider_key=provider_key)
-    credential = db.read_provider_account_credential(settings, account_id=account_id) if account_id else None
-    # The account first, the deployment's bootstrap key otherwise: the order the sender and the
-    # invitation mail already use, so a deployment that can send can also read what comes back.
-    api_key = (credential.get("secret") if credential else None) or os.environ.get("RESEND_API_KEY")
+    # Read only through the account recorded as holding the receiving address's domain — never the
+    # platform default or the deployment's own key, which may belong to a different account.
+    receiving = db.email_receiving_account(settings, to_addresses=list(event.get("to") or []))
+    if receiving["state"] in ("unknown", "ambiguous"):
+        # Nobody here receives at that address (or more than one business claims it): the database
+        # would refuse it anyway, and retrying would not change that.
+        return "ignored"
+    credential = db.read_provider_account_credential(settings, account_id=receiving["provider_account_id"]) if receiving["state"] == "ready" else None
+    api_key = credential.get("secret") if credential else None
     if not api_key:
-        raise RuntimeError("no provider credential can read this message")
+        # The address is held here but its account is not recorded or not usable yet: the provider
+        # retries, and the message is read once the domain is confirmed — never through another account.
+        raise RuntimeError("the receiving address's provider account cannot read this message yet")
 
     content = provider.fetch_received_email(api_key=api_key, email_id=event["email_id"])
     if content is None:

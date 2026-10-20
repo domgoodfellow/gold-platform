@@ -45,6 +45,12 @@ EXPECTED_AUDIENCE = "authenticated"
 # published JWKS. HS256 is deliberately absent — see `_verify_via_auth_server` below.
 ASYMMETRIC_ALGORITHMS = ("RS256", "ES256", "EdDSA")
 
+# How far this runtime's clock may disagree with Supabase Auth's. Without it, a token used in the
+# same second it was issued can read as "issued in the future" when the issuing server's clock is
+# a fraction of a second ahead (found in Phase 3C: a fresh sign-in's first API call was refused).
+# It widens only the time checks; the signature, issuer and audience are checked exactly as before.
+CLOCK_SKEW_SECONDS = 30
+
 # The legacy generation: a shared secret this runtime never holds for a human token, verified
 # instead by asking the server that issued it.
 LEGACY_SYMMETRIC_ALGORITHM = "HS256"
@@ -117,6 +123,7 @@ def _verify_via_jwks(token: str, *, supabase_url: str) -> VerifiedToken:
             algorithms=list(ASYMMETRIC_ALGORITHMS),
             audience=EXPECTED_AUDIENCE,
             issuer=_expected_issuer(supabase_url),
+            leeway=CLOCK_SKEW_SECONDS,
         )
     except jwt.InvalidTokenError:
         raise invalid_credential() from None

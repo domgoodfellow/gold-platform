@@ -53,6 +53,9 @@ function calledFromPython(): string[] {
     /_post\(\s*settings,\s*"([a-z_0-9]+)"/g, //          the automation runner's helper
     /function="([a-z_0-9]+)"/g, //                        a tool or a domain command's declaration
     /\b_rpc\(\s*settings,\s*token,\s*"([a-z_0-9]+)"/g, // communications/routing.py's own RPC helper
+    // communications/voice_agent.py's helper. Missing until Phase 3C, which is how six voice
+    // functions were called without contract entries.
+    /\bcommand\(\s*settings,\s*'([a-z_0-9]+)'/g,
   ];
   for (const file of pythonFiles(join(API, 'app'))) {
     const source = readFileSync(file, 'utf8');

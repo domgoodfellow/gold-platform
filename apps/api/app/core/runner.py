@@ -62,6 +62,7 @@ class QueuedMessage:
     body: str
     from_address: str | None = None
     from_name: str | None = None
+    reply_to: str | None = None
     provider_key: str | None = None
     provider_account_id: str | None = None
 
@@ -111,6 +112,7 @@ def claim_deliveries(settings: RunnerSettings, limit: int = 50) -> list[QueuedMe
             body=row["body"],
             from_address=row.get("from_address"),
             from_name=row.get("from_name"),
+            reply_to=row.get("reply_to"),
             provider_key=row.get("provider_key"),
             provider_account_id=row.get("provider_account_id"),
         )

@@ -249,7 +249,7 @@ describe('a credential goes in and never comes out', () => {
     expect(rows[0]).toEqual({ decrypted: false, secrets: false });
   });
 
-  it('gives the machine role no table grant and exactly seventeen executes', async () => {
+  it('gives the machine role no table grant and exactly twenty-six executes', async () => {
     const tables = await pg.query(`select table_name from information_schema.role_table_grants where grantee = 'provider_operator'`);
     expect(tables.rows).toEqual([]);
 
@@ -277,12 +277,26 @@ describe('a credential goes in and never comes out', () => {
     // `email_sender_account` joined with the organization sender (Phase 3A): before sending an Inbox
     // email, apps/api asks the one sender resolution whether the address is still this business's
     // and ready, and which recorded account holds its domain. It answers rather than raises.
+    // Phase 3C: `email_receiving_account` reads received mail only through the receiving address's
+    // recorded account; `email_test_send_account`/`finish_email_test_send` send and record one
+    // manager-started test. The six `*voice_agent*` doors joined with the voice receptionist
+    // (20261227000003/7) without this list being updated, which is what made it fail: reviewed in
+    // Phase 3C, each acts only on the named call or session row, checks its state and organization,
+    // sets `search_path = ''`, and is called only by apps/api's voice agent service, which must also
+    // read the voice provider's credential — so this role, and no signed-in or anonymous caller.
     expect(functions.rows.map((row) => row.proname)).toEqual([
+      'admit_voice_agent_session',
+      'bind_voice_agent_session',
       'claim_email_for_send',
+      'claim_voice_agent_transfer',
       'custom_domain_provider_account',
       'default_platform_provider_account',
       'email_domain_provider_account',
+      'email_receiving_account',
       'email_sender_account',
+      'email_test_send_account',
+      'finish_email_test_send',
+      'mark_voice_agent_uncertain',
       'read_provider_account_credential',
       'record_ai_usage',
       'record_custom_domain_registration',
@@ -291,10 +305,12 @@ describe('a credential goes in and never comes out', () => {
       'record_invitation_delivery',
       'record_provider_account_verification',
       'record_public_communication_reply',
+      'record_voice_agent_event',
       'resolve_ai_runtime_assignment',
       'resolve_public_agent_turn',
       'resolve_public_assistant',
       'set_custom_domain_verification',
+      'voice_agent_session_context',
     ]);
   });
 

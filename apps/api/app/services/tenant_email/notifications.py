@@ -72,6 +72,7 @@ def drain_notifications(settings, *, limit: int = 20, budget_seconds: float = IN
                     to=job["to"], subject=job["subject"], text=job["text"], html=None,
                     in_reply_to=None, references=[], attachments=[],
                     timeout=max(1.0, min(PROVIDER_TIMEOUT, remaining() - FINISH_RESERVE)),
+                    reply_to=job.get("reply_to"),
                 )
                 outcome = "accepted" if result["ok"] else "retry" if result.get("retryable") else "rejected"
                 external_id = result.get("external_id")

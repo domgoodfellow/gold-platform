@@ -220,6 +220,9 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
             in_reply_to=None,
             references=[],
             attachments=[],
+            reply_to=message.reply_to,
+            # Lets a delivery report name this delivery even if the answer to this send is lost.
+            tags=[{"name": "gildops_delivery", "value": message.id}],
         )
         if result["ok"]:
             return "accepted", result["external_id"], None

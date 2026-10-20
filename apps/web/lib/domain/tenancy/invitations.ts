@@ -165,29 +165,35 @@ export async function listInvitationDeliveryStatus(
 ): Promise<Map<string, InvitationDeliveryStatus>> {
   const { data, error } = await db
     .from('invitation_deliveries')
-    .select('invitation_id, state, detail, occurred_at, provider_event_at')
+    .select('invitation_id, source, state, detail, occurred_at, provider_event_at, provider_message_id')
     .eq('organization_id', input.organizationId);
 
   if (error) {
     throw new DomainError(error.message, 'invitations.delivery_read_failed');
   }
 
-  // Current status is whichever row's own moment -- Resend's own `provider_event_at` when a
-  // webhook reported one, this platform's ingestion `occurred_at` otherwise -- is the latest. A
-  // delayed or retried callback for an older event can arrive after a newer one already landed;
-  // ordering by when this platform *heard* a row rather than the moment it describes would let
-  // that regress an already-current state (work order 1 closeout, section 4).
-  const latest = new Map<string, { effectiveAt: string; status: InvitationDeliveryStatus }>();
-  for (const row of data ?? []) {
-    const effectiveAt = row.provider_event_at ?? row.occurred_at;
-    const current = latest.get(row.invitation_id);
-    if (current && current.effectiveAt >= effectiveAt) continue;
-    latest.set(row.invitation_id, {
-      effectiveAt,
-      status: { state: row.state as InvitationDeliveryState, detail: row.detail, occurredAt: effectiveAt },
-    });
+  // Two clocks, never compared with each other. GildOps' own clock (`occurred_at`) says which send
+  // attempt is the latest — a resend supersedes everything said about the attempt before it. The
+  // provider's clock (`provider_event_at`) orders what the provider then reported about that
+  // attempt's message, so a delayed or retried callback for an older event cannot regress a newer
+  // one (work order 1 closeout, section 4). Any report about the attempt outranks the attempt's own
+  // "accepted" record, however the two clocks happen to compare (Phase 3C).
+  type Row = NonNullable<typeof data>[number];
+  const byInvitation = new Map<string, Row[]>();
+  for (const row of data ?? []) byInvitation.set(row.invitation_id, [...(byInvitation.get(row.invitation_id) ?? []), row]);
+
+  const status = new Map<string, InvitationDeliveryStatus>();
+  for (const [invitationId, rows] of byInvitation) {
+    const sends = rows.filter((row) => row.source === 'send').sort((x, y) => (x.occurred_at < y.occurred_at ? 1 : -1));
+    const attempt = sends[0];
+    const reports = rows
+      .filter((row) => row.source !== 'send' && (!attempt || (attempt.provider_message_id && row.provider_message_id === attempt.provider_message_id)))
+      .sort((x, y) => ((x.provider_event_at ?? x.occurred_at) < (y.provider_event_at ?? y.occurred_at) ? 1 : -1));
+    const current = reports[0] ?? attempt;
+    if (!current) continue;
+    status.set(invitationId, { state: current.state as InvitationDeliveryState, detail: current.detail, occurredAt: current.provider_event_at ?? current.occurred_at });
   }
-  return new Map([...latest].map(([invitationId, entry]) => [invitationId, entry.status]));
+  return status;
 }
 
 /**
@@ -221,4 +227,21 @@ export async function acceptInvitation(
   }
 
   return data as string;
+}
+
+export type InvitationPreview =
+  | { state: 'valid'; businessName: string; roleName: string; email: string; expiresAt: string }
+  | { state: 'invalid' };
+
+/**
+ * What a link is for, for whoever holds it (`invitation_preview`): the business, the role and the
+ * address it was sent to, only while the invitation is valid. Unknown, revoked, expired and used
+ * links all answer `invalid`, exactly as accepting one would, so a dead link reveals nothing.
+ */
+export async function previewInvitation(db: Db, token: string): Promise<InvitationPreview> {
+  const { data, error } = await db.rpc('invitation_preview', { p_token: token });
+  if (error) throw new DomainError(error.message, 'invitation.preview_failed');
+  const row = (data ?? [])[0];
+  if (!row || row.state !== 'valid' || !row.business_name || !row.role_name || !row.email || !row.expires_at) return { state: 'invalid' };
+  return { state: 'valid', businessName: row.business_name, roleName: row.role_name, email: row.email, expiresAt: row.expires_at };
 }

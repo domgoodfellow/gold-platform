@@ -240,7 +240,8 @@ describe('the default sender', () => {
     )).rows[0].id;
     expect((await claim()).some((row) => row.id === text)).toBe(false);
     const after = (await pg.query('select state,detail from public.message_deliveries where id=$1', [text])).rows[0];
-    expect(after.state).toBe('failed');
+    // Phase 3C: uncertainty is its own state, shown to the business, never a plain failure.
+    expect(after.state).toBe('uncertain');
     expect(after.detail).toContain('Delivery uncertain');
   });
 
@@ -356,7 +357,7 @@ describe('retries and what the provider later says', () => {
     await pg.query("update public.message_deliveries set first_attempt_at=now()-interval '24 hours' where id=$1", [id]);
     expect((await claim()).some((row) => row.id === id)).toBe(false);
     const after = await delivery(booking);
-    expect(after.state).toBe('failed');
+    expect(after.state).toBe('uncertain');
     expect(after.detail).toContain('Delivery uncertain');
   });
 
@@ -366,7 +367,7 @@ describe('retries and what the provider later says', () => {
     expect((await claim()).some((row) => row.id === id)).toBe(true);
     await finish(id, 'uncertain', null, 'the idempotency key was already used for a different request');
     const after = await delivery(booking);
-    expect(after.state).toBe('failed');
+    expect(after.state).toBe('uncertain');
     expect(after.detail).toMatch(/^Delivery uncertain: the idempotency key was already used/);
   });
 
@@ -398,5 +399,128 @@ describe('retries and what the provider later says', () => {
     expect(await state(id)).toBe('delivered');
     await report(provider, 'bounced', 'now()');
     expect(await state(id)).toBe('bounced');
+  });
+});
+
+describe('Phase 3C: Reply-To, uncertainty, test sends, received mail and invitation previews', () => {
+  let c: Business;
+  let sender: ReadySender;
+  let ownerEmail: string;
+  const webhook = (provider: string, kind: string, tags: Record<string, string> | null) =>
+    as('tenant_email_webhook', 'select public.record_email_event($1,$2,$3,null,$4::jsonb,now())',
+      [provider, kind, `evt_${randomUUID()}`, JSON.stringify({ type: `email.${kind}`, data: { email_id: provider, ...(tags ? { tags } : {}) } })]);
+
+  beforeAll(async () => {
+    c = await business('sender-3c');
+    sender = await readyEmailSender(pg, c.db, c.organizationId);
+    ownerEmail = (await pg.query('select u.email from auth.users u where u.id=$1', [c.userId])).rows[0].email;
+  });
+
+  it('accepts as Reply-To only one of the business’s own addresses on a verified domain', async () => {
+    const replies = await readyEmailSender(pg, c.db, c.organizationId, { makeDefault: false });
+    expect((await c.db.rpc('set_email_reply_to', { p_organization_id: c.organizationId, p_email_identity_id: replies.identityId })).error).toBeNull();
+    const listed = (await c.db.rpc('organization_email_senders', { p_organization_id: c.organizationId })).data!;
+    expect((listed as { email_identity_id: string }[]).find((row) => row.email_identity_id === replies.identityId)).toMatchObject({ is_reply_to: true, can_take_replies: true });
+
+    // An address on a domain nobody has verified, and another business's address, are refused.
+    const domainName = `unproved-${randomUUID().slice(0, 8)}.example.test`;
+    const named = await c.db.rpc('record_organization_email_domain', { p_organization_id: c.organizationId, p_domain: domainName });
+    const unproved = await createEmailIdentity(c.db, { organizationId: c.organizationId, address: `hello@${domainName}`, sendingDomainResourceId: named.data as string });
+    expect((await c.db.rpc('set_email_reply_to', { p_organization_id: c.organizationId, p_email_identity_id: unproved.id })).error?.code).toBe('55000');
+    const foreign = (await pg.query('select default_email_identity_id id from organization_email_sending where organization_id=$1', [a.organizationId])).rows[0].id;
+    expect((await c.db.rpc('set_email_reply_to', { p_organization_id: c.organizationId, p_email_identity_id: foreign })).error?.code).toBe('55000');
+    expect((await b.db.rpc('set_email_reply_to', { p_organization_id: c.organizationId, p_email_identity_id: null as unknown as string })).error?.code).toBe('42501');
+
+    // An automation email carries it, fixed at the first attempt.
+    const booking = await book(c);
+    const { id } = await delivery(booking);
+    const claimed = (await as<Claimed & { reply_to: string | null }>('automation_runner', 'select * from public.claim_message_deliveries(200)')).find((row) => row.id === id)!;
+    expect(claimed.reply_to).toBe(replies.address);
+    await finish(id, 'accepted', `re_${randomUUID()}`);
+  });
+
+  it('marks a delivery uncertain rather than failed, and a tagged provider report resolves it without a second send', async () => {
+    const booking = await book(c);
+    const { id } = await delivery(booking);
+    expect((await claim()).some((row) => row.id === id)).toBe(true);
+    await finish(id, 'uncertain', null, 'the answer was lost');
+    expect(await delivery(booking)).toMatchObject({ state: 'uncertain' });
+
+    const provider = `re_${randomUUID()}`;
+    await webhook(provider, 'delivered', { gildops_delivery: id });
+    expect(await delivery(booking)).toMatchObject({ state: 'sent', external_id: provider, detail: null });
+    expect((await pg.query('select provider_state from message_deliveries where id=$1', [id])).rows[0].provider_state).toBe('delivered');
+  });
+
+  it('records a delivery whose answer was lost as sent when its report arrives, so it is never claimed again', async () => {
+    const booking = await book(c);
+    const { id } = await delivery(booking);
+    expect((await claim()).some((row) => row.id === id)).toBe(true);
+    await finish(id, 'retry');
+    const provider = `re_${randomUUID()}`;
+    await webhook(provider, 'sent', { gildops_delivery: id });
+    expect(await delivery(booking)).toMatchObject({ state: 'sent', external_id: provider });
+    expect((await claim()).some((row) => row.id === id)).toBe(false);
+    // An uncertain delivery after the day-long window is its own state, never resent.
+    const late = await book(c);
+    const { id: lateId } = await delivery(late);
+    expect((await claim()).some((row) => row.id === lateId)).toBe(true);
+    await finish(lateId, 'retry');
+    await pg.query("update message_deliveries set first_attempt_at=now()-interval '24 hours' where id=$1", [lateId]);
+    expect((await claim()).some((row) => row.id === lateId)).toBe(false);
+    expect(await delivery(late)).toMatchObject({ state: 'uncertain' });
+  });
+
+  it('sends a test only to the manager’s own confirmed address, through the recorded account, a few times at most', async () => {
+    const started = await c.db.rpc('begin_email_test_send', { p_organization_id: c.organizationId });
+    expect(started.error).toBeNull();
+    const test = started.data![0];
+    expect(test).toMatchObject({ recipient: ownerEmail.toLowerCase(), from_address: sender.address });
+    const account = await as<{ state: string; provider_account_id: string }>('provider_operator', 'select * from public.email_test_send_account($1,$2)', [c.organizationId, test.id]);
+    expect(account[0]).toMatchObject({ state: 'ready', provider_account_id: sender.accountId });
+    const provider = `re_${randomUUID()}`;
+    await as('provider_operator', "select public.finish_email_test_send($1,$2,'accepted',$3,null)", [c.organizationId, test.id, provider]);
+    await webhook(provider, 'delivered', { gildops_test_send: test.id });
+    expect((await c.db.from('email_test_sends').select('state, provider_state').eq('id', test.id)).data).toEqual([{ state: 'sent', provider_state: 'delivered' }]);
+
+    // Rate limited: three within ten minutes.
+    for (let i = 0; i < 2; i++) expect((await c.db.rpc('begin_email_test_send', { p_organization_id: c.organizationId })).error).toBeNull();
+    expect((await c.db.rpc('begin_email_test_send', { p_organization_id: c.organizationId })).error?.code).toBe('53400');
+    // Nobody else may start one, read them, or reach the provider runtime's doors.
+    expect((await b.db.rpc('begin_email_test_send', { p_organization_id: c.organizationId })).error?.code).toBe('42501');
+    expect((await b.db.from('email_test_sends').select('id').eq('organization_id', c.organizationId)).data).toEqual([]);
+    expect((await c.db.rpc('email_test_send_account' as never, { p_organization_id: c.organizationId, p_id: test.id } as never)).error).not.toBeNull();
+    expect((await c.db.rpc('finish_email_test_send' as never, { p_organization_id: c.organizationId, p_id: test.id, p_outcome: 'accepted' } as never)).error).not.toBeNull();
+  });
+
+  it('reads received mail only through the receiving address’s recorded account', async () => {
+    const receiving = await readyEmailSender(pg, c.db, c.organizationId, { makeDefault: false });
+    await pg.query('update email_identities set can_receive=true where id=$1', [receiving.identityId]);
+    const ask = async (to: string[]) => (await as<{ state: string; provider_account_id: string | null }>('provider_operator', 'select * from public.email_receiving_account($1)', [to]))[0];
+    expect(await ask([`someone@else.test`, receiving.address.toUpperCase()])).toMatchObject({ state: 'ready', provider_account_id: receiving.accountId });
+    expect(await ask(['nobody@nowhere.test'])).toMatchObject({ state: 'unknown', provider_account_id: null });
+    await pg.query('update organization_provider_bindings set provider_account_id=null where id=$1', [receiving.bindingId]);
+    try {
+      expect(await ask([receiving.address])).toMatchObject({ state: 'unrecorded', provider_account_id: null });
+    } finally {
+      await pg.query('update organization_provider_bindings set provider_account_id=$1 where id=$2', [receiving.accountId, receiving.bindingId]);
+    }
+    expect((await c.db.rpc('email_receiving_account' as never, { p_to_addresses: [receiving.address] } as never)).error).not.toBeNull();
+  });
+
+  it('previews a valid invitation to whoever holds it, and reveals nothing about a dead one', async () => {
+    const roles = await c.db.from('roles').select('id, name').eq('organization_id', c.organizationId).limit(1);
+    const invitee = `preview-${randomUUID().slice(0, 8)}@example.test`;
+    const token = (await c.db.rpc('invite_member', { p_organization_id: c.organizationId, p_email: invitee, p_role_id: roles.data![0].id })).data as string;
+    const anonymous = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+    const valid = (await anonymous.rpc('invitation_preview', { p_token: token })).data![0];
+    expect(valid).toMatchObject({ state: 'valid', business_name: 'sender-3c Ltd', role_name: roles.data![0].name, email: invitee });
+    await pg.query('update organization_invitations set revoked_at=now() where organization_id=$1 and email=$2', [c.organizationId, invitee]);
+    expect((await anonymous.rpc('invitation_preview', { p_token: token })).data![0]).toEqual({ state: 'invalid', business_name: null, role_name: null, email: null, expires_at: null });
+    expect((await anonymous.rpc('invitation_preview', { p_token: 'f'.repeat(64) })).data![0].state).toBe('invalid');
+  });
+
+  it('tells only platform staff the facts GildOps’ own email readiness is judged on', async () => {
+    expect((await c.db.rpc('platform_email_readiness_facts')).error?.code).toBe('42501');
   });
 });
