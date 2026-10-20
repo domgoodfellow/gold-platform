@@ -302,6 +302,11 @@
       "category": "component",
       "concerns": ["navigation", "accessibility", "permissions"]
     },
+    "apps/web/tests/unit/workspace-shortcuts.test.ts": {
+      "category": "unit",
+      "concerns": ["navigation", "permissions", "entitlements"],
+      "note": "Work Home's Manage Work shortcuts are chosen from the workspace navigation projection: registered addresses, sidebar labels, business labels, and absent when unavailable."
+    },
     "apps/web/e2e/workspace-navigation.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": ["navigation", "responsive", "accessibility", "permissions"],

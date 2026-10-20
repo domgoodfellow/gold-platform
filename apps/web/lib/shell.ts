@@ -373,6 +373,23 @@ export function inPlatformScope(pathname: string): boolean {
   return platformSubpath(pathname) !== null;
 }
 
+/**
+ * A workspace Home's chosen shortcuts, taken from the projection the sidebar draws — so route,
+ * authorization and (business) label are the registry's, never the page's. The Home decides only
+ * which ones to show and in what order; anything this person may not use is simply absent.
+ */
+export function workspaceShortcuts(
+  sections: readonly ShellSection[],
+  workspace: string,
+  pick: { destinations?: readonly string[]; calendar?: boolean; configuration?: readonly string[] },
+): NavItem[] {
+  const row = sections.flatMap((section) => section.items).find((item) => item.key === `workspace-${workspace}`);
+  if (!row) return [];
+  const destinations = (pick.destinations ?? []).map((key) => row.destinations?.find((item) => item.key === key));
+  const configuration = (pick.configuration ?? []).map((key) => row.configuration?.children?.find((item) => item.key === key));
+  return [...destinations, ...(pick.calendar && row.calendar ? [row.calendar] : []), ...configuration].filter((item): item is NavItem => Boolean(item));
+}
+
 /** The business's landing item for the persistent phone Home control. */
 export function shellHomeItem(sections: readonly ShellSection[]): NavItem | undefined {
   return sections.find((section) => section.key === 'home')?.items.find(item => item.key === 'home');

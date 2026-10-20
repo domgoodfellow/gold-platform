@@ -32,6 +32,10 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-10-20
+
+- Work Home's Manage Work list now comes from the Work workspace's navigation. It uses the same labels as the sidebar, including a business's own names, and offers only pages the member may open. Scheduling & hours no longer appears for a business that schedules no work, where that page was refused.
+
 ## 2026-10-19
 
 - Workspace navigation has one approved contract (ADR-046, superseding ADR-006 and ADR-045's flat sidebar); product, architecture and UI documents now each own one part of it. A new `contract` CI job lists changes to protected contract paths (`.github/CODEOWNERS`) and requires a `Contract-Change:` rationale for them and a `Coverage-Change:` rationale for removed, skipped or newly mocked tests. It blocks merges only where branch protection requires it.

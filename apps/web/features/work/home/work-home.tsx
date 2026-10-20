@@ -11,10 +11,11 @@ import { MetricTile, OperationalPanel } from '@/components/operational/primitive
 import { WorkAttention } from './attention';
 import type { WorkOperations } from '@/lib/application/work/operations';
 
-export function WorkHome({ organizationId, timezone, data: d, createOptions, mayConfigure, destinations, activity, configure }: {
+export function WorkHome({ organizationId, timezone, data: d, createOptions, shortcuts, activity, configure }: {
   configure?: ReactNode;
   organizationId: string; timezone: string; data: WorkOperations; createOptions: WorkCreateOptions | null;
-  mayConfigure: boolean; destinations: { resources: boolean; locations: boolean; assets: boolean; schedule: boolean }; activity: ReactNode;
+  /** Manage Work's links, chosen from the authorized navigation projection (`workspaceShortcuts`); never a list of its own. */
+  shortcuts: readonly { key: string; label: string; href: string }[]; activity: ReactNode;
 }) {
   const base = `/organizations/${organizationId}`;
   const dispatch = `${base}/work/dispatch?on=${d.date}`;
@@ -55,7 +56,7 @@ export function WorkHome({ organizationId, timezone, data: d, createOptions, may
         <OperationalPanel density="compact" flush title="Work status"><dl className="divide-y divide-border px-3 text-xs">{[['Active work', d.active], ['Scheduled on selected day', d.todayCount], ['Unscheduled backlog', d.unscheduled.total], ['Unassigned scheduled work', d.unassigned.total], ['Requirement gaps · day', d.shortfalls.total], ['Availability conflicts · day', d.conflicts.total]].map(([label, value]) => <div key={label} className="flex justify-between gap-2 py-2"><dt className="text-muted">{label}</dt><dd className="font-semibold tabular-nums">{value}</dd></div>)}</dl></OperationalPanel>
         <OperationalPanel density="compact" flush title="Recent activity" href={`${base}/work`} hrefLabel="View work"><div className="px-3 pb-2">{activity}</div></OperationalPanel>
         <OperationalPanel density="compact" flush title="Insights"><div className="grid grid-cols-2 gap-2 px-3 pb-3"><div className="rounded-md border border-border p-2"><p className="text-[11px] text-muted">Free resource hours · day</p><p className="mt-1 text-xl font-semibold tabular-nums">{d.freeHours.toFixed(1)}</p></div><div className="rounded-md border border-border p-2"><p className="text-[11px] text-muted">Open resource hours · day</p><p className="mt-1 text-xl font-semibold tabular-nums">{d.openHours.toFixed(1)}</p></div></div><p className="px-3 pb-3 text-[11px] text-muted">{d.hoursConfigured ? 'Hours follow business and resource availability.' : 'Opening hours are not configured; availability currently permits the full day.'}</p></OperationalPanel>
-        <OperationalPanel density="compact" flush title="Manage Work"><NavigationList label="Work destinations" density="compact" className="grid-cols-2 px-3 pb-3" items={[{ name: 'Work items', href: 'work', show: true }, { name: 'Resources', href: 'resources', show: destinations.resources }, { name: 'Locations', href: 'locations', show: destinations.locations }, { name: 'Assets', href: 'assets', show: destinations.assets }, { name: 'Calendar', href: 'field/calendar', show: true }, { name: 'Opening hours', href: 'schedule/configuration', show: mayConfigure }].filter(x => x.show).map(x => ({ key: x.href, title: x.name, href: `${base}/${x.href}` }))} /></OperationalPanel>
+        <OperationalPanel density="compact" flush title="Manage Work"><NavigationList label="Work shortcuts" density="compact" className="grid-cols-2 px-3 pb-3" items={shortcuts.map((shortcut) => ({ key: shortcut.key, title: shortcut.label, href: shortcut.href }))} /></OperationalPanel>
       </aside>
     </div>
   </AppPage>;
