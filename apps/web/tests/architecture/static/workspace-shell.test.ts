@@ -187,7 +187,8 @@ describe('Agent is workspace-global and the support modes are page-level', () =>
   });
 
   it('every page that offers Configure also registers the panel it opens', () => {
-    for (const area of ['resources', 'locations', 'assets', 'schedule', 'customers', 'work']) {
+    // Customers is absent: Package 3A retired its link-only Configure panel (CRM configuration is its sidebar group).
+    for (const area of ['resources', 'locations', 'assets', 'schedule', 'work']) {
       const source = readFileSync(
         `${WEB}/app/organizations/[organizationId]/${area}/page.tsx`,
         'utf8',

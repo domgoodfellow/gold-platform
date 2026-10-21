@@ -36,6 +36,7 @@
     "./components/separator": "./src/components/separator.tsx",
     "./components/sheet": "./src/components/sheet.tsx",
     "./components/sidebar": "./src/components/sidebar.tsx",
+    "./components/sidebar-preferences": "./src/components/sidebar-preferences.ts",
     "./components/skeleton": "./src/components/skeleton.tsx",
     "./components/sonner": "./src/components/sonner.tsx",
     "./components/tab-styles": "./src/components/tab-styles.ts",

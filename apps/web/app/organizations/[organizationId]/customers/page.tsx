@@ -1,6 +1,5 @@
 import { BusinessLabel } from '@/lib/context/business-vocabulary';
 import { AppPage } from '@/components/layout/app-page';
-import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
 import { SupportRegistrar } from '@/components/panels/support-registrar';
 import { CollectionHeader } from '@/components/patterns/collection-header';
 import { ButtonLink } from '@/components/controls/button';
@@ -8,7 +7,6 @@ import {
   CreateCustomerSheetProvider,
   CreateCustomerTrigger,
 } from '@/features/crm/customers/create-customer-sheet';
-import { CustomerConfiguration } from '@/features/crm/customers/customer-configuration';
 import {
   CustomerListToolbar,
   type CustomerDirectoryView,
@@ -62,7 +60,6 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
       featureAvailability: availableFeatureKeys(resolvedFeatures),
     }) && organization.capabilities.includes('report.read');
   const visibleStages = salesEnabled ? stages : [];
-  const mayConfigure = organization.capabilities.includes('field.manage');
   // The database refuses an import from a role without `integration.manage`; the button follows
   // the organization's own capability, never platform authority, and only when the module is on.
   const mayImport = modules.has('integrations') && organization.capabilities.includes('integration.manage');
@@ -129,7 +126,6 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
           ) : undefined}
           activity={!emptyCollection}
           insights={mayInsight && !emptyCollection}
-          configure={mayConfigure}
         />
         <SupportRegistrar mode="activity" title="Customer activity">
           <WorkspaceActivity
@@ -153,21 +149,8 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
             />
           </SupportRegistrar>
         ) : null}
-        {mayConfigure ? (
-          <ConfigureRegistrar
-            title="Customers configuration"
-            settingsHref={`/organizations/${organizationId}/settings/custom-fields`}
-          >
-            <CustomerConfiguration
-              organizationId={organizationId}
-              role={organization.role}
-              mayConfigure={mayConfigure}
-              definitions={definitions}
-              stages={stages}
-              salesEnabled={salesEnabled}
-            />
-          </ConfigureRegistrar>
-        ) : null}
+        {/* CRM configuration is reached from CRM's own sidebar group and Home Configure menu; this
+            page has no configuration of its own to offer, so it registers no Configure panel. */}
         {emptyCollection ? (
           <section className="mt-6 rounded-lg border border-border bg-surface px-5 py-12 text-center" aria-labelledby="customers-empty-heading">
             <h2 id="customers-empty-heading" className="text-base font-semibold"><BusinessLabel>No customers yet</BusinessLabel></h2>

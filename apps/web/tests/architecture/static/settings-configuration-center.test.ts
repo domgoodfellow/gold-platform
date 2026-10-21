@@ -252,11 +252,6 @@ describe('contextual Configure, generalized from Work â€” the same componen
       component: 'features/assets/configuration/asset-configuration.tsx',
       import: 'AssetConfiguration',
     },
-    customers: {
-      page: 'customers/page.tsx',
-      component: 'features/crm/customers/customer-configuration.tsx',
-      import: 'CustomerConfiguration',
-    },
     schedule: {
       page: 'schedule/page.tsx',
       component: 'features/scheduling/configuration/schedule-configuration.tsx',
@@ -299,7 +294,8 @@ describe('contextual Configure, generalized from Work â€” the same componen
       expect(source).not.toContain('CreateFieldForm');
     }
     expect(readFileSync(`${ROUTES}/sales/configuration/fields/page.tsx`, 'utf8')).toContain('EntityFieldsConfiguration');
-    expect(readFileSync(`${WEB_FEATURES}/crm/customers/customer-configuration.tsx`, 'utf8')).toContain("configTarget('customer-fields')");
+    // Package 3A retired Customers' link-only Configure panel; customer fields are configured on their CRM page only.
+    expect(readFileSync(`${ROUTES}/customers/page.tsx`, 'utf8')).not.toContain('ConfigureRegistrar');
   });
 
   it('Schedule swapped the raw date input for the shared Calendar/Popover DatePicker', () => {

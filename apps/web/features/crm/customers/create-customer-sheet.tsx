@@ -1,13 +1,15 @@
 'use client';
 import { BusinessLabel } from '@/lib/context/business-vocabulary';
 
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useId, useState, type ReactNode } from 'react';
 import { UserPlus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import {
   PageDrawer,
+  PageDrawerClose,
   PageDrawerContent,
   PageDrawerDescription,
+  PageDrawerFooter,
   PageDrawerHeader,
   PageDrawerTitle,
 } from '@/components/panels/page-drawer';
@@ -33,6 +35,8 @@ export function CreateCustomerSheetProvider({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [pending, setPending] = useState(false);
+  const formId = useId();
 
   return (
     <CreateCustomerSheetContext.Provider value={() => setOpen(true)}>
@@ -43,13 +47,21 @@ export function CreateCustomerSheetProvider({
             <PageDrawerTitle><BusinessLabel>New customer</BusinessLabel></PageDrawerTitle>
             <PageDrawerDescription>Add the identity and contact details this business knows today.</PageDrawerDescription>
           </PageDrawerHeader>
-          <div>
-            <CreateCustomerForm
-              organizationId={organizationId}
-              definitions={definitions}
-              onCreated={() => setOpen(false)}
-            />
-          </div>
+          <CreateCustomerForm
+            organizationId={organizationId}
+            definitions={definitions}
+            formId={formId}
+            onCreated={() => setOpen(false)}
+            onPendingChange={setPending}
+          />
+          <PageDrawerFooter>
+            <Button type="submit" form={formId} disabled={pending}>
+              {pending ? 'Adding…' : 'Add customer'}
+            </Button>
+            <PageDrawerClose asChild>
+              <Button type="button" tone="secondary">Cancel</Button>
+            </PageDrawerClose>
+          </PageDrawerFooter>
         </PageDrawerContent>
       </PageDrawer>
     </CreateCustomerSheetContext.Provider>

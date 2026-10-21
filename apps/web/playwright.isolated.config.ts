@@ -3,8 +3,9 @@ import { defineConfig } from '@playwright/test';
 import base from './playwright.config';
 
 /**
- * The demo-dependent navigation specs, run against one disposable business instead of the shared
- * demo ones (`e2e/isolated-setup.ts`, removed again by `e2e/isolated-teardown.ts`). The tests that
+ * The demo-dependent navigation specs, the CRM form-drawer contract, the responsive shell and CRM configuration discovery, run against one disposable
+ * business instead of the shared demo ones (`e2e/isolated-setup.ts`, removed again by
+ * `e2e/isolated-teardown.ts`). The tests that
  * need Platform staff stay out: Platform needs GildOps' own operating organization, which a
  * disposable business cannot stand in for, so they remain unverified here.
  */
@@ -14,6 +15,6 @@ export default defineConfig({
   ...base,
   globalSetup: './e2e/isolated-setup.ts',
   globalTeardown: './e2e/isolated-teardown.ts',
-  testMatch: ['**/adaptive-shell.spec.ts', '**/breadcrumbs.spec.ts', '**/studio-navigation.spec.ts'],
+  testMatch: ['**/adaptive-shell.spec.ts', '**/breadcrumbs.spec.ts', '**/studio-navigation.spec.ts', '**/crm-form-drawers.spec.ts', '**/responsive-shell.spec.ts', '**/crm-configuration.spec.ts'],
   grepInvert: /GildOps platform staff|Administration breadcrumbs|mobile Platform page location/,
 });

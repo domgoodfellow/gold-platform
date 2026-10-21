@@ -32,6 +32,8 @@ beforeEach(() => {
 
 describe('Settings interactions', () => {
   it('opens and closes the account menu with pressed state, and returns focus on Escape', async () => {
+    // The expanded desktop sidebar: jsdom's default 1024px is the tablet width, where the sidebar starts as the icon rail.
+    vi.stubGlobal('innerWidth', 1440);
     const user = userEvent.setup();
     render(<TooltipProvider><SidebarProvider><AccountMenu email="person@example.test" signOutAction={vi.fn()} /></SidebarProvider></TooltipProvider>);
     const trigger = screen.getByRole('button', { name: /person@example.test/ });

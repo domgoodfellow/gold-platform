@@ -247,6 +247,8 @@ function NavRow({ item, active }: { item: NavItem; active: string | null }) {
     if (inside) setOpen(true);
   }
 
+  if (item.group && item.children) return <NavGroupRow item={item} active={active} open={open} setOpen={setOpen} />;
+
   const link = (
     <SidebarMenuButton asChild isActive={current} tooltip={item.label} className={item.children ? 'max-md:min-h-11' : undefined}>
       <Link href={item.href} target={retainActivity && item.href.startsWith('/platform') ? '_blank' : undefined} rel={retainActivity && item.href.startsWith('/platform') ? 'noopener noreferrer' : undefined} aria-current={current ? 'page' : undefined}>
@@ -273,6 +275,46 @@ function NavRow({ item, active }: { item: NavItem; active: string | null }) {
         <CollapsibleContent>
           <SidebarMenuSub>
             {item.children.map((child) => (
+              <NavSubRow key={child.key} item={child} active={active} />
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  );
+}
+
+/**
+ * A grouping parent with no page of its own (CRM's Configuration): the whole row expands and
+ * collapses its children, and only the children are destinations. The collapsed rail has no room
+ * for children, so there the row opens the navigation (the tablet overlay, or the desktop sidebar)
+ * with the group already expanded.
+ */
+function NavGroupRow({ item, active, open, setOpen }: { item: NavItem; active: string | null; open: boolean; setOpen: (open: boolean) => void }) {
+  const Icon = NAV_ICONS[item.key];
+  const sidebar = useSidebar();
+  return (
+    <Collapsible asChild open={open} onOpenChange={setOpen}>
+      <SidebarMenuItem>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton
+            tooltip={item.label}
+            className="max-md:min-h-11"
+            onClick={(event) => {
+              if (sidebar.isMobile || sidebar.state !== 'collapsed') return;
+              event.preventDefault();
+              sidebar.setOpen(true);
+              setOpen(true);
+            }}
+          >
+            {Icon ? <Icon aria-hidden /> : null}
+            <span>{item.label}</span>
+            <ChevronRight aria-hidden className="ml-auto transition-transform [[data-state=open]>&]:rotate-90" />
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {item.children!.map((child) => (
               <NavSubRow key={child.key} item={child} active={active} />
             ))}
           </SidebarMenuSub>

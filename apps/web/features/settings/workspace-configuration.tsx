@@ -3,7 +3,7 @@ import { NavigationList } from '@/components/navigation/navigation-list';
 import { redirect } from 'next/navigation';
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
-import { WORKSPACES, AREAS, areaHref, areaEntitled, areaVisibleTo, type WorkspaceKey } from '@/lib/navigation';
+import { WORKSPACES, AREAS, areaHref, areaEntitled, areaVisibleTo, configurationHasLanding, type WorkspaceKey } from '@/lib/navigation';
 import { requireWorkspaceConfiguration, configurationLayoutSections } from '@/lib/route/workspace-configuration';
 
 export async function WorkspaceConfigurationLayout({ organizationId, workspace, children }: { organizationId: string; workspace: WorkspaceKey; children: ReactNode }) {
@@ -17,7 +17,10 @@ export async function WorkspaceConfigurationLayout({ organizationId, workspace, 
  * its own `requireWorkspaceConfiguration` result, so authorization stays visible at the route.
  */
 export function WorkspaceConfigurationHome({ organizationId, workspace, configuration: { gate, sections } }: { organizationId: string; workspace: WorkspaceKey; configuration: Awaited<ReturnType<typeof requireWorkspaceConfiguration>> }) {
-  if (sections.length === 1) redirect(sections[0].href);
+  // A workspace without a landing (CRM) sends its old address to the first door this member may
+  // open; `requireWorkspaceConfiguration` has already returned not-found when there is none. The
+  // server redirect replaces the address, so Back does not return to it.
+  if (sections.length === 1 || !configurationHasLanding(workspace)) redirect(sections[0].href);
   const owner = WORKSPACES.find(candidate => candidate.key === workspace)!;
   const home = AREAS.find(area => area.segment === owner.home)!;
   const mayOperate = areaEntitled(home, gate.enabledModules, gate.featureAvailability) && areaVisibleTo(home, gate.capabilities);

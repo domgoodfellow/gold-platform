@@ -6,6 +6,7 @@ import {
   areaAvailable,
   configTarget,
   configTargetOffered,
+  configurationHasLanding,
   workspaceConfigureItems,
   type ConfigGate,
   type ConfigTarget,
@@ -187,7 +188,8 @@ function deriveNodes(): LocationNode[] {
   for (const workspace of WORKSPACES) {
     nodes.push({ id: `workspace:${workspace.key}`, scope: 'organization', kind: 'workspace', pattern: areaRoute(workspace.home), area: workspace.home, workspace: workspace.key });
     if (hasConfigurationLanding(workspace.key)) {
-      nodes.push({ id: `configuration:${workspace.key}`, scope: 'organization', kind: 'configuration', pattern: `${areaRoute(workspace.home)}/configuration`, parent: `workspace:${workspace.key}`, workspace: workspace.key, label: 'Configuration', open: OPEN_LANDINGS[workspace.key] });
+      // Without a landing the address only redirects to a door, so the level is plain text.
+      nodes.push({ id: `configuration:${workspace.key}`, scope: 'organization', kind: 'configuration', pattern: `${areaRoute(workspace.home)}/configuration`, parent: `workspace:${workspace.key}`, workspace: workspace.key, label: 'Configuration', open: OPEN_LANDINGS[workspace.key], ...(configurationHasLanding(workspace.key) ? {} : { redirect: true as const }) });
     }
   }
 

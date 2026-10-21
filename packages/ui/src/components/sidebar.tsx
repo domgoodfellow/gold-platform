@@ -5,7 +5,6 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 import { Slot } from "radix-ui"
 
-import { useIsMobile } from "../hooks/use-mobile"
 import { Button } from "./button"
 import { Input } from "./input"
 import { Separator } from "./separator"
@@ -22,14 +21,37 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "./tooltip"
-import { MenuIcon, PanelLeftIcon } from "lucide-react"
+import { MenuIcon, PanelLeftIcon, XIcon } from "lucide-react"
 
-const SIDEBAR_COOKIE_NAME = "sidebar_state"
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
+import { SIDEBAR_COOKIE_NAME, SIDEBAR_VIEWPORT_COOKIE_NAME, type SidebarViewport } from "./sidebar-preferences"
+
+const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 const SIDEBAR_WIDTH = "18rem"
 const SIDEBAR_WIDTH_MOBILE = "20rem"
 const SIDEBAR_WIDTH_ICON = "3.5rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
+const TABLET_MIN_WIDTH = 768
+const DESKTOP_MIN_WIDTH = 1280
+
+function readViewport(): SidebarViewport {
+  const width = window.innerWidth
+  if (width < TABLET_MIN_WIDTH) return "phone"
+  return width < DESKTOP_MIN_WIDTH ? "tablet" : "desktop"
+}
+
+function subscribeToViewport(onChange: () => void) {
+  const queries = [`(max-width: ${TABLET_MIN_WIDTH - 0.02}px)`, `(max-width: ${DESKTOP_MIN_WIDTH - 0.02}px)`].map((query) => window.matchMedia(query))
+  queries.forEach((query) => query.addEventListener("change", onChange))
+  window.addEventListener("resize", onChange)
+  return () => {
+    queries.forEach((query) => query.removeEventListener("change", onChange))
+    window.removeEventListener("resize", onChange)
+  }
+}
+
+function useSidebarViewport(serverGuess: SidebarViewport): SidebarViewport {
+  return React.useSyncExternalStore(subscribeToViewport, readViewport, () => serverGuess)
+}
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
@@ -38,6 +60,10 @@ type SidebarContextProps = {
   openMobile: boolean
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
+  viewport: SidebarViewport
+  /** True while tablet navigation is expanded over the page. */
+  overlay: boolean
+  closeOverlay: (returnFocus?: boolean) => void
   mobileTriggerRef: React.RefObject<HTMLButtonElement | null>
   toggleSidebar: () => void
 }
@@ -55,6 +81,7 @@ function useSidebar() {
 
 function SidebarProvider({
   defaultOpen = true,
+  defaultViewport = "desktop",
   open: openProp,
   onOpenChange: setOpenProp,
   className,
@@ -62,32 +89,61 @@ function SidebarProvider({
   children,
   ...props
 }: React.ComponentProps<"div"> & {
+  /** The saved desktop preference (`sidebar_state`); expanded when nothing is saved. */
   defaultOpen?: boolean
+  /** The viewport class the server should render for (`sidebar_viewport`), before the browser reports its own. */
+  defaultViewport?: SidebarViewport
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }) {
-  const isMobile = useIsMobile()
+  const viewport = useSidebarViewport(defaultViewport)
+  const isMobile = viewport === "phone"
   const [openMobile, setOpenMobile] = React.useState(false)
   const mobileTriggerRef = React.useRef<HTMLButtonElement>(null)
 
-  // This is the internal state of the sidebar.
-  // We use openProp and setOpenProp for control from outside the component.
+  // The desktop preference. Only desktop reads it as the docked state; tablet always starts as the rail.
   const [_open, _setOpen] = React.useState(defaultOpen)
-  const open = openProp ?? _open
+  const desktopOpen = openProp ?? _open
+  // A tablet overlay is temporary state of its own, separate from the saved desktop preference.
+  const [overlayIn, setOverlayIn] = React.useState<SidebarViewport | null>(null)
+  // Changing viewport class always starts from that class's default, so a tablet overlay never reappears.
+  const [seenViewport, setSeenViewport] = React.useState(viewport)
+  if (seenViewport !== viewport) {
+    setSeenViewport(viewport)
+    setOverlayIn(null)
+  }
+  const overlay = viewport === "tablet" && overlayIn === "tablet"
+  const open = viewport === "tablet" ? overlay : desktopOpen
+
+  const closeOverlay = React.useCallback((returnFocus = false) => {
+    setOverlayIn(null)
+    if (returnFocus) mobileTriggerRef.current?.focus()
+  }, [])
+
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value
+      if (viewport === "tablet") {
+        // Temporary: never saved, so it cannot force an expanded layout anywhere later.
+        setOverlayIn(openState ? "tablet" : null)
+        return
+      }
       if (setOpenProp) {
         setOpenProp(openState)
       } else {
         _setOpen(openState)
       }
 
-      // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+      // An explicit desktop choice, kept for the next visit.
+      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}; samesite=lax`
     },
-    [setOpenProp, open]
+    [setOpenProp, open, viewport]
   )
+
+  // Record the viewport class so a reload renders the right layout on the server, without a flash.
+  React.useEffect(() => {
+    document.cookie = `${SIDEBAR_VIEWPORT_COOKIE_NAME}=${viewport}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}; samesite=lax`
+  }, [viewport])
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
@@ -120,12 +176,15 @@ function SidebarProvider({
       open,
       setOpen,
       isMobile,
+      viewport,
+      overlay,
+      closeOverlay,
       openMobile,
       setOpenMobile,
       toggleSidebar,
       mobileTriggerRef,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [state, open, setOpen, isMobile, viewport, overlay, closeOverlay, openMobile, setOpenMobile, toggleSidebar]
   )
 
   return (
@@ -167,7 +226,27 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
-  const { isMobile, state, openMobile, setOpenMobile, mobileTriggerRef } = useSidebar()
+  const { isMobile, state, openMobile, setOpenMobile, mobileTriggerRef, overlay, closeOverlay } = useSidebar()
+  const containerRef = React.useRef<HTMLDivElement>(null)
+
+  // Tablet overlay: focus moves into the navigation it opened, and Escape closes it again — from
+  // inside the navigation, or from the page body when nothing else holds focus. A dialog, popover or
+  // drawer with focus keeps its own Escape.
+  React.useEffect(() => {
+    if (!overlay) return
+    const container = containerRef.current
+    const first = container?.querySelector<HTMLElement>('[aria-current="page"], a[href], button:not([disabled])')
+    first?.focus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return
+      const target = event.target as Node | null
+      if (target !== document.body && !container?.contains(target)) return
+      event.preventDefault()
+      closeOverlay(true)
+    }
+    document.addEventListener("keydown", onKeyDown)
+    return () => document.removeEventListener("keydown", onKeyDown)
+  }, [overlay, closeOverlay])
 
   if (collapsible === "none") {
     return (
@@ -229,11 +308,13 @@ function Sidebar({
       )}
       data-state={state}
       data-collapsible={state === "collapsed" ? collapsible : ""}
+      data-overlay={overlay ? "true" : undefined}
       data-variant={variant}
       data-side={side}
       data-slot="sidebar"
     >
-      {/* This is what handles the sidebar gap on desktop */}
+      {/* This is what handles the sidebar gap on desktop. A tablet overlay keeps the rail's gap
+          (or none, for an off-canvas sidebar), so the page keeps its width beneath it. */}
       <div
         data-slot="sidebar-gap"
         className={cn(
@@ -242,14 +323,25 @@ function Sidebar({
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
             ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)"
+            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
+          overlay && (collapsible === "icon" ? "w-(--sidebar-width-icon)" : "w-0")
         )}
       />
+      {overlay ? (
+        <div
+          data-slot="sidebar-scrim"
+          aria-hidden
+          onClick={() => closeOverlay()}
+          className="fixed inset-0 z-20 bg-black/20"
+        />
+      ) : null}
       <div
+        ref={containerRef}
         data-slot="sidebar-container"
         data-side={side}
         className={cn(
           "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
+          overlay && "z-30 shadow-xl",
           // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
@@ -266,6 +358,22 @@ function Sidebar({
           {children}
         </div>
       </div>
+      {overlay ? (
+        // The header toggle sits under the open panel, so the overlay carries its own close control,
+        // on the dimmed page just beside the panel's edge.
+        <button
+          type="button"
+          data-slot="sidebar-overlay-close"
+          onClick={() => closeOverlay(true)}
+          className={cn(
+            "fixed top-2 z-30 flex size-9 items-center justify-center rounded-md border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm outline-hidden hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+            side === "left" ? "left-[calc(var(--sidebar-width)+0.5rem)]" : "right-[calc(var(--sidebar-width)+0.5rem)]"
+          )}
+        >
+          <XIcon aria-hidden className="size-4" />
+          <span className="sr-only">Close navigation</span>
+        </button>
+      ) : null}
     </div>
   )
 }
@@ -275,12 +383,12 @@ function SidebarTrigger({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar, isMobile, openMobile, mobileTriggerRef } = useSidebar()
+  const { toggleSidebar, isMobile, openMobile, mobileTriggerRef, viewport, overlay } = useSidebar()
 
   return (
     <Button
       ref={mobileTriggerRef}
-      aria-expanded={isMobile ? openMobile : undefined}
+      aria-expanded={isMobile ? openMobile : viewport === "tablet" ? overlay : undefined}
       aria-haspopup={isMobile ? "dialog" : undefined}
       data-sidebar="trigger"
       data-slot="sidebar-trigger"
@@ -525,6 +633,7 @@ function SidebarMenuButton({
 } & VariantProps<typeof sidebarMenuButtonVariants>) {
   const Comp = asChild ? Slot.Root : "button"
   const { isMobile, state } = useSidebar()
+  const [tooltipOpen, setTooltipOpen] = React.useState(false)
 
   const button = (
     <Comp
@@ -547,8 +656,10 @@ function SidebarMenuButton({
     }
   }
 
+  // Only the collapsed rail shows names as tooltips. Expanded, the tooltip stays closed rather than
+  // merely hidden, so an invisible tooltip never takes the Escape meant for the navigation.
   return (
-    <Tooltip>
+    <Tooltip open={state === "collapsed" && tooltipOpen} onOpenChange={setTooltipOpen}>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent
         side="right"

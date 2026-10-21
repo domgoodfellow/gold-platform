@@ -68,12 +68,9 @@ describe('CRM configuration pages', () => {
     expect(screen.getByRole('heading', { name: 'Relationship stages' })).toBeVisible();
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
   });
-  it('renders a real landing page from the canonical eligible destinations', async () => {
-    render(await WorkspaceConfigurationHome({ organizationId: 'org', workspace: 'crm', configuration: await requireWorkspaceConfiguration('org', 'crm') }));
-    expect(screen.getByRole('heading', { name: 'Configuration' })).toBeVisible();
-    for (const [label, path] of [['Relationship stages', 'relationship-stages'], ['Opportunity stages', 'opportunity-stages'], ['Customer fields', 'fields']]) {
-      expect(screen.getByRole('link', { name: label })).toHaveAttribute('href', `/organizations/org/sales/configuration/${path}`);
-    }
+  // Package 3A: CRM's Configuration has no landing; its old address resolves to an eligible door.
+  it('sends the retired landing address to the first configuration page the member may open', async () => {
+    await expect((async () => WorkspaceConfigurationHome({ organizationId: 'org', workspace: 'crm', configuration: await requireWorkspaceConfiguration('org', 'crm') }))()).rejects.toThrow('REDIRECT:/organizations/org/sales/configuration/relationship-stages');
   });
 });
 

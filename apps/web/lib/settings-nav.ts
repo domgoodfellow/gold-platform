@@ -1,4 +1,4 @@
-import { configTarget, configTargetOffered, workspaceConfigurationHref, WORKSPACES, areaHref, AREAS, areaAvailable, workspaceConfigureItems, type ConfigGate } from '@/lib/navigation';
+import { configTarget, configTargetOffered, configurationHasLanding, workspaceConfigurationHref, WORKSPACES, areaHref, AREAS, areaAvailable, workspaceConfigureItems, type ConfigGate } from '@/lib/navigation';
 import type { NavItem, ShellSection } from '@/lib/shell';
 import { PERSONAL_SECTIONS, personalSettingsHref } from '@/lib/route/personal-settings';
 
@@ -92,5 +92,7 @@ export function workspaceConfigCrumbs(organizationId: string, targetKey: string,
   const workspace = WORKSPACES.find((candidate) => candidate.key === workspaceKey);
   if (!workspace) return [];
   const home = AREAS.find((area) => area.segment === workspace.home);
-  return home ? [{ label: workspace.label, href: !gate || areaAvailable(home.segment, { ...gate, enabled: gate.enabledModules }) ? areaHref(organizationId, home.segment) : undefined }, ...(!configTarget(targetKey).treatment ? [{ label: 'Configuration', href: !gate || workspaceConfigureItems(organizationId, workspace.key, gate).length ? workspaceConfigurationHref(organizationId, workspace.key) : undefined }] : [])] : [];
+  // A workspace without a Configuration landing shows "Configuration" as a plain-text grouping level.
+  const landing = configurationHasLanding(workspace.key) && (!gate || workspaceConfigureItems(organizationId, workspace.key, gate).length);
+  return home ? [{ label: workspace.label, href: !gate || areaAvailable(home.segment, { ...gate, enabled: gate.enabledModules }) ? areaHref(organizationId, home.segment) : undefined }, ...(!configTarget(targetKey).treatment ? [{ label: 'Configuration', href: landing ? workspaceConfigurationHref(organizationId, workspace.key) : undefined }] : [])] : [];
 }

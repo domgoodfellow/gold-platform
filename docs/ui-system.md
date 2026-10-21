@@ -329,7 +329,7 @@ Every configurable concern is one registered **configuration target** (`CONFIG_T
 
 A workspace Home has at most one Configure entry, and it is one of two things:
 
-- **Contextual Configure** — the page-support rail (`PageHeader configure` with a `ConfigureRegistrar`), used only when the rail holds real controls or links for the concern (CRM). A rail mode with nothing registered is not offered.
+- **Contextual Configure** — the page-support rail (`PageHeader configure` with a `ConfigureRegistrar`), used only when the rail holds real controls for the concern (Work items, Schedule, Resources, Locations, Assets, Support). A rail mode with nothing registered is not offered, and a panel that would only repeat links is not registered.
 - **Configuration destination** — `ConfigureMenu`, resolved on the server by `WorkspaceConfigure` from `WORKSPACE_CONFIGURE`. It applies the same entitlement-and-permission gate as the Settings directory, then renders nothing, one link named for what it opens, or a menu. It never opens a collection that merely relates to the workspace, and never offers a door the member may not configure or the business is not entitled to.
 
 Readiness states are separate facts and are worded once (`ReadinessState`, `ReadinessBadge`): operational (proven), configured (present; the domain has nothing to verify with), needs configuration, needs verification, unavailable, restricted, not measured, not applicable. Entitlement, activation, permission, configuration, provider verification and observed operation are never collapsed into one flag. Setup importance (required, recommended, optional) is independent of operational state: only a required gap blocks launch, and launch is decided by the database's blocker authority, not by this vocabulary. Setup progress states required items outstanding separately from areas finished, and says that the latter includes optional areas. Unknown is never shown as healthy or as zero.
@@ -722,6 +722,8 @@ The footer must be a direct child of `PageDrawerContent`, outside the scrolling 
 </PageDrawerContent>
 ```
 
+**Unsaved changes in a drawer are opt-in.** An editing form reports whether it differs from what it opened with by calling `usePageDrawerUnsavedChanges(dirty)`, usually with `useFormDirty()` from `components/controls/use-form-dirty.ts`. Once it does, the close control, Escape, `PageDrawerClose` and `usePageDrawerClose()` ask "Discard unsaved changes?" before closing a changed form, and close at once when it is unchanged. The confirmation is the shared Dialog: Keep editing returns focus to where it was in the drawer, Escape closes only the confirmation, and Discard closes the drawer and returns focus to what opened it. An owner closing the drawer after a successful save is never asked. Such a form also keeps Escape working when a submit has left focus on the page body. Drawers that do not opt in — inspection panels, previews, Studio workbench panes — close exactly as before. A refused save keeps what was typed: a drawer form submits through a transition rather than `<form action>`, because React resets an action form after every completed action, refusals included, and moves focus to the refusal. `useDrawerFormSubmit` (`components/controls/use-drawer-form-submit.ts`) owns that lifecycle, single submission and the pending state its footer button reads. Customer fields, New customer, opportunities and follow-ups use it; a read-only follow-up keeps no footer actions. The drawer does not intercept leaving the page: in-page links, browser Back and the workspace switcher are outside its reach, and a form that must survive them keeps its own draft recovery.
+
 Website template previews use `components/display/preview-frame.tsx` to render the canonical website sections in an isolated, scaled viewport. Public responsive breakpoints must follow the preview width rather than the application's width. Studio website and form editors share `features/studio/editor-layout.tsx`; secondary panes respond to the available editor container width and open as page drawers on compact layouts. Editing state remains in the workbench owner when a drawer closes.
 
 Studio Home retains a contained website overview, four factual summaries, Forms/content, recent submissions, creation shortcuts and a supporting publishing/attention/public-surface/activity column even when empty. Public website links require both a ready managed hostname and a published revision. A published site can simultaneously have an unpublished working revision. Booking readiness consumes usable module access, published bookable types and a public slug; portal invitations remain in CRM and brand/public-address configuration remains in Organization Settings.
@@ -1000,9 +1002,13 @@ Do not maintain a separate lossy “phone navigation” information architecture
 
 Use an icon-focused/collapsed rail or equivalent compact shell while preserving the same navigation hierarchy.
 
+From 768 to 1279 px the sidebar is the icon rail by default, whatever the desktop preference, and names its items as tooltips. The header toggle expands it as a temporary overlay: the page keeps its rail-width layout beneath a dimmed backdrop, focus moves into the navigation, and Escape, the visible Close navigation control, a click on the backdrop, choosing a destination or leaving the tablet width close it, returning focus to the toggle where the person closed it. The overlay is never saved. Its destinations, workspace heading and Configuration group are the same projection as at desktop, so a configuration-only member sees exactly what the desktop sidebar offers them.
+
 ### Desktop
 
 Use the persistent sidebar and higher-density page layouts.
+
+From 1280 px the sidebar docks, expanded unless the person collapsed it. That explicit desktop choice is kept in the `sidebar_state` cookie and read on the server. A `sidebar_viewport` cookie records the viewport class the browser last reported, so a reload renders the matching layout without an expanded-then-collapsed flash. A first visit, or one from a different class of device, renders the desktop layout until the browser reports its width. Neither cookie holds account information.
 
 ---
 
@@ -1130,6 +1136,8 @@ Configure exposes page/workspace-owned configuration.
 Support's Configure opens a nonmodal panel in the page-support rail, beneath the workspace header, through `SupportRegistrar`. The panel lists the queues and service levels the member may configure, using the same configuration read model, editors and commands as the full pages. Each editor opens its own drawer above the panel, and closing it returns to the panel. The trigger appears only when the configuration projection offers at least one of these concerns, so a `support.read`-only member sees no Configure control. Full configuration pages remain addressable. The Configure control never navigates to a landing page.
 
 Where configuration belongs to Settings, Configure should link or transition to the authoritative Settings destination rather than create duplicate settings. Other workspaces still reach their configuration through `WorkspaceConfigure`, which links to the workspace's configuration page.
+
+CRM has no Configuration landing (`configurationHasLanding` in `lib/navigation.ts`). CRM Home offers `ConfigureMenu` over the doors `workspaceConfigureItems` grants the member: nothing, one link named for its page, or a Configure menu of direct links. The sidebar's Configuration heading is a button that expands and collapses those doors; on the collapsed rail it opens the navigation with the group expanded. "Configuration" is a plain-text ancestor in the breadcrumb, and the phone's Up control skips it. The old `sales/configuration` address redirects on the server to the first door the member may open, or shows not-found when there is none. Customers registers no Configure panel, and the Relationship pipeline links straight to Relationship stages for members who may open it.
 
 ---
 

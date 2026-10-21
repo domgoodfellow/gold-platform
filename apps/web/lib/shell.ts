@@ -13,6 +13,7 @@ import {
   configTargetOffered,
   workspaceConfigureItems,
   workspaceConfigurationHref,
+  configurationHasLanding,
   workspaceConfigurationOwner,
   workspaceConfigurationTarget,
   type Area,
@@ -66,6 +67,11 @@ export type NavItem = {
    * a renderer without room for children — the collapsed rail — can still link to it.
    */
   children?: NavItem[];
+  /**
+   * A grouping parent with no page of its own (a Configuration without a landing): it expands and
+   * collapses its children, and its `href` — an address that only redirects — is never drawn as a link.
+   */
+  group?: true;
   /** Matches only its own address, not everything beneath it: the Administration overview is the root of a whole tree. */
   exact?: boolean;
   /**
@@ -224,6 +230,7 @@ export function projectShell(input: ShellInput): ShellSection[] {
     const configurationHref = workspaceConfigurationHref(organizationId, workspace.key);
     const configuration: NavItem | undefined = branch.length ? {
       key: 'workspace-configuration', label: 'Configuration', href: configurationHref,
+      ...(configurationHasLanding(workspace.key) ? {} : { group: true as const }),
       activeHrefs: branch.filter(concern => {
         const target = configTargetForHref(concern.href);
         return target?.workspace === workspace.key && !target.treatment;

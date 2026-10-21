@@ -1,5 +1,5 @@
-import { ConfigureLink } from '@/components/controls/configure-link';
-import { workspaceConfigurationHref } from '@/lib/navigation';
+import { ConfigureMenu } from '@/components/controls/configure-menu';
+import type { ConfigureItem } from '@/lib/navigation';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Users, CircleDollarSign, CalendarClock, TrendingUp } from 'lucide-react';
@@ -25,18 +25,20 @@ export type CrmHomeProps = {
   opportunitySummary:OpportunitySummary[];opportunities:Opportunity[];today:FollowUp[];overdue:FollowUp[];
   noNext:Opportunity[];unassigned:Opportunity[];followUpOptions:FollowUpOptions;opportunityOptions:OpportunityFormOptions;
   followUpsEnabled:boolean;conversionEnabled:boolean;mayCreate:boolean;mayCreateOpportunity:boolean;mayConfigure:boolean;activity:ReactNode;
+  /** CRM's configuration doors this member may open (`workspaceConfigureItems`): none, one link, or a menu. */
+  configureItems?:ConfigureItem[];
 };
 export function CurrencyValues({values}:{values:CurrencyTotal[]}) {
   return values.length?<>{values.map(v=><span className="block tabular-nums" key={v.currency}>{formatOpportunityValue(v.amount_minor,v.currency)}</span>)}</>:<span className="text-sm font-normal leading-5 text-muted">No valued opportunities</span>;
 }
-export function CrmHome({organizationId,timezone,month,summary,customers,customerContext,opportunitySummary,opportunities,today,overdue,noNext,unassigned,followUpOptions,opportunityOptions,followUpsEnabled,conversionEnabled,mayCreate,mayCreateOpportunity,mayConfigure,activity}:CrmHomeProps) {
+export function CrmHome({organizationId,timezone,month,summary,customers,customerContext,opportunitySummary,opportunities,today,overdue,noNext,unassigned,followUpOptions,opportunityOptions,followUpsEnabled,conversionEnabled,mayCreate,mayCreateOpportunity,mayConfigure,activity,configureItems=[]}:CrmHomeProps) {
   const base=`/organizations/${organizationId}`; const rate=winRate(summary.won,summary.lost);
   const nextMonth=new Date(`${month}T12:00:00Z`);nextMonth.setUTCMonth(nextMonth.getUTCMonth()+1);
   const kpis=[{label:'Customers',value:summary.customers,context:'Customer relationships',href:`${base}/customers`,icon:Users},
     {label:'Open opportunities',value:summary.open,context:'In stages classified Open',href:`${base}/opportunities?kind=open`,icon:CircleDollarSign},
     {label:'Follow-ups due today',value:followUpsEnabled?summary.today:'Unavailable',context:timezone,href:followUpsEnabled?`${base}/follow-ups?status=open&due=today`:undefined,icon:CalendarClock},
     {label:'Forecast this month',value:<CurrencyValues values={summary.forecast}/>,context:'Open · unweighted expected close',href:`${base}/opportunities?kind=open&closeFrom=${month}&closeBefore=${nextMonth.toISOString().slice(0,10)}`,icon:TrendingUp}];
-  return <WorkspaceHome location={{}} actions={<>{mayConfigure ? <ConfigureLink href={workspaceConfigurationHref(organizationId, 'crm')} label="Configuration" /> : null}
+  return <WorkspaceHome location={{}} actions={<><ConfigureMenu items={configureItems} />
     <form method="get" className="flex items-center gap-1"><TextInput aria-label="Reporting month" name="month" type="month" defaultValue={month.slice(0,7)} className="w-40"/><Button type="submit" tone="text" size="small">Apply</Button></form>
     {mayCreate?<CreateCustomerTrigger/>:null}{mayCreateOpportunity?<OpportunitySheet {...opportunityOptions}/>:null}
   </>}>

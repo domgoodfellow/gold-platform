@@ -847,6 +847,18 @@ export const WORKSPACE_CONFIGURE: Partial<Record<WorkspaceKey, readonly Workspac
   ],
 };
 
+/**
+ * Workspaces whose Configuration is a group of doors with no landing page of its own. Their sidebar
+ * Configuration parent expands and collapses instead of linking, their Home offers `ConfigureMenu`,
+ * breadcrumbs show "Configuration" as plain text, and the old landing address redirects to the first
+ * door the member may open. Every other workspace keeps its landing until it is decided separately.
+ */
+const CONFIGURATION_WITHOUT_LANDING: ReadonlySet<WorkspaceKey> = new Set<WorkspaceKey>(['crm']);
+
+export function configurationHasLanding(workspace: WorkspaceKey): boolean {
+  return !CONFIGURATION_WITHOUT_LANDING.has(workspace);
+}
+
 export type ConfigureItem = { key: string; label: string; href: string };
 
 /** The doors a member may be offered from `workspace`'s Configure control, resolved to hrefs. */

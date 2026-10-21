@@ -14,6 +14,8 @@ import { projectSettingsNav, settingsSearchItems } from '@/lib/settings-nav';
 import { AccountAppearance } from '@/features/appearance/account-appearance';
 import { BusinessVocabulary } from '@/lib/context/business-vocabulary';
 import { serializeLocationAccess } from '@/lib/route/page-location';
+import { readShellLayout } from '@/lib/route/shell-layout';
+import { ShellLayoutProvider } from '@/components/layout/shell-layout-context';
 
 /** The one frame for every organization, GildOps' own Administration included, with canonical
  * server authority resolution. Each page still enforces its own access; layouts persist across
@@ -96,9 +98,12 @@ export async function OrganizationShell({
     </span>
   );
 
+  const shellLayout = await readShellLayout();
+
   return (
     // `data-brand` sits here rather than on `<html>` — a brand belongs to one business, and this shell is the only thing that knows which.
     <AccountAppearance brand={brand}>
+      <ShellLayoutProvider value={shellLayout}>
       <BusinessVocabulary profile={businessProfile}>
       <OrganizationFrame
         organizationId={organizationId}
@@ -132,6 +137,7 @@ export async function OrganizationShell({
       </OrganizationFrame>
       {feedback}
       </BusinessVocabulary>
+      </ShellLayoutProvider>
     </AccountAppearance>
   );
 }

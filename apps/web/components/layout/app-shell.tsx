@@ -6,13 +6,20 @@ import { usePathname } from 'next/navigation';
 import { cx } from '../class-names';
 import { PAGE_BOTTOM_CLEARANCE, PAGE_BOTTOM_CLEARANCE_WITH_NAV, PAGE_PADDING } from './workspace-geometry';
 import { PagePanel } from '../panels/workspace-right-rail';
+import { useShellLayout } from './shell-layout-context';
 
+/** Choosing a destination closes the phone sheet and a tablet overlay; neither is meant to stay open. */
 function MobileNavigationDismissal({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { setOpenMobile } = useSidebar();
-  useEffect(() => setOpenMobile(false), [pathname, setOpenMobile]);
+  const { setOpenMobile, closeOverlay } = useSidebar();
+  useEffect(() => {
+    setOpenMobile(false);
+    closeOverlay();
+  }, [pathname, setOpenMobile, closeOverlay]);
   return <div className="contents" onClickCapture={(event) => {
-    if ((event.target as Element).closest('a[href]')) setOpenMobile(false);
+    if (!(event.target as Element).closest('a[href]')) return;
+    setOpenMobile(false);
+    closeOverlay();
   }}>{children}</div>;
 }
 
@@ -34,8 +41,9 @@ export function AppShell({
   bottomBar?: ReactNode;
   children: ReactNode;
 }) {
+  const layout = useShellLayout();
   return (
-    <SidebarProvider className="h-svh overflow-hidden">
+    <SidebarProvider className="h-svh overflow-hidden" defaultOpen={layout.open} defaultViewport={layout.viewport}>
       <MobileNavigationDismissal>
         {/* `sidebar`, `header` and `bottomBar` are elements the calling layout created on the server. When
             the payload is large enough to stream in more than one piece they arrive as lazy siblings, which

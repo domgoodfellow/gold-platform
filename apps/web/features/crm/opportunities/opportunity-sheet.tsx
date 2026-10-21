@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/controls/button';
 import { TextInput, SelectInput } from '@/components/controls/inputs';
 import { FormField, FormError } from '@/components/controls/form';
-import { PageDrawer, PageDrawerContent, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
+import { useDrawerFormSubmit } from '@/components/controls/use-drawer-form-submit';
+import { useFormDirty } from '@/components/controls/use-form-dirty';
+import { PageDrawer, PageDrawerClose, PageDrawerContent, PageDrawerFooter, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger, usePageDrawerUnsavedChanges } from '@/components/panels/page-drawer';
 import { saveOpportunityAction, searchOpportunityCustomers } from '@/app/organizations/[organizationId]/opportunities/actions';
 import type { Opportunity, OpportunityStage } from '@/lib/domain/opportunities/opportunities';
 import { opportunityValueInput } from '@/lib/domain/opportunities/money';
@@ -14,17 +16,26 @@ type CustomerChoice = { id: string; name: string };
 export type OpportunityFormOptions = { organizationId: string; stages: OpportunityStage[]; members: { id: string; displayName: string }[]; defaultCurrency: string };
 export function OpportunitySheet({ opportunity, customer, ...options }: OpportunityFormOptions & { opportunity?: Opportunity; customer?: CustomerChoice }) {
   const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const formId = useId();
   return <PageDrawer open={open} onOpenChange={setOpen}>
     <PageDrawerTrigger asChild><Button tone={opportunity ? 'secondary' : 'primary'}>{opportunity ? 'Edit opportunity' : 'New opportunity'}</Button></PageDrawerTrigger>
     <PageDrawerContent><PageDrawerHeader><PageDrawerTitle>{opportunity ? 'Edit opportunity' : 'New opportunity'}</PageDrawerTitle></PageDrawerHeader>
-      <OpportunityForm {...options} opportunity={opportunity} customer={customer} onSaved={() => setOpen(false)} />
+      <OpportunityForm {...options} opportunity={opportunity} customer={customer} formId={formId} onSaved={() => setOpen(false)} onPendingChange={setPending} />
+      <PageDrawerFooter>
+        <Button type="submit" form={formId} disabled={pending}>{pending ? 'Saving…' : 'Save opportunity'}</Button>
+        <PageDrawerClose asChild><Button type="button" tone="secondary">Cancel</Button></PageDrawerClose>
+      </PageDrawerFooter>
     </PageDrawerContent>
   </PageDrawer>;
 }
-function OpportunityForm({ organizationId, stages, members, defaultCurrency, opportunity, customer, onSaved }: OpportunityFormOptions & { opportunity?: Opportunity; customer?: CustomerChoice; onSaved: () => void }) {
+function OpportunityForm({ organizationId, stages, members, defaultCurrency, opportunity, customer, formId, onSaved, onPendingChange }: OpportunityFormOptions & { opportunity?: Opportunity; customer?: CustomerChoice; formId: string; onSaved: () => void; onPendingChange: (pending: boolean) => void }) {
   const prefix = useId();
   const router = useRouter();
   const [state, action, pending] = useActionState(saveOpportunityAction, { error: null, savedId: null });
+  const { ref, dirty, onChange } = useFormDirty();
+  usePageDrawerUnsavedChanges(dirty);
+  const { onSubmit, errorRef } = useDrawerFormSubmit(action, state, pending, onPendingChange);
   const [search, setSearch] = useState('');
   const [result, setResult] = useState<{ customers: CustomerChoice[]; total: number }>({ customers: [], total: 0 });
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -50,7 +61,7 @@ function OpportunityForm({ organizationId, stages, members, defaultCurrency, opp
     const { name, value } = event.target;
     setDraft((current) => ({ ...current, [name]: value }));
   };
-  return <form action={action} className="space-y-4" onReset={(event) => event.preventDefault()}>
+  return <form id={formId} ref={ref} onSubmit={onSubmit} onChange={onChange} onClick={onChange} className="space-y-4">
     <input type="hidden" name="organizationId" value={organizationId} />
     <input type="hidden" name="opportunityId" value={opportunity?.id ?? ''} />
     {fixedCustomer ? <><input type="hidden" name="customerId" value={fixedCustomer.id} /><p className="text-sm">Customer: <strong>{fixedCustomer.name}</strong></p></> : <>
@@ -65,7 +76,6 @@ function OpportunityForm({ organizationId, stages, members, defaultCurrency, opp
     <FormField id={`${prefix}-currency`} label="Currency" hint="Three-letter currency code. Required when a value is entered.">{(props) => <TextInput {...props} name="currency" maxLength={3} value={draft.currency} onChange={changeDraft} />}</FormField>
     <FormField id={`${prefix}-owner`} label="Owner" optional>{(props) => <SelectInput {...props} name="ownerMembershipId" value={draft.ownerMembershipId} onChange={changeDraft}><option value="">Unassigned</option>{members.map((member) => <option key={member.id} value={member.id}>{member.displayName || 'Member'}</option>)}</SelectInput>}</FormField>
     <FormField id={`${prefix}-date`} label="Expected close" optional>{(props) => <TextInput {...props} name="expectedCloseOn" type="date" value={draft.expectedCloseOn} onChange={changeDraft} />}</FormField>
-    <FormError>{state.error}</FormError>
-    <Button type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save opportunity'}</Button>
+    <div ref={errorRef} tabIndex={-1} className="outline-none"><FormError>{state.error}</FormError></div>
   </form>;
 }

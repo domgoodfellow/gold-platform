@@ -49,12 +49,13 @@ describe('Custom Fields uses bounded Sheets', () => {
     expect(editSheet).toContain('Applies to');
   });
 
-  it('uses action success state to close Sheets while errors stay in the forms', () => {
+  // That the drawers close on success and stay open with the error in the form on refusal is
+  // proven by behavior in tests/component/custom-field-drawers.test.tsx; this keeps only the
+  // server half of that contract, the success flags the drawers react to.
+  it('reports action success as state the drawers close on', () => {
     const actions = readFileSync(`${FIELDS}/actions.ts`, 'utf8');
     expect(actions).toContain('created: true');
     expect(actions).toContain('updated: true');
-    expect(createSheet).toContain('onCreated={() => setOpen(false)}');
-    expect(editSheet).toContain('onUpdated={() => setOpen(false)}');
   });
 });
 

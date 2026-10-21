@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import {
   PageDrawer,
+  PageDrawerClose,
   PageDrawerContent,
   PageDrawerDescription,
+  PageDrawerFooter,
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
@@ -27,6 +29,8 @@ export function EditFieldSheet({
   definition: FieldDefinition;
 }) {
   const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const formId = useId();
 
   return (
     <PageDrawer open={open} onOpenChange={setOpen}>
@@ -48,8 +52,18 @@ export function EditFieldSheet({
         <EditFieldForm
           organizationId={organizationId}
           definition={definition}
+          formId={formId}
           onUpdated={() => setOpen(false)}
+          onPendingChange={setPending}
         />
+        <PageDrawerFooter>
+          <Button type="submit" form={formId} disabled={pending}>
+            {pending ? 'Saving…' : 'Save changes'}
+          </Button>
+          <PageDrawerClose asChild>
+            <Button type="button" tone="secondary">Cancel</Button>
+          </PageDrawerClose>
+        </PageDrawerFooter>
       </PageDrawerContent>
     </PageDrawer>
   );

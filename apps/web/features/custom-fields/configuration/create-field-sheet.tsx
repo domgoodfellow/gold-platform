@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import {
   PageDrawer,
+  PageDrawerClose,
   PageDrawerContent,
   PageDrawerDescription,
+  PageDrawerFooter,
   PageDrawerHeader,
   PageDrawerTitle,
   PageDrawerTrigger,
@@ -17,7 +19,7 @@ import {
 } from '@/lib/domain/fields/field-definitions';
 import { CreateFieldForm } from './field-form';
 
-/** One bounded creation surface, scoped to its host entity. */
+/** One bounded creation surface, scoped to its host entity. Its actions stay in the footer. */
 export function CreateFieldSheet({
   organizationId,
   entityType,
@@ -26,6 +28,8 @@ export function CreateFieldSheet({
   entityType: CustomFieldEntity;
 }) {
   const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const formId = useId();
   const label = CUSTOM_FIELD_ENTITY_LABELS[entityType];
 
   return (
@@ -43,8 +47,18 @@ export function CreateFieldSheet({
         <CreateFieldForm
           organizationId={organizationId}
           entityType={entityType}
+          formId={formId}
           onCreated={() => setOpen(false)}
+          onPendingChange={setPending}
         />
+        <PageDrawerFooter>
+          <Button type="submit" form={formId} disabled={pending}>
+            {pending ? 'Adding…' : 'Add field'}
+          </Button>
+          <PageDrawerClose asChild>
+            <Button type="button" tone="secondary">Cancel</Button>
+          </PageDrawerClose>
+        </PageDrawerFooter>
       </PageDrawerContent>
     </PageDrawer>
   );

@@ -14,7 +14,8 @@ for (const width of [1440, 768, 390]) test(`canonical workspace configuration at
   ['settings/email', 'Email sending'],
   ['comms/configuration/numbers', 'Numbers'],
   ['settings/general', 'General'],
-  ['sales/configuration', 'Configuration'],
+  // Package 3A: CRM has no Configuration landing; its old address resolves to an eligible page.
+  ['sales/configuration', 'Relationship stages'],
   ['sales/configuration/relationship-stages', 'Relationship stages'],
   ['sales/configuration/opportunity-stages', 'Opportunity stages'],
   ['sales/configuration/fields', 'Customer fields'],
@@ -51,30 +52,8 @@ for (const width of [1440, 768, 390]) test(`canonical workspace configuration at
 });
 
 
-test('CRM Configuration is a navigable disclosure with canonical child routes and browser history', async ({ page }) => {
- const { organizationId } = loadDemoContext();
- const root = `/organizations/${organizationId}/sales/configuration`;
- await page.goto(root);
- await expect(page).toHaveURL(root);
- const nav = page.locator('[data-slot="sidebar-container"]').getByRole('navigation', { name: 'This business' });
- const parent = nav.getByRole('link', { name: 'Configuration', exact: true });
- await expect(parent).toHaveAttribute('aria-current', 'page');
- await nav.getByRole('button', { name: 'Collapse Configuration' }).click();
- await expect(nav.getByRole('link', { name: 'Customer fields' })).toHaveCount(0);
- await nav.getByRole('button', { name: 'Expand Configuration' }).press('Enter');
- for (const [name, segment] of [['Relationship stages', 'relationship-stages'], ['Opportunity stages', 'opportunity-stages'], ['Customer fields', 'fields']]) {
-  const link = nav.getByRole('link', { name, exact: true });
-  await link.click();
-  await expect(page).toHaveURL(`${root}/${segment}`);
-  await expect(link).toHaveAttribute('aria-current', 'page');
-  await expect(parent).not.toHaveAttribute('aria-current');
-  await expect(page.getByRole('navigation', { name: 'Configuration sections' })).toHaveCount(0);
-  await page.reload();
-  await expect(link).toHaveAttribute('aria-current', 'page');
-  await page.goBack();
-  await expect(page).toHaveURL(root);
- }
-});
+// Package 3A: CRM's Configuration is no longer a navigable parent. Its expand/collapse group, child
+// routes, history and redirect are covered on a disposable business in e2e/crm-configuration.spec.ts.
 
 
 test.describe('Configuration disclosure input methods', () => {

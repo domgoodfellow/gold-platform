@@ -38,7 +38,8 @@ describe('operational CRM dashboard',()=>{
     expect(screen.queryByRole('button',{name:'New customer'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'New opportunity'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'New follow-up'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'Configure'})).not.toBeInTheDocument();expect(screen.getByRole('link',{name:'View calendar'})).toHaveAttribute('href','/organizations/org/sales/calendar');expect(screen.queryByRole('button',{name:/No next follow-up/})).not.toBeInTheDocument();
   });
   it('offers canonical drawers only for authorized mutation and calculates real win rate',()=>{
-    render(<CrmHome {...defaults} mayCreate mayCreateOpportunity mayConfigure followUpOptions={{...defaults.followUpOptions,mayManage:true}} summary={{...defaults.summary,won:3,lost:1}}/>);
-    for(const name of ['New customer','New opportunity','New follow-up'])expect(screen.getByRole('button',{name})).toBeInTheDocument();expect(screen.getByRole('link',{name:'Configuration'})).toHaveAttribute('href','/organizations/org/sales/configuration');expect(screen.getByText('75%')).toBeInTheDocument();
+    render(<CrmHome {...defaults} mayCreate mayCreateOpportunity mayConfigure configureItems={[{key:'sales-stages',label:'Relationship stages',href:'/organizations/org/sales/configuration/relationship-stages'},{key:'opportunity-stages',label:'Opportunity stages',href:'/organizations/org/sales/configuration/opportunity-stages'}]} followUpOptions={{...defaults.followUpOptions,mayManage:true}} summary={{...defaults.summary,won:3,lost:1}}/>);
+    // Package 3A: several configuration doors are a Configure menu, never a link to the retired landing.
+    for(const name of ['New customer','New opportunity','New follow-up'])expect(screen.getByRole('button',{name})).toBeInTheDocument();expect(screen.getByRole('button',{name:'Configure'})).toBeInTheDocument();expect(screen.queryByRole('link',{name:'Configuration'})).toBeNull();expect(screen.getByText('75%')).toBeInTheDocument();
   });
 });

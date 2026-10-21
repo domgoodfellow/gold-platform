@@ -9,6 +9,8 @@ import { signOut } from '@/lib/domain/identity/credentials';
 import { destinationFor, readLastOrganizationId, resolveOrganizationsLanding } from '@/lib/route/landing';
 import { loadPersonContext } from '@/lib/route/person-context';
 import { AccountAppearance } from '@/features/appearance/account-appearance';
+import { ShellLayoutProvider } from '@/components/layout/shell-layout-context';
+import { readShellLayout } from '@/lib/route/shell-layout';
 
 /** The one recovery a fallback offers: where a sign-in would land this person, named for what it is. */
 export type Recovery = { href: string; label: string };
@@ -46,8 +48,10 @@ export async function GlobalFallbackShell({ children }: { children: (recovery: R
     redirect('/login');
   }
 
+  const shellLayout = await readShellLayout();
+
   return (
-    <AccountAppearance><WorkspaceShell
+    <AccountAppearance><ShellLayoutProvider value={shellLayout}><WorkspaceShell
       sidebar={
         <GlobalFallbackSidebar
           email={person.email}
@@ -64,6 +68,6 @@ export async function GlobalFallbackShell({ children }: { children: (recovery: R
       agent={<AccountAgentRail />}
     >
       {children(recovery)}
-    </WorkspaceShell></AccountAppearance>
+    </WorkspaceShell></ShellLayoutProvider></AccountAppearance>
   );
 }

@@ -3,7 +3,8 @@ import { CollectionHeader } from '@/components/patterns/collection-header';
 import { EmptyState } from '@/components/surfaces/section';
 import { buildPipelineColumns, PipelineBoard } from '@/features/crm/sales/pipeline-board';
 import { CustomerStageControl } from '@/features/crm/sales/stage-control';
-import { WorkspaceConfigure } from '@/features/settings/workspace-configure';
+import { ConfigureLink } from '@/components/controls/configure-link';
+import { workspaceConfigureDoors } from '@/features/settings/workspace-configure';
 import { listCustomers } from '@/lib/domain/customers/customers';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
@@ -16,11 +17,14 @@ export default async function PipelinePage({ params }: PageProps<'/organizations
   const { db, organization } = await requireOrganization(organizationId);
   // The same answer the Customers list uses to offer this view at all — one source, so the two
   // sibling views can never disagree about whether the Pipeline exists.
-  const [customers, stages, resolvedFeatures] = await Promise.all([
+  const [customers, stages, resolvedFeatures, doors] = await Promise.all([
     listCustomers(db, { organizationId }),
     listCustomerStages(db, { organizationId }),
     organizationResolvedFeatureStates(db, { organizationId }),
+    workspaceConfigureDoors(organizationId, 'crm'),
   ]);
+  // The one configuration this board depends on, offered only to a member who may open it.
+  const stagesDoor = doors.find((door) => door.key === 'sales-stages');
   const reception = activeModuleKeys(resolvedFeatures).has('reception');
   const mayMoveCustomers = organization.capabilities.includes('customer.update');
   const stageById = new Map(customers.map((customer) => [customer.id, customer.stageId]));
@@ -30,8 +34,8 @@ export default async function PipelinePage({ params }: PageProps<'/organizations
       <CollectionHeader
         location={{}}
         actions={
-          reception ? (
-            <WorkspaceConfigure organizationId={organizationId} workspace="crm" />
+          reception && stagesDoor ? (
+            <ConfigureLink href={stagesDoor.href} label={stagesDoor.label} />
           ) : null
         }
       />
@@ -43,7 +47,10 @@ export default async function PipelinePage({ params }: PageProps<'/organizations
       ) : stages.length === 0 ? (
         <EmptyState
           title="No stages named"
-          description="Use Stage settings to define the stages this business moves customer relationships through."
+          description={stagesDoor
+            ? 'Name the stages this business moves customer relationships through in Relationship stages.'
+            : 'Someone who manages CRM configuration names the stages customer relationships move through.'}
+          action={stagesDoor ? <ConfigureLink href={stagesDoor.href} label={stagesDoor.label} /> : undefined}
         />
       ) : (
         <PipelineBoard

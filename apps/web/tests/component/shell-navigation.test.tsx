@@ -147,23 +147,29 @@ describe('workspace header icon utilities', () => {
 
 
 describe('contextual sidebar rendering', () => {
-  it('expands CRM Configuration, selects direct child links and keeps its parent navigable', async () => {
+  // Package 3A: CRM's Configuration parent groups its doors; it expands and collapses and is not a link.
+  it('expands and collapses CRM Configuration from its heading, which is a button, and selects direct child links', async () => {
+    vi.stubGlobal('innerWidth', 1440);
     const org = '11111111-1111-4111-8111-111111111111';
     const sections = projectShell({ organizationId: org, enabledModules: new Set(['reception']), featureAvailability: new Set(AREAS.flatMap(area => area.featureKeys ?? [])), capabilities: new Set(ALL_CAPABILITIES) });
     route.pathname = `/organizations/${org}/sales/configuration/relationship-stages`;
     render(<TooltipProvider><SidebarProvider><OrgNav sections={sections} organizationId={org} /></SidebarProvider></TooltipProvider>);
-    const parent = screen.getByRole('link', { name: 'Configuration' });
-    expect(parent).toHaveAttribute('href', `/organizations/${org}/sales/configuration`);
-    expect(parent).not.toHaveAttribute('aria-current');
+    expect(screen.queryByRole('link', { name: 'Configuration' })).not.toBeInTheDocument();
+    const heading = screen.getByRole('button', { name: 'Configuration' });
+    expect(heading).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('link', { name: 'Relationship stages' })).toHaveAttribute('aria-current', 'page');
     for (const name of ['Relationship stages', 'Opportunity stages', 'Customer fields']) expect(screen.getByRole('link', { name }).querySelector('svg')).toBeNull();
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: 'Collapse Configuration' }));
+    await user.click(heading);
+    expect(heading).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('link', { name: 'Customer fields' })).not.toBeInTheDocument();
-    const expand = screen.getByRole('button', { name: 'Expand Configuration' });
-    expand.focus();
+    heading.focus();
     await user.keyboard('{Enter}');
+    expect(heading).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('link', { name: 'Customer fields' })).toHaveAttribute('href', `/organizations/${org}/sales/configuration/fields`);
+    await user.keyboard(' ');
+    expect(heading).toHaveAttribute('aria-expanded', 'false');
+    vi.unstubAllGlobals();
   });
 
   it('changes navigation on route updates while retaining the registered telephone runtime', async () => {
