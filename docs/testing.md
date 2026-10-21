@@ -91,6 +91,8 @@ Local upgrade/test evidence does not establish a hosted baseline or authorize a 
 
 The reviewed source baseline is `bbf4f1c`; repeat local checks rather than copying Batch E totals.
 Confirm the Docker database identity and loopback test URLs before `pnpm db:reset`, then run
+Isolated browser runs (`playwright.isolated.config.ts`) remove exactly what their manifest records through `e2e/isolated-cleanup.ts`: rows whose foreign key does not cascade from the business are found from the catalogue and deleted children-first in one transaction, triggers and foreign keys are never disabled, a record that cannot lawfully be removed (a published website revision) fails the run with the reason, and a final check proves none of the run's businesses, accounts or plans remain. A run killed before its teardown is cleaned by the next run's setup, only once the process that wrote it has exited. `tests/support/founding.ts` creates a Platform staff account per process that it never removes; isolated specs provision through the run's own owner instead.
+
 `pnpm check` and the isolated Batch A–E Playwright configurations against the local production
 build. Database tests and simulated delivery callbacks are local evidence only. Manifest categories
 already register the notification database, component, API and browser suites.

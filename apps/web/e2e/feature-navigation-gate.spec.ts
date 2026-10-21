@@ -25,13 +25,17 @@ test.describe('Settings > Features and the shell agree, and a disable removes ex
 
     await expect(page.getByRole('heading', { name: 'Features', level: 1 })).toBeVisible();
 
-    // Reporting's entitled Features read "Included" with a readiness word, never "Not included".
-    await expect(page.getByText('Included · Ready').first()).toBeVisible();
+    // Entitled Features carry a readiness badge in their product group, never "Not in your plan".
+    await expect(page.getByText('Ready', { exact: true }).first()).toBeVisible();
 
     // A Feature nobody has wanted-and-paid for (card payments isn't part of this business's
     // default shape) reads honestly as not included, with a way to the Plan screen rather than a
     // disable control it cannot use.
-    await expect(page.getByText('Not included in your plan').first()).toBeVisible();
+    // Batch C: grouped once per product, folded, with one View plan link for the group.
+    const notInPlan = page.locator('summary').filter({ hasText: /^› ?Not in your plan \(\d+\)$/ }).first();
+    await expect(notInPlan).toBeVisible();
+    await notInPlan.click();
+    await expect(page.getByRole('link', { name: 'View plan' }).first()).toBeVisible();
   });
 
   test('disabling the Assets Feature removes Assets from both the sidebar and the phone bar, and restores on re-enable', async ({ page }) => {
@@ -53,7 +57,7 @@ test.describe('Settings > Features and the shell agree, and a disable removes ex
     // The row itself says so. The server action revalidates the whole organization layout, which
     // can take a moment the first time this route recompiles in dev — worth a generous timeout
     // rather than a flaky race.
-    await expect(page.getByText('disabled', { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Disabled', { exact: true })).toBeVisible({ timeout: 15_000 });
 
     // The area is gone from navigation entirely — not merely relabelled.
     await page.goto(`${orgHref}/home`);
@@ -70,7 +74,7 @@ test.describe('Settings > Features and the shell agree, and a disable removes ex
     await page.getByRole('button', { name: 'More actions for Assets' }).click();
     await page.getByRole('menuitem', { name: 'Enable feature' }).click();
     // Wait for the server action to land before leaving the page, or navigating away cancels it.
-    await expect(page.getByText('disabled', { exact: true })).toHaveCount(0, { timeout: 15_000 });
+    await expect(page.getByText('Disabled', { exact: true })).toHaveCount(0, { timeout: 15_000 });
 
     await page.goto(`${orgHref}/home`);
     await expect(page.getByRole('link', { name: 'Assets', exact: true }).first()).toBeVisible();

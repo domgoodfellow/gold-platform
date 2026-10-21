@@ -18,6 +18,7 @@ import { createCustomer } from '../lib/domain/customers/customers';
 import { createWorkItem } from '../lib/domain/work-items/work-items';
 import { createAsset } from '../lib/domain/assets/assets';
 import { BUSINESSES, DEMO_PASSWORD } from '../scripts/demo/businesses';
+import { cleanupAbandonedRuns } from './isolated-cleanup';
 
 /**
  * Disposable fixtures for the navigation specs that used to need the shared demo businesses
@@ -40,6 +41,9 @@ export default async function isolatedSetup(config: FullConfig): Promise<void> {
   const baseURL = config.projects[0]?.use?.baseURL ?? 'http://localhost:3000';
   for (const value of [url, connection, baseURL]) local(value);
   if (!FIXTURE_DIR) throw new Error('E2E_FIXTURE_DIR is not set.');
+  // A run killed before its teardown left its manifest; remove what it recorded before adding more.
+  const abandoned = await cleanupAbandonedRuns(path.dirname(FIXTURE_DIR), FIXTURE_DIR);
+  if (abandoned.length) console.log(`Removed fixtures of abandoned isolated runs: ${abandoned.join(', ')}`);
   mkdirSync(path.join(FIXTURE_DIR, '.auth'), { recursive: true });
 
   const run = randomUUID().slice(0, 8);

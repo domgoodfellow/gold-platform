@@ -49,18 +49,22 @@ test('Marketing acquisition, review, audiences and reporting journey',async({pag
   await page.goto(`${base}/campaigns`);await page.screenshot({path:path.join(shots,'campaigns.png'),fullPage:true});
   await page.goto(`${base}/performance`);await expect(page.getByRole('heading',{name:'Acquisition cohort',exact:true})).toBeVisible();await page.screenshot({path:path.join(shots,'performance.png'),fullPage:true});
   for(const width of [1440,768,390]){await page.setViewportSize({width,height:1050});await page.goto(base);await expect(page.getByRole('heading',{name:'Marketing',exact:true})).toBeVisible();await page.screenshot({path:path.join(shots,`home-${width}.png`),fullPage:true});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);}
-  await page.getByRole('heading',{name:'Acquisition / source performance',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:path.join(shots,'home-sources-mobile.png'),fullPage:true});
+  await page.getByRole('heading',{name:'Acquisition in this period',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:path.join(shots,'home-sources-mobile.png'),fullPage:true});
   await page.goto(`${base}/leads?campaign=${campaignId}`);await page.getByRole('button',{name:'Review',exact:true}).first().click();await expect(page.getByRole('link',{name:/Open CRM Customer:/})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);await page.screenshot({path:path.join(shots,'lead-inspector-mobile.png'),fullPage:true});
   expect(errors).toEqual([]);
 });
 
-test('Empty Marketing keeps the complete operational dashboard',async({page})=>{
+test('Empty Marketing says once what is missing, without empty panels',async({page})=>{
   test.setTimeout(60000);
   const organizationId=await foundBusiness({ownerEmail:BUSINESSES[0].owner.email,name:`Empty Marketing ${randomUUID().slice(0,5)}`,currency:'CAD',timezone:'America/Toronto'});
   await page.setViewportSize({width:1440,height:1050});await page.goto(`/organizations/${organizationId}/marketing`);
   await expect(page.getByRole('heading',{name:'Marketing',exact:true})).toBeVisible();
   await expect(page.getByRole('heading',{name:'Needs attention',exact:true})).toBeVisible();
-  await expect(page.getByRole('heading',{name:'Marketing readiness / status',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Status',exact:true})).toBeVisible();
+  // Batch C: one statement per absence; no empty activity feed, no navigation cards.
+  await expect(page.getByText('Nothing needs attention.')).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Recent activity',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('heading',{name:'Quick actions',exact:true})).toHaveCount(0);
   await expect(page.getByRole('link',{name:/Active campaigns\s*0/})).toBeVisible();
   await page.screenshot({path:path.resolve(__dirname,'../test-results/marketing/home-empty.png'),fullPage:true});
 });

@@ -1,7 +1,6 @@
 import { ConfigureMenu } from '@/components/controls/configure-menu';
 import type { ConfigureItem } from '@/lib/navigation';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
 import { Users, CircleDollarSign, CalendarClock, TrendingUp } from 'lucide-react';
 import { Button,ButtonLink } from '@/components/controls/button';
 import { TextInput } from '@/components/controls/inputs';
@@ -9,7 +8,6 @@ import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { MetricTile, OperationalPanel, PanelState } from '@/components/operational/primitives';
 import { CreateCustomerTrigger } from '@/features/crm/customers/create-customer-sheet';
 import { OpportunitySheet,type OpportunityFormOptions } from '@/features/crm/opportunities/opportunity-sheet';
-import { OpportunityTable } from '@/features/crm/opportunities/opportunity-table';
 import { FollowUpList } from '@/features/crm/follow-ups/follow-up-list';
 import { FollowUpSheet,type FollowUpOptions } from '@/features/crm/follow-ups/follow-up-sheet';
 import { NeedsAttention } from './needs-attention';
@@ -22,44 +20,60 @@ import { formatOpportunityValue } from '@/lib/domain/opportunities/money';
 export type CrmHomeProps = {
   organizationId:string;timezone:string;month:string;summary:CrmSummary;customers:Customer[];
   customerContext:Record<string,{stage:string;touch:string|null;next:FollowUp|null}>;
-  opportunitySummary:OpportunitySummary[];opportunities:Opportunity[];today:FollowUp[];overdue:FollowUp[];
+  opportunitySummary:OpportunitySummary[];today:FollowUp[];overdue:FollowUp[];
   noNext:Opportunity[];unassigned:Opportunity[];followUpOptions:FollowUpOptions;opportunityOptions:OpportunityFormOptions;
-  followUpsEnabled:boolean;conversionEnabled:boolean;mayCreate:boolean;mayCreateOpportunity:boolean;mayConfigure:boolean;activity:ReactNode;
+  followUpsEnabled:boolean;conversionEnabled:boolean;mayCreate:boolean;mayCreateOpportunity:boolean;mayConfigure:boolean;
   /** CRM's configuration doors this member may open (`workspaceConfigureItems`): none, one link, or a menu. */
   configureItems?:ConfigureItem[];
 };
 export function CurrencyValues({values}:{values:CurrencyTotal[]}) {
   return values.length?<>{values.map(v=><span className="block tabular-nums" key={v.currency}>{formatOpportunityValue(v.amount_minor,v.currency)}</span>)}</>:<span className="text-sm font-normal leading-5 text-muted">No valued opportunities</span>;
 }
-export function CrmHome({organizationId,timezone,month,summary,customers,customerContext,opportunitySummary,opportunities,today,overdue,noNext,unassigned,followUpOptions,opportunityOptions,followUpsEnabled,conversionEnabled,mayCreate,mayCreateOpportunity,mayConfigure,activity,configureItems=[]}:CrmHomeProps) {
+/**
+ * CRM Home: what needs doing now, then how the pipeline stands. Today owns the day's agenda and
+ * Needs attention owns exceptions (overdue, no next step, unassigned), so nothing is listed twice.
+ * The month picker sits on the one panel it filters. Recent activity lives in the Activity panel
+ * rather than setting the height of the page. A business with no customers, opportunities or stages
+ * sees one getting-started panel instead of a row of empty ones. Panels are in task order in the
+ * document (Needs attention, Today, Pipeline, This month, Recent customers), so narrow screens and
+ * keyboard and screen-reader order agree; the wide layout only places them in two columns.
+ */
+export function CrmHome({organizationId,timezone,month,summary,customers,customerContext,opportunitySummary,today,overdue,noNext,unassigned,followUpOptions,opportunityOptions,followUpsEnabled,conversionEnabled,mayCreate,mayCreateOpportunity,mayConfigure,configureItems=[]}:CrmHomeProps) {
   const base=`/organizations/${organizationId}`; const rate=winRate(summary.won,summary.lost);
   const nextMonth=new Date(`${month}T12:00:00Z`);nextMonth.setUTCMonth(nextMonth.getUTCMonth()+1);
+  const stages=opportunitySummary.filter(s=>s.stageId); const unstaged=opportunitySummary.find(s=>s.stageId===null)?.count??0;
+  const fresh=summary.customers===0&&summary.open===0&&stages.length===0;
+  const actions=<><ConfigureMenu items={configureItems} />{mayCreate?<CreateCustomerTrigger/>:null}{mayCreateOpportunity?<OpportunitySheet {...opportunityOptions}/>:null}</>;
+  if(fresh) return <WorkspaceHome location={{}} actions={actions}>
+    <OperationalPanel title="Get started with CRM"><ol className="grid gap-4 text-sm sm:grid-cols-3">
+      <li><p className="font-medium">1. Add your customers</p><p className="mt-1 text-muted">Everything in CRM hangs off a customer: stages, opportunities and follow-ups.</p>{mayCreate?<div className="mt-3"><CreateCustomerTrigger/></div>:null}</li>
+      <li><p className="font-medium">2. Name your opportunity stages</p><p className="mt-1 text-muted">Stages make the pipeline. Mark one Won and one Lost to measure win rate.</p>{mayConfigure?<ButtonLink className="mt-3" tone="secondary" href={`${base}/sales/configuration/opportunity-stages`}>Set up stages</ButtonLink>:null}</li>
+      <li><p className="font-medium">3. Plan the next step</p><p className="mt-1 text-muted">{followUpsEnabled?'Follow-ups due today appear here; overdue ones and opportunities without a next step are flagged.':'Follow-ups are not active for this business.'}</p></li>
+    </ol></OperationalPanel>
+  </WorkspaceHome>;
   const kpis=[{label:'Customers',value:summary.customers,context:'Customer relationships',href:`${base}/customers`,icon:Users},
     {label:'Open opportunities',value:summary.open,context:'In stages classified Open',href:`${base}/opportunities?kind=open`,icon:CircleDollarSign},
-    {label:'Follow-ups due today',value:followUpsEnabled?summary.today:'Unavailable',context:timezone,href:followUpsEnabled?`${base}/follow-ups?status=open&due=today`:undefined,icon:CalendarClock},
-    {label:'Forecast this month',value:<CurrencyValues values={summary.forecast}/>,context:'Open · unweighted expected close',href:`${base}/opportunities?kind=open&closeFrom=${month}&closeBefore=${nextMonth.toISOString().slice(0,10)}`,icon:TrendingUp}];
-  return <WorkspaceHome location={{}} actions={<><ConfigureMenu items={configureItems} />
-    <form method="get" className="flex items-center gap-1"><TextInput aria-label="Reporting month" name="month" type="month" defaultValue={month.slice(0,7)} className="w-40"/><Button type="submit" tone="text" size="small">Apply</Button></form>
-    {mayCreate?<CreateCustomerTrigger/>:null}{mayCreateOpportunity?<OpportunitySheet {...opportunityOptions}/>:null}
-  </>}>
+    {label:'Overdue follow-ups',value:followUpsEnabled?summary.overdue:'Unavailable',context:followUpsEnabled?'Open and past due':'Follow-ups not active',href:followUpsEnabled?`${base}/follow-ups?status=open&due=overdue`:undefined,icon:CalendarClock},
+    {label:'Open pipeline value',value:<CurrencyValues values={summary.pipeline}/>,context:'Current · each currency separately',href:`${base}/opportunities/pipeline`,icon:TrendingUp}];
+  return <WorkspaceHome location={{}} activity actions={actions}>
     <div className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">{kpis.map(kpi=><MetricTile key={kpi.label} label={kpi.label} value={kpi.value} detail={kpi.context} icon={kpi.icon} href={kpi.href}/>)}</div>
-    <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_18rem] 2xl:grid-cols-[minmax(0,1fr)_20rem]">
-      <div className="order-1 min-w-0 space-y-6 xl:order-none">
-        <OperationalPanel title="Needs attention" action={followUpsEnabled && followUpOptions.mayManage?<FollowUpSheet {...followUpOptions}/>:null}><NeedsAttention summary={summary} overdue={overdue} today={today} noNext={noNext} unassigned={unassigned} options={followUpOptions} followUpsEnabled={followUpsEnabled}/></OperationalPanel>
-        <OperationalPanel title="Pipeline" href={`${base}/opportunities/pipeline`} hrefLabel="View pipeline"><div className="space-y-4">
-          {opportunitySummary.filter(s=>s.stageId).length?<div className="flex gap-2 overflow-x-auto pb-2">{opportunitySummary.filter(s=>s.stageId).map(stage=><Link key={stage.stageId} href={`${base}/opportunities?stage=${stage.stageId}`} className="min-w-36 flex-1 rounded-md border-t-2 border-foreground bg-surface p-3"><div className="flex justify-between gap-3 text-sm font-medium"><span>{stage.name}</span><span>{stage.count}</span></div><p className="my-1 text-xs capitalize text-muted">{stage.kind}</p>{stage.values.map(v=><p key={v.currency} className="text-xs tabular-nums">{formatOpportunityValue(v.amountMinor,v.currency)}</p>)}</Link>)}</div>:<PanelState kind="not-configured" action={mayConfigure?<ButtonLink tone="secondary" href={`${base}/sales/configuration/opportunity-stages`}>Configure opportunity stages</ButtonLink>:undefined}>No opportunity stages are configured, so there is no pipeline to show yet.</PanelState>}
-          {opportunitySummary.find(s=>s.stageId===null)?.count?<Link href={`${base}/opportunities?stage=unstaged`} className="text-xs text-muted underline">{opportunitySummary.find(s=>s.stageId===null)?.count} unstaged opportunities</Link>:null}
-          <OpportunityTable organizationId={organizationId} opportunities={opportunities} timezone={timezone} followUpOptions={followUpsEnabled?followUpOptions:undefined}/>
-        </div></OperationalPanel>
-        <OperationalPanel title="Recent customers" href={`${base}/customers`} hrefLabel="View all customers" flush>
-          {customers.length?<div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b border-border text-xs text-muted"><tr>{['Customer','Relationship stage','Last CRM touchpoint','Next follow-up'].map(label=><th key={label} scope="col" className="px-3 py-2 font-medium">{label}</th>)}</tr></thead><tbody className="divide-y divide-border">{customers.map(customer=>{const context=customerContext[customer.id];return <tr key={customer.id}><td className="px-3 py-3 font-medium"><Link href={`${base}/customers/${customer.id}`}>{customer.name}</Link></td><td className="px-3 py-3 text-muted">{context?.stage ?? 'Unstaged'}</td><td className="px-3 py-3 text-xs text-muted">{context?.touch?new Intl.DateTimeFormat('en-CA',{timeZone:timezone,dateStyle:'medium'}).format(new Date(context.touch)):'No CRM activity'}</td><td className="min-w-36 px-3 py-3">{context?.next?<FollowUpSheet {...followUpOptions} item={context.next}>{context.next.title}</FollowUpSheet>:<span className="text-muted">Not scheduled</span>}</td></tr>;})}</tbody></table></div>:<PanelState>No customers yet. Add your first customer to start working.</PanelState>}
+    {/* Reading order is task order at every width; the wide layout places Today and This month in the right column. */}
+    <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <OperationalPanel className="min-w-0 xl:col-start-1" title="Needs attention" action={followUpsEnabled && followUpOptions.mayManage?<FollowUpSheet {...followUpOptions}/>:null}><NeedsAttention summary={summary} overdue={overdue} noNext={noNext} unassigned={unassigned} options={followUpOptions} followUpsEnabled={followUpsEnabled}/></OperationalPanel>
+        <OperationalPanel className="min-w-0 xl:col-start-2" title="Today" count={followUpsEnabled?summary.today:undefined} href={`${base}/sales/calendar`} hrefLabel="View calendar">{followUpsEnabled?<><FollowUpList {...followUpOptions} items={today} compact/>{summary.today>today.length?<ButtonLink tone="text" href={`${base}/follow-ups?status=open&due=today`}>View all today</ButtonLink>:null}</>:<PanelState kind="not-configured">Follow-ups are not active for this organization.</PanelState>}</OperationalPanel>
+        <OperationalPanel className="min-w-0 xl:col-start-1" title="Pipeline" href={`${base}/opportunities/pipeline`} hrefLabel="View pipeline">
+          {stages.length?<ul className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-2">{stages.map(stage=><li key={stage.stageId}><Link href={`${base}/opportunities?stage=${stage.stageId}`} className="block h-full rounded-md border border-border bg-surface p-3 hover:bg-hover"><span className="flex justify-between gap-3 text-sm font-medium"><span className="min-w-0 break-words">{stage.name}</span><span className="tabular-nums">{stage.count}</span></span><span className="mt-1 block text-xs capitalize text-muted">{stage.kind}</span>{stage.values.map(v=><span key={v.currency} className="block text-xs tabular-nums">{formatOpportunityValue(v.amountMinor,v.currency)}</span>)}</Link></li>)}</ul>:<PanelState kind="not-configured" action={mayConfigure?<ButtonLink tone="secondary" href={`${base}/sales/configuration/opportunity-stages`}>Set up opportunity stages</ButtonLink>:undefined}>No opportunity stages yet, so there is no pipeline to show.</PanelState>}
+          {unstaged?<Link href={`${base}/opportunities?stage=unstaged`} className="mt-3 inline-block text-xs text-muted underline">{unstaged} unstaged opportunities</Link>:null}
         </OperationalPanel>
-        <OperationalPanel title="CRM Insights"><div className="grid gap-5 sm:grid-cols-2"><div><p className="text-sm text-muted">Opportunity win rate · {month.slice(0,7)}</p><p className="mt-2 text-2xl font-semibold">{!conversionEnabled?'Unavailable':rate===null?'No closed opportunities':`${Math.round(rate*100)}%`}</p>{conversionEnabled?<><p className="mt-1 text-xs text-muted">{summary.won} won / {summary.won+summary.lost} closed · last closed transition per opportunity this month</p>{rate!==null?<div aria-hidden className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface"><div className="h-full bg-foreground" style={{width:`${rate*100}%`}}/></div>:null}</>:null}</div><div><p className="text-sm text-muted">Current open pipeline value</p><div className="mt-2 text-xl font-semibold"><CurrencyValues values={summary.pipeline}/></div><p className="mt-1 text-xs text-muted">Separate totals for each currency</p></div></div></OperationalPanel>
-      </div>
-      <aside className="contents min-w-0 xl:block xl:space-y-6">
-        <OperationalPanel title="Today" count={followUpsEnabled?summary.today:undefined} href={`${base}/sales/calendar`} hrefLabel="View calendar">{followUpsEnabled?<><FollowUpList {...followUpOptions} items={today} compact/>{summary.today>today.length?<ButtonLink tone="text" href={`${base}/follow-ups?status=open&due=today`}>View all today</ButtonLink>:null}</>:<PanelState kind="not-configured">Follow-ups are not active for this organization.</PanelState>}</OperationalPanel>
-        <OperationalPanel title="Recent activity" className="order-2">{activity}</OperationalPanel>
-      </aside>
+        <OperationalPanel className="min-w-0 xl:col-start-2" title="This month" action={<form method="get" className="flex items-center gap-1"><TextInput aria-label="Month for forecast and win rate" name="month" type="month" defaultValue={month.slice(0,7)} size="small" className="w-36"/><Button type="submit" tone="text" size="small">Apply</Button></form>}>
+          <dl className="grid gap-4 text-sm">
+            <div><dt className="text-muted">Forecast</dt><dd className="mt-1 text-lg font-semibold"><Link className="hover:underline" href={`${base}/opportunities?kind=open&closeFrom=${month}&closeBefore=${nextMonth.toISOString().slice(0,10)}`}><CurrencyValues values={summary.forecast}/></Link></dd><dd className="text-xs text-muted">Open opportunities expected to close this month, unweighted</dd></div>
+            <div><dt className="text-muted">Win rate</dt><dd className="mt-1">{!conversionEnabled?<span className="text-muted">Unavailable</span>:rate===null?<span className="text-muted">No opportunities closed this month</span>:<span className="text-lg font-semibold">{Math.round(rate*100)}%</span>}</dd>{conversionEnabled&&rate!==null?<dd className="text-xs text-muted">{summary.won} won of {summary.won+summary.lost} closed</dd>:null}</div>
+          </dl>
+        </OperationalPanel>
+        <OperationalPanel className="min-w-0 xl:col-start-1" title="Recent customers" href={`${base}/customers`} hrefLabel="View all customers" flush>
+          {customers.length?<ul className="divide-y divide-border">{customers.map(customer=>{const context=customerContext[customer.id];return <li key={customer.id} className="grid gap-1 px-4 py-3 text-sm sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.2fr)] sm:items-center sm:gap-3"><Link className="min-w-0 break-words font-medium hover:underline" href={`${base}/customers/${customer.id}`}>{customer.name}</Link><span className="text-xs text-muted">{context?.stage ?? 'Unstaged'} · {context?.touch?`Last touch ${new Intl.DateTimeFormat('en-CA',{timeZone:timezone,dateStyle:'medium'}).format(new Date(context.touch))}`:'No CRM activity'}</span><span className="min-w-0 text-xs">{context?.next?<FollowUpSheet {...followUpOptions} item={context.next}>{context.next.title}</FollowUpSheet>:<span className="text-muted">No follow-up scheduled</span>}</span></li>;})}</ul>:<PanelState>No customers yet.</PanelState>}
+        </OperationalPanel>
     </div>
   </WorkspaceHome>;
 }

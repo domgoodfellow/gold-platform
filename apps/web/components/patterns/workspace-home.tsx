@@ -18,6 +18,7 @@ export function WorkspaceHome({
   location,
   actions,
   insights = false,
+  activity = false,
   configure = false,
   children,
 }: {
@@ -28,6 +29,8 @@ export function WorkspaceHome({
   location?: Record<string, never>;
   actions?: ReactNode;
   insights?: boolean;
+  /** Offers the page-support Activity panel; the page registers its feed there instead of drawing it inline. */
+  activity?: boolean;
   configure?: boolean;
   children: ReactNode;
 }) {
@@ -39,9 +42,10 @@ export function WorkspaceHome({
       {location ? null : <PageLocation crumbs={crumbs} current={title} />}
       <div className="mb-6 flex flex-wrap items-center justify-end gap-x-4 gap-y-3">
         {location ? <LocationHeading required /> : <h1 className={titleInBar ? 'sr-only' : 'mr-auto text-2xl font-semibold tracking-tight'}>{title}</h1>}
-        {actions || insights || configure ? (
+        {actions || insights || activity || configure ? (
           <div className="flex flex-wrap items-center gap-2">
             {actions}
+            {activity ? <SupportTrigger mode="activity" /> : null}
             {insights ? <SupportTrigger mode="insights" /> : null}
             {configure ? <SupportTrigger mode="configure" /> : null}
           </div>

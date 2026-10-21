@@ -40,11 +40,17 @@ export function FeatureRow({
   state,
   mayManage,
   mayConfigure = true,
+  meta,
+  showReason = true,
 }: {
   organizationId: string;
   label: string;
   description: string;
   state: ResolvedFeatureState;
+  /** A short locating word shown beside the status, e.g. the feature's module. */
+  meta?: string;
+  /** False when the setup reason is already said once for the whole group. */
+  showReason?: boolean;
   /** Gated on `feature.manage`, never on `organization.manage` — a distinct capability now that one exists. */
   mayManage: boolean;
   mayConfigure?: boolean;
@@ -57,20 +63,22 @@ export function FeatureRow({
   const notEntitled = !state.entitled;
   const disabled = state.activation === 'disabled';
 
-  const statusLine = notEntitled
-    ? 'Not included in your plan'
-    : `Included · ${disabled ? 'Disabled' : 'Enabled'} · ${READINESS_LABEL[disabled ? 'unavailable' : state.readiness]}`;
+  const status = notEntitled
+    ? 'Not in your plan'
+    : disabled ? 'Disabled'
+      : state.implementationState === 'partial' ? 'Limited availability'
+        : state.readiness === 'setup_required' ? 'Needs setup' : READINESS_LABEL[state.readiness];
 
   return (
-    <div className="flex flex-col gap-1 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+    <div className="flex flex-col gap-1 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="min-w-0">
-        <p className="text-sm font-medium">
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
           {label}
-          {disabled ? <Badge className="ml-2 font-normal">disabled</Badge> : null}
+          <Badge className="font-normal">{status}</Badge>
+          {meta ? <span className="text-xs font-normal text-muted">{meta}</span> : null}
         </p>
-        <p className="mt-0.5 text-sm text-muted">{statusLine}</p>
-        <Hint>{description}</Hint>
-        {!disabled && !notEntitled && state.readiness === 'setup_required' && state.reason ? (
+        <Hint className="mt-0.5 text-xs">{description}</Hint>
+        {showReason && !disabled && !notEntitled && state.readiness === 'setup_required' && state.reason ? (
           <p className="mt-1 text-sm text-muted">{state.reason}</p>
         ) : null}
         <ErrorText role="alert" className="mt-1">{actionState.error}</ErrorText>

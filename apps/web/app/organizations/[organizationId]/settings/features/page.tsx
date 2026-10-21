@@ -1,4 +1,3 @@
-import { DividedList, Section, SectionHeading } from '@/components/surfaces/section';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/settings-page-frame';
 import {
@@ -8,7 +7,7 @@ import {
 } from '@/lib/domain/catalogue/catalogue';
 import { organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { requireOrganization } from '@/lib/route/organization';
-import { FeatureRow } from '@/features/catalogue/feature-row';
+import { FeatureCatalogue, type CatalogueFeature } from '@/features/catalogue/feature-catalogue';
 import { configTargetOffered, featureConfigurationTarget } from '@/lib/navigation';
 import { activeModuleKeys, availableFeatureKeys } from '@/lib/domain/catalogue/organization-plans';
 import { hasSchedulableWork } from '@/lib/domain/work-items/types';
@@ -42,70 +41,28 @@ export default async function FeaturesSettingsPage({
   const gate = { capabilities: new Set(organization.capabilities), enabledModules: activeModuleKeys(resolved), featureAvailability: availableFeatureKeys(resolved), schedulableWork };
   const resolvedByFeatureId = new Map(resolved.map((r) => [r.featureId, r]));
 
-  // Grouped by canonical Product then Module, in catalogue display order — never by the legacy
-  // module list, which has no Product axis at all.
-  const featuresByModuleId = new Map<string, typeof features>();
-  for (const feature of features) {
-    const list = featuresByModuleId.get(feature.moduleId) ?? [];
-    list.push(feature);
-    featuresByModuleId.set(feature.moduleId, list);
-  }
+  // Catalogue display order: Product, then Module, then Feature — never the legacy module list.
+  const items: CatalogueFeature[] = products.flatMap((product) => modules
+    .filter((module) => module.productId === product.id)
+    .flatMap((module) => features
+      .filter((feature) => feature.moduleId === module.id)
+      .flatMap((feature) => {
+        const state = resolvedByFeatureId.get(feature.id);
+        if (!state) return [];
+        const target = featureConfigurationTarget(feature.key);
+        return [{
+          id: feature.id, label: feature.label, description: feature.description, product: product.label, module: module.label, state,
+          mayConfigure: target ? configTargetOffered(target, gate) : mayManage || organization.capabilities.includes('organization.manage'),
+        }];
+      })));
 
   return (
     <SettingsPageFrame>
-      <SettingsPageHeader
-        title="Features"
-      />
+      <SettingsPageHeader title="Features" />
       <Hint className="mt-1">
-        What this business is entitled to, and what it has switched off. An entitled feature is
-        on by default — disabling one hides it from this business without removing anything it
-        has already recorded, and re-enabling restores access.
+        An included feature is on unless switched off here; switching one off keeps everything it has recorded.
       </Hint>
-
-      {products.map((product) => {
-        const productModules = modules
-          .filter((m) => m.productId === product.id)
-          .filter((m) => (featuresByModuleId.get(m.id) ?? []).length > 0);
-        if (productModules.length === 0) return null;
-
-        return (
-          <Section key={product.id} className="mt-8">
-            <SectionHeading>{product.label}</SectionHeading>
-            {productModules.map((module) => {
-              const moduleFeatures = featuresByModuleId.get(module.id) ?? [];
-              return (
-                <div key={module.id} className="mt-4">
-                  <p className="text-sm font-medium text-subtle">{module.label}</p>
-                  <DividedList as="div" className="mt-1">
-                    {moduleFeatures.map((feature) => {
-                      const state = resolvedByFeatureId.get(feature.id);
-                      if (!state) return null;
-                      const target = featureConfigurationTarget(feature.key);
-                      return (
-                        <FeatureRow
-                          key={feature.id}
-                          organizationId={organizationId}
-                          label={feature.label}
-                          description={feature.description}
-                          state={state}
-                          mayManage={mayManage}
-                          mayConfigure={target ? configTargetOffered(target, gate) : mayManage || organization.capabilities.includes('organization.manage')}
-                        />
-                      );
-                    })}
-                  </DividedList>
-                </div>
-              );
-            })}
-          </Section>
-        );
-      })}
-
-      {mayManage ? null : (
-        <Hint className="mt-4">
-          Your role, {organization.role}, cannot switch features on or off for this business.
-        </Hint>
-      )}
+      <FeatureCatalogue organizationId={organizationId} features={items} mayManage={mayManage} />
     </SettingsPageFrame>
   );
 }

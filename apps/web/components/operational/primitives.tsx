@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import {
-  ChevronRight,
   CircleAlert,
   Inbox,
   Lock,
@@ -349,34 +348,6 @@ export function ActivityList({
         </li>
       ))}
     </ol>
-  );
-}
-
-export function ResourceTile({
-  title,
-  description,
-  icon,
-  href,
-}: {
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  href: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex min-w-0 items-start gap-2.5 rounded-lg border border-border bg-surface p-3 transition-colors hover:bg-hover"
-    >
-      <IconWell icon={icon} />
-      <div className="min-w-0 flex-1">
-        <div className="text-xs font-semibold">{title}</div>
-        <p className="mt-1 text-[11px] leading-4 text-muted">
-          {description}
-        </p>
-      </div>
-      <ChevronRight className="mt-3 size-3.5 shrink-0 text-subtle" />
-    </Link>
   );
 }
 

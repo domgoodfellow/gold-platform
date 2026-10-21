@@ -5,13 +5,11 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
-  ChartNoAxesCombined,
   Check,
   CircleCheck,
   ClipboardList,
   Clock,
   Headset,
-  Layers,
   SlidersHorizontal,
   TriangleAlert,
   Users,
@@ -29,7 +27,6 @@ import {
   MetricTile,
   OperationalPanel,
   RelativeTime,
-  ResourceTile,
   RiskBar,
   type StatusTone,
 } from "@/components/operational/primitives";
@@ -403,37 +400,6 @@ export function SupportHome({
             </div>
           </OperationalPanel>
         </div>
-        <section>
-          <h2 className="mb-2 text-sm font-semibold tracking-tight">
-            Support tools & resources
-          </h2>
-          <div className="grid grid-cols-2 gap-2 @3xl:grid-cols-4">
-            <ResourceTile
-              href={href("cases")}
-              title="Cases"
-              description="View and manage support cases"
-              icon={ClipboardList}
-            />
-            <ResourceTile
-              href={href("queues")}
-              title="Queues"
-              description="Organize team responsibility"
-              icon={Layers}
-            />
-            <ResourceTile
-              href={href("service-levels")}
-              title="Service levels"
-              description="Manage resolution targets"
-              icon={Clock}
-            />
-            <ResourceTile
-              href={href("reports")}
-              title="Reports"
-              description="Support performance and insights"
-              icon={ChartNoAxesCombined}
-            />
-          </div>
-        </section>
       </div>
       <aside className="min-w-0 space-y-3">
         <OperationalPanel
