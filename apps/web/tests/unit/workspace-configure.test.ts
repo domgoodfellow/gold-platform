@@ -29,12 +29,20 @@ describe('workspace Configure doors', () => {
     expect(workspaceConfigureItems('org', 'automations', none)).toEqual([]);
   });
 
-  it('resolves each door to its registered path inside the organization, and keeps a section hash', () => {
+  it('resolves each door to its registered path inside the organization, one door per page', () => {
     const items = workspaceConfigureItems('org-1', 'finance', { ...everythingEntitled, capabilities: everyPermission });
-    expect(items.map((item) => item.href)).toEqual([
-      '/organizations/org-1/finance/configuration/pricing',
-      '/organizations/org-1/finance/configuration/pricing#getting-paid',
-    ]);
+    expect(items.map((item) => item.href)).toEqual(['/organizations/org-1/finance/configuration/pricing']);
+    // Batch A: no workspace offers two doors to the same page, or a door that is only an anchor into another door's page.
+    for (const workspace of Object.keys(WORKSPACE_CONFIGURE) as (keyof typeof WORKSPACE_CONFIGURE)[]) {
+      const pages = workspaceConfigureItems('org-1', workspace, { ...everythingEntitled, capabilities: everyPermission }).map((item) => item.href.split('#')[0]);
+      expect(new Set(pages).size, workspace).toBe(pages.length);
+    }
+  });
+
+  it('registers no workspace whose doors are always filtered away (Marketing, Automations)', () => {
+    for (const [workspace, doors] of Object.entries(WORKSPACE_CONFIGURE)) {
+      expect(doors!.some((door) => { const target = configTarget(door.target); return target.workspace === workspace && target.treatment !== 'operating'; }), workspace).toBe(true);
+    }
   });
 
   it('is gated by the configuration permission, never the permission to operate', () => {

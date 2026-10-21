@@ -128,7 +128,7 @@ describe('the Settings context', () => {
   });
 
   it('points workspace configuration pages back at their workspace', () => {
-    expect(workspaceConfigCrumbs(ORG, 'pricing')).toEqual([{ label: 'Finance', href: `/organizations/${ORG}/finance` }, { label: 'Configuration', href: `/organizations/${ORG}/finance/configuration` }]);
+    expect(workspaceConfigCrumbs(ORG, 'pricing')).toEqual([{ label: 'Finance', href: `/organizations/${ORG}/finance` }, { label: 'Configuration' }]);
     expect(workspaceConfigCrumbs(ORG, 'custom-fields')).toEqual([]);
   });
 });

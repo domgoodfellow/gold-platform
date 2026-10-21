@@ -2,6 +2,12 @@
 
 import { useEffect } from 'react';
 
+/**
+ * While `dirty`, asks before the page is left: the browser's own prompt on reload or closing the tab,
+ * and a confirmation before following a link to another page. Shared by the Studio editors, the
+ * customer service disclosure editor and the price book; programmatic navigation and Back cannot be
+ * intercepted in Next and are not covered.
+ */
 export function useUnsavedChanges(dirty: boolean) {
   useEffect(() => {
     if (!dirty) return;

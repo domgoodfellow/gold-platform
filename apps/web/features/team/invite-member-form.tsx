@@ -10,7 +10,7 @@ import { inviteMemberAction, type InviteMemberState } from '@/app/organizations/
 const INITIAL: InviteMemberState = { error: null, link: null, email: null };
 
 /**
- * The shared Add Member Sheet owns the bounded creation surface; this component owns only the
+ * The shared Add member dialog owns the bounded creation surface; this component owns only the
  * invite-by-email operation, including its post-success copyable-link state.
  */
 export function InviteMemberForm({

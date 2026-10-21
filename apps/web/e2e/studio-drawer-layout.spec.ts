@@ -60,12 +60,14 @@ test('form editing retains changes across compact drawers and tests responses lo
   await page.getByLabel('Form name').fill(`Layout acceptance ${Date.now()}`);
   await page.getByRole('button', { name: 'Create form' }).click();
   await expect(page).toHaveURL(/\/studio\/forms\/[0-9a-f-]{36}$/);
-  await page.getByRole('button', { name: 'Distribute', exact: true }).click();
-  const distribution = page.getByRole('dialog', { name: 'Distribute', exact: true });
+  // Batch B: sharing is a section of the form's page; the toolbar links down to it.
+  await expect(page.getByRole('button', { name: 'Distribute', exact: true })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Sharing', exact: true }).click();
+  const distribution = page.getByRole('region', { name: 'Sharing', exact: true });
+  await expect(distribution).toBeInViewport();
   await expect(distribution.getByText('Publish this form to share it. Links and embeds open the published version only.')).toBeVisible();
   await expect(distribution.getByRole('region', { name: 'Link', exact: true })).toHaveCount(0);
   await expect(distribution.getByRole('region', { name: 'Embed', exact: true })).toHaveCount(0);
-  await distribution.getByRole('button', { name: 'Close', exact: true }).click();
   await page.getByRole('button', { name: 'Short text', exact: true }).click();
   await page.getByRole('textbox', { name: 'Question', exact: true }).fill('Your name');
   await page.getByRole('checkbox', { name: 'Required' }).check();

@@ -5,7 +5,7 @@ import { listInvitationDeliveryStatus, listPendingInvitations } from '@/lib/doma
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { listRoles } from '@/lib/domain/tenancy/roles';
 import { requireOrganization } from '@/lib/route/organization';
-import { AddMemberSheetProvider, AddMemberTrigger } from '@/features/team/add-member-sheet';
+import { AddMemberDialogProvider, AddMemberTrigger } from '@/features/team/add-member-dialog';
 import { CreateRoleSheet } from '@/features/team/create-role-sheet';
 import { InvitationsTable } from '@/features/team/invitations-table';
 import { MembersTable } from '@/features/team/members-table';
@@ -44,7 +44,7 @@ export async function AccessPage({
 
   return (
     <SettingsPageFrame width="fluid">
-      <AddMemberSheetProvider organizationId={organizationId} roles={roles}>
+      <AddMemberDialogProvider organizationId={organizationId} roles={roles}>
       <SettingsPageHeader
         title={view === 'members' ? 'Members' : view === 'invitations' ? 'Invitations' : 'Roles'}
         actions={
@@ -107,7 +107,7 @@ export async function AccessPage({
           />
         </div>
       ) : null}
-      </AddMemberSheetProvider>
+      </AddMemberDialogProvider>
     </SettingsPageFrame>
   );
 }

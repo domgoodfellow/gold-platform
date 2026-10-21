@@ -9,7 +9,7 @@ import { disclosureAction, type ServiceActionState } from '@/app/organizations/[
 import { SERVICE_KINDS, type Deliverable, type Engagement } from '@/lib/domain/customers/service-engagements';
 import { parseDisclosureContent, type ApprovedDeliverable, type DisclosureContent, type DisclosureRevision, type ServiceDisclosure } from '@/lib/domain/customers/service-disclosures';
 import { ServicePresentation } from '@/features/portal-access/service-presenter';
-import { useUnsavedChanges } from '@/features/studio/use-unsaved-changes';
+import { useUnsavedChanges } from '@/components/controls/use-unsaved-changes';
 import { NotificationChoice } from './service-notification-section';
 import type { readEngagementDetails } from '@/app/organizations/[organizationId]/customers/[customerId]/service-actions';
 

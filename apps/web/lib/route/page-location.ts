@@ -6,7 +6,6 @@ import {
   areaAvailable,
   configTarget,
   configTargetOffered,
-  configurationHasLanding,
   workspaceConfigureItems,
   type ConfigGate,
   type ConfigTarget,
@@ -84,7 +83,6 @@ const OPEN_TARGETS: Readonly<Record<string, string>> = {
   'phone-numbers': 'U-3', 'support-queues': 'B-D5', 'support-service-levels': 'B-D5',
   'ai-agents': 'U-5', 'ai-deployments': 'U-5', 'ai-knowledge': 'U-5', 'ai-tools': 'U-5', 'custom-fields': 'U-7', secrets: 'U-7',
 };
-const OPEN_LANDINGS: Partial<Record<WorkspaceKey, string>> = { support: 'U-4', studio: 'U-6', ai: 'U-5' };
 
 /** Business nouns are keyed by entity; these destinations are named by one. Never matched by displayed word (A2). */
 const DESTINATION_NOUNS: Readonly<Record<string, BusinessEntity>> = {
@@ -162,8 +160,8 @@ const areaRoute = (segment: string) => {
   return area.route ?? area.segment;
 };
 
-/** A workspace has a configuration landing exactly when one of its own doors is a configuration page. */
-function hasConfigurationLanding(workspace: WorkspaceKey): boolean {
+/** A workspace has a Configuration level exactly when one of its own doors is a configuration page. */
+function hasConfigurationLevel(workspace: WorkspaceKey): boolean {
   return (WORKSPACE_CONFIGURE[workspace] ?? []).some((door) => {
     const target = configTarget(door.target);
     return target.workspace === workspace && target.treatment !== 'operating';
@@ -187,9 +185,9 @@ function deriveNodes(): LocationNode[] {
 
   for (const workspace of WORKSPACES) {
     nodes.push({ id: `workspace:${workspace.key}`, scope: 'organization', kind: 'workspace', pattern: areaRoute(workspace.home), area: workspace.home, workspace: workspace.key });
-    if (hasConfigurationLanding(workspace.key)) {
-      // Without a landing the address only redirects to a door, so the level is plain text.
-      nodes.push({ id: `configuration:${workspace.key}`, scope: 'organization', kind: 'configuration', pattern: `${areaRoute(workspace.home)}/configuration`, parent: `workspace:${workspace.key}`, workspace: workspace.key, label: 'Configuration', open: OPEN_LANDINGS[workspace.key], ...(configurationHasLanding(workspace.key) ? {} : { redirect: true as const }) });
+    if (hasConfigurationLevel(workspace.key)) {
+      // No workspace has a Configuration landing: the address only redirects to a door, so the level is plain text.
+      nodes.push({ id: `configuration:${workspace.key}`, scope: 'organization', kind: 'configuration', pattern: `${areaRoute(workspace.home)}/configuration`, parent: `workspace:${workspace.key}`, workspace: workspace.key, label: 'Configuration', redirect: true });
     }
   }
 
@@ -420,7 +418,7 @@ function opens(node: LocationNode, access: LocationAccess, organizationId: strin
 function permitted(node: LocationNode, access: LocationAccess, organizationId: string | undefined): boolean {
   const gate = access.gate ?? {};
   const state = { enabled: gate.enabledModules, capabilities: gate.capabilities, featureAvailability: gate.featureAvailability, schedulableWork: gate.schedulableWork };
-  if (node.kind === 'configuration') return workspaceConfigureItems(organizationId ?? '_', node.workspace!, gate).length >= 2;
+  if (node.kind === 'configuration') return workspaceConfigureItems(organizationId ?? '_', node.workspace!, gate).length > 0;
   if (node.target) return configTargetOffered(configTarget(node.target), gate);
   if (node.area) return areaAvailable(node.area, state);
   if (node.platform) {

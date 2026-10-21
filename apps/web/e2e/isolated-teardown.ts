@@ -5,7 +5,8 @@ import { createClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 
 /**
- * Removes exactly what `isolated-setup.ts` recorded for this run — its business and its two
+ * Removes exactly what `isolated-setup.ts` recorded for this run — its business (with the few records
+ * its specs create that do not cascade from it) and its two
  * accounts — and the run's context and signed-in states. Nothing else is touched.
  */
 export default async function isolatedTeardown(): Promise<void> {
@@ -22,6 +23,11 @@ export default async function isolatedTeardown(): Promise<void> {
   await pg.connect();
   try {
     await pg.query('delete from platform_staff where user_id=any($1::uuid[])', [created.userIds]);
+    // Records the specs create through the UI whose foreign keys do not cascade from the business:
+    // a campaign (surface-replacements) or a portal offer would otherwise keep it, and its accounts, behind.
+    for (const table of ['marketing_campaigns', 'marketing_audiences', 'portal_definitions']) {
+      await pg.query(`delete from ${table} where organization_id=any($1::uuid[])`, [created.organizationIds]);
+    }
     await pg.query('delete from organizations where id=any($1::uuid[])', [created.organizationIds]);
     await pg.query('delete from platform_plans where key=any($1::text[])', [created.planKeys ?? []]);
   } finally {

@@ -3,7 +3,8 @@
 import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
 import { SectionHeading } from '@/components/surfaces/section';
 import { Button } from '@/components/controls/button';
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
+import { useUnsavedChanges } from '@/components/controls/use-unsaved-changes';
 import { CurrencyField } from '@/features/locale/locale-fields';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 import {
@@ -73,124 +74,70 @@ export function ChooseCurrencyForm({ organizationId, currentCurrency }: { organi
   );
 }
 
-export function CreatePriceItemForm({
-  organizationId,
-  currency,
-}: {
-  organizationId: string;
-  currency: string;
-}) {
-  const [state, formAction, pending] = useActionState(createPriceItemAction, INITIAL);
-  const [fields, setFields] = useState({ name: '', unit: '', amount: '' });
-  const control = (name: keyof typeof fields) => ({ name, value: fields[name], onChange: (event: { target: { value: string } }) => setFields(previous => ({ ...previous, [name]: event.target.value })) });
-
-  return (
-    <form action={formAction} className="mt-8 flex flex-col gap-3">
-      <input type="hidden" name="organizationId" value={organizationId} />
-
-      <SectionHeading>Something you charge for</SectionHeading>
-
-      <div className="grid gap-3">
-        <TextInput
-          {...control('name')}
-          type="text"
-          required
-          maxLength={200}
-          placeholder="What it is, e.g. Callout"
-          aria-label="Name"
-          className="flex-1"
-        />
-        <TextInput
-          {...control('unit')}
-          type="text"
-          required
-          maxLength={40}
-          placeholder="Per what, e.g. visit"
-          aria-label="Unit"
-          className="flex-1"
-        />
-        <TextInput
-          {...control('amount')}
-          type="number"
-          required
-          min={0}
-          step={step(currency)}
-          placeholder={`Amount in ${currency}`}
-          aria-label={`Amount in ${currency}`}
-          className="w-full"
-        />
-      </div>
-
-      <Button type="submit" disabled={pending} className="w-fit">
-        {pending ? 'Adding…' : 'Add'}
-      </Button>
-
-      <ErrorText role="alert">{state.error}</ErrorText>
-      {state.success ? <p role="status" className="text-sm text-success">{state.success}</p> : null}
-    </form>
-  );
-}
-
 /**
- * Re-price or rename one item.
+ * Add or edit one price item in its row of the price book. One row is one atomic write through the
+ * existing create/update action — the same money parsing, domain validation and `price.manage`
+ * check as before — so editing in place needs no list-wide save. A refusal keeps what was typed
+ * (the inputs are controlled) and moves focus to the reason; Save success hands control back to the
+ * list. Cancel and Escape discard this row's changes; leaving the page with changes asks first.
  *
- * The currency is shown and not editable, and that is a fact about the row rather than about
- * this role: the column grant refuses it to everybody, because changing it would reinterpret
- * the amount rather than convert it. An organization that has changed what it trades in
- * re-prices its catalogue, and seeing the old currency here is how it knows to.
+ * The currency is shown and not editable, and that is a fact about the row rather than about this
+ * role: the column grant refuses it to everybody, because changing it would reinterpret the amount
+ * rather than convert it. An organization that has changed what it trades in re-prices its
+ * catalogue, and seeing the old currency here is how it knows to.
  */
-export function EditPriceItemForm({
+export function PriceItemRowForm({
   organizationId,
   item,
+  currency,
+  onDone,
+  onCancel,
 }: {
   organizationId: string;
-  item: PriceBookItem;
+  /** Absent when adding. */
+  item?: PriceBookItem;
+  currency: string;
+  onDone: () => void;
+  onCancel: () => void;
 }) {
-  const [state, formAction, pending] = useActionState(updatePriceItemAction, INITIAL);
-  const [fields, setFields] = useState({ name: item.name, unit: item.unit, amount: minorToTyped(item.unitAmountMinor, item.currency) });
+  const [state, formAction, pending] = useActionState(item ? updatePriceItemAction : createPriceItemAction, INITIAL);
+  const initial = { name: item?.name ?? '', unit: item?.unit ?? '', amount: item ? minorToTyped(item.unitAmountMinor, item.currency) : '' };
+  const [fields, setFields] = useState(initial);
+  const dirty = fields.name !== initial.name || fields.unit !== initial.unit || fields.amount !== initial.amount;
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  useUnsavedChanges(dirty);
+  // Reacts to each action result once, not to a caller's new callback on every render.
+  const done = useRef(onDone);
+  useEffect(() => { done.current = onDone; }, [onDone]);
+  useEffect(() => {
+    if (state.success) done.current();
+    else if (state.error) errorRef.current?.focus();
+  }, [state]);
   const control = (name: keyof typeof fields) => ({ name, value: fields[name], onChange: (event: { target: { value: string } }) => setFields(previous => ({ ...previous, [name]: event.target.value })) });
+  const subject = item ? item.name : 'new price item';
+  const label = 'text-xs font-medium text-muted @min-[40rem]/prices:sr-only';
 
   return (
-    <form action={formAction} className="flex flex-wrap items-center gap-2 py-2">
+    <form
+      action={formAction}
+      aria-label={item ? `Edit ${item.name}` : 'Add price item'}
+      onKeyDown={(event) => { if (event.key === 'Escape' && !pending) { event.preventDefault(); onCancel(); } }}
+      className="grid gap-2 bg-secondary/40 px-3 py-3 @min-[40rem]/prices:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] @min-[40rem]/prices:items-start"
+    >
       <input type="hidden" name="organizationId" value={organizationId} />
-      <input type="hidden" name="itemId" value={item.id} />
-
-      <TextInput
-        {...control('name')}
-        type="text"
-        required
-        maxLength={200}
-        aria-label={`Name of ${item.name}`}
-        size="small"
-        className="min-w-0 flex-1"
-      />
-      <span className="text-sm text-subtle">per</span>
-      <TextInput
-        {...control('unit')}
-        type="text"
-        required
-        maxLength={40}
-        aria-label={`Unit of ${item.name}`}
-        size="small"
-        className="w-28"
-      />
-      <TextInput
-        {...control('amount')}
-        type="number"
-        required
-        min={0}
-        step={step(item.currency)}
-        aria-label={`Amount for ${item.name}`}
-        size="small"
-        className="w-28"
-      />
-      <span className="text-sm text-subtle">{item.currency}</span>
-      <Button type="submit" disabled={pending} tone="secondary" size="tiny">
-        Save
-      </Button>
-
-      <ErrorText role="alert" className="w-full">{state.error}</ErrorText>
-      {state.success ? <p role="status" className="w-full text-sm text-success">{state.success}</p> : null}
+      {item ? <input type="hidden" name="itemId" value={item.id} /> : null}
+      <label className="grid gap-1"><span className={label}>Name</span>
+        <TextInput {...control('name')} type="text" required maxLength={200} autoFocus aria-label={`Name of ${subject}`} placeholder="What it is, e.g. Callout" size="small" /></label>
+      <label className="grid gap-1"><span className={label}>Unit</span>
+        <TextInput {...control('unit')} type="text" required maxLength={40} aria-label={`Unit of ${subject}`} placeholder="Per what, e.g. visit" size="small" /></label>
+      <label className="grid gap-1"><span className={label}>Amount ({currency})</span>
+        <span className="flex items-center gap-2"><TextInput {...control('amount')} type="number" inputMode="decimal" required min={0} step={step(currency)} aria-label={`Amount in ${currency} for ${subject}`} size="small" className="min-w-0 flex-1 text-right tabular-nums" /><span className="text-xs text-subtle">{currency}</span></span></label>
+      <div className="flex gap-2 @min-[40rem]/prices:justify-end">
+        <Button type="button" tone="secondary" size="tiny" disabled={pending} onClick={onCancel}>Cancel</Button>
+        <Button type="submit" size="tiny" disabled={pending}>{pending ? 'Saving…' : item ? 'Save' : 'Add'}</Button>
+      </div>
+      <ErrorText ref={errorRef} tabIndex={-1} role="alert" className="@min-[40rem]/prices:col-span-4">{state.error}</ErrorText>
+      {item ? <Hint className="@min-[40rem]/prices:col-span-4">Existing quoted and invoiced lines keep their original prices.</Hint> : null}
     </form>
   );
 }

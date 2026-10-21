@@ -11,7 +11,7 @@ import { PageHeader } from '@/components/headers/page-header';
 import { OperationalPanel, PanelState, StatePill } from '@/components/operational/primitives';
 import { AppPage } from '@/components/layout/app-page';
 import { Button } from '@/components/controls/button';
-import { PageDrawer, PageDrawerBody, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
+import { Popover, PopoverContent, PopoverTrigger } from '@gold/ui/components/popover';
 import { useWorkspaceRail } from '@/components/panels/workspace-right-rail';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { prioritize, type HomeAttentionItem, type HomeData, type HomeObligation, type HomeQuery, type HomeSourceData } from '@/lib/application/home/contracts';
@@ -50,8 +50,17 @@ function usePreferences(key: string) {
   const toggle = (panel: string) => { try { localStorage.setItem(key, JSON.stringify(hidden.includes(panel) ? hidden.filter(v => v !== panel) : [...hidden, panel])); window.dispatchEvent(new Event('home-preferences')); } catch { /* Blocked storage leaves the default layout intact. */ } };
   return { hidden, toggle };
 }
-function Launcher({ title, label, icon, description, children }: { title: string; label?: string; icon: ReactNode; description: string; children: ReactNode }) {
-  return <PageDrawer><PageDrawerTrigger asChild><Button tone={'secondary'} size="small">{icon}{label ?? title}</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>{title}</PageDrawerTitle><PageDrawerDescription>{description}</PageDrawerDescription></PageDrawerHeader><PageDrawerBody>{children}</PageDrawerBody></PageDrawerContent></PageDrawer>;
+/**
+ * Choosing which of two panels Home shows is a small, passing choice tied to one control, so it is a
+ * popover anchored to Customize rather than a full-height drawer. Each change applies at once and is
+ * saved in this browser; Escape or clicking away closes it and returns focus to Customize.
+ */
+export function CustomizeHome({ hidden, toggle }: { hidden: string[]; toggle: (panel: string) => void }) {
+  return <Popover><PopoverTrigger asChild><Button tone="secondary" size="small"><Settings2 aria-hidden className="size-4" />Customize</Button></PopoverTrigger>
+    <PopoverContent align="end" aria-labelledby="customize-home-title" className="grid gap-3">
+      <div><h2 id="customize-home-title" className="text-sm font-semibold">Customize Home</h2><p className="mt-1 text-xs text-muted">Choose the panels shown on Home. Saved in this browser.</p></div>
+      <fieldset className="grid gap-2"><legend className="sr-only">Panels shown on Home</legend>{[['performance', 'Business performance'], ['activity', 'Recent activity']].map(([key, label]) => <label key={key} className="flex min-h-11 items-center gap-3 rounded border border-border px-3 text-sm"><input type="checkbox" checked={!hidden.includes(key)} onChange={() => toggle(key)} />{label}</label>)}</fieldset>
+    </PopoverContent></Popover>;
 }
 const attentionFilters: { label: string; scope: HomeQuery['scope']; attention: HomeQuery['attention'] }[] = [{ label: 'All', scope: 'organization', attention: 'all' }, { label: 'Mine', scope: 'mine', attention: 'all' }, { label: 'Urgent', scope: 'organization', attention: 'urgent' }, { label: 'Overdue', scope: 'organization', attention: 'overdue' }];
 
@@ -77,7 +86,7 @@ export function HomeDashboard({ data, setup }: { data: HomeData; setup?: ReactNo
   return <AppPage className="@container/home space-y-4">
     {setup}
     <PageHeader title={greeting} breadcrumbLabel="Home" meta={<><time dateTime={data.date}>{new Intl.DateTimeFormat('en-CA', { dateStyle: 'full', timeZone: 'UTC' }).format(new Date(`${data.date}T12:00:00Z`))}</time>{browserTimezone !== data.timezone ? ` | ${data.timezone}` : ''}</>} actions={<>
-      <Launcher title="Customize Home" label="Customize" icon={<Settings2 aria-hidden className="size-4" />} description="Choose the panels shown on Home. Saved in this browser.">{[['performance', 'Business performance'], ['activity', 'Recent activity']].map(([key, label]) => <label key={key} className="flex items-center gap-3 rounded border border-border p-3 text-sm"><input type="checkbox" checked={!preferences.hidden.includes(key)} onChange={() => preferences.toggle(key)} />{label}</label>)}</Launcher>
+      <CustomizeHome hidden={preferences.hidden} toggle={preferences.toggle} />
       <QuickActions actions={data.quickActions}/>
     </>} />
     <div className="flex flex-wrap items-center justify-between gap-2">{commands && data.agentPrompts.length ? <Button tone="secondary" size="small" onClick={commands.openSearch}>Ask or find something...</Button> : <span/>}<Button tone="ghost" size="small" aria-label="Refresh Home" disabled={refreshing} onClick={() => refresh(() => router.refresh())}><time dateTime={data.refreshedAt} className="text-xs text-muted">Updated {timestamp(data.refreshedAt, data.timezone, true)}</time><RefreshCw aria-hidden className={cx('size-3', refreshing && 'animate-spin')}/></Button></div>

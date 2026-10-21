@@ -201,30 +201,31 @@ describe('Communications and the Dialer', () => {
     expect(trail(call)).toEqual([`Communications → ${ORG}/comms`, `Dialer → ${ORG}/calls`]);
   });
 
-  it('places a configuration record beneath its target and landing', () => {
+  it('places a configuration record beneath its target and the plain-text Configuration level', () => {
     const number = at(`${ORG}/comms/configuration/numbers/n1`, { records: { phoneNumberId: { state: 'ready', label: '+1 555 0100' } } });
-    expect(trail(number)).toEqual([`Communications → ${ORG}/comms`, `Configuration → ${ORG}/comms/configuration`, `Numbers & assignments → ${ORG}/comms/configuration/numbers`]);
+    expect(trail(number)).toEqual([`Communications → ${ORG}/comms`, 'Configuration', `Numbers & assignments → ${ORG}/comms/configuration/numbers`]);
     expect(number.open).toContain('U-3');
   });
 
   it('leaves the workspace as plain text for a member who may configure it but not operate it', () => {
     const gate = { ...everything, capabilities: new Set<Capability>(['organization.manage']) };
     const location = resolved(resolveLocation({ pathname: `${ORG}/comms/configuration/calling`, access: { gate } }));
-    expect(trail(location)).toEqual(['Communications', `Configuration → ${ORG}/comms/configuration`]);
+    expect(trail(location)).toEqual(['Communications', 'Configuration']);
     expect(location.current.label).toBe('Calling & routing');
-    expect(location.up).toBe(`${ORG}/comms/configuration`);
+    // Neither ancestor is a page this member may open, so Up goes to the organization Home.
+    expect(location.up).toBe(`${ORG}/home`);
   });
 });
 
 describe('configuration with known ownership', () => {
   it('keeps one canonical location however the page was reached', () => {
     const location = at(`${ORG}/schedule/configuration`);
-    expect(trail(location)).toEqual([`Work → ${ORG}/field`, `Configuration → ${ORG}/field/configuration`]);
+    expect(trail(location)).toEqual([`Work → ${ORG}/field`, 'Configuration']);
     expect(location.current.label).toBe('Scheduling & hours');
     expect(location.owner).toMatchObject({ workspace: 'field', configTarget: 'schedule-configuration' });
   });
 
-  it('does not link a configuration landing that would only redirect to its one entry', () => {
+  it('never links the Configuration level, which only redirects (Batch A: no workspace has a landing)', () => {
     const gate = { ...everything, capabilities: new Set<Capability>(['field.manage']), schedulableWork: false };
     const location = resolved(resolveLocation({ pathname: `${ORG}/work/configuration`, access: { gate } }));
     expect(trail(location)).toEqual([`Work → ${ORG}/field`, 'Configuration']);

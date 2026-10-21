@@ -2,8 +2,6 @@
 vi.mock('@/features/tenancy/business-profile-settings', () => ({ BusinessProfileSettings: () => null }));
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { WorkspaceConfigurationHome } from '@/features/settings/workspace-configuration';
-import { requireWorkspaceConfiguration } from '@/lib/route/workspace-configuration';
 import ConfigurationLayout from '@/app/organizations/[organizationId]/sales/configuration/layout';
 import { workspaceConfigureItems, AREAS, type WorkspaceKey } from '@/lib/navigation';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
@@ -68,21 +66,37 @@ describe('CRM configuration pages', () => {
     expect(screen.getByRole('heading', { name: 'Relationship stages' })).toBeVisible();
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
   });
-  // Package 3A: CRM's Configuration has no landing; its old address resolves to an eligible door.
-  it('sends the retired landing address to the first configuration page the member may open', async () => {
-    await expect((async () => WorkspaceConfigurationHome({ organizationId: 'org', workspace: 'crm', configuration: await requireWorkspaceConfiguration('org', 'crm') }))()).rejects.toThrow('REDIRECT:/organizations/org/sales/configuration/relationship-stages');
-  });
 });
 
-describe('Configuration landing rule', () => {
-  it('lists the eligible destinations of any workspace with several, and no other workspace content', async () => {
-    render(await WorkspaceConfigurationHome({ organizationId: 'org', workspace: 'support', configuration: await requireWorkspaceConfiguration('org', 'support') }));
-    expect(screen.getByRole('link', { name: 'Queues' })).toHaveAttribute('href', '/organizations/org/support/configuration/queues');
-    expect(screen.getByRole('link', { name: 'Service levels' })).toBeVisible();
-    expect(screen.queryByText(/Studio|Website|Branding/)).not.toBeInTheDocument();
+// Batch A: no workspace has a Configuration landing. Each old address resolves to an eligible door.
+describe('Retired configuration landings', () => {
+  const LANDINGS = {
+    sales: () => import('@/app/organizations/[organizationId]/sales/configuration/page'),
+    comms: () => import('@/app/organizations/[organizationId]/comms/configuration/page'),
+    support: () => import('@/app/organizations/[organizationId]/support/configuration/page'),
+    field: () => import('@/app/organizations/[organizationId]/field/configuration/page'),
+    finance: () => import('@/app/organizations/[organizationId]/finance/configuration/page'),
+    studio: () => import('@/app/organizations/[organizationId]/studio/configuration/page'),
+    ai: () => import('@/app/organizations/[organizationId]/ai/configuration/page'),
+  };
+  const redirectOf = async (segment: keyof typeof LANDINGS) => {
+    const { default: Page } = await LANDINGS[segment]();
+    try { await Page({ params: Promise.resolve({ organizationId: 'org' }) } as never); } catch (error) { return (error as Error).message; }
+    return 'rendered';
+  };
+  it.each([
+    ['sales', 'sales/configuration/relationship-stages'],
+    ['comms', 'comms/configuration/calling'],
+    ['support', 'support/configuration/queues'],
+    ['field', 'work/configuration'],
+    ['finance', 'finance/configuration/pricing'],
+    ['studio', 'settings/branding'],
+    ['ai', 'ai/agents'],
+  ] as const)('sends the old %s/configuration address to the first page the member may open and never renders a list', async (segment, path) => {
+    expect(await redirectOf(segment)).toBe(`REDIRECT:/organizations/org/${path}`);
   });
   it('goes straight to the only destination', async () => {
     only.count = 1;
-    await expect((async () => WorkspaceConfigurationHome({ organizationId: 'org', workspace: 'support', configuration: await requireWorkspaceConfiguration('org', 'support') }))()).rejects.toThrow('REDIRECT:/organizations/org/support/configuration/queues');
+    expect(await redirectOf('support')).toBe('REDIRECT:/organizations/org/support/configuration/queues');
   });
 });

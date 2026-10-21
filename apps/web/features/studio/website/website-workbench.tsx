@@ -25,7 +25,7 @@ import {
   createDraftAction,
   type WebsiteActionState,
 } from '@/app/organizations/[organizationId]/studio/website/actions';
-import { useUnsavedChanges } from '../use-unsaved-changes';
+import { useUnsavedChanges } from '@/components/controls/use-unsaved-changes';
 import { EditorLayout } from '../editor-layout';
 import { SiteStructure } from './site-structure';
 import { WebsiteCanvas, VIEWPORT_LABEL, type Viewport } from './website-canvas';

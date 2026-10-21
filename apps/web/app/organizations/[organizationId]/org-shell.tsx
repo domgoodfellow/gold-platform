@@ -285,7 +285,7 @@ function NavRow({ item, active }: { item: NavItem; active: string | null }) {
 }
 
 /**
- * A grouping parent with no page of its own (CRM's Configuration): the whole row expands and
+ * A grouping parent with no page of its own (a workspace's Configuration with several pages): the whole row expands and
  * collapses its children, and only the children are destinations. The collapsed rail has no room
  * for children, so there the row opens the navigation (the tablet overlay, or the desktop sidebar)
  * with the group already expanded.

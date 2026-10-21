@@ -6,7 +6,8 @@ import { CallHistory } from '@/features/communications/voice/call-history';
 import { CallHistoryDisclosure } from '@/features/communications/voice/call-history-disclosure';
 import { DialerRecentCalls, DialerWrapUp } from '@/features/communications/voice/dialer-context';
 import { VoiceCounters } from '@/features/communications/voice/voice-overview';
-import { WorkspaceConfigure, workspaceConfigureDoors } from '@/features/settings/workspace-configure';
+import { workspaceConfigureDoors } from '@/features/settings/workspace-configure';
+import { ConfigureMenu } from '@/components/controls/configure-menu';
 import { WrapUpCallSheet } from '@/features/communications/voice/wrap-up-sheet';
 import { getCallCounts, listCallPage } from '@/lib/domain/reception/calls';
 import { listPhoneNumbers } from '@/lib/domain/reception/numbers';
@@ -73,7 +74,8 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
         actions={
           <>
             <ButtonLink href="#call-history" tone="secondary">Call history</ButtonLink>
-            <WorkspaceConfigure organizationId={organizationId} workspace="communications" />
+            {/* The Dialer configures calling, not the whole of Communications. */}
+            <ConfigureMenu items={doors.filter((door) => door.key === 'call-setup' || door.key === 'phone-numbers')} />
           </>
         }
         wrapUp={toWrapUp ? <DialerWrapUp organizationId={organizationId} timeZone={organization.timezone} calls={toWrapUp.items} total={counts.needsWrapUp} outcomes={outcomes} href={`${callsHref(base, { wrap: '1' })}#call-history`} /> : undefined}

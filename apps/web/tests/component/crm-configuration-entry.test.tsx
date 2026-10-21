@@ -3,7 +3,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ConfigureMenu } from '@/components/controls/configure-menu';
-import { AREAS, CONFIG_TARGETS, MODULES, configurationHasLanding, workspaceConfigureItems, type ConfigGate } from '@/lib/navigation';
+import { AREAS, CONFIG_TARGETS, MODULES, workspaceConfigureItems, type ConfigGate } from '@/lib/navigation';
 import { workspaceConfigCrumbs } from '@/lib/settings-nav';
 import { resolveLocation, type ResolvedLocation } from '@/lib/route/page-location';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
@@ -72,18 +72,13 @@ describe('CRM Home Configure control (ConfigureMenu over workspaceConfigureItems
 });
 
 describe('CRM configuration page identity', () => {
-  it('has no landing; other workspaces keep theirs', () => {
-    expect(configurationHasLanding('crm')).toBe(false);
-    for (const workspace of ['communications', 'support', 'field', 'finance', 'studio'] as const) expect(configurationHasLanding(workspace)).toBe(true);
-  });
-
   it('names Configuration as a plain-text ancestor on a CRM configuration page', () => {
     expect(workspaceConfigCrumbs(ORG, 'sales-stages', gate())).toEqual([
       { label: 'CRM', href: `/organizations/${ORG}/sales` },
       { label: 'Configuration', href: undefined },
     ]);
-    // Communications still has a real landing to link to.
-    expect(workspaceConfigCrumbs(ORG, 'call-setup', gate())[1]).toEqual({ label: 'Configuration', href: `/organizations/${ORG}/comms/configuration` });
+    // No workspace has a landing to link to (Batch A).
+    expect(workspaceConfigCrumbs(ORG, 'call-setup', gate())[1]).toEqual({ label: 'Configuration' });
   });
 
   it('resolves CRM configuration under a non-linking Configuration level, with Up going to CRM', () => {

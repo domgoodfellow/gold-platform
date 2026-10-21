@@ -15,7 +15,7 @@ export function AddMemberForm({
 }: {
   organizationId: string;
   roles: Role[];
-  /** Called once the write succeeds — the Add Member Sheet uses this to close itself. */
+  /** Called once the write succeeds — the Add member dialog uses this to close itself. */
   onAdded?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(addMemberAction, INITIAL);

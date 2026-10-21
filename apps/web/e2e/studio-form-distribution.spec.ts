@@ -108,9 +108,7 @@ test('website: place a published form on the website, publish it, and a visitor 
 
   // The form now says it is used by the website, and will not be archived out from under it.
   await page.goto(`${studio()}/forms/${form.formId}`);
-  await page.getByRole('button', { name: 'Distribute' }).click();
-  await expect(page.getByRole('region', { name: 'Used by' })).toContainText('Website');
-  await page.getByRole('button', { name: 'Close' }).first().click().catch(() => undefined);
+  await expect(page.getByRole('region', { name: 'Sharing' }).getByRole('region', { name: 'Used by' })).toContainText('Website');
 
   const { context, page: visitor } = await asStranger(browser);
   await visitor.goto(site());
@@ -154,10 +152,9 @@ test('portal: a customer opens an offered form and the response is theirs, whate
   const name = `Portal enquiry ${Date.now()}`;
   const form = await publishForm(page, name);
 
-  // Offered through Studio's own Distribute panel.
+  // Offered through the Sharing section of the form's own page.
   await page.goto(`${studio()}/forms/${form.formId}`);
-  await page.getByRole('button', { name: 'Distribute' }).click();
-  await page.getByRole('button', { name: 'Add to portal' }).click();
+  await page.getByRole('region', { name: 'Sharing' }).getByRole('button', { name: 'Add to portal' }).click();
   await expect(page.getByRole('button', { name: 'Remove from portal' })).toBeVisible();
 
   const token = await createPortalInvite(owner as never, { customerId: ctx.customerId });
@@ -231,7 +228,7 @@ test('a signed-in Studio user submitting their own public form stays signed in',
 
   await page.goto(`${studio()}/forms/${form.formId}`);
   await expect(page).toHaveURL(/\/studio\/forms\//);
-  await expect(page.getByRole('button', { name: 'Distribute' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Sharing' })).toBeVisible();
   const detail = await responsesFor(page, form.formId);
   await expect(detail).toContainText('The Owner');
 });
@@ -260,7 +257,7 @@ test('mobile and keyboard: the hosted form and the distribution panel at a phone
 
   await page.setViewportSize({ width: 390, height: 800 });
   await page.goto(`${studio()}/forms/${form.formId}`);
-  await page.getByRole('button', { name: 'Distribute' }).click();
-  await expect(page.getByRole('textbox', { name: 'Embed code' })).toBeVisible();
+  await page.getByRole('link', { name: 'Sharing', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Embed code' })).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

@@ -799,7 +799,10 @@ export type WorkspaceConfigureDoor = {
 /**
  * What each workspace's Configure control offers, by registered target. One door renders as a
  * link, several as a menu (`ConfigureMenu`); a door the member may not configure, or the business
- * is not entitled to, is omitted. CRM concerns also populate its persistent Configuration sidebar branch.
+ * is not entitled to, is omitted. The same doors populate the workspace's sidebar Configuration
+ * branch. No workspace has a Configuration landing page: `{home}/configuration` only redirects to
+ * the first door the member may open. Marketing and Automations configure nothing of their own, so
+ * they have no entry rather than one that is always filtered away.
  * The order is the order of the concerns, most frequently changed first.
  */
 export const WORKSPACE_CONFIGURE: Partial<Record<WorkspaceKey, readonly WorkspaceConfigureDoor[]>> = {
@@ -811,9 +814,7 @@ export const WORKSPACE_CONFIGURE: Partial<Record<WorkspaceKey, readonly Workspac
     { target: 'email', label: 'Email sending' },
     { target: 'inbox-email', label: 'Inbox email' },
     { target: 'schedule-configuration', label: 'Business hours' },
-    { target: 'call-setup', label: 'Recording & compliance (information)', hash: '#recording' },
   ],
-  marketing: [{ target: 'forms', label: 'Forms & acquisition sources' }],
   support: [
     { target: 'support-queues', label: 'Queues' },
     { target: 'support-service-levels', label: 'Service levels' },
@@ -824,14 +825,8 @@ export const WORKSPACE_CONFIGURE: Partial<Record<WorkspaceKey, readonly Workspac
     { target: 'resources', label: 'Resources' },
     { target: 'locations', label: 'Locations' },
   ],
-  finance: [
-    { target: 'pricing', label: 'Services & pricing' },
-    { target: 'pricing', label: 'Payment collection', hash: '#getting-paid' },
-  ],
-  automations: [
-    { target: 'automation-rules', label: 'Rules' },
-    { target: 'automation-messages', label: 'Message templates' },
-  ],
+  // Prices, currency and payment collection are sections of one page: one door, not two to the same page.
+  finance: [{ target: 'pricing', label: 'Services & pricing' }],
   ai: [
     { target: 'ai-agents', label: 'Agents' },
     { target: 'ai-deployments', label: 'Channel deployments' },
@@ -847,19 +842,8 @@ export const WORKSPACE_CONFIGURE: Partial<Record<WorkspaceKey, readonly Workspac
   ],
 };
 
-/**
- * Workspaces whose Configuration is a group of doors with no landing page of its own. Their sidebar
- * Configuration parent expands and collapses instead of linking, their Home offers `ConfigureMenu`,
- * breadcrumbs show "Configuration" as plain text, and the old landing address redirects to the first
- * door the member may open. Every other workspace keeps its landing until it is decided separately.
- */
-const CONFIGURATION_WITHOUT_LANDING: ReadonlySet<WorkspaceKey> = new Set<WorkspaceKey>(['crm']);
-
-export function configurationHasLanding(workspace: WorkspaceKey): boolean {
-  return !CONFIGURATION_WITHOUT_LANDING.has(workspace);
-}
-
-export type ConfigureItem = { key: string; label: string; href: string };
+/** `owner: 'settings'` marks a door that opens an Organization Settings page (a shared target), not the workspace's own configuration. */
+export type ConfigureItem = { key: string; label: string; href: string; owner?: 'settings' };
 
 /** The doors a member may be offered from `workspace`'s Configure control, resolved to hrefs. */
 export function workspaceConfigureItems(organizationId: string, workspace: WorkspaceKey, gate: ConfigGate): ConfigureItem[] {
@@ -868,7 +852,7 @@ export function workspaceConfigureItems(organizationId: string, workspace: Works
   return doors.flatMap((door) => {
     const target = configTarget(door.target);
     if (target.treatment === 'operating' || !configTargetOffered(target, gate)) return [];
-    return [{ key: `${door.target}${door.hash ?? ''}`, label: door.label, href: `/organizations/${organizationId}/${target.path}${door.hash ?? ''}` }];
+    return [{ key: `${door.target}${door.hash ?? ''}`, label: door.label, href: `/organizations/${organizationId}/${target.path}${door.hash ?? ''}`, ...(target.treatment === 'shared' ? { owner: 'settings' as const } : {}) }];
   });
 }
 
@@ -885,7 +869,7 @@ export function workspaceConfigurationTarget(pathname: string): ConfigTarget | u
 }
 
 
-/** One root per registered workspace; absent when it has no real configuration concerns. */
+/** One root per registered workspace. It is a redirect-only address, never a page or a link: it sends old links to the first door the member may open. */
 export function workspaceConfigurationHref(organizationId: string, workspace: WorkspaceKey): string {
   const owner = WORKSPACES.find(candidate => candidate.key === workspace)!;
   return `/organizations/${organizationId}/${owner.home}/configuration`;

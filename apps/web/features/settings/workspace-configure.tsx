@@ -1,7 +1,7 @@
-import { ConfigureLink } from '@/components/controls/configure-link';
+import { ConfigureMenu } from '@/components/controls/configure-menu';
 import { activeModuleKeys, availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { hasSchedulableWork } from '@/lib/domain/work-items/types';
-import { workspaceConfigureItems, workspaceConfigurationHref, type ConfigureItem, type WorkspaceKey } from '@/lib/navigation';
+import { workspaceConfigureItems, type ConfigureItem, type WorkspaceKey } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
 /**
@@ -25,9 +25,9 @@ export async function workspaceConfigureDoors(organizationId: string, workspace:
 
 /**
  * The Configure control for a workspace Home, so a hub can never offer a door Settings would
- * hide. Passed to a hub as a node; the hub only places it.
+ * hide: nothing, one link named for its page, or a menu of direct links (`ConfigureMenu`). It never
+ * opens a page that lists the doors again. Passed to a hub as a node; the hub only places it.
  */
 export async function WorkspaceConfigure({ organizationId, workspace }: { organizationId: string; workspace: WorkspaceKey }) {
-  const items = await workspaceConfigureDoors(organizationId, workspace);
-  return items.length ? <ConfigureLink href={workspaceConfigurationHref(organizationId, workspace)} label="Configuration" title="Configuration" /> : null;
+  return <ConfigureMenu items={await workspaceConfigureDoors(organizationId, workspace)} />;
 }

@@ -9,7 +9,7 @@ import { portalAction, readPortalHistory } from '@/app/organizations/[organizati
 import { DEFAULT_PORTAL_CONTENT, PORTAL_MODULES, PORTAL_TEMPLATES, portalFromTemplate, newPortalModule, removePortalPage, parsePortalContent, type PortalContent, type PortalModule } from '@/lib/domain/portal/composition';
 import type { PortalDefinition, PortalRevision, PortalAvailability } from '@/lib/domain/portal/definitions';
 import { PortalRenderer, PORTAL_PREVIEW_RECORDS } from './portal-renderer';
-import { useUnsavedChanges } from '../use-unsaved-changes';
+import { useUnsavedChanges } from '@/components/controls/use-unsaved-changes';
 import type { Brand } from '@/lib/domain/branding/brand';
 import type { PublicProfile } from '@/lib/domain/tenancy/profile';
 import { BrandStyle } from '@/features/branding/brand-style';

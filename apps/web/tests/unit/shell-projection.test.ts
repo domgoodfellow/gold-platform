@@ -418,7 +418,8 @@ describe('workspace Configuration authority', () => {
   it('lets a configuration-only member enter without Overview, Calls or Inbox', () => {
     const sections = project(['field.manage']);
     const row = projectedItems(sections).find(item => item.key === 'workspace-communications')!;
-    expect(row.href).toBe(`/organizations/${ORG}/comms/configuration`);
+    // The row opens the first configuration page directly, never the redirect-only address.
+    expect(row.href).toBe(`/organizations/${ORG}/comms/configuration/calling`);
     expect(row.configurationOnly).toBe(true);
     const context = workspaceNavigation(sections, row.href)!;
     expect(context.sections[0].items.map(item => item.key)).toEqual(['workspace-configuration']);
@@ -474,13 +475,19 @@ describe('CRM Configuration children', () => {
 });
 
 
-describe('every workspace Configuration is a sidebar group', () => {
-  it('lists its destinations as children, and the group is the parent of exactly its own routes', () => {
+describe('every workspace Configuration organizes its real pages', () => {
+  it('draws one page as a direct link and several as a group that never links to a landing', () => {
     const rows = projectedItems(project()).filter(item => item.configuration);
     expect(rows.length).toBeGreaterThan(1);
+    const finance = rows.find(row => row.key === 'workspace-finance')!.configuration!;
+    expect(finance.href).toBe(`/organizations/${ORG}/finance/configuration/pricing`);
+    expect(finance.children).toBeUndefined();
+    expect(finance.group).toBeUndefined();
     for (const row of rows) {
       const parent = row.configuration!;
-      expect(parent.children?.length, row.key).toBeGreaterThan(0);
+      if (!parent.children) { expect(parent.href, row.key).not.toMatch(/\/configuration$/); continue; }
+      expect(parent.group, row.key).toBe(true);
+      expect(parent.children.length, row.key).toBeGreaterThan(1);
       for (const child of parent.children!) {
         expect(child.href.startsWith(`/organizations/${ORG}/`), child.key).toBe(true);
         const context = workspaceNavigation(project(), child.href);

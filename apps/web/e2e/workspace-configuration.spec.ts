@@ -14,8 +14,12 @@ for (const width of [1440, 768, 390]) test(`canonical workspace configuration at
   ['settings/email', 'Email sending'],
   ['comms/configuration/numbers', 'Numbers'],
   ['settings/general', 'General'],
-  // Package 3A: CRM has no Configuration landing; its old address resolves to an eligible page.
+  // Batch A: no workspace has a Configuration landing; each old address resolves to an eligible page.
   ['sales/configuration', 'Relationship stages'],
+  ['comms/configuration', 'Calling & routing'],
+  ['finance/configuration', 'Services & Pricing'],
+  ['support/configuration', 'Queues & assignment'],
+  ['field/configuration', 'Work configuration'],
   ['sales/configuration/relationship-stages', 'Relationship stages'],
   ['sales/configuration/opportunity-stages', 'Opportunity stages'],
   ['sales/configuration/fields', 'Customer fields'],
@@ -24,7 +28,7 @@ for (const width of [1440, 768, 390]) test(`canonical workspace configuration at
   ['support/configuration/service-levels', 'Service levels'],
   ['work/configuration', 'Work configuration'],
   ['schedule/configuration', 'Schedule configuration'],
-  ['studio/configuration', 'Configuration'],
+  ['studio/configuration', 'Branding'],
  ] as const;
  for (const colorScheme of ['light', 'dark'] as const) {
   await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
@@ -60,53 +64,36 @@ test.describe('Configuration disclosure input methods', () => {
  for (const [name, width, touch] of [['desktop', 1440, false], ['phone touch', 390, true]] as const) {
   test.describe(name, () => {
    test.use({ hasTouch: touch, viewport: { width, height: width === 390 ? 844 : 1000 } });
-   test(`Finance Configuration expands and collapses by pointer, Enter and Space (${name})`, async ({ page }) => {
+   test(`Communications Configuration expands and collapses by pointer, Enter and Space (${name})`, async ({ page }) => {
     const { organizationId } = loadDemoContext();
-    await page.goto(`/organizations/${organizationId}/finance/configuration/pricing`);
+    await page.goto(`/organizations/${organizationId}/comms/configuration/calling`);
     if (width < 768) await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();
     const nav = (width < 768 ? page.getByRole('dialog', { name: 'Sidebar', exact: true }) : page.locator('[data-slot="sidebar-container"]')).getByRole('navigation', { name: 'This business' });
-    const child = nav.getByRole('link', { name: 'Services & pricing', exact: true });
+    const child = nav.getByRole('link', { name: 'Calling & routing', exact: true });
     await expect(child).toBeVisible();
     await expect(child).toHaveAttribute('aria-current', 'page');
-    const collapse = nav.getByRole('button', { name: 'Collapse Configuration' });
+    // Batch A: the heading is one expand/collapse button, never a link to a landing.
+    await expect(nav.getByRole('link', { name: 'Configuration', exact: true })).toHaveCount(0);
+    const collapse = nav.getByRole('button', { name: 'Configuration', exact: true });
+    await expect(collapse).toHaveAttribute('aria-expanded', 'true');
     if (touch) {
      const box = await collapse.boundingBox();
      expect(box!.width).toBeGreaterThanOrEqual(44); expect(box!.height).toBeGreaterThanOrEqual(44);
     }
     if (touch) await collapse.tap(); else await collapse.click();
     await expect(child).toHaveCount(0);
-    const expand = nav.getByRole('button', { name: 'Expand Configuration' });
-    await expand.focus(); await page.keyboard.press('Enter');
+    await collapse.focus(); await page.keyboard.press('Enter');
     await expect(child).toBeVisible();
-    await nav.getByRole('button', { name: 'Collapse Configuration' }).focus(); await page.keyboard.press('Space');
+    await collapse.focus(); await page.keyboard.press('Space');
     await expect(child).toHaveCount(0);
-    await nav.getByRole('button', { name: 'Expand Configuration' }).focus(); await page.keyboard.press('Space');
+    await collapse.focus(); await page.keyboard.press('Space');
     await expect(child).toBeVisible();
-    await expect(page).toHaveURL(`/organizations/${organizationId}/finance/configuration/pricing`);
+    await expect(page).toHaveURL(`/organizations/${organizationId}/comms/configuration/calling`);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
    });
   });
  }
 });
 
-test.describe('Configuration landing', () => {
- test.use({ storageState: OWNER_STORAGE_STATE });
- test('a workspace with several destinations opens an overview of its own destinations, and the chevron does not navigate', async ({ page }) => {
-  const { organizationId } = loadDemoContext();
-  const root = `/organizations/${organizationId}`;
-  await page.goto(`${root}/finance/configuration`);
-  await expect(page).toHaveURL(`${root}/finance/configuration`);
-  await expect(page.getByRole('heading', { level: 1, name: 'Configuration', exact: true })).toBeVisible();
-  await expect(page.getByRole('main').getByRole('link', { name: 'Services & pricing' })).toHaveAttribute('href', `${root}/finance/configuration/pricing`);
-  await expect(page.getByRole('main').getByRole('link', { name: 'Payment collection' })).toBeVisible();
-  await expect(page.getByRole('main').getByText(/Branding|Website/)).toHaveCount(0);
-  const nav = page.locator('[data-slot="sidebar-container"]').getByRole('navigation', { name: 'This business' });
-  await nav.getByRole('button', { name: 'Collapse Configuration' }).click();
-  await expect(page).toHaveURL(`${root}/finance/configuration`);
-  await nav.getByRole('button', { name: 'Expand Configuration' }).click();
-  await nav.getByRole('link', { name: 'Payment collection', exact: true }).click();
-  await expect(page).toHaveURL(`${root}/finance/configuration/pricing#getting-paid`);
-  await page.goBack();
-  await expect(page).toHaveURL(`${root}/finance/configuration`);
- });
-});
+// Batch A: the retired landings, the one-door Finance link and each Home's Configure menu are
+// covered on a disposable business in e2e/workspace-configuration-cleanup.spec.ts.

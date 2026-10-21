@@ -169,7 +169,7 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
   it('/roles is canonical and renders the Team workspace â€” Members, Invitations and Roles as URL-backed sibling views', () => {
     const page = readFileSync(`${ROUTES}/settings/access/access-page.tsx`, 'utf8');
     expect(page).toContain('<ViewNav');
-    expect(page).toContain('AddMemberSheetProvider');
+    expect(page).toContain('AddMemberDialogProvider');
     expect(page).toContain('MembersTable');
     expect(page).toContain('InvitationsTable');
     expect(page).toContain('RolesTable');
@@ -181,9 +181,9 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
     const membersTable = readFileSync(`${WEB_FEATURES}/team/members-table.tsx`, 'utf8');
     expect(membersTable).toContain('RoleAssignmentControl');
 
-    const addMemberSheet = readFileSync(`${WEB_FEATURES}/team/add-member-sheet.tsx`, 'utf8');
-    expect(addMemberSheet).toContain('AddMemberForm');
-    expect(addMemberSheet).toContain('InviteMemberForm');
+    const addMemberDialog = readFileSync(`${WEB_FEATURES}/team/add-member-dialog.tsx`, 'utf8');
+    expect(addMemberDialog).toContain('AddMemberForm');
+    expect(addMemberDialog).toContain('InviteMemberForm');
 
     const rolesTable = readFileSync(`${WEB_FEATURES}/team/roles-table.tsx`, 'utf8');
     expect(rolesTable).toContain('EditRoleSheet');

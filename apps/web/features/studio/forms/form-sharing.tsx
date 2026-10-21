@@ -6,25 +6,20 @@ import { Button, ButtonLink } from '@/components/controls/button';
 import { CopyField } from '@/components/controls/copy-field';
 import { ErrorText, Hint } from '@/components/controls/inputs';
 import { GroupHeading } from '@/components/surfaces/section';
-import {
-  PageDrawer,
-  PageDrawerContent,
-  PageDrawerHeader,
-  PageDrawerTitle,
-  PageDrawerTrigger,
-} from '@/components/panels/page-drawer';
 import { embedSnippet, placementLabels, publicFormPath, stableFormPath, type FormPlacements } from '@/lib/domain/forms/forms';
 import { setPortalFormAction } from '@/app/organizations/[organizationId]/studio/forms/actions';
 
 /**
- * Where a published form can be put, and where it already is. Secondary to authoring on purpose:
- * one button in the toolbar opens this, so the builder is not a row of tabs. Nothing here is
- * infrastructure — the business is placing a form, not learning how it is routed.
+ * Where a published form can be put, and where it already is: a section of the form's own page,
+ * beneath the editor, because every part of it is about this form and the page behind a drawer added
+ * nothing. Secondary to authoring on purpose: the toolbar only links down to it, so the builder is
+ * not a row of tabs. Nothing here is infrastructure — the business is placing a form, not learning
+ * how it is routed.
  *
  * The form is never copied into a place. The website names it, the portal lists it, and a link or an
  * embed opens it; each owner keeps its own reference, and this panel only asks them.
  */
-export function FormDistribution({ organizationId, formId, formSlug, publicKey, organizationSlug, siteHostname, origin, published, placements }: {
+export function FormSharing({ organizationId, formId, formSlug, publicKey, organizationSlug, siteHostname, origin, published, placements }: {
   organizationId: string;
   formId: string;
   formSlug: string;
@@ -51,12 +46,10 @@ export function FormDistribution({ organizationId, formId, formSlug, publicKey, 
   };
 
   return (
-    <PageDrawer>
-      <PageDrawerTrigger asChild><Button tone="secondary" size="small">Distribute</Button></PageDrawerTrigger>
-      <PageDrawerContent>
-        <PageDrawerHeader><PageDrawerTitle>Distribute</PageDrawerTitle></PageDrawerHeader>
-        <div className="grid gap-6 text-sm">
-          {!published ? <Hint>Publish this form to share it. Links and embeds open the published version only.</Hint> : null}
+    <section id="sharing" aria-labelledby="form-sharing-heading" className="scroll-mt-20 rounded-lg border border-border bg-surface p-4">
+      <h2 id="form-sharing-heading" className="text-sm font-semibold">Sharing</h2>
+      {!published ? <Hint className="mt-1">Publish this form to share it. Links and embeds open the published version only.</Hint> : null}
+        <div className="mt-4 grid gap-6 text-sm @min-[48rem]/editor:grid-cols-2">
 
           {published ? <section className="grid gap-2" aria-label="Link">
             <GroupHeading>Link</GroupHeading>
@@ -94,9 +87,8 @@ export function FormDistribution({ organizationId, formId, formSlug, publicKey, 
             {used.length > 0 ? <Hint>Remove a form from these places before archiving it.</Hint> : null}
           </section>
 
-          <ErrorText role="alert">{error}</ErrorText>
+          <ErrorText role="alert" className="@min-[48rem]/editor:col-span-2">{error}</ErrorText>
         </div>
-      </PageDrawerContent>
-    </PageDrawer>
+    </section>
   );
 }

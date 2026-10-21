@@ -12,8 +12,9 @@ import { COLLEAGUE_STORAGE_STATE, loadDemoContext, OWNER_STORAGE_STATE } from '.
  * How CRM configuration is found (Package 3A), in a real browser: CRM Home's Configure menu, a
  * Configuration sidebar group that expands rather than links, plain-text Configuration ancestry,
  * the retired landing address resolving to an eligible page without a Back loop, and the same
- * doors on desktop, tablet and phone. Other workspaces keep their landing. Runs against one
- * disposable business (`playwright.isolated.config.ts`).
+ * doors on desktop, tablet and phone. The other workspaces are covered by
+ * `workspace-configuration-cleanup.spec.ts`. Runs against one disposable business
+ * (`playwright.isolated.config.ts`).
  */
 
 const DOORS = [['Relationship stages', 'relationship-stages'], ['Opportunity stages', 'opportunity-stages'], ['Customer fields', 'fields']] as const;
@@ -114,15 +115,6 @@ test.describe('an owner', () => {
     await expect(door).toHaveAttribute('href', `${base}/sales/configuration/relationship-stages`);
   });
 
-  test('other workspaces keep their Configuration landing and linked parent', async ({ page }) => {
-    const { organizationId } = loadDemoContext();
-    const base = `/organizations/${organizationId}`;
-    await page.goto(`${base}/comms/configuration`);
-    await expect(page).toHaveURL(`${base}/comms/configuration`);
-    await expect(page.getByRole('navigation', { name: 'Communications configuration' })).toBeVisible();
-    await expect(sidebarNav(page).getByRole('link', { name: 'Configuration', exact: true })).toBeVisible();
-  });
-
   test('tablet: the rail Configuration opens the navigation with the group expanded', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     const base = `/organizations/${organizationId}`;
@@ -219,5 +211,12 @@ test.describe('a configuration-only member', () => {
     await page.goto(`${base}/sales/configuration`);
     await expect(page).toHaveURL(`${base}/sales/configuration/relationship-stages`);
     for (const [label, segment] of DOORS) await expect(sidebarNav(page).getByRole('link', { name: label, exact: true })).toHaveAttribute('href', `${base}/sales/configuration/${segment}`);
+    // CRM Home needs no capability, so this member may open it. Communications Home does, so there
+    // they are configuration-only: ADR-047 keeps that workspace heading plain text, and the
+    // workspace's own row opens their first configuration page, never a landing.
+    await page.goto(`${base}/comms/configuration/calling`);
+    await expect(sidebarNav(page).locator(`a[href="${base}/comms"]`)).toHaveCount(0);
+    await expect(sidebarNav(page).getByText('Communications', { exact: true })).toBeVisible();
+    await expect(sidebarNav(page).getByRole('link', { name: 'Calling & routing', exact: true })).toHaveAttribute('aria-current', 'page');
   });
 });

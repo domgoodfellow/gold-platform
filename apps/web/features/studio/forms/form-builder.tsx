@@ -14,10 +14,10 @@ import {
   PageDrawerTitle,
   PageDrawerTrigger,
 } from '@/components/panels/page-drawer';
-import { useUnsavedChanges } from '../use-unsaved-changes';
+import { useUnsavedChanges } from '@/components/controls/use-unsaved-changes';
 import { EditorLayout } from '../editor-layout';
 import { FormRenderer, type FormValues, type FormErrors } from '@/features/forms/form-renderer';
-import { FormDistribution } from './form-distribution';
+import { FormSharing } from './form-sharing';
 import type { FormEditorState } from '@/lib/domain/forms/forms';
 import {
   createFormDraftAction,
@@ -79,8 +79,10 @@ export function FormBuilder({ organizationId, state, distribution }: {
   const publicLink = published && !form.archived ? (
     <ButtonLink tone="secondary" size="small" href={`/f/${form.publicKey}`} target="_blank" rel="noreferrer">Open public form</ButtonLink>
   ) : null;
-  const distribute = (
-    <FormDistribution
+  // The sharing section belongs to the page; the toolbar only links down to it.
+  const shareLink = <ButtonLink tone="secondary" size="small" href="#sharing">Sharing</ButtonLink>;
+  const sharing = (
+    <FormSharing
       organizationId={organizationId}
       formId={form.id}
       formSlug={form.slug}
@@ -105,7 +107,7 @@ export function FormBuilder({ organizationId, state, distribution }: {
           <div className="flex flex-wrap items-center gap-2">
             <RevisionHistorySheet organizationId={organizationId} formId={form.id} history={history} />
             {publicLink}
-            {distribute}
+            {shareLink}
             <ButtonLink tone="secondary" size="small" href={`/organizations/${organizationId}/studio/forms/${form.id}/submissions`}>Submissions</ButtonLink>
             {!form.archived ? (
               <>
@@ -128,6 +130,7 @@ export function FormBuilder({ organizationId, state, distribution }: {
             <FormRenderer definition={published.definition} values={previewValues} onChange={(id, value) => setPreviewValues((current) => ({ ...current, [id]: value }))} />
           </div>
         ) : null}
+        {sharing}
       </div>
     );
   }
@@ -207,7 +210,7 @@ export function FormBuilder({ organizationId, state, distribution }: {
           </div>
           <RevisionHistorySheet organizationId={organizationId} formId={form.id} history={history} />
           {publicLink}
-          {distribute}
+          {shareLink}
           <ButtonLink tone="secondary" size="small" href={`/organizations/${organizationId}/studio/forms/${form.id}/submissions`}>Submissions</ButtonLink>
           <Button tone="secondary" size="small" disabled={pending || !dirty || form.archived} onClick={() => run(save, 'Draft saved.', () => { setSaved(snapshot(name, definition)); router.refresh(); })}>
             {pending ? 'Working…' : 'Save'}
@@ -246,6 +249,7 @@ export function FormBuilder({ organizationId, state, distribution }: {
           />}
         </div>
       </EditorLayout>
+      {sharing}
     </div>
   );
 }

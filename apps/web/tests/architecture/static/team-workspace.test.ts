@@ -45,8 +45,14 @@ describe('Members is a collection, not an inline creation form', () => {
   });
 });
 
-describe('one Add Member Sheet exposes both existing operations', () => {
-  const sheet = readFileSync(`${FEATURES}/add-member-sheet.tsx`, 'utf8');
+// Batch B: adding somebody is an address and a role, so it is a focused dialog, not a drawer.
+describe('one Add member dialog exposes both existing operations', () => {
+  const sheet = readFileSync(`${FEATURES}/add-member-dialog.tsx`, 'utf8');
+
+  it('is the shared Dialog, not a PageDrawer', () => {
+    expect(sheet).toContain("from '@/components/controls/confirm-submit'");
+    expect(sheet).not.toContain('PageDrawer');
+  });
 
   it('hosts both invite-by-email and add-existing-account, defaulting to invite', () => {
     expect(sheet).toContain('InviteMemberForm');
@@ -66,8 +72,8 @@ describe('one Add Member Sheet exposes both existing operations', () => {
     expect(inviteForm).toContain('Copy');
   });
 
-  it('is one Sheet, reused rather than duplicated, and reachable from both Members and Invitations', () => {
-    expect(sheet.match(/function AddMemberSheetProvider/g)?.length).toBe(1);
+  it('is one dialog, reused rather than duplicated, and reachable from both Members and Invitations', () => {
+    expect(sheet.match(/function AddMemberDialogProvider/g)?.length).toBe(1);
     const page = readFileSync(`${ROUTES}/access-page.tsx`, 'utf8');
     // One trigger, in the page header, serving both views that add a person; Roles has its own.
     expect(page.match(/<AddMemberTrigger/g)?.length).toBe(1);

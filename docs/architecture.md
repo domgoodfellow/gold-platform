@@ -1406,12 +1406,14 @@ It does not own:
 `CONFIG_TARGETS` classifies operating editors and shared organization owners explicitly;
 `WORKSPACE_CONFIGURE` references those same targets. `workspaceConfigureItems` excludes operating
 editors, applies independent configuration capabilities and resolved entitlements/shape, and
-allows shared-owner links without copying their editors. The workspace Home shortcut and one
-icon-bearing sidebar Configuration row open the workspace's canonical `{home}/configuration`.
-Marketing and Automations have no registered execution/acquisition policies today; their
-operating form and rule/template editors do not earn empty Configuration pages.
-A configuration-only member enters that root directly, without an operating Home or
-restricted destinations. `requireWorkspaceConfiguration` and `requireConfigurationTarget`
+allows shared-owner links without copying their editors. The workspace Home's `ConfigureMenu` and one
+icon-bearing sidebar Configuration row (a direct link for one door, an expand/collapse group for
+several) open the doors themselves. `{home}/configuration` is redirect-only: it sends old links to
+the first door the member may open, or not-found, and is never drawn as a link.
+Marketing and Automations have no registered execution/acquisition policies today; they register
+no Configure doors, and their operating form and rule/template editors do not earn Configuration pages.
+A configuration-only member's workspace row opens their first door directly, without an operating
+Home or restricted destinations. `requireWorkspaceConfiguration` and `requireConfigurationTarget`
 enforce membership, service access, capabilities and availability before page reads. The
 persistent layout is never the sole page authorization boundary.
 
@@ -1452,7 +1454,7 @@ Classification precedes route migration. A legacy URL is compatibility only, nev
 
 The migration inventory above is implemented through the existing registries. CRM stages and customer fields live under `sales/configuration`; legacy customer-field URLs redirect to CRM, while work-item field URLs redirect to the existing Work field tab. Other entity definitions retain the shared field engine and their existing entity-specific controls. The operating Relationship pipeline links to the Relationship stages editor rather than keeping an inline copy; CRM configuration is otherwise reached from CRM's own sidebar group and Home Configure menu. Finance owns price-book/payment configuration; General remains the sole currency editor. Work and Scheduling retain their existing route owners and share the Work configuration section projection.
 
-Support configuration reads only `support_queues` and `support_service_levels` through existing RLS. It does not call `support_read` or fetch Cases/metrics. Its existing command contract still requires both `support.read` and `support.configure`; `ConfigTarget.requiresAll` records that prerequisite without changing database permissions. Operating queue triage stays at `/support/queues` and links to its canonical editor. AI keeps its agent/deployment/knowledge/tool routes and existing feature/management authority, with a shared configuration layout. Marketing and Automations expose no invented policy/configuration root; their currently implemented campaigns, rules, templates and activity remain operating surfaces. Studio Configuration links to shared Branding/Public profile/Domains owners while website/forms/templates remain Studio operations.
+Support configuration reads only `support_queues` and `support_service_levels` through existing RLS. It does not call `support_read` or fetch Cases/metrics. Its existing command contract still requires both `support.read` and `support.configure`; `ConfigTarget.requiresAll` records that prerequisite without changing database permissions. Operating queue triage stays at `/support/queues` and links to its canonical editor. AI keeps its agent/deployment/knowledge/tool routes and existing feature/management authority, with a shared configuration layout. Marketing and Automations expose no invented policy/configuration root; their currently implemented campaigns, rules, templates and activity remain operating surfaces. Studio's Configure control links to shared Branding/Public profile/Domains owners while website/forms/templates remain Studio operations.
 
 `legacyConfigurationPath` resolves compatibility URLs through `CONFIG_TARGETS`. The request proxy returns HTTP redirects, preserving the request's query string and allowing browser fragment inheritance; fallback legacy pages redirect without reading protected data. Canonical pages independently call `requireConfigurationTarget`, `requireWorkspaceConfiguration`, or `requireOperatingArea` before reads. Layouts never grant page authority. Operator number-record access retains its existing independent gate and does not grant number management or call-history access.
 

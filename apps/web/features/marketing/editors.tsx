@@ -1,7 +1,7 @@
 'use client';
 
 import { PhoneInput } from '@/components/controls/phone-input';
-import { useEffect, useId, useState, useTransition, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -9,6 +9,7 @@ import { Button } from '@/components/controls/button';
 import { TextInput, SelectInput } from '@/components/controls/inputs';
 import { FormError } from '@/components/controls/form';
 import { PageDrawer, PageDrawerTrigger, PageDrawerContent, PageDrawerHeader, PageDrawerTitle, PageDrawerDescription, PageDrawerBody, PageDrawerFooter, PageDrawerClose } from '@/components/panels/page-drawer';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/controls/confirm-submit';
 import { marketingCommandAction, previewAudienceAction, inspectInquiryAction, searchMarketingCustomersAction } from '@/app/organizations/[organizationId]/marketing/actions';
 import { OBJECTIVES, TRANSITIONS, type Campaign, type Audience, type InquiryDetail, type MarketingData } from '@/lib/domain/marketing/marketing';
 import type { Json } from '@/lib/db/database.types';
@@ -51,11 +52,28 @@ export function CampaignEditor({ organizationId, members, campaign, defaultOpen 
   </PageDrawer>;
 }
 
+const TRANSITION_LABELS: Record<string, string> = { active: 'Activate', paused: 'Pause', completed: 'Complete', archived: 'Archive', draft: 'Draft' };
+
+/**
+ * A status change is one consequential decision, so it is confirmed in the shared Dialog rather than
+ * a full-height drawer that held one sentence. The command, its domain validation and its refusal
+ * are unchanged; a refusal stays in the dialog, and closing it returns focus to the button that
+ * opened it. Radix returns focus only to its own trigger, and these buttons are not one, so the
+ * opener is remembered here.
+ */
 export function Lifecycle({ organizationId, campaign }: { organizationId: string; campaign: Campaign }) {
   const [target, setTarget] = useState(''); const [pending, start] = useTransition(); const [error, setError] = useState<string | null>(null); const router = useRouter();
+  const label = TRANSITION_LABELS[target] ?? 'Confirm';
+  const opener = useRef<HTMLButtonElement | null>(null);
   return <div className="flex flex-wrap items-center gap-2">
-    {TRANSITIONS[campaign.status].map(status => <Button key={status} tone="secondary" size="small" onClick={() => setTarget(status)}>{({ active: 'Activate', paused: 'Pause', completed: 'Complete', archived: 'Archive', draft: 'Draft' })[status]}</Button>)}
-    <PageDrawer open={!!target} onOpenChange={open => { if (!open) setTarget(''); }}><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>Confirm campaign change</PageDrawerTitle><PageDrawerDescription>Set {campaign.name} to {target.replaceAll('_', ' ')}. Activating a campaign enables its tracked Form links; it does not send messages.</PageDrawerDescription></PageDrawerHeader><PageDrawerBody><FormError>{error}</FormError></PageDrawerBody><PageDrawerFooter><PageDrawerClose asChild><Button tone="secondary">Cancel</Button></PageDrawerClose><Button disabled={pending} onClick={() => start(async () => { const r = await marketingCommandAction(organizationId, 'campaign.status', { id: campaign.id, status: target }); if (r.error) setError(r.error); else { setTarget(''); toast.success('Campaign status updated'); router.refresh(); } })}>{pending ? 'Updating…' : 'Confirm'}</Button></PageDrawerFooter></PageDrawerContent></PageDrawer>
+    {TRANSITIONS[campaign.status].map(status => <Button key={status} tone="secondary" size="small" onClick={(event) => { opener.current = event.currentTarget; setError(null); setTarget(status); }}>{TRANSITION_LABELS[status]}</Button>)}
+    <Dialog open={!!target} onOpenChange={open => { if (!open && !pending) setTarget(''); }}>
+      <DialogContent onCloseAutoFocus={(event) => { if (opener.current?.isConnected) { event.preventDefault(); opener.current.focus(); } }}>
+        <DialogHeader><DialogTitle>{label} campaign?</DialogTitle><DialogDescription>Set {campaign.name} to {target.replaceAll('_', ' ')}. Activating a campaign enables its tracked Form links; it does not send messages.</DialogDescription></DialogHeader>
+        <FormError>{error}</FormError>
+        <DialogFooter><DialogClose asChild><Button tone="secondary" size="small" disabled={pending}>Cancel</Button></DialogClose><Button size="small" disabled={pending} onClick={() => start(async () => { const r = await marketingCommandAction(organizationId, 'campaign.status', { id: campaign.id, status: target }); if (r.error) setError(r.error); else { setTarget(''); toast.success('Campaign status updated'); router.refresh(); } })}>{pending ? 'Updating…' : label}</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>;
 }
 

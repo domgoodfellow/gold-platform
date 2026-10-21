@@ -13,7 +13,6 @@ import {
   configTargetOffered,
   workspaceConfigureItems,
   workspaceConfigurationHref,
-  configurationHasLanding,
   workspaceConfigurationOwner,
   workspaceConfigurationTarget,
   type Area,
@@ -227,17 +226,21 @@ export function projectShell(input: ShellInput): ShellSection[] {
     // A door that edits one destination's page is that destination's, not a branch of its own.
     const branch = concerns.filter(concern => !configTargetForHref(concern.href)?.destination);
     if (!home && branch.length === 0) return [];
+    // `{home}/configuration` only redirects; it is matched as active but never drawn as a link.
     const configurationHref = workspaceConfigurationHref(organizationId, workspace.key);
-    const configuration: NavItem | undefined = branch.length ? {
-      key: 'workspace-configuration', label: 'Configuration', href: configurationHref,
-      ...(configurationHasLanding(workspace.key) ? {} : { group: true as const }),
-      activeHrefs: branch.filter(concern => {
-        const target = configTargetForHref(concern.href);
-        return target?.workspace === workspace.key && !target.treatment;
-      }).map(concern => concern.href.split('#')[0]),
-      section: 'workspaces',
-      children: branch.map(concern => ({ ...concern, section: 'workspaces' as const })),
-    } : undefined;
+    const ownPages = branch.filter(concern => {
+      const target = configTargetForHref(concern.href);
+      return target?.workspace === workspace.key && !target.treatment;
+    }).map(concern => concern.href.split('#')[0]);
+    // One page is a direct link; several are a group that expands and collapses, never a page that lists them again.
+    const configuration: NavItem | undefined = branch.length === 1
+      ? { key: 'workspace-configuration', label: 'Configuration', href: branch[0].href, activeHrefs: [configurationHref, ...ownPages], section: 'workspaces' }
+      : branch.length ? {
+        key: 'workspace-configuration', label: 'Configuration', href: configurationHref, group: true,
+        activeHrefs: ownPages,
+        section: 'workspaces',
+        children: branch.map(concern => ({ ...concern, section: 'workspaces' as const })),
+      } : undefined;
     // The registered calendar beneath this workspace's Home, only while that Home is usable.
     const calendarRoute = home ? `${home.route ?? home.segment}/calendar` : null;
     const calendarArea = calendarRoute ? AREAS.find((area) => area.workspace === workspace.key && (area.route ?? area.segment) === calendarRoute) : undefined;
@@ -247,7 +250,7 @@ export function projectShell(input: ShellInput): ShellSection[] {
     return [{
       key: `workspace-${workspace.key}`,
       label: workspace.label,
-      href: home ? areaHref(organizationId, home.segment) : configurationHref,
+      href: home ? areaHref(organizationId, home.segment) : branch[0].href,
       section: 'workspaces',
       activeHrefs: [...AREAS.filter((area) => area.workspace === workspace.key && area.group === 'workspaces' && eligible(area)).map((area) => areaHref(organizationId, area.segment)), ...(configuration ? [configurationHref, ...(configuration.activeHrefs ?? [])] : [])],
       configuration,
