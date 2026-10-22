@@ -105,7 +105,7 @@ export function LocationDetail({
               {location.customers.map((customer) => (
                 <li key={customer.id} className="py-2">
                   <Link
-                    href={`/organizations/${organizationId}/customers/${customer.id}`}
+                    href={`/organizations/${organizationId}/crm/contacts/${customer.id}`}
                     className="underline underline-offset-4"
                   >
                     {customer.name}

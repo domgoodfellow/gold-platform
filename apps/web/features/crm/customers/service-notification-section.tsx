@@ -4,7 +4,7 @@ import { Button, ButtonLink } from '@/components/controls/button';
 import { FormField } from '@/components/controls/form';
 import { ErrorText, SelectInput } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
-import { notificationAction, type ServiceActionState, type readEngagementDetails } from '@/app/organizations/[organizationId]/customers/[customerId]/service-actions';
+import { notificationAction, type ServiceActionState, type readEngagementDetails } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/service-actions';
 import { NOTIFICATION_PURPOSES, NOTIFICATION_STATES } from '@/lib/domain/customers/service-notifications';
 
 type Details = Awaited<ReturnType<typeof readEngagementDetails>>;

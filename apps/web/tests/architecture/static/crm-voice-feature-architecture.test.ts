@@ -28,10 +28,10 @@ describe('CRM and Voice feature boundaries', () => {
 
   it('leaves routes responsible for loading and composing named feature UI', () => {
     const calls = routeSource('app/organizations/[organizationId]/calls/page.tsx');
-    const customers = routeSource('app/organizations/[organizationId]/customers/page.tsx');
-    const detail = routeSource('app/organizations/[organizationId]/customers/[customerId]/page.tsx');
-    const pipeline = routeSource('app/organizations/[organizationId]/customers/pipeline/page.tsx');
-    const home = routeSource('app/organizations/[organizationId]/sales/page.tsx');
+    const customers = routeSource('app/organizations/[organizationId]/crm/contacts/page.tsx');
+    const detail = routeSource('app/organizations/[organizationId]/crm/contacts/[contactId]/page.tsx');
+    const pipeline = routeSource('app/organizations/[organizationId]/crm/contacts/stages/page.tsx');
+    const home = routeSource('app/organizations/[organizationId]/crm/page.tsx');
     expect(home).toContain("@/features/crm/home/crm-home");
     expect(routeSource('features/crm/home/crm-home.tsx')).toContain('<WorkspaceHome');
 

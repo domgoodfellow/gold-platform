@@ -63,7 +63,7 @@ test('Dialer uses tenant call follow-ups and the global pop-out survives navigat
       await page.getByRole('button', { name: /Alice Plumbing.*Discuss/ }).click();
       await expect(page.getByRole('textbox', { name: 'Number to call', exact: true })).toHaveValue('(416)555-0101');
       await region('Customer');
-      await expect(page.getByRole('link', { name: 'Alice Plumbing', exact: true })).toHaveAttribute('href', `${base}/customers/${alice}`);
+      await expect(page.getByRole('link', { name: 'Alice Plumbing', exact: true })).toHaveAttribute('href', `${base}/crm/contacts/${alice}`);
       await page.getByRole('link', { name: 'Call history', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Call history', exact: true })).toBeVisible();
       await page.screenshot({ path: testInfo.outputPath(`dialer-${width}.png`), fullPage: true });
@@ -80,7 +80,7 @@ test('Dialer uses tenant call follow-ups and the global pop-out survives navigat
       await expect(popup.getByRole('button', { name: 'Call', exact: true })).toBeDisabled();
       await popup.getByLabel('Number to call').fill('+14165550199');
       await page.getByRole('link', { name: 'Alice Plumbing', exact: true }).click();
-      await expect(page).toHaveURL(`${testInfo.project.use.baseURL ?? 'http://localhost:3000'}${base}/customers/${alice}`);
+      await expect(page).toHaveURL(`${testInfo.project.use.baseURL ?? 'http://localhost:3000'}${base}/crm/contacts/${alice}`);
       await expect(popup.getByLabel('Number to call')).toHaveValue('+14165550199');
       await popup.getByRole('button', { name: 'Return to GildOps', exact: true }).click();
       await expect.poll(() => popup.isClosed()).toBe(true);

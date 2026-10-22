@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Db } from '@/lib/db/types';
-import { listCustomers } from '@/lib/domain/customers/customers';
+import { listContacts } from '@/lib/domain/contacts/contacts';
 import { formatMinutes, listTimeCommitted, totalMinutes } from '@/lib/domain/reporting/commitment';
 import { listWorkMarkedComplete, totalJobs } from '@/lib/domain/reporting/completion';
 import { listInvoicedAndIncurred, totalsByCurrency } from '@/lib/domain/reporting/financials';
@@ -41,8 +41,8 @@ export async function CustomersInsights({
 }) {
   const period = periodFor('month', today);
   const [customers, unstaged, invoiced] = await Promise.all([
-    listCustomers(db, { organizationId, limit: 1 }),
-    salesEnabled ? listCustomers(db, { organizationId, limit: 1, stageId: null }) : Promise.resolve(null),
+    listContacts(db, { organizationId, limit: 1 }),
+    salesEnabled ? listContacts(db, { organizationId, limit: 1, stageId: null }) : Promise.resolve(null),
     listInvoicedAndIncurred(db, { organizationId, grouping: 'customer', period }),
   ]);
   const metrics: Metric[] = [{ label: 'Customers', value: customers.total }];

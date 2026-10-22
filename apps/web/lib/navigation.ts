@@ -348,19 +348,18 @@ export const AREAS: readonly Area[] = [
   { segment: 'library', label: 'Library', group: 'library' },
   { segment: 'organization-calendar-legacy', label: 'Calendar (legacy organization link)', group: 'library', route: 'calendar', sidebar: false },
 
-  // Sales. Home is the workspace's own parent destination — kernel, like Customers, so the row is
-  // always there — and is never repeated as a child beneath it. Pipeline is the CRM stages view,
-  // offered where the business has it (the reception module).
-  { segment: 'sales', label: 'CRM', group: 'workspaces', workspace: 'crm' },
+  // CRM retains its existing landing route. The shell offers Dashboard explicitly;
+  // Contacts and opportunity Pipeline are principal destinations, relationship stages contextual.
+  { segment: 'sales', route: 'crm', label: 'CRM', group: 'workspaces', workspace: 'crm' },
   ...WORKSPACES.filter(workspace => !['crm', 'field'].includes(workspace.key)).map(workspace => ({ segment: `${workspace.key}-calendar`, label: `${workspace.label} calendar`, group: 'workspaces' as const, workspace: workspace.key, route: `${workspace.home}/calendar`, sidebar: false })),
-  { segment: 'calendar', label: 'Calendar', group: 'workspaces', workspace: 'crm', route: 'sales/calendar', sidebar: false },
-  { segment: 'follow-up-calendar', label: 'Calendar (legacy link)', group: 'workspaces', workspace: 'crm', route: 'follow-ups/calendar', sidebar: false },
-  { segment: 'customers', label: 'Customers', group: 'workspaces', workspace: 'crm' },
-  { segment: 'pipeline', label: 'Relationship pipeline', group: 'workspaces', workspace: 'crm', route: 'customers/pipeline', module: 'reception', featureKeys: ['pipeline', 'configurable_stages', 'qualification_state'] },
-  { segment: 'opportunities', label: 'Opportunities', group: 'workspaces', workspace: 'crm', sidebar: false },
-  { segment: 'opportunity-pipeline', label: 'Opportunity pipeline', group: 'workspaces', workspace: 'crm', route: 'opportunities/pipeline', sidebar: false },
-  { segment: 'follow-ups', label: 'Follow-ups', group: 'workspaces', workspace: 'crm', sidebar: false, featureKeys: ['follow_ups'] },
-  { segment: 'crm-search', label: 'Search CRM', group: 'workspaces', workspace: 'crm', route: 'sales/search', sidebar: false },
+  { segment: 'calendar', label: 'Calendar', group: 'workspaces', workspace: 'crm', route: 'crm/calendar', sidebar: false },
+  { segment: 'follow-up-calendar', label: 'Calendar (legacy link)', group: 'workspaces', workspace: 'crm', route: 'crm/tasks/calendar', sidebar: false },
+  { segment: 'customers', route: 'crm/contacts', label: 'Contacts', group: 'workspaces', workspace: 'crm' },
+  { segment: 'pipeline', label: 'Relationship stages', group: 'workspaces', workspace: 'crm', route: 'crm/contacts/stages', sidebar: false, module: 'reception', featureKeys: ['pipeline', 'configurable_stages', 'qualification_state'] },
+  { segment: 'opportunities', route: 'crm/opportunities', label: 'Opportunities', group: 'workspaces', workspace: 'crm', sidebar: false },
+  { segment: 'opportunity-pipeline', label: 'Pipeline', group: 'workspaces', workspace: 'crm', route: 'crm/pipeline' },
+  { segment: 'follow-ups', route: 'crm/tasks', label: 'Follow-ups', group: 'workspaces', workspace: 'crm', sidebar: false, featureKeys: ['follow_ups'] },
+  { segment: 'crm-search', label: 'Search CRM', group: 'workspaces', workspace: 'crm', route: 'crm/search', sidebar: false },
   // Communications. Home is the workspace's own destination, so it is offered to anyone who can
   // operate **any** of its channels — placing calls (`call.place`) or sending texts
   // (`message.send`), two independent authorities — and entitled through either channel's
@@ -519,11 +518,11 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'work-configuration', scope: 'organization', workspace: 'field', path: 'work/configuration', permission: ['field.manage'] },
   { key: 'schedule-configuration', scope: 'organization', workspace: 'field', path: 'schedule/configuration', entitledBy: 'schedule', permission: ['field.manage'] },
   { key: 'pricing', scope: 'organization', workspace: 'finance', path: 'finance/configuration/pricing', entitledBy: 'pricing', permission: ['price.manage', 'organization.manage'] },
-  { key: 'customer-fields', scope: 'organization', workspace: 'crm', path: 'sales/configuration/fields', permission: ['field.manage'], directory: false },
+  { key: 'customer-fields', scope: 'organization', workspace: 'crm', path: 'crm/configuration/fields', permission: ['field.manage'], directory: false },
   { key: 'custom-fields', treatment: 'shared', scope: 'organization', path: 'settings/custom-fields', permission: ['field.manage'] },
   // Entitled through Pipeline, permitted through field.manage: naming stages is not moving a customer between them.
-  { key: 'sales-stages', scope: 'organization', workspace: 'crm', path: 'sales/configuration/relationship-stages', entitledBy: 'pipeline', permission: ['field.manage'] },
-  { key: 'opportunity-stages', scope: 'organization', workspace: 'crm', path: 'sales/configuration/opportunity-stages', entitledBy: 'opportunity-pipeline', permission: ['field.manage'] },
+  { key: 'sales-stages', scope: 'organization', workspace: 'crm', path: 'crm/configuration/relationship-stages', entitledBy: 'pipeline', permission: ['field.manage'] },
+  { key: 'opportunity-stages', scope: 'organization', workspace: 'crm', path: 'crm/configuration/opportunity-stages', entitledBy: 'opportunity-pipeline', permission: ['field.manage'] },
   // Entitled through Calls, permitted through field.manage: configuring outcomes and routing is not making calls.
   // A dedicated settings route, never `calls#setup` — a fragment into an operational page is not a canonical destination.
   { key: 'call-setup', scope: 'organization', workspace: 'communications', path: 'comms/configuration/calling', entitledBy: 'calls', permission: ['field.manage', 'organization.manage'] },
@@ -872,7 +871,7 @@ export function workspaceConfigurationTarget(pathname: string): ConfigTarget | u
 /** One root per registered workspace. It is a redirect-only address, never a page or a link: it sends old links to the first door the member may open. */
 export function workspaceConfigurationHref(organizationId: string, workspace: WorkspaceKey): string {
   const owner = WORKSPACES.find(candidate => candidate.key === workspace)!;
-  return `/organizations/${organizationId}/${owner.home}/configuration`;
+  return `${areaHref(organizationId, owner.home)}/configuration`;
 }
 
 export function workspaceConfigurationOwner(pathname: string): WorkspaceKey | undefined {

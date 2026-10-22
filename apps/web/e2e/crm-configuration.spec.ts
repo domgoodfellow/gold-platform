@@ -27,7 +27,7 @@ test.describe('an owner', () => {
   test('CRM Home offers a Configure menu of direct links, operable from the keyboard', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     const base = `/organizations/${organizationId}`;
-    await page.goto(`${base}/sales`);
+    await page.goto(`${base}/crm`);
     await expect(page.getByRole('main').getByRole('link', { name: 'Configuration', exact: true })).toHaveCount(0);
     const configure = page.getByRole('main').getByRole('button', { name: 'Configure', exact: true });
     await configure.focus();
@@ -36,21 +36,21 @@ test.describe('an owner', () => {
     await expect(items).toHaveCount(DOORS.length);
     for (const [index, [label, segment]] of DOORS.entries()) {
       await expect(items.nth(index)).toHaveText(label);
-      await expect(items.nth(index)).toHaveAttribute('href', `${base}/sales/configuration/${segment}`);
+      await expect(items.nth(index)).toHaveAttribute('href', `${base}/crm/configuration/${segment}`);
     }
     await page.keyboard.press('Escape');
     await expect(page.getByRole('menu')).toHaveCount(0);
     await expect(configure).toBeFocused();
     await configure.click();
     await page.getByRole('menuitem', { name: 'Opportunity stages' }).click();
-    await expect(page).toHaveURL(`${base}/sales/configuration/opportunity-stages`);
+    await expect(page).toHaveURL(`${base}/crm/configuration/opportunity-stages`);
   });
 
   test('a configuration page names Configuration as plain text and has one heading', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     const base = `/organizations/${organizationId}`;
-    await page.goto(`${base}/sales/configuration/relationship-stages`);
-    await expect(breadcrumb(page).getByRole('link', { name: 'CRM', exact: true })).toHaveAttribute('href', `${base}/sales`);
+    await page.goto(`${base}/crm/configuration/relationship-stages`);
+    await expect(breadcrumb(page).getByRole('link', { name: 'CRM', exact: true })).toHaveAttribute('href', `${base}/crm`);
     await expect(breadcrumb(page).getByText('Configuration', { exact: true })).toBeVisible();
     await expect(breadcrumb(page).getByRole('link', { name: 'Configuration', exact: true })).toHaveCount(0);
     await expect(breadcrumb(page).locator('[aria-current="page"]')).toHaveText('Relationship stages');
@@ -61,20 +61,20 @@ test.describe('an owner', () => {
   test('the retired landing resolves to an eligible page, and Back does not return to it', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     const base = `/organizations/${organizationId}`;
-    await page.goto(`${base}/sales`);
-    await page.goto(`${base}/sales/configuration`);
-    await expect(page).toHaveURL(`${base}/sales/configuration/relationship-stages`);
+    await page.goto(`${base}/crm`);
+    await page.goto(`${base}/crm/configuration`);
+    await expect(page).toHaveURL(`${base}/crm/configuration/relationship-stages`);
     await page.goBack();
-    await expect(page).toHaveURL(`${base}/sales`);
+    await expect(page).toHaveURL(`${base}/crm`);
     // The legacy Settings address still lands on its canonical page.
     await page.goto(`${base}/settings/sales-stages`);
-    await expect(page).toHaveURL(`${base}/sales/configuration/relationship-stages`);
+    await expect(page).toHaveURL(`${base}/crm/configuration/relationship-stages`);
   });
 
   test('the sidebar Configuration heading expands and collapses; only its children navigate', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     const base = `/organizations/${organizationId}`;
-    await page.goto(`${base}/sales/configuration/relationship-stages`);
+    await page.goto(`${base}/crm/configuration/relationship-stages`);
     const nav = sidebarNav(page);
     await expect(nav.getByRole('link', { name: 'Configuration', exact: true })).toHaveCount(0);
     const heading = nav.getByRole('button', { name: 'Configuration', exact: true });
@@ -88,45 +88,45 @@ test.describe('an owner', () => {
     await page.keyboard.press('Space');
     await expect(heading).toHaveAttribute('aria-expanded', 'false');
     await page.keyboard.press('Space');
-    await expect(page).toHaveURL(`${base}/sales/configuration/relationship-stages`);
+    await expect(page).toHaveURL(`${base}/crm/configuration/relationship-stages`);
     for (const [label, segment] of DOORS) {
       const link = nav.getByRole('link', { name: label, exact: true });
       await link.click();
-      await expect(page).toHaveURL(`${base}/sales/configuration/${segment}`);
+      await expect(page).toHaveURL(`${base}/crm/configuration/${segment}`);
       await expect(link).toHaveAttribute('aria-current', 'page');
     }
     await page.reload();
     await expect(nav.getByRole('link', { name: 'Customer fields', exact: true })).toHaveAttribute('aria-current', 'page');
     await page.goBack();
-    await expect(page).toHaveURL(`${base}/sales/configuration/opportunity-stages`);
+    await expect(page).toHaveURL(`${base}/crm/configuration/opportunity-stages`);
     // The workspace heading remains the separate way to CRM Home.
     await nav.getByRole('link', { name: /^CRM/ }).first().click();
-    await expect(page).toHaveURL(`${base}/sales`);
+    await expect(page).toHaveURL(`${base}/crm`);
   });
 
   test('Customers has no Configure panel; Relationship pipeline links straight to Relationship stages', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     const base = `/organizations/${organizationId}`;
-    await page.goto(`${base}/customers`);
+    await page.goto(`${base}/crm/contacts`);
     await expect(page.getByRole('main').getByRole('button', { name: 'Configure', exact: true })).toHaveCount(0);
-    await page.goto(`${base}/customers/pipeline`);
+    await page.goto(`${base}/crm/contacts/stages`);
     await expect(page.getByText(/Stage settings/)).toHaveCount(0);
     const door = page.getByRole('main').getByRole('link', { name: 'Relationship stages' }).first();
-    await expect(door).toHaveAttribute('href', `${base}/sales/configuration/relationship-stages`);
+    await expect(door).toHaveAttribute('href', `${base}/crm/configuration/relationship-stages`);
   });
 
   test('tablet: the rail Configuration opens the navigation with the group expanded', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     const base = `/organizations/${organizationId}`;
     await page.setViewportSize({ width: 1024, height: 900 });
-    await page.goto(`${base}/sales`);
+    await page.goto(`${base}/crm`);
     await expect(page.locator('[data-slot="sidebar"]:not([data-mobile])')).toHaveAttribute('data-state', 'collapsed');
     await sidebarNav(page).getByRole('button', { name: 'Configuration', exact: true }).click();
     await expect(page.locator('[data-slot="sidebar"]:not([data-mobile])')).toHaveAttribute('data-overlay', 'true');
     const fields = sidebarNav(page).getByRole('link', { name: 'Customer fields', exact: true });
     await expect(fields).toBeVisible();
     await fields.click();
-    await expect(page).toHaveURL(`${base}/sales/configuration/fields`);
+    await expect(page).toHaveURL(`${base}/crm/configuration/fields`);
     await expect(page.locator('[data-slot="sidebar"]:not([data-mobile])')).not.toHaveAttribute('data-overlay', 'true');
   });
 
@@ -134,14 +134,14 @@ test.describe('an owner', () => {
     const { organizationId } = loadDemoContext();
     const base = `/organizations/${organizationId}`;
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(`${base}/sales`);
+    await page.goto(`${base}/crm`);
     await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();
     const sheet = page.locator('[data-slot="sidebar"][data-mobile="true"]');
     const heading = sheet.getByRole('button', { name: 'Configuration', exact: true });
     await expect(heading).toBeVisible();
     if ((await heading.getAttribute('aria-expanded')) !== 'true') await heading.click();
     await sheet.getByRole('link', { name: 'Opportunity stages', exact: true }).click();
-    await expect(page).toHaveURL(`${base}/sales/configuration/opportunity-stages`);
+    await expect(page).toHaveURL(`${base}/crm/configuration/opportunity-stages`);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 });
@@ -152,15 +152,15 @@ test.describe('a reduced-role colleague', () => {
   test('sees CRM configuration only as far as their permissions reach, consistently everywhere', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     const base = `/organizations/${organizationId}`;
-    await page.goto(`${base}/sales`);
+    await page.goto(`${base}/crm`);
     const group = sidebarNav(page).getByRole('button', { name: 'Configuration', exact: true });
-    const doors = await group.count() ? await sidebarNav(page).locator(`a[href^="${base}/sales/configuration/"]`).evaluateAll((links) => links.map((link) => link.getAttribute('href'))) : [];
+    const doors = await group.count() ? await sidebarNav(page).locator(`a[href^="${base}/crm/configuration/"]`).evaluateAll((links) => links.map((link) => link.getAttribute('href'))) : [];
     const control = page.getByRole('main').getByRole('button', { name: 'Configure', exact: true }).or(page.getByRole('main').getByRole('link', { name: /Relationship stages|Opportunity stages|Customer fields/ }));
-    await page.goto(`${base}/sales/configuration`);
+    await page.goto(`${base}/crm/configuration`);
     if (doors.length === 0) {
-      await page.goto(`${base}/sales`);
+      await page.goto(`${base}/crm`);
       await expect(control).toHaveCount(0);
-      await page.goto(`${base}/sales/configuration`);
+      await page.goto(`${base}/crm/configuration`);
       await expect(page.getByRole('heading', { name: 'This page does not exist' })).toBeVisible();
     } else {
       expect(doors).toContain(new URL(page.url()).pathname);
@@ -208,9 +208,9 @@ test.describe('a configuration-only member', () => {
     await page.getByLabel('Password', { exact: true }).fill(password);
     await page.getByRole('button', { name: 'Log in', exact: true }).click();
     await expect(page).toHaveURL(/organizations/);
-    await page.goto(`${base}/sales/configuration`);
-    await expect(page).toHaveURL(`${base}/sales/configuration/relationship-stages`);
-    for (const [label, segment] of DOORS) await expect(sidebarNav(page).getByRole('link', { name: label, exact: true })).toHaveAttribute('href', `${base}/sales/configuration/${segment}`);
+    await page.goto(`${base}/crm/configuration`);
+    await expect(page).toHaveURL(`${base}/crm/configuration/relationship-stages`);
+    for (const [label, segment] of DOORS) await expect(sidebarNav(page).getByRole('link', { name: label, exact: true })).toHaveAttribute('href', `${base}/crm/configuration/${segment}`);
     // CRM Home needs no capability, so this member may open it. Communications Home does, so there
     // they are configuration-only: ADR-047 keeps that workspace heading plain text, and the
     // workspace's own row opens their first configuration page, never a landing.

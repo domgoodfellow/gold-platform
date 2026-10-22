@@ -2,24 +2,24 @@
 
 import { useActionState, useEffect, useId, useState, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/controls/button';
+import { Button, type ButtonTone } from '@/components/controls/button';
 import { TextInput, SelectInput } from '@/components/controls/inputs';
 import { FormField, FormError } from '@/components/controls/form';
 import { useDrawerFormSubmit } from '@/components/controls/use-drawer-form-submit';
 import { useFormDirty } from '@/components/controls/use-form-dirty';
 import { PageDrawer, PageDrawerClose, PageDrawerContent, PageDrawerFooter, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger, usePageDrawerUnsavedChanges } from '@/components/panels/page-drawer';
-import { saveOpportunityAction, searchOpportunityCustomers } from '@/app/organizations/[organizationId]/opportunities/actions';
+import { saveOpportunityAction, searchOpportunityCustomers } from '@/app/organizations/[organizationId]/crm/opportunities/actions';
 import type { Opportunity, OpportunityStage } from '@/lib/domain/opportunities/opportunities';
 import { opportunityValueInput } from '@/lib/domain/opportunities/money';
 
 type CustomerChoice = { id: string; name: string };
 export type OpportunityFormOptions = { organizationId: string; stages: OpportunityStage[]; members: { id: string; displayName: string }[]; defaultCurrency: string };
-export function OpportunitySheet({ opportunity, customer, ...options }: OpportunityFormOptions & { opportunity?: Opportunity; customer?: CustomerChoice }) {
+export function OpportunitySheet({ opportunity, customer, triggerTone, ...options }: OpportunityFormOptions & { opportunity?: Opportunity; customer?: CustomerChoice; triggerTone?: ButtonTone }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const formId = useId();
   return <PageDrawer open={open} onOpenChange={setOpen}>
-    <PageDrawerTrigger asChild><Button tone={opportunity ? 'secondary' : 'primary'}>{opportunity ? 'Edit opportunity' : 'New opportunity'}</Button></PageDrawerTrigger>
+    <PageDrawerTrigger asChild><Button tone={triggerTone ?? (opportunity ? 'secondary' : 'primary')}>{opportunity ? 'Edit opportunity' : 'New opportunity'}</Button></PageDrawerTrigger>
     <PageDrawerContent><PageDrawerHeader><PageDrawerTitle>{opportunity ? 'Edit opportunity' : 'New opportunity'}</PageDrawerTitle></PageDrawerHeader>
       <OpportunityForm {...options} opportunity={opportunity} customer={customer} formId={formId} onSaved={() => setOpen(false)} onPendingChange={setPending} />
       <PageDrawerFooter>
@@ -50,12 +50,12 @@ function OpportunityForm({ organizationId, stages, members, defaultCurrency, opp
       setSearching(true);
       void searchOpportunityCustomers(organizationId, search).then((value) => {
         if (active) { setResult(value); setSearchError(null); }
-      }).catch(() => { if (active) setSearchError('Customers could not be loaded. Try searching again.'); }).finally(() => { if (active) setSearching(false); });
+      }).catch(() => { if (active) setSearchError('Contacts could not be loaded. Try searching again.'); }).finally(() => { if (active) setSearching(false); });
     }, 200);
     return () => { active = false; clearTimeout(timer); };
   }, [organizationId, search, customerIsFixed]);
   useEffect(() => {
-    if (state.savedId) { onSaved(); router.push(`/organizations/${organizationId}/opportunities/${state.savedId}`); router.refresh(); }
+    if (state.savedId) { onSaved(); router.push(`/organizations/${organizationId}/crm/opportunities/${state.savedId}`); router.refresh(); }
   }, [state.savedId, onSaved, router, organizationId]);
   const changeDraft = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target;
@@ -64,10 +64,10 @@ function OpportunityForm({ organizationId, stages, members, defaultCurrency, opp
   return <form id={formId} ref={ref} onSubmit={onSubmit} onChange={onChange} onClick={onChange} className="space-y-4">
     <input type="hidden" name="organizationId" value={organizationId} />
     <input type="hidden" name="opportunityId" value={opportunity?.id ?? ''} />
-    {fixedCustomer ? <><input type="hidden" name="customerId" value={fixedCustomer.id} /><p className="text-sm">Customer: <strong>{fixedCustomer.name}</strong></p></> : <>
-      <FormField id={`${prefix}-search`} label="Find customer" hint="Search by name, email or phone.">{(props) => <TextInput {...props} type="search" value={search} onChange={(event) => setSearch(event.target.value)} />}</FormField>
-      <FormField id={`${prefix}-customer`} label="Customer">{(props) => <SelectInput {...props} name="customerId" required value={draft.customerId} onChange={changeDraft}><option value="">Choose a customer</option>{result.customers.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</SelectInput>}</FormField>
-      <p role="status" className="text-xs text-muted">{searching ? 'Searching…' : result.total > result.customers.length ? `Showing ${result.customers.length} of ${result.total}. Refine your search.` : `${result.total} customers found.`}</p>
+    {fixedCustomer ? <><input type="hidden" name="customerId" value={fixedCustomer.id} /><p className="text-sm">Contact: <strong>{fixedCustomer.name}</strong></p></> : <>
+      <FormField id={`${prefix}-search`} label="Find contact" hint="Search by name, email or phone.">{(props) => <TextInput {...props} type="search" value={search} onChange={(event) => setSearch(event.target.value)} />}</FormField>
+      <FormField id={`${prefix}-customer`} label="Contact">{(props) => <SelectInput {...props} name="customerId" required value={draft.customerId} onChange={changeDraft}><option value="">Choose a contact</option>{result.customers.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</SelectInput>}</FormField>
+      <p role="status" className="text-xs text-muted">{searching ? 'Searching…' : result.total > result.customers.length ? `Showing ${result.customers.length} of ${result.total}. Refine your search.` : `${result.total} contacts found.`}</p>
       <FormError>{searchError}</FormError>
     </>}
     <FormField id={`${prefix}-title`} label="Title">{(props) => <TextInput {...props} name="title" required maxLength={200} value={draft.title} onChange={changeDraft} />}</FormField>

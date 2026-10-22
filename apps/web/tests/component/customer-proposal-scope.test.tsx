@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import CustomerPage from '@/app/organizations/[organizationId]/customers/[customerId]/page';
+import CustomerPage from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/page';
 
 const boundary = vi.hoisted(() => ({
   operating: true,
@@ -25,7 +25,7 @@ vi.mock('@/lib/domain/customers/proposal-invites', () => ({ listProposalInvites:
 vi.mock('@/lib/domain/catalogue/plans', () => ({ listPlans: boundary.plans }));
 vi.mock('@/lib/domain/customers/configuration-recommendation', () => ({ recommendConfiguration: boundary.recommendation }));
 vi.mock('@/lib/domain/customers/proposal-handoff', () => ({ getProposalHandoff: boundary.handoff }));
-vi.mock('@/lib/domain/customers/customers', () => ({ getCustomer: async () => ({ id: 'customer', name: 'Real customer', custom: {} }) }));
+vi.mock('@/lib/domain/contacts/contacts', () => ({ getContact: async () => ({ id: 'customer', name: 'Real customer', custom: {} }) }));
 vi.mock('@/lib/route/origin', () => ({ requestOrigin: async () => 'http://localhost' }));
 vi.mock('@/lib/domain/portal/address', () => ({ portalOrigin: async () => 'http://localhost' }));
 vi.mock('@/lib/domain/opportunities/opportunities', () => ({ listOpportunities: async () => [], listOpportunityStages: async () => [] }));
@@ -45,7 +45,8 @@ vi.mock('@/lib/application/crm/follow-ups', () => ({ followUpsAvailable: async (
 vi.mock('@/lib/domain/customers/client-tenants', () => ({ getClientTenantRelationships: async () => [], listExistingTenantOptions: async () => [] }));
 vi.mock('@/lib/domain/customers/service-engagements', () => ({ listServiceEngagements: async () => ({ items: [], total: 0 }) }));
 
-vi.mock('@/app/organizations/[organizationId]/customers/[customerId]/actions', () => ({ createPortalInviteAction: vi.fn(), revokePortalInviteAction: vi.fn(), uploadCustomerDocumentAction: vi.fn() }));
+vi.mock('@/app/organizations/[organizationId]/crm/contacts/[contactId]/actions', () => ({ createPortalInviteAction: vi.fn(), revokePortalInviteAction: vi.fn(), uploadCustomerDocumentAction: vi.fn() }));
+vi.mock('@/features/crm/customers/contact-affiliations', () => ({ ContactAffiliations: () => null }));
 vi.mock('@/features/crm/customers/customer-header', () => ({ CustomerHeader: () => <h1>Customer</h1> }));
 vi.mock('@/features/crm/customers/discovery-snapshot-section', () => ({ DiscoverySnapshotSection: () => null }));
 vi.mock('@/features/crm/customers/configuration-recommendation-section', () => ({ ConfigurationRecommendationSection: () => null }));
@@ -63,7 +64,7 @@ vi.mock('@/features/crm/customers/client-tenant-section', () => ({ ClientTenantS
 vi.mock('@/features/crm/customers/service-engagement-section', () => ({ ServiceEngagementSection: () => <span>Service engagements</span> }));
 
 async function renderPage() {
-  return render(await CustomerPage({ params: Promise.resolve({ organizationId: 'org', customerId: 'customer' }) } as Parameters<typeof CustomerPage>[0]));
+  return render(await CustomerPage({ params: Promise.resolve({ organizationId: 'org', contactId: 'customer' }) } as Parameters<typeof CustomerPage>[0]));
 }
 
 beforeEach(() => {

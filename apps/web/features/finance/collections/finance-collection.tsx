@@ -7,7 +7,7 @@ import { FinanceWorkflow } from '../finance-workflow';
 import { InvoicesTable, QuotesTable, PaymentsTable } from './finance-tables';
 import { financeFilters } from '@/lib/application/finance/operating';
 import { readFinanceInvoices, readFinancePayments, readFinanceQuotes } from '@/lib/domain/billing/finance-reads';
-import { listCustomers } from '@/lib/domain/customers/customers';
+import { listContacts } from '@/lib/domain/contacts/contacts';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { requireOrganization } from '@/lib/route/organization';
 
@@ -16,7 +16,7 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
   const filter = financeFilters(query, organization.timezone);
   const [result, customers, modules] = await Promise.all([
     kind === 'invoices' ? readFinanceInvoices(db, organizationId, filter) : kind === 'quotes' ? readFinanceQuotes(db, organizationId, filter) : readFinancePayments(db, organizationId, filter),
-    listCustomers(db, { organizationId }),
+    listContacts(db, { organizationId }),
     listUsableModules(db, { organizationId }),
   ]);
   const base = `/organizations/${organizationId}/finance`, title = kind[0].toUpperCase() + kind.slice(1);
@@ -27,9 +27,9 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
   const href = (next: number) => { const p = new URLSearchParams(); for (const [k,v] of Object.entries(query)) if (typeof v === 'string' && k !== 'page') p.set(k,v); p.set('page', String(next)); return `${base}/${kind}?${p}`; };
   return <AppPage><CollectionHeader title={title} crumbs={[{ label: 'Finance', href: base }]} actions={canCreate ? <FinanceWorkflow organizationId={organizationId} kind={workflow} initiallyOpen={query.create === '1'} mayCreateWork={may('work_item.create')} /> : undefined} />
     <form className="mb-4 flex flex-wrap items-end gap-3">
-      <FormField id="finance-search" label="Search">{field => <TextInput {...field} name="q" type="search" defaultValue={filter.q} placeholder="Customer, record or reference" />}</FormField>
+      <FormField id="finance-search" label="Search">{field => <TextInput {...field} name="q" type="search" defaultValue={filter.q} placeholder="Contact, record or reference" />}</FormField>
       {kind !== 'payments' ? <FormField id="finance-status" label="Status">{field => <SelectInput {...field} name="status" defaultValue={filter.status}><option value="">All</option>{(kind === 'invoices' ? [['outstanding','Outstanding'],['overdue','Overdue'],['settled','Settled']] : [['not-invoiced','Not invoiced'],['invoiced','Invoiced']]).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</SelectInput>}</FormField> : null}
-      <FormField id="finance-customer" label="Customer">{field => <SelectInput {...field} name="customer" defaultValue={filter.customer ?? ''}><option value="">All customers</option>{customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</SelectInput>}</FormField>
+      <FormField id="finance-customer" label="Contact">{field => <SelectInput {...field} name="customer" defaultValue={filter.customer ?? ''}><option value="">All customers</option>{customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</SelectInput>}</FormField>
       <FormField id="finance-from" label="From">{field => <TextInput {...field} name="from" type="date" defaultValue={typeof query.from === 'string' ? query.from : ''} />}</FormField>
       <FormField id="finance-to" label="Before">{field => <TextInput {...field} name="to" type="date" defaultValue={typeof query.to === 'string' ? query.to : ''} />}</FormField>
       {kind === 'invoices' ? <FormField id="finance-due-on" label="Due on">{field => <TextInput {...field} name="due" type="date" defaultValue={typeof query.due === 'string' ? query.due : ''} />}</FormField> : null}

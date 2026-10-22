@@ -101,7 +101,7 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
       for (const name of ['Customers', 'Invoices', 'Payments', 'Dialer']) await expect(businessNav().getByRole('link', { name, exact: true })).toHaveCount(0);
       await page.screenshot({ path: path.join(shots, `restored-workspaces-${width}.png`), animations: 'disabled' });
       await businessNav().getByRole('link', { name: 'CRM', exact: true }).click();
-      await expect(page).toHaveURL(`${org}/sales`);
+      await expect(page).toHaveURL(`${org}/crm`);
       if (width < 768) await page.getByRole('button', { name: /^(Toggle Sidebar|Menu)$/ }).click();
       await expect(businessNav().getByRole('link', { name: 'Customers', exact: true })).toBeVisible();
       await expect(businessNav().getByRole('link', { name: 'Invoices', exact: true })).toHaveCount(0);
@@ -116,7 +116,7 @@ test('Global Home operational queues, owning actions, Agent and responsive surfa
     const rowBounds = await attentionLink.boundingBox();
     expect(rowBounds!.width).toBeGreaterThan(500);
     await attentionLink.click({ position: { x: rowBounds!.width - 5, y: 10 } });
-    await expect(page).toHaveURL(/\/follow-ups\?selected=/);
+    await expect(page).toHaveURL(/\/crm\/tasks\?selected=/);
     await visit();
     await page.getByRole('button', { name: 'Expand previews' }).click();
     await capture(page, '06-attention-expanded', 'Needs attention');

@@ -3,7 +3,7 @@
 **Date:** 2026-10-19
 **Status:** Accepted (approved by the owner on 2026-10-19 after the Batch 1 architecture review)
 **Supersedes:** ADR-046, point 3 only (Home shown as an Overview child)
-**Superseded by:** None
+**Superseded by:** ADR-049, point 1 only (explicit Dashboard replaces the implicit Home link)
 
 ## Context
 
@@ -17,6 +17,8 @@ The Batch 1 review found that page location and page titles had no single owner:
 - Inside an entered workspace, Home appeared twice: as the workspace heading context and as an Overview row and strip item.
 
 ## Decision
+
+> **Point 1 superseded effective 2026-10-22 by [ADR-049](ADR-049-explicit-workspace-dashboard.md).** The active behavior is an explicit Gauge Dashboard destination; the workspace heading is identity only, without a link or selected state. The original point 1 below is retained as historical context. All other decisions remain active.
 
 1. **Workspace Home (A1).** Inside an entered workspace, the workspace heading is the link to its canonical Home and shows as current there. No child row and no header-strip item repeats the Home route. ADR-046 points 1–2 and 4–7 stand.
 2. **Labels by key (A2).** Business vocabulary is applied by stable destination and entity keys, never by matching displayed words. A workspace name is never relabelled by a destination label.

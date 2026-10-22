@@ -76,7 +76,7 @@ async function attachCustomers(
 
   const { data: links, error } = await db
     .from('customer_locations')
-    .select('location_id, customers!customer_locations_customer_same_org (id, name)')
+    .select('location_id, contacts!customer_locations_customer_same_org (id, name)')
     .eq('organization_id', organizationId)
     .in('location_id', rows.map((row) => row.id));
 
@@ -89,7 +89,7 @@ async function attachCustomers(
     // PostgREST returns an embedded to-one as an object, but the generated types allow an
     // array because the relationship is expressed as two columns. `one()` collapses both
     // shapes rather than the call site guessing which it got.
-    const customer = one(link.customers);
+    const customer = one(link.contacts);
     if (!customer) continue;
     const existing = byLocation.get(link.location_id) ?? [];
     existing.push({ id: customer.id, name: customer.name });

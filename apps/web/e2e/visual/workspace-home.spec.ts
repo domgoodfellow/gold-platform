@@ -10,7 +10,7 @@ test.use({ storageState: OWNER_STORAGE_STATE });
 
 test('CRM workspace home', async ({ page }) => {
   const { organizationId } = loadDemoContext();
-  await page.goto(`/organizations/${organizationId}/sales`);
+  await page.goto(`/organizations/${organizationId}/crm`);
   await page.waitForLoadState('networkidle');
   await expect(page).toHaveScreenshot('crm-home.png', { fullPage: true });
 });

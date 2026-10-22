@@ -381,7 +381,7 @@ export function ActivityView({
                 <p className="text-xs text-subtle">
                   Content was snapshotted when queued. Template edits do not
                   change it. Sent means the email provider accepted the message
-                  from this business's own sender address; a later provider report
+                  from this business&apos;s own sender address; a later provider report
                   says whether it was delivered. Uncertain means an attempt may have
                   reached the provider but was never confirmed: it is not sent again
                   automatically, so check with the recipient before sending it

@@ -25,9 +25,9 @@ afterEach(cleanup);
 describe('CRM Home Configure control (ConfigureMenu over workspaceConfigureItems)', () => {
   it('offers CRM\'s three doors, in registry order, to a member who may configure them all', () => {
     expect(workspaceConfigureItems(ORG, 'crm', gate()).map((item) => [item.label, item.href])).toEqual([
-      ['Relationship stages', `/organizations/${ORG}/sales/configuration/relationship-stages`],
-      ['Opportunity stages', `/organizations/${ORG}/sales/configuration/opportunity-stages`],
-      ['Customer fields', `/organizations/${ORG}/sales/configuration/fields`],
+      ['Relationship stages', `/organizations/${ORG}/crm/configuration/relationship-stages`],
+      ['Opportunity stages', `/organizations/${ORG}/crm/configuration/opportunity-stages`],
+      ['Customer fields', `/organizations/${ORG}/crm/configuration/fields`],
     ]);
   });
 
@@ -48,7 +48,7 @@ describe('CRM Home Configure control (ConfigureMenu over workspaceConfigureItems
     const fields = workspaceConfigureItems(ORG, 'crm', gate()).find((item) => item.key === 'customer-fields')!;
     render(<ConfigureMenu items={[fields]} />);
     expect(screen.queryByRole('button', { name: 'Configure' })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Customer fields' })).toHaveAttribute('href', `/organizations/${ORG}/sales/configuration/fields`);
+    expect(screen.getByRole('link', { name: 'Customer fields' })).toHaveAttribute('href', `/organizations/${ORG}/crm/configuration/fields`);
   });
 
   it('opens a menu of direct links from the keyboard, and Escape returns focus to the control', async () => {
@@ -59,9 +59,9 @@ describe('CRM Home Configure control (ConfigureMenu over workspaceConfigureItems
     await user.keyboard('{Enter}');
     const items = await screen.findAllByRole('menuitem');
     expect(items.map((item) => [item.textContent, item.getAttribute('href')])).toEqual([
-      ['Relationship stages', `/organizations/${ORG}/sales/configuration/relationship-stages`],
-      ['Opportunity stages', `/organizations/${ORG}/sales/configuration/opportunity-stages`],
-      ['Customer fields', `/organizations/${ORG}/sales/configuration/fields`],
+      ['Relationship stages', `/organizations/${ORG}/crm/configuration/relationship-stages`],
+      ['Opportunity stages', `/organizations/${ORG}/crm/configuration/opportunity-stages`],
+      ['Customer fields', `/organizations/${ORG}/crm/configuration/fields`],
     ]);
     await user.keyboard('{ArrowDown}');
     expect(document.activeElement?.getAttribute('role')).toBe('menuitem');
@@ -74,7 +74,7 @@ describe('CRM Home Configure control (ConfigureMenu over workspaceConfigureItems
 describe('CRM configuration page identity', () => {
   it('names Configuration as a plain-text ancestor on a CRM configuration page', () => {
     expect(workspaceConfigCrumbs(ORG, 'sales-stages', gate())).toEqual([
-      { label: 'CRM', href: `/organizations/${ORG}/sales` },
+      { label: 'CRM', href: `/organizations/${ORG}/crm` },
       { label: 'Configuration', href: undefined },
     ]);
     // No workspace has a landing to link to (Batch A).
@@ -82,11 +82,11 @@ describe('CRM configuration page identity', () => {
   });
 
   it('resolves CRM configuration under a non-linking Configuration level, with Up going to CRM', () => {
-    const location = resolveLocation({ pathname: `/organizations/${ORG}/sales/configuration/relationship-stages`, access: { gate: gate() } }) as ResolvedLocation;
+    const location = resolveLocation({ pathname: `/organizations/${ORG}/crm/configuration/relationship-stages`, access: { gate: gate() } }) as ResolvedLocation;
     expect(location.status).toBe('resolved');
     const configuration = location.trail.find((crumb) => crumb.label === 'Configuration');
     expect(configuration).toBeDefined();
     expect(configuration?.href).toBeUndefined();
-    expect(location.up).toBe(`/organizations/${ORG}/sales`);
+    expect(location.up).toBe(`/organizations/${ORG}/crm`);
   });
 });

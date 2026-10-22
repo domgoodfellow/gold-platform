@@ -41,7 +41,7 @@ export function WorkspaceHome({
     <AppPage>
       {location ? null : <PageLocation crumbs={crumbs} current={title} />}
       <div className="mb-6 flex flex-wrap items-center justify-end gap-x-4 gap-y-3">
-        {location ? <LocationHeading required /> : <h1 className={titleInBar ? 'sr-only' : 'mr-auto text-2xl font-semibold tracking-tight'}>{title}</h1>}
+        {location ? <LocationHeading required /> : <LocationHeading fallback={<h1 className={titleInBar ? 'sr-only' : 'mr-auto text-2xl font-semibold tracking-tight'}>{title}</h1>} />}
         {actions || insights || activity || configure ? (
           <div className="flex flex-wrap items-center gap-2">
             {actions}

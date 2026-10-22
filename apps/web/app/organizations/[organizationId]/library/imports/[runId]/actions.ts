@@ -44,6 +44,6 @@ export async function applyImportRunAction(
   revalidatePath(libraryImportHref(organizationId, runId));
   revalidatePath(libraryHref(organizationId, 'sources'));
   revalidatePath(`/organizations/${organizationId}/crm`);
-  revalidatePath(`/organizations/${organizationId}/customers`);
+  revalidatePath(`/organizations/${organizationId}/crm/contacts`);
   redirect(libraryImportHref(organizationId, runId));
 }

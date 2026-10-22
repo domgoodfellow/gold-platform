@@ -37,7 +37,7 @@ import type { Capability } from '@/lib/domain/tenancy/capabilities';
 export type ShellSectionKey = 'home' | 'library' | 'workspaces' | 'administration' | 'settings-personal' | 'settings-organization' | 'settings-administration';
 
 export type NavItem = {
-  /** Unique across the whole projection; also the icon key. */
+  /** Unique within a rendered context; also the icon key. Dashboard is shared across workspace contexts. */
   key: string;
   label: string;
   href: string;
@@ -84,10 +84,7 @@ export type ShellSection = {
   key: ShellSectionKey;
   /** `null` draws no heading — Home names itself. */
   label: string | null;
-  /**
-   * The heading's own destination: an entered workspace's canonical Home (ADR-047). Present only
-   * when this person may operate that Home, so a configuration-only member's heading is not a link.
-   */
+  /** Optional linked heading for non-workspace contexts. Workspace identity is plain text. */
   href?: string;
   items: NavItem[];
 };
@@ -128,6 +125,7 @@ function areaItem(organizationId: string, area: Area, section: ShellSectionKey):
 /** A workspace page, which also stays selected while somebody edits the configuration behind it. */
 function destinationItem(organizationId: string, area: Area): NavItem {
   const editors = CONFIG_TARGETS.filter((target) => target.destination === area.segment).map((target) => `/organizations/${organizationId}/${target.path}`);
+  if (area.segment === 'opportunity-pipeline') editors.push(areaHref(organizationId, 'opportunities'));
   return { ...areaItem(organizationId, area, 'workspaces'), ...(editors.length ? { activeHrefs: editors } : {}) };
 }
 
@@ -256,7 +254,10 @@ export function projectShell(input: ShellInput): ShellSection[] {
       configuration,
       ...(calendar ? { calendar } : {}),
       configurationOnly: !home,
-      destinations: areas.filter((area) => area.segment !== home?.segment).map((area) => destinationItem(organizationId, area)),
+      destinations: [
+        ...(home ? [{ ...destinationItem(organizationId, home), key: 'workspace-dashboard', label: 'Dashboard', exact: true }] : []),
+        ...areas.filter((area) => area.segment !== home?.segment).map((area) => destinationItem(organizationId, area)),
+      ],
     }];
   });
 
@@ -277,8 +278,8 @@ function workspaceContext(workspace: NavItem, organizationId: string): ContextNa
   return {
     workspace,
     backHref: areaHref(organizationId, 'home'),
-    // The workspace heading is the way to its Home; no child repeats the Home route (ADR-047).
-    sections: [{ key: 'workspaces', label: workspace.label, ...(!workspace.configurationOnly ? { href: workspace.href } : {}), items: [
+    // Identity is separate from the explicit, permission-filtered Dashboard destination (ADR-049).
+    sections: [{ key: 'workspaces', label: workspace.label, items: [
       ...(workspace.destinations ?? []),
       ...(workspace.configuration ? [workspace.configuration] : []),
       ...(workspace.administration ? [workspace.administration] : []),
@@ -418,7 +419,7 @@ export type LocationNavigation = {
 export type PageNavigation = {
   parentHref?: string;
   activeKey: string | null;
-  /** `href` is the group heading's own destination (a workspace Home); `current` marks it as this page. */
+  /** Optional linked grouping for non-workspace contexts. Workspace identity stays plain text. */
   groups: { label: string | null; href?: string; current?: boolean; items: NavItem[] }[];
 };
 
@@ -462,7 +463,7 @@ export function pageNavigation(navigation: LocationNavigation | undefined, pathn
   if (workspace || sections.some((section) => section.key.startsWith('settings-'))) {
     const append = (items: NavItem[], label: string | null, href?: string) => {
       const leaves = items.filter((item) => inScope(item.href) && !item.children).map((item) => ({ ...item, children: undefined }));
-      // A workspace heading is its Home: the group keeps it even when the workspace has no other page.
+      // Non-workspace linked groups may retain their own destination; workspaces use Dashboard items.
       const heading = href && inScope(href) ? { href, current: cleanPath(href) === path } : {};
       if (leaves.length || 'href' in heading) groups.push({ label, ...heading, items: leaves });
       for (const item of items) if (item.children) append(item.children, item.label);

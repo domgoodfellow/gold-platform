@@ -171,7 +171,7 @@ export async function readLibraryFile(
   };
 
   const [customers, locations, assets, workItems] = await Promise.all([
-    ids.customer.length ? db.from('customers').select('id, name').in('id', ids.customer) : { data: [], error: null },
+    ids.customer.length ? db.from('contacts').select('id, name').in('id', ids.customer) : { data: [], error: null },
     ids.location.length ? db.from('locations').select('id, label').in('id', ids.location) : { data: [], error: null },
     ids.asset.length ? db.from('assets').select('id, name').in('id', ids.asset) : { data: [], error: null },
     ids.work_item.length ? db.from('work_items').select('id, title').in('id', ids.work_item) : { data: [], error: null },

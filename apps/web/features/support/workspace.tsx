@@ -878,7 +878,7 @@ export function SupportWorkspace({
                 <p>{data.serviceReview.targetTitle} · Revision {data.serviceReview.revisionNumber}</p>
                 <p className="whitespace-pre-wrap">{data.serviceReview.description}</p>
                 <p className="text-xs text-muted">Portal customer: {data.serviceReview.responderName} · {new Date(data.serviceReview.respondedAt).toLocaleString('en-GB', { timeZone: timezone })}</p>
-                <Link className="underline" href={`/organizations/${organizationId}/customers/${data.serviceReview.customerId}`}>Open customer engagement</Link>
+                <Link className="underline" href={`/organizations/${organizationId}/crm/contacts/${data.serviceReview.customerId}`}>Open customer engagement</Link>
                 <p className="text-xs text-muted">Original review evidence is retained independently of Case resolution.</p>
               </div>
             </OperationalPanel> : null}

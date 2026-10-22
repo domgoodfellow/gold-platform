@@ -55,6 +55,9 @@ import {
   Hash,
   History,
   Home,
+  Gauge,
+  GitBranch,
+  ContactRound,
   Headset,
   Layers,
   LayoutDashboard,
@@ -122,6 +125,7 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
   field: Wrench,
   sales: Users,
   pipeline: Filter,
+  'opportunity-pipeline': GitBranch,
   comms: Phone,
   calls: Phone,
   'comms-inbox': Inbox,
@@ -137,7 +141,7 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
   'studio-portal': Users,
   'studio-templates': LayoutTemplate,
   schedule: CalendarDays,
-  customers: Users,
+  customers: ContactRound,
   locations: MapPin,
   assets: Package,
   resources: Layers,
@@ -151,6 +155,7 @@ export const AREA_ICONS: Record<string, LucideIcon> = {
 /** Every item the projection can produce: the areas and the Administration destinations. */
 export const NAV_ICONS: Record<string, LucideIcon> = {
   ...AREA_ICONS,
+  'workspace-dashboard': Gauge,
   'workspace-configuration': Settings,
   // Workspace destinations share their icons across sidebar, rail and phone Menu.
   'workspace-crm': Users,
@@ -341,19 +346,17 @@ function PrimaryNavigation({ organizationId, home, library, active }: { organiza
 }
 
 /**
- * The heading of an entered workspace, which is also the way to its canonical Home (ADR-047): the
- * workspace's own icon and name, set apart as the group's heading rather than drawn as one of its
- * pages, current while the Home is open. Its accessible name says where it goes.
+ * Workspace identity remains visible in the rail without competing with the selected page.
  */
-function WorkspaceHeading({ workspace, href, label, current }: { workspace: NavItem; href: string; label: string; current: boolean }) {
+function WorkspaceHeading({ workspace, label }: { workspace: NavItem; label: string }) {
   const Icon = NAV_ICONS[workspace.key];
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={current} tooltip={`${label} home`} className="font-semibold">
-        <Link href={href} aria-label={`${label} home`} aria-current={current ? 'page' : undefined}>
+      <SidebarMenuButton asChild tooltip={label} className="font-semibold hover:bg-transparent">
+        <h2 aria-label={label}>
           {Icon ? <Icon aria-hidden data-workspace-icon /> : null}
           <span>{label}</span>
-        </Link>
+        </h2>
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
@@ -378,11 +381,9 @@ export function OrgNav({ sections, organizationId }: { sections: ShellSection[];
 
   const group = (section: ShellSection) => (
     <SidebarGroup key={section.key} className={!context && section.key === 'administration' ? 'border-t border-sidebar-border' : undefined}>
-      {section.label && section.href && context ? (
-        // An entered workspace's heading is its Home (ADR-047): a row, so it keeps its icon in the collapsed rail.
-        // The divider sets the heading apart from the workspace's own pages, expanded or collapsed.
+      {section.label && context && section.key === 'workspaces' ? (
         <SidebarMenu data-workspace-heading className="mb-2 border-b border-sidebar-border pb-2">
-          <WorkspaceHeading workspace={context.workspace} href={section.href} label={section.label} current={pathname.split(/[?#]/)[0].replace(/\/$/, '') === section.href} />
+          <WorkspaceHeading workspace={context.workspace} label={section.label} />
         </SidebarMenu>
       ) : section.label ? <SidebarGroupLabel>{section.label}</SidebarGroupLabel> : null}
       <SidebarGroupContent>

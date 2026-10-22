@@ -13,7 +13,7 @@ const date = (iso: string, timezone: string) => new Intl.DateTimeFormat('en-CA',
 
 /** Where a record opens: the work record owns the job, and the customer's own page owns the customer. Finance owns neither. */
 const workHref = (organizationId: string, workItemId: string) => `/organizations/${organizationId}/work/${workItemId}?tab=financials`;
-const customerHref = (organizationId: string, customerId: string) => `/organizations/${organizationId}/customers/${customerId}`;
+const customerHref = (organizationId: string, customerId: string) => `/organizations/${organizationId}/crm/contacts/${customerId}`;
 
 export function InvoiceStandingBadge({ row }: { row: Pick<FinanceInvoiceRow, 'settled' | 'overdue'> }) {
   if (row.settled) return <Badge tone="success">Settled</Badge>;

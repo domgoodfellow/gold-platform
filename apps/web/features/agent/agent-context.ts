@@ -19,12 +19,17 @@ export type AgentViewing = {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function resolveAgentViewing(pathname: string): AgentViewing {
-  const segment = currentSegment(pathname);
-  const area = AREAS.find((candidate) => candidate.segment === segment);
+  // /organizations/{id}/{area route}/{record}. Area routes can span segments (crm/contacts), so the
+  // longest registered route that prefixes the path names the area.
+  const parts = pathname.split(/[?#]/)[0].split('/').filter(Boolean);
+  const rest = parts.slice(2);
+  const routeOf = (candidate: (typeof AREAS)[number]) => (candidate.route ?? candidate.segment).split('/');
+  const byRoute = AREAS.filter((candidate) => routeOf(candidate).every((part, index) => rest[index] === part))
+    .sort((a, b) => routeOf(b).length - routeOf(a).length)[0];
+  const area = byRoute ?? AREAS.find((candidate) => candidate.segment === currentSegment(pathname));
   if (!area) return { workspace: null, recordId: null };
 
-  // /organizations/{id}/{area}/{record}
-  const parts = pathname.split(/[?#]/)[0].split('/').filter(Boolean);
-  const record = parts[2] === 'support' && parts[3] === 'cases' ? parts[4] : parts[3];
+  const depth = byRoute ? routeOf(byRoute).length : 1;
+  const record = rest[0] === 'support' && rest[1] === 'cases' ? rest[2] : rest[depth];
   return { workspace: area.label, recordId: record && UUID.test(record) ? record : null };
 }

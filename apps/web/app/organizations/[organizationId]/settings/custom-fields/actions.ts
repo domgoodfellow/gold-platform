@@ -23,8 +23,8 @@ export type CreateFieldState = { error: string | null; created: boolean };
 function revalidateFieldSurfaces(organizationId: string, entityType: string) {
   revalidatePath(`/organizations/${organizationId}/settings/custom-fields`);
   if (entityType === 'customer') {
-    revalidatePath(`/organizations/${organizationId}/customers`);
-    revalidatePath(`/organizations/${organizationId}/sales`);
+    revalidatePath(`/organizations/${organizationId}/crm/contacts`);
+    revalidatePath(`/organizations/${organizationId}/crm`);
   }
   if (entityType === 'work_item') {
     revalidatePath(`/organizations/${organizationId}/work`);

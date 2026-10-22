@@ -20,7 +20,7 @@ describe('business vocabulary and navigation',()=>{
     const workspaces = sections.find(section => section.key === 'workspaces')!.items;
     expect(workspaces.map(item => item.label)).toEqual(['CRM', 'Communications', 'Marketing', 'Support', 'Work', 'Finance', 'Automations', 'AI', 'Studio']);
     expect(sections.flatMap(section => section.items).map(item => item.key)).not.toEqual(expect.arrayContaining(['customers', 'calls', 'finance-invoices']));
-    expect(workspaceNavigation(sections, '/organizations/11111111-1111-4111-8111-111111111111/customers')!.sections[0].items.find(item => item.key === 'customers')!.label).toBe('Patients');
+    expect(workspaceNavigation(sections, '/organizations/11111111-1111-4111-8111-111111111111/crm/contacts')!.sections[0].items.find(item => item.key === 'customers')!.label).toBe('Patients');
     expect(workspaceNavigation(sections, '/organizations/11111111-1111-4111-8111-111111111111/calls')!.sections[0].items.find(item => item.key === 'calls')!.label).toBe('Phone desk');
     expect(workspaceNavigation(sections, '/organizations/11111111-1111-4111-8111-111111111111/finance/invoices')!.workspace.label).toBe('Finance');
     const destinations = businessDestinations(input);
@@ -29,4 +29,12 @@ describe('business vocabulary and navigation',()=>{
     const restricted = projectBusinessNavigation({ ...input, capabilities: new Set() }, profile);
     expect(restricted.find(section => section.key === 'workspaces')!.items.flatMap(item => item.destinations ?? []).map(item => item.key)).not.toContain('calls');
   });
+  it('keeps Dashboard first and CRM Contacts before Pipeline despite an older saved order',()=>{
+    const input={organizationId:'org',enabledModules:new Set(['reception']),featureAvailability:new Set(AREAS.flatMap(area=>area.featureKeys??[])),capabilities:new Set(ALL_CAPABILITIES)};
+    const sections=projectBusinessNavigation(input,{...profile,navigation:['opportunity-pipeline','customers'],labels:{'workspace-dashboard':'Old overview'}});
+    const crm=sections.flatMap(section=>section.items).find(item=>item.key==='workspace-crm')!;
+    expect(crm.destinations?.map(item=>item.key)).toEqual(['workspace-dashboard','customers','opportunity-pipeline']);
+    expect(crm.destinations?.[0].label).toBe('Dashboard');
+  });
+
 });

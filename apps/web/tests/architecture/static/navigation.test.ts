@@ -1,7 +1,7 @@
 import { readdirSync, existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { Bot, Headset, Megaphone, Wrench } from 'lucide-react';
+import { Bot, Gauge, Headset, Megaphone, Wrench } from 'lucide-react';
 import {
   AREAS,
   AREA_GROUPS,
@@ -64,6 +64,8 @@ function routeSegmentsOnDisk(): string[] {
 }
 
 describe('the operator shell navigation', () => {
+  it('uses Gauge for the explicit workspace Dashboard', () => { expect(NAV_ICONS['workspace-dashboard']).toBe(Gauge); });
+  it('uses Gauge for the explicit workspace Dashboard', () => { expect(NAV_ICONS['workspace-dashboard']).toBe(Gauge); });
   it('points every entry at a route that exists', () => {
     for (const area of AREAS) {
       expect(
@@ -153,11 +155,12 @@ describe('the operator shell navigation', () => {
     }
   });
 
-  it('keeps Opportunity tools under CRM without permanent sidebar children', () => {
-    for (const segment of ['opportunities', 'opportunity-pipeline']) {
+  it('makes the opportunity Pipeline operational and keeps compatibility tools contextual', () => {
+    for (const segment of ['opportunities', 'pipeline']) {
       expect(AREAS.find((area) => area.segment === segment)).toMatchObject({ workspace: 'crm', sidebar: false });
     }
-    expect(areaHref('org', 'opportunity-pipeline')).toBe('/organizations/org/opportunities/pipeline');
+    expect(AREAS.find(area => area.segment === 'opportunity-pipeline')).toMatchObject({workspace:'crm',label:'Pipeline'});
+    expect(areaHref('org', 'opportunity-pipeline')).toBe('/organizations/org/crm/pipeline');
   });
 
   it('registers every workspace and draws a row for only those with a page', () => {
@@ -368,7 +371,7 @@ describe('the operator shell navigation', () => {
     expect(inSidebar).toEqual([
       'home',
       'library',
-      'sales', 'customers', 'pipeline',
+      'sales', 'customers', 'opportunity-pipeline',
       'comms', 'calls', 'comms-inbox',
       'marketing', 'marketing-campaigns', 'marketing-audiences', 'marketing-leads', 'marketing-performance', 'support', 'support-cases', 'support-queue-workbench', 'support-service-levels-view', 'support-reports', 'ai', 'ai-activity', 'ai-evaluations',
       'finance', 'finance-quotes', 'finance-invoices', 'finance-payments',
@@ -1106,9 +1109,9 @@ describe('sibling views are navigation, not page actions', () => {
     expect(read(`${UI}/tab-styles.ts`)).toContain('aria-[current=page]:font-semibold');
   });
 
-  it('Customers and Pipeline remain contextual pages of CRM without a redundant tab strip', () => {
-    const list = read(`${ROUTES}/customers/page.tsx`);
-    const pipeline = read(`${ROUTES}/customers/pipeline/page.tsx`);
+  it('Contacts and relationship stages remain contextual pages of CRM without a redundant tab strip', () => {
+    const list = read(`${ROUTES}/crm/contacts/page.tsx`);
+    const pipeline = read(`${ROUTES}/crm/contacts/stages/page.tsx`);
     for (const page of [list, pipeline]) expect(page).not.toMatch(/ViewNav|ViewTabs/);
     expect(() => read(`${WEB_ROOT}/features/crm/customers/customers-view-nav.tsx`)).toThrow();
     expect(code(list)).not.toMatch(/<Link\b/);

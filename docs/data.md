@@ -82,6 +82,12 @@ the live revision pointer. Termination and engagement transitions do not mutate 
 canonical artifacts, Work, subscription or Finance records. TypeScript and PostgreSQL enforce the
 same bounded draft and Services configuration contracts. Generated types use `pnpm db:types`.
 
+### Contact classification and intake ownership
+
+`20261229000001_contact_lifecycle_temperature.sql` extends `customers` with a nullable closed lifecycle and closed lead temperature. Existing lifecycle values stay NULL (Unclassified); only future inserts default to Lead. Unrated records absence of a temperature rating. No existing identifiers, stage assignments, foreign keys or relationships are rewritten. `create_contact` and `update_contact` extend the established customer commands transactionally, with exact organization capability checks and classification audit events; existing command signatures remain usable. Types are generated from the local schema using `pnpm db:types`.
+
+`20261229000002_crm_source_sync_review.sql` extends the existing Library mapping `sync_mode` to import/sync, guarded by `configure_crm_import_sync`; only active connected worksheets may select sync. Existing CSV identity remains scoped by filename and explicit source ID (or content fingerprint). Worksheet identity uses the immutable resource ID and provider external row ID. Runs preserve the saved mapping and external-record provenance. For fields with a previous applied source value, updates compare current CRM values with that snapshot and the incoming value. Divergent local edits fail the row with a reconciliation message; the contact and previous source link remain intact. Reconcile the spreadsheet with the local value, or leave the contact unchanged and stop synchronization, then review a fresh run. Missing source rows only change Library reconciliation state; no contact delete command is involved. CRM scheduling remains manual and reviewed.
+
 ### CRM Follow-up persistence and operating reads
 
 `crm_follow_ups` stores future/actionable CRM work. Organization-leading foreign keys enforce Customer and owner scope; `(organization_id, customer_id, opportunity_id)` also enforces the Opportunity's Customer. RLS requires tenant membership and `follow_up.manage` for writes. Column grants protect identity, creator and completion evidence. An invoker trigger stamps completion and records created/updated/completed/cancelled Events in the existing log atomically. Completed/cancelled records cannot be edited or deleted. Customer activity uses snapshotted Customer attribution.
@@ -1245,3 +1251,23 @@ Content admits exactly version, settings, defaultPageId, pages and navigation. D
 ## Business foundation persistence
 
 Forward migrations `20261227000001`?`20261227000007` add private inbound call snapshots/stable route cursors, a Membership-readable and owner-command-written business profile, receptionist configuration, and private provider session/event records. Profile and receptionist writes use revision checks with immediate conflict responses; raw client writes are denied. Session admission serializes each business budget, requires Reception and Assistant entitlement and a usable central voice assignment. Event deduplication and duration/token metering commit atomically. Retry fences recheck live Membership capabilities and terminal call state. Applied locally only; hosted application is a separate release action.
+
+## Approved CRM consolidation and compatibility retirement
+
+V1.1 requires canonical `contacts` persistence with stable existing IDs, explicit Person/Company/Unspecified type, typed identity details and organization-bound affiliations. Existing associations remain attached to the same identity through PostgreSQL dependency-preserving table renaming. Transitional customer names are adapters to that identity, never a second store. The existing CRM obligations are the suitable task authority; no shared generic task table exists. Preserve task identifiers, assignments, due dates, statuses and historical event vocabulary.
+
+Legacy database views, command/domain adapters and URL redirects have one compatibility period: retain through migration rollout and one client release after all consumers have moved. Remove only after consumer inventory and URL telemetry show no legacy use for 30 consecutive days, historical import/provider replay tests pass, and a forward migration has been reviewed. Do not remove historical event names, capability identifiers or applied SQL as a cosmetic rename. Legacy routes retain tenant, record ID and query parameters.
+
+`20261230000001_canonical_contact_identity.sql` renames `customers` to `contacts`, `customer_stages` to `contact_relationship_stages` and `crm_follow_ups` to `crm_tasks`. A rename keeps every row ID and every inbound foreign key (opportunities, quotes, invoices, calls, conversations, work, locations, documents, service engagements, portal access, import staging, external record links), along with RLS policies and triggers. Stored functions that named the old tables are rewritten to the new names in the same transaction. `contacts.contact_type` is `person`, `company` or `unspecified`; every existing row is `unspecified` and nothing infers a type. Typed details live in `contact_people` and `contact_companies`, and `contact_affiliations` links a person to a company with title, primary flag and active/historical state. Composite `(organization_id, id, contact_type)` keys make a wrong type or a cross-organization link impossible. All three new tables are read-only to members and written only through `create_crm_contact`, `update_crm_contact` (which classifies an Unspecified record once and refuses any later change of type) and `save_contact_affiliation`, each checking `customer.create` or `customer.update`. Columns keep their existing names (`customer_id`, `matched_customer_id`), and so do event entity types and capability keys, because they are historical vocabulary.
+
+`20261230000002_crm_contact_intake.sql` adds the `contact_directory` view (invoker RLS) that projects each contact's active primary company for sorting and grouping. It adds `opportunities.primary_person_id`, which must be a person actively affiliated with the opportunity's company. It also replaces `apply_import_run` so imports write `contacts.contact_type` from the mapping (default `unspecified`) and attach an affiliation only by an exact company contact ID, never by a similar name.
+
+| Old name | Canonical name | Compatibility layer |
+| --- | --- | --- |
+| table `customers` | `contacts` | view `customers` (invoker RLS, same rows) |
+| table `customer_stages` | `contact_relationship_stages` | view `customer_stages` |
+| table `crm_follow_ups` | `crm_tasks` | view `crm_follow_ups` |
+| `lib/domain/customers/customers.ts` | `lib/domain/contacts/contacts.ts` | re-export shim, no app callers |
+| `lib/domain/follow-ups/follow-ups.ts` | `lib/domain/tasks/tasks.ts` | re-export shim, no app callers |
+
+Local ledger verification on 2026-10-22 found all four migrations applied through `20261230000002`. These versions follow the existing future-dated repository sequence; new migrations must sort after that maximum. Do not rename applied files. Hosted ledger/application is a separately authorized release step.

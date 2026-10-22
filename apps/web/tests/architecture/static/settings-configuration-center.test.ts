@@ -293,9 +293,9 @@ describe('contextual Configure, generalized from Work â€” the same componen
       expect(source).toContain('EntityFieldsConfiguration');
       expect(source).not.toContain('CreateFieldForm');
     }
-    expect(readFileSync(`${ROUTES}/sales/configuration/fields/page.tsx`, 'utf8')).toContain('EntityFieldsConfiguration');
+    expect(readFileSync(`${ROUTES}/crm/configuration/fields/page.tsx`, 'utf8')).toContain('EntityFieldsConfiguration');
     // Package 3A retired Customers' link-only Configure panel; customer fields are configured on their CRM page only.
-    expect(readFileSync(`${ROUTES}/customers/page.tsx`, 'utf8')).not.toContain('ConfigureRegistrar');
+    expect(readFileSync(`${ROUTES}/crm/contacts/page.tsx`, 'utf8')).not.toContain('ConfigureRegistrar');
   });
 
   it('Schedule swapped the raw date input for the shared Calendar/Popover DatePicker', () => {

@@ -31,7 +31,7 @@ describe('dialer workspace', () => {
     expect(screen.getByText('Recorded notes for Bob')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Call' }));
     await waitFor(() => expect(dial).toHaveBeenCalledWith(expect.objectContaining({ customerId: 'bob', toNumber: '+14165550102', contactLabel: 'Bob' })));
-    expect(screen.getByRole('link', { name: 'Bob' })).toHaveAttribute('href', '/organizations/tenant/customers/bob');
+    expect(screen.getByRole('link', { name: 'Bob' })).toHaveAttribute('href', '/organizations/tenant/crm/contacts/bob');
   });
   it('clears customer attribution when dialing another number', async () => {
     render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101')]} />);
@@ -48,7 +48,7 @@ describe('dialer workspace', () => {
   it('keeps every region of the console when the business has nothing recorded and cannot call yet', () => {
     render(<DialerWorkspace {...common} queue={[]} queueTotal={0} options={blocked('not-configured', 'No ready outbound number is assigned.', 'phone-numbers')} setupHref="/organizations/tenant/comms/configuration/numbers" />);
     expect(screen.getByRole('region', { name: 'Call queue' })).toHaveTextContent(/No open call follow-ups/);
-    expect(screen.getByRole('link', { name: 'Open follow-ups' })).toHaveAttribute('href', '/organizations/tenant/follow-ups');
+    expect(screen.getByRole('link', { name: 'Open follow-ups' })).toHaveAttribute('href', '/organizations/tenant/crm/tasks');
     expect(screen.getByRole('region', { name: 'Customer' })).toHaveTextContent(/appear here when you call from a follow-up/);
     const readiness = screen.getByRole('region', { name: 'Calling readiness' });
     expect(within(readiness).getByText('No outbound number')).toBeVisible();

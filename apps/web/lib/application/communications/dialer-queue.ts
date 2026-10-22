@@ -1,12 +1,12 @@
 import type { Db } from '@/lib/db/types';
-import { getCustomer, type Customer } from '@/lib/domain/customers/customers';
-import { listFollowUps, type FollowUp } from '@/lib/domain/follow-ups/follow-ups';
+import { getContact, type Contact } from '@/lib/domain/contacts/contacts';
+import { listTasks, type CrmTask } from '@/lib/domain/tasks/tasks';
 import { listCallPage, type Call } from '@/lib/domain/reception/calls';
 
 /** How many of a queued customer's most recent recorded calls the Dialer shows beside them. */
 export const RECENT_CALLS_PER_CUSTOMER = 3;
 
-export type DialerQueueEntry = { followUp: FollowUp; customer: Customer | null; recentCalls: Call[] };
+export type DialerQueueEntry = { followUp: CrmTask; customer: Contact | null; recentCalls: Call[] };
 
 /**
  * The first page of open call follow-ups, earliest due first, with each customer read once and
@@ -14,11 +14,11 @@ export type DialerQueueEntry = { followUp: FollowUp; customer: Customer | null; 
  * the same organization under the caller's own access.
  */
 export async function loadDialerQueue(db: Db, organizationId: string): Promise<{ items: DialerQueueEntry[]; total: number }> {
-  const followUps = await listFollowUps(db, { organizationId, status: 'open', kind: 'call', limit: 25 });
+  const followUps = await listTasks(db, { organizationId, status: 'open', kind: 'call', limit: 25 });
   const ids = [...new Set(followUps.map(item => item.customerId))];
   const context = new Map(await Promise.all(ids.map(async customerId => {
     const [customer, calls] = await Promise.all([
-      getCustomer(db, { organizationId, customerId }),
+      getContact(db, { organizationId, customerId }),
       listCallPage(db, { organizationId, filter: { customerId }, limit: RECENT_CALLS_PER_CUSTOMER }),
     ]);
     return [customerId, { customer, recentCalls: calls.items }] as const;

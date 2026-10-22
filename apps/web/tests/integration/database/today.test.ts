@@ -119,7 +119,7 @@ describe('Home, real data behind its blocks', () => {
     await createCustomer(dbA, { organizationId: orgA, name: 'Ana Reyes' });
 
     const ownActivity = await listRecentActivity(dbA, { organizationId: orgA });
-    const customerCreated = ownActivity.find((entry) => entry.description === 'Added as a customer');
+    const customerCreated = ownActivity.find((entry) => entry.description === 'Contact added');
     expect(customerCreated).toBeDefined();
     expect(customerCreated?.actorName).toBe('Founder');
 

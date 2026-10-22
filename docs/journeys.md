@@ -2,11 +2,17 @@
 
 Status describes repository implementation, not hosted/provider acceptance. **Built** means the path exists; **partial** means a required connection or application step is absent; **missing** means no implementation. `web/` below means `apps/web/`; `api/` means `apps/api/`. `{org}` and `{customer}` are organization and Customer IDs.
 
+## CRM relationship intake
+
+CRM Dashboard is `/crm`. Contacts at `/crm/contacts` is one directory of people and companies (All, People, Companies, optional grouping by company); new contacts must be a Person or a Company, and existing records stay Unspecified until someone classifies them. Lifecycle and temperature are independent of type. Contact detail is `/crm/contacts/{contact}` and shows company affiliations or associated people. Pipeline at `/crm/pipeline` operates opportunities; opportunity detail is `/crm/opportunities/{opportunity}`. Tasks (`/crm/tasks`) and relationship stages (`/crm/contacts/stages`) are contextual, not sidebar destinations. Old `/sales`, `/customers`, `/opportunities` and `/follow-ups` links redirect temporarily (removal criteria in `docs/data.md`).
+
+Contacts Import and Library Sources/file selections enter the same source, mapping, duplicate review, confirmation and report path at `/library/imports/new`. Worksheet mappings can retain one-way association; source Sync now refreshes the existing Library snapshot and opens reviewed CRM updates. Automatic CRM scheduling is not enabled. Removed source rows preserve the contact; conflicting local edits appear as failed import rows requiring reconciliation. Live Google/Microsoft authorization and provider access remain separate acceptance evidence.
+
 ## Sales-led onboarding
 
 | Step / route | Owner | Status and evidence |
 | --- | --- | --- |
-| Prospect Customer: `/organizations/{org}/customers/{customer}` | CRM | **Built.** `web/app/organizations/[organizationId]/customers/[customerId]/page.tsx`. Discovery/configuration/proposal reads and tabs require the configured GildOps operating organization and live platform authority. |
+| Prospect contact: `/organizations/{org}/crm/contacts/{customer}` | CRM | **Built.** `web/app/organizations/[organizationId]/crm/contacts/[contactId]/page.tsx`. Discovery/configuration/proposal reads and tabs require the configured GildOps operating organization and live platform authority. |
 | Discovery tab, same route | CRM discovery | **Built.** `web/features/crm/customers/discovery-snapshot-section.tsx`; `web/lib/domain/customers/discovery-snapshots.ts`. Durable operational answers. |
 | Proposed configuration tab, same route | CRM sales composition / Catalogue | **Partial.** `web/lib/domain/customers/configuration-recommendation.ts`. Catalogue-based recommendations exist; these do not configure the future tenant. |
 | Commercial proposal and invite, same route | Commercial proposals / proposal access | **Built.** `web/features/crm/customers/commercial-proposal-section.tsx`; `web/lib/domain/customers/proposal-invites.ts`. Versioned terms and an access link; creating a link is not email delivery. |

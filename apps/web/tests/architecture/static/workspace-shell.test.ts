@@ -14,6 +14,7 @@ import ts from 'typescript';
  */
 
 const WEB = fileURLToPath(new URL('../../..', import.meta.url));
+/** Area folders that moved under a workspace path; the area key itself is unchanged. */const PAGE_DIR: Record<string, string> = { customers: 'crm/contacts' };
 
 it('page drawer actions stay outside scrolling forms', () => {
   const offenders: string[] = [];
@@ -155,7 +156,7 @@ describe('Agent is workspace-global and the support modes are page-level', () =>
   it('only offers a mode where the page also registers its content', () => {
     const root = `${WEB}/app/organizations/[organizationId]`;
     for (const area of ['customers', 'work']) {
-      const source = readFileSync(`${root}/${area}/page.tsx`, 'utf8');
+      const source = readFileSync(`${root}/${PAGE_DIR[area] ?? area}/page.tsx`, 'utf8');
       expect(source, `${area} offers Activity`).toMatch(/\bactivity\b/);
       expect(source, `${area} registers Activity`).toContain('<SupportRegistrar mode="activity"');
       expect(source, `${area} offers Insights`).toContain('insights={mayInsight &&');
@@ -190,7 +191,7 @@ describe('Agent is workspace-global and the support modes are page-level', () =>
     // Customers is absent: Package 3A retired its link-only Configure panel (CRM configuration is its sidebar group).
     for (const area of ['resources', 'locations', 'assets', 'schedule', 'work']) {
       const source = readFileSync(
-        `${WEB}/app/organizations/[organizationId]/${area}/page.tsx`,
+        `${WEB}/app/organizations/[organizationId]/${PAGE_DIR[area] ?? area}/page.tsx`,
         'utf8',
       );
       expect(source, `${area}/page.tsx asks for Configure`).toMatch(/configure=\{mayConfigure\}/);
@@ -536,7 +537,7 @@ describe('Business area roots with an Add action keep it in their CollectionHead
   it('Resources, Locations, Customers and Assets no longer render PageHeading or register chrome', () => {
     for (const area of ['resources', 'locations', 'customers', 'assets']) {
       const source = readFileSync(
-        `${WEB}/app/organizations/[organizationId]/${area}/page.tsx`,
+        `${WEB}/app/organizations/[organizationId]/${PAGE_DIR[area] ?? area}/page.tsx`,
         'utf8',
       );
       expect(source, `${area}/page.tsx should not import PageHeading`).not.toContain('PageHeading');
@@ -553,7 +554,7 @@ describe('Business area roots with an Add action keep it in their CollectionHead
     };
     for (const [area, trigger] of Object.entries(triggers)) {
       const source = readFileSync(
-        `${WEB}/app/organizations/[organizationId]/${area}/page.tsx`,
+        `${WEB}/app/organizations/[organizationId]/${PAGE_DIR[area] ?? area}/page.tsx`,
         'utf8',
       );
       const start = source.indexOf('<CollectionHeader');
@@ -696,7 +697,7 @@ describe('organization page composition', () => {
   });
 
   it('Import is offered by the organization capability, not by the module alone or by platform role', () => {
-    const customers = read(`${WEB}/app/organizations/[organizationId]/customers/page.tsx`);
+    const customers = read(`${WEB}/app/organizations/[organizationId]/crm/contacts/page.tsx`);
     expect(customers).toContain("organization.capabilities.includes('integration.manage')");
     expect(customers).not.toMatch(/staff/i);
     const newImport = read(

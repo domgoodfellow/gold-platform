@@ -277,7 +277,7 @@ export function DialerWorkspace({
               <dd className={cx('whitespace-pre-wrap', !selected.followUp.notes && 'text-muted')}>{selected.followUp.notes ?? 'No notes recorded.'}</dd>
               {selected.followUp.opportunityId ? <>
                 <dt className="text-muted">Opportunity</dt>
-                <dd><Link className="underline underline-offset-4" href={`/organizations/${organizationId}/opportunities/${selected.followUp.opportunityId}`}>{selected.followUp.opportunityTitle ?? 'Open opportunity'}</Link></dd>
+                <dd><Link className="underline underline-offset-4" href={`/organizations/${organizationId}/crm/opportunities/${selected.followUp.opportunityId}`}>{selected.followUp.opportunityTitle ?? 'Open opportunity'}</Link></dd>
               </> : null}
             </dl>
           ) : <p className="text-sm text-muted">A number dialled directly has no follow-up. Choose one in the queue to see its notes here.</p>}
@@ -298,14 +298,14 @@ export function DialerWorkspace({
       density="compact"
       body="edge-to-edge"
       fill={queueAvailable && queue.length > 0}
-      href={queueAvailable ? `/organizations/${organizationId}/follow-ups?status=open&kind=call` : undefined}
+      href={queueAvailable ? `/organizations/${organizationId}/crm/tasks?status=open&kind=call` : undefined}
       hrefLabel="All call follow-ups"
       className="min-h-0 flex-1"
     >
       {!queueAvailable ? <PanelState kind="not-configured">Follow-ups are not included for this business, so there is no call queue.</PanelState> : queue.length === 0 ? (
         <div className="space-y-3 p-3">
           <p className="text-sm text-muted">No open call follow-ups. A call follow-up added to a customer joins this queue, earliest due first.</p>
-          <ButtonLink href={`/organizations/${organizationId}/follow-ups`} tone="secondary" size="small">Open follow-ups</ButtonLink>
+          <ButtonLink href={`/organizations/${organizationId}/crm/tasks`} tone="secondary" size="small">Open follow-ups</ButtonLink>
         </div>
       ) : <>
         <div className="shrink-0 space-y-2 border-b border-border p-3">
@@ -358,7 +358,7 @@ export function DialerWorkspace({
           <div className="flex items-center gap-3">
             <Avatar className="size-10 shrink-0"><AvatarFallback className="bg-secondary text-sm font-semibold text-muted">{initials(selected.customer.name)}</AvatarFallback></Avatar>
             <div className="min-w-0">
-              <Link className="block truncate font-semibold underline-offset-4 hover:underline" href={`/organizations/${organizationId}/customers/${selected.customer.id}`}>{selected.customer.name}</Link>
+              <Link className="block truncate font-semibold underline-offset-4 hover:underline" href={`/organizations/${organizationId}/crm/contacts/${selected.customer.id}`}>{selected.customer.name}</Link>
               <p className="truncate text-xs text-muted">{selected.followUp.title}</p>
             </div>
           </div>
@@ -381,7 +381,7 @@ export function DialerWorkspace({
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Recent calls</h3>
             {recentCalls[selected.customer.id] ?? <p className="text-sm text-muted">No recorded calls with this customer yet.</p>}
           </div>
-          <ButtonLink href={`/organizations/${organizationId}/customers/${selected.customer.id}`} tone="secondary" size="small" className="w-full">Open customer</ButtonLink>
+          <ButtonLink href={`/organizations/${organizationId}/crm/contacts/${selected.customer.id}`} tone="secondary" size="small" className="w-full">Open customer</ButtonLink>
         </div>
       )}
     </OperationalPanel>

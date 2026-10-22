@@ -13,7 +13,7 @@ test('uploads a document to a customer, sees it listed, and sees it in that cust
 }) => {
   const ctx = loadDemoContext();
 
-  await page.goto(`/organizations/${ctx.organizationId}/customers/${ctx.customerId}`);
+  await page.goto(`/organizations/${ctx.organizationId}/crm/contacts/${ctx.customerId}`);
   await expect(page.getByRole('heading', { name: 'Documents' })).toBeVisible();
 
   const fileName = `e2e-upload-${Date.now()}.txt`;

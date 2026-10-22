@@ -41,7 +41,7 @@ test('business vocabulary stays within contextual workspaces across responsive w
     await page.getByRole('textbox',{name:'Customer plural',exact:true}).fill('Patients');
     await page.getByRole('button',{name:'Save business words and navigation',exact:true}).click();
     await expect(page.getByRole('status').filter({hasText:'Business profile saved.'})).toBeVisible();
-    await page.goto(`/organizations/${organizationId}/customers`);
+    await page.goto(`/organizations/${organizationId}/crm/contacts`);
     await expect(page.getByRole('heading',{name:'Patients',exact:true})).toBeVisible();
     await expect(page.getByRole('button',{name:'New patient',exact:true})).toBeVisible();
     await expect(page.getByRole('heading',{name:'No patients yet',exact:true})).toBeVisible();

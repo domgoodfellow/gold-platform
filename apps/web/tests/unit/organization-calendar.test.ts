@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Db } from '@/lib/db/types';
 import { counted } from '@/lib/domain/counted';
-import type { FollowUp } from '@/lib/domain/follow-ups/follow-ups';
+import type { CrmTask } from '@/lib/domain/tasks/tasks';
 import type { WorkItem } from '@/lib/domain/work-items/work-items';
 import { calendarEvents, eventsOnDate, loadOrganizationCalendar, parseCalendarSource } from '@/lib/application/calendar/organization-calendar';
 
 const reads = vi.hoisted(() => ({ available: vi.fn(), followUps: vi.fn(), work: vi.fn(), members: vi.fn(), events: vi.fn() }));
 vi.mock('@/lib/application/crm/follow-ups', () => ({ followUpsAvailable: reads.available }));
-vi.mock('@/lib/domain/follow-ups/follow-ups', () => ({ listFollowUps: reads.followUps }));
+vi.mock('@/lib/domain/tasks/tasks', () => ({ listTasks: reads.followUps }));
 vi.mock('@/lib/domain/work-items/work-items', () => ({ listWorkItems: reads.work }));
 vi.mock('@/lib/domain/calendar/events', () => ({ listCalendarEvents: reads.events }));
 vi.mock('@/lib/domain/tenancy/members', () => ({ listMembers: reads.members }));
 
 const followUp = { id: 'same-id', title: 'Discuss proposal', dueAt: '2026-11-01T05:30:00Z', kind: 'meeting',
-  status: 'open', customerName: 'Customer', opportunityTitle: 'Proposal', ownerName: 'Owner' } as FollowUp;
+  status: 'open', customerName: 'Customer', opportunityTitle: 'Proposal', ownerName: 'Owner' } as CrmTask;
 const work = { id: 'same-id', title: 'Installation', window: { startsAt: '2026-11-01T03:00:00Z', endsAt: '2026-11-01T07:00:00Z' },
   status: { label: 'Booked' }, resources: [{ id: 'r1', label: 'One' }, { id: 'r2', label: 'Two' }], customer: { label: 'Customer' } } as WorkItem;
 const input = { organizationId: 'org', source: 'all' as const, within: { startsAt: '2026-11-01T04:00:00Z', endsAt: '2026-11-02T05:00:00Z' } };

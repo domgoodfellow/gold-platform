@@ -11,7 +11,7 @@ export async function marketingCommandAction(organizationId: string, command: st
   try {
     const id = await commandMarketing(db, organizationId, command, input);
     revalidatePath(`/organizations/${organizationId}/marketing`, 'layout');
-    revalidatePath(`/organizations/${organizationId}/customers`);
+    revalidatePath(`/organizations/${organizationId}/crm/contacts`);
     return { id, error: null };
   } catch (error) { return { id: null, error: error instanceof Error ? error.message : 'The change could not be saved.' }; }
 }

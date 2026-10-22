@@ -40,7 +40,7 @@ export async function loadHome(db: Db, organization: Organization, rawQuery: Rec
   const results = await Promise.all(jobs.map(([source, read]) => isolateSource(source, read)));
   // Metadata only: no notes, message previews, transcripts, money or Agent conversations in the shared event feed.
   const eventGroups: [HomeSource, string[], (kind: string, id: string) => string][] = [
-    ['CRM', ['customer.created', 'customer.updated', 'opportunity.created', 'opportunity.stage_changed', 'follow_up.created', 'follow_up.completed'], (kind, id) => kind === 'customer' ? `/organizations/${organizationId}/customers/${id}` : kind === 'opportunity' ? `/organizations/${organizationId}/opportunities/${id}` : `/organizations/${organizationId}/follow-ups?selected=${id}&status=all`],
+    ['CRM', ['customer.created', 'customer.updated', 'opportunity.created', 'opportunity.stage_changed', 'follow_up.created', 'follow_up.completed'], (kind, id) => kind === 'customer' ? `/organizations/${organizationId}/crm/contacts/${id}` : kind === 'opportunity' ? `/organizations/${organizationId}/crm/opportunities/${id}` : `/organizations/${organizationId}/crm/tasks?selected=${id}&status=all`],
     ['Work', ['work_item.created', 'work_item.scheduled', 'work_item.unscheduled', 'work_item.assigned', 'work_item.status_changed'], (_, id) => `/organizations/${organizationId}/work/${id}`],
     ['Finance', ['invoice.issued', 'payment.recorded'], (_, id) => `/organizations/${organizationId}/work/${id}`],
     ['Marketing', ['marketing_campaign.created', 'marketing_campaign.updated', 'marketing_inquiry.reviewed', 'marketing_inquiry.handed_off'], (kind, id) => kind === 'marketing_campaign' ? `/organizations/${organizationId}/marketing/campaigns/${id}` : `/organizations/${organizationId}/marketing/leads?inquiry=${id}`],
@@ -63,7 +63,7 @@ export async function loadHome(db: Db, organization: Organization, rawQuery: Rec
   const base = `/organizations/${organizationId}`;
   const quickActions: HomeData['quickActions'] = [];
   const add = (key: string, capability: string, label: string, href: string, description: string) => { if (capabilities.has(capability)) quickActions.push({ key, label, href, description }); };
-  add('customer', 'customer.create', 'New customer', `${base}/customers?create=1`, 'Open CRM and add a customer');
+  add('customer', 'customer.create', 'New customer', `${base}/crm/contacts?create=1`, 'Open CRM and add a customer');
   add('work', 'work_item.create', 'New work', `${base}/work?create=1`, 'Create and assign Work');
   if (available('support')) add('case', 'support.case.create', 'New case', `${base}/support/cases?create=1`, 'Open Cases and create a problem or request');
   if (available('marketing')) add('campaign', 'marketing.manage', 'New campaign', `${base}/marketing/campaigns?create=1`, 'Open Campaigns and create a draft');
@@ -71,7 +71,7 @@ export async function loadHome(db: Db, organization: Organization, rawQuery: Rec
   if (available('comms-inbox')) add('message', 'message.send', 'Compose message', `${base}/comms/inbox/new`, 'Open Inbox and compose through the configured channel');
   if (available('automations')) add('rule', 'automation.manage', 'New automation', `${base}/automations/rules?create=1`, 'Create an automation');
   add('form', 'organization.manage', 'New form', `${base}/studio/forms?create=1`, 'Open Forms and create a draft');
-  const search = [{ label: 'CRM', href: `${base}/sales/search` }, { label: 'Work', href: `${base}/work` }, ...results.filter(r => !['CRM', 'Work', 'Studio', 'AI', 'Finance', 'Automations'].includes(r.source)).map(r => ({ label: r.source, href: r.source === 'Support' ? `${base}/support/cases` : r.source === 'Marketing' ? `${base}/marketing/leads` : available('comms-inbox') ? `${base}/comms/inbox` : `${base}/calls` }))];
+  const search = [{ label: 'CRM', href: `${base}/crm/search` }, { label: 'Work', href: `${base}/work` }, ...results.filter(r => !['CRM', 'Work', 'Studio', 'AI', 'Finance', 'Automations'].includes(r.source)).map(r => ({ label: r.source, href: r.source === 'Support' ? `${base}/support/cases` : r.source === 'Marketing' ? `${base}/marketing/leads` : available('comms-inbox') ? `${base}/comms/inbox` : `${base}/calls` }))];
   const agentPrompts = capabilities.has('assistant.ask') && enabled.has('assistant') ? [
     ...(schedulable ? ['Which Work is at risk?', 'What is scheduled tomorrow?'] : []),
     'Which Customers have not been contacted?',

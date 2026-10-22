@@ -25,7 +25,7 @@ test.describe('Opportunity journey', () => {
     const organizationId = await provisionOrganization(staff, { ownerEmail: context.ownerEmail, name: `Opportunity acceptance ${Date.now()}`, displayName: 'Opportunity owner', currency: 'CAD', timezone: 'America/Toronto' });
     const customerId = await createCustomer(owner, { organizationId, name: 'Opportunity acceptance customer' });
     const base = `/organizations/${organizationId}`;
-    await page.goto(`${base}/sales`);
+    await page.goto(`${base}/crm`);
     await expect(page.getByText('No opportunity stages are configured')).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('opportunities-home-empty.png'), fullPage: true });
     await page.getByRole('link', { name: 'Configure opportunity stages' }).click();
@@ -39,7 +39,7 @@ test.describe('Opportunity journey', () => {
       await expect(page.getByText(`(${kind})`, { exact: true })).toBeVisible();
     }
     await page.screenshot({ path: testInfo.outputPath('opportunity-stage-settings.png'), fullPage: true });
-    await page.goto(`${base}/opportunities`);
+    await page.goto(`${base}/crm/opportunities`);
     await page.getByRole('button', { name: 'New opportunity', exact: true }).click();
     const create = page.getByRole('dialog', { name: 'New opportunity', exact: true });
     await expect(create.getByLabel('Find customer')).toBeFocused();
@@ -63,7 +63,7 @@ test.describe('Opportunity journey', () => {
     await page.screenshot({ path: testInfo.outputPath('opportunity-error-drawer.png'), fullPage: true });
     await create.getByLabel('Currency').fill('CAD');
     await create.getByRole('button', { name: 'Save opportunity' }).click();
-    await expect(page).toHaveURL(new RegExp(`${base}/opportunities/[a-f0-9-]+$`));
+    await expect(page).toHaveURL(new RegExp(`${base}/crm/opportunities/[a-f0-9-]+$`));
     const opportunityUrl = page.url();
     await expect(page.getByRole('heading', { name: 'Workshop expansion', exact: true })).toBeVisible();
     await expect(page.getByText('CA$1,250.50', { exact: true })).toBeVisible();
@@ -75,10 +75,10 @@ test.describe('Opportunity journey', () => {
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Workshop expansion revised' })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('opportunity-detail.png'), fullPage: true });
-    await page.goto(`${base}/opportunities`);
+    await page.goto(`${base}/crm/opportunities`);
     await expect(page.getByRole('link', { name: 'Workshop expansion revised' })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('opportunity-collection.png'), fullPage: true });
-    await page.goto(`${base}/opportunities/pipeline`);
+    await page.goto(`${base}/crm/pipeline`);
     const discuss = page.getByRole('region', { name: 'Discuss', exact: true });
     await expect(discuss.getByRole('link', { name: 'Workshop expansion revised' })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('opportunity-pipeline.png'), fullPage: true });
@@ -86,7 +86,7 @@ test.describe('Opportunity journey', () => {
     await discuss.getByRole('button', { name: 'Move', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Agreed', exact: true }).getByRole('link', { name: 'Workshop expansion revised' })).toBeVisible();
     await page.reload();
-    await page.goto(`${base}/customers/${customerId}`);
+    await page.goto(`${base}/crm/contacts/${customerId}`);
     await expect(page.getByText('No relationship stage').filter({ visible: true })).toBeVisible();
     await page.getByRole('tab', { name: 'Opportunities', exact: true }).click();
     await expect(page.getByRole('link', { name: 'Workshop expansion revised' })).toHaveAttribute('href', new URL(opportunityUrl).pathname);
@@ -94,14 +94,14 @@ test.describe('Opportunity journey', () => {
     await page.getByRole('button', { name: 'New opportunity', exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'New opportunity' }).getByText('Opportunity acceptance customer', { exact: true })).toBeVisible();
     await page.getByRole('dialog', { name: 'New opportunity' }).getByRole('button', { name: 'Close', exact: true }).click();
-    await page.goto(`${base}/opportunities`);
+    await page.goto(`${base}/crm/opportunities`);
     await page.getByLabel('Classification', { exact: true }).selectOption('won');
     await page.getByRole('button', { name: 'Apply filters' }).click();
     await expect(page).toHaveURL(/kind=won/);
     await page.reload();
     await expect(page.getByLabel('Classification', { exact: true })).toHaveValue('won');
     await expect(page.getByRole('link', { name: 'Workshop expansion revised' })).toBeVisible();
-    await page.goto(`${base}/sales`);
+    await page.goto(`${base}/crm`);
     await expect(page.getByRole('link', { name: /Open opportunities\s*0/ })).toBeVisible();
     await expect(page.getByRole('link', { name: /Agreed 1 won/i })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('opportunity-home-populated.png'), fullPage: true });
@@ -109,10 +109,10 @@ test.describe('Opportunity journey', () => {
       await page.setViewportSize({ width, height: 844 });
       await page.screenshot({ path: testInfo.outputPath(`opportunity-home-${width}.png`), fullPage: true });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-      await page.goto(`${base}/opportunities/pipeline`);
+      await page.goto(`${base}/crm/pipeline`);
       await page.screenshot({ path: testInfo.outputPath(`opportunity-pipeline-${width}.png`), fullPage: true });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-      await page.goto(`${base}/sales`);
+      await page.goto(`${base}/crm`);
     }
   });
 });
@@ -120,10 +120,10 @@ test.describe('Opportunity reduced role', () => {
   test.use({ storageState: COLLEAGUE_STORAGE_STATE });
   test('reads Opportunities without create/update/configuration controls', async ({ page }, testInfo) => {
     const base = `/organizations/${loadDemoContext().organizationId}`;
-    await page.goto(`${base}/opportunities`);
+    await page.goto(`${base}/crm/opportunities`);
     await expect(page.getByRole('heading', { name: 'Opportunities', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'New opportunity', exact: true })).toHaveCount(0);
-    await page.goto(`${base}/opportunities/pipeline`);
+    await page.goto(`${base}/crm/pipeline`);
     await expect(page.getByRole('button', { name: 'Move', exact: true })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Opportunity stages', exact: true })).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath('opportunity-reduced-role.png'), fullPage: true });

@@ -2,7 +2,7 @@ import type { Db } from '@/lib/db/types';
 import { paymentProvider } from '@/lib/adapters/payments';
 import { getInvoiceForWorkItem, invoiceStanding } from '@/lib/domain/billing/invoices';
 import { listAssets } from '@/lib/domain/assets/assets';
-import { listCustomers } from '@/lib/domain/customers/customers';
+import { listContacts } from '@/lib/domain/contacts/contacts';
 import { listDocuments } from '@/lib/domain/documents/documents';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
@@ -34,7 +34,7 @@ export async function loadWorkItemDetail(db: Db, input: { organizationId: string
   const [checklist, timeEntries, costs, resources, definitions, lines, priceBook, customers, locations, assets, invoice, resolvedFeatures, statuses, transitions, documents, timeline, intake] = await Promise.all([
     listChecklistItems(db, { organizationId, workItemId }), listTimeEntries(db, { organizationId, workItemId }), listCosts(db, { organizationId, workItemId }),
     listResources(db, { organizationId }), listFieldDefinitions(db, { organizationId, entityType: 'work_item' }), listPricedLines(db, { organizationId, workItemId }),
-    listPriceBookItems(db, { organizationId }), listCustomers(db, { organizationId }), listLocations(db, { organizationId }), listAssets(db, { organizationId }),
+    listPriceBookItems(db, { organizationId }), listContacts(db, { organizationId }), listLocations(db, { organizationId }), listAssets(db, { organizationId }),
     getInvoiceForWorkItem(db, { organizationId, workItemId }), organizationResolvedFeatureStates(db, { organizationId }),
     listWorkItemStatuses(db, { organizationId, typeId: workItem.type.id }), listWorkItemTransitions(db, { organizationId, typeId: workItem.type.id }),
     listDocuments(db, { organizationId, attachedTo: { entity: 'work_item', id: workItemId } }), listWorkItemTimeline(db, { organizationId, workItemId }),

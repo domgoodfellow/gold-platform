@@ -5,7 +5,7 @@ import { Button, ButtonLink } from '@/components/controls/button';
 import { FormField } from '@/components/controls/form';
 import { ErrorText, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
-import { relationshipAction, searchExistingClientTenants } from '@/app/organizations/[organizationId]/customers/[customerId]/service-actions';
+import { relationshipAction, searchExistingClientTenants } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/service-actions';
 import type { ClientTenantRelationship } from '@/lib/domain/customers/client-tenants';
 
 function EndRelationship({ organizationId, customerId, relationshipId }: { organizationId: string; customerId: string; relationshipId: string }) {

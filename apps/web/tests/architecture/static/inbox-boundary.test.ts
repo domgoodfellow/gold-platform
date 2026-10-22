@@ -104,12 +104,12 @@ describe('assignment is one mechanism, keyed by membership', () => {
 });
 
 describe('Communications links to CRM and never becomes it', () => {
-  it('creates a customer only through CRM’s own function, and never writes the customers table itself', () => {
+  it('creates a contact only through CRM’s own function, and never writes the contacts table itself', () => {
     const inbox = code('lib/domain/reception/inbox.ts');
-    expect(inbox).toMatch(/createCustomer\(/);
-    expect(inbox).not.toMatch(/\.from\('customers'\)\s*\.(insert|update|delete|upsert)/);
+    expect(inbox).toMatch(/createContact\(/);
+    expect(inbox).not.toMatch(/\.from\('(customers|contacts)'\)\s*\.(insert|update|delete|upsert)/);
     for (const [path, text] of under('features/communications/inbox')) {
-      expect(text, path).not.toMatch(/\.from\('customers'\)/);
+      expect(text, path).not.toMatch(/\.from\('(customers|contacts)'\)/);
     }
   });
 

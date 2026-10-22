@@ -6,7 +6,7 @@ test.use({ storageState: OWNER_STORAGE_STATE });
 
 test('CRM pipeline board', async ({ page }) => {
   const { organizationId } = loadDemoContext();
-  await page.goto(`/organizations/${organizationId}/customers/pipeline`);
+  await page.goto(`/organizations/${organizationId}/crm/contacts/stages`);
   await page.waitForLoadState('networkidle');
   await expect(page).toHaveScreenshot('pipeline-board.png', { fullPage: true });
 });

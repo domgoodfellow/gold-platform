@@ -262,7 +262,7 @@ test('F: Studio, the portal and a public form open together, and none ends anoth
   const studio = await context.newPage();
   const portal = await context.newPage();
   const site = await context.newPage();
-  const customers = `/organizations/${organizationId}/customers`;
+  const customers = `/organizations/${organizationId}/crm/contacts`;
 
   await studio.goto(customers);
   await expect(studio).toHaveURL(new RegExp(`${customers}$`));

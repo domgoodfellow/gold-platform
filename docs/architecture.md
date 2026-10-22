@@ -598,6 +598,8 @@ Navigation represents operator intent.
 
 The information architecture is owned by `docs/product.md` → *Workspace navigation* (ADR-046); presentation by `docs/ui-system.md`. This section owns the modules. `lib/navigation.ts` registers destinations (`WORKSPACES`, `AREAS`, `CONFIG_TARGETS`, `WORKSPACE_CONFIGURE`). `projectShell` (`lib/shell.ts`) is the one projection of that registry, filtered by entitlement, permission and work shape; the sidebar, the phone menu and the page-location control read it; page headers never reproduce its destinations (ADR-048), and the header Calendar shortcut is its registered `calendar` entry. `projectBusinessNavigation` (`lib/application/shell`) decorates that projection with business-profile labels and order and never restructures it; configuration cannot grant access. No feature or page keeps its own destination list. `resolveLocation` (`lib/route/page-location.ts`) is the one page-location resolver (ADR-047): explicit route patterns that reference these registries by key, plus only the location metadata they lack (record and sub-view labels, plain-text grouping levels). It separates whether a route exists, whether the viewer may open it, whether the sidebar shows it and where it sits in the hierarchy; it reads no domain data, and pages pass server-loaded record labels into it. During migration, `WorkspaceCrumbSlot` renders the resolver's answer itself on the routes `RESOLVED_LOCATION_ROUTES` names, using the shell's serialized gate from `LocationNavigation.access`, and `PageCrumbs` stands down there; every other route keeps its page-published trail. Organization Home, Library, domain collections and optional dashboards remain canonical destinations. Settings keeps its independent canonical navigation. The Account/session menu retains Settings, Help, Contact Support and Sign out; the switcher lists businesses only. GildOps' authorized sidebar offers entry to the separate Platform scope. Same-business navigation retains the telephone runtime; cross-scope entry opens a new tab during a call.
 
+Dashboard is the first eligible operating destination on each existing workspace landing route; workspace headings are identity only (ADR-049).
+
 ---
 
 ### Workspace registry
@@ -614,21 +616,7 @@ Do not create a separate “visible workspaces” hard-coded list.
 
 ### Areas/pages
 
-A page can belong to a workspace without changing its route hierarchy to mirror the workspace hierarchy.
-
-Example:
-
-```text
-/customers
-```
-
-may be CRM-owned without requiring:
-
-```text
-/crm/customers
-```
-
-Ownership and URL structure are related architectural choices, not the same axis.
+CRM route ownership follows the approved `/crm` hierarchy in `docs/product.md`. Legacy `/sales`, `/customers` and `/opportunities` paths exist only as temporary compatibility redirects. Route composition delegates to canonical domain commands; a redirect does not own a second page.
 
 ---
 
@@ -1476,3 +1464,9 @@ Local verification uses the repository fast suite, focused database and provider
 ## Live inbound and receptionist execution
 
 `app/domains/communications/routing.py` remains the only preview/runtime routing decision. `app/services/communications/inbound.py` composes machine-scoped snapshot reads with that resolver and the carrier adapter. `app/services/communications/voice_agent.py` composes spend admission, pinned credential lookup, external session creation, signed callbacks and canonical restricted transfer. Vendor HTTP/XML/HMAC live under `app/providers`. The external voice-agent project owns speech/agent execution; no agent internals or tenant database credentials cross this adapter. `/platform` owns its route tree and composes the shared shell independently of organization pages.
+
+### CRM intake composition
+
+`lib/domain/customers/classification.ts` owns the closed Contact classification vocabulary; existing Customer commands and IDs remain canonical. `lib/domain/integrations/{resources,mappings,import-runs}.ts` continues to own Library intake. CRM routes only link into that service. Provider refresh uses the existing Connections command and Library resource snapshot, never another OAuth or spreadsheet adapter. The existing mapping `sync_mode`, import run snapshots and external record links retain synchronization association and provenance. Every reviewed update returns through the same database apply command; missing source rows never invoke CRM deletion.
+
+Contacts and CRM Dashboard share `listCustomerLastActivity` over the existing tenant-scoped `customer_activity` projection. Activity is read from canonical events rather than copied onto contacts. The existing timeline reader presents classification changes independently of relationship and opportunity stages.

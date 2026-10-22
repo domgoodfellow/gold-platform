@@ -1,10 +1,12 @@
+import { uploadDocument } from '@/lib/domain/documents/documents';
+import { attachLibraryFileForImport, downloadImportFile } from '@/lib/domain/integrations/resources';
 import { BUCKET } from '@/lib/domain/documents/documents';
 import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createCustomer, getCustomer } from '@/lib/domain/customers/customers';
+import { createCustomer, getCustomer, updateCustomer } from '@/lib/domain/customers/customers';
 import { createFieldDefinition, listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import {
@@ -397,5 +399,44 @@ describe('integrations: CSV import', () => {
     });
     expect(carol).not.toBeNull();
     expect(carol?.name).toBe('Carol New Name');
+  });
+});
+
+describe('CRM import classification and local ownership', () => {
+  it('preserves stable identity on updates and refuses overwriting local edits', async () => {
+    const file = await uploadImportFile(alice.db,{organizationId:alice.organizationId,files:supabaseFileStore(alice.db,BUCKET),file:csvFile('source_record_id,name,lifecycle,temperature\n42,Source Lead,lead,cold','classification.csv')});
+    const mapping = suggestMapping(file.parsed.headers,[]);
+    const mappingId = await createMapping(alice.db,{organizationId:alice.organizationId,resourceId:file.resourceId,fields:mapping});
+    const definitions = await listFieldDefinitions(alice.db,{organizationId:alice.organizationId,entityType:'customer'});
+    async function run(name:string, temperature:string) {
+      const runId=await beginImportRun(alice.db,{organizationId:alice.organizationId,mappingId});
+      await stageRows(alice.db,{organizationId:alice.organizationId,runId,mapping,fieldDefinitions:definitions,sourceRows:sourceRowsForImport([{source_record_id:'42',name,lifecycle:'lead',temperature}],file.resourceId)});
+      await applyImportRun(alice.db,{organizationId:alice.organizationId,runId});
+      return {run:await getImportRun(alice.db,{organizationId:alice.organizationId,runId}),rows:await listStagingRows(alice.db,{organizationId:alice.organizationId,runId})};
+    }
+    const first=await run('Source Lead','cold');const id=first.rows[0].matchedCustomerId!;
+    expect(first.run).toMatchObject({rowsCreated:1,rowsFailed:0});
+    expect(await getCustomer(alice.db,{organizationId:alice.organizationId,customerId:id})).toMatchObject({id,lifecycle:'lead',leadTemperature:'cold'});
+    const second=await run('Source renamed','warm');expect(second.rows[0].matchedCustomerId).toBe(id);
+    expect(second.run).toMatchObject({rowsCreated:0,rowsUpdated:1});
+    await updateCustomer(alice.db,{organizationId:alice.organizationId,customerId:id,name:'Locally corrected',lifecycle:'prospect',leadTemperature:'hot'});
+    const conflict=await run('Source changes again','cold');
+    expect(conflict.run).toMatchObject({status:'completed_with_errors',rowsFailed:1});
+    expect(conflict.rows[0].validationErrors.join(' ')).toContain('Local edit conflict');
+    expect(await getCustomer(alice.db,{organizationId:alice.organizationId,customerId:id})).toMatchObject({id,name:'Locally corrected',lifecycle:'prospect',leadTemperature:'hot'});
+    const notExternal=await alice.db.rpc('configure_crm_import_sync',{p_organization_id:alice.organizationId,p_mapping_id:mappingId,p_enabled:true});
+    expect(notExternal.error?.code).toBe('22023');
+    const foreign=await bob.db.rpc('configure_crm_import_sync',{p_organization_id:alice.organizationId,p_mapping_id:mappingId,p_enabled:false});
+    expect(foreign.error?.code).toBe('42501');
+  });
+});
+
+describe('selected Library file intake',()=>{
+  it('retains the selected file and reuses its stored bytes and resource on repeat entry',async()=>{
+    const documentId=await uploadDocument(alice.db,{organizationId:alice.organizationId,files:supabaseFileStore(alice.db,BUCKET),file:csvFile('name,lifecycle\nLibrary selected,lead','library-selected.csv')});
+    const resourceId=await attachLibraryFileForImport(alice.db,alice.organizationId,documentId);
+    expect(await attachLibraryFileForImport(alice.db,alice.organizationId,documentId)).toBe(resourceId);
+    expect(await downloadImportFile(alice.db,{organizationId:alice.organizationId,resourceId})).toMatchObject({rows:[{name:'Library selected',lifecycle:'lead'}]});
+    await expect(attachLibraryFileForImport(bob.db,alice.organizationId,documentId)).rejects.toMatchObject({code:'integrations.file_missing'});
   });
 });

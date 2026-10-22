@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AREAS, WORKSPACES, configTarget, configTargetOffered, workspaceAncestry, areaLabel } from '@/lib/navigation';
+import { AREAS, WORKSPACES, configTarget, configTargetOffered, workspaceAncestry, areaLabel, areaHref } from '@/lib/navigation';
 import { SHELL_SECTION_ORDER, pageNavigation, workspaceNavigation, activeItemKey, inPlatformScope, itemContains, projectedItems, projectShell, projectHeaderUtilities, shellHomeItem, topLevelSections, withAdministration, type ShellInput, type ShellSection } from '@/lib/shell';
 import { PLATFORM_CAPABILITIES } from '@/lib/domain/platform/permissions';
 import { platformAncestry, platformDestinationsFor, platformHref, platformRouteRequires } from '@/lib/platform-navigation';
@@ -31,7 +31,7 @@ describe('flat business navigation', () => {
     }
   });
   it('links every row to its real Home and preserves internal field identity', () => {
-    const homes = ['sales', 'comms', 'marketing', 'support', 'field', 'finance', 'automations', 'ai', 'studio'];
+    const homes = ['crm', 'comms', 'marketing', 'support', 'field', 'finance', 'automations', 'ai', 'studio'];
     expect(rows.map((row) => row.href)).toEqual(homes.map((home) => `/organizations/${ORG}/${home}`));
     expect(rows.find((row) => row.key === 'workspace-field')?.label).toBe('Work');
     expect(areaLabel('work')).toBe('Work items');
@@ -52,7 +52,7 @@ describe('flat business navigation', () => {
     expect(keys(none)).toEqual(['home', 'library', 'workspace-crm', 'workspace-communications', 'workspace-marketing', 'workspace-support', 'workspace-field', 'workspace-finance', 'workspace-ai', 'workspace-studio']);
     const aliases = projectedItems(none).flatMap((item) => item.activeHrefs ?? []);
     expect(aliases).not.toContain(`/organizations/${ORG}/assets`);
-    expect(aliases).not.toContain(`/organizations/${ORG}/customers/pipeline`);
+    expect(aliases).not.toContain(`/organizations/${ORG}/crm/contacts/stages`);
   });
   it('configuration permission alone does not grant Communications operation', () => {
     expect(keys(project(['integration.manage', 'secret.manage']))).not.toContain('workspace-communications');
@@ -82,7 +82,7 @@ describe('owning workspace stays active on contextual and detail routes', () => 
   const sections = project();
   it.each([
     ['home', 'home'], ['library/files', 'library'],
-    ['sales', 'workspace-crm'], ['customers', 'workspace-crm'], ['customers/customer-1', 'workspace-crm'], ['customers/pipeline', 'workspace-crm'],
+    ['crm', 'workspace-crm'], ['crm/contacts', 'workspace-crm'], ['crm/contacts/customer-1', 'workspace-crm'], ['crm/contacts/stages', 'workspace-crm'],
     ['comms', 'workspace-communications'], ['calls/call-1', 'workspace-communications'], ['comms/inbox/conversation-1', 'workspace-communications'], ['comms/configuration/numbers/number-1', 'workspace-communications'],
     ['marketing', 'workspace-marketing'], ['support', 'workspace-support'], ['ai', 'workspace-ai'],
     ['finance/invoices/invoice-1', 'workspace-finance'], ['finance/payments/payment-1', 'workspace-finance'],
@@ -287,20 +287,20 @@ describe('role presets are templates, not personas', () => {
 
 describe('contextual workspace navigation', () => {
   it.each(WORKSPACES)('enters $label through its canonical Home and returns to organization Home', (workspace) => {
-    const context = workspaceNavigation(project(), `/organizations/${ORG}/${workspace.home}`)!;
+    const context = workspaceNavigation(project(), areaHref(ORG, workspace.home))!;
     expect(context.workspace.key).toBe(`workspace-${workspace.key}`);
     expect(context.backHref).toBe(`/organizations/${ORG}/home`);
     expect(context.sections[0].label).toBe(workspace.label);
-    // ADR-047: the workspace heading is the way to its Home; no child (formerly Overview) repeats the Home route.
-    const home = `/organizations/${ORG}/${workspace.home}`;
-    expect(context.sections[0].href).toBe(home);
-    expect(context.sections[0].items.some((item) => item.href === home)).toBe(false);
-    expect(activeItemKey(context.sections, home)).toBeNull();
+    // ADR-049: one explicit Dashboard owns the landing route; identity is not a link.
+    const home = areaHref(ORG, workspace.home);
+    expect(context.sections[0].href).toBeUndefined();
+    expect(context.sections[0].items.filter(item => item.href === home)).toEqual([expect.objectContaining({ key: 'workspace-dashboard', label: 'Dashboard', exact: true })]);
+    expect(activeItemKey(context.sections, home)).toBe('workspace-dashboard');
     const expected = AREAS.filter((area) => area.workspace === workspace.key && area.sidebar !== false && area.segment !== workspace.home);
-    expect(context.sections[0].items.filter(item => item.key !== 'workspace-configuration' && !item.key.startsWith('platform-')).map((item) => item.key)).toEqual(expected.map((area) => area.segment));
+    expect(context.sections[0].items.filter(item => item.key !== 'workspace-configuration' && !item.key.startsWith('platform-')).map((item) => item.key)).toEqual(['workspace-dashboard', ...expected.map((area) => area.segment)]);
   });
   it.each([
-    ['customers/123', 'crm', 'customers'], ['customers/pipeline', 'crm', 'pipeline'],
+    ['crm/contacts/123', 'crm', 'customers'], ['crm/contacts/stages', 'crm', 'customers'],
     ['calls/123', 'communications', 'calls'], ['comms/inbox/123', 'communications', 'comms-inbox'],
     ['finance/invoices/123', 'finance', 'finance-invoices'], ['automations/rules/123', 'automations', 'automation-rules'],
     ['work/dispatch', 'field', 'work'], ['studio/forms/123', 'studio', 'studio-forms'],
@@ -311,7 +311,7 @@ describe('contextual workspace navigation', () => {
     expect(activeItemKey(context.sections, href)).toBe(active);
   });
   it('retains hidden operating ownership without exposing hidden or configuration destinations', () => {
-    const context = workspaceNavigation(project(), `/organizations/${ORG}/opportunities/123`)!;
+    const context = workspaceNavigation(project(), `/organizations/${ORG}/crm/opportunities/123`)!;
     expect(context.workspace.key).toBe('workspace-crm');
     expect(context.sections[0].items.map((item) => item.key)).not.toContain('opportunities');
     for (const path of ['home', 'library', 'pricing', 'platform/providers', 'customers-other']) {
@@ -323,14 +323,14 @@ describe('contextual workspace navigation', () => {
     for (const path of ['comms', 'calls/123', 'customers/pipeline', 'finance/invoices/123', 'schedule', 'studio/forms', 'support', 'automations/rules']) {
       expect(workspaceNavigation(reduced, `/organizations/${ORG}/${path}`), path).toBeNull();
     }
-    // ADR-047: Work's Home is its heading, not an Overview child.
-    expect(workspaceNavigation(reduced, `/organizations/${ORG}/field`)!.sections[0]).toMatchObject({ href: `/organizations/${ORG}/field` });
-    expect(workspaceNavigation(reduced, `/organizations/${ORG}/field`)!.sections[0].items.map((item) => item.key)).toEqual(['work']);
+    // Dashboard is available only while the registered Work landing is operable.
+    expect(workspaceNavigation(reduced, `/organizations/${ORG}/field`)!.sections[0]).toMatchObject({ label: 'Work' });
+    expect(workspaceNavigation(reduced, `/organizations/${ORG}/field`)!.sections[0].items.map((item) => item.key)).toEqual(['workspace-dashboard', 'work']);
   });
   it('does not carry workspace selection into another organization or organization Home', () => {
-    expect(workspaceNavigation(project(), '/organizations/other/customers/123')).toBeNull();
+    expect(workspaceNavigation(project(), '/organizations/other/crm/contacts/123')).toBeNull();
     const switched = project(ALL_CAPABILITIES, { organizationId: '22222222-2222-4222-8222-222222222222' });
-    expect(workspaceNavigation(switched, '/organizations/22222222-2222-4222-8222-222222222222/customers/123')!.backHref).toBe('/organizations/22222222-2222-4222-8222-222222222222/home');
+    expect(workspaceNavigation(switched, '/organizations/22222222-2222-4222-8222-222222222222/crm/contacts/123')!.backHref).toBe('/organizations/22222222-2222-4222-8222-222222222222/home');
     expect(workspaceNavigation(switched, '/organizations/other/home')).toBeNull();
   });
 });
@@ -347,9 +347,9 @@ describe('responsive page-location projection', () => {
     const location = pageNavigation(navigation, `${base}/schedule`, []);
     expect(location.parentHref).toBe(`${base}/field`);
     expect(location.groups[0].label).toBe('Work');
-    // ADR-047: Work's Home is the group heading's own link, not its first item.
-    expect(location.groups[0]).toMatchObject({ href: `${base}/field`, current: false });
-    expect(location.groups[0].items.some((item) => item.href === `${base}/field`)).toBe(false);
+    // The mobile group names the workspace and offers Dashboard as a normal item.
+    expect(location.groups[0].href).toBeUndefined();
+    expect(location.groups[0].items.some((item) => item.href === `${base}/field`)).toBe(true);
     expect(location.groups[0].items.some((item) => item.href === `${base}/work`)).toBe(true);
     expect(location.activeKey).toBe('schedule');
   });
@@ -379,9 +379,9 @@ describe('responsive page-location projection', () => {
   });
   it('offers Marketing its Home as the heading and four operating pages, and keeps a campaign under Campaigns', () => {
     const location = pageNavigation(navigation, `${base}/marketing/campaigns/campaign-1`, []);
-    // ADR-047: Marketing's Home is the group heading, not an Overview item.
-    expect(location.groups[0]).toMatchObject({ label: 'Marketing', href: `${base}/marketing`, current: false });
-    expect(location.groups.flatMap((group) => group.items).map((item) => item.key)).toEqual(['marketing-campaigns', 'marketing-audiences', 'marketing-leads', 'marketing-performance']);
+    // Marketing retains identity plus an explicit Dashboard before its operational pages.
+    expect(location.groups[0]).toMatchObject({ label: 'Marketing' });
+    expect(location.groups.flatMap((group) => group.items).map((item) => item.key)).toEqual(['workspace-dashboard', 'marketing-campaigns', 'marketing-audiences', 'marketing-leads', 'marketing-performance']);
     expect(location.activeKey).toBe('marketing-campaigns');
   });
   it('uses the restricted Settings projection without adding tenant workspaces', () => {
@@ -503,7 +503,7 @@ describe('workspace calendars', () => {
     const sections = project();
     expect(projectedItems(sections).some(item => item.key.includes('calendar'))).toBe(false);
     for (const workspace of WORKSPACES) {
-      const context = workspaceNavigation(sections, `/organizations/${ORG}/${workspace.home}/calendar`);
+      const context = workspaceNavigation(sections, `${areaHref(ORG, workspace.home)}/calendar`);
       expect(context?.workspace.key).toBe(`workspace-${workspace.key}`);
     }
   });
@@ -522,10 +522,10 @@ describe('Support workspace navigation', () => {
     expect(top).not.toContain('support-queue-workbench');
   });
   it('replaces the directory with exactly the operating destinations when somebody enters Support', () => {
-    expect(workspaceNavigation(project(), base)!.sections[0].items.map((item) => item.key)).toEqual(operating);
-    expect(workspaceNavigation(readOnly(), base)!.sections[0].items.map((item) => item.key)).toEqual(operating);
+    expect(workspaceNavigation(project(), base)!.sections[0].items.map((item) => item.key)).toEqual(['workspace-dashboard', ...operating]);
+    expect(workspaceNavigation(readOnly(), base)!.sections[0].items.map((item) => item.key)).toEqual(['workspace-dashboard', ...operating]);
     expect(workspaceNavigation(project(), base)!.backHref).toBe(`/organizations/${ORG}/home`);
-    expect(workspaceNavigation(project(), base)!.sections[0].href).toBe(base);
+    expect(workspaceNavigation(project(), base)!.sections[0].href).toBeUndefined();
   });
   it.each([
     [`${base}/cases`, 'support-cases'],
@@ -558,8 +558,8 @@ describe('Support workspace navigation', () => {
   it('gives a read-only member no configuration context beyond the operating views', () => {
     const sections = readOnly();
     expect(keys(sections)).toContain('workspace-support');
-    expect(workspaceNavigation(sections, base)!.sections[0].items.map((item) => item.key)).toEqual(operating);
-    expect(workspaceNavigation(sections, `${base}/configuration/queues`)!.sections[0].items.map((item) => item.key)).toEqual(operating);
+    expect(workspaceNavigation(sections, base)!.sections[0].items.map((item) => item.key)).toEqual(['workspace-dashboard', ...operating]);
+    expect(workspaceNavigation(sections, `${base}/configuration/queues`)!.sections[0].items.map((item) => item.key)).toEqual(['workspace-dashboard', ...operating]);
   });
   it('does not reveal Support to a member without support.read', () => {
     const none = project([], { enabledModules: new Set(), featureAvailability: new Set() });
@@ -580,18 +580,18 @@ describe('entered-workspace destinations by role', () => {
     return context?.sections[0].items.filter((item) => !item.children && !item.key.startsWith('platform-')).map((item) => item.key);
   };
   it('gives a read-only AI member only the member pages, and keeps agent configuration out of its pages', () => {
-    expect(destinations([], 'ai')).toEqual(['ai-activity', 'ai-evaluations']);
+    expect(destinations([], 'ai')).toEqual(['workspace-dashboard', 'ai-activity', 'ai-evaluations']);
     expect(activeItemKey(workspaceNavigation(project(), `${base}/ai/evaluations`)!.sections, `${base}/ai/evaluations`)).toBe('ai-evaluations');
   });
   it('keeps calling-only and messaging-only Communications distinct', () => {
-    expect(destinations(['call.place'], 'comms')).toEqual(['calls']);
-    expect(destinations(['message.send'], 'comms')).toEqual(['comms-inbox']);
+    expect(destinations(['call.place'], 'comms')).toEqual(['workspace-dashboard', 'calls']);
+    expect(destinations(['message.send'], 'comms')).toEqual(['workspace-dashboard', 'comms-inbox']);
   });
   it('keeps detail routes on their destination for Finance and Support, and Studio pages for managers only', () => {
     expect(activeItemKey(workspaceNavigation(project(), `${base}/finance/invoices/invoice-1`)!.sections, `${base}/finance/invoices/invoice-1`)).toBe('finance-invoices');
     expect(activeItemKey(workspaceNavigation(project(), `${base}/support/cases/case-1`)!.sections, `${base}/support/cases/case-1`)).toBe('support-cases');
-    expect(destinations(ALL_CAPABILITIES, 'studio')).toEqual(['studio-website', 'studio-portal', 'studio-forms', 'studio-templates']);
-    expect(destinations([], 'studio')).toEqual([]);
+    expect(destinations(ALL_CAPABILITIES, 'studio')).toEqual(['workspace-dashboard', 'studio-website', 'studio-portal', 'studio-forms', 'studio-templates']);
+    expect(destinations([], 'studio')).toEqual(['workspace-dashboard']);
   });
 });
 
@@ -616,8 +616,8 @@ describe('workspace Calendar shortcut', () => {
     expect(projectedItems(reduced).find((item) => item.key === 'workspace-communications')?.calendar).toBeUndefined();
   });
   it('reaches the calendar from inside the workspace and keeps the workspace context there', () => {
-    const context = workspaceNavigation(project(), `${base}/sales/calendar`)!;
+    const context = workspaceNavigation(project(), `${base}/crm/calendar`)!;
     expect(context.workspace.key).toBe('workspace-crm');
-    expect(context.workspace.calendar?.href).toBe(`${base}/sales/calendar`);
+    expect(context.workspace.calendar?.href).toBe(`${base}/crm/calendar`);
   });
 });

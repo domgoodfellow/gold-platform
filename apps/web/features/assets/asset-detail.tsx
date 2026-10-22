@@ -66,7 +66,7 @@ export function AssetDetail({
           <Detail label="Owned by">
             {asset.customer ? (
               <Link
-                href={`/organizations/${organizationId}/customers/${asset.customer.id}`}
+                href={`/organizations/${organizationId}/crm/contacts/${asset.customer.id}`}
                 className="underline underline-offset-4"
               >
                 {asset.customer.label}

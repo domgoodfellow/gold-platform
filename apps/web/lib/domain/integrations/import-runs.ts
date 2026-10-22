@@ -19,7 +19,7 @@ export async function requireImportPipeline(db: Db): Promise<void> {
 export function sourceRowsForImport(rows: Record<string, string>[], sourceName: string) {
   const namespace = createHash('sha256').update(sourceName).digest('hex');
   return rows.map((raw) => {
-    const id = importValue(raw.source_record_id);
+    const id = importValue(raw.__source_record_id ?? raw.source_record_id);
     const fingerprint = createHash('sha256').update(JSON.stringify(Object.entries(raw).sort(([a], [b]) => a.localeCompare(b)))).digest('hex');
     return { key: `${namespace}:${id ? `id:${id}` : `row:${fingerprint}`}`, raw };
   });
@@ -34,14 +34,14 @@ export async function resumeImportStaging(db: Db, input: { organizationId: strin
   }
   const parsed = await downloadImportFile(db, { organizationId: input.organizationId, resourceId: run.resource_id });
   if (!parsed || parsed.truncated) throw new DomainError('The complete source is unavailable. Upload it again.', 'integrations.file_missing');
-  const resource = await db.from('integration_resources').select('display_name').eq('organization_id', input.organizationId).eq('id', run.resource_id).single();
+  const resource = await db.from('integration_resources').select('display_name,resource_type').eq('organization_id', input.organizationId).eq('id', run.resource_id).single();
   if (resource.error) throw new DomainError('The import source could not be read.', 'integrations.resource_get_failed');
   const snapshot = run.mapping_snapshot as { mapping?: MappingField[] };
   if (!Array.isArray(snapshot.mapping)) throw new DomainError('The saved mapping is unavailable.', 'integrations.mapping_missing');
   return stageRows(db, {
     ...input, mapping: snapshot.mapping,
     fieldDefinitions: await listFieldDefinitions(db, { organizationId: input.organizationId, entityType: 'customer' }),
-    sourceRows: sourceRowsForImport(parsed.rows, resource.data.display_name),
+    sourceRows: sourceRowsForImport(parsed.rows, resource.data.resource_type === 'file_upload' ? resource.data.display_name : run.resource_id),
   });
 }
 

@@ -1,3 +1,4 @@
+import { CONTACT_LIFECYCLES, LEAD_TEMPERATURES } from '@/lib/domain/customers/classification';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
@@ -32,7 +33,7 @@ export async function prepareImportFields(db: Db, organizationId: string, header
  */
 export type MappingTarget =
   | { kind: 'ignore' }
-  | { kind: 'core'; field: 'name' | 'email' | 'phone' }
+  | { kind: 'core'; field: 'name' | 'email' | 'phone' | 'lifecycle' | 'lead_temperature' | 'contact_type' | 'company_contact_id' | 'affiliation_title' }
   | { kind: 'location'; field: 'address' | 'city' | 'province' }
   | { kind: 'custom'; key: string };
 
@@ -45,6 +46,7 @@ export type MappingFieldTransform = 'none' | 'trim_lowercase' | 'e164' | 'url' |
 
 export type MappingField = {
   sourceColumn: string;
+  fixedValue?: string;
   target: MappingTarget;
   transform: MappingFieldTransform;
 };
@@ -53,6 +55,7 @@ export type IntegrationMapping = {
   id: string;
   resourceId: string;
   targetEntity: 'customer';
+  syncMode?: 'import' | 'sync';
   fields: MappingField[];
   dedupeKey: string | null;
   createdAt: string;
@@ -64,7 +67,7 @@ export async function listMappings(
 ): Promise<IntegrationMapping[]> {
   const { data, error } = await db
     .from('integration_mappings')
-    .select('id, resource_id, target_entity, mapping, dedupe_key, created_at')
+    .select('id, resource_id, target_entity, mapping, dedupe_key, sync_mode, created_at')
     .eq('organization_id', input.organizationId)
     .eq('resource_id', input.resourceId)
     .order('created_at', { ascending: false });
@@ -82,7 +85,7 @@ export async function getMapping(
 ): Promise<IntegrationMapping | null> {
   const { data, error } = await db
     .from('integration_mappings')
-    .select('id, resource_id, target_entity, mapping, dedupe_key, created_at')
+    .select('id, resource_id, target_entity, mapping, dedupe_key, sync_mode, created_at')
     .eq('organization_id', input.organizationId)
     .eq('id', input.mappingId)
     .maybeSingle();
@@ -98,6 +101,7 @@ function toMapping(row: {
   resource_id: string;
   target_entity: string;
   mapping: unknown;
+  sync_mode?: string;
   dedupe_key: string | null;
   created_at: string;
 }): IntegrationMapping {
@@ -105,6 +109,7 @@ function toMapping(row: {
     id: row.id,
     resourceId: row.resource_id,
     targetEntity: 'customer',
+    syncMode: row.sync_mode === 'sync' ? 'sync' : 'import',
     fields: Array.isArray(row.mapping) ? (row.mapping as MappingField[]) : [],
     dedupeKey: row.dedupe_key,
     createdAt: row.created_at,
@@ -153,7 +158,12 @@ export async function createMapping(
 // uses elsewhere.
 // ---------------------------------------------------------------------------
 
-const CORE_SYNONYMS: Record<'name' | 'email' | 'phone', string[]> = {
+const CORE_SYNONYMS: Record<'name' | 'email' | 'phone' | 'lifecycle' | 'lead_temperature' | 'contact_type' | 'company_contact_id' | 'affiliation_title', string[]> = {
+  contact_type:['contacttype','entitytype'],
+  company_contact_id:['companycontactid'],
+  affiliation_title:['affiliationtitle','jobtitle'],
+  lifecycle: ['lifecycle', 'contactlifecycle'],
+  lead_temperature: ['leadtemperature', 'temperature'],
   name: ['name', 'businessname', 'companyname', 'company', 'fullname', 'customername', 'contactname'],
   email: ['email', 'emailaddress', 'contactemail', 'e_mail'.replace(/_/g, '')],
   phone: ['phone', 'phonenumber', 'telephone', 'contactphone', 'phonee164', 'mobile', 'cell'],
@@ -163,7 +173,7 @@ function normalizeHeader(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-function defaultTransform(field: 'name' | 'email' | 'phone'): MappingFieldTransform {
+function defaultTransform(field: 'name' | 'email' | 'phone' | 'lifecycle' | 'lead_temperature' | 'contact_type' | 'company_contact_id' | 'affiliation_title'): MappingFieldTransform {
   if (field === 'email') return 'trim_lowercase';
   if (field === 'phone') return 'e164';
   return 'none';
@@ -182,7 +192,7 @@ export function suggestMapping(headers: string[], definitions: FieldDefinition[]
     }
 
     for (const [coreField, synonyms] of Object.entries(CORE_SYNONYMS) as [
-      'name' | 'email' | 'phone',
+      'name' | 'email' | 'phone' | 'lifecycle' | 'lead_temperature' | 'contact_type' | 'company_contact_id' | 'affiliation_title',
       string[],
     ][]) {
       if (!usedCore.has(coreField) && synonyms.includes(normalized)) {
@@ -217,6 +227,11 @@ export function suggestMapping(headers: string[], definitions: FieldDefinition[]
 // ---------------------------------------------------------------------------
 
 export type NormalizedCustomerRow = {
+  lifecycle?: string;
+  lead_temperature?: string;
+  contact_type?: string;
+  company_contact_id?: string;
+  affiliation_title?: string;
   name: string;
   email: string | null;
   phone: string | null;
@@ -276,6 +291,7 @@ export function normalizeImportRow(
   raw: Record<string, string>,
 ): { normalized: NormalizedCustomerRow; validationErrors: string[] } {
   const errors: string[] = [];
+  const classification: { lifecycle?: string; lead_temperature?: string; contact_type?: string; company_contact_id?: string; affiliation_title?: string } = {};
   let name = '';
   let email: string | null = null;
   let phone: string | null = null;
@@ -285,13 +301,21 @@ export function normalizeImportRow(
   for (const field of fields) {
     if (field.target.kind === 'ignore') continue;
 
-    const { value, warning } = applyTransform(field.transform, raw[field.sourceColumn] ?? '', field.sourceColumn);
+    const { value, warning } = applyTransform(field.transform, field.fixedValue ?? raw[field.sourceColumn] ?? '', field.sourceColumn);
     if (warning) errors.push(warning);
 
     if (field.target.kind === 'core') {
       if (field.target.field === 'name') name = value;
       else if (field.target.field === 'email') email = value || null;
       else if (field.target.field === 'phone') phone = value || null;
+      else if(field.target.field==='company_contact_id'){if(value && !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(value))errors.push('Company contact ID must be an exact existing UUID.');else if(value)classification.company_contact_id=value;}
+      else if(field.target.field==='affiliation_title'){if(value.length>200)errors.push('Affiliation title is too long.');else if(value)classification.affiliation_title=value;}
+      else if (value) {
+        const normalized = value.toLowerCase();
+        const allowed: readonly string[] = field.target.field === 'contact_type' ? ['person','company','unspecified'] : field.target.field === 'lifecycle' ? CONTACT_LIFECYCLES : LEAD_TEMPERATURES;
+        if (!allowed.includes(normalized)) errors.push(`Invalid ${field.target.field}: ${value}. Use ${allowed.join(', ')}.`);
+        else classification[field.target.field] = normalized;
+      }
     } else if (field.target.kind === 'location') {
       location[field.target.field] = value || null;
     } else if (value.length > 0) {
@@ -318,7 +342,7 @@ export function normalizeImportRow(
   }
 
   return {
-    normalized: { name, email, phone, custom, location },
+    normalized: { name, email, phone, custom, location, ...classification },
     validationErrors: errors,
   };
 }

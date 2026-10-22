@@ -36,7 +36,7 @@ describe('the one address', () => {
   });
 
   it('reads the business from an organization path only', () => {
-    expect(organizationIdFromPath(`/organizations/${ORG}/customers`)).toBe(ORG);
+    expect(organizationIdFromPath(`/organizations/${ORG}/crm/contacts`)).toBe(ORG);
     expect(organizationIdFromPath(`/organizations/${ORG}`)).toBe(ORG);
     expect(organizationIdFromPath('/organizations/accept-invite/token')).toBeNull();
     expect(organizationIdFromPath('/settings/account')).toBeNull();

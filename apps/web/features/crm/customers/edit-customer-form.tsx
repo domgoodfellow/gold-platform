@@ -1,17 +1,18 @@
 'use client';
+import { ContactClassificationFields } from './contact-classification-fields';
 
 import { PhoneInput } from '@/components/controls/phone-input';
 import { useActionState, useEffect } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, SelectInput, TextInput } from '@/components/controls/inputs';
 import { CustomFieldInputs } from '@/features/custom-fields/inputs';
-import type { Customer } from '@/lib/domain/customers/customers';
+import type { Contact } from '@/lib/domain/contacts/contacts';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import {
   editCustomerAction,
   type EditCustomerState,
-} from '@/app/organizations/[organizationId]/customers/[customerId]/actions';
+} from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/actions';
 
 const EDIT_INITIAL: EditCustomerState = { error: null, updated: false };
 
@@ -22,7 +23,7 @@ const EDIT_INITIAL: EditCustomerState = { error: null, updated: false };
  * relationship is something somebody does while looking at the person, not while looking at a
  * pipeline. `features/crm/sales/pipeline-board.tsx` is that board, with its own stage control
  * calling a different, FastAPI-authoritative write (`apps/api/app/domains/crm/stages.py`) — this
- * form keeps the one it already had, `updateCustomer`, unchanged: correcting a name, an email,
+ * form keeps the one it already had, `updateContact`, unchanged: correcting a name, an email,
  * a phone number and a stage together remains one act, and splitting it here to route the stage
  * field through a second network call would trade the atomic write this form has always made for
  * two requests that can now fail independently of each other, which is a regression this
@@ -39,7 +40,7 @@ export function EditCustomerForm({
   onUpdated,
 }: {
   organizationId: string;
-  customer: Customer;
+  customer: Contact;
   definitions: FieldDefinition[];
   stages: CustomerStage[];
   onUpdated?: () => void;
@@ -54,6 +55,7 @@ export function EditCustomerForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="customerId" value={customer.id} />
 
+      <div className="flex flex-col gap-1"><FieldLabel htmlFor="edit-contact-type">Contact type</FieldLabel><SelectInput id="edit-contact-type" name="contactType" defaultValue={customer.contactType ?? 'unspecified'}>{(!customer.contactType || customer.contactType==='unspecified')?<option value="unspecified">Unspecified / Needs classification</option>:null}{(!customer.contactType || customer.contactType==='unspecified' || customer.contactType==='person')?<option value="person">Person</option>:null}{(!customer.contactType || customer.contactType==='unspecified' || customer.contactType==='company')?<option value="company">Company</option>:null}</SelectInput></div>
       <div className="flex flex-col gap-2 sm:flex-row">
         <TextInput
           name="name"
@@ -106,6 +108,7 @@ export function EditCustomerForm({
         <input type="hidden" name="stageId" value="" />
       )}
 
+      <ContactClassificationFields id="edit-contact" lifecycle={customer.lifecycle ?? null} temperature={customer.leadTemperature} />
       <CustomFieldInputs definitions={definitions} values={customer.custom} />
 
       <Button type="submit" disabled={pending} className="w-fit">

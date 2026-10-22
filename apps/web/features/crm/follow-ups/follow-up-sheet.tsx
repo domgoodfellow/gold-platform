@@ -7,11 +7,11 @@ import { FormField, FormError } from '@/components/controls/form';
 import { useDrawerFormSubmit } from '@/components/controls/use-drawer-form-submit';
 import { useFormDirty } from '@/components/controls/use-form-dirty';
 import { PageDrawer, PageDrawerClose, PageDrawerContent, PageDrawerFooter, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger, usePageDrawerUnsavedChanges } from '@/components/panels/page-drawer';
-import { saveFollowUpAction, searchFollowUpOpportunities, readFollowUpForDrawer } from '@/app/organizations/[organizationId]/follow-ups/actions';
-import { searchOpportunityCustomers } from '@/app/organizations/[organizationId]/opportunities/actions';
-import type { FollowUp } from '@/lib/domain/follow-ups/follow-ups';
+import { saveFollowUpAction, searchFollowUpOpportunities, readFollowUpForDrawer } from '@/app/organizations/[organizationId]/crm/tasks/actions';
+import { searchOpportunityCustomers } from '@/app/organizations/[organizationId]/crm/opportunities/actions';
+import type { CrmTask } from '@/lib/domain/tasks/tasks';
 export type FollowUpOptions = { organizationId: string; timezone: string; members: { id: string; displayName: string }[]; mayManage: boolean };
-type Props = FollowUpOptions & { item?: FollowUp; reference?: {id:string;title:string}; customer?: { id: string; name: string }; opportunity?: { id: string; title: string }; children?: ReactNode };
+type Props = FollowUpOptions & { item?: CrmTask; reference?: {id:string;title:string}; customer?: { id: string; name: string }; opportunity?: { id: string; title: string }; children?: ReactNode };
 function localInput(instant: string, timezone: string) {
   const parts = new Intl.DateTimeFormat('en-CA',{ timeZone: timezone, year:'numeric', month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23' }).formatToParts(new Date(instant));
   const p = (key: string) => parts.find(part=>part.type===key)?.value;
@@ -19,7 +19,7 @@ function localInput(instant: string, timezone: string) {
 }
 export function FollowUpSheet(props: Props) {
   const [open,setOpen] = useState(false);
-  const [loaded,setLoaded]=useState<FollowUp|null>(null);
+  const [loaded,setLoaded]=useState<CrmTask|null>(null);
   const [loadError,setLoadError]=useState<string|null>(null);
   const [pending,setPending]=useState(false);
   const formId=useId();

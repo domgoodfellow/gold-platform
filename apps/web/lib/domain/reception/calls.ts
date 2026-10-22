@@ -75,7 +75,7 @@ export type Call = {
 const CALL_SELECT =
   'id, customer_id, direction, status, from_number, to_number, phone_number_id, note, started_at, answered_at, ended_at, duration_seconds, recording_available_at, ' +
   'outcome:call_outcomes!calls_outcome_same_org (id, name, reached), ' +
-  'customer:customers!calls_customer_same_org (name), ' +
+  'customer:contacts!calls_customer_same_org (name), ' +
   'legs:call_participants!call_participants_call_same_org (membership_id, party, membership:memberships!call_participants_membership_same_org (display_name))';
 
 function one<T>(value: T | T[] | null): T | undefined {

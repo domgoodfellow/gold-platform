@@ -1,7 +1,9 @@
+import { listCustomerTimeline } from '@/lib/domain/timeline/timeline';
+import { createRole, assignRole } from '@/lib/domain/tenancy/roles';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createCustomer, listCustomers } from '@/lib/domain/customers/customers';
+import { createCustomer, listCustomers, getCustomer, updateCustomer, listCustomerPage, listCustomerLastActivity } from '@/lib/domain/customers/customers';
 import { foundBusiness } from '@/tests/support/founding';
 
 /**
@@ -153,5 +155,73 @@ describe('customers', () => {
     await expect(
       createCustomer(alice.db, { organizationId: alice.organizationId, name: '   ' }),
     ).rejects.toMatchObject({ code: 'customers.name_required' });
+  });
+});
+
+describe('contact lifecycle and temperature', () => {
+  it('keeps identity and history through independent classification changes', async () => {
+    const id = await createCustomer(alice.db, {organizationId:alice.organizationId,name:'Classification fixture'});
+    expect(await getCustomer(alice.db,{organizationId:alice.organizationId,customerId:id})).toMatchObject({id,lifecycle:'lead',leadTemperature:'unrated'});
+    for (const [lifecycle,leadTemperature] of [['lead','hot'],['prospect','hot'],['customer','cold']] as const) {
+      await updateCustomer(alice.db,{organizationId:alice.organizationId,customerId:id,name:'Classification fixture',lifecycle,leadTemperature});
+      expect(await getCustomer(alice.db,{organizationId:alice.organizationId,customerId:id})).toMatchObject({id,lifecycle,leadTemperature,stageId:null});
+    }
+    const filtered = await listCustomerPage(alice.db,{organizationId:alice.organizationId,filter:{page:1,search:'Classification',lifecycle:'customer',temperature:'cold'}});
+    expect(filtered.map(contact => contact.id)).toEqual([id]);
+    const events=await alice.db.from('events').select('action').eq('organization_id',alice.organizationId).eq('entity_id',id);
+    expect(events.data?.filter(event=>event.action==='customer.classification_changed')).toHaveLength(3);
+    const history=await listCustomerTimeline(alice.db,{organizationId:alice.organizationId,customerId:id});
+    expect(history.filter(entry=>entry.action==='customer.classification_changed')).toHaveLength(3);
+    expect(history.map(entry=>entry.description)).toContain('Lifecycle: Customer; lead temperature: Cold');
+    expect((await listCustomerLastActivity(alice.db,{organizationId:alice.organizationId,customerIds:[id]}))[id]).toBeTruthy();
+    expect(await listCustomerLastActivity(bob.db,{organizationId:alice.organizationId,customerIds:[id]})).toEqual({});
+    await expect(updateCustomer(bob.db,{organizationId:alice.organizationId,customerId:id,name:'Foreign change',lifecycle:'lead'})).rejects.toMatchObject({code:'customers.update_refused'});
+    const invalid = await alice.db.rpc('update_contact',{p_organization_id:alice.organizationId,p_customer_id:id,p_name:'Classification fixture',p_email:null,p_phone:null,p_custom:{},p_stage_id:null,p_lifecycle:'won',p_lead_temperature:'hot'});
+    expect(invalid.error?.code).toBe('23514');
+    expect(await getCustomer(alice.db,{organizationId:alice.organizationId,customerId:id})).toMatchObject({id,lifecycle:'customer',leadTemperature:'cold'});
+  });
+});
+
+describe('contact command authority',()=>{
+  it('allows creation with classification without granting later editing authority',async()=>{
+    const creator=await newTenant('classification-creator');
+    const roleId=await createRole(creator.db,{organizationId:creator.organizationId,name:'Create without editing',capabilities:['customer.create','role.manage']});
+    const membership=await creator.db.from('memberships').select('id').eq('organization_id',creator.organizationId).single();
+    await assignRole(creator.db,{membershipId:membership.data!.id,roleId});
+    const id=await createCustomer(creator.db,{organizationId:creator.organizationId,name:'Create only contact',lifecycle:'prospect',leadTemperature:'hot'});
+    expect(await getCustomer(creator.db,{organizationId:creator.organizationId,customerId:id})).toMatchObject({id,lifecycle:'prospect',leadTemperature:'hot'});
+    await expect(updateCustomer(creator.db,{organizationId:creator.organizationId,customerId:id,name:'Denied edit',lifecycle:'customer'})).rejects.toMatchObject({code:'customers.update_refused'});
+  });
+});
+
+
+describe('canonical person and company identity', () => {
+  it('preserves independent identities, affiliations, filters, and tenant isolation', async () => {
+    const {createContact,getContact,listContactPage}=await import('@/lib/domain/contacts/contacts');
+    const organizationId=alice.organizationId;
+    const company=await createContact(alice.db,{organizationId,name:'Canonical company',contactType:'company',lifecycle:'customer'});
+    const person=await createContact(alice.db,{organizationId,name:'Canonical person',contactType:'person',companyId:company,affiliationTitle:'Director'});
+    const second=await createContact(alice.db,{organizationId,name:'Canonical second',contactType:'person',companyId:company});
+    const other=await createContact(alice.db,{organizationId,name:'Other employer',contactType:'company'});
+    const linked=await alice.db.rpc('save_contact_affiliation',{p_organization_id:organizationId,p_person_id:person,p_company_id:other,p_title:'Advisor',p_active:false});
+    expect(linked.error).toBeNull();
+    expect(await getContact(alice.db,{organizationId,customerId:company})).toMatchObject({id:company,contactType:'company',lifecycle:'customer'});
+    expect(await getContact(alice.db,{organizationId,customerId:person})).toMatchObject({id:person,contactType:'person',lifecycle:'lead'});
+    const legacy=await alice.db.from('customers').select('id').eq('id',company).single();expect(legacy.data?.id).toBe(company);
+    const affiliations=await alice.db.from('contact_affiliations').select('*').eq('organization_id',organizationId).eq('company_id',company);
+    expect(affiliations.data?.map(row=>row.person_id).sort()).toEqual([person,second].sort());
+    const people=await listContactPage(alice.db,{organizationId,filter:{page:1,contactType:'person',companyId:company,sort:'name'}});
+    expect(people.map(row=>row.id).sort()).toEqual([person,second].sort());
+    expect(await bob.db.from('contact_affiliations').select('*').eq('organization_id',organizationId)).toMatchObject({data:[],error:null});
+    const refused=await bob.db.rpc('save_contact_affiliation',{p_organization_id:organizationId,p_person_id:person,p_company_id:company});expect(refused.error).not.toBeNull();
+    const wrongType=await alice.db.rpc('save_contact_affiliation',{p_organization_id:organizationId,p_person_id:company,p_company_id:other});expect(wrongType.error).not.toBeNull();
+    const details=await alice.db.from('contact_people').select('contact_id').eq('contact_id',person).single();expect(details.data?.contact_id).toBe(person);
+    const legacyId=await createCustomer(alice.db,{organizationId,name:'Unspecified legacy'});
+    expect(await getContact(alice.db,{organizationId,customerId:legacyId})).toMatchObject({id:legacyId,contactType:'unspecified'});
+    await updateCustomer(alice.db,{organizationId,customerId:legacyId,name:'Classified legacy',contactType:'company'});
+    expect(await getContact(alice.db,{organizationId,customerId:legacyId})).toMatchObject({id:legacyId,contactType:'company'});
+    // Classification happens once; a typed identity never changes kind afterwards.
+    await expect(updateCustomer(alice.db,{organizationId,customerId:legacyId,name:'Classified legacy',contactType:'person'})).rejects.toThrow();
+    expect(await getContact(alice.db,{organizationId,customerId:legacyId})).toMatchObject({id:legacyId,contactType:'company'});
   });
 });

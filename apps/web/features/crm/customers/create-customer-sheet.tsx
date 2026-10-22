@@ -28,11 +28,13 @@ export function CreateCustomerSheetProvider({
   definitions,
   children,
   defaultOpen = false,
+  initialType='',
 }: {
   organizationId: string;
   definitions: FieldDefinition[];
   children: ReactNode;
   defaultOpen?: boolean;
+  initialType?: 'person'|'company'|'';
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [pending, setPending] = useState(false);
@@ -44,19 +46,20 @@ export function CreateCustomerSheetProvider({
       <PageDrawer open={open} onOpenChange={setOpen}>
         <PageDrawerContent>
           <PageDrawerHeader>
-            <PageDrawerTitle><BusinessLabel>New customer</BusinessLabel></PageDrawerTitle>
+            <PageDrawerTitle><BusinessLabel>Add contact</BusinessLabel></PageDrawerTitle>
             <PageDrawerDescription>Add the identity and contact details this business knows today.</PageDrawerDescription>
           </PageDrawerHeader>
           <CreateCustomerForm
             organizationId={organizationId}
             definitions={definitions}
             formId={formId}
+            initialType={initialType}
             onCreated={() => setOpen(false)}
             onPendingChange={setPending}
           />
           <PageDrawerFooter>
             <Button type="submit" form={formId} disabled={pending}>
-              {pending ? 'Adding…' : 'Add customer'}
+              {pending ? 'Adding…' : 'Add contact'}
             </Button>
             <PageDrawerClose asChild>
               <Button type="button" tone="secondary">Cancel</Button>
@@ -71,7 +74,7 @@ export function CreateCustomerSheetProvider({
 export function CreateCustomerTrigger({
   children = (
     <>
-      <UserPlus aria-hidden /> <BusinessLabel>New customer</BusinessLabel>
+      <UserPlus aria-hidden /> <BusinessLabel>Add contact</BusinessLabel>
     </>
   ),
 }: {

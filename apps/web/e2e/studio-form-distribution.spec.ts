@@ -170,7 +170,7 @@ test('portal: a customer opens an offered form and the response is theirs, whate
   const detail = await responsesFor(page, form.formId);
   await expect(detail).toContainText('Portal Person');
   await expect(detail).toContainText('Customer portal');
-  await expect(detail.getByRole('link', { name: /./ }).filter({ hasText: /\w/ }).first()).toHaveAttribute('href', new RegExp(`/customers/${ctx.customerId}$`));
+  await expect(detail.getByRole('link', { name: /./ }).filter({ hasText: /\w/ }).first()).toHaveAttribute('href', new RegExp(`/crm/contacts/${ctx.customerId}$`));
 
   // A form the portal offers is not archived out from under it.
   await page.goto(`${studio()}/forms/${form.formId}`);

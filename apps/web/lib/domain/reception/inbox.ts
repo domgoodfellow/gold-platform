@@ -1,6 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
-import { createCustomer, listCustomers } from '@/lib/domain/customers/customers';
+import { createContact, listContacts } from '@/lib/domain/contacts/contacts';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { getConversation, listMessages, type Conversation, type ConversationChannel, type Message } from './messaging';
 import { listEmailThread, type EmailThreadMessage } from '@/lib/domain/email/messages';
@@ -57,7 +57,7 @@ export const INBOX_PAGE_SIZE = 30;
 
 const INBOX_COLUMNS =
   'id, channel, external_number, external_email, subject, last_message_at, last_message_preview, unread, status, customer_id, assignee_membership_id, ' +
-  'customer:customers!conversations_organization_id_customer_id_fkey(name), assignee:memberships!conversations_assignee_fk(display_name)';
+  'customer:contacts!conversations_organization_id_customer_id_fkey(name), assignee:memberships!conversations_assignee_fk(display_name)';
 
 type InboxRow = {
   id: string;
@@ -88,7 +88,7 @@ function toItem(row: InboxRow): InboxItem {
     unread: row.unread,
     status: row.status as ConversationStatus,
     assignee: row.assignee_membership_id ? { membershipId: row.assignee_membership_id, name: row.assignee?.display_name ?? 'Someone' } : null,
-    customer: row.customer_id ? { id: row.customer_id, name: row.customer?.name ?? 'Customer' } : null,
+    customer: row.customer_id ? { id: row.customer_id, name: row.customer?.name ?? 'Contact' } : null,
   };
 }
 
@@ -258,7 +258,7 @@ export async function getConversationDetail(db: Db, input: { organizationId: str
       ? db.from('memberships').select('id, display_name').eq('organization_id', input.organizationId).eq('id', row.assignee_membership_id).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     row.customer_id
-      ? db.from('customers').select('id, name, email, phone').eq('organization_id', input.organizationId).eq('id', row.customer_id).maybeSingle()
+      ? db.from('contacts').select('id, name, email, phone').eq('organization_id', input.organizationId).eq('id', row.customer_id).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     row.customer_id
       ? Promise.resolve({ data: [] as { customer_id: string; name: string; email: string | null; phone: string | null }[], error: null })
@@ -282,7 +282,7 @@ export async function getConversationDetail(db: Db, input: { organizationId: str
     for (const member of data ?? []) names.set(member.id, member.display_name);
   }
   if (customerIds.size > 0) {
-    const { data } = await db.from('customers').select('id, name').eq('organization_id', input.organizationId).in('id', [...customerIds]);
+    const { data } = await db.from('contacts').select('id, name').eq('organization_id', input.organizationId).in('id', [...customerIds]);
     for (const customer of data ?? []) names.set(customer.id, customer.name);
   }
 
@@ -357,7 +357,7 @@ export async function linkConversationCustomer(
 
 /**
  * The one explicit act that creates a customer from a conversation: a person chose to, named them, and
- * CRM's own `createCustomer` does the creating (its validation, its duplicate rule). The conversation's
+ * CRM's own `createContact` does the creating (its validation, its duplicate rule). The conversation's
  * contact point seeds the new record; nothing about it is ever copied back onto the conversation.
  */
 export async function createCustomerFromConversation(
@@ -367,7 +367,7 @@ export async function createCustomerFromConversation(
   const conversation = await getConversation(db, { organizationId: input.organizationId, conversationId: input.conversationId });
   if (!conversation) throw new DomainError('No such conversation here.', 'conversation.forbidden');
 
-  const customerId = await createCustomer(db, {
+  const customerId = await createContact(db, {
     organizationId: input.organizationId,
     name: input.name,
     email: conversation.channel === 'email' ? conversation.externalEmail : undefined,
@@ -379,7 +379,7 @@ export async function createCustomerFromConversation(
 
 /** Customers matching a search, for the "link to an existing customer" picker. Scoped to this business by RLS and the filter. */
 export async function searchCustomersToLink(db: Db, input: { organizationId: string; search: string }): Promise<CustomerCandidate[]> {
-  const found = await listCustomers(db, { organizationId: input.organizationId, search: input.search, limit: 8 });
+  const found = await listContacts(db, { organizationId: input.organizationId, search: input.search, limit: 8 });
   return found.map((customer) => ({ id: customer.id, name: customer.name, email: customer.email, phone: customer.phone }));
 }
 

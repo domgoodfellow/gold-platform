@@ -332,9 +332,9 @@ External actors receive only the minimum access required for their specific flow
 
 ### Customer
 
-**Definition:** The canonical organization-owned record representing a customer or prospect relationship.
+**Definition:** The canonical organization-owned business relationship record, presented as a Contact in CRM. It may represent an individual or business at Lead, Prospect or Customer lifecycle. The existing `customers` table remains its persistence owner.
 
-CRM owns the Customer relationship.
+CRM owns the Customer relationship. Lifecycle (`lead`, `prospect`, `customer`) is independent of optional lead temperature (`unrated`, `cold`, `warm`, `hot`), configurable relationship stage and each associated opportunity stage. Legacy NULL lifecycle means unclassified; no payment, stage or name is used to infer it. Classification never replaces the record or its associated history.
 
 A Customer may be related to:
 
@@ -1787,3 +1787,7 @@ When a new concept is introduced, define it here if it becomes part of the durab
 ## Business Profile and voice session
 
 `organization_business_profiles` owns versioned business nouns, labels and destination keys. It is organization configuration, not permission or record identity. `voice_receptionist_configs` references a published external deployment with explicit duration and monthly voice budget. `voice_agent_sessions` pins the admitted call, organization, route, provider account, runtime and deployment revision; provider-reported usage and signed events belong to that session. Unknown duration reserves the maximum admitted duration. An uncertain carrier transfer is not a completed transfer.
+
+## Canonical CRM identity (approved V1.1)
+
+Contact is the organization-scoped identity of an external Person or Company, never a synonym for paying Customer. Each has its own stable contact ID. Unspecified is an explicit legacy classification state, never inferred from names or domains. Typed details describe identity; affiliations link a Person to Companies with title, primary designation and active/historical state. Lifecycle and temperature belong to each independent organization relationship. Opportunities are potential transactions linked to Contacts; Tasks are obligations and Activity is recorded history. Company membership does not propagate lifecycle, duplicate identity or merge records.

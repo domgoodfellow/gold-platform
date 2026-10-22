@@ -34,7 +34,8 @@ This file is the agent operating contract. Canonical concern docs own detail.
 Authority model and change protocol: docs/decisions/README.md. Test discipline: docs/testing.md.
 Before changing a feature, read its contract and identify the owner of the affected behavior.
 Preserve accepted decisions. If code violates a contract, fix the code, not the contract.
-If documents contradict each other or the request, stop and report; never pick one in code.
+Accepted product decisions define intended behavior. Current canonical specifications express those decisions; ADRs explain decisions and history; tests enforce current behavior. Existing code is implementation evidence, not authority to redefine requirements.
+When a conflict appears, reconcile the specification against the accepted decision before changing code or tests. Explicit approval in the current work order authorizes the stated contract changes; unresolved decisions require owner clarification.
 Changing established user-facing behavior needs explicit owner authorization before editing.
 Never remove, skip, mock away or rewrite a test just to make the suite pass.
 Commits touching .github/CODEOWNERS paths need a `Contract-Change:` line; coverage cuts, `Coverage-Change:`.

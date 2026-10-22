@@ -4,12 +4,12 @@ import { Button, ButtonLink } from '@/components/controls/button';
 import { FormField } from '@/components/controls/form';
 import { ErrorText, SelectInput } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
-import { serviceReviewAction, type ServiceActionState } from '@/app/organizations/[organizationId]/customers/[customerId]/service-actions';
+import { serviceReviewAction, type ServiceActionState } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/service-actions';
 import { REVIEW_STATES, type ServiceReview } from '@/lib/domain/customers/service-reviews';
 import { parseDisclosureContent, type DisclosureRevision, type ServiceDisclosure } from '@/lib/domain/customers/service-disclosures';
 import { NotificationChoice } from './service-notification-section';
 import { NOTIFICATION_STATES, type NotificationHistory } from '@/lib/domain/customers/service-notifications';
-import type { readEngagementDetails } from '@/app/organizations/[organizationId]/customers/[customerId]/service-actions';
+import type { readEngagementDetails } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/service-actions';
 
 export function ServiceReviewSection({ organizationId, customerId, engagementId, disclosure, history, reviews, timezone, mayManage, mayReadSupport, relationshipEnded, onSaved, notificationDetails }: {
   organizationId: string; customerId: string; engagementId: string; disclosure: ServiceDisclosure | null; history: DisclosureRevision[];

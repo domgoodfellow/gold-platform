@@ -103,7 +103,7 @@ test.describe('a tenant owner', () => {
     await expect(sidebar(page).getByRole('link',{name:'Administration',exact:true})).toHaveCount(0);
   });
   for(const width of [1440,768,390]) test(`contextual workspace navigation at ${width}px`,async({page},info)=>{
-    await page.setViewportSize({width,height:900});await page.goto(`/organizations/${loadDemoContext().organizationId}/customers`);
+    await page.setViewportSize({width,height:900});await page.goto(`/organizations/${loadDemoContext().organizationId}/crm/contacts`);
     if(width<768)await page.getByRole('button',{name:/^(Toggle Sidebar|Menu)$/}).click();
     const nav=page.getByRole('navigation',{name:'This business'}).filter({visible:true});
     await expect(nav.getByRole('link',{name:'Customers',exact:true})).toBeVisible();
@@ -181,7 +181,7 @@ test.describe('account menu and icon-bearing Settings', () => {
     await page.setViewportSize({ width, height: 1000 });
     for (const colorScheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme });
-      await page.goto(`/organizations/${organizationId}/customers`);
+      await page.goto(`/organizations/${organizationId}/crm/contacts`);
       const open = async () => { if (width < 768) await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click(); };
       await open();
       await expect(page.getByRole('navigation', { name: 'Application controls' })).toHaveCount(0);
@@ -208,7 +208,7 @@ test.describe('account menu and icon-bearing Settings', () => {
       await expect(page.getByRole('heading', { name: 'Appearance', exact: true })).toBeVisible();
       await open();
       await settings.getByRole('link', { name: 'Back to app', exact: true }).click();
-      await expect(page).toHaveURL(`/organizations/${organizationId}/customers`);
+      await expect(page).toHaveURL(`/organizations/${organizationId}/crm/contacts`);
       if (width >= 768) await page.locator('header').getByRole('button', { name: /^(Toggle Sidebar|Menu)$/ }).click();
       await page.goto(`/organizations/${organizationId}/comms`);
       await open();

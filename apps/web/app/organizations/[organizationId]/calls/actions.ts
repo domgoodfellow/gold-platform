@@ -70,7 +70,7 @@ export async function recordCallAction(
   const customerId = String(formData.get('customerId') ?? '');
   const direction = String(formData.get('direction') ?? 'outbound');
 
-  return attempt(organizationId, `/customers/${customerId}`, () =>
+  return attempt(organizationId, `/crm/contacts/${customerId}`, () =>
     recordCall(db, {
       organizationId,
       customerId,

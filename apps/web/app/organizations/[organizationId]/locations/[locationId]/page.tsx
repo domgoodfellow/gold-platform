@@ -3,7 +3,7 @@ import { RecordHeader } from '@/components/headers/record-header';
 import { LocationDetail } from '@/features/locations/location-detail';
 import { geocodingProvider } from '@/lib/adapters/geocoding';
 import { listAssets } from '@/lib/domain/assets/assets';
-import { listCustomers } from '@/lib/domain/customers/customers';
+import { listContacts } from '@/lib/domain/contacts/contacts';
 import { listDocuments } from '@/lib/domain/documents/documents';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { getLocation } from '@/lib/domain/locations/locations';
@@ -21,14 +21,14 @@ export default async function LocationPage({
   const { db, organization } = await requireOrganization(organizationId);
 
   // Another tenant's location id resolves to null, so this renders a 404 rather than an
-  // empty page — the same indistinguishability `getCustomer` and `getAsset` rely on RLS for.
+  // empty page — the same indistinguishability `getContact` and `getAsset` rely on RLS for.
   const location = await getLocation(db, { organizationId, locationId });
   if (!location) {
     notFound();
   }
 
   const [customers, definitions, documents, assets, workItems, geocoding, timeline] = await Promise.all([
-    listCustomers(db, { organizationId }),
+    listContacts(db, { organizationId }),
     listFieldDefinitions(db, { organizationId, entityType: 'location' }),
     listDocuments(db, { organizationId, attachedTo: { entity: 'location', id: locationId } }),
     listAssets(db, { organizationId, locationId }),

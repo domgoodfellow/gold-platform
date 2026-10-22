@@ -13,7 +13,7 @@ import { LocationsViewNav } from '@/features/locations/locations-view-nav';
 import { resolveLocationsView } from '@/features/locations/locations-view';
 import { geocodingProvider } from '@/lib/adapters/geocoding';
 import { mapConfig } from '@/lib/adapters/maps/config';
-import { listCustomers } from '@/lib/domain/customers/customers';
+import { listContacts } from '@/lib/domain/contacts/contacts';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
@@ -32,7 +32,7 @@ export default async function LocationsPage({
 
   const [locations, customers, definitions, geocoding] = await Promise.all([
     listLocations(db, { organizationId }),
-    listCustomers(db, { organizationId }),
+    listContacts(db, { organizationId }),
     listFieldDefinitions(db, { organizationId, entityType: 'location' }),
     geocodingProvider(),
   ]);

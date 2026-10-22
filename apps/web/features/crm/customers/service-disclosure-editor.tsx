@@ -5,13 +5,13 @@ import { Button } from '@/components/controls/button';
 import { FormField } from '@/components/controls/form';
 import { ErrorText, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
-import { disclosureAction, type ServiceActionState } from '@/app/organizations/[organizationId]/customers/[customerId]/service-actions';
+import { disclosureAction, type ServiceActionState } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/service-actions';
 import { SERVICE_KINDS, type Deliverable, type Engagement } from '@/lib/domain/customers/service-engagements';
 import { parseDisclosureContent, type ApprovedDeliverable, type DisclosureContent, type DisclosureRevision, type ServiceDisclosure } from '@/lib/domain/customers/service-disclosures';
 import { ServicePresentation } from '@/features/portal-access/service-presenter';
 import { useUnsavedChanges } from '@/components/controls/use-unsaved-changes';
 import { NotificationChoice } from './service-notification-section';
-import type { readEngagementDetails } from '@/app/organizations/[organizationId]/customers/[customerId]/service-actions';
+import type { readEngagementDetails } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/service-actions';
 
 type Props = {
   organizationId: string; customerId: string; customerName: string; organizationName: string; timezone?: string;

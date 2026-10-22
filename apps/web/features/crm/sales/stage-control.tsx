@@ -6,7 +6,7 @@ import type { CustomerStage } from '@/lib/domain/customers/stages';
 import {
   changeCustomerStageAction,
   type ChangeStageState,
-} from '@/app/organizations/[organizationId]/customers/pipeline/actions';
+} from '@/app/organizations/[organizationId]/crm/contacts/stages/actions';
 
 const INITIAL: ChangeStageState = { error: null };
 

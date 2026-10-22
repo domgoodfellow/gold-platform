@@ -62,7 +62,7 @@ test('customer approval, changes into Support, stale review and invitation bound
     await pg.query('delete from platform_staff where user_id=$1', [made.data.user.id]);
     const tls = new URL(process.env.E2E_PORTAL_TLS_URL ?? 'https://localhost:3148');
     const origin = `https://${sellerHost}:${tls.port}`;
-    const customerPath = `/organizations/${org}/customers/${customer}`;
+    const customerPath = `/organizations/${org}/crm/contacts/${customer}`;
     const openEngagement = async () => {
       await page.goto(customerPath); await page.getByRole('tab', { name: 'Overview', exact: true }).click();
       await page.getByRole('button', { name: 'View engagement', exact: true }).click();

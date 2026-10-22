@@ -152,7 +152,7 @@ describe('contextual sidebar rendering', () => {
     vi.stubGlobal('innerWidth', 1440);
     const org = '11111111-1111-4111-8111-111111111111';
     const sections = projectShell({ organizationId: org, enabledModules: new Set(['reception']), featureAvailability: new Set(AREAS.flatMap(area => area.featureKeys ?? [])), capabilities: new Set(ALL_CAPABILITIES) });
-    route.pathname = `/organizations/${org}/sales/configuration/relationship-stages`;
+    route.pathname = `/organizations/${org}/crm/configuration/relationship-stages`;
     render(<TooltipProvider><SidebarProvider><OrgNav sections={sections} organizationId={org} /></SidebarProvider></TooltipProvider>);
     expect(screen.queryByRole('link', { name: 'Configuration' })).not.toBeInTheDocument();
     const heading = screen.getByRole('button', { name: 'Configuration' });
@@ -166,7 +166,7 @@ describe('contextual sidebar rendering', () => {
     heading.focus();
     await user.keyboard('{Enter}');
     expect(heading).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('link', { name: 'Customer fields' })).toHaveAttribute('href', `/organizations/${org}/sales/configuration/fields`);
+    expect(screen.getByRole('link', { name: 'Customer fields' })).toHaveAttribute('href', `/organizations/${org}/crm/configuration/fields`);
     await user.keyboard(' ');
     expect(heading).toHaveAttribute('aria-expanded', 'false');
     vi.unstubAllGlobals();
@@ -190,20 +190,20 @@ describe('contextual sidebar rendering', () => {
     const runtime = screen.getByTestId('runtime');
     await userEvent.click(runtime);
     await waitFor(() => expect(runtime).toHaveTextContent('ready'));
-    expect(screen.getByRole('link', { name: 'CRM' })).toHaveAttribute('href', `/organizations/${org}/sales`);
-    expect(screen.queryByRole('link', { name: 'Customers' })).not.toBeInTheDocument();
-    route.pathname = `/organizations/${org}/customers/123`;
+    expect(screen.getByRole('link', { name: 'CRM' })).toHaveAttribute('href', `/organizations/${org}/crm`);
+    expect(screen.queryByRole('link', { name: 'Contacts' })).not.toBeInTheDocument();
+    route.pathname = `/organizations/${org}/crm/contacts/123`;
     rerender(view());
-    expect(screen.getByRole('link', { name: 'Customers' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Contacts' })).toHaveAttribute('aria-current', 'page');
     // ADR-047: the workspace heading is the way to CRM's Home, and it is not current on a child page.
     expect(screen.queryByRole('link', { name: 'Overview' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'CRM home' })).toHaveAttribute('href', `/organizations/${org}/sales`);
-    expect(screen.getByRole('link', { name: 'CRM home' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', `/organizations/${org}/crm`);
+    expect(screen.getByRole('link', { name: 'Dashboard' })).not.toHaveAttribute('aria-current');
     expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', `/organizations/${org}/home`);
     route.pathname = `/organizations/${org}/calls`;
     rerender(view());
     expect(screen.getByRole('link', { name: 'Dialer' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.queryByRole('link', { name: 'Customers' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Contacts' })).not.toBeInTheDocument();
     for (const path of ['comms/configuration/calling', 'settings/general']) { route.pathname = `/organizations/${org}/${path}`; rerender(view()); expect(runtime).toHaveTextContent('call-1'); }
     route.pathname = `/organizations/${org}/home`;
     rerender(view());
@@ -234,8 +234,8 @@ describe('responsive breadcrumb interaction', () => {
     expect(screen.getByRole('menuitem', { name: 'Schedule' })).toHaveAttribute('aria-current', 'page');
     // ADR-047: the phone menu reaches Work's Home through its heading, not an Overview item.
     expect(screen.queryByRole('menuitem', { name: 'Overview' })).not.toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Work home' })).toHaveAttribute('href', `${base}/field`);
-    expect(screen.getByRole('menuitem', { name: 'Work home' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('menuitem', { name: 'Dashboard' })).toHaveAttribute('href', `${base}/field`);
+    expect(screen.getByRole('menuitem', { name: 'Dashboard' })).not.toHaveAttribute('aria-current');
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
     expect(trigger).toHaveFocus();

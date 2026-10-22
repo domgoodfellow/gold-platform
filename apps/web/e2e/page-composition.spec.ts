@@ -75,7 +75,7 @@ test.describe('an owner', () => {
   });
 
   test('CRM Home: agenda once, exceptions only, month on its panel, activity in its panel', async ({ page }) => {
-    await page.goto(`/organizations/${loadDemoContext().organizationId}/sales`);
+    await page.goto(`/organizations/${loadDemoContext().organizationId}/crm`);
     await expect(page.getByText('Agenda call later today')).toHaveCount(1);
     await expect(panel(page, 'Today').getByText('Agenda call later today')).toBeVisible();
     const attention = panel(page, 'Needs attention');
@@ -118,7 +118,7 @@ test.describe('an owner', () => {
         await noOverflow(page);
       }
       // Narrow screens put exceptions before the agenda.
-      await page.goto(`${base}/sales`);
+      await page.goto(`${base}/crm`);
       const order = await page.getByRole('heading', { name: /^(Needs attention|Today|Pipeline)$/ }).allTextContents();
       expect(order.slice(0, 2)).toEqual(['Needs attention', 'Today']);
     });

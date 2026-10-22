@@ -46,7 +46,7 @@ const TITLE_MAX = 300;
 // status hint names the three-column constraint, which carries type_id as well — a work item
 // cannot sit in another type's status, and that is a database fact rather than a convention.
 const WORK_ITEM_SELECT =
-  'id, title, custom, created_at, scheduled_during, type:work_item_types!work_items_type_same_org!inner (id, name, schedulable), status:work_item_statuses!work_items_status_same_org_and_type!inner (id, name, releases_resource), customer:customers!work_items_customer_same_org (id, name), location:locations!work_items_location_same_org (id, label), assignments:work_item_resource_assignments!work_item_resource_assignments_work_item_same_org (resource:resources!work_item_resource_assignments_resource_same_org (id, name)), assignment_filter:work_item_resource_assignments!work_item_resource_assignments_work_item_same_org (resource_id), asset:assets!work_items_asset_same_org (id, name)';
+  'id, title, custom, created_at, scheduled_during, type:work_item_types!work_items_type_same_org!inner (id, name, schedulable), status:work_item_statuses!work_items_status_same_org_and_type!inner (id, name, releases_resource), customer:contacts!work_items_customer_same_org (id, name), location:locations!work_items_location_same_org (id, label), assignments:work_item_resource_assignments!work_item_resource_assignments_work_item_same_org (resource:resources!work_item_resource_assignments_resource_same_org (id, name)), assignment_filter:work_item_resource_assignments!work_item_resource_assignments_work_item_same_org (resource_id), asset:assets!work_items_asset_same_org (id, name)';
 
 function one<T>(value: T | T[] | null): T | undefined {
   if (value === null) return undefined;

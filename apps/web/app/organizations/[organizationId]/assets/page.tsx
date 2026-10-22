@@ -6,7 +6,7 @@ import { AssetTable } from '@/features/assets/asset-table';
 import { CreateAssetSheetProvider, CreateAssetTrigger } from '@/features/assets/create-asset-sheet';
 import { listAssets } from '@/lib/domain/assets/assets';
 import { listLatestAssetReadings } from '@/lib/domain/assets/readings';
-import { listCustomers } from '@/lib/domain/customers/customers';
+import { listContacts } from '@/lib/domain/contacts/contacts';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
@@ -23,7 +23,7 @@ export default async function AssetsPage({
 
   const [assets, customers, locations, definitions] = await Promise.all([
     listAssets(db, { organizationId }),
-    listCustomers(db, { organizationId }),
+    listContacts(db, { organizationId }),
     listLocations(db, { organizationId }),
     listFieldDefinitions(db, { organizationId, entityType: 'asset' }),
   ]);

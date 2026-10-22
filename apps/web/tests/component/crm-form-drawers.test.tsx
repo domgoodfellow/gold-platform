@@ -9,14 +9,14 @@ import { FollowUpSheet } from '@/features/crm/follow-ups/follow-up-sheet';
 import type { FollowUp } from '@/lib/domain/follow-ups/follow-ups';
 import type { Opportunity } from '@/lib/domain/opportunities/opportunities';
 
-const customers = vi.hoisted(() => ({ createCustomerAction: vi.fn() }));
+const customers = vi.hoisted(() => ({ createCustomerAction: vi.fn(), companyOptionsAction: vi.fn(async () => []) }));
 const opportunities = vi.hoisted(() => ({ saveOpportunityAction: vi.fn(), searchOpportunityCustomers: vi.fn(), moveOpportunityAction: vi.fn(), saveOpportunityStageAction: vi.fn() }));
 const followUps = vi.hoisted(() => ({ saveFollowUpAction: vi.fn(), searchFollowUpOpportunities: vi.fn(), readFollowUpForDrawer: vi.fn(), changeFollowUpStatusAction: vi.fn() }));
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
-vi.mock('@/app/organizations/[organizationId]/customers/actions', () => customers);
-vi.mock('@/app/organizations/[organizationId]/opportunities/actions', () => opportunities);
-vi.mock('@/app/organizations/[organizationId]/follow-ups/actions', () => followUps);
-vi.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/organizations/org/sales' }));
+vi.mock('@/app/organizations/[organizationId]/crm/contacts/actions', () => customers);
+vi.mock('@/app/organizations/[organizationId]/crm/opportunities/actions', () => opportunities);
+vi.mock('@/app/organizations/[organizationId]/crm/tasks/actions', () => followUps);
+vi.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/organizations/org/crm' }));
 
 const confirmation = () => screen.queryByRole('dialog', { name: 'Discard unsaved changes?' });
 const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 10)));
@@ -40,17 +40,17 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-describe('New customer drawer', () => {
+describe('Add contact drawer', () => {
   const open = async () => {
     const user = inRail(<CreateCustomerSheetProvider organizationId="org" definitions={[]}><CreateCustomerTrigger /></CreateCustomerSheetProvider>);
-    await user.click(screen.getByRole('button', { name: /New customer/ }));
-    return { user, drawer: screen.getByRole('dialog', { name: 'New customer' }) };
+    await user.click(screen.getByRole('button', { name: /Add contact/ }));
+    return { user, drawer: screen.getByRole('dialog', { name: 'Add contact' }) };
   };
 
-  it('opens on Name with Add customer and Cancel in the footer, associated with the form', async () => {
+  it('opens on Contact type with Add contact and Cancel in the footer, associated with the form', async () => {
     const { drawer } = await open();
-    expect(screen.getByLabelText('Name')).toHaveFocus();
-    const submit = within(drawer).getByRole('button', { name: 'Add customer' });
+    expect(screen.getByLabelText('Contact type')).toHaveFocus();
+    const submit = within(drawer).getByRole('button', { name: 'Add contact' });
     const form = drawer.querySelector('form')!;
     expect(submit).toHaveAttribute('form', form.id);
     expect(form.contains(submit)).toBe(false);
@@ -61,12 +61,13 @@ describe('New customer drawer', () => {
   it('a refused save keeps what was typed and focuses the reason; Escape asks, Keep editing returns', async () => {
     customers.createCustomerAction.mockResolvedValue({ error: 'That email belongs to another customer.', created: false });
     const { user } = await open();
-    await user.type(screen.getByLabelText('Name'), 'Harbour View Dental');
+    await user.selectOptions(screen.getByLabelText('Contact type'), 'company');
+    await user.type(screen.getByLabelText('Company name'), 'Harbour View Dental');
     await user.type(screen.getByLabelText(/Email/), 'desk@harbour.example');
-    await user.click(screen.getByRole('button', { name: 'Add customer' }));
+    await user.click(within(screen.getByRole('dialog', {name:'Add contact'})).getByRole('button', { name: 'Add contact' }));
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('another customer');
-    expect(screen.getByLabelText('Name')).toHaveValue('Harbour View Dental');
+    expect(screen.getByLabelText('Company name')).toHaveValue('Harbour View Dental');
     expect(screen.getByLabelText(/Email/)).toHaveValue('desk@harbour.example');
     await waitFor(() => expect(alert.parentElement).toHaveFocus());
     await user.keyboard('{Escape}');
@@ -80,24 +81,26 @@ describe('New customer drawer', () => {
     const save = deferred();
     customers.createCustomerAction.mockReturnValue(save.promise);
     const { user } = await open();
-    await user.type(screen.getByLabelText('Name'), 'Northgate Bakery');
-    await user.click(screen.getByRole('button', { name: 'Add customer' }));
+    await user.selectOptions(screen.getByLabelText('Contact type'), 'company');
+    await user.type(screen.getByLabelText('Company name'), 'Northgate Bakery');
+    await user.click(within(screen.getByRole('dialog', {name:'Add contact'})).getByRole('button', { name: 'Add contact' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Adding…' })).toBeDisabled());
     await user.click(screen.getByRole('button', { name: 'Adding…' }));
     expect(customers.createCustomerAction).toHaveBeenCalledTimes(1);
     await save.resolve({ error: null, created: true });
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New customer' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add contact' })).toBeNull());
     expect(confirmation()).toBeNull();
-    await user.click(screen.getByRole('button', { name: /New customer/ }));
+    await user.click(screen.getByRole('button', { name: /Add contact/ }));
     expect(screen.getByLabelText('Name')).toHaveValue('');
+    expect(screen.getByLabelText('Contact type')).toHaveValue('');
   });
 
   it('closes an untouched drawer at once and returns focus to the trigger', async () => {
     const { user } = await open();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(confirmation()).toBeNull();
-    expect(screen.queryByRole('dialog', { name: 'New customer' })).toBeNull();
-    await waitFor(() => expect(screen.getByRole('button', { name: /New customer/ })).toHaveFocus());
+    expect(screen.queryByRole('dialog', { name: 'Add contact' })).toBeNull();
+    await waitFor(() => expect(screen.getByRole('button', { name: /Add contact/ })).toHaveFocus());
   });
 });
 
@@ -131,7 +134,7 @@ describe('Opportunity drawer', () => {
     await user.click(screen.getByRole('button', { name: 'Saving…' }));
     expect(opportunities.saveOpportunityAction).toHaveBeenCalledTimes(1);
     await save.resolve({ error: null, savedId: 'opp-1' });
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/organizations/org/opportunities/opp-1'));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/organizations/org/crm/opportunities/opp-1'));
     expect(screen.queryByRole('dialog', { name: 'New opportunity' })).toBeNull();
     expect(confirmation()).toBeNull();
   });

@@ -30,7 +30,7 @@ const NAME_MAX = 200;
 // One string literal, not a concatenation — supabase-js parses the select at the type level.
 // Both embeds are hinted with their constraint names because the references are composite.
 const ASSET_SELECT =
-  'id, name, custom, created_at, customer:customers!assets_customer_same_org (id, name), location:locations!assets_location_same_org (id, label)';
+  'id, name, custom, created_at, customer:contacts!assets_customer_same_org (id, name), location:locations!assets_location_same_org (id, label)';
 
 function one<T>(value: T | T[] | null): T | undefined {
   if (value === null) return undefined;

@@ -40,7 +40,9 @@ Each kind of rule has one owner. Another document may link to it, but must not r
 | `CLAUDE.md` | How agents interpret, implement and change these contracts | Product, UI or architecture rules |
 | Tests (`test-manifest.json`) | Executable checks derived from approved contracts | New contracts. A test that passes after its expectation was edited proves nothing about authorization |
 
-When two owners disagree, neither silently wins. Use the protocol below.
+Accepted product decisions define intended behavior. Current canonical specifications express those decisions. ADRs explain decisions and historical changes. Tests enforce current behavior. Existing code is evidence of implementation, not justification for redefining requirements.
+
+When a conflict appears, reconcile the current specification against the accepted decision before modifying tests or implementation. An explicitly approved work order supplies authorization for its stated decisions; unresolved product decisions still follow the protocol below.
 
 ---
 
@@ -189,6 +191,7 @@ It is not a duplicate specification.
 | ADR-046 | Entered workspaces use contextual navigation over one canonical projection. **Point 3 (Overview) superseded by ADR-047; point 6 (header presentation) by ADR-048** | [`ADR-046-contextual-workspace-navigation.md`](ADR-046-contextual-workspace-navigation.md) |
 | ADR-047 | One page location and identity contract | [`ADR-047-page-location-and-identity.md`](ADR-047-page-location-and-identity.md) |
 | ADR-048 | The sidebar owns workspace navigation; the header owns page identity and actions | [`ADR-048-sidebar-owns-workspace-navigation.md`](ADR-048-sidebar-owns-workspace-navigation.md) |
+| ADR-049 | Explicit workspace Dashboard; supersedes ADR-047 point 1 | [`ADR-049-explicit-workspace-dashboard.md`](ADR-049-explicit-workspace-dashboard.md) |
 
 ---
 

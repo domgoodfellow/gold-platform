@@ -102,7 +102,7 @@ export async function listPricedWork(
   const { data, error, count } = await db
     .from('work_items')
     .select(
-      'id, title, created_at, status:work_item_statuses!work_items_status_same_org_and_type (name), customer:customers!work_items_customer_same_org (id, name), lines:work_item_priced_lines!work_item_priced_lines_work_item_same_org!inner (id, description, unit, unit_amount_minor, currency, quantity, created_at)',
+      'id, title, created_at, status:work_item_statuses!work_items_status_same_org_and_type (name), customer:contacts!work_items_customer_same_org (id, name), lines:work_item_priced_lines!work_item_priced_lines_work_item_same_org!inner (id, description, unit, unit_amount_minor, currency, quantity, created_at)',
       { count: 'exact' },
     )
     .eq('organization_id', input.organizationId)

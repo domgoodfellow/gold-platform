@@ -50,13 +50,13 @@ export function ImportRunDetail({
           <SectionHeading>Result</SectionHeading>
           <WidgetGrid className="mt-3">
             <Widget title="Created" value={run.rowsCreated} />
-            <Widget title="Matched existing customers" value={run.rowsUpdated} />
+            <Widget title="Updated contacts" value={run.rowsUpdated} />
             <Widget title="Skipped" value={run.rowsSkipped} />
             <Widget title="Failed" value={run.rowsFailed} />
           </WidgetGrid>
           <div className="mt-4 flex flex-wrap gap-3">
-            <ButtonLink href={`/organizations/${organizationId}/customers`} tone="primary" size="small">
-              View customers
+            <ButtonLink href={`/organizations/${organizationId}/crm/contacts`} tone="primary" size="small">
+              View contacts
             </ButtonLink>
             <ButtonLink href={libraryImportHref(organizationId, runId, `?status=failed`)} tone="secondary" size="small">
               Review problems

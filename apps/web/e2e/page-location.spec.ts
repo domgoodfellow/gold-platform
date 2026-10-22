@@ -222,19 +222,19 @@ test('streaming never exposes a second primary heading, and the settled page has
   for (let round = 0; round < 5; round++) {
     // The original observation came straight after sign-in, so each round starts there.
     await page.goto(`${base}/home`);
-    await page.goto(`${base}/customers`);
+    await page.goto(`${base}/crm/contacts`);
     settled[`hard-collection-${round}`] = await settledHeadings(page);
-    await page.goto(`${base}/customers/${fixture.acme}`);
+    await page.goto(`${base}/crm/contacts/${fixture.acme}`);
     settled[`hard-record-${round}`] = await settledHeadings(page);
   }
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`${base}/customers`);
+  await page.goto(`${base}/crm/contacts`);
   for (let round = 0; round < 3; round++) {
     await page.getByRole('link', { name: 'Acme Ltd', exact: true }).first().click();
-    await page.waitForURL(`**/customers/${fixture.acme}`);
+    await page.waitForURL(`**/crm/contacts/${fixture.acme}`);
     settled[`client-record-${round}`] = await settledHeadings(page);
     await page.goBack();
-    await page.waitForURL(`**${base}/customers`);
+    await page.waitForURL(`**${base}/crm/contacts`);
     settled[`client-back-${round}`] = await settledHeadings(page);
   }
   const samples = await page.evaluate(() => (window as unknown as { __headings: unknown[] }).__headings);
@@ -291,36 +291,36 @@ test('Customers collection and Customer detail resolve one location', async ({ p
   page.on('pageerror', (error) => errors.push(error.message));
   await signIn(page, fixture.email, fixture.password);
   const base = `/organizations/${fixture.plain}`;
-  const crm = { label: 'CRM', href: `${base}/sales` };
-  const customers = { label: 'Customers', href: `${base}/customers` };
+  const crm = { label: 'CRM', href: `${base}/crm` };
+  const customers = { label: 'Customers', href: `${base}/crm/contacts` };
 
   for (const width of WIDTHS) {
     await page.setViewportSize({ width, height: 900 });
 
-    await page.goto(`${base}/customers`);
+    await page.goto(`${base}/crm/contacts`);
     await expectLocation(page, width, { trail: [crm], current: 'Customers', heading: 'Customers' });
     await capture(page, `customers-${width}`);
 
     const vocabularyBase = `/organizations/${fixture.vocabulary}`;
-    await page.goto(`${vocabularyBase}/customers`);
-    await expectLocation(page, width, { trail: [{ label: 'CRM', href: `${vocabularyBase}/sales` }], current: 'Clients', heading: 'Clients' });
+    await page.goto(`${vocabularyBase}/crm/contacts`);
+    await expectLocation(page, width, { trail: [{ label: 'CRM', href: `${vocabularyBase}/crm` }], current: 'Clients', heading: 'Clients' });
     await capture(page, `customers-vocabulary-${width}`);
 
     // Direct deep-link entry to a record.
-    await page.goto(`${base}/customers/${fixture.acme}`);
+    await page.goto(`${base}/crm/contacts/${fixture.acme}`);
     await expectLocation(page, width, { trail: [crm, customers], current: 'Acme Ltd', heading: 'Acme Ltd' });
     await capture(page, `customer-${width}`);
 
-    await page.goto(`${base}/customers/${fixture.long}`);
+    await page.goto(`${base}/crm/contacts/${fixture.long}`);
     await expectLocation(page, width, { trail: [crm, customers], current: LONG_NAME, heading: LONG_NAME });
     await capture(page, `customer-long-${width}`);
 
-    await page.goto(`${base}/customers/${randomUUID()}`);
+    await page.goto(`${base}/crm/contacts/${randomUUID()}`);
     await expectLocation(page, width, { trail: [crm, customers], current: 'Not found', heading: 'This page does not exist', stateHeading: true });
     await capture(page, `customer-missing-${width}`);
 
     // Another business's customer: the same not-found, and its name is never on the page.
-    await page.goto(`${base}/customers/${fixture.hidden}`);
+    await page.goto(`${base}/crm/contacts/${fixture.hidden}`);
     await expectLocation(page, width, { trail: [crm, customers], current: 'Not found', heading: 'This page does not exist', stateHeading: true });
     expect(await page.content()).not.toContain('Hidden Secret Customer');
     await capture(page, `customer-unauthorized-${width}`);
@@ -329,11 +329,11 @@ test('Customers collection and Customer detail resolve one location', async ({ p
   // Panels open: the location stays put, single and unclipped.
   for (const width of [390, 820, 1440] as const) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto(`${base}/customers`);
+    await page.goto(`${base}/crm/contacts`);
     await page.getByRole('button', { name: 'Configure', exact: true }).click();
     await expectLocation(page, width, { trail: [crm], current: 'Customers', heading: 'Customers' });
     await capture(page, `customers-configure-${width}`);
-    await page.goto(`${base}/customers/${fixture.acme}`);
+    await page.goto(`${base}/crm/contacts/${fixture.acme}`);
     const agent = page.getByRole('button', { name: 'Agent', exact: true }).first();
     if (await agent.isVisible()) {
       await agent.click();
@@ -345,9 +345,9 @@ test('Customers collection and Customer detail resolve one location', async ({ p
 
   // Client-side transitions between records never show a previous record's name.
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`${base}/customers`);
+  await page.goto(`${base}/crm/contacts`);
   const seen: string[] = [];
-  await page.route('**/customers/**', async (route) => {
+  await page.route('**/crm/contacts/**', async (route) => {
     if (route.request().headers()['rsc']) await new Promise((resolve) => setTimeout(resolve, 1500));
     await route.continue();
   });
@@ -361,7 +361,7 @@ test('Customers collection and Customer detail resolve one location', async ({ p
   await page.getByRole('link', { name: 'Bravo Services', exact: true }).first().click();
   await expect(page.locator('header.sticky').getByRole('navigation', { name: 'breadcrumb' })).not.toContainText('Acme Ltd');
   await expectLocation(page, 1440, { trail: [crm, customers], current: 'Bravo Services', heading: 'Bravo Services' });
-  await page.unroute('**/customers/**');
+  await page.unroute('**/crm/contacts/**');
   expect(seen[0]).not.toContain('Acme Ltd');
   expect(errors, 'no page errors').toEqual([]);
 });
@@ -369,20 +369,20 @@ test('Customers collection and Customer detail resolve one location', async ({ p
 /** The CRM operating routes Slice 1C covers, keyed by the location each one should resolve to. */
 function crmRoutes() {
   const base = `/organizations/${fixture.plain}`;
-  const crm = { label: 'CRM', href: `${base}/sales` };
+  const crm = { label: 'CRM', href: `${base}/crm` };
   const followUps = fixture.followUps
     ? { trail: [crm], current: 'Follow-ups', heading: 'Follow-ups' }
     : { trail: [crm], current: 'Not found', heading: 'This page does not exist', stateHeading: true };
   return {
-    'workspace:crm': { path: `${base}/sales`, expected: { trail: [], current: 'CRM', heading: 'CRM', up: `${base}/home` } },
-    'area:customers': { path: `${base}/customers`, expected: { trail: [crm], current: 'Customers', heading: 'Customers' } },
-    'record:customer': { path: `${base}/customers/${fixture.acme}`, expected: { trail: [crm, { label: 'Customers', href: `${base}/customers` }], current: 'Acme Ltd', heading: 'Acme Ltd' } },
-    'area:pipeline': { path: `${base}/customers/pipeline`, expected: { trail: [crm], current: 'Relationship pipeline', heading: 'Relationship pipeline' } },
-    'area:opportunities': { path: `${base}/opportunities`, expected: { trail: [crm], current: 'Opportunities', heading: 'Opportunities' } },
-    'record:opportunity': { path: `${base}/opportunities/${fixture.opportunity}`, expected: { trail: [crm, { label: 'Opportunities', href: `${base}/opportunities` }], current: 'Roof refit', heading: 'Roof refit' } },
-    'area:follow-ups': { path: `${base}/follow-ups`, expected: followUps },
-    'area:calendar': { path: `${base}/sales/calendar`, expected: { trail: [crm], current: 'Calendar', heading: 'Calendar' } },
-    'area:crm-search': { path: `${base}/sales/search`, expected: { trail: [crm], current: 'Search CRM', heading: 'Search CRM' } },
+    'workspace:crm': { path: `${base}/crm`, expected: { trail: [], current: 'CRM', heading: 'CRM', up: `${base}/home` } },
+    'area:customers': { path: `${base}/crm/contacts`, expected: { trail: [crm], current: 'Customers', heading: 'Customers' } },
+    'record:customer': { path: `${base}/crm/contacts/${fixture.acme}`, expected: { trail: [crm, { label: 'Customers', href: `${base}/crm/contacts` }], current: 'Acme Ltd', heading: 'Acme Ltd' } },
+    'area:pipeline': { path: `${base}/crm/contacts/stages`, expected: { trail: [crm], current: 'Relationship pipeline', heading: 'Relationship pipeline' } },
+    'area:opportunities': { path: `${base}/crm/opportunities`, expected: { trail: [crm], current: 'Opportunities', heading: 'Opportunities' } },
+    'record:opportunity': { path: `${base}/crm/opportunities/${fixture.opportunity}`, expected: { trail: [crm, { label: 'Opportunities', href: `${base}/crm/opportunities` }], current: 'Roof refit', heading: 'Roof refit' } },
+    'area:follow-ups': { path: `${base}/crm/tasks`, expected: followUps },
+    'area:calendar': { path: `${base}/crm/calendar`, expected: { trail: [crm], current: 'Calendar', heading: 'Calendar' } },
+    'area:crm-search': { path: `${base}/crm/search`, expected: { trail: [crm], current: 'Search CRM', heading: 'Search CRM' } },
   } as Record<string, { path: string; expected: Parameters<typeof expectLocation>[2] }>;
 }
 
@@ -390,7 +390,7 @@ test('CRM capture: the location every CRM operating route shows', async ({ page 
   test.setTimeout(240_000);
   await signIn(page, fixture.email, fixture.password);
   const base = `/organizations/${fixture.plain}`;
-  const routes = { ...Object.fromEntries(Object.entries(crmRoutes()).map(([id, { path: route }]) => [id, route])), 'area:opportunity-pipeline': `${base}/opportunities/pipeline` };
+  const routes = { ...Object.fromEntries(Object.entries(crmRoutes()).map(([id, { path: route }]) => [id, route])), 'area:opportunity-pipeline': `${base}/crm/pipeline` };
   const results: Record<string, unknown> = {};
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
@@ -420,11 +420,11 @@ test('every route on the migration list has a rendered check and one location pu
   }
   // The Opportunity pipeline (U-17) still publishes its own trail, and only that one.
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`/organizations/${fixture.plain}/opportunities/pipeline`);
+  await page.goto(`/organizations/${fixture.plain}/crm/pipeline`);
   await page.waitForLoadState('networkidle');
   const identity = await readIdentity(page);
   expect(identity.landmarks).toBe(1);
-  expect(identity.desktop).toEqual([{ label: 'CRM', href: `/organizations/${fixture.plain}/sales` }, { label: 'Opportunity pipeline', href: null }]);
+  expect(identity.desktop).toEqual([{ label: 'CRM', href: `/organizations/${fixture.plain}/crm` }, { label: 'Opportunity pipeline', href: null }]);
   await page.waitForTimeout(1500);
   expect(warnings, 'no header asked for a location it does not own, and every record label arrived').toEqual([]);
 });
@@ -435,17 +435,17 @@ test('CRM records: deep links, client navigation, vocabulary, loading, missing, 
   page.on('pageerror', (error) => errors.push(error.message));
   await signIn(page, fixture.email, fixture.password);
   const base = `/organizations/${fixture.plain}`;
-  const crm = { label: 'CRM', href: `${base}/sales` };
-  const opportunities = { label: 'Opportunities', href: `${base}/opportunities` };
+  const crm = { label: 'CRM', href: `${base}/crm` };
+  const opportunities = { label: 'Opportunities', href: `${base}/crm/opportunities` };
 
   for (const width of [320, 390, 820, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto(`${base}/opportunities/${fixture.opportunity}`);
+    await page.goto(`${base}/crm/opportunities/${fixture.opportunity}`);
     await expectLocation(page, width, { trail: [crm, opportunities], current: 'Roof refit', heading: 'Roof refit' });
     await capture(page, `opportunity-${width}`);
-    await page.goto(`${base}/opportunities/${randomUUID()}`);
+    await page.goto(`${base}/crm/opportunities/${randomUUID()}`);
     await expectLocation(page, width, { trail: [crm, opportunities], current: 'Not found', heading: 'This page does not exist', stateHeading: true });
-    await page.goto(`${base}/opportunities/${fixture.hiddenOpportunity}`);
+    await page.goto(`${base}/crm/opportunities/${fixture.hiddenOpportunity}`);
     await expectLocation(page, width, { trail: [crm, opportunities], current: 'Not found', heading: 'This page does not exist', stateHeading: true });
     expect(await page.content()).not.toContain('Hidden Secret Deal');
     await capture(page, `opportunity-unauthorized-${width}`);
@@ -455,17 +455,17 @@ test('CRM records: deep links, client navigation, vocabulary, loading, missing, 
   const vocabularyBase = `/organizations/${fixture.vocabulary}`;
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto(`${vocabularyBase}/opportunities`);
-    await expectLocation(page, width, { trail: [{ label: 'CRM', href: `${vocabularyBase}/sales` }], current: 'Deals', heading: 'Deals' });
+    await page.goto(`${vocabularyBase}/crm/opportunities`);
+    await expectLocation(page, width, { trail: [{ label: 'CRM', href: `${vocabularyBase}/crm` }], current: 'Deals', heading: 'Deals' });
     await capture(page, `opportunities-vocabulary-${width}`);
   }
 
   // Hidden but authorized: Opportunities is linked in the trail although the sidebar lists no such row.
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`${base}/opportunities/${fixture.opportunity}`);
+  await page.goto(`${base}/crm/opportunities/${fixture.opportunity}`);
   await expectLocation(page, 1440, { trail: [crm, opportunities], current: 'Roof refit', heading: 'Roof refit' });
   await expect(page.getByRole('navigation', { name: 'This business' }).getByRole('link', { name: 'Opportunities', exact: true })).toHaveCount(0);
-  await expect(page.locator('header.sticky').getByRole('link', { name: 'Opportunities', exact: true })).toHaveAttribute('href', `${base}/opportunities`);
+  await expect(page.locator('header.sticky').getByRole('link', { name: 'Opportunities', exact: true })).toHaveAttribute('href', `${base}/crm/opportunities`);
 
   // Keyboard: the trail's links are reachable in order and show a focus indicator.
   await page.locator('body').focus();
@@ -485,8 +485,8 @@ test('CRM records: deep links, client navigation, vocabulary, loading, missing, 
   expect(focusedTrail).toEqual(['CRM', 'Opportunities']);
 
   // Client-side: list → record (while loading, then resolved) → back → forward, never stale.
-  await page.goto(`${base}/opportunities`);
-  await page.route('**/opportunities/**', async (route) => {
+  await page.goto(`${base}/crm/opportunities`);
+  await page.route('**/crm/opportunities/**', async (route) => {
     if (route.request().headers()['rsc']) await new Promise((resolve) => setTimeout(resolve, 1500));
     await route.continue();
   });
@@ -495,23 +495,23 @@ test('CRM records: deep links, client navigation, vocabulary, loading, missing, 
   expect(await page.getByRole('heading', { level: 1 }).allTextContents()).toEqual(['Loading…']);
   await capture(page, 'opportunity-loading-1440');
   await expectLocation(page, 1440, { trail: [crm, opportunities], current: 'Roof refit', heading: 'Roof refit' });
-  await page.unroute('**/opportunities/**');
+  await page.unroute('**/crm/opportunities/**');
   await page.goBack();
   await expectLocation(page, 1440, { trail: [crm], current: 'Opportunities', heading: 'Opportunities' });
   await page.goForward();
   await expectLocation(page, 1440, { trail: [crm, opportunities], current: 'Roof refit', heading: 'Roof refit' });
 
   // Rapid moves between records never show the previous record's name.
-  await page.goto(`${base}/customers/${fixture.acme}`);
-  await page.goto(`${base}/customers/${fixture.bravo}`);
-  await page.goto(`${base}/opportunities/${fixture.opportunity}`);
+  await page.goto(`${base}/crm/contacts/${fixture.acme}`);
+  await page.goto(`${base}/crm/contacts/${fixture.bravo}`);
+  await page.goto(`${base}/crm/opportunities/${fixture.opportunity}`);
   await expectLocation(page, 1440, { trail: [crm, opportunities], current: 'Roof refit', heading: 'Roof refit' });
   await expect(page.locator('header.sticky')).not.toContainText('Bravo Services');
 
   // Panels: the Agent open on a record, at phone, tablet and desktop.
   for (const width of [390, 820, 1440] as const) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto(`${base}/opportunities/${fixture.opportunity}`);
+    await page.goto(`${base}/crm/opportunities/${fixture.opportunity}`);
     const agent = page.getByRole('button', { name: 'Agent', exact: true }).first();
     if (await agent.isVisible()) {
       await agent.click();
@@ -523,9 +523,9 @@ test('CRM records: deep links, client navigation, vocabulary, loading, missing, 
 
   // Organization change: the other business's Customers, with nothing carried over.
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`${base}/opportunities/${fixture.opportunity}`);
-  await page.goto(`${vocabularyBase}/customers`);
-  await expectLocation(page, 1440, { trail: [{ label: 'CRM', href: `${vocabularyBase}/sales` }], current: 'Clients', heading: 'Clients' });
+  await page.goto(`${base}/crm/opportunities/${fixture.opportunity}`);
+  await page.goto(`${vocabularyBase}/crm/contacts`);
+  await expectLocation(page, 1440, { trail: [{ label: 'CRM', href: `${vocabularyBase}/crm` }], current: 'Clients', heading: 'Clients' });
   await expect(page.locator('header.sticky')).not.toContainText('Roof refit');
   expect(errors, 'no page errors').toEqual([]);
 });

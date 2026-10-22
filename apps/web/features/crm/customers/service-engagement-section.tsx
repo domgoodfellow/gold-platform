@@ -7,7 +7,7 @@ import { FormField } from '@/components/controls/form';
 import { ErrorText, SelectInput, TextInput } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { PageDrawer, PageDrawerContent, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
-import { engagementAction, readEngagementDetails } from '@/app/organizations/[organizationId]/customers/[customerId]/service-actions';
+import { engagementAction, readEngagementDetails } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/service-actions';
 import { ARTIFACT_KINDS, SERVICE_KINDS, type Engagement } from '@/lib/domain/customers/service-engagements';
 import type { ClientTenantRelationship } from '@/lib/domain/customers/client-tenants';
 import { ServiceDisclosureEditor } from './service-disclosure-editor';

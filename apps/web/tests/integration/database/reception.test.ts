@@ -461,7 +461,7 @@ describe('the loop the module exists for', () => {
     expect(descriptions).toContain('Call made');
     expect(descriptions).toContain('Call written up: Interested');
     // The tenant's word, resolved at read time — the same treatment a work item's status gets.
-    expect(descriptions).toContain('Moved to Booked a meeting');
+    expect(descriptions).toContain('Relationship moved to Booked a meeting');
   });
 });
 
@@ -500,7 +500,7 @@ describe('moving a customer along the pipeline, on its own', () => {
       organizationId: floor.organizationId,
       customerId,
     });
-    expect(timeline.map((entry) => entry.description)).toContain(`Moved to Board stage`);
+    expect(timeline.map((entry) => entry.description)).toContain(`Relationship moved to Board stage`);
   });
 
   it('writes no event when the board re-submits the column a card is already in', async () => {

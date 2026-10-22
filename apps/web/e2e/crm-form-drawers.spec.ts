@@ -53,7 +53,7 @@ for (const viewport of VIEWPORTS) {
 
     test('Customer fields: refusal keeps input, guarded discard, create, edit and persisted values', async ({ page }) => {
       const { organizationId } = loadDemoContext();
-      await page.goto(`/organizations/${organizationId}/sales/configuration/fields`);
+      await page.goto(`/organizations/${organizationId}/crm/configuration/fields`);
       await expect(page.getByRole('heading', { level: 1, name: 'Customer fields' })).toBeAttached();
       const trigger = page.getByRole('button', { name: /New field/ });
       const drawer = page.getByRole('dialog', { name: 'New field' });
@@ -107,7 +107,7 @@ for (const viewport of VIEWPORTS) {
 
     test('New customer: refusal keeps input, one submission while saving, guarded discard', async ({ page }) => {
       const { organizationId } = loadDemoContext();
-      await page.goto(`/organizations/${organizationId}/customers`);
+      await page.goto(`/organizations/${organizationId}/crm/contacts`);
       const trigger = page.getByRole('button', { name: 'New customer', exact: true }).first();
       const drawer = page.getByRole('dialog', { name: 'New customer' });
 
@@ -140,7 +140,7 @@ for (const viewport of VIEWPORTS) {
 
     test('Opportunity and follow-up from a customer record: refusals keep input, saves behave as before', async ({ page }) => {
       const { organizationId, customerId } = loadDemoContext();
-      await page.goto(`/organizations/${organizationId}/customers/${customerId}`);
+      await page.goto(`/organizations/${organizationId}/crm/contacts/${customerId}`);
 
       await page.getByRole('tab', { name: 'Opportunities' }).click();
       const newOpportunity = page.getByRole('button', { name: 'New opportunity' });
@@ -179,7 +179,7 @@ for (const viewport of VIEWPORTS) {
       await newOpportunity.click();
       await opportunity.getByLabel('Title', { exact: true }).fill(`Saved opportunity ${run}`);
       await opportunity.getByRole('button', { name: 'Save opportunity' }).click();
-      await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/opportunities/[a-f0-9-]+$`));
+      await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/crm/opportunities/[a-f0-9-]+$`));
       await expect(page.getByRole('heading', { name: `Saved opportunity ${run}` })).toBeVisible();
     });
   });

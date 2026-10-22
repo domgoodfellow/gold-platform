@@ -14,8 +14,8 @@ export function projectBusinessNavigation(input: ShellInput, profile: BusinessPr
   const ordered = (items: NavItem[]) => [...items].sort((a, b) => (rank.get(a.key) ?? Infinity) - (rank.get(b.key) ?? Infinity));
   const decorate = (item: NavItem): NavItem => ({
     ...item,
-    label: item.key.startsWith('workspace-') ? item.label : profile?.labels[item.key] ?? businessLabel(profile, item.label),
-    ...(item.destinations ? { destinations: ordered(item.destinations).map(decorate) } : {}),
+    label: item.key.startsWith('workspace-') ? item.label : profile?.labels[item.key] ?? (item.key === 'customers' ? profile?.nouns.customer?.plural ?? item.label : businessLabel(profile, item.label)),
+    ...(item.destinations ? { destinations: item.key === 'workspace-crm' ? item.destinations.map(decorate) : [...item.destinations.filter(child => child.key === 'workspace-dashboard'), ...ordered(item.destinations.filter(child => child.key !== 'workspace-dashboard'))].map(decorate) } : {}),
     ...(item.children ? { children: item.children.map(decorate) } : {}),
   });
   return projectShell(input).map(section => ({ ...section, items: section.items.map(decorate) }));

@@ -2,7 +2,7 @@
 vi.mock('@/features/tenancy/business-profile-settings', () => ({ BusinessProfileSettings: () => null }));
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import ConfigurationLayout from '@/app/organizations/[organizationId]/sales/configuration/layout';
+import ConfigurationLayout from '@/app/organizations/[organizationId]/crm/configuration/layout';
 import { workspaceConfigureItems, AREAS, type WorkspaceKey } from '@/lib/navigation';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import GeneralPage from '@/app/organizations/[organizationId]/settings/general/page';
@@ -71,7 +71,7 @@ describe('CRM configuration pages', () => {
 // Batch A: no workspace has a Configuration landing. Each old address resolves to an eligible door.
 describe('Retired configuration landings', () => {
   const LANDINGS = {
-    sales: () => import('@/app/organizations/[organizationId]/sales/configuration/page'),
+    sales: () => import('@/app/organizations/[organizationId]/crm/configuration/page'),
     comms: () => import('@/app/organizations/[organizationId]/comms/configuration/page'),
     support: () => import('@/app/organizations/[organizationId]/support/configuration/page'),
     field: () => import('@/app/organizations/[organizationId]/field/configuration/page'),
@@ -85,7 +85,7 @@ describe('Retired configuration landings', () => {
     return 'rendered';
   };
   it.each([
-    ['sales', 'sales/configuration/relationship-stages'],
+    ['sales', 'crm/configuration/relationship-stages'],
     ['comms', 'comms/configuration/calling'],
     ['support', 'support/configuration/queues'],
     ['field', 'work/configuration'],

@@ -94,8 +94,8 @@ const PLATFORM_ROOT_LABEL = 'Platform';
 /** What the registries cannot say: records, sub-views, creation and state routes. */
 const LOCATION_METADATA: readonly LocationNode[] = [
   // CRM
-  { id: 'record:customer', scope: 'organization', kind: 'record', pattern: 'customers/[customerId]', parent: 'area:customers', record: 'customerId', noun: 'customer' },
-  { id: 'record:opportunity', scope: 'organization', kind: 'record', pattern: 'opportunities/[opportunityId]', parent: 'area:opportunities', record: 'opportunityId', noun: 'opportunity' },
+  { id: 'record:customer', scope: 'organization', kind: 'record', pattern: 'crm/contacts/[contactId]', parent: 'area:customers', record: 'contactId', noun: 'customer' },
+  { id: 'record:opportunity', scope: 'organization', kind: 'record', pattern: 'crm/opportunities/[opportunityId]', parent: 'area:opportunities', record: 'opportunityId', noun: 'opportunity' },
   // Communications
   { id: 'record:call', scope: 'organization', kind: 'record', pattern: 'calls/[callId]', parent: 'area:calls', record: 'callId' },
   { id: 'record:conversation', scope: 'organization', kind: 'record', pattern: 'comms/inbox/[conversationId]', parent: 'area:comms-inbox', record: 'conversationId' },
@@ -201,7 +201,7 @@ function deriveNodes(): LocationNode[] {
       if (area.segment !== 'library' && area.segment !== 'settings') nodes.push({ id: `area:${area.segment}`, scope: 'organization', kind: 'destination', pattern: route, area: area.segment, redirect: true });
       continue;
     }
-    nodes.push({ id: `area:${area.segment}`, scope: 'organization', kind: 'destination', pattern: route, area: area.segment, workspace: area.workspace, ...(area.workspace ? { parent: `workspace:${area.workspace}` } : {}) });
+    nodes.push({ id: `area:${area.segment}`, scope: 'organization', kind: 'destination', pattern: route, area: area.segment, workspace: area.workspace, ...(area.workspace ? { parent: area.segment === 'pipeline' ? 'area:customers' : `workspace:${area.workspace}` } : {}) });
   }
 
   for (const target of CONFIG_TARGETS) {
@@ -271,10 +271,11 @@ export function locationAccessFrom(serialized: SerializedLocationAccess): Locati
  * systems, so the header bar never has two publishers.
  */
 export const RESOLVED_LOCATION_ROUTES: ReadonlySet<string> = new Set([
+  ...WORKSPACES.map(workspace => `workspace:${workspace.key}`),
   // Slice 1B
   'area:customers', 'record:customer',
   // Slice 1C — CRM operating pages. The Opportunity pipeline (U-17) and CRM configuration (Batch 3) stay on their own trails.
-  'workspace:crm', 'area:pipeline', 'area:opportunities', 'record:opportunity', 'area:follow-ups', 'area:calendar', 'area:crm-search',
+  'workspace:crm', 'area:pipeline', 'area:opportunity-pipeline', 'area:opportunities', 'record:opportunity', 'area:follow-ups', 'area:calendar', 'area:crm-search',
 ]);
 
 export function adoptsResolvedLocation(pathname: string): boolean {
@@ -498,8 +499,8 @@ export function resolveLocation(input: LocationInput): PageLocation {
     // An unsupplied label falls back to what kind of record this is, never to which one.
     const label = record?.state === 'ready' ? (step.recordLabel ?? ((value: string) => value))(record.label)
       : record?.state === 'loading' ? LOADING_LABEL
-      : record?.state === 'unknown' ? (step.noun ? businessNoun(input.vocabulary ?? null, step.noun) : '')
-      : labelOf(step, input.vocabulary);
+      : record?.state === 'unknown' ? (step.noun === 'customer' && !input.vocabulary?.nouns.customer ? 'Contact' : step.noun ? businessNoun(input.vocabulary ?? null, step.noun) : '')
+      : last && step.kind === 'workspace' ? 'Dashboard' : labelOf(step, input.vocabulary);
     if (record?.state === 'ready' && step.kind === 'record') recordName = record.label;
     const pending = record?.state === 'loading' || record?.state === 'unknown' ? record.state : undefined;
     if (last) {

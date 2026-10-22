@@ -22,7 +22,7 @@ test('opens a work item and follows its customer relationship to a real customer
   await expect(customerRow).toBeVisible();
   await customerRow.click();
 
-  await expect(page).toHaveURL(/\/customers\/[0-9a-f-]+$/);
+  await expect(page).toHaveURL(/\/crm\/contacts\/[0-9a-f-]+$/);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
 

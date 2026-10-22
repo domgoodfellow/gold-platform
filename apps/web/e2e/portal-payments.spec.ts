@@ -18,7 +18,7 @@ test.use({ storageState: OWNER_STORAGE_STATE });
 
 test('shows the customer record\'s own invoices', async ({ page }) => {
   const ctx = loadDemoContext();
-  await page.goto(`/organizations/${ctx.organizationId}/customers/${ctx.customerId}`);
+  await page.goto(`/organizations/${ctx.organizationId}/crm/contacts/${ctx.customerId}`);
   // Invoices are a tab of the customer record (4d2430c); the tab is what a person opens.
   await expect(page.getByRole('tab', { name: 'Invoices' })).toBeVisible();
 });
@@ -28,7 +28,7 @@ test('a customer opening their portal link sees their invoices, with no live Pay
   browser,
 }) => {
   const ctx = loadDemoContext();
-  await page.goto(`/organizations/${ctx.organizationId}/customers/${ctx.customerId}`);
+  await page.goto(`/organizations/${ctx.organizationId}/crm/contacts/${ctx.customerId}`);
 
   await page.getByRole('tab', { name: 'Portal' }).click();
   await page.getByRole('button', { name: 'Make a portal link' }).click();

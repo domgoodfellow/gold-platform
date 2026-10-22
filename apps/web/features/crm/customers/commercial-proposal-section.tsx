@@ -23,7 +23,7 @@ import {
   type SendCommercialProposalState,
   type SendProposalInviteState,
   type HandoffProposalState,
-} from '@/app/organizations/[organizationId]/customers/[customerId]/actions';
+} from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/actions';
 
 const BUILD_INITIAL: BuildCommercialProposalState = { error: null, created: false };
 const SEND_INITIAL: SendCommercialProposalState = { error: null };

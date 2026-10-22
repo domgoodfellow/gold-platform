@@ -48,7 +48,7 @@ test.describe('responsive shell', () => {
     test(`phone ${width}px: the menu sheet, never a docked rail, and no horizontal overflow`, async ({ page }) => {
       const { organizationId } = loadDemoContext();
       await page.setViewportSize({ width, height: 844 });
-      await page.goto(`/organizations/${organizationId}/customers`);
+      await page.goto(`/organizations/${organizationId}/crm/contacts`);
       await expect(sidebar(page)).toHaveCount(0);
       await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();
       const sheet = page.locator('[data-slot="sidebar"][data-mobile="true"]');
@@ -61,7 +61,7 @@ test.describe('responsive shell', () => {
     test(`tablet ${width}px: icon rail by default, overlay that keeps the page width, Escape returns focus`, async ({ page }) => {
       const { organizationId } = loadDemoContext();
       await page.setViewportSize({ width, height: 900 });
-      await page.goto(`/organizations/${organizationId}/customers`);
+      await page.goto(`/organizations/${organizationId}/crm/contacts`);
       await expect(sidebar(page)).toHaveAttribute('data-state', 'collapsed');
       await settledRail(page, 'rail');
       const rail = await geometry(page);
@@ -103,7 +103,7 @@ test.describe('responsive shell', () => {
       await context.clearCookies({ name: 'sidebar_state' });
       const { organizationId } = loadDemoContext();
       await page.setViewportSize({ width, height: 900 });
-      await page.goto(`/organizations/${organizationId}/customers`);
+      await page.goto(`/organizations/${organizationId}/crm/contacts`);
       await expect(sidebar(page)).toHaveAttribute('data-state', 'expanded');
       await expect(sidebar(page)).not.toHaveAttribute('data-overlay', 'true');
       await settledRail(page, 'expanded');
@@ -118,7 +118,7 @@ test.describe('responsive shell', () => {
     await context.clearCookies({ name: 'sidebar_state' });
     const { organizationId } = loadDemoContext();
     await page.setViewportSize({ width: 1279, height: 900 });
-    await page.goto(`/organizations/${organizationId}/customers`);
+    await page.goto(`/organizations/${organizationId}/crm/contacts`);
     await expect(sidebar(page)).toHaveAttribute('data-state', 'collapsed');
     await toggle(page).click();
     await expect(sidebar(page)).toHaveAttribute('data-overlay', 'true');
@@ -134,7 +134,7 @@ test.describe('responsive shell', () => {
     await context.clearCookies({ name: 'sidebar_state' });
     const { organizationId } = loadDemoContext();
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(`/organizations/${organizationId}/customers`);
+    await page.goto(`/organizations/${organizationId}/crm/contacts`);
     await toggle(page).click();
     await expect(sidebar(page)).toHaveAttribute('data-state', 'collapsed');
     await page.reload();
@@ -156,7 +156,7 @@ test.describe('responsive shell', () => {
 
   test('the server renders the layout the browser last reported, so a reload does not flash', async ({ page, context }) => {
     const { organizationId } = loadDemoContext();
-    const url = `/organizations/${organizationId}/customers`;
+    const url = `/organizations/${organizationId}/crm/contacts`;
     await context.clearCookies({ name: 'sidebar_state' });
     await page.setViewportSize({ width: 1024, height: 900 });
     await page.goto(url);
@@ -174,7 +174,7 @@ test.describe('responsive shell', () => {
   test('tablet overlay offers the same destinations as the desktop sidebar, and the workspace heading still opens Home', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(`/organizations/${organizationId}/customers`);
+    await page.goto(`/organizations/${organizationId}/crm/contacts`);
     const desktop = await navigationHrefs(page);
     await page.setViewportSize({ width: 820, height: 900 });
     await toggle(page).click();
@@ -184,14 +184,14 @@ test.describe('responsive shell', () => {
     await expect(page.locator('[data-header-controls] nav')).toHaveCount(0);
     const heading = page.locator('[data-slot="sidebar"]').getByRole('link', { name: /^CRM/ }).first();
     await heading.click();
-    await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/sales$`));
+    await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/crm$`));
     await expect(sidebar(page)).not.toHaveAttribute('data-overlay', 'true');
   });
 
   test('Agent and Configure open over the tablet layout without trapping navigation, and the drawer guard still works', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     await page.setViewportSize({ width: 1024, height: 900 });
-    await page.goto(`/organizations/${organizationId}/customers`);
+    await page.goto(`/organizations/${organizationId}/crm/contacts`);
 
     await page.getByRole('button', { name: 'Agent', exact: true }).first().click();
     await expect(page.getByRole('button', { name: 'Close Agent' })).toBeVisible();
@@ -208,7 +208,7 @@ test.describe('responsive shell', () => {
     await expect(page.getByRole('dialog', { name: 'Resources configuration' })).toBeVisible();
     await page.keyboard.press('Escape');
 
-    await page.goto(`/organizations/${organizationId}/sales/configuration/fields`);
+    await page.goto(`/organizations/${organizationId}/crm/configuration/fields`);
     await page.getByRole('button', { name: /New field/ }).click();
     await page.getByLabel('Label', { exact: true }).fill('Typed on a tablet');
     await page.keyboard.press('Escape');

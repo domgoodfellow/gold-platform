@@ -94,14 +94,14 @@ describe('resolveAgentViewing — what the Agent may be told about where the per
   const record = '22222222-2222-4222-8222-222222222222';
 
   it('names the workspace from navigation’s own label', () => {
-    expect(resolveAgentViewing(`/organizations/${org}/customers`)).toEqual({ workspace: 'Customers', recordId: null });
+    expect(resolveAgentViewing(`/organizations/${org}/crm/contacts`)).toEqual({ workspace: 'Contacts', recordId: null });
   });
 
   it('names a record only on an area’s record page, and only a well-formed id', () => {
-    expect(resolveAgentViewing(`/organizations/${org}/customers/${record}`).recordId).toBe(record);
-    expect(resolveAgentViewing(`/organizations/${org}/customers/${record}?tab=x`).recordId).toBe(record);
-    expect(resolveAgentViewing(`/organizations/${org}/customers/new`).recordId).toBeNull();
-    expect(resolveAgentViewing(`/organizations/${org}/customers/not-an-id`).recordId).toBeNull();
+    expect(resolveAgentViewing(`/organizations/${org}/crm/contacts/${record}`).recordId).toBe(record);
+    expect(resolveAgentViewing(`/organizations/${org}/crm/contacts/${record}?tab=x`).recordId).toBe(record);
+    expect(resolveAgentViewing(`/organizations/${org}/crm/contacts/new`).recordId).toBeNull();
+    expect(resolveAgentViewing(`/organizations/${org}/crm/contacts/not-an-id`).recordId).toBeNull();
   });
 
   it('says nothing for a path that is no area', () => {
@@ -119,8 +119,8 @@ describe('describeViewing — the one sentence that reaches the model', () => {
   });
 
   it('names the workspace, and a record when its id is one', () => {
-    expect(describeViewing({ workspace: 'Customers', recordId: null })).toBe(
-      ' The person asking has the Customers workspace open.',
+    expect(describeViewing({ workspace: 'Contacts', recordId: null })).toBe(
+      ' The person asking has the Contacts workspace open.',
     );
     expect(describeViewing({ workspace: 'Customers', recordId: record })).toBe(
       ` The person asking has the Customers workspace open, on one record there (id ${record}).`,

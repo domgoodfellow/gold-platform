@@ -148,7 +148,7 @@ describe('configuring is not operating', () => {
   it('splits sales stages out as its own CRM-owned target, never routed through Communications', () => {
     const salesStages = configTarget('sales-stages');
     expect(salesStages.workspace).toBe('crm');
-    expect(salesStages.path).toBe('sales/configuration/relationship-stages');
+    expect(salesStages.path).toBe('crm/configuration/relationship-stages');
     expect(salesStages.entitledBy).toBe('pipeline');
     expect(AREAS.some((area) => area.segment === 'pipeline')).toBe(true);
 

@@ -14,7 +14,7 @@ import type { BusinessProfile } from '@/lib/domain/tenancy/business-profile';
 
 /**
  * The resolver-owned location as it renders (ADR-047, Slice 1B): one answer for the bar's trail,
- * the phone's Up control and the page's heading, on the Customers pilot routes only.
+ * the phone's Up control and the page's heading, on the Contacts pilot routes only.
  */
 const route = vi.hoisted(() => ({ pathname: '/' }));
 vi.mock('next/navigation', () => ({ usePathname: () => route.pathname }));
@@ -48,38 +48,38 @@ function Shell({ children, profile = null, withAccess = true }: { children?: Rea
 const bar = () => within(screen.getByTestId('bar'));
 const trail = () => within(bar().getByRole('navigation', { name: 'breadcrumb' })).getAllByRole('listitem').map((item) => item.textContent);
 
-describe('the Customers collection', () => {
-  it('shows CRM › Customers with one hidden heading and a linked workspace', () => {
-    route.pathname = `${base}/customers`;
+describe('the Contacts collection', () => {
+  it('shows CRM › Contacts with one hidden heading and a linked workspace', () => {
+    route.pathname = `${base}/crm/contacts`;
     render(<Shell><CollectionHeader location={{}} /></Shell>);
-    expect(trail()).toEqual(['CRM', 'Customers']);
-    expect(bar().getByRole('link', { name: 'CRM' })).toHaveAttribute('href', `${base}/sales`);
+    expect(trail()).toEqual(['CRM', 'Contacts']);
+    expect(bar().getByRole('link', { name: 'CRM' })).toHaveAttribute('href', `${base}/crm`);
     // The current page is the breadcrumb primitive's disabled page item, never an anchor.
-    expect(within(bar().getByRole('navigation', { name: 'breadcrumb' })).getByText('Customers').closest('a')).toBeNull();
-    expect(bar().getByRole('link', { name: 'Back to parent' })).toHaveAttribute('href', `${base}/sales`);
+    expect(within(bar().getByRole('navigation', { name: 'breadcrumb' })).getByText('Contacts').closest('a')).toBeNull();
+    expect(bar().getByRole('link', { name: 'Back to parent' })).toHaveAttribute('href', `${base}/crm`);
     const headings = screen.getAllByRole('heading', { level: 1 });
-    expect(headings.map((heading) => heading.textContent)).toEqual(['Customers']);
+    expect(headings.map((heading) => heading.textContent)).toEqual(['Contacts']);
     expect(headings[0]).toHaveClass('sr-only');
   });
 
   it('applies a business label by destination key, in the bar and the heading alike', () => {
-    route.pathname = `${base}/customers`;
+    route.pathname = `${base}/crm/contacts`;
     render(<Shell profile={{ revision: 1, nouns: {}, navigation: [], labels: { customers: 'Clients' } }}><CollectionHeader location={{}} /></Shell>);
     expect(trail()).toEqual(['CRM', 'Clients']);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Clients');
   });
 
   it('without access facts still links only the destinations every member has', () => {
-    route.pathname = `${base}/customers/c1`;
-    render(<Shell withAccess={false}><PageLocationRecords records={{ customerId: { state: 'ready', label: 'Acme Ltd' } }} /></Shell>);
-    expect(trail()).toEqual(['CRM', 'Customers', 'Acme Ltd']);
-    // CRM's Home and Customers are kernel destinations: no entitlement or permission gates them.
-    expect(bar().getByRole('link', { name: 'CRM' })).toHaveAttribute('href', `${base}/sales`);
-    expect(bar().getByRole('link', { name: 'Customers' })).toHaveAttribute('href', `${base}/customers`);
+    route.pathname = `${base}/crm/contacts/c1`;
+    render(<Shell withAccess={false}><PageLocationRecords records={{ contactId: { state: 'ready', label: 'Acme Ltd' } }} /></Shell>);
+    expect(trail()).toEqual(['CRM', 'Contacts', 'Acme Ltd']);
+    // CRM's Home and Contacts are kernel destinations: no entitlement or permission gates them.
+    expect(bar().getByRole('link', { name: 'CRM' })).toHaveAttribute('href', `${base}/crm`);
+    expect(bar().getByRole('link', { name: 'Contacts' })).toHaveAttribute('href', `${base}/crm/contacts`);
   });
 
   it('never shows a second, page-authored trail on a resolver-owned route', () => {
-    route.pathname = `${base}/customers`;
+    route.pathname = `${base}/crm/contacts`;
     render(<Shell><CollectionHeader location={{}} /><PageCrumbs crumbs={[{ label: 'Somewhere else', href: '/x' }]} current="Competing" /></Shell>);
     expect(screen.getAllByRole('navigation', { name: 'breadcrumb' })).toHaveLength(1);
     expect(screen.queryByText('Competing')).toBeNull();
@@ -87,33 +87,33 @@ describe('the Customers collection', () => {
 });
 
 describe('a Customer record', () => {
-  it('names the record from the label the page was allowed to read, and goes up to Customers', () => {
-    route.pathname = `${base}/customers/c1`;
-    render(<Shell><RecordHeader location={{ records: { customerId: { state: 'ready', label: 'Acme Ltd' } } }} summary="Relationship stage: Lead" /></Shell>);
-    expect(trail()).toEqual(['CRM', 'Customers', 'Acme Ltd']);
-    expect(bar().getByRole('link', { name: 'Customers' })).toHaveAttribute('href', `${base}/customers`);
-    expect(bar().getByRole('link', { name: 'Back to parent' })).toHaveAttribute('href', `${base}/customers`);
+  it('names the record from the label the page was allowed to read, and goes up to Contacts', () => {
+    route.pathname = `${base}/crm/contacts/c1`;
+    render(<Shell><RecordHeader location={{ records: { contactId: { state: 'ready', label: 'Acme Ltd' } } }} summary="Relationship stage: Lead" /></Shell>);
+    expect(trail()).toEqual(['CRM', 'Contacts', 'Acme Ltd']);
+    expect(bar().getByRole('link', { name: 'Contacts' })).toHaveAttribute('href', `${base}/crm/contacts`);
+    expect(bar().getByRole('link', { name: 'Back to parent' })).toHaveAttribute('href', `${base}/crm/contacts`);
     expect(screen.getAllByRole('heading', { level: 1 }).map((heading) => heading.textContent)).toEqual(['Acme Ltd']);
     expect(screen.getByText('Relationship stage: Lead')).toBeVisible();
   });
 
   it('says the record is loading only when a loading boundary says so', () => {
-    route.pathname = `${base}/customers/c1`;
-    render(<Shell><PageLocationRecords records={{ customerId: { state: 'loading' } }} /></Shell>);
-    expect(trail()).toEqual(['CRM', 'Customers', 'Loading…']);
+    route.pathname = `${base}/crm/contacts/c1`;
+    render(<Shell><PageLocationRecords records={{ contactId: { state: 'loading' } }} /></Shell>);
+    expect(trail()).toEqual(['CRM', 'Contacts', 'Loading…']);
   });
 
   it('falls back to the record’s kind for a label nobody handed up, and reports it in development', () => {
     vi.useFakeTimers();
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
-      route.pathname = `${base}/customers/c1`;
+      route.pathname = `${base}/crm/contacts/c1`;
       render(<Shell><LocationHeading /></Shell>);
-      expect(trail()).toEqual(['CRM', 'Customers', 'Customer']);
-      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Customer');
+      expect(trail()).toEqual(['CRM', 'Contacts', 'Contact']);
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Contact');
       expect(screen.queryByText('Loading…')).toBeNull();
       act(() => { vi.advanceTimersByTime(1500); });
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining('customerId'));
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('contactId'));
     } finally {
       warn.mockRestore();
       vi.useRealTimers();
@@ -124,8 +124,8 @@ describe('a Customer record', () => {
     vi.useFakeTimers();
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
-      route.pathname = `${base}/customers/c1`;
-      render(<Shell><PageLocationRecords records={{ customerId: { state: 'ready', label: 'Acme Ltd' } }} /></Shell>);
+      route.pathname = `${base}/crm/contacts/c1`;
+      render(<Shell><PageLocationRecords records={{ contactId: { state: 'ready', label: 'Acme Ltd' } }} /></Shell>);
       act(() => { vi.advanceTimersByTime(1500); });
       expect(warn).not.toHaveBeenCalled();
     } finally {
@@ -135,23 +135,23 @@ describe('a Customer record', () => {
   });
 
   it('ends at Not found for a missing or undisclosed record', () => {
-    route.pathname = `${base}/customers/c1`;
-    render(<Shell><PageLocationRecords records={{ customerId: { state: 'missing' } }} /></Shell>);
-    expect(trail()).toEqual(['CRM', 'Customers', 'Not found']);
+    route.pathname = `${base}/crm/contacts/c1`;
+    render(<Shell><PageLocationRecords records={{ contactId: { state: 'missing' } }} /></Shell>);
+    expect(trail()).toEqual(['CRM', 'Contacts', 'Not found']);
   });
 
   it('never carries one record’s name to the next record’s address', () => {
-    route.pathname = `${base}/customers/c1`;
-    const view = render(<Shell><PageLocationRecords records={{ customerId: { state: 'ready', label: 'Acme Ltd' } }} /></Shell>);
-    route.pathname = `${base}/customers/c2`;
+    route.pathname = `${base}/crm/contacts/c1`;
+    const view = render(<Shell><PageLocationRecords records={{ contactId: { state: 'ready', label: 'Acme Ltd' } }} /></Shell>);
+    route.pathname = `${base}/crm/contacts/c2`;
     view.rerender(<Shell />);
-    expect(trail()).toEqual(['CRM', 'Customers', 'Customer']);
+    expect(trail()).toEqual(['CRM', 'Contacts', 'Contact']);
     expect(screen.queryByText('Acme Ltd')).toBeNull();
   });
 
   it('marks the current record as the page, never as a link', () => {
-    route.pathname = `${base}/customers/c1`;
-    render(<Shell><PageLocationRecords records={{ customerId: { state: 'ready', label: 'Acme Ltd' } }} /></Shell>);
+    route.pathname = `${base}/crm/contacts/c1`;
+    render(<Shell><PageLocationRecords records={{ contactId: { state: 'ready', label: 'Acme Ltd' } }} /></Shell>);
     const current = within(bar().getByRole('navigation', { name: 'breadcrumb' })).getByText('Acme Ltd');
     expect(current).toHaveAttribute('aria-current', 'page');
     expect(current.closest('a')).toBeNull();
@@ -168,40 +168,40 @@ describe('one location for the bar, phone Up and heading', () => {
   }
 
   it('agrees through loading, the resolved record, a rapid move to another record and a missing one', () => {
-    route.pathname = `${base}/customers/c1`;
-    const view = render(<Shell><PageLocationRecords records={{ customerId: { state: 'loading' } }} /><LocationHeading /></Shell>);
-    expect(outputs()).toEqual({ current: 'Loading…', up: `${base}/customers`, headings: ['Loading…'] });
+    route.pathname = `${base}/crm/contacts/c1`;
+    const view = render(<Shell><PageLocationRecords records={{ contactId: { state: 'loading' } }} /><LocationHeading /></Shell>);
+    expect(outputs()).toEqual({ current: 'Loading…', up: `${base}/crm/contacts`, headings: ['Loading…'] });
 
-    view.rerender(<Shell><PageLocationRecords records={{ customerId: { state: 'ready', label: 'Acme Ltd' } }} /><LocationHeading /></Shell>);
-    expect(outputs()).toEqual({ current: 'Acme Ltd', up: `${base}/customers`, headings: ['Acme Ltd'] });
+    view.rerender(<Shell><PageLocationRecords records={{ contactId: { state: 'ready', label: 'Acme Ltd' } }} /><LocationHeading /></Shell>);
+    expect(outputs()).toEqual({ current: 'Acme Ltd', up: `${base}/crm/contacts`, headings: ['Acme Ltd'] });
 
-    route.pathname = `${base}/customers/c2`;
-    view.rerender(<Shell><PageLocationRecords records={{ customerId: { state: 'ready', label: 'Bravo Services' } }} /><LocationHeading /></Shell>);
-    expect(outputs()).toEqual({ current: 'Bravo Services', up: `${base}/customers`, headings: ['Bravo Services'] });
+    route.pathname = `${base}/crm/contacts/c2`;
+    view.rerender(<Shell><PageLocationRecords records={{ contactId: { state: 'ready', label: 'Bravo Services' } }} /><LocationHeading /></Shell>);
+    expect(outputs()).toEqual({ current: 'Bravo Services', up: `${base}/crm/contacts`, headings: ['Bravo Services'] });
 
-    route.pathname = `${base}/customers/c3`;
-    view.rerender(<Shell><PageLocationRecords records={{ customerId: { state: 'missing' } }} /><LocationHeading /></Shell>);
-    expect(outputs()).toEqual({ current: 'Not found', up: `${base}/customers`, headings: ['Not found'] });
+    route.pathname = `${base}/crm/contacts/c3`;
+    view.rerender(<Shell><PageLocationRecords records={{ contactId: { state: 'missing' } }} /><LocationHeading /></Shell>);
+    expect(outputs()).toEqual({ current: 'Not found', up: `${base}/crm/contacts`, headings: ['Not found'] });
   });
 
   it('agrees when the organization changes, and never carries the other business’s record', () => {
-    route.pathname = `${base}/customers/c1`;
-    const view = render(<Shell><PageLocationRecords records={{ customerId: { state: 'ready', label: 'Acme Ltd' } }} /><LocationHeading /></Shell>);
+    route.pathname = `${base}/crm/contacts/c1`;
+    const view = render(<Shell><PageLocationRecords records={{ contactId: { state: 'ready', label: 'Acme Ltd' } }} /><LocationHeading /></Shell>);
     const other = '22222222-2222-4222-8222-222222222222';
-    route.pathname = `/organizations/${other}/customers`;
+    route.pathname = `/organizations/${other}/crm/contacts`;
     view.rerender(<Shell><LocationHeading /></Shell>);
-    expect(outputs()).toEqual({ current: 'Customers', up: `/organizations/${other}/sales`, headings: ['Customers'] });
+    expect(outputs()).toEqual({ current: 'Contacts', up: `/organizations/${other}/crm`, headings: ['Contacts'] });
     expect(screen.queryByText('Acme Ltd')).toBeNull();
   });
 
   it('places a refused Follow-ups page inside CRM', () => {
-    route.pathname = `${base}/follow-ups`;
+    route.pathname = `${base}/crm/tasks`;
     render(<Shell><PageLocationRecords notFound /></Shell>);
     expect(trail()).toEqual(['CRM', 'Not found']);
   });
 
   it('renders no resolver heading on a route that still publishes its own', () => {
-    route.pathname = `${base}/opportunities/pipeline`;
+    route.pathname = `${base}/calls`;
     render(<Shell><LocationHeading /></Shell>);
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
   });

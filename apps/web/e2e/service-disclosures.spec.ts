@@ -61,7 +61,7 @@ test('seller publication, independent customer identities, withdrawal and module
     const portalDb=client();const otherDb=client();await exchangePortalLink(portalDb,{token});await exchangePortalLink(otherDb,{token:otherToken});
     await pg.query('delete from platform_staff where user_id=$1',[made.data.user.id]);
     await page.goto('/login');await page.getByLabel('Email',{exact:true}).fill(email);await page.getByLabel('Password',{exact:true}).fill(password);await page.getByRole('button',{name:'Log in',exact:true}).click();await page.waitForURL(value=>value.pathname!=='/login');
-    const customerPath=`/organizations/${org}/customers/${customer}`;
+    const customerPath=`/organizations/${org}/crm/contacts/${customer}`;
     await page.goto(customerPath);await page.getByRole('tab',{name:'Commercial proposal',exact:true}).click();
     await page.getByRole('button',{name:'View engagement',exact:true}).click();
     const drawer=page.getByRole('dialog',{name:'AI Receptionist delivery',exact:true});
@@ -101,7 +101,7 @@ test('seller publication, independent customer identities, withdrawal and module
     await savePortalDraft(operator,tenant,0,portalFromTemplate('managed-services'));await submitPortalDraft(operator,tenant,(await portalEditorState(operator,tenant)).definition!.draft_version);await publishPortalDraft(operator,tenant,(await portalEditorState(operator,tenant)).definition!.draft_version);
     await tenantPage.goto(`/portal/${tenantToken}`);await tenantPage.getByRole('link',{name:'Services',exact:true}).click();await expect(tenantPage.getByText('Your AI receptionist',{exact:true})).toHaveCount(0);
     await tenantOperatorPage.goto('/login');await tenantOperatorPage.getByLabel('Email',{exact:true}).fill(tenantEmail);await tenantOperatorPage.getByLabel('Password',{exact:true}).fill(password);await tenantOperatorPage.getByRole('button',{name:'Log in',exact:true}).click();await tenantOperatorPage.waitForURL(value=>value.pathname!=='/login');
-    await tenantOperatorPage.goto(`/organizations/${tenant}/customers/${tenantCustomer}`);await expect(tenantOperatorPage.getByRole('heading',{name:'Acme own customer',exact:true})).toBeVisible();
+    await tenantOperatorPage.goto(`/organizations/${tenant}/crm/contacts/${tenantCustomer}`);await expect(tenantOperatorPage.getByRole('heading',{name:'Acme own customer',exact:true})).toBeVisible();
     const tlsPort=new URL(process.env.E2E_PORTAL_TLS_URL ?? 'https://localhost:3141').port;
     const sellerHost=`seller-${randomUUID()}.example.test`;const tenantHost=`tenant-${randomUUID()}.example.test`;
     for(const [target,hostname] of [[org,sellerHost],[tenant,tenantHost]]) {

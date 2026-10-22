@@ -20,7 +20,7 @@ test('compact dialer preserves its draft across workspace navigation and window 
   await expect(popup.getByLabel('Number to call')).toHaveValue('+15145550123');
   await page.getByRole('navigation', { name: 'This business' }).first().getByRole('link', { name: 'Home' }).click();
   await page.getByRole('navigation', { name: 'This business' }).first().getByRole('link', { name: 'CRM', exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/sales$`));
+  await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/crm$`));
   await expect(popup.getByLabel('Number to call')).toHaveValue('+15145550123');
   await popup.setViewportSize({ width: 390, height: 844 });
   expect(await popup.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

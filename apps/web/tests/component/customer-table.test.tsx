@@ -98,7 +98,7 @@ describe('customer directory table', () => {
   it('shows the working columns by default and nothing from the custom-field dump', () => {
     const { container } = renderTable();
 
-    expect(headers(container)).toEqual(['Name', 'Phone', 'Industry', 'Location']);
+    expect(headers(container)).toEqual(['Name', 'Type', 'Company', 'Lifecycle', 'Temperature', 'Phone', 'Email', 'Last activity', 'Industry', 'Location']);
     expect(screen.queryByText('Details')).toBeNull();
     expect(screen.queryByText('VAT number')).toBeNull();
   });
@@ -111,11 +111,11 @@ describe('customer directory table', () => {
     expect(rowCells(container, 'Brightline Electric')).toContain('(613)555-0199');
   });
 
-  it('shows a dash for a missing phone, a missing industry and a missing location rather than inventing one', () => {
+  it('shows a dash for a missing company, phone, industry and location rather than inventing one', () => {
     const { container } = renderTable();
 
     const cells = rowCells(container, 'Unlisted Contact');
-    expect(cells.filter((text) => text === '—')).toHaveLength(3);
+    expect(cells.filter((text) => text === '—')).toHaveLength(5);
   });
 
   it('keeps a long business name whole in the wide table', () => {
@@ -135,12 +135,12 @@ describe('customer directory table', () => {
   it('adds an optional column only when the view asks for it, with its own value', () => {
     const { container } = renderTable(['custom:website', 'custom:vat_number']);
 
-    expect(headers(container)).toEqual(['Name', 'Phone', 'Industry', 'Location', 'Website', 'VAT number']);
+    expect(headers(container)).toEqual(['Name', 'Type', 'Company', 'Lifecycle', 'Temperature', 'Phone', 'Email', 'Last activity', 'Industry', 'Location', 'Website', 'VAT number']);
     expect(rowCells(container, 'Harbour')).toContain('https://harbourhearth.example');
     expect(rowCells(container, 'Brightline Electric')).toContain('CA123456789');
   });
 
-  it('shows an email only in the optional email column, and a dash where none is recorded', () => {
+  it('shows email as core contact information, and a dash where none is recorded', () => {
     const { container } = renderTable(['email']);
 
     expect(headers(container)).toContain('Email');
@@ -151,6 +151,6 @@ describe('customer directory table', () => {
   it('lists the industry filter options and every optional field except industry', () => {
     const choices = optionalColumnChoices(DEFINITIONS).map((choice) => choice.id);
 
-    expect(choices).toEqual(['email', 'custom:website', 'custom:vat_number']);
+    expect(choices).toEqual(['custom:website', 'custom:vat_number']);
   });
 });

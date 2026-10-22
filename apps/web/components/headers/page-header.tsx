@@ -108,7 +108,7 @@ export function PageHeader({
         ) : (
           <>
             <PageLocation crumbs={section ? [] : crumbs} current={section ?? breadcrumbLabel ?? (recordTitle ? title : <BusinessLabel>{title}</BusinessLabel>)} />
-            <h1 className={titleInBar ? 'sr-only' : 'text-2xl font-semibold tracking-tight'}>{recordTitle ? title : <BusinessLabel>{title}</BusinessLabel>}</h1>
+            <LocationHeading fallback={<h1 className={titleInBar ? 'sr-only' : 'text-2xl font-semibold tracking-tight'}>{recordTitle ? title : <BusinessLabel>{title}</BusinessLabel>}</h1>} />
           </>
         )}
         {meta ? <div className={cx('text-sm text-muted', !titleInBar && 'mt-1')}>{meta}</div> : null}

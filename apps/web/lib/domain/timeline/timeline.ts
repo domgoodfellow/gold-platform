@@ -1,3 +1,4 @@
+import { classificationLabel } from '@/lib/domain/customers/classification';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
@@ -71,10 +72,11 @@ const OPPORTUNITY_ACTIONS = ['opportunity.created', 'opportunity.updated', 'oppo
 const FOLLOW_UP_ACTIONS = ['follow_up.created', 'follow_up.updated', 'follow_up.completed', 'follow_up.cancelled'] as const;
 const SERVICE_ACTIONS = ['client_tenant.linked', 'client_tenant.ended', 'service_engagement.created', 'service_engagement.status_changed', 'service_engagement.tenant_bound', 'service_engagement.deliverable_attached', 'service_engagement.work_attached', 'service_disclosure.saved', 'service_disclosure.published', 'service_disclosure.withdrawn', 'service_review.released', 'service_review.withdrawn', 'service_review.approved', 'service_review.changes_requested'] as const;
 const NOTIFICATION_ACTIONS = ['notification.intent_created', 'notification.delivery_requested', 'notification.accepted', 'notification.delivered', 'notification.bounced', 'notification.failed', 'notification.rejected', 'notification.consent_recorded', 'notification.consent_withdrawn'] as const;
-const CRM_ACTIONS = ['customer.created', 'customer.updated', 'customer.stage_changed', 'customer.imported', 'customer.import_matched', ...OPPORTUNITY_ACTIONS, ...FOLLOW_UP_ACTIONS, ...SERVICE_ACTIONS, ...NOTIFICATION_ACTIONS] as const;
+const CRM_ACTIONS = ['customer.created', 'customer.updated', 'customer.classification_changed', 'contact.type_classified', 'contact.affiliation_changed', 'customer.stage_changed', 'customer.imported', 'customer.import_matched', ...OPPORTUNITY_ACTIONS, ...FOLLOW_UP_ACTIONS, ...SERVICE_ACTIONS, ...NOTIFICATION_ACTIONS] as const;
 const CUSTOMER_ACTIONS = [
   'customer.created',
   'customer.updated',
+  'customer.classification_changed', 'contact.type_classified', 'contact.affiliation_changed',
   'customer.stage_changed',
   'customer.imported',
   'customer.import_matched',
@@ -214,24 +216,28 @@ function describe(row: EventRow, words: Vocabulary, perspective?: 'location'): s
       return `Opportunity updated: ${text(row.payload, 'title') ?? 'Untitled'}`;
     case 'opportunity.stage_changed':
       return `Opportunity ${text(row.payload, 'title') ?? 'Untitled'} moved to ${text(row.payload, 'stage_name') ?? 'Unstaged'}${text(row.payload, 'stage_kind') ? ` (${text(row.payload, 'stage_kind')})` : ''}`;
+    case 'contact.type_classified': return `Contact classified as ${String(row.payload.to ?? 'Unspecified')}`;
+    case 'contact.affiliation_changed': return row.payload.active === false ? 'Company affiliation marked historical' : 'Company affiliation saved';
     case 'customer.created':
-      return 'Added as a customer';
+      return 'Contact added';
     case 'customer.updated':
       return 'Details corrected';
+    case 'customer.classification_changed':
+      return `Lifecycle: ${classificationLabel(text(row.payload, 'to_lifecycle'))}; lead temperature: ${classificationLabel(text(row.payload, 'to_temperature'))}`;
     case 'customer.stage_changed': {
       const to = text(row.payload, 'to_stage_id');
       const name = to ? words.stages.get(to) : null;
       return to
-        ? `Moved to ${name ?? 'a stage that no longer exists'}`
-        : 'Taken off the pipeline';
+        ? `Relationship moved to ${name ?? 'a stage that no longer exists'}`
+        : 'Relationship stage cleared';
     }
     // Distinct from `customer.created` on purpose — a row a person typed and a row a file
     // produced are different facts, and the timeline says which honestly rather than implying
     // somebody sat down and entered it by hand.
     case 'customer.imported':
-      return 'Imported from a connected data source';
+      return 'Contact imported from a source';
     case 'customer.import_matched':
-      return 'Updated by a connected data source';
+      return 'Contact updated from a source';
     case 'call.placed':
       return text(row.payload, 'direction') === 'inbound' ? 'Call taken' : 'Call made';
     case 'call.wrapped_up': {
@@ -355,7 +361,7 @@ export async function listCustomerTimeline(
       .select('user_id, display_name')
       .eq('organization_id', input.organizationId),
     // Read unconditionally rather than behind a module check — a business that's switched reception off can still hold calls made while it was on.
-    db.from('customer_stages').select('id, name').eq('organization_id', input.organizationId),
+    db.from('contact_relationship_stages').select('id, name').eq('organization_id', input.organizationId),
     db.from('call_outcomes').select('id, name').eq('organization_id', input.organizationId),
   ]);
 
@@ -388,6 +394,7 @@ const ACTIVITY_SCOPE_ACTIONS = {
   customers: [
     'customer.created',
     'customer.updated',
+    'customer.classification_changed', 'contact.type_classified', 'contact.affiliation_changed',
     'customer.stage_changed',
     'customer.imported',
     'customer.import_matched',
@@ -442,7 +449,7 @@ export async function listRecentActivity(
     db.from('work_item_statuses').select('id, name').eq('organization_id', input.organizationId),
     db.from('resources').select('id, name').eq('organization_id', input.organizationId),
     db.from('memberships').select('user_id, display_name').eq('organization_id', input.organizationId),
-    db.from('customer_stages').select('id, name').eq('organization_id', input.organizationId),
+    db.from('contact_relationship_stages').select('id, name').eq('organization_id', input.organizationId),
     db.from('call_outcomes').select('id, name').eq('organization_id', input.organizationId),
     db
       .from('work_items')
@@ -636,7 +643,7 @@ export async function listLocationTimeline(
       : Promise.resolve({ data: [] as { id: string; title: string }[], error: null }),
     customerIds.length > 0
       ? db
-          .from('customers')
+          .from('contacts')
           .select('id, name')
           .eq('organization_id', input.organizationId)
           .in('id', customerIds)

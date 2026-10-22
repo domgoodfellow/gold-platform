@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ClientTenantSection } from '@/features/crm/customers/client-tenant-section';
 import type { ClientTenantRelationship } from '@/lib/domain/customers/client-tenants';
 
-vi.mock('@/app/organizations/[organizationId]/customers/[customerId]/service-actions', () => ({ relationshipAction: vi.fn() }));
+vi.mock('@/app/organizations/[organizationId]/crm/contacts/[contactId]/service-actions', () => ({ relationshipAction: vi.fn() }));
 afterEach(cleanup);
 const relationship: ClientTenantRelationship = { id: 'relationship', customer_id: 'customer', tenant_organization_id: 'tenant', status: 'active', origin: 'proposal_handoff', created_at: '2026-10-13T10:00:00Z', ended_at: null, tenant_name: 'Acme Plumbing', operational_state: 'setup', may_open: false };
 const props = { organizationId: 'seller', customerId: 'customer', tenants: [{ id: 'tenant', name: 'Acme Plumbing' }], mayManage: false, mayLink: false };

@@ -137,7 +137,7 @@ describe('Settings is one contextual sidebar, not a landing page or a directory'
     for (const page of [
       'app/organizations/[organizationId]/finance/configuration/pricing/page.tsx',
       'app/organizations/[organizationId]/comms/configuration/calling/page.tsx',
-      'app/organizations/[organizationId]/sales/configuration/relationship-stages/page.tsx',
+      'app/organizations/[organizationId]/crm/configuration/relationship-stages/page.tsx',
     ]) {
       const source = read(page);
       expect(source, page).toContain('workspaceConfigCrumbs(');

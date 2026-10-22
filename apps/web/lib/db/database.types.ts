@@ -682,6 +682,20 @@ export type Database = {
             foreignKeyName: "assets_customer_same_org"
             columns: ["organization_id", "customer_id"]
             isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "assets_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "assets_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -1441,6 +1455,20 @@ export type Database = {
             foreignKeyName: "calls_customer_same_org"
             columns: ["organization_id", "customer_id"]
             isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "calls_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "calls_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -1525,6 +1553,20 @@ export type Database = {
           tenant_organization_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "client_tenant_relationships_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "client_tenant_relationships_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "client_tenant_relationships_organization_id_customer_id_fkey"
             columns: ["organization_id", "customer_id"]
@@ -2034,6 +2076,20 @@ export type Database = {
             foreignKeyName: "communication_threads_organization_id_customer_id_fkey"
             columns: ["organization_id", "customer_id"]
             isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "communication_threads_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "communication_threads_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -2127,6 +2183,296 @@ export type Database = {
           },
         ]
       }
+      contact_affiliations: {
+        Row: {
+          active: boolean
+          company_id: string
+          company_type: string
+          created_at: string
+          created_by: string
+          id: string
+          is_primary: boolean
+          organization_id: string
+          person_id: string
+          person_type: string
+          title: string | null
+        }
+        Insert: {
+          active?: boolean
+          company_id: string
+          company_type?: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_primary?: boolean
+          organization_id: string
+          person_id: string
+          person_type?: string
+          title?: string | null
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          company_type?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_primary?: boolean
+          organization_id?: string
+          person_id?: string
+          person_type?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_affiliations_organization_id_company_id_company_ty_fkey"
+            columns: ["organization_id", "company_id", "company_type"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id", "contact_type"]
+          },
+          {
+            foreignKeyName: "contact_affiliations_organization_id_company_id_company_ty_fkey"
+            columns: ["organization_id", "company_id", "company_type"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id", "contact_type"]
+          },
+          {
+            foreignKeyName: "contact_affiliations_organization_id_company_id_company_ty_fkey"
+            columns: ["organization_id", "company_id", "company_type"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id", "contact_type"]
+          },
+          {
+            foreignKeyName: "contact_affiliations_organization_id_person_id_person_type_fkey"
+            columns: ["organization_id", "person_id", "person_type"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id", "contact_type"]
+          },
+          {
+            foreignKeyName: "contact_affiliations_organization_id_person_id_person_type_fkey"
+            columns: ["organization_id", "person_id", "person_type"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id", "contact_type"]
+          },
+          {
+            foreignKeyName: "contact_affiliations_organization_id_person_id_person_type_fkey"
+            columns: ["organization_id", "person_id", "person_type"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id", "contact_type"]
+          },
+        ]
+      }
+      contact_companies: {
+        Row: {
+          contact_id: string
+          contact_type: string
+          legal_name: string | null
+          organization_id: string
+        }
+        Insert: {
+          contact_id: string
+          contact_type?: string
+          legal_name?: string | null
+          organization_id: string
+        }
+        Update: {
+          contact_id?: string
+          contact_type?: string
+          legal_name?: string | null
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_companies_organization_id_contact_id_contact_type_fkey"
+            columns: ["organization_id", "contact_id", "contact_type"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id", "contact_type"]
+          },
+          {
+            foreignKeyName: "contact_companies_organization_id_contact_id_contact_type_fkey"
+            columns: ["organization_id", "contact_id", "contact_type"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id", "contact_type"]
+          },
+          {
+            foreignKeyName: "contact_companies_organization_id_contact_id_contact_type_fkey"
+            columns: ["organization_id", "contact_id", "contact_type"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id", "contact_type"]
+          },
+        ]
+      }
+      contact_people: {
+        Row: {
+          contact_id: string
+          contact_type: string
+          family_name: string | null
+          given_name: string | null
+          organization_id: string
+        }
+        Insert: {
+          contact_id: string
+          contact_type?: string
+          family_name?: string | null
+          given_name?: string | null
+          organization_id: string
+        }
+        Update: {
+          contact_id?: string
+          contact_type?: string
+          family_name?: string | null
+          given_name?: string | null
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_people_organization_id_contact_id_contact_type_fkey"
+            columns: ["organization_id", "contact_id", "contact_type"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id", "contact_type"]
+          },
+          {
+            foreignKeyName: "contact_people_organization_id_contact_id_contact_type_fkey"
+            columns: ["organization_id", "contact_id", "contact_type"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id", "contact_type"]
+          },
+          {
+            foreignKeyName: "contact_people_organization_id_contact_id_contact_type_fkey"
+            columns: ["organization_id", "contact_id", "contact_type"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id", "contact_type"]
+          },
+        ]
+      }
+      contact_relationship_stages: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          organization_id: string
+          position: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          organization_id: string
+          position?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_stages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_stages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          contact_type: string
+          created_at: string
+          created_by: string
+          custom: Json
+          email: string | null
+          id: string
+          lead_temperature: string
+          lifecycle: string | null
+          name: string
+          organization_id: string
+          phone: string | null
+          stage_id: string | null
+        }
+        Insert: {
+          contact_type?: string
+          created_at?: string
+          created_by: string
+          custom?: Json
+          email?: string | null
+          id?: string
+          lead_temperature?: string
+          lifecycle?: string | null
+          name: string
+          organization_id: string
+          phone?: string | null
+          stage_id?: string | null
+        }
+        Update: {
+          contact_type?: string
+          created_at?: string
+          created_by?: string
+          custom?: Json
+          email?: string | null
+          id?: string
+          lead_temperature?: string
+          lifecycle?: string | null
+          name?: string
+          organization_id?: string
+          phone?: string | null
+          stage_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_stage_same_org"
+            columns: ["organization_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "contact_relationship_stages"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customers_stage_same_org"
+            columns: ["organization_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "customer_stages"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           assignee_membership_id: string | null
@@ -2201,6 +2547,20 @@ export type Database = {
             foreignKeyName: "conversations_organization_id_customer_id_fkey"
             columns: ["organization_id", "customer_id"]
             isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "conversations_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "conversations_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -2234,7 +2594,7 @@ export type Database = {
           },
         ]
       }
-      crm_follow_ups: {
+      crm_tasks: {
         Row: {
           completed_at: string | null
           completed_by: string | null
@@ -2284,6 +2644,20 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_follow_ups_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_follow_ups_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "crm_follow_ups_organization_id_customer_id_fkey"
             columns: ["organization_id", "customer_id"]
@@ -2462,6 +2836,20 @@ export type Database = {
             foreignKeyName: "customer_commercial_proposals_organization_id_customer_id_fkey"
             columns: ["organization_id", "customer_id"]
             isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_commercial_proposals_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_commercial_proposals_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -2525,6 +2913,20 @@ export type Database = {
             foreignKeyName: "customer_discovery_snapshots_organization_id_customer_id_fkey"
             columns: ["organization_id", "customer_id"]
             isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_discovery_snapshots_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_discovery_snapshots_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -2567,6 +2969,20 @@ export type Database = {
           organization_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "customer_locations_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_locations_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "customer_locations_customer_same_org"
             columns: ["organization_id", "customer_id"]
@@ -2652,6 +3068,20 @@ export type Database = {
             foreignKeyName: "customer_notification_recipien_organization_id_customer_id_fkey"
             columns: ["organization_id", "customer_id"]
             isOneToOne: true
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_notification_recipien_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: true
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_notification_recipien_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: true
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -2679,6 +3109,20 @@ export type Database = {
             columns: ["organization_id", "email_identity_id"]
             isOneToOne: false
             referencedRelation: "email_identities"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_notification_settings_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: true
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_notification_settings_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: true
+            referencedRelation: "contacts"
             referencedColumns: ["organization_id", "id"]
           },
           {
@@ -2719,6 +3163,20 @@ export type Database = {
           token?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "customer_portal_invites_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_portal_invites_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "customer_portal_invites_customer_same_org"
             columns: ["organization_id", "customer_id"]
@@ -2798,6 +3256,20 @@ export type Database = {
             foreignKeyName: "customer_proposal_handoffs_organization_id_customer_id_fkey"
             columns: ["organization_id", "customer_id"]
             isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_proposal_handoffs_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_proposal_handoffs_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -2857,6 +3329,20 @@ export type Database = {
             foreignKeyName: "customer_proposal_invites_customer_same_org"
             columns: ["organization_id", "customer_id"]
             isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_proposal_invites_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_proposal_invites_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -2873,106 +3359,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
-          },
-        ]
-      }
-      customer_stages: {
-        Row: {
-          created_at: string
-          created_by: string
-          id: string
-          name: string
-          organization_id: string
-          position: number
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          id?: string
-          name: string
-          organization_id: string
-          position?: number
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          id?: string
-          name?: string
-          organization_id?: string
-          position?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customer_stages_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customer_stages_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "platform_tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      customers: {
-        Row: {
-          created_at: string
-          created_by: string
-          custom: Json
-          email: string | null
-          id: string
-          name: string
-          organization_id: string
-          phone: string | null
-          stage_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          custom?: Json
-          email?: string | null
-          id?: string
-          name: string
-          organization_id: string
-          phone?: string | null
-          stage_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          custom?: Json
-          email?: string | null
-          id?: string
-          name?: string
-          organization_id?: string
-          phone?: string | null
-          stage_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "platform_tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customers_stage_same_org"
-            columns: ["organization_id", "stage_id"]
-            isOneToOne: false
-            referencedRelation: "customer_stages"
-            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -3114,6 +3500,20 @@ export type Database = {
             columns: ["organization_id", "asset_id"]
             isOneToOne: false
             referencedRelation: "assets"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "document_links_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "document_links_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["organization_id", "id"]
           },
           {
@@ -3713,6 +4113,20 @@ export type Database = {
             foreignKeyName: "external_actors_customer_same_org"
             columns: ["organization_id", "customer_id"]
             isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "external_actors_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "external_actors_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -4038,6 +4452,20 @@ export type Database = {
             foreignKeyName: "form_submissions_customer_fk"
             columns: ["organization_id", "customer_id"]
             isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "form_submissions_customer_fk"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "form_submissions_customer_fk"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -4293,6 +4721,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_staging_rows_organization_id_matched_customer_id_fkey"
+            columns: ["organization_id", "matched_customer_id"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "import_staging_rows_organization_id_matched_customer_id_fkey"
+            columns: ["organization_id", "matched_customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
           },
           {
             foreignKeyName: "import_staging_rows_organization_id_matched_customer_id_fkey"
@@ -5303,6 +5745,20 @@ export type Database = {
             foreignKeyName: "invoices_customer_same_org"
             columns: ["organization_id", "customer_id"]
             isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invoices_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invoices_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -5444,6 +5900,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_audiences_organization_id_stage_id_fkey"
+            columns: ["organization_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "contact_relationship_stages"
+            referencedColumns: ["organization_id", "id"]
           },
           {
             foreignKeyName: "marketing_audiences_organization_id_stage_id_fkey"
@@ -5680,6 +6143,20 @@ export type Database = {
             columns: ["organization_id", "campaign_id"]
             isOneToOne: false
             referencedRelation: "marketing_campaigns"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "marketing_inquiries_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "marketing_inquiries_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["organization_id", "id"]
           },
           {
@@ -6312,6 +6789,7 @@ export type Database = {
           id: string
           organization_id: string
           owner_membership_id: string | null
+          primary_person_id: string | null
           stage_id: string | null
           title: string
         }
@@ -6325,6 +6803,7 @@ export type Database = {
           id?: string
           organization_id: string
           owner_membership_id?: string | null
+          primary_person_id?: string | null
           stage_id?: string | null
           title: string
         }
@@ -6338,10 +6817,25 @@ export type Database = {
           id?: string
           organization_id?: string
           owner_membership_id?: string | null
+          primary_person_id?: string | null
           stage_id?: string | null
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "opportunities_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "opportunities_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "opportunities_customer_same_org"
             columns: ["organization_id", "customer_id"]
@@ -6368,6 +6862,27 @@ export type Database = {
             columns: ["organization_id", "owner_membership_id"]
             isOneToOne: false
             referencedRelation: "memberships"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "opportunities_primary_person_same_org"
+            columns: ["organization_id", "primary_person_id"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "opportunities_primary_person_same_org"
+            columns: ["organization_id", "primary_person_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "opportunities_primary_person_same_org"
+            columns: ["organization_id", "primary_person_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
           {
@@ -10623,6 +11138,20 @@ export type Database = {
             foreignKeyName: "report_definitions_customer_same_org"
             columns: ["organization_id", "customer_id"]
             isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "report_definitions_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "report_definitions_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -11328,6 +11857,20 @@ export type Database = {
             foreignKeyName: "service_engagements_organization_id_customer_id_fkey"
             columns: ["organization_id", "customer_id"]
             isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "service_engagements_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "service_engagements_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -11913,6 +12456,20 @@ export type Database = {
             columns: ["organization_id", "assigned_membership_id"]
             isOneToOne: false
             referencedRelation: "memberships"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_cases_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_cases_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["organization_id", "id"]
           },
           {
@@ -13622,6 +14179,20 @@ export type Database = {
             foreignKeyName: "work_items_customer_same_org"
             columns: ["organization_id", "customer_id"]
             isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_items_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_items_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -13694,6 +14265,163 @@ export type Database = {
           },
         ]
       }
+      contact_directory: {
+        Row: {
+          company_sort: string | null
+          contact_type: string | null
+          created_at: string | null
+          created_by: string | null
+          custom: Json | null
+          directory_company_id: string | null
+          directory_company_name: string | null
+          email: string | null
+          id: string | null
+          lead_temperature: string | null
+          lifecycle: string | null
+          name: string | null
+          organization_id: string | null
+          phone: string | null
+          stage_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_stage_same_org"
+            columns: ["organization_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "contact_relationship_stages"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customers_stage_same_org"
+            columns: ["organization_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "customer_stages"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      crm_follow_ups: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string | null
+          created_by: string | null
+          customer_id: string | null
+          due_at: string | null
+          id: string | null
+          kind: string | null
+          notes: string | null
+          opportunity_id: string | null
+          organization_id: string | null
+          owner_membership_id: string | null
+          status: string | null
+          title: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_id?: string | null
+          due_at?: string | null
+          id?: string | null
+          kind?: string | null
+          notes?: string | null
+          opportunity_id?: string | null
+          organization_id?: string | null
+          owner_membership_id?: string | null
+          status?: string | null
+          title?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_id?: string | null
+          due_at?: string | null
+          id?: string | null
+          kind?: string | null
+          notes?: string | null
+          opportunity_id?: string | null
+          organization_id?: string | null
+          owner_membership_id?: string | null
+          status?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_follow_ups_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_follow_ups_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_follow_ups_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_follow_ups_organization_id_customer_id_opportunity_id_fkey"
+            columns: ["organization_id", "customer_id", "opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["organization_id", "customer_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_follow_ups_organization_id_customer_id_opportunity_id_fkey"
+            columns: ["organization_id", "customer_id", "opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunity_worklist"
+            referencedColumns: ["organization_id", "customer_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_follow_ups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_follow_ups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_follow_ups_organization_id_owner_membership_id_fkey"
+            columns: ["organization_id", "owner_membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       customer_activity: {
         Row: {
           action: string | null
@@ -13723,6 +14451,122 @@ export type Database = {
           },
         ]
       }
+      customer_stages: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string | null
+          name: string | null
+          organization_id: string | null
+          position: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string | null
+          name?: string | null
+          organization_id?: string | null
+          position?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string | null
+          name?: string | null
+          organization_id?: string | null
+          position?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_stages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_stages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          contact_type: string | null
+          created_at: string | null
+          created_by: string | null
+          custom: Json | null
+          email: string | null
+          id: string | null
+          lead_temperature: string | null
+          lifecycle: string | null
+          name: string | null
+          organization_id: string | null
+          phone: string | null
+          stage_id: string | null
+        }
+        Insert: {
+          contact_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          custom?: Json | null
+          email?: string | null
+          id?: string | null
+          lead_temperature?: string | null
+          lifecycle?: string | null
+          name?: string | null
+          organization_id?: string | null
+          phone?: string | null
+          stage_id?: string | null
+        }
+        Update: {
+          contact_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          custom?: Json | null
+          email?: string | null
+          id?: string | null
+          lead_temperature?: string | null
+          lifecycle?: string | null
+          name?: string | null
+          organization_id?: string | null
+          phone?: string | null
+          stage_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_stage_same_org"
+            columns: ["organization_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "contact_relationship_stages"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customers_stage_same_org"
+            columns: ["organization_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "customer_stages"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       finance_invoice_records: {
         Row: {
           billed_to: string | null
@@ -13742,6 +14586,20 @@ export type Database = {
           work_item_id: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invoices_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invoices_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "invoices_customer_same_org"
             columns: ["organization_id", "customer_id"]
@@ -13846,6 +14704,20 @@ export type Database = {
             foreignKeyName: "work_items_customer_same_org"
             columns: ["organization_id", "customer_id"]
             isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_items_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "work_items_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["organization_id", "id"]
           },
@@ -13884,6 +14756,20 @@ export type Database = {
           title: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "opportunities_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "opportunities_customer_same_org"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "opportunities_customer_same_org"
             columns: ["organization_id", "customer_id"]
@@ -14069,6 +14955,20 @@ export type Database = {
             columns: ["organization_id", "assigned_membership_id"]
             isOneToOne: false
             referencedRelation: "memberships"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_cases_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contact_directory"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "support_cases_organization_id_customer_id_fkey"
+            columns: ["organization_id", "customer_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["organization_id", "id"]
           },
           {
@@ -14465,11 +15365,14 @@ export type Database = {
           p_stage_id: string
         }
         Returns: {
+          contact_type: string
           created_at: string
           created_by: string
           custom: Json
           email: string | null
           id: string
+          lead_temperature: string
+          lifecycle: string | null
           name: string
           organization_id: string
           phone: string | null
@@ -14477,7 +15380,7 @@ export type Database = {
         }
         SetofOptions: {
           from: "*"
-          to: "customers"
+          to: "contacts"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -14607,6 +15510,14 @@ export type Database = {
           written: boolean
         }[]
       }
+      configure_crm_import_sync: {
+        Args: {
+          p_enabled: boolean
+          p_mapping_id: string
+          p_organization_id: string
+        }
+        Returns: undefined
+      }
       configure_integration_resource_sync: {
         Args: { p_enabled: boolean; p_parameters: Json; p_resource_id: string }
         Returns: undefined
@@ -14689,6 +15600,33 @@ export type Database = {
           p_phone: string
           p_starts_at: string
           p_type_id: string
+        }
+        Returns: string
+      }
+      create_contact: {
+        Args: {
+          p_custom: Json
+          p_email: string
+          p_lead_temperature?: string
+          p_lifecycle?: string
+          p_name: string
+          p_organization_id: string
+          p_phone: string
+        }
+        Returns: string
+      }
+      create_crm_contact: {
+        Args: {
+          p_company_id?: string
+          p_contact_type: string
+          p_custom: Json
+          p_email: string
+          p_lead_temperature?: string
+          p_lifecycle?: string
+          p_name: string
+          p_organization_id: string
+          p_phone: string
+          p_title?: string
         }
         Returns: string
       }
@@ -16912,6 +17850,17 @@ export type Database = {
         }
         Returns: string
       }
+      save_contact_affiliation: {
+        Args: {
+          p_active?: boolean
+          p_company_id: string
+          p_is_primary?: boolean
+          p_organization_id: string
+          p_person_id: string
+          p_title?: string
+        }
+        Returns: string
+      }
       save_form_draft: {
         Args: {
           p_definition: Json
@@ -17488,6 +18437,35 @@ export type Database = {
           p_label: string
           p_lifecycle: string
           p_sale_status: string
+        }
+        Returns: undefined
+      }
+      update_contact: {
+        Args: {
+          p_custom: Json
+          p_customer_id: string
+          p_email: string
+          p_lead_temperature?: string
+          p_lifecycle?: string
+          p_name: string
+          p_organization_id: string
+          p_phone: string
+          p_stage_id: string
+        }
+        Returns: undefined
+      }
+      update_crm_contact: {
+        Args: {
+          p_contact_id: string
+          p_contact_type: string
+          p_custom: Json
+          p_email: string
+          p_lead_temperature?: string
+          p_lifecycle?: string
+          p_name: string
+          p_organization_id: string
+          p_phone: string
+          p_stage_id: string
         }
         Returns: undefined
       }

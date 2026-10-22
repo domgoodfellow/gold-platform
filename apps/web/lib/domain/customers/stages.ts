@@ -39,7 +39,7 @@ export async function listCustomerStages(
   input: { organizationId: string },
 ): Promise<CustomerStage[]> {
   const { data, error } = await db
-    .from('customer_stages')
+    .from('contact_relationship_stages')
     .select('id, name, position')
     .eq('organization_id', input.organizationId)
     .order('position', { ascending: true })
@@ -64,7 +64,7 @@ export async function createCustomerStage(
   const name = cleanName(input.name);
 
   const { data, error } = await db
-    .from('customer_stages')
+    .from('contact_relationship_stages')
     .insert({
       organization_id: input.organizationId,
       name,
@@ -109,7 +109,7 @@ export async function updateCustomerStage(
   }
 
   const { data, error } = await db
-    .from('customer_stages')
+    .from('contact_relationship_stages')
     .update({ name, position: input.position })
     .eq('id', input.id)
     .select('id');

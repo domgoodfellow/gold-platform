@@ -60,7 +60,7 @@ export function WorkIdentity({ organizationId, workItem, definitions, assetsEnab
         <Detail label="Customer">
           {workItem.customer ? (
             <Link
-              href={`/organizations/${organizationId}/customers/${workItem.customer.id}`}
+              href={`/organizations/${organizationId}/crm/contacts/${workItem.customer.id}`}
               className="underline underline-offset-4"
             >
               {workItem.customer.label}

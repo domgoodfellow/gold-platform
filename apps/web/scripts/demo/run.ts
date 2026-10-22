@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { issueInvoice, recordPayment } from '@/lib/domain/billing/invoices';
-import { createCustomer } from '@/lib/domain/customers/customers';
+import { createContact } from '@/lib/domain/contacts/contacts';
 import { createLocation, linkCustomerLocation } from '@/lib/domain/locations/locations';
 import { configureBusiness } from '@/lib/domain/configuration/configure';
 import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
@@ -295,7 +295,7 @@ async function standUp(
 
   const customerIds: string[] = [];
   for (const customer of business.customers) {
-    const customerId = await createCustomer(ownerDb, {
+    const customerId = await createContact(ownerDb, {
       organizationId,
       name: customer.name,
       email: customer.email,

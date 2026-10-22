@@ -1,3 +1,4 @@
+import { CONTACT_LIFECYCLES, LEAD_TEMPERATURES, classificationLabel } from '@/lib/domain/customers/classification';
 import { Search } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { CheckboxField } from '@/components/controls/checkbox-field';
@@ -6,6 +7,12 @@ import type { CustomerStage } from '@/lib/domain/customers/stages';
 
 export type CustomerDirectoryView = {
   search: string;
+  contactType?: string;
+  companyId?: string;
+  sort?: string;
+  group?: string;
+  lifecycle?: string;
+  temperature?: string;
   stage: string;
   industry: string;
   website: string;
@@ -22,6 +29,7 @@ export function CustomerListToolbar({
   industries,
   choices,
   view,
+  companies=[],
 }: {
   organizationId: string;
   stages: CustomerStage[];
@@ -29,15 +37,27 @@ export function CustomerListToolbar({
   industries: string[];
   choices: { id: string; label: string }[];
   view: CustomerDirectoryView;
+  companies?: {id:string;name:string}[];
 }) {
-  const filtered = Boolean(view.search || view.stage || view.industry || view.website);
+  const filtered = Boolean(view.contactType || view.companyId || view.lifecycle || view.temperature || view.search || view.stage || view.industry || view.website);
   return (
     <form className="flex flex-col gap-2" role="search">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <div className="relative min-w-0 flex-1">
           <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-          <TextInput name="q" defaultValue={view.search} placeholder="Search customers" aria-label="Search customers" className="w-full pl-9" />
+          <TextInput name="q" defaultValue={view.search} placeholder="Search contacts" aria-label="Search contacts" className="w-full pl-9" />
         </div>
+        <SelectInput name="contactType" aria-label="Contact type view" defaultValue={view.contactType ?? ''} className="w-full sm:w-40"><option value="">All contacts</option><option value="company">Companies</option><option value="person">People</option><option value="unspecified">Needs classification</option></SelectInput>
+        <SelectInput name="companyId" aria-label="Filter by company" defaultValue={view.companyId ?? ''} className="w-full sm:w-48"><option value="">All companies</option>{companies.map(company=><option key={company.id} value={company.id}>{company.name}</option>)}</SelectInput>
+        <SelectInput name="sort" aria-label="Sort contacts" defaultValue={view.sort ?? ''} className="w-full sm:w-40"><option value="">Newest first</option><option value="name">Name</option><option value="company">Company</option></SelectInput>
+        <SelectInput name="group" aria-label="Contact grouping" defaultValue={view.group ?? ''} className="w-full sm:w-40"><option value="">Flat list</option><option value="company">Group by company</option></SelectInput>
+        <SelectInput name="lifecycle" defaultValue={view.lifecycle ?? ''} aria-label="Filter by lifecycle" className="w-full sm:w-40">
+          <option value="">All lifecycles</option><option value="unclassified">Unclassified</option>
+          {CONTACT_LIFECYCLES.map(value => <option key={value} value={value}>{classificationLabel(value)}</option>)}
+        </SelectInput>
+        <SelectInput name="temperature" defaultValue={view.temperature ?? ''} aria-label="Filter by temperature" className="w-full sm:w-40">
+          <option value="">All temperatures</option>{LEAD_TEMPERATURES.map(value => <option key={value} value={value}>{classificationLabel(value)}</option>)}
+        </SelectInput>
         {stages.length > 0 ? (
           <SelectInput name="stage" defaultValue={view.stage} aria-label="Filter by relationship" className="w-full sm:w-48">
             <option value="">All relationships</option>
@@ -60,7 +80,7 @@ export function CustomerListToolbar({
       <div className="flex flex-wrap items-center gap-2">
         <Button type="submit" tone="secondary">Apply</Button>
         {filtered || view.optional.length > 0 ? (
-          <ButtonLink href={`/organizations/${organizationId}/customers`} tone="text">Clear</ButtonLink>
+          <ButtonLink href={`/organizations/${organizationId}/crm/contacts`} tone="text">Clear</ButtonLink>
         ) : null}
         {choices.length > 0 ? (
           <details className="ml-auto">

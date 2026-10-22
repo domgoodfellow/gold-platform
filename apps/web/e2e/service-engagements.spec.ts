@@ -41,7 +41,7 @@ test.describe('Batch A CRM managed services', () => {
     const tenantName = `Service tenant ${Date.now()}`;
     const tenant = await provisionOrganization(staff, { ownerEmail: staffEmail, name: tenantName, currency: 'CAD', displayName: 'Tenant owner' });
     const customer = await createCustomer(staff, { organizationId: org, name: 'Managed client', email: ownerEmail });
-    const base = `/organizations/${org}/customers/${customer}`;
+    const base = `/organizations/${org}/crm/contacts/${customer}`;
     const loginScope = new Client(connection); await loginScope.connect();
     try { await loginScope.query('delete from platform_staff where user_id=$1',[staffAccount.data.user.id]); }
     finally { await loginScope.end(); }

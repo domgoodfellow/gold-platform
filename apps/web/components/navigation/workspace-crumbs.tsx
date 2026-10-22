@@ -121,14 +121,14 @@ export function PageLocationRecords({ records = {}, notFound = false }: { record
  * The page's one `h1`, named by the same resolved location the bar shows; the bar already shows it,
  * so it is visually hidden. Renders nothing on a route that still publishes its own identity.
  */
-export function LocationHeading({ required = false }: { required?: boolean }) {
+export function LocationHeading({ required = false, fallback = null }: { required?: boolean; fallback?: ReactNode }) {
   const location = useResolvedLocation();
   const pathname = usePathname();
   useEffect(() => {
     // A header that asked for the resolver's location on a route not yet migrated would have no heading and no location.
     if (required && !location && process.env.NODE_ENV !== 'production') console.warn(`A header uses the resolved page location on "${pathname}", which is not in RESOLVED_LOCATION_ROUTES.`);
   }, [required, location, pathname]);
-  return location ? <h1 className="sr-only">{location.headingName}</h1> : null;
+  return location ? <h1 className="sr-only">{location.headingName}</h1> : fallback;
 }
 
 

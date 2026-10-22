@@ -10,7 +10,7 @@ import { OrganizationCalendar } from '@/features/calendar/organization-calendar'
 import { loadOrganizationCalendar } from '@/lib/application/calendar/organization-calendar';
 import { todayInZone, shiftDate, startOfMonth, zonedDayRange, localDateTimeToInstant } from '@/lib/domain/scheduling/window';
 import { requireOrganization } from '@/lib/route/organization';
-import { WORKSPACES, type WorkspaceKey, workspaceAncestry } from '@/lib/navigation';
+import { WORKSPACES, areaHref, type WorkspaceKey, workspaceAncestry } from '@/lib/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +33,7 @@ export async function WorkspaceCalendarPage({ params, searchParams, workspace }:
     endsAt: zonedDayRange(shiftDate(dates[dates.length - 1], 1), organization.timezone).startsAt,
   } });
   const base = `/organizations/${organizationId}`;
-  const calendarPath = `${base}/${WORKSPACES.find(item => item.key === workspace)!.home}/calendar`;
+  const calendarPath = `${areaHref(organizationId, WORKSPACES.find(item => item.key === workspace)!.home)}/calendar`;
   const options = { organizationId, timezone: organization.timezone, members: data.members,
     mayManage: workspace === 'crm' && data.followUpsEnabled && organization.capabilities.includes('follow_up.manage') };
   const filters = { scope };

@@ -1,3 +1,6 @@
+import { createMapping, suggestMapping } from '@/lib/domain/integrations/mappings';
+import { beginImportRun, resumeImportStaging, applyImportRun, listStagingRows } from '@/lib/domain/integrations/import-runs';
+import { getCustomer } from '@/lib/domain/customers/customers';
 import {randomUUID} from 'node:crypto';
 import {createClient,type SupabaseClient} from '@supabase/supabase-js';
 import {Client} from 'pg';
@@ -33,7 +36,9 @@ describe('imported reads and synchronized records retain database authority',()=
     await pg.query("update public.integration_connections set status='active' where id=$1",[connection]);
     resource=(await machine("select public.record_managed_integration_resource($1,'google_sheet','sheet-test','Sheet','{}') as id",[connection]))[0].id;
   });
-  afterAll(async()=>{if(pg){await pg.query('delete from public.integration_connections where id=$1',[connection]);await pg.end();}});
+  afterAll(async()=>{if(pg){// Preserve imported provenance; leave this isolated fixture disconnected and unscheduled.
+    await pg.query('update public.integration_resource_syncs set enabled=false where organization_id=$1',[org]);
+    await pg.query("update public.integration_connections set status='disconnected' where id=$1",[connection]);await pg.end();}});
   it('refuses cross-tenant configuration and hides records',async()=>{
     const result=await bob.rpc('configure_integration_resource_sync',{p_resource_id:resource,p_enabled:true,p_parameters:{}});
     expect(result.error?.code).toBe('42501');
@@ -69,7 +74,26 @@ describe('imported reads and synchronized records retain database authority',()=
   it('completed worksheet rows feed the existing mapping preview without a second source store',async()=>{
     await commit(await claim(),[{external_id:'42',display_name:'42',metadata:{headers:['id','name'],values:['42','Alice']},deleted:false}]);
     const parsed=await downloadImportFile(alice,{organizationId:org,resourceId:resource});
-    expect(parsed?.headers).toEqual(['id','name']);expect(parsed?.rows).toEqual([{id:'42',name:'Alice'}]);
+    expect(parsed?.headers).toEqual(['id','name']);expect(parsed?.rows).toEqual([{id:'42',name:'Alice',__source_record_id:'42'}]);
+  });
+  it('keeps saved worksheet identity across updates and preserves CRM history when a source row disappears', async()=>{
+    const metadata=(name:string)=>({headers:['source_record_id','name','lifecycle','temperature'],values:['42',name,'lead','warm']});
+    await commit(await claim(),[{external_id:'42',display_name:'42',metadata:metadata('Worksheet contact'),deleted:false}]);
+    const mapping = suggestMapping(['source_record_id','name','lifecycle','temperature'],[]);
+    const mappingId=await createMapping(alice,{organizationId:org,resourceId:resource,fields:mapping});
+    expect((await alice.rpc('configure_crm_import_sync',{p_organization_id:org,p_mapping_id:mappingId,p_enabled:true})).error).toBeNull();
+    expect((await bob.rpc('configure_crm_import_sync',{p_organization_id:org,p_mapping_id:mappingId,p_enabled:false})).error?.code).toBe('42501');
+    async function run(){const runId=await beginImportRun(alice,{organizationId:org,mappingId});await resumeImportStaging(alice,{organizationId:org,runId});await applyImportRun(alice,{organizationId:org,runId});return (await listStagingRows(alice,{organizationId:org,runId}))[0];}
+    const first=await run();const id=first.matchedCustomerId!;
+    expect(await getCustomer(alice,{organizationId:org,customerId:id})).toMatchObject({id,name:'Worksheet contact',lifecycle:'lead',leadTemperature:'warm'});
+    await commit(await claim(),[{external_id:'42',display_name:'42',metadata:metadata('Worksheet renamed'),deleted:false}]);
+    expect((await run()).matchedCustomerId).toBe(id);
+    expect(await getCustomer(alice,{organizationId:org,customerId:id})).toMatchObject({id,name:'Worksheet renamed'});
+    await commit(await claim(),[]);
+    expect((await listResourceRecords(alice,org,resource))).toHaveLength(0);
+    expect(await getCustomer(alice,{organizationId:org,customerId:id})).toMatchObject({id,name:'Worksheet renamed'});
+    const events=await alice.from('events').select('action').eq('organization_id',org).eq('entity_id',id);expect(events.data?.length).toBeGreaterThanOrEqual(2);
+    await commit(await claim(),[{external_id:'42',display_name:'42',metadata:metadata('Worksheet renamed'),deleted:false}]);
   });
   it('keeps the page reader tenant-scoped and refuses sync changes and record reads to a member without integration.manage',async()=>{
     expect(await listResourceRecords(bob,org,resource)).toEqual([]);

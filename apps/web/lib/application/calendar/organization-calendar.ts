@@ -2,7 +2,7 @@ import { listCalendarEvents, type CalendarEvent } from '@/lib/domain/calendar/ev
 import type { WorkspaceKey } from '@/lib/navigation';
 import type { Db } from '@/lib/db/types';
 import { followUpsAvailable } from '@/lib/application/crm/follow-ups';
-import { listFollowUps, type FollowUp } from '@/lib/domain/follow-ups/follow-ups';
+import { listTasks, type CrmTask } from '@/lib/domain/tasks/tasks';
 import { listMembers, type Member } from '@/lib/domain/tenancy/members';
 import { listWorkItems, type WorkItem } from '@/lib/domain/work-items/work-items';
 import { zonedDayRange, type Window } from '@/lib/domain/scheduling/window';
@@ -18,9 +18,9 @@ export type OrganizationCalendarEvent = {
   endsAt?: string;
   context: string;
   status: string;
-} & ({ source: 'follow-ups'; followUp: FollowUp } | { source: 'work'; workId: string } | { source: 'calendar'; event: CalendarEvent });
+} & ({ source: 'follow-ups'; followUp: CrmTask } | { source: 'work'; workId: string } | { source: 'calendar'; event: CalendarEvent });
 
-export function calendarEvents(followUps: FollowUp[], work: WorkItem[]): OrganizationCalendarEvent[] {
+export function calendarEvents(followUps: CrmTask[], work: WorkItem[]): OrganizationCalendarEvent[] {
   const events: OrganizationCalendarEvent[] = followUps.map(item => ({
     key: `follow-up:${item.id}`, source: 'follow-ups', title: item.title, startsAt: item.dueAt,
     context: [item.customerName, item.opportunityTitle, item.ownerName].filter(Boolean).join(' · '),
@@ -54,7 +54,7 @@ export async function loadOrganizationCalendar(db: Db, input: {
       followUpsEnabled = await followUpsAvailable(db, input.organizationId);
       if (!followUpsEnabled) return [];
       const [items, owners] = await Promise.all([
-        listFollowUps(db, { organizationId: input.organizationId, from: input.within.startsAt,
+        listTasks(db, { organizationId: input.organizationId, from: input.within.startsAt,
           before: input.within.endsAt, ownerMembershipId: input.owner === 'unassigned' ? null : input.owner || undefined, limit: 500 }),
         listMembers(db, { organizationId: input.organizationId }),
       ]);

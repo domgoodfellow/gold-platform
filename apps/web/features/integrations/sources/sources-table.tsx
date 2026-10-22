@@ -15,10 +15,12 @@ export function SourcesTable({
   organizationId,
   resources,
   connectionLabel,
+  mayImport = false,
 }: {
   organizationId: string;
   resources: IntegrationResource[];
   connectionLabel: Map<string, string>;
+  mayImport?: boolean;
 }) {
   return (
     <DataTable
@@ -37,8 +39,7 @@ export function SourcesTable({
         {
           key: 'actions',
           header: 'Import',
-          visibility: 'card-only',
-          cell: (r) => ['file_upload','google_sheet','microsoft_workbook'].includes(r.resourceType) ? (
+          cell: (r) => mayImport && ['file_upload','google_sheet','microsoft_workbook'].includes(r.resourceType) ? (
             <ButtonLink href={libraryNewImportHref(organizationId, r.id)} tone="text" size="small">
               Import →
             </ButtonLink>

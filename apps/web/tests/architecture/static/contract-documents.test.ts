@@ -65,10 +65,10 @@ describe('the workspace navigation contract (ADR-046)', () => {
   });
 });
 
-describe('the workspace Home contract (ADR-047, amending ADR-046 point 3)', () => {
-  it('is stated in product.md and presented in ui-system.md, each citing ADR-047', () => {
-    expect(read('docs/product.md')).toMatch(/### Workspace navigation[\s\S]*?workspace heading links to its canonical Home[^\n]*ADR-047/);
-    expect(read('docs/ui-system.md')).toMatch(/## Navigation model[\s\S]*?workspace heading[^\n]*ADR-047/);
+describe('the explicit workspace Dashboard contract (ADR-049, superseding ADR-047 point 1)', () => {
+  it('is stated by product and presentation owners with the explicit approved supersession', () => {
+    expect(read('docs/product.md')).toMatch(/### Workspace navigation[\s\S]*?Dashboard is the first explicit destination[^\n]*ADR-049/);
+    expect(read('docs/ui-system.md')).toMatch(/## Navigation model[\s\S]*?workspace heading[^\n]*ADR-049/);
   });
 
   it('no canonical document states the superseded Overview child as the current rule', () => {
@@ -89,5 +89,20 @@ describe('protected contract paths', () => {
     const agents = read('CLAUDE.md');
     expect(agents).toContain('docs/decisions/README.md');
     expect(agents).toMatch(/Contract-Change/);
+  });
+});
+
+
+describe('approved CRM consolidation governance', () => {
+  it('annotates the replaced decision at its historical point without retiring the whole ADR', () => {
+    const adr = read(`${DECISIONS}/ADR-047-page-location-and-identity.md`);
+    expect(adr).toMatch(/Point 1 superseded effective 2026-10-22 by \[ADR-049\][\s\S]*1\. \*\*Workspace Home/);
+    expect(header('ADR-047-page-location-and-identity.md')).toMatch(/Status:\*\* Accepted/);
+  });
+  it('keeps approved decisions above implementation evidence and one CRM directory', () => {
+    expect(read('CLAUDE.md')).toContain('Existing code is implementation evidence');
+    expect(read('docs/product.md')).toContain('`/crm/contacts/[contactId]`');
+    expect(read('docs/product.md')).not.toContain("Dashboard (`/sales`)");
+    expect(read('docs/data.md')).toContain('30 consecutive days');
   });
 });

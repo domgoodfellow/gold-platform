@@ -20,7 +20,7 @@ import {
 import {
   editDiscoverySnapshotAction,
   type EditDiscoverySnapshotState,
-} from '@/app/organizations/[organizationId]/customers/[customerId]/actions';
+} from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/actions';
 
 const EDIT_INITIAL: EditDiscoverySnapshotState = { error: null, updated: false };
 

@@ -71,7 +71,7 @@ describe('the organization mobile menu', () => {
     await userEvent.click(screen.getByRole('link', { name: 'Home' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await open();
-    route.pathname = '/organizations/org-1/sales';
+    route.pathname = '/organizations/org-1/crm';
     view.rerender(<Harness />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });

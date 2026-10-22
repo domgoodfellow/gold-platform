@@ -307,7 +307,7 @@ function CustomerPanel({
     return (
       <div className="flex flex-wrap items-center gap-2 text-xs" role="group" aria-label="Customer">
         <span className="text-muted">Customer</span>
-        <Link className="font-medium underline" href={`/organizations/${organizationId}/customers/${resolution.customer.id}`}>{resolution.customer.name}</Link>
+        <Link className="font-medium underline" href={`/organizations/${organizationId}/crm/contacts/${resolution.customer.id}`}>{resolution.customer.name}</Link>
         {mayHandle ? <Button type="button" size="small" tone="secondary" onClick={() => onLink(null)}>Unlink</Button> : null}
       </div>
     );

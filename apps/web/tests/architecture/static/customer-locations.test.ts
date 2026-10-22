@@ -31,7 +31,7 @@ describe('a Customer reads its own sites through the Location domain, never a se
   });
 
   it('the customer route calls it once, feeding the record page', () => {
-    const page = read(`${ROUTES}/customers/[customerId]/page.tsx`);
+    const page = read(`${ROUTES}/crm/contacts/[contactId]/page.tsx`);
     expect(page).toContain('listLocationsForCustomer(db, { organizationId, customerId })');
   });
 });

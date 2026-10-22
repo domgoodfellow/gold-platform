@@ -1,7 +1,7 @@
 import type { Db } from '@/lib/db/types';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
-import { listCustomers } from '@/lib/domain/customers/customers';
+import { listContacts } from '@/lib/domain/contacts/contacts';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { listResources } from '@/lib/domain/resources/resources';
 import { listAssets } from '@/lib/domain/assets/assets';
@@ -16,7 +16,7 @@ export type WorkCreateOptions = { organizationId: string; types: WorkItemType[];
 
 export async function workCreateOptions(db: Db, organizationId: string, assetsEnabled: boolean): Promise<WorkCreateOptions> {
   const [types, customers, locations, resources, assets, definitions] = await Promise.all([
-    listWorkItemTypes(db, { organizationId }), listCustomers(db, { organizationId }),
+    listWorkItemTypes(db, { organizationId }), listContacts(db, { organizationId }),
     listLocations(db, { organizationId }), listResources(db, { organizationId }),
     assetsEnabled ? listAssets(db, { organizationId }) : Promise.resolve([]),
     listFieldDefinitions(db, { organizationId, entityType: 'work_item' }),

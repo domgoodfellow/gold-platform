@@ -172,14 +172,14 @@ export async function downloadImportFile(
     if(!resource||resource.status!=='active'||!['google_sheet','microsoft_workbook'].includes(resource.resource_type))return null;
     const sync=await getResourceSync(db,input.organizationId,input.resourceId);
     if(!sync?.last_success_at||sync.state!=='idle')throw new DomainError('Complete synchronization before mapping this worksheet.','integrations.sync_incomplete');
-    const {data,error}=await db.from('integration_resource_records').select('metadata').eq('organization_id',input.organizationId)
+    const {data,error}=await db.from('integration_resource_records').select('external_id,metadata').eq('organization_id',input.organizationId)
       .eq('resource_id',input.resourceId).eq('deleted',false).order('external_id').limit(501);
     if(error)throw new DomainError(error.message,'integrations.rows_read_failed');
     if(!data?.length)return null;
     const values=data.map(record=>record.metadata as {headers:string[];values:unknown[]});
     const headers=values[0].headers;
     if(!headers?.length||values.some(record=>JSON.stringify(record.headers)!==JSON.stringify(headers)))throw new DomainError('Worksheet columns changed. Synchronize again before mapping.','integrations.headers_changed');
-    const rows=values.map(record=>Object.fromEntries(headers.map((header,index)=>[header,String(record.values[index]??'')])));
+    const rows=values.map((record,rowIndex)=>({...Object.fromEntries(headers.map((header,index)=>[header,String(record.values[index]??'')])), __source_record_id:data[rowIndex].external_id}));
     return {headers,rows,sample:rows.slice(0,5),totalRows:rows.length,truncated:rows.length>500};
   }
 
@@ -187,4 +187,27 @@ export async function downloadImportFile(
   if (error || !blob) return null;
 
   return parseCsv(await blob.text());
+}
+
+/** Register an existing Library CSV as an import source without copying its bytes. */
+export async function attachLibraryFileForImport(db: Db, organizationId: string, documentId: string): Promise<string> {
+  await requireActor(db);
+  const { data: document, error } = await db.from('documents').select('id,file_name,mime_type,storage_path').eq('organization_id', organizationId).eq('id', documentId).maybeSingle();
+  if (error || !document) throw new DomainError('That Library file is unavailable.', 'integrations.file_missing');
+  const { data: existing } = await db.from('integration_resources').select('id').eq('organization_id', organizationId).eq('resource_type', 'file_upload').eq('storage_path', document.storage_path).limit(1).maybeSingle();
+  if (existing) return existing.id;
+  const { data: blob, error: downloadError } = await db.storage.from(DOCUMENTS_BUCKET).download(document.storage_path);
+  if (downloadError || !blob) throw new DomainError('The selected file could not be read.', 'integrations.file_missing');
+  const file = new File([blob], document.file_name, { type: document.mime_type });
+  const checked = checkFileIntake(file, { consumer: 'crm_import' });
+  if (!checked.ok) throw new DomainError('CRM intake currently reads CSV files.', 'integrations.file_unsupported');
+  const parsed = parseCsv(await file.text());
+  const result = await db.rpc('record_integration_resource', {
+    p_organization_id: organizationId, p_connection_id: null as unknown as string,
+    p_resource_type: 'file_upload', p_display_name: document.file_name.slice(0, DISPLAY_NAME_MAX),
+    p_external_id: null as unknown as string, p_storage_path: document.storage_path,
+    p_metadata: { format: checked.artifact.format.id, headers: parsed.headers, totalRows: parsed.totalRows, library_document_id: document.id },
+  });
+  if (result.error) throw new DomainError(result.error.message, 'integrations.resource_create_failed');
+  return result.data;
 }

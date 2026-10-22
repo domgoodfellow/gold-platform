@@ -2,9 +2,9 @@ import type { Db } from '@/lib/db/types';
 import { HomeStudioSummarySchema } from '@gold/schemas';
 import { DomainError } from '@/lib/domain/errors';
 import type { Counted } from '@/lib/domain/counted';
-import { listCustomers } from '@/lib/domain/customers/customers';
+import { listContacts } from '@/lib/domain/contacts/contacts';
 import { listOpportunities } from '@/lib/domain/opportunities/opportunities';
-import { listFollowUps, type FollowUp } from '@/lib/domain/follow-ups/follow-ups';
+import { listTasks, type CrmTask } from '@/lib/domain/tasks/tasks';
 import { listWorkItems, type WorkItem } from '@/lib/domain/work-items/work-items';
 import { evaluateWorkItems, describeShortfall } from '@/lib/domain/work-items/requirements';
 import { listAvailabilityConflicts } from '@/lib/domain/scheduling/resource-availability';
@@ -36,8 +36,8 @@ function exact(result: { count: number | null; error: { message: string } | null
 function item(c: ReadContext, source: HomeSource, kind: string, id: string, title: string, description: string, href: string, extra: Partial<HomeAttentionItem> = {}): HomeAttentionItem {
   return { key: `${source}:${kind}:${id}`, organizationId: c.organizationId, source, category: kind, title, description, urgency: 'normal', overdue: false, record: { kind, id }, destination: { href, label: 'Open' }, ...extra };
 }
-function followUp(c: ReadContext, f: FollowUp) {
-  return item(c, 'CRM', 'follow-up', f.id, f.title, f.customerName, `/organizations/${c.organizationId}/follow-ups?selected=${f.id}`, { dueAt: f.dueAt, ownerMembershipId: f.ownerMembershipId, ownerName: f.ownerName, overdue: f.dueAt < c.now, urgency: f.dueAt < c.now ? 'high' : 'normal' });
+function followUp(c: ReadContext, f: CrmTask) {
+  return item(c, 'CRM', 'follow-up', f.id, f.title, f.customerName, `/organizations/${c.organizationId}/crm/tasks?selected=${f.id}`, { dueAt: f.dueAt, ownerMembershipId: f.ownerMembershipId, ownerName: f.ownerName, overdue: f.dueAt < c.now, urgency: f.dueAt < c.now ? 'high' : 'normal' });
 }
 function workItem(c: ReadContext, w: WorkItem, category: string) {
   return item(c, 'Work', 'work-item', w.id, w.title, `${w.status.label}${w.customer ? ` · ${w.customer.label}` : ''}`, `/organizations/${c.organizationId}/work/${w.id}`, { category, dueAt: w.window?.startsAt, ownerMembershipId: w.resources.some(r => r.id === c.resourceId) ? c.membershipId : null, ownerName: w.resources.map(r => r.label).join(', ') || 'Unassigned' });
@@ -53,21 +53,21 @@ function obligations(data: HomeSourceData, items: HomeAttentionItem[], c: ReadCo
 export async function readCrm(c: ReadContext): Promise<HomeSourceData> {
   const d = emptySource('CRM'), base = `/organizations/${c.organizationId}`, day = zonedDayRange(c.date, c.timezone);
   const [customers, opportunities] = await Promise.all([
-    listCustomers(c.db, { organizationId: c.organizationId, limit: 1 }),
+    listContacts(c.db, { organizationId: c.organizationId, limit: 1 }),
     listOpportunities(c.db, { organizationId: c.organizationId, kind: 'open', limit: 1 }),
   ]);
-  d.metrics.push({ key: 'opportunities', label: 'Open opportunities', value: countedTotal(opportunities), definition: 'Current opportunities in stages classified Open', href: `${base}/opportunities?kind=open` });
-  d.performance.push({ key: 'customers', label: 'Customers', value: countedTotal(customers), definition: 'All recorded customer relationships · current', href: `${base}/customers` });
+  d.metrics.push({ key: 'opportunities', label: 'Open opportunities', value: countedTotal(opportunities), definition: 'Current opportunities in stages classified Open', href: `${base}/crm/opportunities?kind=open` });
+  d.performance.push({ key: 'customers', label: 'Customers', value: countedTotal(customers), definition: 'All recorded customer relationships · current', href: `${base}/crm/contacts` });
   if (!c.features.has('follow_ups')) return d;
   const scope = c.query.scope === 'mine' ? { ownerMembershipId: c.membershipId } : {};
   const cutoff = c.query.attention === 'all' ? day.endsAt : c.now;
   const [due, dated, mine] = await Promise.all([
-    listFollowUps(c.db, { organizationId: c.organizationId, status: 'open', before: cutoff, ...scope, limit: LIMIT }),
-    listFollowUps(c.db, { organizationId: c.organizationId, status: 'open', from: day.startsAt, before: zonedDayRange(shiftDate(c.date, 7), c.timezone).startsAt, ...scope, limit: LIMIT }),
-    listFollowUps(c.db, { organizationId: c.organizationId, status: 'open', ownerMembershipId: c.membershipId, before: day.endsAt, limit: 3 }),
+    listTasks(c.db, { organizationId: c.organizationId, status: 'open', before: cutoff, ...scope, limit: LIMIT }),
+    listTasks(c.db, { organizationId: c.organizationId, status: 'open', from: day.startsAt, before: zonedDayRange(shiftDate(c.date, 7), c.timezone).startsAt, ...scope, limit: LIMIT }),
+    listTasks(c.db, { organizationId: c.organizationId, status: 'open', ownerMembershipId: c.membershipId, before: day.endsAt, limit: 3 }),
   ]);
   d.attention = due.map(f => followUp(c, f)); d.priorities = mine.map(f => followUp(c, f));
-  d.categories.push({ key: 'follow-up', label: c.query.attention === 'all' ? 'Follow-ups due by today' : 'Overdue follow-ups', total: countedTotal(due), href: `${base}/follow-ups?status=open&${c.query.attention === 'all' ? `to=${c.date}` : 'due=overdue'}${c.query.scope === 'mine' ? `&owner=${c.membershipId}` : ''}` });
+  d.categories.push({ key: 'follow-up', label: c.query.attention === 'all' ? 'Follow-ups due by today' : 'Overdue follow-ups', total: countedTotal(due), href: `${base}/crm/tasks?status=open&${c.query.attention === 'all' ? `to=${c.date}` : 'due=overdue'}${c.query.scope === 'mine' ? `&owner=${c.membershipId}` : ''}` });
   obligations(d, dated.map(f => followUp(c, f)), c);
   return d;
 }

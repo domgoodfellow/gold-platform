@@ -1,3 +1,4 @@
+import { selectLibraryFileAction } from '@/app/organizations/[organizationId]/library/imports/new/actions';
 import { AppPage } from '@/components/layout/app-page';
 import { CollectionHeader } from '@/components/patterns/collection-header';
 import { Button, ButtonLink } from '@/components/controls/button';
@@ -176,6 +177,7 @@ export async function LibraryFilesCollection({
               <FileDetail
                 organizationId={organizationId}
                 detail={detail}
+                mayImport={capabilities.includes('integration.manage')}
                 dateFormat={dateFormat}
                 closeHref={hrefWith({ file: null })}
               />
@@ -240,11 +242,13 @@ function FileDetail({
   detail,
   dateFormat,
   closeHref,
+  mayImport,
 }: {
   organizationId: string;
   detail: LibraryFileDetail;
   dateFormat: Intl.DateTimeFormat;
   closeHref: string;
+  mayImport: boolean;
 }) {
   return (
     <Section aria-labelledby="file-detail-heading" className="rounded-lg border border-border bg-surface p-4">
@@ -268,6 +272,10 @@ function FileDetail({
         Download
       </ButtonLink>
 
+      {mayImport && (detail.mimeType === 'text/csv' || detail.fileName.toLowerCase().endsWith('.csv')) ? <form action={selectLibraryFileAction} className="mt-3">
+        <input type="hidden" name="organizationId" value={organizationId} /><input type="hidden" name="documentId" value={detail.id} />
+        <Button type="submit" tone="secondary">Import into CRM</Button>
+      </form> : null}
       <h3 className="mt-6 text-sm font-medium">Used by</h3>
       {detail.uses.length === 0 ? (
         <p className="mt-1 text-sm text-muted">Not used by any record yet.</p>

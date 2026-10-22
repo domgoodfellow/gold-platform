@@ -32,6 +32,12 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-10-22
+
+- Workspace navigation now offers an explicit Gauge Dashboard at each existing landing route, with a plain contextual heading. CRM uses Contacts and the opportunity Pipeline while preserving relationship-stage and Follow-up routes.
+- Contacts support independent lifecycle and temperature, preserving existing unclassified records and canonical identities. Library intake shares source selection, CSV reuse, classification mapping, duplicate review and reports; saved worksheet synchronization opens reviewed updates and protects local edits and contacts removed from a source. Automatic CRM scheduling is not enabled.
+- CRM now has one contact identity for people and companies. Existing records keep their IDs and every link to opportunities, finance, communications, work, documents, portal access and imports, and stay Unspecified until someone classifies them. New contacts must be a Person or a Company, and people can be affiliated with companies, with history kept. CRM lives at `/crm`, `/crm/contacts`, `/crm/pipeline` and `/crm/opportunities/{id}`; old `/sales`, `/customers`, `/opportunities` and `/follow-ups` links redirect for a limited period. Follow-ups are CRM tasks attached to their contact or opportunity.
+
 ## 2026-10-21
 
 - Correct operational panel composition: shared inset gutters, explicit edge-to-edge tables/lists, compact Work Home metrics without duplicate navigation, consistent small Work toolbar controls and sidebar workspace glyphs aligned with child rows.

@@ -17,7 +17,7 @@ import {
   formatCallDuration,
   formatCallTime,
 } from '@/features/communications/voice/format';
-import { listCustomers } from '@/lib/domain/customers/customers';
+import { listContacts } from '@/lib/domain/contacts/contacts';
 import { callStatusLabel, getCall } from '@/lib/domain/reception/calls';
 import { getPhoneNumber } from '@/lib/domain/reception/numbers';
 import { listCallOutcomes } from '@/lib/domain/reception/outcomes';
@@ -46,7 +46,7 @@ export default async function CallDetailPage({
   const [number, outcomes, customers] = await Promise.all([
     call.phoneNumberId ? getPhoneNumber(db, { organizationId, phoneNumberId: call.phoneNumberId }) : Promise.resolve(null),
     listCallOutcomes(db, { organizationId }),
-    call.customerId === null && mayCall ? listCustomers(db, { organizationId }) : Promise.resolve([]),
+    call.customerId === null && mayCall ? listContacts(db, { organizationId }) : Promise.resolve([]),
   ]);
 
   const timeZone = organization.timezone;
@@ -101,11 +101,11 @@ export default async function CallDetailPage({
       </section>
 
       <section className="mt-6">
-        <GroupHeading>Customer</GroupHeading>
+        <GroupHeading>Contact</GroupHeading>
         {call.customerId ? (
           <p className="mt-2 text-sm">
-            <Link href={`/organizations/${organizationId}/customers/${call.customerId}`} className="underline underline-offset-4">
-              {call.customerName ?? 'Customer'}
+            <Link href={`/organizations/${organizationId}/crm/contacts/${call.customerId}`} className="underline underline-offset-4">
+              {call.customerName ?? 'Contact'}
             </Link>
           </p>
         ) : (

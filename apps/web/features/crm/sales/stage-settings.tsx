@@ -8,7 +8,7 @@ import {
   createStageAction,
   updateStageAction,
   type FormState,
-} from '@/app/organizations/[organizationId]/customers/pipeline/actions';
+} from '@/app/organizations/[organizationId]/crm/contacts/stages/actions';
 
 const INITIAL: FormState = { error: null };
 

@@ -30,8 +30,8 @@ export function ApplyImportForm({
       <input type="hidden" name="runId" value={runId} />
       <ConfirmSubmit
         formId={formId}
-        label={`Import ${batchCount} customer${batchCount === 1 ? '' : 's'}`}
-        confirmLabel={`Import ${batchCount} customer${batchCount === 1 ? '' : 's'}?`}
+        label={`Import ${batchCount} contact${batchCount === 1 ? '' : 's'}`}
+        confirmLabel={`Import ${batchCount} contact${batchCount === 1 ? '' : 's'}?`}
         description="Rows marked Review, Duplicate or Invalid are skipped and stay exactly as they are — nothing about them is written."
         tone="primary"
         size="default"

@@ -52,9 +52,9 @@ test('calendar has time blocks, slot creation, event editing and workspace conte
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Log in', exact: true }).click();
   await page.waitForURL(location => location.pathname !== '/login');
-  await page.goto(`${base}/sales`);
+  await page.goto(`${base}/crm`);
   await page.getByRole('link', { name: 'View calendar', exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`${base}/sales/calendar$`));
+  await expect(page).toHaveURL(new RegExp(`${base}/crm/calendar$`));
   await expect(page.getByRole('heading', { name: 'Calendar', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'New follow-up', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'New event', exact: true })).toBeVisible();
@@ -101,8 +101,8 @@ test('calendar has time blocks, slot creation, event editing and workspace conte
   await expect(page.getByRole('link', { name: 'Calendar installation', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Team planning', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Proposal meeting', exact: true })).toHaveCount(0);
-  await page.goto(`${base}/follow-ups/calendar?view=day&on=${today}`);
-  await expect(page).toHaveURL(new RegExp(`${base}/sales/calendar`));
+  await page.goto(`${base}/crm/calendar?view=day&on=${today}`);
+  await expect(page).toHaveURL(new RegExp(`${base}/crm/calendar`));
   await page.getByRole('combobox', { name: 'Calendar scope', exact: true }).selectOption('organization');
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
   for (const [width, height] of [[1600, 1000], [768, 1024], [390, 844]]) {

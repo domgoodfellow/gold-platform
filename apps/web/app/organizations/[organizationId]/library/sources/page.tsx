@@ -51,7 +51,7 @@ export default async function LibrarySourcesPage({
       <Section className="mt-6" aria-labelledby="sources-heading">
         <SectionHeading id="sources-heading">Sources</SectionHeading>
         <div className="mt-2">
-          <SourcesTable organizationId={organizationId} resources={resources} connectionLabel={connectionLabel} />
+          <SourcesTable organizationId={organizationId} resources={resources} mayImport={mayImport} connectionLabel={connectionLabel} />
         </div>
       </Section>
 

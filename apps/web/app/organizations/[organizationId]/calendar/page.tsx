@@ -12,5 +12,5 @@ export default async function LegacyCalendarPage({ params, searchParams }: {
     for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value]) query.append(key, entry);
   }
   const suffix = query.toString();
-  redirect(`/organizations/${organizationId}/sales/calendar${suffix ? `?${suffix}` : ''}`);
+  redirect(`/organizations/${organizationId}/crm/calendar${suffix ? `?${suffix}` : ''}`);
 }

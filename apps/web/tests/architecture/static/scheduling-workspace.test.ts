@@ -450,7 +450,7 @@ describe('CRM and Work use one calendar foundation', () => {
     const page = code(read(`${WEB}/features/calendar/workspace-calendar-page.tsx`));
     expect(page).toContain('loadOrganizationCalendar');
     expect(page).not.toContain('notFound');
-    const legacy = code(read(`${ROUTES}/follow-ups/calendar/page.tsx`));
+    const legacy = code(read(`${ROUTES}/crm/tasks/calendar/page.tsx`));
     expect(legacy).toContain('redirect(');
     expect(legacy).toContain('/calendar');
     expect(legacy).not.toContain('listFollowUps');

@@ -11,7 +11,7 @@ import {
   requireOrganizationForBillingRecovery,
   serviceLockedHref,
 } from '@/lib/route/organization';
-import { createCustomerAction } from '@/app/organizations/[organizationId]/customers/actions';
+import { createCustomerAction } from '@/app/organizations/[organizationId]/crm/contacts/actions';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 import { applySubscriptionEvent } from '@/tests/support/subscription-events';
 

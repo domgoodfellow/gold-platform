@@ -20,7 +20,7 @@ import type { CommercialProposal } from '@/lib/domain/customers/commercial-propo
 import type { ProposalInvite } from '@/lib/domain/customers/proposal-invites';
 import type { AcceptedProposalHandoff } from '@/lib/domain/customers/proposal-handoff';
 import type { ConfigurationRecommendation } from '@/lib/domain/customers/configuration-recommendation';
-import type { Customer } from '@/lib/domain/customers/customers';
+import type { Contact } from '@/lib/domain/contacts/contacts';
 import type { DiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 import type { StoredDocument } from '@/lib/domain/documents/documents';
@@ -34,7 +34,7 @@ import {
   createPortalInviteAction,
   revokePortalInviteAction,
   uploadCustomerDocumentAction,
-} from '@/app/organizations/[organizationId]/customers/[customerId]/actions';
+} from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/actions';
 import { CustomerFinancialSummary } from './customer-financial-summary';
 import { CustomerHeader } from './customer-header';
 import { CustomerLocationsSection } from './customer-locations-section';
@@ -74,6 +74,7 @@ export function CustomerDetail({
   followUps,
   support,
   services,
+  affiliations,
   accessibleTenantIds,
 }: {
   organizationId: string;
@@ -81,8 +82,9 @@ export function CustomerDetail({
   followUps?: ReactNode;
   support?: ReactNode;
   services?: ReactNode;
+  affiliations?: ReactNode;
   accessibleTenantIds?: string[];
-  customer: Customer;
+  customer: Contact;
   stage: CustomerStage | null;
   stages: CustomerStage[];
   definitions: FieldDefinition[];
@@ -121,7 +123,7 @@ export function CustomerDetail({
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           {opportunities ? <TabsTrigger value="opportunities"><BusinessLabel>Opportunities</BusinessLabel></TabsTrigger> : null}
-          {followUps ? <TabsTrigger value="follow-ups">Follow-ups</TabsTrigger> : null}
+          {followUps ? <TabsTrigger value="follow-ups">Tasks</TabsTrigger> : null}
           {mayPropose ? <>
             <TabsTrigger value="discovery">Discovery</TabsTrigger>
             <TabsTrigger value="configuration">Proposed configuration</TabsTrigger>
@@ -140,13 +142,15 @@ export function CustomerDetail({
           <Section>
             <SectionHeading>Contact information</SectionHeading>
             <DefinitionList className="mt-3">
+              <Detail label="Contact type">{customer.contactType==='person'?'Person':customer.contactType==='company'?'Company':'Unspecified / Needs classification'}</Detail>
               <Detail label="Email">{customer.email ? <a href={`mailto:${customer.email}`} className="underline underline-offset-4">{customer.email}</a> : 'Not recorded'}</Detail>
               <Detail label="Phone">{customer.phone ? <a href={`tel:${customer.phone}`} className="underline underline-offset-4">{formatPhoneForDisplay(customer.phone)}</a> : 'Not recorded'}</Detail>
-              <Detail label="Stage">{stage?.name ?? 'No stage'}</Detail>
+              <Detail label="Relationship stage">{stage?.name ?? 'No stage'}</Detail>
             </DefinitionList>
             <CustomFieldValues definitions={definitions} custom={customer.custom} />
             {!permissions.edit ? <Hint className="mt-6">Your role, {role}, cannot change this customer.</Hint> : null}
           </Section>
+          {affiliations}
           {!mayPropose ? services : null}
         </TabsContent>
         {followUps ? <TabsContent value="follow-ups" className="mt-6">{followUps}</TabsContent> : null}

@@ -1,8 +1,8 @@
 import { DividedList, EmptyState } from '@/components/surfaces/section';
-import type { Customer } from '@/lib/domain/customers/customers';
+import type { Contact } from '@/lib/domain/contacts/contacts';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 
-export function PipelineSummary({ stages, customers, limit = 4 }: { stages: CustomerStage[]; customers: Customer[]; limit?: number }) {
+export function PipelineSummary({ stages, customers, limit = 4 }: { stages: CustomerStage[]; customers: Contact[]; limit?: number }) {
   if (stages.length === 0) return <EmptyState weight="subtle">No stages named.</EmptyState>;
   const counts = new Map<string, number>();
   for (const customer of customers) if (customer.stageId) counts.set(customer.stageId, (counts.get(customer.stageId) ?? 0) + 1);

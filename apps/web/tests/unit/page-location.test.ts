@@ -43,14 +43,14 @@ describe('route recognition', () => {
     expect(at(`${ORG}/automations/r1`, { records: { ruleId: { state: 'ready', label: 'Rain delay' } } }).id).toBe('record:rule');
     expect(at(`${ORG}/work/dispatch`).id).toBe('view:dispatch');
     expect(at(`${ORG}/work/configuration`).id).toBe('target:work-configuration');
-    expect(at(`${ORG}/customers/pipeline`).id).toBe('area:pipeline');
+    expect(at(`${ORG}/crm/contacts/stages`).id).toBe('area:pipeline');
     expect(at('/platform/providers/twilio').id).toBe('view:platform-twilio');
     expect(at('/platform/integrations/new').id).toBe('create:platform-connector');
   });
 
   it('reports an unknown address as unresolved instead of inventing an ancestry', () => {
     expect(resolveLocation({ pathname: `${ORG}/nonsense` })).toEqual({ status: 'unresolved', pathname: `${ORG}/nonsense` });
-    expect(resolveLocation({ pathname: `${ORG}/customers/a/b` }).status).toBe('unresolved');
+    expect(resolveLocation({ pathname: `${ORG}/crm/contacts/a/b` }).status).toBe('unresolved');
     expect(resolveLocation({ pathname: '/elsewhere' }).status).toBe('unresolved');
     expect(resolveLocation({ pathname: '/organizations/accept-invite/t' }).status).toBe('unresolved');
   });
@@ -115,6 +115,7 @@ describe('every location is a real page, and every shell page has a location', (
     // areas (`calendar`, `fields`, `roles`, …) are recognized as redirects and so are not listed.
     const expected = [
       'organizations/[organizationId]', 'organizations/[organizationId]/[...unmatched]', 'platform/[...unmatched]',
+      ...['customers', 'follow-ups', 'opportunities', 'sales'].map((legacy) => `organizations/[organizationId]/${legacy}/[[...legacyPath]]`),
       ...['comms/numbers', 'comms/numbers/[phoneNumberId]', 'finance/economics', 'finance/economics/[targetOrganizationId]', 'finance/plans', 'finance/plans/[planKey]', 'insights/reports', 'integrations/[connectionId]', 'integrations/imports', 'integrations/imports/[runId]', 'integrations/imports/new', 'integrations/sources', 'integrations/sources/[resourceId]',
         'settings/calls', 'settings/commerce', 'settings/communications', 'settings/connections/apps', 'settings/data-automation', 'settings/opportunity-stages', 'settings/organization', 'settings/people', 'settings/pricing', 'settings/sales-stages', 'settings/website'].map((path) => `organizations/[organizationId]/${path}`),
     ];
@@ -124,36 +125,36 @@ describe('every location is a real page, and every shell page has a location', (
 
 describe('CRM collections and records', () => {
   it('places a collection beneath its workspace and goes up to the workspace Home', () => {
-    const location = at(`${ORG}/customers`);
-    expect(trail(location)).toEqual([`CRM → ${ORG}/sales`]);
-    expect(location.current).toMatchObject({ label: 'Customers', state: 'ready' });
-    expect(location.up).toBe(`${ORG}/sales`);
+    const location = at(`${ORG}/crm/contacts`);
+    expect(trail(location)).toEqual([`CRM → ${ORG}/crm`]);
+    expect(location.current).toMatchObject({ label: 'Contacts', state: 'ready' });
+    expect(location.up).toBe(`${ORG}/crm`);
     expect(location.owner).toMatchObject({ workspace: 'crm', destination: 'customers' });
   });
 
   it('names a record from server-loaded data and goes up to its collection', () => {
-    const location = at(`${ORG}/customers/c1`, { records: { customerId: { state: 'ready', label: 'Acme Ltd' } } });
-    expect(trail(location)).toEqual([`CRM → ${ORG}/sales`, `Customers → ${ORG}/customers`]);
+    const location = at(`${ORG}/crm/contacts/c1`, { records: { contactId: { state: 'ready', label: 'Acme Ltd' } } });
+    expect(trail(location)).toEqual([`CRM → ${ORG}/crm`, `Contacts → ${ORG}/crm/contacts`]);
     expect(location.current.label).toBe('Acme Ltd');
     expect(location.headingName).toBe('Acme Ltd');
-    expect(location.up).toBe(`${ORG}/customers`);
+    expect(location.up).toBe(`${ORG}/crm/contacts`);
   });
 
   it('keeps known ancestors while the record name loads, without inventing one', () => {
-    const location = at(`${ORG}/customers/c1`, { records: { customerId: { state: 'loading' } } });
-    expect(trail(location)).toEqual([`CRM → ${ORG}/sales`, `Customers → ${ORG}/customers`]);
+    const location = at(`${ORG}/crm/contacts/c1`, { records: { contactId: { state: 'loading' } } });
+    expect(trail(location)).toEqual([`CRM → ${ORG}/crm`, `Contacts → ${ORG}/crm/contacts`]);
     expect(location.current).toMatchObject({ label: 'Loading…', state: 'loading' });
     expect(location.headingName).toBe('Loading…');
     expect(location.incomplete).toEqual([]);
   });
 
   it('reports a record label nobody supplied, falling back to the record’s kind rather than loading or blank', () => {
-    const location = at(`${ORG}/customers/c1`);
-    expect(trail(location)).toEqual([`CRM → ${ORG}/sales`, `Customers → ${ORG}/customers`]);
-    expect(location.current).toMatchObject({ label: 'Customer', state: 'unknown' });
-    expect(location.headingName).toBe('Customer');
-    expect(location.incomplete).toEqual(['customerId']);
-    const renamed = at(`${ORG}/customers/c1`, { vocabulary: { revision: 1, navigation: [], labels: {}, nouns: { customer: { singular: 'Client', plural: 'Clients' } } } });
+    const location = at(`${ORG}/crm/contacts/c1`);
+    expect(trail(location)).toEqual([`CRM → ${ORG}/crm`, `Contacts → ${ORG}/crm/contacts`]);
+    expect(location.current).toMatchObject({ label: 'Contact', state: 'unknown' });
+    expect(location.headingName).toBe('Contact');
+    expect(location.incomplete).toEqual(['contactId']);
+    const renamed = at(`${ORG}/crm/contacts/c1`, { vocabulary: { revision: 1, navigation: [], labels: {}, nouns: { customer: { singular: 'Client', plural: 'Clients' } } } });
     expect(renamed.current.label).toBe('Client');
   });
 
@@ -168,26 +169,26 @@ describe('CRM collections and records', () => {
   });
 
   it('shows a missing or undisclosed record as not found inside its ancestors', () => {
-    const location = at(`${ORG}/customers/c1`, { records: { customerId: { state: 'missing' } } });
-    expect(trail(location)).toEqual([`CRM → ${ORG}/sales`, `Customers → ${ORG}/customers`]);
+    const location = at(`${ORG}/crm/contacts/c1`, { records: { contactId: { state: 'missing' } } });
+    expect(trail(location)).toEqual([`CRM → ${ORG}/crm`, `Contacts → ${ORG}/crm/contacts`]);
     expect(location.current).toMatchObject({ label: 'Not found', state: 'missing', kind: 'state' });
-    expect(location.up).toBe(`${ORG}/customers`);
+    expect(location.up).toBe(`${ORG}/crm/contacts`);
   });
 
   it('links a parent the sidebar hides when the viewer may open it', () => {
     const navigation = projectShell({ organizationId: 'o', ...everything });
-    const collection = at(`${ORG}/opportunities`, { navigation });
+    const collection = at(`${ORG}/crm/opportunities`, { navigation });
     expect(collection.inNavigation).toBe(false);
-    const record = at(`${ORG}/opportunities/x`, { records: { opportunityId: { state: 'ready', label: 'Roof refit' } } });
-    expect(trail(record)).toEqual([`CRM → ${ORG}/sales`, `Opportunities → ${ORG}/opportunities`]);
-    expect(record.up).toBe(`${ORG}/opportunities`);
-    expect(at(`${ORG}/customers`, { navigation }).inNavigation).toBe(true);
+    const record = at(`${ORG}/crm/opportunities/x`, { records: { opportunityId: { state: 'ready', label: 'Roof refit' } } });
+    expect(trail(record)).toEqual([`CRM → ${ORG}/crm`, `Opportunities → ${ORG}/crm/opportunities`]);
+    expect(record.up).toBe(`${ORG}/crm/opportunities`);
+    expect(at(`${ORG}/crm/contacts`, { navigation }).inNavigation).toBe(true);
   });
 
   it('goes up from a workspace Home to the organization Home', () => {
-    const location = at(`${ORG}/sales`);
+    const location = at(`${ORG}/crm`);
     expect(location.trail).toEqual([]);
-    expect(location.current.label).toBe('CRM');
+    expect(location.current.label).toBe('Dashboard');
     expect(location.up).toBe(`${ORG}/home`);
     expect(at(`${ORG}/home`).up).toBeUndefined();
   });
@@ -317,15 +318,15 @@ describe('Platform', () => {
 
 describe('not-found and state pages', () => {
   it('keeps the nearest recognized ancestor for an unknown address beneath a workspace', () => {
-    const location = at(`${ORG}/sales/nonsense`, { state: 'not-found' });
-    expect(trail(location)).toEqual([`CRM → ${ORG}/sales`]);
+    const location = at(`${ORG}/crm/nonsense`, { state: 'not-found' });
+    expect(trail(location)).toEqual([`CRM → ${ORG}/crm`]);
     expect(location.current).toMatchObject({ label: 'Not found', state: 'missing' });
   });
 
   it('keeps the registered ancestors of a recognized page that refuses, not a URL prefix', () => {
-    // Follow-ups lives at /follow-ups but belongs to CRM; when the feature is off the page refuses.
-    const location = at(`${ORG}/follow-ups`, { state: 'not-found' });
-    expect(trail(location)).toEqual([`CRM → ${ORG}/sales`]);
+    // Follow-ups lives at /crm/tasks but belongs to CRM; when the feature is off the page refuses.
+    const location = at(`${ORG}/crm/tasks`, { state: 'not-found' });
+    expect(trail(location)).toEqual([`CRM → ${ORG}/crm`]);
     expect(location.current).toMatchObject({ label: 'Not found', state: 'missing' });
   });
 
@@ -342,13 +343,13 @@ describe('not-found and state pages', () => {
 
 describe('the migration boundary', () => {
   it('adopts the resolver only on the pilot routes', () => {
-    expect(adoptsResolvedLocation(`${ORG}/customers`)).toBe(true);
-    expect(adoptsResolvedLocation(`${ORG}/customers/c1`)).toBe(true);
+    expect(adoptsResolvedLocation(`${ORG}/crm/contacts`)).toBe(true);
+    expect(adoptsResolvedLocation(`${ORG}/crm/contacts/c1`)).toBe(true);
     // Slice 1C: CRM operating pages, but neither the Opportunity pipeline (U-17) nor CRM configuration (Batch 3).
-    for (const path of ['/sales', '/customers/pipeline', '/opportunities', '/opportunities/o1', '/follow-ups', '/sales/calendar', '/sales/search']) {
+    for (const path of ['/crm', '/crm/pipeline', '/crm/contacts/stages', '/crm/opportunities', '/crm/opportunities/o1', '/crm/tasks', '/crm/calendar', '/crm/search']) {
       expect(adoptsResolvedLocation(`${ORG}${path}`), path).toBe(true);
     }
-    for (const path of ['/opportunities/pipeline', '/sales/configuration', '/sales/configuration/relationship-stages', '/sales/configuration/fields']) {
+    for (const path of ['/crm/configuration', '/crm/configuration/relationship-stages', '/crm/configuration/fields']) {
       expect(adoptsResolvedLocation(`${ORG}${path}`), path).toBe(false);
     }
     expect(adoptsResolvedLocation(`${ORG}/calls`)).toBe(false);
@@ -359,8 +360,8 @@ describe('the migration boundary', () => {
 
   it('round-trips the shell gate the server hands to the browser', () => {
     const access = locationAccessFrom(serializeLocationAccess(everything));
-    expect(at(`${ORG}/opportunities/x`, { records: { opportunityId: { state: 'ready', label: 'Roof refit' } } }).trail)
-      .toEqual(resolved(resolveLocation({ pathname: `${ORG}/opportunities/x`, access, records: { opportunityId: { state: 'ready', label: 'Roof refit' } } })).trail);
+    expect(at(`${ORG}/crm/opportunities/x`, { records: { opportunityId: { state: 'ready', label: 'Roof refit' } } }).trail)
+      .toEqual(resolved(resolveLocation({ pathname: `${ORG}/crm/opportunities/x`, access, records: { opportunityId: { state: 'ready', label: 'Roof refit' } } })).trail);
   });
 });
 
@@ -370,11 +371,11 @@ describe('business vocabulary (A2)', () => {
   it('renames destinations by key and never renames the workspace', () => {
     const location = at(`${ORG}/work/w1`, { vocabulary, records: { workItemId: { state: 'ready', label: 'Boiler service' } } });
     expect(trail(location)).toEqual([`Work → ${ORG}/field`, `Jobs → ${ORG}/work`]);
-    expect(at(`${ORG}/customers`, { vocabulary }).current.label).toBe('Clients');
+    expect(at(`${ORG}/crm/contacts`, { vocabulary }).current.label).toBe('Clients');
   });
 
   it('never renames a record title', () => {
-    const location = at(`${ORG}/customers/c1`, { vocabulary, records: { customerId: { state: 'ready', label: 'Customers Unlimited' } } });
-    expect(location.current.label).toBe('Customers Unlimited');
+    const location = at(`${ORG}/crm/contacts/c1`, { vocabulary, records: { contactId: { state: 'ready', label: 'Contacts Unlimited' } } });
+    expect(location.current.label).toBe('Contacts Unlimited');
   });
 });

@@ -6,7 +6,7 @@ import { Button } from '@/components/controls/button';
 import { SelectInput, TextInput } from '@/components/controls/inputs';
 import { FormField, FormError } from '@/components/controls/form';
 import { PageDrawer, PageDrawerContent, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
-import { moveOpportunityAction, saveOpportunityStageAction } from '@/app/organizations/[organizationId]/opportunities/actions';
+import { moveOpportunityAction, saveOpportunityStageAction } from '@/app/organizations/[organizationId]/crm/opportunities/actions';
 import type { OpportunityStage } from '@/lib/domain/opportunities/opportunities';
 
 export function OpportunityStageControl({ organizationId, opportunityId, title, stageId, stages }: { organizationId: string; opportunityId: string; title: string; stageId: string | null; stages: OpportunityStage[] }) {
