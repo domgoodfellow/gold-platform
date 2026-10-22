@@ -106,6 +106,7 @@ const LOCATION_METADATA: readonly LocationNode[] = [
   { id: 'record:campaign', scope: 'organization', kind: 'record', pattern: 'marketing/campaigns/[campaignId]', parent: 'area:marketing-campaigns', record: 'campaignId' },
   { id: 'record:case', scope: 'organization', kind: 'record', pattern: 'support/cases/[caseId]', parent: 'area:support-cases', record: 'caseId' },
   // Work
+  { id: 'create:work-item', scope: 'organization', kind: 'create', pattern: 'work/new', parent: 'area:work', label: 'New work' },
   { id: 'record:work-item', scope: 'organization', kind: 'record', pattern: 'work/[workItemId]', parent: 'area:work', record: 'workItemId', noun: 'work' },
   { id: 'view:dispatch', scope: 'organization', kind: 'view', pattern: 'work/dispatch', parent: 'workspace:field', label: 'Dispatch', open: 'P-2' },
   { id: 'record:resource', scope: 'organization', kind: 'record', pattern: 'resources/[resourceId]', parent: 'area:resources', record: 'resourceId', noun: 'resource' },

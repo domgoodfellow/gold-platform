@@ -333,7 +333,7 @@ export function SupportHome({
             title="Resolution performance"
             href={href("reports")}
           >
-            <div className="grid grid-cols-2 gap-3 border-t border-border px-3.5 py-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <p className="text-[11px] text-muted">
                   Latest resolution duration
@@ -367,7 +367,7 @@ export function SupportHome({
             title="Today"
             href={href("cases", { period: "due_today" })}
           >
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border px-3.5 py-3">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
               {[
                 ["Due today", summary.due_today, { period: "due_today" }],
                 [
@@ -409,7 +409,7 @@ export function SupportHome({
             attention: summary.overdue ? "overdue" : "urgent",
           })}
         >
-          <div className="divide-y divide-border px-3.5">
+          <div className="divide-y divide-border">
             {attention.map((c) => {
               const overdue = data.attention.overdue.some(
                 (item) => item.id === c.id,
@@ -457,7 +457,7 @@ export function SupportHome({
           </div>
         </OperationalPanel>
         <OperationalPanel title="Queue health" href={href("queues")}>
-          <div className="px-3.5 pb-2">
+          <div >
             <div className="grid grid-cols-[minmax(0,1fr)_32px_110px] gap-2 rounded bg-secondary px-1 py-2 text-[10px] text-muted">
               <span>Queue</span>
               <span>Open</span>
@@ -530,7 +530,7 @@ export function SupportHome({
             }))}
           />
           {!data.events.length && (
-            <p className="px-3.5 pb-5 text-xs text-muted">
+            <p className="text-xs text-muted">
               No Support activity yet.
             </p>
           )}

@@ -1,5 +1,5 @@
 import { Settings2 } from 'lucide-react';
-import { ButtonLink } from './button';
+import { ButtonLink, type ButtonSize } from './button';
 
 /**
  * The one way a workspace Home points at its configuration. It is a destination — a Settings
@@ -8,9 +8,9 @@ import { ButtonLink } from './button';
  * rail's Configure mode (`PageHeader configure`) is for workspaces whose configuration opens
  * in-place; those and this do not appear together.
  */
-export function ConfigureLink({ href, label = 'Configure', title }: { href: string; label?: string; title?: string }) {
+export function ConfigureLink({ href, label = 'Configure', title, size }: { href: string; label?: string; title?: string; size?: ButtonSize }) {
   return (
-    <ButtonLink href={href} tone="secondary" title={title}>
+    <ButtonLink href={href} tone="secondary" title={title} size={size}>
       <Settings2 aria-hidden />
       {label}
     </ButtonLink>

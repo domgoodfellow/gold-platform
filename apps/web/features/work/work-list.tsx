@@ -3,19 +3,17 @@ import Link from 'next/link';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { SelectInput, TextInput } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
-import { WorkCreateDrawer } from './work-create-drawer';
+import { NewWorkAction } from './new-work-action';
 import { WorkTable } from './operations-panels';
 import { MoveWorkItemForm } from './work-operations-forms';
 import { formatWindow } from '@/lib/domain/scheduling/window';
 import { allowedNextStatusIds, type WorkItemTransition } from '@/lib/domain/work-items/transitions';
 import type { Counted } from '@/lib/domain/counted';
-import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
 import type { WorkItemType } from '@/lib/domain/work-items/types';
 import type { WorkItem } from '@/lib/domain/work-items/work-items';
-import type { CoverageView, ResourceNeedsView } from '@/lib/domain/work-items/requirements';
-export function WorkList({ organizationId, role, timezone, types, selectedType, statuses, statusesByType, transitions, workItems, customers, locations, resources, assets, definitions, assetsEnabled, coverage, mayAdd, mayConfigure, mayMove, maySchedule, createOpen = false, view = 'list', page = 1, q = '', sort = 'newest', statusId = '', stages = {} }: {
-  createOpen?: boolean;
+import type { CoverageView } from '@/lib/domain/work-items/requirements';
+export function WorkList({ organizationId, role, timezone, types, selectedType, statuses, transitions, workItems, coverage, mayAdd, mayConfigure, mayMove, maySchedule, view = 'list', page = 1, q = '', sort = 'newest', statusId = '', stages = {} }: {
   view?: 'list' | 'board'; page?: number; q?: string; sort?: string; statusId?: string; stages?: Record<string, Counted<WorkItem>>;
   organizationId: string;
   role: string;
@@ -23,18 +21,8 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
   types: WorkItemType[];
   selectedType: WorkItemType | null;
   statuses: WorkItemStatus[];
-  /** Stages for every type, so New work can switch type without showing another type's stages. */
-  statusesByType: Record<string, WorkItemStatus[]>;
   transitions: WorkItemTransition[];
   workItems: Counted<WorkItem>;
-  customers: { id: string; label: string }[];
-  locations: { id: string; label: string }[];
-  resources: { id: string; label: string }[];
-  assets: { id: string; label: string }[];
-  definitions: FieldDefinition[];
-  assetsEnabled: boolean;
-  /** What the selected kind of work needs, with who is eligible — null when it says nothing. */
-  needs: ResourceNeedsView | null;
   /** Requirement coverage by work item id, for jobs of a type that needs something. */
   coverage: Record<string, CoverageView>;
   mayAdd: boolean;
@@ -47,8 +35,8 @@ export function WorkList({ organizationId, role, timezone, types, selectedType, 
   const statusName = new Map(statuses.map(s => [s.id, s.name]));
   return <div className="space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <ViewNav label="Work view" current={view} className="mb-0" views={[{ key: 'list', label: 'List', href: href({ view: 'list' }) }, { key: 'board', label: 'Board', href: href({ view: 'board', status: '' }) }, { key: 'dispatch', label: 'Dispatch board', href: `${base}/work/dispatch` }]} />
-      {mayAdd && selectedType ? <WorkCreateDrawer key={selectedType.id} defaultOpen={createOpen} initialTypeId={selectedType.id} configureHref={mayConfigure ? `${base}/work/configuration` : undefined} options={{ organizationId, types, statusesByType, customers, locations, resources, assets, assetsEnabled, definitions }}/> : null}
+      <ViewNav size="small" label="Work view" current={view} className="mb-0" views={[{ key: 'list', label: 'List', href: href({ view: 'list' }) }, { key: 'board', label: 'Board', href: href({ view: 'board', status: '' }) }, { key: 'dispatch', label: 'Dispatch board', href: `${base}/work/dispatch` }]} />
+      {mayAdd ? <NewWorkAction organizationId={organizationId} typeId={selectedType?.id} /> : null}
     </div>
     <form method="get" className="flex flex-wrap items-end gap-2 rounded-lg border border-border p-3">
       <input type="hidden" name="view" value={view}/>

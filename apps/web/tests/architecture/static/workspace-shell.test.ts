@@ -148,7 +148,7 @@ describe('Agent is workspace-global and the support modes are page-level', () =>
     expect(code(pageHeader)).not.toMatch(/Agent|useWorkspaceRail/);
     const header = code(pageHeader);
     for (const mode of ['activity', 'insights', 'configure']) {
-      expect(header.indexOf(`<SupportTrigger mode="${mode}" />`)).toBeGreaterThan(header.indexOf('{actions}'));
+      expect(header.indexOf(`<SupportTrigger mode="${mode}"`)).toBeGreaterThan(header.indexOf('{actions}'));
     }
   });
 
@@ -692,7 +692,7 @@ describe('organization page composition', () => {
     );
     const header = code(read(`${WEB}/components/headers/page-header.tsx`));
     expect(header.indexOf('{actions}')).toBeGreaterThan(-1);
-    expect(header.indexOf('{actions}')).toBeLessThan(header.indexOf('<SupportTrigger mode="activity" />'));
+    expect(header.indexOf('{actions}')).toBeLessThan(header.indexOf('<SupportTrigger mode="activity"'));
   });
 
   it('Import is offered by the organization capability, not by the module alone or by platform role', () => {

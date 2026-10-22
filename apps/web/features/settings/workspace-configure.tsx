@@ -1,4 +1,5 @@
 import { ConfigureMenu } from '@/components/controls/configure-menu';
+import type { ButtonSize } from '@/components/controls/button';
 import { activeModuleKeys, availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { hasSchedulableWork } from '@/lib/domain/work-items/types';
 import { workspaceConfigureItems, type ConfigureItem, type WorkspaceKey } from '@/lib/navigation';
@@ -28,6 +29,6 @@ export async function workspaceConfigureDoors(organizationId: string, workspace:
  * hide: nothing, one link named for its page, or a menu of direct links (`ConfigureMenu`). It never
  * opens a page that lists the doors again. Passed to a hub as a node; the hub only places it.
  */
-export async function WorkspaceConfigure({ organizationId, workspace }: { organizationId: string; workspace: WorkspaceKey }) {
-  return <ConfigureMenu items={await workspaceConfigureDoors(organizationId, workspace)} />;
+export async function WorkspaceConfigure({ organizationId, workspace, size }: { organizationId: string; workspace: WorkspaceKey; size?: ButtonSize }) {
+  return <ConfigureMenu size={size} items={await workspaceConfigureDoors(organizationId, workspace)} />;
 }

@@ -148,7 +148,9 @@ export function PanelState({
 
 /**
  * The standard section: a titled container with an optional count, destination link and action.
- * `flush` lets a table or list run edge to edge; otherwise the body is padded. `density` changes
+ * `body="inset"` owns all four gutters (compact 12px, standard 16px). Ordinary content must
+ * not repeat that outer padding. `body="edge-to-edge"` is for tables/full-width rows which
+ * own their cell spacing. `flush` remains a compatibility alias for edge-to-edge. `density` changes
  * spacing only, never the heading size, so adjacent panels read as one family. `fill` makes the
  * panel take its container's height with the heading fixed and only the body scrolling, for a
  * console region that must keep its shape whatever it holds.
@@ -164,6 +166,7 @@ export function OperationalPanel({
   hrefLabel = "View all",
   action,
   flush = false,
+  body,
   density = "standard",
   fill = false,
   children,
@@ -179,13 +182,15 @@ export function OperationalPanel({
   hrefLabel?: string;
   action?: ReactNode;
   flush?: boolean;
+  body?: "inset" | "edge-to-edge";
   density?: "compact" | "standard";
   fill?: boolean;
   children: ReactNode;
   className?: string;
 }) {
   const compact = density === "compact";
-  const padding = flush ? undefined : compact ? "p-3" : "p-4";
+  const presentation = body ?? (flush ? "edge-to-edge" : "inset");
+  const padding = presentation === "edge-to-edge" ? undefined : compact ? "p-3" : "p-4";
   return (
     <section
       aria-label={title}
@@ -226,7 +231,7 @@ export function OperationalPanel({
           ) : null}
         </div>
       </div>
-      <div className={fill ? cx("flex min-h-0 flex-1 flex-col overflow-y-auto", padding) : padding}>{children}</div>
+      <div data-slot="operational-panel-body" data-presentation={presentation} data-density={density} className={fill ? cx("flex min-h-0 flex-1 flex-col overflow-y-auto", padding) : padding}>{children}</div>
     </section>
   );
 }
@@ -307,7 +312,7 @@ export function ActivityList({
   }[];
 }) {
   return (
-    <ol className="px-3.5 pb-2">
+    <ol>
       {items.map((item, i) => (
         <li key={item.id} className="relative flex gap-3 py-2.5">
           {i < items.length - 1 && (

@@ -760,21 +760,22 @@ describe('a switch leads to its inputs', () => {
     expect(workConfigurationPage).toContain("enabledModules.has('booking')");
   });
 
-  it('gates the asset reference on a job on the assets module, on both the board and the job page', () => {
+  it('gates the asset reference on a job on the assets module, on both creation and the job page', () => {
     // The same rule as above, one module over: an asset is what the Assets module owns on a
     // job screen, and the module-visibility rule says a module hides what it owns everywhere. This one was found by
     // the product reality audit rather than caught at the time — the asset picker and badge
     // rendered regardless of whether a business had switched Assets off at all.
-    const work = `${readFileSync(`${ROUTES}/work/page.tsx`, 'utf8')}\n${readFileSync(`${WEB_ROOT}/features/work/work-list.tsx`, 'utf8')}`;
+    const creationPage = readFileSync(`${ROUTES}/work/new/page.tsx`, 'utf8');
+    const creationOptions = readFileSync(`${WEB_ROOT}/lib/application/work/create-options.ts`, 'utf8');
+    const creationForm = readFileSync(`${WEB_ROOT}/features/work/work-create-form.tsx`, 'utf8');
     // Phase C (Slice 9) split the work item route into a loader (where `enabledModules` is read)
     // and a Screen/sections/edit-sheet (where `assetsEnabled` is consumed) the thin page
     // delegates to.
     const workItem = `${readFileSync(`${WEB_ROOT}/lib/application/work/work-item-detail.ts`, 'utf8')}\n${readFileSync(`${WEB_ROOT}/features/work/work-item-sections.tsx`, 'utf8')}\n${readFileSync(`${WEB_ROOT}/features/work/edit-work-item-sheet.tsx`, 'utf8')}`;
 
-    expect(work).toContain("enabledModules.has('assets')");
-    expect(work, 'the create-work-item form is not told whether assets are enabled').toContain(
-      'assetsEnabled={assetsEnabled}',
-    );
+    expect(creationPage).toContain("workCreateOptions(db, organizationId, areaAvailable('assets', state))");
+    expect(creationOptions).toContain('definitions, assetsEnabled');
+    expect(creationForm, 'creation must hide the asset picker when assets are unavailable').toMatch(/assetsEnabled\s*\?\s*\(/);
     expect(workItem).toContain("enabledModules.has('assets')");
     expect(workItem, 'the "Asset" detail is not gated on the assets module').toMatch(
       /assetsEnabled\s*\?[\s\S]{0,200}Detail label="Asset"/,

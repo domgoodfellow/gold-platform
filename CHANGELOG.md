@@ -34,6 +34,11 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-10-21
 
+- Correct operational panel composition: shared inset gutters, explicit edge-to-edge tables/lists, compact Work Home metrics without duplicate navigation, consistent small Work toolbar controls and sidebar workspace glyphs aligned with child rows.
+- Move New work to one permission-checked creation page shared by Work Home, Work Items and Schedule, retaining type deep links, setup prerequisites, domain validation, draft protection and return to Work Items.
+
+## 2026-10-21
+
 - Settings → Features is now a searchable catalogue: usable features are listed by product with their actions, while features outside the plan and planned features are folded beneath each product with one explanation (planned features no longer suggest they can be bought). A setup warning shared by several features is shown once. The page is about 56% shorter for a fully entitled business and 86% shorter for one with a small plan.
 - CRM Home lists today's follow-ups once, in Today, and Needs attention shows only exceptions. The pipeline shows its stages without repeating the opportunities list, the month picker sits beside the forecast and win rate it controls, and recent activity opens from an Activity button. A new business sees one getting-started panel. Marketing Home drops the cards that repeated the sidebar, lists draft campaigns once, and says once when there is nothing yet; Support Home drops its grid of links to Cases, Queues, Service levels and Reports, which the sidebar already shows.
 - Several small tasks no longer open a full-height side panel. Confirming a Marketing campaign status change is now a short dialog ("Activate campaign?"). Team's Add member is a focused dialog that still offers invite by email or adding an existing account, and still says truthfully whether the invitation email went, with the link to share yourself when it did not. Home's Customize opens a small popover beside the button. A Studio form's sharing options (links, website, portal, embed and where it is used) are now a Sharing section on the form's own page instead of a Distribute panel. Price items are added and edited directly in their row of the price book; a refused save keeps what was typed. Closing either dialog returns focus to the button that opened it.

@@ -39,6 +39,10 @@ Status describes repository implementation, not hosted/provider acceptance. **Bu
 
 Both acquisition paths reach the same versioned business profile editor in Setup and Organization General Settings. It controls authored vocabulary, labels and the ordered workspace page labels. Missing configuration keeps neutral defaults without asserting that setup was completed. Permissions and entitlements always filter the chosen destinations. `/platform` has its own guarded shell; GildOps operating-organization Membership and exact live platform permissions remain required. Old organization Platform URLs render the organization not-found page.
 
+## Work creation
+
+Work Home, Work Items and Schedule open `/organizations/{org}/work/new` through the same action. The existing Work creation form, server action and database tenant/permission checks own the operation. `?type=` selects a type; `/work?create=1&type=...` redirects to the creation page. Missing types or starting stages show prerequisites, permission-filtered configuration and a return to creation. Ready types expose customer, location, resource, optional asset and custom-field inputs. Errors retain the draft; success and Cancel return to Work Items. Dirty drafts guard links, type switches and browser unload through the shared unsaved-changes hook.
+
 ## Gaps
 
 - Telephony provisioning is manual; neither onboarding path provisions a carrier binding/number.

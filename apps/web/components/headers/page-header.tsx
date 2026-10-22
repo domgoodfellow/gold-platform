@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { ButtonSize } from '../controls/button';
 import { BusinessLabel } from '@/lib/context/business-vocabulary';
 import { cx } from '../class-names';
 import { PageLocation, type PageLocationCrumb } from '../navigation/page-location';
@@ -58,6 +59,7 @@ export function PageHeader({
   activity = false,
   insights = false,
   configure = false,
+  supportSize,
   className,
   recordTitle = false,
 }: {
@@ -84,6 +86,7 @@ export function PageHeader({
   meta?: ReactNode;
   /** Business actions, in reading order. Never Configure — see `configure`. */
   actions?: ReactNode;
+  supportSize?: ButtonSize;
   /** Offers the Activity mode: what recently changed here. Only where a domain-level read exists. */
   activity?: boolean;
   /** Offers the Insights mode: a few numbers for this workspace, from the reporting aggregates. */
@@ -113,9 +116,9 @@ export function PageHeader({
       {actions || activity || insights || configure ? (
         <HeaderControls>
           {actions}
-          {activity ? <SupportTrigger mode="activity" /> : null}
-          {insights ? <SupportTrigger mode="insights" /> : null}
-          {configure ? <SupportTrigger mode="configure" /> : null}
+          {activity ? <SupportTrigger mode="activity" size={supportSize} /> : null}
+          {insights ? <SupportTrigger mode="insights" size={supportSize} /> : null}
+          {configure ? <SupportTrigger mode="configure" size={supportSize} /> : null}
         </HeaderControls>
       ) : null}
     </header>

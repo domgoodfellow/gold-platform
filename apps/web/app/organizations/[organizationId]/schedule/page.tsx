@@ -1,8 +1,6 @@
 import Link from 'next/link';
 import { ButtonLink } from '@/components/controls/button';
-import { WorkCreateDrawer } from '@/features/work/work-create-drawer';
-import { workCreateOptions } from '@/lib/application/work/create-options';
-import { listUsableModules } from '@/lib/domain/tenancy/modules';
+import { NewWorkAction } from '@/features/work/new-work-action';
 import { AppPage } from '@/components/layout/app-page';
 import { EmptyState } from '@/components/surfaces/section';
 import { ConfigureRegistrar } from '@/components/panels/configure-registrar';
@@ -78,8 +76,7 @@ export default async function SchedulePage({
   const monthStart = startOfMonth(date);
   const dates = calendarDates(view, date);
 
-  const enabledModules = await listUsableModules(db, { organizationId });
-  const createOptions = organization.capabilities.includes('work_item.create') ? await workCreateOptions(db, organizationId, enabledModules.has('assets')) : null;
+
   const mayConfigure = organization.capabilities.includes('field.manage');
   const mayAddResource = organization.capabilities.includes('resource.create');
   const resourcesHref = `/organizations/${organizationId}/resources`;
@@ -157,7 +154,7 @@ export default async function SchedulePage({
           </>
         }
         configure={mayConfigure}
-        actions={<>{createOptions ? <WorkCreateDrawer options={createOptions}/> : null}<ButtonLink size="small" tone="secondary" href={`/organizations/${organizationId}/work/dispatch?on=${date}`}>Dispatch board</ButtonLink></>}
+        actions={<>{organization.capabilities.includes('work_item.create') ? <NewWorkAction organizationId={organizationId}/> : null}<ButtonLink size="small" tone="secondary" href={`/organizations/${organizationId}/work/dispatch?on=${date}`}>Dispatch board</ButtonLink></>}
       />
 
       <ScheduleWorkspace

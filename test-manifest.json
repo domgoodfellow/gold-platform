@@ -257,6 +257,7 @@
     "apps/web/tests/component/dialer-popout.test.tsx": {"category": "component", "concerns": ["communications", "voice"], "note": "Compact dialer window shares telephone state, preserves drafts, and restores controls without ending calls."},
     "apps/web/e2e/communications-operating.spec.ts": {"category": "playwright-acceptance", "concerns": ["communications", "voice", "inbox", "routing"]},
     "apps/web/e2e/finance-operating.spec.ts": {"category": "playwright-acceptance", "concerns": ["finance", "pricing", "payments"]},
+    "apps/web/e2e/work-composition.spec.ts": {"category": "playwright-acceptance", "concerns": ["ui", "work", "composition", "permissions", "responsive"], "note": "Run with playwright.composition.config.ts against loopback Supabase. Exact rendered panel gutters, creation parity, readiness, role gates, errors, success, toolbar and sidebar geometry; disposable fixtures with enforced teardown."},
     "apps/web/e2e/work-operating.spec.ts": {"category": "playwright-acceptance", "concerns": ["finance", "pricing", "payments"]},
     "apps/web/tests/integration/database/follow-ups.test.ts": {
       "category": "database-integration",
@@ -2968,7 +2969,7 @@
       "category": "component",
       "concerns": ["work", "configuration"]
     },
-    "apps/web/tests/component/work-create-drawer.test.tsx": {
+    "apps/web/tests/component/work-create-page.test.tsx": {
       "category": "component",
       "concerns": ["work", "configuration", "security"]
     },

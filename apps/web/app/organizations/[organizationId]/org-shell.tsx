@@ -351,8 +351,7 @@ function WorkspaceHeading({ workspace, href, label, current }: { workspace: NavI
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={current} tooltip={`${label} home`} className="font-semibold">
         <Link href={href} aria-label={`${label} home`} aria-current={current ? 'page' : undefined}>
-          {/* An outlined tile marks the workspace level, so a page sharing its glyph (CRM and Customers) never reads as the same row. Outlined, not filled: a filled tile would look selected when it is not. */}
-          {Icon ? <span aria-hidden data-workspace-tile className="-m-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border border-sidebar-border"><Icon className="size-3.5!" /></span> : null}
+          {Icon ? <Icon aria-hidden data-workspace-icon /> : null}
           <span>{label}</span>
         </Link>
       </SidebarMenuButton>

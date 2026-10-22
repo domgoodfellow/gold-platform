@@ -30,7 +30,7 @@ export async function RelatedSupport({
     ...(kind === "customer" ? { customerName } : {}),
   };
   return (
-    <OperationalPanel flush
+    <OperationalPanel body="edge-to-edge"
       title="Support Cases"
       href={`${base}?${new URLSearchParams(filters)}`}
     >

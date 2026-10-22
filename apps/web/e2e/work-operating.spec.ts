@@ -105,14 +105,14 @@ test.describe('Work operating journey', () => {
       if (dow !== currentDow) await addOperatingHours(owner, { organizationId, dayOfWeek: dow, opensAt: '08:00', closesAt: '18:00' });
     }
     await page.goto(`${base}/field`);
-    await page.getByRole('button', { name: 'New work', exact: true }).click();
-    const createDrawer = page.getByRole('dialog', { name: 'New work', exact: true });
+    await page.getByRole('link', { name: 'New work', exact: true }).click();
+    const createDrawer = page.getByRole('form', { name: 'Create work', exact: true });
     await createDrawer.getByLabel('Job title', { exact: true }).fill('Dental emergency inspection');
     await createDrawer.getByLabel('Customer', { exact: true }).selectOption(customerId);
     await createDrawer.getByLabel('Location', { exact: true }).selectOption(locationId);
-    await createDrawer.getByRole('button', { name: 'Add work item', exact: true }).click();
-    await expect(createDrawer.getByRole('status')).toHaveText('Work created.');
-    await createDrawer.getByRole('button', { name: 'Close', exact: true }).click();
+    await createDrawer.getByRole('button', { name: 'Create work', exact: true }).click();
+    await expect(page).toHaveURL(`${base}/work?type=${type.id}`);
+    await page.goto(`${base}/field`);
     const work = (await owner.from('work_items').select('id').eq('organization_id', organizationId).single()).data!;
     await page.getByRole('link', { name: 'Dispatch board', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Selected work', exact: true })).toContainText('Dental emergency inspection');
@@ -192,7 +192,7 @@ test.describe('Work operating journey', () => {
     const readOnlyContext = await page.context().browser()!.newContext({ storageState: COLLEAGUE_STORAGE_STATE });
     const reader = await readOnlyContext.newPage();
     await reader.goto(`${base}/field`);
-    await expect(reader.getByRole('button', { name: 'New work', exact: true })).toHaveCount(0);
+    await expect(reader.getByRole('link', { name: 'New work', exact: true })).toHaveCount(0);
     await expect(reader.getByRole('link', { name: 'Configure Work', exact: true })).toHaveCount(0);
     await reader.goto(`${base}/work/dispatch?selected=${work.id}`);
     await expect(reader.getByRole('region', { name: 'Selected work', exact: true })).toContainText('Your role cannot assign or schedule work.');
@@ -207,7 +207,7 @@ test.describe('Work reduced role', () => {
   test('withholds operational writes and refuses foreign records', async ({ page }) => {
     const ctx = loadDemoContext();
     await page.goto(`/organizations/${ctx.organizationId}/field`);
-    await expect(page.getByRole('button', { name: 'New work', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'New work', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Configure Work', exact: true })).toHaveCount(0);
     await page.goto(`/organizations/${ctx.organizationId}/work/dispatch`);
     await expect(page.getByRole('button', { name: 'Save resources', exact: true })).toHaveCount(0);

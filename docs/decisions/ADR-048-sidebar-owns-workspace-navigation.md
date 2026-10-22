@@ -5,6 +5,8 @@
 **Supersedes:** ADR-046, point 6 only, in that the page header may no longer present the workspace's destinations
 **Superseded by:** None
 
+**Amended:** 2026-10-21, owner-directed UI composition correction: point 5's outlined tile is replaced by ordinary sidebar glyph geometry; typography and the divider retain workspace hierarchy.
+
 ## Context
 
 ADR-046 allowed the page header to present the workspace projection as a compact destination strip. In practice:
@@ -24,7 +26,7 @@ The header also built its Calendar shortcut by appending `/calendar` to the work
 2. The page header owns page identity, contextual business actions, page-support modes (Activity, Insights, Configure) and page-local view controls. It never reproduces the workspace's destination list.
 3. Page-local view controls (list or board, filters, periods, record sub-views) are not workspace navigation and stay in the page.
 4. The header Calendar shortcut is the projection's registered calendar for the workspace (`NavItem.calendar`), offered only while the workspace Home is usable. The header builds no addresses.
-5. Inside a workspace the heading row is set apart from its pages by an outlined icon tile and a divider, in the full and collapsed sidebar. An outlined tile, not a filled one, so an inactive heading never looks selected.
+5. Inside a workspace the heading row is set apart from its pages by typography and a divider, in the full and collapsed sidebar. Workspace glyphs use the same dimensions and alignment as ordinary sidebar rows, without a separate tile, special scaling or negative margins. The shared selected state continues to distinguish the current page.
 
 ## Consequences
 

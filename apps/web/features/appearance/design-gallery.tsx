@@ -31,6 +31,9 @@ function Examples({ preset, appearance, density }: { preset: VisualPreset; appea
       <span className="text-sm text-muted capitalize">{appearance} · {density}</span>
     </div>
     <div className="grid min-w-0 gap-5 lg:grid-cols-2">
+      <OperationalPanel title="Compact inset composition" density="compact"><p>Panel-owned gutters on all four sides.</p></OperationalPanel>
+      <OperationalPanel title="Standard inset composition"><p>Panel-owned gutters on all four sides.</p></OperationalPanel>
+      <OperationalPanel title="Edge-to-edge composition" body="edge-to-edge"><table className="w-full text-sm"><tbody><tr><td className="px-4 py-3">Table cells own their spacing.</td></tr></tbody></table></OperationalPanel>
       <OperationalPanel title={`${VISUAL_PRESETS[preset].label} ${appearance} settings form`} variant="elevated">
         <form onSubmit={(event) => { event.preventDefault(); setSaved(true); }}>
             <FieldGroup variant="inset">

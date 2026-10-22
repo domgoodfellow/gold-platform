@@ -289,7 +289,7 @@ export function AgentTrigger() {
  * another switches the rail to that one. The page decides which modes it offers; that is
  * presentation, never the guard — the panel's own reads and writes are refused by RLS regardless.
  */
-export function SupportTrigger({ mode }: { mode: SupportMode }) {
+export function SupportTrigger({ mode, size }: { mode: SupportMode; size?: import('../controls/button').ButtonSize }) {
   const { supportMode, toggleSupport } = useWorkspaceRail();
   const { label, icon: Icon } = SUPPORT_MODE_LABELS[mode];
 
@@ -297,6 +297,7 @@ export function SupportTrigger({ mode }: { mode: SupportMode }) {
     <Button
       type="button"
       tone="secondary"
+      size={size}
       aria-pressed={supportMode === mode}
       onClick={() => toggleSupport(mode)}
       className="gap-1.5"

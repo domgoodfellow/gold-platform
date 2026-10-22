@@ -470,7 +470,7 @@ export function SupportWorkspace({
     </Table>
   );
   const performance = (
-    <div className="grid gap-4 border-t border-border p-4 sm:grid-cols-2">
+    <div className="grid gap-4 sm:grid-cols-2">
       <div>
         <p className="text-xs text-muted">Latest resolution duration</p>
         <p className="mt-2 text-2xl font-semibold">
@@ -568,8 +568,8 @@ export function SupportWorkspace({
     </div>
   );
   const inspector = c ? (
-    <OperationalPanel flush title={view === "queues" ? "Selected Case" : "Case details"}>
-      <div className="grid gap-4 border-t border-border p-4 text-xs">
+    <OperationalPanel title={view === "queues" ? "Selected Case" : "Case details"}>
+      <div className="grid gap-4 text-xs">
         <Link
           href={`${base}/cases/${c.id}`}
           className="text-sm font-semibold text-accent-text"
@@ -711,7 +711,7 @@ export function SupportWorkspace({
         />
       )}
       {view === "cases" && (
-        <OperationalPanel flush
+        <OperationalPanel body="edge-to-edge"
           title={`${data.total} Cases`}
           action={
             <div className="flex gap-1">
@@ -788,7 +788,7 @@ export function SupportWorkspace({
       )}
       {view === "queues" && (
         <div className="grid min-w-0 items-start gap-4 @4xl:grid-cols-[180px_minmax(0,1fr)] @6xl:grid-cols-[180px_minmax(0,1fr)_280px]">
-          <OperationalPanel flush title="Queue selection">
+          <OperationalPanel body="edge-to-edge" title="Queue selection">
             <div className="divide-y divide-border border-t border-border">
               <Link
                 href={href("queues")}
@@ -829,7 +829,7 @@ export function SupportWorkspace({
             </div>
           </OperationalPanel>
           <div className="min-w-0">
-            <OperationalPanel flush
+            <OperationalPanel body="edge-to-edge"
               title={
                 data.queues.find((q) => q.id === query.get("queue"))?.name ??
                 "Queue workbench"
@@ -842,7 +842,7 @@ export function SupportWorkspace({
           </div>
           <div className="min-w-0 lg:col-start-2 xl:col-start-3">
             {inspector ?? (
-              <OperationalPanel flush title="Case inspector">
+              <OperationalPanel body="edge-to-edge" title="Case inspector">
                 <PanelState>
                   Select a Case to inspect its ownership and resolution target.
                 </PanelState>
@@ -854,7 +854,7 @@ export function SupportWorkspace({
       {view === "detail" && c && (
         <div className="grid min-w-0 gap-4 @4xl:grid-cols-[minmax(0,2.5fr)_minmax(260px,1fr)]">
           <main className="min-w-0 space-y-4">
-            <OperationalPanel flush
+            <OperationalPanel
               title="Problem description"
               action={
                 can("support.case.update") &&
@@ -869,12 +869,12 @@ export function SupportWorkspace({
                 ) : null
               }
             >
-              <p className="whitespace-pre-wrap break-words border-t border-border p-4 text-sm leading-6">
+              <p className="whitespace-pre-wrap break-words text-sm leading-6">
                 {c.description || (data.serviceReview ? 'Customer changes are recorded in the original review request below.' : 'No description recorded.')}
               </p>
             </OperationalPanel>
-            {data.serviceReview ? <OperationalPanel flush title="Customer review request">
-              <div className="space-y-3 p-4 text-sm break-words [overflow-wrap:anywhere]">
+            {data.serviceReview ? <OperationalPanel title="Customer review request">
+              <div className="space-y-3 text-sm break-words [overflow-wrap:anywhere]">
                 <p>{data.serviceReview.targetTitle} · Revision {data.serviceReview.revisionNumber}</p>
                 <p className="whitespace-pre-wrap">{data.serviceReview.description}</p>
                 <p className="text-xs text-muted">Portal customer: {data.serviceReview.responderName} · {new Date(data.serviceReview.respondedAt).toLocaleString('en-GB', { timeZone: timezone })}</p>
@@ -883,8 +883,8 @@ export function SupportWorkspace({
               </div>
             </OperationalPanel> : null}
             {c.resolution_summary && (
-              <OperationalPanel flush title="Latest recorded resolution">
-                <div className="border-t border-border p-4">
+              <OperationalPanel title="Latest recorded resolution">
+                <div>
                   <p className="whitespace-pre-wrap break-words text-sm">
                     {c.resolution_summary}
                   </p>
@@ -895,7 +895,7 @@ export function SupportWorkspace({
                 </div>
               </OperationalPanel>
             )}
-            <OperationalPanel flush title="Internal timeline">
+            <OperationalPanel body="edge-to-edge" title="Internal timeline">
               {!["resolved", "closed"].includes(c.status) &&
                 can("support.case.update") && (
                   <InternalNote organizationId={organizationId} c={c} />
@@ -905,7 +905,7 @@ export function SupportWorkspace({
           </main>
           <aside className="min-w-0 space-y-4">
             {inspector}
-            <OperationalPanel flush
+            <OperationalPanel body="edge-to-edge"
               title="Related records"
               action={
                 can("support.case.update") &&
@@ -958,7 +958,7 @@ export function SupportWorkspace({
       )}
       {view === "policies" && (
         <>
-          <OperationalPanel flush title="Resolution policies">
+          <OperationalPanel body="edge-to-edge" title="Resolution policies">
             <Table
               headings={[
                 "Policy",
@@ -1008,7 +1008,7 @@ export function SupportWorkspace({
       {view === "reports" && (
         <>
           <div className="grid min-w-0 gap-4 @4xl:grid-cols-2">
-            <OperationalPanel flush title="Cases created and resolved by day">
+            <OperationalPanel body="edge-to-edge" title="Cases created and resolved by day">
               <div className="max-h-96 overflow-y-auto">
                 <Table
                   headings={["Day", "Created", "Latest resolved", "Volume"]}
@@ -1054,17 +1054,17 @@ export function SupportWorkspace({
                 </Table>
               </div>
             </OperationalPanel>
-            <OperationalPanel flush title="Resolution performance">
+            <OperationalPanel title="Resolution performance">
               {performance}
-              <div className="border-t border-border p-4 text-xs text-muted">
+              <div className="mt-4 border-t border-border pt-4 text-xs text-muted">
                 Reopened Cases are excluded until resolved again. Duration
                 includes elapsed time since initial creation through the latest
                 resolution, including time spent previously resolved. SLA
                 adherence includes only historically targeted Cases.
               </div>
             </OperationalPanel>
-            <OperationalPanel flush title="Current queue backlog">{queueTable}</OperationalPanel>
-            <OperationalPanel flush title="Case volume by queue">
+            <OperationalPanel body="edge-to-edge" title="Current queue backlog">{queueTable}</OperationalPanel>
+            <OperationalPanel body="edge-to-edge" title="Case volume by queue">
               <Table
                 headings={["Queue", "Created in period", "Latest resolved"]}
                 hasRows
@@ -1122,7 +1122,7 @@ export function SupportWorkspace({
                 </tr>
               </Table>
             </OperationalPanel>
-            <OperationalPanel flush title="Case volume by priority">
+            <OperationalPanel body="edge-to-edge" title="Case volume by priority">
               <Table
                 headings={["Priority", "Created in period", "All Cases"]}
                 hasRows

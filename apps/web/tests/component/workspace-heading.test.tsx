@@ -94,8 +94,9 @@ describe('the heading is a distinct level, expanded and collapsed', () => {
     render(<TooltipProvider><SidebarProvider defaultOpen={open}><OrgNav sections={sections()} organizationId={org} /></SidebarProvider></TooltipProvider>);
     const heading = nav().getByRole('link', { name: 'CRM home' });
     const customers = nav().getByRole('link', { name: 'Customers' });
-    // CRM and Customers share a glyph; only the heading carries the workspace tile.
-    expect(heading.querySelector('[data-workspace-tile]')).not.toBeNull();
+    // Workspace and child glyphs inherit the same row geometry.
+    expect(heading.querySelector(':scope > svg[data-workspace-icon]')).not.toBeNull();
+    expect(heading.querySelector('[data-workspace-tile]')).toBeNull();
     expect(customers.querySelector('[data-workspace-tile]')).toBeNull();
     // A divider separates the heading row from the workspace's pages.
     expect(heading.closest('[data-workspace-heading]')).not.toBeNull();

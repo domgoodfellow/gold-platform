@@ -19,10 +19,11 @@ describe('Today → Work → Work item operator flow', () => {
     expect(workSections).toContain('<ScheduleWorkItemForm');
   });
 
-  it('makes creation the board’s one leading disclosure instead of a permanent trailing form', () => {
-    expect(workList).toContain('<WorkCreateDrawer');
-    expect(workList).toContain('defaultOpen={createOpen}');
-    expect(readFileSync(`${WEB}/features/work/work-create-drawer.tsx`, 'utf8')).toContain('<PageDrawerTrigger asChild><Button size="small">');
+  it('uses the same persistent creation route from both Work surfaces', () => {
+    expect(workList).toContain('<NewWorkAction');
+    expect(readFileSync(`${WEB}/features/work/home/work-home.tsx`, 'utf8')).toContain('<NewWorkAction');
+    expect(readFileSync(`${WEB}/features/work/new-work-action.tsx`, 'utf8')).toContain('/work/new');
+    expect(existsSync(`${WEB}/features/work/work-create-drawer.tsx`)).toBe(false);
   });
 
   it('leaves no duplicate catch-all work form behind', () => {

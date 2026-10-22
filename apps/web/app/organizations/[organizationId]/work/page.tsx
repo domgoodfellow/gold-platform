@@ -1,10 +1,9 @@
 import { WorkList } from '@/features/work/work-list';
+import { redirect } from 'next/navigation';
+import { newWorkHref } from '@/features/work/new-work-action';
 import { AppPage } from '@/components/layout/app-page';
-import { listAssets } from '@/lib/domain/assets/assets';
 import { counted } from '@/lib/domain/counted';
-import { listCustomers } from '@/lib/domain/customers/customers';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
-import { listLocations } from '@/lib/domain/locations/locations';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { listResources } from '@/lib/domain/resources/resources';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
@@ -27,7 +26,6 @@ import {
   coverageView,
   evaluateRequirements,
   listResourceRequirements,
-  requirementGroups,
   type CoverageView,
 } from '@/lib/domain/work-items/requirements';
 import { todayInZone } from '@/lib/domain/scheduling/window';
@@ -47,19 +45,15 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
   const page = Math.max(1, Math.min(100000, Math.trunc(Number(text('page'))) || 1));
   const sort = ['oldest', 'title', 'schedule'].includes(text('sort')) ? text('sort') as 'oldest' | 'title' | 'schedule' : 'newest';
   const { db, organization } = await requireOrganization(organizationId);
+  if (create === '1') redirect(newWorkHref(organizationId, typeof requestedType === 'string' ? requestedType : undefined));
   const types = await listWorkItemTypes(db, { organizationId });
   const selectedType = types.find((type) => type.id === requestedType) ?? types[0] ?? null;
   const statuses = selectedType ? await listWorkItemStatuses(db, { organizationId, typeId: selectedType.id }) : [];
-  const otherStatuses = await Promise.all(types.map(type => type.id === selectedType?.id ? Promise.resolve(statuses) : listWorkItemStatuses(db, { organizationId, typeId: type.id })));
-  const statusesByType = Object.fromEntries(types.map((type, i) => [type.id, otherStatuses[i]]));
   const statusId = statuses.find(s => s.id === text('status'))?.id;
-  const [transitions, workItems, customers, locations, resources, assets, definitions, enabledModules, templateSteps, prices, booking, requirements, capabilities, intakeForms] = await Promise.all([
+  const [transitions, workItems, resources, definitions, enabledModules, templateSteps, prices, booking, requirements, capabilities, intakeForms] = await Promise.all([
     selectedType ? listWorkItemTransitions(db, { organizationId, typeId: selectedType.id }) : Promise.resolve([]),
     selectedType ? listWorkItems(db, { organizationId, typeId: selectedType.id, q: text('q'), statusId, limit: 20, offset: (page - 1) * 20, sort }) : Promise.resolve(counted([] as WorkItem[], 0)),
-    listCustomers(db, { organizationId }),
-    listLocations(db, { organizationId }),
     listResources(db, { organizationId, limit: 1000 }),
-    listAssets(db, { organizationId }),
     listFieldDefinitions(db, { organizationId, entityType: 'work_item' }),
     listUsableModules(db, { organizationId }),
     selectedType ? listTypeChecklistItems(db, { organizationId, typeId: selectedType.id }) : Promise.resolve([]),
@@ -75,7 +69,6 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
 
   // What the selected kind of work needs against who is on each job — derived on this read from the
   // type's requirements and the assignments, stored nowhere.
-  const needs = requirements.length > 0 ? requirementGroups(requirements, resources, RESOURCE_CLASS_LABELS) : null;
   const resourcesById = new Map(resources.map((resource) => [resource.id, resource]));
   const coverage: Record<string, CoverageView> = {};
   for (const item of [...workItems, ...stageLists.flat()]) {
@@ -85,7 +78,6 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
   }
 
   const can = (capability: Capability) => organization.capabilities.includes(capability);
-  const assetsEnabled = enabledModules.has('assets');
   const mayConfigure = can('field.manage');
   const mayInsight =
     areaAvailable('insights', {
@@ -140,6 +132,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
         </ConfigureRegistrar>
       ) : null}
       <PageHeader
+        supportSize="small"
         title={areaLabel('work')}
         crumbs={workspaceAncestry(organizationId, 'work')}
         activity={types.length > 0}
@@ -147,7 +140,6 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
         configure={mayConfigure}
       />
       <WorkList
-        createOpen={create === '1'}
         view={view}
         page={page}
         q={text('q')}
@@ -160,16 +152,8 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
         types={types}
         selectedType={selectedType}
         statuses={statuses}
-        statusesByType={statusesByType}
         transitions={transitions}
         workItems={workItems}
-        customers={customers.map((item) => ({ id: item.id, label: item.name }))}
-        locations={locations.map((item) => ({ id: item.id, label: item.label }))}
-        resources={resources.map((item) => ({ id: item.id, label: item.name }))}
-        assets={assets.map((item) => ({ id: item.id, label: item.name }))}
-        definitions={definitions}
-        assetsEnabled={assetsEnabled}
-        needs={needs}
         coverage={coverage}
         mayAdd={can('work_item.create')}
         mayConfigure={mayConfigure}

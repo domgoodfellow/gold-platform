@@ -1,8 +1,9 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { createWorkItemAction, type WorkActionState } from '@/app/organizations/[organizationId]/work/actions';
-import { Button } from '@/components/controls/button';
+import { Button, ButtonLink } from '@/components/controls/button';
 import { FormActions, FormError, FormField } from '@/components/controls/form';
 import { Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import { OptionalSelect, type SelectOption } from '@/components/controls/optional-select';
@@ -23,6 +24,8 @@ export function CreateWorkItemForm({
   assets,
   assetsEnabled,
   definitions,
+  cancelHref,
+  onDirtyChange,
 }: {
   organizationId: string;
   statuses: WorkItemStatus[];
@@ -32,8 +35,17 @@ export function CreateWorkItemForm({
   assets: SelectOption[];
   assetsEnabled: boolean;
   definitions: FieldDefinition[];
+  cancelHref?: string;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [state, formAction, pending] = useActionState(createWorkItemAction, INITIAL);
+  const router = useRouter();
+  useEffect(() => {
+    if (state.success && cancelHref) {
+      onDirtyChange?.(false);
+      router.push(cancelHref);
+    }
+  }, [state.success, cancelHref, onDirtyChange, router]);
 
   if (statuses.length === 0) {
     return (
@@ -44,7 +56,7 @@ export function CreateWorkItemForm({
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form action={formAction} onChange={() => onDirtyChange?.(true)} onReset={event => event.preventDefault()} className="flex flex-col gap-4" aria-label="Create work">
       <input type="hidden" name="organizationId" value={organizationId} />
       <div className="grid gap-3 sm:grid-cols-2">
         <FormField id={`new-work-title-${organizationId}`} label="Job title">
@@ -96,8 +108,9 @@ export function CreateWorkItemForm({
       <CustomFieldInputs definitions={definitions} />
       <FormActions>
         <Button type="submit" disabled={pending}>
-          {pending ? 'Adding…' : 'Add work item'}
+          {pending ? 'Creating…' : 'Create work'}
         </Button>
+        {cancelHref ? <ButtonLink href={cancelHref} tone="secondary">Cancel</ButtonLink> : null}
       </FormActions>
       <FormError>{state.error}</FormError>
       {state.success ? <p role="status" className="text-sm text-success">Work created.</p> : null}

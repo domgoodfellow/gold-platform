@@ -296,7 +296,7 @@ export function DialerWorkspace({
       title="Call queue"
       count={queueAvailable ? queueTotal : undefined}
       density="compact"
-      flush
+      body="edge-to-edge"
       fill={queueAvailable && queue.length > 0}
       href={queueAvailable ? `/organizations/${organizationId}/follow-ups?status=open&kind=call` : undefined}
       hrefLabel="All call follow-ups"

@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/headers/page-header';
+import { NewWorkAction } from '@/features/work/new-work-action';
 import { areaLabel } from '@/lib/navigation';
 
 import { AppPage } from '@/components/layout/app-page';
@@ -23,7 +24,7 @@ export default async function WorkConfigurationPage({
   searchParams,
 }: PageProps<'/organizations/[organizationId]/work/configuration'>) {
   const { organizationId } = await params;
-  const { type: requestedType, tab: requestedTab, new: requestedNew } = await searchParams;
+  const { type: requestedType, tab: requestedTab, new: requestedNew, returnTo } = await searchParams;
   const { db, organization } = await requireConfigurationTarget(organizationId, 'work-configuration');
 
   const types = await listWorkItemTypes(db, { organizationId });
@@ -62,6 +63,7 @@ export default async function WorkConfigurationPage({
         breadcrumbLabel="Work configuration"
         crumbs={[{ label: areaLabel('work'), href: `/organizations/${organizationId}/work` }]}
         className="mb-0"
+        actions={returnTo === 'create' && organization.capabilities.includes('work_item.create') ? <NewWorkAction organizationId={organizationId} typeId={selectedType?.id} /> : undefined}
       />
       <WorkConfiguration
         variant="page"
@@ -84,7 +86,7 @@ export default async function WorkConfigurationPage({
         requirements={requirements}
         capabilities={capabilities}
         intakeForms={intakeForms}
-        typeHref={(typeId) => `/organizations/${organizationId}/work/configuration?type=${typeId}`}
+        typeHref={(typeId) => `/organizations/${organizationId}/work/configuration?${returnTo === 'create' ? 'returnTo=create&' : ''}type=${typeId}`}
       />
     </AppPage>
   );
