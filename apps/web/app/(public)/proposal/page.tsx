@@ -24,9 +24,9 @@ export const dynamic = 'force-dynamic';
 
 /**
  * A prospect's own commercial proposal (Slice 9). Pays for nothing new on the external axis —
- * see `20261024000001_a_prospect_reviews_their_own_proposal.sql` — the same shared-document
+ * see `20261022000003_a_prospect_reviews_their_own_proposal.sql` — the same shared-document
  * link model the portal uses, over the same `external_actors` binding, exchanged once for a
- * session of its own (`[token]/route.ts`, `20261124000001`).
+ * session of its own (`[token]/route.ts`, `20261022000046`).
  *
  * Order follows what a prospect needs to judge the number that follows it: what GildOps
  * understood, what it would configure, then the price and the terms — never the reverse.

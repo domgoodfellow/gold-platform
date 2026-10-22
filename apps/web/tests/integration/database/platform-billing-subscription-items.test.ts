@@ -677,10 +677,10 @@ describe('the provider cache has one writer', () => {
 // the C2 closeout migration's backfill, against real data
 // ---------------------------------------------------------------------------
 
-describe('20261108000003 attaches an existing negotiated mapping to the agreement that was in force', () => {
+describe('20261022000022 attaches an existing negotiated mapping to the agreement that was in force', () => {
   it('runs its own backfill statement over old-shaped rows: right agreement, reference preserved, nothing overwritten', async () => {
     const sql = readFileSync(
-      resolve(import.meta.dirname, '../../../../../supabase/migrations/20261108000003_a_negotiated_provider_price_belongs_to_its_agreement.sql'), 'utf8');
+      resolve(import.meta.dirname, '../../../../../supabase/migrations/20261022000022_a_negotiated_provider_price_belongs_to_its_agreement.sql'), 'utf8');
     const statement = /update public\.organization_plan_agreement_provider_prices m[\s\S]*?;/.exec(sql)?.[0];
     expect(statement, 'the backfill statement is still in the migration').toBeTruthy();
 

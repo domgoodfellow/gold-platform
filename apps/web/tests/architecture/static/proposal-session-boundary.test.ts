@@ -91,7 +91,7 @@ describe('a proposal decision takes its identity from the session', () => {
 });
 
 describe('a proposal recipient is not an organization member', () => {
-  const migration = read('../../supabase/migrations/20261124000001_a_proposal_session_ends_when_its_link_does.sql');
+  const migration = read('../../supabase/migrations/20261022000046_a_proposal_session_ends_when_its_link_does.sql');
 
   it('binds only an anonymous session, and leaves memberships out of it', () => {
     expect(migration).toContain("'is_anonymous'");

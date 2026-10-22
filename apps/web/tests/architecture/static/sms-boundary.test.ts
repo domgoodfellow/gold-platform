@@ -86,7 +86,7 @@ describe('SMS is a channel of canonical Communications', () => {
 });
 
 describe('the carrier decides a text’s state', () => {
-  const sql = () => migrations().find(({ name }) => name === '20261114000001_a_texts_state_is_the_carriers_word.sql')!.sql;
+  const sql = () => migrations().find(({ name }) => name === '20261022000033_a_texts_state_is_the_carriers_word.sql')!.sql;
 
   it('lets a signed-in role create a text only as queued and grants it no update at all', () => {
     expect(sql()).toMatch(/and status = 'queued'/);

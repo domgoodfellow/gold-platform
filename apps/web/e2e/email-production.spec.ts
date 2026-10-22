@@ -11,6 +11,7 @@ import type { Database } from '../lib/db/types';
 import { provisionOrganization } from '../lib/domain/platform/provision';
 import { createRole } from '../lib/domain/tenancy/roles';
 import { readyEmailSender, type ReadySender } from '../tests/support/email-sender';
+import { storeFixtureProviderCredential, removeFixtureProviderAccounts } from '../tests/support/provider-credentials';
 
 /**
  * Email production readiness through the real Web → API path (Phase 3C).
@@ -186,7 +187,7 @@ test.beforeAll(async () => {
   sender = await readyEmailSender(pg, ownerDb, orgA);
   accounts.push(sender.accountId);
   // The fixture account's key, placed directly in the local secret store (only staff may store one).
-  await pg.query("update platform_provider_accounts set secret_id = vault.create_secret($2, 'fixture:' || $1::text) where id=$1", [sender.accountId, DOMAIN_KEY]);
+  await storeFixtureProviderCredential(pg, sender.accountId, DOMAIN_KEY);
   await startFake();
   await startApi();
 });
@@ -197,9 +198,7 @@ test.afterAll(async () => {
   if (!pg) return;
   const signedUp = (await pg.query("select id from auth.users where email like 'prod-new-%@example.test' and created_at > now() - interval '1 hour'")).rows.map((row) => row.id as string);
   await pg.query('delete from organizations where id=any($1::uuid[])', [organizations]);
-  const secrets = (await pg.query('select secret_id from platform_provider_accounts where id=any($1::uuid[]) and secret_id is not null', [accounts])).rows.map((row) => row.secret_id);
-  await pg.query('delete from platform_provider_accounts where id=any($1::uuid[])', [accounts]);
-  if (secrets.length) await pg.query('delete from vault.secrets where id=any($1::uuid[])', [secrets]);
+  await removeFixtureProviderAccounts(pg, accounts);
   for (const id of [...users, ...signedUp]) await admin.auth.admin.deleteUser(id);
   await pg.end();
 });

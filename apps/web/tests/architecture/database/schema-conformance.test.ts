@@ -95,7 +95,7 @@ describe('schema conformance', () => {
     //   * `customer_portal_invites_token_unique` is a secret a customer arrives holding, with
     //     no tenant in hand to scope it by.
     //   * `customer_proposal_invites_token_unique` is the same shape one product over
-    //     (20261024000001) — a secret a prospect arrives holding, before `claim_proposal_invite`
+    //     (20261022000003) — a secret a prospect arrives holding, before `claim_proposal_invite`
     //     has given their browser any tenant to be scoped by.
     //   * `organization_invitations_token_hash_unique` is the same shape one axis over
     //     (20260915000003) — a hash of a secret an invitee arrives holding, looked up by
@@ -106,7 +106,7 @@ describe('schema conformance', () => {
     //     the invitation hash: a browser arrives holding a hostname, with no tenant in hand to
     //     scope it by, so it must be unique across every claim or resolution would have to guess
     //     which business `shop.example.com` means. Only an unreleased claim counts.
-    //   * `forms_public_key_unique` (20261115000001) is the same shape again: a visitor arrives
+    //   * `forms_public_key_unique` (20261022000034) is the same shape again: a visitor arrives
     //     holding a form's public key with no tenant in hand, so the key must be unique across
     //     every business or it could not say which form it means. It names only a published form
     //     anybody could already open.
@@ -118,7 +118,7 @@ describe('schema conformance', () => {
     //     exception, below) has a composite key to point at, and `id` already makes it globally
     //     collision-proof regardless of tenant — leading it with `organization_id` would buy
     //     nothing tenant isolation exists to prevent, since no two tenants' rows can collide here either way.
-    //     `20261028000001` records why forcing the alternative would actually be wrong: it would
+    //     `20261022000007` records why forcing the alternative would actually be wrong: it would
     //     require every usage event to match a retail-rate row carrying its *own* organization_id,
     //     but the row nearly every usage event prices against is the shared default, whose
     //     `organization_id` is null by construction — a composite FK on that shape could never
@@ -343,7 +343,7 @@ describe('schema conformance', () => {
     // not at another tenant's own row. Composite-with-`organization_id` would require that shared
     // row's `organization_id` (null) to equal the usage event's own (never null), which can never
     // be true; every usage event once no negotiated rate exists for its organization — the common
-    // case — would then be refused rather than recorded. `20261028000001` records the full
+    // case — would then be refused rather than recorded. `20261022000007` records the full
     // reasoning and the real bug its investigation found (`app.retail_rate_at` resolving with no
     // regard to organization at all, which is what RLS cannot catch on this side either, since the
     // function runs as its own definer rather than through a row a policy could refuse).
@@ -358,7 +358,7 @@ describe('schema conformance', () => {
     await db.query(`create table public.__fk_probe (
       id uuid primary key default gen_random_uuid(),
       organization_id uuid not null,
-      customer_id uuid not null references public.customers (id)
+      customer_id uuid not null references public.contacts (id)
     )`);
     try {
       const { rows } = await db.query<{ table_name: string }>(

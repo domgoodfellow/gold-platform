@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // A separate local acceptance server must not share another server's build files/lock.
+  distDir: process.env.GOLD_NEXT_DIST_DIR ?? '.next',
   // Workspace packages ship as TypeScript source, not a prebuilt dist (the source-package rule: no build
   // orchestrator until a second consumer earns one) -- Next has to run its own compiler over
   // them itself rather than treating them as pre-built node_modules.

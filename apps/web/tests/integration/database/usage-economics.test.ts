@@ -297,7 +297,7 @@ describe('retail rate resolution', () => {
     expect(rows).toHaveLength(1);
   });
 
-  it('never resolves another organization\'s negotiated rate, even one that would otherwise sort first (20261028000001)', async () => {
+  it('never resolves another organization\'s negotiated rate, even one that would otherwise sort first (20261022000007)', async () => {
     // A negotiated rate for `other`, dated after every global row above — if `app.retail_rate_at`
     // ever went back to ignoring the organization it is pricing for, this is exactly what would
     // leak: `tenant`'s own usage priced at a rate GOLD only agreed with a different business.

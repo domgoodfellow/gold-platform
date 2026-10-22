@@ -44,7 +44,7 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const CONNECTION =
   process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 const MIGRATION = new URL(
-  '../../../../../supabase/migrations/20261221000001_the_operating_organization_is_configured_not_inferred.sql',
+  '../../../../../supabase/migrations/20261022000083_the_operating_organization_is_configured_not_inferred.sql',
   import.meta.url,
 );
 

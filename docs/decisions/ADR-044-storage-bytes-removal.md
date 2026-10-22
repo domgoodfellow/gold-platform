@@ -2,7 +2,7 @@
 
 **Recorded:** 2026-10-16
 **Status:** Accepted
-**Origin:** Conversation 13 (Library) slice 13.2. Exact implementation history remains in Git and in `supabase/migrations/20261224000001_library_storage_boundary.sql`.
+**Origin:** Conversation 13 (Library) slice 13.2. Exact implementation history remains in Git and in `supabase/migrations/20261022000086_library_storage_boundary.sql`.
 
 ## Context
 
@@ -36,7 +36,7 @@ Deleting a file as a feature, row and bytes together, is not covered. It is a se
 ## Enforcement / current owners
 
 - `docs/data.md` — Files and storage.
-- `supabase/migrations/20261224000001_library_storage_boundary.sql` — `documents_objects_delete` and `app.storage_path_is_referenced`.
+- `supabase/migrations/20261022000086_library_storage_boundary.sql` — `documents_objects_delete` and `app.storage_path_is_referenced`.
 - `apps/web/tests/integration/database/library-storage-boundary.test.ts` — removal by owner, by another member, of a referenced document, of an import file, and from another organization.
 
 Executable schema, tests and source remain authoritative for implementation details. If a later accepted ADR changes this decision, update the canonical document and mark this record superseded.

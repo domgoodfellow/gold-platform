@@ -67,10 +67,12 @@ const HOME_READS = fileURLToPath(new URL('../../../lib/application/home/reads.ts
 describe('Home, with nothing recorded yet', () => {
   it('renders an intentional state for each region rather than silent zeroes', () => {
     const source = readFileSync(TODAY_FEATURE, 'utf8');
-    expect(source).toContain('No items requiring attention in this authorized view.');
-    expect(source).toContain('No authorized performance projection is available for this period.');
+    expect(source).toContain('Nothing needs attention.');
+    expect(source).toContain('Nothing assigned to you needs attention.');
+    expect(source).toContain('No performance data for this period.');
     // A source that failed is unknown, never presented as an empty queue.
-    expect(source).toContain('Other queues are unknown.');
+    expect(source).toContain('Some sources are temporarily unavailable');
+    expect(source).toContain('No items from the sources that loaded.');
   });
 });
 

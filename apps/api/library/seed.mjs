@@ -14,6 +14,6 @@ for (const app of applications) for (const action of app.actions.filter(a=>a.exe
   sql += `insert into public.integration_library_actions values(${quote(action.capability)},${quote(app.connector_key)},${quote(app.key)},${quote(permission)},${quote(JSON.stringify(action.inputs))}::jsonb);\n`;
   sql += `insert into public.integration_capability_permissions values(${quote(action.capability)},${quote(permission)}) on conflict(capability_key) do nothing;\n`;
 }
-const file = new URL('../../../supabase/migrations/20261212000001_open_source_integration_library.sql', import.meta.url);
+const file = new URL('../../../supabase/migrations/20261022000069_open_source_integration_library.sql', import.meta.url);
 const base = (await readFile(file,'utf8')).split('-- Generated from the installed open-source library')[0];
 await writeFile(file,base+sql);

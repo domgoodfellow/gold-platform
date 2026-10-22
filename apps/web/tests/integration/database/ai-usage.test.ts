@@ -186,7 +186,7 @@ describe('recording what a request consumed', () => {
 
   it('is a capability the runtime assignment table also knows', async () => {
     const { rows } = await pg.query(`select app.ai_capabilities() as capabilities`);
-    expect(rows[0].capabilities).toEqual(['operator_assistant', 'public_assistant', 'configuration_drafting']);
+      expect(rows[0].capabilities).toEqual(['operator_assistant', 'public_assistant', 'configuration_drafting', 'voice_receptionist']);
   });
 });
 

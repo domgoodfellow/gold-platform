@@ -69,13 +69,13 @@ describe('a portal operation takes its identity from the session', () => {
 
 describe('a portal customer is not an organization member', () => {
   it('binds only an anonymous session, and leaves memberships out of it', () => {
-    const migration = read('../../supabase/migrations/20261122000001_a_portal_session_ends_when_its_link_does.sql');
+    const migration = read('../../supabase/migrations/20261022000043_a_portal_session_ends_when_its_link_does.sql');
     expect(migration).toContain("'is_anonymous'");
     expect(migration).not.toMatch(/insert into public\.memberships/);
   });
 
   it('answers nothing for a revoked link or an expired exchange, from the one function every portal policy reads', () => {
-    const migration = read('../../supabase/migrations/20261122000001_a_portal_session_ends_when_its_link_does.sql');
+    const migration = read('../../supabase/migrations/20261022000043_a_portal_session_ends_when_its_link_does.sql');
     expect(migration).toMatch(/create or replace function app\.current_external_customer\(\)[\s\S]*portal_expires_at > now\(\)[\s\S]*revoked_at is null/);
   });
 });

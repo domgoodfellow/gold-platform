@@ -280,7 +280,7 @@ describe('a credential goes in and never comes out', () => {
     // Phase 3C: `email_receiving_account` reads received mail only through the receiving address's
     // recorded account; `email_test_send_account`/`finish_email_test_send` send and record one
     // manager-started test. The six `*voice_agent*` doors joined with the voice receptionist
-    // (20261227000003/7) without this list being updated, which is what made it fail: reviewed in
+    // (20261022000091/7) without this list being updated, which is what made it fail: reviewed in
     // Phase 3C, each acts only on the named call or session row, checks its state and organization,
     // sets `search_path = ''`, and is called only by apps/api's voice agent service, which must also
     // read the voice provider's credential — so this role, and no signed-in or anonymous caller.

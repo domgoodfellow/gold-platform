@@ -217,7 +217,7 @@ describe('the routing decision stays where it can be tested', () => {
     'utf8',
   );
   const platformLayout = readFileSync(
-    fileURLToPath(new URL('../../../app/platform/[[...path]]/page.tsx', import.meta.url)),
+    fileURLToPath(new URL('../../../app/platform/layout.tsx', import.meta.url)),
     'utf8',
   );
 
@@ -232,9 +232,12 @@ describe('the routing decision stays where it can be tested', () => {
   });
 
   it('/platform still refuses a caller with no platform authority', () => {
-    // Platform authority is the caller's own staff row, read live; without a permission there is no /platform.
-    expect(platformLayout).toContain('const permissions = await platformPermissions(db)');
-    expect(platformLayout).toContain("if (permissions.size === 0) redirect('/organizations')");
+    expect(platformLayout).toContain('await requirePlatformScope()');
+    const guard = readFileSync(new URL('../../../lib/route/platform.ts', import.meta.url), 'utf8');
+    expect(guard).toContain('await requireOrganizationForBillingRecovery(organizationId)');
+    expect(guard).toContain('await isOperatingOrganization(db, { organizationId })');
+    expect(guard).toContain('const permissions = await platformPermissions(db)');
+    expect(guard).toContain('if (permissions.size === 0) notFound()');
   });
 });
 

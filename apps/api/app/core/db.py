@@ -1026,7 +1026,7 @@ def clear_integration_credential(settings: IntegrationSettings, *, connection_id
 INVITATION_EMAIL_WEBHOOK_ROLE = "invitation_email_webhook"
 
 # The invitation-email-delivery integration's own auth.users row, fixed in
-# 20261102000001_resend_is_a_provider_account_and_invitations_report_delivery.sql. No email, no
+# 20261022000009_resend_is_a_provider_account_and_invitations_report_delivery.sql. No email, no
 # password, like every other webhook actor.
 INVITATION_EMAIL_WEBHOOK_ACTOR = "00000000-0000-4000-8000-0000000000a6"
 
@@ -1282,7 +1282,7 @@ def record_email_send_result(
 SECRET_ROLE = "secret_operator"
 
 # The secret-resolution integration's own `auth.users` row, fixed in
-# 20261126000002_an_organization_stores_a_private_credential_once.sql.
+# 20261022000049_an_organization_stores_a_private_credential_once.sql.
 SECRET_RESOLUTION_ACTOR = "00000000-0000-4000-8000-0000000000a9"
 
 

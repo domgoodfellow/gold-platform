@@ -4,7 +4,7 @@
 -- `work_item_resource_assignments_resource_not_double_booked` — the guarantee that no resource is
 -- occupied twice over the same instant — so the suite can be watched failing.
 --
--- (Until `20261116000002` this replaced `work_items_resource_not_double_booked` with the shape
+-- (Until `20261022000036` this replaced `work_items_resource_not_double_booked` with the shape
 -- `tire-app-template` is quoted for in constraints.md, a null resource coalesced to one key. An
 -- assignment always names a resource, so that shape cannot be written any more; the control is
 -- now the constraint's absence.)

@@ -27,6 +27,7 @@ import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
 import { createRole } from '@/lib/domain/tenancy/roles';
 import { createWorkItem, listWorkItems } from '@/lib/domain/work-items/work-items';
 import { foundBusiness } from '@/tests/support/founding';
+import { readyEmailSender } from '@/tests/support/email-sender';
 
 /**
  * M6 — workflows, automations, and the channels they act through.
@@ -175,6 +176,9 @@ describe('M6 — a business that runs itself', () => {
     await client.connect();
 
     try {
+      // Notification admission requires the business's verified default identity. This
+      // local provider fixture does not send mail or change scheduling authorization.
+      await readyEmailSender(client, owner.db, organizationId);
       // What the business says to its customers, in its own words. Every word below is theirs;
       // the platform contributes the five placeholders and not one syllable more.
       const templateId = await createMessageTemplate(owner.db, {

@@ -56,7 +56,7 @@ keep the filename stable for repeat imports. Conflicting duplicate source keys a
 refused rather than silently dropping rows. The source-link check is repeated at
 commit under a tenant/source lock so concurrent runs cannot create duplicate Customers.
 
-`20261215000001_prospect_import_batches.sql` replaces only the two existing import
+`20261022000074_prospect_import_batches.sql` replaces only the two existing import
 functions and adds a read-only pipeline-version check. The app refuses imports
 until that check confirms the repaired database contract. Hosted application
 requires explicit migration approval; importing data

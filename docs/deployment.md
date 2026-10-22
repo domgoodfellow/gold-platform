@@ -4,7 +4,7 @@
 
 ### Imported connector runtime configuration
 
-The API deployment now installs the pnpm workspace package `@gold/integration-library` alongside Python requirements. The Vercel API project has Root Directory `apps/api`: upload the repository root (prefer a clean tracked release snapshot), not the API subdirectory; `api/library_runtime.mjs` is a Node function and Python functions exclude its node_modules. Run `pnpm --filter @gold/integration-library check` before deployment. Apply `20261212000001_open_source_integration_library.sql` after its existing predecessor migrations, then regenerate database types and deploy API and web.
+The API deployment now installs the pnpm workspace package `@gold/integration-library` alongside Python requirements. The Vercel API project has Root Directory `apps/api`: upload the repository root (prefer a clean tracked release snapshot), not the API subdirectory; `api/library_runtime.mjs` is a Node function and Python functions exclude its node_modules. Run `pnpm --filter @gold/integration-library check` before deployment. Apply `20261022000069_open_source_integration_library.sql` after its existing predecessor migrations, then regenerate database types and deploy API and web.
 
 The runtime requires `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (or `SUPABASE_ANON_KEY`), `SUPABASE_JWT_SECRET`, `GILDOPS_LIBRARY_SECRET`, and `GILDOPS_LIBRARY_URL` pointing to the API project's HTTPS `/integrations/library-runtime`. Python and Node must share the signing secret. Set `CRON_SECRET` for scheduled resource synchronization. Existing integration commands also require `GOLD_OAUTH_STATE_SECRET` and `GOLD_OAUTH_REDIRECT_URI`; supported generic OAuth apps use `<CONNECTOR_KEY>_OAUTH_CLIENT_ID` and `<CONNECTOR_KEY>_OAUTH_CLIENT_SECRET`. Google/Microsoft retain their existing prefixes. The web requires server-only `GOLD_API_URL`.
 
@@ -297,9 +297,9 @@ deployment/provider systems; never paste them into reports, logs, commits or bro
    and allowed recipients. Confirm backup/recovery, plan support and explicit authorization. Disable
    notification cron in the selected project's Cron settings before any API release if it exists.
 2. Compare hosted migration history with repository order. Apply reviewed predecessors first:
-   `20261217000001_customer_service_disclosures.sql`,
-   `20261218000001_customer_service_reviews.sql`, then
-   `20261219000001_customer_delivery_notifications.sql`. Earlier email/Portal/provider migrations
+   `20261022000076_customer_service_disclosures.sql`,
+   `20261022000077_customer_service_reviews.sql`, then
+   `20261022000078_customer_delivery_notifications.sql`. Earlier email/Portal/provider migrations
    must already exist. Review the exact pending migration set; never broad-push unrelated migrations.
 3. Before deploying the worker, use the notification-only hold described in `docs/operations.md`.
    Verify grants, RLS, signatures and generated types. Test the previous Web/API versions against
@@ -338,7 +338,7 @@ substitute unrelated projects. Billing/team scope, deployed revisions, plan and 
 values remain unverified. Reconcile access with the intended owner before any release.
 
 Refreshed read-only Supabase inventory found active `Gold Platform` (`nuceqypuwrjavrwiloda`), latest
-migration `20261220000004`, the Batch E claim RPC, zero email identities, zero Resend Provider
+migration `20261022000082`, the Batch E claim RPC, zero email identities, zero Resend Provider
 Accounts, zero notification intents and zero notification jobs. The notification machine role has
 no table access or private `app` schema usage. This corrects the earlier pre-Batch-E inventory;
 migration presence does not establish application deployment or provider readiness.

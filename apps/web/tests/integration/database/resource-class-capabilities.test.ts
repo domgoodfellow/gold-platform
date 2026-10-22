@@ -336,7 +336,7 @@ describe('a resource has a class and capabilities', () => {
       // The migration's own backfill statement, read from the file and pointed at a table shaped
       // like `resources` before it ran — so what is proved is the statement that shipped.
       const file = readFileSync(
-        join(__dirname, '..', '..', '..', '..', '..', 'supabase', 'migrations', '20261113000002_a_resource_has_a_class_and_capabilities.sql'),
+        join(__dirname, '..', '..', '..', '..', '..', 'supabase', 'migrations', '20261022000032_a_resource_has_a_class_and_capabilities.sql'),
         'utf8',
       );
       const backfill = /update public\.resources\s+set resource_class = case[^;]+;/i.exec(file)?.[0];

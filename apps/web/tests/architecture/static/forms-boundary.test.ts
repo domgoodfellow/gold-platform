@@ -153,7 +153,7 @@ describe('a form is placed, not copied', () => {
   });
 
   it('has no placement table that points at several owners', () => {
-    const migration = read('../../supabase/migrations/20261115000001_a_form_is_placed_not_copied.sql');
+    const migration = read('../../supabase/migrations/20261022000034_a_form_is_placed_not_copied.sql');
     expect(migration).not.toMatch(/create table public\.form_placements/);
     expect(migration).toContain('create table public.portal_forms');
   });

@@ -28,6 +28,6 @@ Customer and Opportunity boards are distinct projections. CRM Home summarizes Op
 ## Enforcement / current owners
 
 - `docs/domain-model.md`, `docs/data.md`, `docs/security.md`, `docs/ui-system.md`
-- `supabase/migrations/20261130000001_opportunities_have_their_own_lifecycle.sql`
+- `supabase/migrations/20261022000055_opportunities_have_their_own_lifecycle.sql`
 - `apps/web/lib/domain/opportunities/`
 - `apps/web/tests/integration/database/opportunities.test.ts`

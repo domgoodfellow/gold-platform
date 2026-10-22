@@ -31,7 +31,7 @@ Implementation status belongs in `docs/roadmap.md`.
 Personal appearance is an account-owned exception to organization-owned operating records.
 `account_appearance_preferences.user_id` references `auth.users(id)` with cascade deletion;
 it has no organization column and is not part of `account_profiles` or `brand_settings`.
-Migration `20261012173928_account_appearance_preferences.sql` adds closed text checks for
+Migration `20261012000002_account_appearance_preferences.sql` adds closed text checks for
 appearance, preset, density, shape and motion, plus `updated_at`. Nullable overrides inherit;
 absence is the established platform default. Reads never manufacture rows, Save upserts the
 verified account, and Reset deletes its overrides. Organization defaults and Studio design
@@ -60,19 +60,19 @@ Application code should not repeatedly compensate for ambiguity that the data mo
 
 ### Client/Tenant and engagement persistence
 
-`20261213000001_client_tenant_relationships.sql` adds organization-leading relationship keys, partial active-tuple and originating-handoff uniqueness, explicit Active/Ended lifecycle, actor attribution and immutable provenance. An `AFTER INSERT` handoff trigger creates the relationship in the existing provisioning transaction. `app.backfill_handoff_relationships` uses only authoritative handoff rows, preserves actor/time, deterministically uses the handoff UUID for the initial relationship period, safely repeats and refuses conflicting provenance. No second application write follows provisioning.
+`20261022000070_client_tenant_relationships.sql` adds organization-leading relationship keys, partial active-tuple and originating-handoff uniqueness, explicit Active/Ended lifecycle, actor attribution and immutable provenance. An `AFTER INSERT` handoff trigger creates the relationship in the existing provisioning transaction. `app.backfill_handoff_relationships` uses only authoritative handoff rows, preserves actor/time, deterministically uses the handoff UUID for the initial relationship period, safely repeats and refuses conflicting provenance. No second application write follows provisioning.
 
-`20261213000002_service_engagements.sql` adds engagements, typed deliverable references and Work references. The relationship composite key binds engagement Organization, Customer and target tenant; the deliverable's engagement key binds its target tenant before artifact-specific composite keys verify ownership. This deliberately crosses to the linked tenant's `organization_id`, rather than pretending that artifacts belong to the selling Organization. The schema-conformance test checks the exact supported source/target column pairs. Artifact deletion is restricted while referenced, preserving historical identities; archiving remains in the owning domain.
+`20261022000071_service_engagements.sql` adds engagements, typed deliverable references and Work references. The relationship composite key binds engagement Organization, Customer and target tenant; the deliverable's engagement key binds its target tenant before artifact-specific composite keys verify ownership. This deliberately crosses to the linked tenant's `organization_id`, rather than pretending that artifacts belong to the selling Organization. The schema-conformance test checks the exact supported source/target column pairs. Artifact deletion is restricted while referenced, preserving historical identities; archiving remains in the owning domain.
 
 All four tables force RLS and grant authenticated actors only SELECT. Narrow RPCs own mutations; direct INSERT/UPDATE/DELETE is unavailable. Relationship-ending and reference-attachment commands lock the relationship row, preventing a concurrent attach after ending. Engagement commands lock their row, preserve terminal history and record existing canonical Customer Events. Accepted commercial terms are stored once and never recomputed for display from mutable proposals. No copied operational status is persisted.
 
-Generated types come from `pnpm db:types`. The CLI-generated migration filenames were moved after the repository's existing December migration sequence so a fresh reset applies their dependencies first; historical migrations are unchanged.
+Generated types come from `pnpm db:types`. Migration file names follow the version rule in Database migrations.
 
-`20261213000003_tenant_reference_baseline_alignment.sql` reconciles an existing clean-gate violation: library jobs now reference execution through `(organization_id, execution_id)` and use organization-leading execution uniqueness. It preserves execution lookup and cascading cleanup; inconsistent legacy jobs fail the new foreign key rather than being reassigned. This changes no provider operation or connector credential authority.
+`20261022000072_tenant_reference_baseline_alignment.sql` reconciles an existing clean-gate violation: library jobs now reference execution through `(organization_id, execution_id)` and use organization-leading execution uniqueness. It preserves execution lookup and cascading cleanup; inconsistent legacy jobs fail the new foreign key rather than being reassigned. This changes no provider operation or connector credential authority.
 
 ### Customer service disclosure persistence
 
-`20261217000001_customer_service_disclosures.sql` introduces private versioned drafts, immutable
+`20261022000076_customer_service_disclosures.sql` introduces private versioned drafts, immutable
 attributed approval revisions and typed-reference presentation snapshots. Organization-leading
 composite foreign keys bind each Customer/Engagement and revision/deliverable pair. No migration
 backfills or publishes existing engagements. Table mutations are unavailable to API roles; narrow
@@ -84,9 +84,9 @@ same bounded draft and Services configuration contracts. Generated types use `pn
 
 ### Contact classification and intake ownership
 
-`20261229000001_contact_lifecycle_temperature.sql` extends `customers` with a nullable closed lifecycle and closed lead temperature. Existing lifecycle values stay NULL (Unclassified); only future inserts default to Lead. Unrated records absence of a temperature rating. No existing identifiers, stage assignments, foreign keys or relationships are rewritten. `create_contact` and `update_contact` extend the established customer commands transactionally, with exact organization capability checks and classification audit events; existing command signatures remain usable. Types are generated from the local schema using `pnpm db:types`.
+`20261022000098_contact_lifecycle_temperature.sql` extends `customers` with a nullable closed lifecycle and closed lead temperature. Existing lifecycle values stay NULL (Unclassified); only future inserts default to Lead. Unrated records absence of a temperature rating. No existing identifiers, stage assignments, foreign keys or relationships are rewritten. `create_contact` and `update_contact` extend the established customer commands transactionally, with exact organization capability checks and classification audit events; existing command signatures remain usable. Types are generated from the local schema using `pnpm db:types`.
 
-`20261229000002_crm_source_sync_review.sql` extends the existing Library mapping `sync_mode` to import/sync, guarded by `configure_crm_import_sync`; only active connected worksheets may select sync. Existing CSV identity remains scoped by filename and explicit source ID (or content fingerprint). Worksheet identity uses the immutable resource ID and provider external row ID. Runs preserve the saved mapping and external-record provenance. For fields with a previous applied source value, updates compare current CRM values with that snapshot and the incoming value. Divergent local edits fail the row with a reconciliation message; the contact and previous source link remain intact. Reconcile the spreadsheet with the local value, or leave the contact unchanged and stop synchronization, then review a fresh run. Missing source rows only change Library reconciliation state; no contact delete command is involved. CRM scheduling remains manual and reviewed.
+`20261022000099_crm_source_sync_review.sql` extends the existing Library mapping `sync_mode` to import/sync, guarded by `configure_crm_import_sync`; only active connected worksheets may select sync. Existing CSV identity remains scoped by filename and explicit source ID (or content fingerprint). Worksheet identity uses the immutable resource ID and provider external row ID. Runs preserve the saved mapping and external-record provenance. For fields with a previous applied source value, updates compare current CRM values with that snapshot and the incoming value. Divergent local edits fail the row with a reconciliation message; the contact and previous source link remain intact. Reconcile the spreadsheet with the local value, or leave the contact unchanged and stop synchronization, then review a fresh run. Missing source rows only change Library reconciliation state; no contact delete command is involved. CRM scheduling remains manual and reviewed.
 
 ### CRM Follow-up persistence and operating reads
 
@@ -969,7 +969,7 @@ Do not rely only on a storage path string to define authorization.
 
 Public assets should be public intentionally, not because a bucket was made broad for convenience.
 
-Library files (`documents`, ADR-043) are organization-owned. Records reference them through `document_links`, one target per row. An Agent-private file is owned by its person and cannot be linked. The following hold for the private `documents` bucket (migration `20261224000001`):
+Library files (`documents`, ADR-043) are organization-owned. Records reference them through `document_links`, one target per row. An Agent-private file is owned by its person and cannot be linked. The following hold for the private `documents` bucket (migration `20261022000086`):
 
 - Only the uploader may remove an object, and only while no `documents` row or integration resource names its path (ADR-044).
 - The bucket accepts only the MIME types a Library file may have. SVG is not one of them.
@@ -977,7 +977,7 @@ Library files (`documents`, ADR-043) are organization-owned. Records reference t
 - Each file records a SHA-256 checksum of the bytes as stored. A file stored before the checksum existed has none recorded, and it is not shown as an empty one.
 - The storage-limit check and the row insert run under a per-organization lock, so concurrent uploads cannot both pass the same remaining allowance.
 
-The Library's file list is read through `library_file_page` and `library_file_summary` (migration `20261225000001`). Search, type, usage, sort and paging run in PostgreSQL, so the count above a list and the rows beneath it agree. Both are security-invoker, and neither ever lists an Agent-private file.
+The Library's file list is read through `library_file_page` and `library_file_summary` (migration `20261022000087`). Search, type, usage, sort and paging run in PostgreSQL, so the count above a list and the rows beneath it agree. Both are security-invoker, and neither ever lists an Agent-private file.
 
 ---
 
@@ -996,6 +996,16 @@ Rules:
 7. grants/RLS must be updated with schema changes;
 8. generated database types must be refreshed after schema changes;
 9. tests must prove new invariants.
+
+### Migration version numbers
+
+A migration file is named `YYYYMMDDNNNNNN_purpose.sql`. The first eight digits are the real date the migration was written, never a future date. The last six digits are a counter within that day (`000001`, `000002`, …), not a clock time. Supabase applies files in name order and refuses a new file that sorts before one already applied, so:
+
+1. take today's date; if today already has migrations, use the next counter after the highest one;
+2. if the highest existing version is dated after today (which should not happen), keep that date and raise its counter rather than moving the date further forward;
+3. never move the date forward to get a later name, and never use a clock time from `supabase migration new`; rename such a file to the day-counter form before it is applied.
+
+On 2026-10-22, 104 files that broke this rule (100 future-dated through `20261230…`, and four clock-time names) were renumbered in their original order: the future-dated ones became `20261022000002`–`20261022000101`, and the clock-time ones became the next counters of their own day. File contents were not changed. The local ledger was updated in place, and the hosted ledger (`nuceqypuwrjavrwiloda`) was corrected with `supabase migration repair` (new versions marked applied, old versions marked reverted). Afterwards, hosted listed all 265 applied migrations against matching local files, with only the four unreleased CRM migrations (`20261022000098`–`20261022000101`) pending. Any other database copy with the old numbers (another developer's local database, a separate hosted project) needs the same repair before its next migration run: mark the new versions applied and the old ones reverted. Old-to-new pairs can be recovered from git history (`git log --follow` on a migration file).
 
 ---
 
@@ -1222,7 +1232,7 @@ Those belong to the respective canonical documents.
 
 Customer service reviews use `service_reviews`, composite-bound to the exact Organization/Customer/Engagement/disclosure/revision and optional approved typed deliverable. A unique nulls-not-distinct revision/target key refuses duplicate release. Requests are immutable except for one pending-to-final transition; terminal rows and target fields are protected by a database trigger. All public commands deny direct table mutation. Disclosure locks precede review locks, serializing publication, withdrawal and competing decisions; version conflicts return HTTP 409. Publication/withdrawal atomically finalize affected pending reviews. Response attribution pins the Portal user, invitation and customer-name snapshot. History is never repointed to a newer revision.
 
-Changes requested atomically allocates a canonical Support Case number, creates a normal unassigned/unqueued Case and applies the existing active general normal-priority elapsed service-level policy. Request prose lives only in the immutable review row; a Support-capability projection supplies its original source. Private/public event payloads contain reference IDs, not customer prose. The forward migration is `20261218000001_customer_service_reviews.sql`.
+Changes requested atomically allocates a canonical Support Case number, creates a normal unassigned/unqueued Case and applies the existing active general normal-priority elapsed service-level policy. Request prose lives only in the immutable review row; a Support-capability projection supplies its original source. Private/public event payloads contain reference IDs, not customer prose. The forward migration is `20261022000077_customer_service_reviews.sql`.
 
 Support uses `support_cases`, `support_queues`, `support_service_levels`, `support_case_counters`, `support_case_events` and `support_case_links`. Organization-leading composite foreign keys bind Customer, Membership, queue, policy and each typed canonical relation to the same tenant. An atomic per-organization counter allocates Case numbers safely under concurrent creation. One transaction validates and writes each command and its attributed immutable evidence. No authenticated direct mutation or deletion is granted.
 
@@ -1234,7 +1244,7 @@ Marketing persistence uses organization-bound composite foreign keys for Campaig
 
 ## Global Home read projections
 
-Home stores no duplicated operational records. Ordinary actor clients read exact category counts and bounded previews independently. `Counted` retains non-serialized exact-count evidence so an absent count cannot masquerade as a complete preview. Call/Inbox totals remain unavailable when the server does not answer their exact-count request. Studio tables retain their direct-read restrictions: `home_studio_summary` checks the existing tenant Studio-manager boundary and returns only exact draft counts and bounded metadata, excluding archived Forms and editor content. `home_financial_totals` is an invoker aggregation over the canonical invoiced/incurred report, retaining `report.read`, tenant RLS, organization-local date bounds and stored currencies while avoiding transfer of all Customer groups. Forward-only migrations are `20261207000001_home_studio_summary.sql` and `20261207000002_home_financial_totals.sql`; neither introduces a record table. Hosted application is a separate release step.
+Home stores no duplicated operational records. Ordinary actor clients read exact category counts and bounded previews independently. `Counted` retains non-serialized exact-count evidence so an absent count cannot masquerade as a complete preview. Call/Inbox totals remain unavailable when the server does not answer their exact-count request. Studio tables retain their direct-read restrictions: `home_studio_summary` checks the existing tenant Studio-manager boundary and returns only exact draft counts and bounded metadata, excluding archived Forms and editor content. `home_financial_totals` is an invoker aggregation over the canonical invoiced/incurred report, retaining `report.read`, tenant RLS, organization-local date bounds and stored currencies while avoiding transfer of all Customer groups. Forward-only migrations are `20261022000063_home_studio_summary.sql` and `20261022000064_home_financial_totals.sql`; neither introduces a record table. Hosted application is a separate release step.
 
 ## Studio Portal publication
 
@@ -1250,7 +1260,7 @@ Content admits exactly version, settings, defaultPageId, pages and navigation. D
 
 ## Business foundation persistence
 
-Forward migrations `20261227000001`?`20261227000007` add private inbound call snapshots/stable route cursors, a Membership-readable and owner-command-written business profile, receptionist configuration, and private provider session/event records. Profile and receptionist writes use revision checks with immediate conflict responses; raw client writes are denied. Session admission serializes each business budget, requires Reception and Assistant entitlement and a usable central voice assignment. Event deduplication and duration/token metering commit atomically. Retry fences recheck live Membership capabilities and terminal call state. Applied locally only; hosted application is a separate release action.
+Forward migrations `20261022000089`?`20261022000095` add private inbound call snapshots/stable route cursors, a Membership-readable and owner-command-written business profile, receptionist configuration, and private provider session/event records. Profile and receptionist writes use revision checks with immediate conflict responses; raw client writes are denied. Session admission serializes each business budget, requires Reception and Assistant entitlement and a usable central voice assignment. Event deduplication and duration/token metering commit atomically. Retry fences recheck live Membership capabilities and terminal call state. Applied locally only; hosted application is a separate release action.
 
 ## Approved CRM consolidation and compatibility retirement
 
@@ -1258,9 +1268,9 @@ V1.1 requires canonical `contacts` persistence with stable existing IDs, explici
 
 Legacy database views, command/domain adapters and URL redirects have one compatibility period: retain through migration rollout and one client release after all consumers have moved. Remove only after consumer inventory and URL telemetry show no legacy use for 30 consecutive days, historical import/provider replay tests pass, and a forward migration has been reviewed. Do not remove historical event names, capability identifiers or applied SQL as a cosmetic rename. Legacy routes retain tenant, record ID and query parameters.
 
-`20261230000001_canonical_contact_identity.sql` renames `customers` to `contacts`, `customer_stages` to `contact_relationship_stages` and `crm_follow_ups` to `crm_tasks`. A rename keeps every row ID and every inbound foreign key (opportunities, quotes, invoices, calls, conversations, work, locations, documents, service engagements, portal access, import staging, external record links), along with RLS policies and triggers. Stored functions that named the old tables are rewritten to the new names in the same transaction. `contacts.contact_type` is `person`, `company` or `unspecified`; every existing row is `unspecified` and nothing infers a type. Typed details live in `contact_people` and `contact_companies`, and `contact_affiliations` links a person to a company with title, primary flag and active/historical state. Composite `(organization_id, id, contact_type)` keys make a wrong type or a cross-organization link impossible. All three new tables are read-only to members and written only through `create_crm_contact`, `update_crm_contact` (which classifies an Unspecified record once and refuses any later change of type) and `save_contact_affiliation`, each checking `customer.create` or `customer.update`. Columns keep their existing names (`customer_id`, `matched_customer_id`), and so do event entity types and capability keys, because they are historical vocabulary.
+`20261022000100_canonical_contact_identity.sql` renames `customers` to `contacts`, `customer_stages` to `contact_relationship_stages` and `crm_follow_ups` to `crm_tasks`. A rename keeps every row ID and every inbound foreign key (opportunities, quotes, invoices, calls, conversations, work, locations, documents, service engagements, portal access, import staging, external record links), along with RLS policies and triggers. Stored functions that named the old tables are rewritten to the new names in the same transaction. `contacts.contact_type` is `person`, `company` or `unspecified`; every existing row is `unspecified` and nothing infers a type. Typed details live in `contact_people` and `contact_companies`, and `contact_affiliations` links a person to a company with title, primary flag and active/historical state. Composite `(organization_id, id, contact_type)` keys make a wrong type or a cross-organization link impossible. All three new tables are read-only to members and written only through `create_crm_contact`, `update_crm_contact` (which classifies an Unspecified record once and refuses any later change of type) and `save_contact_affiliation`, each checking `customer.create` or `customer.update`. Columns keep their existing names (`customer_id`, `matched_customer_id`), and so do event entity types and capability keys, because they are historical vocabulary.
 
-`20261230000002_crm_contact_intake.sql` adds the `contact_directory` view (invoker RLS) that projects each contact's active primary company for sorting and grouping. It adds `opportunities.primary_person_id`, which must be a person actively affiliated with the opportunity's company. It also replaces `apply_import_run` so imports write `contacts.contact_type` from the mapping (default `unspecified`) and attach an affiliation only by an exact company contact ID, never by a similar name.
+`20261022000101_crm_contact_intake.sql` adds the `contact_directory` view (invoker RLS) that projects each contact's active primary company for sorting and grouping. It adds `opportunities.primary_person_id`, which must be a person actively affiliated with the opportunity's company. It also replaces `apply_import_run` so imports write `contacts.contact_type` from the mapping (default `unspecified`) and attach an affiliation only by an exact company contact ID, never by a similar name.
 
 | Old name | Canonical name | Compatibility layer |
 | --- | --- | --- |
@@ -1270,4 +1280,4 @@ Legacy database views, command/domain adapters and URL redirects have one compat
 | `lib/domain/customers/customers.ts` | `lib/domain/contacts/contacts.ts` | re-export shim, no app callers |
 | `lib/domain/follow-ups/follow-ups.ts` | `lib/domain/tasks/tasks.ts` | re-export shim, no app callers |
 
-Local ledger verification on 2026-10-22 found all four migrations applied through `20261230000002`. These versions follow the existing future-dated repository sequence; new migrations must sort after that maximum. Do not rename applied files. Hosted ledger/application is a separately authorized release step.
+Local ledger verification on 2026-10-22 found all four migrations applied through `20261022000101`. They were renumbered on 2026-10-22 under the version rule in Database migrations. Hosted ledger/application is a separately authorized release step.

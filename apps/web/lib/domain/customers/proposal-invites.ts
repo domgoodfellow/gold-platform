@@ -5,7 +5,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 /**
  * The link a salesperson sends a prospect to review their own commercial proposal — a third kind
  * of token over the anonymous-session model's external axis, the same shared-document model `customer_portal_invites`
- * already uses. See `20261024000001_a_prospect_reviews_their_own_proposal.sql`.
+ * already uses. See `20261022000003_a_prospect_reviews_their_own_proposal.sql`.
  */
 export type ProposalInvite = {
   id: string;

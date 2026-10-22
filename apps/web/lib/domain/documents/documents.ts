@@ -42,7 +42,7 @@ const FILE_NAME_MAX = 255;
 
 /**
  * The formats a Library file may be. Each one has a signature `content.ts` can check, and each one's
- * MIME type is on the bucket's allowlist (migration 20261224000001). SVG is absent on purpose: it is
+ * MIME type is on the bucket's allowlist (migration 20261022000086). SVG is absent on purpose: it is
  * a document that can run script, and a file a person downloads should never be one.
  */
 const ATTACHABLE_FORMAT_IDS: readonly string[] = [

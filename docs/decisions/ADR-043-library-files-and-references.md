@@ -2,7 +2,7 @@
 
 **Recorded:** 2026-10-16
 **Status:** Accepted
-**Origin:** Conversation 13 (Library) slice 13.1. Exact implementation history remains in Git and in `supabase/migrations/20261223000001_library_files_are_organization_owned.sql`.
+**Origin:** Conversation 13 (Library) slice 13.1. Exact implementation history remains in Git and in `supabase/migrations/20261022000085_library_files_are_organization_owned.sql`.
 
 ## Context
 
@@ -41,7 +41,7 @@ The canonical rule already stated in `docs/domain-model.md` ("the related record
 - `docs/domain-model.md` — Document / File and Media definitions.
 - `docs/product.md` — Library is shared organization infrastructure.
 - `docs/data.md` — tenant scoping and composite references.
-- `supabase/migrations/20261223000001_library_files_are_organization_owned.sql`
+- `supabase/migrations/20261022000085_library_files_are_organization_owned.sql`
 - `apps/web/tests/integration/database/documents.test.ts` — links, one target per link, duplicate links, cross-tenant links.
 - `apps/web/tests/integration/database/agent-attachments.test.ts` — a private file has no links.
 

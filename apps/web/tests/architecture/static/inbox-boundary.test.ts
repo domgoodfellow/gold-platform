@@ -78,7 +78,7 @@ describe('one canonical Inbox', () => {
 describe('assignment is one mechanism, keyed by membership', () => {
   it('lives in one column on the one conversation table, not once per channel', () => {
     const touching = migrations().filter(({ sql }) => /assignee_membership_id/.test(sql)).map(({ name }) => name);
-    expect(touching).toEqual(['20261111000001_a_conversation_has_a_status_and_an_owner.sql']);
+    expect(touching).toEqual(['20261022000027_a_conversation_has_a_status_and_an_owner.sql']);
 
     const sql = migrations().find(({ name }) => name === touching[0])!.sql;
     expect(sql).toMatch(/alter table public\.conversations[\s\S]*add column assignee_membership_id/);
@@ -94,7 +94,7 @@ describe('assignment is one mechanism, keyed by membership', () => {
   });
 
   it('is changed only through the doors, and the browser names no assignee relationship it is trusted on', () => {
-    const sql = migrations().find(({ name }) => name === '20261111000001_a_conversation_has_a_status_and_an_owner.sql')!.sql;
+    const sql = migrations().find(({ name }) => name === '20261022000027_a_conversation_has_a_status_and_an_owner.sql')!.sql;
     // No new column grant for the three facts a person changes.
     expect(sql).not.toMatch(/grant update \([^)]*(status|assignee_membership_id|customer_id)/);
     for (const door of ['claim_conversation', 'assign_conversation', 'release_conversation', 'set_conversation_status', 'link_conversation_customer']) {
@@ -120,7 +120,7 @@ describe('Communications links to CRM and never becomes it', () => {
   });
 
   it('matches contact points inside one organization only, with one normalization each', () => {
-    const sql = migrations().find(({ name }) => name === '20261111000001_a_conversation_has_a_status_and_an_owner.sql')!.sql;
+    const sql = migrations().find(({ name }) => name === '20261022000027_a_conversation_has_a_status_and_an_owner.sql')!.sql;
     expect(sql).toMatch(/where c\.organization_id = p_organization_id/);
     expect(sql).toMatch(/create function app\.normalize_phone/);
     expect(sql).toMatch(/create function app\.normalize_email/);

@@ -416,9 +416,11 @@ Stages have tenant-defined names and ordering. At most one Won and one Lost stag
 
 CRM Home, the Opportunity collection/pipeline and the Customer's Opportunities tab project the same canonical records. The next action is the earliest open attached Follow-up, including overdue work; it is not a separate Opportunity text field. Opportunity does not imply a Commercial Proposal, quote, invoice or fulfillment handoff.
 
-### Follow-up
+### Task and Follow-up
 
-A Follow-up is actionable CRM work for one Customer, optionally attached to an Opportunity for that same Customer. Its type is Call, Email, Meeting or Task. It has a due instant, optional notes and same-Organization owner Membership, and Open, Completed or Cancelled status. Completed and cancelled records remain historical; subsequent work uses a new Follow-up. Customer and Opportunity surfaces, the Follow-ups collection and shared Organization Calendar all project `crm_follow_ups`. Calendar composes native calendar events and dated domain projections, including Follow-ups and scheduled Work; it does not copy those domain records or own their pipeline stages or availability rules. Follow-ups are separate from immutable activity Events and from Work Items/resource scheduling.
+A Task is an actionable obligation. A Follow-up is an optional task purpose or workflow; an Activity records something that happened. The current CRM task model remains specialized: every task requires one Contact and a due instant, optionally references an Opportunity for that same Contact, and has kind Call, Email, Meeting or Task, an optional owner Membership, and Open, Completed or Cancelled status. It is not a general organization task system.
+
+Contact and Opportunity detail, Pipeline, dashboard attention and the shared Organization Calendar project the same `crm_tasks` records. The old Follow-ups API and URLs remain compatibility adapters. Neither Follow-ups nor Tasks is a primary CRM navigation destination. Calendar does not copy task records or own their pipeline stages or resource scheduling. Completed and cancelled tasks remain historical. Broader task architecture is deferred.
 
 CRM Home forecasts currently Open Opportunity values with an expected-close date in the selected month, unweighted and grouped by currency. Win rate is Won / (Won + Lost), using the last recorded closed transition per Opportunity in the selected month, including creation in a terminal stage. Reclosures count once per Opportunity in that month. Later reopening does not erase recorded closure evidence. A period with no closures has no defined win rate.
 

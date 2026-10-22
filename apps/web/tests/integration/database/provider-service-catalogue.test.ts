@@ -218,7 +218,7 @@ describe('Google Workspace’s expanded suite (section 10, 57)', () => {
       'calendar', 'gmail', 'drive', 'docs', 'sheets', 'forms', 'meet', 'chat', 'people', 'tasks', 'workspace_events',
     ]) {
       expect(byKey.has(key), key).toBe(true);
-      // calendar, drive and sheets are what the adapter discovers (20261126000001); nothing else is built.
+      // calendar, drive and sheets are what the adapter discovers (20261022000048); nothing else is built.
       const read = ['calendar', 'drive', 'sheets'].includes(key);
       expect(byKey.get(key)?.implementationState, key).toBe(read ? 'partial' : 'planned');
     }

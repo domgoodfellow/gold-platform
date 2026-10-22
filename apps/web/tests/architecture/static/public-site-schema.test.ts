@@ -30,12 +30,12 @@ describe('the website vocabulary has one definition per kind', () => {
   });
 
   it('is judged by the database for every kind the schema has', () => {
-    const migration = read('../../supabase/migrations/20261128000001_a_website_is_one_revision_of_pages_and_sections.sql');
+    const migration = read('../../supabase/migrations/20261022000052_a_website_is_one_revision_of_pages_and_sections.sql');
     for (const kind of SECTION_KINDS) expect(migration).toContain(`v_kind = '${kind}'`);
   });
 
   it('reserves the same paths in TypeScript and in the database', () => {
-    const migration = read('../../supabase/migrations/20261128000001_a_website_is_one_revision_of_pages_and_sections.sql');
+    const migration = read('../../supabase/migrations/20261022000052_a_website_is_one_revision_of_pages_and_sections.sql');
     const list = /select array\[([^\]]+)\]::text\[\]/.exec(migration.slice(migration.indexOf('public_site_reserved_slugs')))![1]!;
     const sql = list.split(',').map((item) => item.trim().replace(/'/g, ''));
     expect(sql.sort()).toEqual([...RESERVED_PAGE_SLUGS].sort());
@@ -106,7 +106,7 @@ describe('publication', () => {
   });
 
   it('selects one revision by one pointer, never page by page', () => {
-    const migration = read('../../supabase/migrations/20261128000001_a_website_is_one_revision_of_pages_and_sections.sql');
+    const migration = read('../../supabase/migrations/20261022000052_a_website_is_one_revision_of_pages_and_sections.sql');
     expect(migration).toContain('current_published_revision_id');
     expect(migration).not.toMatch(/create table public\.public_pages/);
   });

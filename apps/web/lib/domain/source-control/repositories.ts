@@ -12,7 +12,7 @@ import { sourceControlConnectorKeys, sourceControlReader, type SourceRepository 
  * appears only while its connection is `active` and the row is `active`; a connection that needs
  * attention, was disconnected, or lost an installation offers nothing, so a caller never builds on
  * access the vendor has since withdrawn. Nothing here writes: the rows are machine-authored and a
- * tenant cannot assert one (`20261103000001`).
+ * tenant cannot assert one (`20261022000010`).
  */
 
 type Row = {

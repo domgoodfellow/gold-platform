@@ -281,7 +281,7 @@ specific sandbox and recipient authorization; local synthetic fixtures are the o
 executable environment. Provider acceptance and genuine scheduled execution remain blocked.
 
 Batch F review of `bbf4f1c` identified four release concerns, corrected by migration
-`20261222000001_customer_notification_delivery_reliability.sql` and the bounded worker in
+`20261022000084_customer_notification_delivery_reliability.sql` and the bounded worker in
 `app/services/tenant_email/notifications.py`:
 
 - Lease fencing: `finish_customer_notification` completes only the current, unexpired lease. An

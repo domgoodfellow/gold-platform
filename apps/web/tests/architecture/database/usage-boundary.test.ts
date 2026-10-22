@@ -47,7 +47,7 @@ describe('the second retail price list stays gone', () => {
          from pg_proc p
         where p.pronamespace in ('public'::regnamespace, 'app'::regnamespace) and p.proname like '%retail_rate_at'`,
     );
-    // The organization joined the key in `20261028000001` — a rate resolved for nobody in
+    // The organization joined the key in `20261022000007` — a rate resolved for nobody in
     // particular was how one organization's negotiated rate could leak into another's usage.
     expect(rows).toEqual([
       { proname: 'retail_rate_at', args: 'p_meter_id text, p_currency text, p_organization_id uuid, p_at timestamp with time zone' },

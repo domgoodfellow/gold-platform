@@ -154,7 +154,7 @@ describe('a work item has many resources', () => {
       // they were before it ran — so what is proved is the statement that shipped, on data this
       // test controls rather than whatever the local database happens to hold.
       const file = readFileSync(
-        join(__dirname, '..', '..', '..', '..', '..', 'supabase', 'migrations', '20261116000001_a_work_item_has_many_resources_expand.sql'),
+        join(__dirname, '..', '..', '..', '..', '..', 'supabase', 'migrations', '20261022000035_a_work_item_has_many_resources_expand.sql'),
         'utf8',
       );
       const statement = /insert into public\.work_item_resource_assignments[\s\S]+?where w\.resource_id is not null;/i.exec(file)?.[0];
