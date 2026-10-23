@@ -52,7 +52,7 @@ test.describe('responsive shell', () => {
       await expect(sidebar(page)).toHaveCount(0);
       await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();
       const sheet = page.locator('[data-slot="sidebar"][data-mobile="true"]');
-      await expect(sheet.getByRole('link', { name: 'Customers', exact: true })).toBeVisible();
+      await expect(sheet.getByRole('link', { name: 'Contacts', exact: true })).toBeVisible();
       expect((await geometry(page)).overflow).toBe(false);
     });
   }
@@ -78,7 +78,7 @@ test.describe('responsive shell', () => {
       // The page keeps its rail-width layout under the overlay.
       expect(expanded.main).toBe(rail.main);
       expect(await sidebar(page).evaluate((element) => element.contains(document.activeElement))).toBe(true);
-      await expect(page.locator('[data-slot="sidebar"]').getByRole('link', { name: 'Customers', exact: true })).toBeVisible();
+      await expect(page.locator('[data-slot="sidebar"]').getByRole('link', { name: 'Contacts', exact: true })).toBeVisible();
 
       await page.keyboard.press('Escape');
       await expect(sidebar(page)).toHaveAttribute('data-state', 'collapsed');
@@ -171,7 +171,7 @@ test.describe('responsive shell', () => {
     expect(desktop).toMatch(/data-slot="sidebar"[^>]*data-state="expanded"|data-state="expanded"[^>]*data-slot="sidebar"/);
   });
 
-  test('tablet overlay offers the same destinations as the desktop sidebar, and the workspace heading still opens Home', async ({ page }) => {
+  test('tablet overlay offers the same destinations as desktop, with explicit Dashboard navigation', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`/organizations/${organizationId}/crm/contacts`);
@@ -182,8 +182,8 @@ test.describe('responsive shell', () => {
     expect(await navigationHrefs(page)).toEqual(desktop);
     // The header carries no copy of the workspace destinations (ADR-048).
     await expect(page.locator('[data-header-controls] nav')).toHaveCount(0);
-    const heading = page.locator('[data-slot="sidebar"]').getByRole('link', { name: /^CRM/ }).first();
-    await heading.click();
+    await expect(sidebar(page).getByRole('heading', { name: 'CRM', exact: true })).toBeVisible();
+    await sidebar(page).getByRole('link', { name: 'Dashboard', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/crm$`));
     await expect(sidebar(page)).not.toHaveAttribute('data-overlay', 'true');
   });

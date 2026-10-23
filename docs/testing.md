@@ -2,6 +2,16 @@
 
 ## Purpose
 
+### Disposable V1.1 browser acceptance
+
+`playwright.stabilization.config.ts` runs Contacts identity/affiliations/classification, reviewed CSV duplicates and repeat imports, simulated worksheet removal, existing contact history, legacy CRM redirects, workspace Dashboard navigation, breadcrumbs and responsive shell checks. It uses the manifest-owned isolated setup/teardown, not shared demo organizations. Platform staff journeys require a separate operating-organization fixture and are excluded explicitly.
+
+For a clean database run, copy `supabase/config.toml`, `supabase/migrations` and `supabase/templates` into an ignored disposable project directory. Choose a unique project ID and unused API/database/mail/shadow ports; do not copy the linked-project metadata. The repository has no `seed.sql`, so set the disposable copy's `db.seed.sql_paths` to `[]`. Run `supabase start --workdir <disposable-directory>` to apply the complete migration chain to new volumes. Never run `demo:fresh` or `db reset` against the development project for this verification.
+
+Read the disposable project's `supabase status --workdir <disposable-directory> --output json` privately. Set `SUPABASE_URL`, `SUPABASE_DB_URL`, `DATABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_MAIL_URL` from that project's API, database, keys and mail URL. Set the web process's `NEXT_PUBLIC_SUPABASE_URL` and public key to the same project. Start a separate app port with `GOLD_NEXT_DIST_DIR` set to a separate build directory, and set `E2E_BASE_URL` to that app. Then run `pnpm --filter @gold/web exec playwright test --config playwright.stabilization.config.ts`. Keep generated credentials, authentication states and screenshots in ignored artifacts. Database regression tests should use a separate disposable project so global fixture changes cannot affect the browser run.
+
+The ordinary demo setup is not a substitute: its empty-database guard and plan/configuration requirements must both succeed before the default complete browser suite is usable. Some other browser specs obtain `supabase status` from the root project or hard-code mail ports; inspect those targets before running them against a separate stack. A selected-suite pass does not establish complete-suite or live-provider acceptance. Worksheet snapshots in the CRM acceptance test simulate the provider through the authorized local machine functions; they do not exercise Google/Microsoft OAuth or automatic CRM scheduling.
+
 ### Imported connector checks
 
 `node-contract` runs `apps/api/library/runtime.test.mjs` in the fast tier and is included by `pnpm test:contract`. The API package's `check` runs metadata drift checks and these runtime tests. They verify signed request integrity, expiry, reviewed reads, connector matching, input refusal and secret redaction without contacting a vendor.

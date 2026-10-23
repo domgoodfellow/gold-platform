@@ -25,15 +25,20 @@ function local(value: string) {
  * run. Ordered so each is emptied before any table it depends on; a cycle among them is refused.
  */
 async function blockingTables(pg: Client, organizationIds: string[]): Promise<string[]> {
-  const { rows: edges } = await pg.query<{ child: string; parent: string }>(`
-    select c.conrelid::regclass::text as child, c.confrelid::regclass::text as parent
+  const { rows: allEdges } = await pg.query<{ child: string; parent: string; restricted: boolean }>(`
+    select c.conrelid::regclass::text as child, c.confrelid::regclass::text as parent,
+           c.confdeltype in ('a', 'r') as restricted
     from pg_constraint c
-    where c.contype = 'f' and c.confdeltype in ('a', 'r') and c.conrelid <> c.confrelid`);
-  const reachable = new Set<string>();
+    where c.contype = 'f' and c.conrelid <> c.confrelid`);
+  const descendants = new Set<string>();
   const add = (parent: string) => {
-    for (const edge of edges) if (edge.parent === parent && !reachable.has(edge.child)) { reachable.add(edge.child); add(edge.child); }
+    for (const edge of allEdges) if (edge.parent === parent && !descendants.has(edge.child)) { descendants.add(edge.child); add(edge.child); }
   };
   add('organizations');
+  // A cascading business child may itself have a restrictive child (Contacts →
+  // affiliations). Follow cascades to find those blockers; never disable their FKs.
+  const edges = allEdges.filter(edge => edge.restricted);
+  const reachable = new Set(edges.filter(edge => edge.parent === 'organizations' || descendants.has(edge.parent)).map(edge => edge.child));
   const { rows: scoped } = await pg.query<{ name: string }>(`
     select c.oid::regclass::text as name from pg_class c join pg_attribute a on a.attrelid = c.oid
     where a.attname = 'organization_id' and not a.attisdropped and c.relkind = 'r'`);

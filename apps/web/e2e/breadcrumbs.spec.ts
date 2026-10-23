@@ -9,14 +9,14 @@ import { loadDemoContext, platformUrl, OWNER_STORAGE_STATE, STAFF_STORAGE_STATE 
 test.describe('workspace and record breadcrumbs', () => {
   test.use({ storageState: OWNER_STORAGE_STATE });
 
-  test('a workspace root publishes only its own name, non-linked', async ({ page }) => {
+  test('a workspace root publishes Dashboard as its current location', async ({ page }) => {
     const ctx = loadDemoContext();
     await page.goto(`/organizations/${ctx.organizationId}/field`);
     const trail = page.getByRole('navigation', { name: 'breadcrumb' });
     await expect(trail).toBeVisible();
-    await expect(trail.getByText('Work', { exact: true })).toBeVisible();
-    // No repeated "Field / Field" and no separator — a workspace Home has zero ancestors.
-    await expect(trail.locator('a')).toHaveCount(0);
+    await expect(trail.getByText('Dashboard', { exact: true })).toBeVisible();
+    // ADR-049 explicitly names the workspace landing Dashboard.
+    await expect(trail.locator('a[href]')).toHaveCount(0);
   });
 
   test('a workspace child page links back to its workspace Home', async ({ page }) => {
@@ -122,8 +122,8 @@ test.describe('responsive page location', () => {
     await trigger.focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('menuitem', { name: 'Resources', exact: true })).toHaveAttribute('aria-current', 'page');
-    // ADR-047: Work's Home is reached from its heading in the menu, not an Overview item.
-    await expect(page.getByRole('menuitem', { name: 'Work home', exact: true })).toHaveAttribute('href', `${base}/field`);
+    // ADR-049 makes Dashboard explicit in every workspace's contextual navigation.
+    await expect(page.getByRole('menuitem', { name: 'Dashboard', exact: true })).toHaveAttribute('href', `${base}/field`);
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Escape');
     await expect(page.getByRole('menu')).toHaveCount(0);
@@ -133,7 +133,7 @@ test.describe('responsive page location', () => {
     await page.mouse.click(10, 600);
     await expect(page.getByRole('menu')).toHaveCount(0);
     await trigger.click();
-    await page.getByRole('menuitem', { name: 'Work home', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Dashboard', exact: true }).click();
     await expect(page).toHaveURL(`${base}/field`);
     await expect(page.getByRole('menu')).toHaveCount(0);
   });

@@ -15,6 +15,7 @@ import {
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
+const MAIL_URL = process.env.SUPABASE_MAIL_URL ?? 'http://127.0.0.1:54324';
 
 function anonClient(): SupabaseClient {
   return createClient(SUPABASE_URL, ANON_KEY, {
@@ -24,12 +25,13 @@ function anonClient(): SupabaseClient {
 
 async function signupCode(address: string, previousCode?: string): Promise<string> {
   if (!['localhost', '127.0.0.1'].includes(new URL(SUPABASE_URL).hostname)) throw new Error('Mail capture fixtures are local-only.');
+  if (!['localhost', '127.0.0.1'].includes(new URL(MAIL_URL).hostname)) throw new Error('Mail capture fixtures require a loopback mail service.');
   for (let attempt = 0; attempt < 30; attempt++) {
-    const inbox = await (await fetch('http://127.0.0.1:54324/api/v1/messages')).json();
+    const inbox = await (await fetch(`${MAIL_URL}/api/v1/messages`)).json();
     const message = inbox.messages?.find((entry: { To: { Address: string }[]; Subject: string }) =>
       entry.To.some((recipient) => recipient.Address === address) && entry.Subject === 'Verify your GildOps email');
     if (message) {
-      const content = await (await fetch(`http://127.0.0.1:54324/api/v1/message/${message.ID}`)).json();
+      const content = await (await fetch(`${MAIL_URL}/api/v1/message/${message.ID}`)).json();
       const code = content.HTML?.match(/>([0-9]{6})<\/p>/)?.[1];
       if (code && code !== previousCode) return code;
     }

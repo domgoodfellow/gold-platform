@@ -1,4 +1,4 @@
-import { WORKSPACES as REGISTERED_WORKSPACES } from '../lib/navigation';
+import { areaHref, WORKSPACES as REGISTERED_WORKSPACES } from '../lib/navigation';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -481,7 +481,11 @@ test('the header carries page identity and actions, never the workspace destinat
   expect(focus.ring !== 'none' || focus.outline !== 'none', 'Calendar shows focus').toBe(true);
 
   // Panels open: page identity stays single and in place.
-  for (const [name, route, panel] of [['support-configure', '/support', 'Configure'], ['customers-configure', '/crm/contacts', 'Configure'], ['customers-agent', '/crm/contacts', 'Agent']] as const) {
+  // Contacts' link-only Configure panel was retired; its canonical configuration
+  // remains in workspace navigation, and Agent still opens over the directory.
+  await page.goto(`${base}/crm/contacts`);
+  await expect(page.getByRole('button', { name: 'Configure', exact: true })).toHaveCount(0);
+  for (const [name, route, panel] of [['support-configure', '/support', 'Configure'], ['customers-agent', '/crm/contacts', 'Agent']] as const) {
     for (const width of [820, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(`${base}${route}`);
@@ -552,15 +556,15 @@ test('the workspace identity stays distinct from Dashboard, expanded and collaps
 test('all nine registered workspaces expose one explicit Dashboard at each responsive width', async ({page}) => {
   test.setTimeout(600_000);
   await signIn(page,fixture.owner);
-  const base=`/organizations/${fixture.full}`;
   for (const width of [390,820,1440]) {
     await page.setViewportSize({width,height:900});
     for (const workspace of REGISTERED_WORKSPACES) {
-      await page.goto(`${base}/${workspace.home}`);
+      const homeHref=areaHref(fixture.full,workspace.home);
+      await page.goto(homeHref);
       await expect(page.getByRole('heading',{level:1})).toHaveText(['Dashboard']);
       const nav=await businessNav(page,width);
       const dashboard=nav.getByRole('link',{name:'Dashboard',exact:true});
-      await expect(dashboard).toHaveCount(1);await expect(dashboard).toHaveAttribute('href',`${base}/${workspace.home}`);
+      await expect(dashboard).toHaveCount(1);await expect(dashboard).toHaveAttribute('href',homeHref);
       await expect(dashboard).toHaveAttribute('aria-current','page');
       await expect(dashboard.locator('svg.lucide-gauge')).toHaveCount(1);
       await expect(nav.locator('[data-workspace-heading] a')).toHaveCount(0);
@@ -582,7 +586,8 @@ test('contact lifecycle, multiple opportunities, and reviewed intake from Contac
   await page.goto(`${base}/crm/contacts`);
   await page.getByRole('button',{name:'Add contact',exact:true}).click();
   let dialog=page.getByRole('dialog');
-  await dialog.getByLabel('Name',{exact:true}).fill(name);await dialog.getByRole('textbox',{name:/^Email/}).fill(email);
+  await dialog.getByLabel('Contact type',{exact:true}).selectOption('person');
+  await dialog.getByLabel('Person name',{exact:true}).fill(name);await dialog.getByRole('textbox',{name:/^Email/}).fill(email);
   await expect(dialog.getByLabel('Lifecycle',{exact:true})).toHaveValue('lead');
   await dialog.getByLabel('Lead temperature').selectOption('warm');
   await dialog.getByRole('button',{name:'Add contact',exact:true}).click();await expect(dialog).toHaveCount(0);

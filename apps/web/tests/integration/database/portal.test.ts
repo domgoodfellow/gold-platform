@@ -128,7 +128,7 @@ async function newBusiness(label: string): Promise<Business> {
 
 /** Backdate an exchange. No signed-in role can write the column, which is the point; a test reaches it as the database owner. */
 async function expire(userId: string): Promise<void> {
-  const pg = new Client({ connectionString: process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' });
+  const pg = new Client({ connectionString: process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' });
   await pg.connect();
   try {
     await pg.query("update public.external_actors set portal_expires_at = now() - interval '1 second' where user_id = $1", [userId]);
