@@ -1359,6 +1359,7 @@
       ],
       "note": "Also runs a pure view resolver."
     },
+    "apps/web/tests/architecture/static/migration-versions.test.ts": {"category": "architecture-static", "concerns": ["data", "migrations"], "note": "Migration naming contract: unique increasing YYYYMMDDHHMMSS UTC versions, none in the future, with the 40 renumbered 2026-10-22 versions recorded as exact historical exceptions (docs/data.md)."},
     "apps/web/tests/architecture/static/test-manifest.test.ts": {
       "category": "architecture-static",
       "concerns": [

@@ -999,13 +999,17 @@ Rules:
 
 ### Migration version numbers
 
-A migration file is named `YYYYMMDDNNNNNN_purpose.sql`. The first eight digits are the real date the migration was written, never a future date. The last six digits are a counter within that day (`000001`, `000002`, …), not a clock time. Supabase applies files in name order and refuses a new file that sorts before one already applied, so:
+A migration file is named `YYYYMMDDHHMMSS_purpose.sql`: Supabase's standard UTC timestamp. Create every new migration with `supabase migration new <purpose>` (run through the repository CLI, `pnpm exec supabase`), which writes the current UTC time. Do not type a version by hand, do not use a future date, and do not use the last six digits as a counter.
 
-1. take today's date; if today already has migrations, use the next counter after the highest one;
-2. if the highest existing version is dated after today (which should not happen), keep that date and raise its counter rather than moving the date further forward;
-3. never move the date forward to get a later name, and never use a clock time from `supabase migration new`; rename such a file to the day-counter form before it is applied.
+Supabase applies files in version order and refuses a new file that sorts before one already applied. Versions must be unique, valid timestamps, later than every existing version, and no later than the time they were created. `tests/architecture/static/migration-versions.test.ts` enforces this for every file not listed as a historical exception.
 
-On 2026-10-22, 104 files that broke this rule (100 future-dated through `20261230…`, and four clock-time names) were renumbered in their original order: the future-dated ones became `20261022000002`–`20261022000101`, and the clock-time ones became the next counters of their own day. File contents were not changed. The local ledger was updated in place, and the hosted ledger (`nuceqypuwrjavrwiloda`) was corrected with `supabase migration repair` (new versions marked applied, old versions marked reverted). Afterwards, hosted listed all 265 applied migrations against matching local files, with only the four unreleased CRM migrations (`20261022000098`–`20261022000101`) pending. Any other database copy with the old numbers (another developer's local database, a separate hosted project) needs the same repair before its next migration run: mark the new versions applied and the old ones reverted. Old-to-new pairs can be recovered from git history (`git log --follow` on a migration file).
+Historical exceptions (keep them; do not rename applied migrations):
+
+- Before 2026-10-22, most files used `YYYYMMDD` followed by a counter in the time field (`000001`, `000002`, …). Counters up to `000059` are still valid times (00:00:01 to 00:00:59), so these comply.
+- On 2026-10-22, 104 files were renumbered in their original order with contents unchanged. 100 had future dates (up to `20261230…`) and became `20261022000002`–`20261022000101`. Four had clock times and became the next counter of their own day. Of these, `20261022000060`–`20261022000099` (40 files) have a seconds value of 60–99, so they are not valid timestamps. Supabase CLI 2.115.0 lists, orders and applies them correctly and shows the raw number instead of a time. They are recorded as exceptions in the test.
+- The local ledger was updated in place, and the hosted ledger (`nuceqypuwrjavrwiloda`) was corrected with `supabase migration repair` (new versions applied, old versions reverted). Any other database still holding the old numbers needs the same repair before its next migration run. Old-to-new pairs are recoverable with `git log --follow` on a migration file.
+
+The first migration after these exceptions only has to sort after `20261022000101`, which any `supabase migration new` timestamp from 2026-10-22T00:01:02Z onward does.
 
 ---
 

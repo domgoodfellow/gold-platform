@@ -6,6 +6,8 @@ import { createContact } from '@/lib/domain/contacts/contacts';
 import { createLocation, linkCustomerLocation } from '@/lib/domain/locations/locations';
 import { configureBusiness } from '@/lib/domain/configuration/configure';
 import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
+import { createPlan, grantPlanModule, grantPlanProduct } from '@/lib/domain/catalogue/plans';
+import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { provisionOrganization } from '@/lib/domain/platform/provision';
 import { addPricedLine } from '@/lib/domain/pricing/prices';
 import { createDashboard, pinReport } from '@/lib/domain/reporting/dashboards';
@@ -213,6 +215,7 @@ async function buildJob(
 async function standUp(
   staff: SupabaseClient,
   business: DemoBusiness,
+  planId: string,
 ): Promise<{ organizationId: string }> {
   const ownerDb = await account(business.owner.email);
   const memberDb = await account(business.member.email);
@@ -230,6 +233,10 @@ async function standUp(
     timezone: business.timezone,
     currency: business.currency,
   });
+
+  // A sold business has a plan before it is configured: `configureBusiness` refuses any module
+  // outside the plan. The demo plan is assigned through the same command a sale uses.
+  await recordPlanAssignment(staff, { organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
 
   // Modules are part of the shape now, so `configureBusiness` switches them on — one path,
   // the same one a proposal takes.
@@ -416,10 +423,31 @@ async function main(): Promise<void> {
     });
     if (signIn.error) throw signIn.error;
 
+    // One deterministic, non-billable demo plan, created by platform staff through the catalogue
+    // commands. It grants everything except online booking and card payments: launch requires each
+    // of those to be set up (a public booking address, a payment account), and the demo uses
+    // neither, so selling them would only make the demo businesses unlaunchable.
+    const planId = await createPlan(staff, {
+      key: 'demo_complete', kind: 'plan', label: 'Demo',
+      description: 'Local demo only: every catalogue module except online booking and card payments.', billable: false,
+    });
+    const NOT_SOLD = new Set(['payments', 'public_booking', 'forms_intake']);
+    const modules = await pg.query<{ product: string; module: string; id: string }>(
+      `select p.key as product, m.key as module, m.id from public.platform_catalog_modules m
+         join public.platform_catalog_products p on p.id = m.product_id order by p.key, m.key`,
+    );
+    const partial = new Set(modules.rows.filter((row) => NOT_SOLD.has(row.module)).map((row) => row.product));
+    for (const product of new Set(modules.rows.map((row) => row.product))) {
+      if (!partial.has(product)) await grantPlanProduct(staff, { planId, productKey: product });
+    }
+    for (const row of modules.rows) {
+      if (partial.has(row.product) && !NOT_SOLD.has(row.module)) await grantPlanModule(staff, { planId, moduleId: row.id });
+    }
+
     const stood: { business: DemoBusiness; organizationId: string }[] = [];
     for (const business of BUSINESSES) {
       process.stdout.write(`Standing up ${business.name}…\n`);
-      const { organizationId } = await standUp(staff, business);
+      const { organizationId } = await standUp(staff, business, planId);
       stood.push({ business, organizationId });
     }
 

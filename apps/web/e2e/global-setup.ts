@@ -39,8 +39,10 @@ import { createCallOutcome, listCallOutcomes } from '../lib/domain/reception/out
  * script's own account passwords are not secret, only local.
  */
 
-const AUTH_DIR = path.join(__dirname, '.auth');
-const CONTEXT_FILE = path.join(__dirname, '.demo-context.json');
+// The same directory the specs read (helpers.ts): `E2E_FIXTURE_DIR` when set, else beside this file.
+const FIXTURE_DIR = process.env.E2E_FIXTURE_DIR ?? __dirname;
+const AUTH_DIR = path.join(FIXTURE_DIR, '.auth');
+const CONTEXT_FILE = path.join(FIXTURE_DIR, '.demo-context.json');
 
 export type DemoContext = {
   organizationId: string;
@@ -292,7 +294,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   // A real, signed-in browser session, saved once so every spec starts already logged in
   // rather than re-running the login form per test — faster, and it isolates "can this
   // specific journey be reached" from "does login itself work" (covered by its own spec).
-  if (!existsSync(AUTH_DIR)) mkdirSync(AUTH_DIR);
+  if (!existsSync(AUTH_DIR)) mkdirSync(AUTH_DIR, { recursive: true });
 
   const baseURL = config.projects[0]?.use?.baseURL ?? 'http://localhost:3000';
   const browser = await chromium.launch();

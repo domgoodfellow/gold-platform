@@ -94,7 +94,7 @@ commercial mutations. Existing provider, webhook, billing and tenant suites rema
 Before adding the P0 migrations, the inspected local ledger contained all 246 repository versions
 through `20261022000078`, with no extra/missing versions; stored SQL matched repository files after
 comment/format normalization. The P0 migrations deliberately follow that dependency baseline,
-rather than using a wall-clock timestamp that would sort before existing migrations.
+rather than using a wall-clock timestamp that would sort before existing migrations (a historical exception; new migrations follow `docs/data.md`, Migration version numbers).
 Local upgrade/test evidence does not establish a hosted baseline or authorize a hosted rollout.
 
 ### Provider-sandbox acceptance preparation (Batch F)
