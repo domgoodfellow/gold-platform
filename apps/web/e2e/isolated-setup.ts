@@ -1,3 +1,4 @@
+import { assertLocalE2eEnvironment } from './environment-guard';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -35,6 +36,7 @@ function local(url: string) {
 }
 
 export default async function isolatedSetup(config: FullConfig): Promise<void> {
+  assertLocalE2eEnvironment();
   loadEnv({ path: path.join(__dirname, '..', '..', '..', '.env.test'), quiet: true });
   const url = process.env.SUPABASE_URL!;
   const connection = process.env.SUPABASE_DB_URL!;

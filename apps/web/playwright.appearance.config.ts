@@ -1,4 +1,7 @@
 import { defineConfig } from '@playwright/test';
+import { assertLocalE2eEnvironment } from './e2e/environment-guard';
+
+assertLocalE2eEnvironment();
 
 /** Local account fixtures, independent of the larger demo bootstrap. */
 export default defineConfig({

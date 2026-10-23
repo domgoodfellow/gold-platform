@@ -1,4 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
+import { assertLocalE2eEnvironment } from './e2e/environment-guard';
+
+// Every config that builds on this one refuses a hosted database or live provider keys.
+assertLocalE2eEnvironment();
 
 /**
  * A small, deterministic browser harness — proof for the UX journeys a unit test cannot reach,

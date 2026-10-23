@@ -107,6 +107,8 @@ const ACCEPT_INVITE_PREFIX = '/organizations/accept-invite/';
 export function isPublic(pathname: string): boolean {
   return (
     (process.env.NODE_ENV === 'development' && pathname === '/dev/design-system') ||
+    // Browser-harness identity check; the route answers 404 unless the caller holds the instance token.
+    (process.env.NODE_ENV !== 'production' && pathname === '/api/e2e/instance') ||
     PUBLIC_PATHS.includes(pathname) ||
     pathname.startsWith(BOOKING_PREFIX) ||
     pathname === PORTAL_HOME ||

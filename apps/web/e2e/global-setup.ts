@@ -1,3 +1,4 @@
+import { assertLocalE2eEnvironment } from './environment-guard';
 import { BUCKET } from '../lib/domain/documents/documents';
 import { supabaseFileStore } from '../lib/adapters/storage/supabase-file-store';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -64,6 +65,7 @@ function refuseAnythingButLocalhost(url: string): void {
 }
 
 export default async function globalSetup(config: FullConfig): Promise<void> {
+  assertLocalE2eEnvironment();
   loadEnv({ path: path.join(__dirname, '..', '..', '..', '.env.test') });
 
   const SUPABASE_URL = process.env.SUPABASE_URL ?? '';
