@@ -3,6 +3,7 @@ import { BUCKET } from '../lib/domain/documents/documents';
 import { supabaseFileStore } from '../lib/adapters/storage/supabase-file-store';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { Client } from 'pg';
 import { config as loadEnv } from 'dotenv';
 import { chromium, type FullConfig } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
@@ -279,6 +280,17 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
       currency: 'EUR',
     });
     await bootstrapOperatingOrganization(goldStaffDb, { organizationId: goldOrganizationId });
+  }
+
+  // GildOps' own public homepage, which the public marketing pages render. No application command
+  // publishes the platform site: deployment runs the platform bootstrap once, and so does this
+  // fixture, over the same direct connection the staff row needs. It is idempotent.
+  const platformDb = new Client({ connectionString: process.env.SUPABASE_DB_URL });
+  await platformDb.connect();
+  try {
+    await platformDb.query('select app.bootstrap_gold_public_site($1)', [goldOrganizationId]);
+  } finally {
+    await platformDb.end();
   }
 
   const context: DemoContext = {

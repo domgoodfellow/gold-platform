@@ -63,9 +63,11 @@ test.describe('Studio forms', () => {
     await page.getByRole('button', { name: 'Publish' }).click();
     await expect(page.getByText('Published. Visitors now see this version.')).toBeVisible();
     const publicPath = (await page.getByRole('link', { name: 'Open public form' }).getAttribute('href'))!;
-    const originalTitle = await page.getByRole('heading', { level: 2 }).last().textContent();
 
     await page.getByRole('button', { name: 'Edit form' }).click();
+    // The published title, read from the form's own title field rather than from page headings.
+    const originalTitle = await page.getByLabel('Title shown to visitors').inputValue();
+    expect(originalTitle).not.toBe('');
     await page.getByLabel('Title shown to visitors').fill('A brand new title');
     await page.getByRole('button', { name: 'Save' }).click();
     await expect(page.getByText('Draft saved.')).toBeVisible();

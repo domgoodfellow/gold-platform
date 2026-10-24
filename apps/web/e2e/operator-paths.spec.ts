@@ -101,6 +101,7 @@ test.describe('Customer Portal — making and revoking a link', () => {
   test('makes a portal link, then revokes it into history', async ({ page }) => {
     const ctx = loadDemoContext();
     await page.goto(`/organizations/${ctx.organizationId}/crm/contacts/${ctx.customerId}`);
+    await page.getByRole('tab', { name: 'Portal' }).click();
 
     await page.getByRole('button', { name: 'Make a portal link' }).click();
 
@@ -134,6 +135,8 @@ test.describe('Customer Portal — a caller without customer.create', () => {
   test('sees why, not a way to manage portal access', async ({ page }) => {
     const ctx = loadDemoContext();
     await page.goto(`/organizations/${ctx.organizationId}/crm/contacts/${ctx.customerId}`);
+    // Open the Portal tab first, so the absent control is checked where it would appear.
+    await page.getByRole('tab', { name: 'Portal' }).click();
 
     await expect(page.getByRole('button', { name: 'Make a portal link' })).toHaveCount(0);
     await expect(

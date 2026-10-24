@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SidebarMenuButton, SidebarProvider, useSidebar } from '@gold/ui/components/sidebar';
@@ -19,15 +19,15 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-let controls: ReturnType<typeof useSidebar> | null = null;
-function Capture() { controls = useSidebar(); return null; }
+// Collapses the sidebar without moving the pointer, as Escape or the header toggle would.
+function Collapse() { const { setOpen } = useSidebar(); return <button type="button" onClick={() => setOpen(false)}>Collapse</button>; }
 
 function renderRail(open: boolean) {
   return render(
     <TooltipProvider delayDuration={0}>
       <SidebarProvider defaultOpen={open}>
-        <Capture />
         <SidebarMenuButton tooltip="Grachtwerk Verhuur">GV</SidebarMenuButton>
+        <Collapse />
       </SidebarProvider>
     </TooltipProvider>,
   );
@@ -44,7 +44,7 @@ describe('collapsed rail tooltips', () => {
     renderRail(true);
     await userEvent.hover(screen.getByRole('button', { name: 'GV' }));
     expect(screen.queryByRole('tooltip')).toBeNull();
-    act(() => controls!.setOpen(false));
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse' }));
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(screen.queryByRole('tooltip')).toBeNull();
   });
