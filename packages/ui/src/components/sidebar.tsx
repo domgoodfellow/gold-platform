@@ -634,6 +634,9 @@ function SidebarMenuButton({
   const Comp = asChild ? Slot.Root : "button"
   const { isMobile, state } = useSidebar()
   const [tooltipOpen, setTooltipOpen] = React.useState(false)
+  // A hover recorded while expanded must not surface when the rail collapses: it would open a
+  // tooltip away from the pointer, over the header's own controls.
+  React.useEffect(() => setTooltipOpen(false), [state])
 
   const button = (
     <Comp
@@ -659,7 +662,7 @@ function SidebarMenuButton({
   // Only the collapsed rail shows names as tooltips. Expanded, the tooltip stays closed rather than
   // merely hidden, so an invisible tooltip never takes the Escape meant for the navigation.
   return (
-    <Tooltip open={state === "collapsed" && tooltipOpen} onOpenChange={setTooltipOpen}>
+    <Tooltip open={state === "collapsed" && tooltipOpen} onOpenChange={(open) => setTooltipOpen(open && state === "collapsed")}>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent
         side="right"

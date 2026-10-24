@@ -17,6 +17,8 @@ import { createResource } from '@/lib/domain/resources/resources';
 import { scheduleWorkItem } from '@/lib/domain/scheduling/schedule';
 import { addMember } from '@/lib/domain/tenancy/members';
 import { launchOrganization } from '@/lib/domain/tenancy/lifecycle';
+import { getOrganization, updateOrganization } from '@/lib/domain/tenancy/organizations';
+import { listWorkItemTypes, setTypeBookable } from '@/lib/domain/work-items/types';
 import { recordCost, recordTime } from '@/lib/domain/work-items/consumption';
 import { updateWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { changeWorkItemStatus } from '@/lib/domain/work-items/transitions';
@@ -371,6 +373,16 @@ async function standUp(
   // Three months of jobs, invoices and reports is not a business "still being set up" — the
   // real path a person building one of these by hand would have launched it long before now,
   // and the demo-seed decision says this script takes the real path, not a shortcut around it.
+  // Online booking is sold, so launch requires it to be usable: a public address and one bookable
+  // type, set the way the owner sets them in Settings and Work configuration.
+  const organization = (await getOrganization(ownerDb, organizationId))!;
+  await updateOrganization(ownerDb, {
+    id: organizationId, name: organization.name, timezone: organization.timezone, currency: organization.currency,
+    bufferMinutes: organization.bufferMinutes, slug: business.owner.email.split('@')[1].split('.')[0],
+  });
+  const [bookableType] = await listWorkItemTypes(ownerDb, { organizationId });
+  await setTypeBookable(ownerDb, { id: bookableType.id, statusId: configured.statusIds[0], durationMinutes: 60 });
+
   await launchOrganization(ownerDb, { organizationId });
 
   return { organizationId };
@@ -424,14 +436,13 @@ async function main(): Promise<void> {
     if (signIn.error) throw signIn.error;
 
     // One deterministic, non-billable demo plan, created by platform staff through the catalogue
-    // commands. It grants everything except online booking and card payments: launch requires each
-    // of those to be set up (a public booking address, a payment account), and the demo uses
-    // neither, so selling them would only make the demo businesses unlaunchable.
+    // commands. It grants everything except card payments: launch requires a connected payment
+    // account for those, which a local demo cannot have. Online booking is granted and set up below.
     const planId = await createPlan(staff, {
       key: 'demo_complete', kind: 'plan', label: 'Demo',
-      description: 'Local demo only: every catalogue module except online booking and card payments.', billable: false,
+      description: 'Local demo only: every catalogue module except card payments.', billable: false,
     });
-    const NOT_SOLD = new Set(['payments', 'public_booking', 'forms_intake']);
+    const NOT_SOLD = new Set(['payments']);
     const modules = await pg.query<{ product: string; module: string; id: string }>(
       `select p.key as product, m.key as module, m.id from public.platform_catalog_modules m
          join public.platform_catalog_products p on p.id = m.product_id order by p.key, m.key`,

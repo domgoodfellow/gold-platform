@@ -9,6 +9,8 @@ test.use({ storageState: OWNER_STORAGE_STATE });
  * record and every query value, so a bookmarked or emailed link keeps working until retirement.
  */
 test('old CRM links land on the canonical page with the same record and query', async ({ page }) => {
+  // Nine full page loads; on a development server each first visit also compiles the page.
+  test.setTimeout(90_000);
   const { organizationId, customerId } = loadDemoContext();
   const base = `/organizations/${organizationId}`;
   const cases: [string, string][] = [

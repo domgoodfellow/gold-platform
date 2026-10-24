@@ -88,9 +88,12 @@ test.describe('a tenant owner', () => {
     const {organizationId}=loadDemoContext();const base=`/organizations/${organizationId}`;
     await page.goto(`${base}/home`);
     const links=await sidebar(page).getByRole('link').evaluateAll(elements=>elements.map(element=>element.getAttribute('href')));
-    await page.locator('[data-slot="sidebar-container"]').evaluate(element=>element.setAttribute('data-persistence-probe','retained'));
-    for(const path of ['sales','comms','field','finance','ai']) {
+    // The probe proves the sidebar survives client navigation; a full load (reload, goto) rightly
+    // discards it, so it is placed again before each workspace is entered.
+    const placeProbe=()=>page.locator('[data-slot="sidebar-container"]').evaluate(element=>element.setAttribute('data-persistence-probe','retained'));
+    for(const path of ['crm','comms','field','finance','ai']) {
       if(!links.includes(`${base}/${path}`))continue;
+      await placeProbe();
       await sidebar(page).locator(`a[href="${base}/${path}"]`).click();
       await expect(page).toHaveURL(`${base}/${path}`);
       await expect(sidebar(page).getByRole('link',{name:'Home'})).toBeVisible();
