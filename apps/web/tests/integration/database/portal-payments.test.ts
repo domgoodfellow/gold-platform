@@ -21,6 +21,10 @@ import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
+import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
+import { createPlan, grantPlanProduct } from '@/lib/domain/catalogue/plans';
+import { DEFAULT_PORTAL_CONTENT } from '@/lib/domain/portal/composition';
+import { portalEditorState, publishPortalDraft, savePortalDraft, submitPortalDraft } from '@/lib/domain/portal/definitions';
 
 /**
  * A customer initiating their own card payment — the external axis's narrowest door yet.
@@ -474,5 +478,64 @@ describe('the operator\'s own reference-update grant (20260920000001)', () => {
       .eq('id', requestId)
       .single();
     expect(data!.provider_reference).toBe(requestId);
+  });
+});
+
+/**
+ * A payable invoice is still refused when the business is not entitled to card payments by its
+ * plan, or when its published Portal does not offer payments on invoices. Both gates live in the
+ * public entry points (`begin_external_card_payment`, `external_card_payment_availability`); a
+ * deployment that lacked them still passed the module-switched-off case above, so each gate is
+ * proved here on its own with everything else in place.
+ */
+describe('card payments also require plan entitlement and Portal invoice payments', () => {
+  let unsold: Business;
+  let hidden: Business;
+
+  async function availability(db: SupabaseClient, invoiceId: string) {
+    return db.rpc('external_card_payment_availability', { p_invoice_id: invoiceId, p_provider: PROVIDER });
+  }
+
+  beforeAll(async () => {
+    staff ??= await asPlatformStaff();
+    unsold = await newBusiness('pp-unsold', { cardPayments: true });
+    hidden = await newBusiness('pp-hidden', { cardPayments: true });
+
+    // A plan that sells the workspace product only: card payments are switched on and paid for,
+    // but not entitled.
+    const planId = await createPlan(staff, {
+      key: `pp_unsold_${randomUUID().slice(0, 8)}`, kind: 'plan', label: 'No card payments',
+      description: 'Test plan without card payments.', billable: false,
+    });
+    await grantPlanProduct(staff, { planId, productKey: 'workspace' });
+    await recordPlanAssignment(staff, { organizationId: unsold.organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
+
+    // A published Portal whose invoices module does not offer payments.
+    await recordCommercialTerm(staff, { organizationId: hidden.organizationId, productKey: 'module:portal', periodStart: '2026-01-01', periodEnd: '9999-12-31', priceMinor: 0, currency: 'CAD' });
+    const draft = structuredClone(DEFAULT_PORTAL_CONTENT);
+    draft.pages = draft.pages.map((page) => ({
+      ...page,
+      modules: page.modules.map((module) => (module.kind === 'invoices' ? { ...module, config: { ...module.config, payments: false } } : module)),
+    }));
+    const version = async () => (await portalEditorState(hidden.db as never, hidden.organizationId)).definition?.draft_version ?? 0;
+    await savePortalDraft(hidden.db as never, hidden.organizationId, await version(), draft);
+    await submitPortalDraft(hidden.db as never, hidden.organizationId, await version());
+    await publishPortalDraft(hidden.db as never, hidden.organizationId, await version());
+  });
+
+  it('refuses a business whose plan does not include card payments', async () => {
+    const db = await recognised(unsold, unsold.customerId);
+    const { data, error } = await begin(db, unsold.invoiceId);
+    expect(data).toBeNull();
+    expect(error?.code).toBe('42501');
+    expect((await availability(db, unsold.invoiceId)).data).toEqual([]);
+  });
+
+  it('refuses when the published Portal does not offer payments on invoices', async () => {
+    const db = await recognised(hidden, hidden.customerId);
+    const { data, error } = await begin(db, hidden.invoiceId);
+    expect(data).toBeNull();
+    expect(error?.code).toBe('42501');
+    expect((await availability(db, hidden.invoiceId)).data).toEqual([]);
   });
 });

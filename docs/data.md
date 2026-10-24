@@ -1013,6 +1013,8 @@ The first migration after these exceptions only has to sort after `2026102200010
 
 ---
 
+`20261024011839_reconcile_hosted_schema.sql` restores the committed end state where the hosted project held earlier drafts of `20261022000075` and `20260923000001`. It recreates `app.external_card_payment_availability` and the public card-payment entry points, which require the Portal to offer invoice payments and card payments to be switched on and entitled by the plan. It also restores two Portal function bodies, forces row-level security on `public_communication_rate_limits` and revokes every table privilege on it from `PUBLIC`, `anon` and `authenticated`; the table is reached only through `consume_public_communication_rate_limit`. On a database that already matches, only the rate-limit table's leftover default privileges change. It is ordered after `20261022000098`–`20261022000101`, and nothing is applied to hosted without separate approval.
+
 ### Expand / migrate / contract
 
 For risky live changes, prefer staged evolution:
