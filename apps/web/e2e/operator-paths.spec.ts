@@ -39,7 +39,11 @@ test.describe('People & Roles — reassigning an existing member', () => {
     const select = row.getByRole('combobox', { name: 'Role' });
     await expect(select).toHaveValue(await optionValue(select, 'Werfmedewerker'));
 
+    // The control submits itself; wait for that save to answer before reloading, or the reload
+    // can be served before the change is committed.
+    const saved = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/settings/access'));
     await select.selectOption({ label: 'Admin' });
+    expect((await saved).ok()).toBe(true);
     await expect(select).toHaveValue(await optionValue(select, 'Admin'));
     await expect(row.getByRole('alert')).toHaveCount(0);
 
