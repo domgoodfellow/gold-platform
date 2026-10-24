@@ -15868,6 +15868,32 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      crm_recent_relationships: {
+        Args: {
+          p_include_next?: boolean
+          p_limit?: number
+          p_organization_id: string
+        }
+        Returns: {
+          action: string
+          company_id: string
+          company_name: string
+          contact_id: string
+          contact_type: string
+          detail: Json
+          event_id: string
+          lifecycle: string
+          name: string
+          next_task_due_at: string
+          next_task_id: string
+          next_task_title: string
+          occurred_at: string
+        }[]
+      }
+      crm_relationship_overview: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
       custom_domain_provider_account: {
         Args: { p_domain_id: string; p_organization_id: string }
         Returns: string

@@ -263,6 +263,9 @@
       "category": "database-integration",
       "concerns": ["crm", "tenancy", "rbac"]
     },
+    "apps/web/tests/integration/database/crm-dashboard-relationships.test.ts": {"category": "database-integration", "concerns": ["crm", "tenancy", "rbac", "data integrity"], "note": "Relationship overview counts and recently active relationships: qualifying events only, routine edits ignored, bounded, tenant-isolated."},
+    "apps/web/tests/unit/crm-dashboard.test.ts": {"category": "unit", "concerns": ["crm"]},
+    "apps/web/e2e/crm-dashboard.spec.ts": {"category": "playwright-acceptance", "concerns": ["crm", "responsive", "rbac", "navigation"], "note": "Relationship-first CRM Dashboard across new, relationship-only, people-and-companies, sales-heavy and limited-member states at phone, tablet and desktop widths."},
     "apps/web/tests/unit/crm-follow-up-time.test.ts": {
       "category": "unit",
       "concerns": ["crm", "time"]

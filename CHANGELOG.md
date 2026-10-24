@@ -32,6 +32,10 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-10-23
+
+- The CRM Dashboard puts relationships first. It opens with contact counts (people, companies, unspecified), contacts added in the last 30 days and the lifecycle mix. Next comes the main list: the contacts most recently dealt with, ordered by calls, completed tasks, lifecycle changes and opportunity progress, never by edits to contact details, with an optional Group by company view. Needs attention lists overdue tasks and tasks due later today separately, and becomes one short line when nothing needs doing. Opportunities & Pipeline appears only when the business uses opportunities, or as brief setup guidance for people who can set up stages. New businesses see the same layout instead of a separate setup page.
+
 ## 2026-10-22
 
 - CRM stabilization adds disposable browser acceptance for contact identity, affiliations, reviewed imports and preserved history. Fixture teardown now finds restrictive children behind cascading relationships without disabling database enforcement; browser assertions follow the accepted Dashboard and Contacts labels. Database-test isolation supports a separate mail catcher and consistently targets the test database for Portal expiry probes. The credential boundary scan remains unchanged; privileged fake-email fixture setup lives in test support.
