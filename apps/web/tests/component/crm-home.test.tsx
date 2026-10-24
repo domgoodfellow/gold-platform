@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach,beforeEach,describe,expect,it,vi } from 'vitest';
 import { CrmHome,type CrmHomeProps } from '@/features/crm/home/crm-home';
 import type { RelationshipRow } from '@/lib/domain/contacts/relationship-activity';
-vi.mock('@/features/crm/customers/create-customer-sheet',()=>({CreateCustomerTrigger:()=> <button>Add contact</button>}));
+vi.mock('@/features/crm/intake/contact-intake',()=>({AddContactsTrigger:()=> <button>Add contacts</button>}));
 vi.mock('@/features/crm/opportunities/opportunity-sheet',()=>({OpportunitySheet:()=> <button>New opportunity</button>}));
 vi.mock('@/features/crm/follow-ups/follow-up-sheet',()=>({FollowUpSheet:({children,item}:{children?:string;item?:unknown})=><button>{children??(item?'Edit follow-up':'New follow-up')}</button>}));
 vi.mock('@/features/crm/follow-ups/follow-up-list',()=>({FollowUpList:({items}:{items:{title:string}[]})=><ul>{items.map(item=><li key={item.title}>{item.title}</li>)}</ul>}));
@@ -17,7 +17,7 @@ const defaults:CrmHomeProps={organizationId:'org',timezone:'America/Toronto',mon
   overview:{total:12,people:7,companies:3,unspecified:2,newLast30Days:4,lifecycles:{lead:5,prospect:3,customer:2,unclassified:2}},
   relationships:{rows,mode:'active',grouped:false},sales:{summary,stages:[stage,{stageId:null,name:'Unstaged',kind:null,position:null,count:2,values:[]}]} as CrmHomeProps['sales'],salesComposition:'full',
   attention:{overdue:1,today:1,noNext:5,unassigned:2},today:[{id:'today',title:'Call today'}] as CrmHomeProps['today'],overdue:[{id:'overdue',title:'Review overdue'}] as CrmHomeProps['overdue'],noNext:[{id:'o1',title:'Quiet deal',customerName:'Acme',stage:null}] as CrmHomeProps['noNext'],unassigned:[{id:'o2',title:'Nobody deal',customerName:'Acme',stage:null}] as CrmHomeProps['unassigned'],
-  followUpOptions:{organizationId:'org',timezone:'America/Toronto',members:[],mayManage:false},opportunityOptions:{organizationId:'org',stages:[],members:[],defaultCurrency:'CAD'},followUpsEnabled:true,conversionEnabled:true,mayCreate:false,mayCreateOpportunity:false,mayConfigure:false};
+  followUpOptions:{organizationId:'org',timezone:'America/Toronto',members:[],mayManage:false},opportunityOptions:{organizationId:'org',stages:[],members:[],defaultCurrency:'CAD'},followUpsEnabled:true,conversionEnabled:true,mayAddContacts:false,mayCreateOpportunity:false,mayConfigure:false};
 const relationshipOnly:Partial<CrmHomeProps>={sales:null,salesComposition:'hidden',attention:{overdue:0,today:0,noNext:0,unassigned:0},today:[],overdue:[],noNext:[],unassigned:[]};
 beforeEach(() => { Object.defineProperty(window, 'matchMedia', { configurable: true, value: vi.fn().mockImplementation((media: string) => ({ matches: false, media, addEventListener: vi.fn(), removeEventListener: vi.fn() })) }); });
 afterEach(cleanup);
@@ -30,7 +30,7 @@ describe('relationship-first CRM dashboard',()=>{
     expect(within(overview).getByRole('link',{name:'7 people'})).toHaveAttribute('href','/organizations/org/crm/contacts?contactType=person');
     expect(within(overview).getByRole('link',{name:'3 companies'})).toHaveAttribute('href','/organizations/org/crm/contacts?contactType=company');
     expect(within(overview).getByRole('link',{name:'2 unspecified'})).toHaveAttribute('href','/organizations/org/crm/contacts?contactType=unspecified');
-    expect(within(overview).getByRole('link',{name:/New contacts 4 Records added in the last 30 days/})).toBeInTheDocument();
+    expect(within(overview).getByRole('link',{name:/New contacts 4 Records added in the last 30 days/})).toHaveAttribute('href','/organizations/org/crm/contacts?added=30d');
     const lifecycles=within(overview).getByRole('list',{name:'Contacts by lifecycle'});
     expect(within(lifecycles).getByRole('link',{name:'Leads 5'})).toHaveAttribute('href','/organizations/org/crm/contacts?lifecycle=lead');
     expect(within(lifecycles).getByRole('link',{name:'Unclassified 2'})).toHaveAttribute('href','/organizations/org/crm/contacts?lifecycle=unclassified');
@@ -49,7 +49,7 @@ describe('relationship-first CRM dashboard',()=>{
     expect(within(recent).getByRole('link',{name:'Acme Ltd'})).toHaveAttribute('href','/organizations/org/crm/contacts/c1');
     expect(within(recent).getByText('Person · Prospect · Acme Ltd')).toBeInTheDocument();
     expect(within(recent).getByText('Company · Customer')).toBeInTheDocument();
-    expect(within(recent).getByText('Call completed: Call Ada Person')).toBeInTheDocument();
+    expect(within(recent).getByText('Call task completed: Call Ada Person')).toBeInTheDocument();
     expect(within(recent).getAllByText(/^Next:/)).toHaveLength(1);
   });
   it('labels the no-activity fallback as Recently added contacts, never as activity',()=>{
@@ -57,7 +57,7 @@ describe('relationship-first CRM dashboard',()=>{
     expect(screen.getByRole('region',{name:'Recently added contacts'})).toBeInTheDocument();
     expect(screen.queryByRole('region',{name:'Recently active relationships'})).toBeNull();
     expect(screen.getByText(/these are the newest records/)).toBeInTheDocument();
-    expect(screen.queryByText(/Call completed/)).toBeNull();
+    expect(screen.queryByText(/task completed/)).toBeNull();
   });
   it('groups by company from a URL-backed control without repeating any person',()=>{
     const {unmount}=render(<CrmHome {...defaults}/>);
@@ -130,23 +130,24 @@ describe('relationship-first CRM dashboard',()=>{
     expect(within(panel('Opportunities & Pipeline')).getByText('Unavailable')).toBeInTheDocument();
   });
   it('keeps the normal structure for a new organization, with add and Library import entry points',()=>{
-    render(<CrmHome {...defaults} {...relationshipOnly} salesComposition="setup" mayCreate mayConfigure importHref="/organizations/org/library/imports/new" overview={{total:0,people:0,companies:0,unspecified:0,newLast30Days:0,lifecycles:{lead:0,prospect:0,customer:0,unclassified:0}}} relationships={{rows:[],mode:'active',grouped:false}}/>);
+    render(<CrmHome {...defaults} {...relationshipOnly} salesComposition="setup" mayAddContacts mayConfigure overview={{total:0,people:0,companies:0,unspecified:0,newLast30Days:0,lifecycles:{lead:0,prospect:0,customer:0,unclassified:0}}} relationships={{rows:[],mode:'active',grouped:false}}/>);
     expect(screen.queryByRole('heading',{name:'Get started with CRM'})).toBeNull();
     expect(screen.getByRole('region',{name:'Relationship overview'})).toBeInTheDocument();
     const recent=panel('Recently active relationships');
     expect(within(recent).getByText(/No contacts yet/)).toBeInTheDocument();
-    expect(within(recent).getAllByRole('button',{name:'Add contact'})).toHaveLength(1);
-    expect(within(recent).getByRole('link',{name:'Import contacts'})).toHaveAttribute('href','/organizations/org/library/imports/new');
+    // One entry point: importing and synchronizing are choices inside the Add contacts dialog, not separate buttons.
+    expect(within(recent).getAllByRole('button',{name:'Add contacts'})).toHaveLength(1);
+    expect(within(recent).queryByRole('link',{name:/Import/})).toBeNull();
     expect(within(recent).queryByRole('navigation',{name:'Relationship grouping'})).toBeNull();
     expect(screen.getByRole('status')).toHaveTextContent('nothing overdue or due today');
   });
   it('keeps reduced roles read-only',()=>{
     render(<CrmHome {...defaults}/>);
-    for(const name of ['Add contact','New opportunity','New follow-up','Configure'])expect(screen.queryByRole('button',{name})).toBeNull();
+    for(const name of ['Add contacts','New opportunity','New follow-up','Configure'])expect(screen.queryByRole('button',{name})).toBeNull();
     expect(screen.getByRole('button',{name:'Activity'})).toBeInTheDocument();
   });
   it('offers canonical drawers and configuration only for authorized mutation',()=>{
-    render(<CrmHome {...defaults} mayCreate mayCreateOpportunity mayConfigure configureItems={[{key:'sales-stages',label:'Relationship stages',href:'/organizations/org/crm/configuration/relationship-stages'},{key:'opportunity-stages',label:'Opportunity stages',href:'/organizations/org/crm/configuration/opportunity-stages'}]} followUpOptions={{...defaults.followUpOptions,mayManage:true}}/>);
-    for(const name of ['Add contact','New opportunity','New follow-up','Configure'])expect(screen.getByRole('button',{name})).toBeInTheDocument();
+    render(<CrmHome {...defaults} mayAddContacts mayCreateOpportunity mayConfigure configureItems={[{key:'sales-stages',label:'Relationship stages',href:'/organizations/org/crm/configuration/relationship-stages'},{key:'opportunity-stages',label:'Opportunity stages',href:'/organizations/org/crm/configuration/opportunity-stages'}]} followUpOptions={{...defaults.followUpOptions,mayManage:true}}/>);
+    for(const name of ['Add contacts','New opportunity','New follow-up','Configure'])expect(screen.getByRole('button',{name})).toBeInTheDocument();
   });
 });

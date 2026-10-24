@@ -25,19 +25,28 @@ export function salesComposition(input: { entitled: boolean; hasStages: boolean;
   return input.mayConfigureStages ? 'setup' : 'hidden';
 }
 
-const TASK_DONE: Record<string, string> = { call: 'Call completed', email: 'Email completed', meeting: 'Meeting held', task: 'Task completed' };
-/** One plain sentence for a qualifying relationship event; only the actions the read admits. */
+const TASK_DONE: Record<string, string> = { call: 'Call task completed', email: 'Email task completed', meeting: 'Meeting task completed', task: 'Task completed' };
+const CALL_ENDED: Record<string, string> = { no_answer: 'Call not answered', busy: 'Call attempted: line busy', failed: 'Call attempted: did not connect' };
+/**
+ * One plain sentence for a qualifying relationship event; only the actions the read admits. A placed
+ * call is an attempt until its end is recorded as completed; a completed task says a task was marked
+ * done, not that a conversation happened; opportunity events say the opportunity moved.
+ */
 export function relationshipActivityLabel(activity: RelationshipActivity): string {
   const { detail } = activity;
   switch (activity.action) {
-    case 'call.placed': return detail.direction === 'inbound' ? 'Call taken' : 'Call made';
-    case 'call.ended': return 'Call ended';
-    case 'call.wrapped_up': return 'Call written up';
+    case 'call.placed': return detail.direction === 'inbound' ? 'Incoming call' : 'Call attempted';
+    case 'call.ended': {
+      if (detail.status !== 'completed') return CALL_ENDED[detail.status] ?? 'Call ended';
+      const minutes = Number(detail.duration) > 0 ? Math.max(1, Math.round(Number(detail.duration) / 60)) : null;
+      return minutes ? `Call completed (${minutes} min)` : 'Call completed';
+    }
+    case 'call.wrapped_up': return 'Call notes recorded';
     case 'follow_up.completed': return `${TASK_DONE[detail.kind] ?? 'Task completed'}${detail.title ? `: ${detail.title}` : ''}`;
-    case 'customer.classification_changed': return detail.to_lifecycle ? `Became ${classificationLabel(detail.to_lifecycle).toLowerCase()}` : 'Lifecycle cleared';
+    case 'customer.classification_changed': return detail.to_lifecycle ? `Lifecycle changed to ${classificationLabel(detail.to_lifecycle).toLowerCase()}` : 'Lifecycle cleared';
     case 'customer.stage_changed': return 'Relationship stage changed';
     case 'opportunity.created': return `Opportunity opened${detail.title ? `: ${detail.title}` : ''}`;
-    case 'opportunity.stage_changed': return `${detail.title ?? 'Opportunity'} moved to ${detail.stage_name ?? 'Unstaged'}`;
+    case 'opportunity.stage_changed': return `Opportunity ${detail.title ?? ''} moved to ${detail.stage_name ?? 'Unstaged'}`.replace('  ', ' ');
     default: return 'Relationship activity';
   }
 }

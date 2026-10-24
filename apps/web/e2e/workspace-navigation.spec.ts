@@ -1,3 +1,4 @@
+import { addContactManually } from './helpers';
 import { areaHref, WORKSPACES as REGISTERED_WORKSPACES } from '../lib/navigation';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -584,13 +585,8 @@ test('contact lifecycle, multiple opportunities, and reviewed intake from Contac
   const base=`/organizations/${fixture.full}`;
   const suffix=randomUUID().slice(0,8),name=`GuildOps contact ${suffix}`,email=`guildops-${suffix}@example.test`;
   await page.goto(`${base}/crm/contacts`);
-  await page.getByRole('button',{name:'Add contact',exact:true}).click();
+  await addContactManually(page,{type:'person',name,email,details:async details=>{await expect(details.getByLabel('Lifecycle',{exact:true})).toHaveValue('lead');await details.getByLabel('Lead temperature').selectOption('warm');}});
   let dialog=page.getByRole('dialog');
-  await dialog.getByLabel('Contact type',{exact:true}).selectOption('person');
-  await dialog.getByLabel('Person name',{exact:true}).fill(name);await dialog.getByRole('textbox',{name:/^Email/}).fill(email);
-  await expect(dialog.getByLabel('Lifecycle',{exact:true})).toHaveValue('lead');
-  await dialog.getByLabel('Lead temperature').selectOption('warm');
-  await dialog.getByRole('button',{name:'Add contact',exact:true}).click();await expect(dialog).toHaveCount(0);
   await page.getByRole('link',{name,exact:true}).filter({visible:true}).first().click();
   await page.waitForURL(/\/crm\/contacts\/[a-f0-9-]+$/);
   const identity=page.url();

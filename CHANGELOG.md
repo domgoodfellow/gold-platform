@@ -32,6 +32,10 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-10-24
+
+- CRM has one Add contacts button on the Dashboard, the Contacts list and their empty states. It opens a dialog with three choices: create a person or company, import records, or use a connected spreadsheet. Choices a person's role can't complete explain why instead of failing later. Creating a contact now happens in a centered dialog: choose Person or Company, fill in the essentials, and save, or add lifecycle and the business's own fields first. A new company can be created on the spot without leaving the person you are adding. Importing is a guided series of steps in Library: choose a source, map columns, review what will change, confirm, and see the results.
+
 ## 2026-10-23
 
 - The CRM Dashboard puts relationships first. It opens with contact counts (people, companies, unspecified), contacts added in the last 30 days and the lifecycle mix. Next comes the main list: the contacts most recently dealt with, ordered by calls, completed tasks, lifecycle changes and opportunity progress, never by edits to contact details, with an optional Group by company view. Needs attention lists overdue tasks and tasks due later today separately, and becomes one short line when nothing needs doing. Opportunities & Pipeline appears only when the business uses opportunities, or as brief setup guidance for people who can set up stages. New businesses see the same layout instead of a separate setup page.

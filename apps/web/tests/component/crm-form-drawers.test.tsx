@@ -3,7 +3,6 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PagePanel, WorkspaceRailProvider } from '@/components/panels/workspace-right-rail';
-import { CreateCustomerSheetProvider, CreateCustomerTrigger } from '@/features/crm/customers/create-customer-sheet';
 import { OpportunitySheet } from '@/features/crm/opportunities/opportunity-sheet';
 import { FollowUpSheet } from '@/features/crm/follow-ups/follow-up-sheet';
 import type { FollowUp } from '@/lib/domain/follow-ups/follow-ups';
@@ -40,70 +39,7 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-describe('Add contact drawer', () => {
-  const open = async () => {
-    const user = inRail(<CreateCustomerSheetProvider organizationId="org" definitions={[]}><CreateCustomerTrigger /></CreateCustomerSheetProvider>);
-    await user.click(screen.getByRole('button', { name: /Add contact/ }));
-    return { user, drawer: screen.getByRole('dialog', { name: 'Add contact' }) };
-  };
-
-  it('opens on Contact type with Add contact and Cancel in the footer, associated with the form', async () => {
-    const { drawer } = await open();
-    expect(screen.getByLabelText('Contact type')).toHaveFocus();
-    const submit = within(drawer).getByRole('button', { name: 'Add contact' });
-    const form = drawer.querySelector('form')!;
-    expect(submit).toHaveAttribute('form', form.id);
-    expect(form.contains(submit)).toBe(false);
-    expect(submit.closest('[data-drawer-footer]')).not.toBeNull();
-    expect(within(drawer).getByRole('button', { name: 'Cancel' }).closest('[data-drawer-footer]')).not.toBeNull();
-  });
-
-  it('a refused save keeps what was typed and focuses the reason; Escape asks, Keep editing returns', async () => {
-    customers.createCustomerAction.mockResolvedValue({ error: 'That email belongs to another customer.', created: false });
-    const { user } = await open();
-    await user.selectOptions(screen.getByLabelText('Contact type'), 'company');
-    await user.type(screen.getByLabelText('Company name'), 'Harbour View Dental');
-    await user.type(screen.getByLabelText(/Email/), 'desk@harbour.example');
-    await user.click(within(screen.getByRole('dialog', {name:'Add contact'})).getByRole('button', { name: 'Add contact' }));
-    const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('another customer');
-    expect(screen.getByLabelText('Company name')).toHaveValue('Harbour View Dental');
-    expect(screen.getByLabelText(/Email/)).toHaveValue('desk@harbour.example');
-    await waitFor(() => expect(alert.parentElement).toHaveFocus());
-    await user.keyboard('{Escape}');
-    expect(confirmation()).not.toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Keep editing' }));
-    await waitFor(() => expect(confirmation()).toBeNull());
-    await waitFor(() => expect(alert.parentElement).toHaveFocus());
-  });
-
-  it('submits once while saving, closes on success without asking, and reopens empty', async () => {
-    const save = deferred();
-    customers.createCustomerAction.mockReturnValue(save.promise);
-    const { user } = await open();
-    await user.selectOptions(screen.getByLabelText('Contact type'), 'company');
-    await user.type(screen.getByLabelText('Company name'), 'Northgate Bakery');
-    await user.click(within(screen.getByRole('dialog', {name:'Add contact'})).getByRole('button', { name: 'Add contact' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Adding…' })).toBeDisabled());
-    await user.click(screen.getByRole('button', { name: 'Adding…' }));
-    expect(customers.createCustomerAction).toHaveBeenCalledTimes(1);
-    await save.resolve({ error: null, created: true });
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add contact' })).toBeNull());
-    expect(confirmation()).toBeNull();
-    await user.click(screen.getByRole('button', { name: /Add contact/ }));
-    expect(screen.getByLabelText('Name')).toHaveValue('');
-    expect(screen.getByLabelText('Contact type')).toHaveValue('');
-  });
-
-  it('closes an untouched drawer at once and returns focus to the trigger', async () => {
-    const { user } = await open();
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(confirmation()).toBeNull();
-    expect(screen.queryByRole('dialog', { name: 'Add contact' })).toBeNull();
-    await waitFor(() => expect(screen.getByRole('button', { name: /Add contact/ })).toHaveFocus());
-  });
-});
-
+// Contact creation moved from a drawer to the intake dialog; its contract lives in contact-intake.test.tsx.
 describe('Opportunity drawer', () => {
   const options = { organizationId: 'org', stages: [], members: [{ id: 'm1', displayName: 'Sanne' }], defaultCurrency: 'EUR' };
   const customer = { id: 'c1', name: 'Harbour View Dental' };

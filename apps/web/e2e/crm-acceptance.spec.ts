@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Client } from 'pg';
 import { createClient } from '@supabase/supabase-js';
 import { expect, test, type Page } from '@playwright/test';
-import { loadDemoContext, OWNER_STORAGE_STATE, COLLEAGUE_STORAGE_STATE } from './helpers';
+import { addContactManually, loadDemoContext, OWNER_STORAGE_STATE, COLLEAGUE_STORAGE_STATE } from './helpers';
 import { DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { recordConnection } from '../lib/domain/integrations/connections';
 import { createPriceBookItem } from '../lib/domain/pricing/price-book';
@@ -14,13 +14,7 @@ import { recordCall } from '../lib/domain/reception/calls';
 test.use({ storageState: OWNER_STORAGE_STATE });
 
 async function createContact(page: Page, type: 'person' | 'company', name: string, company?: string) {
-  await page.getByRole('button', { name: 'Add contact', exact: true }).first().click();
-  const drawer = page.getByRole('dialog', { name: 'Add contact', exact: true });
-  await drawer.getByLabel('Contact type', { exact: true }).selectOption(type);
-  await drawer.getByLabel(type === 'person' ? 'Person name' : 'Company name', { exact: true }).fill(name);
-  if (company) await drawer.locator('select[name="companyId"]').selectOption({ label: company });
-  await drawer.getByRole('button', { name: 'Add contact', exact: true }).click();
-  await expect(drawer).toBeHidden();
+  await addContactManually(page, { type, name, company });
   await expect(page.getByRole('link', { name, exact: true }).first()).toBeVisible();
 }
 
@@ -139,7 +133,7 @@ test.describe('CRM limited membership', () => {
   test.use({ storageState: COLLEAGUE_STORAGE_STATE });
   test('does not offer contact creation or import', async ({ page }) => {
     await page.goto(`/organizations/${loadDemoContext().organizationId}/crm/contacts`);
-    await expect(page.getByRole('button', { name: 'Add contact', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Add contacts', exact: true })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Import', exact: true })).toHaveCount(0);
   });
 });

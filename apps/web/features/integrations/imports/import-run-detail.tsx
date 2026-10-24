@@ -1,19 +1,19 @@
 import { Button, ButtonLink } from '@/components/controls/button';
 import { resumeImportStagingAction } from '@/app/organizations/[organizationId]/library/imports/[runId]/actions';
 import { Hint } from '@/components/controls/inputs';
-import { Section, SectionHeading } from '@/components/surfaces/section';
+import { Card } from '@/components/surfaces/card';
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
 import { WidgetGrid, Widget } from '@/components/display/widget';
 import type { ImportRun, StagingRow, StagingRowStatus } from '@/lib/domain/integrations/import-runs';
 import { ApplyImportForm } from './apply-import-form';
-import { libraryImportHref } from '@/lib/route/library';
+import { libraryImportHref, librarySourceHref } from '@/lib/route/library';
 
 const STATUS_LABEL: Record<StagingRowStatus, string> = {
   ready: 'Ready',
-  duplicate: 'Duplicate',
-  invalid: 'Invalid',
-  ignored: 'Ignored',
+  duplicate: 'Possible duplicate',
+  invalid: 'Rejected',
+  ignored: 'Skipped',
   applied: 'Applied',
   failed: 'Failed',
 };
@@ -21,18 +21,37 @@ const STATUS_LABEL: Record<StagingRowStatus, string> = {
 const FILTERS: { key: StagingRowStatus | 'all'; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'ready', label: 'Ready' },
-  { key: 'duplicate', label: 'Duplicates' },
-  { key: 'invalid', label: 'Invalid' },
+  { key: 'duplicate', label: 'Possible duplicates' },
+  { key: 'invalid', label: 'Rejected' },
   { key: 'applied', label: 'Applied' },
   { key: 'failed', label: 'Failed' },
 ];
 
-/** One import run: its result or its review step, and the staging rows behind whichever filter is active. */
+/** What staging decided, counted from the staged rows themselves; nothing here is estimated. */
+export function summarizeStaging(rows: StagingRow[]) {
+  const ready = rows.filter(row => row.status === 'ready');
+  const typeOf = (row: StagingRow) => String((row.normalized as { contact_type?: string }).contact_type ?? '');
+  return {
+    created: ready.filter(row => row.proposedAction === 'create').length,
+    updated: ready.filter(row => row.proposedAction === 'update').length,
+    duplicates: rows.filter(row => row.status === 'duplicate').length,
+    skipped: rows.filter(row => row.status === 'invalid' || row.status === 'ignored').length,
+    unclassified: ready.filter(row => row.proposedAction === 'create' && !['person', 'company'].includes(typeOf(row))).length,
+  };
+}
+
+/**
+ * One import run as the last three steps of the contact import: Review changes (what applying would
+ * do), Apply (an explicit confirmation), and Results (what actually happened, from the run's own
+ * counters). Conflicts with local edits are detected while applying and reported there as failures,
+ * so they are never forecast here.
+ */
 export function ImportRunDetail({
   organizationId,
   runId,
   run,
   rows,
+  summary,
   readyCount,
   status,
 }: {
@@ -40,52 +59,55 @@ export function ImportRunDetail({
   runId: string;
   run: ImportRun;
   rows: StagingRow[];
+  summary: ReturnType<typeof summarizeStaging>;
   readyCount: number;
   status?: StagingRowStatus;
 }) {
+  const finished = run.status === 'completed' || run.status === 'completed_with_errors';
   return (
     <>
-      {run.status === 'completed' || run.status === 'completed_with_errors' ? (
-        <Section className="mt-6">
-          <SectionHeading>Result</SectionHeading>
+      {finished ? (
+        <Card as="section" aria-labelledby="import-results">
+          <h2 id="import-results" className="text-sm font-semibold">Results</h2>
           <WidgetGrid className="mt-3">
             <Widget title="Created" value={run.rowsCreated} />
-            <Widget title="Updated contacts" value={run.rowsUpdated} />
+            <Widget title="Updated" value={run.rowsUpdated} />
             <Widget title="Skipped" value={run.rowsSkipped} />
             <Widget title="Failed" value={run.rowsFailed} />
           </WidgetGrid>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <ButtonLink href={`/organizations/${organizationId}/crm/contacts`} tone="primary" size="small">
-              View contacts
-            </ButtonLink>
-            <ButtonLink href={libraryImportHref(organizationId, runId, `?status=failed`)} tone="secondary" size="small">
-              Review problems
-            </ButtonLink>
+          {run.rowsFailed ? <Hint className="mt-3 block">Failed rows include any where a contact was edited in GildOps after this source last changed it; those contacts were kept as they are.</Hint> : null}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <ButtonLink href={`/organizations/${organizationId}/crm/contacts`} tone="primary">View contacts</ButtonLink>
+            {run.rowsFailed ? <ButtonLink href={libraryImportHref(organizationId, runId, `?status=failed`)} tone="secondary">Review problems</ButtonLink> : null}
+            {run.resourceId ? <ButtonLink href={librarySourceHref(organizationId, run.resourceId)} tone="text">Open saved source</ButtonLink> : null}
           </div>
-        </Section>
+        </Card>
       ) : run.status === 'pending' || run.status === 'running' ? (
-        <Section className="mt-6">
-          <SectionHeading>Review</SectionHeading>
-          <Hint className="mt-1">
-            {readyCount} row{readyCount === 1 ? '' : 's'} ready to import. {run.rowsSeen - readyCount} skipped — duplicates,
-            invalid rows and anything with no value mapped to Name.
-          </Hint>
-          <div className="mt-4">
+        <Card as="section" aria-labelledby="import-review">
+          <h2 id="import-review" className="text-sm font-semibold">Review changes</h2>
+          <p className="mt-0.5 text-sm text-muted">This is what applying would do. Nothing has been written to Contacts yet.</p>
+          <dl className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Staged changes">
+            {[['New contacts', summary.created], ['Updates to existing contacts', summary.updated], ['Possible duplicates (not applied)', summary.duplicates], ['Skipped or rejected', summary.skipped]].map(([label, value]) =>
+              <div key={label} className="rounded-md bg-secondary px-3 py-2"><dt className="text-xs text-muted">{label}</dt><dd className="text-xl font-semibold tabular-nums">{value}</dd></div>)}
+          </dl>
+          {summary.unclassified ? <p role="status" className="mt-3 text-sm">{summary.unclassified} new contact{summary.unclassified === 1 ? '' : 's'} will be saved as Unspecified / Needs classification because no contact type was mapped.</p> : null}
+          <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+            <p className="text-sm font-medium">Apply</p>
             <ApplyImportForm organizationId={organizationId} runId={runId} readyCount={readyCount} />
             {run.status === 'pending' ? (
-              <form action={resumeImportStagingAction} className="mt-2">
+              <form action={resumeImportStagingAction}>
                 <input type="hidden" name="organizationId" value={organizationId} />
                 <input type="hidden" name="runId" value={runId} />
                 <Button type="submit" tone="secondary">Resume staging</Button>
               </form>
             ) : null}
           </div>
-        </Section>
+        </Card>
       ) : (
         <Hint className="mt-6">This import is still running.</Hint>
       )}
 
-      <Section className="mt-8">
+      <section aria-label="Staged rows" className="mt-8">
         <div className="flex flex-wrap items-center gap-2">
           {FILTERS.map((filter) => (
             <ButtonLink
@@ -109,8 +131,7 @@ export function ImportRunDetail({
             rowKey={(row) => row.id}
             empty="No rows match this filter."
             columns={[
-              { key: 'key', header: 'Row', emphasis: 'primary', cell: (row) => row.sourceRecordKey },
-              { key: 'name', header: 'Name', cell: (row) => (row.normalized as { name?: string }).name ?? '—' },
+              { key: 'name', header: 'Name', emphasis: 'primary', cell: (row) => (row.normalized as { name?: string }).name ?? '—' },
               {
                 key: 'status',
                 header: 'Status',
@@ -120,7 +141,7 @@ export function ImportRunDetail({
                   </Badge>
                 ),
               },
-              { key: 'action', header: 'Action', visibility: 'card-only', cell: (row) => row.proposedAction },
+              { key: 'action', header: 'Action', visibility: 'card-only', cell: (row) => row.proposedAction === 'create' ? 'New contact' : row.proposedAction === 'update' ? 'Update existing contact' : 'Skip' },
               {
                 key: 'problem',
                 header: 'Problem',
@@ -128,10 +149,12 @@ export function ImportRunDetail({
                 cell: (row) =>
                   row.validationErrors.length > 0 ? <span className="text-danger">{row.validationErrors.join(' ')}</span> : '—',
               },
+              // The stable source key is long and machine-made; its end is enough to tell rows apart, and the whole key stays available.
+              { key: 'key', header: 'Source row', visibility: 'card-only', cell: (row) => <span title={row.sourceRecordKey} className="font-mono text-xs text-muted">…{row.sourceRecordKey.slice(-8)}</span> },
             ]}
           />
         </div>
-      </Section>
+      </section>
     </>
   );
 }

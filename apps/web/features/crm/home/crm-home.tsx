@@ -6,7 +6,7 @@ import { Button,ButtonLink } from '@/components/controls/button';
 import { TextInput } from '@/components/controls/inputs';
 import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { MetricTile, OperationalPanel, PanelState } from '@/components/operational/primitives';
-import { CreateCustomerTrigger } from '@/features/crm/customers/create-customer-sheet';
+import { AddContactsTrigger } from '@/features/crm/intake/contact-intake';
 import { OpportunitySheet,type OpportunityFormOptions } from '@/features/crm/opportunities/opportunity-sheet';
 import { FollowUpSheet,type FollowUpOptions } from '@/features/crm/follow-ups/follow-up-sheet';
 import { NeedsAttention,type AttentionCounts } from './needs-attention';
@@ -24,7 +24,8 @@ export type CrmHomeProps = {
   sales:{summary:CrmSummary;stages:OpportunitySummary[]}|null;salesComposition:SalesComposition;
   attention:AttentionCounts;today:CrmTask[];overdue:CrmTask[];noNext:Opportunity[];unassigned:Opportunity[];
   followUpOptions:FollowUpOptions;opportunityOptions:OpportunityFormOptions;
-  followUpsEnabled:boolean;conversionEnabled:boolean;mayCreate:boolean;mayCreateOpportunity:boolean;mayConfigure:boolean;importHref?:string;
+  followUpsEnabled:boolean;conversionEnabled:boolean;/** Whether any way into Contacts (create, import, synchronize) is open to this member. */
+  mayAddContacts:boolean;mayCreateOpportunity:boolean;mayConfigure:boolean;
   /** CRM's configuration doors this member may open (`workspaceConfigureItems`): none, one link, or a menu. */
   configureItems?:ConfigureItem[];
 };
@@ -41,13 +42,13 @@ function dashboardHref(base:string,params:{month?:string;group?:boolean}) {
  * CRM Dashboard, relationship first: who the business knows (overview), who it has been dealing with
  * (Recently active relationships, the primary panel), what needs doing (Needs attention, beside it on
  * wide screens and after it in reading order), then Opportunities & Pipeline when sales applies.
- * A new business keeps this structure with real zeros and an add/import entry point; there is no
+ * A new business keeps this structure with real zeros and the Add contacts entry point; there is no
  * separate getting-started page. Document order is reading order at every width.
  */
-export function CrmHome({organizationId,timezone,month,overview,relationships,sales,salesComposition,attention,today,overdue,noNext,unassigned,followUpOptions,opportunityOptions,followUpsEnabled,conversionEnabled,mayCreate,mayCreateOpportunity,mayConfigure,importHref,configureItems=[]}:CrmHomeProps) {
+export function CrmHome({organizationId,timezone,month,overview,relationships,sales,salesComposition,attention,today,overdue,noNext,unassigned,followUpOptions,opportunityOptions,followUpsEnabled,conversionEnabled,mayAddContacts,mayCreateOpportunity,mayConfigure,configureItems=[]}:CrmHomeProps) {
   const base=`/organizations/${organizationId}`; const contacts=`${base}/crm/contacts`;
   const monthParam=month.slice(0,7); const salesEnabled=salesComposition==='full';
-  const actions=<><ConfigureMenu items={configureItems} />{mayCreate?<CreateCustomerTrigger/>:null}{mayCreateOpportunity&&salesEnabled?<OpportunitySheet {...opportunityOptions} triggerTone="secondary"/>:null}</>;
+  const actions=<><ConfigureMenu items={configureItems} />{mayAddContacts?<AddContactsTrigger/>:null}{mayCreateOpportunity&&salesEnabled?<OpportunitySheet {...opportunityOptions} triggerTone="secondary"/>:null}</>;
   const attentionSources=followUpsEnabled||salesEnabled; const attentionTotal=attention.overdue+attention.today+(salesEnabled?attention.unassigned+(followUpsEnabled?attention.noNext:0):0);
   const allClear=attentionSources&&!attentionTotal;
   const lifecycleTotal=LIFECYCLES.reduce((sum,[key])=>sum+overview.lifecycles[key],0);
@@ -57,7 +58,7 @@ export function CrmHome({organizationId,timezone,month,overview,relationships,sa
         <Link className="underline underline-offset-4" href={`${contacts}?contactType=person`}>{overview.people} {overview.people===1?'person':'people'}</Link>
         <Link className="underline underline-offset-4" href={`${contacts}?contactType=company`}>{overview.companies} {overview.companies===1?'company':'companies'}</Link>
         {overview.unspecified?<Link className="underline underline-offset-4" href={`${contacts}?contactType=unspecified`}>{overview.unspecified} unspecified</Link>:null}</span>}/>
-      <MetricTile label="New contacts" value={overview.newLast30Days} detail="Records added in the last 30 days" href={contacts}/>
+      <MetricTile label="New contacts" value={overview.newLast30Days} detail="Records added in the last 30 days" href={`${contacts}?added=30d`}/>
       <div data-slot="metric-tile" className="min-w-0 rounded-lg border border-border bg-surface px-4 py-3 sm:col-span-2 xl:col-span-1">
         <h2 className="text-xs text-muted">Relationship lifecycle</h2>
         {lifecycleTotal?<div aria-hidden className="mt-2 flex h-2 overflow-hidden rounded-full bg-secondary">{LIFECYCLES.map(([key])=>overview.lifecycles[key]?<span key={key} className={SHADES[key]} style={{width:`${overview.lifecycles[key]/lifecycleTotal*100}%`}}/>:null)}</div>:null}
@@ -65,7 +66,7 @@ export function CrmHome({organizationId,timezone,month,overview,relationships,sa
       </div>
     </section>
     <div className={`mb-6 grid min-w-0 items-start gap-6 ${attentionSources&&!allClear?'xl:grid-cols-[minmax(0,1fr)_24rem]':''}`}>
-      <RecentRelationships organizationId={organizationId} timezone={timezone} {...relationships} hrefFor={group=>dashboardHref(base,{month:sales?monthParam:undefined,group})} totalContacts={overview.total} mayCreate={mayCreate} importHref={importHref}/>
+      <RecentRelationships organizationId={organizationId} timezone={timezone} {...relationships} hrefFor={group=>dashboardHref(base,{month:sales?monthParam:undefined,group})} totalContacts={overview.total} mayAddContacts={mayAddContacts}/>
       {attentionSources&&!allClear?<OperationalPanel className="min-w-0" title="Needs attention" action={followUpsEnabled&&followUpOptions.mayManage?<FollowUpSheet {...followUpOptions}/>:null}><NeedsAttention counts={attention} overdue={overdue} today={today} noNext={noNext} unassigned={unassigned} options={followUpOptions} followUpsEnabled={followUpsEnabled} salesEnabled={salesEnabled}/></OperationalPanel>:null}
       {allClear?<p role="status" className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm"><CircleCheck aria-hidden className="size-4 text-muted"/><span><span className="font-medium">Needs attention:</span> nothing overdue{followUpsEnabled?' or due today':''}{salesEnabled?', and every open opportunity has an owner':''}.</span></p>:null}
     </div>

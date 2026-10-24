@@ -103,6 +103,8 @@ export type ContactPageFilter = {
   /** Exact match on the `industry` custom value. */
   industry?: string;
   website?: 'with' | 'without';
+  /** Created at or after this instant; the Dashboard's New contacts uses now minus 30 days. */
+  addedSince?: string;
   /** One-based. */
   page: number;
 };
@@ -144,6 +146,7 @@ export async function listContactPage(
   if (filter.industry) query = query.eq('custom->>industry', filter.industry);
   if (filter.website === 'with') query = query.not('custom->>website', 'is', null).neq('custom->>website', '');
   if (filter.website === 'without') query = query.or('custom->>website.is.null,custom->>website.eq.');
+  if (filter.addedSince) query = query.gte('created_at', filter.addedSince);
 
   const from = (filter.page - 1) * CONTACT_PAGE_SIZE;
   const { data, error, count } = await query

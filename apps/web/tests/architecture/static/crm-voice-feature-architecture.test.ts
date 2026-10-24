@@ -38,7 +38,7 @@ describe('CRM and Voice feature boundaries', () => {
     expect(calls).toContain("@/features/communications/voice/voice-overview");
     expect(calls).toContain("@/features/settings/workspace-configure");
     expect(customers).toContain("@/features/crm/customers/customer-table");
-    expect(customers).toContain("@/features/crm/customers/create-customer-sheet");
+    expect(customers).toContain("@/features/crm/intake/contact-intake");
     // Package 3A: the link-only Customers Configure panel is retired; CRM configuration lives in its sidebar group.
     expect(customers).not.toContain('ConfigureRegistrar');
     expect(detail).toContain("@/features/crm/customers/customer-detail");

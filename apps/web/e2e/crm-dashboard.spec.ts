@@ -62,7 +62,7 @@ test.describe.serial('Relationship-first CRM Dashboard', () => {
         await expect(page.getByText('Get started with CRM')).toHaveCount(0);
         const recent = region(page, 'Recently active relationships');
         await expect(recent.getByText(/No contacts yet/)).toBeVisible();
-        await expect(recent.getByRole('button', { name: 'Add contact', exact: true })).toBeVisible();
+        await expect(recent.getByRole('button', { name: 'Add contacts', exact: true })).toBeVisible();
         await expect(recent.getByRole('navigation', { name: 'Relationship grouping' })).toHaveCount(0);
         await expect(region(page, 'Opportunities & Pipeline').getByRole('link', { name: 'Set up opportunity stages' })).toBeVisible();
         await expect(page.getByText('Win rate')).toHaveCount(0);
@@ -91,7 +91,7 @@ test.describe.serial('Relationship-first CRM Dashboard', () => {
         await expect(recent).toBeVisible();
         const names = await recent.getByRole('link', { name: new RegExp(run) }).allTextContents();
         expect(names.slice(0, 3)).toEqual([`Ada Marsh ${run}`, `Ben Ortiz ${run}`, `Cy Lund ${run}`]);
-        await expect(recent.getByText('Meeting held: Site walk')).toBeVisible();
+        await expect(recent.getByText('Meeting task completed: Site walk')).toBeVisible();
         await expect(recent.getByText(`Next: Follow up ${run}`)).toBeVisible();
         await expect(recent.getByText(`Person · Lead · Harbour Supply ${run}`).first()).toBeVisible();
       });
@@ -105,6 +105,18 @@ test.describe.serial('Relationship-first CRM Dashboard', () => {
       await expect(grouped.getByRole('link', { name: `Harbour Supply ${run}`, exact: true })).toHaveCount(1);
       for (const name of [`Ada Marsh ${run}`, `Ben Ortiz ${run}`, `Cy Lund ${run}`]) await expect(grouped.getByRole('link', { name, exact: true })).toHaveCount(1);
       await expect(grouped.getByText('No company', { exact: true })).toBeVisible();
+      await page.screenshot({ path: test.info().outputPath('crm-dashboard-grouped-desktop.png'), fullPage: true });
+
+      // New contacts opens Contacts filtered to the same 30-day window, and the records shown match the count.
+      await page.goto(`/organizations/${organizationId}/crm`);
+      const tile = page.getByRole('link', { name: /New contacts/ });
+      const count = Number((await tile.locator('.text-2xl').textContent())?.trim());
+      expect(count).toBeGreaterThanOrEqual(4);
+      await tile.click();
+      await expect(page).toHaveURL(/\/crm\/contacts\?added=30d$/);
+      await expect(page.getByLabel('Filter by date added')).toHaveValue('30d');
+      await expect(page.locator('table tbody tr')).toHaveCount(count);
+      await page.goto(`/organizations/${organizationId}/crm?group=company`);
       await page.setViewportSize({ width: 390, height: 844 });
       await expect(page.getByRole('link', { name: 'Group by company', exact: true })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
@@ -158,7 +170,7 @@ test.describe.serial('Relationship-first CRM Dashboard', () => {
       await fitsEveryWidth(page, `/organizations/${organizationId}/crm`, 'crm-dashboard-member', async () => {
         await expect(region(page, 'Relationship overview')).toBeVisible();
         await expect(region(page, 'Recently active relationships')).toBeVisible();
-        for (const name of ['Add contact', 'New opportunity', 'Configure']) await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
+        for (const name of ['Add contacts', 'New opportunity', 'Configure']) await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
         await expect(page.getByRole('link', { name: 'Set up opportunity stages' })).toHaveCount(0);
       });
     });

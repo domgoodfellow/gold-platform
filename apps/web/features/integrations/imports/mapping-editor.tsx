@@ -1,6 +1,8 @@
-import { Section, SectionHeading } from '@/components/surfaces/section';
+import { Card } from '@/components/surfaces/card';
+import { FormField } from '@/components/controls/form';
+import { libraryNewImportHref } from '@/lib/route/library';
 import { ErrorText, Hint, SelectInput } from '@/components/controls/inputs';
-import { Button } from '@/components/controls/button';
+import { Button, ButtonLink } from '@/components/controls/button';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { MappingField, MappingTarget } from '@/lib/domain/integrations/mappings';
 import { createMappingAndStageAction } from '@/app/organizations/[organizationId]/library/imports/new/actions';
@@ -39,98 +41,81 @@ export function MappingEditor({
   error?: string;
   maySynchronize?: boolean;
 }) {
+  const samples = (header: string) => [...new Set(sample.map(row => row[header]?.trim()).filter(Boolean))].slice(0, 2);
   return (
-    <>
-      <Hint className="mt-2">
-        {totalRows} row{totalRows === 1 ? '' : 's'} detected. Each becomes a CRM contact. New contacts default to Lead / Unrated unless mapped. GildOps has
-        guessed a mapping below — check it before continuing; nothing is written yet.
-      </Hint>
-      {error ? <ErrorText className="mt-2">{error}</ErrorText> : null}
+    <form action={createMappingAndStageAction} className="flex flex-col gap-4">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="resourceId" value={resourceId} />
+      <p className="max-w-3xl text-sm text-muted">
+        {totalRows} row{totalRows === 1 ? '' : 's'} found. GildOps has suggested a destination for each column; check them, then review the changes. Nothing is written yet.
+      </p>
+      {error ? <ErrorText role="alert">{error}</ErrorText> : null}
 
-      <Section className="mt-6">
-        <SectionHeading>Columns</SectionHeading>
-        <form action={createMappingAndStageAction} className="mt-3">
-          <input type="hidden" name="organizationId" value={organizationId} />
-          <input type="hidden" name="resourceId" value={resourceId} />
+      <Card as="section" aria-labelledby="mapping-identity">
+        <h2 id="mapping-identity" className="text-sm font-semibold">Who these rows are</h2>
+        <p className="mt-0.5 text-sm text-muted">Person and Company are kept apart. Rows without a type become Unspecified / Needs classification; GildOps never guesses it from a name.</p>
+        <div data-slot="field-group" className="mt-3 grid gap-3 md:grid-cols-3">
+          <FormField id="mapping-contact-type" label="Contact type">{field => <SelectInput {...field} name="contactType" defaultValue=""><option value="">Use a mapped column (otherwise Unspecified)</option><option value="person">All rows are People</option><option value="company">All rows are Companies</option></SelectInput>}</FormField>
+          <FormField id="mapping-mode" label="How often">{field => <SelectInput {...field} name="mode" defaultValue="import"><option value="import">Import once</option>{maySynchronize ? <option value="sync">Keep synchronized (review each refresh)</option> : null}</SelectInput>}</FormField>
+          <FormField id="mapping-dedupe" label="Duplicate matching">{field => <SelectInput {...field} name="dedupeKey" defaultValue="email"><option value="email">Stable source ID, then email</option><option value="">Stable source ID only</option></SelectInput>}</FormField>
+        </div>
+        <Hint className="mt-3 block">New contacts are Lead / Unrated unless a lifecycle or temperature column is mapped. {maySynchronize ? 'A synchronized worksheet is reviewed on every refresh: local edits are kept on conflicts and removed rows never delete contacts. Automatic scheduling is not enabled.' : 'Updates to contacts this source created before are reviewed like new rows.'}</Hint>
+      </Card>
 
-          <fieldset className="mb-4 flex flex-wrap items-end gap-3">
-            <legend className="mb-2 font-medium">CRM intake</legend>
-            <label>Contact type<SelectInput name="contactType" defaultValue=""><option value="">Map a column / Unspecified if absent</option><option value="person">All rows are People</option><option value="company">All rows are Companies</option></SelectInput></label>
-            <label>Mode<SelectInput name="mode" defaultValue="import"><option value="import">Import once</option>{maySynchronize ? <option value="sync">Keep synchronized (manual review)</option> : null}</SelectInput></label>
-            <label>Duplicate matching<SelectInput name="dedupeKey" defaultValue="email"><option value="email">Stable source ID, then email</option><option value="">Stable source ID only</option></SelectInput></label>
-            <Hint>Updates are reviewed before applying. Local edits are preserved on conflicts. Removed source rows never delete contacts. Automatic CRM scheduling is not enabled.</Hint>
-          </fieldset>
-          <div className="@container overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th scope="col" className="py-2 pr-4 font-medium">Source column</th>
-                  <th scope="col" className="py-2 pr-4 font-medium">Example value</th>
-                  <th scope="col" className="py-2 pr-4 font-medium">Maps to</th>
-                  <th scope="col" className="py-2 font-medium">Transform</th>
-                </tr>
-              </thead>
-              <tbody>
-                {headers.map((header, index) => {
-                  const field = suggested[index];
-                  const example = sample[0]?.[header] ?? '';
-                  return (
-                    <tr key={header} className="border-b border-border/50">
-                      <td className="py-2 pr-4 align-top font-medium">
-                        {header}
-                        <input type="hidden" name="header" value={header} />
-                      </td>
-                      <td className="py-2 pr-4 align-top text-muted">{example || '—'}</td>
-                      <td className="py-2 pr-4 align-top">
-                        <SelectInput name={`target_${index}`} size="small" defaultValue={targetValue(field.target)}>
-                          <option value="ignore">Ignore this column</option>
-                          <option value="core:name">Contact → Name</option>
-                          <option value="core:email">Contact → Email</option>
+      <Card as="section" aria-labelledby="mapping-columns" className="p-0 py-0">
+        <div className="px-4 pt-4"><h2 id="mapping-columns" className="text-sm font-semibold">Columns</h2>
+          <p className="mt-0.5 text-sm text-muted">Ignored columns are not written to contacts; they stay with the import&apos;s source data.</p></div>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full min-w-[40rem] text-sm">
+            <thead><tr className="border-y border-border bg-secondary/50 text-left text-xs text-muted">
+              <th scope="col" className="px-4 py-2 font-medium">Source column</th><th scope="col" className="px-4 py-2 font-medium">Sample value</th>
+              <th scope="col" className="px-4 py-2 font-medium">Destination field</th><th scope="col" className="px-4 py-2 font-medium">Transformation</th>
+            </tr></thead>
+            <tbody className="divide-y divide-border">
+              {headers.map((header, index) => {
+                const field = suggested[index]; const examples = samples(header);
+                return (
+                  <tr key={header}>
+                    <th scope="row" className="px-4 py-2 text-left align-top font-medium">{header}<input type="hidden" name="header" value={header} /></th>
+                    <td className="max-w-48 px-4 py-2 align-top text-muted">{examples.length ? examples.map(value => <span key={value} className="block truncate">{value}</span>) : <span>No values in the sample</span>}</td>
+                    <td className="px-4 py-2 align-top">
+                      <SelectInput aria-label={`Destination for ${header}`} name={`target_${index}`} size="small" defaultValue={targetValue(field.target)}>
+                        <option value="ignore">Ignore this column</option>
+                        <optgroup label="Contact">
+                          <option value="core:name">Name</option><option value="core:email">Email</option><option value="core:phone">Phone</option>
                           <option value="core:contact_type">Contact type (Person / Company / Unspecified)</option>
-                          <option value="core:company_contact_id">Affiliation company contact ID</option><option value="core:affiliation_title">Affiliation role or title</option>
-                          <option value="core:lifecycle">Contact lifecycle</option>
-                          <option value="core:lead_temperature">Lead temperature</option>
-                          <option value="core:phone">Contact → Phone</option>
-                          <option value="location:address">Location → Address</option>
-                          <option value="location:city">Location → City</option>
-                          <option value="location:province">Location → Province</option>
-                          {definitions.length > 0 ? (
-                            <optgroup label="Custom fields">
-                              {definitions.map((definition) => (
-                                <option key={definition.key} value={`custom:${definition.key}`}>
-                                  Custom → {definition.label}
-                                </option>
-                              ))}
-                            </optgroup>
-                          ) : null}
-                        </SelectInput>
-                      </td>
-                      <td className="py-2 align-top">
-                        <SelectInput name={`transform_${index}`} size="small" defaultValue={field.transform}>
-                          <option value="none">None</option>
-                          <option value="trim_lowercase">Lowercase</option>
-                          <option value="e164">Phone number</option>
-                          <option value="url">Website address</option>
-                          <option value="integer">Whole number</option>
-                        </SelectInput>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                          <option value="core:lifecycle">Lifecycle</option><option value="core:lead_temperature">Lead temperature</option>
+                        </optgroup>
+                        <optgroup label="Company affiliation">
+                          <option value="core:company_contact_id">Company contact ID</option><option value="core:affiliation_title">Role or title</option>
+                        </optgroup>
+                        <optgroup label="Location">
+                          <option value="location:address">Address</option><option value="location:city">City</option><option value="location:province">Province</option>
+                        </optgroup>
+                        {definitions.length > 0 ? <optgroup label="Custom fields">{definitions.map(definition => <option key={definition.key} value={`custom:${definition.key}`}>{definition.label}</option>)}</optgroup> : null}
+                      </SelectInput>
+                    </td>
+                    <td className="px-4 py-2 align-top">
+                      <SelectInput aria-label={`Transformation for ${header}`} name={`transform_${index}`} size="small" defaultValue={field.transform}>
+                        <option value="none">None</option><option value="trim_lowercase">Lowercase</option><option value="e164">Phone number</option>
+                        <option value="url">Website address</option><option value="integer">Whole number</option>
+                      </SelectInput>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <Hint className="block px-4 py-3">
+          Worksheet imports match stable provider row IDs within the selected resource. For CSV updates, supply a source_record_id column; otherwise matching uses email when selected, or unchanged row content within the same filename. Historical contact dates do not create call activity.
+        </Hint>
+      </Card>
 
-          <Hint className="mt-4">
-            Worksheet imports match stable provider row IDs within the selected resource. For CSV updates, supply a source_record_id column; otherwise matching uses email when selected, or unchanged row content within the same filename. Email is optional. Unmapped source metadata stays
-            with the import; historical contact dates do not create call activity.
-          </Hint>
-
-          <Button type="submit" tone="primary" className="mt-4">
-            Review import
-          </Button>
-        </form>
-      </Section>
-    </>
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <ButtonLink tone="secondary" href={libraryNewImportHref(organizationId)}>Choose a different source</ButtonLink>
+        <Button type="submit" tone="primary">Review changes</Button>
+      </div>
+    </form>
   );
 }

@@ -3,7 +3,7 @@ import { Building2, User, CircleHelp } from 'lucide-react';
 import { tabListStyles, tabTriggerStyles } from '@gold/ui/components/tab-styles';
 import { ButtonLink } from '@/components/controls/button';
 import { OperationalPanel, PanelState } from '@/components/operational/primitives';
-import { CreateCustomerTrigger } from '@/features/crm/customers/create-customer-sheet';
+import { AddContactsTrigger } from '@/features/crm/intake/contact-intake';
 import { classificationLabel } from '@/lib/domain/customers/classification';
 import type { RelationshipRow } from '@/lib/domain/contacts/relationship-activity';
 import { groupRelationshipsByCompany, relationshipActivityLabel } from '@/lib/application/crm/dashboard';
@@ -27,10 +27,10 @@ function Row({row,base,timezone,showCompany}:{row:RelationshipRow;base:string;ti
  * URL-backed presentation of the same rows: company rows head their group and each person appears
  * once, under their primary active company, or under No company.
  */
-export function RecentRelationships({organizationId,timezone,rows,mode,grouped,hrefFor,totalContacts,mayCreate,importHref}:{
+export function RecentRelationships({organizationId,timezone,rows,mode,grouped,hrefFor,totalContacts,mayAddContacts}:{
   organizationId:string;timezone:string;rows:RelationshipRow[];mode:'active'|'added';grouped:boolean;
   /** Dashboard URL with the grouping choice applied, keeping the page's other parameters. */
-  hrefFor:(group:boolean)=>string;totalContacts:number;mayCreate:boolean;importHref?:string;
+  hrefFor:(group:boolean)=>string;totalContacts:number;mayAddContacts:boolean;
 }) {
   const base=`/organizations/${organizationId}`;
   const title=mode==='active'?'Recently active relationships':'Recently added contacts';
@@ -38,7 +38,7 @@ export function RecentRelationships({organizationId,timezone,rows,mode,grouped,h
     {([[false,'All'],[true,'Group by company']] as const).map(([value,label])=><Link key={label} href={hrefFor(value)} scroll={false} aria-current={grouped===value?'true':undefined} data-state={grouped===value?'active':undefined} data-slot="tabs-trigger" className={tabTriggerStyles}>{label}</Link>)}
   </nav>:null;
   if(!totalContacts) return <OperationalPanel className="min-w-0" title={title}>
-    <PanelState action={mayCreate||importHref?<span className="flex flex-wrap gap-2">{mayCreate?<CreateCustomerTrigger/>:null}{importHref?<ButtonLink tone="secondary" href={importHref}>Import contacts</ButtonLink>:null}</span>:undefined}>
+    <PanelState action={mayAddContacts?<AddContactsTrigger/>:undefined}>
       No contacts yet. People and companies you add appear here, ordered by their latest calls, completed tasks, lifecycle changes and opportunity progress.
     </PanelState>
   </OperationalPanel>;

@@ -105,38 +105,7 @@ for (const viewport of VIEWPORTS) {
       await expect(page.getByRole('dialog', { name: `Edit Renamed ${run}` }).getByLabel('Label', { exact: true })).toHaveValue(`Renamed ${run}`);
     });
 
-    test('New customer: refusal keeps input, one submission while saving, guarded discard', async ({ page }) => {
-      const { organizationId } = loadDemoContext();
-      await page.goto(`/organizations/${organizationId}/crm/contacts`);
-      const trigger = page.getByRole('button', { name: 'New customer', exact: true }).first();
-      const drawer = page.getByRole('dialog', { name: 'New customer' });
-
-      await trigger.click();
-      await expect(page.getByLabel('Name', { exact: true })).toBeFocused();
-      await expectFooterBelowBody(page, drawer);
-      // Spaces pass the browser's required check and are refused by the domain.
-      await page.getByLabel('Name', { exact: true }).fill('   ');
-      await drawer.getByLabel('Email').fill(`refused-${run}@example.test`);
-      await drawer.getByRole('button', { name: 'Add customer' }).click();
-      await expect(drawer.getByRole('alert')).toContainText('needs a name');
-      await expect(drawer.getByLabel('Email')).toHaveValue(`refused-${run}@example.test`);
-      await page.keyboard.press('Escape');
-      await expect(confirmation(page)).toBeVisible();
-      await page.getByRole('button', { name: 'Keep editing' }).click();
-      await expect(confirmation(page)).toBeHidden();
-
-      await page.getByLabel('Name', { exact: true }).fill(`Drawer customer ${run}`);
-      const submit = drawer.getByRole('button', { name: 'Add customer' });
-      await submit.dblclick();
-      await expect(drawer).toBeHidden();
-      await expect(confirmation(page)).toBeHidden();
-      await expect(page.getByRole('link', { name: `Drawer customer ${run}` })).toHaveCount(1);
-
-      await trigger.click();
-      await expect(page.getByLabel('Name', { exact: true })).toHaveValue('');
-      await page.getByLabel('Name', { exact: true }).fill('Abandoned');
-      await expectGuardedDiscard(page, drawer, trigger);
-    });
+    // Contact creation is now the Add contacts intake dialog, covered by crm-intake.spec.ts at every width.
 
     test('Opportunity and follow-up from a customer record: refusals keep input, saves behave as before', async ({ page }) => {
       const { organizationId, customerId } = loadDemoContext();
@@ -156,7 +125,7 @@ for (const viewport of VIEWPORTS) {
       await expect(opportunity.getByLabel('Value')).toHaveValue('1250.50');
       await expectGuardedDiscard(page, opportunity, newOpportunity);
 
-      await page.getByRole('tab', { name: 'Follow-ups' }).click();
+      await page.getByRole('tab', { name: 'Tasks' }).click();
       const newFollowUp = page.getByRole('button', { name: 'New follow-up' });
       const followUp = page.getByRole('dialog', { name: 'New follow-up' });
       await newFollowUp.click();

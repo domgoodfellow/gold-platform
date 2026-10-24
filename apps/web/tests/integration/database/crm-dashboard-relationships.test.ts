@@ -4,7 +4,7 @@ import { Client } from 'pg';
 import { beforeAll,describe,expect,it } from 'vitest';
 import { foundBusiness } from '@/tests/support/founding';
 import { createCustomer } from '@/lib/domain/customers/customers';
-import { createContact,updateContact } from '@/lib/domain/contacts/contacts';
+import { createContact,listContactPage,updateContact } from '@/lib/domain/contacts/contacts';
 import { listRecentRelationships,listRecentlyAddedContacts,relationshipOverview } from '@/lib/domain/contacts/relationship-activity';
 import { createTask,changeTaskStatus } from '@/lib/domain/tasks/tasks';
 import { createOpportunity,createOpportunityStage } from '@/lib/domain/opportunities/opportunities';
@@ -37,6 +37,9 @@ describe('CRM dashboard relationship reads under real PostgreSQL RLS',()=>{
     const overview=await relationshipOverview(owner.db,organizationId);
     expect(overview).toEqual({total:6,people:3,companies:2,unspecified:1,newLast30Days:5,lifecycles:{lead:4,prospect:0,customer:1,unclassified:1}});
     expect((await relationshipOverview(outsider.db,organizationId)).total).toBe(0);
+    // The New contacts link opens the directory filtered to the same window, and the counts agree.
+    const added=await listContactPage(owner.db,{organizationId,filter:{page:1,addedSince:new Date(Date.now()-30*86400000).toISOString()}});
+    expect(added.total).toBe(overview.newLast30Days);expect(ids(added)).not.toContain(old);
   });
   it('falls back to recently added contacts, newest first, when nothing qualifying is recorded',async()=>{
     expect(await listRecentRelationships(owner.db,{organizationId,includeNextTask:true})).toEqual([]);
@@ -85,5 +88,11 @@ describe('CRM dashboard relationship reads under real PostgreSQL RLS',()=>{
     expect(await listRecentRelationships(outsider.db,{organizationId,includeNextTask:true})).toEqual([]);
     expect(await listRecentlyAddedContacts(outsider.db,{organizationId})).toEqual([]);
     expect(ids(await listRecentRelationships(reader.db,{organizationId,includeNextTask:false}))).toEqual([ada,ben,acme]);
+  });
+  it('carries the recorded call status so an unanswered call is never shown as a conversation',async()=>{
+    const pg=new Client({connectionString:CONNECTION});await pg.connect();
+    try{await pg.query("insert into public.events(organization_id,actor_id,entity_type,entity_id,action,payload) select $1,c.created_by,'customer',$2,'call.ended',jsonb_build_object('call_id',gen_random_uuid(),'status','no_answer','duration',null) from public.contacts c where c.id=$2",[organizationId,solo]);}finally{await pg.end();}
+    const [latest]=await listRecentRelationships(owner.db,{organizationId,limit:1,includeNextTask:false});
+    expect(latest).toMatchObject({id:solo,activity:{action:'call.ended',detail:{status:'no_answer'}}});
   });
 });

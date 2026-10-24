@@ -48,3 +48,27 @@ export async function provisionBrowserOrganization(name: string) {
   const organizationId = await provisionOrganization(staff, { ownerEmail, name, currency: 'EUR', timezone: 'Europe/Amsterdam', displayName: 'Owner' });
   return { organizationId, owner };
 }
+
+/**
+ * Adds one contact through CRM's Add contacts intake: choose Create manually, pick Person or
+ * Company, fill the essentials (and, for a person, an existing company), save, and close the
+ * confirmation. `details` runs on the Additional information stage before saving, when given.
+ */
+export async function addContactManually(
+  page: import('@playwright/test').Page,
+  input: { type: 'person' | 'company'; name: string; email?: string; company?: string; details?: (dialog: import('@playwright/test').Locator) => Promise<void> },
+) {
+  await page.getByRole('button', { name: 'Add contacts', exact: true }).filter({ visible: true }).first().click();
+  await page.getByRole('dialog', { name: 'Add contacts' }).getByRole('button', { name: /Create manually/ }).click();
+  const dialog = page.getByRole('dialog', { name: 'Add a contact' });
+  await dialog.getByText(input.type === 'person' ? 'Person' : 'Company', { exact: true }).click();
+  await dialog.getByLabel(input.type === 'person' ? 'Name' : 'Company name', { exact: true }).fill(input.name);
+  if (input.email) await dialog.getByRole('textbox', { name: /email/i }).fill(input.email);
+  if (input.company) await dialog.getByRole('combobox', { name: /^Company/ }).selectOption({ label: input.company });
+  if (input.details) { await dialog.getByRole('button', { name: 'Add more details' }).click(); await input.details(dialog); }
+  await dialog.getByRole('button', { name: 'Save contact' }).click();
+  const done = page.getByRole('dialog', { name: 'Contact added' });
+  await done.waitFor();
+  await done.getByRole('button', { name: 'Close', exact: true }).first().click();
+  await done.waitFor({ state: 'detached' });
+}

@@ -18,10 +18,20 @@ describe('CRM dashboard composition rules',()=>{
   });
   it('labels only recorded qualifying events, in plain words',()=>{
     const label=(action:string,detail:Record<string,string>={})=>relationshipActivityLabel({action,detail,occurredAt:'2026-10-01T00:00:00Z'});
-    expect(label('follow_up.completed',{kind:'meeting',title:'Site walk'})).toBe('Meeting held: Site walk');
-    expect(label('follow_up.completed',{kind:'email'})).toBe('Email completed');
-    expect(label('call.placed',{direction:'inbound'})).toBe('Call taken');
-    expect(label('customer.classification_changed',{to_lifecycle:'customer'})).toBe('Became customer');
-    expect(label('opportunity.stage_changed',{title:'Roof',stage_name:'Won'})).toBe('Roof moved to Won');
+    // Attempts, outcomes and tasks never read as conversations that did not happen.
+    expect(label('call.placed')).toBe('Call attempted');
+    expect(label('call.placed',{direction:'inbound'})).toBe('Incoming call');
+    expect(label('call.ended',{status:'no_answer'})).toBe('Call not answered');
+    expect(label('call.ended',{status:'busy'})).toBe('Call attempted: line busy');
+    expect(label('call.ended',{status:'failed'})).toBe('Call attempted: did not connect');
+    expect(label('call.ended',{status:'completed',duration:'185' as never})).toBe('Call completed (3 min)');
+    expect(label('call.ended',{status:'completed'})).toBe('Call completed');
+    expect(label('call.wrapped_up',{outcome_id:'x'})).toBe('Call notes recorded');
+    expect(label('follow_up.completed',{kind:'call',title:'Ring back'})).toBe('Call task completed: Ring back');
+    expect(label('follow_up.completed',{kind:'meeting',title:'Site walk'})).toBe('Meeting task completed: Site walk');
+    expect(label('follow_up.completed',{kind:'task'})).toBe('Task completed');
+    expect(label('customer.classification_changed',{to_lifecycle:'customer'})).toBe('Lifecycle changed to customer');
+    expect(label('opportunity.created',{title:'Roof'})).toBe('Opportunity opened: Roof');
+    expect(label('opportunity.stage_changed',{title:'Roof',stage_name:'Won'})).toBe('Opportunity Roof moved to Won');
   });
 });

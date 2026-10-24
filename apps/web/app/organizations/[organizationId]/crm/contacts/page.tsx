@@ -4,10 +4,8 @@ import { AppPage } from '@/components/layout/app-page';
 import { SupportRegistrar } from '@/components/panels/support-registrar';
 import { CollectionHeader } from '@/components/patterns/collection-header';
 import { ButtonLink } from '@/components/controls/button';
-import {
-  CreateCustomerSheetProvider,
-  CreateCustomerTrigger,
-} from '@/features/crm/customers/create-customer-sheet';
+import { AddContactsTrigger, ContactIntakeProvider } from '@/features/crm/intake/contact-intake';
+import { anyIntake, contactIntakeOptions } from '@/lib/application/crm/contact-intake';
 import {
   CustomerListToolbar,
   type CustomerDirectoryView,
@@ -33,7 +31,9 @@ import { areaAvailable } from '@/lib/navigation';
 import { CustomersInsights } from '@/features/insights/workspace-insights';
 import { WorkspaceActivity } from '@/features/timeline/workspace-activity';
 import { requireOrganization } from '@/lib/route/organization';
-import { libraryNewImportHref } from '@/lib/route/library';
+
+/** The CRM Dashboard's New contacts window: the 30 days before the request. */
+function thirtyDaysAgo(now: Date) { return new Date(now.getTime() - 30 * 86400000).toISOString(); }
 
 export const dynamic = 'force-dynamic';
 
@@ -65,9 +65,11 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
       featureAvailability: availableFeatureKeys(resolvedFeatures),
     }) && organization.capabilities.includes('report.read');
   const visibleStages = salesEnabled ? stages : [];
-  // The database refuses an import from a role without `integration.manage`; the button follows
-  // the organization's own capability, never platform authority, and only when the module is on.
-  const mayImport = modules.has('integrations') && organization.capabilities.includes('integration.manage');
+  // Adding, importing and synchronizing are offered through one intake dialog; each path follows the
+  // capability its destination enforces (`contactIntakeOptions`). Library's file import needs
+  // `integration.manage` alone; the Integrations module governs provider Connections, not file imports.
+  const intake = await contactIntakeOptions(db, { organizationId, capabilities: organization.capabilities, modules });
+  const mayIntake = anyIntake(intake);
 
   const industryDefinition = definitions.find((definition) => definition.key === INDUSTRY_FIELD_KEY);
   const choices = optionalColumnChoices(definitions);
@@ -83,10 +85,11 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
     stage: single(query.stage),
     industry: single(query.industry),
     website: single(query.website),
+    added: single(query.added) === '30d' ? '30d' : undefined,
     optional: (Array.isArray(query.column) ? query.column : query.column ? [query.column] : []).filter((id) => validChoices.has(id)),
   };
   const companies=await listCompanies(db,organizationId);
-  const filtered = Boolean(view.contactType || view.companyId || view.lifecycle || view.temperature || view.search || view.stage || view.industry || view.website);
+  const filtered = Boolean(view.contactType || view.companyId || view.lifecycle || view.temperature || view.search || view.stage || view.industry || view.website || view.added);
 
   const customers = await listContactPage(db, {
     organizationId,
@@ -100,6 +103,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
       stageId: view.stage === 'unstaged' ? null : view.stage || undefined,
       industry: view.industry || undefined,
       website: view.website === 'with' || view.website === 'without' ? view.website : undefined,
+      addedSince: view.added === '30d' ? thirtyDaysAgo(new Date()) : undefined,
       page,
     },
   });
@@ -122,6 +126,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
     if (view.stage) params.set('stage', view.stage);
     if (view.industry) params.set('industry', view.industry);
     if (view.website) params.set('website', view.website);
+    if (view.added) params.set('added', view.added);
     for (const id of view.optional) params.append('column', id);
     if (target > 1) params.set('page', String(target));
     const suffix = params.toString();
@@ -131,18 +136,13 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
 
   return (
     <AppPage>
-      <CreateCustomerSheetProvider organizationId={organizationId} definitions={definitions} initialType={query.type==='company'?'company':query.type==='person'?'person':''} defaultOpen={mayCreate && query.create === '1'}>
+      <ContactIntakeProvider organizationId={organizationId} definitions={definitions} options={intake} initialType={query.type==='company'?'company':query.type==='person'?'person':''} defaultOpen={mayCreate && query.create === '1'}>
         <CollectionHeader
           location={{}}
           actions={!emptyCollection ? (
             <>
               {relationshipBoardAvailable ? <ButtonLink tone="secondary" href={`/organizations/${organizationId}/crm/contacts/stages`}>Relationship stages</ButtonLink> : null}
-              {mayImport ? (
-                <ButtonLink href={libraryNewImportHref(organizationId)} tone="secondary">
-                  Import
-                </ButtonLink>
-              ) : null}
-              {mayCreate ? <CreateCustomerTrigger /> : null}
+              {mayIntake ? <AddContactsTrigger /> : null}
             </>
           ) : undefined}
           activity={!emptyCollection}
@@ -179,12 +179,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
               Add a person or company directly or bring existing contact records into this organization.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
-              {mayCreate ? <CreateCustomerTrigger /> : null}
-              {mayImport ? (
-                <ButtonLink href={libraryNewImportHref(organizationId)} tone="secondary">
-                  Import contacts
-                </ButtonLink>
-              ) : null}
+              {mayIntake ? <AddContactsTrigger /> : null}
             </div>
           </section>
         ) : (
@@ -222,7 +217,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
           ) : null}
           </>
         )}
-      </CreateCustomerSheetProvider>
+      </ContactIntakeProvider>
     </AppPage>
   );
 }

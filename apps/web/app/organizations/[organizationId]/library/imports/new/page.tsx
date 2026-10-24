@@ -1,17 +1,20 @@
 import { ButtonLink } from '@/components/controls/button';
 import { listResources } from '@/lib/domain/integrations/resources';
-import { libraryNewImportHref, librarySourceHref } from '@/lib/route/library';
+import { librarySourceHref } from '@/lib/route/library';
 import { Lock } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@gold/ui/components/alert';
 import { PageHeader } from '@/components/headers/page-header';
-import { Hint } from '@/components/controls/inputs';
+import { ErrorText, Hint } from '@/components/controls/inputs';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import { suggestMapping } from '@/lib/domain/integrations/mappings';
 import { downloadImportFile } from '@/lib/domain/integrations/resources';
 import { libraryHref } from '@/lib/route/library';
 import { LibraryNav } from '@/features/library/library-nav';
 import { requireOrganization } from '@/lib/route/organization';
-import { UploadSourceForm } from '@/features/integrations/imports/upload-source-form';
+import { ChooseImportSource } from '@/features/integrations/imports/choose-source';
+import { ImportSteps } from '@/features/integrations/imports/import-steps';
+import { listConnections } from '@/lib/domain/integrations/connections';
+import { listLibraryFiles } from '@/lib/domain/documents/library-files';
 import { MappingEditor } from '@/features/integrations/imports/mapping-editor';
 import {DomainError} from '@/lib/domain/errors';
 
@@ -43,21 +46,19 @@ export default async function NewImportPage({
 
   const resources = await listResources(db, { organizationId });
   if (typeof resourceId !== 'string') {
+    const [connections, spreadsheets] = await Promise.all([
+      listConnections(db, { organizationId }),
+      listLibraryFiles(db, { organizationId, filter: { search: '', family: 'spreadsheets', usage: 'any', sort: 'newest', page: 1 } }),
+    ]);
+    const csvFiles = spreadsheets.rows.filter(file => file.mimeType === 'text/csv' || file.fileName.toLowerCase().endsWith('.csv'));
     return (
       <>
         <PageHeader title="Import into Contacts" crumbs={[{ label: 'Imports', href: libraryHref(organizationId, 'sources') }]} />
         <LibraryNav organizationId={organizationId} active="sources" />
-        <Hint className="mb-4 block">
-          Upload a CSV export. GildOps reads the header row and shows you a mapping to review before anything is written.
-        </Hint>
-        {typeof error === 'string' ? <Hint role="alert">{error}</Hint> : null}
-        <section className="mb-6 space-y-2"><h2 className="font-medium">Choose an existing source</h2>
-          {resources.filter(resource => resource.status === 'active' && ['file_upload','google_sheet','microsoft_workbook'].includes(resource.resourceType)).map(resource => <div key={resource.id} className="flex flex-wrap items-center gap-3"><ButtonLink tone="secondary" href={libraryNewImportHref(organizationId, resource.id)}>{resource.displayName}</ButtonLink><ButtonLink tone="text" href={librarySourceHref(organizationId, resource.id)}>Source status</ButtonLink></div>)}
-          <ButtonLink tone="text" href={libraryHref(organizationId, 'files')}>Choose a Library CSV file</ButtonLink>
-          <ButtonLink tone="text" href={libraryHref(organizationId, 'sources')}>Connect or synchronize a spreadsheet</ButtonLink>
-        </section>
-        <h2 className="mb-2 font-medium">Upload a CSV snapshot</h2>
-        <UploadSourceForm organizationId={organizationId} />
+        <ImportSteps organizationId={organizationId} current={0} />
+        <p className="mb-4 max-w-3xl text-sm text-muted">Choose where the contacts come from. Next you map columns to contact fields and review every change; nothing reaches Contacts until you apply it.</p>
+        {typeof error === 'string' ? <ErrorText role="alert" className="mb-4">{error}</ErrorText> : null}
+        <ChooseImportSource organizationId={organizationId} resources={resources} files={csvFiles} connectionStatus={new Map(connections.map(connection => [connection.id, connection.status]))} />
       </>
     );
   }
@@ -76,6 +77,7 @@ export default async function NewImportPage({
     <>
       <PageHeader title="Map your columns" crumbs={[{ label: 'Imports', href: libraryHref(organizationId, 'sources') }]} />
       <LibraryNav organizationId={organizationId} active="sources" />
+      <ImportSteps organizationId={organizationId} current={1} resourceId={resourceId} />
       <MappingEditor
         organizationId={organizationId}
         maySynchronize={['google_sheet','microsoft_workbook'].includes(resources.find(resource => resource.id === resourceId)?.resourceType ?? '')}

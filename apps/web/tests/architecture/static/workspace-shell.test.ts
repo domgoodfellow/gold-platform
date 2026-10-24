@@ -549,7 +549,8 @@ describe('Business area roots with an Add action keep it in their CollectionHead
     const triggers: Record<string, string> = {
       resources: 'CreateResourceTrigger',
       locations: 'CreateLocationTrigger',
-      customers: 'CreateCustomerTrigger',
+      // V1.3: Contacts' one entry point is the Add contacts intake (create, import or synchronize).
+      customers: 'AddContactsTrigger',
       assets: 'CreateAssetTrigger',
     };
     for (const [area, trigger] of Object.entries(triggers)) {
@@ -697,9 +698,15 @@ describe('organization page composition', () => {
   });
 
   it('Import is offered by the organization capability, not by the module alone or by platform role', () => {
+    // V1.3: CRM offers Import inside the Add contacts intake; contactIntakeOptions decides it from
+    // the organization's own capability, never the module alone or platform role.
     const customers = read(`${WEB}/app/organizations/[organizationId]/crm/contacts/page.tsx`);
-    expect(customers).toContain("organization.capabilities.includes('integration.manage')");
+    expect(customers).toContain('contactIntakeOptions(db, { organizationId, capabilities: organization.capabilities');
     expect(customers).not.toMatch(/staff/i);
+    const intake = read(`${WEB}/lib/application/crm/contact-intake.ts`);
+    expect(intake).toContain("const mayIntegrate = has('integration.manage');");
+    expect(intake).toMatch(/const importChoice: IntakeChoice = !mayIntegrate/);
+    expect(intake).not.toMatch(/staff/i);
     const newImport = read(
       `${WEB}/app/organizations/[organizationId]/library/imports/new/page.tsx`,
     );

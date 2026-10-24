@@ -16,6 +16,8 @@ export type CustomerDirectoryView = {
   stage: string;
   industry: string;
   website: string;
+  /** `30d`: created in the last 30 days, the CRM Dashboard's New contacts window. */
+  added?: string;
   optional: string[];
 };
 
@@ -39,7 +41,7 @@ export function CustomerListToolbar({
   view: CustomerDirectoryView;
   companies?: {id:string;name:string}[];
 }) {
-  const filtered = Boolean(view.contactType || view.companyId || view.lifecycle || view.temperature || view.search || view.stage || view.industry || view.website);
+  const filtered = Boolean(view.contactType || view.companyId || view.lifecycle || view.temperature || view.search || view.stage || view.industry || view.website || view.added);
   return (
     <form className="flex flex-col gap-2" role="search">
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -75,6 +77,10 @@ export function CustomerListToolbar({
           <option value="">Any website</option>
           <option value="with">Has a website</option>
           <option value="without">No website</option>
+        </SelectInput>
+        <SelectInput name="added" defaultValue={view.added ?? ''} aria-label="Filter by date added" className="w-full sm:w-44">
+          <option value="">Added any time</option>
+          <option value="30d">Added in the last 30 days</option>
         </SelectInput>
       </div>
       <div className="flex flex-wrap items-center gap-2">

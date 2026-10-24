@@ -265,6 +265,8 @@
     },
     "apps/web/tests/integration/database/crm-dashboard-relationships.test.ts": {"category": "database-integration", "concerns": ["crm", "tenancy", "rbac", "data integrity"], "note": "Relationship overview counts and recently active relationships: qualifying events only, routine edits ignored, bounded, tenant-isolated."},
     "apps/web/tests/unit/crm-dashboard.test.ts": {"category": "unit", "concerns": ["crm"]},
+    "apps/web/tests/unit/contact-intake-options.test.ts": {"category": "unit", "concerns": ["crm", "rbac", "imports"], "note": "Each intake path follows the capability its destination enforces; the Integrations module gates only provider connection."},
+    "apps/web/e2e/crm-intake.spec.ts": {"category": "playwright-acceptance", "concerns": ["crm", "imports", "forms", "rbac", "responsive", "accessibility"], "note": "Add contacts intake on the isolated harness: shared dialog, two-stage creation with inline company, discard guard, guided Library CSV import to results with matching and provenance, Appearance presets, reduced role."},
     "apps/web/e2e/crm-dashboard.spec.ts": {"category": "playwright-acceptance", "concerns": ["crm", "responsive", "rbac", "navigation"], "note": "Relationship-first CRM Dashboard across new, relationship-only, people-and-companies, sales-heavy and limited-member states at phone, tablet and desktop widths."},
     "apps/web/tests/unit/crm-follow-up-time.test.ts": {
       "category": "unit",
@@ -1383,6 +1385,7 @@
       "category": "unit",
       "concerns": ["calendar", "crm", "work", "navigation"]
     },
+    "apps/web/tests/component/contact-intake.test.tsx": {"category": "component", "concerns": ["crm", "forms", "rbac", "accessibility"], "note": "Add contacts intake: one dialog from every entry point, per-path permissions, two-stage creation, inline company, unsaved-change guard, focus return."},
     "apps/web/tests/component/crm-home.test.tsx": {
       "category": "component",
       "concerns": ["crm", "navigation", "rbac"]
