@@ -1,17 +1,36 @@
 import { AppPage } from '@/components/layout/app-page';
 import { CollectionHeader } from '@/components/patterns/collection-header';
-import { Button, ButtonLink } from '@/components/controls/button';
-import { TextInput, SelectInput } from '@/components/controls/inputs';
-import { FormField } from '@/components/controls/form';
-import { FinanceWorkflow } from '../finance-workflow';
+import { ButtonLink } from '@/components/controls/button';
+import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { CollectionToolbar, type ActiveFilter } from '@/components/patterns/collection-toolbar';
+import { InvoiceDialog } from '../transactions/invoice-dialog';
+import { PaymentDialog } from '../transactions/payment-dialog';
+import { QuoteDialog } from '../transactions/quote-dialog';
 import { InvoicesTable, QuotesTable, PaymentsTable } from './finance-tables';
 import { financeFilters } from '@/lib/application/finance/operating';
 import { readFinanceInvoices, readFinancePayments, readFinanceQuotes } from '@/lib/domain/billing/finance-reads';
 import { listContacts } from '@/lib/domain/contacts/contacts';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
+import { todayInZone } from '@/lib/domain/scheduling/window';
 import { requireOrganization } from '@/lib/route/organization';
 
-export async function FinanceCollection({ organizationId, kind, query }: { organizationId: string; kind: 'invoices' | 'quotes' | 'payments'; query: Record<string, string | string[] | undefined> }) {
+type Kind = 'invoices' | 'quotes' | 'payments';
+const PAGE_SIZE = 25;
+/** Each collection's quick scopes (one URL parameter), sort orders and the parameters its view keeps. */
+const VIEW = {
+  invoices: { scope: 'status', scopes: [['', 'All'], ['outstanding', 'Outstanding'], ['due-soon', 'Due soon'], ['overdue', 'Overdue'], ['settled', 'Settled']], sorts: [['', 'Newest first'], ['due', 'Due date'], ['outstanding', 'Largest balance'], ['customer', 'Customer']], keys: ['q', 'status', 'customer', 'from', 'to', 'due', 'sort'] },
+  quotes: { scope: 'status', scopes: [['', 'All'], ['not-invoiced', 'Not invoiced'], ['invoiced', 'Invoiced']], sorts: [['', 'Newest first'], ['amount', 'Largest amount'], ['title', 'Work title']], keys: ['q', 'status', 'customer', 'from', 'to', 'sort'] },
+  payments: { scope: 'entry', scopes: [['', 'All'], ['receipts', 'Receipts'], ['corrections', 'Corrections']], sorts: [['', 'Newest first'], ['oldest', 'Oldest first'], ['amount', 'Largest amount']], keys: ['q', 'entry', 'customer', 'source', 'from', 'to', 'sort'] },
+} as const;
+const TITLES = { invoices: 'Invoices', quotes: 'Quotes', payments: 'Payments' } as const;
+const NOUN = { invoices: ['invoice', 'invoices'], quotes: ['priced Work item', 'priced Work items'], payments: ['payment entry', 'payment entries'] } as const;
+
+/**
+ * Quotes, Invoices and Payments share one collection grammar: quick scopes and search, then sort,
+ * with less frequent criteria inside Filters, shown as removable chips with Reset. Everything is in
+ * the URL and applied by the database, so the count, the rows and the pages always agree.
+ */
+export async function FinanceCollection({ organizationId, kind, query }: { organizationId: string; kind: Kind; query: Record<string, string | string[] | undefined> }) {
   const { db, organization } = await requireOrganization(organizationId);
   const filter = financeFilters(query, organization.timezone);
   const [result, customers, modules] = await Promise.all([
@@ -19,23 +38,62 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
     listContacts(db, { organizationId }),
     listUsableModules(db, { organizationId }),
   ]);
-  const base = `/organizations/${organizationId}/finance`, title = kind[0].toUpperCase() + kind.slice(1);
-  const workflow = kind === 'invoices' ? 'invoice' : kind === 'quotes' ? 'quote' : 'payment';
+  const base = `/organizations/${organizationId}/finance`, path = `${base}/${kind}`, view = VIEW[kind];
   const may = (cap: (typeof organization.capabilities)[number]) => organization.capabilities.includes(cap);
-  const canCreate = modules.has('billing') && may(kind === 'invoices' ? 'invoice.issue' : kind === 'quotes' ? 'work_item.price' : 'payment.record');
-  const page = filter.page ?? 1;
-  const href = (next: number) => { const p = new URLSearchParams(); for (const [k,v] of Object.entries(query)) if (typeof v === 'string' && k !== 'page') p.set(k,v); p.set('page', String(next)); return `${base}/${kind}?${p}`; };
-  return <AppPage><CollectionHeader title={title} crumbs={[{ label: 'Finance', href: base }]} actions={canCreate ? <FinanceWorkflow organizationId={organizationId} kind={workflow} initiallyOpen={query.create === '1'} mayCreateWork={may('work_item.create')} /> : undefined} />
-    <form className="mb-4 flex flex-wrap items-end gap-3">
-      <FormField id="finance-search" label="Search">{field => <TextInput {...field} name="q" type="search" defaultValue={filter.q} placeholder="Contact, record or reference" />}</FormField>
-      {kind !== 'payments' ? <FormField id="finance-status" label="Status">{field => <SelectInput {...field} name="status" defaultValue={filter.status}><option value="">All</option>{(kind === 'invoices' ? [['outstanding','Outstanding'],['overdue','Overdue'],['settled','Settled']] : [['not-invoiced','Not invoiced'],['invoiced','Invoiced']]).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</SelectInput>}</FormField> : null}
-      <FormField id="finance-customer" label="Contact">{field => <SelectInput {...field} name="customer" defaultValue={filter.customer ?? ''}><option value="">All customers</option>{customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</SelectInput>}</FormField>
-      <FormField id="finance-from" label="From">{field => <TextInput {...field} name="from" type="date" defaultValue={typeof query.from === 'string' ? query.from : ''} />}</FormField>
-      <FormField id="finance-to" label="Before">{field => <TextInput {...field} name="to" type="date" defaultValue={typeof query.to === 'string' ? query.to : ''} />}</FormField>
-      {kind === 'invoices' ? <FormField id="finance-due-on" label="Due on">{field => <TextInput {...field} name="due" type="date" defaultValue={typeof query.due === 'string' ? query.due : ''} />}</FormField> : null}
-      <Button type="submit" tone="secondary">Filter</Button><ButtonLink tone="text" href={`${base}/${kind}`}>Reset</ButtonLink>
-    </form>
-    <div className="rounded-lg border border-border bg-surface p-3"><p className="mb-3 text-xs text-muted">{result.total} matching {kind} · {organization.timezone}</p>{kind === 'invoices' ? <InvoicesTable timezone={organization.timezone} organizationId={organizationId} rows={result.rows as Awaited<ReturnType<typeof readFinanceInvoices>>['rows']} empty="No matching invoices." mayRecord={modules.has('billing') && may('payment.record')} /> : kind === 'quotes' ? <QuotesTable organizationId={organizationId} rows={result.rows as Awaited<ReturnType<typeof readFinanceQuotes>>['rows']} empty="No matching priced Work." mayIssue={modules.has('billing') && may('invoice.issue')} /> : <PaymentsTable timezone={organization.timezone} organizationId={organizationId} rows={result.rows as Awaited<ReturnType<typeof readFinancePayments>>['rows']} empty="No matching payments." />}</div>
-    <nav aria-label="Pagination" className="mt-4 flex items-center justify-between gap-3 text-sm">{page > 1 ? <ButtonLink href={href(page - 1)}>Previous</ButtonLink> : <span />}<span>Page {page} · {result.total} records</span>{page * 25 < result.total ? <ButtonLink href={href(page + 1)}>Next</ButtonLink> : <span />}</nav>
+  const billing = modules.has('billing');
+  const today = todayInZone(organization.timezone);
+  const value = (key: string) => typeof query[key] === 'string' ? query[key] as string : '';
+  const href = (overrides: Record<string, string | undefined>) => {
+    const params = new URLSearchParams();
+    for (const key of view.keys) { const next = key in overrides ? overrides[key] : value(key); if (next) params.set(key, next); }
+    if (overrides.page && overrides.page !== '1') params.set('page', overrides.page);
+    return `${path}${params.size ? `?${params}` : ''}`;
+  };
+  const scopeValue = value(view.scope);
+  const scopes = view.scopes.map(([key, label]) => ({ key: key || 'all', label, href: href({ [view.scope]: key || undefined }), current: scopeValue === key }));
+  const customerName = (id: string) => customers.find(customer => customer.id === id)?.name ?? 'Contact';
+  const dateLabel = kind === 'payments' ? 'Received' : kind === 'quotes' ? 'Created' : 'Issued';
+  const chips: [string, string, (v: string) => string][] = [
+    ['customer', 'Contact', customerName], ['source', 'Source', v => v === 'manual' ? 'Recorded by hand' : 'Payment processor'],
+    ['from', `${dateLabel} from`, v => v], ['to', `${dateLabel} before`, v => v], ['due', 'Due on', v => v],
+  ];
+  const active: ActiveFilter[] = [
+    ...(filter.q ? [{ key: 'q', label: `Search: ${filter.q}`, removeHref: href({ q: undefined }) }] : []),
+    ...chips.filter(([key]) => (view.keys as readonly string[]).includes(key) && value(key)).map(([key, label, show]) => ({ key, label: `${label}: ${show(value(key))}`, removeHref: href({ [key]: undefined }) })),
+  ];
+  const page = filter.page ?? 1, pages = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
+  const create = !billing ? null
+    : kind === 'invoices' && may('invoice.issue') ? <InvoiceDialog organizationId={organizationId} today={today} tone="primary" initiallyOpen={query.create === '1'} />
+    : kind === 'quotes' && may('work_item.price') ? <QuoteDialog organizationId={organizationId} tone="primary" initiallyOpen={query.create === '1'} mayCreateWork={may('work_item.create')} mayManageCatalog={may('price.manage')} />
+    : kind === 'payments' && may('payment.record') ? <PaymentDialog organizationId={organizationId} today={today} tone="primary" initiallyOpen={query.create === '1'} />
+    : null;
+  const [one, many] = NOUN[kind];
+  const filtered = active.length > 0 || Boolean(scopeValue);
+  return <AppPage>
+    <CollectionHeader title={TITLES[kind]} crumbs={[{ label: 'Finance', href: base }]} actions={create ?? undefined} />
+    <CollectionToolbar action={path} viewId={`finance-${kind}`} scopes={scopes} scopeLabel={`${TITLES[kind]} views`}
+      search={{ name: 'q', value: filter.q, label: `Search ${TITLES[kind].toLowerCase()}`, placeholder: kind === 'quotes' ? 'Work title or contact' : kind === 'invoices' ? 'Contact or invoice number' : 'Contact, invoice number or reference' }}
+      hidden={{ [view.scope]: scopeValue || undefined }}
+      filterCount={active.filter(filter => filter.key !== 'q').length}
+      filters={<>
+        <label className="flex flex-col gap-1 text-sm">Contact<SelectInput name="customer" aria-label="Filter by contact" defaultValue={value('customer')}><option value="">Any contact</option>{customers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</SelectInput></label>
+        {kind === 'payments' ? <label className="flex flex-col gap-1 text-sm">Source<SelectInput name="source" aria-label="Filter by source" defaultValue={value('source')}><option value="">Any source</option><option value="manual">Recorded by hand</option><option value="processor">Payment processor</option></SelectInput></label> : null}
+        <label className="flex flex-col gap-1 text-sm">{dateLabel} from<TextInput name="from" type="date" aria-label={`${dateLabel} from`} defaultValue={value('from')} /></label>
+        <label className="flex flex-col gap-1 text-sm">{dateLabel} before<TextInput name="to" type="date" aria-label={`${dateLabel} before`} defaultValue={value('to')} /></label>
+        {kind === 'invoices' ? <label className="flex flex-col gap-1 text-sm">Due on<TextInput name="due" type="date" aria-label="Due on" defaultValue={value('due')} /></label> : null}
+      </>}
+      sort={<SelectInput name="sort" aria-label={`Sort ${TITLES[kind].toLowerCase()}`} defaultValue={value('sort')} className="w-full md:w-44">{view.sorts.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</SelectInput>}
+      active={active} resetHref={filtered ? path : undefined} className="mb-4" />
+    <section aria-label={`${TITLES[kind]} results`} className="min-w-0">
+      <p role="status" className="mb-2 text-sm text-muted"><span className="font-medium text-foreground tabular-nums">{result.total}</span> {result.total === 1 ? one : many}{filtered ? ' match this view' : ''}</p>
+      {kind === 'invoices' ? <InvoicesTable timezone={organization.timezone} organizationId={organizationId} today={today} rows={result.rows as Awaited<ReturnType<typeof readFinanceInvoices>>['rows']} empty={filtered ? 'No invoices match this view.' : 'No invoices issued yet. Invoices are issued from priced Work.'} mayRecord={billing && may('payment.record')} />
+        : kind === 'quotes' ? <QuotesTable organizationId={organizationId} today={today} rows={result.rows as Awaited<ReturnType<typeof readFinanceQuotes>>['rows']} empty={filtered ? 'No priced Work matches this view.' : 'Nothing priced yet. A quote is a Work item with priced lines from your catalog.'} mayIssue={billing && may('invoice.issue')} />
+        : <PaymentsTable timezone={organization.timezone} organizationId={organizationId} rows={result.rows as Awaited<ReturnType<typeof readFinancePayments>>['rows']} empty={filtered ? 'No payment entries match this view.' : 'No payments recorded yet. Payments are recorded against issued invoices.'} />}
+    </section>
+    {result.total > PAGE_SIZE || page > 1 ? <nav aria-label="Pagination" className="mt-4 flex items-center justify-between gap-3 text-sm">
+      {page > 1 ? <ButtonLink tone="secondary" size="small" href={href({ page: String(page - 1) })}>Previous</ButtonLink> : <span />}
+      <span className="tabular-nums text-muted">Page {page} of {pages} · {result.total} records</span>
+      {page * PAGE_SIZE < result.total ? <ButtonLink tone="secondary" size="small" href={href({ page: String(page + 1) })}>Next</ButtonLink> : <span />}
+    </nav> : null}
   </AppPage>;
 }

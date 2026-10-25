@@ -74,10 +74,11 @@ describe('Finance is tenant Financial Operations', () => {
     expect(source).not.toMatch(/unitAmountMinor\s*\*/);
   });
 
-  it('keeps Finance workspace ownership in the registry: Home, Quotes, Invoices and Payments, with Pricing configured from Settings', () => {
+  it('keeps Finance workspace ownership in the registry: Dashboard, Catalog & Pricing, Quotes, Invoices, Payments and Financial reports, with payment configuration behind Configure', () => {
     expect(WORKSPACES.find((workspace) => workspace.key === 'finance')?.home).toBe('finance');
     const owned = AREAS.filter((area) => area.workspace === 'finance' && area.sidebar !== false).map((area) => area.segment);
-    expect(owned).toEqual(['finance', 'finance-quotes', 'finance-invoices', 'finance-payments']);
+    expect(owned).toEqual(['finance', 'finance-catalog', 'finance-quotes', 'finance-invoices', 'finance-payments', 'finance-reports']);
+    expect(AREAS.find((area) => area.segment === 'finance-reports')?.relevantCapabilities).toEqual(['report.read']);
     const pricing = AREAS.find((area) => area.segment === 'pricing');
     expect(pricing?.workspace).toBe('finance');
     expect(pricing?.sidebar).toBe(false);

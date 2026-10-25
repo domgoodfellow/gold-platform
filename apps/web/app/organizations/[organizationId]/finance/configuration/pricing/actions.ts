@@ -39,6 +39,7 @@ export async function createPriceItemAction(
   }
 
   revalidatePath(`/organizations/${organizationId}/finance/configuration/pricing`);
+  revalidatePath(`/organizations/${organizationId}/finance/catalog`);
   revalidatePath(`/organizations/${organizationId}/finance`, 'layout');
   return { error: null, success: 'Saved.' };
 }
@@ -68,6 +69,7 @@ export async function updatePriceItemAction(
   }
 
   revalidatePath(`/organizations/${organizationId}/finance/configuration/pricing`);
+  revalidatePath(`/organizations/${organizationId}/finance/catalog`);
   revalidatePath(`/organizations/${organizationId}/finance`, 'layout');
   return { error: null, success: 'Saved.' };
 }
@@ -101,6 +103,7 @@ export async function chooseCurrencyAction(
   }
 
   revalidatePath(`/organizations/${organizationId}/finance/configuration/pricing`);
+  revalidatePath(`/organizations/${organizationId}/finance/catalog`);
   revalidatePath(`/organizations/${organizationId}/finance`, 'layout');
   return { error: null, success: 'Saved.' };
 }

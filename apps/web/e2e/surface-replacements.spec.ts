@@ -102,7 +102,7 @@ test.describe('an owner', () => {
 
   test('price items are added and edited in their rows, with refusal, Escape and focus', async ({ page }) => {
     const base = `/organizations/${loadDemoContext().organizationId}`;
-    await page.goto(`${base}/finance/configuration/pricing`);
+    await page.goto(`${base}/finance/catalog`);
     const book = page.getByRole('region', { name: /Price book/ });
     const name = `Surface item ${Date.now()}`;
     const add = book.getByRole('button', { name: 'Add price item' });
@@ -162,7 +162,7 @@ test.describe('an owner', () => {
       await page.getByRole('button', { name: 'Customize' }).click();
       await expect(page.getByRole('dialog', { name: 'Customize Home' })).toBeInViewport();
       await page.keyboard.press('Escape');
-      await page.goto(`${base}/finance/configuration/pricing`);
+      await page.goto(`${base}/finance/catalog`);
       await page.getByRole('region', { name: /Price book/ }).getByRole('button', { name: /^Edit / }).first().click();
       await expect(page.getByRole('form', { name: /^Edit / }).getByRole('button', { name: 'Save' })).toBeInViewport();
       await noOverflow(page);
@@ -177,7 +177,7 @@ test.describe('a reduced-role colleague', () => {
     const base = `/organizations/${loadDemoContext().organizationId}`;
     await page.goto(`${base}/settings/access/members`);
     await expect(page.getByRole('button', { name: 'Add member' })).toHaveCount(0);
-    await page.goto(`${base}/finance/configuration/pricing`);
+    await page.goto(`${base}/finance/catalog`);
     if (await page.getByRole('heading', { name: 'This page does not exist' }).isVisible()) return;
     await expect(page.getByRole('button', { name: /^Edit / })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Add price item' })).toHaveCount(0);

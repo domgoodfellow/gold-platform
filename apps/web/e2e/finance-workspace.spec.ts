@@ -36,17 +36,19 @@ test.describe('tenant Finance workspace', () => {
     }
   });
 
-  test('the Finance row opens Home, and Pricing is configured from Settings rather than duplicated', async ({ page }) => {
+  test('the Finance row opens Home; the price book is an operating page and payment collection is configuration', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     await page.goto(`/organizations/${organizationId}/finance/invoices`);
     await page.getByRole('link', { name: 'Finance', exact: true }).first().click();
     await expect(page).toHaveURL(`/organizations/${organizationId}/finance`);
 
-    // Pricing is configured from Settings; Finance reaches it through its Configure menu.
-    await page.getByRole('button', { name: 'Configure' }).click();
-    await page.getByRole('menuitem', { name: 'Services & pricing' }).click();
+    // Finance V2.0: Catalog & Pricing is a sidebar destination; currency and payment collection stay behind Configure's one direct link.
+    await page.getByRole('link', { name: 'Catalog & Pricing', exact: true }).first().click();
+    await expect(page).toHaveURL(`/organizations/${organizationId}/finance/catalog`);
+    await page.goto(`/organizations/${organizationId}/finance`);
+    await page.getByRole('main').getByRole('link', { name: 'Payments & currency', exact: true }).click();
     await expect(page).toHaveURL(`/organizations/${organizationId}/finance/configuration/pricing`);
-    await expect(page.getByRole('heading', { name: /Pricing/, level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Payments & currency', level: 1 })).toBeAttached();
   });
 
   test('Plan & usage stays outside Finance, under Settings', async ({ page }) => {

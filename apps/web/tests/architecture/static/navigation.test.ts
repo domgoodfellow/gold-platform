@@ -270,7 +270,7 @@ describe('the operator shell navigation', () => {
       expect(area, `${target.key} edits a destination that is not an Area`).toBeDefined();
       expect(area?.workspace).toBe(target.workspace);
     }
-    expect(CONFIG_TARGETS.filter((candidate) => candidate.destination).map((candidate) => candidate.key)).toEqual(['support-queues', 'support-service-levels']);
+    expect(CONFIG_TARGETS.filter((candidate) => candidate.destination).map((candidate) => candidate.key)).toEqual(['price-book', 'support-queues', 'support-service-levels']);
   });
 
   it('uses the nine stable canonical workspace identities and default labels', () => {
@@ -374,7 +374,7 @@ describe('the operator shell navigation', () => {
       'sales', 'customers', 'opportunity-pipeline',
       'comms', 'calls', 'comms-inbox',
       'marketing', 'marketing-campaigns', 'marketing-audiences', 'marketing-leads', 'marketing-performance', 'support', 'support-cases', 'support-queue-workbench', 'support-service-levels-view', 'support-reports', 'ai', 'ai-activity', 'ai-evaluations',
-      'finance', 'finance-quotes', 'finance-invoices', 'finance-payments',
+      'finance', 'finance-catalog', 'finance-quotes', 'finance-invoices', 'finance-payments', 'finance-reports',
       'automations', 'automation-rules', 'automation-messages', 'automation-activity',
       'field', 'work', 'schedule', 'resources', 'locations', 'assets',
       'studio', 'studio-website', 'studio-portal', 'studio-forms', 'studio-templates',
@@ -821,17 +821,18 @@ describe('a switch leads to its inputs', () => {
       '/organizations/org-1/settings/domains#booking-address',
     );
 
+    // Billing starts with the operating price book (Finance V2.0): pricing what it sells is the setup.
     const billing = MODULES.find((sold) => sold.key === 'billing')!;
-    expect(moduleConfiguration('org-1', billing).href).toBe('/organizations/org-1/finance/configuration/pricing');
-    expect(moduleConfiguration('org-1', billing).label).toBe('Pricing');
+    expect(moduleConfiguration('org-1', billing).href).toBe('/organizations/org-1/finance/catalog');
+    expect(moduleConfiguration('org-1', billing).label).toBe('Catalog & Pricing');
   });
 
   it('keeps every module’s configuration link valid', () => {
     // Billing and Automations both configure at their own canonical workspace's segment.
     const billing = MODULES.find((sold) => sold.key === 'billing')!;
     expect(moduleConfiguration('org-1', billing)).toEqual({
-      href: '/organizations/org-1/finance/configuration/pricing',
-      label: 'Pricing',
+      href: '/organizations/org-1/finance/catalog',
+      label: 'Catalog & Pricing',
     });
 
     const automations = MODULES.find((sold) => sold.key === 'automations')!;

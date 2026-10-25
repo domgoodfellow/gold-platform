@@ -118,10 +118,14 @@ describe('configuration fields stay with their owning surfaces', () => {
  * only a compatibility redirect.
  */
 describe('Pricing, Automations, Custom fields and Team are canonical, not Settings sub-routes', () => {
-  it('/pricing is canonical and renders both the price book and, when connected, Getting paid', () => {
+  it('the price book is the operating Catalog & Pricing page, and /pricing keeps currency and, when connected, Getting paid', () => {
+    const catalog = readFileSync(`${ROUTES}/finance/catalog/page.tsx`, 'utf8');
+    expect(catalog).toContain('PricingManagement');
+    expect(catalog).toContain("requireOperatingArea(organizationId, 'finance-catalog')");
     const page = readFileSync(`${ROUTES}/finance/configuration/pricing/page.tsx`, 'utf8');
-    expect(page).toContain('PricingManagement');
+    expect(page).not.toContain('PricingManagement');
     expect(page).toContain('PaymentAccountRow');
+    expect(page).toContain('id="getting-paid"');
     expect(page).not.toContain('redirect(');
   });
 

@@ -150,7 +150,8 @@ export const MODULES = [
     label: 'Billing',
     description:
       'A price book, quotes, invoices and payments. A business that invoices somewhere else runs without this and keeps every job it recorded.',
-    configuredAt: { segment: 'finance', path: 'configuration/pricing', label: 'Pricing' },
+    // A business starts billing by pricing what it sells, so Billing's setup is the operating price book.
+    configuredAt: { segment: 'finance-catalog' },
   },
   {
     key: 'assets',
@@ -400,13 +401,16 @@ export const AREAS: readonly Area[] = [
   // Finance: how this business prices, bills, gets paid and understands what its work earns —
   // tenant Financial Operations, customer to business, and nothing a business pays GildOps (that is
   // Settings → Plan & usage, and Platform for GildOps' own control plane). Home is kernel, like
-  // Sales and Field's own; Quotes, Invoices and Payments are its operating pages and sit behind the
-  // billing module as Pricing does. Pricing stays a Settings-only configuration target it owns
-  // without drawing a sidebar row of its own.
+  // Sales and Field's own. Catalog & Pricing (the operating price book), Quotes, Invoices and
+  // Payments are its operating pages behind the billing module; Financial reports adds `report.read`.
+  // Currency and payment collection stay configuration (`CONFIG_TARGETS` pricing), reached from Configure.
   { segment: 'finance', label: 'Finance', group: 'workspaces', workspace: 'finance' },
+  // Readable by any member (RLS); offered to those who price, quote from it or manage the business.
+  { segment: 'finance-catalog', label: 'Catalog & Pricing', group: 'workspaces', workspace: 'finance', route: 'finance/catalog', module: 'billing', relevantCapabilities: ['price.manage', 'work_item.price', 'organization.manage'], featureKeys: ['price_book'] },
   { segment: 'finance-quotes', label: 'Quotes', group: 'workspaces', workspace: 'finance', route: 'finance/quotes', module: 'billing', featureKeys: ['quote_creation'] },
   { segment: 'finance-invoices', label: 'Invoices', group: 'workspaces', workspace: 'finance', route: 'finance/invoices', module: 'billing', featureKeys: ['invoices', 'invoice_history'] },
   { segment: 'finance-payments', label: 'Payments', group: 'workspaces', workspace: 'finance', route: 'finance/payments', module: 'billing', featureKeys: ['invoices', 'card_payments'] },
+  { segment: 'finance-reports', label: 'Financial reports', group: 'workspaces', workspace: 'finance', route: 'finance/reports', module: 'billing', relevantCapabilities: ['report.read'], featureKeys: ['invoices', 'invoice_history'] },
   // Automations: building, reviewing and observing rules is ongoing work, so it is a workspace.
   // Home carries Rules' own entitlement, so the workspace draws no row for a business without it.
   // Rules, Messages and Activity are three pages of it, each its own route — the sidebar is the
@@ -518,6 +522,8 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'work-configuration', scope: 'organization', workspace: 'field', path: 'work/configuration', permission: ['field.manage'] },
   { key: 'schedule-configuration', scope: 'organization', workspace: 'field', path: 'schedule/configuration', entitledBy: 'schedule', permission: ['field.manage'] },
   { key: 'pricing', scope: 'organization', workspace: 'finance', path: 'finance/configuration/pricing', entitledBy: 'pricing', permission: ['price.manage', 'organization.manage'] },
+  // The operating price book, linked from the Settings directory and setup the way Resources and Locations are; it is its own sidebar destination.
+  { key: 'price-book', treatment: 'operating', scope: 'organization', workspace: 'finance', path: 'finance/catalog', entitledBy: 'finance-catalog', permission: ['price.manage'], destination: 'finance-catalog' },
   { key: 'customer-fields', scope: 'organization', workspace: 'crm', path: 'crm/configuration/fields', permission: ['field.manage'], directory: false },
   { key: 'custom-fields', treatment: 'shared', scope: 'organization', path: 'settings/custom-fields', permission: ['field.manage'] },
   // Entitled through Pipeline, permitted through field.manage: naming stages is not moving a customer between them.
@@ -578,7 +584,7 @@ export function configTarget(key: string): ConfigTarget {
 export const FEATURE_CONFIG_TARGETS: Readonly<Record<string, string>> = {
   pipeline: 'sales-stages', configurable_stages: 'sales-stages', qualification_state: 'sales-stages',
   inbound_calling: 'communications', outbound_calling: 'communications', recording: 'call-setup', call_dispositions: 'call-setup',
-  price_book: 'pricing', card_payments: 'pricing', connected_processor: 'pricing',
+  price_book: 'price-book', card_payments: 'pricing', connected_processor: 'pricing',
   resource_records: 'resources', locations: 'locations',
   pages_sections: 'website', draft_review_publish: 'website', seo_metadata: 'website',
   rule_authoring: 'automation-rules', domain_event_trigger: 'automation-rules', email_action: 'automation-rules',
@@ -824,8 +830,8 @@ export const WORKSPACE_CONFIGURE: Partial<Record<WorkspaceKey, readonly Workspac
     { target: 'resources', label: 'Resources' },
     { target: 'locations', label: 'Locations' },
   ],
-  // Prices, currency and payment collection are sections of one page: one door, not two to the same page.
-  finance: [{ target: 'pricing', label: 'Services & pricing' }],
+  // The price book is an operating page in the sidebar (Catalog & Pricing); currency and payment collection are configuration.
+  finance: [{ target: 'pricing', label: 'Payments & currency' }],
   ai: [
     { target: 'ai-agents', label: 'Agents' },
     { target: 'ai-deployments', label: 'Channel deployments' },

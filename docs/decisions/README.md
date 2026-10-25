@@ -194,6 +194,14 @@ It is not a duplicate specification.
 | ADR-049 | Explicit workspace Dashboard; supersedes ADR-047 point 1 | [`ADR-049-explicit-workspace-dashboard.md`](ADR-049-explicit-workspace-dashboard.md) |
 | ADR-050 | The organization header carries no workspace Calendar shortcut; supersedes ADR-048 point 4 | [`ADR-050-no-calendar-in-organization-header.md`](ADR-050-no-calendar-in-organization-header.md) |
 
+## Proposed
+
+Not yet accepted. Current canonical documents and the Accepted records above remain authoritative until the owner accepts or rejects these.
+
+| ID | Proposal | File |
+| --- | --- | --- |
+| ADR-051 | Commercial capabilities are reusable in tenant Finance; ledgers, settlement and platform authority stay separate. Would supersede ADR-014 in part on acceptance | [`ADR-051-reusable-commercial-capabilities.md`](ADR-051-reusable-commercial-capabilities.md) |
+
 ---
 
 ## Adding a new decision

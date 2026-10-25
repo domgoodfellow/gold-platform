@@ -266,7 +266,8 @@ describe('the setup overview — areas, importance and progress', () => {
     expect(overview.optionalOpen).toBe(1);
     // Each area points at the surface that owns it, not at a copy of it.
     expect(byKey.get('work')?.area.href).toBe(`/organizations/${organizationId}/work/configuration`);
-    expect(byKey.get('billing')?.area.href).toBe(`/organizations/${organizationId}/finance/configuration/pricing`);
+    // Billing's setup is pricing what the business sells: the operating Catalog & Pricing page (Finance V2.0).
+    expect(byKey.get('billing')?.area.href).toBe(`/organizations/${organizationId}/finance/catalog`);
   });
 
   it('counts an area as ready the moment its real fact is true, and orders required gaps first', async () => {

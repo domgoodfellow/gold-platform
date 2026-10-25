@@ -79,7 +79,7 @@ test.describe('an owner', () => {
     await page.goto(`${base}/finance`);
     const main = page.getByRole('main');
     await expect(main.getByRole('button', { name: 'Configure', exact: true })).toHaveCount(0);
-    await expect(main.getByRole('link', { name: 'Services & pricing', exact: true })).toHaveAttribute('href', `${base}/finance/configuration/pricing`);
+    await expect(main.getByRole('link', { name: 'Payments & currency', exact: true })).toHaveAttribute('href', `${base}/finance/configuration/pricing`);
     const nav = sidebarNav(page);
     await expect(nav.getByRole('button', { name: 'Configuration', exact: true })).toHaveCount(0);
     const configuration = nav.getByRole('link', { name: 'Configuration', exact: true });
