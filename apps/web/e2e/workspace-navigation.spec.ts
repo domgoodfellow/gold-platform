@@ -449,8 +449,8 @@ test('the header carries page identity and actions, never the workspace destinat
           // One page identity, and nothing scrolls sideways.
           await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
           expect(header.horizontalScroll).toBe(false);
-          // The Calendar shortcut is the registered calendar of this workspace, whenever it is offered.
-          if (header.calendarHref) expect(header.calendarHref).toBe(`${base}${registered[key]}`);
+          // ADR-050: the organization header carries no workspace Calendar shortcut.
+          expect(header.calendarHref).toBeNull();
           await page.screenshot({ caret: 'initial', path: path.join(OUT, `header-${key}${route.replaceAll('/', '-')}-${width}.png`) });
         });
       }
@@ -458,14 +458,17 @@ test('the header carries page identity and actions, never the workspace destinat
   }
   writeFileSync(path.join(OUT, 'header-acceptance.json'), JSON.stringify(results, null, 2));
 
-  // Every workspace destination is still reachable from the sidebar, and its Calendar opens a real calendar.
+  // Every workspace destination is still reachable from the sidebar, and each registered Calendar still
+  // opens a resolved calendar (not only its loading state), now reached in context rather than from the header.
   await page.setViewportSize({ width: 1440, height: 900 });
   for (const [key, workspace] of Object.entries(WORKSPACES) as [keyof typeof WORKSPACES, (typeof WORKSPACES)[keyof typeof WORKSPACES]][]) {
     await page.goto(`${base}${workspace.home}`);
     for (const child of CHILDREN[key]) await expect(sidebar(page).getByRole('link', { name: child, exact: true })).toBeVisible();
-    await page.locator('header.sticky').getByRole('link', { name: `${workspace.row} calendar` }).click();
+    if (key === 'crm') await page.getByRole('link', { name: 'Calendar', exact: true }).click();
+    else await page.goto(`${base}${registered[key === 'work' ? 'work' : key]}`);
     await page.waitForURL(`**${base}${registered[key === 'work' ? 'work' : key]}`);
     await expect(page.locator('header.sticky').getByRole('navigation', { name: 'breadcrumb' })).toContainText('Calendar');
+    await expect(page.getByLabel(/^(day|week|month) calendar$/).first()).toBeVisible();
   }
 
   // A page-local view control still works: Work items' List / Board.
@@ -474,9 +477,9 @@ test('the header carries page identity and actions, never the workspace destinat
   await page.waitForURL((url) => url.searchParams.get('view') === 'board');
   await expect(page.getByRole('navigation', { name: 'Work view' }).getByRole('link', { name: 'Board', exact: true })).toHaveAttribute('aria-current', 'page');
 
-  // The Calendar shortcut is focusable and shows focus.
-  await page.goto(`${base}/support`);
-  const calendar = page.locator('header.sticky').getByRole('link', { name: 'Support calendar' });
+  // The contextual Calendar action is focusable and shows focus.
+  await page.goto(`${base}/crm`);
+  const calendar = page.getByRole('link', { name: 'Calendar', exact: true });
   await calendar.focus();
   const focus = await calendar.evaluate((element) => { const style = getComputedStyle(element); return { ring: style.boxShadow, outline: style.outlineStyle }; });
   expect(focus.ring !== 'none' || focus.outline !== 'none', 'Calendar shows focus').toBe(true);
@@ -592,10 +595,14 @@ test('contact lifecycle, multiple opportunities, and reviewed intake from Contac
   const identity=page.url();
   for(const [lifecycle,temperature] of [['lead','hot'],['prospect','hot'],['customer','cold']]) {
     await page.getByRole('button',{name:'Edit',exact:true}).click();dialog=page.getByRole('dialog');
+    // V1.4: the edit dialog is sectioned; lifecycle and temperature live under Relationship.
+    await dialog.getByRole('button',{name:'Relationship',exact:true}).click();
     await dialog.getByLabel('Lifecycle',{exact:true}).selectOption(lifecycle);await dialog.getByLabel('Lead temperature').selectOption(temperature);
-    await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).toHaveCount(0);
+    await dialog.getByRole('button',{name:'Save changes',exact:true}).click();await expect(dialog).toHaveCount(0);
     await page.reload();expect(page.url()).toBe(identity);
-    await expect(page.getByRole('main').getByText(`${lifecycle.charAt(0).toUpperCase()+lifecycle.slice(1)} / ${temperature.charAt(0).toUpperCase()+temperature.slice(1)} temperature`,{exact:false})).toBeVisible();
+    // V1.4 record header: lifecycle and temperature are labelled chips (term/definition pairs).
+    const label=(value:string)=>value.charAt(0).toUpperCase()+value.slice(1);
+    await expect(page.getByRole('main').locator('dl[data-slot=status-summary]').first()).toHaveText(new RegExp(`Lifecycle\\s*${label(lifecycle)}\\s*Temperature\\s*${label(temperature)}`));
   }
   for(const width of [390,820,1440]) {await page.setViewportSize({width,height:900});await noHorizontalScroll(page);await page.screenshot({ caret: 'initial',path:path.join(OUT,`guildops-contact-${width}.png`)});}
   await page.setViewportSize({width:1440,height:900});
@@ -614,15 +621,19 @@ test('contact lifecycle, multiple opportunities, and reviewed intake from Contac
   for(const index of [1,2])await expect(page.getByRole('link',{name:`GuildOps opportunity ${index} ${suffix}`,exact:true}).filter({visible:true}).first()).toBeVisible();
   await page.goto(`${base}/crm/contacts?q=${encodeURIComponent(name)}&lifecycle=customer&temperature=cold`);
   await expect(page.getByRole('link',{name,exact:true}).filter({visible:true})).toHaveCount(1);
-  await page.getByRole('link',{name:'Import',exact:true}).click();
+  // V1.3: importing starts from the Add contacts intake, which leads to Library's import.
+  await page.getByRole('button',{name:'Add contacts',exact:true}).first().click();
+  await page.getByRole('dialog',{name:'Add contacts'}).getByRole('link',{name:/Import records/}).click();
   await page.getByLabel('CSV file').setInputFiles({name:`guildops-${suffix}.csv`,mimeType:'text/csv',buffer:Buffer.from(`source_record_id,name,email,lifecycle,temperature\n100,Imported ${suffix},import-${suffix}@example.test,lead,warm\n101,Duplicate ${suffix},import-${suffix}@example.test,lead,cold`)});
   await page.getByRole('button',{name:'Continue',exact:true}).click();await page.waitForURL(/resourceId=/);
   const resourceId=new URL(page.url()).searchParams.get('resourceId')!;
   async function reviewAndApply() {
-    await page.getByRole('button',{name:'Review import',exact:true}).click();await page.waitForURL(/\/library\/imports\/[a-f0-9-]+$/);
+    // V1.3 mapping: contact type is chosen for rows without one; the review step is "Review changes".
+    await page.getByRole('combobox',{name:'Contact type',exact:true}).selectOption('person');
+    await page.getByRole('button',{name:'Review changes',exact:true}).click();await page.waitForURL(/\/library\/imports\/[a-f0-9-]+$/);
     await page.getByRole('button',{name:'Import 1 contact',exact:true}).click();
-    await page.getByRole('dialog').getByRole('button',{name:'Import 1 contact?',exact:true}).click();
-    await expect(page.getByRole('heading',{name:'Result',exact:true})).toBeVisible();
+    await page.getByRole('dialog').getByRole('button',{name:/Import 1 contact/}).click();
+    await expect(page.getByRole('heading',{name:'Results',exact:true})).toBeVisible();
   }
   await reviewAndApply();
   await page.goto(`${base}/library/sources/${resourceId}`);await page.getByRole('link',{name:'Import into CRM',exact:true}).click();

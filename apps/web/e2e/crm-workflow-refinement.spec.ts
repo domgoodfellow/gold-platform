@@ -8,6 +8,7 @@ import { DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { createContact, updateContact } from '../lib/domain/contacts/contacts';
 import { createCustomer } from '../lib/domain/customers/customers';
 import { resetAppearance, saveAppearance } from '../lib/domain/identity/appearance';
+import { createOpportunityStage, listOpportunityStages } from '../lib/domain/opportunities/opportunities';
 
 /**
  * V1.4 CRM interface refinement in a real browser, on the isolated run's disposable business
@@ -36,6 +37,9 @@ test.describe.serial('CRM workflow refinement', () => {
     person = await createContact(owner, { organizationId, name: `Rae Refine ${run}`, contactType: 'person', companyId: company, lifecycle: 'prospect', email: `rae-${run}@example.test`, phone: '+14165550123' });
     legacy = await createCustomer(owner, { organizationId, name: `Legacy Refine ${run}` });
     legacyTwo = await createCustomer(owner, { organizationId, name: `Legacy Review ${run}` });
+    // The pipeline board renders only once stages exist (V1.4 first run shows setup instead), so this
+    // file gives its business a stage of its own rather than relying on another spec having made one.
+    if (!(await listOpportunityStages(owner, { organizationId })).length) await createOpportunityStage(owner, { organizationId, name: `Qualify ${run}`, position: 1, kind: 'open' });
   });
   test.afterAll(async () => { await resetAppearance(owner).catch(() => undefined); await pg?.end(); });
 
@@ -236,8 +240,7 @@ test.describe.serial('CRM workflow refinement', () => {
         const padding = await cell.evaluate(element => getComputedStyle(element).paddingTop);
         await shot(page, `appearance-contacts-${name}`);
         await page.goto(`/organizations/${organizationId}/crm/pipeline`);
-        const column = page.locator('[data-slot=board-column]').first();
-        // The rendered page background: its brightness, not an attribute, shows the theme took effect.
+        const column = page.locator('[data-slot=board-column]').first();        // The rendered page background: its brightness, not an attribute, shows the theme took effect.
         // The column heading's own text colour shows which theme actually rendered: dark text on light, light text on dark.
         const style = await column.evaluate(element => {
           // Browsers report theme colours in lab()/oklch(); painting one pixel converts any notation to RGB.

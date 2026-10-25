@@ -54,7 +54,7 @@ const TYPE_LABEL = { person: 'Person', company: 'Company', unspecified: 'Unspeci
  */
 export function CustomerDetail(props: {
   organizationId: string;
-  query?: { section?: string; view?: string; tab?: string };
+  query?: { section?: string; view?: string; tab?: string; classify?: string };
   opportunities?: ReactNode; opportunityCount?: number;
   followUps?: ReactNode; openTaskCount?: number;
   support?: ReactNode;
@@ -104,10 +104,12 @@ export function CustomerDetail(props: {
   const sectionItems = available.sections.map(key => ({ key, label: SECTION_LABELS[key], href: recordHref(base, key, available.views[key]?.[0]) }));
   const viewItems = (available.views[section] ?? []).filter(key => SECTION_VIEWS[section].includes(key)).map(key => ({ key, label: VIEW_LABELS[key], href: recordHref(base, section, key) }));
   const editStages = features.voice ? stages : [];
+  // `?classify=identity|lifecycle` (from Needs review) opens editing on that section; only when the viewer may edit.
+  const classify = permissions.edit && (props.query?.classify === 'identity' || props.query?.classify === 'lifecycle') ? props.query.classify : null;
 
   return (
     <>
-      <CustomerHeader organizationId={organizationId} customer={customer} stage={stage} definitions={definitions} stages={editStages} mayEdit={permissions.edit} mayCall={features.voice && permissions.call} />
+      <CustomerHeader organizationId={organizationId} customer={customer} stage={stage} definitions={definitions} stages={editStages} mayEdit={permissions.edit} mayCall={features.voice && permissions.call} openEditOn={classify === 'identity' ? 'identity' : classify === 'lifecycle' ? 'relationship' : undefined} />
       <RecordSubnavigation label="Contact sections" sections={sectionItems} current={section} subsections={viewItems} currentSubsection={view} />
       <div className="min-w-0">{renderSection(section, view)}</div>
     </>

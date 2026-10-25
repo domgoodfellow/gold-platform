@@ -146,6 +146,8 @@ export function ContextSwitcher({ mark, current, organizations, setupPending = f
             <SidebarMenuButton
               size="lg"
               tooltip={view.triggerName}
+              // The visible name is hidden when the sidebar collapses to icons; keep the same name for assistive technology.
+              aria-label={view.triggerName}
               className="justify-center data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               {/* Symmetric identity row when expanded — mark, centered name, chevron, the mark and

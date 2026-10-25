@@ -59,6 +59,8 @@ test('Person and Company identity, multiple affiliations, grouping and classific
   await companyLink.click();
   for (const name of people) await expect(page.getByRole('link', { name, exact: true })).toBeVisible();
   await page.goto(base);
+  // V1.4: less frequent criteria live in the Filters panel.
+  await page.getByText('Filters', { exact: true }).click();
   await page.getByLabel('Filter by company', { exact: true }).selectOption(companyId);
   await page.getByLabel('Contact grouping', { exact: true }).selectOption('company');
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
@@ -87,37 +89,39 @@ test('Contacts and Library enter reviewed CSV import; repeating the same source 
   const name = `Imported Person ${suffix}`;
   const csv = `source_record_id,name,email\n${suffix},${name},import-${suffix}@example.test\n${suffix}-duplicate,${name},import-${suffix}@example.test\n`;
   await page.goto(`${base}/crm/contacts`);
-  await page.getByRole('link', { name: /Import/, exact: false }).first().click();
+  // V1.3: importing starts from the Add contacts intake, which leads to Library's import.
+  await page.getByRole('button', { name: 'Add contacts', exact: true }).first().click();
+  await page.getByRole('dialog', { name: 'Add contacts' }).getByRole('link', { name: /Import records/ }).click();
   await expect(page).toHaveURL(/\/library\/imports\/new/);
   await page.getByLabel('CSV file', { exact: true }).setInputFiles({ name: `acceptance-${suffix}.csv`, mimeType: 'text/csv', buffer: Buffer.from(csv) });
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Map your columns', exact: true })).toBeVisible();
   const sourceUrl = page.url();
   await page.getByRole('combobox', { name: 'Contact type', exact: true }).selectOption('person');
-  await page.getByRole('button', { name: 'Review import', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Review', exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Duplicates', exact: true }).click();
+  await page.getByRole('button', { name: 'Review changes', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Review changes', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Possible duplicates', exact: true }).click();
   await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
   await page.screenshot({ path: info.outputPath('import-review.png'), fullPage: true });
   await page.getByRole('link', { name: 'Ready', exact: true }).click();
   await page.getByRole('button', { name: 'Import 1 contact', exact: true }).click();
   const confirmation = page.getByRole('dialog');
   await confirmation.getByRole('button', { name: /Import 1 contact/ }).click();
-  await expect(page.getByRole('heading', { name: 'Result', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Results', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'View contacts', exact: true }).click();
   await page.getByRole('link', { name, exact: true }).first().click();
   await expect(page).toHaveURL(/\/crm\/contacts\/[a-f0-9-]+$/);
   const identity = page.url();
   await page.goto(sourceUrl);
   await page.getByRole('combobox', { name: 'Contact type', exact: true }).selectOption('person');
-  await page.getByRole('button', { name: 'Review import', exact: true }).click();
+  await page.getByRole('button', { name: 'Review changes', exact: true }).click();
   // A newly reviewed mapping proposes an update to the existing contact, not a
   // second identity. Reconfirm it and prove the persisted cardinality and ID.
   await expect(page.getByRole('button', { name: 'Import 1 contact', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Import 1 contact', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: /Import 1 contact/ }).click();
-  await expect(page.getByRole('heading', { name: 'Result', exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Duplicates', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Results', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Possible duplicates', exact: true }).click();
   await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
   await page.screenshot({ path: info.outputPath('import-duplicate-review.png'), fullPage: true });
   await page.goto(`${base}/library/sources`);
@@ -224,11 +228,11 @@ test('a simulated synchronized worksheet can lose a row while its imported conta
     await snapshot([{ external_id: 'person-42', display_name: name, metadata: { headers: ['name'], values: [name] }, deleted: false }]);
     await page.goto(`${base}/library/imports/new?resourceId=${resourceId}`);
     await page.getByRole('combobox', { name: 'Contact type', exact: true }).selectOption('person');
-    await page.getByRole('combobox', { name: 'Mode', exact: true }).selectOption('sync');
-    await page.getByRole('button', { name: 'Review import', exact: true }).click();
+    await page.getByRole('combobox', { name: 'How often', exact: true }).selectOption('sync');
+    await page.getByRole('button', { name: 'Review changes', exact: true }).click();
     await page.getByRole('button', { name: 'Import 1 contact', exact: true }).click();
     await page.getByRole('dialog').getByRole('button', { name: /Import 1 contact/ }).click();
-    await expect(page.getByRole('heading', { name: 'Result', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Results', exact: true })).toBeVisible();
     const contact = await db.from('contacts').select('id').eq('organization_id', organizationId).eq('name', name).single();
     expect(contact.error).toBeNull();
     await snapshot([]);

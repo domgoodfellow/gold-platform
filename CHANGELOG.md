@@ -32,6 +32,12 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-10-25
+
+- A pipeline with no stages and no opportunities now shows a short setup message with a Configure stages button for people who can configure stages, instead of an empty board. The Unstaged column appears only when it holds opportunities or no stages exist.
+- On tablets, the Contacts list keeps Search and Filters in view and moves sort and display into a View menu; the table switches to rows on narrower screens instead of cutting off columns. On phones, quick views scroll sideways and each row shows only the details it has.
+- The Needs review view says what each contact is missing (person or company, lifecycle, or both), with a Classify link that opens the contact's edit dialog at the right section.
+
 ## 2026-10-24
 
 - CRM contact records now open with who the contact is (type, company, lifecycle, temperature and stage as labelled chips, plus how to reach them) and group their pages into seven sections: Overview, Sales, Tasks, Activity, Related, Documents and Portal. Old links to a record's tabs still land in the right place. Editing a contact, creating or editing an opportunity, and editing opportunity stages now happen in focused dialogs. Contacts that still need classifying offer a Classify contact button.

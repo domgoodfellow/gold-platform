@@ -49,6 +49,7 @@ export function CustomerTable({
   timezone = 'UTC',
   empty = 'No contacts yet.',
   inGroup = false,
+  reviewMode = false,
 }: {
   organizationId: string;
   groupByCompany?:boolean;
@@ -64,6 +65,8 @@ export function CustomerTable({
   empty?: string;
   /** Rendered inside a company group, where the company is the heading. */
   inGroup?: boolean;
+  /** Needs review: say why each row is here and link straight to classifying it. */
+  reviewMode?: boolean;
 }) {
   if (groupByCompany && customers.length) {
     // Each contact appears once: a company heads its own group, a person sits under their one primary
@@ -84,7 +87,7 @@ export function CustomerTable({
     const ordered = [...groups.entries()].sort(([a], [b]) => Number(a.startsWith('~')) - Number(b.startsWith('~')));
     return <div className="flex flex-col gap-6">{ordered.map(([key, group]) => <section key={key} aria-label={group.label} className="flex flex-col gap-2">
       <h2 className="flex items-center gap-2 text-sm font-semibold">{group.companyId ? <><Building2 aria-hidden className="size-4 text-muted" /><Link href={`/organizations/${organizationId}/crm/contacts/${group.companyId}`} className="hover:underline">{group.label}</Link></> : group.label}<span className="font-normal tabular-nums text-muted">{group.rows.length}</span></h2>
-      <CustomerTable organizationId={organizationId} customers={group.rows} definitions={definitions} stages={stages} locationLabels={locationLabels} optional={optional} lastActivity={lastActivity} timezone={timezone} empty={empty} inGroup />
+      <CustomerTable organizationId={organizationId} customers={group.rows} definitions={definitions} stages={stages} locationLabels={locationLabels} optional={optional} lastActivity={lastActivity} timezone={timezone} empty={empty} inGroup reviewMode={reviewMode} />
     </section>)}</div>;
   }
   const stageNames = new Map(stages.map((stage) => [stage.id, stage.name]));
@@ -104,6 +107,7 @@ export function CustomerTable({
     },
     {
       key: 'phone',
+      cardValue: (customer) => customer.phone ? <a href={`tel:${customer.phone}`} className="hover:underline">{formatPhoneForDisplay(customer.phone)}</a> : null,
       header: 'Phone',
       // The link dials the stored value. Only the visible text is regrouped.
       cell: (customer) =>
@@ -115,16 +119,19 @@ export function CustomerTable({
     },
     {
       key: 'email',
+      cardValue: customer => customer.email ? <a className="break-all hover:underline" href={`mailto:${customer.email}`}>{customer.email}</a> : null,
       header: 'Email',
       cell: customer => customer.email ? <a className="break-all hover:underline" href={`mailto:${customer.email}`}>{customer.email}</a> : MISSING,
     },
     {
       key: 'last-activity',
+      cardValue: customer => lastActivity[customer.id] ? new Intl.DateTimeFormat('en-CA',{timeZone:timezone,dateStyle:'medium'}).format(new Date(lastActivity[customer.id])) : null,
       header: 'Last activity',
       cell: customer => lastActivity[customer.id] ? new Intl.DateTimeFormat('en-CA',{timeZone:timezone,dateStyle:'medium',timeStyle:'short'}).format(new Date(lastActivity[customer.id])) : <span className="text-subtle">No visible activity</span>,
     },
     {
       key: 'industry',
+      cardValue: (customer) => { const value = customer.custom[INDUSTRY_FIELD_KEY]; return value === undefined || value === '' ? null : readValue(value); },
       header: 'Industry',
       cell: (customer) => {
         const value = customer.custom[INDUSTRY_FIELD_KEY];
@@ -133,6 +140,7 @@ export function CustomerTable({
     },
     {
       key: 'location',
+      cardValue: (customer) => locationLabels[customer.id] ?? null,
       header: 'Location',
       cell: (customer) => locationLabels[customer.id] ?? MISSING,
     },
@@ -143,9 +151,27 @@ export function CustomerTable({
     ...(extra.has('core:temperature') ? [{ key: 'temperature', header: 'Temperature', cell: (customer: Contact) => classificationLabel(customer.leadTemperature ?? 'unrated') }] : []),
   );
 
+  if (reviewMode) {
+    // The reason comes from what is missing, never from the name; nothing is changed until someone saves.
+    columns.splice(1, 0, {
+      key: 'review',
+      header: 'Needs',
+      cell: (customer) => {
+        const identity = !customer.contactType || customer.contactType === 'unspecified';
+        const lifecycle = !customer.lifecycle;
+        const reason = identity && lifecycle ? 'Type and lifecycle' : identity ? 'Person or Company' : 'Lifecycle';
+        return <span className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-xs">{reason}</span>
+          <Link className="text-xs font-medium text-accent-text underline underline-offset-4" href={`/organizations/${organizationId}/crm/contacts/${customer.id}?classify=${identity ? 'identity' : 'lifecycle'}`} aria-label={`Classify ${customer.name}`}>Classify</Link>
+        </span>;
+      },
+    });
+  }
+
   if (stages.length > 0) {
     columns.push({
       key: 'relationship',
+      cardValue: (customer) => customer.stageId ? stageNames.get(customer.stageId) ?? 'Unknown stage' : null,
       header: 'Relationship',
       cell: (customer) =>
         customer.stageId ? stageNames.get(customer.stageId) ?? 'Unknown stage' : <span className="text-subtle">No stage</span>,
@@ -166,7 +192,9 @@ export function CustomerTable({
   }
 
   return (
+    // Cards until a wide container: on tablets and phones a contact reads as identity plus what was recorded, never a clipped table.
     <DataTable
+      tableFrom="wide"
       rows={customers}
       rowKey={(customer) => customer.id}
       empty={<BusinessLabel>{empty}</BusinessLabel>}

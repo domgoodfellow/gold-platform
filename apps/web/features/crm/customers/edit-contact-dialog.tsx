@@ -27,11 +27,13 @@ const INITIAL: EditCustomerState = { error: null, updated: false };
  * `editCustomerAction`, and the shared unsaved-change protection. "Classify contact" is this
  * dialog opened on Identity: Person or Company is chosen explicitly, never guessed from the name.
  */
-export function EditContactDialog({ organizationId, customer, definitions, stages, label = 'Edit', tone = 'secondary', initialSection = 'identity', icon = true }: {
+export function EditContactDialog({ organizationId, customer, definitions, stages, label = 'Edit', tone = 'secondary', initialSection = 'identity', icon = true, defaultOpen = false }: {
   organizationId: string; customer: Contact; definitions: FieldDefinition[]; stages: CustomerStage[];
   label?: ReactNode; tone?: ButtonTone; initialSection?: EditSection; icon?: boolean;
+  /** Opened from a Needs review link (`?classify=`), straight onto the section that needs attention. */
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [key, setKey] = useState(0);
   return <>
     <Button type="button" tone={tone} onClick={() => { setKey(value => value + 1); setOpen(true); }}>{icon ? <Pencil aria-hidden /> : null}{label}</Button>
@@ -62,7 +64,7 @@ function EditContactForm({ organizationId, customer, definitions, stages, initia
   ];
   const sections: { key: EditSection; label: string }[] = [{ key: 'identity', label: 'Identity & essentials' }, { key: 'relationship', label: 'Relationship' }, ...(definitions.length ? [{ key: 'fields' as const, label: 'Additional fields' }] : [])];
   return <>
-    <StepHeader title={unspecified && initialSection === 'identity' ? 'Classify and edit contact' : 'Edit contact'} />
+    <StepHeader title={(unspecified && initialSection === 'identity') || (!customer.lifecycle && initialSection === 'relationship') ? 'Classify and edit contact' : 'Edit contact'} />
     <div className="border-b border-border px-5 py-2">
       <div role="group" aria-label="Contact sections" data-slot="tabs-list" data-variant="segmented" className={tabListStyles()}>
         {sections.map(entry => <button key={entry.key} type="button" aria-pressed={section === entry.key} onClick={() => setSection(entry.key)} data-slot="tabs-trigger" className={tabTriggerStyles}>{entry.label}</button>)}

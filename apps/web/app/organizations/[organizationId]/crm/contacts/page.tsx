@@ -188,6 +188,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
             organizationId={organizationId}
             customers={customers}
             groupByCompany={view.group==='company'}
+            reviewMode={view.review === '1'}
             definitions={definitions}
             stages={visibleStages}
             locationLabels={locationLabels}

@@ -32,6 +32,11 @@ export type Column<T> = {
    */
   visibility?: 'table-and-card' | 'card-only';
   cell: (row: T) => ReactNode;
+  /**
+   * The card's value, when it should differ from the table cell. Returning null leaves the line out
+   * of the card, so a narrow layout shows what was recorded instead of a column of dashes.
+   */
+  cardValue?: (row: T) => ReactNode | null;
 };
 
 export type DataTableProps<T> = {
@@ -43,7 +48,12 @@ export type DataTableProps<T> = {
   empty: ReactNode;
   /** Offered only at zero rows — the same create trigger the page's header already shows. */
   footer?: ReactNode;
+  /** `wide` keeps cards until a wider container, for tables whose columns would otherwise be clipped. */
+  tableFrom?: 'default' | 'wide';
 };
+
+// Container breakpoints, spelled out so the class names exist at build time.
+const TABLE_FROM = { default: { table: 'hidden overflow-x-auto @min-[38rem]:block', cards: 'flex flex-col gap-3 @min-[38rem]:hidden' }, wide: { table: 'hidden overflow-x-auto @min-[64rem]:block', cards: 'flex flex-col gap-3 @min-[64rem]:hidden' } } as const;
 
 export function DataTable<T>({
   columns,
@@ -52,6 +62,7 @@ export function DataTable<T>({
   actions,
   empty,
   footer,
+  tableFrom = 'default',
 }: DataTableProps<T>) {
   if (rows.length === 0) return <EmptyState>{empty}</EmptyState>;
 
@@ -63,7 +74,7 @@ export function DataTable<T>({
 
   return (
     <div className="@container">
-      <div className="hidden overflow-x-auto @min-[38rem]:block">
+      <div className={TABLE_FROM[tableFrom].table}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -111,7 +122,7 @@ export function DataTable<T>({
         </Table>
       </div>
 
-      <ul className="flex flex-col gap-3 @min-[38rem]:hidden">
+      <ul className={TABLE_FROM[tableFrom].cards}>
         {rows.map((row) => {
           const heading = columns.filter((column) => column.emphasis === 'primary');
           const rest = columns.filter((column) => column.emphasis !== 'primary');
@@ -125,14 +136,16 @@ export function DataTable<T>({
               ))}
 
               <dl className={cx('grid grid-cols-[auto_1fr] items-baseline gap-x-3 gap-y-1', heading.length > 0 && 'mt-2')}>
-                {rest.map((column) => (
-                  <div key={column.key} className="contents">
-                    <dt className="text-sm text-subtle">{column.header}</dt>
-                    <dd className={cx('text-sm', column.numeric && 'tabular-nums')}>
-                      {column.cell(row)}
-                    </dd>
-                  </div>
-                ))}
+                {rest.map((column) => {
+                  const value = column.cardValue ? column.cardValue(row) : column.cell(row);
+                  if (value === null) return null;
+                  return (
+                    <div key={column.key} className="contents">
+                      <dt className="text-sm text-subtle">{column.header}</dt>
+                      <dd className={cx('text-sm', column.numeric && 'tabular-nums')}>{value}</dd>
+                    </div>
+                  );
+                })}
               </dl>
 
               {actions ? (

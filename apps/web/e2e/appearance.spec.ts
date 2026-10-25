@@ -53,10 +53,17 @@ test('draft, durable save, opposite-system theme, account scope, public regressi
   await expect(page).toHaveURL(/\/organizations\//);
   await page.goto(`/settings/account/appearance?org=${first}`);
   await expect(page.getByRole('heading', { name: 'Appearance', exact: true })).toBeVisible();
+  // Preset radios are visually hidden inside their cards; choose one the way a person does (the card),
+  // then assert the radio itself is checked, so the accessible control is still what is verified.
+  const choose = async (name: string) => {
+    const radio = page.getByRole('radio', { name, exact: true });
+    await radio.locator('xpath=ancestor::label[1]').click();
+    await expect(radio).toBeChecked();
+  };
   const shell = page.locator('[data-account-appearance]');
   await expect(shell).not.toHaveAttribute('data-visual-preset');
   await page.getByLabel('Theme', { exact: true }).selectOption('light');
-  await page.getByRole('radio', { name: 'Expressive', exact: true }).check();
+  await choose('Expressive');
   await page.getByLabel('Density', { exact: true }).selectOption('compact');
   await page.getByLabel('Shape', { exact: true }).selectOption('soft');
   await expect(shell).not.toHaveAttribute('data-appearance');
@@ -65,7 +72,7 @@ test('draft, durable save, opposite-system theme, account scope, public regressi
   await page.getByRole('button', { name: 'Discard changes' }).click();
   await expect(page.getByRole('button', { name: 'Save appearance' })).toBeDisabled();
   await page.getByLabel('Theme', { exact: true }).selectOption('light');
-  await page.getByRole('radio', { name: 'Layered', exact: true }).check();
+  await choose('Layered');
   await page.getByLabel('Density', { exact: true }).selectOption('comfortable');
   await page.getByLabel('Shape', { exact: true }).selectOption('square');
   await page.getByLabel('Motion', { exact: true }).selectOption('reduced');
@@ -78,12 +85,12 @@ test('draft, durable save, opposite-system theme, account scope, public regressi
   const preview = page.getByTestId('appearance-preview');
   const elevation = (locator: typeof preview) => locator.evaluate(el => getComputedStyle(el).getPropertyValue('--visual-elevation').trim());
   const platformElevation = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--visual-elevation').trim());
-  await page.getByRole('radio', { name: 'Platform default', exact: true }).check();
+  await choose('Platform default');
   await expect(preview).toHaveAttribute('data-visual-system', '');
   expect(await elevation(shell)).not.toBe(platformElevation);
   expect(await elevation(preview)).toBe(platformElevation);
   const layered = page.getByRole('radio', { name: 'Layered', exact: true });
-  await layered.check();
+  await choose('Layered');
   await expect(preview).toHaveAttribute('data-visual-preset', 'layered');
   expect(await elevation(preview)).toBe(await elevation(shell));
   await layered.focus();

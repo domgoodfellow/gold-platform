@@ -182,4 +182,28 @@ describe('customer directory table', () => {
     expect(names).toEqual(['Harbour Co', 'Ada Person']);
     for (const name of ['Ada Person', 'Solo Person', 'Legacy Row']) expect(screen.getAllByRole('link', { name }).filter(link => link.closest('table'))).toHaveLength(1);
   });
+
+  it('Needs review says why each record is listed and links straight to the section that classifies it', () => {
+    const rows = [
+      { id: 'a', name: 'No Type', contactType: 'unspecified' as const, lifecycle: 'customer' as const, email: null, phone: null, custom: {}, stageId: null, createdAt: '2026-01-01' },
+      { id: 'b', name: 'No Lifecycle', contactType: 'person' as const, lifecycle: null, email: null, phone: null, custom: {}, stageId: null, createdAt: '2026-01-01' },
+      { id: 'c', name: 'Neither', contactType: 'unspecified' as const, lifecycle: null, email: null, phone: null, custom: {}, stageId: null, createdAt: '2026-01-01' },
+    ];
+    const { container } = render(<CustomerTable organizationId="org-1" customers={rows} definitions={[]} locationLabels={{}} reviewMode />);
+    expect(headers(container)).toContain('Needs');
+    expect(rowCells(container, 'No Type')).toContain('Person or CompanyClassify');
+    expect(rowCells(container, 'No Lifecycle')).toContain('LifecycleClassify');
+    expect(rowCells(container, 'Neither')).toContain('Type and lifecycleClassify');
+    const table = wideTable(container);
+    expect(within(table).getByRole('link', { name: 'Classify No Type' }).getAttribute('href')).toBe('/organizations/org-1/crm/contacts/a?classify=identity');
+    expect(within(table).getByRole('link', { name: 'Classify No Lifecycle' }).getAttribute('href')).toBe('/organizations/org-1/crm/contacts/b?classify=lifecycle');
+    expect(within(table).getByRole('link', { name: 'Classify Neither' }).getAttribute('href')).toBe('/organizations/org-1/crm/contacts/c?classify=identity');
+  });
+
+  it('cards on narrow layouts list only recorded values, never a column of dashes', () => {
+    renderTable();
+    const card = screen.getAllByRole('listitem').find(item => item.textContent?.includes('Unlisted Contact'))!;
+    expect(card.textContent).not.toContain('—');
+    expect(within(card).queryByText('Phone')).toBeNull();
+  });
 });

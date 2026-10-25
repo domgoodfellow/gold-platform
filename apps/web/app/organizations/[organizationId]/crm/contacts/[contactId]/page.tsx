@@ -95,7 +95,7 @@ export default async function CustomerPage({ params, searchParams }: PageProps<'
     <AppPage>
       <CustomerDetail
         organizationId={organizationId}
-        query={{ section: one('section'), view: one('view'), tab: one('tab') }}
+        query={{ section: one('section'), view: one('view'), tab: one('tab'), classify: one('classify') }}
         opportunityCount={opportunities.total}
         openTaskCount={followUps?.open.length}
         customer={customer}
