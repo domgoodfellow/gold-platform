@@ -47,8 +47,10 @@ describe('relationship-first CRM dashboard',()=>{
     const recent=panel('Recently active relationships');
     expect(within(recent).getByRole('link',{name:'Ada Person'})).toHaveAttribute('href','/organizations/org/crm/contacts/p1');
     expect(within(recent).getByRole('link',{name:'Acme Ltd'})).toHaveAttribute('href','/organizations/org/crm/contacts/c1');
-    expect(within(recent).getByText('Person · Prospect · Acme Ltd')).toBeInTheDocument();
-    expect(within(recent).getByText('Company · Customer')).toBeInTheDocument();
+    // V1.4: identity and affiliation on the secondary line; lifecycle as a labelled status.
+    expect(within(recent).getAllByText('Person · Acme Ltd')).toHaveLength(2);
+    expect(within(recent).getByLabelText('Ada Person lifecycle')).toHaveTextContent('LifecycleProspect');
+    expect(within(recent).getByLabelText('Acme Ltd lifecycle')).toHaveTextContent('LifecycleCustomer');
     expect(within(recent).getByText('Call task completed: Call Ada Person')).toBeInTheDocument();
     expect(within(recent).getAllByText(/^Next:/)).toHaveLength(1);
   });
@@ -56,7 +58,7 @@ describe('relationship-first CRM dashboard',()=>{
     render(<CrmHome {...defaults} relationships={{rows:rows.map(r=>({...r,activity:null,createdAt:'2026-10-01T12:00:00Z'})),mode:'added',grouped:false}}/>);
     expect(screen.getByRole('region',{name:'Recently added contacts'})).toBeInTheDocument();
     expect(screen.queryByRole('region',{name:'Recently active relationships'})).toBeNull();
-    expect(screen.getByText(/these are the newest records/)).toBeInTheDocument();
+    expect(screen.getByText('No relationship activity yet. Showing newest contacts.')).toBeInTheDocument();
     expect(screen.queryByText(/task completed/)).toBeNull();
   });
   it('groups by company from a URL-backed control without repeating any person',()=>{

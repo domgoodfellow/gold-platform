@@ -17,7 +17,7 @@ vi.mock('@/app/organizations/[organizationId]/crm/opportunities/actions', () => 
 vi.mock('@/app/organizations/[organizationId]/crm/tasks/actions', () => followUps);
 vi.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/organizations/org/crm' }));
 
-const confirmation = () => screen.queryByRole('dialog', { name: 'Discard unsaved changes?' });
+const confirmation = () => screen.queryByRole('alertdialog', { name: 'Discard unsaved changes?' }) ?? screen.queryByRole('dialog', { name: 'Discard unsaved changes?' });
 const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 10)));
 function deferred() {
   let resolve: (value: unknown) => void = () => {};
@@ -40,7 +40,7 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 // Contact creation moved from a drawer to the intake dialog; its contract lives in contact-intake.test.tsx.
-describe('Opportunity drawer', () => {
+describe('Opportunity dialog', () => {
   const options = { organizationId: 'org', stages: [], members: [{ id: 'm1', displayName: 'Sanne' }], defaultCurrency: 'EUR' };
   const customer = { id: 'c1', name: 'Harbour View Dental' };
 

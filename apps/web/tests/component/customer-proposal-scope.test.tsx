@@ -63,9 +63,11 @@ vi.mock('@/features/support/related', () => ({ RelatedSupport: () => null }));
 vi.mock('@/features/crm/customers/client-tenant-section', () => ({ ClientTenantSection: () => <span>Client tenants</span> }));
 vi.mock('@/features/crm/customers/service-engagement-section', () => ({ ServiceEngagementSection: () => <span>Service engagements</span> }));
 
-async function renderPage() {
-  return render(await CustomerPage({ params: Promise.resolve({ organizationId: 'org', contactId: 'customer' }) } as Parameters<typeof CustomerPage>[0]));
+async function renderPage(query: Record<string, string> = {}) {
+  return render(await CustomerPage({ params: Promise.resolve({ organizationId: 'org', contactId: 'customer' }), searchParams: Promise.resolve(query) } as Parameters<typeof CustomerPage>[0]));
 }
+// V1.4: proposal work lives under the record's Sales section, and services under Related.
+const PROPOSAL_VIEWS = ['Discovery', 'Proposed configuration', 'Commercial proposals'];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -88,11 +90,11 @@ describe('customer proposal scope', () => {
   ])('omits proposal tabs and all proposal/catalogue reads for $label', async ({ operating, authority }) => {
     boundary.operating = operating;
     boundary.authority = authority;
-    await renderPage();
-    expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument();
-    for (const name of ['Discovery', 'Proposed configuration', 'Commercial proposal']) {
-      expect(screen.queryByRole('tab', { name })).not.toBeInTheDocument();
-    }
+    const { unmount } = await renderPage({ section: 'sales' });
+    expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument();
+    for (const name of PROPOSAL_VIEWS) expect(screen.queryByRole('link', { name })).not.toBeInTheDocument();
+    unmount();
+    await renderPage({ section: 'related', view: 'services' });
     for (const read of [boundary.discovery, boundary.proposals, boundary.invites, boundary.plans, boundary.recommendation, boundary.handoff]) {
       expect(read).not.toHaveBeenCalled();
     }
@@ -101,10 +103,8 @@ describe('customer proposal scope', () => {
   });
 
   it('loads and renders proposals only for platform authority in the operating organization', async () => {
-    await renderPage();
-    for (const name of ['Discovery', 'Proposed configuration', 'Commercial proposal']) {
-      expect(screen.getByRole('tab', { name })).toBeInTheDocument();
-    }
+    await renderPage({ section: 'sales' });
+    for (const name of PROPOSAL_VIEWS) expect(screen.getByRole('link', { name })).toHaveAttribute('href', expect.stringContaining('section=sales&view='));
     expect(boundary.discovery).toHaveBeenCalledOnce();
     expect(boundary.proposals).toHaveBeenCalledOnce();
     expect(boundary.invites).toHaveBeenCalledOnce();

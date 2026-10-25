@@ -600,10 +600,8 @@ export function OrganizationFrame({
   const recovery = locked && !inPlatformScope(pathname);
   const administration = sections.find((section) => section.key === 'administration')?.items[0];
   const shared = { mark, name, organizations, email, signOutAction };
-  const calendarContext = !recovery && !settingsContext ? workspaceNavigation(sections, pathname) : null;
-  // The workspace's registered Calendar, from the projection: absent for a workspace whose Home this person cannot use.
-  const calendarWorkspace = calendarContext?.workspace.key.startsWith('workspace-') && calendarContext.workspace.calendar ? calendarContext.workspace : null;
-
+  // ADR-050: the organization header carries no workspace Calendar shortcut. Calendars stay registered
+  // destinations, reached in context (CRM Dashboard and Tasks, Work Dashboard).
   return (
     <CommandCenterProvider key={organizationId} organizationId={organizationId} displayName={displayName}><WorkspaceShell
       locationNavigation={{ organizationId, sections: recovery ? [] : settingsContext ? settings : sections, configurationHrefs: recovery ? [] : settingsSearch.map((item) => item.href), ...(recovery || !locationAccess ? {} : { access: locationAccess }) }}
@@ -613,7 +611,7 @@ export function OrganizationFrame({
           navigationTrigger="always"
           agentTrigger="md"
           utilities={utilities}
-          beforeActions={<>{!recovery ? <CommandPalette /> : null}{calendarWorkspace?.calendar ? <Link href={calendarWorkspace.calendar.href} aria-label={`${calendarWorkspace.label} calendar`} className={cx('inline-flex min-h-9 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-hover', FOCUS_RING)}><CalendarDays aria-hidden size={16}/><span className="hidden sm:inline">Calendar</span></Link> : null}</>}
+          beforeActions={!recovery ? <CommandPalette /> : null}
         />
       }
       agent={agent}

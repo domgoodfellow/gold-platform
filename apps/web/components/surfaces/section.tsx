@@ -28,6 +28,14 @@ export function SectionHeading({ className, ...props }: ComponentProps<'h2'>) {
 }
 
 /** Label over a group inside a screen — *If*, *Then*, *Recently*, *Sent*. */
+/** A section's heading row: its name and the actions that belong to it. No subtitle is required. */
+export function SectionHeader({ id, title, action, as: Heading = 'h2', className }: { id?: string; title: ReactNode; action?: ReactNode; as?: 'h2' | 'h3'; className?: string }) {
+  return <div data-slot="section-header" className={cx('flex flex-wrap items-center justify-between gap-2', className)}>
+    <Heading id={id} className={Heading === 'h2' ? 'text-base font-semibold' : 'text-sm font-semibold'}>{title}</Heading>
+    {action ? <div className="flex flex-wrap items-center gap-2">{action}</div> : null}
+  </div>;
+}
+
 export function GroupHeading({ className, ...props }: ComponentProps<'h3'>) {
   return (
     <h3

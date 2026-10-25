@@ -147,6 +147,21 @@ export function PanelState({
 }
 
 /**
+ * A one-line empty state for a minor region: a brief fact and, where useful, the next action. Use
+ * `PanelState` only where an empty region is the page's main content.
+ */
+export function CompactEmptyState({ children, action, kind = "empty" }: { children: ReactNode; action?: ReactNode; kind?: PanelStateKind }) {
+  const Icon = { empty: Inbox, "not-configured": Settings2, unavailable: CircleAlert, restricted: Lock }[kind];
+  return (
+    <div data-slot="compact-empty" data-state={kind} role={kind === "unavailable" ? "status" : undefined} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-sm text-muted">
+      <Icon aria-hidden className="size-4 shrink-0" />
+      <p className="min-w-0 flex-1">{children}</p>
+      {action}
+    </div>
+  );
+}
+
+/**
  * The standard section: a titled container with an optional count, destination link and action.
  * `body="inset"` owns all four gutters (compact 12px, standard 16px). Ordinary content must
  * not repeat that outer padding. `body="edge-to-edge"` is for tables/full-width rows which

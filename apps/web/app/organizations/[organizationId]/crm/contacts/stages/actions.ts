@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
 import { requireAccessToken } from '@/lib/api/client';
 import { changeCustomerStage } from '@/lib/api/crm';
-import { createCustomerStage, updateCustomerStage } from '@/lib/domain/customers/stages';
+import { createCustomerStage, deleteCustomerStage, listCustomerStages, moveCustomerStage, updateCustomerStage } from '@/lib/domain/customers/stages';
 import { DomainError } from '@/lib/domain/errors';
 import { requireOrganization } from '@/lib/route/organization';
 
@@ -49,13 +49,12 @@ export async function createStageAction(
   const organizationId = String(formData.get('organizationId') ?? '');
   await requireOrganization(organizationId);
 
-  return attempt(organizationId, () =>
-    createCustomerStage(db, {
-      organizationId,
-      name: String(formData.get('name') ?? ''),
-      position: Number(formData.get('position') ?? 0),
-    }),
-  );
+  // A new stage goes to the end of the list unless a position is given; the list is reordered with Move up / Move down.
+  return attempt(organizationId, async () => {
+    const given = formData.get('position');
+    const position = given === null || given === '' ? Math.max(-1, ...(await listCustomerStages(db, { organizationId })).map(stage => stage.position)) + 1 : Number(given);
+    return createCustomerStage(db, { organizationId, name: String(formData.get('name') ?? ''), position });
+  });
 }
 
 export async function updateStageAction(
@@ -73,6 +72,34 @@ export async function updateStageAction(
       position: Number(formData.get('position') ?? 0),
     }),
   );
+}
+
+/** Rename a stage, keeping its place in the list. */
+export async function renameStageAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  const id = String(formData.get('id') ?? '');
+  return attempt(organizationId, async () => {
+    const stage = (await listCustomerStages(db, { organizationId })).find(entry => entry.id === id);
+    if (!stage) throw new DomainError('That stage is not yours to change.', 'customer_stages.update_refused');
+    return updateCustomerStage(db, { id, name: String(formData.get('name') ?? ''), position: stage.position });
+  });
+}
+
+export async function deleteStageAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  return attempt(organizationId, () => deleteCustomerStage(db, { organizationId, id: String(formData.get('id') ?? '') }));
+}
+
+export async function moveStageAction(formData: FormData): Promise<void> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+  const direction = formData.get('direction') === 'up' ? 'up' : 'down';
+  await attempt(organizationId, () => moveCustomerStage(db, { organizationId, id: String(formData.get('id') ?? ''), direction }));
 }
 
 /**

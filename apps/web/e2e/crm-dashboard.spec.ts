@@ -73,7 +73,7 @@ test.describe.serial('Relationship-first CRM Dashboard', () => {
       test.setTimeout(150_000);
       await page.goto(`/organizations/${organizationId}/crm`);
       await expect(region(page, 'Recently added contacts')).toBeVisible();
-      await expect(page.getByText(/these are the newest records/)).toBeVisible();
+      await expect(page.getByText('No relationship activity yet. Showing newest contacts.')).toBeVisible();
       await expect(page.getByText('Win rate')).toHaveCount(0);
 
       const company = await createContact(owner, { organizationId, name: `Harbour Supply ${run}`, contactType: 'company' });
@@ -93,7 +93,7 @@ test.describe.serial('Relationship-first CRM Dashboard', () => {
         expect(names.slice(0, 3)).toEqual([`Ada Marsh ${run}`, `Ben Ortiz ${run}`, `Cy Lund ${run}`]);
         await expect(recent.getByText('Meeting task completed: Site walk')).toBeVisible();
         await expect(recent.getByText(`Next: Follow up ${run}`)).toBeVisible();
-        await expect(recent.getByText(`Person · Lead · Harbour Supply ${run}`).first()).toBeVisible();
+        await expect(recent.getByText(`Person · Harbour Supply ${run}`).first()).toBeVisible();
       });
 
       await page.setViewportSize({ width: 1440, height: 900 });

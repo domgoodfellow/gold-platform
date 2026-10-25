@@ -16,12 +16,13 @@ const VIEWPORTS = [
   { name: 'desktop', width: 1440, height: 900 },
 ] as const;
 
-const confirmation = (page: Page) => page.getByRole('dialog', { name: 'Discard unsaved changes?' });
+// Drawers confirm in a dialog, focused dialogs in an alertdialog; the contract is the same.
+const confirmation = (page: Page) => page.getByRole('dialog', { name: 'Discard unsaved changes?' }).or(page.getByRole('alertdialog', { name: 'Discard unsaved changes?' }));
 
 /** The footer is reachable, inside the window, and below the scrolling body rather than over it. */
 async function expectFooterBelowBody(page: Page, drawer: Locator) {
-  const footer = await drawer.locator('[data-drawer-footer]').boundingBox();
-  const body = await drawer.locator('[data-drawer-body]').boundingBox();
+  const footer = await drawer.locator('[data-drawer-footer], [data-dialog-footer]').boundingBox();
+  const body = await drawer.locator('[data-drawer-body], [data-dialog-body]').boundingBox();
   const viewport = page.viewportSize()!;
   expect(footer).not.toBeNull();
   expect(body).not.toBeNull();
@@ -40,7 +41,7 @@ async function expectGuardedDiscard(page: Page, drawer: Locator, trigger: Locato
   expect(await drawer.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   await drawer.getByRole('button', { name: 'Cancel' }).click();
   await expect(confirmation(page)).toBeVisible();
-  await page.getByRole('button', { name: 'Discard changes' }).click();
+  await page.getByRole('button', { name: /^Discard/ }).click();
   await expect(drawer).toBeHidden();
   await expect(trigger).toBeFocused();
   expect(await page.evaluate(() => document.body.style.pointerEvents)).not.toBe('none');
@@ -111,7 +112,8 @@ for (const viewport of VIEWPORTS) {
       const { organizationId, customerId } = loadDemoContext();
       await page.goto(`/organizations/${organizationId}/crm/contacts/${customerId}`);
 
-      await page.getByRole('tab', { name: 'Opportunities' }).click();
+      // V1.4: opportunities live under the record's Sales section.
+      await page.getByRole('link', { name: 'Sales', exact: true }).click();
       const newOpportunity = page.getByRole('button', { name: 'New opportunity' });
       const opportunity = page.getByRole('dialog', { name: 'New opportunity' });
       await newOpportunity.click();
@@ -125,7 +127,7 @@ for (const viewport of VIEWPORTS) {
       await expect(opportunity.getByLabel('Value')).toHaveValue('1250.50');
       await expectGuardedDiscard(page, opportunity, newOpportunity);
 
-      await page.getByRole('tab', { name: 'Tasks' }).click();
+      await page.getByRole('link', { name: 'Tasks', exact: true }).click();
       const newFollowUp = page.getByRole('button', { name: 'New follow-up' });
       const followUp = page.getByRole('dialog', { name: 'New follow-up' });
       await newFollowUp.click();
@@ -144,7 +146,7 @@ for (const viewport of VIEWPORTS) {
       await expect(page.getByRole('button', { name: `Drawer follow-up ${run}` }).first()).toBeVisible();
 
       // Saving an opportunity still opens it, as it did before the footer moved.
-      await page.getByRole('tab', { name: 'Opportunities' }).click();
+      await page.getByRole('link', { name: 'Sales', exact: true }).click();
       await newOpportunity.click();
       await opportunity.getByLabel('Title', { exact: true }).fill(`Saved opportunity ${run}`);
       await opportunity.getByRole('button', { name: 'Save opportunity' }).click();

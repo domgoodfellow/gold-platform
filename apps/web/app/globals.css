@@ -397,6 +397,15 @@ h1, h2, h3, h4 {
   outline: 2px solid var(--focus-color);
   outline-offset: 3px;
 }
+/* V1.4 shared CRM surfaces follow shape, preset and density like cards and controls do. */
+:scope :where([data-slot=board-column], [data-slot=board-card], [data-slot=configuration-editor], [data-slot=filter-panel], [data-slot=compact-empty]) {
+  border-radius: var(--visual-radius);
+}
+:scope :where([data-slot=board-card]) { box-shadow: var(--visual-elevation); }
+:scope[data-density] :where([data-slot=entity-row]) { padding-block: calc(var(--visual-spacing) * .75); }
+:scope[data-density] :where([data-slot=board-card]) { padding: calc(var(--visual-spacing) * .75); }
+:scope[data-density] :where([data-slot=configuration-editor] li) { padding-block: calc(var(--visual-spacing) * .75); }
+:scope[data-density] :where([data-slot=table-cell]) { padding-block: calc(var(--visual-spacing) * .5); }
 :scope :where([data-slot=popover-content], [data-slot=dropdown-menu-content], [data-slot=dialog-content]) {
   border-radius: var(--visual-radius);
   box-shadow: var(--visual-overlay-shadow);

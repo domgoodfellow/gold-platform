@@ -209,9 +209,10 @@ describe('the Business mobile navigation', () => {
     expect(organizationLayout).not.toContain('CompactContextSwitcher');
     expect(organizationLayout).not.toContain('bottomBar=');
     expect(organizationLayout).not.toContain('<NotificationBell');
-    // ADR-048 / F-26: the Calendar shortcut is the projection's registered calendar, never an address built by appending `/calendar`.
-    expect(organizationLayout).toContain('{calendarWorkspace?.calendar ? <Link href={calendarWorkspace.calendar.href}');
-    expect(organizationLayout).not.toMatch(/href=\{`\$\{calendarWorkspace\.href\}\/calendar`\}/);
+    // ADR-050 (supersedes ADR-048 point 4): the organization header carries no workspace Calendar shortcut.
+    // Calendars stay registered destinations reached in context, and no address is built by appending `/calendar`.
+    expect(organizationLayout).not.toContain('calendarWorkspace');
+    expect(organizationLayout).not.toMatch(/\/calendar`/);
   });
   it('reuses authorized switcher choices and keeps recovery mobile identity inert', () => {
     expect(organizationShellModel).toMatch(/myOrganizations\.map/);

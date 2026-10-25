@@ -7,34 +7,45 @@ import { TextInput, SelectInput } from '@/components/controls/inputs';
 import { FormField, FormError } from '@/components/controls/form';
 import { useDrawerFormSubmit } from '@/components/controls/use-drawer-form-submit';
 import { useFormDirty } from '@/components/controls/use-form-dirty';
-import { PageDrawer, PageDrawerClose, PageDrawerContent, PageDrawerFooter, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger, usePageDrawerUnsavedChanges } from '@/components/panels/page-drawer';
+import { GuardedDialog, useGuardedDialogClose, useGuardedDialogDirty } from '@/components/panels/guarded-dialog';
+import { DialogBody, DialogFooterBar, StepHeader } from '@/components/panels/dialog-layout';
 import { saveOpportunityAction, searchOpportunityCustomers } from '@/app/organizations/[organizationId]/crm/opportunities/actions';
 import type { Opportunity, OpportunityStage } from '@/lib/domain/opportunities/opportunities';
 import { opportunityValueInput } from '@/lib/domain/opportunities/money';
 
 type CustomerChoice = { id: string; name: string };
 export type OpportunityFormOptions = { organizationId: string; stages: OpportunityStage[]; members: { id: string; displayName: string }[]; defaultCurrency: string };
+/**
+ * Create or edit an opportunity in a focused dialog: one short form, its single primary action, and
+ * the shared unsaved-change protection. Saving still opens the saved opportunity.
+ */
 export function OpportunitySheet({ opportunity, customer, triggerTone, ...options }: OpportunityFormOptions & { opportunity?: Opportunity; customer?: CustomerChoice; triggerTone?: ButtonTone }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const formId = useId();
-  return <PageDrawer open={open} onOpenChange={setOpen}>
-    <PageDrawerTrigger asChild><Button tone={triggerTone ?? (opportunity ? 'secondary' : 'primary')}>{opportunity ? 'Edit opportunity' : 'New opportunity'}</Button></PageDrawerTrigger>
-    <PageDrawerContent><PageDrawerHeader><PageDrawerTitle>{opportunity ? 'Edit opportunity' : 'New opportunity'}</PageDrawerTitle></PageDrawerHeader>
-      <OpportunityForm {...options} opportunity={opportunity} customer={customer} formId={formId} onSaved={() => setOpen(false)} onPendingChange={setPending} />
-      <PageDrawerFooter>
+  const title = opportunity ? 'Edit opportunity' : 'New opportunity';
+  return <>
+    <Button type="button" tone={triggerTone ?? (opportunity ? 'secondary' : 'primary')} onClick={() => setOpen(true)}>{title}</Button>
+    <GuardedDialog open={open} onOpenChange={setOpen}>
+      <StepHeader title={title} />
+      <DialogBody><OpportunityForm {...options} opportunity={opportunity} customer={customer} formId={formId} onSaved={() => setOpen(false)} onPendingChange={setPending} /></DialogBody>
+      <DialogFooterBar>
         <Button type="submit" form={formId} disabled={pending}>{pending ? 'Saving…' : 'Save opportunity'}</Button>
-        <PageDrawerClose asChild><Button type="button" tone="secondary">Cancel</Button></PageDrawerClose>
-      </PageDrawerFooter>
-    </PageDrawerContent>
-  </PageDrawer>;
+        <CancelButton />
+      </DialogFooterBar>
+    </GuardedDialog>
+  </>;
+}
+function CancelButton() {
+  const close = useGuardedDialogClose();
+  return <Button type="button" tone="secondary" onClick={close}>Cancel</Button>;
 }
 function OpportunityForm({ organizationId, stages, members, defaultCurrency, opportunity, customer, formId, onSaved, onPendingChange }: OpportunityFormOptions & { opportunity?: Opportunity; customer?: CustomerChoice; formId: string; onSaved: () => void; onPendingChange: (pending: boolean) => void }) {
   const prefix = useId();
   const router = useRouter();
   const [state, action, pending] = useActionState(saveOpportunityAction, { error: null, savedId: null });
   const { ref, dirty, onChange } = useFormDirty();
-  usePageDrawerUnsavedChanges(dirty);
+  useGuardedDialogDirty(dirty);
   const { onSubmit, errorRef } = useDrawerFormSubmit(action, state, pending, onPendingChange);
   const [search, setSearch] = useState('');
   const [result, setResult] = useState<{ customers: CustomerChoice[]; total: number }>({ customers: [], total: 0 });
@@ -55,7 +66,8 @@ function OpportunityForm({ organizationId, stages, members, defaultCurrency, opp
     return () => { active = false; clearTimeout(timer); };
   }, [organizationId, search, customerIsFixed]);
   useEffect(() => {
-    if (state.savedId) { onSaved(); router.push(`/organizations/${organizationId}/crm/opportunities/${state.savedId}`); router.refresh(); }
+    // Navigate first, then close: the opportunity page is dynamic, so it loads fresh without a refresh that could override the push.
+    if (state.savedId) { router.push(`/organizations/${organizationId}/crm/opportunities/${state.savedId}`); onSaved(); }
   }, [state.savedId, onSaved, router, organizationId]);
   const changeDraft = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target;

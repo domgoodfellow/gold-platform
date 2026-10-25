@@ -4,6 +4,7 @@ import { BUCKET } from '@/lib/domain/documents/documents';
 import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 
 import { redirect } from 'next/navigation';
+import { CONTACT_LIFECYCLES, type ContactLifecycle } from '@/lib/domain/customers/classification';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { uploadImportFile, attachLibraryFileForImport, getResourceSync } from '@/lib/domain/integrations/resources';
@@ -78,6 +79,10 @@ export async function createMappingAndStageAction(formData: FormData): Promise<v
     for(const field of fields)if(field.target.kind==='core' && field.target.field==='contact_type')field.target={kind:'ignore'};
     fields.push({sourceColumn:'__fixed_contact_type',fixedValue:fixedType,target:{kind:'core',field:'contact_type'},transform:'none'});
   }
+  // A source-wide lifecycle applies only to contacts this import creates; a valid lifecycle column
+  // still wins per row, and existing contacts keep theirs. Absent both, new rows are Unclassified.
+  const defaultLifecycle=String(formData.get('defaultLifecycle') ?? '');
+  if(CONTACT_LIFECYCLES.includes(defaultLifecycle as ContactLifecycle))fields.push({sourceColumn:'__default_lifecycle',fixedValue:defaultLifecycle,target:{kind:'core',field:'default_lifecycle'},transform:'none'});
   const backTo = libraryNewImportHref(organizationId, resourceId);
 
   let runId: string | undefined;

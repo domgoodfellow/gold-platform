@@ -32,8 +32,8 @@ test.describe('CRM reference vertical', () => {
     await expect(customerLink).toBeVisible();
     await customerLink.click();
     await expect(page.getByRole('heading', { name: customerName }).last()).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Activity' })).toBeVisible();
-    await page.getByRole('tab', { name: 'Work' }).click();
+    await expect(page.getByRole('link', { name: 'Activity', exact: true })).toBeVisible();
+    await page.getByRole('link', { name: 'Related', exact: true }).click();
     await expect(page.getByText('No work recorded for this customer.')).toBeVisible();
 
     await page.goto(`/organizations/${ctx.organizationId}/crm/contacts/stages`);

@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { Button } from '@/components/controls/button';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { SelectInput } from '@/components/controls/inputs';
+import { Board, BoardCard, BoardColumn } from '@/components/patterns/board';
+import { CollectionToolbar } from '@/components/patterns/collection-toolbar';
 import { listContacts } from '@/lib/domain/contacts/contacts';
 import { AppPage } from '@/components/layout/app-page';
 import { CollectionHeader } from '@/components/patterns/collection-header';
@@ -27,36 +28,46 @@ export default async function OpportunityPipelinePage({ params, searchParams }: 
   const followUpsEnabled=await followUpsAvailable(db,organizationId);
   const collection = areaHref(organizationId, 'opportunities');
   const columns = [...stages.map((stage) => ({ id: stage.id as string | null, name: stage.name, kind: stage.kind as string })), { id: null, name: 'Unstaged', kind: '' }];
+  const base = `/organizations/${organizationId}/crm/pipeline`;
+  const without = (key: string) => { const params = new URLSearchParams(); for (const name of ['q', 'stage', 'owner', 'customer']) if (name !== key && value(name)) params.set(name, value(name)); const text = params.toString(); return text ? `${base}?${text}` : base; };
+  const stageName = (id: string) => id === 'unstaged' ? 'Unstaged' : stages.find(stage => stage.id === id)?.name ?? 'Stage';
+  const active = [
+    ...(value('q') ? [{ key: 'q', label: `Search: ${value('q')}`, removeHref: without('q') }] : []),
+    ...(value('stage') ? [{ key: 'stage', label: `Stage: ${stageName(value('stage'))}`, removeHref: without('stage') }] : []),
+    ...(value('owner') ? [{ key: 'owner', label: `Owner: ${value('owner') === 'unassigned' ? 'Unassigned' : members.find(member => member.id === value('owner'))?.displayName ?? 'Member'}`, removeHref: without('owner') }] : []),
+    ...(value('customer') ? [{ key: 'customer', label: `Contact: ${contacts.find(contact => contact.id === value('customer'))?.name ?? 'Contact'}`, removeHref: without('customer') }] : []),
+  ];
+  const dateFormat = new Intl.DateTimeFormat('en-CA', { timeZone: organization.timezone, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   return <AppPage>
-    <CollectionHeader location={{}} actions={<><ButtonLink tone="secondary" href={collection}>List view</ButtonLink>{organization.capabilities.includes('field.manage') ? <ButtonLink href={`/organizations/${organizationId}/${configTarget('opportunity-stages').path}`}>Opportunity stages</ButtonLink> : null}{organization.capabilities.includes('opportunity.create') ? <OpportunitySheet organizationId={organizationId} stages={stages} members={members} defaultCurrency={organization.currency ?? ''} /> : null}</>} />
-    <form className="mb-4 flex flex-wrap items-end gap-2" role="search">
-      <label>Search<TextInput name="q" defaultValue={value('q')} type="search" /></label>
-      <label>Stage<SelectInput name="stage" defaultValue={value('stage')}><option value="">All stages</option><option value="unstaged">Unstaged</option>{stages.map(stage=><option key={stage.id} value={stage.id}>{stage.name}</option>)}</SelectInput></label>
-      <label>Owner<SelectInput name="owner" defaultValue={value('owner')}><option value="">All owners</option><option value="unassigned">Unassigned</option>{members.map(member=><option key={member.id} value={member.id}>{member.displayName}</option>)}</SelectInput></label>
-      <label>Contact<SelectInput name="customer" defaultValue={value('customer')}><option value="">All contacts</option>{contacts.map(contact=><option key={contact.id} value={contact.id}>{contact.name}</option>)}</SelectInput></label>
-      <Button type="submit" tone="secondary">Apply filters</Button>
-      {filtered ? <ButtonLink tone="text" href={`/organizations/${organizationId}/crm/pipeline`}>Clear</ButtonLink> : null}
-    </form>
-    {!stages.length ? <p className="mb-4 text-sm text-muted">No opportunity stages configured. Opportunities remain unstaged until a stage is assigned.</p> : null}
-    <p className="mb-4 text-xs text-muted">{filtered ? 'Showing up to 100 matching opportunities. Stage counts describe the displayed cards; use List view for pagination.' : 'Up to 10 opportunities per stage, ordered by expected close. Counts and currency totals include every opportunity.'}</p>
-    <div className="flex min-w-0 gap-4 overflow-x-auto pb-4" aria-label="Opportunity stages">
+    <CollectionHeader location={{}} actions={<><ButtonLink tone="secondary" href={collection}>List view</ButtonLink>{organization.capabilities.includes('field.manage') ? <ButtonLink tone="secondary" href={`/organizations/${organizationId}/${configTarget('opportunity-stages').path}`}>Opportunity stages</ButtonLink> : null}{organization.capabilities.includes('opportunity.create') ? <OpportunitySheet organizationId={organizationId} stages={stages} members={members} defaultCurrency={organization.currency ?? ''} /> : null}</>} />
+    <CollectionToolbar className="mb-4" action={base} search={{ name: 'q', value: value('q'), label: 'Search opportunities' }} filterCount={['stage', 'owner', 'customer'].filter(key => value(key)).length}
+      filters={<>
+        <label className="flex flex-col gap-1 text-sm">Stage<SelectInput name="stage" defaultValue={value('stage')}><option value="">All stages</option><option value="unstaged">Unstaged</option>{stages.map(stage => <option key={stage.id} value={stage.id}>{stage.name}</option>)}</SelectInput></label>
+        <label className="flex flex-col gap-1 text-sm">Owner<SelectInput name="owner" defaultValue={value('owner')}><option value="">All owners</option><option value="unassigned">Unassigned</option>{members.map(member => <option key={member.id} value={member.id}>{member.displayName}</option>)}</SelectInput></label>
+        <label className="flex flex-col gap-1 text-sm sm:col-span-2">Contact<SelectInput name="customer" defaultValue={value('customer')}><option value="">All contacts</option>{contacts.map(contact => <option key={contact.id} value={contact.id}>{contact.name}</option>)}</SelectInput></label>
+      </>}
+      active={active} resetHref={filtered ? base : undefined} />
+    {!stages.length ? <p className="mb-3 text-sm text-muted">No opportunity stages yet. Opportunities stay Unstaged until stages exist.</p> : null}
+    <p className="mb-3 text-xs text-muted">{filtered ? 'Up to 100 matching opportunities; counts describe the cards shown. Use List view to page through more.' : 'Up to 10 opportunities per stage, by expected close. Counts and totals include every opportunity.'}</p>
+    <Board label="Opportunity stages">
       {columns.map((column) => {
         const totals = filtered ? undefined : summary.find((item) => item.stageId === column.id);
         const cards = items.filter((item) => item.stageId === column.id);
-        return <section key={column.id ?? 'unstaged'} className="w-80 shrink-0 overflow-hidden rounded-xl border border-border bg-surface p-3" aria-label={column.name}>
-          <div className="mb-3 flex items-start justify-between gap-2 border-b border-border pb-3"><div><h2 className="font-semibold">{column.name}</h2><p className={`text-xs capitalize ${column.kind==='won'?'text-success':column.kind==='lost'?'text-muted':'text-muted'}`}>{column.kind || 'No stage assigned'}</p></div><span className="rounded-md bg-background px-2 py-0.5 text-sm font-semibold tabular-nums">{filtered ? cards.length : totals?.count ?? 0}</span></div>
-          {totals?.values.map((value) => <p key={value.currency} className="mb-2 text-xs tabular-nums text-muted">{formatOpportunityValue(value.amountMinor, value.currency)}</p>)}
-          <div className="space-y-3">{cards.map((item) => <article key={item.id} className="space-y-3 rounded-xl border border-border bg-background p-4 shadow-sm">
-            <div><Link className="break-words font-medium underline underline-offset-4" href={`${collection}/${item.id}`}>{item.title}</Link><Link className="mt-1 block text-sm text-muted underline" href={`/organizations/${organizationId}/crm/contacts/${item.customerId}`}>{item.customerName}</Link></div>
-            <p className="text-sm tabular-nums">{item.amountMinor !== null && item.currency ? formatOpportunityValue(item.amountMinor, item.currency) : 'Value not set'}</p>
-            <div className="flex flex-wrap justify-between gap-2 text-xs text-muted"><span>{item.ownerName ?? 'Unassigned'}</span><span>{item.expectedCloseOn ? `Closes ${item.expectedCloseOn}` : 'Close date not set'}</span></div>
-            {followUpsEnabled ? item.nextFollowUp ? <div className="rounded-md bg-surface p-2 text-xs">{followUpsEnabled?<FollowUpSheet organizationId={organizationId} timezone={organization.timezone} members={members} mayManage={organization.capabilities.includes('follow_up.manage')} reference={item.nextFollowUp}/>:<p className="font-medium">{item.nextFollowUp.title}</p>}<p className="mt-1 text-muted">{new Intl.DateTimeFormat('en-CA',{timeZone:organization.timezone,month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(item.nextFollowUp.dueAt))}</p></div> : <p className="text-xs text-muted">No next follow-up</p> : null}
-            {mayUpdate ? <OpportunityStageControl organizationId={organizationId} opportunityId={item.id} title={item.title} stageId={item.stageId} stages={stages} /> : null}
-          </article>)}</div>
-          {!cards.length ? <p className="py-8 text-center text-sm text-muted">No opportunities in this stage.</p> : null}
-          <ButtonLink tone="text" href={`${collection}?stage=${column.id ?? 'unstaged'}`}>View all in {column.name}</ButtonLink>
-        </section>;
+        const count = filtered ? cards.length : totals?.count ?? 0;
+        return <BoardColumn key={column.id ?? 'unstaged'} name={column.name} count={count} empty="No opportunities."
+          meta={<><span className={column.kind ? 'capitalize' : undefined}>{column.kind || 'No stage assigned'}</span>{totals?.values.map((total) => <span key={total.currency} className="block tabular-nums">{formatOpportunityValue(total.amountMinor, total.currency)}</span>)}</>}
+          footer={count > cards.length || filtered ? <Link className="text-xs font-medium text-accent-text underline underline-offset-4" href={`${collection}?stage=${column.id ?? 'unstaged'}`}>View all in {column.name}</Link> : null}>
+          {cards.length ? cards.map((item) => <BoardCard key={item.id} actions={mayUpdate ? <OpportunityStageControl organizationId={organizationId} opportunityId={item.id} title={item.title} stageId={item.stageId} stages={stages} /> : undefined}>
+            <div className="min-w-0"><Link className="block break-words font-medium hover:underline" href={`${collection}/${item.id}`}>{item.title}</Link><Link className="block truncate text-xs text-muted hover:underline" href={`/organizations/${organizationId}/crm/contacts/${item.customerId}`}>{item.customerName}</Link></div>
+            <dl className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-xs">
+              <dt className="sr-only">Value</dt><dd className="font-medium tabular-nums">{item.amountMinor !== null && item.currency ? formatOpportunityValue(item.amountMinor, item.currency) : <span className="text-muted">No value</span>}</dd>
+              <dt className="sr-only">Expected close</dt><dd className="text-right text-muted">{item.expectedCloseOn ? `Closes ${item.expectedCloseOn}` : 'No close date'}</dd>
+              <dt className="sr-only">Owner</dt><dd className="col-span-2 text-muted">{item.ownerName ?? 'Unassigned'}</dd>
+            </dl>
+            {followUpsEnabled ? item.nextFollowUp ? <div className="rounded-md bg-secondary px-2 py-1.5 text-xs"><FollowUpSheet organizationId={organizationId} timezone={organization.timezone} members={members} mayManage={organization.capabilities.includes('follow_up.manage')} reference={item.nextFollowUp} /><p className="mt-0.5 text-muted">{dateFormat.format(new Date(item.nextFollowUp.dueAt))}</p></div> : <p className="text-xs text-muted">No next follow-up</p> : null}
+          </BoardCard>) : null}
+        </BoardColumn>;
       })}
-    </div>
+    </Board>
   </AppPage>;
 }

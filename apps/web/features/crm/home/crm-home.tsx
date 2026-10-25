@@ -1,7 +1,7 @@
 import { ConfigureMenu } from '@/components/controls/configure-menu';
 import type { ConfigureItem } from '@/lib/navigation';
 import Link from 'next/link';
-import { CircleCheck } from 'lucide-react';
+import { CalendarDays, CircleCheck } from 'lucide-react';
 import { Button,ButtonLink } from '@/components/controls/button';
 import { TextInput } from '@/components/controls/inputs';
 import { WorkspaceHome } from '@/components/patterns/workspace-home';
@@ -48,7 +48,8 @@ function dashboardHref(base:string,params:{month?:string;group?:boolean}) {
 export function CrmHome({organizationId,timezone,month,overview,relationships,sales,salesComposition,attention,today,overdue,noNext,unassigned,followUpOptions,opportunityOptions,followUpsEnabled,conversionEnabled,mayAddContacts,mayCreateOpportunity,mayConfigure,configureItems=[]}:CrmHomeProps) {
   const base=`/organizations/${organizationId}`; const contacts=`${base}/crm/contacts`;
   const monthParam=month.slice(0,7); const salesEnabled=salesComposition==='full';
-  const actions=<><ConfigureMenu items={configureItems} />{mayAddContacts?<AddContactsTrigger/>:null}{mayCreateOpportunity&&salesEnabled?<OpportunitySheet {...opportunityOptions} triggerTone="secondary"/>:null}</>;
+  // ADR-050: Calendar is reached in context, from the workspace that owns it, not from global chrome.
+  const actions=<><ConfigureMenu items={configureItems} />{followUpsEnabled?<ButtonLink tone="secondary" href={`${base}/crm/calendar`}><CalendarDays aria-hidden/> Calendar</ButtonLink>:null}{mayAddContacts?<AddContactsTrigger/>:null}{mayCreateOpportunity&&salesEnabled?<OpportunitySheet {...opportunityOptions} triggerTone="secondary"/>:null}</>;
   const attentionSources=followUpsEnabled||salesEnabled; const attentionTotal=attention.overdue+attention.today+(salesEnabled?attention.unassigned+(followUpsEnabled?attention.noNext:0):0);
   const allClear=attentionSources&&!attentionTotal;
   const lifecycleTotal=LIFECYCLES.reduce((sum,[key])=>sum+overview.lifecycles[key],0);

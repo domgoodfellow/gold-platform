@@ -15,7 +15,7 @@ const INITIAL: ChangeStageState = { error: null };
  *
  * **Calls the FastAPI-authoritative write.** `changeCustomerStageAction` forwards this to
  * `apps/api/app/domains/crm/stages.py::change_customer_stage`, which is the one implementation of
- * *moving a card between pipeline columns* — a different act from `EditCustomerForm`'s bundled
+ * *moving a card between pipeline columns* — a different act from `EditContactDialog`'s bundled
  * edit-and-move, which keeps its own unchanged, atomic write (see that component's own comment).
  *
  * Submits on change rather than needing a Save button: a board with one button per card for
@@ -37,7 +37,7 @@ export function CustomerStageControl({
   const [state, formAction, pending] = useActionState(changeCustomerStageAction, INITIAL);
 
   return (
-    <form action={formAction} className="mt-1">
+    <form action={formAction}>
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="customerId" value={customerId} />
       <SelectInput

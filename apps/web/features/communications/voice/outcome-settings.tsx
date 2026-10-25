@@ -14,7 +14,7 @@ const INITIAL: FormState = { error: null };
 /**
  * Naming the ways a call can go.
  *
- * **Nothing here proposes a word**, for the same reason `features/crm/sales/stage-settings.tsx`
+ * **Nothing here proposes a word**, for the same reason `features/crm/sales/relationship-stage-editor.tsx`
  * proposes none: no placeholder suggests *Voicemail*, and a platform that ships no dialer script
  * may not seed one through a form's suggestions.
  */

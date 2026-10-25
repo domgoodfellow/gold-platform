@@ -15943,6 +15943,10 @@ export type Database = {
         Args: { p_id: string; p_organization_id: string }
         Returns: undefined
       }
+      delete_relationship_stage: {
+        Args: { p_organization_id: string; p_stage_id: string }
+        Returns: undefined
+      }
       delete_resource_availability_exception: {
         Args: { p_id: string }
         Returns: undefined
@@ -17618,6 +17622,13 @@ export type Database = {
         Returns: Json
       }
       reissue_invitation: { Args: { p_id: string }; Returns: string }
+      relationship_stage_usage: {
+        Args: { p_organization_id: string }
+        Returns: {
+          contacts: number
+          stage_id: string
+        }[]
+      }
       release_conversation: {
         Args: { p_conversation_id: string; p_organization_id: string }
         Returns: undefined

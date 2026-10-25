@@ -105,6 +105,8 @@ export type ContactPageFilter = {
   website?: 'with' | 'without';
   /** Created at or after this instant; the Dashboard's New contacts uses now minus 30 days. */
   addedSince?: string;
+  /** Needs review: an Unspecified identity or no lifecycle yet. Never inferred, only listed for a person to classify. */
+  needsReview?: boolean;
   /** One-based. */
   page: number;
 };
@@ -147,6 +149,7 @@ export async function listContactPage(
   if (filter.website === 'with') query = query.not('custom->>website', 'is', null).neq('custom->>website', '');
   if (filter.website === 'without') query = query.or('custom->>website.is.null,custom->>website.eq.');
   if (filter.addedSince) query = query.gte('created_at', filter.addedSince);
+  if (filter.needsReview) query = query.or('contact_type.eq.unspecified,lifecycle.is.null');
 
   const from = (filter.page - 1) * CONTACT_PAGE_SIZE;
   const { data, error, count } = await query
@@ -306,9 +309,10 @@ export async function getContact(
   db: Db,
   input: { organizationId: string; customerId: string },
 ): Promise<Contact | null> {
+  // contact_directory is the same security-invoker row plus a person's primary active company.
   const { data, error } = await db
-    .from('contacts')
-    .select('id, name, email, phone, custom, stage_id, contact_type, lifecycle, lead_temperature, created_at')
+    .from('contact_directory')
+    .select('id, name, email, phone, custom, stage_id, contact_type, lifecycle, lead_temperature, created_at, directory_company_id, directory_company_name')
     .eq('organization_id', input.organizationId)
     .eq('id', input.customerId)
     .maybeSingle();
@@ -319,8 +323,8 @@ export async function getContact(
   if (!data) return null;
 
   return {
-    id: data.id,
-    name: data.name,
+    id: data.id!,
+    name: data.name!,
     email: data.email,
     phone: data.phone,
     custom: (data.custom ?? {}) as CustomValues,
@@ -328,7 +332,9 @@ export async function getContact(
     contactType: data.contact_type as ContactType,
     lifecycle: data.lifecycle as ContactLifecycle | null,
     leadTemperature: data.lead_temperature as LeadTemperature,
-    createdAt: data.created_at,
+    createdAt: data.created_at!,
+    companyId: data.contact_type === 'person' ? data.directory_company_id : null,
+    companyName: data.contact_type === 'person' ? data.directory_company_name : null,
   };
 }
 

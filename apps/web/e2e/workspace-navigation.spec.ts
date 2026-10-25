@@ -585,7 +585,7 @@ test('contact lifecycle, multiple opportunities, and reviewed intake from Contac
   const base=`/organizations/${fixture.full}`;
   const suffix=randomUUID().slice(0,8),name=`GuildOps contact ${suffix}`,email=`guildops-${suffix}@example.test`;
   await page.goto(`${base}/crm/contacts`);
-  await addContactManually(page,{type:'person',name,email,details:async details=>{await expect(details.getByLabel('Lifecycle',{exact:true})).toHaveValue('lead');await details.getByLabel('Lead temperature').selectOption('warm');}});
+  await addContactManually(page,{type:'person',name,email,details:async details=>{await expect(details.getByLabel('Lifecycle',{exact:true})).toHaveValue('');await details.getByLabel('Lifecycle',{exact:true}).selectOption('lead');await details.getByLabel('Lead temperature').selectOption('warm');}});
   let dialog=page.getByRole('dialog');
   await page.getByRole('link',{name,exact:true}).filter({visible:true}).first().click();
   await page.waitForURL(/\/crm\/contacts\/[a-f0-9-]+$/);

@@ -7,6 +7,7 @@ import { ButtonLink } from '@/components/controls/button';
 import { AddContactsTrigger, ContactIntakeProvider } from '@/features/crm/intake/contact-intake';
 import { anyIntake, contactIntakeOptions } from '@/lib/application/crm/contact-intake';
 import {
+  directoryHref,
   CustomerListToolbar,
   type CustomerDirectoryView,
 } from '@/features/crm/customers/customer-list-toolbar';
@@ -86,10 +87,11 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
     industry: single(query.industry),
     website: single(query.website),
     added: single(query.added) === '30d' ? '30d' : undefined,
+    review: single(query.review) === '1' ? '1' : undefined,
     optional: (Array.isArray(query.column) ? query.column : query.column ? [query.column] : []).filter((id) => validChoices.has(id)),
   };
   const companies=await listCompanies(db,organizationId);
-  const filtered = Boolean(view.contactType || view.companyId || view.lifecycle || view.temperature || view.search || view.stage || view.industry || view.website || view.added);
+  const filtered = Boolean(view.contactType || view.companyId || view.lifecycle || view.temperature || view.search || view.stage || view.industry || view.website || view.added || view.review);
 
   const customers = await listContactPage(db, {
     organizationId,
@@ -104,6 +106,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
       industry: view.industry || undefined,
       website: view.website === 'with' || view.website === 'without' ? view.website : undefined,
       addedSince: view.added === '30d' ? thirtyDaysAgo(new Date()) : undefined,
+      needsReview: view.review === '1',
       page,
     },
   });
@@ -117,21 +120,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
   const emptyCollection = customers.total === 0 && !filtered;
   const mayCreate = organization.capabilities.includes('customer.create');
 
-  const hrefFor = (target: number) => {
-    const params = new URLSearchParams();
-    for(const key of ['contactType','companyId','sort','group'] as const)if(view[key])params.set(key,view[key]);
-    if (view.lifecycle) params.set('lifecycle', view.lifecycle);
-    if (view.temperature) params.set('temperature', view.temperature);
-    if (view.search) params.set('q', view.search);
-    if (view.stage) params.set('stage', view.stage);
-    if (view.industry) params.set('industry', view.industry);
-    if (view.website) params.set('website', view.website);
-    if (view.added) params.set('added', view.added);
-    for (const id of view.optional) params.append('column', id);
-    if (target > 1) params.set('page', String(target));
-    const suffix = params.toString();
-    return `/organizations/${organizationId}/crm/contacts${suffix ? `?${suffix}` : ''}`;
-  };
+  const hrefFor = (target: number) => directoryHref(organizationId, view, { page: String(target) });
   const lastPage = Math.max(1, Math.ceil(customers.total / CONTACT_PAGE_SIZE));
 
   return (

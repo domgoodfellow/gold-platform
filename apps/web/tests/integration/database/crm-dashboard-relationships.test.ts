@@ -34,8 +34,9 @@ describe('CRM dashboard relationship reads under real PostgreSQL RLS',()=>{
     const roleId=await createRole(owner.db,{organizationId,name:'Relationship reader',capabilities:['customer.update']});await addMember(owner.db,{organizationId,email:reader.email,roleId});
   });
   it('counts identity type and lifecycle as separate dimensions, with a 30-day creation window',async()=>{
+    // Ada and Solo were created as Leads; Ben and Old Company were created without a lifecycle (V1.4: Unclassified), and the legacy record was cleared.
     const overview=await relationshipOverview(owner.db,organizationId);
-    expect(overview).toEqual({total:6,people:3,companies:2,unspecified:1,newLast30Days:5,lifecycles:{lead:4,prospect:0,customer:1,unclassified:1}});
+    expect(overview).toEqual({total:6,people:3,companies:2,unspecified:1,newLast30Days:5,lifecycles:{lead:2,prospect:0,customer:1,unclassified:3}});
     expect((await relationshipOverview(outsider.db,organizationId)).total).toBe(0);
     // The New contacts link opens the directory filtered to the same window, and the counts agree.
     const added=await listContactPage(owner.db,{organizationId,filter:{page:1,addedSince:new Date(Date.now()-30*86400000).toISOString()}});

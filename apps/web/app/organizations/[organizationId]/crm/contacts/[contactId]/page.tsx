@@ -37,8 +37,10 @@ import { listServiceEngagements } from '@/lib/domain/customers/service-engagemen
 
 export const dynamic = 'force-dynamic';
 
-export default async function CustomerPage({ params }: PageProps<'/organizations/[organizationId]/crm/contacts/[contactId]'>) {
+export default async function CustomerPage({ params, searchParams }: PageProps<'/organizations/[organizationId]/crm/contacts/[contactId]'>) {
   const { organizationId, contactId: customerId } = await params;
+  const raw = await searchParams;
+  const one = (key: string) => (typeof raw[key] === 'string' ? raw[key] as string : undefined);
   const { db, organization } = await requireOrganization(organizationId);
   const customer = await getContact(db, { organizationId, customerId });
   if (!customer) notFound();
@@ -93,6 +95,9 @@ export default async function CustomerPage({ params }: PageProps<'/organizations
     <AppPage>
       <CustomerDetail
         organizationId={organizationId}
+        query={{ section: one('section'), view: one('view'), tab: one('tab') }}
+        opportunityCount={opportunities.total}
+        openTaskCount={followUps?.open.length}
         customer={customer}
         affiliations={<ContactAffiliations db={db} organizationId={organizationId} contact={customer} mayEdit={organization.capabilities.includes('customer.update')}/>}
         accessibleTenantIds={relationships.filter(r => r.may_open).map(r => r.tenant_organization_id)}

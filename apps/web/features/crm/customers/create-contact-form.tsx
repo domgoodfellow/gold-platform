@@ -11,14 +11,15 @@ import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { createCustomerAction, companyOptionsAction, type CreateCustomerState } from '@/app/organizations/[organizationId]/crm/contacts/actions';
 import { ContactClassificationFields } from './contact-classification-fields';
-import { DialogBody, DialogFooterBar, StepHeader } from './contact-dialog-layout';
+import { DialogBody, DialogFooterBar, StepHeader } from '@/components/panels/dialog-layout';
+import { useGuardedDialogClose, useGuardedDialogDirty } from '@/components/panels/guarded-dialog';
 
 const INITIAL: CreateCustomerState = { error: null, created: false };
 type Identity = 'person' | 'company' | '';
 /** Industry classification fields come first in Additional information when this business defines them. */
 const INDUSTRY_KEYS = ['industry', 'sic', 'sic_code', 'naics', 'naics_code'];
 
-function IdentityChoice({ value, checked, onChange, label, description, Icon }: { value: 'person' | 'company'; checked: boolean; onChange: () => void; label: string; description: string; Icon: typeof User }) {
+export function IdentityChoice({ value, checked, onChange, label, description, Icon }: { value: 'person' | 'company' | 'unspecified'; checked: boolean; onChange: () => void; label: string; description: string; Icon: typeof User }) {
   return <label data-slot="selectable-card" className="flex min-h-20 cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface p-4 text-left transition-colors hover:bg-hover has-[:checked]:border-accent has-[:checked]:ring-2 has-[:checked]:ring-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent">
     <input type="radio" name="contactType" value={value} checked={checked} onChange={onChange} required className="sr-only" />
     <Icon aria-hidden className="mt-0.5 size-5 shrink-0 text-muted" />
@@ -32,10 +33,10 @@ function IdentityChoice({ value, checked, onChange, label, description, Icon }: 
  * them (or into the inline company step and back) never loses a typed value. Saving is possible
  * from either stage; the canonical `createCustomerAction` returns the new contact's id.
  */
-export function CreateContactForm({ organizationId, definitions, initialType = '', onCreated, onDirtyChange, onCancel }: {
-  organizationId: string; definitions: FieldDefinition[]; initialType?: Identity;
-  onCreated: (created: CreateCustomerState) => void; onDirtyChange: (dirty: boolean) => void; onCancel: () => void;
+export function CreateContactForm({ organizationId, definitions, initialType = '', onCreated }: {
+  organizationId: string; definitions: FieldDefinition[]; initialType?: Identity; onCreated: (created: CreateCustomerState) => void;
 }) {
+  const onCancel = useGuardedDialogClose();
   const formId = useId();
   const [identity, setIdentity] = useState<Identity>(initialType);
   const [stage, setStage] = useState<'essentials' | 'details' | 'company'>('essentials');
@@ -45,7 +46,7 @@ export function CreateContactForm({ organizationId, definitions, initialType = '
   useEffect(() => { let active = true; companyOptionsAction(organizationId).then(rows => { if (active) setCompanies(rows); }).catch(() => { if (active) setCompaniesError('Company options could not be loaded.'); }); return () => { active = false; }; }, [organizationId]);
   const [state, formAction, pending] = useActionState(createCustomerAction, INITIAL);
   const { ref, dirty, onChange } = useFormDirty();
-  useEffect(() => { onDirtyChange(dirty); }, [dirty, onDirtyChange]);
+  useGuardedDialogDirty(dirty);
   const { onSubmit, errorRef } = useDrawerFormSubmit(formAction, state, pending);
   useEffect(() => { if (state.created) onCreated(state); }, [state, onCreated]);
 

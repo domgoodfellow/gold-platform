@@ -3,7 +3,7 @@
 **Date:** 2026-10-20
 **Status:** Accepted (approved by the owner on 2026-10-20 after the Slice 2B review)
 **Supersedes:** ADR-046, point 6 only, in that the page header may no longer present the workspace's destinations
-**Superseded by:** None
+**Superseded by:** ADR-050, point 4 only (no workspace Calendar shortcut in the organization header)
 
 **Amended:** 2026-10-21, owner-directed UI composition correction: point 5's outlined tile is replaced by ordinary sidebar glyph geometry; typography and the divider retain workspace hierarchy.
 

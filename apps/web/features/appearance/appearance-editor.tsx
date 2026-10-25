@@ -2,7 +2,7 @@
 
 import { useId, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check } from 'lucide-react';
+import { Building2, Check, User, X } from 'lucide-react';
 import { VISUAL_PRESETS, type PersonalAppearancePreferences, type VisualPreset } from '@gold/ui/design-system';
 import { VisualScope } from '@gold/ui/components/visual-scope';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@gold/ui/components/tabs';
@@ -13,6 +13,12 @@ import { FormField, FormActions, FormError } from '@/components/controls/form';
 import { SelectableCard } from '@/components/controls/selectable-card';
 import { Card } from '@/components/surfaces/card';
 import { Toolbar } from '@/components/display/data';
+import { EntityIdentity, EntityRow } from '@/components/display/entity-row';
+import { StatusSummary } from '@/components/display/status-summary';
+import { ViewNav } from '@/components/navigation/view-nav';
+import { DialogBody, DialogFooterBar, StepHeader } from '@/components/panels/dialog-layout';
+import { Dialog, DialogContent, DialogTrigger } from '@gold/ui/components/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@gold/ui/components/table';
 import { cx } from '@/components/class-names';
 import { updateAppearanceAction } from '@/app/settings/account/actions';
 
@@ -104,6 +110,19 @@ export function AppearanceEditor({ saved }: { saved: PersonalAppearancePreferenc
           </div>
           <Card variant="accent" className="space-y-1"><h3 className="font-semibold">Accent surface</h3><p className="text-sm text-muted">Highlighted content keeps neutral text.</p></Card>
         </div>
+        {/* Representative operational surfaces, drawn with the real shared components so every preset,
+            density and shape is shown on rows, tables, selected views, filters and dialogs. */}
+        <Card className="space-y-3 [grid-column:1/-1]" aria-label="Collection preview">
+          <h3 className="font-semibold">Collection</h3>
+          <ViewNav label="Preview collection views" className="mb-0" items={[{ key: 'all', label: 'All', href: '#appearance-preview', current: true }, { key: 'people', label: 'People', href: '#appearance-preview' }, { key: 'companies', label: 'Companies', href: '#appearance-preview' }]} />
+          <div role="group" aria-label="Preview active filters" className="flex flex-wrap gap-2"><span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs">Lifecycle: Customer <X aria-hidden className="size-3" /></span></div>
+          <ul className="divide-y divide-border overflow-hidden rounded-[var(--visual-radius,0.625rem)] border border-border">
+            <EntityRow identity={<EntityIdentity icon={User} kind="Person" name="Example person" secondary="Person · Example company" />} status={<StatusSummary label="Example person lifecycle" items={[{ label: 'Lifecycle', value: 'Customer' }]} />} activity="Call completed (3 min)" timestamp="Today" />
+            <EntityRow identity={<EntityIdentity icon={Building2} kind="Company" name="Example company" secondary="Company" />} status={<StatusSummary label="Example company lifecycle" items={[{ label: 'Lifecycle', value: 'Prospect' }]} />} activity="Opportunity opened" timestamp="Yesterday" />
+          </ul>
+          <Table><TableHeader><TableRow><TableHead>Contact</TableHead><TableHead>Lifecycle</TableHead></TableRow></TableHeader><TableBody><TableRow><TableCell>Example person</TableCell><TableCell>Customer</TableCell></TableRow><TableRow><TableCell>Example company</TableCell><TableCell>Prospect</TableCell></TableRow></TableBody></Table>
+          <Dialog><DialogTrigger asChild><Button type="button" tone="secondary">Open preview dialog</Button></DialogTrigger><DialogContent className="flex flex-col gap-0 p-0"><StepHeader title="Preview dialog" steps={['Essentials', 'Additional information']} current={0} /><DialogBody><FormField id="appearance-dialog-input" label="Name">{props => <TextInput {...props} />}</FormField></DialogBody><DialogFooterBar><Button type="button">Save</Button><Button type="button" tone="secondary">Cancel</Button></DialogFooterBar></DialogContent></Dialog>
+        </Card>
       </VisualScope>
     </section>
     <div className="space-y-3 border-t border-border pt-4">

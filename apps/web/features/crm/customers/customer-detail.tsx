@@ -1,11 +1,13 @@
+import Link from 'next/link';
 import { formatPhoneForDisplay } from '@/lib/display/phone';
-import { BusinessLabel } from '@/lib/context/business-vocabulary';
 import type { ReactNode } from 'react';
 import { Hint } from '@/components/controls/inputs';
 import { DefinitionList, Detail } from '@/components/display/data';
-import { Section, SectionHeading } from '@/components/surfaces/section';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
-import { CustomFieldValues } from '@/features/custom-fields/values';
+import { SectionHeader } from '@/components/surfaces/section';
+import { CompactEmptyState } from '@/components/operational/primitives';
+import { RecordSubnavigation } from '@/components/navigation/record-subnavigation';
+import { cx, FOCUS_RING } from '@/components/class-names';
+import { CustomFieldDetails } from '@/features/custom-fields/values';
 import { DocumentsSection } from '@/features/documents/section';
 import { ActivityList } from '@/features/timeline/activity-list';
 import { CallHistory } from '@/features/communications/voice/call-history';
@@ -39,47 +41,22 @@ import { CustomerFinancialSummary } from './customer-financial-summary';
 import { CustomerHeader } from './customer-header';
 import { CustomerLocationsSection } from './customer-locations-section';
 import { CustomerRelatedWork } from './customer-related-work';
+import { EditContactDialog } from './edit-contact-dialog';
+import { SECTION_LABELS, SECTION_VIEWS, VIEW_LABELS, recordHref, resolveRecordLocation, type Availability, type RecordSection, type RecordView } from './record-sections';
 
-export function CustomerDetail({
-  organizationId,
-  customer,
-  stage,
-  stages,
-  definitions,
-  documents,
-  timeline,
-  work,
-  locations,
-  mapStyleUrl,
-  calls,
-  invoices,
-  invites,
-  discoverySnapshot,
-  configurationRecommendation,
-  commercialProposals,
-  proposalInvites,
-  handoffsByProposalId,
-  mayHandoff,
-  mayPropose,
-  plans,
-  addonPlans,
-  origin,
-  portalOrigin = origin,
-  timezone,
-  currency,
-  role,
-  features,
-  permissions,
-  opportunities,
-  followUps,
-  support,
-  services,
-  affiliations,
-  accessibleTenantIds,
-}: {
+const TYPE_LABEL = { person: 'Person', company: 'Company', unspecified: 'Unspecified' } as const;
+
+/**
+ * The contact record: identity and quick actions, then seven top-level sections (Overview, Sales,
+ * Tasks, Activity, Related, Documents, Portal) with contextual sub-sections. Every former tab's
+ * content is kept, under the section it belongs to, and offered only where the viewer may open it
+ * and the underlying capability applies. Sections are URL-backed, and old `?tab=` links resolve.
+ */
+export function CustomerDetail(props: {
   organizationId: string;
-  opportunities?: ReactNode;
-  followUps?: ReactNode;
+  query?: { section?: string; view?: string; tab?: string };
+  opportunities?: ReactNode; opportunityCount?: number;
+  followUps?: ReactNode; openTaskCount?: number;
   support?: ReactNode;
   services?: ReactNode;
   affiliations?: ReactNode;
@@ -114,100 +91,104 @@ export function CustomerDetail({
   features: { voice: boolean; billing: boolean; portal: boolean };
   permissions: { edit: boolean; call: boolean; attach: boolean; portal: boolean; priceManage: boolean };
 }) {
+  const { organizationId, customer, stage, stages, definitions, features, permissions, mayPropose, role, timezone } = props;
+  const base = `/organizations/${organizationId}/crm/contacts/${customer.id}`;
+  const salesViews: RecordView[] = [...(props.opportunities ? ['opportunities' as const] : []), ...(mayPropose ? ['discovery' as const, 'configuration' as const, 'commercial' as const] : []), ...(features.billing ? ['invoices' as const] : [])];
+  const activityViews: RecordView[] = ['timeline', ...(features.voice ? ['calls' as const] : [])];
+  const relatedViews: RecordView[] = ['work', 'locations', ...(props.support ? ['support' as const] : []), ...(props.services ? ['services' as const] : [])];
+  const available: Availability = {
+    sections: ['overview', ...(salesViews.length ? ['sales' as const] : []), ...(props.followUps ? ['tasks' as const] : []), 'activity', 'related', 'documents', ...(features.portal ? ['portal' as const] : [])],
+    views: { sales: salesViews, activity: activityViews, related: relatedViews },
+  };
+  const { section, view } = resolveRecordLocation(props.query ?? {}, available);
+  const sectionItems = available.sections.map(key => ({ key, label: SECTION_LABELS[key], href: recordHref(base, key, available.views[key]?.[0]) }));
+  const viewItems = (available.views[section] ?? []).filter(key => SECTION_VIEWS[section].includes(key)).map(key => ({ key, label: VIEW_LABELS[key], href: recordHref(base, section, key) }));
+  const editStages = features.voice ? stages : [];
+
   return (
     <>
-      <CustomerHeader organizationId={organizationId} customer={customer} stage={stage} definitions={definitions} stages={features.voice ? stages : []} mayEdit={permissions.edit} mayCall={features.voice && permissions.call} />
-      {support}
-
-      <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          {opportunities ? <TabsTrigger value="opportunities"><BusinessLabel>Opportunities</BusinessLabel></TabsTrigger> : null}
-          {followUps ? <TabsTrigger value="follow-ups">Tasks</TabsTrigger> : null}
-          {mayPropose ? <>
-            <TabsTrigger value="discovery">Discovery</TabsTrigger>
-            <TabsTrigger value="configuration">Proposed configuration</TabsTrigger>
-            <TabsTrigger value="commercial">Commercial proposal</TabsTrigger>
-          </> : null}
-          <TabsTrigger value="activity">Activity</TabsTrigger>
-          <TabsTrigger value="work">Work</TabsTrigger>
-          <TabsTrigger value="locations"><BusinessLabel>Locations</BusinessLabel></TabsTrigger>
-          {features.voice ? <TabsTrigger value="calls">Calls</TabsTrigger> : null}
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          {features.billing ? <TabsTrigger value="invoices"><BusinessLabel>Invoices</BusinessLabel></TabsTrigger> : null}
-          {features.portal ? <TabsTrigger value="portal">Portal</TabsTrigger> : null}
-        </TabsList>
-
-        <TabsContent value="overview" className="mt-6">
-          <Section>
-            <SectionHeading>Contact information</SectionHeading>
-            <DefinitionList className="mt-3">
-              <Detail label="Contact type">{customer.contactType==='person'?'Person':customer.contactType==='company'?'Company':'Unspecified / Needs classification'}</Detail>
-              <Detail label="Email">{customer.email ? <a href={`mailto:${customer.email}`} className="underline underline-offset-4">{customer.email}</a> : 'Not recorded'}</Detail>
-              <Detail label="Phone">{customer.phone ? <a href={`tel:${customer.phone}`} className="underline underline-offset-4">{formatPhoneForDisplay(customer.phone)}</a> : 'Not recorded'}</Detail>
-              <Detail label="Relationship stage">{stage?.name ?? 'No stage'}</Detail>
-            </DefinitionList>
-            <CustomFieldValues definitions={definitions} custom={customer.custom} />
-            {!permissions.edit ? <Hint className="mt-6">Your role, {role}, cannot change this customer.</Hint> : null}
-          </Section>
-          {affiliations}
-          {!mayPropose ? services : null}
-        </TabsContent>
-        {followUps ? <TabsContent value="follow-ups" className="mt-6">{followUps}</TabsContent> : null}
-
-        {mayPropose ? <>
-          <TabsContent value="discovery" className="mt-6">
-            <DiscoverySnapshotSection
-              organizationId={organizationId}
-              customerId={customer.id}
-              snapshot={discoverySnapshot}
-              mayEdit={permissions.edit}
-              role={role}
-            />
-          </TabsContent>
-          <TabsContent value="configuration" className="mt-6">
-            {configurationRecommendation ? <ConfigurationRecommendationSection recommendation={configurationRecommendation} /> : null}
-          </TabsContent>
-          <TabsContent value="commercial" className="mt-6">
-            {services}
-            <CommercialProposalSection
-              accessibleTenantIds={accessibleTenantIds}
-              organizationId={organizationId}
-              customerId={customer.id}
-              proposals={commercialProposals}
-              invites={proposalInvites}
-              handoffsByProposalId={handoffsByProposalId}
-              mayHandoff={mayHandoff}
-              origin={origin}
-              plans={plans}
-              addonPlans={addonPlans}
-              mayEdit={permissions.priceManage}
-              role={role}
-              currency={currency}
-            />
-          </TabsContent>
-        </> : null}
-        <TabsContent value="activity" className="mt-6"><ActivityList timeline={timeline} timezone={timezone} /></TabsContent>
-        {opportunities ? <TabsContent value="opportunities" className="mt-6">{opportunities}</TabsContent> : null}
-        <TabsContent value="work" className="mt-6"><CustomerRelatedWork organizationId={organizationId} work={work} /></TabsContent>
-        <TabsContent value="locations" className="mt-6">
-          <CustomerLocationsSection
-            organizationId={organizationId}
-            customerId={customer.id}
-            locations={locations}
-            mapStyleUrl={mapStyleUrl}
-          />
-        </TabsContent>
-        {features.voice ? <TabsContent value="calls" className="mt-6"><CallHistory organizationId={organizationId} timeZone={timezone} calls={calls} empty="No calls with this customer." />{permissions.call ? null : <Hint className="mt-4">Your role, {role}, cannot call customers.</Hint>}</TabsContent> : null}
-        <TabsContent value="documents" className="mt-6"><DocumentsSection organizationId={organizationId} documents={documents} mayAttach={permissions.attach} roleLabel={role} uploadAction={uploadCustomerDocumentAction} hiddenFields={{ organizationId, customerId: customer.id }} className="mt-0" /></TabsContent>
-        {features.billing ? <TabsContent value="invoices" className="mt-6"><CustomerFinancialSummary organizationId={organizationId} invoices={invoices} timezone={timezone} /></TabsContent> : null}
-        {features.portal ? (
-          <TabsContent value="portal" className="mt-6">
-            <Hint>A link this customer can open to see their own work and invoices. Anyone holding it is them.</Hint>
-            {permissions.portal ? <><PortalLinkForm organizationId={organizationId} customerId={customer.id} origin={portalOrigin} createAction={createPortalInviteAction} /><PortalInviteList organizationId={organizationId} customerId={customer.id} invites={invites} origin={portalOrigin} revokeAction={revokePortalInviteAction} /></> : <Hint className="mt-3">Your role, {role}, cannot manage this customer&apos;s portal access.</Hint>}
-          </TabsContent>
-        ) : null}
-      </Tabs>
+      <CustomerHeader organizationId={organizationId} customer={customer} stage={stage} definitions={definitions} stages={editStages} mayEdit={permissions.edit} mayCall={features.voice && permissions.call} />
+      <RecordSubnavigation label="Contact sections" sections={sectionItems} current={section} subsections={viewItems} currentSubsection={view} />
+      <div className="min-w-0">{renderSection(section, view)}</div>
     </>
   );
+
+  function renderSection(current: RecordSection, currentView?: RecordView): ReactNode {
+    switch (current) {
+      case 'overview': return overview();
+      case 'tasks': return props.followUps;
+      case 'documents': return <DocumentsSection organizationId={organizationId} documents={props.documents} mayAttach={permissions.attach} roleLabel={role} uploadAction={uploadCustomerDocumentAction} hiddenFields={{ organizationId, customerId: customer.id }} className="mt-0" />;
+      case 'portal': return <>
+        <Hint>A link this contact can open to see their own work and invoices. Anyone holding it is them.</Hint>
+        {permissions.portal ? <><PortalLinkForm organizationId={organizationId} customerId={customer.id} origin={props.portalOrigin ?? props.origin} createAction={createPortalInviteAction} /><PortalInviteList organizationId={organizationId} customerId={customer.id} invites={props.invites} origin={props.portalOrigin ?? props.origin} revokeAction={revokePortalInviteAction} /></> : <Hint className="mt-3">Your role, {role}, cannot manage this contact&apos;s portal access.</Hint>}
+      </>;
+      default: return renderView(currentView);
+    }
+  }
+
+  function renderView(currentView?: RecordView): ReactNode {
+    switch (currentView) {
+      case 'opportunities': return props.opportunities;
+      case 'discovery': return <DiscoverySnapshotSection organizationId={organizationId} customerId={customer.id} snapshot={props.discoverySnapshot} mayEdit={permissions.edit} role={role} />;
+      case 'configuration': return props.configurationRecommendation ? <ConfigurationRecommendationSection recommendation={props.configurationRecommendation} /> : <CompactEmptyState>No proposed configuration yet. It is drawn from the discovery answers.</CompactEmptyState>;
+      case 'commercial': return <CommercialProposalSection accessibleTenantIds={props.accessibleTenantIds} organizationId={organizationId} customerId={customer.id} proposals={props.commercialProposals} invites={props.proposalInvites} handoffsByProposalId={props.handoffsByProposalId} mayHandoff={props.mayHandoff} origin={props.origin} plans={props.plans} addonPlans={props.addonPlans} mayEdit={permissions.priceManage} role={role} currency={props.currency} />;
+      case 'invoices': return <CustomerFinancialSummary organizationId={organizationId} invoices={props.invoices} timezone={timezone} />;
+      case 'timeline': return <ActivityList timeline={props.timeline} timezone={timezone} />;
+      case 'calls': return <>{<CallHistory organizationId={organizationId} timeZone={timezone} calls={props.calls} empty="No calls with this contact." />}{permissions.call ? null : <Hint className="mt-4">Your role, {role}, cannot call contacts.</Hint>}</>;
+      case 'work': return <CustomerRelatedWork organizationId={organizationId} work={props.work} />;
+      case 'locations': return <CustomerLocationsSection organizationId={organizationId} customerId={customer.id} locations={props.locations} mapStyleUrl={props.mapStyleUrl} />;
+      case 'support': return props.support;
+      case 'services': return props.services;
+      default: return null;
+    }
+  }
+
+  function overview() {
+    const unspecified = !customer.contactType || customer.contactType === 'unspecified';
+    const related = [
+      ...(salesViews.includes('opportunities') ? [{ label: 'Opportunities', count: props.opportunityCount, href: recordHref(base, 'sales', 'opportunities') }] : []),
+      ...(props.followUps ? [{ label: 'Open tasks', count: props.openTaskCount, href: recordHref(base, 'tasks') }] : []),
+      { label: 'Work', count: props.work.length, href: recordHref(base, 'related', 'work') },
+      { label: 'Locations', count: props.locations.length, href: recordHref(base, 'related', 'locations') },
+      ...(features.voice ? [{ label: 'Calls', count: props.calls.length, href: recordHref(base, 'activity', 'calls') }] : []),
+      { label: 'Documents', count: props.documents.length, href: recordHref(base, 'documents') },
+      ...(props.support ? [{ label: 'Support cases', count: undefined, href: recordHref(base, 'related', 'support') }] : []),
+    ];
+    return <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+      <div className="flex min-w-0 flex-col gap-6">
+        {unspecified ? <div role="status" className="flex flex-wrap items-center gap-3 rounded-[var(--visual-radius,0.625rem)] border border-border bg-secondary px-4 py-3 text-sm">
+          <span className="min-w-0 flex-1"><span className="font-medium">Needs classification.</span> Choose Person or Company; only people can be linked to a company.</span>
+          {permissions.edit ? <EditContactDialog organizationId={organizationId} customer={customer} definitions={definitions} stages={editStages} label="Classify contact" tone="primary" icon={false} initialSection="identity" /> : null}
+        </div> : null}
+        <section aria-labelledby="contact-details" className="flex flex-col gap-3">
+          <SectionHeader id="contact-details" title="Details" />
+          <DefinitionList>
+            <Detail label="Type">{TYPE_LABEL[customer.contactType ?? 'unspecified']}</Detail>
+            {customer.companyId ? <Detail label="Company"><Link className="hover:underline" href={`/organizations/${organizationId}/crm/contacts/${customer.companyId}`}>{customer.companyName}</Link></Detail> : null}
+            <Detail label="Email">{customer.email ? <a href={`mailto:${customer.email}`} className="hover:underline">{customer.email}</a> : <span className="text-muted">Not recorded</span>}</Detail>
+            <Detail label="Phone">{customer.phone ? <a href={`tel:${customer.phone}`} className="hover:underline">{formatPhoneForDisplay(customer.phone)}</a> : <span className="text-muted">Not recorded</span>}</Detail>
+            {editStages.length ? <Detail label="Relationship stage">{stage?.name ?? 'None'}</Detail> : null}
+            <Detail label="Added">{customer.createdAt ? new Intl.DateTimeFormat('en-CA', { timeZone: timezone, dateStyle: 'medium' }).format(new Date(customer.createdAt)) : null}</Detail>
+            <CustomFieldDetails definitions={definitions} custom={customer.custom} />
+          </DefinitionList>
+          {!permissions.edit ? <Hint>Your role, {role}, cannot change this contact.</Hint> : null}
+        </section>
+        {props.affiliations}
+      </div>
+      <div className="flex min-w-0 flex-col gap-6">
+        <section aria-labelledby="contact-recent" className="flex flex-col gap-2">
+          <SectionHeader id="contact-recent" title="Recent activity" action={props.timeline.length > 5 ? <Link href={recordHref(base, 'activity', 'timeline')} className={cx('text-xs font-medium text-accent-text underline underline-offset-4', FOCUS_RING)}>View all activity</Link> : null} />
+          {props.timeline.length ? <ActivityList timeline={props.timeline.slice(0, 5)} timezone={timezone} /> : <CompactEmptyState>No activity recorded yet.</CompactEmptyState>}
+        </section>
+        <section aria-labelledby="contact-related" className="flex flex-col gap-2">
+          <SectionHeader id="contact-related" title="Related" />
+          <ul className="divide-y divide-border overflow-hidden rounded-[var(--visual-radius,0.625rem)] border border-border bg-surface">
+            {related.map(item => <li key={item.label}><Link href={item.href} className={cx('flex items-center justify-between gap-3 px-4 py-2.5 text-sm hover:bg-hover', FOCUS_RING)}>
+              <span>{item.label}</span>{item.count !== undefined ? <span className="tabular-nums text-muted">{item.count}</span> : <span aria-hidden className="text-muted">›</span>}
+            </Link></li>)}
+          </ul>
+        </section>
+      </div>
+    </div>;
+  }
 }

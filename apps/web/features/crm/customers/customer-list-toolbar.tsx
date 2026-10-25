@@ -1,8 +1,7 @@
 import { CONTACT_LIFECYCLES, LEAD_TEMPERATURES, classificationLabel } from '@/lib/domain/customers/classification';
-import { Search } from 'lucide-react';
-import { Button, ButtonLink } from '@/components/controls/button';
 import { CheckboxField } from '@/components/controls/checkbox-field';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { SelectInput } from '@/components/controls/inputs';
+import { CollectionToolbar, type ActiveFilter } from '@/components/patterns/collection-toolbar';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 
 export type CustomerDirectoryView = {
@@ -18,97 +17,91 @@ export type CustomerDirectoryView = {
   website: string;
   /** `30d`: created in the last 30 days, the CRM Dashboard's New contacts window. */
   added?: string;
+  /** `1`: Needs review — Unspecified identity or no lifecycle yet. */
+  review?: string;
   optional: string[];
 };
 
+const KEYS = ['contactType', 'review', 'companyId', 'sort', 'group', 'lifecycle', 'temperature', 'stage', 'industry', 'website', 'added'] as const;
+
+/** The directory address for this view with some values replaced or removed — the one place the URL view model is written. */
+export function directoryHref(organizationId: string, view: CustomerDirectoryView, overrides: Partial<Record<keyof CustomerDirectoryView | 'page', string | undefined>> = {}) {
+  const params = new URLSearchParams();
+  const merged: Record<string, string | string[] | undefined> = { ...view, ...overrides };
+  if (merged.search) params.set('q', String(merged.search));
+  for (const key of KEYS) { const value = merged[key]; if (typeof value === 'string' && value) params.set(key, value); }
+  for (const id of view.optional) params.append('column', id);
+  if (overrides.page && overrides.page !== '1') params.set('page', overrides.page);
+  const text = params.toString();
+  return `/organizations/${organizationId}/crm/contacts${text ? `?${text}` : ''}`;
+}
+
 /**
- * Filters and optional columns, submitted as a plain GET form so the view lives in the URL.
- * Changing a filter or a column starts again at page one: the form carries no `page`.
+ * The directory's controls: quick scopes (All, People, Companies, Needs review) and search first,
+ * then sort and display, with the less frequent criteria inside Filters. Active filters show as
+ * removable chips. A plain GET form over the URL view model, so the database stays the one filter
+ * engine and counts and pagination always agree with the rows.
  */
-export function CustomerListToolbar({
-  organizationId,
-  stages,
-  industries,
-  choices,
-  view,
-  companies=[],
-}: {
+export function CustomerListToolbar({ organizationId, stages, industries, choices, view, companies = [] }: {
   organizationId: string;
   stages: CustomerStage[];
   /** Industry values recorded in this business's own field options. */
   industries: string[];
   choices: { id: string; label: string }[];
   view: CustomerDirectoryView;
-  companies?: {id:string;name:string}[];
+  companies?: { id: string; name: string }[];
 }) {
-  const filtered = Boolean(view.contactType || view.companyId || view.lifecycle || view.temperature || view.search || view.stage || view.industry || view.website || view.added);
+  const href = (overrides: Parameters<typeof directoryHref>[2]) => directoryHref(organizationId, view, overrides);
+  const scope = view.review === '1' ? 'review' : view.contactType ?? 'all';
+  const scopes = [
+    { key: 'all', label: 'All', href: href({ contactType: undefined, review: undefined }) },
+    { key: 'person', label: 'People', href: href({ contactType: 'person', review: undefined }) },
+    { key: 'company', label: 'Companies', href: href({ contactType: 'company', review: undefined }) },
+    { key: 'review', label: 'Needs review', href: href({ contactType: undefined, review: '1' }) },
+  ].map(item => ({ ...item, current: item.key === scope }));
+  const stageName = new Map(stages.map(stage => [stage.id, stage.name]));
+  const labels: [keyof CustomerDirectoryView, string, (value: string) => string][] = [
+    ['lifecycle', 'Lifecycle', value => classificationLabel(value)],
+    ['temperature', 'Temperature', value => classificationLabel(value)],
+    ['companyId', 'Company', value => companies.find(company => company.id === value)?.name ?? 'Company'],
+    ['stage', 'Relationship', value => value === 'unstaged' ? 'No stage' : stageName.get(value) ?? 'Stage'],
+    ['industry', 'Industry', value => value],
+    ['website', 'Website', value => value === 'with' ? 'Has a website' : 'No website'],
+    ['added', 'Added', () => 'Last 30 days'],
+  ];
+  const active: ActiveFilter[] = [
+    ...(view.search ? [{ key: 'search', label: `Search: ${view.search}`, removeHref: href({ search: '' }) }] : []),
+    ...labels.filter(([key]) => view[key]).map(([key, label, show]) => ({ key, label: `${label}: ${show(String(view[key]))}`, removeHref: href({ [key]: undefined }) })),
+  ];
   return (
-    <form className="flex flex-col gap-2" role="search">
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <div className="relative min-w-0 flex-1">
-          <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-          <TextInput name="q" defaultValue={view.search} placeholder="Search contacts" aria-label="Search contacts" className="w-full pl-9" />
-        </div>
-        <SelectInput name="contactType" aria-label="Contact type view" defaultValue={view.contactType ?? ''} className="w-full sm:w-40"><option value="">All contacts</option><option value="company">Companies</option><option value="person">People</option><option value="unspecified">Needs classification</option></SelectInput>
-        <SelectInput name="companyId" aria-label="Filter by company" defaultValue={view.companyId ?? ''} className="w-full sm:w-48"><option value="">All companies</option>{companies.map(company=><option key={company.id} value={company.id}>{company.name}</option>)}</SelectInput>
-        <SelectInput name="sort" aria-label="Sort contacts" defaultValue={view.sort ?? ''} className="w-full sm:w-40"><option value="">Newest first</option><option value="name">Name</option><option value="company">Company</option></SelectInput>
-        <SelectInput name="group" aria-label="Contact grouping" defaultValue={view.group ?? ''} className="w-full sm:w-40"><option value="">Flat list</option><option value="company">Group by company</option></SelectInput>
-        <SelectInput name="lifecycle" defaultValue={view.lifecycle ?? ''} aria-label="Filter by lifecycle" className="w-full sm:w-40">
-          <option value="">All lifecycles</option><option value="unclassified">Unclassified</option>
-          {CONTACT_LIFECYCLES.map(value => <option key={value} value={value}>{classificationLabel(value)}</option>)}
-        </SelectInput>
-        <SelectInput name="temperature" defaultValue={view.temperature ?? ''} aria-label="Filter by temperature" className="w-full sm:w-40">
-          <option value="">All temperatures</option>{LEAD_TEMPERATURES.map(value => <option key={value} value={value}>{classificationLabel(value)}</option>)}
-        </SelectInput>
-        {stages.length > 0 ? (
-          <SelectInput name="stage" defaultValue={view.stage} aria-label="Filter by relationship" className="w-full sm:w-48">
-            <option value="">All relationships</option>
-            <option value="unstaged">No relationship stage</option>
-            {stages.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-          </SelectInput>
-        ) : null}
-        {industries.length > 0 ? (
-          <SelectInput name="industry" defaultValue={view.industry} aria-label="Filter by industry" className="w-full sm:w-44">
-            <option value="">All industries</option>
-            {industries.map((item) => <option key={item} value={item}>{item}</option>)}
-          </SelectInput>
-        ) : null}
-        <SelectInput name="website" defaultValue={view.website} aria-label="Filter by website" className="w-full sm:w-40">
-          <option value="">Any website</option>
-          <option value="with">Has a website</option>
-          <option value="without">No website</option>
-        </SelectInput>
-        <SelectInput name="added" defaultValue={view.added ?? ''} aria-label="Filter by date added" className="w-full sm:w-44">
-          <option value="">Added any time</option>
-          <option value="30d">Added in the last 30 days</option>
-        </SelectInput>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" tone="secondary">Apply</Button>
-        {filtered || view.optional.length > 0 ? (
-          <ButtonLink href={`/organizations/${organizationId}/crm/contacts`} tone="text">Clear</ButtonLink>
-        ) : null}
-        {choices.length > 0 ? (
-          <details className="ml-auto">
-            <summary className="cursor-pointer text-sm font-medium">
-              Columns{view.optional.length > 0 ? ` (${view.optional.length} more)` : ''}
-            </summary>
-            <fieldset className="mt-2 grid gap-2 rounded border border-border p-3 sm:grid-cols-2">
-              <legend className="sr-only">Optional columns</legend>
-              {choices.map((choice) => (
-                <CheckboxField
-                  key={choice.id}
-                  id={`column-${choice.id.replace(':', '-')}`}
-                  name="column"
-                  value={choice.id}
-                  label={choice.label}
-                  defaultChecked={view.optional.includes(choice.id)}
-                />
-              ))}
-            </fieldset>
-          </details>
-        ) : null}
-      </div>
-    </form>
+    <CollectionToolbar
+      action={`/organizations/${organizationId}/crm/contacts`}
+      scopes={scopes} scopeLabel="Contact views"
+      search={{ name: 'q', value: view.search, label: 'Search contacts' }}
+      hidden={{ contactType: view.contactType, review: view.review }}
+      filterCount={labels.filter(([key]) => view[key]).length}
+      filters={<>
+        <label className="flex flex-col gap-1 text-sm">Lifecycle<SelectInput name="lifecycle" aria-label="Filter by lifecycle" defaultValue={view.lifecycle ?? ''}><option value="">Any lifecycle</option><option value="unclassified">Unclassified</option>{CONTACT_LIFECYCLES.map(value => <option key={value} value={value}>{classificationLabel(value)}</option>)}</SelectInput></label>
+        <label className="flex flex-col gap-1 text-sm">Lead temperature<SelectInput name="temperature" aria-label="Filter by temperature" defaultValue={view.temperature ?? ''}><option value="">Any temperature</option>{LEAD_TEMPERATURES.map(value => <option key={value} value={value}>{classificationLabel(value)}</option>)}</SelectInput></label>
+        <label className="flex flex-col gap-1 text-sm">Company<SelectInput name="companyId" aria-label="Filter by company" defaultValue={view.companyId ?? ''}><option value="">Any company</option>{companies.map(company => <option key={company.id} value={company.id}>{company.name}</option>)}</SelectInput></label>
+        {stages.length > 0 ? <label className="flex flex-col gap-1 text-sm">Relationship stage<SelectInput name="stage" aria-label="Filter by relationship" defaultValue={view.stage}><option value="">Any stage</option><option value="unstaged">No relationship stage</option>{stages.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectInput></label> : null}
+        {industries.length > 0 ? <label className="flex flex-col gap-1 text-sm">Industry<SelectInput name="industry" aria-label="Filter by industry" defaultValue={view.industry}><option value="">Any industry</option>{industries.map(item => <option key={item} value={item}>{item}</option>)}</SelectInput></label> : null}
+        <label className="flex flex-col gap-1 text-sm">Website<SelectInput name="website" aria-label="Filter by website" defaultValue={view.website}><option value="">Any website</option><option value="with">Has a website</option><option value="without">No website</option></SelectInput></label>
+        <label className="flex flex-col gap-1 text-sm">Added<SelectInput name="added" aria-label="Filter by date added" defaultValue={view.added ?? ''}><option value="">Any time</option><option value="30d">In the last 30 days</option></SelectInput></label>
+      </>}
+      sort={<SelectInput name="sort" aria-label="Sort contacts" defaultValue={view.sort ?? ''} className="w-full md:w-40"><option value="">Newest first</option><option value="name">Name</option><option value="company">Company</option></SelectInput>}
+      display={<>
+        <SelectInput name="group" aria-label="Contact grouping" defaultValue={view.group ?? ''} className="w-full md:w-44"><option value="">Flat list</option><option value="company">Group by company</option></SelectInput>
+        {choices.length > 0 ? <details className="relative">
+          <summary className="flex min-h-[var(--control-height,2.25rem)] cursor-pointer list-none items-center rounded-[var(--visual-radius,0.625rem)] border border-border bg-surface px-3 text-sm font-medium hover:bg-hover [&::-webkit-details-marker]:hidden">Columns{view.optional.length > 0 ? ` (${view.optional.length})` : ''}</summary>
+          <fieldset className="z-30 mt-2 grid gap-2 rounded-[var(--visual-radius,0.625rem)] border border-border bg-popover p-3 shadow-[var(--visual-overlay-shadow)] sm:grid-cols-2 md:absolute md:right-0 md:w-80">
+            <legend className="sr-only">Optional columns</legend>
+            {choices.map(choice => <CheckboxField key={choice.id} id={`column-${choice.id.replace(':', '-')}`} name="column" value={choice.id} label={choice.label} defaultChecked={view.optional.includes(choice.id)} />)}
+          </fieldset>
+        </details> : null}
+      </>}
+      active={active}
+      resetHref={active.length ? directoryHref(organizationId, { search: '', stage: '', industry: '', website: '', optional: view.optional }, { contactType: view.contactType, review: view.review }) : undefined}
+    />
   );
 }

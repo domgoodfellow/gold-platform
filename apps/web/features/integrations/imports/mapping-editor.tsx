@@ -1,4 +1,5 @@
 import { Card } from '@/components/surfaces/card';
+import { CONTACT_LIFECYCLES, classificationLabel } from '@/lib/domain/customers/classification';
 import { FormField } from '@/components/controls/form';
 import { libraryNewImportHref } from '@/lib/route/library';
 import { ErrorText, Hint, SelectInput } from '@/components/controls/inputs';
@@ -54,12 +55,13 @@ export function MappingEditor({
       <Card as="section" aria-labelledby="mapping-identity">
         <h2 id="mapping-identity" className="text-sm font-semibold">Who these rows are</h2>
         <p className="mt-0.5 text-sm text-muted">Person and Company are kept apart. Rows without a type become Unspecified / Needs classification; GildOps never guesses it from a name.</p>
-        <div data-slot="field-group" className="mt-3 grid gap-3 md:grid-cols-3">
+        <div data-slot="field-group" className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <FormField id="mapping-contact-type" label="Contact type">{field => <SelectInput {...field} name="contactType" defaultValue=""><option value="">Use a mapped column (otherwise Unspecified)</option><option value="person">All rows are People</option><option value="company">All rows are Companies</option></SelectInput>}</FormField>
           <FormField id="mapping-mode" label="How often">{field => <SelectInput {...field} name="mode" defaultValue="import"><option value="import">Import once</option>{maySynchronize ? <option value="sync">Keep synchronized (review each refresh)</option> : null}</SelectInput>}</FormField>
+          <FormField id="mapping-default-lifecycle" label="Lifecycle for new contacts" hint="A mapped lifecycle column wins per row. Existing contacts keep theirs.">{field => <SelectInput {...field} name="defaultLifecycle" defaultValue=""><option value="">Unclassified</option>{CONTACT_LIFECYCLES.map(value => <option key={value} value={value}>{classificationLabel(value)}</option>)}</SelectInput>}</FormField>
           <FormField id="mapping-dedupe" label="Duplicate matching">{field => <SelectInput {...field} name="dedupeKey" defaultValue="email"><option value="email">Stable source ID, then email</option><option value="">Stable source ID only</option></SelectInput>}</FormField>
         </div>
-        <Hint className="mt-3 block">New contacts are Lead / Unrated unless a lifecycle or temperature column is mapped. {maySynchronize ? 'A synchronized worksheet is reviewed on every refresh: local edits are kept on conflicts and removed rows never delete contacts. Automatic scheduling is not enabled.' : 'Updates to contacts this source created before are reviewed like new rows.'}</Hint>
+        <Hint className="mt-3 block">Lead temperature stays Unrated unless a column is mapped. {maySynchronize ? 'A synchronized worksheet is reviewed on every refresh: local edits are kept on conflicts and removed rows never delete contacts. Automatic scheduling is not enabled.' : 'Updates to contacts this source created before are reviewed like new rows.'}</Hint>
       </Card>
 
       <Card as="section" aria-labelledby="mapping-columns" className="p-0 py-0">

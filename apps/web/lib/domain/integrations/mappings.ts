@@ -34,6 +34,8 @@ export async function prepareImportFields(db: Db, organizationId: string, header
 export type MappingTarget =
   | { kind: 'ignore' }
   | { kind: 'core'; field: 'name' | 'email' | 'phone' | 'lifecycle' | 'lead_temperature' | 'contact_type' | 'company_contact_id' | 'affiliation_title' }
+  /** A source-wide lifecycle for rows this import creates; never applied to an existing contact (V1.4). Only ever a fixed value, never suggested. */
+  | { kind: 'core'; field: 'default_lifecycle' }
   | { kind: 'location'; field: 'address' | 'city' | 'province' }
   | { kind: 'custom'; key: string };
 
@@ -228,6 +230,8 @@ export function suggestMapping(headers: string[], definitions: FieldDefinition[]
 
 export type NormalizedCustomerRow = {
   lifecycle?: string;
+  /** Used only when creating, and only when no valid row-level lifecycle was mapped. */
+  default_lifecycle?: string;
   lead_temperature?: string;
   contact_type?: string;
   company_contact_id?: string;
@@ -291,7 +295,7 @@ export function normalizeImportRow(
   raw: Record<string, string>,
 ): { normalized: NormalizedCustomerRow; validationErrors: string[] } {
   const errors: string[] = [];
-  const classification: { lifecycle?: string; lead_temperature?: string; contact_type?: string; company_contact_id?: string; affiliation_title?: string } = {};
+  const classification: { lifecycle?: string; default_lifecycle?: string; lead_temperature?: string; contact_type?: string; company_contact_id?: string; affiliation_title?: string } = {};
   let name = '';
   let email: string | null = null;
   let phone: string | null = null;
@@ -312,7 +316,7 @@ export function normalizeImportRow(
       else if(field.target.field==='affiliation_title'){if(value.length>200)errors.push('Affiliation title is too long.');else if(value)classification.affiliation_title=value;}
       else if (value) {
         const normalized = value.toLowerCase();
-        const allowed: readonly string[] = field.target.field === 'contact_type' ? ['person','company','unspecified'] : field.target.field === 'lifecycle' ? CONTACT_LIFECYCLES : LEAD_TEMPERATURES;
+        const allowed: readonly string[] = field.target.field === 'contact_type' ? ['person','company','unspecified'] : field.target.field === 'lifecycle' || field.target.field === 'default_lifecycle' ? CONTACT_LIFECYCLES : LEAD_TEMPERATURES;
         if (!allowed.includes(normalized)) errors.push(`Invalid ${field.target.field}: ${value}. Use ${allowed.join(', ')}.`);
         else classification[field.target.field] = normalized;
       }

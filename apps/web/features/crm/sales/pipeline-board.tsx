@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
-import Link from 'next/link';
-import { Badge } from '@/components/display/data';
-import { Card, CardContent, CardHeader, CardTitle } from '@gold/ui/components/card';
-import { EmptyState, GroupHeading } from '@/components/surfaces/section';
+import { Building2, CircleHelp, User } from 'lucide-react';
+import { Board, BoardCard, BoardColumn } from '@/components/patterns/board';
+import { EntityIdentity } from '@/components/display/entity-row';
 
-export type PipelinePerson = { id: string; name: string };
+export type PipelinePerson = { id: string; name: string; contactType?: 'person' | 'company' | 'unspecified' };
+const IDENTITY = { person: { Icon: User, label: 'Person' }, company: { Icon: Building2, label: 'Company' }, unspecified: { Icon: CircleHelp, label: 'Needs classification' } } as const;
 export type PipelineColumn = { key: string; name: string; people: PipelinePerson[] };
 
 /**
@@ -16,14 +16,14 @@ export type PipelineColumn = { key: string; name: string; people: PipelinePerson
  */
 export function buildPipelineColumns(
   stages: { id: string; name: string }[],
-  customers: { id: string; name: string; stageId: string | null }[],
+  customers: { id: string; name: string; stageId: string | null; contactType?: PipelinePerson['contactType'] }[],
 ): PipelineColumn[] {
   const perStage = new Map<string, PipelinePerson[]>();
   for (const customer of customers) {
     // Null is ordinary — a business that has named no stages, or a customer nobody has staged
     // yet. Both are "this business has said nothing", never "something is missing".
     const key = customer.stageId ?? '';
-    perStage.set(key, [...(perStage.get(key) ?? []), { id: customer.id, name: customer.name }]);
+    perStage.set(key, [...(perStage.get(key) ?? []), { id: customer.id, name: customer.name, contactType: customer.contactType }]);
   }
 
   return [
@@ -64,38 +64,17 @@ export function PipelineBoard({
   renderStageControl?: (person: PipelinePerson) => ReactNode;
 }) {
   return (
-    <div className="flex gap-4 overflow-x-auto pb-2">
+    <Board label="Relationship stages">
       {columns.map((column) => (
-        <Card key={column.key || 'unstaged'} asChild className="w-64 shrink-0 gap-0 py-0">
-          <section>
-          <CardHeader className="grid-cols-[1fr_auto] border-b py-3">
-            <CardTitle><GroupHeading>{column.name}</GroupHeading></CardTitle>
-            <Badge>{column.people.length}</Badge>
-          </CardHeader>
-          <CardContent className="px-0">
-          {column.people.length === 0 ? (
-            <EmptyState weight="subtle" className="px-3 py-2">
-              Nobody here.
-            </EmptyState>
-          ) : (
-            <ul className="divide-y divide-border">
-              {column.people.map((person) => (
-                <li key={person.id} className="px-3 py-2">
-                  <Link
-                    href={customerHref(person.id)}
-                    className="block truncate text-sm underline-offset-4 hover:underline"
-                  >
-                    {person.name}
-                  </Link>
-                  {renderStageControl ? renderStageControl(person) : null}
-                </li>
-              ))}
-            </ul>
-          )}
-          </CardContent>
-          </section>
-        </Card>
+        <BoardColumn key={column.key || 'unstaged'} name={column.name} count={column.people.length} empty="No contacts on this stage.">
+          {column.people.length ? column.people.map((person) => {
+            const identity = IDENTITY[person.contactType ?? 'unspecified'] ?? IDENTITY.unspecified;
+            return <BoardCard key={person.id} actions={renderStageControl ? renderStageControl(person) : undefined}>
+              <EntityIdentity icon={identity.Icon} kind={identity.label} name={person.name} href={customerHref(person.id)} secondary={identity.label} />
+            </BoardCard>;
+          }) : null}
+        </BoardColumn>
       ))}
-    </div>
+    </Board>
   );
 }

@@ -37,3 +37,16 @@ export function CustomFieldValues({
     </dl>
   );
 }
+
+/**
+ * The same values as labelled rows for a `DefinitionList`: each field its own label and value, so a
+ * record's custom data reads as data rather than as one long sentence.
+ */
+export function CustomFieldDetails({ definitions, custom }: { definitions: FieldDefinition[]; custom: CustomValues }) {
+  return <>{definitions.filter(definition => custom[definition.key] !== undefined && custom[definition.key] !== '').map(definition => (
+    <div key={definition.id} className="contents">
+      <dt className="text-sm text-subtle">{definition.label}</dt>
+      <dd className="text-sm break-words">{readValue(custom[definition.key])}</dd>
+    </div>
+  ))}</>;
+}

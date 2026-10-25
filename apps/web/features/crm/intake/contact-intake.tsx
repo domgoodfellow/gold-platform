@@ -1,8 +1,8 @@
 'use client';
 import Link from 'next/link';
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import { ArrowRight, FileSpreadsheet, Lock, RefreshCw, UserPlus, UserRoundPlus } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@gold/ui/components/dialog';
+import { GuardedDialog, useGuardedDialogClose } from '@/components/panels/guarded-dialog';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { BusinessLabel } from '@/lib/context/business-vocabulary';
@@ -10,7 +10,7 @@ import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { ContactIntakeOptions, IntakeChoice } from '@/lib/application/crm/contact-intake';
 import type { CreateCustomerState } from '@/app/organizations/[organizationId]/crm/contacts/actions';
 import { CreateContactForm } from '@/features/crm/customers/create-contact-form';
-import { DialogBody, DialogFooterBar, StepHeader } from '@/features/crm/customers/contact-dialog-layout';
+import { DialogBody, DialogFooterBar, StepHeader } from '@/components/panels/dialog-layout';
 
 type View = 'choose' | 'manual' | 'created';
 type Identity = 'person' | 'company' | '';
@@ -40,26 +40,18 @@ export function ContactIntakeProvider({ organizationId, definitions, options, ch
   const [open, setOpen] = useState(startManual);
   const [view, setView] = useState<View>(startManual ? 'manual' : 'choose');
   const [identity, setIdentity] = useState<Identity>(initialType);
-  const [dirty, setDirty] = useState(false);
-  const [confirming, setConfirming] = useState(false);
   const [created, setCreated] = useState<CreateCustomerState | null>(null);
   const [formKey, setFormKey] = useState(0);
-  // The dialog is opened from our own triggers, not Radix's, so the opener is remembered here and focus returns to it.
-  const opener = useRef<HTMLElement | null>(null);
 
   const show = useCallback((next: 'choose' | 'manual' = 'choose', type: Identity = '') => {
-    if (document.activeElement instanceof HTMLElement && !document.activeElement.closest('[role=dialog]')) opener.current = document.activeElement;
-    setView(next === 'manual' && options.manual.state === 'available' ? 'manual' : 'choose'); setIdentity(type); setDirty(false); setCreated(null); setFormKey(key => key + 1); setOpen(true);
+    setView(next === 'manual' && options.manual.state === 'available' ? 'manual' : 'choose'); setIdentity(type); setCreated(null); setFormKey(key => key + 1); setOpen(true);
   }, [options.manual.state]);
-  const close = () => { setConfirming(false); setOpen(false); setDirty(false); };
-  const requestClose = () => { if (view === 'manual' && dirty) setConfirming(true); else close(); };
-  const onCreated = useCallback((state: CreateCustomerState) => { setCreated(state); setDirty(false); setView('created'); }, []);
+  const onCreated = useCallback((state: CreateCustomerState) => { setCreated(state); setView('created'); }, []);
   const base = `/organizations/${organizationId}`;
 
   return <IntakeContext.Provider value={show}>
     {children}
-    <Dialog open={open} onOpenChange={next => { if (!next) requestClose(); }}>
-      <DialogContent onCloseAutoFocus={event => { if (opener.current?.isConnected) { event.preventDefault(); opener.current.focus(); } }} className="flex max-h-[min(92dvh,46rem)] w-[min(40rem,calc(100%-1rem))] flex-col gap-0 overflow-hidden p-0">
+    <GuardedDialog open={open} onOpenChange={setOpen} discardDescription="The contact you started will not be saved.">
         {view === 'choose' ? <>
           <StepHeader title="Add contacts" description="Choose how these contacts reach GildOps." />
           <DialogBody>
@@ -84,26 +76,16 @@ export function ContactIntakeProvider({ organizationId, definitions, options, ch
               </section></li>
             </ul>
           </DialogBody>
-        </> : view === 'manual' ? <CreateContactForm key={formKey} organizationId={organizationId} definitions={definitions} initialType={identity} onCreated={onCreated} onDirtyChange={setDirty} onCancel={requestClose} />
+        </> : view === 'manual' ? <CreateContactForm key={formKey} organizationId={organizationId} definitions={definitions} initialType={identity} onCreated={onCreated} />
         : <>
           <StepHeader title="Contact added" description={<><span className="font-medium text-foreground">{created?.name}</span> was added as a {created?.contactType === 'company' ? 'company' : 'person'}.</>} />
           <DialogFooterBar>
             {created?.id ? <ButtonLink tone="primary" href={`${base}/crm/contacts/${created.id}`}>View contact</ButtonLink> : null}
             <Button type="button" tone="secondary" onClick={() => show('manual')}>Add another</Button>
-            <Button type="button" tone="text" onClick={close} className="sm:mr-auto">Close</Button>
+            <Button type="button" tone="text" onClick={() => setOpen(false)} className="sm:mr-auto">Close</Button>
           </DialogFooterBar>
         </>}
-      </DialogContent>
-    </Dialog>
-    <Dialog open={confirming} onOpenChange={setConfirming}>
-      <DialogContent role="alertdialog" showCloseButton={false}>
-        <DialogHeader><DialogTitle>Discard unsaved changes?</DialogTitle><DialogDescription>The contact you started will not be saved.</DialogDescription></DialogHeader>
-        <DialogFooter>
-          <Button type="button" tone="secondary" size="small" autoFocus onClick={() => setConfirming(false)}>Keep editing</Button>
-          <Button type="button" tone="danger" size="small" onClick={close}>Discard</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </GuardedDialog>
   </IntakeContext.Provider>;
 }
 

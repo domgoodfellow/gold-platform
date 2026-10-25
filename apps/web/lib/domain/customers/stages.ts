@@ -133,3 +133,42 @@ export async function updateCustomerStage(
     );
   }
 }
+
+/**
+ * Remove a relationship stage that nothing uses. The database refuses while any contact or
+ * marketing audience is still on it (`delete_relationship_stage`), so a removal never silently
+ * clears a contact's stage.
+ */
+export async function deleteCustomerStage(db: Db, input: { organizationId: string; id: string }): Promise<void> {
+  await requireActor(db);
+  const { error } = await db.rpc('delete_relationship_stage', { p_organization_id: input.organizationId, p_stage_id: input.id });
+  if (!error) return;
+  if (error.code === '23503') throw new DomainError(error.message, 'customer_stages.in_use');
+  if (error.code === '42501') throw new DomainError('That stage is not yours to remove.', 'customer_stages.delete_refused');
+  throw new DomainError(error.message, 'customer_stages.delete_failed');
+}
+
+/** How many contacts are on each stage, keyed by stage id. */
+export async function customerStageUsage(db: Db, organizationId: string): Promise<Map<string, number>> {
+  const { data, error } = await db.rpc('relationship_stage_usage', { p_organization_id: organizationId });
+  if (error) throw new DomainError(error.message, 'customer_stages.usage_failed');
+  return new Map((data ?? []).map(row => [row.stage_id, row.contacts]));
+}
+
+/**
+ * Move one stage up or down by renumbering the list 0…n-1 in its new order, through the same
+ * position column and update every other stage edit uses. Only rows whose position changes are
+ * written. Equal legacy positions are settled into the order the list already shows.
+ */
+export async function moveCustomerStage(db: Db, input: { organizationId: string; id: string; direction: 'up' | 'down' }): Promise<void> {
+  const stages = await listCustomerStages(db, { organizationId: input.organizationId });
+  const index = stages.findIndex(stage => stage.id === input.id);
+  if (index < 0) throw new DomainError('That stage is not yours to change.', 'customer_stages.update_refused');
+  const target = input.direction === 'up' ? index - 1 : index + 1;
+  if (target < 0 || target >= stages.length) return;
+  const order = [...stages];
+  [order[index], order[target]] = [order[target], order[index]];
+  for (const [position, stage] of order.entries()) {
+    if (stage.position !== position) await updateCustomerStage(db, { id: stage.id, name: stage.name, position });
+  }
+}

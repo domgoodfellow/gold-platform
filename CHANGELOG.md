@@ -34,6 +34,11 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-10-24
 
+- CRM contact records now open with who the contact is (type, company, lifecycle, temperature and stage as labelled chips, plus how to reach them) and group their pages into seven sections: Overview, Sales, Tasks, Activity, Related, Documents and Portal. Old links to a record's tabs still land in the right place. Editing a contact, creating or editing an opportunity, and editing opportunity stages now happen in focused dialogs. Contacts that still need classifying offer a Classify contact button.
+- New contacts are no longer assumed to be Leads. A contact created by hand keeps the lifecycle you choose, or none. Imports can set a lifecycle for new rows only; a lifecycle column still wins, and existing contacts are never downgraded by an import default.
+- Relationship stages are managed directly on their page: add, rename, move up or down, and remove a stage only when no contact uses it. Both pipeline boards have clearer columns and cards, scroll within the board, and can be reached by keyboard.
+- The Contacts list leads with each contact's identity, has quick views (All, People, Companies, Needs review), keeps less common filters in a Filters panel with removable chips, and groups people under their company without repeating anyone.
+- The organization header no longer shows a Calendar button; the CRM calendar opens from the CRM Dashboard and Tasks. Appearance settings now visibly change CRM lists, tables, boards and dialogs, and the preview shows them.
 - CRM has one Add contacts button on the Dashboard, the Contacts list and their empty states. It opens a dialog with three choices: create a person or company, import records, or use a connected spreadsheet. Choices a person's role can't complete explain why instead of failing later. Creating a contact now happens in a centered dialog: choose Person or Company, fill in the essentials, and save, or add lifecycle and the business's own fields first. A new company can be created on the spot without leaving the person you are adding. Importing is a guided series of steps in Library: choose a source, map columns, review what will change, confirm, and see the results.
 
 ## 2026-10-23

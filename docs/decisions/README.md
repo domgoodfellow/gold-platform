@@ -190,8 +190,9 @@ It is not a duplicate specification.
 | ADR-045 | Foundational scope, terminology and voice options. **Part B flat-sidebar rendering superseded by ADR-046** | [`ADR-045-foundational-options.md`](ADR-045-foundational-options.md) |
 | ADR-046 | Entered workspaces use contextual navigation over one canonical projection. **Point 3 (Overview) superseded by ADR-047; point 6 (header presentation) by ADR-048** | [`ADR-046-contextual-workspace-navigation.md`](ADR-046-contextual-workspace-navigation.md) |
 | ADR-047 | One page location and identity contract | [`ADR-047-page-location-and-identity.md`](ADR-047-page-location-and-identity.md) |
-| ADR-048 | The sidebar owns workspace navigation; the header owns page identity and actions | [`ADR-048-sidebar-owns-workspace-navigation.md`](ADR-048-sidebar-owns-workspace-navigation.md) |
+| ADR-048 | The sidebar owns workspace navigation; the header owns page identity and actions. **Point 4 (header Calendar shortcut) superseded by ADR-050** | [`ADR-048-sidebar-owns-workspace-navigation.md`](ADR-048-sidebar-owns-workspace-navigation.md) |
 | ADR-049 | Explicit workspace Dashboard; supersedes ADR-047 point 1 | [`ADR-049-explicit-workspace-dashboard.md`](ADR-049-explicit-workspace-dashboard.md) |
+| ADR-050 | The organization header carries no workspace Calendar shortcut; supersedes ADR-048 point 4 | [`ADR-050-no-calendar-in-organization-header.md`](ADR-050-no-calendar-in-organization-header.md) |
 
 ---
 

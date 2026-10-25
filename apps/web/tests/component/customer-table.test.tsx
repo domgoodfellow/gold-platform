@@ -98,7 +98,8 @@ describe('customer directory table', () => {
   it('shows the working columns by default and nothing from the custom-field dump', () => {
     const { container } = renderTable();
 
-    expect(headers(container)).toEqual(['Name', 'Type', 'Company', 'Lifecycle', 'Temperature', 'Phone', 'Email', 'Last activity', 'Industry', 'Location']);
+    // V1.4: identity type and company live in the identity-led Contact column; temperature is optional.
+    expect(headers(container)).toEqual(['Contact', 'Lifecycle', 'Phone', 'Email', 'Last activity', 'Industry', 'Location']);
     expect(screen.queryByText('Details')).toBeNull();
     expect(screen.queryByText('VAT number')).toBeNull();
   });
@@ -111,11 +112,11 @@ describe('customer directory table', () => {
     expect(rowCells(container, 'Brightline Electric')).toContain('(613)555-0199');
   });
 
-  it('shows a dash for a missing company, phone, industry and location rather than inventing one', () => {
+  it('shows a dash for a missing phone, email, industry and location rather than inventing one', () => {
     const { container } = renderTable();
 
     const cells = rowCells(container, 'Unlisted Contact');
-    expect(cells.filter((text) => text === '—')).toHaveLength(5);
+    expect(cells.filter((text) => text === '—')).toHaveLength(4);
   });
 
   it('keeps a long business name whole in the wide table', () => {
@@ -135,7 +136,7 @@ describe('customer directory table', () => {
   it('adds an optional column only when the view asks for it, with its own value', () => {
     const { container } = renderTable(['custom:website', 'custom:vat_number']);
 
-    expect(headers(container)).toEqual(['Name', 'Type', 'Company', 'Lifecycle', 'Temperature', 'Phone', 'Email', 'Last activity', 'Industry', 'Location', 'Website', 'VAT number']);
+    expect(headers(container)).toEqual(['Contact', 'Lifecycle', 'Phone', 'Email', 'Last activity', 'Industry', 'Location', 'Website', 'VAT number']);
     expect(rowCells(container, 'Harbour')).toContain('https://harbourhearth.example');
     expect(rowCells(container, 'Brightline Electric')).toContain('CA123456789');
   });
@@ -151,6 +152,34 @@ describe('customer directory table', () => {
   it('lists the industry filter options and every optional field except industry', () => {
     const choices = optionalColumnChoices(DEFINITIONS).map((choice) => choice.id);
 
-    expect(choices).toEqual(['custom:website', 'custom:vat_number']);
+    expect(choices).toEqual(['core:temperature', 'custom:website', 'custom:vat_number']);
+  });
+
+  it('keeps lead temperature reachable as an optional column', () => {
+    const { container } = renderTable(['core:temperature']);
+    expect(headers(container)).toEqual(['Contact', 'Lifecycle', 'Temperature', 'Phone', 'Email', 'Last activity', 'Industry', 'Location']);
+  });
+
+  it('leads each row with identity: the name opens the record and the type is spoken', () => {
+    const { container } = renderTable();
+    const link = within(wideTable(container)).getByRole('link', { name: 'Brightline Electric' });
+    expect(link.getAttribute('href')).toBe('/organizations/org-1/crm/contacts/c-2');
+    expect(within(wideTable(container)).getAllByText('Needs classification').length).toBeGreaterThan(0);
+  });
+
+  it('groups by company without repeating anyone: company first, its people beneath, the rest last', () => {
+    const people = [
+      { id: 'p1', name: 'Ada Person', contactType: 'person' as const, companyId: 'co', companyName: 'Harbour Co', email: null, phone: null, custom: {}, stageId: null, createdAt: '2026-01-01' },
+      { id: 'co', name: 'Harbour Co', contactType: 'company' as const, companyId: 'co', companyName: 'Harbour Co', email: null, phone: null, custom: {}, stageId: null, createdAt: '2026-01-01' },
+      { id: 'p2', name: 'Solo Person', contactType: 'person' as const, companyId: null, companyName: null, email: null, phone: null, custom: {}, stageId: null, createdAt: '2026-01-01' },
+      { id: 'u1', name: 'Legacy Row', contactType: 'unspecified' as const, companyId: null, companyName: null, email: null, phone: null, custom: {}, stageId: null, createdAt: '2026-01-01' },
+    ];
+    render(<CustomerTable organizationId="org-1" customers={people} definitions={[]} locationLabels={{}} groupByCompany />);
+    const groups = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'));
+    expect(groups).toEqual(['Harbour Co', 'No company', 'Needs classification']);
+    const harbour = screen.getByRole('region', { name: 'Harbour Co' });
+    const names = within(harbour.querySelector('table')!).getAllByRole('link').map(link => link.textContent);
+    expect(names).toEqual(['Harbour Co', 'Ada Person']);
+    for (const name of ['Ada Person', 'Solo Person', 'Legacy Row']) expect(screen.getAllByRole('link', { name }).filter(link => link.closest('table'))).toHaveLength(1);
   });
 });
