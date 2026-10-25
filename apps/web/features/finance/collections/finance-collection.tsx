@@ -8,7 +8,9 @@ import { PaymentDialog } from '../transactions/payment-dialog';
 import { QuoteDialog } from '../transactions/quote-dialog';
 import { InvoicesTable, QuotesTable, PaymentsTable } from './finance-tables';
 import { financeFilters } from '@/lib/application/finance/operating';
-import { readFinanceInvoices, readFinancePayments, readFinanceQuotes } from '@/lib/domain/billing/finance-reads';
+import { readFinanceInvoice, readFinanceInvoices, readFinancePayments, readFinanceQuotes } from '@/lib/domain/billing/finance-reads';
+import { getInvoiceForWorkItem } from '@/lib/domain/billing/invoices';
+import { InspectorFocusReturn, InvoiceInspector } from './invoice-inspector';
 import { listContacts } from '@/lib/domain/contacts/contacts';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { todayInZone } from '@/lib/domain/scheduling/window';
@@ -68,6 +70,11 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
     : kind === 'payments' && may('payment.record') ? <PaymentDialog organizationId={organizationId} today={today} tone="primary" initiallyOpen={query.create === '1'} />
     : null;
   const [one, many] = NOUN[kind];
+  // The inspector reads only when the address names an invoice, each time under this reader's own access.
+  const inspected = kind === 'invoices' && value('invoice') ? await readFinanceInvoice(db, organizationId, value('invoice')) : null;
+  const inspectedInvoice = inspected ? await getInvoiceForWorkItem(db, { organizationId, workItemId: inspected.workItemId }) : null;
+  const here = href({ page: String(page) });
+  const inspectHref = (invoiceId: string) => `${here}${here.includes('?') ? '&' : '?'}invoice=${invoiceId}`;
   const filtered = active.length > 0 || Boolean(scopeValue);
   return <AppPage>
     <CollectionHeader title={TITLES[kind]} crumbs={[{ label: 'Finance', href: base }]} actions={create ?? undefined} />
@@ -86,10 +93,12 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
       active={active} resetHref={filtered ? path : undefined} className="mb-4" />
     <section aria-label={`${TITLES[kind]} results`} className="min-w-0">
       <p role="status" className="mb-2 text-sm text-muted"><span className="font-medium text-foreground tabular-nums">{result.total}</span> {result.total === 1 ? one : many}{filtered ? ' match this view' : ''}</p>
-      {kind === 'invoices' ? <InvoicesTable timezone={organization.timezone} organizationId={organizationId} today={today} rows={result.rows as Awaited<ReturnType<typeof readFinanceInvoices>>['rows']} empty={filtered ? 'No invoices match this view.' : 'No invoices issued yet. Invoices are issued from priced Work.'} mayRecord={billing && may('payment.record')} />
+      {kind === 'invoices' ? <InvoicesTable timezone={organization.timezone} organizationId={organizationId} today={today} inspectHref={inspectHref} rows={result.rows as Awaited<ReturnType<typeof readFinanceInvoices>>['rows']} empty={filtered ? 'No invoices match this view.' : 'No invoices issued yet. Invoices are issued from priced Work.'} mayRecord={billing && may('payment.record')} />
         : kind === 'quotes' ? <QuotesTable organizationId={organizationId} today={today} rows={result.rows as Awaited<ReturnType<typeof readFinanceQuotes>>['rows']} empty={filtered ? 'No priced Work matches this view.' : 'Nothing priced yet. A quote is a Work item with priced lines from your catalog.'} mayIssue={billing && may('invoice.issue')} />
         : <PaymentsTable timezone={organization.timezone} organizationId={organizationId} rows={result.rows as Awaited<ReturnType<typeof readFinancePayments>>['rows']} empty={filtered ? 'No payment entries match this view.' : 'No payments recorded yet. Payments are recorded against issued invoices.'} />}
     </section>
+    {kind === 'invoices' ? <InspectorFocusReturn /> : null}
+    {inspected && inspectedInvoice ? <InvoiceInspector key={inspected.id} organizationId={organizationId} row={inspected} invoice={inspectedInvoice} timezone={organization.timezone} today={today} closeHref={here} mayRecord={billing && may('payment.record')} /> : null}
     {result.total > PAGE_SIZE || page > 1 ? <nav aria-label="Pagination" className="mt-4 flex items-center justify-between gap-3 text-sm">
       {page > 1 ? <ButtonLink tone="secondary" size="small" href={href({ page: String(page - 1) })}>Previous</ButtonLink> : <span />}
       <span className="tabular-nums text-muted">Page {page} of {pages} · {result.total} records</span>

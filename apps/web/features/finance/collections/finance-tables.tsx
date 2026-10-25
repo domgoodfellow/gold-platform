@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { AlertTriangle, CheckCircle2, CircleDot, Undo2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, CircleDot, PanelRight, Undo2 } from 'lucide-react';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import type { FinanceInvoiceRow } from '@/lib/application/finance/invoices';
@@ -28,7 +28,7 @@ export function PaymentEntryBadge({ amountMinor }: { amountMinor: number }) {
   return amountMinor < 0 ? <Badge tone="danger" className="gap-1"><Undo2 aria-hidden className="size-3" />Correction</Badge> : <Badge>Receipt</Badge>;
 }
 
-export function InvoicesTable({ organizationId, rows, empty, mayRecord = false, compact = false, timezone = 'UTC', today = '' }: { organizationId: string; rows: FinanceInvoiceRow[]; empty: string; mayRecord?: boolean; compact?: boolean; timezone?: string; today?: string }) {
+export function InvoicesTable({ organizationId, rows, empty, mayRecord = false, compact = false, timezone = 'UTC', today = '', inspectHref }: { organizationId: string; rows: FinanceInvoiceRow[]; empty: string; mayRecord?: boolean; compact?: boolean; timezone?: string; today?: string; inspectHref?: (invoiceId: string) => string }) {
   const inZone = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: timezone, month: 'short', day: 'numeric' }).format(new Date(iso));
   return (
     <DataTable
@@ -36,9 +36,12 @@ export function InvoicesTable({ organizationId, rows, empty, mayRecord = false, 
       rowKey={(row) => row.id}
       empty={empty}
       tableFrom={compact ? 'default' : 'wide'}
-      actions={mayRecord && today ? row => row.settled
-        ? <PaymentDialog organizationId={organizationId} workItemId={row.workItemId} today={today} entry="correction" label="Correction" ariaLabel={`Record a correction on invoice #${row.number}`} size="tiny" tone="ghost" />
-        : <PaymentDialog organizationId={organizationId} workItemId={row.workItemId} today={today} label="Record payment" ariaLabel={`Record payment for invoice #${row.number}`} size="tiny" /> : undefined}
+      actions={mayRecord || inspectHref ? row => <>
+        {inspectHref ? <Link href={inspectHref(row.id)} scroll={false} data-inspect-invoice={row.id} aria-label={`Preview invoice #${row.number}`} className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium hover:bg-hover"><PanelRight aria-hidden className="size-3.5" />Preview</Link> : null}
+        {mayRecord && today ? row.settled
+          ? <PaymentDialog organizationId={organizationId} workItemId={row.workItemId} today={today} entry="correction" label="Correction" ariaLabel={`Record a correction on invoice #${row.number}`} size="tiny" tone="ghost" />
+          : <PaymentDialog organizationId={organizationId} workItemId={row.workItemId} today={today} label="Record payment" ariaLabel={`Record payment for invoice #${row.number}`} size="tiny" /> : null}
+      </> : undefined}
       columns={[
         { key: 'number', header: 'Invoice', emphasis: 'primary', cell: (row) => <Link className={LINK} href={workHref(organizationId, row.workItemId)}>#{row.number}</Link> },
         { key: 'customer', header: 'Customer', cell: (row) => row.customerId ? <Link className="underline-offset-4 hover:underline" href={customerHref(organizationId, row.customerId)}>{row.billedTo}</Link> : row.billedTo },

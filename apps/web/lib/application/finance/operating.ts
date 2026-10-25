@@ -88,6 +88,10 @@ export async function loadFinanceOperating(db: Db, input: { organizationId: stri
     started: invoiced.total > 0 || priced.total > 0 || payments.total > 0,
     billingEnabled: enabled.has('billing'), cardCollection,
     financials: financials ? totalsByCurrency(financials) : null,
+    /** The customer rows behind `financials`, for the Dashboard's invoiced-and-costs chart (same read, not a second query). */
+    financialGroups: financials,
+    /** Exact count of every issued invoice. */
+    issuedCount: invoiced.total,
   };
 }
 export type FinanceOperating = Awaited<ReturnType<typeof loadFinanceOperating>>;

@@ -17,7 +17,7 @@ import { resetAppearance, saveAppearance } from '../lib/domain/identity/appearan
  * dialogs, collections and catalog, each checked against the database, with screenshots at phone,
  * tablet and desktop width saved under `.artifacts/finance-v2/after`.
  */
-const OUT = path.join(__dirname, '..', '..', '..', '.artifacts', 'finance-v2', 'after');
+const OUT = path.join(__dirname, '..', '..', '..', '.artifacts', 'finance-v2', 'current');
 const VIEWPORTS = [{ name: 'phone', width: 390, height: 844 }, { name: 'tablet', width: 768, height: 1024 }, { name: 'desktop', width: 1440, height: 900 }] as const;
 const shot = (page: Page, name: string) => page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: true });
 const fits = async (page: Page, label: string) => expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), `${label} scrolls sideways`).toBe(true);
@@ -113,7 +113,8 @@ test.describe.serial('Finance V2.0', () => {
       await activity.getByRole('link', { name: /Correction recorded/ }).click();
       await expect(page).toHaveURL(new RegExp(`/work/${fx.work.overdueA}\\?tab=financials`));
       await page.goto(base);
-      await expect(page.getByRole('region', { name: 'Collections & receivables' })).toBeVisible();
+      // Finance V2.1: collections are chart widgets on the customizable Dashboard.
+      await expect(page.getByRole('heading', { name: 'Receivables aging', exact: true })).toBeVisible();
       await page.getByLabel('Reporting month').fill('2025-12');
       await page.getByRole('button', { name: 'Apply' }).click();
       await expect(page).toHaveURL(/month=2025-12/);
@@ -331,7 +332,8 @@ test.describe.serial('Finance V2.0', () => {
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto(base);
       for (const name of ['New invoice', 'New quote', 'Record payment', 'Add services']) await expect(main(page).getByRole(name === 'Add services' ? 'link' : 'button', { name, exact: true })).toHaveCount(0);
-      await expect(page.getByRole('region', { name: 'Collections & receivables' })).toHaveCount(0);
+      await expect(page.getByRole('heading', { name: 'Receivables aging', exact: true })).toHaveCount(0);
+      await expect(page.getByRole('heading', { name: 'Payments received', exact: true })).toHaveCount(0);
       for (const name of ['Catalog & Pricing', 'Financial reports']) await expect(sidebarNav(page).getByRole('link', { name })).toHaveCount(0);
       await shot(page, 'dashboard-reduced-role-desktop');
       // The page streams, so refusal is the rendered not-found, as for any other refused organization page.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowedPresentations, formatTick, hasValues, labelStride, linearScale, niceTicks, resolvePresentation, type ChartData } from '@/components/charts/chart-model';
+import { allowedPresentations, formatTick, hasValues, labelStride, linearScale, niceTicks, resolvePresentation, type ChartData } from '@/lib/chart-model';
 import { CHART_FIXTURES } from '@/components/charts/chart-fixtures';
 
 const series = (values: (number | null)[]): ChartData['series'] => [{ id: 's', label: 'S', points: values.map(value => ({ value, label: String(value) })) }];

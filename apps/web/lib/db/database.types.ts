@@ -3371,6 +3371,48 @@ export type Database = {
           },
         ]
       }
+      dashboard_layout_preferences: {
+        Row: {
+          layout: Json
+          organization_id: string
+          revision: number
+          updated_at: string
+          user_id: string
+          workspace: string
+        }
+        Insert: {
+          layout: Json
+          organization_id: string
+          revision?: number
+          updated_at?: string
+          user_id: string
+          workspace: string
+        }
+        Update: {
+          layout?: Json
+          organization_id?: string
+          revision?: number
+          updated_at?: string
+          user_id?: string
+          workspace?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_layout_preferences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_layout_preferences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dashboard_reports: {
         Row: {
           created_at: string

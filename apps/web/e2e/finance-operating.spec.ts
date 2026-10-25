@@ -124,7 +124,7 @@ test.describe('Finance operating journey', () => {
     const attention = page.getByRole('region',{name:'Needs attention',exact:true});
     await expect(attention.getByRole('button',{name:'Overdue 3'})).toBeVisible();
     await page.screenshot({path:testInfo.outputPath('finance-populated-desktop.png'),fullPage:true,caret:'initial'});
-    await page.getByRole('region',{name:'Collections & receivables',exact:true}).scrollIntoViewIfNeeded();
+    await page.getByRole('heading',{name:'Receivables aging',exact:true}).scrollIntoViewIfNeeded();
     await page.screenshot({path:testInfo.outputPath('finance-populated-desktop-lower.png'),fullPage:true,caret:'initial'});
     // Due soon includes the two invoices due today and opens the same window in Invoices.
     await attention.getByRole('button',{name:/^Due soon/}).click();
@@ -140,7 +140,7 @@ test.describe('Finance operating journey', () => {
     await page.getByRole('link',{name:'#2',exact:true}).filter({visible:true}).click();await expect(page.getByRole('tab',{name:'Financials',exact:true})).toHaveAttribute('data-state','active');
     await page.goto(finance);await page.getByLabel('Reporting month',{exact:true}).fill('2025-12');await page.getByRole('button',{name:'Apply',exact:true}).click();await expect(page).toHaveURL(/month=2025-12/);await expect(page.getByLabel('Reporting month',{exact:true})).toHaveValue('2025-12');await expect(page.getByRole('link',{name:/Payments received None this month/})).toBeVisible();
     await expect(page.getByRole('searchbox',{name:'Search Finance',exact:true})).toHaveCount(0);await page.goto(`${finance}/search?q=Vertex`);await expect(page.getByRole('link',{name:'Vertex HVAC',exact:true}).filter({visible:true}).first()).toBeVisible();
-    for(const width of [768,390]) { await page.setViewportSize({width,height:1000});await page.goto(finance);await expect(page.getByRole('heading',{name:'Finance',exact:true})).toBeAttached();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);await page.screenshot({path:testInfo.outputPath(`finance-populated-${width}.png`),fullPage:true,caret:'initial'});await page.getByRole('region',{name:'Financial activity',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath(`finance-populated-${width}-lower.png`),fullPage:true,caret:'initial'}); }
+    for(const width of [768,390]) { await page.setViewportSize({width,height:1000});await page.goto(finance);await expect(page.getByRole('heading',{name:'Dashboard',level:1,exact:true})).toBeAttached();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);await page.screenshot({path:testInfo.outputPath(`finance-populated-${width}.png`),fullPage:true,caret:'initial'});await page.getByRole('region',{name:'Financial activity',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath(`finance-populated-${width}-lower.png`),fullPage:true,caret:'initial'}); }
     await page.getByRole('button',{name:'Record payment',exact:true}).first().scrollIntoViewIfNeeded();
     await page.getByRole('button',{name:'Record payment',exact:true}).first().click();
     dialog = page.getByRole('dialog',{name:'Record payment',exact:true});
@@ -174,4 +174,4 @@ test.describe('Finance operating journey', () => {
     expect(browserErrors).toEqual([]);
   });
 });
-test.describe('Finance reduced role',()=>{test.use({storageState:COLLEAGUE_STORAGE_STATE});test('does not offer unauthorized writes or aggregate reports',async({page})=>{await page.goto(`/organizations/${loadDemoContext().organizationId}/finance`);await expect(page.getByRole('heading',{name:'Finance',exact:true})).toBeAttached();for(const name of ['New invoice','New quote','Record payment'])await expect(page.getByRole('button',{name,exact:true})).toHaveCount(0);await expect(page.getByRole('region',{name:'Collections & receivables'})).toHaveCount(0);});});
+test.describe('Finance reduced role',()=>{test.use({storageState:COLLEAGUE_STORAGE_STATE});test('does not offer unauthorized writes or aggregate reports',async({page})=>{await page.goto(`/organizations/${loadDemoContext().organizationId}/finance`);await expect(page.getByRole('heading',{name:'Dashboard',level:1,exact:true})).toBeAttached();for(const name of ['New invoice','New quote','Record payment'])await expect(page.getByRole('button',{name,exact:true})).toHaveCount(0);await expect(page.getByRole('heading',{name:'Receivables aging'})).toHaveCount(0);});});

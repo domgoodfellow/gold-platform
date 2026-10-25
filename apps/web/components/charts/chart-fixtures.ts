@@ -1,4 +1,4 @@
-import type { ChartData, ChartPoint } from './chart-model';
+import type { ChartData, ChartPoint } from '@/lib/chart-model';
 
 /**
  * Synthetic chart data for the development gallery (`/dev/charts`) and the focused chart tests

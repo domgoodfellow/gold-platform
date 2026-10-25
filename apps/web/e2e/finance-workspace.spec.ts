@@ -19,7 +19,8 @@ test.describe('tenant Finance workspace', () => {
     await page.goto(`/organizations/${organizationId}/home`);
     await page.getByRole('link', { name: 'Finance', exact: true }).click();
     await expect(page).toHaveURL(base);
-    await expect(page.getByRole('heading', { name: 'Finance', level: 1 })).toBeVisible();
+    // ADR-049: the workspace root is named Dashboard; Finance is the workspace identity in the sidebar.
+    await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeAttached();
 
     // The commercial plane is not here.
     for (const text of ['Plan & usage', 'Usage allowances', 'Manage plan', 'Financial connections', 'Known COGS']) {
@@ -75,7 +76,8 @@ test.describe('GildOps staff', () => {
 
   test('GildOps’ own Finance is ordinary tenant Finance, with no commercial controls', async ({ page }) => {
     await page.goto(financeUrl());
-    await expect(page.getByRole('heading', { name: 'Finance', level: 1 })).toBeVisible();
+    // ADR-049: the workspace root is named Dashboard; Finance is the workspace identity in the sidebar.
+    await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeAttached();
     await expect(page.locator('main').getByRole('link', { name: 'Plans & Add-ons' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Economics' })).toHaveCount(0);
     await page.screenshot({ path: `${ARTIFACTS}/finance-workspace-gildops-home.png`, fullPage: true });

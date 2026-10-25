@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Banknote, CheckCircle2, CircleCheck, FileText, Tag, Undo2 } from 'lucide-react';
+import { AlertTriangle, Banknote, CheckCircle2, CircleCheck, ClipboardList, FileText, Tag, Undo2 } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { TextInput } from '@/components/controls/inputs';
 import { WorkspaceHome } from '@/components/patterns/workspace-home';
@@ -15,6 +15,11 @@ import type { FinanceOperating } from '@/lib/application/finance/operating';
 import { DUE_SOON_DAYS } from '@/lib/application/finance/operating';
 import type { CurrencyAmount } from '@/lib/domain/billing/finance-reads';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
+import { CustomizeDashboardButton, DashboardEditingProvider, DashboardLayoutGrid, type DashboardWidgetContent } from '@/components/dashboard/dashboard-layout';
+import { FINANCE_WIDGETS, readableFinanceWidgets } from '@/lib/application/finance/dashboard-widgets';
+import { agingCharts, invoiceStatusChart, paymentsTrendCharts, performanceCharts } from '@/lib/application/finance/dashboard-charts';
+import type { StoredDashboardLayout } from '@/lib/domain/preferences/dashboard-layouts';
+import { resetFinanceDashboardLayout, saveFinanceDashboardLayout } from '@/app/organizations/[organizationId]/finance/dashboard-actions';
 
 /** Each currency on its own line; amounts in different currencies are never added together. */
 function Amounts({ values, empty }: { values: CurrencyAmount[]; empty: string }) {
@@ -28,7 +33,7 @@ function Amounts({ values, empty }: { values: CurrencyAmount[]; empty: string })
  * Work, invoice or payment it offers a starting path instead of zero-valued figures. Entitlement
  * decides whether billing applies at all; capabilities decide which actions and amounts appear.
  */
-export function FinanceHome({ organizationId, timezone, today, data, capabilities, configure }: { organizationId: string; timezone: string; today: string; data: FinanceOperating; capabilities: readonly string[]; configure?: ReactNode }) {
+export function FinanceHome({ organizationId, timezone, today, data, capabilities, configure, layout }: { organizationId: string; timezone: string; today: string; data: FinanceOperating; capabilities: readonly string[]; configure?: ReactNode; layout: StoredDashboardLayout }) {
   const base = `/organizations/${organizationId}`, finance = `${base}/finance`;
   const { summary, open, overdue, dueSoon, quotes, period } = data;
   const has = (cap: string) => capabilities.includes(cap);
@@ -68,27 +73,42 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
     ...(data.cardCollection === 'not-connected' || data.cardCollection === 'unavailable' ? [{ key: 'card', label: 'Card payments', count: 1, href: configureHref, rows: [{ id: 'card', href: configureHref, title: data.cardCollection === 'unavailable' ? 'Card payments are on, but no payment processor is available' : 'Card payments are on, but no payment account is connected', detail: 'Manual payment recording still works.', amount: '' }] }] : []),
   ].filter(category => category.count > 0);
 
-  return <WorkspaceHome title="Finance" actions={actions}>
-    <section aria-labelledby="finance-overview" className="mb-6">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 id="finance-overview" className="text-sm font-semibold">Financial overview</h2>
-        {reports ? <form method="get" action={finance} className="flex items-center gap-1"><TextInput aria-label="Reporting month" name="month" type="month" defaultValue={period.month} size="small" className="w-40" /><Button type="submit" tone="text" size="small">Apply</Button></form> : null}
-      </div>
-      <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {reports ? <MetricTile label="Payments received" icon={Banknote} value={<Amounts values={summary.received} empty="None this month" />} detail={`${monthLabel} · net of corrections`} href={`${finance}/payments?from=${period.from}&to=${period.to}`} /> : null}
-        <MetricTile label="Outstanding" icon={FileText} value={reports ? <Amounts values={summary.outstanding} empty="Nothing outstanding" /> : open.total} detail={`${open.total} unpaid ${open.total === 1 ? 'invoice' : 'invoices'}`} href={`${finance}/invoices?status=outstanding`} />
-        <MetricTile label="Overdue" value={reports ? <Amounts values={data.overdueAmounts ?? []} empty="Nothing overdue" /> : overdue.total} detail={`${overdue.total} past ${overdue.total === 1 ? 'its' : 'their'} due date`} href={`${finance}/invoices?status=overdue`} emphasis={overdue.total > 0 ? 'danger' : undefined} />
-        <MetricTile label="Quoted, not invoiced" value={reports ? <Amounts values={summary.quoted} empty="Nothing waiting" /> : quotes.total} detail={`${quotes.total} priced Work ${quotes.total === 1 ? 'item' : 'items'}`} href={`${finance}/quotes?status=not-invoiced`} />
-      </div>
-      {!reports ? <p className="mt-2 text-xs text-muted">Amounts are shown to people with reporting access.</p> : null}
-    </section>
-    <div className="mb-6 grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
-      {categories.length ? <OperationalPanel className="min-w-0" title="Needs attention"><FinanceAttention categories={categories} /></OperationalPanel>
-        : <p role="status" className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm"><CircleCheck aria-hidden className="size-4 text-muted" /><span><span className="font-medium">Needs attention:</span> nothing overdue or due in the next {DUE_SOON_DAYS} days, and no priced Work waiting for an invoice.</span></p>}
-      <FinanceActivity organizationId={organizationId} activity={data.activity} shortDate={shortDate} />
+  // The reporting period governs payments received and the period charts; receivables stay current.
+  const periodControl = reports ? <form method="get" action={finance} className="flex items-center gap-1"><TextInput aria-label="Reporting month" name="month" type="month" defaultValue={period.month} size="small" className="w-36" /><Button type="submit" tone="text" size="small">Apply</Button></form> : null;
+  const readable = readableFinanceWidgets({ billingEnabled: data.billingEnabled, capabilities });
+  const periodLabel = monthLabel;
+  const overview = <div className="@container min-w-0">
+    <h2 className="sr-only">Financial overview</h2>
+    <div className="grid min-w-0 gap-3 @min-[34rem]:grid-cols-2 @min-[60rem]:grid-cols-4">
+      {reports ? <MetricTile label="Payments received" icon={Banknote} value={<Amounts values={summary.received} empty="None this month" />} detail={`${monthLabel} · net of corrections`} href={`${finance}/payments?from=${period.from}&to=${period.to}`} /> : null}
+      <MetricTile label="Outstanding" icon={FileText} value={reports ? <Amounts values={summary.outstanding} empty="Nothing outstanding" /> : open.total} detail={`${open.total} unpaid ${open.total === 1 ? 'invoice' : 'invoices'}`} href={`${finance}/invoices?status=outstanding`} />
+      <MetricTile label="Overdue" icon={AlertTriangle} value={reports ? <Amounts values={data.overdueAmounts ?? []} empty="Nothing overdue" /> : overdue.total} detail={`${overdue.total} past ${overdue.total === 1 ? 'its' : 'their'} due date`} href={`${finance}/invoices?status=overdue`} emphasis={overdue.total > 0 ? 'danger' : undefined} />
+      <MetricTile label="Quoted, not invoiced" icon={ClipboardList} value={reports ? <Amounts values={summary.quoted} empty="Nothing waiting" /> : quotes.total} detail={`${quotes.total} priced Work ${quotes.total === 1 ? 'item' : 'items'}`} href={`${finance}/quotes?status=not-invoiced`} />
     </div>
-    {reports ? <Collections finance={finance} summary={summary} financials={data.financials} monthLabel={monthLabel} /> : null}
-  </WorkspaceHome>;
+    {!reports ? <p className="mt-2 text-xs text-muted">Amounts are shown to people with reporting access.</p> : null}
+  </div>;
+  const attention = categories.length ? <OperationalPanel className="h-full min-w-0" title="Needs attention"><FinanceAttention categories={categories} /></OperationalPanel>
+    : <p role="status" className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm"><CircleCheck aria-hidden className="size-4 shrink-0 text-muted" /><span><span className="font-medium">Needs attention:</span> nothing overdue or due in the next {DUE_SOON_DAYS} days, and no priced Work waiting for an invoice.</span></p>;
+  const reportsLink = <p className="mt-2 text-right text-xs"><Link className="text-accent-text underline-offset-4 hover:underline" href={`${finance}/reports`}>Open financial reports</Link></p>;
+  // Built only for widgets this viewer may read; a hidden-by-permission chart is never computed.
+  const widgets: Record<string, DashboardWidgetContent> = {
+    overview: { kind: 'node', node: overview },
+    attention: { kind: 'node', node: attention },
+    activity: { kind: 'node', node: <FinanceActivity organizationId={organizationId} activity={data.activity} shortDate={shortDate} />, densities: { compact: <FinanceActivity organizationId={organizationId} activity={data.activity} shortDate={shortDate} compact /> } },
+    'invoice-status': { kind: 'chart', title: 'Invoices by status', variants: invoiceStatusChart({ issued: data.issuedCount, unpaid: open.total, overdue: overdue.total }, finance) },
+    ...(reports && readable.has('payments-trend') ? {
+      'payments-trend': { kind: 'chart' as const, title: 'Payments received', variants: paymentsTrendCharts(summary.trend, periodLabel), state: summary.trend.length ? undefined : { status: 'empty' as const, message: `No payments recorded in ${monthLabel}.` } },
+      aging: { kind: 'chart' as const, title: 'Receivables aging', variants: agingCharts(summary.aging), state: summary.aging.length ? undefined : { status: 'empty' as const, message: 'Nothing is outstanding.' } },
+      performance: { kind: 'chart' as const, title: 'Invoiced and recorded costs', variants: performanceCharts(data.financialGroups ?? [], periodLabel), state: data.financialGroups?.length ? undefined : { status: 'empty' as const, message: `Nothing invoiced in ${monthLabel}.` },
+        footer: <><p className="mt-2 text-xs text-muted">Costs are those recorded against the same work; a customer with no recorded cost shows zero recorded, which is not a measured margin.</p>{reportsLink}</> },
+    } : {}),
+  };
+  return <DashboardEditingProvider available>
+    <WorkspaceHome title="Finance" actions={<>{periodControl}<CustomizeDashboardButton />{actions}</>}>
+      <DashboardLayoutGrid label="Finance dashboard" registry={FINANCE_WIDGETS} saved={layout} readable={[...readable]} widgets={widgets}
+        onSave={saveFinanceDashboardLayout.bind(null, organizationId)} onReset={resetFinanceDashboardLayout.bind(null, organizationId)} />
+    </WorkspaceHome>
+  </DashboardEditingProvider>;
 }
 
 function StartingPath({ organizationId, data, mayManageCatalog, mayQuote, mayCreateWork, configureHref }: { organizationId: string; data: FinanceOperating; mayManageCatalog: boolean; mayQuote: boolean; mayCreateWork: boolean; configureHref: string }) {
@@ -114,9 +134,9 @@ function StartingPath({ organizationId, data, mayManageCatalog, mayQuote, mayCre
 const EVENT_LABEL: Record<string, string> = { 'invoice.issued': 'Invoice issued', 'payment.recorded': 'Payment recorded', 'work_item.line_added': 'Quote line added', 'work_item.line_removed': 'Quote line removed', 'price_book_item.created': 'Service added to catalog', 'price_book_item.updated': 'Catalog price changed' };
 
 /** Recorded Finance events only, each linked to the record it is about; nothing here is inferred. */
-function FinanceActivity({ organizationId, activity, shortDate }: { organizationId: string; activity: FinanceOperating['activity']; shortDate: (iso: string) => string }) {
+function FinanceActivity({ organizationId, activity, shortDate, compact = false }: { organizationId: string; activity: FinanceOperating['activity']; shortDate: (iso: string) => string; compact?: boolean }) {
   const base = `/organizations/${organizationId}`;
-  return <OperationalPanel density="compact" title="Financial activity" className="min-w-0">{activity.length ? <ul className="divide-y divide-border">{activity.map(event => {
+  return <OperationalPanel density="compact" title="Financial activity" className="h-full min-w-0">{activity.length ? <ul className="divide-y divide-border">{activity.map(event => {
     const p = event.payload as Record<string, unknown>;
     const amount = typeof p.amount_minor === 'number' && typeof p.currency === 'string' ? p.amount_minor : null;
     const correction = event.action === 'payment.recorded' && amount !== null && amount < 0;
@@ -124,26 +144,10 @@ function FinanceActivity({ organizationId, activity, shortDate }: { organization
     const detail = typeof p.description === 'string' ? p.description : typeof p.name === 'string' ? p.name : amount !== null ? formatMoney(amount, p.currency as string) : event.action === 'invoice.issued' ? `Open invoice${typeof p.currency === 'string' ? ` · ${p.currency}` : ''}` : 'Open record';
     const href = event.entity_type === 'work_item' ? workHref(organizationId, event.entity_id) : `${base}/finance/catalog`;
     const Icon = correction ? Undo2 : event.action === 'payment.recorded' ? Banknote : event.action.startsWith('price_book') ? Tag : FileText;
-    return <li key={event.id}><Link href={href} className="flex items-start gap-2.5 py-2.5 text-sm hover:bg-hover">
+    return <li key={event.id}><Link href={href} className={cx('flex items-start gap-2.5 text-sm hover:bg-hover', compact ? 'py-1.5' : 'py-2.5')}>
       <Icon aria-hidden className={cx('mt-0.5 size-4 shrink-0', correction ? 'text-danger' : 'text-muted')} />
       <span className="min-w-0 flex-1"><span className="block font-medium">{label}</span><span className={cx('block break-words text-xs', correction ? 'text-danger' : 'text-muted')}>{detail}</span></span>
       <time dateTime={event.occurred_at} className="shrink-0 text-xs text-muted">{shortDate(event.occurred_at)}</time>
     </Link></li>;
   })}</ul> : <PanelState>No financial activity recorded yet.</PanelState>}</OperationalPanel>;
-}
-
-/** Collections and receivables for reporting members; the full breakdown stays on Reports. */
-function Collections({ finance, summary, financials, monthLabel }: { finance: string; summary: NonNullable<FinanceOperating['summary']>; financials: FinanceOperating['financials']; monthLabel: string }) {
-  const peak = (currency: string) => Math.max(1, ...summary.trend.filter(v => v.currency === currency).map(v => Math.abs(Number(v.amount))));
-  return <OperationalPanel title="Collections & receivables" href={`${finance}/reports`} hrefLabel="Open reports">
-    <div className="grid gap-6 md:grid-cols-2">
-      <div className="min-w-0"><h3 className="mb-2 text-xs font-semibold">Payments by day · {monthLabel}</h3>{summary.trend.length ? <ul className="space-y-2">{summary.trend.slice(-8).map(t => <li key={`${t.day}-${t.currency}`} className="text-xs"><div className="flex justify-between gap-2"><time dateTime={t.day}>{new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC', month: 'short', day: 'numeric' }).format(new Date(`${t.day}T12:00:00Z`))}</time><span className={cx('tabular-nums', Number(t.amount) < 0 && 'text-danger')}>{formatMoney(Number(t.amount), t.currency)}</span></div><div aria-hidden className="mt-1 h-1.5 rounded bg-accent/60" style={{ width: `${Math.max(0.02, Math.abs(Number(t.amount)) / peak(t.currency)) * 100}%` }} /></li>)}</ul> : <p className="py-3 text-xs text-muted">No payments in this period.</p>}</div>
-      <div className="min-w-0"><h3 className="mb-2 text-xs font-semibold">Receivables aging · current</h3>{summary.aging.length ? <dl>{summary.aging.map(a => <div key={`${a.band}-${a.currency}`} className="flex justify-between gap-2 border-b border-border py-1.5 text-xs"><dt>{a.band}</dt><dd className="tabular-nums">{formatMoney(Number(a.amount), a.currency)}</dd></div>)}</dl> : <p className="py-3 text-xs text-muted">No outstanding balances.</p>}</div>
-    </div>
-    {financials?.length ? <dl className="mt-4 grid gap-3 border-t border-border pt-4 text-xs sm:grid-cols-3">{financials.map(f => <div key={f.currency} className="contents">
-      <div><dt className="text-muted">Invoiced · {monthLabel}</dt><dd className="mt-1 font-semibold tabular-nums">{formatMoney(f.invoicedMinor, f.currency)}</dd></div>
-      <div><dt className="text-muted">Costs recorded</dt><dd className="mt-1 tabular-nums">{f.incurredMinor === null ? 'Unknown' : formatMoney(f.incurredMinor, f.currency)}</dd></div>
-      <div><dt className="text-muted">Margin on recorded costs</dt><dd className="mt-1 tabular-nums">{f.marginMinor === null ? 'Unknown' : formatMoney(f.marginMinor, f.currency)}</dd></div>
-    </div>)}</dl> : null}
-  </OperationalPanel>;
 }

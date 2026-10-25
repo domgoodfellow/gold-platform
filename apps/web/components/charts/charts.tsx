@@ -9,7 +9,7 @@ import { cx, FOCUS_RING } from '../class-names';
 import {
   allowedPresentations, describeFormat, formatTick, hasValues, labelStride, linearScale, niceTicks, PRESENTATION_LABEL, resolvePresentation, seriesColor, seriesDash,
   type ChartData, type ChartPresentation, type ChartState,
-} from './chart-model';
+} from '@/lib/chart-model';
 
 export type ChartHeight = 'compact' | 'standard' | 'tall';
 /** Heights from the spacing scale; the plot measures what it is given rather than assuming pixels. */
@@ -130,10 +130,11 @@ export function CartesianChart({ title, data, presentation, height = 'standard' 
     data.series.forEach((series, index) => {
       const value = series.points[row]?.value;
       if (value === null || value === undefined) return;
-      const thickness = stacked ? slot * 0.7 : (slot * 0.75) / data.series.length;
+      // Bars stay readable but never slab-like when there are only a few categories.
+      const thickness = Math.min(stacked ? slot * 0.7 : (slot * 0.75) / data.series.length, 28);
       const start = stacked ? valuePos(offset) : zero, end = valuePos(stacked ? offset + Math.max(0, value) : value);
       if (stacked) offset += Math.max(0, value);
-      const across = stacked ? centre(row) - thickness / 2 : centre(row) - (slot * 0.75) / 2 + thickness * index;
+      const across = stacked ? centre(row) - thickness / 2 : centre(row) - (thickness * data.series.length) / 2 + thickness * index;
       bars.push(horizontal
         ? { x: Math.min(start, end), y: across, w: Math.abs(end - start), h: thickness, series: index, row, negative: value < 0 }
         : { x: across, y: Math.min(start, end), w: thickness, h: Math.abs(end - start), series: index, row, negative: value < 0 });

@@ -98,10 +98,23 @@ export async function readFinanceInvoices(db: Db, organizationId: string, f: Fin
   const { data, error, count } = await ordered(query, 'invoices', f.sort, 'id').range(...bounds(f));
   if (error) throw new DomainError(error.message, 'invoices.list_failed');
   if (count === null) throw new DomainError('Invoice count unavailable.', 'invoices.count_failed');
-  const rows: FinanceInvoiceRow[] = (data ?? []).map(r => ({ id: r.id!, workItemId: r.work_item_id!, number: r.number!, billedTo: r.billed_to!, customerId: r.customer_id,
-    currency: r.currency!, issuedAt: r.issued_at!, dueAt: r.due_at, total: r.total_minor === null ? null : { totalMinor: safeMinor(r.total_minor), currency: r.currency! },
-    paidMinor: safeMinor(r.paid_minor ?? 0), outstandingMinor: r.outstanding_minor === null ? null : safeMinor(r.outstanding_minor), settled: r.settled ?? false, overdue: r.overdue ?? false }));
+  const rows: FinanceInvoiceRow[] = (data ?? []).map(invoiceRow);
   return { rows, total: count ?? 0 };
+}
+
+type InvoiceRecord = { id: string | null; work_item_id: string | null; number: number | null; billed_to: string | null; customer_id: string | null; currency: string | null; issued_at: string | null; due_at: string | null; total_minor: number | null; paid_minor: number | null; outstanding_minor: number | null; settled: boolean | null; overdue: boolean | null };
+function invoiceRow(r: InvoiceRecord): FinanceInvoiceRow {
+  return ({ id: r.id!, workItemId: r.work_item_id!, number: r.number!, billedTo: r.billed_to!, customerId: r.customer_id,
+    currency: r.currency!, issuedAt: r.issued_at!, dueAt: r.due_at, total: r.total_minor === null ? null : { totalMinor: safeMinor(r.total_minor), currency: r.currency! },
+    paidMinor: safeMinor(r.paid_minor ?? 0), outstandingMinor: r.outstanding_minor === null ? null : safeMinor(r.outstanding_minor), settled: r.settled ?? false, overdue: r.overdue ?? false });
+}
+
+/** One invoice as the collection shows it, or null when it does not exist in this organization or this reader may not see it (RLS). */
+export async function readFinanceInvoice(db: Db, organizationId: string, invoiceId: string): Promise<FinanceInvoiceRow | null> {
+  if (!/^[0-9a-f-]{36}$/.test(invoiceId)) return null;
+  const { data, error } = await db.from('finance_invoice_records').select('*').eq('organization_id', organizationId).eq('id', invoiceId).maybeSingle();
+  if (error) throw new DomainError(error.message, 'invoices.read_failed');
+  return data ? invoiceRow(data) : null;
 }
 
 export async function readFinanceQuotes(db: Db, organizationId: string, f: FinanceFilter = {}) {
