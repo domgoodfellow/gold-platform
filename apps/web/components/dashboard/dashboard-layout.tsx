@@ -39,7 +39,7 @@ const StopContext = createContext<() => void>(() => {});
 export function CustomizeDashboardButton() {
   const context = useContext(EditingContext);
   if (!context?.available) return null;
-  return <Button type="button" tone="secondary" size="small" aria-pressed={context.editing} disabled={context.editing} onClick={context.start}><LayoutGrid aria-hidden className="size-4" />Customize dashboard</Button>;
+  return <Button type="button" tone="secondary" size="small" aria-pressed={context.editing} disabled={context.editing} onClick={context.start}><LayoutGrid aria-hidden className="size-4" /><span className="max-sm:sr-only">Customize dashboard</span></Button>;
 }
 
 // Container-width breakpoints, written out so every class exists at build time.
@@ -131,15 +131,15 @@ export function DashboardLayoutGrid({ registry, saved: initial, readable, widget
       {shown.map((placement, index) => <DashboardWidget key={placement.id} placement={placement} definition={definitions.get(placement.id)!} content={widgets[placement.id]}
         className={cx('col-span-1', MEDIUM[spans.medium.get(placement.id)!], WIDE[spans.wide.get(placement.id)!])}
         editing={editing} mode={mode} selected={selected === placement.id} onSelect={() => setSelected(placement.id)}
-        first={index === 0} last={index === shown.length - 1}
+        first={index === 0} last={index === shown.length - 1} filled={(spans[mode === 'medium' ? 'medium' : 'wide'].get(placement.id) ?? 0) > (mode === 'medium' ? (placement.span > 6 ? 6 : 3) : placement.span)}
         onLayout={update => change(update(draft))} registry={registry} visible={readableSet} measure={columnWidth} />)}
     </div>
   </div>;
 }
 
-function DashboardWidget({ placement, definition, content, className, editing, mode, selected, onSelect, first, last, onLayout, registry, visible, measure }: {
+function DashboardWidget({ placement, definition, content, className, editing, mode, selected, onSelect, first, last, filled, onLayout, registry, visible, measure }: {
   placement: WidgetPlacement; definition: WidgetDefinition; content: DashboardWidgetContent | undefined; className: string;
-  editing: boolean; mode: 'wide' | 'medium' | 'narrow'; selected: boolean; onSelect: () => void; first: boolean; last: boolean;
+  editing: boolean; mode: 'wide' | 'medium' | 'narrow'; selected: boolean; onSelect: () => void; first: boolean; last: boolean; filled: boolean;
   onLayout: (update: (layout: DashboardLayout) => DashboardLayout) => void; registry: readonly WidgetDefinition[]; visible: ReadonlySet<string>;
   measure: () => { column: number; gap: number };
 }) {
@@ -183,7 +183,7 @@ function DashboardWidget({ placement, definition, content, className, editing, m
       <Button type="button" size="tiny" tone="ghost" disabled={last} aria-label={`Move ${definition.label} later`} onClick={() => onLayout(layout => stepWidget(layout, placement.id, 1, visible))}>{mode === 'narrow' ? <ArrowDown aria-hidden className="size-3.5" /> : <ArrowRight aria-hidden className="size-3.5" />}Later</Button>
       {mode !== 'narrow' && definition.spans.length > 1 ? <span className="flex items-center gap-0.5">
         <Button type="button" size="tiny" tone="ghost" aria-label={`Decrease width of ${definition.label}`} disabled={placement.span === Math.min(...definition.spans)} onClick={() => onLayout(layout => stepWidth(layout, registry, placement.id, -1))}>−</Button>
-        <span aria-live="polite" className="min-w-16 text-center tabular-nums">{SPAN_LABEL[placement.span as WidgetSpan]}</span>
+        <span aria-live="polite" className="min-w-16 text-center tabular-nums">{SPAN_LABEL[placement.span as WidgetSpan]}{filled ? <span className="text-muted"> · widened to fill its row</span> : null}</span>
         <Button type="button" size="tiny" tone="ghost" aria-label={`Increase width of ${definition.label}`} disabled={placement.span === Math.max(...definition.spans)} onClick={() => onLayout(layout => stepWidth(layout, registry, placement.id, 1))}>+</Button>
       </span> : null}
       {definition.heights.length > 1 ? <SelectInput size="small" aria-label={`Height of ${definition.label}`} value={placement.height} onChange={event => onLayout(layout => setWidgetOption(layout, registry, placement.id, { height: event.target.value as WidgetHeight }))} className="w-28">{definition.heights.map(height => <option key={height} value={height}>{HEIGHT_LABEL[height]}</option>)}</SelectInput> : null}

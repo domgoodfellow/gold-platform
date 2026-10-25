@@ -38,6 +38,16 @@ verified account, and Reset deletes its overrides. Organization defaults and Stu
 remain typed future contracts without persistence changes in Slice B.
 Migration `20261025010000_brand_palette_and_background.sql` adds a nullable, checked
 `background` (none, gradient, grid, ambient3d) to the same table; null keeps the neutral surface.
+
+Personal Dashboard layout is presentation owned by one person in one organization, for one
+workspace. `dashboard_layout_preferences` (migration `20261025201138_dashboard_layout_preferences.sql`)
+is keyed by user, organization and workspace (`finance` only today), stores a versioned `layout`
+(ordered widgets with width, height, presentation, density and hidden flags) and a `revision`.
+RLS limits every row to its own person in an organization they currently belong to. A save names
+the revision it started from and a stale one is refused, never merged; Reset deletes the row and
+the product default applies. The application validates the layout against the workspace's widget
+registry before writing, and checks bound the stored shape and size. It is never authorization,
+never an organization report dashboard (`dashboards`, `dashboard_reports`) and never appearance.
 The same migration adds nullable, hex-checked `secondary` and `highlight` columns to
 `brand_settings` (`accent` stays the primary, so existing brands are unchanged), column grants for
 them, and the security-invoker `set_brand_palette` write, which records `organization.brand_updated`.

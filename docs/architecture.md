@@ -495,6 +495,8 @@ Organize features by meaningful product/domain concepts, not by arbitrary visual
 
 ### Shared application UI — `apps/web/components`
 
+Charts and workspace Dashboards are shared, not per workspace. `lib/chart-model.ts` is the pure chart data contract (shapes, valid presentations, scales, ticks) used by application code that prepares chart data and by `components/charts`, which only renders supplied, already-authorized values. `lib/dashboard-layout.ts` is the one ordering, sizing, validation and packing algorithm for personal Dashboard layouts, used by the browser editor (`components/dashboard`) and by `lib/domain/preferences/dashboard-layouts.ts`, which persists them. A workspace registers its widgets and their read requirements in its application layer (`lib/application/finance/dashboard-widgets.ts`); its chart data comes from its existing read model (`lib/application/finance/dashboard-charts.ts`), never a second aggregation.
+
 Shared application components sit between generic `packages/ui` primitives and feature UI.
 
 Current categories include:

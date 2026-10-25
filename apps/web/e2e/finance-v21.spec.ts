@@ -160,21 +160,25 @@ test.describe.serial('Finance V2.1', () => {
       await page.getByRole('button', { name: 'Save changes' }).click();
       await expect(page.getByRole('status').filter({ hasText: 'Dashboard layout saved.' })).toBeVisible();
       await page.reload();
+      await page.waitForLoadState('networkidle');
       await expect(widget(page, 'aging')).toHaveAttribute('data-span', '8');
       expect(await order()).toEqual(edited);
       await expect(widget(page, 'payments-trend').getByLabel('Payments received presentation')).toHaveValue('bar');
       await shot(page, 'saved-layout-desktop');
       // Another organization keeps its own (default) layout; coming back restores this one.
       await page.goto(`/organizations/${second}/finance`);
+      await page.waitForLoadState('networkidle');
       await expect(widget(page, 'aging')).toHaveAttribute('data-span', '6');
       await expect(widget(page, 'payments-trend').getByLabel('Payments received presentation')).toHaveValue('line');
       await page.goto(base);
+      await page.waitForLoadState('networkidle');
       await expect(widget(page, 'aging')).toHaveAttribute('data-span', '8');
       // Reset returns to the canonical composition.
       await page.getByRole('button', { name: 'Customize dashboard' }).click();
       await page.getByRole('button', { name: 'Reset to default' }).click();
       await expect(page.getByRole('status').filter({ hasText: 'reset to the default' })).toBeVisible();
       await page.reload();
+      await page.waitForLoadState('networkidle');
       expect(await order()).toEqual(['overview', 'attention', 'payments-trend', 'aging', 'activity', 'performance', 'invoice-status']);
       await expect(widget(page, 'aging')).toHaveAttribute('data-span', '6');
     });

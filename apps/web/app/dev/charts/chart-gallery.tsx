@@ -8,7 +8,7 @@ import { CHART_FIXTURES } from '@/components/charts/chart-fixtures';
 export function ChartGallery() {
   const [currency, setCurrency] = useState('CAD');
   const payments = currency === 'CAD' ? CHART_FIXTURES.paymentsWithCorrections : CHART_FIXTURES.paymentsUsd;
-  return <main className="mx-auto flex max-w-6xl flex-col gap-8 bg-background p-4 text-foreground">
+  return <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 bg-background p-4 text-foreground">
     <h1 className="text-xl font-semibold">Shared charts</h1>
     <section aria-label="Currency switch" className="rounded-lg border border-border bg-surface p-4">
       <Chart title="Payments received" data={payments.data} variants={[{ key: 'CAD', label: 'CAD' }, { key: 'USD', label: 'USD' }]} variant={currency} onVariantChange={setCurrency} />
