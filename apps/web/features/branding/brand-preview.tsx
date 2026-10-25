@@ -6,6 +6,7 @@ import { TextInput } from '@/components/controls/inputs';
 import { Card } from '@/components/surfaces/card';
 import { cx } from '@/components/class-names';
 import type { FontKey } from '@/lib/domain/branding/palette';
+import { DecorativeBackground } from '@/components/display/background-treatment';
 import { brandStyleProperties } from './brand-style';
 
 type Scheme = 'light' | 'dark';
@@ -20,6 +21,8 @@ type Width = 'wide' | 'narrow';
  */
 export function BrandPreview({
   accent,
+  secondary = null,
+  highlight = null,
   headingFont,
   bodyFont,
   logoUrl,
@@ -27,6 +30,9 @@ export function BrandPreview({
 }: {
   /** A valid, normalised accent, or null for the platform's own look. */
   accent: string | null;
+  /** Optional palette roles; absent means derived from the primary (secondary) or the primary itself (highlight). */
+  secondary?: string | null;
+  highlight?: string | null;
   headingFont: FontKey;
   bodyFont: FontKey;
   logoUrl: string | null;
@@ -36,7 +42,7 @@ export function BrandPreview({
   const [surface, setSurface] = useState<Surface>('workspace');
   const [width, setWidth] = useState<Width>('wide');
 
-  const style = brandStyleProperties({ accent, headingFont, bodyFont }, scheme);
+  const style = brandStyleProperties({ accent, secondary, highlight, headingFont, bodyFont }, scheme);
 
   const mark = logoUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -102,12 +108,14 @@ export function BrandPreview({
 
           {surface === 'workspace' ? (
             <div className="flex flex-col gap-4 p-4">
-              <div>
+              <div className="relative isolate overflow-hidden rounded-md border border-border px-3 py-3">
+                <DecorativeBackground treatment="gradient" clear="start" />
                 <h3 className="text-lg font-semibold">Today&rsquo;s schedule</h3>
                 <p className="text-sm text-muted">Three visits, one waiting for confirmation.</p>
               </div>
+              <PaletteRoles />
               <ul className="flex flex-col gap-1 text-sm" aria-label="Sample list">
-                <li className="rounded-md bg-selected px-3 py-2">Boiler service · 09:00 (selected)</li>
+                <li className="rounded-md border-l-2 border-(--accent-indicator) bg-selected px-3 py-2">Boiler service · 09:00 (selected)</li>
                 <li className="rounded-md px-3 py-2 hover:bg-hover">Quote follow-up · 11:30</li>
               </ul>
               <div className="flex flex-wrap items-center gap-2">
@@ -140,6 +148,31 @@ export function BrandPreview({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Each brand role on its own fill with its computed readable foreground, then the role as it is used
+ * against the page: primary and secondary as text (≥ 4.5:1); highlight only as a mark (≥ 3:1), since
+ * it has no text role.
+ */
+function PaletteRoles() {
+  const roles = [
+    ['Primary', 'var(--accent)', 'var(--on-accent)', 'var(--accent-text)', 'text'],
+    ['Secondary', 'var(--brand-secondary)', 'var(--on-brand-secondary)', 'var(--brand-secondary-text)', 'text'],
+    ['Highlight', 'var(--brand-highlight)', 'var(--on-brand-highlight)', 'var(--brand-highlight-indicator)', 'mark'],
+  ] as const;
+  return (
+    <ul aria-label="Palette roles" className="grid grid-cols-3 gap-2 text-xs">
+      {roles.map(([label, fill, on, use, kind]) => (
+        <li key={label} className="flex flex-col gap-1">
+          <span className="rounded-md px-2 py-1.5 font-medium" style={{ background: fill, color: on }}>{label}</span>
+          {kind === 'text'
+            ? <span className="font-medium" style={{ color: use }}>{label} text</span>
+            : <span className="flex items-center gap-1.5 text-muted"><span aria-hidden className="h-1 w-6 rounded-full" style={{ background: use }} />{label} mark</span>}
+        </li>
+      ))}
+    </ul>
   );
 }
 

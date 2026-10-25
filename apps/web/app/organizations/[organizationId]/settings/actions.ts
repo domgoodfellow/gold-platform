@@ -210,6 +210,10 @@ export async function updateBrandAction(
       accent: String(formData.get('accent') ?? ''),
       headingFont: String(formData.get('headingFont') ?? ''),
       bodyFont: String(formData.get('bodyFont') ?? ''),
+      // The palette editor always sends both optional roles (empty clears); an older form sends neither.
+      ...(formData.has('secondary') || formData.has('highlight')
+        ? { secondary: String(formData.get('secondary') ?? ''), highlight: String(formData.get('highlight') ?? '') }
+        : {}),
     });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };

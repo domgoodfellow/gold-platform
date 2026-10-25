@@ -109,9 +109,9 @@ test('draft, durable save, opposite-system theme, account scope, public regressi
   await expect(tiles).toHaveCount(4);
   expect(await tiles.evaluateAll(els => els.every(el => el.getBoundingClientRect().height >= 44))).toBe(true);
   const tileRows = await rows(tiles);
-  const settingRows = await rows(page.locator('#appearance-theme, #appearance-density, #appearance-shape, #appearance-motion'));
-  if (info.project.name === 'desktop') { expect(tileRows).toEqual([4]); expect(settingRows).toEqual([4]); }
-  if (info.project.name === 'phone') { expect(tileRows).toEqual([2, 2]); expect(settingRows).toEqual([1, 1, 1, 1]); }
+  const settingRows = await rows(page.locator('#appearance-theme, #appearance-density, #appearance-shape, #appearance-motion, #appearance-background'));
+  if (info.project.name === 'desktop') { expect(tileRows).toEqual([4]); expect(settingRows).toEqual([5]); }
+  if (info.project.name === 'phone') { expect(tileRows).toEqual([2, 2]); expect(settingRows).toEqual([1, 1, 1, 1, 1]); }
   expect(new Set(tileRows).size).toBe(1);
   if (info.project.name === 'phone') {
     const menuTrigger = page.getByRole('button', { name: 'Menu', exact: true });

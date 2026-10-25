@@ -37,6 +37,7 @@ export type Database = {
       account_appearance_preferences: {
         Row: {
           appearance: string
+          background: string | null
           density: string | null
           motion: string | null
           preset: string | null
@@ -46,6 +47,7 @@ export type Database = {
         }
         Insert: {
           appearance?: string
+          background?: string | null
           density?: string | null
           motion?: string | null
           preset?: string | null
@@ -55,6 +57,7 @@ export type Database = {
         }
         Update: {
           appearance?: string
+          background?: string | null
           density?: string | null
           motion?: string | null
           preset?: string | null
@@ -1115,8 +1118,10 @@ export type Database = {
           accent: string | null
           body_font: string | null
           heading_font: string | null
+          highlight: string | null
           logo_path: string | null
           organization_id: string
+          secondary: string | null
           updated_at: string
           updated_by: string
         }
@@ -1124,8 +1129,10 @@ export type Database = {
           accent?: string | null
           body_font?: string | null
           heading_font?: string | null
+          highlight?: string | null
           logo_path?: string | null
           organization_id: string
+          secondary?: string | null
           updated_at?: string
           updated_by: string
         }
@@ -1133,8 +1140,10 @@ export type Database = {
           accent?: string | null
           body_font?: string | null
           heading_font?: string | null
+          highlight?: string | null
           logo_path?: string | null
           organization_id?: string
+          secondary?: string | null
           updated_at?: string
           updated_by?: string
         }
@@ -17979,6 +17988,17 @@ export type Database = {
       }
       set_brand_logo: {
         Args: { p_logo_path: string; p_organization_id: string }
+        Returns: undefined
+      }
+      set_brand_palette: {
+        Args: {
+          p_accent: string
+          p_body_font: string
+          p_heading_font: string
+          p_highlight: string
+          p_organization_id: string
+          p_secondary: string
+        }
         Returns: undefined
       }
       set_brand_settings: {

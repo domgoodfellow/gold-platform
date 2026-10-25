@@ -31,6 +31,16 @@ it('has no automatic row; persists across sessions and resets by deleting overri
   await resetAppearance(owner as Db);
   expect((await fresh.from('account_appearance_preferences').select()).data).toEqual([]);
 });
+it('stores the background treatment as a personal preference and refuses an unknown one', async () => {
+  expect(await saveAppearance(owner as Db, { background: 'ambient3d' })).toMatchObject({ background: 'ambient3d' });
+  expect(await getAppearance(owner as Db)).toMatchObject({ background: 'ambient3d' });
+  expect((await other.from('account_appearance_preferences').select('background').eq('user_id', ids[0])).data).toEqual([]);
+  expect((await owner.from('account_appearance_preferences').update({ background: 'video' }).eq('user_id', ids[0])).error).not.toBeNull();
+  await expect(saveAppearance(owner as Db, { background: 'video' })).rejects.toMatchObject({ code: 'identity.appearance_invalid' });
+  await saveAppearance(owner as Db, { preset: 'minimal' });
+  expect(await getAppearance(owner as Db)).toEqual({ appearance: 'system', preset: 'minimal' });
+  await resetAppearance(owner as Db);
+});
 it('enforces own-account read/insert/update/delete and immutable owner under real RLS', async () => {
   await saveAppearance(owner as Db, { appearance: 'light' });
   expect((await other.from('account_appearance_preferences').select().eq('user_id', ids[0])).data).toEqual([]);

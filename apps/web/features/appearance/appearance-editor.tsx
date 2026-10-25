@@ -3,7 +3,8 @@
 import { useId, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Building2, Check, User, X } from 'lucide-react';
-import { VISUAL_PRESETS, type PersonalAppearancePreferences, type VisualPreset } from '@gold/ui/design-system';
+import { VISUAL_PRESETS, type BackgroundTreatment, type PersonalAppearancePreferences, type VisualPreset } from '@gold/ui/design-system';
+import { DecorativeBackground } from '@/components/display/background-treatment';
 import { VisualScope } from '@gold/ui/components/visual-scope';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@gold/ui/components/tabs';
 import { Popover, PopoverTrigger, PopoverContent } from '@gold/ui/components/popover';
@@ -28,7 +29,7 @@ const PRESET_CHOICES: { value?: VisualPreset; label: string }[] = [
 ];
 
 function equal(a: PersonalAppearancePreferences, b: PersonalAppearancePreferences) {
-  return (['appearance', 'preset', 'density', 'shape', 'motion'] as const).every(key => a[key] === b[key]);
+  return (['appearance', 'preset', 'density', 'shape', 'motion', 'background'] as const).every(key => a[key] === b[key]);
 }
 
 export function AppearanceEditor({ saved }: { saved: PersonalAppearancePreferences }) {
@@ -81,19 +82,27 @@ export function AppearanceEditor({ saved }: { saved: PersonalAppearancePreferenc
             })}
           </div>
         </fieldset>
-        <div className="grid gap-4 @md:grid-cols-2 @2xl:grid-cols-4">
+        <div className="grid gap-4 @md:grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-5">
           <FormField id="appearance-theme" label="Theme">{props => <SelectInput {...props} value={draft.appearance ?? 'system'} onChange={event => change('appearance', event.target.value as PersonalAppearancePreferences['appearance'])}>
             <option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option>
           </SelectInput>}</FormField>
           <FormField id="appearance-density" label="Density">{props => <SelectInput {...props} value={draft.density ?? ''} onChange={event => change('density', (event.target.value || undefined) as PersonalAppearancePreferences['density'])}><option value="">Platform default</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></SelectInput>}</FormField>
           <FormField id="appearance-shape" label="Shape">{props => <SelectInput {...props} value={draft.shape ?? ''} onChange={event => change('shape', (event.target.value || undefined) as PersonalAppearancePreferences['shape'])}><option value="">Inherit from preset</option><option value="square">Square</option><option value="rounded">Rounded</option><option value="soft">Soft</option></SelectInput>}</FormField>
           <FormField id="appearance-motion" label="Motion">{props => <SelectInput {...props} value={draft.motion ?? 'system'} onChange={event => change('motion', event.target.value as PersonalAppearancePreferences['motion'])}><option value="system">System</option><option value="reduced">Reduced</option></SelectInput>}</FormField>
+          <FormField id="appearance-background" label="Background">{props => <SelectInput {...props} value={draft.background ?? 'none'} onChange={event => change('background', event.target.value === 'none' ? undefined : event.target.value as BackgroundTreatment)}>
+            <option value="none">None</option><option value="gradient">Ambient gradient</option><option value="grid">Fine grid</option><option value="ambient3d">Ambient 3D</option>
+          </SelectInput>}</FormField>
         </div>
       </div>
     </fieldset>
     <section aria-label="Appearance preview" className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3"><h2 className="text-lg font-semibold">Preview</h2><div className="w-40"><FormField id="appearance-preview-scheme" label="Preview theme">{props => <SelectInput {...props} value={previewScheme} onChange={event => setPreviewScheme(event.target.value as 'light' | 'dark')}><option value="light">Light</option><option value="dark">Dark</option></SelectInput>}</FormField></div></div>
       <VisualScope selection={{ ...draft, appearance: previewScheme }} data-testid="appearance-preview" className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4 rounded-xl border border-border p-4 sm:p-6">
+        <div data-testid="appearance-preview-intro" className="relative isolate overflow-hidden rounded-(--visual-radius,0.625rem) border border-border px-4 py-5 col-span-full">
+          <DecorativeBackground clear="start" />
+          <h3 className="text-lg font-semibold">Good morning</h3>
+          <p className="text-sm text-muted">Dashboard introduction. {draft.background && draft.background !== 'none' ? 'Decorates introductions only.' : 'No background.'}</p>
+        </div>
         <Card className="space-y-4">
           <h3 className="font-semibold">Your workspace</h3>
           <FormField id="appearance-example-input" label="Example input">{props => <TextInput {...props} placeholder="Enter a preview value" />}</FormField>

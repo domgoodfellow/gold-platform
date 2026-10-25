@@ -13,8 +13,14 @@ import { FONT_KEYS, isFontKey, normaliseBrandColour, type FontKey } from './pale
  */
 
 export type Brand = {
-  /** The colour as chosen, or null when this business has said nothing. */
+  /** The primary colour as chosen, or null when this business has said nothing. Stored as `accent`. */
   accent: string | null;
+  /**
+   * Optional supporting and emphasis colours; null or absent derives from the primary at render time.
+   * Absent on public surfaces that read a published single-colour brand.
+   */
+  secondary?: string | null;
+  highlight?: string | null;
   /** Never null out here — see `getBrand` for why an unset pair is the platform's own. */
   headingFont: FontKey;
   bodyFont: FontKey;
@@ -25,6 +31,8 @@ export type Brand = {
 /** Not stored — an absent row means "has said nothing", the same way an absent operating hours set does. Writing these at founding would make that indistinguishable from choosing the platform's look on purpose. */
 export const DEFAULT_BRAND: Brand = {
   accent: null,
+  secondary: null,
+  highlight: null,
   headingFont: 'sans',
   bodyFont: 'sans',
   logoPath: null,
@@ -34,7 +42,7 @@ export const DEFAULT_BRAND: Brand = {
 export async function getBrand(db: Db, input: { organizationId: string }): Promise<Brand> {
   const { data, error } = await db
     .from('brand_settings')
-    .select('accent, heading_font, body_font, logo_path')
+    .select('accent, secondary, highlight, heading_font, body_font, logo_path')
     .eq('organization_id', input.organizationId)
     .maybeSingle();
 
@@ -46,6 +54,8 @@ export async function getBrand(db: Db, input: { organizationId: string }): Promi
 
   return {
     accent: data.accent,
+    secondary: data.secondary,
+    highlight: data.highlight,
     // Guarded rather than cast — an unknown string must not become a `FontKey` by assertion and reach a `style` attribute as `undefined`.
     headingFont: data.heading_font && isFontKey(data.heading_font) ? data.heading_font : 'sans',
     bodyFont: data.body_font && isFontKey(data.body_font) ? data.body_font : 'sans',
@@ -67,12 +77,18 @@ export async function setBrand(
     accent: string;
     headingFont: string;
     bodyFont: string;
+    /** Optional roles. Omit both to keep the single-colour write; empty clears one. */
+    secondary?: string;
+    highlight?: string;
   },
 ): Promise<void> {
   await requireActor(db);
 
-  const accent = input.accent.trim() === '' ? '' : normaliseBrandColour(input.accent);
-  if (accent === null) {
+  const colour = (value: string) => (value.trim() === '' ? '' : normaliseBrandColour(value));
+  const accent = colour(input.accent);
+  const secondary = input.secondary === undefined ? undefined : colour(input.secondary);
+  const highlight = input.highlight === undefined ? undefined : colour(input.highlight);
+  if (accent === null || secondary === null || highlight === null) {
     throw new DomainError(
       'A colour is a hex value such as #1f6feb.',
       'brand.colour_invalid',
@@ -91,12 +107,23 @@ export async function setBrand(
     }
   }
 
-  const { error } = await db.rpc('set_brand_settings', {
-    p_organization_id: input.organizationId,
-    p_accent: accent,
-    p_heading_font: input.headingFont,
-    p_body_font: input.bodyFont,
-  });
+  // The palette write when a caller sends the optional roles; the original write otherwise, so a
+  // single-colour caller can never clear a secondary or highlight it did not mention.
+  const { error } = secondary !== undefined || highlight !== undefined
+    ? await db.rpc('set_brand_palette', {
+      p_organization_id: input.organizationId,
+      p_accent: accent,
+      p_secondary: secondary ?? '',
+      p_highlight: highlight ?? '',
+      p_heading_font: input.headingFont,
+      p_body_font: input.bodyFont,
+    })
+    : await db.rpc('set_brand_settings', {
+      p_organization_id: input.organizationId,
+      p_accent: accent,
+      p_heading_font: input.headingFont,
+      p_body_font: input.bodyFont,
+    });
 
   if (error) {
     if (error.code === '42501') {

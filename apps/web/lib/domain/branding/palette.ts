@@ -193,6 +193,69 @@ export function brandPalette(input: {
   };
 }
 
+/** WCAG 2.1 non-text contrast (1.4.11): selected marks, outlines and indicators need 3:1 against what surrounds them. */
+export const AA_NON_TEXT = 3;
+
+/**
+ * The organization palette: a primary (the existing `accent`), and optional secondary and highlight
+ * roles. Each role is derived for both schemes, so any colour a business picks — black, white, a pale
+ * pastel — stays legible as text and visible as an indicator. Semantic colours (success, warning,
+ * error, destructive, disabled) and the focus ring are never part of this palette.
+ */
+export type BrandRole = {
+  /** The colour as chosen (or derived). Used as a fill. */
+  fill: string;
+  /** Black or white, whichever reads on `fill` (≥ 4.5:1). */
+  on: string;
+  /** The colour as text on each page scheme (≥ 4.5:1). */
+  textLight: string;
+  textDark: string;
+  /** The colour as a non-text indicator on each page scheme (≥ 3:1). */
+  indicatorLight: string;
+  indicatorDark: string;
+};
+export type OrganizationPalette = { primary: BrandRole; secondary: BrandRole; highlight: BrandRole; secondaryChosen: boolean; highlightChosen: boolean };
+
+function role(fill: string): BrandRole {
+  return {
+    fill,
+    on: foregroundOn(fill),
+    textLight: readableOn(fill, PAGE_LIGHT),
+    textDark: readableOn(fill, PAGE_DARK),
+    indicatorLight: readableOn(fill, PAGE_LIGHT, AA_NON_TEXT),
+    indicatorDark: readableOn(fill, PAGE_DARK, AA_NON_TEXT),
+  };
+}
+
+/** A supporting colour when none is chosen: the primary's hue, softened toward the middle of the lightness range. */
+export function derivedSecondary(primary: string): string {
+  const hsl = toHsl(toRgb(primary));
+  const l = hsl.l < 0.5 ? Math.min(0.72, hsl.l + 0.38) : Math.max(0.32, hsl.l - 0.38);
+  return toHex(fromHsl({ ...hsl, s: hsl.s * 0.7, l }));
+}
+
+/** One function for the app and every preview: validated inputs in, all role variants out. */
+export function organizationPalette(input: { primary: string | null; secondary?: string | null; highlight?: string | null }): OrganizationPalette {
+  const primary = normaliseBrandColour(input.primary ?? '') ?? '#000000';
+  const secondary = input.secondary ? normaliseBrandColour(input.secondary) : null;
+  const highlight = input.highlight ? normaliseBrandColour(input.highlight) : null;
+  return {
+    primary: role(primary),
+    secondary: role(secondary ?? derivedSecondary(primary)),
+    highlight: role(highlight ?? primary),
+    secondaryChosen: Boolean(secondary),
+    highlightChosen: Boolean(highlight),
+  };
+}
+
+/** Whole-palette starting points. Choosing one writes the same three values a typed hex would. */
+export const PALETTE_PRESETS = [
+  { key: 'monochrome', label: 'Monochrome', primary: '#111111', secondary: '#6b7280', highlight: null },
+  { key: 'neutral-accent', label: 'Neutral with one accent', primary: '#334155', secondary: null, highlight: '#2563eb' },
+  { key: 'complementary', label: 'Complementary', primary: '#1d4ed8', secondary: '#ea580c', highlight: null },
+  { key: 'three-colour', label: 'Three colours', primary: '#0f766e', secondary: '#7c3aed', highlight: '#f59e0b' },
+] as const;
+
 /** Starting points for a business without a hex code. Values to pick, never stored as objects — choosing one writes the same accent a typed hex would. */
 export const BRAND_PRESETS = [
   { label: 'Blue', value: '#2563eb' },

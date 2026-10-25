@@ -37,6 +37,9 @@ Entries describe the product or operational change, not every file touched.
 - A pipeline with no stages and no opportunities now shows a short setup message with a Configure stages button for people who can configure stages, instead of an empty board. The Unstaged column appears only when it holds opportunities or no stages exist.
 - On tablets, the Contacts list keeps Search and Filters in view and moves sort and display into a View menu; the table switches to rows on narrower screens instead of cutting off columns. On phones, quick views scroll sideways and each row shows only the details it has.
 - The Needs review view says what each contact is missing (person or company, lifecycle, or both), with a Classify link that opens the contact's edit dialog at the right section.
+- Businesses can now set a palette instead of one colour: a primary, plus an optional secondary and highlight, with four starting palettes (Monochrome, Neutral with one accent, Complementary, Three colours). Every colour is adjusted where needed so text and selection marks stay readable in light and dark themes. Existing single-colour brands look exactly as before.
+- Visual styles now look clearly different: Minimal is flatter with lighter borders, Layered adds a faint brand tint to selected items, and Expressive adds a brand edge to panels and the selected tab.
+- Personal Appearance has a new Background choice: None (the default), Ambient gradient, Fine grid or Ambient 3D. It decorates dashboard introductions only. Ambient 3D falls back to the gradient on phones, on devices without 3D graphics and when it fails to start, and holds still when reduced motion is on.
 
 ## 2026-10-24
 

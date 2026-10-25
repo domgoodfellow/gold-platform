@@ -133,8 +133,12 @@ registry, typed selections, safe token resolution and shared surface variants. A
 resolve to the same roles in `apps/web/app/globals.css`: existing page/surface/text/brand/status
 colors plus raised/recessed/accent surfaces, strong border, focus, pressed feedback, radius,
 elevation/overlay shadows, caption/body/title/display typography, control height/spacing and
-motion durations/easing. Minimal is flat, Layered adds restrained hierarchy, Expressive adds
-larger shapes, richer accent surfaces and longer feedback. None changes status colors or brand
+motion durations/easing. Minimal is flat: lighter borders, no elevation, neutral selection.
+Layered adds restrained hierarchy, moderate elevation and a faint brand tint on selection.
+Expressive adds larger shapes, stronger depth, a brand edge on panels, configuration editors and
+board columns, a brand underline on the selected tab and a richer brand-tinted selection. The preset
+tokens `--visual-border-strength`, `--visual-selected-mix` and `--visual-edge` carry these
+differences; no preset adds animation. None changes status colors, the focus ring or brand
 contrast derivation. Color always accompanies a label, icon, border or selection state.
 
 `VisualScope` is an explicit opt-in boundary. Account shells apply only saved personal choices;
@@ -204,7 +208,26 @@ saves and resets. `account_appearance_preferences` owns persisted selections, in
 profiles, memberships, brands and public website revisions. There is no automatic row creation.
 A successful missing-row read means legacy defaults; failed reads are errors, never defaults.
 Reset deletes the row. Save stores only closed choices; blank preset/density/shape values inherit.
-Theme is system/light/dark; motion is system/reduced. Last successful account save wins.
+Theme is system/light/dark; motion is system/reduced; background is none (stored as null),
+gradient, grid or ambient3d. Last successful account save wins.
+
+#### Background treatments
+
+A background treatment is a personal Appearance choice, never part of a preset or of Branding.
+`DecorativeBackground` (`components/display/background-treatment.tsx`) is the only component that
+draws one. It renders inside a designated decorative region only: the `WorkspaceHome`
+introduction (`data-slot="workspace-intro"`) and the Appearance and Branding previews. It never
+sits behind tables, forms, dialogs or record content. The layer is `aria-hidden`,
+`pointer-events: none` and behind content inside an isolated region, so it never covers or
+intercepts controls. Colours come only from the brand and neutral tokens.
+
+- None (default): nothing is drawn and the region keeps its normal spacing.
+- Ambient gradient and Fine grid: static CSS.
+- Ambient 3D: a Three.js wireframe surface in the brand colours, imported on the client only when
+  chosen. It falls back to the static gradient when WebGL is unavailable, on narrow (≤ 40rem) or
+  low-core devices, or on any load or start-up error, so it never blocks a page. It draws one still
+  frame under system or saved reduced motion, pauses while the page is hidden, caps the device
+  pixel ratio at 1.5, and disposes its geometry, materials and renderer on unmount.
 
 `AppearanceEditor` owns a local draft. Visual style is one native radio group of compact tiles;
 the single Preview renders the draft through `VisualScope` with real shared components and is
@@ -254,33 +277,35 @@ integrate Appearance with explicit precedence, and introduce Studio design persi
 publication snapshots only after its own schema/security review. Expand operational scope
 usage deliberately, with route-level visual regressions; do not bulk redesign routes.
 
-An Organization's visual identity is one accent colour, a heading and body typeface from a closed list, and an optional logo. Authority is `brand_settings`, read by `getBrand` and written by `setBrand`, `uploadLogo` and `removeLogo`. Nothing else stores brand state.
+An Organization's visual identity is a palette (a primary colour, plus an optional secondary and an optional highlight), a heading and body typeface from a closed list, and an optional logo. Authority is `brand_settings` (`accent` is the primary; `secondary` and `highlight` are nullable), read by `getBrand` and written by `setBrand` (`set_brand_palette` when the optional roles are sent, otherwise `set_brand_settings`, so a single-colour caller never clears them), `uploadLogo` and `removeLogo`. Nothing else stores brand state. A legacy single-colour brand renders exactly as before: the primary is unchanged, the secondary is derived from it and the highlight is the primary.
 
 Resolution path:
 
 ```text
-brand_settings → getBrand → brandPalette → BrandStyle / brandStyleProperties → [data-brand] custom properties → shared components
+brand_settings → getBrand → organizationPalette → brandTokens → BrandStyle / brandStyleProperties → [data-brand] custom properties → shared components
 ```
 
-- `brandPalette` (`lib/domain/branding/palette.ts`) is the only place a role is derived. The stored accent is never replaced; a foreground (`--on-accent`) and per-scheme link colour (`--accent-text`) are derived from it to meet 4.5:1 text contrast.
-- `BrandStyle` writes `--accent`, `--on-accent`, `--accent-text`, `--font-heading` and `--font-body` on `[data-brand]`, which the Organization shell and public pages set. An Organization that has chosen nothing writes nothing and renders the platform's neutral look. A font choice applies without an accent.
+- `organizationPalette` (`lib/domain/branding/palette.ts`) is the only place a role is derived. A stored colour is never replaced; for each role it derives a readable foreground (≥ 4.5:1), a text colour per scheme (≥ 4.5:1) and an indicator colour per scheme (≥ 3:1, for selected marks and outlines). Black, white and pale colours stay usable. Presets (Monochrome, Neutral with one accent, Complementary, Three colours) only fill the three values a typed hex would.
+- `brandTokens` is the one place a palette becomes custom properties; the shell and both previews use it. Token map: `--accent` / `--on-accent` / `--accent-text` / `--accent-indicator` (primary: primary actions, selected states, links); `--brand-secondary` / `--on-brand-secondary` / `--brand-secondary-text` (supporting decoration); `--brand-highlight` / `--on-brand-highlight` / `--brand-highlight-indicator` (non-semantic emphasis).
+- `BrandStyle` writes those tokens (theme-dependent values through `light-dark()`) with `--font-heading` and `--font-body` on `[data-brand]`, which the Organization shell and public pages set. Switching Organization renders the other Organization's style; nothing carries over. An Organization that has chosen nothing writes nothing and renders the platform's neutral look. A font choice applies without a colour.
 - `[data-brand]` also sets `font-family: var(--font-body)`. Body text inherits from the `<body>` element, which sits above the brand scope, so the scope must apply the font itself.
-- The Branding preview renders the shared `Button` and `TextInput` inside its own `[data-brand]` scope whose properties come from `brandStyleProperties`, the same derivation the shell uses. `[data-appearance="light|dark"]` forces a scheme for the preview; a role that is an alias must be declared again inside that selector.
+- The Branding preview renders the shared `Button` and `TextInput`, the three palette roles with their foregrounds, a selected row and a decorated dashboard introduction inside its own `[data-brand]` scope whose properties come from `brandStyleProperties`, the same derivation the shell uses. `[data-appearance="light|dark"]` forces a scheme for the preview; a role that is an alias must be declared again inside that selector.
 
 Role ownership:
 
 | Role | Owner | Brand may change it |
 | --- | --- | --- |
 | Background, surface, border, text, muted, hover, selected, ring | Platform | No |
-| Primary action fill, its foreground, branded links | Organization accent | Yes |
+| Primary action fill, its foreground, branded links, selected indicators | Organization primary | Yes |
+| Supporting decoration, non-semantic emphasis | Organization secondary and highlight | Yes |
 | Danger, warning, success | Platform and domain rules | No |
 | Heading and body typeface | Organization, from `FONT_STACKS` | Yes |
 
 Use `bg-accent text-on-accent` for a branded action and `text-accent-text` for a branded link. Use `text-foreground`, not `text-primary`, for ordinary neutral text. Never colour an operational status with the accent: a status colour carries meaning the Organization cannot override.
 
-Branding edits are a local draft over the persisted brand. An unfinished or malformed colour is rejected, blocks saving, and leaves the preview on the saved value. "Use platform default" clears the accent and resets both typefaces; it is saved like any other edit. Logos are uploaded and removed independently of colour and type.
+Branding edits are a local draft over the persisted brand. An unfinished or malformed colour is rejected, blocks saving, and leaves the preview on the saved value. The secondary and highlight are optional, can be cleared individually and need a primary first. "Use platform default" clears every colour and resets both typefaces; it is saved like any other edit. Logos are uploaded and removed independently of colour and type.
 
-Configuration ownership: Branding owns the logo, accent and typography. Public profile (`settings/public-profile`) owns customer-facing name, tagline, description and contact details. Domains (`settings/domains`) owns the public booking address and connected domains. Studio may read the brand; it does not store a second one. A viewer's light/dark preference is personal and is never an Organization setting.
+Configuration ownership: Branding owns the logo, palette and typography. Public profile (`settings/public-profile`) owns customer-facing name, tagline, description and contact details. Domains (`settings/domains`) owns the public booking address and connected domains. Studio may read the brand; it does not store a second one. A viewer's light/dark preference is personal and is never an Organization setting.
 
 Not yet supported: separate logo variants for dark backgrounds, advanced colour overrides, and optimistic-concurrency checks on simultaneous brand edits (the last save wins).
 

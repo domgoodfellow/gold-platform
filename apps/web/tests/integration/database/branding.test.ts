@@ -189,6 +189,24 @@ describe('what a business chose', () => {
     expect((await getBrand(shop.db, { organizationId: shop.organizationId })).accent).toBeNull();
   });
 
+  it('keeps a palette, leaves it alone on a single-colour save, and clears optional roles', async () => {
+    const org = { organizationId: shop.organizationId, headingFont: 'sans', bodyFont: 'sans' };
+    await setBrand(shop.db, { ...org, accent: '#0F766E', secondary: '#7C3AED', highlight: '#f59e0b' });
+    expect(await getBrand(shop.db, { organizationId: shop.organizationId })).toMatchObject({ accent: '#0f766e', secondary: '#7c3aed', highlight: '#f59e0b' });
+
+    // A legacy single-colour caller never mentions the optional roles, so it cannot clear them.
+    await setBrand(shop.db, { ...org, accent: '#1d4ed8' });
+    expect(await getBrand(shop.db, { organizationId: shop.organizationId })).toMatchObject({ accent: '#1d4ed8', secondary: '#7c3aed', highlight: '#f59e0b' });
+
+    await setBrand(shop.db, { ...org, accent: '#1d4ed8', secondary: '', highlight: '' });
+    expect(await getBrand(shop.db, { organizationId: shop.organizationId })).toMatchObject({ accent: '#1d4ed8', secondary: null, highlight: null });
+
+    await expect(setBrand(shop.db, { ...org, accent: '#1d4ed8', secondary: 'teal' })).rejects.toMatchObject({ code: 'brand.colour_invalid' });
+    // The column refuses a malformed colour even from a direct write.
+    expect((await shop.db.from('brand_settings').update({ highlight: 'yellow' }).eq('organization_id', shop.organizationId)).error).not.toBeNull();
+    await setBrand(shop.db, { ...org, accent: '' });
+  });
+
   it('refuses a colour that is not one, and a lettering it does not have', async () => {
     await expect(
       setBrand(shop.db, {
@@ -224,6 +242,11 @@ describe('what a business chose', () => {
     expect(await getBrand(shop.db, { organizationId: other.organizationId })).toEqual(
       DEFAULT_BRAND,
     );
+
+    // The palette write is refused across businesses too.
+    await expect(
+      setBrand(shop.db, { organizationId: other.organizationId, accent: '#000000', secondary: '#ffffff', headingFont: 'sans', bodyFont: 'sans' }),
+    ).rejects.toBeTruthy();
 
     // And the write is refused by the policy rather than by anything on a screen.
     await expect(

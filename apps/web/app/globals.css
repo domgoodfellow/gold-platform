@@ -397,6 +397,28 @@ h1, h2, h3, h4 {
   outline: 2px solid var(--focus-color);
   outline-offset: 3px;
 }
+/* Preset character (V1.4 final): border strength, brand-tinted selection and the Expressive brand
+   edge come from the preset's tokens, so Minimal, Layered and Expressive read differently on the
+   same surfaces. Semantic status colours and the focus ring are never touched here. */
+:scope {
+  --selected: color-mix(in srgb, var(--accent) var(--visual-selected-mix, 0%), color-mix(in srgb, var(--foreground) 12%, transparent));
+}
+:scope :where([data-slot=card], [data-slot=operational-panel], [data-slot=metric-tile], [data-slot=board-column], [data-slot=board-card], [data-slot=configuration-editor], [data-slot=entity-row]) {
+  border-color: color-mix(in srgb, var(--border) var(--visual-border-strength, 100%), transparent);
+}
+:scope :where([data-slot=operational-panel], [data-slot=configuration-editor], [data-slot=board-column]) {
+  border-top: var(--visual-edge, 0px) solid color-mix(in srgb, var(--accent-indicator, var(--accent)) 70%, transparent);
+}
+:scope[data-visual-preset=expressive] :where([data-slot=tabs-trigger][aria-current=page], [data-slot=tabs-trigger][aria-current=true], [data-slot=tabs-trigger][data-state=active], [data-slot=tabs-trigger][aria-pressed=true]) {
+  box-shadow: inset 0 -2px 0 var(--accent-indicator, var(--accent));
+}
+:scope[data-visual-preset=expressive] :where([data-slot=selectable-card][aria-pressed=true], [data-slot=selectable-card]:has(:checked)) {
+  box-shadow: 0 0 0 2px var(--accent-indicator, var(--accent)), var(--visual-elevation);
+}
+:scope[data-visual-preset=minimal] :where([data-slot=card], [data-slot=operational-panel], [data-slot=metric-tile], [data-slot=board-card]) {
+  box-shadow: none;
+}
+
 /* V1.4 shared CRM surfaces follow shape, preset and density like cards and controls do. */
 :scope :where([data-slot=board-column], [data-slot=board-card], [data-slot=configuration-editor], [data-slot=filter-panel], [data-slot=compact-empty]) {
   border-radius: var(--visual-radius);
@@ -474,4 +496,11 @@ h1, h2, h3, h4 {
 }
 @media (max-width: 639px) {
   [data-slot=tabs-list] > [data-slot=tabs-trigger] { min-height: 2.75rem; }
+}
+
+/* A chosen background treatment gives the workspace introduction room to show it. Top level, not
+   inside the preset scope: a background can be chosen without a visual style. */
+[data-background] [data-slot=workspace-intro] {
+  padding: 1.25rem 1rem;
+  border-radius: var(--visual-radius, 0.625rem);
 }

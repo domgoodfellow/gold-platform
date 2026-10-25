@@ -36,6 +36,11 @@ appearance, preset, density, shape and motion, plus `updated_at`. Nullable overr
 absence is the established platform default. Reads never manufacture rows, Save upserts the
 verified account, and Reset deletes its overrides. Organization defaults and Studio design
 remain typed future contracts without persistence changes in Slice B.
+Migration `20261025010000_brand_palette_and_background.sql` adds a nullable, checked
+`background` (none, gradient, grid, ambient3d) to the same table; null keeps the neutral surface.
+The same migration adds nullable, hex-checked `secondary` and `highlight` columns to
+`brand_settings` (`accent` stays the primary, so existing brands are unchanged), column grants for
+them, and the security-invoker `set_brand_palette` write, which records `organization.brand_updated`.
 
 The data model should:
 

@@ -1,13 +1,16 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { BrandStyle, brandStyleProperties } from '@/features/branding/brand-style';
+import { BrandStyle, brandStyleProperties, brandTokens } from '@/features/branding/brand-style';
 import {
+  AA_NON_TEXT,
   AA_TEXT,
   PAGE_DARK,
   PAGE_LIGHT,
+  PALETTE_PRESETS,
   brandPalette,
   contrastRatio,
   normaliseBrandColour,
+  organizationPalette,
 } from '@/lib/domain/branding/palette';
 import { DEFAULT_BRAND } from '@/lib/domain/branding/brand';
 
@@ -36,6 +39,62 @@ describe('brand palette roles', () => {
     expect(normaliseBrandColour('#abc')).toBe('#aabbcc');
     expect(normaliseBrandColour('#12')).toBeNull();
     expect(normaliseBrandColour('blue')).toBeNull();
+  });
+});
+
+describe('organization palette', () => {
+  const legible = (role: ReturnType<typeof organizationPalette>['primary']) => {
+    expect(contrastRatio(role.fill, role.on)).toBeGreaterThanOrEqual(AA_TEXT);
+    expect(contrastRatio(role.textLight, PAGE_LIGHT)).toBeGreaterThanOrEqual(AA_TEXT);
+    expect(contrastRatio(role.textDark, PAGE_DARK)).toBeGreaterThanOrEqual(AA_TEXT);
+    expect(contrastRatio(role.indicatorLight, PAGE_LIGHT)).toBeGreaterThanOrEqual(AA_NON_TEXT);
+    expect(contrastRatio(role.indicatorDark, PAGE_DARK)).toBeGreaterThanOrEqual(AA_NON_TEXT);
+  };
+
+  for (const [label, hex] of Object.entries(NAMED)) {
+    it(`keeps every role legible when ${label} is the primary, secondary and highlight`, () => {
+      const palette = organizationPalette({ primary: hex, secondary: hex, highlight: hex });
+      legible(palette.primary); legible(palette.secondary); legible(palette.highlight);
+      const derived = organizationPalette({ primary: hex });
+      legible(derived.secondary); legible(derived.highlight);
+    });
+  }
+
+  it('keeps a legacy single-colour brand exactly as it looked', () => {
+    const legacy = brandPalette({ accent: '#c2410c', headingFont: 'sans', bodyFont: 'sans' });
+    const palette = organizationPalette({ primary: '#c2410c' });
+    expect(palette.primary.fill).toBe(legacy.accent);
+    expect(palette.primary.on).toBe(legacy.onAccent);
+    expect(palette.primary.textLight).toBe(legacy.accentTextLight);
+    expect(palette.primary.textDark).toBe(legacy.accentTextDark);
+    expect(palette.highlight.fill).toBe(legacy.accent);
+    expect(palette.secondaryChosen).toBe(false);
+    expect(palette.highlightChosen).toBe(false);
+  });
+
+  it('records which optional roles were chosen and derives the rest', () => {
+    const palette = organizationPalette({ primary: '#0f766e', secondary: '#7C3AED', highlight: '' });
+    expect(palette.secondary.fill).toBe('#7c3aed');
+    expect(palette.secondaryChosen).toBe(true);
+    expect(palette.highlight.fill).toBe('#0f766e');
+    expect(palette.highlightChosen).toBe(false);
+  });
+
+  it('offers the four presets with legible roles', () => {
+    expect(PALETTE_PRESETS.map(preset => preset.key)).toEqual(['monochrome', 'neutral-accent', 'complementary', 'three-colour']);
+    for (const preset of PALETTE_PRESETS) {
+      const palette = organizationPalette(preset);
+      legible(palette.primary); legible(palette.secondary); legible(palette.highlight);
+    }
+  });
+
+  it('emits the brand roles only, with light-dark() for the shell and fixed values per preview scheme', () => {
+    const both = brandTokens({ accent: '#ffffcc', secondary: '#000000', highlight: '#ffffff' }, 'both')!;
+    expect(both['--accent-text']).toMatch(/^light-dark\(#[0-9a-f]{6},#[0-9a-f]{6}\)$/);
+    expect(Object.keys(both).every(name => /^--(brand-|accent|on-accent|on-brand-)/.test(name))).toBe(true);
+    const light = brandTokens({ accent: '#ffffcc' }, 'light')!;
+    expect(light['--accent-text']).toBe(organizationPalette({ primary: '#ffffcc' }).primary.textLight);
+    expect(brandTokens({ accent: null, secondary: '#7c3aed' }, 'both')).toBeNull();
   });
 });
 

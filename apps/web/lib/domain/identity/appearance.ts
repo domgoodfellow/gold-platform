@@ -1,4 +1,4 @@
-import type { PersonalAppearancePreferences } from '@gold/ui/design-system';
+import { BACKGROUND_TREATMENTS, type PersonalAppearancePreferences } from '@gold/ui/design-system';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 
@@ -6,6 +6,7 @@ export const DEFAULT_APPEARANCE: PersonalAppearancePreferences = {};
 const choices = {
   appearance: ['system', 'light', 'dark'], preset: ['minimal', 'layered', 'expressive'],
   density: ['compact', 'comfortable'], shape: ['square', 'rounded', 'soft'], motion: ['system', 'reduced'],
+  background: BACKGROUND_TREATMENTS,
 } as const;
 
 /** Absence is an override decision, not a fabricated preset. Closed values only. */
@@ -29,7 +30,7 @@ async function accountId(db: Db) {
 
 export async function getAppearance(db: Db): Promise<PersonalAppearancePreferences> {
   const id = await accountId(db);
-  const { data, error } = await db.from('account_appearance_preferences').select('appearance,preset,density,shape,motion').eq('user_id', id).maybeSingle();
+  const { data, error } = await db.from('account_appearance_preferences').select('appearance,preset,density,shape,motion,background').eq('user_id', id).maybeSingle();
   if (error) throw new DomainError('Unable to load your appearance. Try again.', 'identity.appearance_read_failed');
   return data ? validateAppearance(data) : DEFAULT_APPEARANCE;
 }
@@ -40,7 +41,7 @@ export async function saveAppearance(db: Db, input: unknown): Promise<PersonalAp
   const { error } = await db.from('account_appearance_preferences').upsert({
     user_id: id, appearance: selection.appearance ?? 'system', preset: selection.preset ?? null,
     density: selection.density ?? null, shape: selection.shape ?? null, motion: selection.motion ?? null,
-    updated_at: new Date().toISOString(),
+    background: selection.background ?? null, updated_at: new Date().toISOString(),
   }).select('user_id').single();
   if (error) throw new DomainError('Unable to save your appearance. Your changes remain unsaved.', 'identity.appearance_write_failed');
   return { ...selection, appearance: selection.appearance ?? 'system' };

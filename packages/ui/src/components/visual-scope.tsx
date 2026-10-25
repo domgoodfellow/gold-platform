@@ -21,6 +21,7 @@ export function VisualScope({ selection, children, ...props }: Omit<ComponentPro
     <div {...props} ref={setContainer} data-visual-scope="" data-visual-system={active ? '' : undefined}
       data-appearance={selection.appearance === 'light' || selection.appearance === 'dark' ? selection.appearance : undefined}
       data-visual-preset={selection.preset} data-density={selection.density} data-motion={selection.motion}
+      data-background={selection.background && selection.background !== 'none' ? selection.background : undefined}
       style={designProperties(selection)}>{children}</div>
   </PortalContainer.Provider></AppearanceContext.Provider>;
 }
