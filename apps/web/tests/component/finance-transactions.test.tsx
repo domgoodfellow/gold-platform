@@ -48,7 +48,7 @@ describe('New quote', () => {
     await user.click(within(dialog).getByRole('radio', { name: /Boiler repair/ }));
     await settle();
     expect(within(dialog).getByText('North Shore Plumbing')).toBeVisible();
-    await user.selectOptions(within(dialog).getByLabelText('Service'), 'labour');
+    await user.selectOptions(within(dialog).getByLabelText('Price item'), 'labour');
     await user.clear(within(dialog).getByLabelText('Quantity'));
     await user.type(within(dialog).getByLabelText('Quantity'), '3');
     expect(within(dialog).getByText('New')).toBeVisible();
@@ -66,7 +66,7 @@ describe('New quote', () => {
     render(<QuoteDialog organizationId="org" workItemId="w1" />);
     await user.click(screen.getByRole('button', { name: 'New quote' }));
     await settle();
-    await user.selectOptions(screen.getByLabelText('Service'), 'consult');
+    await user.selectOptions(screen.getByLabelText('Price item'), 'consult');
     expect(screen.getByText(/A quote has one currency/)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Add to quote' })).toBeDisabled();
   });
@@ -78,11 +78,11 @@ describe('New quote', () => {
     const trigger = screen.getByRole('button', { name: 'New quote' });
     await user.click(trigger);
     await settle();
-    await user.selectOptions(screen.getByLabelText('Service'), 'labour');
+    await user.selectOptions(screen.getByLabelText('Price item'), 'labour');
     await user.keyboard('{Escape}');
     const confirm = await screen.findByRole('alertdialog', { name: 'Discard unsaved changes?' });
     await user.click(within(confirm).getByRole('button', { name: 'Keep editing' }));
-    expect(screen.getByLabelText('Service')).toHaveValue('labour');
+    expect(screen.getByLabelText('Price item')).toHaveValue('labour');
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Discard' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New quote' })).toBeNull());

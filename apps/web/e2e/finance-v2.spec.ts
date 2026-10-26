@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
+import { guardedShot } from './visual-guard';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { COLLEAGUE_STORAGE_STATE, OWNER_STORAGE_STATE, loadDemoContext } from './helpers';
 import { populateFinanceBusiness, provisionFinanceBusiness, signInOwner, type FinanceFixture } from './finance-fixtures';
@@ -19,7 +20,8 @@ import { resetAppearance, saveAppearance } from '../lib/domain/identity/appearan
  */
 const OUT = path.join(__dirname, '..', '..', '..', '.artifacts', 'finance-v2', 'current');
 const VIEWPORTS = [{ name: 'phone', width: 390, height: 844 }, { name: 'tablet', width: 768, height: 1024 }, { name: 'desktop', width: 1440, height: 900 }] as const;
-const shot = (page: Page, name: string) => page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: true });
+/** Every capture is guarded: signed in, inside one of this run's businesses, loaded, and not a refusal page. */
+const shot = (page: Page, name: string) => guardedShot(page, { url: ours(), content: page.getByRole('dialog').or(page.getByRole('main').getByRole('heading', { level: 1 })).first() }, { path: path.join(OUT, `${name}.png`), fullPage: true });
 const fits = async (page: Page, label: string) => expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), `${label} scrolls sideways`).toBe(true);
 const sidebarNav = (page: Page) => page.locator('[data-slot="sidebar-container"]').getByRole('navigation', { name: 'This business' });
 const main = (page: Page) => page.getByRole('main');
@@ -29,6 +31,8 @@ const choose = (scope: ReturnType<Page['getByRole']>, name: RegExp) => scope.loc
 let owner: { db: SupabaseClient; userId: string; ownerEmail: string };
 let empty: string;
 let fx: FinanceFixture;
+/** This run's businesses: a capture anywhere else is refused. */
+const ours = () => new RegExp(`^/organizations/(${[fx?.organizationId, empty, loadDemoContext().organizationId].filter(Boolean).join('|')})(/|[?#]|$)`);
 
 test.describe.serial('Finance V2.0', () => {
   test.beforeAll(async () => {
@@ -45,38 +49,46 @@ test.describe.serial('Finance V2.0', () => {
   test.describe('owner', () => {
     test.use({ storageState: OWNER_STORAGE_STATE });
 
-    test('a new business starts at its catalog instead of zero-valued figures', async ({ page }) => {
+    test('a new business keeps its Dashboard, with Getting started offering Set up pricing', async ({ page }) => {
       test.setTimeout(120_000);
       for (const viewport of VIEWPORTS) {
         await page.setViewportSize(viewport);
         await page.goto(`/organizations/${empty}/finance`);
-        await expect(page.getByRole('region', { name: 'Get started with Finance' })).toBeVisible();
-        await expect(page.getByRole('heading', { name: 'Financial overview' })).toHaveCount(0);
+        await page.waitForLoadState('networkidle');
+        // The Dashboard shell stays: overview, the Getting started panel and activity, never a replacement page.
+        await expect(page.getByRole('region', { name: 'Finance dashboard' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Financial overview' })).toBeAttached();
+        await expect(page.getByRole('region', { name: 'Getting started' })).toBeVisible();
+        await expect(page.getByRole('region', { name: 'Get started with Finance' })).toHaveCount(0);
+        // Nothing to invoice or record yet, and no chart is drawn over nothing.
         await expect(main(page).getByRole('button', { name: 'New invoice' })).toHaveCount(0);
+        await expect(page.getByRole('heading', { name: 'Receivables aging', exact: true })).toHaveCount(0);
+        if (viewport.name !== 'phone') await expect(page.getByRole('button', { name: 'Customize dashboard' })).toBeVisible();
         await fits(page, `new dashboard ${viewport.name}`);
         await shot(page, `dashboard-new-${viewport.name}`);
       }
-      await main(page).getByRole('link', { name: 'Add services' }).first().click();
+      await page.getByRole('region', { name: 'Getting started' }).getByRole('link', { name: 'Set up pricing' }).click();
       await expect(page).toHaveURL(`/organizations/${empty}/finance/catalog`);
-      await expect(page.getByText('No services priced yet.')).toBeVisible();
+      await expect(page.getByText('Nothing is priced yet.')).toBeVisible();
       await shot(page, 'catalog-empty-desktop');
     });
 
-    test('Finance navigation lists Dashboard first, then its operating pages, with configuration last', async ({ page }) => {
+    test('Finance navigation lists Dashboard first, then its operating pages, and no Configuration', async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
       const base = `/organizations/${fx.organizationId}/finance`;
       await page.goto(base);
       const names = (await sidebarNav(page).getByRole('link').allInnerTexts()).map(text => text.trim()).filter(Boolean);
       const start = names.indexOf('Dashboard');
-      expect(names.slice(start, start + 7)).toEqual(['Dashboard', 'Catalog & Pricing', 'Quotes', 'Invoices', 'Payments', 'Financial reports', 'Configuration']);
-      await expect(sidebarNav(page).getByRole('link', { name: 'Configuration', exact: true })).toHaveAttribute('href', `${base}/configuration/pricing`);
+      expect(names.slice(start, start + 6)).toEqual(['Dashboard', 'Catalog & Pricing', 'Quotes', 'Invoices', 'Payments', 'Financial reports']);
+      expect(names).not.toContain('Configuration');
+      expect(names).not.toContain('Commercial administration');
       await sidebarNav(page).getByRole('link', { name: 'Catalog & Pricing' }).click();
       await expect(page).toHaveURL(`${base}/catalog`);
       await expect(sidebarNav(page).getByRole('link', { name: 'Catalog & Pricing' })).toHaveAttribute('aria-current', 'page');
       // Old addresses still resolve inside Finance, never to /platform.
       for (const legacy of ['pricing', 'settings/pricing']) {
         await page.goto(`/organizations/${fx.organizationId}/${legacy}`);
-        await expect(page).toHaveURL(`${base}/configuration/pricing`);
+        await expect(page).toHaveURL(`${base}/catalog`);
         await expect(page.getByRole('link', { name: 'Catalog & Pricing' }).last()).toBeVisible();
       }
     });
@@ -131,7 +143,7 @@ test.describe.serial('Finance V2.0', () => {
       await dialog.getByLabel('Search Work items').fill('Heat pump');
       await choose(dialog, /Heat pump estimate/);
       await expect(dialog.getByText('Cedar Tree Properties')).toBeVisible();
-      await dialog.getByLabel('Service').selectOption({ label: 'Labour · CA$95.50 / hour' });
+      await dialog.getByLabel('Price item').selectOption({ label: 'Labour · CA$95.50 / hour' });
       await dialog.getByLabel('Quantity').fill('2');
       await expect(dialog.getByLabel('Quote totals')).toContainText('Quote after this line');
       await shot(page, 'quote-dialog-desktop');
@@ -336,7 +348,7 @@ test.describe.serial('Finance V2.0', () => {
       const base = `/organizations/${loadDemoContext().organizationId}/finance`;
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto(base);
-      for (const name of ['New invoice', 'New quote', 'Record payment', 'Add services']) await expect(main(page).getByRole(name === 'Add services' ? 'link' : 'button', { name, exact: true })).toHaveCount(0);
+      for (const name of ['New invoice', 'New quote', 'Record payment', 'Set up pricing']) await expect(main(page).getByRole(name === 'Set up pricing' ? 'link' : 'button', { name, exact: true })).toHaveCount(0);
       await expect(page.getByRole('heading', { name: 'Receivables aging', exact: true })).toHaveCount(0);
       await expect(page.getByRole('heading', { name: 'Payments received', exact: true })).toHaveCount(0);
       for (const name of ['Catalog & Pricing', 'Financial reports']) await expect(sidebarNav(page).getByRole('link', { name })).toHaveCount(0);

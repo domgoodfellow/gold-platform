@@ -4,7 +4,7 @@ import { configTarget } from '@/lib/navigation';
 export function legacyConfigurationPath(pathname: string): string | null {
   const match = /^\/organizations\/([^/]+)\/(settings\/(?:calls|communications|sales-stages|opportunity-stages|pricing)|comms\/numbers(?:\/[^/]+)?)\/?$/.exec(pathname);
   if (!match) return null;
-  const keys: Record<string, string> = { 'settings/calls': 'call-setup', 'settings/communications': 'communications', 'settings/sales-stages': 'sales-stages', 'settings/opportunity-stages': 'opportunity-stages', 'settings/pricing': 'pricing' };
+  const keys: Record<string, string> = { 'settings/calls': 'call-setup', 'settings/communications': 'communications', 'settings/sales-stages': 'sales-stages', 'settings/opportunity-stages': 'opportunity-stages', 'settings/pricing': 'price-book' };
   const legacy = match[2];
   const path = legacy.startsWith('comms/numbers') ? configTarget('phone-numbers').path + legacy.slice('comms/numbers'.length) : configTarget(keys[legacy]).path;
   return `/organizations/${match[1]}/${path}`;

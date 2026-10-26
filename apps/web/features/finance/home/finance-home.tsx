@@ -1,12 +1,9 @@
-import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, Banknote, CheckCircle2, CircleCheck, ClipboardList, FileText, Tag, Undo2 } from 'lucide-react';
+import { AlertTriangle, Banknote, CircleCheck, ClipboardList, FileText, Tag, Undo2 } from 'lucide-react';
 import { ButtonLink } from '@/components/controls/button';
 import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { MetricTile, OperationalPanel, PanelState } from '@/components/operational/primitives';
 import { cx } from '@/components/class-names';
-import { InvoiceDialog } from '../transactions/invoice-dialog';
-import { PaymentDialog } from '../transactions/payment-dialog';
 import { QuoteDialog } from '../transactions/quote-dialog';
 import { workHref } from '../collections/finance-tables';
 import { FinanceAttention, type AttentionCategory } from './finance-attention';
@@ -15,7 +12,6 @@ import { DUE_SOON_DAYS } from '@/lib/application/finance/operating';
 import type { CurrencyAmount } from '@/lib/domain/billing/finance-reads';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { DashboardEditingProvider, DashboardLayoutGrid, type DashboardWidgetContent } from '@/components/dashboard/dashboard-layout';
-import type { ConfigureItem } from '@/lib/navigation';
 import { FinanceHeaderActions } from './finance-header-actions';
 import { FinancePeriod } from './finance-period';
 import { FINANCE_WIDGETS, readableFinanceWidgets } from '@/lib/application/finance/dashboard-widgets';
@@ -31,40 +27,29 @@ function Amounts({ values, empty }: { values: CurrencyAmount[]; empty: string })
 /**
  * Finance Dashboard, in reading order: Financial overview (period-aware for reporting members),
  * Needs attention (only categories with records, otherwise one all-clear line), Financial activity
- * from recorded events, then Collections & receivables for `report.read`. Before the first priced
- * Work, invoice or payment it offers a starting path instead of zero-valued figures. Entitlement
- * decides whether billing applies at all; capabilities decide which actions and amounts appear.
+ * from recorded events, then reporting widgets for `report.read`. A business with nothing recorded
+ * keeps the same Dashboard: the attention slot becomes a compact Getting started panel offering the
+ * one next step, and reporting charts appear once there is something to chart. Entitlement decides
+ * whether billing applies at all; capabilities decide which actions and amounts appear.
  */
-export function FinanceHome({ organizationId, timezone, today, data, capabilities, configure, configureItems = [], layout }: { organizationId: string; timezone: string; today: string; data: FinanceOperating; capabilities: readonly string[]; configure?: ReactNode; configureItems?: ConfigureItem[]; layout: StoredDashboardLayout }) {
+export function FinanceHome({ organizationId, timezone, today, data, capabilities, layout }: { organizationId: string; timezone: string; today: string; data: FinanceOperating; capabilities: readonly string[]; layout: StoredDashboardLayout }) {
   const base = `/organizations/${organizationId}`, finance = `${base}/finance`;
   const { summary, open, overdue, dueSoon, quotes, period } = data;
   const has = (cap: string) => capabilities.includes(cap);
   const may = (cap: 'invoice.issue' | 'work_item.price' | 'payment.record') => data.billingEnabled && has(cap);
   const reports = has('report.read') && summary !== null;
   const mayManageCatalog = has('price.manage');
-  const configureHref = `${finance}/configuration/pricing#getting-paid`;
+  // Card payments are configured in Organization Settings → General, beside the trading currency.
+  const gettingPaidHref = `${base}/settings/general#getting-paid`;
   const shortDate = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: timezone, month: 'short', day: 'numeric' }).format(new Date(iso));
   const localDay = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
   const monthLabel = new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(new Date(`${period.from}T12:00:00Z`));
 
-  // One visually primary action, chosen by what this member can do: issuing is the usual next step,
-  // then recording money, then pricing. A business with nothing priced starts at its catalog.
-  const startAtCatalog = data.billingEnabled && data.priceBookCount === 0;
-  const primary = startAtCatalog ? 'catalog' : may('invoice.issue') ? 'invoice' : may('payment.record') ? 'payment' : may('work_item.price') ? 'quote' : null;
-  const actions = <>
-    {configure}
-    {!startAtCatalog && may('work_item.price') ? <QuoteDialog organizationId={organizationId} tone={primary === 'quote' ? 'primary' : 'secondary'} mayCreateWork={has('work_item.create')} mayManageCatalog={mayManageCatalog} /> : null}
-    {!startAtCatalog && data.started && may('payment.record') ? <PaymentDialog organizationId={organizationId} today={today} tone={primary === 'payment' ? 'primary' : 'secondary'} /> : null}
-    {!startAtCatalog && data.started && may('invoice.issue') ? <InvoiceDialog organizationId={organizationId} today={today} tone="primary" /> : null}
-    {startAtCatalog && mayManageCatalog ? <ButtonLink tone="primary" href={`${finance}/catalog`}><Tag aria-hidden className="size-4" />Add services</ButtonLink> : null}
-  </>;
+  // A business with nothing priced starts by setting up pricing; that is then its primary action.
+  const setUpPricing = data.priceBookCount === 0 && mayManageCatalog ? <ButtonLink tone="primary" size="small" href={`${finance}/catalog`}><Tag aria-hidden className="size-4" />Set up pricing</ButtonLink> : null;
 
-  if (!data.billingEnabled) return <WorkspaceHome title="Finance" actions={configure}>
+  if (!data.billingEnabled) return <WorkspaceHome title="Finance">
     <OperationalPanel title="Billing is off"><PanelState kind="not-configured" action={has('feature.manage') ? <ButtonLink tone="secondary" href={`${base}/settings/features`}>Manage features</ButtonLink> : undefined}>This business does not price, quote or invoice in GildOps. Records made while billing was on stay as they were.</PanelState></OperationalPanel>
-  </WorkspaceHome>;
-
-  if (!data.started) return <WorkspaceHome title="Finance" actions={actions}>
-    <StartingPath organizationId={organizationId} data={data} mayManageCatalog={mayManageCatalog} mayQuote={may('work_item.price')} mayCreateWork={has('work_item.create')} configureHref={configureHref} />
   </WorkspaceHome>;
 
   const invoiceRow = (row: (typeof overdue.rows)[number], when: string) => ({ id: row.id, href: workHref(organizationId, row.workItemId), title: `Invoice #${row.number} · ${row.billedTo}`, detail: when, amount: row.outstandingMinor === null ? '—' : formatMoney(Math.max(row.outstandingMinor, 0), row.currency), tone: row.overdue ? 'danger' as const : undefined });
@@ -72,12 +57,13 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
     { key: 'overdue', label: 'Overdue', count: overdue.total, href: `${finance}/invoices?status=overdue&sort=due`, rows: overdue.rows.map(row => invoiceRow(row, `Was due ${row.dueAt ? shortDate(row.dueAt) : ''}`)) },
     { key: 'due-soon', label: 'Due soon', count: dueSoon.total, href: `${finance}/invoices?status=due-soon&sort=due`, rows: dueSoon.rows.map(row => invoiceRow(row, row.dueAt && localDay(row.dueAt) === today ? 'Due today' : `Due ${row.dueAt ? shortDate(row.dueAt) : ''}`)) },
     ...(may('invoice.issue') || has('report.read') ? [{ key: 'to-invoice', label: 'Ready to invoice', count: quotes.total, href: `${finance}/quotes?status=not-invoiced`, rows: quotes.rows.map(row => ({ id: row.workItemId, href: workHref(organizationId, row.workItemId), title: row.title, detail: `${row.customer?.name ?? 'No contact'} · ${row.lineCount} priced ${row.lineCount === 1 ? 'line' : 'lines'}`, amount: row.quoted ? formatMoney(row.quoted.totalMinor, row.quoted.currency) : '—' })) }] : []),
-    ...(data.cardCollection === 'not-connected' || data.cardCollection === 'unavailable' ? [{ key: 'card', label: 'Card payments', count: 1, href: configureHref, rows: [{ id: 'card', href: configureHref, title: data.cardCollection === 'unavailable' ? 'Card payments are on, but no payment processor is available' : 'Card payments are on, but no payment account is connected', detail: 'Manual payment recording still works.', amount: '' }] }] : []),
+    ...(data.cardCollection === 'not-connected' || data.cardCollection === 'unavailable' ? [{ key: 'card', label: 'Card payments', count: 1, href: gettingPaidHref, rows: [{ id: 'card', href: gettingPaidHref, title: data.cardCollection === 'unavailable' ? 'Card payments are on, but no payment processor is available' : 'Card payments are on, but no payment account is connected', detail: 'Manual payment recording still works.', amount: '' }] }] : []),
   ].filter(category => category.count > 0);
 
   // The reporting period governs payments received and the period charts; receivables stay current.
   const periodControl = reports ? <FinancePeriod action={finance} month={period.month} /> : null;
-  const readable = readableFinanceWidgets({ billingEnabled: data.billingEnabled, capabilities });
+  // Before anything is recorded the reporting charts have nothing to show, so they are not drawn at all.
+  const readable = new Set([...readableFinanceWidgets({ billingEnabled: data.billingEnabled, capabilities })].filter(id => data.started || !['payments-trend', 'aging', 'performance', 'invoice-status'].includes(id)));
   const periodLabel = monthLabel;
   const overview = <div className="@container min-w-0">
     <h2 className="sr-only">Financial overview</h2>
@@ -89,7 +75,8 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
     </div>
     {!reports ? <p className="mt-2 text-xs text-muted">Amounts are shown to people with reporting access.</p> : null}
   </div>;
-  const attention = categories.length ? <OperationalPanel className="h-full min-w-0" title="Needs attention"><FinanceAttention categories={categories} /></OperationalPanel>
+  const attention = !data.started ? <GettingStarted organizationId={organizationId} priced={data.priceBookCount > 0} mayManageCatalog={mayManageCatalog} mayQuote={may('work_item.price')} mayCreateWork={has('work_item.create')} />
+    : categories.length ? <OperationalPanel className="h-full min-w-0" title="Needs attention"><FinanceAttention categories={categories} /></OperationalPanel>
     : <p role="status" className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm"><CircleCheck aria-hidden className="size-4 shrink-0 text-muted" /><span><span className="font-medium">Needs attention:</span> nothing overdue or due in the next {DUE_SOON_DAYS} days, and no priced Work waiting for an invoice.</span></p>;
   const reportsLink = <p className="mt-2 text-right text-xs"><Link className="text-accent-text underline-offset-4 hover:underline" href={`${finance}/reports`}>Open financial reports</Link></p>;
   // Built only for widgets this viewer may read; a hidden-by-permission chart is never computed.
@@ -106,35 +93,32 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
     } : {}),
   };
   return <DashboardEditingProvider available>
-    <WorkspaceHome title="Finance" actions={<FinanceHeaderActions organizationId={organizationId} today={today} period={periodControl} configure={configure} configureItems={configureItems}
-      mayQuote={may('work_item.price')} mayRecord={may('payment.record')} mayInvoice={may('invoice.issue')} mayCreateWork={has('work_item.create')} mayManageCatalog={mayManageCatalog} />}>
+    <WorkspaceHome title="Finance" actions={<FinanceHeaderActions organizationId={organizationId} today={today} period={periodControl} lead={setUpPricing}
+      mayQuote={may('work_item.price')} mayRecord={may('payment.record') && data.started} mayInvoice={may('invoice.issue') && data.started} mayCreateWork={has('work_item.create')} mayManageCatalog={mayManageCatalog} />}>
       <DashboardLayoutGrid label="Finance dashboard" registry={FINANCE_WIDGETS} saved={layout} readable={[...readable]} widgets={widgets}
         onSave={saveFinanceDashboardLayout.bind(null, organizationId)} onReset={resetFinanceDashboardLayout.bind(null, organizationId)} />
     </WorkspaceHome>
   </DashboardEditingProvider>;
 }
 
-function StartingPath({ organizationId, data, mayManageCatalog, mayQuote, mayCreateWork, configureHref }: { organizationId: string; data: FinanceOperating; mayManageCatalog: boolean; mayQuote: boolean; mayCreateWork: boolean; configureHref: string }) {
+/**
+ * The first-run panel in the attention slot: one sentence and the one next step for this business,
+ * not a fixed checklist. Pricing is set up in the price book; quoting starts from a Work item and
+ * snapshots its prices; neither creates the other.
+ */
+function GettingStarted({ organizationId, priced, mayManageCatalog, mayQuote, mayCreateWork }: { organizationId: string; priced: boolean; mayManageCatalog: boolean; mayQuote: boolean; mayCreateWork: boolean }) {
   const finance = `/organizations/${organizationId}/finance`;
-  const priced = data.priceBookCount > 0;
-  const steps: { title: string; detail: string; done?: boolean; action?: ReactNode }[] = [
-    { title: 'Add the services you charge for', detail: priced ? `${data.priceBookCount} ${data.priceBookCount === 1 ? 'service is' : 'services are'} in your catalog.` : 'Each has a name, a unit and a price. Quotes are built from them.', done: priced, action: <ButtonLink size="small" tone={priced ? 'text' : 'secondary'} href={`${finance}/catalog`}>{priced ? 'Open catalog' : mayManageCatalog ? 'Add services' : 'View catalog'}</ButtonLink> },
-    { title: 'Price a Work item', detail: 'A quote is a Work item with priced lines from your catalog.', action: priced && mayQuote ? <QuoteDialog organizationId={organizationId} label="Price Work" size="small" mayCreateWork={mayCreateWork} mayManageCatalog={mayManageCatalog} /> : undefined },
-    { title: 'Issue the invoice', detail: 'Review the priced Work, set its dates and confirm. Issued invoices are not edited.' },
-    { title: 'Record payments as they arrive', detail: data.cardCollection === 'connected' ? 'Card payments are connected; payments can also be recorded by hand.' : 'Payments are recorded by hand against each invoice.', action: data.cardCollection === 'not-connected' || data.cardCollection === 'unavailable' ? <ButtonLink size="small" tone="text" href={configureHref}>Set up card payments</ButtonLink> : undefined },
-  ];
-  return <OperationalPanel title="Get started with Finance">
-    <ol className="flex flex-col divide-y divide-border">
-      {steps.map((step, index) => <li key={step.title} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
-        <span aria-hidden className={cx('flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold', step.done ? 'border-success/30 bg-success/10 text-success' : 'border-border text-muted')}>{step.done ? <CheckCircle2 className="size-4" /> : index + 1}</span>
-        <span className="min-w-0 flex-1"><span className="block text-sm font-medium">{step.title}{step.done ? <span className="sr-only"> (done)</span> : null}</span><span className="block text-xs text-muted">{step.detail}</span></span>
-        {step.action ? <span className="shrink-0">{step.action}</span> : null}
-      </li>)}
-    </ol>
+  const [text, action] = !priced
+    ? [mayManageCatalog ? 'Nothing is priced yet. Add price items for what this business charges, then quote Work from them.' : 'Nothing is priced yet. Someone who manages pricing adds price items before Work can be quoted.',
+      mayManageCatalog ? <ButtonLink size="small" tone="secondary" href={`${finance}/catalog`}>Set up pricing</ButtonLink> : null]
+    : ['Prices are ready. Choose a Work item and add priced lines to create its quote; invoices and payments follow from there.',
+      mayQuote ? <QuoteDialog organizationId={organizationId} label="Price Work" size="small" tone="secondary" mayCreateWork={mayCreateWork} mayManageCatalog={mayManageCatalog} /> : <ButtonLink size="small" tone="secondary" href={`${finance}/catalog`}>View price book</ButtonLink>];
+  return <OperationalPanel className="h-full min-w-0" title="Getting started" density="compact">
+    <div className="flex flex-col items-start gap-3 text-sm"><p>{text}</p>{action}<p className="text-xs text-muted">Payments are recorded by hand against each invoice; card payments are optional.</p></div>
   </OperationalPanel>;
 }
 
-const EVENT_LABEL: Record<string, string> = { 'invoice.issued': 'Invoice issued', 'payment.recorded': 'Payment recorded', 'work_item.line_added': 'Quote line added', 'work_item.line_removed': 'Quote line removed', 'price_book_item.created': 'Service added to catalog', 'price_book_item.updated': 'Catalog price changed' };
+const EVENT_LABEL: Record<string, string> = { 'invoice.issued': 'Invoice issued', 'payment.recorded': 'Payment recorded', 'work_item.line_added': 'Quote line added', 'work_item.line_removed': 'Quote line removed', 'price_book_item.created': 'Price item added', 'price_book_item.updated': 'Price changed' };
 
 /** Recorded Finance events only, each linked to the record it is about; nothing here is inferred. */
 function FinanceActivity({ organizationId, activity, shortDate, compact = false }: { organizationId: string; activity: FinanceOperating['activity']; shortDate: (iso: string) => string; compact?: boolean }) {

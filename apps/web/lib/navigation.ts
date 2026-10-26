@@ -234,10 +234,9 @@ export const MODULES = [
     label: 'Card payments',
     description: 'Ask a processor to collect what is outstanding, rather than only cash.',
     outside: 'the card control on an invoice',
-    // Configured inside Pricing's own "Getting paid" section — a card collects against an
-    // invoice Billing produced, so this declares the dependency rather than leaving a link
-    // pointing at an area a second switch could hide without saying so.
-    configuredAt: { segment: 'finance', path: 'configuration/pricing', section: 'getting-paid', label: 'Pricing' },
+    // Configured in Organization Settings → General's "Getting paid" section, beside the trading
+    // currency it collects in. It still needs Billing, which produces the invoices it collects against.
+    configuredAt: { segment: 'settings', path: 'general', section: 'getting-paid', label: 'General' },
     requires: 'billing',
   },
   {
@@ -521,7 +520,6 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'ai-agents', scope: 'organization', workspace: 'ai', path: 'ai/agents', featureKeys: ['agent_tools'], permission: ['organization.manage'] },
   { key: 'work-configuration', scope: 'organization', workspace: 'field', path: 'work/configuration', permission: ['field.manage'] },
   { key: 'schedule-configuration', scope: 'organization', workspace: 'field', path: 'schedule/configuration', entitledBy: 'schedule', permission: ['field.manage'] },
-  { key: 'pricing', scope: 'organization', workspace: 'finance', path: 'finance/configuration/pricing', entitledBy: 'pricing', permission: ['price.manage', 'organization.manage'] },
   // The operating price book, linked from the Settings directory and setup the way Resources and Locations are; it is its own sidebar destination.
   { key: 'price-book', treatment: 'operating', scope: 'organization', workspace: 'finance', path: 'finance/catalog', entitledBy: 'finance-catalog', permission: ['price.manage'], destination: 'finance-catalog' },
   { key: 'customer-fields', scope: 'organization', workspace: 'crm', path: 'crm/configuration/fields', permission: ['field.manage'], directory: false },
@@ -584,7 +582,7 @@ export function configTarget(key: string): ConfigTarget {
 export const FEATURE_CONFIG_TARGETS: Readonly<Record<string, string>> = {
   pipeline: 'sales-stages', configurable_stages: 'sales-stages', qualification_state: 'sales-stages',
   inbound_calling: 'communications', outbound_calling: 'communications', recording: 'call-setup', call_dispositions: 'call-setup',
-  price_book: 'price-book', card_payments: 'pricing', connected_processor: 'pricing',
+  price_book: 'price-book', card_payments: 'general', connected_processor: 'general',
   resource_records: 'resources', locations: 'locations',
   pages_sections: 'website', draft_review_publish: 'website', seo_metadata: 'website',
   rule_authoring: 'automation-rules', domain_event_trigger: 'automation-rules', email_action: 'automation-rules',
@@ -830,8 +828,8 @@ export const WORKSPACE_CONFIGURE: Partial<Record<WorkspaceKey, readonly Workspac
     { target: 'resources', label: 'Resources' },
     { target: 'locations', label: 'Locations' },
   ],
-  // The price book is an operating page in the sidebar (Catalog & Pricing); currency and payment collection are configuration.
-  finance: [{ target: 'pricing', label: 'Payments & currency' }],
+  // Finance registers no doors: the price book is its Catalog & Pricing page, and trading currency and payment
+  // collection belong to Organization Settings → General, their one owner. No Configuration row, Configure control or landing.
   ai: [
     { target: 'ai-agents', label: 'Agents' },
     { target: 'ai-deployments', label: 'Channel deployments' },

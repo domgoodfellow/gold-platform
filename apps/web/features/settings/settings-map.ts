@@ -58,8 +58,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     key: 'pricing',
     title: 'Pricing',
     entries: [
-      entry('price-book', 'Catalog & pricing', 'The services this business sells, their units and prices.'),
-      entry('pricing', 'Payments & currency', 'The trading currency and how this business collects payment.'),
+      entry('price-book', 'Catalog & pricing', 'The price items this business charges for, their units and prices.'),
     ],
   },
   {

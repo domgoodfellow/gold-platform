@@ -36,10 +36,11 @@ test.describe('Finance operating journey', () => {
     await setModuleEnabled(owner,{organizationId,key:'billing',enabled:true});
     await page.setViewportSize({width:1440,height:1000});
     await page.goto(finance);
-    // A new business starts at its catalog (Finance V2.0), not at zero-valued figures.
-    await expect(page.getByRole('region',{name:'Get started with Finance',exact:true})).toBeVisible();
+    // A new business keeps its Dashboard; Getting started offers the one next step, Set up pricing.
+    await expect(page.getByRole('region',{name:'Getting started',exact:true})).toBeVisible();
+    await expect(page.getByRole('heading',{name:'Financial overview'})).toBeAttached();
     await page.screenshot({path:testInfo.outputPath('finance-empty-desktop.png'),fullPage:true,caret:'initial'});
-    await page.locator('main').getByRole('link',{name:'Add services',exact:true}).first().click();
+    await page.getByRole('region',{name:'Getting started',exact:true}).getByRole('link',{name:'Set up pricing',exact:true}).click();
     await expect(page).toHaveURL(`${finance}/catalog`);
     // Price items are added and edited in their row of the price book, not in a drawer.
     await page.getByRole('button',{name:'Add price item',exact:true}).click();
@@ -62,15 +63,17 @@ test.describe('Finance operating journey', () => {
     await row.getByRole('button',{name:'Save',exact:true}).click();
     await expect(row).toHaveCount(0);
     await page.screenshot({path:testInfo.outputPath('finance-pricing-desktop.png'),fullPage:true,caret:'initial'});
-    await page.goto(`${finance}/configuration/pricing`);
-    await page.getByRole('link',{name:'Manage payment features',exact:true}).click();
-    await expect(page.getByRole('heading',{name:'Features',exact:true})).toBeVisible();
+    // Adding a price item creates neither a Work type nor Work: those above were made separately.
+    expect((await owner.from('work_item_types').select('id').eq('organization_id',organizationId)).data).toHaveLength(1);
+    expect((await owner.from('work_items').select('id').eq('organization_id',organizationId)).data).toHaveLength(1);
+    await page.getByRole('main').getByRole('link',{name:'Currency & payment settings',exact:true}).click();
+    await expect(page).toHaveURL(`${base}/settings/general#getting-paid`);
     await page.goto(finance);
     await page.getByRole('button',{name:'New quote',exact:true}).click();
     let dialog = page.getByRole('dialog',{name:'New quote',exact:true});
     await dialog.getByLabel('Search Work items').fill('Service quote acceptance');
     await choose(dialog,/Service quote acceptance/);
-    await dialog.getByLabel('Service').selectOption(price.id);
+    await dialog.getByLabel('Price item').selectOption(price.id);
     await dialog.getByRole('button',{name:'Add to quote',exact:true}).click();
     await expect(dialog.getByRole('status')).toContainText('Priced line added');
     await dialog.getByRole('button',{name:'Done',exact:true}).click();

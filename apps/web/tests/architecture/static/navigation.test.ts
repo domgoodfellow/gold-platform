@@ -309,7 +309,9 @@ describe('the operator shell navigation', () => {
     }
     const configOwner = (key: string) => CONFIG_TARGETS.find((target) => target.key === key)?.workspace;
     expect(configOwner('branding')).toBe('studio');
-    expect(configOwner('pricing')).toBe('finance');
+    // Finance registers no configuration target: its price book is an operating page (Structural Correction A1).
+    expect(configOwner('pricing')).toBeUndefined();
+    expect(configOwner('price-book')).toBe('finance');
     expect(configOwner('communications')).toBe('communications');
     expect(configOwner('team')).toBeUndefined();
     // Website earned its own operating page: it is an `Area`, not a `ConfigTarget`, and the
@@ -810,11 +812,11 @@ describe('a switch leads to its inputs', () => {
     const payments = MODULES.find((sold) => sold.key === 'card_payments')!;
     const where = moduleConfiguration('org-1', payments);
 
-    // Getting paid lives on Pricing, the same workspace as the price book it charges through.
-    expect(where.href).toBe('/organizations/org-1/finance/configuration/pricing#getting-paid');
-    // The area's own word, which is the platform noun this file owns. A link labelled
-    // "configure" would be the one place in the shell where a screen invents a name.
-    expect(where.label).toBe('Pricing');
+    // Getting paid lives in Organization Settings → General, beside the trading currency it collects in.
+    expect(where.href).toBe('/organizations/org-1/settings/general#getting-paid');
+    // The destination's own word. A link labelled "configure" would be the one place in the
+    // shell where a screen invents a name.
+    expect(where.label).toBe('General');
 
     const booking = MODULES.find((sold) => sold.key === 'booking')!;
     expect(moduleConfiguration('org-1', booking).href).toBe(

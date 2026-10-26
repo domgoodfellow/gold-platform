@@ -92,14 +92,14 @@ describe('Administration inside GildOps', () => {
     expect(screen.queryByRole('link', { name: /Plans/ })).not.toBeInTheDocument();
   });
 
-  it('gives commercial-only staff a Finance link, no Administration row, and an Administration context once inside', () => {
+  it('gives commercial-only staff an Administration row, never a platform link inside Finance', () => {
     route.pathname = `${base}/home`;
     const sections = withAdministration(business(), org, new Set(['platform.commercial']));
     const { rerender } = render(view(sections));
-    expect(screen.queryByRole('link', { name: 'Administration' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Administration' })).toBeInTheDocument();
     route.pathname = `${base}/finance`;
     rerender(view(sections));
-    expect(screen.getByRole('link', { name: 'Commercial administration' })).toHaveAttribute('href', `/platform/plans`);
+    expect(screen.queryByRole('link', { name: 'Commercial administration' })).not.toBeInTheDocument();
     route.pathname = `/platform/pricing`;
     rerender(view(sections));
     expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();

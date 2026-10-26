@@ -1,13 +1,9 @@
 import { redirect } from 'next/navigation';
-import { requireWorkspaceConfiguration } from '@/lib/route/workspace-configuration';
 
-/**
- * Redirect-only, never a landing: the sidebar group and the Home's Configure control already list
- * the doors. Sends an old link to the first configuration page the member may open, replacing the
- * address so Back does not return here; `requireWorkspaceConfiguration` is not-found when there is none.
- */
-export default async function ConfigurationPage({ params }: PageProps<'/organizations/[organizationId]/finance/configuration'>) {
+export const dynamic = 'force-dynamic';
+
+/** Finance has no configuration area. An old link lands on General, where currency and payment collection are configured. */
+export default async function LegacyFinanceConfigurationRoute({ params }: PageProps<'/organizations/[organizationId]/finance/configuration'>) {
   const { organizationId } = await params;
-  const { sections } = await requireWorkspaceConfiguration(organizationId, 'finance');
-  redirect(sections[0].href);
+  redirect(`/organizations/${organizationId}/settings/general`);
 }

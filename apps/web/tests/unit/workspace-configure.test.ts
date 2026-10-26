@@ -30,8 +30,10 @@ describe('workspace Configure doors', () => {
   });
 
   it('resolves each door to its registered path inside the organization, one door per page', () => {
-    const items = workspaceConfigureItems('org-1', 'finance', { ...everythingEntitled, capabilities: everyPermission });
-    expect(items.map((item) => item.href)).toEqual(['/organizations/org-1/finance/configuration/pricing']);
+    // Finance offers no doors: its price book is an operating page, currency and payments are General's.
+    expect(workspaceConfigureItems('org-1', 'finance', { ...everythingEntitled, capabilities: everyPermission })).toEqual([]);
+    const items = workspaceConfigureItems('org-1', 'communications', { ...everythingEntitled, capabilities: everyPermission });
+    expect(items.map((item) => item.href)).toContain('/organizations/org-1/comms/configuration/calling');
     // Batch A: no workspace offers two doors to the same page, or a door that is only an anchor into another door's page.
     for (const workspace of Object.keys(WORKSPACE_CONFIGURE) as (keyof typeof WORKSPACE_CONFIGURE)[]) {
       const pages = workspaceConfigureItems('org-1', workspace, { ...everythingEntitled, capabilities: everyPermission }).map((item) => item.href.split('#')[0]);

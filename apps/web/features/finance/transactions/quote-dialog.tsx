@@ -23,7 +23,7 @@ export const lineItem = (line: PricedLine, tone?: LineItem['tone']): LineItem =>
 /**
  * Add one priced line to a Work item's quote. A quote here is priced Work — not a standalone
  * proposal — so the dialog starts from Work, shows its contact and current lines, and adds a
- * service from the price book. The line is a snapshot through `add_work_item_priced_line`; the
+ * price item from the price book. It never creates Work or a Work type. The line is a snapshot through `add_work_item_priced_line`; the
  * amount is never sent, and later price changes never reach it. Fuller review stays on the Work
  * item's Financials.
  */
@@ -70,11 +70,11 @@ function QuoteBody({ organizationId, workItemId, mayCreateWork, mayManageCatalog
       </RecordSummary> : null}
       {done ? <TransactionResult title={done.success} detail={review ? `${review.work.title}${current ? ` · quote now ${formatMoney(current.totalMinor, current.currency)}` : ''}` : undefined} actions={<ButtonLink size="small" tone="secondary" href={done.href ?? workHref}>Open Work financials</ButtonLink>} /> : null}
       {review && !done ? review.items.length ? <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_8rem]">
-        <FormField id={`${id}-service`} label="Service">{field => <SelectInput {...field} value={itemId} onChange={event => setItemId(event.target.value)} required><option value="">Choose from your catalog</option>{review.items.map(entry => <option key={entry.id} value={entry.id}>{entry.name} · {formatMoney(entry.unitAmountMinor, entry.currency)} / {entry.unit}</option>)}</SelectInput>}</FormField>
+        <FormField id={`${id}-service`} label="Price item">{field => <SelectInput {...field} value={itemId} onChange={event => setItemId(event.target.value)} required><option value="">Choose a priced item</option>{review.items.map(entry => <option key={entry.id} value={entry.id}>{entry.name} · {formatMoney(entry.unitAmountMinor, entry.currency)} / {entry.unit}</option>)}</SelectInput>}</FormField>
         <FormField id={`${id}-quantity`} label="Quantity">{field => <TextInput {...field} value={quantity} onChange={event => setQuantity(event.target.value)} type="number" inputMode="numeric" min={1} step={1} required className="tabular-nums" />}</FormField>
         {!validQuantity ? <p className="text-xs text-danger sm:col-span-2">Quantity is a whole number, one or more.</p> : null}
-        {mixed ? <p className="text-xs text-danger sm:col-span-2">This Work is priced in {current!.currency}; this service is in {preview!.currency}. A quote has one currency.</p> : null}
-      </div> : <div className="flex flex-col items-start gap-2 text-sm"><p>Your catalog has no services yet, so there is nothing to quote.</p>{mayManageCatalog ? <ButtonLink size="small" tone="secondary" href={`${base}/finance/catalog`}>Add services to the catalog</ButtonLink> : null}</div> : null}
+        {mixed ? <p className="text-xs text-danger sm:col-span-2">This Work is priced in {current!.currency}; this price item is in {preview!.currency}. A quote has one currency.</p> : null}
+      </div> : <div className="flex flex-col items-start gap-2 text-sm"><p>Nothing is in the price book yet, so there is nothing to quote.</p>{mayManageCatalog ? <ButtonLink size="small" tone="secondary" href={`${base}/finance/catalog`}>Set up pricing</ButtonLink> : null}</div> : null}
       <TransactionError error={state.error} errorRef={errorRef} />
     </div></DialogBody>
     <DialogFooterBar>

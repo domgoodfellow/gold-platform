@@ -118,15 +118,16 @@ describe('configuration fields stay with their owning surfaces', () => {
  * only a compatibility redirect.
  */
 describe('Pricing, Automations, Custom fields and Team are canonical, not Settings sub-routes', () => {
-  it('the price book is the operating Catalog & Pricing page, and /pricing keeps currency and, when connected, Getting paid', () => {
+  it('the price book is the operating Catalog & Pricing page, and General owns currency and Getting paid', () => {
     const catalog = readFileSync(`${ROUTES}/finance/catalog/page.tsx`, 'utf8');
     expect(catalog).toContain('PricingManagement');
     expect(catalog).toContain("requireOperatingArea(organizationId, 'finance-catalog')");
-    const page = readFileSync(`${ROUTES}/finance/configuration/pricing/page.tsx`, 'utf8');
-    expect(page).not.toContain('PricingManagement');
-    expect(page).toContain('PaymentAccountRow');
-    expect(page).toContain('id="getting-paid"');
-    expect(page).not.toContain('redirect(');
+    expect(catalog).toContain('/settings/general#getting-paid');
+    const general = readFileSync(`${ROUTES}/settings/general/page.tsx`, 'utf8');
+    expect(general).toContain('<GettingPaidSection');
+    expect(general).toContain('id="getting-paid"');
+    expect(readFileSync(`${WEB_FEATURES}/pricing/getting-paid-section.tsx`, 'utf8')).toContain('PaymentAccountRow');
+    expect(readFileSync(`${ROUTES}/finance/configuration/pricing/route.ts`, 'utf8')).toContain('NextResponse.redirect(');
   });
 
   it('/automations is canonical Automations Home; Rules, Messages and Activity are its three pages, and a rule is its own detail route', () => {
@@ -197,7 +198,7 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
     for (const [segment, destination] of [
       ['settings/people', 'settings/access'],
       ['settings/data-automation', 'settings/custom-fields'],
-      ['settings/commerce', 'finance/configuration/pricing'],
+      ['settings/commerce', 'settings/general'],
     ] as const) {
       const page = readFileSync(`${ROUTES}/${segment}/page.tsx`, 'utf8');
       expect(page, `${segment} no longer redirects to ${destination}`).toContain(`/${destination}`);

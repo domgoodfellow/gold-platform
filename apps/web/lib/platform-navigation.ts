@@ -18,16 +18,17 @@ export type PlatformGroupKey = 'product-registry' | 'integration-registry' | 'in
  * The navigation groups: headings with no page of their own, each opening its first page.
  *
  * `linkedFrom` names a workspace whose own navigation also links in, because GildOps operators
- * reach this administration from that work (Commercial administration from Finance, AI Runtime
- * from AI). The pages stay in Administration — the link is a way in, never a second home, so
- * GildOps' commercial control is not drawn as part of its tenant Finance.
+ * reach this administration from that work (AI Runtime from AI). The pages stay in Administration —
+ * the link is a way in, never a second home. Commercial administration is not linked from Finance:
+ * Finance is the tenant's own ledger, and GildOps' commercial control is platform-only (ADR-051).
  */
 export const PLATFORM_GROUPS: readonly { key: PlatformGroupKey; label: string; linkedFrom?: WorkspaceKey }[] = [
   { key: 'product-registry', label: 'Product Registry' },
   { key: 'integration-registry', label: 'Integration Registry' },
   { key: 'infrastructure', label: 'Infrastructure' },
   { key: 'reliability', label: 'Reliability' },
-  { key: 'commercial', label: 'Commercial administration', linkedFrom: 'finance' },
+  // Not linked from Finance: commercial administration is platform-only and is reached from Administration (ADR-051).
+  { key: 'commercial', label: 'Commercial administration' },
 ];
 
 export type PlatformDestination = {

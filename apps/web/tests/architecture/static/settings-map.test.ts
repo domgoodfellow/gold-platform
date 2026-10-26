@@ -73,7 +73,7 @@ describe('the Settings configuration map', () => {
     // Studio Home — none of them is a Settings *configuration* door.
     // `help` is product help opened from the account menu: not configuration, so not a door on the map.
     const settingsOwned: Record<string, string> = {
-      pricing: 'pricing',
+      pricing: 'price-book',
       fields: 'custom-fields',
       roles: 'team',
       integrations: 'integrations',
@@ -169,7 +169,7 @@ describe('configuring is not operating', () => {
 
 describe('offered entries and sections', () => {
   it('offers an entry only when it is entitled and the member may configure it', () => {
-    const pricing = entries.find((entry) => entry.key === 'pricing') as SettingsEntry;
+    const pricing = entries.find((entry) => entry.key === 'price-book') as SettingsEntry;
     const permitted = { ...everythingEntitled, capabilities: new Set<Capability>(['price.manage']) };
     expect(entryOffered(pricing, permitted)).toBe(true);
     // Not entitled, and entitled but without the permission: both hide it.

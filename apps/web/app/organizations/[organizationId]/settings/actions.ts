@@ -183,7 +183,7 @@ export async function disconnectPaymentAccountAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/finance/configuration/pricing`);
+  revalidatePath(`/organizations/${organizationId}/settings/general`);
   return { error: null };
 }
 

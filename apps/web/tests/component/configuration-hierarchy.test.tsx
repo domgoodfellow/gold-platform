@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 vi.mock('@/features/tenancy/business-profile-settings', () => ({ BusinessProfileSettings: () => null }));
+vi.mock('@/features/pricing/getting-paid-section', () => ({ GettingPaidSection: () => null }));
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ConfigurationLayout from '@/app/organizations/[organizationId]/crm/configuration/layout';
@@ -89,7 +90,8 @@ describe('Retired configuration landings', () => {
     ['comms', 'comms/configuration/calling'],
     ['support', 'support/configuration/queues'],
     ['field', 'work/configuration'],
-    ['finance', 'finance/configuration/pricing'],
+    // Finance has no doors; its old address lands on General, which owns currency and payment collection.
+    ['finance', 'settings/general'],
     ['studio', 'settings/branding'],
     ['ai', 'ai/agents'],
   ] as const)('sends the old %s/configuration address to the first page the member may open and never renders a list', async (segment, path) => {

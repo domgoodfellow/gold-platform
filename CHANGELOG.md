@@ -32,6 +32,13 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-10-26
+
+- Finance no longer has a Configuration row, Configure button or Payments & currency page. The trading currency and card payment settings now live in one place, Settings → General, in a Getting paid section; Catalog & Pricing links there. Old links, including ones to Getting paid, land on General.
+- Finance no longer links to Commercial administration. GildOps staff reach it from Administration, as before.
+- A business that has not recorded anything yet now sees its normal Finance Dashboard with a short Getting started panel that offers the next step (Set up pricing, then Price Work), instead of a separate start page. Customize dashboard stays available.
+- Pricing wording now says what it does: Set up pricing, Add price item and Price item, instead of Add services. Adding a price item never creates a kind of work or a Work item.
+
 ## 2026-10-25
 
 - A pipeline with no stages and no opportunities now shows a short setup message with a Configure stages button for people who can configure stages, instead of an empty board. The Unstaged column appears only when it holds opportunities or no stages exist.

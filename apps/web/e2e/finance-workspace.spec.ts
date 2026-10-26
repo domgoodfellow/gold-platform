@@ -37,22 +37,18 @@ test.describe('tenant Finance workspace', () => {
     }
   });
 
-  test('the Finance row opens Home; the price book is an operating page and payment collection is configuration', async ({ page }) => {
+  test('the Finance row opens Home; the price book is an operating page and currency and payments are General settings', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     await page.goto(`/organizations/${organizationId}/finance/invoices`);
     await page.getByRole('link', { name: 'Finance', exact: true }).first().click();
     await expect(page).toHaveURL(`/organizations/${organizationId}/finance`);
 
-    // Finance V2.0: Catalog & Pricing is a sidebar destination; currency and payment collection stay behind Configure's one direct link.
+    // Catalog & Pricing is a sidebar destination; its header links to the one owner of currency and payment collection.
     await page.getByRole('link', { name: 'Catalog & Pricing', exact: true }).first().click();
     await expect(page).toHaveURL(`/organizations/${organizationId}/finance/catalog`);
-    await page.goto(`/organizations/${organizationId}/finance`);
-    // Wide headers show the Configure link inline; narrower ones (this run's 1280px) offer it in More.
-    const inline = page.getByRole('main').getByRole('link', { name: 'Payments & currency', exact: true }).filter({ visible: true });
-    if (await inline.count()) await inline.click();
-    else { await page.getByRole('button', { name: 'More finance actions' }).click(); await page.getByRole('menuitem', { name: 'Payments & currency' }).click(); }
-    await expect(page).toHaveURL(`/organizations/${organizationId}/finance/configuration/pricing`);
-    await expect(page.getByRole('heading', { name: 'Payments & currency', level: 1 })).toBeAttached();
+    await page.getByRole('main').getByRole('link', { name: 'Currency & payment settings', exact: true }).click();
+    await expect(page).toHaveURL(`/organizations/${organizationId}/settings/general#getting-paid`);
+    await expect(page.getByRole('heading', { name: 'General', level: 1 })).toBeAttached();
   });
 
   test('Plan & usage stays outside Finance, under Settings', async ({ page }) => {
@@ -83,6 +79,8 @@ test.describe('GildOps staff', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeAttached();
     await expect(page.locator('main').getByRole('link', { name: 'Plans & Add-ons' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Economics' })).toHaveCount(0);
+    // Commercial administration is reached from Administration, never from inside Finance (ADR-051).
+    await expect(page.getByRole('link', { name: 'Commercial administration' })).toHaveCount(0);
     await page.screenshot({ path: `${ARTIFACTS}/finance-workspace-gildops-home.png`, fullPage: true });
   });
 

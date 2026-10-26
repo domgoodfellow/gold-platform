@@ -240,12 +240,12 @@ test.describe('legacy Communications configuration compatibility', () => {
   test.use({ storageState: OWNER_STORAGE_STATE });
   test('preserves query values and fragments and resolves each canonical owner', async ({ page }) => {
     const { organizationId } = loadDemoContext();
-    for (const [legacy, canonical] of [['settings/calls', 'comms/configuration/calling'], ['settings/communications', 'comms/configuration/messaging'], ['comms/numbers', 'comms/configuration/numbers'], ['settings/sales-stages', 'sales/configuration/relationship-stages'], ['settings/opportunity-stages', 'sales/configuration/opportunity-stages'], ['settings/pricing', 'finance/configuration/pricing']]) {
+    for (const [legacy, canonical] of [['settings/calls', 'comms/configuration/calling'], ['settings/communications', 'comms/configuration/messaging'], ['comms/numbers', 'comms/configuration/numbers'], ['settings/sales-stages', 'sales/configuration/relationship-stages'], ['settings/opportunity-stages', 'sales/configuration/opportunity-stages'], ['settings/pricing', 'finance/catalog']]) {
       await page.goto(`/organizations/${organizationId}/${legacy}?filter=a&filter=b#recording`);
       await expect(page).toHaveURL(`/organizations/${organizationId}/${canonical}?filter=a&filter=b#recording`);
       // Batch A: configuration pages draw no second navigation column, and no workspace has a landing.
       // The canonical page's own sidebar entry is current: a door in a several-page group, or Finance's
-      // single direct Configuration link.
+      // Catalog & Pricing operating page (Finance has no Configuration).
       await expect(page.getByRole('navigation', { name: 'Configuration sections' })).toHaveCount(0);
       const label = ({
         'comms/configuration/calling': 'Calling & routing',
@@ -253,7 +253,7 @@ test.describe('legacy Communications configuration compatibility', () => {
         'comms/configuration/numbers': 'Numbers & assignments',
         'sales/configuration/relationship-stages': 'Relationship stages',
         'sales/configuration/opportunity-stages': 'Opportunity stages',
-        'finance/configuration/pricing': 'Configuration',
+        'finance/catalog': 'Catalog & Pricing',
       } as Record<string, string>)[canonical];
       await expect(sidebar(page).getByRole('link', { name: label, exact: true })).toHaveAttribute('aria-current', 'page');
     }

@@ -166,21 +166,22 @@ describe('Administration inside GildOps', () => {
     const commercial = entry()!.destinations!.find((item) => item.key === 'platform-group-commercial')!;
     expect(commercial.children?.map((item) => item.key)).toEqual(['platform-plans', 'platform-pricing', 'platform-usage-economics', 'platform-vendor-rates', 'platform-package-economics', 'platform-portfolio-economics', 'platform-billing']);
   });
-  it('links Finance to Commercial administration and AI to AI Runtime, owning neither', () => {
-    expect(row('workspace-finance')?.administration).toEqual({ key: 'platform-link-commercial', label: 'Commercial administration', href: platformHref(ORG, 'plans'), section: 'workspaces' });
+  it('links AI to AI Runtime and never links Finance to Commercial administration', () => {
+    // Finance is the tenant's own ledger; GildOps' commercial control is reached from Administration only (ADR-051).
+    expect(row('workspace-finance')?.administration).toBeUndefined();
     expect(row('workspace-ai')?.administration).toEqual({ key: 'platform-link-ai-runtime', label: 'AI Runtime', href: platformHref(ORG, 'ai-runtime'), section: 'workspaces' });
-    expect(projectedItems(workspaceNavigation(gildops, `/organizations/${ORG}/finance`)!.sections).map((item) => item.key)).toContain('platform-link-commercial');
+    expect(projectedItems(workspaceNavigation(gildops, `/organizations/${ORG}/finance`)!.sections).map((item) => item.key)).not.toContain('platform-link-commercial');
     expect(workspaceNavigation(gildops, platformHref(ORG, 'plans/base'))?.workspace.key).toBe('administration');
     expect(workspaceNavigation(gildops, platformHref(ORG, 'ai-runtime'))?.workspace.key).toBe('administration');
   });
   it('adds nothing without a platform permission', () => {
     expect(withAdministration(project(), ORG, new Set())).toEqual(project());
   });
-  it('offers commercial-only staff their Finance link and no empty Administration row', () => {
+  it('offers commercial-only staff an Administration row and no Finance link', () => {
     const commercial = withAdministration(project(), ORG, new Set(['platform.commercial']));
-    expect(row('workspace-finance', commercial)?.administration?.label).toBe('Commercial administration');
-    expect(entry(commercial)?.contextOnly).toBe(true);
-    expect(projectedItems(topLevelSections(commercial)).map((item) => item.key)).not.toContain('administration');
+    expect(row('workspace-finance', commercial)?.administration).toBeUndefined();
+    expect(entry(commercial)?.contextOnly).toBeUndefined();
+    expect(projectedItems(topLevelSections(commercial)).map((item) => item.key)).toContain('administration');
     const context = workspaceNavigation(commercial, platformHref(ORG, 'pricing'))!;
     expect(context.workspace.key).toBe('administration');
     expect(activeItemKey(context.sections, platformHref(ORG, 'pricing'))).toBe('platform-pricing');
@@ -479,10 +480,9 @@ describe('every workspace Configuration organizes its real pages', () => {
   it('draws one page as a direct link and several as a group that never links to a landing', () => {
     const rows = projectedItems(project()).filter(item => item.configuration);
     expect(rows.length).toBeGreaterThan(1);
-    const finance = rows.find(row => row.key === 'workspace-finance')!.configuration!;
-    expect(finance.href).toBe(`/organizations/${ORG}/finance/configuration/pricing`);
-    expect(finance.children).toBeUndefined();
-    expect(finance.group).toBeUndefined();
+    // Finance has no Configuration row at all (Structural Correction A1).
+    expect(rows.find(row => row.key === 'workspace-finance')).toBeUndefined();
+    for (const single of rows.filter(row => !row.configuration!.children)) expect(single.configuration!.group, single.key).toBeUndefined();
     for (const row of rows) {
       const parent = row.configuration!;
       if (!parent.children) { expect(parent.href, row.key).not.toMatch(/\/configuration$/); continue; }

@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
+import { guardedShot } from './visual-guard';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { COLLEAGUE_STORAGE_STATE, OWNER_STORAGE_STATE, loadDemoContext } from './helpers';
 import { populateFinanceBusiness, provisionFinanceBusiness, signInOwner, ZONE, type FinanceFixture } from './finance-fixtures';
@@ -18,7 +19,8 @@ import { formatMoney } from '../lib/domain/work-items/consumption';
  */
 const OUT = path.join(__dirname, '..', '..', '..', '.artifacts', 'finance-v21', 'after');
 const VIEWPORTS = [{ name: 'phone', width: 390, height: 844 }, { name: 'tablet', width: 768, height: 1024 }, { name: 'compact', width: 1024, height: 800 }, { name: 'desktop', width: 1440, height: 900 }] as const;
-const shot = (page: Page, name: string) => page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: true });
+/** Every capture is guarded: signed in, inside one of this run's businesses, loaded, and not a refusal page. */
+const shot = (page: Page, name: string) => guardedShot(page, { url: ours(), content: page.getByRole('dialog').or(page.getByRole('main').getByRole('heading', { level: 1 })).first() }, { path: path.join(OUT, `${name}.png`), fullPage: true });
 /** The app scrolls inside its own container, so a whole composition is captured with a tall window at the same width. */
 const tallShot = async (page: Page, name: string) => { const size = page.viewportSize()!; await page.setViewportSize({ width: size.width, height: 2600 }); await page.waitForTimeout(300); await shot(page, name); await page.setViewportSize(size); };
 /** The header's controls: everything in the page's own header row above the dashboard. */
@@ -29,6 +31,8 @@ const tableRows = async (page: Page, id: string) => { await expect(widget(page, 
 
 let owner: { db: SupabaseClient; userId: string; ownerEmail: string };
 let fx: FinanceFixture; let second: string; let empty: string;
+/** This run's businesses: a capture anywhere else is refused. */
+const ours = () => new RegExp(`^/organizations/(${[fx?.organizationId, second, empty, loadDemoContext().organizationId].filter(Boolean).join('|')})(/|[?#]|$)`);
 
 test.describe.serial('Finance V2.1', () => {
   test.beforeAll(async () => {
@@ -112,7 +116,8 @@ test.describe.serial('Finance V2.1', () => {
           await expect(page.getByRole('button', { name: 'New quote' }).filter({ visible: true })).toHaveCount(0);
           await page.getByRole('button', { name: 'More finance actions' }).click();
           await expect(page.getByRole('menuitem', { name: 'Record payment' })).toBeVisible();
-          await expect(page.getByRole('menuitem', { name: 'Payments & currency' })).toBeVisible();
+          // Finance has no configuration door: currency and payment collection are General settings.
+          await expect(page.getByRole('menuitem', { name: /Payments & currency|Configur/ })).toHaveCount(0);
           // On a phone, Customize dashboard is offered here instead of in the header row.
           await expect(page.getByRole('menuitem', { name: 'Customize dashboard' })).toHaveCount(viewport.name === 'phone' ? 1 : 0);
           await page.keyboard.press('Escape');

@@ -37,7 +37,7 @@ test.describe('an owner', () => {
       comms: `${base}/comms/configuration/calling`,
       support: `${base}/support/configuration/queues`,
       field: `${base}/work/configuration`,
-      finance: `${base}/finance/configuration/pricing`,
+      finance: `${base}/settings/general`,
       studio: `${base}/settings/branding`,
     };
     for (const segment of LANDINGS) {
@@ -73,22 +73,24 @@ test.describe('an owner', () => {
     await expect(page).toHaveURL(`${base}/comms/configuration/messaging`);
   });
 
-  test('Finance has one configuration page: a direct Home link and a direct sidebar link', async ({ page }) => {
+  test('Finance has no configuration: no Configure control, no Configuration row and no Configuration crumb', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     const base = `/organizations/${organizationId}`;
-    await page.goto(`${base}/finance`);
-    const main = page.getByRole('main');
-    await expect(main.getByRole('button', { name: 'Configure', exact: true })).toHaveCount(0);
-    await expect(main.getByRole('link', { name: 'Payments & currency', exact: true })).toHaveAttribute('href', `${base}/finance/configuration/pricing`);
-    const nav = sidebarNav(page);
-    await expect(nav.getByRole('button', { name: 'Configuration', exact: true })).toHaveCount(0);
-    const configuration = nav.getByRole('link', { name: 'Configuration', exact: true });
-    await expect(configuration).toHaveAttribute('href', `${base}/finance/configuration/pricing`);
-    await configuration.click();
-    await expect(page).toHaveURL(`${base}/finance/configuration/pricing`);
-    await expect(configuration).toHaveAttribute('aria-current', 'page');
-    await expect(nav.getByRole('link', { name: 'Payment collection' })).toHaveCount(0);
-    await expect(breadcrumb(page).getByRole('link', { name: 'Configuration', exact: true })).toHaveCount(0);
+    for (const path of ['finance', 'finance/catalog', 'finance/invoices']) {
+      await page.goto(`${base}/${path}`);
+      const main = page.getByRole('main');
+      await expect(main.getByRole('button', { name: 'Configure', exact: true })).toHaveCount(0);
+      await expect(main.getByRole('link', { name: 'Payments & currency', exact: true })).toHaveCount(0);
+      const nav = sidebarNav(page);
+      await expect(nav.getByRole('button', { name: 'Configuration', exact: true })).toHaveCount(0);
+      await expect(nav.getByRole('link', { name: 'Configuration', exact: true })).toHaveCount(0);
+      await expect(breadcrumb(page).getByText('Configuration', { exact: true })).toHaveCount(0);
+    }
+    // The old addresses land on General, which owns currency and payment collection, and keep the anchor.
+    await page.goto(`${base}/finance/configuration/pricing#getting-paid`);
+    await expect(page).toHaveURL(`${base}/settings/general#getting-paid`);
+    await page.goto(`${base}/finance/configuration`);
+    await expect(page).toHaveURL(`${base}/settings/general`);
   });
 
   test('Work Home offers a Configure menu instead of a "Configuration" landing link', async ({ page }) => {
@@ -166,15 +168,17 @@ test.describe('an owner', () => {
     await noOverflow(page);
   });
 
-  test('phone: Finance Configuration is a direct link in the menu sheet; Communications is a group', async ({ page }) => {
+  test('phone: Finance has no Configuration in the menu sheet; Communications is a group', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     const base = `/organizations/${organizationId}`;
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`${base}/finance`);
     await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();
     const sheet = page.locator('[data-slot="sidebar"][data-mobile="true"]');
-    await sheet.getByRole('link', { name: 'Configuration', exact: true }).click();
-    await expect(page).toHaveURL(`${base}/finance/configuration/pricing`);
+    await expect(sheet.getByRole('link', { name: 'Catalog & Pricing', exact: true })).toBeVisible();
+    await expect(sheet.getByRole('link', { name: 'Configuration', exact: true })).toHaveCount(0);
+    await expect(sheet.getByRole('button', { name: 'Configuration', exact: true })).toHaveCount(0);
+    await page.keyboard.press('Escape');
     await noOverflow(page);
     await page.goto(`${base}/comms`);
     await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();

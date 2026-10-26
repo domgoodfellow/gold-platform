@@ -1,4 +1,3 @@
-import { WorkspaceConfigure, workspaceConfigureDoors } from '@/features/settings/workspace-configure';
 import { FinanceHome } from '@/features/finance/home/finance-home';
 import { loadFinanceOperating } from '@/lib/application/finance/operating';
 import { todayInZone } from '@/lib/domain/scheduling/window';
@@ -13,10 +12,9 @@ export default async function FinancePage({ params, searchParams }: PageProps<'/
   const { db, organization } = await requireOrganization(organizationId);
   const today = todayInZone(organization.timezone);
   // The layout is this person's presentation only; it is read beside the data, never instead of a permission check.
-  const [data, layout, configureItems] = await Promise.all([
+  const [data, layout] = await Promise.all([
     loadFinanceOperating(db, { organizationId, today, timezone: organization.timezone, month: typeof query.month === 'string' ? query.month : undefined, canReadReports: organization.capabilities.includes('report.read') }),
     readDashboardLayout(db, { organizationId, workspace: 'finance', registry: FINANCE_WIDGETS }),
-    workspaceConfigureDoors(organizationId, 'finance'),
   ]);
-  return <FinanceHome organizationId={organizationId} today={today} timezone={organization.timezone} data={data} capabilities={organization.capabilities} configure={<WorkspaceConfigure organizationId={organizationId} workspace="finance" />} layout={layout} configureItems={configureItems} />;
+  return <FinanceHome organizationId={organizationId} today={today} timezone={organization.timezone} data={data} capabilities={organization.capabilities} layout={layout} />;
 }

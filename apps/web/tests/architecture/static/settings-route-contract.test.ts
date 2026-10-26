@@ -31,7 +31,9 @@ describe('canonical Settings route contract', () => {
 
   it('registers canonical Settings-owned configuration while retaining workspace-owned routes', () => {
     const byKey = new Map(CONFIG_TARGETS.map((target) => [target.key, target.path]));
-    expect(byKey.get('pricing')).toBe('finance/configuration/pricing');
+    // Finance has no configuration page: trading currency and payment collection belong to General.
+    expect(byKey.has('pricing')).toBe(false);
+    expect(byKey.get('price-book')).toBe('finance/catalog');
     expect(byKey.get('custom-fields')).toBe('settings/custom-fields');
     expect(byKey.get('team')).toBe('settings/access');
     expect(byKey.get('integrations')).toBe('settings/connections');
@@ -51,7 +53,6 @@ describe('canonical Settings route contract', () => {
       'settings/connections/page.tsx',
       'settings/connections/apps/page.tsx',
       'settings/connections/[connectionId]/page.tsx',
-      'finance/configuration/pricing/page.tsx',
       'settings/custom-fields/page.tsx',
     ]) expect(existsSync(route(path)), path).toBe(true);
   });
@@ -71,11 +72,20 @@ describe('canonical Settings route contract', () => {
     }
     // A sub-page keeps the one ancestor it belongs under.
     expect(read('app/organizations/[organizationId]/settings/connections/[connectionId]/page.tsx')).toContain("label: 'Connections'");
-    expect(read('app/organizations/[organizationId]/finance/configuration/pricing/page.tsx')).toContain("workspaceConfigCrumbs(organizationId, 'pricing', gate)");
   });
 
   it('keeps legacy routes as direct redirects to final canonical destinations', () => {
-    expect(read('app/organizations/[organizationId]/pricing/page.tsx')).toContain('/finance/configuration/pricing');
+    expect(read('app/organizations/[organizationId]/pricing/page.tsx')).toContain('/finance/catalog');
+    // The retired Finance configuration addresses only redirect to General; neither renders a page or a breadcrumb.
+    for (const old of ['finance/configuration/page.tsx', 'finance/configuration/pricing/route.ts']) {
+      const source = read(`app/organizations/[organizationId]/${old}`);
+      expect(source, old).toContain('/settings/general');
+      expect(source, old).toMatch(/redirect\(/);
+      expect(source, old).not.toContain('workspaceConfigCrumbs');
+      expect(source, old).not.toContain('<PageHeader');
+    }
+    expect(existsSync(route('finance/configuration/layout.tsx'))).toBe(false);
+    expect(existsSync(route('finance/configuration/pricing/page.tsx'))).toBe(false);
     expect(read('app/organizations/[organizationId]/fields/page.tsx')).toContain('/settings/custom-fields');
     expect(read('app/organizations/[organizationId]/roles/page.tsx')).toContain('/settings/access/');
     expect(read('app/organizations/[organizationId]/integrations/page.tsx')).toContain('/settings/connections');
@@ -111,7 +121,6 @@ describe('Settings is one contextual sidebar, not a landing page or a directory'
     const pages = [
       'app/organizations/[organizationId]/settings/branding/page.tsx',
       'app/organizations/[organizationId]/settings/general/page.tsx',
-      'app/organizations/[organizationId]/finance/configuration/pricing/page.tsx',
       'app/organizations/[organizationId]/settings/custom-fields/page.tsx',
       'app/organizations/[organizationId]/settings/features/page.tsx',
       'app/organizations/[organizationId]/comms/configuration/messaging/page.tsx',
@@ -135,7 +144,6 @@ describe('Settings is one contextual sidebar, not a landing page or a directory'
 
   it('workspace-owned configuration carries its workspace as ancestry, not Settings', () => {
     for (const page of [
-      'app/organizations/[organizationId]/finance/configuration/pricing/page.tsx',
       'app/organizations/[organizationId]/comms/configuration/calling/page.tsx',
       'app/organizations/[organizationId]/crm/configuration/relationship-stages/page.tsx',
     ]) {

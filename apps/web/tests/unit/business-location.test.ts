@@ -128,7 +128,9 @@ describe('the Settings context', () => {
   });
 
   it('points workspace configuration pages back at their workspace', () => {
-    expect(workspaceConfigCrumbs(ORG, 'pricing')).toEqual([{ label: 'Finance', href: `/organizations/${ORG}/finance` }, { label: 'Configuration' }]);
+    expect(workspaceConfigCrumbs(ORG, 'call-setup')).toEqual([{ label: 'Communications', href: `/organizations/${ORG}/comms` }, { label: 'Configuration' }]);
+    // The price book is Finance's operating page, never under a Configuration crumb.
+    expect(workspaceConfigCrumbs(ORG, 'price-book')).not.toContainEqual({ label: 'Configuration' });
     expect(workspaceConfigCrumbs(ORG, 'custom-fields')).toEqual([]);
   });
 });

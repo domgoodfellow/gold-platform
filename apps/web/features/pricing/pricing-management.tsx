@@ -39,7 +39,7 @@ export function PricingManagement({ organizationId, items, currency, mayManage }
       {mayManage && !currency ? <Hint className="px-3 pb-3">Choose a trading currency before adding prices.</Hint> : null}
       {items.length || editing === 'new' ? (
         <>
-          <div aria-hidden className={`${ROW} hidden border-y border-border text-xs font-medium text-muted @min-[40rem]/prices:grid`}><span>Service</span><span>Unit</span><span className="text-right">Unit price</span><span className="w-24" /></div>
+          <div aria-hidden className={`${ROW} hidden border-y border-border text-xs font-medium text-muted @min-[40rem]/prices:grid`}><span>Price item</span><span>Unit</span><span className="text-right">Unit price</span><span className="w-24" /></div>
           <ul className="divide-y divide-border">
             {editing === 'new' && currency ? <li><PriceItemRowForm organizationId={organizationId} currency={currency} onDone={() => close('new')} onCancel={() => close('new')} /></li> : null}
             {items.map((item) => editing === item.id ? (
@@ -59,8 +59,8 @@ export function PricingManagement({ organizationId, items, currency, mayManage }
         </>
       ) : (
         <div className="flex flex-col items-start gap-3 border-t border-border px-3 py-6 text-sm">
-          <p className="font-medium">No services priced yet.</p>
-          <p className="max-w-prose text-muted">Add each thing this business charges for — a name, a unit such as hour or visit, and a price. Quotes are built from these.</p>
+          <p className="font-medium">Nothing is priced yet.</p>
+          <p className="max-w-prose text-muted">Add a price item for each thing this business charges: a name, a unit such as hour or visit, and a price. Quoting a Work item copies these prices onto it; adding a price item does not create Work or a Work type.</p>
           {add}
         </div>
       )}
