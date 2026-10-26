@@ -998,6 +998,8 @@ It is not a separate ledger.
 
 ## Platform commercial model
 
+A **commercial capability** (a sellable item and its price, a quote, an invoice, a payment, and later a subscription, metered usage or prepaid balance) is owned by organization Finance and reused by every Organization, including GildOps selling its platform through its operating Organization (ADR-051). A **commercial record** is one Organization's instance of a capability and belongs to that Organization. The organization price book is a commercial capability; the platform capability registry below (Catalogue Products, Modules, Features, Plans) describes what the platform can enable and entitle, and is not a price book. Provider rates, costs and platform margin are never commercial capabilities.
+
 ### Catalogue Product
 
 **Definition:** A customer-facing commercial grouping of GildOps capability.
@@ -1753,7 +1755,7 @@ Examples:
 | integration for a file upload | File intake / Import |
 | provider connection | Provider Binding or tenant Connection, whichever is meant |
 | AI owns the action | AI proposes/invokes a domain-owned action |
-| Finance for GildOps SaaS billing | Platform commercial control plane |
+| Finance for GildOps SaaS billing | GildOps operating Organization Finance (seller side) and Business Settings → Plan & usage (buyer side); provider economics stay in the platform control plane (ADR-051) |
 | Overview as a workspace page type | Workspace Home |
 
 Legacy routes and symbols may retain legacy names until migrated safely.

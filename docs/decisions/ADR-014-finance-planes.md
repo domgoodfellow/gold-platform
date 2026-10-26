@@ -2,6 +2,7 @@
 
 **Recorded:** 2026-10-07
 **Status:** Accepted
+**Superseded in part by:** ADR-051 (who owns GildOps' own selling records; the separation of money directions and private provider economics stands)
 **Origin:** Formalizes architecture already present before the documentation reset; exact implementation history remains in Git.
 
 ## Context

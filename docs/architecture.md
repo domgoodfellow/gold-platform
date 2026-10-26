@@ -940,7 +940,7 @@ GildOps
 Provider
 ```
 
-Owned by Platform Administration.
+Owned by Platform Administration: provisioning, entitlement enforcement, providers, infrastructure and platform economics. Selling is not platform-owned: every Organization sells through organization Finance, and GildOps sells its platform through its operating Organization's Finance (ADR-051). The existing platform-billing tables remain in this plane, protected, until a reviewed migration.
 
 Shared concepts such as money, meter or payment provider do not justify merging the ledgers.
 

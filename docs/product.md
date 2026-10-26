@@ -288,7 +288,7 @@ A file format is not a Connection.
 
 #### Plan & usage
 
-Plan & usage represents the organization's commercial relationship with GildOps.
+Plan & usage represents the organization's commercial relationship with GildOps: the buyer's view of what it bought. The seller-side records belong to GildOps (ADR-051), and this view never exposes GildOps' provider costs or margin.
 
 It includes:
 
@@ -526,9 +526,9 @@ GildOps should meter normalized product concepts rather than make vendor-specifi
 
 ## Two finance planes
 
-GildOps contains two economic systems and they must remain separate.
+GildOps contains two economic systems and they must remain separate (ADR-014, ADR-051).
 
-### Tenant Finance
+### Organization Finance
 
 Direction:
 
@@ -536,34 +536,38 @@ Direction:
 customer → organization
 ```
 
-Tenant Finance owns:
+Organization Finance owns the reusable commercial capabilities every Organization sells with:
 
 - price book;
 - quotes;
 - invoices;
 - payments;
 - credits/adjustments;
-- work costs;
-- job economics.
+- work and supplier costs;
+- job economics;
+- later: subscriptions, recurring charges, metered usage and prepaid balances.
 
-### Platform commercial control plane
+Every Organization sells its own products and services through its own Finance. GildOps sells its platform the same way, through its operating Organization's Finance: the seller-side records of a GildOps sale belong there. Each seller's customers pay through that seller's own payment-processing relationship.
+
+### Platform control plane
 
 Direction:
 
 ```text
-organization → GildOps
 GildOps → provider
 ```
 
-Platform Administration owns:
+Platform Administration owns what only the platform may do or know:
 
-- Plans and Add-ons;
-- GildOps subscription billing;
-- retail usage pricing;
-- provider rates;
-- provider costs;
-- platform margin;
-- infrastructure economics.
+- tenant provisioning and global feature definitions;
+- entitlement enforcement;
+- provider accounts, provider rates and provider costs;
+- platform margin, package economics and infrastructure economics;
+- platform security and diagnostics.
+
+During transition, the existing platform-billing records (Plans and Add-ons, plan assignments and agreements, commercial terms, platform subscriptions and usage events) remain in Platform Administration, protected and unchanged, until a reviewed migration moves GildOps' selling onto its operating Organization's Finance.
+
+An Organization's purchase of GildOps is shown to that Organization under Business Settings → Plan & usage, never as its revenue.
 
 A Finance workspace must never become a back door into GildOps platform economics.
 

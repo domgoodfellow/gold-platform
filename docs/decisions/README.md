@@ -158,7 +158,7 @@ It is not a duplicate specification.
 | ADR-011 | Resource and Asset are role-based concepts | [`ADR-011-resource-asset.md`](ADR-011-resource-asset.md) |
 | ADR-012 | Settings has five independent scopes | [`ADR-012-settings-scopes.md`](ADR-012-settings-scopes.md) |
 | ADR-013 | Entitlement and authorization are independent | [`ADR-013-entitlement-authorization.md`](ADR-013-entitlement-authorization.md) |
-| ADR-014 | Tenant Finance and Platform commercial control are separate | [`ADR-014-finance-planes.md`](ADR-014-finance-planes.md) |
+| ADR-014 | Tenant Finance and Platform commercial control are separate. **Partly superseded by ADR-051** (GildOps' own selling records) | [`ADR-014-finance-planes.md`](ADR-014-finance-planes.md) |
 | ADR-015 | Providers sit behind capability adapters | [`ADR-015-provider-adapters.md`](ADR-015-provider-adapters.md) |
 | ADR-016 | Platform Provider infrastructure and tenant Connections are different axes | [`ADR-016-provider-vs-connections.md`](ADR-016-provider-vs-connections.md) |
 | ADR-017 | Files are artifacts and import sources, not Connections | [`ADR-017-files-not-connections.md`](ADR-017-files-not-connections.md) |
@@ -193,16 +193,7 @@ It is not a duplicate specification.
 | ADR-048 | The sidebar owns workspace navigation; the header owns page identity and actions. **Point 4 (header Calendar shortcut) superseded by ADR-050** | [`ADR-048-sidebar-owns-workspace-navigation.md`](ADR-048-sidebar-owns-workspace-navigation.md) |
 | ADR-049 | Explicit workspace Dashboard; supersedes ADR-047 point 1 | [`ADR-049-explicit-workspace-dashboard.md`](ADR-049-explicit-workspace-dashboard.md) |
 | ADR-050 | The organization header carries no workspace Calendar shortcut; supersedes ADR-048 point 4 | [`ADR-050-no-calendar-in-organization-header.md`](ADR-050-no-calendar-in-organization-header.md) |
-
-## Proposed
-
-Not yet accepted. Current canonical documents and the Accepted records above remain authoritative until the owner accepts or rejects these.
-
-| ID | Proposal | File |
-| --- | --- | --- |
-| ADR-051 | Commercial capabilities are reusable in tenant Finance; ledgers, settlement and platform authority stay separate. Would supersede ADR-014 in part on acceptance | [`ADR-051-reusable-commercial-capabilities.md`](ADR-051-reusable-commercial-capabilities.md) |
-
----
+| ADR-051 | Organization Finance owns reusable commercial capabilities; GildOps sells through its own Finance; supersedes ADR-014 in part | [`ADR-051-reusable-commercial-capabilities.md`](ADR-051-reusable-commercial-capabilities.md) |
 
 ## Adding a new decision
 
