@@ -35,11 +35,16 @@ export function DashboardEditingProvider({ children, available }: { children: Re
 }
 const StopContext = createContext<() => void>(() => {});
 
-/** The header control. Absent when there is nothing this person could arrange. */
-export function CustomizeDashboardButton() {
+/** Whether customizing is available, and how to start it — for a menu that offers it on narrow screens. */
+export function useDashboardEditing() {
+  return useContext(EditingContext);
+}
+
+/** The header control. Absent when there is nothing this person could arrange. `className` lets a header hide it where a menu offers it instead. */
+export function CustomizeDashboardButton({ className }: { className?: string }) {
   const context = useContext(EditingContext);
   if (!context?.available) return null;
-  return <Button type="button" tone="secondary" size="small" aria-pressed={context.editing} disabled={context.editing} onClick={context.start}><LayoutGrid aria-hidden className="size-4" /><span className="max-sm:sr-only">Customize dashboard</span></Button>;
+  return <Button type="button" tone="secondary" size="small" className={className} aria-pressed={context.editing} disabled={context.editing} onClick={context.start}><LayoutGrid aria-hidden className="size-4" />Customize dashboard</Button>;
 }
 
 // Container-width breakpoints, written out so every class exists at build time.
@@ -174,7 +179,7 @@ function DashboardWidget({ placement, definition, content, className, editing, m
   // A plain container: each widget's content names itself (a panel title or chart heading), so landmarks are not doubled.
   return <div ref={ref} data-widget-id={placement.id} data-span={placement.span}
     onClick={editing ? onSelect : undefined} onFocus={editing ? onSelect : undefined}
-    className={cx(className, 'relative min-w-0', editing && 'rounded-[var(--visual-radius,0.625rem)] outline-2 outline-offset-4', editing && (selected ? 'outline outline-accent' : 'outline outline-dashed outline-border'), drag === 'move' && 'opacity-60')}>
+    className={cx(className, 'relative flex min-w-0 flex-col', editing && 'rounded-[var(--visual-radius,0.625rem)] outline-2 outline-offset-4', editing && (selected ? 'outline outline-accent' : 'outline outline-dashed outline-border'), drag === 'move' && 'opacity-60')}>
     {editing ? <div role="group" aria-label={`Arrange ${definition.label}`} className="mb-2 flex flex-wrap items-center gap-1.5 rounded-[var(--visual-radius,0.625rem)] bg-secondary px-2 py-1.5 text-xs">
       {mode !== 'narrow' ? <button type="button" aria-label={`Drag to move ${definition.label}`} title="Drag to move" className={cx('cursor-grab touch-none rounded p-1 hover:bg-hover active:cursor-grabbing', FOCUS_RING)}
         onPointerDown={event => { event.currentTarget.setPointerCapture(event.pointerId); setDrag('move'); }} onPointerUp={moveEnd} onPointerCancel={() => setDrag(null)}><GripVertical aria-hidden className="size-4" /></button> : null}
@@ -190,7 +195,8 @@ function DashboardWidget({ placement, definition, content, className, editing, m
       {definition.densities ? <SelectInput size="small" aria-label={`Row density of ${definition.label}`} value={placement.density} onChange={event => onLayout(layout => setWidgetOption(layout, registry, placement.id, { density: event.target.value as WidgetDensity }))} className="w-32">{definition.densities.map(density => <option key={density} value={density}>{density === 'compact' ? 'Compact rows' : 'Comfortable rows'}</option>)}</SelectInput> : null}
       {definition.hideable ? <Button type="button" size="tiny" tone="ghost" aria-label={`Hide ${definition.label}`} onClick={() => onLayout(layout => setWidgetOption(layout, registry, placement.id, { hidden: true }))}><EyeOff aria-hidden className="size-3.5" />Hide</Button> : null}
     </div> : null}
-    <div className={cx(editing && 'pointer-events-auto')}>{body}</div>
+    {/* The body fills the cell, so panels sharing a row end at the same line. */}
+    <div className="flex min-h-0 flex-1 flex-col [&>*]:flex-1">{body}</div>
     {editing && pointerResize && definition.spans.length > 1 ? <button type="button" aria-label={`Resize ${definition.label}, currently ${SPAN_LABEL[placement.span as WidgetSpan]}. Use left and right arrows.`}
       className={cx('absolute -right-3 top-1/2 z-10 flex h-12 w-5 -translate-y-1/2 cursor-ew-resize touch-none items-center justify-center rounded border border-accent bg-surface shadow', FOCUS_RING)}
       onPointerDown={resizeStart} onPointerMove={resizeMove} onPointerUp={resizeEnd} onPointerCancel={resizeEnd} onLostPointerCapture={resizeEnd} onKeyDown={resizeKeys}><MoveHorizontal aria-hidden className="size-3.5" /></button> : null}

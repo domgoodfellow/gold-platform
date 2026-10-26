@@ -27,8 +27,8 @@ export const lineItem = (line: PricedLine, tone?: LineItem['tone']): LineItem =>
  * amount is never sent, and later price changes never reach it. Fuller review stays on the Work
  * item's Financials.
  */
-export function QuoteDialog({ organizationId, workItemId, tone, size, initiallyOpen, label = 'New quote', ariaLabel, mayCreateWork = false, mayManageCatalog = false }: TransactionTriggerProps & { mayCreateWork?: boolean; mayManageCatalog?: boolean }) {
-  return <TransactionDialog label={label} icon={<Plus aria-hidden className="size-4" />} tone={tone} size={size} initiallyOpen={initiallyOpen} ariaLabel={ariaLabel}>
+export function QuoteDialog({ organizationId, workItemId, tone, size, initiallyOpen, label = 'New quote', ariaLabel, open, onOpenChange, trigger, mayCreateWork = false, mayManageCatalog = false }: TransactionTriggerProps & { mayCreateWork?: boolean; mayManageCatalog?: boolean }) {
+  return <TransactionDialog label={label} icon={<Plus aria-hidden className="size-4" />} tone={tone} size={size} initiallyOpen={initiallyOpen} ariaLabel={ariaLabel} open={open} onOpenChange={onOpenChange} trigger={trigger}>
     {close => <QuoteBody organizationId={organizationId} workItemId={workItemId} mayCreateWork={mayCreateWork} mayManageCatalog={mayManageCatalog} close={close} />}
   </TransactionDialog>;
 }

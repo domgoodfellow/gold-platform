@@ -47,7 +47,10 @@ test.describe('tenant Finance workspace', () => {
     await page.getByRole('link', { name: 'Catalog & Pricing', exact: true }).first().click();
     await expect(page).toHaveURL(`/organizations/${organizationId}/finance/catalog`);
     await page.goto(`/organizations/${organizationId}/finance`);
-    await page.getByRole('main').getByRole('link', { name: 'Payments & currency', exact: true }).click();
+    // Wide headers show the Configure link inline; narrower ones (this run's 1280px) offer it in More.
+    const inline = page.getByRole('main').getByRole('link', { name: 'Payments & currency', exact: true }).filter({ visible: true });
+    if (await inline.count()) await inline.click();
+    else { await page.getByRole('button', { name: 'More finance actions' }).click(); await page.getByRole('menuitem', { name: 'Payments & currency' }).click(); }
     await expect(page).toHaveURL(`/organizations/${organizationId}/finance/configuration/pricing`);
     await expect(page.getByRole('heading', { name: 'Payments & currency', level: 1 })).toBeAttached();
   });

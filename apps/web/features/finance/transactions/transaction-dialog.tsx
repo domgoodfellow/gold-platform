@@ -15,6 +15,11 @@ export type TransactionTriggerProps = {
   label?: string;
   /** A row's trigger names its record, e.g. "Record payment for invoice #4". */
   ariaLabel?: string;
+  /** Controlled opening, for a dialog launched from a menu that closes as the dialog opens. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** False when something else (a menu item) opens the dialog. */
+  trigger?: boolean;
 };
 
 /**
@@ -22,13 +27,16 @@ export type TransactionTriggerProps = {
  * while open, so every opening starts from the record and nothing typed in a closed dialog lingers.
  * Focus returns to the button on close; unsaved input asks before it is discarded.
  */
-export function TransactionDialog({ label, icon, tone = 'secondary', size = 'small', initiallyOpen = false, ariaLabel, children }: {
+export function TransactionDialog({ label, icon, tone = 'secondary', size = 'small', initiallyOpen = false, ariaLabel, open: controlled, onOpenChange, trigger = true, children }: {
   label: string; icon?: ReactNode; tone?: ButtonTone; size?: 'tiny' | 'small' | 'default'; initiallyOpen?: boolean; ariaLabel?: string;
+  open?: boolean; onOpenChange?: (open: boolean) => void; trigger?: boolean;
   children: (close: () => void) => ReactNode;
 }) {
-  const [open, setOpen] = useState(initiallyOpen);
+  const [own, setOwn] = useState(initiallyOpen);
+  const open = controlled ?? own;
+  const setOpen = (next: boolean) => { if (controlled === undefined) setOwn(next); onOpenChange?.(next); };
   return <>
-    <Button type="button" tone={tone} size={size} aria-label={ariaLabel} onClick={() => setOpen(true)}>{icon}{label}</Button>
+    {trigger ? <Button type="button" tone={tone} size={size} aria-label={ariaLabel} onClick={() => setOpen(true)}>{icon}{label}</Button> : null}
     <GuardedDialog open={open} onOpenChange={setOpen}>{open ? children(() => setOpen(false)) : null}</GuardedDialog>
   </>;
 }

@@ -24,8 +24,8 @@ const readable = (day: string) => new Intl.DateTimeFormat('en-CA', { timeZone: '
  * the invoice, freezes its lines and refuses a second invoice for the same Work. The server also
  * refuses an issue that did not come through the confirmation step.
  */
-export function InvoiceDialog({ organizationId, workItemId, tone, size, initiallyOpen, label = 'New invoice', ariaLabel, today }: TransactionTriggerProps & { today: string }) {
-  return <TransactionDialog label={label} icon={<FileText aria-hidden className="size-4" />} tone={tone} size={size} initiallyOpen={initiallyOpen} ariaLabel={ariaLabel}>
+export function InvoiceDialog({ organizationId, workItemId, tone, size, initiallyOpen, label = 'New invoice', ariaLabel, open, onOpenChange, trigger, today }: TransactionTriggerProps & { today: string }) {
+  return <TransactionDialog label={label} icon={<FileText aria-hidden className="size-4" />} tone={tone} size={size} initiallyOpen={initiallyOpen} ariaLabel={ariaLabel} open={open} onOpenChange={onOpenChange} trigger={trigger}>
     {close => <InvoiceBody organizationId={organizationId} workItemId={workItemId} today={today} close={close} />}
   </TransactionDialog>;
 }

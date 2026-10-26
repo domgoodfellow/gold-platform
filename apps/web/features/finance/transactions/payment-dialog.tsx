@@ -29,8 +29,8 @@ function amountMinor(raw: string, currency: string): number | null {
  * history is append-only — and a manual entry claims nothing about a payment processor. Recording
  * is the existing `record_payment` through `financeMutation`.
  */
-export function PaymentDialog({ organizationId, workItemId, tone, size, initiallyOpen, label = 'Record payment', ariaLabel, today, entry = 'receipt' }: TransactionTriggerProps & { today: string; entry?: Entry }) {
-  return <TransactionDialog label={label} icon={<CreditCard aria-hidden className="size-4" />} tone={tone} size={size} initiallyOpen={initiallyOpen} ariaLabel={ariaLabel}>
+export function PaymentDialog({ organizationId, workItemId, tone, size, initiallyOpen, label = 'Record payment', ariaLabel, open, onOpenChange, trigger, today, entry = 'receipt' }: TransactionTriggerProps & { today: string; entry?: Entry }) {
+  return <TransactionDialog label={label} icon={<CreditCard aria-hidden className="size-4" />} tone={tone} size={size} initiallyOpen={initiallyOpen} ariaLabel={ariaLabel} open={open} onOpenChange={onOpenChange} trigger={trigger}>
     {close => <PaymentBody organizationId={organizationId} workItemId={workItemId} today={today} initialEntry={entry} close={close} />}
   </TransactionDialog>;
 }

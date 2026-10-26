@@ -141,8 +141,9 @@ test.describe('Finance operating journey', () => {
     await page.goto(finance);await page.getByLabel('Reporting month',{exact:true}).fill('2025-12');await page.getByRole('button',{name:'Apply',exact:true}).click();await expect(page).toHaveURL(/month=2025-12/);await expect(page.getByLabel('Reporting month',{exact:true})).toHaveValue('2025-12');await expect(page.getByRole('link',{name:/Payments received None this month/})).toBeVisible();
     await expect(page.getByRole('searchbox',{name:'Search Finance',exact:true})).toHaveCount(0);await page.goto(`${finance}/search?q=Vertex`);await expect(page.getByRole('link',{name:'Vertex HVAC',exact:true}).filter({visible:true}).first()).toBeVisible();
     for(const width of [768,390]) { await page.setViewportSize({width,height:1000});await page.goto(finance);await expect(page.getByRole('heading',{name:'Dashboard',level:1,exact:true})).toBeAttached();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);await page.screenshot({path:testInfo.outputPath(`finance-populated-${width}.png`),fullPage:true,caret:'initial'});await page.getByRole('region',{name:'Financial activity',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath(`finance-populated-${width}-lower.png`),fullPage:true,caret:'initial'}); }
-    await page.getByRole('button',{name:'Record payment',exact:true}).first().scrollIntoViewIfNeeded();
-    await page.getByRole('button',{name:'Record payment',exact:true}).first().click();
+    // Finance V2.1: on a phone, Record payment is in the More menu.
+    await page.getByRole('button',{name:'More finance actions'}).click();
+    await page.getByRole('menuitem',{name:'Record payment'}).click();
     dialog = page.getByRole('dialog',{name:'Record payment',exact:true});
     await dialog.getByLabel('Search invoices').fill('Vertex');
     await choose(dialog,/Vertex HVAC/);
@@ -155,6 +156,7 @@ test.describe('Finance operating journey', () => {
     const organization = (await getOrganization(owner,organizationId))!;
     await updateOrganization(owner,{id:organizationId,name:organization.name,timezone:organization.timezone,bufferMinutes:organization.bufferMinutes,slug:organization.slug,currency:'USD'});
     await page.goto(`${finance}/catalog`);
+    await page.waitForLoadState('networkidle');
     await expect(page.getByText('Priced in CAD')).toBeVisible();
     await page.getByRole('button',{name:'Edit Service inspection',exact:true}).click();
     row = page.getByRole('form',{name:'Edit Service inspection',exact:true});

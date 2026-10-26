@@ -19,6 +19,10 @@ import { formatMoney } from '../lib/domain/work-items/consumption';
 const OUT = path.join(__dirname, '..', '..', '..', '.artifacts', 'finance-v21', 'after');
 const VIEWPORTS = [{ name: 'phone', width: 390, height: 844 }, { name: 'tablet', width: 768, height: 1024 }, { name: 'compact', width: 1024, height: 800 }, { name: 'desktop', width: 1440, height: 900 }] as const;
 const shot = (page: Page, name: string) => page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: true });
+/** The app scrolls inside its own container, so a whole composition is captured with a tall window at the same width. */
+const tallShot = async (page: Page, name: string) => { const size = page.viewportSize()!; await page.setViewportSize({ width: size.width, height: 2600 }); await page.waitForTimeout(300); await shot(page, name); await page.setViewportSize(size); };
+/** The header's controls: everything in the page's own header row above the dashboard. */
+const headerTops = (page: Page) => page.locator('[data-slot="workspace-intro"] button:visible, [data-slot="workspace-intro"] input:visible, [data-slot="workspace-intro"] a:visible').evaluateAll(nodes => [...new Set(nodes.map(node => { const box = node.getBoundingClientRect(); return Math.round((box.top + box.height / 2) / 16); }))]);
 const fits = async (page: Page, label: string) => expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), `${label} scrolls sideways`).toBe(true);
 const widget = (page: Page, id: string) => page.locator(`[data-widget-id="${id}"]`);
 const tableRows = async (page: Page, id: string) => { await expect(widget(page, id).getByRole('table').getByRole('row').nth(1)).toBeVisible(); return widget(page, id).getByRole('table').getByRole('row').evaluateAll(rows => rows.slice(1).map(row => [...row.querySelectorAll('th, td')].map(cell => cell.textContent?.trim()))); };
@@ -52,7 +56,13 @@ test.describe.serial('Finance V2.1', () => {
       const month = startOfMonth(todayInZone(ZONE));
       const summary = await readFinanceSummary(owner.db, fx.organizationId, month, shiftMonth(month, 1));
       // Payments received, as a table, equals the summary's CAD trend (net of the correction).
+      // The same values as a line, as bars and as a table.
+      await widget(page, 'payments-trend').screenshot({ path: path.join(OUT, 'chart-payments-line.png') });
+      await widget(page, 'payments-trend').getByLabel('Payments received presentation').selectOption('bar');
+      await widget(page, 'payments-trend').screenshot({ path: path.join(OUT, 'chart-payments-bar-negative-correction.png') });
+      await widget(page, 'aging').screenshot({ path: path.join(OUT, 'chart-receivables-aging.png') });
       await widget(page, 'payments-trend').getByLabel('Payments received presentation').selectOption('table');
+      await widget(page, 'payments-trend').screenshot({ path: path.join(OUT, 'chart-payments-table.png') });
       const trend = summary.trend.filter(row => row.currency === 'CAD').sort((a, b) => a.day.localeCompare(b.day)).map(row => formatMoney(Number(row.amount), 'CAD'));
       expect((await tableRows(page, 'payments-trend')).map(row => row[1])).toEqual(trend);
       expect(trend.some(value => value.startsWith('-'))).toBe(true);
@@ -87,10 +97,41 @@ test.describe.serial('Finance V2.1', () => {
         for (const [name, organizationId] of [['populated', fx.organizationId], ['new', empty]] as const) {
           await page.goto(`/organizations/${organizationId}/finance`);
           await expect(page.getByRole('heading', { level: 1 })).toBeAttached();
+          await page.waitForLoadState('networkidle');
           await fits(page, `${name} ${viewport.name}`);
-          await shot(page, `dashboard-${name}-${viewport.name}`);
+          await tallShot(page, `dashboard-${name}-${viewport.name}`);
+        }
+        // The populated header stays one row up to wide desktop; secondary actions move into More below it.
+        await page.goto(`/organizations/${fx.organizationId}/finance`);
+        await page.waitForLoadState('networkidle');
+        expect((await headerTops(page)).length, `${viewport.name} header rows`).toBe(1);
+        await expect(page.getByLabel('Reporting month')).toBeVisible();
+        if (viewport.name !== 'phone') await expect(page.getByRole('button', { name: 'Customize dashboard' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'New invoice' })).toBeVisible();
+        if (viewport.width < 1360) {
+          await expect(page.getByRole('button', { name: 'New quote' }).filter({ visible: true })).toHaveCount(0);
+          await page.getByRole('button', { name: 'More finance actions' }).click();
+          await expect(page.getByRole('menuitem', { name: 'Record payment' })).toBeVisible();
+          await expect(page.getByRole('menuitem', { name: 'Payments & currency' })).toBeVisible();
+          // On a phone, Customize dashboard is offered here instead of in the header row.
+          await expect(page.getByRole('menuitem', { name: 'Customize dashboard' })).toHaveCount(viewport.name === 'phone' ? 1 : 0);
+          await page.keyboard.press('Escape');
+        } else {
+          await expect(page.getByRole('button', { name: 'More finance actions' }).filter({ visible: true })).toHaveCount(0);
+          await expect(page.getByRole('button', { name: 'New quote' }).filter({ visible: true })).toHaveCount(1);
         }
       }
+      // A secondary action opened from More is the same dialog, and focus returns to More.
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(`/organizations/${fx.organizationId}/finance`);
+      await page.waitForLoadState('networkidle');
+      await page.getByRole('button', { name: 'More finance actions' }).click();
+      await page.getByRole('menuitem', { name: 'New quote' }).click();
+      await expect(page.getByRole('dialog', { name: 'New quote' })).toBeVisible();
+      await shot(page, 'quote-dialog-from-more-phone');
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog', { name: 'New quote' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'More finance actions' })).toBeFocused();
       // Desktop with the sidebar collapsed: the dashboard container widens and the grid follows it.
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto(`/organizations/${fx.organizationId}/finance`);
@@ -194,7 +235,9 @@ test.describe.serial('Finance V2.1', () => {
       await expect(widget(page, 'invoice-status')).toHaveCount(1);
       await page.setViewportSize({ width: 390, height: 844 });
       await page.reload();
-      await page.getByRole('button', { name: 'Customize dashboard' }).click();
+      await page.waitForLoadState('networkidle');
+      await page.getByRole('button', { name: 'More finance actions' }).click();
+      await page.getByRole('menuitem', { name: 'Customize dashboard' }).click();
       await expect(page.getByRole('toolbar', { name: 'Customize dashboard' })).toContainText('every widget is full width on this screen');
       await expect(page.getByRole('button', { name: /^Resize / })).toHaveCount(0);
       await expect(page.getByRole('button', { name: /^Drag to move/ })).toHaveCount(0);

@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, Banknote, CheckCircle2, CircleCheck, ClipboardList, FileText, Tag, Undo2 } from 'lucide-react';
-import { Button, ButtonLink } from '@/components/controls/button';
-import { TextInput } from '@/components/controls/inputs';
+import { ButtonLink } from '@/components/controls/button';
 import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { MetricTile, OperationalPanel, PanelState } from '@/components/operational/primitives';
 import { cx } from '@/components/class-names';
@@ -15,7 +14,10 @@ import type { FinanceOperating } from '@/lib/application/finance/operating';
 import { DUE_SOON_DAYS } from '@/lib/application/finance/operating';
 import type { CurrencyAmount } from '@/lib/domain/billing/finance-reads';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
-import { CustomizeDashboardButton, DashboardEditingProvider, DashboardLayoutGrid, type DashboardWidgetContent } from '@/components/dashboard/dashboard-layout';
+import { DashboardEditingProvider, DashboardLayoutGrid, type DashboardWidgetContent } from '@/components/dashboard/dashboard-layout';
+import type { ConfigureItem } from '@/lib/navigation';
+import { FinanceHeaderActions } from './finance-header-actions';
+import { FinancePeriod } from './finance-period';
 import { FINANCE_WIDGETS, readableFinanceWidgets } from '@/lib/application/finance/dashboard-widgets';
 import { agingCharts, invoiceStatusChart, paymentsTrendCharts, performanceCharts } from '@/lib/application/finance/dashboard-charts';
 import type { StoredDashboardLayout } from '@/lib/domain/preferences/dashboard-layouts';
@@ -33,7 +35,7 @@ function Amounts({ values, empty }: { values: CurrencyAmount[]; empty: string })
  * Work, invoice or payment it offers a starting path instead of zero-valued figures. Entitlement
  * decides whether billing applies at all; capabilities decide which actions and amounts appear.
  */
-export function FinanceHome({ organizationId, timezone, today, data, capabilities, configure, layout }: { organizationId: string; timezone: string; today: string; data: FinanceOperating; capabilities: readonly string[]; configure?: ReactNode; layout: StoredDashboardLayout }) {
+export function FinanceHome({ organizationId, timezone, today, data, capabilities, configure, configureItems = [], layout }: { organizationId: string; timezone: string; today: string; data: FinanceOperating; capabilities: readonly string[]; configure?: ReactNode; configureItems?: ConfigureItem[]; layout: StoredDashboardLayout }) {
   const base = `/organizations/${organizationId}`, finance = `${base}/finance`;
   const { summary, open, overdue, dueSoon, quotes, period } = data;
   const has = (cap: string) => capabilities.includes(cap);
@@ -74,7 +76,7 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
   ].filter(category => category.count > 0);
 
   // The reporting period governs payments received and the period charts; receivables stay current.
-  const periodControl = reports ? <form method="get" action={finance} className="flex items-center gap-1"><TextInput aria-label="Reporting month" name="month" type="month" defaultValue={period.month} size="small" className="w-36" /><Button type="submit" tone="text" size="small">Apply</Button></form> : null;
+  const periodControl = reports ? <FinancePeriod action={finance} month={period.month} /> : null;
   const readable = readableFinanceWidgets({ billingEnabled: data.billingEnabled, capabilities });
   const periodLabel = monthLabel;
   const overview = <div className="@container min-w-0">
@@ -104,7 +106,8 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
     } : {}),
   };
   return <DashboardEditingProvider available>
-    <WorkspaceHome title="Finance" actions={<>{periodControl}<CustomizeDashboardButton />{actions}</>}>
+    <WorkspaceHome title="Finance" actions={<FinanceHeaderActions organizationId={organizationId} today={today} period={periodControl} configure={configure} configureItems={configureItems}
+      mayQuote={may('work_item.price')} mayRecord={may('payment.record')} mayInvoice={may('invoice.issue')} mayCreateWork={has('work_item.create')} mayManageCatalog={mayManageCatalog} />}>
       <DashboardLayoutGrid label="Finance dashboard" registry={FINANCE_WIDGETS} saved={layout} readable={[...readable]} widgets={widgets}
         onSave={saveFinanceDashboardLayout.bind(null, organizationId)} onReset={resetFinanceDashboardLayout.bind(null, organizationId)} />
     </WorkspaceHome>

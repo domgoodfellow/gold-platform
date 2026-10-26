@@ -51,6 +51,8 @@ describe('every presentation shows the same values', () => {
     expect(container.querySelectorAll('[aria-roledescription="chart"] svg > rect:not([opacity="0.05"])').length).toBe(5);
     // The second series is hatched as well as tinted, so it never differs by colour alone.
     expect(container.querySelectorAll('[aria-roledescription="chart"] svg > rect[fill^="url(#"]').length).toBe(2);
+    // Written where the bar would start, so it cannot be mistaken for a recorded zero.
+    expect([...plotSvg(container)!.querySelectorAll('text')].some(text => text.textContent === 'Unknown')).toBe(true);
     fireEvent.click(screen.getByText('View as table'));
     expect(cells(screen.getByRole('table'))[1]).toEqual(['Maple Dental', 'CA$443.00', 'Unknown']);
   });

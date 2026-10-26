@@ -36,7 +36,7 @@ function useSize<T extends HTMLElement>() {
 /** A chart's frame: what it shows, for which period and unit, its controls, and its state. */
 export function ChartFrame({ title, data, controls, state = { status: 'ready' }, children, headingLevel = 3 }: { title: ReactNode; data: Pick<ChartData, 'period' | 'format'>; controls?: ReactNode; state?: ChartState; children: ReactNode; headingLevel?: 2 | 3 }) {
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
-  return <figure data-slot="chart" className="m-0 flex min-w-0 flex-col gap-2">
+  return <figure data-slot="chart" className="@container m-0 flex min-w-0 flex-col gap-2">
     <div className="flex flex-wrap items-start justify-between gap-2">
       <figcaption className="min-w-0"><Heading className="text-sm font-semibold">{title}</Heading><p className="text-xs text-muted">{data.period} · {describeFormat(data.format)}</p></figcaption>
       {controls ? <div className="flex flex-wrap items-center gap-2">{controls}</div> : null}
@@ -125,11 +125,13 @@ export function CartesianChart({ title, data, presentation, height = 'standard' 
     if (count > 1 && !shownX.has(count - 1)) { const half = textWidth(count - 1) / 2; const previous = Math.max(...[...shownX].filter(row => centre(row) + textWidth(row) / 2 > centre(count - 1) - half)); if (Number.isFinite(previous)) shownX.delete(previous); shownX.add(count - 1); }
   }
   const bars: (Geometry & { series: number; row: number; negative: boolean })[] = [];
+  // An unknown value draws no bar; it is written as Unknown where its bar would start, so it never reads as zero.
+  const unknowns: { series: number; row: number }[] = [];
   if (presentation !== 'line') data.categories.forEach((_, row) => {
     let offset = 0;
     data.series.forEach((series, index) => {
       const value = series.points[row]?.value;
-      if (value === null || value === undefined) return;
+      if (value === null || value === undefined) { if (value === null) unknowns.push({ series: index, row }); return; }
       // Bars stay readable but never slab-like when there are only a few categories.
       const thickness = Math.min(stacked ? slot * 0.7 : (slot * 0.75) / data.series.length, 28);
       const start = stacked ? valuePos(offset) : zero, end = valuePos(stacked ? offset + Math.max(0, value) : value);
@@ -179,12 +181,17 @@ export function CartesianChart({ title, data, presentation, height = 'standard' 
         {active !== null ? (horizontal ? <rect x={margin.left} y={centre(active) - slot / 2} width={plotW} height={slot} fill="var(--foreground)" opacity="0.05" />
           : <rect x={centre(active) - slot / 2} y={margin.top} width={slot} height={plotH} fill="var(--foreground)" opacity="0.05" />) : null}
         {bars.map(bar => <rect key={`${bar.series}-${bar.row}`} x={bar.x} y={bar.y} width={Math.max(bar.w, bar.w === 0 ? 0 : 1)} height={Math.max(bar.h, bar.h === 0 ? 0 : 1)} fill={barFill(bar.series)} opacity={active === null || active === bar.row ? 1 : 0.55} stroke={bar.series === 0 ? 'var(--surface, var(--background))' : seriesColor(bar.series)} strokeWidth={stacked || bar.series > 0 ? 1 : 0} />)}
+        {unknowns.map(({ series, row }) => { const thickness = Math.min((slot * 0.75) / data.series.length, 28); const across = centre(row) - (thickness * data.series.length) / 2 + thickness * series + thickness / 2;
+          return horizontal ? <text key={`u-${series}-${row}`} x={zero + 4} y={across + 4} fontSize="11" fill="currentColor" fontStyle="italic">Unknown</text>
+            : <text key={`u-${series}-${row}`} x={across} y={zero - 4} fontSize="10" textAnchor="middle" fill="currentColor" fontStyle="italic">?</text>; })}
         {presentation === 'line' ? data.series.map((series, index) => {
           const segments: string[] = []; let open = false;
           series.points.forEach((point, row) => { if (point.value === null) { open = false; return; } segments.push(`${open ? 'L' : 'M'}${centre(row)},${valuePos(point.value)}`); open = true; });
           return <g key={series.id}>
             <path d={segments.join(' ')} fill="none" stroke={seriesColor(index)} strokeWidth="2" strokeDasharray={seriesDash(index)} strokeLinejoin="round" />
             {series.points.map((point, row) => point.value === null ? null : <Marker key={row} shape={MARKERS[index % MARKERS.length]} x={centre(row)} y={valuePos(point.value)} color={seriesColor(index)} size={active === row ? 4.5 : 3} />)}
+            {/* A single recorded day draws no line, so its exact value is written beside its point. */}
+            {count === 1 && series.points[0]?.value !== null ? <text x={centre(0) + 8} y={valuePos(series.points[0].value!) + 4} fontSize="12" fill="var(--foreground)">{series.points[0].label}</text> : null}
           </g>;
         }) : null}
       </svg> : null}
@@ -218,7 +225,7 @@ export function PartsBar({ title, data }: { title: string; data: ChartData }) {
     <div role="img" aria-label={`${title}: ${data.categories.map((category, row) => `${category.label} ${points[row]?.label}`).join(', ')}`} className="flex h-6 w-full overflow-hidden rounded-sm border border-border">
       {points.map((point, row) => { const share = total ? Math.max(0, point.value ?? 0) / total : 0; return share > 0 ? <span key={row} className="h-full border-r border-[var(--surface,var(--background))] last:border-r-0" style={{ width: `${share * 100}%`, background: row % 2 ? `repeating-linear-gradient(45deg, ${seriesColor(row)} 0 3px, transparent 3px 6px)` : seriesColor(row) }} /> : null; })}
     </div>
-    <ul aria-hidden className="grid gap-1 text-xs sm:grid-cols-2">{data.categories.map((category, row) => <li key={category.key} className="flex items-center justify-between gap-3">
+    <ul aria-hidden className="grid gap-x-8 gap-y-1 text-xs @min-[28rem]:grid-cols-2">{data.categories.map((category, row) => <li key={category.key} className="flex items-center justify-between gap-3">
       <span className="flex min-w-0 items-center gap-1.5"><span className="size-2.5 shrink-0 border" style={{ borderColor: seriesColor(row), background: row % 2 ? `repeating-linear-gradient(45deg, ${seriesColor(row)} 0 2px, transparent 2px 4px)` : seriesColor(row) }} /><span className="truncate">{category.label}</span></span>
       <span className="tabular-nums">{points[row]?.label}</span>
     </li>)}</ul>

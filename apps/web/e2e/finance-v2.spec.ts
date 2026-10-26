@@ -227,7 +227,10 @@ test.describe.serial('Finance V2.0', () => {
       // Phone: the dialog scrolls inside, its actions stay on screen, nothing scrolls sideways.
       await page.setViewportSize({ width: 390, height: 844 });
       await page.goto(`/organizations/${fx.organizationId}/finance`);
-      await main(page).getByRole('button', { name: 'Record payment' }).click();
+      await page.waitForLoadState('networkidle');
+      // Finance V2.1: on a phone, secondary actions are in the More menu.
+      await page.getByRole('button', { name: 'More finance actions' }).click();
+      await page.getByRole('menuitem', { name: 'Record payment' }).click();
       dialog = page.getByRole('dialog', { name: 'Record payment' });
       await choose(dialog, /Invoice #1/);
       await dialog.getByLabel('Amount (CAD)').fill('10');
@@ -242,8 +245,10 @@ test.describe.serial('Finance V2.0', () => {
       const survey = await createWorkItem(owner.db, { organizationId: fx.organizationId, statusId: fx.statusId, title: 'Rooftop survey' });
       await addPricedLine(owner.db, { workItemId: survey, priceBookItemId: fx.prices.visit, quantity: 1 });
       await page.reload();
+      await page.waitForLoadState('networkidle');
       for (const [label, name] of [['New invoice', 'invoice'], ['New quote', 'quote']] as const) {
-        await main(page).getByRole('button', { name: label }).click();
+        if (label === 'New quote') { await page.getByRole('button', { name: 'More finance actions' }).click(); await page.getByRole('menuitem', { name: label }).click(); }
+        else await main(page).getByRole('button', { name: label }).click();
         await page.getByRole('dialog', { name: label }).locator('label').filter({ has: page.getByRole('radio') }).first().click();
         await page.waitForTimeout(600);
         await fits(page, `${name} dialog phone`);
