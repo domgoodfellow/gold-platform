@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { OWNER_STORAGE_STATE } from './helpers';
+import { COLLEAGUE_STORAGE_STATE, OWNER_STORAGE_STATE, loadDemoContext } from './helpers';
 import { populateFinanceBusiness, provisionFinanceBusiness, signInOwner, type FinanceFixture } from './finance-fixtures';
 import { assertCapturable, guardedShot } from './visual-guard';
 
@@ -30,7 +30,7 @@ async function headerAction(page: Page, name: string) {
 const count = async (db: SupabaseClient, table: string, organizationId: string) => (await db.from(table).select('id', { count: 'exact', head: true }).eq('organization_id', organizationId)).count;
 
 let owner: { db: SupabaseClient; userId: string; ownerEmail: string };
-let fx: FinanceFixture; let empty: string;
+let fx: FinanceFixture; let empty: string; let fresh: string;
 
 test.describe.serial('Finance structural correction', () => {
   test.beforeAll(async () => {
@@ -39,6 +39,7 @@ test.describe.serial('Finance structural correction', () => {
     const run = Date.now().toString(36);
     fx = await populateFinanceBusiness(owner.db, await provisionFinanceBusiness(owner, `Finance structure ${run}`));
     empty = await provisionFinanceBusiness(owner, `Finance structure empty ${run}`);
+    fresh = await provisionFinanceBusiness(owner, `Finance structure fresh ${run}`);
   });
 
   test('the capture guard refuses a signed-out page and a refused page', async ({ browser }) => {
@@ -46,7 +47,39 @@ test.describe.serial('Finance structural correction', () => {
     const page = await signedOut.newPage();
     await page.goto(`/organizations/${fx.organizationId}/finance`);
     await expect(assertCapturable(page, { url: `/organizations/${fx.organizationId}/finance`, content: page.getByRole('main') })).rejects.toThrow(/Refusing to capture/);
+    // The old payments address gives a signed-out visitor nothing but the sign-in page.
+    await page.goto(`/organizations/${fx.organizationId}/finance/configuration/pricing#getting-paid`);
+    await expect(page).toHaveURL(/\/login/);
+    await expect(page.getByText('Getting paid')).toHaveCount(0);
     await signedOut.close();
+  });
+
+  test.describe('reduced-role colleague', () => {
+    test.use({ storageState: COLLEAGUE_STORAGE_STATE });
+
+    test('the old addresses refuse another business and show no payment settings without permission', async ({ page }) => {
+      // Not a member of this business: the redirect is refused, never forwarded to its settings.
+      // The payments address is a plain HTTP redirect: a non-member gets 404 and no Location.
+      const direct = await page.request.get(`/organizations/${fx.organizationId}/finance/configuration/pricing`, { maxRedirects: 0 });
+      expect(direct.status()).toBe(404);
+      expect(direct.headers()['location']).toBeUndefined();
+      expect(await direct.text()).not.toContain('Getting paid');
+      for (const old of ['finance/configuration/pricing#getting-paid', 'finance/configuration']) {
+        await page.goto(`/organizations/${fx.organizationId}/${old}`);
+        await expect(page).not.toHaveURL(/\/settings\/general/);
+        await expect(page.getByText('Getting paid')).toHaveCount(0);
+        await expect(page.getByText(fx.organizationId)).toHaveCount(0);
+      }
+      // The landing address renders the application's own refusal for a business they do not belong to.
+      await expect(page.getByText('This business is not available')).toBeVisible();
+      // Their own business: they land on General, which offers them no currency or payment settings.
+      const own = loadDemoContext().organizationId;
+      await page.goto(`/organizations/${own}/finance/configuration/pricing#getting-paid`);
+      await expect(page).toHaveURL(`/organizations/${own}/settings/general#getting-paid`);
+      await expect(page.getByRole('heading', { name: 'Getting paid' })).toHaveCount(0);
+      await expect(page.locator('#getting-paid')).toHaveCount(0);
+      await expect(page.getByRole('link', { name: 'Manage payment features' })).toHaveCount(0);
+    });
   });
 
   test.describe('owner', () => {
@@ -92,6 +125,43 @@ test.describe.serial('Finance structural correction', () => {
       await address.getByLabel('Country').selectOption('CA');
       await address.getByRole('button', { name: 'Edit', exact: true }).click();
       await expect(page.getByLabel('Currency', { exact: true })).toHaveValue('CAD');
+    });
+
+    test('an empty business customizes its Dashboard, opens New quote, reaches pricing and comes back unchanged', async ({ page }) => {
+      test.setTimeout(120_000);
+      const base = `/organizations/${fresh}/finance`;
+      const order = () => page.locator('[data-widget-id]').evaluateAll(nodes => nodes.map(node => (node as HTMLElement).dataset.widgetId));
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto(base);
+      await page.waitForLoadState('networkidle');
+      await page.getByRole('button', { name: 'Customize dashboard' }).click();
+      await expect(page.getByRole('toolbar', { name: 'Customize dashboard' })).toBeVisible();
+      await page.getByRole('button', { name: 'Move Financial activity earlier' }).click();
+      const edited = await order();
+      expect(edited.indexOf('activity')).toBeLessThan(edited.indexOf('attention'));
+      await page.getByRole('button', { name: 'Save changes' }).click();
+      await expect(page.getByRole('status').filter({ hasText: 'Dashboard layout saved.' })).toBeVisible();
+      // New quote opens; with no Work yet it says a quote starts from Work, and closing returns focus.
+      const newQuote = page.getByRole('main').getByRole('button', { name: 'New quote', exact: true });
+      await newQuote.click();
+      const dialog = page.getByRole('dialog', { name: 'New quote' });
+      await expect(dialog).toContainText('A quote is priced Work, so it starts from a Work item.');
+      await dialog.getByRole('button', { name: 'Cancel' }).click();
+      await expect(dialog).toHaveCount(0);
+      await expect(newQuote).toBeFocused();
+      await page.getByRole('region', { name: 'Getting started' }).getByRole('link', { name: 'Set up pricing' }).click();
+      await expect(page).toHaveURL(`${base}/catalog`);
+      await expect(page.getByText('Nothing is priced yet.')).toBeVisible();
+      // Back returns to the same Dashboard, with the saved arrangement and the Getting started panel.
+      await page.goBack();
+      await expect(page).toHaveURL(base);
+      await page.waitForLoadState('networkidle');
+      await expect(page.getByRole('region', { name: 'Getting started' })).toBeVisible();
+      expect(await order()).toEqual(edited);
+      await page.reload();
+      await page.waitForLoadState('networkidle');
+      expect(await order()).toEqual(edited);
+      await guardedShot(page, { url: base, content: page.getByRole('region', { name: 'Getting started' }) }, { path: path.join(OUT, 'dashboard-empty-customized-desktop.png'), fullPage: true });
     });
 
     test('setting up pricing creates no Work type or Work, and a new business keeps its Dashboard', async ({ page }) => {
