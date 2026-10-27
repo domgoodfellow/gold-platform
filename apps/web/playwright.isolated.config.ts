@@ -15,6 +15,6 @@ export default defineConfig({
   ...base,
   globalSetup: './e2e/isolated-setup.ts',
   globalTeardown: './e2e/isolated-teardown.ts',
-  testMatch: ['**/adaptive-shell.spec.ts', '**/breadcrumbs.spec.ts', '**/studio-navigation.spec.ts', '**/crm-form-drawers.spec.ts', '**/responsive-shell.spec.ts', '**/crm-configuration.spec.ts', '**/workspace-configuration-cleanup.spec.ts', '**/surface-replacements.spec.ts', '**/page-composition.spec.ts', '**/crm-dashboard.spec.ts', '**/crm-home.spec.ts', '**/crm-intake.spec.ts', '**/crm-workflow-refinement.spec.ts', '**/crm-voice.spec.ts', '**/finance-v2.spec.ts', '**/finance-v21.spec.ts', '**/finance-structure.spec.ts'],
+  testMatch: ['**/adaptive-shell.spec.ts', '**/breadcrumbs.spec.ts', '**/studio-navigation.spec.ts', '**/crm-form-drawers.spec.ts', '**/responsive-shell.spec.ts', '**/crm-configuration.spec.ts', '**/workspace-configuration-cleanup.spec.ts', '**/surface-replacements.spec.ts', '**/page-composition.spec.ts', '**/crm-dashboard.spec.ts', '**/crm-home.spec.ts', '**/crm-intake.spec.ts', '**/crm-workflow-refinement.spec.ts', '**/crm-voice.spec.ts', '**/finance-v2.spec.ts', '**/finance-v21.spec.ts', '**/finance-structure.spec.ts', '**/settings-work-finance-ux.spec.ts'],
   grepInvert: /GildOps platform staff|Administration breadcrumbs|mobile Platform page location/,
 });
