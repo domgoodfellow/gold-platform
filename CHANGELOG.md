@@ -38,6 +38,8 @@ Entries describe the product or operational change, not every file touched.
 - Finance no longer links to Commercial administration. GildOps staff reach it from Administration, as before.
 - A business that has not recorded anything yet now sees its normal Finance Dashboard with a short Getting started panel that offers the next step (Set up pricing, then Price Work), instead of a separate start page. Customize dashboard stays available.
 - Pricing wording now says what it does: Set up pricing, Add price item and Price item, instead of Add services. Adding a price item never creates a kind of work or a Work item.
+- Settings → General now holds only the business profile: identity, address, contact and a new Regional settings section. The time zone and trading currency always show there, even before a country is chosen; a stored currency is never replaced by a suggestion.
+- Getting paid moved from General to its own Settings page, Customer payments, and business words and page labels moved to Words & navigation. Old links to Getting paid, Finance's old configuration pages and the old Commerce page land on Customer payments.
 
 ## 2026-10-25
 

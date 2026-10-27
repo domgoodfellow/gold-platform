@@ -76,11 +76,13 @@ describe('canonical Settings route contract', () => {
 
   it('keeps legacy routes as direct redirects to final canonical destinations', () => {
     expect(read('app/organizations/[organizationId]/pricing/page.tsx')).toContain('/finance/catalog');
-    // The retired Finance configuration addresses only redirect to General; neither renders a page or a breadcrumb.
+    // The retired Finance configuration addresses only redirect to Customer payments (General for a member who
+    // cannot manage it); neither renders a page or a breadcrumb.
     for (const old of ['finance/configuration/page.tsx', 'finance/configuration/pricing/route.ts']) {
       const source = read(`app/organizations/[organizationId]/${old}`);
-      expect(source, old).toContain('/settings/general');
-      expect(source, old).toMatch(/redirect\(/);
+      expect(source, old).toContain('legacyPaymentSettingsHref(organizationId,');
+      expect(source, old).toContain("configurationTargetOffered(organizationId, 'payments')");
+      expect(source, old).toMatch(/redirect\(|status: 307, headers: \{ Location:/);
       expect(source, old).not.toContain('workspaceConfigCrumbs');
       expect(source, old).not.toContain('<PageHeader');
     }

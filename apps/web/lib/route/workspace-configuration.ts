@@ -29,6 +29,12 @@ export async function requireConfigurationTarget(organizationId: string, targetK
 }
 
 
+/** Whether this member is offered `targetKey`, under the same gate its page enforces. */
+export async function configurationTargetOffered(organizationId: string, targetKey: string): Promise<boolean> {
+  const { gate } = await loadConfigurationContext(organizationId);
+  return configTargetOffered(configTarget(targetKey), gate);
+}
+
 export async function configurationLayoutSections(organizationId: string, workspace: WorkspaceKey) {
   const context = await loadConfigurationContext(organizationId);
   const sections = workspaceConfigureItems(organizationId, workspace, context.gate);

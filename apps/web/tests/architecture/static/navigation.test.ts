@@ -812,11 +812,11 @@ describe('a switch leads to its inputs', () => {
     const payments = MODULES.find((sold) => sold.key === 'card_payments')!;
     const where = moduleConfiguration('org-1', payments);
 
-    // Getting paid lives in Organization Settings → General, beside the trading currency it collects in.
-    expect(where.href).toBe('/organizations/org-1/settings/general#getting-paid');
+    // Card collection lives in Organization Settings → Customer payments, its one owner.
+    expect(where.href).toBe('/organizations/org-1/settings/payments');
     // The destination's own word. A link labelled "configure" would be the one place in the
     // shell where a screen invents a name.
-    expect(where.label).toBe('General');
+    expect(where.label).toBe('Customer payments');
 
     const booking = MODULES.find((sold) => sold.key === 'booking')!;
     expect(moduleConfiguration('org-1', booking).href).toBe(

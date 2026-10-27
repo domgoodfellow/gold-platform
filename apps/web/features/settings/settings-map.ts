@@ -42,6 +42,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     title: 'General',
     entries: [
       entry('general', 'General', 'Business name, time zone, and currency.'),
+      entry('terminology', 'Words & navigation', 'The words this business uses for its records, and its workspace page labels and order.'),
     ],
   },
   {
@@ -59,6 +60,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     title: 'Pricing',
     entries: [
       entry('price-book', 'Catalog & pricing', 'The price items this business charges for, their units and prices.'),
+      entry('payments', 'Customer payments', 'How customers pay this business: recording payments and card collection.'),
     ],
   },
   {

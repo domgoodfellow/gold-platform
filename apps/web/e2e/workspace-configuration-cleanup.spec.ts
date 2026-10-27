@@ -37,7 +37,7 @@ test.describe('an owner', () => {
       comms: `${base}/comms/configuration/calling`,
       support: `${base}/support/configuration/queues`,
       field: `${base}/work/configuration`,
-      finance: `${base}/settings/general`,
+      finance: `${base}/settings/payments`,
       studio: `${base}/settings/branding`,
     };
     for (const segment of LANDINGS) {
@@ -86,11 +86,11 @@ test.describe('an owner', () => {
       await expect(nav.getByRole('link', { name: 'Configuration', exact: true })).toHaveCount(0);
       await expect(breadcrumb(page).getByText('Configuration', { exact: true })).toHaveCount(0);
     }
-    // The old addresses land on General, which owns currency and payment collection, and keep the anchor.
+    // The old addresses land on Customer payments, the one owner of payment collection, and keep the anchor.
     await page.goto(`${base}/finance/configuration/pricing#getting-paid`);
-    await expect(page).toHaveURL(`${base}/settings/general#getting-paid`);
+    await expect(page).toHaveURL(`${base}/settings/payments#getting-paid`);
     await page.goto(`${base}/finance/configuration`);
-    await expect(page).toHaveURL(`${base}/settings/general`);
+    await expect(page).toHaveURL(`${base}/settings/payments`);
   });
 
   test('Work Home offers a Configure menu instead of a "Configuration" landing link', async ({ page }) => {

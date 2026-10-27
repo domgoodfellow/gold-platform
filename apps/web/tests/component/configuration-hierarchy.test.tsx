@@ -21,6 +21,7 @@ vi.mock('@/app/organizations/[organizationId]/settings/actions', () => ({ update
 vi.mock('next/navigation', () => ({ usePathname: () => '/organizations/org/settings/general', redirect: (target: string) => { throw new Error(`REDIRECT:${target}`); } }));
 vi.mock('@/components/headers/page-header', () => ({ PageHeader: ({ title, meta }: { title: string; meta?: string }) => <header><h1>{title}</h1>{meta}</header> }));
 vi.mock('@/lib/route/workspace-configuration', () => ({
+  configurationTargetOffered: vi.fn(async () => true),
   requireWorkspaceConfiguration: vi.fn(async (organizationId: string, workspace: WorkspaceKey) => {
     const gate = { enabledModules: new Set(['reception']), featureAvailability: new Set(AREAS.flatMap(area => area.featureKeys ?? [])), capabilities: new Set(ALL_CAPABILITIES) };
     return { gate, sections: workspaceConfigureItems(organizationId, workspace, gate).slice(0, only.count ?? undefined) };
@@ -35,7 +36,7 @@ describe('General is one continuous form', () => {
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'General' })).toBeInTheDocument();
     expect(screen.queryByText('Test business')).not.toBeInTheDocument();
-    for (const name of ['Business identity', 'Primary business address', 'Business contact']) expect(screen.getByRole('heading', { name })).toBeInTheDocument();
+    for (const name of ['Business identity', 'Primary business address', 'Business contact', 'Regional settings']) expect(screen.getByRole('heading', { name })).toBeInTheDocument();
     for (const name of ['Business name', 'Legal name', 'Industry', 'Country', 'City', 'Postal code', 'Street address', 'Unit or suite', 'Email', 'Phone', 'Website']) expect(screen.getByLabelText(name, { exact: false })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
     expect(screen.getByText(/This address is private/)).toBeVisible();
@@ -45,9 +46,22 @@ describe('General is one continuous form', () => {
     const forms = container.querySelectorAll('form');
     expect(forms).toHaveLength(1);
     const cards = forms[0].querySelectorAll('[data-slot="card"]');
-    expect(cards).toHaveLength(3);
-    expect([...cards].map(card => card.getAttribute('aria-labelledby'))).toEqual(['identity-heading', 'address-heading', 'contact-heading']);
+    expect(cards).toHaveLength(4);
+    expect([...cards].map(card => card.getAttribute('aria-labelledby'))).toEqual(['identity-heading', 'address-heading', 'contact-heading', 'regional-heading']);
     expect(forms[0].querySelectorAll('button[type="submit"]')).toHaveLength(1);
+  });
+  it('shows the stored trading currency even when no country is set, and suggests nothing in its place', async () => {
+    render(await GeneralPage({ params: Promise.resolve({ organizationId: 'org' }) } as Parameters<typeof GeneralPage>[0]));
+    const regional = screen.getByRole('heading', { name: 'Regional settings' }).closest('section')!;
+    expect(regional).toHaveTextContent('trading currency CAD');
+    expect(regional).toHaveTextContent('No country is set, so no time zone or currency is suggested.');
+    expect(regional).not.toHaveTextContent('usually trade in');
+    expect((document.querySelector('input[name="currency"]') as HTMLInputElement).value).toBe('CAD');
+  });
+  it('no longer hosts payment collection or the business words editor', async () => {
+    render(await GeneralPage({ params: Promise.resolve({ organizationId: 'org' }) } as Parameters<typeof GeneralPage>[0]));
+    expect(screen.queryByRole('heading', { name: 'Getting paid' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Business words and navigation' })).not.toBeInTheDocument();
   });
   it('preserves the permission state without offering an editable form', async () => {
     const saved = context.organization.capabilities;
@@ -90,8 +104,8 @@ describe('Retired configuration landings', () => {
     ['comms', 'comms/configuration/calling'],
     ['support', 'support/configuration/queues'],
     ['field', 'work/configuration'],
-    // Finance has no doors; its old address lands on General, which owns currency and payment collection.
-    ['finance', 'settings/general'],
+    // Finance has no doors; its old address lands on Customer payments for a member who may manage it.
+    ['finance', 'settings/payments'],
     ['studio', 'settings/branding'],
     ['ai', 'ai/agents'],
   ] as const)('sends the old %s/configuration address to the first page the member may open and never renders a list', async (segment, path) => {

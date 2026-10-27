@@ -43,12 +43,12 @@ test.describe('tenant Finance workspace', () => {
     await page.getByRole('link', { name: 'Finance', exact: true }).first().click();
     await expect(page).toHaveURL(`/organizations/${organizationId}/finance`);
 
-    // Catalog & Pricing is a sidebar destination; its header links to the one owner of currency and payment collection.
+    // Catalog & Pricing is a sidebar destination; its header links to the one owner of payment collection.
     await page.getByRole('link', { name: 'Catalog & Pricing', exact: true }).first().click();
     await expect(page).toHaveURL(`/organizations/${organizationId}/finance/catalog`);
-    await page.getByRole('main').getByRole('link', { name: 'Currency & payment settings', exact: true }).click();
-    await expect(page).toHaveURL(`/organizations/${organizationId}/settings/general#getting-paid`);
-    await expect(page.getByRole('heading', { name: 'General', level: 1 })).toBeAttached();
+    await page.getByRole('main').getByRole('link', { name: 'Payment settings', exact: true }).click();
+    await expect(page).toHaveURL(`/organizations/${organizationId}/settings/payments`);
+    await expect(page.getByRole('heading', { name: 'Customer payments', level: 1 })).toBeAttached();
   });
 
   test('Plan & usage stays outside Finance, under Settings', async ({ page }) => {

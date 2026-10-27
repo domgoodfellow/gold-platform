@@ -236,7 +236,7 @@ Settings configures the environment in which work happens.
 
 It is not a workspace and is not a second application shell.
 
-Settings is one contextual navigation of the shell, grouped as **Personal** (Profile, Security & sign-in, Appearance), **Organization** (General, Branding, Domains, Features) and **Administration** (Team & access, Connections, Plan & usage). Settings, Help & documentation and Contact GildOps Support are destinations in the Account menu; product support remains separate from the organization Support workspace. Account owns person/session information and Sign out. Opening Settings lands on the first destination the member may use. The five scopes below keep their separate owners.
+Settings is one contextual navigation of the shell, grouped as **Personal** (Profile, Security & sign-in, Appearance), **Organization** (General, Customer payments, Branding, Domains, Email sending, Features, Words & navigation) and **Administration** (Team & access, Connections, Plan & usage). Settings, Help & documentation and Contact GildOps Support are destinations in the Account menu; product support remains separate from the organization Support workspace. Account owns person/session information and Sign out. Opening Settings lands on the first destination the member may use. The five scopes below keep their separate owners.
 
 Configuration that controls how one workspace performs its work is configured in that workspace, never in Settings. Settings search reaches it and routes to its owner.
 
@@ -247,9 +247,13 @@ Organization owns business-wide configuration:
 - business identity: name, legal name, industry;
 - the primary business address, which is private;
 - general business contact details;
-- regional defaults: time zone and trading currency, suggested from the business location;
+- regional settings: time zone and trading currency, suggested from the business location and never replaced by a later suggestion;
+- customer payments: how this business's own customers pay it (manual recording and card collection), never the GildOps subscription, which is Plan & usage;
+- business words and workspace page labels (Words & navigation);
 - brand and domains;
 - enabled product features.
+
+Each setting has one editor. General holds identity, address, contact and regional settings; Customer payments and Words & navigation are their own pages.
 
 #### Account
 
@@ -934,4 +938,4 @@ Platform Administration remains independently authorized system administration. 
 
 ## Business vocabulary and destination choices
 
-An organization may save singular/plural nouns, authored destination labels and an ordered workspace page labels in one versioned business profile. Setup and General Settings edit the same record. An absent profile retains neutral labels; it does not assert onboarding completion. Canonical permissions, entitlements, routes and stored record names remain independent. Platform lives at `/platform` with its own privileged shell.
+An organization may save singular/plural nouns, authored destination labels and an ordered workspace page labels in one versioned business profile. Setup and Settings → Words & navigation edit the same record. An absent profile retains neutral labels; it does not assert onboarding completion. Canonical permissions, entitlements, routes and stored record names remain independent. Platform lives at `/platform` with its own privileged shell.

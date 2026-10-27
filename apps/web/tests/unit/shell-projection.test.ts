@@ -621,3 +621,20 @@ describe('workspace Calendar shortcut', () => {
     expect(context.workspace.calendar?.href).toBe(`${base}/crm/calendar`);
   });
 });
+
+describe('Organization Settings: one authoritative editor per setting', () => {
+  const labels = (capabilities: readonly Capability[], overrides: Partial<ShellInput> = {}) => projectSettingsNav(ORG, gate(capabilities, overrides)).find(section => section.key === 'settings-organization')?.items.map(item => item.label) ?? [];
+  it('gives customer payments and business words their own pages beside General', () => {
+    expect(labels(['organization.manage', 'feature.manage'])).toEqual(['General', 'Customer payments', 'Branding', 'Domains', 'Email sending', 'Features', 'Words & navigation']);
+  });
+  it('offers Customer payments only to a business that bills, and neither page to a member who cannot manage the business', () => {
+    expect(labels(['organization.manage'], { enabledModules: new Set(), featureAvailability: new Set() })).not.toContain('Customer payments');
+    expect(labels(['organization.manage'], { enabledModules: new Set(), featureAvailability: new Set() })).toContain('Words & navigation');
+    expect(labels(['feature.manage'])).toEqual(['Features']);
+  });
+  it('keeps payment collection out of Plan & usage, the GildOps subscription', () => {
+    const administration = projectSettingsNav(ORG, gate()).find(section => section.key === 'settings-administration')!.items;
+    expect(administration.find(item => item.label === 'Plan & usage')?.href).toBe(`/organizations/${ORG}/settings/plan`);
+    expect(administration.map(item => item.href)).not.toContain(`/organizations/${ORG}/settings/payments`);
+  });
+});

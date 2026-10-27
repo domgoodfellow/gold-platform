@@ -1,9 +1,11 @@
 import { redirect } from 'next/navigation';
+import { configurationTargetOffered } from '@/lib/route/workspace-configuration';
+import { legacyPaymentSettingsHref } from '@/lib/route/settings';
 
-/** Moved back to `/pricing`, its canonical workspace — Settings is one organization Area, not a second application shell (`CLAUDE.md`). Card payments' "Getting paid" section moved with it, at `#getting-paid`. */
+/** Retired. The price book is Finance's Catalog & Pricing; card payments moved to Settings → Customer payments. */
 export default async function CommerceSettingsRedirect({
   params,
 }: PageProps<'/organizations/[organizationId]/settings/commerce'>) {
   const { organizationId } = await params;
-  redirect(`/organizations/${organizationId}/settings/general`);
+  redirect(legacyPaymentSettingsHref(organizationId, await configurationTargetOffered(organizationId, 'payments')));
 }

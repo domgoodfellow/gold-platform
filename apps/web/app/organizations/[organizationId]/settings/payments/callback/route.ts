@@ -21,7 +21,7 @@ import { callbackUrl, STATE_COOKIE } from '../state';
 export const dynamic = 'force-dynamic';
 
 function back(organizationId: string, outcome: string): never {
-  redirect(`/organizations/${organizationId}/settings?payments=${outcome}`);
+  redirect(`/organizations/${organizationId}/settings/payments?payments=${outcome}`);
 }
 
 export async function GET(

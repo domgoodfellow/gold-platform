@@ -39,8 +39,8 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
   const may = (cap: 'invoice.issue' | 'work_item.price' | 'payment.record') => data.billingEnabled && has(cap);
   const reports = has('report.read') && summary !== null;
   const mayManageCatalog = has('price.manage');
-  // Card payments are configured in Organization Settings → General, beside the trading currency.
-  const gettingPaidHref = `${base}/settings/general#getting-paid`;
+  // Card payments are configured in Organization Settings → Customer payments; anyone else reads General, which says who can.
+  const gettingPaidHref = `${base}/settings/${has('organization.manage') ? 'payments' : 'general'}`;
   const shortDate = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: timezone, month: 'short', day: 'numeric' }).format(new Date(iso));
   const localDay = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
   const monthLabel = new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(new Date(`${period.from}T12:00:00Z`));

@@ -7,8 +7,8 @@ import { assertCapturable, guardedShot } from './visual-guard';
 
 /**
  * Finance Structural Correction in a real browser, against a disposable database: Finance has no
- * Configuration row, crumb or landing; trading currency and payment collection are reached at their
- * one owner (Organization Settings → General); no platform link sits inside Finance and platform
+ * Configuration row, crumb or landing; trading currency (Organization Settings → General) and payment
+ * collection (Organization Settings → Customer payments) are reached at their one owners; no platform link sits inside Finance and platform
  * pages refuse a business owner; setting up pricing creates no Work; a business with nothing
  * recorded keeps its Dashboard. Every capture passes `assertCapturable` first, and the guard is
  * itself shown to refuse a signed-out page and a refused page. Screenshots land in
@@ -72,7 +72,7 @@ test.describe.serial('Finance structural correction', () => {
       }
       // The landing address renders the application's own refusal for a business they do not belong to.
       await expect(page.getByText('This business is not available')).toBeVisible();
-      // Their own business: they land on General, which offers them no currency or payment settings.
+      // Their own business: Customer payments is not theirs to open, so they land on General, which offers no payment settings.
       const own = loadDemoContext().organizationId;
       await page.goto(`/organizations/${own}/finance/configuration/pricing#getting-paid`);
       await expect(page).toHaveURL(`/organizations/${own}/settings/general#getting-paid`);
@@ -92,7 +92,7 @@ test.describe.serial('Finance structural correction', () => {
       await expect(assertCapturable(page, { url: `/organizations/${empty}/finance/catalog`, content: page.getByRole('main') })).rejects.toThrow(/Refusing to capture/);
     });
 
-    test('Finance has no Configuration and links currency and payments to General', async ({ page }) => {
+    test('Finance has no Configuration and links payment collection to Customer payments', async ({ page }) => {
       const base = `/organizations/${fx.organizationId}`;
       await page.setViewportSize({ width: 1440, height: 900 });
       for (const at of ['finance', 'finance/catalog', 'finance/invoices', 'finance/payments']) {
@@ -106,24 +106,22 @@ test.describe.serial('Finance structural correction', () => {
         await expect(page.getByRole('navigation', { name: 'breadcrumb' }).getByText('Configuration', { exact: true })).toHaveCount(0);
         await expect(page.getByRole('main').getByRole('button', { name: 'Configure', exact: true })).toHaveCount(0);
       }
-      // The old Finance configuration addresses land on General, never on a Finance landing.
+      // The old Finance configuration addresses land on Customer payments, never on a Finance landing.
       await page.goto(`${base}/finance/configuration`);
-      await expect(page).toHaveURL(`${base}/settings/general`);
+      await expect(page).toHaveURL(`${base}/settings/payments`);
       await page.goto(`${base}/finance/configuration/pricing#getting-paid`);
-      await expect(page).toHaveURL(`${base}/settings/general#getting-paid`);
-      // Catalog & Pricing links to the one owner of currency and payment collection.
+      await expect(page).toHaveURL(`${base}/settings/payments#getting-paid`);
+      // Catalog & Pricing links to the one owner of payment collection.
       await page.goto(`${base}/finance/catalog`);
-      await page.getByRole('main').getByRole('link', { name: 'Currency & payment settings', exact: true }).click();
-      await expect(page).toHaveURL(`${base}/settings/general#getting-paid`);
-      const gettingPaid = page.locator('#getting-paid');
-      await expect(gettingPaid.getByRole('heading', { name: 'Getting paid' })).toBeVisible();
-      await expect(gettingPaid).toContainText('New prices and invoices are in CAD');
-      // The one currency editor is General's address section.
-      await gettingPaid.getByRole('link', { name: 'address section' }).click();
-      // The currency follows the business's country, so a business with no country chooses one first.
-      const address = page.getByRole('region', { name: 'Primary business address' });
-      await address.getByLabel('Country').selectOption('CA');
-      await address.getByRole('button', { name: 'Edit', exact: true }).click();
+      await page.getByRole('main').getByRole('link', { name: 'Payment settings', exact: true }).click();
+      await expect(page).toHaveURL(`${base}/settings/payments`);
+      await expect(page.getByRole('main')).toContainText('New prices and invoices are in CAD');
+      await expect(page.locator('#getting-paid').getByRole('heading', { name: 'Card payments' })).toBeVisible();
+      // The one currency editor is General's Regional settings, which shows the stored currency even with no country.
+      await page.getByRole('main').getByRole('link', { name: 'Change in General → Regional settings' }).click();
+      const regional = page.getByRole('region', { name: 'Regional settings' });
+      await expect(regional).toContainText('trading currency CAD');
+      await regional.getByRole('button', { name: 'Edit', exact: true }).click();
       await expect(page.getByLabel('Currency', { exact: true })).toHaveValue('CAD');
     });
 
@@ -228,13 +226,11 @@ test.describe.serial('Finance structural correction', () => {
         dialog = page.getByRole('dialog', { name: 'Record payment' });
         await dialog.getByLabel('Amount (CAD)').fill('10.00');
         await capture(`payment-dialog-${v}`, `${base}/finance/invoices`, dialog);
-        // Organization currency and payment collection, at their one owner.
+        // Organization currency and payment collection, at their one owners.
         await page.goto(`${base}/settings/general`);
         await capture(`settings-general-currency-${v}`, `${base}/settings/general`, heading(page, 'General'));
-        await page.goto(`${base}/settings/general#getting-paid`);
-        const gettingPaid = page.locator('#getting-paid');
-        await gettingPaid.scrollIntoViewIfNeeded();
-        await capture(`settings-general-getting-paid-${v}`, `${base}/settings/general#getting-paid`, gettingPaid);
+        await page.goto(`${base}/settings/payments`);
+        await capture(`settings-payments-${v}`, `${base}/settings/payments`, heading(page, 'Customer payments'));
       }
     });
   });

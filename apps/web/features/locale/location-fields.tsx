@@ -59,9 +59,15 @@ export function BusinessLocationFields({
   initialCurrency,
   errors,
   streetFields,
+  layout,
 }: {
   /** Rendered between the location fields and the regional-defaults summary: the street address, when the caller collects one. */
   streetFields?: ReactNode;
+  /**
+   * Places the two parts in the caller's own sections (General's Address and Regional settings
+   * cards). Without it they render together, the regional summary boxed beneath the address.
+   */
+  layout?: (parts: { location: ReactNode; regional: ReactNode }) => ReactNode;
   mode: 'create' | 'edit';
   initial?: BusinessLocation;
   initialTimeZone?: string;
@@ -106,7 +112,10 @@ export function BusinessLocationFields({
 
   const place = [location.city, location.region && regions.find((r) => r.code === location.region)?.name || location.region, location.countryCode && countryName(location.countryCode)].filter(Boolean).join(', ');
 
-  return (
+  // Editing a saved business always shows the clock and currency it runs on, country or not: a stored
+  // currency is never hidden behind an unanswered address question, and nothing is inferred to fill it.
+  const showsRegional = Boolean(location.countryCode) || mode === 'edit';
+  const locationPart = (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField id="biz-country" label="Country" error={errors?.country}>
@@ -153,17 +162,20 @@ export function BusinessLocationFields({
 
       <input type="hidden" name="timezone" value={timeZone} />
       <input type="hidden" name="currency" value={currency} />
+    </div>
+  );
 
-      {location.countryCode ? (
-        <div className="rounded-lg border border-border bg-hover/40 p-4 text-sm" aria-live="polite">
+  const regional = showsRegional ? (
+        <div className={layout ? 'text-sm' : 'rounded-lg border border-border bg-hover/40 p-4 text-sm'} aria-live="polite">
           {!editing ? (
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
               <p>
-                {mode === 'create' ? <>Based in {place || countryName(location.countryCode)}. </> : <>Currently set to </>}
+                {mode === 'create' ? <>Based in {place || countryName(location.countryCode)}. </> : <>Time zone </>}
                 {mode === 'create' ? "We'll use " : ''}
                 <strong className="font-medium">{timeZoneLabel(timeZone)}</strong>
-                {currency ? <> {mode === 'create' ? 'and suggest' : 'and'} <strong className="font-medium">{currency}</strong></> : <>. No currency chosen yet</>}
+                {currency ? <>{mode === 'create' ? ' and suggest ' : '; trading currency '}<strong className="font-medium">{currency}</strong></> : <>. No trading currency chosen yet</>}
                 .
+                {mode === 'edit' && !location.countryCode ? <span className="mt-1 block text-muted">No country is set, so no time zone or currency is suggested.</span> : null}
               </p>
               <Button type="button" tone="text" size="small" onClick={() => setEditing(true)}>Edit</Button>
             </div>
@@ -215,7 +227,13 @@ export function BusinessLocationFields({
             </Hint>
           ) : null}
         </div>
-      ) : null}
+      ) : null;
+
+  if (layout) return <>{layout({ location: locationPart, regional })}</>;
+  return (
+    <div className="flex flex-col gap-4">
+      {locationPart}
+      {regional}
     </div>
   );
 }

@@ -234,9 +234,9 @@ export const MODULES = [
     label: 'Card payments',
     description: 'Ask a processor to collect what is outstanding, rather than only cash.',
     outside: 'the card control on an invoice',
-    // Configured in Organization Settings → General's "Getting paid" section, beside the trading
-    // currency it collects in. It still needs Billing, which produces the invoices it collects against.
-    configuredAt: { segment: 'settings', path: 'general', section: 'getting-paid', label: 'General' },
+    // Configured in Organization Settings → Customer payments, the one owner of how customers pay
+    // this business. It still needs Billing, which produces the invoices it collects against.
+    configuredAt: { segment: 'settings', path: 'payments', label: 'Customer payments' },
     requires: 'billing',
   },
   {
@@ -402,7 +402,7 @@ export const AREAS: readonly Area[] = [
   // Settings → Plan & usage, and Platform for GildOps' own control plane). Home is kernel, like
   // Sales and Field's own. Catalog & Pricing (the operating price book), Quotes, Invoices and
   // Payments are its operating pages behind the billing module; Financial reports adds `report.read`.
-  // Currency and payment collection stay configuration (`CONFIG_TARGETS` pricing), reached from Configure.
+  // Trading currency is General's; payment collection is Settings → Customer payments (`CONFIG_TARGETS` payments).
   { segment: 'finance', label: 'Finance', group: 'workspaces', workspace: 'finance' },
   // Readable by any member (RLS); offered to those who price, quote from it or manage the business.
   { segment: 'finance-catalog', label: 'Catalog & Pricing', group: 'workspaces', workspace: 'finance', route: 'finance/catalog', module: 'billing', relevantCapabilities: ['price.manage', 'work_item.price', 'organization.manage'], featureKeys: ['price_book'] },
@@ -513,6 +513,10 @@ export type ConfigTarget = {
 
 export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'general', scope: 'organization', path: 'settings/general', permission: ['organization.manage'] },
+  // How this business's own customers pay it (ADR-037) — never what it pays GildOps, which is Plan & usage.
+  { key: 'payments', scope: 'organization', path: 'settings/payments', entitledBy: 'finance-payments', permission: ['organization.manage'] },
+  // The versioned business words and workspace page labels (business profile); Setup edits the same record.
+  { key: 'terminology', scope: 'organization', path: 'settings/terminology', permission: ['organization.manage'] },
   { key: 'resources', treatment: 'operating', scope: 'organization', workspace: 'field', path: 'resources', entitledBy: 'resources', permission: ['resource.create', 'resource.update'] },
   { key: 'locations', treatment: 'operating', scope: 'organization', workspace: 'field', path: 'locations', entitledBy: 'locations', permission: ['location.create'] },
   { key: 'website', treatment: 'operating', scope: 'organization', workspace: 'studio', path: 'studio/website', permission: ['organization.manage'] },
@@ -582,7 +586,7 @@ export function configTarget(key: string): ConfigTarget {
 export const FEATURE_CONFIG_TARGETS: Readonly<Record<string, string>> = {
   pipeline: 'sales-stages', configurable_stages: 'sales-stages', qualification_state: 'sales-stages',
   inbound_calling: 'communications', outbound_calling: 'communications', recording: 'call-setup', call_dispositions: 'call-setup',
-  price_book: 'price-book', card_payments: 'general', connected_processor: 'general',
+  price_book: 'price-book', card_payments: 'payments', connected_processor: 'payments',
   resource_records: 'resources', locations: 'locations',
   pages_sections: 'website', draft_review_publish: 'website', seo_metadata: 'website',
   rule_authoring: 'automation-rules', domain_event_trigger: 'automation-rules', email_action: 'automation-rules',
@@ -828,8 +832,8 @@ export const WORKSPACE_CONFIGURE: Partial<Record<WorkspaceKey, readonly Workspac
     { target: 'resources', label: 'Resources' },
     { target: 'locations', label: 'Locations' },
   ],
-  // Finance registers no doors: the price book is its Catalog & Pricing page, and trading currency and payment
-  // collection belong to Organization Settings → General, their one owner. No Configuration row, Configure control or landing.
+  // Finance registers no doors: the price book is its Catalog & Pricing page, trading currency belongs to
+  // Organization Settings → General and payment collection to Settings → Customer payments. No Configuration row, Configure control or landing.
   ai: [
     { target: 'ai-agents', label: 'Agents' },
     { target: 'ai-deployments', label: 'Channel deployments' },

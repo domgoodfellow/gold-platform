@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { legacyPaymentSettingsHref } from '@/lib/route/settings';
 
 /**
  * Settings as the Configuration Center, and Work split into operating it versus defining it
@@ -118,16 +119,33 @@ describe('configuration fields stay with their owning surfaces', () => {
  * only a compatibility redirect.
  */
 describe('Pricing, Automations, Custom fields and Team are canonical, not Settings sub-routes', () => {
-  it('the price book is the operating Catalog & Pricing page, and General owns currency and Getting paid', () => {
+  it('the price book is the operating Catalog & Pricing page, General owns currency and Customer payments owns getting paid', () => {
     const catalog = readFileSync(`${ROUTES}/finance/catalog/page.tsx`, 'utf8');
     expect(catalog).toContain('PricingManagement');
     expect(catalog).toContain("requireOperatingArea(organizationId, 'finance-catalog')");
-    expect(catalog).toContain('/settings/general#getting-paid');
+    expect(catalog).toContain('/settings/payments');
+    expect(catalog).toContain('/settings/general#regional-heading');
     const general = readFileSync(`${ROUTES}/settings/general/page.tsx`, 'utf8');
-    expect(general).toContain('<GettingPaidSection');
-    expect(general).toContain('id="getting-paid"');
-    expect(readFileSync(`${WEB_FEATURES}/pricing/getting-paid-section.tsx`, 'utf8')).toContain('PaymentAccountRow');
-    expect(readFileSync(`${ROUTES}/finance/configuration/pricing/route.ts`, 'utf8')).toContain('NextResponse.redirect(');
+    // One editor per setting: General no longer renders payment collection or the business words editor.
+    expect(general).not.toContain('<GettingPaidSection');
+    expect(general).not.toContain('<BusinessProfileSettings');
+    expect(general).toContain("'getting-paid'");
+    const payments = readFileSync(`${ROUTES}/settings/payments/page.tsx`, 'utf8');
+    expect(payments).toContain('<GettingPaidSection');
+    expect(payments).toContain("requireConfigurationTarget(organizationId, 'payments')");
+    const section = readFileSync(`${WEB_FEATURES}/pricing/getting-paid-section.tsx`, 'utf8');
+    expect(section).toContain('PaymentAccountRow');
+    expect(section).toContain('id="getting-paid"');
+    // Customer collection is never the GildOps subscription: that is Plan & usage, only linked.
+    expect(section).not.toMatch(/subscription|platform_plans|getPlan/);
+    const terminology = readFileSync(`${ROUTES}/settings/terminology/page.tsx`, 'utf8');
+    expect(terminology).toContain('<BusinessProfileSettings');
+    expect(terminology).toContain("requireConfigurationTarget(organizationId, 'terminology')");
+    // A plain HTTP redirect (so the browser carries `#getting-paid` across it), with a relative Location.
+    const pricing = readFileSync(`${ROUTES}/finance/configuration/pricing/route.ts`, 'utf8');
+    expect(pricing).toContain('status: 307');
+    expect(pricing).toContain('headers: { Location: `${legacyPaymentSettingsHref(');
+    expect(existsSync(`${ROUTES}/finance/configuration/pricing/page.tsx`)).toBe(false);
   });
 
   it('/automations is canonical Automations Home; Rules, Messages and Activity are its three pages, and a rule is its own detail route', () => {
@@ -198,12 +216,17 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
     for (const [segment, destination] of [
       ['settings/people', 'settings/access'],
       ['settings/data-automation', 'settings/custom-fields'],
-      ['settings/commerce', 'settings/general'],
     ] as const) {
       const page = readFileSync(`${ROUTES}/${segment}/page.tsx`, 'utf8');
       expect(page, `${segment} no longer redirects to ${destination}`).toContain(`/${destination}`);
       expect(page).toContain('redirect(');
     }
+    // Commerce held card payments: it lands on Customer payments, or General for a member who cannot manage it.
+    const commerce = readFileSync(`${ROUTES}/settings/commerce/page.tsx`, 'utf8');
+    expect(commerce).toContain('redirect(legacyPaymentSettingsHref(');
+    expect(commerce).toContain("configurationTargetOffered(organizationId, 'payments')");
+    expect(legacyPaymentSettingsHref('org', true)).toBe('/organizations/org/settings/payments');
+    expect(legacyPaymentSettingsHref('org', false)).toBe('/organizations/org/settings/general');
   });
 });
 

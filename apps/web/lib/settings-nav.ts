@@ -14,10 +14,13 @@ import { PERSONAL_SECTIONS, personalSettingsHref } from '@/lib/route/personal-se
 
 const ORGANIZATION: readonly { key: string; label: string; target: string }[] = [
   { key: 'settings-general', label: 'General', target: 'general' },
+  { key: 'settings-payments', label: 'Customer payments', target: 'payments' },
   { key: 'settings-branding', label: 'Branding', target: 'branding' },
   { key: 'settings-domains', label: 'Domains', target: 'domains' },
   { key: 'settings-email', label: 'Email sending', target: 'email' },
   { key: 'settings-features', label: 'Features', target: 'features' },
+  // Advanced: renaming records and reordering workspace pages changes no access or stored names.
+  { key: 'settings-terminology', label: 'Words & navigation', target: 'terminology' },
 ];
 
 function item(organizationId: string, spec: { key: string; label: string; target: string }, section: NavItem['section'], gate: ConfigGate): NavItem | null {
@@ -54,7 +57,7 @@ export function defaultSettingsHref(sections: readonly ShellSection[]): string {
 }
 
 /** Path segments under `/organizations/{id}/settings/` that belong to the Settings context. Workspace-owned configuration is deliberately absent. */
-const SETTINGS_SEGMENTS = ['general', 'branding', 'domains', 'email', 'features', 'access', 'connections', 'secrets', 'plan', 'organization'];
+const SETTINGS_SEGMENTS = ['general', 'payments', 'terminology', 'branding', 'domains', 'email', 'features', 'access', 'connections', 'secrets', 'plan', 'organization'];
 
 export function inSettingsContext(pathname: string, organizationId: string): boolean {
   const path = pathname.split(/[?#]/)[0].replace(/\/$/, '');

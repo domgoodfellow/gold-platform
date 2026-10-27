@@ -49,3 +49,12 @@ export function settingsLandingHref(organizationId: string | null): string {
 export function settingsScopesFor(organizationId: string | null): readonly SettingsScope[] {
   return organizationId ? SETTINGS_SCOPES : SETTINGS_SCOPES.filter((scope) => scope.key === 'account');
 }
+
+/**
+ * Where an old payment-settings address lands (General's `#getting-paid`, Finance's retired
+ * configuration, Commerce): Customer payments when this member is offered it, otherwise General,
+ * which owns the trading currency and tells everyone else who can change it.
+ */
+export function legacyPaymentSettingsHref(organizationId: string, paymentsOffered: boolean): string {
+  return `/organizations/${organizationId}/settings/${paymentsOffered ? 'payments' : 'general'}`;
+}

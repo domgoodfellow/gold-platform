@@ -88,7 +88,8 @@ describe('the Settings context', () => {
     const sections = projectSettingsNav(ORG, everything);
     expect(sections.map((section) => [section.label, section.items.map((item) => item.label)])).toEqual([
       ['Personal', ['Profile', 'Security & sign-in', 'Appearance']],
-      ['Organization', ['General', 'Branding', 'Domains', 'Email sending', 'Features']],
+      // No module is enabled here, so Customer payments (billing-entitled) is absent.
+      ['Organization', ['General', 'Branding', 'Domains', 'Email sending', 'Features', 'Words & navigation']],
       ['Administration', ['Team & access', 'Connections', 'Plan & usage']],
     ]);
   });

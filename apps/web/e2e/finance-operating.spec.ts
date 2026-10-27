@@ -66,8 +66,8 @@ test.describe('Finance operating journey', () => {
     // Adding a price item creates neither a Work type nor Work: those above were made separately.
     expect((await owner.from('work_item_types').select('id').eq('organization_id',organizationId)).data).toHaveLength(1);
     expect((await owner.from('work_items').select('id').eq('organization_id',organizationId)).data).toHaveLength(1);
-    await page.getByRole('main').getByRole('link',{name:'Currency & payment settings',exact:true}).click();
-    await expect(page).toHaveURL(`${base}/settings/general#getting-paid`);
+    await page.getByRole('main').getByRole('link',{name:'Payment settings',exact:true}).click();
+    await expect(page).toHaveURL(`${base}/settings/payments`);
     await page.goto(finance);
     await page.getByRole('button',{name:'New quote',exact:true}).click();
     let dialog = page.getByRole('dialog',{name:'New quote',exact:true});

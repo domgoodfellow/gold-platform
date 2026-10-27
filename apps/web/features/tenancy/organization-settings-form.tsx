@@ -41,6 +41,7 @@ export function OrganizationSettingsForm({
     if (!result.error) setDirty(false);
     return { ...result, saved: !result.error };
   }, INITIAL);
+  const contact = <BusinessContactCard identity={identity} />;
 
   return (
     <form action={formAction} onChange={() => setDirty(true)} className="flex flex-col gap-6">
@@ -68,35 +69,60 @@ export function OrganizationSettingsForm({
         </div>
       </Card>
 
-      <Card as="section" aria-labelledby="address-heading">
-        <div className="flex flex-col gap-4">
-        <div>
-          <SectionHeading id="address-heading">Primary business address</SectionHeading>
-          <Hint className="mt-1">
-            This address is private to your team.
-            To show an address on your website, add it to the{' '}
-            <Link href={`/organizations/${organizationId}/settings/public-profile`} className="text-accent-text hover:underline">public profile</Link>.
-          </Hint>
-        </div>
-        <BusinessLocationFields
-          mode="edit"
-          initial={{ countryCode: identity.countryCode ?? '', region: identity.region ?? '', city: identity.city ?? '', postalCode: identity.postalCode ?? '' }}
-          initialTimeZone={timezone}
-          initialCurrency={currency}
-          streetFields={
-            <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
-              <FormField id="org-address-1" label="Street address" optional>
-                {(field) => <TextInput {...field} name="addressLine1" autoComplete="address-line1" maxLength={200} defaultValue={identity.addressLine1 ?? ''} />}
-              </FormField>
-              <FormField id="org-address-2" label="Unit or suite" optional>
-                {(field) => <TextInput {...field} name="addressLine2" autoComplete="address-line2" maxLength={100} defaultValue={identity.addressLine2 ?? ''} />}
-              </FormField>
+      <BusinessLocationFields
+        mode="edit"
+        initial={{ countryCode: identity.countryCode ?? '', region: identity.region ?? '', city: identity.city ?? '', postalCode: identity.postalCode ?? '' }}
+        initialTimeZone={timezone}
+        initialCurrency={currency}
+        streetFields={
+          <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
+            <FormField id="org-address-1" label="Street address" optional>
+              {(field) => <TextInput {...field} name="addressLine1" autoComplete="address-line1" maxLength={200} defaultValue={identity.addressLine1 ?? ''} />}
+            </FormField>
+            <FormField id="org-address-2" label="Unit or suite" optional>
+              {(field) => <TextInput {...field} name="addressLine2" autoComplete="address-line2" maxLength={100} defaultValue={identity.addressLine2 ?? ''} />}
+            </FormField>
+          </div>
+        }
+        layout={({ location, regional }) => <>
+          <Card as="section" aria-labelledby="address-heading">
+            <div className="flex flex-col gap-4">
+              <div>
+                <SectionHeading id="address-heading">Primary business address</SectionHeading>
+                <Hint className="mt-1">
+                  This address is private to your team.
+                  To show an address on your website, add it to the{' '}
+                  <Link href={`/organizations/${organizationId}/settings/public-profile`} className="text-accent-text hover:underline">public profile</Link>.
+                </Hint>
+              </div>
+              {location}
             </div>
-          }
-        />
-        </div>
-      </Card>
+          </Card>
+          {contact}
+          <Card as="section" aria-labelledby="regional-heading">
+            <div className="flex flex-col gap-3">
+              <div>
+                <SectionHeading id="regional-heading">Regional settings</SectionHeading>
+                <Hint className="mt-1">The time zone schedules follow and the trading currency new prices and invoices use.</Hint>
+              </div>
+              {regional}
+            </div>
+          </Card>
+        </>}
+      />
 
+      <div className="flex flex-col items-start gap-3">
+        <Button type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save changes'}</Button>
+        <ErrorText role="alert">{state.error}</ErrorText>
+        {state.saved && !dirty ? <p role="status" className="text-sm text-muted">Business profile saved.</p> : null}
+      </div>
+    </form>
+  );
+}
+
+/** The business's own reachable details; separate from sign-in email and Communications numbers. */
+function BusinessContactCard({ identity }: { identity: OrganizationIdentity }) {
+  return (
       <Card as="section" aria-labelledby="contact-heading">
         <div className="flex flex-col gap-4">
         <div>
@@ -113,18 +139,8 @@ export function OrganizationSettingsForm({
         <FormField id="org-website" label="Website" optional>
           {(field) => <TextInput {...field} name="websiteUrl" type="text" inputMode="url" maxLength={300} defaultValue={identity.websiteUrl ?? ''} />}
         </FormField>
-        <details className="text-sm text-muted">
-          <summary className="min-h-11 cursor-pointer content-center rounded-md focus-visible:outline-2 focus-visible:outline-ring">About business contact details</summary>
-          <p className="mt-2">These details are separate from your sign-in email and the phone numbers Communications runs. You can use an existing website address.</p>
-        </details>
+        <Hint>Separate from your sign-in email and the phone numbers Communications uses.</Hint>
         </div>
       </Card>
-
-      <div className="flex flex-col items-start gap-3">
-        <Button type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save changes'}</Button>
-        <ErrorText role="alert">{state.error}</ErrorText>
-        {state.saved && !dirty ? <p role="status" className="text-sm text-muted">Business profile saved.</p> : null}
-      </div>
-    </form>
   );
 }

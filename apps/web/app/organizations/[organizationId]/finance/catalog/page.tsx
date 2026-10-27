@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 /**
  * Catalog & Pricing: the operating price book — what this business sells and charges, edited in
  * its rows. A price change reaches new quote lines only; quoted Work and issued invoices keep the
- * snapshot they took. Trading currency and payment collection are configured in Organization Settings → General.
+ * snapshot they took. Trading currency is configured in Settings → General, payment collection in Settings → Customer payments.
  */
 export default async function FinanceCatalogPage({ params }: PageProps<'/organizations/[organizationId]/finance/catalog'>) {
   const { organizationId } = await params;
@@ -21,8 +21,8 @@ export default async function FinanceCatalogPage({ params }: PageProps<'/organiz
   const has = (capability: (typeof organization.capabilities)[number]) => organization.capabilities.includes(capability);
   const mayManage = has('price.manage');
   return <AppPage>
-    <CollectionHeader title="Catalog & Pricing" crumbs={[{ label: 'Finance', href: `/organizations/${organizationId}/finance` }]} actions={has('organization.manage') ? <ButtonLink tone="secondary" size="small" href={`/organizations/${organizationId}/settings/general#getting-paid`}>Currency & payment settings</ButtonLink> : undefined} />
-    {!organization.currency ? <CompactEmptyState kind="not-configured" action={has('organization.manage') ? <Link className="text-sm font-medium text-accent-text underline-offset-4 hover:underline" href={`/organizations/${organizationId}/settings/general#address-heading`}>Choose a currency</Link> : undefined}>No trading currency is set, so services cannot be priced yet.</CompactEmptyState> : null}
+    <CollectionHeader title="Catalog & Pricing" crumbs={[{ label: 'Finance', href: `/organizations/${organizationId}/finance` }]} actions={has('organization.manage') ? <ButtonLink tone="secondary" size="small" href={`/organizations/${organizationId}/settings/payments`}>Payment settings</ButtonLink> : undefined} />
+    {!organization.currency ? <CompactEmptyState kind="not-configured" action={has('organization.manage') ? <Link className="text-sm font-medium text-accent-text underline-offset-4 hover:underline" href={`/organizations/${organizationId}/settings/general#regional-heading`}>Choose a currency</Link> : undefined}>No trading currency is set, so services cannot be priced yet.</CompactEmptyState> : null}
     <PricingManagement organizationId={organizationId} items={items} currency={organization.currency} mayManage={mayManage} />
     <p className="mt-3 text-xs text-muted">{mayManage ? 'Changing a price affects new quote lines only. Quoted Work and issued invoices keep their original prices.' : 'Your role can view the catalog but cannot change prices.'}</p>
   </AppPage>;
