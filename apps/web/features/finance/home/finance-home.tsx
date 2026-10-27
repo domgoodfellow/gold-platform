@@ -45,9 +45,6 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
   const localDay = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
   const monthLabel = new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(new Date(`${period.from}T12:00:00Z`));
 
-  // A business with nothing priced starts by setting up pricing; that is then its primary action.
-  const setUpPricing = data.priceBookCount === 0 && mayManageCatalog ? <ButtonLink tone="primary" size="small" href={`${finance}/catalog`}><Tag aria-hidden className="size-4" />Set up pricing</ButtonLink> : null;
-
   if (!data.billingEnabled) return <WorkspaceHome title="Finance">
     <OperationalPanel title="Billing is off"><PanelState kind="not-configured" action={has('feature.manage') ? <ButtonLink tone="secondary" href={`${base}/settings/features`}>Manage features</ButtonLink> : undefined}>This business does not price, quote or invoice in GildOps. Records made while billing was on stay as they were.</PanelState></OperationalPanel>
   </WorkspaceHome>;
@@ -63,16 +60,21 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
   // The reporting period governs payments received and the period charts; receivables stay current.
   const periodControl = reports ? <FinancePeriod action={finance} month={period.month} /> : null;
   // Before anything is recorded the reporting charts have nothing to show, so they are not drawn at all.
-  const readable = new Set([...readableFinanceWidgets({ billingEnabled: data.billingEnabled, capabilities })].filter(id => data.started || !['payments-trend', 'aging', 'performance', 'invoice-status'].includes(id)));
+  // Activity with nothing in it would only repeat the Getting started panel, so it waits for the first event.
+  const readable = new Set([...readableFinanceWidgets({ billingEnabled: data.billingEnabled, capabilities })].filter(id => data.started || !['payments-trend', 'aging', 'performance', 'invoice-status', ...(data.activity.length ? [] : ['activity'])].includes(id)));
   const periodLabel = monthLabel;
+  // Before anything is recorded every tile reads None; one line says why rather than four different sentences.
+  const first = !data.started;
+  const none = (text: string) => first ? 'None' : text;
   const overview = <div className="@container min-w-0">
     <h2 className="sr-only">Financial overview</h2>
     <div className="grid min-w-0 gap-3 @min-[34rem]:grid-cols-2 @min-[60rem]:grid-cols-4">
-      {reports ? <MetricTile label="Payments received" icon={Banknote} value={<Amounts values={summary.received} empty="None this month" />} detail={`${monthLabel} · net of corrections`} href={`${finance}/payments?from=${period.from}&to=${period.to}`} /> : null}
-      <MetricTile label="Outstanding" icon={FileText} value={reports ? <Amounts values={summary.outstanding} empty="Nothing outstanding" /> : open.total} detail={`${open.total} unpaid ${open.total === 1 ? 'invoice' : 'invoices'}`} href={`${finance}/invoices?status=outstanding`} />
-      <MetricTile label="Overdue" icon={AlertTriangle} value={reports ? <Amounts values={data.overdueAmounts ?? []} empty="Nothing overdue" /> : overdue.total} detail={`${overdue.total} past ${overdue.total === 1 ? 'its' : 'their'} due date`} href={`${finance}/invoices?status=overdue`} emphasis={overdue.total > 0 ? 'danger' : undefined} />
-      <MetricTile label="Quoted, not invoiced" icon={ClipboardList} value={reports ? <Amounts values={summary.quoted} empty="Nothing waiting" /> : quotes.total} detail={`${quotes.total} priced Work ${quotes.total === 1 ? 'item' : 'items'}`} href={`${finance}/quotes?status=not-invoiced`} />
+      {reports ? <MetricTile label="Payments received" icon={Banknote} value={<Amounts values={summary.received} empty={none('None this month')} />} detail={first ? undefined : `${monthLabel} · net of corrections`} href={`${finance}/payments?from=${period.from}&to=${period.to}`} /> : null}
+      <MetricTile label="Outstanding" icon={FileText} value={reports ? <Amounts values={summary.outstanding} empty={none('Nothing outstanding')} /> : open.total} detail={first ? undefined : `${open.total} unpaid ${open.total === 1 ? 'invoice' : 'invoices'}`} href={`${finance}/invoices?status=outstanding`} />
+      <MetricTile label="Overdue" icon={AlertTriangle} value={reports ? <Amounts values={data.overdueAmounts ?? []} empty={none('Nothing overdue')} /> : overdue.total} detail={first ? undefined : `${overdue.total} past ${overdue.total === 1 ? 'its' : 'their'} due date`} href={`${finance}/invoices?status=overdue`} emphasis={overdue.total > 0 ? 'danger' : undefined} />
+      <MetricTile label="Quoted, not invoiced" icon={ClipboardList} value={reports ? <Amounts values={summary.quoted} empty={none('Nothing waiting')} /> : quotes.total} detail={first ? undefined : `${quotes.total} priced Work ${quotes.total === 1 ? 'item' : 'items'}`} href={`${finance}/quotes?status=not-invoiced`} />
     </div>
+    {first ? <p className="mt-2 text-xs text-muted">No invoices, quotes or payments are recorded yet.</p> : null}
     {!reports ? <p className="mt-2 text-xs text-muted">Amounts are shown to people with reporting access.</p> : null}
   </div>;
   const attention = !data.started ? <GettingStarted organizationId={organizationId} priced={data.priceBookCount > 0} mayManageCatalog={mayManageCatalog} mayQuote={may('work_item.price')} mayCreateWork={has('work_item.create')} />
@@ -93,7 +95,7 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
     } : {}),
   };
   return <DashboardEditingProvider available>
-    <WorkspaceHome title="Finance" actions={<FinanceHeaderActions organizationId={organizationId} today={today} period={periodControl} lead={setUpPricing}
+    <WorkspaceHome title="Finance" actions={<FinanceHeaderActions organizationId={organizationId} today={today} period={periodControl} firstRun={!data.started}
       mayQuote={may('work_item.price')} mayRecord={may('payment.record') && data.started} mayInvoice={may('invoice.issue') && data.started} mayCreateWork={has('work_item.create')} mayManageCatalog={mayManageCatalog} />}>
       <DashboardLayoutGrid label="Finance dashboard" registry={FINANCE_WIDGETS} saved={layout} readable={[...readable]} widgets={widgets}
         onSave={saveFinanceDashboardLayout.bind(null, organizationId)} onReset={resetFinanceDashboardLayout.bind(null, organizationId)} />
@@ -110,11 +112,11 @@ function GettingStarted({ organizationId, priced, mayManageCatalog, mayQuote, ma
   const finance = `/organizations/${organizationId}/finance`;
   const [text, action] = !priced
     ? [mayManageCatalog ? 'Nothing is priced yet. Add price items for what this business charges, then quote Work from them.' : 'Nothing is priced yet. Someone who manages pricing adds price items before Work can be quoted.',
-      mayManageCatalog ? <ButtonLink size="small" tone="secondary" href={`${finance}/catalog`}>Set up pricing</ButtonLink> : null]
+      mayManageCatalog ? <ButtonLink size="small" tone="primary" href={`${finance}/catalog`}><Tag aria-hidden className="size-4" />Set up pricing</ButtonLink> : null]
     : ['Prices are ready. Choose a Work item and add priced lines to create its quote; invoices and payments follow from there.',
-      mayQuote ? <QuoteDialog organizationId={organizationId} label="Price Work" size="small" tone="secondary" mayCreateWork={mayCreateWork} mayManageCatalog={mayManageCatalog} /> : <ButtonLink size="small" tone="secondary" href={`${finance}/catalog`}>View price book</ButtonLink>];
+      mayQuote ? <QuoteDialog organizationId={organizationId} label="Price Work" size="small" tone="primary" mayCreateWork={mayCreateWork} mayManageCatalog={mayManageCatalog} /> : <ButtonLink size="small" tone="secondary" href={`${finance}/catalog`}>View price book</ButtonLink>];
   return <OperationalPanel className="h-full min-w-0" title="Getting started" density="compact">
-    <div className="flex flex-col items-start gap-3 text-sm"><p>{text}</p>{action}<p className="text-xs text-muted">Payments are recorded by hand against each invoice; card payments are optional.</p></div>
+    <div className="flex flex-col items-start gap-3 text-sm"><p>{text}</p>{action}</div>
   </OperationalPanel>;
 }
 

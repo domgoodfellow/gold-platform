@@ -134,9 +134,11 @@ test.describe.serial('Finance structural correction', () => {
       await page.waitForLoadState('networkidle');
       await page.getByRole('button', { name: 'Customize dashboard' }).click();
       await expect(page.getByRole('toolbar', { name: 'Customize dashboard' })).toBeVisible();
-      await page.getByRole('button', { name: 'Move Financial activity earlier' }).click();
+      // Nothing is recorded, so Financial activity is not drawn yet; the overview and Getting started still reorder.
+      await expect(page.locator('[data-widget-id="activity"]')).toHaveCount(0);
+      await page.getByRole('button', { name: 'Move Needs attention earlier' }).click();
       const edited = await order();
-      expect(edited.indexOf('activity')).toBeLessThan(edited.indexOf('attention'));
+      expect(edited.indexOf('attention')).toBeLessThan(edited.indexOf('overview'));
       await page.getByRole('button', { name: 'Save changes' }).click();
       await expect(page.getByRole('status').filter({ hasText: 'Dashboard layout saved.' })).toBeVisible();
       // New quote opens; with no Work yet it says a quote starts from Work, and closing returns focus.

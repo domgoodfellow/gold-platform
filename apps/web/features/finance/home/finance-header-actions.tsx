@@ -18,15 +18,15 @@ type Secondary = 'quote' | 'payment' | 'invoice';
  * header never becomes a wall of buttons, while the period, Customize and the primary action stay.
  * A menu closes as its item is chosen, so the dialogs it opens live beside it, not inside it.
  */
-export function FinanceHeaderActions({ organizationId, today, period, lead, mayQuote, mayRecord, mayInvoice, mayCreateWork, mayManageCatalog }: {
+export function FinanceHeaderActions({ organizationId, today, period, firstRun = false, mayQuote, mayRecord, mayInvoice, mayCreateWork, mayManageCatalog }: {
   organizationId: string; today: string; period: ReactNode;
-  /** A contextual primary action (Set up pricing for a business with no prices); the usual actions then become secondary. */
-  lead?: ReactNode;
+  /** Nothing recorded yet: the Dashboard's Getting started panel holds the one next step, so the header offers no primary action to compete with it. */
+  firstRun?: boolean;
   mayQuote: boolean; mayRecord: boolean; mayInvoice: boolean; mayCreateWork: boolean; mayManageCatalog: boolean;
 }) {
   const [open, setOpen] = useState<Secondary | null>(null);
   const more = useRef<HTMLButtonElement>(null);
-  const primary: Secondary | null = lead ? null : mayInvoice ? 'invoice' : mayRecord ? 'payment' : mayQuote ? 'quote' : null;
+  const primary: Secondary | null = firstRun ? null : mayInvoice ? 'invoice' : mayRecord ? 'payment' : mayQuote ? 'quote' : null;
   const secondary = ([mayQuote && primary !== 'quote' ? 'quote' : null, mayRecord && primary !== 'payment' ? 'payment' : null, mayInvoice && primary !== 'invoice' ? 'invoice' : null] as const).filter(Boolean) as Secondary[];
   const closed = (next: boolean) => { if (!next) { setOpen(null); requestAnimationFrame(() => more.current?.focus()); } };
   const editing = useDashboardEditing();
@@ -56,7 +56,6 @@ export function FinanceHeaderActions({ organizationId, today, period, lead, mayQ
       {secondary.includes('payment') ? <PaymentDialog organizationId={organizationId} today={today} trigger={false} open={open === 'payment'} onOpenChange={closed} /> : null}
       {secondary.includes('invoice') ? <InvoiceDialog organizationId={organizationId} today={today} trigger={false} open={open === 'invoice'} onOpenChange={closed} /> : null}
     </span> : null}
-    {lead ?? null}
     {primary === 'invoice' ? <InvoiceDialog organizationId={organizationId} today={today} tone="primary" />
       : primary === 'payment' ? <PaymentDialog organizationId={organizationId} today={today} tone="primary" />
       : primary === 'quote' ? <QuoteDialog organizationId={organizationId} tone="primary" mayCreateWork={mayCreateWork} mayManageCatalog={mayManageCatalog} /> : null}

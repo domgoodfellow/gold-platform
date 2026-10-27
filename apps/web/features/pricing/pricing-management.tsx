@@ -34,7 +34,7 @@ export function PricingManagement({ organizationId, items, currency, mayManage }
     <section aria-labelledby="price-book-heading" className="@container/prices mt-4 rounded-lg border border-border bg-surface">
       <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-3">
         <h2 id="price-book-heading" className="font-semibold">Price book <span className="text-sm font-normal text-muted">({items.length})</span></h2>
-        {items.length ? add : null}
+        {add}
       </div>
       {mayManage && !currency ? <Hint className="px-3 pb-3">Choose a trading currency before adding prices.</Hint> : null}
       {items.length || editing === 'new' ? (
@@ -58,10 +58,9 @@ export function PricingManagement({ organizationId, items, currency, mayManage }
           </ul>
         </>
       ) : (
-        <div className="flex flex-col items-start gap-3 border-t border-border px-3 py-6 text-sm">
+        <div className="flex flex-col gap-1 border-t border-border px-3 py-4 text-sm">
           <p className="font-medium">Nothing is priced yet.</p>
-          <p className="max-w-prose text-muted">Add a price item for each thing this business charges: a name, a unit such as hour or visit, and a price. Quoting a Work item copies these prices onto it; adding a price item does not create Work or a Work type.</p>
-          {add}
+          <p className="max-w-prose text-muted">{mayAdd ? 'Use Add price item for each thing this business charges: a name, a unit such as hour or visit, and a price.' : 'Price items appear here once someone who manages pricing adds them.'} Quoting Work copies these prices; it creates no Work.</p>
         </div>
       )}
     </section>

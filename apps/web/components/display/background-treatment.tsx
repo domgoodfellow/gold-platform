@@ -95,9 +95,10 @@ function Ambient3d({ className, clear, reducedMotion }: { className?: string; cl
       const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
       renderer.domElement.setAttribute('aria-hidden', 'true');
-      // Fades out toward the region's content side, so the lines never run behind text or controls at full strength.
-      const fade = `linear-gradient(${clear === 'end' ? 'to right' : 'to left'},#000 0%,#000 35%,transparent 80%)`;
-      renderer.domElement.style.cssText = `position:absolute;inset:0;width:100%;height:100%;pointer-events:none;mask-image:${fade};-webkit-mask-image:${fade};`;
+      // Fades out toward the region's content side, so the lines never run behind text or controls, and
+      // softens every edge, so the surface reads as part of the region rather than a panel laid over it.
+      const fade = `linear-gradient(${clear === 'end' ? 'to right' : 'to left'},#000 0%,#000 20%,transparent 60%),linear-gradient(to bottom,transparent 0%,#000 35%,#000 65%,transparent 100%)`;
+      renderer.domElement.style.cssText = `position:absolute;inset:0;width:100%;height:100%;pointer-events:none;mask-image:${fade};-webkit-mask-image:${fade};mask-composite:intersect;-webkit-mask-composite:source-in;`;
       element.appendChild(renderer.domElement);
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
@@ -105,8 +106,8 @@ function Ambient3d({ className, clear, reducedMotion }: { className?: string; cl
       const geometry = new THREE.PlaneGeometry(12, 6, 48, 24);
       geometry.rotateX(-Math.PI / 2.4);
       const base = geometry.attributes.position.array.slice() as Float32Array;
-      const primary = new THREE.MeshBasicMaterial({ color: resolveColour(element, '--accent', '#666666'), wireframe: true, transparent: true, opacity: 0.28 });
-      const secondary = new THREE.MeshBasicMaterial({ color: resolveColour(element, '--brand-secondary', '#999999'), wireframe: true, transparent: true, opacity: 0.18 });
+      const primary = new THREE.MeshBasicMaterial({ color: resolveColour(element, '--accent', '#666666'), wireframe: true, transparent: true, opacity: 0.16 });
+      const secondary = new THREE.MeshBasicMaterial({ color: resolveColour(element, '--brand-secondary', '#999999'), wireframe: true, transparent: true, opacity: 0.09 });
       const wire = new THREE.Mesh(geometry, primary);
       const echo = new THREE.Mesh(geometry, secondary);
       echo.position.y = -0.35;

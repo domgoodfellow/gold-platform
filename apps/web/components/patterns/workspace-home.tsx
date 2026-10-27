@@ -43,7 +43,7 @@ export function WorkspaceHome({
       {location ? null : <PageLocation crumbs={crumbs} current={title} />}
       {/* The workspace introduction is the one designated decorative region in the workspace: a chosen
           background treatment draws behind it (never behind data), and pads it only when present. */}
-      <div data-slot="workspace-intro" className="relative isolate mb-6 flex flex-wrap items-center justify-end gap-x-4 gap-y-3">
+      <div data-slot="workspace-intro" className="relative isolate mb-6 flex flex-wrap items-center justify-end gap-x-4 gap-y-3 has-[>[data-decorative-background]]:min-h-16 has-[>[data-decorative-background]]:px-4 has-[>[data-decorative-background]]:py-3">
         <DecorativeBackground className="rounded-(--visual-radius,0.625rem)" />
         {location ? <LocationHeading required /> : <LocationHeading fallback={<h1 className={titleInBar ? 'sr-only' : 'mr-auto text-2xl font-semibold tracking-tight'}>{title}</h1>} />}
         {actions || insights || activity || configure ? (
