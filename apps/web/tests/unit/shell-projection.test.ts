@@ -492,7 +492,9 @@ describe('every workspace Configuration organizes its real pages', () => {
         expect(child.href.startsWith(`/organizations/${ORG}/`), child.key).toBe(true);
         const context = workspaceNavigation(project(), child.href);
         if (!context) { expect(child.href, `${child.key} is a shared Settings page`).toContain('/settings/'); continue; }
-        expect(activeItemKey(context.sections, child.href.split('#')[0]), child.key).toMatch(new RegExp(`^(${parent.children!.map(item => item.key.replace(/#.*/, '')).join('|')}|workspace-configuration)$`));
+        // An editor that belongs to a destination page (Business hours → Schedule) opens with that page selected.
+        const owner = configTarget(child.key.replace(/#.*/, '')).destination;
+        expect(activeItemKey(context.sections, child.href.split('#')[0]), child.key).toMatch(new RegExp(`^(${parent.children!.map(item => item.key.replace(/#.*/, '')).join('|')}|workspace-configuration${owner ? `|${owner}` : ''})$`));
       }
     }
   });
@@ -619,6 +621,42 @@ describe('workspace Calendar shortcut', () => {
     const context = workspaceNavigation(project(), `${base}/crm/calendar`)!;
     expect(context.workspace.key).toBe('workspace-crm');
     expect(context.workspace.calendar?.href).toBe(`${base}/crm/calendar`);
+  });
+});
+
+// The shared rule: operating destinations are navigation rows; configuring one of them is reached from
+// that page, so its workspace draws no Configuration row for it; a substantial standalone editor keeps
+// its own branch; shared organization settings stay in Settings; legacy addresses still resolve.
+describe('contextual configuration of an existing destination', () => {
+  const row = (key: string, sections = project()) => projectedItems(sections).find(item => item.key === `workspace-${key}`)!;
+  it('draws no Configuration row for Work, whose types and hours configure Work items and Schedule', () => {
+    const work = row('field', project(ALL_CAPABILITIES, { schedulableWork: true }));
+    expect(work.configuration).toBeUndefined();
+    expect(work.destinations?.map(item => item.key)).not.toContain('workspace-configuration');
+    expect(work.destinations?.find(item => item.key === 'work')?.activeHrefs).toEqual([`/organizations/${ORG}/work/configuration`]);
+    expect(work.destinations?.find(item => item.key === 'schedule')?.activeHrefs).toEqual([`/organizations/${ORG}/schedule/configuration`]);
+  });
+  it('keeps the editor reachable and its destination selected while it is edited', () => {
+    const sections = project(['field.manage'], { schedulableWork: true });
+    for (const [path, active] of [['work/configuration', 'work'], ['work/configuration?type=t1', 'work'], ['schedule/configuration', 'schedule']] as const) {
+      const context = workspaceNavigation(sections, `/organizations/${ORG}/${path}`)!;
+      expect(context.workspace.key).toBe('workspace-field');
+      expect(activeItemKey(context.sections, `/organizations/${ORG}/${path.split('?')[0]}`)).toBe(active);
+    }
+    // The legacy root is still Work's, for the redirect to the first door.
+    expect(workspaceNavigation(sections, `/organizations/${ORG}/field/configuration`)?.workspace.key).toBe('workspace-field');
+  });
+  it('lets another workspace keep a link to the same editor and keeps standalone editors as a branch', () => {
+    expect(row('communications').configuration?.children?.map(item => item.key)).toContain('schedule-configuration');
+    expect(row('ai').configuration?.children?.map(item => item.key)).toEqual(['ai-agents', 'ai-deployments', 'ai-knowledge', 'ai-tools']);
+    expect(row('crm').configuration).toBeDefined();
+    expect(row('support').configuration).toBeUndefined();
+    expect(row('finance').configuration).toBeUndefined();
+  });
+  it('never offers the Work editors to a member who cannot configure Work', () => {
+    const sections = project(['work_item.create'], { schedulableWork: true });
+    expect(row('field', sections).configuration).toBeUndefined();
+    expect(workspaceNavigation(sections, `/organizations/${ORG}/work/configuration`)?.sections[0].items.map(item => item.key) ?? []).not.toContain('workspace-configuration');
   });
 });
 

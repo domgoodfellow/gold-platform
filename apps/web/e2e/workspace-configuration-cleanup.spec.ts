@@ -200,7 +200,13 @@ test.describe('a reduced-role colleague', () => {
       await page.goto(`${base}/${segment}`);
       const offered = await sidebarNav(page).locator('a[href]').evaluateAll((links) => links.map((link) => link.getAttribute('href')!));
       const landed = await resolvesAway(page, base, segment);
-      if (landed) expect(offered, segment).toContain(landed);
+      if (!landed) continue;
+      if (offered.includes(landed)) continue;
+      // An editor reached from the page it configures (Work types → Work items) is offered through that
+      // page: the page is one of the colleague's sidebar links and stays selected while the editor is open.
+      const selected = await sidebarNav(page).locator('a[aria-current="page"]').evaluateAll((links) => links.map((link) => link.getAttribute('href')!));
+      expect(selected.length, segment).toBe(1);
+      expect(offered, segment).toContain(selected[0]);
     }
   });
 });

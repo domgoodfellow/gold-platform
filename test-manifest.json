@@ -2996,6 +2996,7 @@
       "category": "component",
       "concerns": ["work", "configuration"]
     },
+    "apps/web/tests/component/work-breadcrumbs.test.tsx": {"category": "component", "concerns": ["navigation", "work", "terminology"], "note": "Work pages (New work, Work types editor, Scheduling hours editor) name their parent with the label the business navigation shows for it, default and renamed, and claim no Configuration ancestor; New work takes the label from the registry, not a hardcoded word."},
     "apps/web/tests/component/work-create-page.test.tsx": {
       "category": "component",
       "concerns": ["work", "configuration", "security"]

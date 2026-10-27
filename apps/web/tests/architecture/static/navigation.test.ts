@@ -270,7 +270,7 @@ describe('the operator shell navigation', () => {
       expect(area, `${target.key} edits a destination that is not an Area`).toBeDefined();
       expect(area?.workspace).toBe(target.workspace);
     }
-    expect(CONFIG_TARGETS.filter((candidate) => candidate.destination).map((candidate) => candidate.key)).toEqual(['price-book', 'support-queues', 'support-service-levels']);
+    expect(CONFIG_TARGETS.filter((candidate) => candidate.destination).map((candidate) => candidate.key)).toEqual(['work-configuration', 'schedule-configuration', 'price-book', 'support-queues', 'support-service-levels']);
   });
 
   it('uses the nine stable canonical workspace identities and default labels', () => {

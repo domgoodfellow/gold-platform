@@ -47,7 +47,7 @@ Both acquisition paths reach the same versioned business profile editor in Setup
 
 ## Work creation
 
-Work Home, Work Items and Schedule open `/organizations/{org}/work/new` through the same action. The existing Work creation form, server action and database tenant/permission checks own the operation. `?type=` selects a type; `/work?create=1&type=...` redirects to the creation page. Missing types or starting stages show prerequisites, permission-filtered configuration and a return to creation. Ready types expose customer, location, resource, optional asset and custom-field inputs. Errors retain the draft; success and Cancel return to Work Items. Dirty drafts guard links, type switches and browser unload through the shared unsaved-changes hook.
+Work Home, Work Items and Schedule open `/organizations/{org}/work/new` through the same action. The existing Work creation form, server action and database tenant/permission checks own the operation. `?type=` selects a type; `/work?create=1&type=...` redirects to the creation page. Missing types or starting stages show the prerequisite on the page; a member with `field.manage` adds the first type or the starting stage there (named by them, through the same actions and policies as Work type settings) and continues creating with the type kept, while others see what is missing and any type that is ready. Ready types expose customer, location, resource, optional asset and custom-field inputs. Errors retain the draft; success and Cancel return to Work Items. Dirty drafts guard links, type switches and browser unload through the shared unsaved-changes hook.
 
 ## Gaps
 

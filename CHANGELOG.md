@@ -40,6 +40,9 @@ Entries describe the product or operational change, not every file touched.
 - Pricing wording now says what it does: Set up pricing, Add price item and Price item, instead of Add services. Adding a price item never creates a kind of work or a Work item.
 - Settings → General now holds only the business profile: identity, address, contact and a new Regional settings section. The time zone and trading currency always show there, even before a country is chosen; a stored currency is never replaced by a suggestion.
 - Getting paid moved from General to its own Settings page, Customer payments, and business words and page labels moved to Words & navigation. Old links to Getting paid, Finance's old configuration pages and the old Commerce page land on Customer payments.
+- New work can now add a missing starting stage in place: someone who can configure Work types names the stage, adds it, and goes straight on creating the work with the same type chosen. Others see what is missing and can pick a type that is ready. The page is now a compact form.
+- Work no longer has a Configuration row in the sidebar. Work types and scheduling hours open from Work items and Schedule, which stay highlighted while they are edited; old Work configuration links still work.
+- Work's breadcrumbs now use the business's own name for Work items and Schedule (for example "Jobs" instead of "Work Items"), and Work's editors sit under the page they configure instead of a Configuration level.
 
 ## 2026-10-25
 

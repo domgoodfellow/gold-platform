@@ -169,6 +169,19 @@ function hasConfigurationLevel(workspace: WorkspaceKey): boolean {
   });
 }
 
+/**
+ * Workspaces whose editors are reached from the page they configure and have no Configuration row,
+ * so an editor's parent is that page rather than a "Configuration" level nobody can see. Work only for
+ * now; Support's Queues and Service levels have the same shape and await their own navigation decision.
+ */
+const CONTEXTUAL_EDITOR_WORKSPACES: ReadonlySet<WorkspaceKey> = new Set(['field']);
+
+function targetParent(target: ConfigTarget): string {
+  return target.destination && target.workspace && CONTEXTUAL_EDITOR_WORKSPACES.has(target.workspace)
+    ? `area:${target.destination}`
+    : `configuration:${target.workspace}`;
+}
+
 function settingsTarget(target: ConfigTarget): boolean {
   return target.key !== 'setup' && (target.treatment === 'shared' || !target.workspace);
 }
@@ -209,7 +222,7 @@ function deriveNodes(): LocationNode[] {
     if (settingsTarget(target)) {
       nodes.push({ id: `target:${target.key}`, scope: 'settings', kind: 'target', pattern: target.path, parent: 'scope:settings', target: target.key, open: OPEN_TARGETS[target.key], ...(target.path === 'settings/access' ? { redirect: true as const } : {}) });
     } else if (target.workspace) {
-      nodes.push({ id: `target:${target.key}`, scope: 'organization', kind: 'target', pattern: target.path, parent: `configuration:${target.workspace}`, target: target.key, workspace: target.workspace, open: OPEN_TARGETS[target.key] });
+      nodes.push({ id: `target:${target.key}`, scope: 'organization', kind: 'target', pattern: target.path, parent: targetParent(target), target: target.key, workspace: target.workspace, open: OPEN_TARGETS[target.key] });
     }
   }
 

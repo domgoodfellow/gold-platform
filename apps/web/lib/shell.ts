@@ -16,6 +16,7 @@ import {
   workspaceConfigurationOwner,
   workspaceConfigurationTarget,
   type Area,
+  type ConfigTarget,
 } from '@/lib/navigation';
 import {
   ADMINISTRATION_LABEL,
@@ -47,6 +48,12 @@ export type NavItem = {
   /** Eligible operating destinations, rendered only after entering this workspace. */
   destinations?: NavItem[];
   configuration?: NavItem;
+  /**
+   * Every configuration door this member may open from this workspace, including ones reached from
+   * the destination they configure (which draw no Configuration row). Never drawn in the sidebar;
+   * a Home's shortcuts read it, so contextual configuration stays one click from Home.
+   */
+  configureDoors?: NavItem[];
   /**
    * The workspace's registered Calendar destination (`AREAS`, `{home}/calendar`), offered as a shortcut
    * only while its Home is usable and the calendar area is available. Never built from a string.
@@ -120,6 +127,11 @@ function areaItem(organizationId: string, area: Area, section: ShellSectionKey):
     href: areaHref(organizationId, area.segment),
     section,
   };
+}
+
+/** Whether `target` configures a destination page of `workspace` itself, and so is reached from that page. */
+function configuresOwnDestination(target: ConfigTarget | undefined, workspace: string): boolean {
+  return Boolean(target?.destination && AREAS.find((area) => area.segment === target.destination)?.workspace === workspace);
 }
 
 /** A workspace page, which also stays selected while somebody edits the configuration behind it. */
@@ -221,8 +233,9 @@ export function projectShell(input: ShellInput): ShellSection[] {
     const areas = AREAS.filter((area) => area.workspace === workspace.key && operable(area));
     const home = workspace.home ? areas.find((area) => area.segment === workspace.home) : undefined;
     const concerns = workspaceConfigureItems(organizationId, workspace.key, { enabledModules, featureAvailability, capabilities, schedulableWork });
-    // A door that edits one destination's page is that destination's, not a branch of its own.
-    const branch = concerns.filter(concern => !configTargetForHref(concern.href)?.destination);
+    // A door that edits one of this workspace's destinations is that destination's, not a branch of
+    // its own. Another workspace linking to the same editor (Communications' Business hours) keeps it.
+    const branch = concerns.filter(concern => !configuresOwnDestination(configTargetForHref(concern.href), workspace.key));
     if (!home && branch.length === 0) return [];
     // `{home}/configuration` only redirects; it is matched as active but never drawn as a link.
     const configurationHref = workspaceConfigurationHref(organizationId, workspace.key);
@@ -252,6 +265,7 @@ export function projectShell(input: ShellInput): ShellSection[] {
       section: 'workspaces',
       activeHrefs: [...AREAS.filter((area) => area.workspace === workspace.key && area.group === 'workspaces' && eligible(area)).map((area) => areaHref(organizationId, area.segment)), ...(configuration ? [configurationHref, ...(configuration.activeHrefs ?? [])] : [])],
       configuration,
+      ...(concerns.length ? { configureDoors: concerns.map(concern => ({ ...concern, section: 'workspaces' as const })) } : {}),
       ...(calendar ? { calendar } : {}),
       configurationOnly: !home,
       destinations: [
@@ -340,7 +354,7 @@ export function projectedItems(sections: readonly ShellSection[]): NavItem[] {
 }
 
 /** Every item a person could be sent to from the projection, including entered-only destinations. */
-function reachableItems(sections: readonly ShellSection[]): NavItem[] {
+export function reachableItems(sections: readonly ShellSection[]): NavItem[] {
   const walk = (item: NavItem): NavItem[] => [item, ...[
     ...(item.children ?? []),
     ...(item.destinations ?? []),
@@ -397,7 +411,7 @@ export function workspaceShortcuts(
   const row = sections.flatMap((section) => section.items).find((item) => item.key === `workspace-${workspace}`);
   if (!row) return [];
   const destinations = (pick.destinations ?? []).map((key) => row.destinations?.find((item) => item.key === key));
-  const configuration = (pick.configuration ?? []).map((key) => row.configuration?.children?.find((item) => item.key === key));
+  const configuration = (pick.configuration ?? []).map((key) => row.configureDoors?.find((item) => item.key === key));
   return [...destinations, ...(pick.calendar && row.calendar ? [row.calendar] : []), ...configuration].filter((item): item is NavItem => Boolean(item));
 }
 

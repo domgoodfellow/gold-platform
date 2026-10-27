@@ -9,7 +9,7 @@ import { ArrowLeft, Check, ChevronDown } from 'lucide-react';
 import { useIsMobile } from '@gold/ui/hooks/use-mobile';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@gold/ui/components/dropdown-menu';
 import { Button, ButtonLink } from '../controls/button';
-import { pageNavigation, projectedItems, type LocationNavigation, type PageNavigation } from '@/lib/shell';
+import { pageNavigation, reachableItems, type LocationNavigation, type PageNavigation } from '@/lib/shell';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -184,7 +184,8 @@ export function MobilePageLocation({ current, navigation }: { current: ReactNode
 export function PageCrumbs({ crumbs: authoredCrumbs, current }: { crumbs: Crumb[]; current: ReactNode }) {
   const context = useContext(CrumbSlotContext);
   const slot = context?.slot;
-  const destinations = projectedItems(context?.navigation?.sections ?? []);
+  // A workspace's own pages too (Work items, Schedule…), so an ancestor reads the business's own label for it.
+  const destinations = reachableItems(context?.navigation?.sections ?? []);
   const crumbs = authoredCrumbs.map(crumb => { const destination = destinations.find(item => item.href === crumb.href); return destination ? {...crumb,label:destination.label} : crumb; });
   const pathname = usePathname();
   const isMobile = useIsMobile();

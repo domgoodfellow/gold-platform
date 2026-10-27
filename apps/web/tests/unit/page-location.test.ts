@@ -219,19 +219,32 @@ describe('Communications and the Dialer', () => {
 });
 
 describe('configuration with known ownership', () => {
-  it('keeps one canonical location however the page was reached', () => {
+  it('keeps one canonical location however the page was reached, under the page it configures', () => {
     const location = at(`${ORG}/schedule/configuration`);
-    expect(trail(location)).toEqual([`Work → ${ORG}/field`, 'Configuration']);
+    // Work has no Configuration row, so its editors sit under the destination they configure, never a Configuration level.
+    expect(trail(location)).toEqual([`Work → ${ORG}/field`, `Schedule → ${ORG}/schedule`]);
     expect(location.current.label).toBe('Scheduling & hours');
+    expect(location.up).toBe(`${ORG}/schedule`);
     expect(location.owner).toMatchObject({ workspace: 'field', configTarget: 'schedule-configuration' });
   });
 
-  it('never links the Configuration level, which only redirects (Batch A: no workspace has a landing)', () => {
+  it('puts the Work type editor under Work items, and Up returns there', () => {
     const gate = { ...everything, capabilities: new Set<Capability>(['field.manage']), schedulableWork: false };
     const location = resolved(resolveLocation({ pathname: `${ORG}/work/configuration`, access: { gate } }));
-    expect(trail(location)).toEqual([`Work → ${ORG}/field`, 'Configuration']);
+    expect(trail(location)).toEqual([`Work → ${ORG}/field`, `Work items → ${ORG}/work`]);
     expect(location.current.label).toBe('Work types & workflow');
-    expect(location.up).toBe(`${ORG}/field`);
+    expect(location.up).toBe(`${ORG}/work`);
+  });
+
+  it("names the Work editors' parents with the business's own words, never renaming the workspace", () => {
+    const vocabulary = { revision: 1, navigation: [], nouns: {}, labels: { work: 'Jobs', schedule: 'Diary', field: 'Operations' } };
+    expect(trail(at(`${ORG}/work/configuration`, { vocabulary }))).toEqual([`Work → ${ORG}/field`, `Jobs → ${ORG}/work`]);
+    expect(trail(at(`${ORG}/schedule/configuration`, { vocabulary }))).toEqual([`Work → ${ORG}/field`, `Diary → ${ORG}/schedule`]);
+  });
+
+  it('keeps the legacy Work configuration address as a redirect that no Work page names as an ancestor', () => {
+    expect(LOCATION_NODES.find((node) => node.id === 'configuration:field')).toMatchObject({ pattern: 'field/configuration', redirect: true });
+    expect(LOCATION_NODES.filter((node) => node.parent === 'configuration:field')).toEqual([]);
   });
 
   it('marks configuration whose ownership is still under review', () => {

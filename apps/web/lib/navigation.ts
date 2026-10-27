@@ -504,9 +504,12 @@ export type ConfigTarget = {
    */
   directory?: false;
   /**
-   * The workspace destination (`AREAS` segment) whose page this door is the configuration of. That
-   * destination counts this address as its own, so the sidebar draws no separate Configuration branch
-   * for it: Support's Queues and Service levels are operating pages, and their editors open from Configure.
+   * The workspace destination (`AREAS` segment) whose page this door is the configuration of. The
+   * shared rule: operating destinations are navigation rows; configuring one of them is reached from
+   * that page (its Configure control), so its own workspace draws no separate Configuration branch for
+   * the door and the destination stays selected while it is edited. Support's Queues and Service
+   * levels, Work's types (Work items) and scheduling hours (Schedule) are configured this way. A door
+   * with no destination (a substantial standalone editor such as AI's Agents) keeps the branch.
    */
   destination?: string;
 };
@@ -522,8 +525,10 @@ export const CONFIG_TARGETS: readonly ConfigTarget[] = [
   { key: 'website', treatment: 'operating', scope: 'organization', workspace: 'studio', path: 'studio/website', permission: ['organization.manage'] },
   { key: 'automation-rules', treatment: 'operating', scope: 'organization', workspace: 'automations', path: 'automations/rules', entitledBy: 'automations', permission: ['automation.manage'] },
   { key: 'ai-agents', scope: 'organization', workspace: 'ai', path: 'ai/agents', featureKeys: ['agent_tools'], permission: ['organization.manage'] },
-  { key: 'work-configuration', scope: 'organization', workspace: 'field', path: 'work/configuration', permission: ['field.manage'] },
-  { key: 'schedule-configuration', scope: 'organization', workspace: 'field', path: 'schedule/configuration', entitledBy: 'schedule', permission: ['field.manage'] },
+  // Work types configure Work items, and scheduling hours configure Schedule: each is reached from the
+  // page it configures (its Configure control), never from a Configuration row of its own.
+  { key: 'work-configuration', scope: 'organization', workspace: 'field', path: 'work/configuration', permission: ['field.manage'], destination: 'work' },
+  { key: 'schedule-configuration', scope: 'organization', workspace: 'field', path: 'schedule/configuration', entitledBy: 'schedule', permission: ['field.manage'], destination: 'schedule' },
   // The operating price book, linked from the Settings directory and setup the way Resources and Locations are; it is its own sidebar destination.
   { key: 'price-book', treatment: 'operating', scope: 'organization', workspace: 'finance', path: 'finance/catalog', entitledBy: 'finance-catalog', permission: ['price.manage'], destination: 'finance-catalog' },
   { key: 'customer-fields', scope: 'organization', workspace: 'crm', path: 'crm/configuration/fields', permission: ['field.manage'], directory: false },
