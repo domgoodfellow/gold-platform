@@ -8,9 +8,8 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { requestOrigin } from '@/lib/route/origin';
 import { requestCardPayment } from '@/lib/domain/billing/card-payments';
-import { issueInvoice, recordPayment } from '@/lib/domain/billing/invoices';
 import { addChecklistItem, setChecklistItemDone } from '@/lib/domain/work-items/checklists';
-import { addPricedLine, removePricedLine } from '@/lib/domain/pricing/prices';
+import { removePricedLine } from '@/lib/domain/pricing/prices';
 import { recordCost, recordTime } from '@/lib/domain/work-items/consumption';
 import { updateWorkItem } from '@/lib/domain/work-items/work-items';
 import { uploadDocument } from '@/lib/domain/documents/documents';
@@ -145,37 +144,6 @@ export async function recordCostAction(
   return { error: null };
 }
 
-/**
- * Put a catalogue item on this job.
- *
- * Notice what this form cannot submit: an amount. The domain layer takes an item and a
- * quantity, and the RPC copies the price from the catalogue — so there is no field here for
- * somebody to type a number into, which is the difference between quoting and invoicing.
- */
-export async function addPricedLineAction(
-  _previous: WorkItemActionState,
-  formData: FormData,
-): Promise<WorkItemActionState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-  await requireOrganization(organizationId);
-  const workItemId = String(formData.get('workItemId') ?? '');
-
-  try {
-    await addPricedLine(db, {
-      workItemId,
-      priceBookItemId: String(formData.get('priceBookItemId') ?? ''),
-      quantity: Number(formData.get('quantity') ?? Number.NaN),
-    });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message };
-    throw error;
-  }
-
-  revalidate(organizationId, workItemId);
-  return { error: null };
-}
-
 export async function removePricedLineAction(
   _previous: WorkItemActionState,
   formData: FormData,
@@ -226,66 +194,6 @@ export async function updateWorkItemAction(
 
   revalidate(organizationId, workItemId);
   return { error: null, updated: true };
-}
-
-/**
- * Issue the invoice for this job.
- *
- * Notice what this form cannot submit either, and it is more than the priced-line form
- * withholds: no amount, no lines, no currency and no number. `issue_invoice` copies the quote
- * and takes the next number for the business, so the only thing a person chooses here is when
- * it falls due. An invoice whose contents a caller could assert would not be a snapshot.
- */
-export async function issueInvoiceAction(
-  _previous: WorkItemActionState,
-  formData: FormData,
-): Promise<WorkItemActionState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-  await requireOrganization(organizationId);
-  const workItemId = String(formData.get('workItemId') ?? '');
-
-  try {
-    await issueInvoice(db, {
-      workItemId,
-      issuedAt: String(formData.get('issuedAt') ?? ''),
-      dueAt: String(formData.get('dueAt') ?? ''),
-    });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message };
-    throw error;
-  }
-
-  revalidate(organizationId, workItemId);
-  return { error: null };
-}
-
-export async function recordPaymentAction(
-  _previous: WorkItemActionState,
-  formData: FormData,
-): Promise<WorkItemActionState> {
-  const db = await getDb();
-  const organizationId = String(formData.get('organizationId') ?? '');
-  await requireOrganization(organizationId);
-  const workItemId = String(formData.get('workItemId') ?? '');
-
-  try {
-    // Minor units, for the reason `recordCostAction` gives. No provider field exists on this
-    // form and none may be added: this path is a person writing down what they were handed,
-    // and a payment that names a processor must have come from one.
-    await recordPayment(db, {
-      invoiceId: String(formData.get('invoiceId') ?? ''),
-      amountMinor: Number(formData.get('amountMinor') ?? Number.NaN),
-      receivedAt: String(formData.get('receivedAt') ?? ''),
-      note: String(formData.get('note') ?? ''),
-    });
-  } catch (error) {
-    if (error instanceof DomainError) return { error: error.message };
-    throw error;
-  }
-
-  revalidate(organizationId, workItemId);
-  return { error: null };
 }
 
 /**

@@ -1,10 +1,11 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { Button } from '@/components/controls/button';
 import { FormActions, FormError, FormField } from '@/components/controls/form';
 import { TextInput } from '@/components/controls/inputs';
 import { OptionalSelect, type SelectOption } from '@/components/controls/optional-select';
+import { parseMoneyInput } from '@/lib/domain/pricing/money-input';
 import {
   recordCostAction,
   recordTimeAction,
@@ -50,22 +51,27 @@ export function RecordCostForm({ organizationId, workItemId, currency }: {
   currency: string;
 }) {
   const [state, formAction, pending] = useActionState(recordCostAction, INITIAL);
+  // Typed as money (12.50) and sent in the currency's minor units, by the same rule Finance's dialogs use.
+  const [amount, setAmount] = useState('');
+  let minor: number | null = null, problem: string | null = null;
+  if (amount.trim()) { try { minor = parseMoneyInput(amount, currency); if (minor <= 0) { minor = null; problem = 'Enter an amount above zero.'; } } catch (error) { problem = error instanceof Error ? error.message : 'Enter a valid amount.'; } }
   return (
     <form action={formAction} className="mt-4 flex flex-col gap-3">
+      <input type="hidden" name="amountMinor" value={minor ?? ''} />
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="workItemId" value={workItemId} />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <FormField id={`cost-description-${workItemId}`} label="Description">
           {(field) => <TextInput {...field} name="description" required maxLength={200} placeholder="Replacement valve" />}
         </FormField>
-        <FormField id={`cost-amount-${workItemId}`} label={`Amount in minor units (${currency})`}>
-          {(field) => <TextInput {...field} name="amountMinor" type="number" required step={1} />}
+        <FormField id={`cost-amount-${workItemId}`} label={`Amount (${currency})`} error={problem ?? undefined}>
+          {(field) => <TextInput {...field} inputMode="decimal" required value={amount} onChange={event => setAmount(event.target.value)} placeholder="0.00" />}
         </FormField>
         <FormField id={`cost-date-${workItemId}`} label="Incurred" optional hint="Leave blank to use today.">
           {(field) => <TextInput {...field} name="incurredAt" type="date" />}
         </FormField>
       </div>
-      <FormActions><Button type="submit" disabled={pending} tone="secondary">{pending ? 'Recording…' : 'Record cost'}</Button></FormActions>
+      <FormActions><Button type="submit" disabled={pending || minor === null} tone="secondary">{pending ? 'Recording…' : 'Record cost'}</Button></FormActions>
       <FormError>{state.error}</FormError>
     </form>
   );

@@ -23,7 +23,8 @@ export function DocumentsSection({
   documents: StoredDocument[];
   organizationId: string;
   mayAttach: boolean;
-  roleLabel: string;
+  /** When given, someone who may not attach is told so; a record that only hides the upload omits it. */
+  roleLabel?: string;
   uploadAction: (previous: UploadDocumentState, formData: FormData) => Promise<UploadDocumentState>;
   hiddenFields: Record<string, string>;
   className?: string;
@@ -38,9 +39,9 @@ export function DocumentsSection({
           database for anyone without document.create regardless of what this renders. */}
       {mayAttach ? (
         <DocumentUploadForm action={uploadAction} hiddenFields={hiddenFields} />
-      ) : (
+      ) : roleLabel ? (
         <Hint className="mt-4">Your role, {roleLabel}, cannot attach documents here.</Hint>
-      )}
+      ) : null}
     </Section>
   );
 }
