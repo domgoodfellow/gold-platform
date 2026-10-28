@@ -39,6 +39,13 @@ Entries describe the product or operational change, not every file touched.
 - A business with no work yet sees one short step on its Work Dashboard (set up work types, add a starting stage, or create the first work) instead of a page of zeros. Work that is never scheduled is never asked for a date, a resource or a schedule.
 - Work items uses the same toolbar as Contacts and Finance: work type, search, filters, sort and a List or Board choice. Dispatch is now a button next to New work instead of a third tab. Changing the work type clears a status filter that belonged to the old type, filters show as removable chips with Reset, and page numbers show the total number of pages.
 - On Work items, each title opens the work, so the extra Open links are gone; Schedule or Assign appears only on work that still needs it. Phones and tablets show cards with only the details a job has, and the board scrolls on its own without moving the page.
+- Each Work record section now has its own address, so Overview, Execution, Financials, Documents and Activity survive a reload, work with Back and Forward, and can be shared. Old links that opened Financials still do.
+- The Work record's header now shows the type, stage and time, with an Edit details button. Overview shows only who the work is for, who is on it, where and on what, plus the business's own fields; empty details are left out, and support cases moved below them.
+- Execution starts with the next step: the stage moves allowed from here, then the schedule and who is on it. Adding a step and recording time open only when asked.
+- On a job's Financials, adding a priced line, issuing the invoice and recording a payment now open the same dialogs Finance uses. Costs are typed as money instead of in cents. A margin appears only once costs are recorded, rather than showing the whole price as profit.
+- Edit details and New work type now open as centred dialogs that ask before discarding changes and keep what was typed when a save is refused. Creating a type still creates nothing else and goes straight to setting up its stages.
+- Work type setup lists stages in order with where new work starts, shows allowed moves in that order, and explains that Booking controls online requests, not when work can happen.
+- People who cannot change a job no longer see a line saying their role cannot; they just don't see the button.
 
 ## 2026-10-26
 
