@@ -63,21 +63,28 @@ test('shared panels have exact rendered inset and edge-to-edge geometry', async 
   await body(page, 'Compact inset composition').first().screenshot({ path: artifact('inset-panel.png') });
 });
 
-test('Work Home gutters, actions, tables, and both creation entry points agree', async ({ page }) => {
+test('Work Dashboard gutters, actions, composition, and both creation entry points agree', async ({ page }) => {
   const base = `/organizations/${loadDemoContext().organizationId}`;
   const measurements: unknown[] = [];
   for (const width of [390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto(`${base}/field`);
-    await expect(page.getByRole('heading', { name: 'Insights', exact: true })).toBeVisible();
+    // The W1 Dashboard: an overview, then panels that each add something; the panels that only
+    // restated the overview (Work status, Insights) and the hand-built tables are gone.
+    await expect(page.getByRole('region', { name: 'Work overview', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Manage Work', exact: true })).toHaveCount(0);
-    const inset = await gutters(body(page, 'Insights'), 12);
-    await gutters(body(page, 'Scheduling performance'), 12);
-    const table = body(page, 'Dispatch overview');
-    expect(await table.evaluate(el => el.querySelector('table')!.getBoundingClientRect().left-el.getBoundingClientRect().left)).toBe(0);
-    const controls = page.locator('[data-header-controls]').last();
-    const rects = await controls.locator('a[data-slot="button"],button[data-slot="button"],input[type="date"]').evaluateAll(elements => elements.map(el => { const r=el.getBoundingClientRect();return { label:el.getAttribute('aria-label')??el.textContent?.trim(),height:r.height,top:r.top,bottom:r.bottom }; }));
-    expect(rects.length).toBeGreaterThanOrEqual(4);
+    for (const retired of ['Insights', 'Work status', 'Scheduling performance', 'Dispatch overview']) await expect(page.getByRole('heading', { name: retired, exact: true })).toHaveCount(0);
+    await expect(page.getByRole('main').locator('table')).toHaveCount(0);
+    // Compact panels own 12px gutters on every side.
+    const inset = await gutters(body(page, 'Dispatch capacity'), 12);
+    await gutters(body(page, 'Upcoming'), 12);
+    // The volume chart is the shared chart, not a hand-built meter list.
+    await expect(page.locator('[data-slot="chart"]').filter({ has: page.getByRole('heading', { name: 'Scheduled work', exact: true }) })).toBeVisible();
+    await expect(page.getByRole('main').locator('meter')).toHaveCount(0);
+    const controls = page.locator('[data-slot="workspace-intro"]');
+    const rects = (await controls.locator('a[data-slot="button"],button[data-slot="button"],button[data-slot="dropdown-menu-trigger"],input[type="date"]').evaluateAll(elements => elements.map(el => { const r=el.getBoundingClientRect();return { label:el.getAttribute('aria-label')??el.textContent?.trim(),height:r.height,width:r.width,top:r.top,bottom:r.bottom }; }))).filter(rect => rect.width > 0);
+    // Date, Configure, Dispatch and New work at least; Apply joins them where there is room.
+    expect(rects.length, JSON.stringify({ width, rects })).toBeGreaterThanOrEqual(4);
     for (const rect of rects) expect(rect.height, JSON.stringify({ width, rects })).toBe(28);
     for (const rect of rects) { const row=rects.filter(r=>Math.abs(r.top-rect.top)<10); expect(new Set(row.map(r=>r.top)).size).toBe(1); }
     measurements.push({ width, inset, controls:rects });
