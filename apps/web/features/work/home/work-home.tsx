@@ -1,60 +1,143 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { CalendarDays, Users, ClipboardList, ShieldCheck } from 'lucide-react';
-import { AppPage } from '@/components/layout/app-page';
-import { PageHeader } from '@/components/headers/page-header';
-import { Button, ButtonLink } from '@/components/controls/button';
-import { TextInput } from '@/components/controls/inputs';
+import { CalendarDays, CircleCheck, ClipboardList, Hourglass, Route, ShieldCheck } from 'lucide-react';
+import { ButtonLink } from '@/components/controls/button';
+import { PeriodField } from '@/components/controls/period-field';
+import { WorkspaceHome } from '@/components/patterns/workspace-home';
+import { CompactEmptyState, MetricTile, OperationalPanel } from '@/components/operational/primitives';
+import { AttentionCategories, type AttentionCategory } from '@/components/operational/attention-categories';
+import { DashboardLayoutGrid, type DashboardWidgetContent } from '@/components/dashboard/dashboard-layout';
+import { defaultLayout } from '@/lib/dashboard-layout';
 import { NewWorkAction } from '../new-work-action';
-import { MetricTile, OperationalPanel } from '@/components/operational/primitives';
-import { WorkAttention } from './attention';
+import { formatWindow, shiftDate } from '@/lib/domain/scheduling/window';
+import type { WorkItem } from '@/lib/domain/work-items/work-items';
 import type { WorkOperations } from '@/lib/application/work/operations';
+import { readableWorkWidgets, scheduledVolumeChart, schedulesWork, workSetupStep, WORK_WIDGETS, type WorkSetupStep } from '@/lib/application/work/dashboard';
 
-export function WorkHome({ organizationId, timezone, data: d, mayCreate, activity, configure }: {
-  configure?: ReactNode;
-  organizationId: string; timezone: string; data: WorkOperations; mayCreate: boolean;
-  activity: ReactNode;
+const DEFAULT_LAYOUT = { layout: defaultLayout(WORK_WIDGETS), revision: 0, customized: false };
+
+/**
+ * Work Dashboard at `/field`, in reading order: Work overview (the selected day's scheduled work,
+ * the unassigned and unscheduled backlogs, requirement coverage), Needs attention beside the
+ * selected day's schedule, scheduled-work volume beside dispatch capacity, then Upcoming and recent
+ * activity. Every figure is `workOperations`'; nothing is counted twice or stored. The header holds
+ * one date control, Configure, Dispatch and New work last; the workspace bar already names the page.
+ * A business that cannot show work yet keeps the overview slot with the one missing step and its
+ * action. Work that is never scheduled is never asked for a date, a resource or a schedule.
+ */
+export function WorkHome({ organizationId, timezone, today, data: d, capabilities, activity, configure }: {
+  organizationId: string; timezone: string; today: string; data: WorkOperations; capabilities: readonly string[];
+  activity: ReactNode; configure?: ReactNode;
 }) {
   const base = `/organizations/${organizationId}`;
-  const dispatch = `${base}/work/dispatch?on=${d.date}`;
-  const schedule = `${base}/schedule?on=${d.date}&view=day`;
-  const shortfalls = Object.fromEntries(Object.entries(d.coverage).flatMap(([id, c]) => c.shortfall ? [[id, c.shortfall]] : []));
-  const kpis = [
-    { label: 'Scheduled work', value: d.todayCount, note: `${d.date} · committed work`, href: schedule, icon: CalendarDays },
-    { label: 'Resources available', value: `${d.available} of ${d.day.resources.length}`, note: d.hoursConfigured ? 'Have a free window on this day' : 'Opening hours not configured', href: `${base}/resources?on=${d.date}`, icon: Users },
-    { label: 'Assignment backlog', value: d.unassigned.total, note: 'Scheduled work with no resource', href: `${base}/work/dispatch?assignment=unassigned`, icon: ClipboardList },
-    { label: 'Requirements met', value: `${d.todayCount - d.shortfalls.total} / ${d.todayCount}`, note: 'Selected day · resource coverage', href: `${dispatch}&assignment=shortfall`, icon: ShieldCheck },
-  ];
-  const groups = [
-    { key: 'unassigned', label: 'Unassigned scheduled', count: d.unassigned.total, rows: d.unassigned, href: `${base}/work/dispatch?assignment=unassigned` },
-    { key: 'unscheduled', label: 'Unscheduled', count: d.unscheduled.total, rows: d.unscheduled, href: `${base}/work/dispatch?assignment=unscheduled` },
-    { key: 'shortfall', label: 'Missing resources · day', count: d.shortfalls.total, rows: d.shortfalls, href: `${dispatch}&assignment=shortfall`, issues: shortfalls },
-    { key: 'conflict', label: 'Availability · day', count: d.conflicts.total, rows: d.conflicts, href: `${dispatch}&assignment=conflict`, issues: Object.fromEntries(d.conflicts.map(w => [w.id, 'Outside resource availability'])) },
-  ];
-  const time = (instant: string) => new Intl.DateTimeFormat('en-CA', { timeZone: timezone, hour: 'numeric', minute: '2-digit' }).format(new Date(instant));
-  return <AppPage className="space-y-3">
-    <PageHeader title="Work" meta={<span>{d.date} · {timezone}</span>} actions={<>
-      <form method="get" className="flex items-center gap-1"><TextInput size="small" type="date" name="on" aria-label="Work date" defaultValue={d.date} className="w-36"/><Button size="small" tone="text">Apply</Button></form>
-      {mayCreate ? <NewWorkAction organizationId={organizationId}/> : null}<ButtonLink size="small" tone="secondary" href={dispatch}>Dispatch board</ButtonLink>
-      {configure}
-    </>}/>
+  const may = (capability: string) => capabilities.includes(capability);
+  const dispatch = `${base}/work/dispatch`;
+  const onDay = `${dispatch}?on=${d.date}`;
+  const step = workSetupStep(d);
+  const scheduling = !step && schedulesWork(d);
+  const isToday = d.date === today;
+  const dayName = isToday ? 'Today' : new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(`${d.date}T12:00:00Z`));
+  const when = (w: WorkItem) => w.window ? formatWindow(w.window, timezone) : w.type.label;
+  const time = (instant: string) => new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', minute: '2-digit' }).format(new Date(instant));
+  const people = (w: WorkItem) => w.resources.map(r => r.label).join(', ') || 'Unassigned';
+  const shortfallText = (id: string) => d.coverage[id]?.shortfall ?? null;
 
-    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{kpis.map(k => <MetricTile key={k.label} label={k.label} value={k.value} detail={k.note} icon={k.icon} href={k.href}/>)}</div>
-    <div className="grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,7fr)_minmax(280px,3fr)]">
-      <div className="min-w-0 space-y-3">
-        <OperationalPanel density="compact" body="edge-to-edge" title="Needs attention"><WorkAttention organizationId={organizationId} timezone={timezone} groups={groups}/></OperationalPanel>
-        <OperationalPanel density="compact" body="edge-to-edge" title="Dispatch overview" count={d.day.resources.length} href={dispatch} hrefLabel="View full dispatch board">
-          <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="border-b border-border bg-secondary text-muted"><tr>{['Resource', 'Assigned work', 'Free windows', 'Availability', 'Action'].map(h => <th key={h} scope="col" className="whitespace-nowrap px-3 py-2 font-medium">{h}</th>)}</tr></thead><tbody className="divide-y divide-border">{d.day.resources.slice(0, 5).map(r => <tr key={r.resource.id}><td className="min-w-32 px-3 py-3 font-medium"><Link href={`${base}/resources/${r.resource.id}`}>{r.resource.name}</Link></td><td className="min-w-40 px-3 py-2">{r.booked.length ? <><Link className="hover:underline" href={`${dispatch}&selected=${r.booked[0].workItemId}`}>{r.booked[0].title}</Link><div className="mt-0.5 text-[11px] text-muted">{r.booked.length} committed work item{r.booked.length === 1 ? '' : 's'}</div></> : <span className="text-muted">No assigned work this day</span>}</td><td className="min-w-32 px-3 py-2 tabular-nums text-muted">{r.free[0] ? <>{time(r.free[0].startsAt)}–{time(r.free[0].endsAt)}{r.free.length > 1 ? ` +${r.free.length - 1}` : ''}</> : 'No free windows'}</td><td className="px-3 py-2"><span className={`whitespace-nowrap rounded-md px-2 py-1 ${r.free.length ? 'bg-success/10 text-success' : 'bg-surface text-muted'}`}>{r.free.length ? 'Capacity available' : r.exceptions.length ? 'Exception / time off' : 'No capacity'}</span></td><td className="px-3 py-2"><Link className="text-accent" href={`${base}/schedule?view=day&on=${d.date}&resource=${r.resource.id}`}>Schedule</Link></td></tr>)}{!d.day.resources.length ? <tr><td colSpan={5} className="px-3 py-3 text-muted">No resources yet. <Link className="text-accent" href={`${base}/resources`}>Manage resources</Link></td></tr> : null}</tbody></table></div>
-        </OperationalPanel>
-        <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,3fr)_minmax(220px,2fr)]"><OperationalPanel density="compact" body="edge-to-edge" title="Upcoming work" count={d.upcoming.total} href={`${dispatch}&assignment=upcoming`} hrefLabel="View work"><div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="border-b border-border bg-secondary text-muted"><tr>{['Work / Customer', 'Time', 'Status', ''].map((h, i) => <th key={i} scope="col" className="px-3 py-2 font-medium">{h}</th>)}</tr></thead><tbody className="divide-y divide-border">{d.upcoming.map(w => <tr key={w.id}><td className="px-3 py-2"><Link className="block max-w-44 truncate font-medium" href={`${base}/work/${w.id}`}>{w.title}</Link><span className="block max-w-44 truncate text-[11px] text-muted">{w.customer?.label ?? 'No customer'} · {w.resources.map(r => r.label).join(', ') || 'Unassigned'}</span></td><td className="whitespace-nowrap px-3 py-2 text-muted">{w.window ? new Intl.DateTimeFormat('en-CA', { timeZone: timezone, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(w.window.startsAt)) : 'Unscheduled'}</td><td className="px-3 py-2"><span className="rounded bg-surface px-2 py-1 text-[11px]">{w.status.label}</span></td><td className="px-3 py-2"><Link href={`${base}/work/${w.id}`} className="text-accent">Open</Link></td></tr>)}{!d.upcoming.length ? <tr><td colSpan={4} className="px-3 py-3 text-muted">No committed work in the next seven days.</td></tr> : null}</tbody></table></div></OperationalPanel>
-        <OperationalPanel density="compact" title="Scheduling performance"><div><p className="text-xs text-muted">Committed work · seven days ending {d.date}</p><div className="mt-3 grid grid-cols-4 gap-1 sm:grid-cols-7 xl:grid-cols-1">{d.history.map(h => <div key={h.date} className="rounded-md bg-surface/60 p-2 text-center text-xs xl:grid xl:grid-cols-[3rem_1.5rem_minmax(0,1fr)] xl:items-center xl:gap-2 xl:p-1 xl:text-left"><div className="text-muted">{h.date.slice(5)}</div><div className="my-1 text-lg font-semibold tabular-nums xl:my-0 xl:text-xs">{h.count}</div><meter aria-label={`Scheduled work ${h.date}`} min={0} max={Math.max(1, ...d.history.map(x => x.count))} value={h.count} className="h-2 w-full accent-accent"/></div>)}</div><p className="mt-2 text-[11px] text-muted">Current commitments by day; released work excluded.</p></div></OperationalPanel></div>
-      </div>
-      <aside className="min-w-0 space-y-3">
-        <OperationalPanel density="compact" title="Today" count={d.todayCount} href={`${base}/field/calendar?on=${d.date}`} hrefLabel="View calendar"><p className="pb-1 text-[11px] text-muted">{d.date}</p><ol className="divide-y divide-border">{d.today.map(w => <li key={w.id} className="flex gap-2 py-2"><time className="w-16 shrink-0 text-xs tabular-nums text-muted">{w.window ? time(w.window.startsAt) : ''}</time><div className="min-w-0 border-l-2 border-accent/30 pl-3"><Link className="block truncate text-xs font-medium hover:underline" href={`${base}/work/${w.id}`}>{w.title}</Link><p className="truncate text-[11px] text-muted" title={`${w.customer?.label ?? 'No customer'} · ${w.location?.label ?? 'No location'} · ${w.resources.map(r => r.label).join(', ') || 'Unassigned'} · ${w.status.label}`}>{w.customer?.label ?? 'No customer'} · {w.resources.map(r => r.label).join(', ') || 'Unassigned'} · {w.status.label}</p></div></li>)}</ol>{!d.today.length ? <p className="py-2 text-xs text-muted">No committed work on this day.</p> : null}{d.todayCount > d.today.length ? <Link href={schedule} className="mt-2 block text-xs text-accent">View all {d.todayCount} scheduled jobs</Link> : null}</OperationalPanel>
-        <OperationalPanel density="compact" title="Work status"><dl className="divide-y divide-border text-xs">{[['Active work', d.active], ['Scheduled on selected day', d.todayCount], ['Unscheduled backlog', d.unscheduled.total], ['Unassigned scheduled work', d.unassigned.total], ['Requirement gaps · day', d.shortfalls.total], ['Availability conflicts · day', d.conflicts.total]].map(([label, value]) => <div key={label} className="flex justify-between gap-2 py-2"><dt className="text-muted">{label}</dt><dd className="font-semibold tabular-nums">{value}</dd></div>)}</dl></OperationalPanel>
-        <OperationalPanel density="compact" title="Recent activity" href={`${base}/work`} hrefLabel="View work"><div>{activity}</div></OperationalPanel>
-        <OperationalPanel density="compact" title="Insights"><div className="grid grid-cols-2 gap-3"><div className="min-w-0"><p className="text-[11px] text-muted">Free resource hours · day</p><p className="mt-1 text-xl font-semibold tabular-nums">{d.freeHours.toFixed(1)}</p></div><div className="min-w-0"><p className="text-[11px] text-muted">Open resource hours · day</p><p className="mt-1 text-xl font-semibold tabular-nums">{d.openHours.toFixed(1)}</p></div></div><p className="mt-3 text-[11px] text-muted">{d.hoursConfigured ? 'Hours follow business and resource availability.' : 'Opening hours are not configured; availability currently permits the full day.'}</p></OperationalPanel>
-      </aside>
-    </div>
-  </AppPage>;
+  const actions = <>
+    {scheduling ? <PeriodField action={`${base}/field`} name="on" type="date" label="Work date" value={d.date} /> : null}
+    {configure}
+    {scheduling ? <ButtonLink size="small" tone="secondary" href={onDay} aria-label="Dispatch"><Route aria-hidden className="size-4" /><span className="max-sm:sr-only">Dispatch</span></ButtonLink> : null}
+    {!step && may('work_item.create') ? <NewWorkAction organizationId={organizationId} /> : null}
+  </>;
+
+  const met = d.todayCount - d.shortfalls.total;
+  const overview = <section aria-label="Work overview" className="@container min-w-0">
+    {step ? <GettingStarted organizationId={organizationId} step={step} capabilities={capabilities} />
+      : <div className="grid min-w-0 grid-cols-2 gap-3 @min-[60rem]:grid-cols-4">
+        {scheduling ? <>
+          <MetricTile label="Scheduled" icon={CalendarDays} value={d.todayCount} detail={isToday ? 'Today' : `On ${dayName}`} href={`${base}/schedule?on=${d.date}&view=day`} />
+          <MetricTile label="Unassigned" icon={ClipboardList} value={d.unassigned.total} detail="Scheduled with no resource" href={`${dispatch}?assignment=unassigned`} emphasis={d.unassigned.total ? 'warning' : undefined} />
+          <MetricTile label="Unscheduled" icon={Hourglass} value={d.unscheduled.total} detail="Waiting for a time" href={`${dispatch}?assignment=unscheduled`} />
+          <MetricTile label="Requirements met" icon={ShieldCheck} value={d.todayCount ? `${met} of ${d.todayCount}` : <span className="text-sm font-normal leading-8 text-muted">Nothing scheduled</span>}
+            detail={d.todayCount ? `Resource coverage, ${isToday ? 'today' : dayName}` : undefined} href={`${onDay}&assignment=shortfall`} emphasis={d.shortfalls.total ? 'danger' : undefined} />
+        </> : <MetricTile label="Active work" icon={ClipboardList} value={d.active} detail={`${d.recorded} recorded in all`} href={`${base}/work`} />}
+      </div>}
+  </section>;
+
+  const row = (w: WorkItem, value: string, tone?: 'danger') => ({ id: w.id, href: `${base}/work/${w.id}`, title: w.title, detail: [w.customer?.label, when(w)].filter(Boolean).join(' · '), value, tone });
+  const categories: AttentionCategory[] = [
+    { key: 'unassigned', label: 'Unassigned', count: d.unassigned.total, href: `${dispatch}?assignment=unassigned`, rows: d.unassigned.map(w => row(w, 'No resource', 'danger')) },
+    { key: 'shortfall', label: 'Requirement gaps', count: d.shortfalls.total, href: `${onDay}&assignment=shortfall`, rows: d.shortfalls.map(w => row(w, shortfallText(w.id) ?? 'Requirement not met', 'danger')) },
+    { key: 'conflict', label: 'Availability', count: d.conflicts.total, href: `${onDay}&assignment=conflict`, rows: d.conflicts.map(w => row(w, 'Outside availability', 'danger')) },
+    { key: 'unscheduled', label: 'Unscheduled', count: d.unscheduled.total, href: `${dispatch}?assignment=unscheduled`, rows: d.unscheduled.map(w => row(w, w.status.label)) },
+  ].filter(category => category.count > 0);
+  const attention = categories.length
+    ? <OperationalPanel className="h-full min-w-0" title="Needs attention"><AttentionCategories categories={categories} /></OperationalPanel>
+    : <p role="status" className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm"><CircleCheck aria-hidden className="size-4 shrink-0 text-muted" /><span><span className="font-medium">Needs attention:</span> every scheduled job has its resources, nothing is outside availability{isToday ? ' today' : ` on ${dayName}`}, and nothing is waiting for a time.</span></p>;
+
+  const schedule = <OperationalPanel className="h-full min-w-0" density="compact" title={dayName} count={d.todayCount} href={`${base}/schedule?on=${d.date}&view=day`} hrefLabel={d.todayCount > d.today.length ? `View all ${d.todayCount}` : 'Schedule'}>
+    {d.today.length ? <ol className="divide-y divide-border">{d.today.map(w => <li key={w.id} className="flex gap-3 py-2">
+      <time dateTime={w.window?.startsAt} className="w-12 shrink-0 pt-px text-xs tabular-nums text-muted">{w.window ? time(w.window.startsAt) : ''}</time>
+      <div className="min-w-0 flex-1"><Link className="block truncate text-sm font-medium hover:underline" href={`${base}/work/${w.id}`}>{w.title}</Link>
+        <p className="truncate text-xs text-muted">{[w.customer?.label, people(w), w.status.label].filter(Boolean).join(' · ')}</p>
+        {shortfallText(w.id) ? <p className="text-xs text-danger">{shortfallText(w.id)}</p> : null}</div>
+    </li>)}</ol> : <CompactEmptyState>Nothing is scheduled {isToday ? 'today' : `on ${dayName}`}.</CompactEmptyState>}
+  </OperationalPanel>;
+
+  const free = d.day.resources.filter(r => r.free.length);
+  const capacity = <OperationalPanel className="h-full min-w-0" density="compact" title="Dispatch capacity" href={onDay} hrefLabel="Open dispatch">
+    {d.setup.resources === 0 ? <CompactEmptyState kind="not-configured" action={may('resource.create') ? <ButtonLink size="small" tone="secondary" href={`${base}/resources`}>Add resources</ButtonLink> : undefined}>No resources yet. Scheduled work is assigned to the people, vehicles or equipment that do it.</CompactEmptyState>
+      : <>
+        <p className="text-sm"><span className="font-semibold tabular-nums">{free.length} of {d.day.resources.length}</span> resources have free time{d.openHours > 0 ? <> · <span className="tabular-nums">{d.freeHours.toFixed(1)} of {d.openHours.toFixed(1)}</span> open hours free</> : null}</p>
+        {!d.hoursConfigured ? <p className="mt-1 text-xs text-muted">Opening hours are not set, so every resource counts as available all day.</p> : null}
+        <ul className="mt-2 divide-y divide-border text-sm">{d.day.resources.slice(0, 5).map(r => <li key={r.resource.id} className="flex items-baseline justify-between gap-3 py-2">
+          <Link className="min-w-0 truncate font-medium hover:underline" href={`${base}/resources/${r.resource.id}`}>{r.resource.name}</Link>
+          <span className="shrink-0 text-right text-xs text-muted">{r.booked.length} {r.booked.length === 1 ? 'job' : 'jobs'} · {r.free[0] ? `free ${time(r.free[0].startsAt)}–${time(r.free[0].endsAt)}${r.free.length > 1 ? ` +${r.free.length - 1}` : ''}` : r.exceptions.length ? 'time off' : 'no free time'}</span>
+        </li>)}</ul>
+        {d.day.resources.length > 5 ? <p className="mt-1 text-xs text-muted">{d.day.resources.length - 5} more on the dispatch board.</p> : null}
+      </>}
+  </OperationalPanel>;
+
+  const next = shiftDate(d.date, 1);
+  const upcoming = <OperationalPanel className="h-full min-w-0" density="compact" title="Upcoming" count={d.upcoming.total} href={`${dispatch}?assignment=upcoming&on=${next}`} hrefLabel={d.upcoming.total > d.upcoming.length ? `View all ${d.upcoming.total}` : 'View all'}>
+    {d.upcoming.length ? <ul className="divide-y divide-border">{d.upcoming.map(w => <li key={w.id} className="py-2">
+      <Link className="block truncate text-sm font-medium hover:underline" href={`${base}/work/${w.id}`}>{w.title}</Link>
+      <p className="truncate text-xs text-muted">{[when(w), w.customer?.label, people(w)].filter(Boolean).join(' · ')}</p>
+    </li>)}</ul> : <CompactEmptyState>Nothing is scheduled in the seven days after {isToday ? 'today' : dayName}.</CompactEmptyState>}
+  </OperationalPanel>;
+
+  const volume = scheduledVolumeChart(d.history, d.date, day => `${base}/schedule?on=${day}&view=day`);
+  const readable = readableWorkWidgets(d);
+  const widgets: Record<string, DashboardWidgetContent> = {
+    overview: { kind: 'node', node: overview },
+    attention: { kind: 'node', node: attention },
+    today: { kind: 'node', node: schedule },
+    volume: { kind: 'chart', title: 'Scheduled work', variants: [{ key: 'jobs', label: 'Jobs', data: volume }], state: d.history.some(h => h.count) ? undefined : { status: 'empty', message: 'No work was scheduled in these seven days.' } },
+    capacity: { kind: 'node', node: capacity },
+    upcoming: { kind: 'node', node: upcoming },
+    activity: { kind: 'node', node: <OperationalPanel className="h-full min-w-0" density="compact" title="Recent activity" href={`${base}/work`} hrefLabel="Work items">{activity}</OperationalPanel> },
+  };
+  return <WorkspaceHome location={{}} actions={actions}>
+    <DashboardLayoutGrid label="Work dashboard" registry={WORK_WIDGETS} saved={DEFAULT_LAYOUT} readable={[...readable]} widgets={widgets} />
+  </WorkspaceHome>;
+}
+
+/**
+ * The one missing step and its action, in the overview slot: no type, a type with no starting
+ * stage, or no work yet. Someone without the authority sees what is missing and who can add it.
+ */
+function GettingStarted({ organizationId, step, capabilities }: { organizationId: string; step: NonNullable<WorkSetupStep>; capabilities: readonly string[] }) {
+  const base = `/organizations/${organizationId}`;
+  const configure = capabilities.includes('field.manage');
+  const [title, text, action] = step.kind === 'no-types'
+    ? ['No work types yet', 'Work types name the jobs this business does and the stages each one moves through.',
+      configure ? <ButtonLink size="small" tone="primary" href={`${base}/work/configuration`}>Set up work types</ButtonLink> : <p className="text-sm text-muted">Someone who manages Work sets up work types.</p>]
+    : step.kind === 'no-starting-stage'
+      ? [`${step.typeName} has no starting stage`, 'Work of this type can be created once it has a first stage.',
+        configure ? <ButtonLink size="small" tone="primary" href={`${base}/work/configuration?type=${step.typeId}`}>Add a starting stage</ButtonLink> : <p className="text-sm text-muted">Someone who manages Work adds the starting stage.</p>]
+      : ['No work yet', 'Work you create appears here, with anything that needs attention.',
+        capabilities.includes('work_item.create') ? <NewWorkAction organizationId={organizationId} typeId={step.typeId} /> : <p className="text-sm text-muted">Someone who can create work adds the first job.</p>];
+  return <div data-slot="compact-empty" className="flex flex-col gap-3 rounded-[var(--visual-radius,0.625rem)] border border-border bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="min-w-0"><h2 className="text-base font-semibold">{title}</h2><p className="mt-1 text-sm text-muted">{text}</p></div>
+    <div className="shrink-0">{action}</div>
+  </div>;
 }

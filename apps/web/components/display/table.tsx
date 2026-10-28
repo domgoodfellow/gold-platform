@@ -48,12 +48,12 @@ export type DataTableProps<T> = {
   empty: ReactNode;
   /** Offered only at zero rows — the same create trigger the page's header already shows. */
   footer?: ReactNode;
-  /** `wide` keeps cards until a wider container, for tables whose columns would otherwise be clipped. */
-  tableFrom?: 'default' | 'wide';
+  /** `medium` and `wide` keep cards until a wider container, for tables whose columns would otherwise be clipped. */
+  tableFrom?: 'default' | 'medium' | 'wide';
 };
 
 // Container breakpoints, spelled out so the class names exist at build time.
-const TABLE_FROM = { default: { table: 'hidden overflow-x-auto @min-[38rem]:block', cards: 'flex flex-col gap-3 @min-[38rem]:hidden' }, wide: { table: 'hidden overflow-x-auto @min-[64rem]:block', cards: 'flex flex-col gap-3 @min-[64rem]:hidden' } } as const;
+const TABLE_FROM = { default: { table: 'hidden overflow-x-auto @min-[38rem]:block', cards: 'flex flex-col gap-3 @min-[38rem]:hidden' }, medium: { table: 'hidden overflow-x-auto @min-[48rem]:block', cards: 'flex flex-col gap-3 @min-[48rem]:hidden' }, wide: { table: 'hidden overflow-x-auto @min-[64rem]:block', cards: 'flex flex-col gap-3 @min-[64rem]:hidden' } } as const;
 
 export function DataTable<T>({
   columns,
@@ -126,6 +126,8 @@ export function DataTable<T>({
         {rows.map((row) => {
           const heading = columns.filter((column) => column.emphasis === 'primary');
           const rest = columns.filter((column) => column.emphasis !== 'primary');
+          // A row with nothing to act on draws no empty action strip.
+          const rowActions = actions ? actions(row) : null;
 
           return (
             <li key={rowKey(row)} className="rounded border border-border p-3">
@@ -148,9 +150,9 @@ export function DataTable<T>({
                 })}
               </dl>
 
-              {actions ? (
+              {rowActions ? (
                 <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
-                  {actions(row)}
+                  {rowActions}
                 </div>
               ) : null}
             </li>

@@ -6,7 +6,7 @@ import { MetricTile, OperationalPanel, PanelState } from '@/components/operation
 import { cx } from '@/components/class-names';
 import { QuoteDialog } from '../transactions/quote-dialog';
 import { workHref } from '../collections/finance-tables';
-import { FinanceAttention, type AttentionCategory } from './finance-attention';
+import { AttentionCategories, type AttentionCategory } from '@/components/operational/attention-categories';
 import type { FinanceOperating } from '@/lib/application/finance/operating';
 import { DUE_SOON_DAYS } from '@/lib/application/finance/operating';
 import type { CurrencyAmount } from '@/lib/domain/billing/finance-reads';
@@ -49,12 +49,12 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
     <OperationalPanel title="Billing is off"><PanelState kind="not-configured" action={has('feature.manage') ? <ButtonLink tone="secondary" href={`${base}/settings/features`}>Manage features</ButtonLink> : undefined}>This business does not price, quote or invoice in GildOps. Records made while billing was on stay as they were.</PanelState></OperationalPanel>
   </WorkspaceHome>;
 
-  const invoiceRow = (row: (typeof overdue.rows)[number], when: string) => ({ id: row.id, href: workHref(organizationId, row.workItemId), title: `Invoice #${row.number} · ${row.billedTo}`, detail: when, amount: row.outstandingMinor === null ? '—' : formatMoney(Math.max(row.outstandingMinor, 0), row.currency), tone: row.overdue ? 'danger' as const : undefined });
+  const invoiceRow = (row: (typeof overdue.rows)[number], when: string) => ({ id: row.id, href: workHref(organizationId, row.workItemId), title: `Invoice #${row.number} · ${row.billedTo}`, detail: when, value: row.outstandingMinor === null ? '—' : formatMoney(Math.max(row.outstandingMinor, 0), row.currency), tone: row.overdue ? 'danger' as const : undefined });
   const categories: AttentionCategory[] = [
     { key: 'overdue', label: 'Overdue', count: overdue.total, href: `${finance}/invoices?status=overdue&sort=due`, rows: overdue.rows.map(row => invoiceRow(row, `Was due ${row.dueAt ? shortDate(row.dueAt) : ''}`)) },
     { key: 'due-soon', label: 'Due soon', count: dueSoon.total, href: `${finance}/invoices?status=due-soon&sort=due`, rows: dueSoon.rows.map(row => invoiceRow(row, row.dueAt && localDay(row.dueAt) === today ? 'Due today' : `Due ${row.dueAt ? shortDate(row.dueAt) : ''}`)) },
-    ...(may('invoice.issue') || has('report.read') ? [{ key: 'to-invoice', label: 'Ready to invoice', count: quotes.total, href: `${finance}/quotes?status=not-invoiced`, rows: quotes.rows.map(row => ({ id: row.workItemId, href: workHref(organizationId, row.workItemId), title: row.title, detail: `${row.customer?.name ?? 'No contact'} · ${row.lineCount} priced ${row.lineCount === 1 ? 'line' : 'lines'}`, amount: row.quoted ? formatMoney(row.quoted.totalMinor, row.quoted.currency) : '—' })) }] : []),
-    ...(data.cardCollection === 'not-connected' || data.cardCollection === 'unavailable' ? [{ key: 'card', label: 'Card payments', count: 1, href: gettingPaidHref, rows: [{ id: 'card', href: gettingPaidHref, title: data.cardCollection === 'unavailable' ? 'Card payments are on, but no payment processor is available' : 'Card payments are on, but no payment account is connected', detail: 'Manual payment recording still works.', amount: '' }] }] : []),
+    ...(may('invoice.issue') || has('report.read') ? [{ key: 'to-invoice', label: 'Ready to invoice', count: quotes.total, href: `${finance}/quotes?status=not-invoiced`, rows: quotes.rows.map(row => ({ id: row.workItemId, href: workHref(organizationId, row.workItemId), title: row.title, detail: `${row.customer?.name ?? 'No contact'} · ${row.lineCount} priced ${row.lineCount === 1 ? 'line' : 'lines'}`, value: row.quoted ? formatMoney(row.quoted.totalMinor, row.quoted.currency) : '—' })) }] : []),
+    ...(data.cardCollection === 'not-connected' || data.cardCollection === 'unavailable' ? [{ key: 'card', label: 'Card payments', count: 1, href: gettingPaidHref, rows: [{ id: 'card', href: gettingPaidHref, title: data.cardCollection === 'unavailable' ? 'Card payments are on, but no payment processor is available' : 'Card payments are on, but no payment account is connected', detail: 'Manual payment recording still works.', value: '' }] }] : []),
   ].filter(category => category.count > 0);
 
   // The reporting period governs payments received and the period charts; receivables stay current.
@@ -78,7 +78,7 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
     {!reports ? <p className="mt-2 text-xs text-muted">Amounts are shown to people with reporting access.</p> : null}
   </div>;
   const attention = !data.started ? <GettingStarted organizationId={organizationId} priced={data.priceBookCount > 0} mayManageCatalog={mayManageCatalog} mayQuote={may('work_item.price')} mayCreateWork={has('work_item.create')} />
-    : categories.length ? <OperationalPanel className="h-full min-w-0" title="Needs attention"><FinanceAttention categories={categories} /></OperationalPanel>
+    : categories.length ? <OperationalPanel className="h-full min-w-0" title="Needs attention"><AttentionCategories categories={categories} /></OperationalPanel>
     : <p role="status" className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm"><CircleCheck aria-hidden className="size-4 shrink-0 text-muted" /><span><span className="font-medium">Needs attention:</span> nothing overdue or due in the next {DUE_SOON_DAYS} days, and no priced Work waiting for an invoice.</span></p>;
   const reportsLink = <p className="mt-2 text-right text-xs"><Link className="text-accent-text underline-offset-4 hover:underline" href={`${finance}/reports`}>Open financial reports</Link></p>;
   // Built only for widgets this viewer may read; a hidden-by-permission chart is never computed.

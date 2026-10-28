@@ -15,10 +15,12 @@ export type ActiveFilter = { key: string; label: ReactNode; removeHref: string }
  * engine — counts and pagination agree with what is shown. Active filters are listed as removable
  * chips, with a reset that returns to the unfiltered collection.
  */
-export function CollectionToolbar({ action, scopes, scopeLabel = 'Views', search, hidden = {}, filters, filterCount = 0, sort, display, active = [], resetHref, className, viewId = 'collection' }: {
+export function CollectionToolbar({ action, scopes, scopeLabel = 'Views', leading, search, hidden = {}, filters, filterCount = 0, sort, display, active = [], resetHref, className, viewId = 'collection' }: {
   /** The collection's own path; submitting keeps the user here. */
   action: string;
   scopes?: readonly ViewNavItem[]; scopeLabel?: string;
+  /** A selector that decides which collection is shown at all (a Work type), placed before search and submitted with it. */
+  leading?: ReactNode;
   search?: { name: string; value?: string; label: string; placeholder?: string };
   /** Query parameters that must survive a submit (the current scope, for instance). */
   hidden?: Record<string, string | undefined>;
@@ -33,6 +35,7 @@ export function CollectionToolbar({ action, scopes, scopeLabel = 'Views', search
         the URL rather than keeping the removed value in an untouched field and sending it back. */}
     <form key={JSON.stringify([hidden, search?.value ?? '', active.map(filter => filter.key + String(filter.removeHref))])} method="get" action={action} role="search" className="flex flex-wrap items-start gap-2">
       {Object.entries(hidden).map(([name, value]) => value ? <input key={name} type="hidden" name={name} value={value} /> : null)}
+      {leading ? <div className="min-w-0 basis-full sm:basis-auto">{leading}</div> : null}
       {search ? <div className="relative min-w-0 basis-full sm:basis-auto sm:flex-1 lg:min-w-64">
         <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
         <TextInput type="search" name={search.name} defaultValue={search.value} aria-label={search.label} placeholder={search.placeholder ?? search.label} className="w-full pl-9" />

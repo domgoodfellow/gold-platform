@@ -30,7 +30,7 @@ import {
 } from '@/lib/domain/work-items/requirements';
 import { todayInZone } from '@/lib/domain/scheduling/window';
 import { areaAvailable, areaLabel, workspaceAncestry } from '@/lib/navigation';
-import { PageHeader } from '@/components/headers/page-header';
+import { parseWorkDirectory, workDirectoryHref, WORK_PAGE_SIZE } from '@/features/work/work-directory';
 import { WorkConfiguration } from '@/features/work/configuration/work-configuration';
 
 export const dynamic = 'force-dynamic';
@@ -39,20 +39,21 @@ export const dynamic = 'force-dynamic';
 export default async function WorkPage({ params, searchParams }: PageProps<'/organizations/[organizationId]/work'>) {
   const { organizationId } = await params;
   const query = await searchParams;
-  const { type: requestedType, create } = query;
-  const text = (key: string) => typeof query[key] === 'string' ? query[key] as string : '';
-  const view = text('view') === 'board' ? 'board' : 'list';
-  const page = Math.max(1, Math.min(100000, Math.trunc(Number(text('page'))) || 1));
-  const sort = ['oldest', 'title', 'schedule'].includes(text('sort')) ? text('sort') as 'oldest' | 'title' | 'schedule' : 'newest';
+  const { create } = query;
+  const view = parseWorkDirectory(query);
+  const { q, page, sort } = view;
   const { db, organization } = await requireOrganization(organizationId);
-  if (create === '1') redirect(newWorkHref(organizationId, typeof requestedType === 'string' ? requestedType : undefined));
+  if (create === '1') redirect(newWorkHref(organizationId, view.type));
   const types = await listWorkItemTypes(db, { organizationId });
-  const selectedType = types.find((type) => type.id === requestedType) ?? types[0] ?? null;
+  const selectedType = types.find((type) => type.id === view.type) ?? types[0] ?? null;
   const statuses = selectedType ? await listWorkItemStatuses(db, { organizationId, typeId: selectedType.id }) : [];
-  const statusId = statuses.find(s => s.id === text('status'))?.id;
+  const statusId = statuses.find(s => s.id === view.status)?.id;
+  // A status belongs to one type, and the Board shows every status: an address that keeps one it
+  // cannot use (from another type, or on the Board) is rewritten without it rather than half-applied.
+  if (view.status && (!statusId || view.view === 'board')) redirect(workDirectoryHref(organizationId, { ...view, type: selectedType?.id }, { status: undefined, page: view.page }));
   const [transitions, workItems, resources, definitions, enabledModules, templateSteps, prices, booking, requirements, capabilities, intakeForms] = await Promise.all([
     selectedType ? listWorkItemTransitions(db, { organizationId, typeId: selectedType.id }) : Promise.resolve([]),
-    selectedType ? listWorkItems(db, { organizationId, typeId: selectedType.id, q: text('q'), statusId, limit: 20, offset: (page - 1) * 20, sort }) : Promise.resolve(counted([] as WorkItem[], 0)),
+    selectedType && view.view === 'list' ? listWorkItems(db, { organizationId, typeId: selectedType.id, q, statusId, limit: WORK_PAGE_SIZE, offset: (page - 1) * WORK_PAGE_SIZE, sort }) : Promise.resolve(counted([] as WorkItem[], 0)),
     listResources(db, { organizationId, limit: 1000 }),
     listFieldDefinitions(db, { organizationId, entityType: 'work_item' }),
     listUsableModules(db, { organizationId }),
@@ -64,7 +65,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
     listBookingIntakeForms(db, { organizationId }),
   ]);
 
-  const stageLists = view === 'board' ? await Promise.all(statuses.map(status => listWorkItems(db, { organizationId, typeId: selectedType!.id, statusId: status.id, q: text('q'), limit: 10, sort }))) : [];
+  const stageLists = view.view === 'board' ? await Promise.all(statuses.map(status => listWorkItems(db, { organizationId, typeId: selectedType!.id, statusId: status.id, q, limit: 10, sort }))) : [];
   const stages = Object.fromEntries(statuses.map((s, i) => [s.id, stageLists[i]]));
 
   // What the selected kind of work needs against who is on each job — derived on this read from the
@@ -131,23 +132,12 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
           />
         </ConfigureRegistrar>
       ) : null}
-      <PageHeader
-        supportSize="small"
+      <WorkList
         title={areaLabel('work')}
         crumbs={workspaceAncestry(organizationId, 'work')}
-        activity={types.length > 0}
-        insights={mayInsight && types.length > 0}
-        configure={mayConfigure}
-      />
-      <WorkList
-        view={view}
-        page={page}
-        q={text('q')}
-        sort={sort}
-        statusId={statusId ?? ''}
+        view={{ ...view, type: selectedType?.id }}
         stages={stages}
         organizationId={organizationId}
-        role={organization.role}
         timezone={organization.timezone}
         types={types}
         selectedType={selectedType}
@@ -159,6 +149,9 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
         mayConfigure={mayConfigure}
         mayMove={can('work_item.transition')}
         maySchedule={can('work_item.schedule')}
+        activity={types.length > 0}
+        insights={mayInsight && types.length > 0}
+        configure={mayConfigure}
       />
     </AppPage>
   );

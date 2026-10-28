@@ -379,7 +379,7 @@ describe('Work, as an operational surface (source scan)', () => {
     // The link is offered only to somebody who could act on it â€” a member who cannot configure
     // work is not shown a control dressed up as one (the UI-is-not-authorization rule, applied to navigation rather than a
     // write).
-    expect(work).toMatch(/mayConfigure\s*\?[\s\S]{0,220}Configure work/);
+    expect(work).toMatch(/mayConfigure\s*\?[\s\S]{0,220}Set up work types/);
   });
 });
 

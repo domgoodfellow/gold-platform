@@ -32,6 +32,14 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-10-27
+
+- The Work Dashboard is easier to read. The header no longer prints the date and time zone; one date field changes the day straight away. Four figures lead the page (scheduled on that day, unassigned, unscheduled and requirements met), followed by Needs attention beside the day's schedule, a chart of scheduled work over seven days beside dispatch capacity, then upcoming work and recent activity. The separate Work status and Insights panels, which repeated the same numbers, are gone.
+- Needs attention shows only categories that have something in them, and each opens Dispatch with the matching filter. Upcoming now starts the day after the chosen day, so a job is never listed twice.
+- A business with no work yet sees one short step on its Work Dashboard (set up work types, add a starting stage, or create the first work) instead of a page of zeros. Work that is never scheduled is never asked for a date, a resource or a schedule.
+- Work items uses the same toolbar as Contacts and Finance: work type, search, filters, sort and a List or Board choice. Dispatch is now a button next to New work instead of a third tab. Changing the work type clears a status filter that belonged to the old type, filters show as removable chips with Reset, and page numbers show the total number of pages.
+- On Work items, each title opens the work, so the extra Open links are gone; Schedule or Assign appears only on work that still needs it. Phones and tablets show cards with only the details a job has, and the board scrolls on its own without moving the page.
+
 ## 2026-10-26
 
 - Finance no longer has a Configuration row, Configure button or Payments & currency page. The trading currency and card payment settings now live in one place, Settings → General, in a Getting paid section; Catalog & Pricing links there. Old links, including ones to Getting paid, land on General.

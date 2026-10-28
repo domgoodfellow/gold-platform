@@ -62,12 +62,13 @@ const MEDIUM_PX = 640, WIDE_PX = 1024;
 export function DashboardLayoutGrid({ registry, saved: initial, readable, widgets, onSave, onReset, label }: {
   registry: readonly WidgetDefinition[]; saved: Saved; readable: readonly string[];
   widgets: Record<string, DashboardWidgetContent>;
-  onSave: (layout: DashboardLayout, expectedRevision: number) => Promise<SaveLayoutResult>;
-  onReset: () => Promise<{ error?: string }>;
+  /** Absent where layouts are not stored (a Dashboard drawn with the product default); there is then no editor to open. */
+  onSave?: (layout: DashboardLayout, expectedRevision: number) => Promise<SaveLayoutResult>;
+  onReset?: () => Promise<{ error?: string }>;
   label: string;
 }) {
   const editingContext = useContext(EditingContext), stop = useContext(StopContext);
-  const editing = Boolean(editingContext?.editing);
+  const editing = Boolean(editingContext?.editing && onSave);
   const [saved, setSaved] = useState(initial);
   const [draft, setDraft] = useState(initial.layout);
   const [selected, setSelected] = useState<string | null>(null);
@@ -95,6 +96,7 @@ export function DashboardLayoutGrid({ registry, saved: initial, readable, widget
   const finish = () => { setSelected(null); setMessage(null); stop(); };
   const cancel = () => { setDraft(saved.layout); finish(); };
   const save = async () => {
+    if (!onSave) return;
     setBusy(true); setMessage(null);
     const result = await onSave(canonicalLayout(draft), saved.revision);
     setBusy(false);
@@ -103,6 +105,7 @@ export function DashboardLayoutGrid({ registry, saved: initial, readable, widget
     finish(); setMessage({ tone: 'status', text: 'Dashboard layout saved.' });
   };
   const reset = async () => {
+    if (!onReset) return;
     setBusy(true); setMessage(null);
     const result = await onReset();
     setBusy(false);
