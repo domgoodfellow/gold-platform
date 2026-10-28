@@ -14,7 +14,7 @@ import type { TypeBooking, WorkItemType } from '@/lib/domain/work-items/types';
 import type { TypeChecklistItem } from '@/lib/domain/work-items/checklists';
 import type { ResourceCapability } from '@/lib/domain/resources/resource-capabilities';
 import type { ResourceRequirement } from '@/lib/domain/work-items/requirements';
-import { NewTypeDrawer } from './new-type-drawer';
+import { NewTypeDialog } from './new-type-dialog';
 import { ResourceRequirementsEditor } from './resource-requirements';
 import {
   AddTypeChecklistItemForm,
@@ -74,13 +74,13 @@ export type WorkConfigurationData = {
 export function WorkConfiguration(props: WorkConfigurationData) {
   const { organizationId, mayConfigure, types, selectedType, typeHref, createOpen, variant = 'page' } = props;
   const newType = mayConfigure ? (
-    <NewTypeDrawer organizationId={organizationId} typeHrefPrefix={typeHref('')} defaultOpen={createOpen} />
+    <NewTypeDialog organizationId={organizationId} typeHrefPrefix={typeHref('')} defaultOpen={createOpen} />
   ) : null;
 
   if (types.length === 0) {
     return (
       <EmptyState title="No work types yet" action={newType}>
-        {mayConfigure ? null : `Your role, ${props.role}, cannot create work types.`}
+        {mayConfigure ? null : 'Someone who manages Work creates work types.'}
       </EmptyState>
     );
   }
@@ -147,12 +147,13 @@ function TypeDetail({
   const requested = initialTab === 'types' ? 'general' : initialTab;
   const startTab = requested && tabs.includes(requested) ? requested : 'general';
   const statusName = new Map(statuses.map((status) => [status.id, status.name]));
+  const position = new Map(statuses.map((status, index) => [status.id, index]));
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <div className="min-w-0">
         <h2 className="wrap-break-word text-lg font-semibold">{selectedType.name}</h2>
-        {!mayConfigure ? <p className="mt-1 text-sm text-muted">Your role, {role}, can view this configuration but not change it.</p> : null}
+        <p className="mt-1 text-sm text-muted">{selectedType.schedulable ? 'Scheduled work' : 'Not scheduled'} · {statuses.length === 1 ? '1 stage' : `${statuses.length} stages`}{mayConfigure ? '' : ' · You can view this configuration but not change it'}. Changes here shape future work of this type; they never create work.</p>
       </div>
 
       <Tabs key={`${selectedType.id}:${startTab}`} defaultValue={startTab} className="min-w-0 gap-5">
@@ -165,7 +166,7 @@ function TypeDetail({
           <TabsTrigger value="fields">Fields</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general" className="flex max-w-xl flex-col gap-6">
+        <TabsContent value="general" className="flex max-w-2xl flex-col gap-6">
           {mayConfigure ? (
             <>
               <RenameTypeForm organizationId={organizationId} typeId={selectedType.id} name={selectedType.name} />
@@ -183,32 +184,36 @@ function TypeDetail({
           )}
         </TabsContent>
 
-        <TabsContent value="workflow" className="flex flex-col gap-8">
-          <section className="flex max-w-2xl flex-col gap-3" aria-label="Stages">
-            <GroupHeading>Stages</GroupHeading>
-            {statuses.length === 0 ? <p className="text-sm text-muted">No stages yet. Add the stage new work starts in.</p> : null}
-            {statuses.length > 0 && mayConfigure ? (
-              <DividedList as="div">
-                {statuses.map((status) => (
-                  <EditStatusForm key={status.id} organizationId={organizationId} status={status} />
+        <TabsContent value="workflow" className="flex max-w-3xl flex-col gap-8">
+          {/* Stages in their order, then the moves between them: the workflow work of this type follows. */}
+          <section className="flex flex-col gap-3" aria-labelledby="workflow-stages">
+            <GroupHeading id="workflow-stages">Stages</GroupHeading>
+            <p className="text-sm text-muted">{statuses.length === 0 ? 'No stages yet. Add the stage new work starts in.' : 'New work starts in the first stage. Order sets the sequence.'}</p>
+            {statuses.length > 0 ? (
+              <ol aria-label="Stages in order" className="flex flex-col divide-y divide-border rounded-[var(--visual-radius,0.625rem)] border border-border">
+                {statuses.map((status, index) => (
+                  <li key={status.id} className="flex flex-col gap-1 px-3 py-1 sm:flex-row sm:items-center sm:gap-3">
+                    <span className="flex shrink-0 items-center gap-2 pt-2 text-xs text-muted sm:w-24 sm:pt-0">
+                      <span aria-hidden className="flex size-5 items-center justify-center rounded-full bg-secondary tabular-nums">{index + 1}</span>
+                      {index === 0 ? 'Starts here' : null}
+                    </span>
+                    {mayConfigure ? <div className="min-w-0 flex-1"><EditStatusForm organizationId={organizationId} status={status} /></div> : <span className="py-2 text-sm">{status.name}</span>}
+                  </li>
                 ))}
-              </DividedList>
+              </ol>
             ) : null}
-            {statuses.length > 0 && !mayConfigure ? <p className="text-sm">{statuses.map((status) => status.name).join(' → ')}</p> : null}
             {mayConfigure ? <CreateStatusForm organizationId={organizationId} typeId={selectedType.id} /> : null}
           </section>
 
           {statuses.length >= 2 ? (
-            <section className="flex max-w-2xl flex-col gap-3" aria-label="Allowed moves">
-              <GroupHeading>Allowed moves</GroupHeading>
+            <section className="flex flex-col gap-3" aria-labelledby="workflow-moves">
+              <GroupHeading id="workflow-moves">Allowed moves</GroupHeading>
               {/* An unconfigured type is frozen, not unconstrained. */}
-              <p className="text-sm text-muted">
-                {transitions.length === 0
-                  ? 'None yet, so work of this type cannot change stage.'
-                  : transitions
-                      .map((t) => `${statusName.get(t.fromStatusId) ?? '?'} → ${statusName.get(t.toStatusId) ?? '?'}`)
-                      .join(' · ')}
-              </p>
+              {transitions.length === 0 ? <p className="text-sm text-muted">None yet, so work of this type cannot change stage.</p> : (
+                <ul aria-label="Allowed moves" className="flex flex-col gap-1 text-sm">
+                  {[...transitions].sort((a, b) => (position.get(a.fromStatusId) ?? 0) - (position.get(b.fromStatusId) ?? 0) || (position.get(a.toStatusId) ?? 0) - (position.get(b.toStatusId) ?? 0)).map((t) => <li key={t.id}>{statusName.get(t.fromStatusId) ?? '?'} <span aria-hidden className="text-subtle">→</span><span className="sr-only"> to </span> {statusName.get(t.toStatusId) ?? '?'}</li>)}
+                </ul>
+              )}
               {mayConfigure ? <CreateTransitionForm organizationId={organizationId} typeId={selectedType.id} statuses={statuses} /> : null}
             </section>
           ) : null}
@@ -248,6 +253,7 @@ function TypeDetail({
 
         {bookingEnabled ? (
           <TabsContent value="booking" className="max-w-2xl">
+            <p className="text-sm text-muted">Booking decides whether customers can request this work online and on what terms. When it can happen still comes from Schedule hours and each resource&rsquo;s availability.</p>
             <PublishTypeForm
               organizationId={organizationId}
               typeId={selectedType.id}

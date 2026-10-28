@@ -3,7 +3,8 @@
 import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { ConfirmSubmit } from '@/components/controls/confirm-submit';
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
+import { useGuardedDialogDirty } from '@/components/panels/guarded-dialog';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
 import type { TypeBooking } from '@/lib/domain/work-items/types';
@@ -63,10 +64,15 @@ export function CreateStatusForm({
 export function CreateTypeForm({
   organizationId,
   onCreated,
+  formId,
+  onPendingChange,
 }: {
   organizationId: string;
   /** Called with the new type's id once it exists, so the host can take the person to it. */
   onCreated?: (typeId: string) => void;
+  /** Inside a dialog: the form's id, so the dialog's footer submits it; the form then draws no button of its own. */
+  formId?: string;
+  onPendingChange?: (pending: boolean) => void;
 }) {
   const [state, formAction, pending] = useActionState(
     async (previous: WorkConfigActionState, formData: FormData) => {
@@ -79,9 +85,12 @@ export function CreateTypeForm({
   // Controlled so a refused submission keeps what was typed — React clears an uncontrolled form after its action.
   const [name, setName] = useState('');
   const [answer, setAnswer] = useState<'yes' | 'no' | null>(null);
+  // In a guarded dialog, anything typed or chosen asks before it is discarded; elsewhere this does nothing.
+  useGuardedDialogDirty(name.trim() !== '' || answer !== null);
+  useEffect(() => { onPendingChange?.(pending); }, [pending, onPendingChange]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form id={formId} action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="organizationId" value={organizationId} />
 
       <label className="flex flex-col gap-1.5 text-sm font-medium">
@@ -118,9 +127,9 @@ export function CreateTypeForm({
         </label>
       </fieldset>
 
-      <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
+      {formId ? null : <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
         {pending ? 'Creating…' : 'Create type'}
-      </Button>
+      </Button>}
 
       <ErrorText role="alert">{state.error}</ErrorText>
     </form>
