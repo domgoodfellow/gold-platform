@@ -224,3 +224,11 @@ export function startOfMonth(date: string): string {
   const [year, month] = date.split('-').map(Number);
   return new Date(Date.UTC(year, month - 1, 1)).toISOString().slice(0, 10);
 }
+
+/** Seven local dates after the selected day. Resolve both edges separately across DST changes. */
+export function upcomingWindow(date: string, timeZone: string): Window {
+  return {
+    startsAt: zonedDayRange(shiftDate(date, 1), timeZone).startsAt,
+    endsAt: zonedDayRange(shiftDate(date, 8), timeZone).startsAt,
+  };
+}

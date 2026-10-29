@@ -33,7 +33,7 @@ export function useDrawerFormSubmit<State extends { error: string | null }>(
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending) return;
-    const data = new FormData(event.currentTarget);
+    const data = new FormData(event.currentTarget, (event.nativeEvent as SubmitEvent).submitter);
     startTransition(() => formAction(data));
   };
 

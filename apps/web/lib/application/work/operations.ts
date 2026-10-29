@@ -4,7 +4,7 @@ import { listScheduleDays, type ScheduleDay } from '@/lib/domain/scheduling/avai
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { coverageView, evaluateWorkItems } from '@/lib/domain/work-items/requirements';
 import { RESOURCE_CLASS_LABELS } from '@/lib/domain/resources/resource-class';
-import { zonedDayRange, shiftDate } from '@/lib/domain/scheduling/window';
+import { upcomingWindow, shiftDate } from '@/lib/domain/scheduling/window';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { listResources } from '@/lib/domain/resources/resources';
@@ -17,7 +17,7 @@ export function scheduledIds(day: ScheduleDay): string[] {
  * The Work Dashboard's read model for one selected day in the organization's zone. Selected-day
  * figures (scheduled, requirement gaps, availability conflicts) come from the canonical scheduling
  * projection; the unassigned and unscheduled backlogs span all dates; upcoming is the seven days
- * after the selected day, so no job is listed under both. `setup` names what a business still lacks
+ * after the selected day, with nonoverlapping date intervals (a commitment may span both). `setup` names what a business still lacks
  * (types, starting stages, resources) from the same domain reads the configuration pages use.
  */
 export async function workOperations(db: Db, organizationId: string, date: string, timezone: string) {
@@ -27,7 +27,7 @@ export async function workOperations(db: Db, organizationId: string, date: strin
     listOperatingHours(db, { organizationId }),
     listWorkItems(db, { organizationId, active: true, scheduled: true, unassigned: true, limit: 6 }),
     listWorkItems(db, { organizationId, active: true, scheduled: false, limit: 6 }),
-    listWorkItems(db, { organizationId, active: true, within: { startsAt: zonedDayRange(shiftDate(date, 1), timezone).startsAt, endsAt: zonedDayRange(shiftDate(date, 8), timezone).startsAt }, sort: 'schedule', limit: 6 }),
+    listWorkItems(db, { organizationId, active: true, within: upcomingWindow(date, timezone), sort: 'schedule', limit: 6 }),
     listWorkItems(db, { organizationId, active: true, limit: 1 }),
     listWorkItems(db, { organizationId, limit: 1 }),
     listWorkItemTypes(db, { organizationId }),

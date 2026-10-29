@@ -32,6 +32,10 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-10-28
+
+- Dispatch now has one filterable Work queue and selected inspector, shared collection controls, focused assignment and scheduling dialogs, and optional Map or compact resource availability context. Schedule remains the full calendar. Dashboard and Dispatch share the seven local dates after the selected day for Upcoming; staffing gaps are distinguished from availability conflicts.
+
 ## 2026-10-27
 
 - The Work Dashboard is easier to read. The header no longer prints the date and time zone; one date field changes the day straight away. Four figures lead the page (scheduled on that day, unassigned, unscheduled and requirements met), followed by Needs attention beside the day's schedule, a chart of scheduled work over seven days beside dispatch capacity, then upcoming work and recent activity. The separate Work status and Insights panels, which repeated the same numbers, are gone.

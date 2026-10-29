@@ -33,18 +33,18 @@ export function CollectionToolbar({ action, scopes, scopeLabel = 'Views', leadin
     {scopes?.length ? <ViewNav label={scopeLabel} items={scopes} className="mb-0 max-sm:max-w-full max-sm:flex-nowrap max-sm:overflow-x-auto" /> : null}
     {/* Keyed by the current view: after a chip removes a filter in place, the form starts again from
         the URL rather than keeping the removed value in an untouched field and sending it back. */}
-    <form key={JSON.stringify([hidden, search?.value ?? '', active.map(filter => filter.key + String(filter.removeHref))])} method="get" action={action} role="search" className="flex flex-wrap items-start gap-2">
+    <form key={JSON.stringify([hidden, search?.value ?? '', active.map(filter => filter.key + String(filter.removeHref))])} method="get" action={action} role="search" className="relative flex flex-wrap items-start gap-2">
       {Object.entries(hidden).map(([name, value]) => value ? <input key={name} type="hidden" name={name} value={value} /> : null)}
       {leading ? <div className="min-w-0 basis-full sm:basis-auto">{leading}</div> : null}
       {search ? <div className="relative min-w-0 basis-full sm:basis-auto sm:flex-1 lg:min-w-64">
         <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
         <TextInput type="search" name={search.name} defaultValue={search.value} aria-label={search.label} placeholder={search.placeholder ?? search.label} className="w-full pl-9" />
       </div> : null}
-      {filters ? <details className="group relative" open={false}>
+      {filters ? <details className="group" open={false}>
         <summary className={cx('flex min-h-[var(--control-height,2.25rem)] cursor-pointer list-none items-center gap-2 rounded-[var(--visual-radius,0.625rem)] border border-border bg-surface px-3 text-sm font-medium hover:bg-hover [&::-webkit-details-marker]:hidden', FOCUS_RING)}>
           <SlidersHorizontal aria-hidden className="size-4" />Filters{filterCount ? <span className="rounded-full bg-accent px-1.5 text-xs tabular-nums text-on-accent">{filterCount}</span> : null}
         </summary>
-        <div data-slot="filter-panel" className="z-30 mt-2 grid w-full gap-3 rounded-[var(--visual-radius,0.625rem)] border border-border bg-popover p-4 shadow-[var(--visual-overlay-shadow)] sm:grid-cols-2 md:absolute md:left-0 md:w-[34rem]">
+        <div data-slot="filter-panel" className="z-30 mt-2 grid w-full gap-3 rounded-[var(--visual-radius,0.625rem)] border border-border bg-popover p-4 shadow-[var(--visual-overlay-shadow)] sm:grid-cols-2 md:absolute md:left-0 md:w-[min(34rem,100%)]">
           {filters}
           <div className="flex justify-end gap-2 sm:col-span-2"><Button type="submit" size="small">Apply filters</Button></div>
         </div>

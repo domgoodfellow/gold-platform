@@ -9,7 +9,7 @@ import { AttentionCategories, type AttentionCategory } from '@/components/operat
 import { DashboardLayoutGrid, type DashboardWidgetContent } from '@/components/dashboard/dashboard-layout';
 import { defaultLayout } from '@/lib/dashboard-layout';
 import { NewWorkAction } from '../new-work-action';
-import { formatWindow, shiftDate } from '@/lib/domain/scheduling/window';
+import { formatWindow } from '@/lib/domain/scheduling/window';
 import type { WorkItem } from '@/lib/domain/work-items/work-items';
 import type { WorkOperations } from '@/lib/application/work/operations';
 import { readableWorkWidgets, scheduledVolumeChart, schedulesWork, workSetupStep, WORK_WIDGETS, type WorkSetupStep } from '@/lib/application/work/dashboard';
@@ -97,8 +97,7 @@ export function WorkHome({ organizationId, timezone, today, data: d, capabilitie
       </>}
   </OperationalPanel>;
 
-  const next = shiftDate(d.date, 1);
-  const upcoming = <OperationalPanel className="h-full min-w-0" density="compact" title="Upcoming" count={d.upcoming.total} href={`${dispatch}?assignment=upcoming&on=${next}`} hrefLabel={d.upcoming.total > d.upcoming.length ? `View all ${d.upcoming.total}` : 'View all'}>
+  const upcoming = <OperationalPanel className="h-full min-w-0" density="compact" title="Upcoming" count={d.upcoming.total} href={`${dispatch}?assignment=upcoming&on=${d.date}`} hrefLabel={d.upcoming.total > d.upcoming.length ? `View all ${d.upcoming.total}` : 'View all'}>
     {d.upcoming.length ? <ul className="divide-y divide-border">{d.upcoming.map(w => <li key={w.id} className="py-2">
       <Link className="block truncate text-sm font-medium hover:underline" href={`${base}/work/${w.id}`}>{w.title}</Link>
       <p className="truncate text-xs text-muted">{[when(w), w.customer?.label, people(w)].filter(Boolean).join(' · ')}</p>

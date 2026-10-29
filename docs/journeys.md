@@ -49,6 +49,10 @@ Both acquisition paths reach the same versioned business profile editor in Setup
 
 Work Home, Work Items and Schedule open `/organizations/{org}/work/new` through the same action. The existing Work creation form, server action and database tenant/permission checks own the operation. `?type=` selects a type; `/work?create=1&type=...` redirects to the creation page. Missing types or starting stages show the prerequisite on the page; a member with `field.manage` adds the first type or the starting stage there (named by them, through the same actions and policies as Work type settings) and continues creating with the type kept, while others see what is missing and any type that is ready. Ready types expose customer, location, resource, optional asset and custom-field inputs. Errors retain the draft; success and Cancel return to Work Items. Dirty drafts guard links, type switches and browser unload through the shared unsaved-changes hook.
 
+## Dispatch and resource assignment
+
+Dashboard attention links open `/organizations/{org}/work/dispatch` with the matching date and assignment filter. Dispatch uses one database-filtered queue beside a selected Work inspector; optional availability context reads the same projection as Schedule, and Map retains coordinate behavior. Upcoming means the seven local dates after the selected day in both places. Assign resources changes participants without changing time; Schedule/Reschedule checks feasibility without writing, then commits through the existing scheduling command. Focused dialogs protect unsaved changes and retain refused input. Schedule remains the full Day/Week/Month visual calendar, linked with date/resource context. Required staffing is distinguished from assessed time availability.
+
 ## Gaps
 
 - Telephony provisioning is manual; neither onboarding path provisions a carrier binding/number.

@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useRef, useState, useTransition } from 'react';
+import { useActionState, useEffect, useState, useTransition } from 'react';
 import {
   changeStatusAction,
   scheduleWorkItemAction,
@@ -14,6 +14,9 @@ import { TextInput } from '@/components/controls/inputs';
 import type { SelectOption } from '@/components/controls/optional-select';
 import { ResourceChecklist } from '@/components/controls/resource-checklist';
 import type { ResourceNeedsView } from '@/lib/domain/work-items/requirements';
+import { useFormDirty } from '@/components/controls/use-form-dirty';
+import { useDrawerFormSubmit } from '@/components/controls/use-drawer-form-submit';
+import { useGuardedDialogClose, useGuardedDialogDirty } from '@/components/panels/guarded-dialog';
 import { FeasibilityPanel } from './feasibility-panel';
 import type { Window } from '@/lib/domain/scheduling/window';
 
@@ -79,6 +82,7 @@ export function ScheduleWorkItemForm({
   scheduled,
   window,
   timezone,
+  onSaved,
 }: {
   organizationId: string;
   workItemId: string;
@@ -90,6 +94,7 @@ export function ScheduleWorkItemForm({
   scheduled: boolean;
   window?: Window | null;
   timezone?: string;
+  onSaved?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(scheduleWorkItemAction, INITIAL);
   // Asking *would this work?* is a second action on the same form: it reads the same fields, writes
@@ -99,7 +104,11 @@ export function ScheduleWorkItemForm({
   const [version, setVersion] = useState(0);
   const [inputVersion, setInputVersion] = useState(0);
   const [checkedVersion, setCheckedVersion] = useState(-1);
-  const formRef = useRef<HTMLFormElement>(null);
+  const { ref: formRef, dirty, onChange } = useFormDirty();
+  useGuardedDialogDirty(dirty);
+  const cancel = useGuardedDialogClose();
+  const { onSubmit, errorRef } = useDrawerFormSubmit(formAction, state, pending);
+  useEffect(() => { if (state.success) onSaved?.(); }, [state.success, onSaved]);
   const [, startTransition] = useTransition();
   const localTime = (instant: string | undefined) => {
     if (!instant || !timezone) return undefined;
@@ -117,7 +126,7 @@ export function ScheduleWorkItemForm({
   };
 
   return (
-    <form ref={formRef} action={formAction} onChange={() => setInputVersion(v => v + 1)} className="flex flex-col gap-3">
+    <form ref={formRef} onSubmit={onSubmit} onChange={() => { onChange(); setInputVersion(v => v + 1); }} className="flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="workItemId" value={workItemId} />
       <div className="grid gap-3 sm:grid-cols-2">
@@ -150,10 +159,11 @@ export function ScheduleWorkItemForm({
             setSelected(ids);
             setInputVersion(v => v + 1);
             setVersion((current) => current + 1);
+            onChange();
           }}
         />
       ) : null}
-      <FormActions>
+      <FormActions className={onSaved ? 'sticky bottom-0 z-10 -mx-1 bg-surface px-1 py-2' : undefined}>
         <Button type="button" onClick={runCheck} disabled={pending || checking} tone="secondary" size="small">
           {checking ? 'Checking…' : 'Check this time'}
         </Button>
@@ -172,8 +182,9 @@ export function ScheduleWorkItemForm({
             Clear schedule
           </Button>
         ) : null}
+        {onSaved ? <Button type="button" tone="secondary" size="small" disabled={pending} onClick={cancel}>Cancel</Button> : null}
       </FormActions>
-      <FormError>{state.error}</FormError>
+      <div ref={errorRef} tabIndex={-1} className="outline-none"><FormError>{state.error}</FormError></div>
       {state.success ? <p role="status" className="text-xs text-success">{state.success}</p> : null}
     </form>
   );
@@ -189,26 +200,34 @@ export function AssignResourcesForm({
   resources,
   assigned,
   needs,
+  onSaved,
 }: {
   organizationId: string;
   workItemId: string;
   resources: SelectOption[];
   assigned: string[];
   needs?: ResourceNeedsView | null;
+  onSaved?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(setWorkItemResourcesAction, INITIAL);
+  const { ref, dirty, onChange } = useFormDirty();
+  useGuardedDialogDirty(dirty);
+  const cancel = useGuardedDialogClose();
+  const { onSubmit, errorRef } = useDrawerFormSubmit(formAction, state, pending);
+  useEffect(() => { if (state.success) onSaved?.(); }, [state.success, onSaved]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-3">
+    <form ref={ref} onSubmit={onSubmit} onChange={onChange} className="flex flex-col gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="workItemId" value={workItemId} />
       <ResourceChecklist legend="Assigned to" options={resources} selected={assigned} {...needsProps(needs)} />
-      <FormActions>
+      <FormActions className={onSaved ? 'sticky bottom-0 z-10 -mx-1 bg-surface px-1 py-2' : undefined}>
         <Button type="submit" disabled={pending} tone="secondary" size="small">
           {pending ? 'Saving…' : 'Save resources'}
         </Button>
+        {onSaved ? <Button type="button" tone="secondary" size="small" disabled={pending} onClick={cancel}>Cancel</Button> : null}
       </FormActions>
-      <FormError>{state.error}</FormError>
+      <div ref={errorRef} tabIndex={-1} className="outline-none"><FormError>{state.error}</FormError></div>
       {state.success ? <p role="status" className="text-xs text-success">{state.success}</p> : null}
     </form>
   );

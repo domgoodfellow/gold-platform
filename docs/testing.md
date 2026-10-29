@@ -12,6 +12,10 @@ Read the disposable project's `supabase status --workdir <disposable-directory> 
 
 The ordinary demo setup is not a substitute: its empty-database guard and plan/configuration requirements must both succeed before the default complete browser suite is usable. Some other browser specs obtain `supabase status` from the root project or hard-code mail ports; inspect those targets before running them against a separate stack. A selected-suite pass does not establish complete-suite or live-provider acceptance. Worksheet snapshots in the CRM acceptance test simulate the provider through the authorized local machine functions; they do not exercise Google/Microsoft OAuth or automatic CRM scheduling.
 
+### Work W3 Dispatch acceptance
+
+`e2e/work-w3.spec.ts` runs with `playwright.isolated.config.ts`, the dedicated loopback server identity and manifest-owned disposable businesses. `W3_PHASE=before` captures the baseline; the default captures the resulting queue, availability, Map fallback, requirement gaps, real time-off conflict, Schedule Day/Week and focused forms at 390, 768, 1024, 1440 and 2000 pixels. It verifies URL filters, paging/selection/reload/history, the Dashboard Upcoming link/count, unscheduled staffing, advisory checks without writes, refused conflicts retaining input, assignment, schedule/reschedule/clear reflected in Schedule, and permission revocation while a dialog is open. Unit checks cover seven local dates across both DST transitions. Database regressions run on a separate disposable stack. Configured Map tiles and provider delivery require separate evidence.
+
 ### Imported connector checks
 
 `node-contract` runs `apps/api/library/runtime.test.mjs` in the fast tier and is included by `pnpm test:contract`. The API package's `check` runs metadata drift checks and these runtime tests. They verify signed request integrity, expiry, reviewed reads, connector matching, input refusal and secret redaction without contacting a vendor.

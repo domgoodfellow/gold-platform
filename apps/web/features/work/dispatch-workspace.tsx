@@ -3,21 +3,24 @@ import { ViewNav } from '@/components/navigation/view-nav';
 import Link from 'next/link';
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
-import { Button, ButtonLink } from '@/components/controls/button';
+import { ButtonLink } from '@/components/controls/button';
 import { TextInput, SelectInput } from '@/components/controls/inputs';
 import { OperationalPanel } from '@/components/operational/primitives';
 import { DispatchMap } from '@/features/work/dispatch-map';
-import { AssignResourcesForm, ScheduleWorkItemForm } from '@/features/work/work-operations-forms';
-import { listWorkItems, getWorkItem } from '@/lib/domain/work-items/work-items';
+import { DispatchOperationDialog, DispatchSelectionNotice } from './dispatch-operation-dialog';
+import { CollectionToolbar, type ActiveFilter } from '@/components/patterns/collection-toolbar';
+import { WorkTypeSelect } from './work-type-select';
+import { dispatchHref, DISPATCH_ASSIGNMENTS } from './dispatch-url';
+import { listWorkItems } from '@/lib/domain/work-items/work-items';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
 import { listResources } from '@/lib/domain/resources/resources';
 import { listLocations } from '@/lib/domain/locations/locations';
-import { listResourceRequirements, requirementGroups, coverageView, evaluateRequirements } from '@/lib/domain/work-items/requirements';
+import { listResourceRequirements, requirementGroups, coverageView, evaluateRequirements, evaluateWorkItems } from '@/lib/domain/work-items/requirements';
 import { RESOURCE_CLASS_LABELS, isResourceClass } from '@/lib/domain/resources/resource-class';
 import { workOperations, scheduledIds } from '@/lib/application/work/operations';
-import { todayInZone, formatWindow, zonedDayRange, shiftDate } from '@/lib/domain/scheduling/window';
-import { parseScheduleDate } from '@/features/scheduling/calendar/schedule-url';
+import { todayInZone, formatWindow, upcomingWindow } from '@/lib/domain/scheduling/window';
+import { scheduleHref, parseScheduleDate } from '@/features/scheduling/calendar/schedule-url';
 import { mapConfig } from '@/lib/adapters/maps/config';
 
 import type { Db } from '@/lib/db/types';
@@ -27,8 +30,8 @@ export async function DispatchWorkspace({ organizationId, query, db, organizatio
   const one = (key: string) => typeof query[key] === 'string' ? query[key] as string : '';
   const base = `/organizations/${organizationId}`;
   const date = parseScheduleDate(query.on, todayInZone(organization.timezone));
-  const assignment = one('assignment');
-  const mode = ['list', 'map'].includes(one('mode')) ? one('mode') : 'schedule';
+  const assignment = DISPATCH_ASSIGNMENTS.find(([key]) => key === one('assignment'))?.[0] ?? '';
+  const mode = ['schedule', 'map'].includes(one('mode')) ? one('mode') : 'list';
   const page = Math.max(1, Math.min(100000, Math.trunc(Number(one('page'))) || 1));
   const [data, types, resources, locations] = await Promise.all([
     workOperations(db, organizationId, date, organization.timezone), listWorkItemTypes(db, { organizationId }),
@@ -43,51 +46,74 @@ export async function DispatchWorkspace({ organizationId, query, db, organizatio
   const conflictIds = [...new Set(data.day.resources.flatMap(r => r.booked.filter(b => b.availabilityProblem).map(b => b.workItemId)))];
   const classResourceIds = resourceClass ? resources.filter(r => r.resourceClass === resourceClass).map(r => r.id) : undefined;
   const filteredIds = assignment === 'shortfall' ? shortfallIds : assignment === 'conflict' ? conflictIds : assignment === 'scheduled' ? scheduledIds(data.day) : undefined;
-  const queue = await listWorkItems(db, { organizationId, typeId, statusId, resourceId, resourceIds: classResourceIds, q: one('q'), active: true, limit: 20, offset: (page - 1) * 20,
-    within: assignment === 'upcoming' ? { startsAt: zonedDayRange(date, organization.timezone).startsAt, endsAt: zonedDayRange(shiftDate(date, 7), organization.timezone).startsAt } : undefined,
-    sort: assignment === 'upcoming' ? 'schedule' : 'newest',
+  const criteria = { organizationId, typeId, statusId, resourceId, resourceIds: classResourceIds, q: one('q'), active: true,
+    within: assignment === 'upcoming' ? upcomingWindow(date, organization.timezone) : undefined,
+    sort: assignment === 'upcoming' ? 'schedule' as const : 'newest' as const,
     scheduled: assignment === 'unscheduled' ? false : assignment === 'unassigned' ? true : undefined,
     unassigned: assignment === 'unassigned', ids: filteredIds,
-  });
-  const selected = one('selected') ? await getWorkItem(db, { organizationId, workItemId: one('selected') }) : queue[0] ?? null;
+  };
+  let queue = await listWorkItems(db, { ...criteria, limit: 20, offset: (page - 1) * 20 });
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(queue.total / 20)));
+  if (currentPage !== page) queue = await listWorkItems(db, { ...criteria, limit: 20, offset: (currentPage - 1) * 20 });
+  // A deep link may point beyond this page, but must still match the complete database filter and RLS.
+  const selectedId = one('selected');
+  const validId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedId);
+  const selected = selectedId ? validId && (!filteredIds || filteredIds.includes(selectedId))
+    ? (await listWorkItems(db, { ...criteria, ids: [selectedId], limit: 1 }))[0] ?? null : null : queue[0] ?? null;
+  const queueEvaluations = await evaluateWorkItems(db, { organizationId, items: queue.map(w => ({ workItemId: w.id, typeId: w.type.id, resourceIds: w.resources.map(r => r.id) })) });
+  const queueCoverage = Object.fromEntries([...queueEvaluations].map(([id, value]) => [id, coverageView(value, RESOURCE_CLASS_LABELS)]));
   const requirements = selected ? await listResourceRequirements(db, { organizationId, typeId: selected.type.id }) : [];
   const needs = requirementGroups(requirements, resources, RESOURCE_CLASS_LABELS);
   const coverage = coverageView(evaluateRequirements(requirements, resources.filter(r => selected?.resources.some(x => x.id === r.id))), RESOURCE_CLASS_LABELS);
-  const href = (patch: Record<string, string>) => { const p = new URLSearchParams(); for (const [key, value] of Object.entries(query)) if (typeof value === 'string') p.set(key, value); p.set('on', date); for (const [key, value] of Object.entries(patch)) { if (value) p.set(key, value); else p.delete(key); } return `${base}/work/dispatch?${p}`; };
+  const state = { on: date, q: one('q'), type: typeId ?? '', status: statusId ?? '', resource: resourceId ?? '', class: resourceClass, assignment, mode, page: String(currentPage), selected: selected?.id ?? '' };
+  const href = (patch: Record<string, string>) => dispatchHref(organizationId, state, patch);
+  const calendar = (id = resourceId) => scheduleHref(organizationId, { view: 'day', date, resourceIds: id ? [id] : [] });
   const maySchedule = organization.capabilities.includes('work_item.schedule');
-  const boardItems = await listWorkItems(db, { organizationId, typeId, statusId, resourceId, resourceIds: classResourceIds, q: one('q'), ids: scheduledIds(data.day), limit: 1000 });
-  const boardIds = new Set(boardItems.map(w => w.id));
-  const lanes = data.day.resources.map(r => ({ ...r, booked: r.booked.filter(b => boardIds.has(b.workItemId)) })).filter(r => (!resourceId || r.resource.id === resourceId) && (!resourceClass || resources.find(x => x.id === r.resource.id)?.resourceClass === resourceClass));
+  const lanes = data.day.resources.filter(r => (!resourceId || r.resource.id === resourceId) && (!resourceClass || resources.find(x => x.id === r.resource.id)?.resourceClass === resourceClass));
+  const labels: Record<string, string> = { q: `Search: ${one('q')}`, type: `Type: ${types.find(t => t.id === typeId)?.name}`, status: `Status: ${statuses.find(s => s.id === statusId)?.name}`, resource: `Resource: ${resources.find(r => r.id === resourceId)?.name}`, class: `Class: ${isResourceClass(resourceClass) ? RESOURCE_CLASS_LABELS[resourceClass] : ''}`, assignment: DISPATCH_ASSIGNMENTS.find(([key]) => key === assignment)?.[1] ?? '' };
+  const active: ActiveFilter[] = Object.entries(labels).filter(([key]) => state[key as keyof typeof state]).map(([key, label]) => ({ key, label, removeHref: href({ [key]: '' }) }));
   const markers = queue.flatMap(w => { const l = locations.find(l => l.id === w.location?.id); return l?.coordinates ? [{ id: w.id, label: `${w.title} · ${l.label}`, ...l.coordinates }] : []; });
   return <AppPage className="space-y-3">
-    <PageHeader title="Dispatch board" crumbs={[{ label: 'Work', href: `${base}/field` }]} meta={`Times in ${organization.timezone} · availability is checked again when saving`} actions={<><ButtonLink size="small" tone="secondary" href={`${base}/schedule?on=${date}&view=day`}>Calendar</ButtonLink><ButtonLink size="small" tone="secondary" href={`${base}/work`}><BusinessLabel>Work items</BusinessLabel></ButtonLink></>}/>
-    <form method="get" className="grid grid-cols-2 gap-2 rounded-lg border border-border p-3 md:grid-cols-4 xl:grid-cols-8">
-      <label className="text-xs text-muted">Date<TextInput type="date" name="on" defaultValue={date}/></label>
-      <label className="text-xs text-muted">Search<TextInput name="q" defaultValue={one('q')} placeholder="Work title"/></label>
-      <label className="text-xs text-muted">Work type<SelectInput name="type" defaultValue={typeId ?? ''}><option value="">All types</option>{types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</SelectInput></label>
-      <label className="text-xs text-muted">Status<SelectInput name="status" defaultValue={statusId ?? ''}><option value="">All statuses</option>{statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</SelectInput></label>
-      <label className="text-xs text-muted">Resource<SelectInput name="resource" defaultValue={resourceId ?? ''}><option value="">All resources</option>{resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</SelectInput></label>
-      <label className="text-xs text-muted">Resource class<SelectInput name="class" defaultValue={resourceClass}><option value="">All classes</option>{Object.entries(RESOURCE_CLASS_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</SelectInput></label>
-      <label className="text-xs text-muted">Assignment state<SelectInput name="assignment" defaultValue={assignment}><option value="">All active work</option><option value="unassigned">Unassigned scheduled</option><option value="unscheduled">Unscheduled</option><option value="upcoming">Upcoming · 7 days</option><option value="scheduled">Scheduled · day</option><option value="shortfall">Requirement shortfalls · day</option><option value="conflict">Availability conflicts · day</option></SelectInput></label>
-      <input type="hidden" name="mode" value={mode}/><div className="flex items-end"><Button size="small">Apply filters</Button></div>
-    </form>
-    <div className="grid min-w-0 items-start gap-3 lg:grid-cols-[minmax(190px,2fr)_minmax(0,5fr)] xl:grid-cols-[minmax(180px,2fr)_minmax(0,5fr)_minmax(250px,3fr)]">
+    <PageHeader title="Dispatch" crumbs={[{ label: 'Work', href: `${base}/field` }]} actions={<><ButtonLink size="small" tone="secondary" href={calendar()}>Schedule</ButtonLink><ButtonLink size="small" tone="secondary" href={`${base}/work`}><BusinessLabel>Work items</BusinessLabel></ButtonLink></>}/>
+    <CollectionToolbar action={`${base}/work/dispatch`} viewId="dispatch"
+      leading={<div className="flex flex-wrap gap-2"><label className="sr-only" htmlFor="dispatch-date">Date</label><TextInput id="dispatch-date" name="on" type="date" defaultValue={date} title={organization.timezone} className="w-full sm:w-40"/><WorkTypeSelect value={typeId ?? ''} types={[{ id: '', name: 'All work types' }, ...types]} hrefs={Object.fromEntries([{ id: '' }, ...types].map(t => [t.id, href({ type: t.id })]))}/></div>}
+      search={{ name: 'q', value: one('q'), label: 'Search work', placeholder: 'Search work titles' }}
+      hidden={{ mode }}
+      filterCount={[statusId, resourceId, resourceClass, assignment].filter(Boolean).length}
+      filters={<>
+        <label className="text-sm">Status<SelectInput name="status" defaultValue={statusId ?? ''}><option value="">All statuses</option>{statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</SelectInput></label>
+        <label className="text-sm">Resource<SelectInput name="resource" defaultValue={resourceId ?? ''}><option value="">All resources</option>{resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</SelectInput></label>
+        <label className="text-sm">Resource class<SelectInput name="class" defaultValue={resourceClass}><option value="">All classes</option>{Object.entries(RESOURCE_CLASS_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</SelectInput></label>
+        <label className="text-sm">Assignment state<SelectInput name="assignment" defaultValue={assignment}>{DISPATCH_ASSIGNMENTS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</SelectInput></label>
+      </>}
+      display={<ViewNav label="Dispatch presentation" size="small" className="mb-0" items={[['list', 'Queue'], ['schedule', 'Availability'], ['map', 'Map']].map(([key, label]) => ({ key, label, href: href({ mode: key }), current: mode === key }))}/>}
+      active={active} resetHref={active.length ? dispatchHref(organizationId, { on: date, mode }) : undefined}/>
+    <p className="text-xs text-muted">{assignment === 'upcoming' ? 'Seven local dates after the selected day.' : ['scheduled', 'shortfall', 'conflict'].includes(assignment) ? `Selected day: ${date}.` : 'Active work across all dates.'} Select work to resolve assignment and scheduling exceptions.</p>
+    <div className="grid min-w-0 items-start gap-3 lg:grid-cols-[minmax(0,3fr)_minmax(18rem,2fr)]">
       <OperationalPanel density="compact" body="edge-to-edge" title="Work queue" count={queue.total}>
-        <p className="px-3 pb-2 text-[11px] text-muted">Unassigned / unscheduled span all dates. Other day filters use {date}.</p>
-        <ul className="max-h-60 divide-y lg:max-h-[38rem] divide-border overflow-y-auto">{queue.map(w => <li key={w.id}><Link scroll={false} aria-current={selected?.id === w.id ? 'true' : undefined} href={href({ selected: w.id })} className={`block border-l-2 px-3 py-3 ${selected?.id === w.id ? 'border-accent bg-accent/5' : 'border-transparent hover:bg-surface'}`}><p className="text-sm font-medium">{w.title}</p><p className="mt-1 text-xs text-muted">{w.customer?.label ?? 'No customer'} · {w.status.label}</p><p className="mt-1 text-[11px] text-muted">{w.window ? formatWindow(w.window, organization.timezone) : 'Unscheduled'} · {w.resources.map(r => r.label).join(', ') || 'Unassigned'}</p>{data.coverage[w.id]?.shortfall ? <p className="mt-1 text-xs text-danger">{data.coverage[w.id].shortfall}</p> : null}</Link></li>)}</ul>
+        <ul className="max-h-[28rem] divide-y divide-border overflow-y-auto lg:max-h-[42rem]">{queue.map(w => <li key={w.id}><Link scroll={false} aria-current={selected?.id === w.id ? 'true' : undefined} href={href({ selected: w.id })} className={`block break-words border-l-2 px-3 py-3 ${selected?.id === w.id ? 'border-accent bg-accent/5' : 'border-transparent hover:bg-surface'}`}><p className="text-sm font-medium">{w.title}</p><p className="mt-1 text-xs text-muted">{w.customer?.label ?? 'No customer'} · {w.status.label}</p><p className="mt-1 text-[11px] text-muted">{w.window ? formatWindow(w.window, organization.timezone) : 'Unscheduled'} · {w.resources.map(r => r.label).join(', ') || 'Unassigned'}</p>{queueCoverage[w.id]?.shortfall ? <p className="mt-1 text-xs text-danger">{w.window ? 'Required resources missing' : 'Not yet staffed'} - {queueCoverage[w.id].shortfall}</p> : null}{conflictIds.includes(w.id) ? <p className="mt-1 text-xs text-danger">Outside resource availability - selected day</p> : null}</Link></li>)}</ul>
         {!queue.length ? <p className="p-4 text-sm text-muted">No work matches these filters.</p> : null}
-        <div className="flex justify-between border-t border-border p-3 text-xs"><span>Page {page}</span>{page > 1 ? <Link href={href({ page: String(page - 1) })}>Previous</Link> : null}{page * 20 < queue.total ? <Link href={href({ page: String(page + 1) })}>Next</Link> : null}</div>
+        <div className="flex justify-between border-t border-border p-3 text-xs"><span>Page {currentPage} of {Math.max(1, Math.ceil(queue.total / 20))}</span>{currentPage > 1 ? <Link href={href({ page: String(currentPage - 1) })}>Previous</Link> : null}{currentPage * 20 < queue.total ? <Link href={href({ page: String(currentPage + 1) })}>Next</Link> : null}</div>
       </OperationalPanel>
-      <OperationalPanel density="compact" body="edge-to-edge" className="order-2 lg:order-none" title="Assignment board" action={<ViewNav label="Dispatch mode" current={mode} className="mb-0" views={['list', 'schedule', 'map'].map(m => ({ key: m, href: href({ mode: m }), label: m[0].toUpperCase() + m.slice(1) }))} />}>
-        {mode === 'map' ? <DispatchMap styleUrl={mapConfig()?.styleUrl ?? null} markers={markers} selectedId={selected?.id ?? null} selectionHref={href({ selected: '' })}/> : mode === 'list' ? <ul className="divide-y divide-border">{queue.map(w => <li key={w.id} className="flex items-center justify-between gap-3 px-3 py-3"><Link href={href({ selected: w.id })} scroll={false} className="text-sm font-medium">{w.title}</Link><span className="text-xs text-muted">{w.resources.map(r => r.label).join(', ') || 'Unassigned'}</span></li>)}</ul> : <div className="overflow-x-auto"><div className="min-w-[480px]"><p className="border-y border-border bg-surface/60 px-3 py-2 text-xs text-muted">{date} · resource commitments and free windows</p>{lanes.map(r => <div key={r.resource.id} className="grid grid-cols-[9rem_minmax(0,1fr)] border-b border-border text-xs"><div className="bg-surface/40 p-3"><Link className="font-medium" href={`${base}/resources/${r.resource.id}`}>{r.resource.name}</Link><div className="mt-1 text-muted">{r.exceptions.length ? `${r.exceptions.length} availability exception(s)` : 'No exceptions'}</div></div><div className="space-y-2 p-3">{r.booked.map(b => <Link key={b.workItemId} href={href({ selected: b.workItemId })} scroll={false} className={`block rounded-md border p-2 ${selected?.id === b.workItemId ? 'border-accent bg-accent/5' : 'border-border bg-surface/50'}`}><span className="font-medium">{b.title}</span><span className="ml-2 text-muted">{formatWindow(b.window, organization.timezone)}</span>{b.availabilityProblem ? <p className="text-danger">Outside resource availability</p> : null}</Link>)}{r.free.map((w, i) => <p key={i} className="text-[11px] text-muted">Free · {formatWindow(w, organization.timezone)}</p>)}{!r.free.length && !r.booked.length ? <p className="text-muted">No available windows</p> : null}</div></div>)}{!lanes.length ? <p className="p-4 text-sm text-muted">No resources match this view.</p> : null}<div className="p-3"><p className="mb-2 text-xs font-medium">Unassigned · {data.day.unassigned.filter(w => boardIds.has(w.workItemId)).length}</p>{data.day.unassigned.filter(w => boardIds.has(w.workItemId)).map(w => <Link key={w.workItemId} href={href({ selected: w.workItemId })} scroll={false} className="mb-2 block rounded-md border border-border p-2 text-xs">{w.title} · {formatWindow(w.window, organization.timezone)}</Link>)}</div></div></div>}
-      </OperationalPanel>
-      <div className="order-1 min-w-0 lg:order-none lg:col-span-2 xl:col-span-1"><OperationalPanel density="compact" title="Selected work">{selected ? <div key={`${selected.id}:${selected.window?.startsAt}:${selected.resources.map(r => r.id).join(',')}`} className="space-y-4">
-        <div><h3 className="font-semibold">{selected.title}</h3><p className="text-xs text-muted">{selected.type.label} · {selected.status.label}</p></div>
+      <div className={`min-w-0 space-y-3 ${selectedId ? 'order-first lg:order-none' : ''}`}><OperationalPanel density="compact" title="Selected work">{selected ? <div key={selected.id} className="space-y-4">
+        <div><h3 className="font-semibold">{selected.title}</h3>{!queue.some(w => w.id === selected.id) ? <p className="mt-1 text-xs text-muted">Selected work is on another queue page.</p> : null}<p className="text-xs text-muted">{selected.type.label} · {selected.status.label}</p></div>
         <dl className="space-y-2 text-xs"><div><dt className="text-muted"><BusinessLabel>Customer</BusinessLabel></dt><dd>{selected.customer ? <Link href={`${base}/crm/contacts/${selected.customer.id}`}>{selected.customer.label}</Link> : 'No customer'}</dd></div><div><dt className="text-muted">Location</dt><dd>{selected.location ? <Link href={`${base}/locations/${selected.location.id}`}>{selected.location.label}</Link> : 'No location'}</dd></div><div><dt className="text-muted">Scheduled window</dt><dd>{selected.window ? formatWindow(selected.window, organization.timezone) : 'Unscheduled'}</dd></div><div><dt className="text-muted">Assigned resources</dt><dd>{selected.resources.map(r => r.label).join(', ') || 'Unassigned'}</dd></div></dl>
-        <div className="rounded-md border border-border p-2 text-xs"><h4 className="mb-1 font-medium">Assignment coverage</h4>{coverage.lines.length ? coverage.lines.map(l => <p key={l.requirementId} className={l.met ? 'text-muted' : 'text-danger'}>{l.text}</p>) : <p className="text-muted">No resource requirements configured.</p>}</div>
-        {maySchedule && selected.type.schedulable ? <><details className="rounded-md border border-border p-3"><summary className="cursor-pointer text-sm font-medium">Assign / reassign</summary><div className="mt-3"><AssignResourcesForm organizationId={organizationId} workItemId={selected.id} resources={resources.map(r => ({ id: r.id, label: r.name }))} assigned={selected.resources.map(r => r.id)} needs={needs}/></div></details><details className="rounded-md border border-border p-3"><summary className="cursor-pointer text-sm font-medium">Schedule / check feasibility</summary><div className="mt-3"><ScheduleWorkItemForm organizationId={organizationId} workItemId={selected.id} resources={resources.map(r => ({ id: r.id, label: r.name }))} assigned={selected.resources.map(r => r.id)} needs={needs} scheduled={!!selected.window} window={selected.window} timezone={organization.timezone}/></div></details></> : <p className="text-xs text-muted">{selected.type.schedulable ? 'Your role cannot assign or schedule work.' : 'This work type does not use scheduling.'}</p>}
-        <ButtonLink size="small" tone="secondary" href={`${base}/work/${selected.id}`}>Open full work detail</ButtonLink>
-      </div> : <p className="text-sm text-muted">Select a work item from the queue.</p>}</OperationalPanel></div>
+        <div className="rounded-md border border-border p-2 text-xs"><h4 className="mb-1 font-medium">Required resources</h4>{!selected.window && !coverage.satisfied ? <p className="mb-1 font-medium">Not yet staffed</p> : null}{coverage.lines.length ? coverage.lines.map(l => <p key={l.requirementId} className={l.met ? 'text-muted' : 'text-danger'}>{l.text}</p>) : <p className="text-muted">No resource requirements configured.</p>}</div>
+        <div className="text-xs"><h4 className="font-medium">Availability</h4><p className="mt-1 text-muted">{!selected.window ? 'Choose a time to check resource availability.' : !selected.resources.length ? 'No assigned resources to assess. Assign resources to check availability.' : !scheduledIds(data.day).includes(selected.id) ? 'Open Schedule for this work date, or check its time when rescheduling.' : conflictIds.includes(selected.id) ? 'Outside resource availability on the selected day. Reassign resources or reschedule.' : 'No resource availability conflicts reported on the selected day. Saving rechecks availability.'}</p></div>
+        {maySchedule && selected.type.schedulable ? <div className="flex flex-wrap gap-2">{(['assign', 'schedule'] as const).map(operation => <DispatchOperationDialog key={operation} operation={operation} organizationId={organizationId} workItemId={selected.id} resources={resources.map(r => ({ id: r.id, label: r.name }))} assigned={selected.resources.map(r => r.id)} needs={needs} scheduled={!!selected.window} window={selected.window} timezone={organization.timezone}/>)}</div> : <p className="text-xs text-muted">{selected.type.schedulable ? 'Your role cannot assign or schedule work.' : 'This work type does not use scheduling.'}</p>}
+        <div className="flex flex-wrap gap-2"><ButtonLink size="small" tone="secondary" href={`${base}/work/${selected.id}`}>Open Work record</ButtonLink>{selected.window ? <ButtonLink size="small" tone="secondary" href={scheduleHref(organizationId, { view: 'day', date: todayInZone(organization.timezone, new Date(selected.window.startsAt)), resourceIds: selected.resources.map(r => r.id) })}>View in Schedule</ButtonLink> : null}</div>
+      </div> : selectedId ? <DispatchSelectionNotice key={selectedId}/> : <p className="text-sm text-muted">Select a work item from the queue.</p>}</OperationalPanel>
+        {mode === 'map' ? <OperationalPanel density="compact" body="edge-to-edge" title="Map"><DispatchMap styleUrl={mapConfig()?.styleUrl ?? null} markers={markers} selectedId={selected?.id ?? null} selectionHref={href({ selected: '' })}/></OperationalPanel> : null}
+        {mode === 'schedule' ? <OperationalPanel density="compact" title="Resource availability" action={<ButtonLink size="small" tone="secondary" href={calendar()}>Open Schedule</ButtonLink>}>
+          <p className="mb-3 text-xs text-muted">{date} - <span title="Organization timezone">{organization.timezone}</span>. Commitments and free windows from Schedule.</p>
+          <ul className="space-y-3">{lanes.map(lane => <li key={lane.resource.id} className="border-t border-border pt-2 text-xs">
+            <Link className="font-medium underline" href={calendar(lane.resource.id)}>{lane.resource.name} - {lane.booked.length} commitments</Link>
+            {lane.exceptions.length ? <p className="mt-1 text-muted">{lane.exceptions.length} availability exceptions</p> : null}
+            {lane.free.map((window, i) => <p key={i} className="mt-1 text-muted">Free - {formatWindow(window, organization.timezone)}</p>)}
+            {!lane.free.length ? <p className="mt-1 text-muted">No free windows</p> : null}
+          </li>)}</ul>{!lanes.length ? <p className="text-sm text-muted">No resources match this view.</p> : null}
+        </OperationalPanel> : null}
+      </div>
     </div>
   </AppPage>;
 }

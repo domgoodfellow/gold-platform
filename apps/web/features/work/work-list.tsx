@@ -83,7 +83,7 @@ export function WorkList({ title, crumbs, organizationId, timezone, types, selec
       { key: 'schedule', header: 'Scheduled', cell: (w: WorkItem) => <span className="whitespace-nowrap tabular-nums text-muted">{w.window ? formatWindow(w.window, timezone) : 'Unscheduled'}</span> },
       { key: 'resources', header: 'Resources', cell: (w: WorkItem) => w.resources.length ? w.resources.map(r => r.label).join(', ') : <span className="text-muted">Unassigned</span> },
     ] : []),
-    { key: 'status', header: 'Status', cell: w => <span className="flex flex-col items-start gap-1"><Badge>{w.status.label}</Badge>{shortfall(w.id) ? <span className="text-xs text-danger">{shortfall(w.id)}</span> : null}</span> },
+    { key: 'status', header: 'Status', cell: w => <span className="flex flex-col items-start gap-1"><Badge>{w.status.label}</Badge>{shortfall(w.id) ? <span className="text-xs text-danger">{!w.window ? 'Not yet staffed - ' : 'Required resources missing - '}{shortfall(w.id)}</span> : null}</span> },
   ];
   // The one contextual action: placing work that is not yet scheduled or not yet staffed. Opening a record is its title.
   const placement = (w: WorkItem) => maySchedule && w.type.schedulable && (!w.window || !w.resources.length)
@@ -122,7 +122,7 @@ export function WorkList({ title, crumbs, organizationId, timezone, types, selec
                   return <BoardCard key={item.id} actions={moves.length || place ? <div className="flex flex-wrap items-center gap-2"><MoveWorkItemForm organizationId={organizationId} workItemId={item.id} moves={moves} />{place}</div> : undefined}>
                     <div className="min-w-0"><Link className="block break-words font-medium hover:underline" href={`${base}/work/${item.id}`}>{item.title}</Link>{item.customer ? <span className="block truncate text-xs text-muted">{item.customer.label}</span> : null}</div>
                     {scheduled ? <p className="text-xs text-muted"><span className="tabular-nums">{item.window ? formatWindow(item.window, timezone) : 'Unscheduled'}</span> · {item.resources.map(r => r.label).join(', ') || 'Unassigned'}</p> : null}
-                    {shortfall(item.id) ? <p className="text-xs text-danger">{shortfall(item.id)}</p> : null}
+                    {shortfall(item.id) ? <p className="text-xs text-danger">{!item.window ? 'Not yet staffed - ' : 'Required resources missing - '}{shortfall(item.id)}</p> : null}
                   </BoardCard>;
                 }) : null}
               </BoardColumn>;
