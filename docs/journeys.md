@@ -53,6 +53,10 @@ Work Home, Work Items and Schedule open `/organizations/{org}/work/new` through 
 
 Dashboard attention links open `/organizations/{org}/work/dispatch` with the matching date and assignment filter. Dispatch uses one database-filtered queue beside a selected Work inspector; optional availability context reads the same projection as Schedule, and Map retains coordinate behavior. Upcoming means the seven local dates after the selected day in both places. Assign resources changes participants without changing time; Schedule/Reschedule checks feasibility without writing, then commits through the existing scheduling command. Focused dialogs protect unsaved changes and retain refused input. Schedule remains the full Day/Week/Month visual calendar, linked with date/resource context. Required staffing is distinguished from assessed time availability.
 
+## Organization Home
+
+`/organizations/{org}/home` gives a cross-workspace overview using existing authorized source projections. Exact overview figures lead attention, distinct personal responsibilities, other dated obligations, relevant business performance and recent activity. Work exceptions open Dispatch with date and selection/filter context; invoices open Finance's existing inspector; CRM responsibilities open the selected task. Today and Upcoming are disjoint in Home, with continuing Work kept under Today and all seven subsequent local dates included in Upcoming. Attention and reporting controls preserve their own URL state. Quick actions and the existing command palette/Agent remain shared; New work opens the canonical `/work/new` route. Optional performance/activity selections stay in browser storage with explicit save-failure feedback. Source failures omit unknown figures while healthy workspaces remain readable.
+
 ## Gaps
 
 - Telephony provisioning is manual; neither onboarding path provisions a carrier binding/number.

@@ -34,6 +34,8 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-10-28
 
+- Organization Home now uses shared dashboard, collection and chart components for one cross-workspace overview. Work exceptions use W3's complete read model, Today/Upcoming include distinct local dates, and records are not repeated across attention, personal priorities and obligations. Attention and reporting controls keep separate URL state; source failures and refused browser-local Customize saves remain explicit.
+
 - Dispatch now has one filterable Work queue and selected inspector, shared collection controls, focused assignment and scheduling dialogs, and optional Map or compact resource availability context. Schedule remains the full calendar. Dashboard and Dispatch share the seven local dates after the selected day for Upcoming; staffing gaps are distinguished from availability conflicts.
 
 ## 2026-10-27

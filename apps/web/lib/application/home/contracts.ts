@@ -1,9 +1,9 @@
 import { shiftDate, startOfMonth, shiftMonth, zonedDayRange } from '@/lib/domain/scheduling/window';
 
 export type HomeSource = 'CRM' | 'Communications' | 'Marketing' | 'Support' | 'Work' | 'Finance' | 'Automations' | 'AI' | 'Studio';
-export type HomeQuery = { when: 'today' | 'week' | 'month'; scope: 'organization' | 'mine'; attention: 'all' | 'urgent' | 'overdue' };
+export type HomeQuery = { when: 'today' | 'week' | 'month'; scope: 'organization' | 'mine'; attention: 'all' | 'urgent' | 'overdue'; schedule: 'today' | 'upcoming' };
 export function homeQuery(query: Record<string, string | string[] | undefined>): HomeQuery {
-  return { when: query.when === 'week' || query.when === 'month' ? query.when : 'today', scope: query.scope === 'mine' ? 'mine' : 'organization', attention: query.attention === 'urgent' || query.attention === 'overdue' ? query.attention : 'all' };
+  return { when: query.when === 'week' || query.when === 'month' ? query.when : 'today', scope: query.scope === 'mine' ? 'mine' : 'organization', attention: query.attention === 'urgent' || query.attention === 'overdue' ? query.attention : 'all', schedule: query.schedule === 'upcoming' ? 'upcoming' : 'today' };
 }
 export function homePeriod(date: string, timezone: string, when: HomeQuery['when']) {
   const from = when === 'month' ? startOfMonth(date) : when === 'week' ? shiftDate(date, -6) : date;
@@ -18,13 +18,14 @@ export type HomeAttentionItem = {
 };
 export type HomeCategory = { key: string; label: string; total: number; href: string };
 export type HomeMetric = { key: string; label: string; value: number | string; definition: string; href: string };
-export type HomeObligation = { key: string; source: HomeSource; title: string; at: string; context: string; owner: string; href: string };
-export type HomeActivity = { key: string; source: HomeSource; title: string; at: string; href: string; actor?: string | null };
+export type HomeObligation = { key: string; source: HomeSource; title: string; at: string; context: string; owner: string; href: string; endsAt?: string; continuing?: boolean; allDay?: boolean };
+export type HomeActivity = { key: string; source: HomeSource; title: string; at: string; href: string; actor?: string | null; recordKey?: string };
 export type HomeHealth = { key: string; source: HomeSource; state: string; detail: string; href: string; warning: boolean };
 export type HomeSourceData = {
   source: HomeSource; metrics: HomeMetric[]; categories: HomeCategory[]; attention: HomeAttentionItem[];
   today: HomeObligation[]; upcoming: HomeObligation[]; priorities: HomeAttentionItem[];
   activity: HomeActivity[]; performance: HomeMetric[]; health: HomeHealth[];
+  obligationTotals?: { today: number; upcoming: number };
   trends: { currency: string; points: { day: string; amountMinor: number }[] }[];
 };
 export type HomeResult = { source: HomeSource; state: 'ready'; data: HomeSourceData } | { source: HomeSource; state: 'unavailable' };

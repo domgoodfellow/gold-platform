@@ -13,8 +13,8 @@ describe('Home semantic projections', () => {
     expect(JSON.stringify(counted(['preview'], 12))).toBe('["preview"]');
   });
   it('normalizes crafted filters without admitting arbitrary scopes or periods', () => {
-    expect(homeQuery({ scope: 'admin', when: 'all', attention: ['overdue'] })).toEqual({ scope: 'organization', when: 'today', attention: 'all' });
-    expect(homeQuery({ scope: 'mine', when: 'month', attention: 'overdue' })).toEqual({ scope: 'mine', when: 'month', attention: 'overdue' });
+    expect(homeQuery({ scope: 'admin', when: 'all', attention: ['overdue'] })).toEqual({ scope: 'organization', when: 'today', attention: 'all', schedule: 'today' });
+    expect(homeQuery({ scope: 'mine', when: 'month', attention: 'overdue' })).toEqual({ scope: 'mine', when: 'month', attention: 'overdue', schedule: 'today' });
   });
   it('uses organization-local DST boundaries and exclusive calendar-month ends', () => {
     expect(homePeriod('2026-03-08', 'America/Toronto', 'today')).toMatchObject({ since: '2026-03-08T05:00:00.000Z', until: '2026-03-09T04:00:00.000Z' });

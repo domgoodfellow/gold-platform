@@ -16,20 +16,21 @@ export async function isolateSource(source: HomeSource, read: () => Promise<Home
 
 export async function loadHome(db: Db, organization: Organization, rawQuery: Record<string, string | string[] | undefined> = {}): Promise<HomeData> {
   const organizationId = organization.id, date = todayInZone(organization.timezone), query = homeQuery(rawQuery);
-  const [featureStates, membershipId, schedulable] = await Promise.all([
+  const [featureStates, membershipId, workShape] = await Promise.all([
     organizationResolvedFeatureStates(db, { organizationId }),
     currentMembershipId(db, { organizationId }),
-    hasSchedulableWork(db, { organizationId }),
+    hasSchedulableWork(db, { organizationId }).then(value => ({ value, failed: false }), () => ({ value: false, failed: true })),
   ]);
   if (!membershipId) throw new DomainError('Organization membership required.', 'home.forbidden');
+  const schedulable = workShape.value;
   const capabilities = new Set<string>(organization.capabilities), features = availableFeatureKeys(featureStates), enabled = activeModuleKeys(featureStates);
   const available = (segment: string) => areaAvailable(segment, { capabilities: new Set(organization.capabilities), featureAvailability: features, enabled, schedulableWork: schedulable });
   const resource = await db.from('resources').select('id').eq('organization_id', organizationId).eq('membership_id', membershipId).maybeSingle();
-  if (resource.error) throw new DomainError('Personal resource projection unavailable.', 'home.resource_failed');
+
   const period = homePeriod(date, organization.timezone, query.when), now = new Date().toISOString();
   const c: ReadContext = { db, organizationId, membershipId, resourceId: resource.data?.id ?? null, schedulable, date, timezone: organization.timezone, now, query, period, capabilities, features, assistantEntitled: enabled.has('assistant') };
   const jobs: [HomeSource, () => Promise<HomeSourceData>][] = [['CRM', () => readCrm(c)]];
-  jobs.push(['Work', () => readWork(c)]);
+  jobs.push(['Work', () => { if (workShape.failed || resource.error) throw new DomainError('Work prerequisites unavailable.', 'home.work_unavailable'); return readWork(c); }]);
   if (available('comms')) jobs.push(['Communications', () => readCommunications(c)]);
   if (available('marketing')) jobs.push(['Marketing', () => readMarketingHome(c)]);
   if (available('support')) jobs.push(['Support', () => readSupportHome(c)]);
@@ -42,29 +43,32 @@ export async function loadHome(db: Db, organization: Organization, rawQuery: Rec
   const eventGroups: [HomeSource, string[], (kind: string, id: string) => string][] = [
     ['CRM', ['customer.created', 'customer.updated', 'opportunity.created', 'opportunity.stage_changed', 'follow_up.created', 'follow_up.completed'], (kind, id) => kind === 'customer' ? `/organizations/${organizationId}/crm/contacts/${id}` : kind === 'opportunity' ? `/organizations/${organizationId}/crm/opportunities/${id}` : `/organizations/${organizationId}/crm/tasks?selected=${id}&status=all`],
     ['Work', ['work_item.created', 'work_item.scheduled', 'work_item.unscheduled', 'work_item.assigned', 'work_item.status_changed'], (_, id) => `/organizations/${organizationId}/work/${id}`],
-    ['Finance', ['invoice.issued', 'payment.recorded'], (_, id) => `/organizations/${organizationId}/work/${id}`],
+    ['Finance', ['invoice.issued', 'payment.recorded'], (_, id) => `/organizations/${organizationId}/work/${id}?section=financials`],
     ['Marketing', ['marketing_campaign.created', 'marketing_campaign.updated', 'marketing_inquiry.reviewed', 'marketing_inquiry.handed_off'], (kind, id) => kind === 'marketing_campaign' ? `/organizations/${organizationId}/marketing/campaigns/${id}` : `/organizations/${organizationId}/marketing/leads?inquiry=${id}`],
   ];
+  const activityPeriod = homePeriod(date, organization.timezone, 'week');
   await Promise.all(eventGroups.map(async ([source, actions, href]) => {
     const result = results.find(r => r.source === source);
     if (result?.state !== 'ready') return;
     const allowedActions = source === 'CRM' && !features.has('follow_ups') ? actions.filter(a => !a.startsWith('follow_up.')) : actions;
-    const events = await db.from('events').select('id,entity_type,entity_id,action,occurred_at').eq('organization_id', organizationId).in('action', allowedActions).gte('occurred_at', period.since).lt('occurred_at', period.until).order('occurred_at', { ascending: false }).order('id').limit(5);
+    const events = await db.from('events').select('id,entity_type,entity_id,action,occurred_at').eq('organization_id', organizationId).in('action', allowedActions).gte('occurred_at', activityPeriod.since).lt('occurred_at', activityPeriod.until).order('occurred_at', { ascending: false }).order('id').limit(5);
     if (events.error) {
       result.data.health.push({ key: `${source}:activity-unavailable`, source, state: 'Activity unavailable', detail: 'The operational summary is available; recent activity could not be read.', href: areaHref(organizationId, source === 'CRM' ? 'sales' : source === 'Work' ? 'field' : source.toLowerCase()), warning: true });
       return;
     }
-    result.data.activity.push(...(events.data ?? []).map(e => ({ key: `${source}:event:${e.id}`, source, title: e.action.replaceAll('_', ' ').replace('.', ' · '), at: e.occurred_at, href: href(e.entity_type, e.entity_id) })));
+    result.data.activity.push(...(events.data ?? []).map(e => ({ key: `${source}:event:${e.id}`, source, title: e.action.replaceAll('_', ' ').replace('.', ' · '), at: e.occurred_at, href: href(e.entity_type, e.entity_id), recordKey: `${e.entity_type === 'work_item' ? 'Work' : source}:${e.entity_type === 'work_item' ? 'work-item' : e.entity_type === 'follow_up' ? 'follow-up' : e.entity_type}:${e.entity_id}` })));
   }));
   assignSetupHealth(results, featureStates, capabilities);
-  const priorities = ['scheduled', 'opportunities', 'cases', 'overdue-invoices', 'inbox', 'inquiries', 'failed-runs', 'missed', 'active-work'];
+  const priorities = ['scheduled', 'overdue-invoices', 'opportunities', 'cases', 'inbox', 'inquiries', 'failed-runs', 'missed', 'active-work'];
   const metrics = results.flatMap(r => r.state === 'ready' ? r.data.metrics : []);
-  const kpis = metrics.sort((a, b) => priorities.indexOf(a.key) - priorities.indexOf(b.key)).slice(0, 4);
+  const meaningful = metrics.filter(metric => typeof metric.value !== 'number' || metric.value > 0);
+  const kpis = (meaningful.length ? meaningful : metrics.filter(metric => ['active-work', 'scheduled', 'opportunities'].includes(metric.key)))
+    .sort((a, b) => priorities.indexOf(a.key) - priorities.indexOf(b.key)).slice(0, 4);
   const base = `/organizations/${organizationId}`;
   const quickActions: HomeData['quickActions'] = [];
   const add = (key: string, capability: string, label: string, href: string, description: string) => { if (capabilities.has(capability)) quickActions.push({ key, label, href, description }); };
-  add('customer', 'customer.create', 'New customer', `${base}/crm/contacts?create=1`, 'Open CRM and add a customer');
-  add('work', 'work_item.create', 'New work', `${base}/work?create=1`, 'Create and assign Work');
+  add('customer', 'customer.create', 'New contact', `${base}/crm/contacts?create=1`, 'Open CRM and add a contact');
+  add('work', 'work_item.create', 'New work', `${base}/work/new`, 'Create and assign Work');
   if (available('support')) add('case', 'support.case.create', 'New case', `${base}/support/cases?create=1`, 'Open Cases and create a problem or request');
   if (available('marketing')) add('campaign', 'marketing.manage', 'New campaign', `${base}/marketing/campaigns?create=1`, 'Open Campaigns and create a draft');
   if (available('finance-invoices')) add('invoice', 'invoice.issue', 'New invoice', `${base}/finance/invoices?create=1`, 'Open Finance and issue an invoice');

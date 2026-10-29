@@ -1,70 +1,88 @@
 'use client';
 
 import Link from 'next/link';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@gold/ui/components/tabs';
-import { QuickActions, useHomeCommands } from './command-center';
-import { ViewNav } from '@/components/navigation/view-nav';
 import { useEffect, useState, useSyncExternalStore, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Activity, ArrowRight, CalendarClock, ChevronDown, CircleAlert, ListTodo, RefreshCw, Settings2, TrendingUp } from 'lucide-react';
+import { Activity, CalendarClock, ChevronDown, CircleAlert, ListTodo, RefreshCw, Settings2, TrendingUp } from 'lucide-react';
+import { QuickActions, useHomeCommands } from './command-center';
+import { ViewNav } from '@/components/navigation/view-nav';
 import { PageHeader } from '@/components/headers/page-header';
-import { OperationalPanel, PanelState, StatePill } from '@/components/operational/primitives';
+import { MetricTile, OperationalPanel, CompactEmptyState, StatePill } from '@/components/operational/primitives';
 import { AppPage } from '@/components/layout/app-page';
 import { Button } from '@/components/controls/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@gold/ui/components/popover';
+import { DataTable, type Column } from '@/components/display/table';
+import { Chart } from '@/components/charts/charts';
+import { DashboardLayoutGrid, type DashboardWidgetContent } from '@/components/dashboard/dashboard-layout';
+import { defaultLayout, type WidgetDefinition } from '@/lib/dashboard-layout';
+import { paymentsTrendCharts } from '@/lib/application/finance/dashboard-charts';
+import { homePresentation } from '@/lib/application/home/presentation';
 import { useWorkspaceRail } from '@/components/panels/workspace-right-rail';
 import { cx, FOCUS_RING } from '@/components/class-names';
-import { prioritize, type HomeAttentionItem, type HomeData, type HomeObligation, type HomeQuery, type HomeSourceData } from '@/lib/application/home/contracts';
-import { zonedDayRange } from '@/lib/domain/scheduling/window';
-import { formatMoney } from '@/lib/domain/work-items/consumption';
+import type { HomeAttentionItem, HomeData, HomeObligation, HomeQuery, HomeSourceData } from '@/lib/application/home/contracts';
 export type { HomeData } from '@/lib/application/home/contracts';
 
 function timestamp(value: string, timezone: string, timeOnly = false) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: timezone, ...(timeOnly ? {} : { month: 'short', day: 'numeric' }), hour: 'numeric', minute: '2-digit' }).format(new Date(value));
 }
 function AttentionRows({ rows, timezone, agent }: { rows: HomeAttentionItem[]; timezone: string; agent: () => void }) {
-  const priority = (row: HomeAttentionItem) => row.overdue || row.urgency !== 'normal' ? <StatePill tone="warning">{row.overdue ? 'Overdue' : row.urgency === 'critical' ? 'Urgent' : 'High'}</StatePill> : null;
-  const date = (row: HomeAttentionItem) => row.dueAt || row.occurredAt ? <time dateTime={row.dueAt ?? row.occurredAt}>{timestamp((row.dueAt ?? row.occurredAt)!, timezone)}</time> : 'No deadline';
-  const action = (row: HomeAttentionItem) => row.source === 'AI' && row.category === 'approval'
-    ? <button type="button" aria-label={`Review ${row.title} in Agent`} onClick={agent} className={cx('absolute inset-0 rounded-md', FOCUS_RING)} />
-    : <Link aria-label={`Open ${row.title}`} href={row.destination.href} className={cx('absolute inset-0 rounded-md', FOCUS_RING)} />;
-  return <>
-    <div className="hidden @min-[48rem]/home:block"><table className="w-full table-fixed text-left text-xs"><caption className="sr-only">Needs attention</caption><thead className="border-b border-border bg-secondary/60 text-[11px] text-muted"><tr>{['Type', 'Subject', 'Priority', 'Due / activity', 'Owner'].map((heading, index) => <th key={heading} scope="col" className={cx('px-3 py-2 font-medium', index === 1 ? 'w-[32%]' : '')}>{heading}</th>)}</tr></thead><tbody className="divide-y divide-border">{rows.map(row => <tr key={row.key} className="relative hover:bg-hover focus-within:bg-hover"><td className="break-words px-3 py-3"><span className="inline-block rounded border border-border px-2 py-1 text-[10px] capitalize">{row.record.kind.replaceAll('-', ' ')}</span></td><td className="px-3 py-3"><span className="break-words font-medium">{row.title}</span><p className="mt-1 break-words text-[11px] text-muted">{row.description}</p>{action(row)}</td><td className="px-3 py-3">{priority(row)}</td><td className="px-3 py-3 text-[11px] text-muted">{date(row)}</td><td className="break-words px-3 py-3 text-[11px] text-muted">{row.ownerName ?? (row.ownerMembershipId ? 'Assigned member' : 'Unassigned')}</td></tr>)}</tbody></table></div>
-    <ul className="divide-y divide-border @min-[48rem]/home:hidden">{rows.map(row => <li key={row.key} className="relative space-y-2 px-4 py-3 hover:bg-hover focus-within:bg-hover"><div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[11px] capitalize text-muted">{row.source} | {row.record.kind.replaceAll('-', ' ')}</span>{priority(row)}</div><p className="break-words text-sm font-medium">{row.title}</p><p className="break-words text-xs text-muted">{row.description}</p><p className="text-[11px] text-muted">{date(row)} | {row.ownerName ?? 'Unassigned'}</p>{action(row)}</li>)}</ul>
-  </>;
+  const columns: Column<HomeAttentionItem>[] = [{ key: 'subject', header: 'Operational exceptions', emphasis: 'primary', cell: row => <div className="min-w-0 space-y-1">
+    <div className="flex flex-wrap items-start justify-between gap-2"><div className="min-w-0 flex-1">{row.source === 'AI' && row.category === 'approval'
+      ? <Button tone="text" size="small" onClick={agent}>Review {row.title} in Agent</Button>
+      : <Link aria-label={`Open ${row.title}`} href={row.destination.href} className="break-words font-medium hover:underline">{row.title}</Link>}</div>
+      {row.overdue || row.urgency !== 'normal' ? <StatePill tone="warning">{row.overdue ? 'Overdue' : row.urgency === 'critical' ? 'Urgent' : 'High'}</StatePill> : null}</div>
+    <p className="break-words text-xs font-normal text-muted">{row.source} - {row.description}</p>
+    <p className="break-words text-xs font-normal text-muted">{row.dueAt ? `${row.source === 'Work' ? 'Starts' : 'Due'} ${timestamp(row.dueAt,timezone)}` : 'No deadline'}{row.ownerName ? ` - ${row.ownerName}` : ''}</p>
+  </div> }];
+  return <DataTable columns={columns} rows={rows} rowKey={row => row.key} empty="No matching attention items."/>;
 }
-function Obligations({ rows, timezone, today = false, createHref, incomplete = false }: { rows: HomeObligation[]; timezone: string; today?: boolean; createHref?: string; incomplete?: boolean }) {
-  return rows.length ? <ul className="divide-y divide-border">{rows.map(row => <li key={row.key}><Link href={row.href} className={cx('flex flex-wrap items-start gap-x-4 gap-y-1 px-4 py-3 hover:bg-hover', FOCUS_RING)}><time className="w-24 shrink-0 text-xs tabular-nums text-muted" dateTime={row.at}>{timestamp(row.at, timezone, today)}</time><div className="min-w-0 flex-1"><p className="break-words text-sm font-medium">{row.title}</p><p className="mt-1 break-words text-xs text-muted">{row.context}</p><p className="mt-1 text-[11px] text-muted">{row.owner}</p></div><ArrowRight aria-hidden className="size-3 text-muted" /></Link></li>)}</ul> : <PanelState kind={incomplete ? 'unavailable' : 'empty'}>{incomplete ? 'Schedule could not fully load. Try refreshing.' : today ? 'Nothing scheduled for today.' : 'Nothing scheduled in the next 7 days.'}{createHref ? <Link href={createHref} className={cx('mt-3 block rounded text-sm font-medium underline', FOCUS_RING)}>Schedule work</Link> : null}</PanelState>;
+function Obligations({ rows, timezone, empty }: { rows: HomeObligation[]; timezone: string; empty: string }) {
+  return rows.length ? <ul className="divide-y divide-border">{rows.map(row => <li key={row.key}><Link href={row.href} data-home-record={row.key} className={cx('flex flex-wrap items-start gap-3 py-3 hover:bg-hover', FOCUS_RING)}>
+    <time className="w-28 shrink-0 text-xs tabular-nums text-muted" dateTime={row.at}>{row.allDay ? 'All day' : row.continuing ? `Continues from ${timestamp(row.at, timezone)}` : timestamp(row.at, timezone)}</time>
+    <div className="min-w-0 flex-1"><p className="break-words text-sm font-medium">{row.title}</p><p className="mt-1 break-words text-xs text-muted">{row.source} - {row.context}</p>{row.endsAt ? <p className="mt-1 text-xs text-muted">Ends {timestamp(row.endsAt, timezone)}</p> : null}<p className="mt-1 text-xs text-muted">{row.owner}</p></div>
+  </Link></li>)}</ul> : <CompactEmptyState>{empty}</CompactEmptyState>;
 }
-function PaymentTrend({ trends }: { trends: HomeSourceData['trends'] }) {
+function PaymentTrend({ trends, period }: { trends: HomeSourceData['trends']; period: string }) {
   const [currency, setCurrency] = useState('');
-  const selected = trends.find(t => t.currency === currency) ?? trends[0];
-  if (!selected || selected.points.length < 2) return null;
-  const max = Math.max(1, ...selected.points.map(p => Math.abs(p.amountMinor)));
-  return <div className="border-t border-border p-4"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-medium">Payments recorded by local day</p><label className="flex items-center gap-2 text-xs text-muted">Currency<select className="rounded border border-border bg-surface px-2 py-1" value={selected.currency} onChange={e => setCurrency(e.target.value)}>{trends.map(t => <option key={t.currency}>{t.currency}</option>)}</select></label></div><div className="flex h-24 items-end gap-1" aria-hidden>{selected.points.map(p => <div key={p.day} className={cx('min-w-0 flex-1 rounded-t', p.amountMinor < 0 ? 'bg-warning/60' : 'bg-foreground/65')} style={{ height: `${Math.max(p.amountMinor ? 3 : 0, Math.abs(p.amountMinor) / max * 100)}%` }} />)}</div><div className="mt-2 flex justify-between text-[10px] text-muted"><span>{selected.points[0].day}</span><span>{selected.points.at(-1)?.day}</span></div><details className="mt-3 text-xs"><summary className="cursor-pointer text-muted">Daily amounts · {selected.currency}</summary><table className="mt-2 w-full text-left"><caption className="sr-only">Signed payments by organization-local day, separate currency</caption><thead><tr><th scope="col">Local date</th><th scope="col">Amount recorded</th></tr></thead><tbody>{selected.points.map(p => <tr key={p.day}><td className="py-1">{p.day}</td><td className="tabular-nums">{formatMoney(p.amountMinor, selected.currency)}</td></tr>)}</tbody></table></details></div>;
+  const variants = paymentsTrendCharts(trends.flatMap(trend => trend.points.map(point => ({ day: point.day, currency: trend.currency, amount: String(point.amountMinor) }))), period);
+  const selected = variants.find(variant => variant.key === currency) ?? variants[0];
+  return selected && selected.data.categories.length > 1 ? <div className="mt-4 border-t border-border pt-4"><Chart title="Payments recorded" data={selected.data} variants={variants} variant={selected.key} onVariantChange={setCurrency} height="compact"/></div> : null;
 }
 const subscribePreferences = (callback: () => void) => { window.addEventListener('storage', callback); window.addEventListener('home-preferences', callback); return () => { window.removeEventListener('storage', callback); window.removeEventListener('home-preferences', callback); }; };
 function usePreferences(key: string) {
+  const [error, setError] = useState('');
   const raw = useSyncExternalStore(subscribePreferences, () => { try { return localStorage.getItem(key) ?? ''; } catch { return ''; } }, () => '');
   const hidden: string[] = (() => { try { const parsed: unknown = JSON.parse(raw); return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string' && ['performance', 'activity'].includes(v)) : []; } catch { return []; } })();
-  const toggle = (panel: string) => { try { localStorage.setItem(key, JSON.stringify(hidden.includes(panel) ? hidden.filter(v => v !== panel) : [...hidden, panel])); window.dispatchEvent(new Event('home-preferences')); } catch { /* Blocked storage leaves the default layout intact. */ } };
-  return { hidden, toggle };
+  const toggle = (panel: string) => { try { localStorage.setItem(key, JSON.stringify(hidden.includes(panel) ? hidden.filter(v => v !== panel) : [...hidden, panel])); window.dispatchEvent(new Event('home-preferences')); setError(''); } catch { setError('Home preferences could not be saved in this browser. Your saved layout is unchanged.'); } };
+  return { hidden, toggle, error };
 }
 /**
  * Choosing which of two panels Home shows is a small, passing choice tied to one control, so it is a
  * popover anchored to Customize rather than a full-height drawer. Each change applies at once and is
  * saved in this browser; Escape or clicking away closes it and returns focus to Customize.
  */
-export function CustomizeHome({ hidden, toggle }: { hidden: string[]; toggle: (panel: string) => void }) {
+export function CustomizeHome({ hidden, toggle, available = ['performance', 'activity'] }: { hidden: string[]; toggle: (panel: string) => void; available?: string[] }) {
   return <Popover><PopoverTrigger asChild><Button tone="secondary" size="small"><Settings2 aria-hidden className="size-4" />Customize</Button></PopoverTrigger>
     <PopoverContent align="end" aria-labelledby="customize-home-title" className="grid gap-3">
       <div><h2 id="customize-home-title" className="text-sm font-semibold">Customize Home</h2><p className="mt-1 text-xs text-muted">Choose the panels shown on Home. Saved in this browser.</p></div>
-      <fieldset className="grid gap-2"><legend className="sr-only">Panels shown on Home</legend>{[['performance', 'Business performance'], ['activity', 'Recent activity']].map(([key, label]) => <label key={key} className="flex min-h-11 items-center gap-3 rounded border border-border px-3 text-sm"><input type="checkbox" checked={!hidden.includes(key)} onChange={() => toggle(key)} />{label}</label>)}</fieldset>
+      <fieldset className="grid gap-2"><legend className="sr-only">Panels shown on Home</legend>{[['performance', 'Business performance'], ['activity', 'Recent activity']].filter(([key]) => available.includes(key)).map(([key, label]) => <label key={key} className="flex min-h-11 items-center gap-3 rounded border border-border px-3 text-sm"><input type="checkbox" checked={!hidden.includes(key)} onChange={() => toggle(key)} />{label}</label>)}</fieldset>
     </PopoverContent></Popover>;
 }
-const attentionFilters: { label: string; scope: HomeQuery['scope']; attention: HomeQuery['attention'] }[] = [{ label: 'All', scope: 'organization', attention: 'all' }, { label: 'Mine', scope: 'mine', attention: 'all' }, { label: 'Urgent', scope: 'organization', attention: 'urgent' }, { label: 'Overdue', scope: 'organization', attention: 'overdue' }];
 
+const attentionFilters: { label: string; scope: HomeQuery['scope']; attention: HomeQuery['attention'] }[] = [
+  { label: 'All', scope: 'organization', attention: 'all' }, { label: 'Mine', scope: 'mine', attention: 'all' },
+  { label: 'Urgent', scope: 'organization', attention: 'urgent' }, { label: 'Overdue', scope: 'organization', attention: 'overdue' },
+];
+const HOME_WIDGETS = [
+  { id: 'attention', label: 'Needs attention', spans: [12], defaultSpan: 12, heights: ['standard'], defaultHeight: 'standard', hideable: false, fullOnTablet: true },
+  { id: 'priorities', label: 'My priorities', spans: [12], defaultSpan: 12, heights: ['standard'], defaultHeight: 'standard', hideable: false },
+  { id: 'obligations', label: 'Today and upcoming', spans: [6,12], defaultSpan: 6, heights: ['standard'], defaultHeight: 'standard', hideable: false },
+  { id: 'performance', label: 'Business performance', spans: [6,12], defaultSpan: 6, heights: ['standard'], defaultHeight: 'standard', hideable: true },
+  { id: 'activity', label: 'Recent activity', spans: [12], defaultSpan: 12, heights: ['standard'], defaultHeight: 'standard', hideable: true },
+] as const satisfies readonly WidgetDefinition[];
+const HOME_LAYOUT = { layout: defaultLayout(HOME_WIDGETS), revision: 0, customized: false };
 const subscribeTimezone = () => () => {};
+
 export function HomeDashboard({ data, setup }: { data: HomeData; setup?: ReactNode }) {
   const router = useRouter(), [refreshing, refresh] = useTransition(), [expanded, setExpanded] = useState(false);
   const { toggleAgent } = useWorkspaceRail();
@@ -72,36 +90,48 @@ export function HomeDashboard({ data, setup }: { data: HomeData; setup?: ReactNo
   useEffect(() => { publish?.(data); }, [data, publish]);
   const browserTimezone = useSyncExternalStore(subscribeTimezone, () => Intl.DateTimeFormat().resolvedOptions().timeZone, () => data.timezone);
   const preferences = usePreferences(`gildops:home:v1:${data.organizationId}:${data.membershipId}`);
-  const sources = data.results.flatMap(result => result.state === 'ready' ? [result.data] : []), unavailable = data.results.filter(result => result.state === 'unavailable');
-  const dayEnd = zonedDayRange(data.date, data.timezone).endsAt;
-  const attention = prioritize(sources.flatMap(source => source.attention), dayEnd), mine = prioritize(sources.flatMap(source => source.priorities), dayEnd).slice(0, 3);
-  const categories = sources.flatMap(source => source.categories), performance = sources.flatMap(source => source.performance);
-  const today = sources.flatMap(source => source.today).sort((a,b) => Date.parse(a.at) - Date.parse(b.at) || a.key.localeCompare(b.key));
-  const upcoming = [...today, ...sources.flatMap(source => source.upcoming)].sort((a,b) => Date.parse(a.at) - Date.parse(b.at) || a.key.localeCompare(b.key));
-  const activity = [...new Map(sources.flatMap(source => source.activity).map(item => [item.key,item])).values()].sort((a,b) => b.at.localeCompare(a.at) || a.key.localeCompare(b.key)).slice(0, 10);
+  const { sources, attention, mine, today, upcoming, activity, categories, performance, upcomingLabel, boundedChecks } = homePresentation(data);
+  const unavailable = data.results.filter(result => result.state === 'unavailable');
   const href = (change: Partial<HomeQuery>) => `/organizations/${data.organizationId}/home?${new URLSearchParams({ ...data.query, ...change })}`;
-  const createHref = data.quickActions.find(action => action.key === 'work')?.href;
   const hour = Number(new Intl.DateTimeFormat('en-CA', { timeZone: data.timezone, hour: 'numeric', hourCycle: 'h23' }).format(new Date(data.refreshedAt)));
   const greeting = `Good ${hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'}${commands?.displayName ? `, ${commands.displayName.split(' ')[0]}` : ''}`;
-  return <AppPage className="@container/home space-y-4">
+  const relevantPerformance = performance.filter(metric => typeof metric.value !== 'number' || metric.value > 0);
+  const activityFailed = sources.filter(source => source.health.some(health => health.key.endsWith(':activity-unavailable')));
+  const availableOptional = [...(relevantPerformance.length || unavailable.some(result => result.source === 'Finance') ? ['performance'] : []), ...(activity.length || activityFailed.length ? ['activity'] : [])];
+  const readable = new Set(['attention', ...(mine.length ? ['priorities'] : []), ...(today.length || upcoming.length || sources.some(source => source.obligationTotals && (source.obligationTotals.today || source.obligationTotals.upcoming)) || unavailable.some(result => ['CRM','Work','Support'].includes(result.source)) ? ['obligations'] : []), ...availableOptional.filter(key => !preferences.hidden.includes(key))]);
+  const periodLabel = data.query.when === 'today' ? 'Today' : data.query.when === 'week' ? 'Last 7 local dates, including today' : 'This calendar month';
+  const widgets: Record<string, DashboardWidgetContent> = {
+    attention: { kind: 'node', node: <OperationalPanel density="compact" title="Needs attention" icon={CircleAlert} action={<ViewNav label="Attention filters" size="small" className="mb-0" items={attentionFilters.map(filter => ({ key: filter.label, label: filter.label, href: href({ scope: filter.scope, attention: filter.attention }), current: data.query.scope === filter.scope && data.query.attention === filter.attention }))}/>}>
+      {categories.length ? <nav aria-label="Attention category totals" className="mb-3 flex flex-wrap gap-x-4 gap-y-2">{categories.map(category => <Link key={category.key} href={category.href} className="text-xs text-accent-text hover:underline"><strong className="tabular-nums">{category.total}</strong> {category.label}</Link>)}</nav> : null}
+      {attention.length ? <><p className="mb-2 text-xs text-muted">Prioritized previews; category totals include every match and may overlap.</p><AttentionRows rows={expanded ? attention : attention.slice(0,6)} timezone={data.timezone} agent={toggleAgent}/>{attention.length > 6 ? <Button tone="text" size="small" onClick={() => setExpanded(value => !value)}>{expanded ? 'Collapse previews' : 'Expand previews'}<ChevronDown aria-hidden className="size-3"/></Button> : null}</> : <CompactEmptyState kind={unavailable.length ? 'unavailable' : 'empty'}>{unavailable.length ? 'No matching items from the sources that loaded.' : data.query.scope === 'mine' ? 'Nothing assigned to you needs attention.' : data.query.attention === 'all' ? boundedChecks.length ? 'No attention items in the checked previews.' : 'Nothing needs attention.' : 'No items match this attention filter.'}</CompactEmptyState>}
+      {boundedChecks.map(check => <p key={check.key} className="mt-2 text-xs text-muted">{check.detail}. <Link href={check.href} className="underline">Review the full source</Link></p>)}
+    </OperationalPanel> },
+    priorities: { kind: 'node', node: <OperationalPanel density="compact" title="My priorities" icon={ListTodo}><p className="mb-2 text-xs text-muted">Your other responsibilities; items needing attention are listed above.</p><ol className="grid gap-3 @min-[40rem]/home:grid-cols-3">{mine.map((row,index) => <li key={row.key} className="rounded border border-border px-3"><Link data-home-record={row.key} href={row.destination.href} className="flex items-start gap-3 py-3 hover:bg-hover"><span className="text-sm tabular-nums text-muted">{index+1}</span><div className="min-w-0"><p className="break-words text-sm font-medium">{row.title}</p><p className="mt-1 text-xs text-muted">{row.source} - {row.dueAt ? timestamp(row.dueAt,data.timezone) : row.description}</p></div></Link></li>)}</ol></OperationalPanel> },
+    obligations: { kind: 'node', node: <OperationalPanel density="compact" title="Today and upcoming" icon={CalendarClock} action={<ViewNav label="Obligation period" size="small" className="mb-0" items={[{ key: 'today', label: 'Today', href: href({schedule:'today'}), current:data.query.schedule==='today' },{ key:'upcoming',label:'Upcoming',href:href({schedule:'upcoming'}),current:data.query.schedule==='upcoming' }]}/>}>
+      <p className="mb-2 text-xs text-muted">{data.query.schedule === 'today' ? data.date : `${upcomingLabel} - seven local dates after today`}. Other dated obligations across the organization, shown once after attention and priorities.</p>
+      {unavailable.some(result => ['CRM','Work','Support'].includes(result.source)) ? <p role="status" className="mb-2 text-xs text-muted">Some obligation sources are unavailable; this preview is incomplete.</p> : null}
+      <Obligations rows={(data.query.schedule === 'today' ? today : upcoming).slice(0,8)} timezone={data.timezone} empty="No other obligations in this preview. Items above are not repeated."/>
+      <p className="mt-2 text-xs text-muted">Up to 8 other obligations shown from bounded source previews.</p>
+      <nav aria-label="Full obligation views" className="mt-3 flex flex-wrap gap-3 text-xs">{sources.filter(source => ['Work','CRM','Support'].includes(source.source) && source.obligationTotals && (source.obligationTotals.today || source.obligationTotals.upcoming)).map(source => <Link key={source.source} className="text-accent-text hover:underline" href={source.source === 'Work' ? `/organizations/${data.organizationId}/schedule?on=${data.query.schedule==='today'?data.date:upcomingLabel.slice(0,10)}&view=${data.query.schedule==='today'?'day':'week'}` : source.source === 'CRM' ? `/organizations/${data.organizationId}/crm/tasks?status=open` : `/organizations/${data.organizationId}/support/cases?status=active`}>Open {source.source === 'Work' ? 'Schedule' : source.source === 'CRM' ? 'CRM tasks' : 'Cases'}</Link>)}</nav>
+    </OperationalPanel> },
+    performance: { kind:'node',node:<OperationalPanel density="compact" title="Business performance" icon={TrendingUp} action={<ViewNav label="Reporting period" size="small" className="mb-0" items={(['today','week','month'] as const).map(when=>({key:when,label:when==='today'?'Today':when==='week'?'Last 7 days':'This month',href:href({when}),current:data.query.when===when}))}/>}>
+      <p className="mb-3 text-xs text-muted">{periodLabel} - {data.period.from} to {data.period.to} (end exclusive).</p>
+      {unavailable.some(result=>result.source==='Finance') ? <p role="status" className="mb-3 text-xs text-muted">Finance is unavailable. Its amounts and payment chart are unknown.</p> : null}
+      <div className="grid min-w-0 grid-cols-2 gap-3">{relevantPerformance.map(metric=><div key={metric.key} title={metric.definition}><MetricTile label={metric.label} value={metric.value} href={metric.href} detail={metric.key==='customers'||metric.key.startsWith('Outstanding invoices')?'Current total':undefined}/></div>)}</div>
+      <PaymentTrend trends={sources.flatMap(source=>source.trends)} period={periodLabel}/>
+    </OperationalPanel> },
+    activity: {kind:'node',node:<OperationalPanel density="compact" title="Recent activity" icon={Activity}>
+      {activityFailed.length ? <p role="status" className="text-xs text-muted">Recent activity is unavailable for {activityFailed.map(source=>source.source).join(', ')}; their operational summaries are still shown.</p> : null}
+      <ul className="divide-y divide-border">{activity.map(item=><li key={item.key}><Link href={item.href} className="flex flex-wrap items-start justify-between gap-2 py-2.5 hover:bg-hover"><div className="min-w-0"><p className="break-words text-sm">{item.title}</p><p className="mt-1 text-xs text-muted">{item.source}</p></div><time className="text-xs text-muted" dateTime={item.at}>{timestamp(item.at,data.timezone)}</time></Link></li>)}</ul>
+    </OperationalPanel>},
+  };
+  return <AppPage className="@container/home space-y-4" aria-busy={refreshing}>
     {setup}
-    <PageHeader title={greeting} breadcrumbLabel="Home" meta={<><time dateTime={data.date}>{new Intl.DateTimeFormat('en-CA', { dateStyle: 'full', timeZone: 'UTC' }).format(new Date(`${data.date}T12:00:00Z`))}</time>{browserTimezone !== data.timezone ? ` | ${data.timezone}` : ''}</>} actions={<>
-      <CustomizeHome hidden={preferences.hidden} toggle={preferences.toggle} />
-      <QuickActions actions={data.quickActions}/>
-    </>} />
-    <div className="flex flex-wrap items-center justify-between gap-2">{commands && data.agentPrompts.length ? <Button tone="secondary" size="small" onClick={commands.openSearch}>Ask or find something...</Button> : <span/>}<Button tone="ghost" size="small" aria-label="Refresh Home" disabled={refreshing} onClick={() => refresh(() => router.refresh())}><time dateTime={data.refreshedAt} className="text-xs text-muted">Updated {timestamp(data.refreshedAt, data.timezone, true)}</time><RefreshCw aria-hidden className={cx('size-3', refreshing && 'animate-spin')}/></Button></div>
-    {data.kpis.length ? <div className="grid grid-cols-2 gap-3 @min-[60rem]/home:grid-cols-4">{data.kpis.map(metric => <Link key={metric.key} href={metric.href} title={metric.definition} data-slot="metric-tile" className={cx('min-w-0 rounded-lg border border-border bg-surface p-4 transition hover:bg-hover', FOCUS_RING)}><div className="flex items-center justify-between gap-2 text-xs text-muted"><span>{metric.label}</span><ArrowRight aria-hidden className="size-3 shrink-0" /></div><p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">{metric.value}</p></Link>)}</div> : null}
-    <div className="grid items-start gap-4 @min-[64rem]/home:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)]">
-      <OperationalPanel body="edge-to-edge" title="Needs attention" icon={CircleAlert} action={<div className="flex flex-wrap gap-1" role="group" aria-label="Attention filters">{attentionFilters.map(filter => <Link key={filter.label} href={href({ scope: filter.scope, attention: filter.attention })} aria-current={data.query.scope === filter.scope && data.query.attention === filter.attention ? 'page' : undefined} className={cx('rounded px-2 py-1 text-xs', data.query.scope === filter.scope && data.query.attention === filter.attention ? 'bg-selected font-medium' : 'text-muted hover:bg-hover', FOCUS_RING)}>{filter.label}</Link>)}</div>}>
-        {unavailable.length ? <div role="alert" className="border-b border-border bg-warning/10 px-4 py-3 text-xs"><p className="font-medium">Some sources are temporarily unavailable</p><p className="mt-1">{unavailable.map(source => source.source).join(', ')} could not load. Refresh to try again.</p></div> : null}
-        {categories.some(category => category.total > 0) ? <div className="flex flex-wrap gap-x-4 gap-y-2 border-b border-border px-4 py-3">{categories.filter(category => category.total > 0).map(category => <Link key={category.key} href={category.href} className={cx('rounded text-xs hover:underline', FOCUS_RING)}><strong className="tabular-nums">{category.total}</strong> {category.label}</Link>)}</div> : null}
-        {attention.length ? <AttentionRows rows={expanded ? attention : attention.slice(0, 8)} timezone={data.timezone} agent={toggleAgent} /> : <PanelState kind={unavailable.length ? 'unavailable' : 'empty'}>{unavailable.length ? 'No items from the sources that loaded.' : data.query.scope === 'mine' ? 'Nothing assigned to you needs attention.' : 'Nothing needs attention.'}</PanelState>}
-        {attention.length > 8 ? <div className="border-t border-border px-4 py-2"><Button tone="text" size="tiny" onClick={() => setExpanded(value => !value)}>{expanded ? 'Collapse previews' : 'Expand previews'}<ChevronDown aria-hidden className="size-3" /></Button></div> : null}
-      </OperationalPanel>
-      <OperationalPanel body="edge-to-edge" title="My priorities" icon={ListTodo}><ol className="divide-y divide-border">{mine.length ? mine.map((row, index) => <li key={row.key}><Link href={row.destination.href} className={cx('flex items-start gap-3 px-4 py-3 hover:bg-hover', FOCUS_RING)}><span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-secondary text-xs">{index+1}</span><div className="min-w-0"><p className="break-words text-sm font-medium">{row.title}</p><p className="mt-1 text-[11px] text-muted">{row.source} | {row.dueAt ? timestamp(row.dueAt, data.timezone) : row.description}</p></div></Link></li>) : <li><PanelState>{unavailable.length ? 'No assignments from the sources that loaded.' : 'You are all caught up.'}</PanelState></li>}</ol><Link href={href({ scope: 'mine', attention: 'all' })} className={cx('block border-t border-border px-4 py-2.5 text-xs hover:underline', FOCUS_RING)}>View my workload</Link></OperationalPanel>
-      <OperationalPanel body="edge-to-edge" title="Schedule" icon={CalendarClock}><Tabs defaultValue="today"><TabsList className="m-3" aria-label="Schedule period"><TabsTrigger value="today">Today</TabsTrigger><TabsTrigger value="week">Next 7 days</TabsTrigger></TabsList><TabsContent value="today"><Obligations rows={today.slice(0, 8)} timezone={data.timezone} today incomplete={unavailable.some(source => ['Work', 'CRM', 'Support'].includes(source.source))} createHref={createHref}/></TabsContent><TabsContent value="week"><Obligations rows={upcoming.slice(0, 8)} timezone={data.timezone} incomplete={unavailable.some(source => ['Work', 'CRM', 'Support'].includes(source.source))} createHref={createHref}/></TabsContent></Tabs></OperationalPanel>
-      {!preferences.hidden.includes('performance') ? <OperationalPanel body="edge-to-edge" title="Business performance" icon={TrendingUp} action={<ViewNav label="Reporting period" current={data.query.when} className="mb-0" views={(['today', 'week', 'month'] as const).map(when => ({ key: when, href: href({ when }), label: when === 'today' ? 'Today' : when === 'week' ? 'Last 7 days' : 'This month' }))} />}><div className="grid grid-cols-2">{performance.length ? performance.map(metric => <Link key={metric.key} href={metric.href} title={metric.definition} className={cx('min-w-0 border-b border-border px-4 py-4 hover:bg-hover', FOCUS_RING)}><p className="text-xs text-muted">{metric.label}</p><p className="mt-2 break-words text-xl font-semibold tabular-nums">{metric.value}</p>{['customers', 'Outstanding invoices'].some(key => metric.key.startsWith(key)) ? <p className="mt-1 text-[11px] text-muted">Current total</p> : null}</Link>) : <PanelState>No performance data for this period.</PanelState>}</div><PaymentTrend trends={sources.flatMap(source => source.trends)} /></OperationalPanel> : null}
-    </div>
-    {!preferences.hidden.includes('activity') ? <OperationalPanel body="edge-to-edge" title="Recent activity" icon={Activity}><ul className="divide-y divide-border">{activity.length ? activity.map(item => <li key={item.key}><Link href={item.href} className={cx('flex flex-wrap items-start justify-between gap-2 px-4 py-3 hover:bg-hover', FOCUS_RING)}><div className="min-w-0"><p className="break-words text-sm">{item.title}</p><p className="mt-1 text-[11px] text-muted">{item.source}</p></div><time className="text-[11px] text-muted" dateTime={item.at}>{timestamp(item.at, data.timezone)}</time></Link></li>) : <li><PanelState>No recent activity.</PanelState></li>}</ul></OperationalPanel> : null}
+    <PageHeader title={greeting} breadcrumbLabel="Home" meta={<><time dateTime={data.date}>{new Intl.DateTimeFormat('en-CA',{dateStyle:'full',timeZone:'UTC'}).format(new Date(`${data.date}T12:00:00Z`))}</time>{browserTimezone!==data.timezone?` | ${data.timezone}`:''}</>} actions={<>{availableOptional.length ? <CustomizeHome hidden={preferences.hidden} toggle={preferences.toggle} available={availableOptional}/> : null}<QuickActions actions={data.quickActions}/></>}/>
+    <div className="flex flex-wrap items-center justify-between gap-2">{commands&&data.agentPrompts.length ? <Button tone="secondary" size="small" onClick={commands.openSearch}>Ask or find something...</Button> : <span/>}<Button tone="ghost" size="small" aria-label="Refresh Home" disabled={refreshing} onClick={()=>refresh(()=>router.refresh())}><time dateTime={data.refreshedAt} className="text-xs text-muted">Updated {timestamp(data.refreshedAt,data.timezone,true)}</time><RefreshCw aria-hidden className={cx('size-3',refreshing&&'animate-spin')}/></Button></div>
+    {preferences.error ? <p role="alert" className="text-sm text-danger">{preferences.error}</p> : null}
+    {unavailable.length ? <div role="alert" className="rounded-lg border border-border bg-warning/10 px-4 py-3 text-xs"><p className="font-medium">Some sources are temporarily unavailable</p><p className="mt-1">{unavailable.map(result=>result.source).join(', ')} could not load. Their figures are omitted; available sources remain visible. Refresh to try again.</p></div> : null}
+    {data.kpis.length ? <section aria-label="Business overview" className="grid grid-cols-2 gap-3 @min-[60rem]/home:grid-cols-4">{data.kpis.map(metric=><div key={metric.key} title={metric.definition}><MetricTile label={metric.label} value={metric.value} href={metric.href}/></div>)}</section> : null}
+    <DashboardLayoutGrid registry={HOME_WIDGETS} saved={HOME_LAYOUT} readable={[...readable]} widgets={widgets} label="Organization Home"/>
   </AppPage>;
 }
