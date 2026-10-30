@@ -2226,6 +2226,14 @@ Do not introduce:
 
 ---
 
+## Guided configuration continuity
+
+Schedule uses the shared URL-backed Day/Week/Month navigation, including selected, hover and visible keyboard-focus treatments; its period selector and resource control share one aligned row. Timezone-aware calculations remain unchanged. Opening hours is reached through Configure, with no competing header sentence/link.
+
+Work type settings use Work → Work items → Work types → the selected type. A zero-stage type opens Workflow unless an explicit tab was requested and shows one Add starting stage operation. The chosen tab remains after saving a stage. General states that name and scheduling behavior save separately and labels both operations specifically. Relationship stages retain one prominent Add stage action in the header when empty or populated, with a compact collection below. Focused configuration dialogs use `GuardedDialog`'s compact 32rem maximum; transaction dialogs retain its default 40rem maximum. Both use the same title/body/footer spacing, primary/secondary ordering, mobile footer, discard protection and focus restoration. No focus ring is removed.
+
+Setup's editor links retain a `setupStep` return hint, including specific type/tab deep links. Readiness refreshes from saved domain records and continues to distinguish Required, Recommended and Optional. Live businesses review configuration without relaunching. New quote presents the prerequisite as an action rather than a zero-result search; an explicit Create Work journey returns to that record's Financials. Missing catalog prices link to Catalog & pricing with Return to new quote. Platform adapter/registration readiness says Ready to connect, while account credential verification, assignments and delivery evidence remain separately named.
+
 ## Finance pricing planning
 
 Financial reports contains a compact `OperationalPanel` for unsaved Economics & pricing planning beneath recorded financial activity. Up to three independently editable scenario fieldsets wrap according to the available container width. Shared inputs, `CurrencyField` and `formatMoney` own input grammar, hydration-safe currency selection and monetary display. Each scenario identifies estimated costs, suggested selling price, estimated gross profit/margin and an optional current catalog unit comparison. Missing assumptions remain Unknown; zero assumptions require an explanation; zero selling price has undefined margin. Currency changes clear monetary inputs, and foreign-currency comparisons state why they cannot be calculated. Current catalog prices remain visibly recorded context. The panel states that scenarios are lost on leaving/reload and update no financial records; no publish control is offered.

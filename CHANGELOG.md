@@ -34,6 +34,8 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-10-29
 
+- Setup now observes missing Work starting stages and optional CRM relationship stages, links to the authorized canonical editor and retains a return to the selected setup step. Zero-stage Work types open Workflow by default; name and scheduling saves remain independent. New quote distinguishes missing catalog, missing Work, unmatched search and permission restrictions, and explicitly created Work continues to its Financials. Schedule drops its duplicate timezone/hours header link, CRM stages use a compact collection with a consistent Add stage action, and compact focused dialogs share one width. Platform connector registration readiness is labelled Ready to connect rather than operational delivery.
+
 - Financial reports now includes unsaved Economics & pricing planning: estimate delivery costs, calculate a target-margin selling suggestion and compare up to three scenarios beside current catalog prices. Unknown costs, documented zero assumptions, forecast profit and recorded finances remain distinct. The planner respects Finance report permissions and availability and changes no catalog, Work, invoice or payment records.
 
 ## 2026-10-28

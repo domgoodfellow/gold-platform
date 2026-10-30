@@ -827,6 +827,12 @@ Navigation should represent the kind of work a person is doing, not internal pac
 
 A page that configures how a workspace behaves belongs in Settings or an explicit Configure surface, not as a permanent operating destination merely because it is important.
 
+Setup remains a readiness view over saved canonical configuration (ADR-039), including for a Live business and for GildOps' operating Organization. A Work type with no starting stage is an optional setup gap and cannot create Work of that type; Setup links directly to its Workflow. Optional relationship stages, resources and opening hours never become universal launch requirements. The database's existing launch blockers remain authoritative. Authorized editor links carry a bounded `setupStep` navigation hint and offer Return to setup; the hint stores no completion or configuration state.
+
+Calling-number gaps lead to Communications → Numbers & assignments, while provider accounts and credentials remain Platform responsibilities. Finance setup includes Catalog & pricing and Customer payments; customer collection setup remains separate from the business's GildOps subscription.
+
+New quote preserves the priced-Work contract. An empty business is led to Catalog & pricing when prices are missing, or to canonical New work when Work is missing. The explicit quote entry carries `returnTo=quote`; successful Work creation opens that Work's Financials. Its existing missing-type/starting-stage recovery remains available. Unmatched searches and permission restrictions have distinct messages. Relationship stages do not gate quotes, and nothing is created automatically.
+
 ### AI follows the system
 
 AI uses the same records, permissions, tools and business rules as people.

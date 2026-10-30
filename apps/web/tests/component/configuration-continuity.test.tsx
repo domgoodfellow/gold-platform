@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppPage } from '@/components/layout/app-page';
+import { OperationalBadge } from '@/features/platform/integrations/connector-readiness';
 
 const location = vi.hoisted(() => ({ path: '/organizations/org/work/configuration', query: 'setupStep=operations' }));
 vi.mock('next/navigation', () => ({ usePathname: () => location.path, useSearchParams: () => new URLSearchParams(location.query) }));
@@ -24,4 +25,11 @@ describe('configuration continuity', () => {
     expect(screen.queryByRole('link', { name: 'Return to setup' })).toBeNull();
   });
 
+  it('describes adapter/registration readiness without claiming operational delivery', () => {
+    const { rerender } = render(<OperationalBadge state="operational" />);
+    expect(screen.getByText('Ready to connect')).toBeVisible();
+    expect(screen.queryByText('Operational')).toBeNull();
+    rerender(<OperationalBadge state="unknown" />);
+    expect(screen.getByText('Unknown')).toBeVisible();
+  });
 });

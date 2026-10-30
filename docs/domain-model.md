@@ -705,6 +705,8 @@ Work Type may determine:
 - requirements;
 - checklist/template policy.
 
+A Work type is not ready to create Work until it has a starting stage. Setup observes this from the existing type and stage records and reports an optional gap; naming a type alone does not complete that area. The first stage is always an explicit authorized operation. A URL explicitly requesting a configuration tab retains it; a zero-stage type otherwise opens Workflow. Naming and scheduling behavior remain separately saved operations.
+
 ---
 
 ### Work Item

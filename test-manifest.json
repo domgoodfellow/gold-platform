@@ -138,6 +138,7 @@
   },
   "files": {
     "apps/web/tests/component/configuration-continuity.test.tsx": {"category":"component","concerns":["setup","configuration","platform","security"]},
+    "apps/web/e2e/ux-guided.spec.ts": {"category":"playwright-acceptance","concerns":["work","finance","crm","scheduling","setup","accessibility"]},
     "apps/web/tests/unit/pricing-planning.test.ts": {"category":"unit","concerns":["finance","pricing","money"]},
     "apps/web/tests/component/pricing-planner.test.tsx": {"category":"component","concerns":["finance","pricing","accessibility"]},
     "apps/web/e2e/finance-planning.spec.ts": {"category":"playwright-acceptance","concerns":["finance","pricing","security","responsive"]},

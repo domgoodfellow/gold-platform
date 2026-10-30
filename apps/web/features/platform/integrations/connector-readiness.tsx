@@ -9,7 +9,7 @@ const LABEL: Record<ConnectorOperationalState, string> = {
   upcoming: 'Upcoming',
   adapter_missing: 'No adapter',
   needs_setup: 'Needs setup',
-  operational: 'Operational',
+  operational: 'Ready to connect',
   unknown: 'Unknown',
 };
 
@@ -17,7 +17,7 @@ const TONE: Record<ConnectorOperationalState, 'neutral' | 'danger' | 'accent' | 
   upcoming: 'neutral',
   adapter_missing: 'danger',
   needs_setup: 'danger',
-  operational: 'success',
+  operational: 'neutral',
   unknown: 'neutral',
 };
 
@@ -65,6 +65,7 @@ export function ConnectorRuntime({
           <OperationalBadge state={state} />
         </Row>
       </DividedList>
+      <Hint className="mt-3">Adapter and registration readiness permit connecting. They do not verify a business connection or data synchronization.</Hint>
       {readiness && readiness.reason === 'oauth_client_missing' ? (
         <Hint className="mt-3 block" role="status">
           Not offered to businesses until this deployment holds the vendor&apos;s registration. Required configuration:{' '}

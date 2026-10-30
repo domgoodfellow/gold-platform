@@ -21,7 +21,7 @@ export function ProviderAccountSummary({ account }: { account: ProviderAccount |
         <DefinitionList>
           <Detail label="Label">{account.label}</Detail>
           <Detail label="Credential">{account.credentialSetAt ? <Badge>Set</Badge> : <Badge tone="neutral">Not configured</Badge>}</Detail>
-          <Detail label="Verification">
+          <Detail label="Credential verification">
             <Badge tone={VERIFICATION_TONE[account.verificationState]}>{account.verificationState}</Badge>
           </Detail>
           <Detail label="Status">

@@ -33,7 +33,7 @@ export function RuntimeAssignmentRow({
           </DefinitionList>
         ) : (
           <p className="mt-1 text-sm text-muted">
-            {capability==='voice_receptionist'?'Not assigned. Calls use their configured routing fallback.':<>Not assigned ? answers using this deployment&apos;s default configuration.</>}
+            {capability==='voice_receptionist'?'Not assigned. Calls use their configured routing fallback.':<>Not assigned. Uses this deployment&apos;s default configuration.</>}
           </p>
         )}
       </div>

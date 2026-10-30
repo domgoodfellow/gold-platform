@@ -1409,8 +1409,9 @@ Home or restricted destinations. `requireWorkspaceConfiguration` and `requireCon
 enforce membership, service access, capabilities and availability before page reads. The
 persistent layout is never the sole page authorization boundary.
 
-Every workspace with configuration routes exposes them as one expandable Configuration group in
-the persistent workspace sidebar; configuration pages render no second navigation column. Sections
+Guided Setup links to the same authorized editor, including a specific Work type's Workflow when its starting stage is absent. `lib/route/setup-context.ts` handles only bounded URL navigation hints (`setupStep`), canonical owner-path comparison and same-Organization return links. `AppPage` displays a contextual Return to setup link only for that explicit hint. Saves revalidate Setup; readiness is reread from the existing domain authorities. No wizard state, readiness table or duplicate editor is introduced. Work creation returns its newly authorized record ID so the explicit Finance quote entry can continue to the existing Financials section; default Work entry retains its previous destination.
+
+Work types and Schedule hours are reached from the destination they configure; other workspaces expose their registered configuration doors in the persistent workspace sidebar. Configuration pages render no second workspace navigation column. Sections
 use canonical URLs or real page anchors, and the group containing the active route is open.
 Existing domain operations and data owners
 remain unchanged. Shared Branding, Domains and Public profile remain organization Settings;
