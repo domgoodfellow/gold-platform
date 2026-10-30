@@ -1,6 +1,7 @@
 import { PageHeader } from '@/components/headers/page-header';
 import { NewWorkAction } from '@/features/work/new-work-action';
-import { areaLabel } from '@/lib/navigation';
+import { workspaceConfigCrumbs } from '@/lib/settings-nav';
+import { setupStepKey } from '@/lib/route/setup-context';
 
 import { AppPage } from '@/components/layout/app-page';
 import { WorkConfiguration } from '@/features/work/configuration/work-configuration';
@@ -24,8 +25,14 @@ export default async function WorkConfigurationPage({
   searchParams,
 }: PageProps<'/organizations/[organizationId]/work/configuration'>) {
   const { organizationId } = await params;
-  const { type: requestedType, tab: requestedTab, new: requestedNew, returnTo } = await searchParams;
-  const { db, organization } = await requireConfigurationTarget(organizationId, 'work-configuration');
+  const { type: requestedType, tab: requestedTab, new: requestedNew, returnTo, quote, setupStep } = await searchParams;
+  const step = setupStepKey(typeof setupStep === 'string' ? setupStep : undefined);
+  const context = new URLSearchParams();
+  if (returnTo === 'create') context.set('returnTo', 'create');
+  if (quote === '1') context.set('quote', '1');
+  if (step) context.set('setupStep', step);
+  const listHref = `/organizations/${organizationId}/work/configuration${context.size ? `?${context}` : ''}`;
+  const { db, organization, gate } = await requireConfigurationTarget(organizationId, 'work-configuration');
 
   const types = await listWorkItemTypes(db, { organizationId });
   const selectedType = types.find((type) => type.id === requestedType) ?? types[0] ?? null;
@@ -59,16 +66,16 @@ export default async function WorkConfigurationPage({
     <AppPage>
       {/* The configuration layout's section navigation and the workspace bar already name this place. */}
       <PageHeader
-        title={<span className="sr-only">Work configuration</span>}
-        breadcrumbLabel="Work configuration"
-        crumbs={[{ label: areaLabel('work'), href: `/organizations/${organizationId}/work` }]}
+        title={<span className="sr-only">Work type settings</span>}
+        breadcrumbLabel={selectedType?.name ?? 'Work types'}
+        crumbs={[...workspaceConfigCrumbs(organizationId, 'work-configuration', gate), ...(selectedType ? [{ label: 'Work types', href: `/organizations/${organizationId}/work/configuration` }] : [])]}
         className="mb-0"
-        actions={returnTo === 'create' && organization.capabilities.includes('work_item.create') ? <NewWorkAction organizationId={organizationId} typeId={selectedType?.id} /> : undefined}
+        actions={(returnTo === 'create' || statuses.length > 0) && organization.capabilities.includes('work_item.create') ? <NewWorkAction organizationId={organizationId} typeId={selectedType?.id} returnTo={quote === '1' ? 'quote' : undefined} setupStep={step ?? undefined} /> : undefined}
       />
       <WorkConfiguration
         variant="page"
         typeRequested={typeof requestedType === 'string' && types.some((type) => type.id === requestedType)}
-        listHref={`/organizations/${organizationId}/work/configuration`}
+        listHref={listHref}
         createOpen={requestedNew === '1'}
         initialTab={typeof requestedTab === 'string' ? requestedTab : undefined}
         organizationId={organizationId}
@@ -86,7 +93,7 @@ export default async function WorkConfigurationPage({
         requirements={requirements}
         capabilities={capabilities}
         intakeForms={intakeForms}
-        typeHref={(typeId) => `/organizations/${organizationId}/work/configuration?${returnTo === 'create' ? 'returnTo=create&' : ''}type=${typeId}`}
+        typeHref={(typeId) => `/organizations/${organizationId}/work/configuration?${context.size ? `${context}&` : ''}type=${typeId}`}
       />
     </AppPage>
   );

@@ -27,11 +27,12 @@ export default async function SalesStagesSettingsPage({
       <PageHeader
         title="Relationship stages"
         crumbs={[...workspaceConfigCrumbs(organizationId, 'sales-stages', gate)]}
-        actions={mayConfigure && stages.length ? <RelationshipStageDialog organizationId={organizationId} triggerTone="primary" /> : null}
+        actions={mayConfigure ? <RelationshipStageDialog organizationId={organizationId} triggerTone="primary" /> : null}
       />
-      <p className="mb-4 text-sm text-muted">Manage relationship stages.</p>
+      <p className="mb-4 text-sm text-muted">Name the stages your customer relationships move through.</p>
       <ConfigurationEditor
         label="Relationship stages"
+        density="compact"
         items={stages.map((stage, index) => {
           const used = usage.get(stage.id) ?? 0;
           return {
@@ -45,7 +46,7 @@ export default async function SalesStagesSettingsPage({
             </> : undefined,
           };
         })}
-        empty={<span className="flex flex-wrap items-center justify-between gap-3"><span>No relationship stages yet. Add the first one this business uses.</span>{mayConfigure ? <RelationshipStageDialog organizationId={organizationId} triggerTone="primary" /> : null}</span>}
+        empty="No relationship stages yet."
       />
       {!mayConfigure ? <Hint className="mt-3">Your role, {organization.role}, cannot change relationship stages.</Hint> : null}
     </SettingsPageFrame>

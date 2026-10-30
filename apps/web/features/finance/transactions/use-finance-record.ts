@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useCallback, useEffect, useRef, useState, useTransition } from 'react';
-import { financeChoices, financeMutation, financeReview, type FinanceActionState, type FinanceChoice } from '@/app/organizations/[organizationId]/finance/actions';
+import { financeChoices, financeMutation, financeReview, type FinanceActionState, type FinanceChoicesResult } from '@/app/organizations/[organizationId]/finance/actions';
 
 type Kind = 'invoice' | 'quote' | 'payment';
 export type FinanceReview = Awaited<ReturnType<typeof financeReview>>;
@@ -15,7 +15,7 @@ export type FinanceReview = Awaited<ReturnType<typeof financeReview>>;
 export function useFinanceRecord(organizationId: string, kind: Kind, initialId?: string, options: { includeSettled?: boolean } = {}) {
   const [q, setQ] = useState('');
   const [selected, setSelected] = useState(initialId ?? '');
-  const [choices, setChoices] = useState<{ total: number; rows: FinanceChoice[] } | null>(null);
+  const [choices, setChoices] = useState<FinanceChoicesResult | null>(null);
   // Keyed by the record it was loaded for, so a stale answer is never shown for a newer choice.
   const [loaded, setLoaded] = useState<{ id: string; review: FinanceReview } | null>(null);
   const [error, setError] = useState<string | null>(null);

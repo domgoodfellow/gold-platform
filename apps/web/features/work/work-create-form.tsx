@@ -11,6 +11,7 @@ import { ResourceChecklist } from '@/components/controls/resource-checklist';
 import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
+import { withSetupContext } from '@/lib/route/setup-context';
 
 const INITIAL: WorkActionState = { error: null };
 
@@ -26,6 +27,8 @@ export function CreateWorkItemForm({
   definitions,
   cancelHref,
   onDirtyChange,
+  returnToQuote = false,
+  setupStep,
 }: {
   organizationId: string;
   statuses: WorkItemStatus[];
@@ -37,15 +40,18 @@ export function CreateWorkItemForm({
   definitions: FieldDefinition[];
   cancelHref?: string;
   onDirtyChange?: (dirty: boolean) => void;
+  returnToQuote?: boolean;
+  setupStep?: string;
 }) {
   const [state, formAction, pending] = useActionState(createWorkItemAction, INITIAL);
   const router = useRouter();
   useEffect(() => {
     if (state.success && cancelHref) {
       onDirtyChange?.(false);
-      router.push(cancelHref);
+      const financials = `/organizations/${organizationId}/work/${state.createdWorkItemId}?tab=financials`;
+      router.push(returnToQuote && state.createdWorkItemId ? setupStep ? withSetupContext(financials, setupStep) : financials : cancelHref);
     }
-  }, [state.success, cancelHref, onDirtyChange, router]);
+  }, [state.success, state.createdWorkItemId, organizationId, returnToQuote, setupStep, cancelHref, onDirtyChange, router]);
 
   if (statuses.length === 0) {
     return (

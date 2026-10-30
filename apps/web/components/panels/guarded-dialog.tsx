@@ -18,8 +18,8 @@ const Guard = createContext<GuardContext | null>(null);
  * Only the middle scrolls on a short or narrow screen, so the actions stay reachable; drawers stay
  * for contextual inspectors and supporting panels.
  */
-export function GuardedDialog({ open, onOpenChange, children, className, discardDescription = 'Your changes have not been saved.' }: {
-  open: boolean; onOpenChange: (open: boolean) => void; children: ReactNode; className?: string; discardDescription?: string;
+export function GuardedDialog({ open, onOpenChange, children, className, size = 'default', discardDescription = 'Your changes have not been saved.' }: {
+  open: boolean; onOpenChange: (open: boolean) => void; children: ReactNode; className?: string; size?: 'default' | 'compact'; discardDescription?: string;
 }) {
   const dirty = useRef(false);
   const opener = useRef<HTMLElement | null>(null);
@@ -44,7 +44,7 @@ export function GuardedDialog({ open, onOpenChange, children, className, discard
   return <Guard.Provider value={{ requestClose, setDirty }}>
     <Dialog open={open} onOpenChange={next => { if (!next) requestClose(); }}>
       <DialogContent ref={content} onCloseAutoFocus={event => { if (opener.current?.isConnected) { event.preventDefault(); opener.current.focus(); } }}
-        className={cx('flex max-h-[min(92dvh,46rem)] w-[min(40rem,calc(100%-1rem))] flex-col gap-0 overflow-hidden p-0', className)}>
+        className={cx('flex max-h-[min(92dvh,46rem)] flex-col gap-0 overflow-hidden p-0', size === 'compact' ? 'w-[min(32rem,calc(100%-1rem))]' : 'w-[min(40rem,calc(100%-1rem))]', className)}>
         {children}
       </DialogContent>
     </Dialog>

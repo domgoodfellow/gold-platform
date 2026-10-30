@@ -14,7 +14,7 @@ import { changeWorkItemStatus } from '@/lib/domain/work-items/transitions';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
 import { requireOrganization } from '@/lib/route/organization';
 
-export type WorkActionState = { error: string | null; success?: string };
+export type WorkActionState = { error: string | null; success?: string; createdWorkItemId?: string };
 
 function refreshOperations(organizationId: string) {
   for (const path of ['field', 'work', 'work/dispatch', 'schedule', 'resources']) {
@@ -30,12 +30,12 @@ export async function createWorkItemAction(
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
   await requireOrganization(organizationId);
-
+  let createdWorkItemId: string;
   try {
     // None of these ids is re-validated here. Every reference is composite, so one naming
     // another tenant's row is refused by the database rather than leaking. The type is not
     // submitted at all — it follows from the status.
-    await createWorkItem(db, {
+    createdWorkItemId = await createWorkItem(db, {
       organizationId,
       title: String(formData.get('title') ?? ''),
       statusId: String(formData.get('statusId') ?? ''),
@@ -54,7 +54,7 @@ export async function createWorkItemAction(
 
   revalidatePath(`/organizations/${organizationId}/work`);
   refreshOperations(organizationId);
-  return { error: null, success: 'Saved.' };
+  return { error: null, success: 'Saved.', createdWorkItemId };
 }
 
 export async function changeStatusAction(

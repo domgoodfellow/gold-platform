@@ -49,7 +49,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     key: 'work',
     title: 'Work & scheduling',
     entries: [
-      entry('work-configuration', 'Kinds of work', 'The kinds of work this business does, their stages, and the checklists that come with them.'),
+      entry('work-configuration', 'Work types', 'The kinds of work this business does, their stages, and the checklists that come with them.'),
       entry('schedule-configuration', 'Working hours', 'Opening hours and the default buffer after scheduled work.'),
       entry('resources', 'Resources', 'People, vehicles, equipment and rooms available for scheduled work.'),
       entry('locations', 'Locations', 'Places where this business performs work.'),

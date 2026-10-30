@@ -32,7 +32,7 @@ export function NewTypeDialog({
       <Plus size={16} aria-hidden />
       New type
     </Button>
-    <GuardedDialog open={open} onOpenChange={setOpen} className="w-[min(32rem,calc(100%-1rem))]">
+    <GuardedDialog open={open} onOpenChange={setOpen} size="compact">
       <NewTypeBody key={key} organizationId={organizationId} onCreated={(typeId) => {
         setOpen(false);
         router.push(`${typeHrefPrefix}${typeId}&tab=workflow`);

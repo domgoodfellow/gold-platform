@@ -100,12 +100,12 @@ export function WorkConfiguration(props: WorkConfigurationData) {
   const showDetail = Boolean(props.typeRequested);
   return (
     <div className="@container min-w-0">
-    <div className="grid min-w-0 gap-6 @3xl:grid-cols-[15rem_minmax(0,1fr)] @3xl:items-start">
+    <div className="grid min-w-0 gap-5 @3xl:grid-cols-[13rem_minmax(0,1fr)] @3xl:items-start">
       <div className={cx('min-w-0', showDetail && 'hidden @3xl:block')}>
         <div className="mb-1 flex min-h-9 items-center justify-between gap-2">
           <h2 className="text-sm font-medium">Work types</h2>{newType}
         </div>
-        <NavigationList label="Work types" density="compact" current={selectedType?.id} items={types.map(type => ({ key: type.id, title: type.name, href: typeHref(type.id), metadata: type.schedulable ? 'Scheduled' : undefined, chevron: true }))} />
+        <NavigationList label="Work types" density="compact" current={selectedType?.id} items={types.map(type => ({ key: type.id, title: type.name, href: typeHref(type.id), metadata: `${type.schedulable ? 'Scheduled' : 'Not scheduled'}${type.id === selectedType?.id ? ' · Selected' : ''}`, chevron: true }))} />
       </div>
 
       <div className={cx('min-w-0', !showDetail && 'hidden @3xl:block')}>
@@ -145,7 +145,7 @@ function TypeDetail({
   const tabs = ['general', 'workflow', ...(selectedType.schedulable ? ['requirements'] : []), 'checklists', ...(bookingEnabled ? ['booking'] : []), 'fields'];
   // `?tab=` is a deep link, kept: the earlier name `types` still means General, and an unknown or unavailable value falls back to it.
   const requested = initialTab === 'types' ? 'general' : initialTab;
-  const startTab = requested && tabs.includes(requested) ? requested : 'general';
+  const startTab = requested && tabs.includes(requested) ? requested : initialTab === undefined && statuses.length === 0 ? 'workflow' : 'general';
   const statusName = new Map(statuses.map((status) => [status.id, status.name]));
   const position = new Map(statuses.map((status, index) => [status.id, index]));
 
@@ -156,7 +156,7 @@ function TypeDetail({
         <p className="mt-1 text-sm text-muted">{selectedType.schedulable ? 'Scheduled work' : 'Not scheduled'} · {statuses.length === 1 ? '1 stage' : `${statuses.length} stages`}{mayConfigure ? '' : ' · You can view this configuration but not change it'}. Changes here shape future work of this type; they never create work.</p>
       </div>
 
-      <Tabs key={`${selectedType.id}:${startTab}`} defaultValue={startTab} className="min-w-0 gap-5">
+      <Tabs key={`${selectedType.id}:${initialTab ?? 'default'}`} defaultValue={startTab} className="min-w-0 gap-5">
         <TabsList aria-label="Work configuration">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="workflow">Workflow</TabsTrigger>
@@ -166,7 +166,8 @@ function TypeDetail({
           <TabsTrigger value="fields">Fields</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general" className="flex max-w-2xl flex-col gap-6">
+        <TabsContent value="general" className="flex max-w-2xl flex-col gap-5">
+          <p className="text-sm text-muted">Name and scheduling behavior are saved separately.</p>
           {mayConfigure ? (
             <>
               <RenameTypeForm organizationId={organizationId} typeId={selectedType.id} name={selectedType.name} />
@@ -188,7 +189,7 @@ function TypeDetail({
           {/* Stages in their order, then the moves between them: the workflow work of this type follows. */}
           <section className="flex flex-col gap-3" aria-labelledby="workflow-stages">
             <GroupHeading id="workflow-stages">Stages</GroupHeading>
-            <p className="text-sm text-muted">{statuses.length === 0 ? 'No stages yet. Add the stage new work starts in.' : 'New work starts in the first stage. Order sets the sequence.'}</p>
+            <p className="text-sm text-muted">{statuses.length === 0 ? 'A starting stage is required before creating Work of this type. Add the stage new Work starts in.' : 'New work starts in the first stage. Order sets the sequence.'}</p>
             {statuses.length > 0 ? (
               <ol aria-label="Stages in order" className="flex flex-col divide-y divide-border rounded-[var(--visual-radius,0.625rem)] border border-border">
                 {statuses.map((status, index) => (
@@ -202,7 +203,7 @@ function TypeDetail({
                 ))}
               </ol>
             ) : null}
-            {mayConfigure ? <CreateStatusForm organizationId={organizationId} typeId={selectedType.id} /> : null}
+            {mayConfigure ? <CreateStatusForm organizationId={organizationId} typeId={selectedType.id} starting={statuses.length === 0} /> : null}
           </section>
 
           {statuses.length >= 2 ? (

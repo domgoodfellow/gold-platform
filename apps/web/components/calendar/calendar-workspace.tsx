@@ -33,7 +33,7 @@ export function CalendarWorkspace({ basePath, view, date, today, filters = {}, f
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <ViewNav label="Calendar views" current={view} views={(['day', 'week', 'month'] as const).map(key => ({ key, label: label[key], href: href(date, key) }))} />
+        <ViewNav label="Calendar views" className="mb-0" current={view} views={(['day', 'week', 'month'] as const).map(key => ({ key, label: label[key], href: href(date, key) }))} />
         {filterControls}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border py-3" aria-label={`${label[view]} calendar controls`}>

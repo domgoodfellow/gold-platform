@@ -93,8 +93,17 @@ describe('Work configuration layout', () => {
   });
 
   it('points a type with no stages at the Workflow tab’s first step', () => {
-    render(<WorkConfiguration {...props({ initialTab: 'workflow' })} />);
-    expect(screen.getByText('No stages yet. Add the stage new work starts in.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Add status' })).toBeTruthy();
+    render(<WorkConfiguration {...props()} />);
+    expect(screen.getByRole('tab', { name: 'Workflow' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText(/A starting stage is required before creating Work/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add starting stage' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Save name' })).toBeNull();
+  });
+
+  it('preserves explicit General and identifies the independently saved operations', () => {
+    render(<WorkConfiguration {...props({ initialTab: 'general' })} />);
+    expect(screen.getByRole('tab', { name: 'General' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'Save name' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Save scheduling behavior' })).toBeVisible();
   });
 });

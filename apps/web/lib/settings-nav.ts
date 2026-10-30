@@ -91,10 +91,17 @@ export function settingsSearchItems(organizationId: string, sections: readonly S
 
 /** Breadcrumb ancestors for a configuration page that belongs to a workspace: that workspace's Home. */
 export function workspaceConfigCrumbs(organizationId: string, targetKey: string, gate?: ConfigGate): { label: string; href?: string }[] {
-  const workspaceKey = configTarget(targetKey).workspace;
+  const target = configTarget(targetKey);
+  const workspaceKey = target.workspace;
   const workspace = WORKSPACES.find((candidate) => candidate.key === workspaceKey);
   if (!workspace) return [];
   const home = AREAS.find((area) => area.segment === workspace.home);
   // No workspace has a Configuration landing: "Configuration" is a plain-text grouping level.
-  return home ? [{ label: workspace.label, href: !gate || areaAvailable(home.segment, { ...gate, enabled: gate.enabledModules }) ? areaHref(organizationId, home.segment) : undefined }, ...(!configTarget(targetKey).treatment ? [{ label: 'Configuration' }] : [])] : [];
+  if (!home) return [];
+  const crumbs: { label: string; href?: string }[] = [{ label: workspace.label, href: !gate || areaAvailable(home.segment, { ...gate, enabled: gate.enabledModules }) ? areaHref(organizationId, home.segment) : undefined }];
+  if (target.destination && workspaceKey === 'field') {
+    const destination = AREAS.find(area => area.segment === target.destination)!;
+    crumbs.push({ label: destination.label, href: !gate || areaAvailable(destination.segment, { ...gate, enabled: gate.enabledModules }) ? areaHref(organizationId, destination.segment) : undefined });
+  } else if (!target.treatment) crumbs.push({ label: 'Configuration' });
+  return crumbs;
 }

@@ -13,6 +13,7 @@ import { formatMoney } from '@/lib/domain/work-items/consumption';
 import type { FinanceActionState } from '@/app/organizations/[organizationId]/finance/actions';
 import { CancelButton, TransactionDialog, TransactionError, type TransactionTriggerProps } from './transaction-dialog';
 import { choiceStatus, useFinanceRecord, useFinanceSubmit } from './use-finance-record';
+import { newWorkHref } from '@/features/work/new-work-action';
 
 /** One priced line as the review shows it; its amount is `priceWorkItem` over that line, so no component multiplies money itself. */
 export const lineItem = (line: PricedLine, tone?: LineItem['tone']): LineItem => {
@@ -52,13 +53,21 @@ function QuoteBody({ organizationId, workItemId, mayCreateWork, mayManageCatalog
   const next = preview && !mixed && review ? priceWorkItem([...review.lines, preview]) : null;
   const base = `/organizations/${organizationId}`;
   const workHref = review ? `${base}/work/${review.work.id}?tab=financials` : '';
+  const prerequisite = record.choices?.quotePrerequisite ?? (record.choices?.total === 0 && !record.q.trim() && !record.searching ? 'work' : null);
+  const canCreateWork = record.choices?.mayCreateWork ?? mayCreateWork;
+  const canManageCatalog = record.choices?.mayManageCatalog ?? mayManageCatalog;
   return <>
     <StepHeader title="New quote" />
     <DialogBody><div className="flex flex-col gap-4">
-      {!record.fixed && !record.selected ? <RecordPicker legend="Work item" search={{ value: record.q, onChange: record.setQ, label: 'Search Work items', placeholder: 'Work title or contact' }}
+      {!record.fixed && !record.selected && prerequisite ? <section aria-label="Quote prerequisite" className="space-y-3 text-sm">
+        {prerequisite === 'forbidden' ? <p>Your role cannot price Work. Ask an authorized member to prepare this quote.</p>
+          : prerequisite === 'catalog' ? <><p>Add a price-book item before pricing Work. Catalog & pricing owns what this business charges.</p>{canManageCatalog ? <ButtonLink size="small" tone="primary" href={`${base}/finance/catalog?returnTo=quote`}>Open Catalog & pricing</ButtonLink> : <p className="text-muted">Ask someone who manages the catalog to add a price item.</p>}</>
+          : <><p>A quote starts from a Work item. Create Work first, then add a price from its Financials.</p>{canCreateWork ? <ButtonLink size="small" tone="primary" href={newWorkHref(organizationId, undefined, { returnTo: 'quote' })}>Create Work</ButtonLink> : <p className="text-muted">Your role cannot create Work. Ask an authorized member to add it.</p>}</>}
+      </section> : null}
+      {!record.fixed && !record.selected && !prerequisite ? <RecordPicker legend="Work item" search={{ value: record.q, onChange: record.setQ, label: 'Search Work items', placeholder: 'Work title or contact' }}
         choices={(record.choices?.rows ?? []).map(row => ({ id: row.id, title: row.title, detail: row.detail }))} selected={record.selected} onSelect={record.choose}
         status={choiceStatus(record.searching, record.choices, 'Work items')}
-        empty={record.choices && !record.searching && !record.q ? <div className="flex flex-col items-start gap-2 text-sm"><p>A quote is priced Work, so it starts from a Work item. There are none yet.</p>{mayCreateWork ? <ButtonLink size="small" tone="secondary" href={`${base}/work/new`}>Create a Work item</ButtonLink> : <p className="text-muted">Ask someone who can create Work to add one.</p>}</div> : null} /> : null}
+        empty={record.choices && !record.searching && record.q.trim() ? <p className="text-sm text-muted">No Work matches this search. Try another title or contact.</p> : null} /> : null}
       {record.selected && !review ? <p role="status" className="text-sm text-muted">{record.loadingReview ? 'Loading Work item…' : ''}</p> : null}
       {review ? <RecordSummary title={review.work.title} subtitle={review.work.customer?.label ?? 'No contact'} action={!record.fixed && !done ? <Button type="button" tone="text" size="small" onClick={() => record.choose('')}>Change</Button> : null}>
         <LineItems label="Quoted lines" items={[...review.lines.map(line => lineItem(line)), ...(preview && !mixed ? [lineItem(preview, 'added')] : [])]} empty="Nothing priced yet." />
@@ -74,12 +83,13 @@ function QuoteBody({ organizationId, workItemId, mayCreateWork, mayManageCatalog
         <FormField id={`${id}-quantity`} label="Quantity">{field => <TextInput {...field} value={quantity} onChange={event => setQuantity(event.target.value)} type="number" inputMode="numeric" min={1} step={1} required className="tabular-nums" />}</FormField>
         {!validQuantity ? <p className="text-xs text-danger sm:col-span-2">Quantity is a whole number, one or more.</p> : null}
         {mixed ? <p className="text-xs text-danger sm:col-span-2">This Work is priced in {current!.currency}; this price item is in {preview!.currency}. A quote has one currency.</p> : null}
-      </div> : <div className="flex flex-col items-start gap-2 text-sm"><p>Nothing is in the price book yet, so there is nothing to quote.</p>{mayManageCatalog ? <ButtonLink size="small" tone="secondary" href={`${base}/finance/catalog`}>Set up pricing</ButtonLink> : null}</div> : null}
+      </div> : <div className="flex flex-col items-start gap-2 text-sm"><p>Nothing is in the price book yet, so there is nothing to quote.</p>{mayManageCatalog ? <ButtonLink size="small" tone="secondary" href={`${base}/finance/catalog?returnTo=quote`}>Open Catalog & pricing</ButtonLink> : <p>Ask someone who manages the catalog to add a price item.</p>}</div> : null}
+      <TransactionError error={record.error} />
       <TransactionError error={state.error} errorRef={errorRef} />
     </div></DialogBody>
     <DialogFooterBar>
       {done ? <><Button type="button" onClick={() => setDone(null)}>Add another line</Button><Button type="button" tone="secondary" onClick={close}>Done</Button></>
-        : <><Button type="button" disabled={pending || !review || !item || !validQuantity || mixed} onClick={() => review && submit({ organizationId, kind: 'quote', workItemId: review.work.id, priceBookItemId: itemId, quantity: String(count) })}>{pending ? 'Adding…' : 'Add to quote'}</Button><CancelButton /></>}
+        : <>{!prerequisite || review ? <Button type="button" disabled={pending || !review || !item || !validQuantity || mixed} onClick={() => review && submit({ organizationId, kind: 'quote', workItemId: review.work.id, priceBookItemId: itemId, quantity: String(count) })}>{pending ? 'Adding…' : 'Add to quote'}</Button> : null}<CancelButton /></>}
     </DialogFooterBar>
   </>;
 }

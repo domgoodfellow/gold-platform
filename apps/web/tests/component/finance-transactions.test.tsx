@@ -96,8 +96,40 @@ describe('New quote', () => {
     render(<QuoteDialog organizationId="org" mayCreateWork />);
     await user.click(screen.getByRole('button', { name: 'New quote' }));
     await settle();
-    expect(screen.getByText(/A quote is priced Work/)).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Create a Work item' })).toHaveAttribute('href', '/organizations/org/work/new');
+    expect(screen.getByText(/A quote starts from a Work item/)).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Create Work' })).toHaveAttribute('href', '/organizations/org/work/new?returnTo=quote');
+    expect(screen.queryByRole('searchbox')).toBeNull();
+    expect(screen.queryByText('0 matching Work items.')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add to quote' })).toBeNull();
+  });
+
+  it('offers the catalog prerequisite before Work creation and keeps permission refusals distinct', async () => {
+    const user = userEvent.setup();
+    finance.financeChoices.mockResolvedValue({ total: 0, rows: [], quotePrerequisite: 'catalog', mayManageCatalog: true, mayCreateWork: true });
+    render(<QuoteDialog organizationId="org" mayCreateWork mayManageCatalog />);
+    await user.click(screen.getByRole('button', { name: 'New quote' }));
+    await settle();
+    expect(screen.getByRole('link', { name: 'Open Catalog & pricing' })).toHaveAttribute('href', '/organizations/org/finance/catalog?returnTo=quote');
+    expect(screen.queryByRole('link', { name: 'Create Work' })).toBeNull();
+    cleanup();
+    finance.financeChoices.mockResolvedValue({ total: 0, rows: [], quotePrerequisite: 'forbidden' });
+    render(<QuoteDialog organizationId="org" mayCreateWork mayManageCatalog />);
+    await user.click(screen.getByRole('button', { name: 'New quote' }));
+    await settle();
+    expect(screen.getByText(/Your role cannot price Work/)).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Create Work' })).toBeNull();
+  });
+
+  it('keeps an unmatched search separate from an empty business', async () => {
+    const user = userEvent.setup();
+    render(<QuoteDialog organizationId="org" mayCreateWork />);
+    await user.click(screen.getByRole('button', { name: 'New quote' }));
+    await settle();
+    finance.financeChoices.mockResolvedValue({ total: 0, rows: [] });
+    await user.type(screen.getByRole('searchbox'), 'No matching record');
+    await settle();
+    expect(screen.getByText(/No Work matches this search/)).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Create Work' })).toBeNull();
   });
 });
 

@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function NewWorkPage({ params, searchParams }: PageProps<'/organizations/[organizationId]/work/new'>) {
   const { organizationId } = await params;
-  const { type } = await searchParams;
+  const { type, returnTo, setupStep } = await searchParams;
   const { db, organization } = await requireOrganization(organizationId);
   if (!organization.capabilities.includes('work_item.create')) notFound();
   const features = await organizationResolvedFeatureStates(db, { organizationId });
@@ -21,6 +21,6 @@ export default async function NewWorkPage({ params, searchParams }: PageProps<'/
   // A bounded Form page: one focused creation task, not a fluid workspace surface.
   return <AppPage width="form">
     <PageHeader title="New work" crumbs={[{ label: areaLabel('work'), href: areaHref(organizationId, 'work') }]} />
-    <WorkCreatePage options={options} initialTypeId={typeof type === 'string' ? type : undefined} mayConfigure={organization.capabilities.includes('field.manage')} />
+    <WorkCreatePage options={options} initialTypeId={typeof type === 'string' ? type : undefined} mayConfigure={organization.capabilities.includes('field.manage')} returnToQuote={returnTo === 'quote'} setupStep={typeof setupStep === 'string' ? setupStep : undefined} />
   </AppPage>;
 }

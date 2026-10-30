@@ -137,22 +137,9 @@ export default async function SchedulePage({
         </ConfigureRegistrar>
       ) : null}
 
-      {/* The absolute-time rule: every window drawn below is an absolute instant rendered in this business's own
-          zone, so naming the zone is part of reading the page rather than decoration. */}
       <PageHeader
         title={areaLabel('schedule')}
         crumbs={workspaceAncestry(organizationId, 'schedule')}
-        meta={
-          <>
-            Times shown in {organization.timezone} ·{' '}
-            <Link
-              href={`/organizations/${organizationId}/schedule/configuration`}
-              className="underline underline-offset-4"
-            >
-              Opening hours
-            </Link>
-          </>
-        }
         configure={mayConfigure}
         actions={<>{organization.capabilities.includes('work_item.create') ? <NewWorkAction organizationId={organizationId}/> : null}<ButtonLink size="small" tone="secondary" href={`/organizations/${organizationId}/work/dispatch?on=${date}`}>Dispatch board</ButtonLink></>}
       />

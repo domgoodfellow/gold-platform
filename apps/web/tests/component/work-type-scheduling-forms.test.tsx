@@ -80,7 +80,7 @@ describe('changing whether a kind of work is scheduled', () => {
   it('cannot be changed by somebody without the configuration permission', () => {
     render(<SchedulingTypeForm {...props} schedulable={false} published={false} disabled />);
     expect((screen.getByRole('checkbox') as HTMLInputElement).disabled).toBe(true);
-    expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Save scheduling behavior' }) as HTMLButtonElement).disabled).toBe(true);
   });
 });
 

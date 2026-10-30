@@ -261,8 +261,8 @@ test.describe.serial('Work W2: record, dialogs and type configuration', () => {
         const type = (await pg.query('select id, schedulable from work_item_types where organization_id = $1 and name = $2', [seeded.organizationId, 'Commissioning'])).rows[0];
         expect(type.schedulable).toBe(false);
         // The starting stage is added explicitly, by name.
-        await main(page).getByLabel('Status name', { exact: true }).fill('Planned');
-        await main(page).getByRole('button', { name: 'Add status', exact: true }).click();
+        await main(page).getByLabel('Starting stage name', { exact: true }).fill('Planned');
+        await main(page).getByRole('button', { name: 'Add starting stage', exact: true }).click();
         await expect(main(page).getByRole('list', { name: 'Stages in order' }).getByRole('textbox', { name: 'Name of status Planned' })).toHaveValue('Planned');
         expect(await count('work_item_statuses')).toBe(before.statuses + 1);
         expect(await count('work_items')).toBe(before.work);

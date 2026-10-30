@@ -24,7 +24,7 @@ export function RelationshipStageDialog({ organizationId, stage, triggerTone = '
   return <>
     {stage ? <Button type="button" tone="ghost" size="small" aria-label={`Rename ${stage.name}`} onClick={() => { setKey(value => value + 1); setOpen(true); }}><Pencil aria-hidden /></Button>
       : <Button type="button" tone={triggerTone} onClick={() => { setKey(value => value + 1); setOpen(true); }}><Plus aria-hidden /> Add stage</Button>}
-    <GuardedDialog open={open} onOpenChange={setOpen} className="w-[min(28rem,calc(100%-1rem))]">
+    <GuardedDialog open={open} onOpenChange={setOpen} size="compact">
       <StageForm key={key} organizationId={organizationId} stage={stage} onSaved={() => setOpen(false)} />
     </GuardedDialog>
   </>;

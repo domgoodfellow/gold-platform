@@ -14,13 +14,14 @@ import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 
 export type FinanceChoice = { id: string; title: string; detail: string; meta: string };
+export type FinanceChoicesResult = { total: number; rows: FinanceChoice[]; quotePrerequisite?: 'catalog' | 'forbidden'; mayCreateWork?: boolean; mayManageCatalog?: boolean };
 
 /**
  * The records a Finance dialog may act on. Invoice issuance offers priced Work not yet invoiced;
  * payments offer unpaid invoices, or every invoice when a correction may apply to a settled one;
  * quoting offers Work. Bounded at 25 with the exact matching total, so the dialog can say so.
  */
-export async function financeChoices(organizationId: string, kind: 'invoice' | 'quote' | 'payment', q: string, options: { includeSettled?: boolean } = {}): Promise<{ total: number; rows: FinanceChoice[] }> {
+export async function financeChoices(organizationId: string, kind: 'invoice' | 'quote' | 'payment', q: string, options: { includeSettled?: boolean } = {}): Promise<FinanceChoicesResult> {
   const { db, organization } = await requireOrganization(organizationId);
   if (kind === 'invoice') {
     const r = await readFinanceQuotes(db, organizationId, { q, status: 'not-invoiced' });
@@ -31,8 +32,10 @@ export async function financeChoices(organizationId: string, kind: 'invoice' | '
     const due = (iso: string | null) => iso ? `due ${new Intl.DateTimeFormat('en-CA', { timeZone: organization.timezone, month: 'short', day: 'numeric' }).format(new Date(iso))}` : 'no due date';
     return { total: r.total, rows: r.rows.map(r => ({ id: r.workItemId, title: `Invoice #${r.number}`, detail: `${r.billedTo} · ${r.settled ? 'settled' : r.overdue ? `overdue, ${due(r.dueAt)}` : due(r.dueAt)}`, meta: r.outstandingMinor === null ? '' : `${formatMoney(Math.max(r.outstandingMinor, 0), r.currency)} due` })) };
   }
-  const r = await listWorkItems(db, { organizationId, q, limit: 25 });
-  return { total: r.total, rows: r.map(r => ({ id: r.id, title: r.title, detail: `${r.customer?.label ?? 'No contact'} · ${r.status.label}`, meta: '' })) };
+  if (!organization.capabilities.includes('work_item.price')) return { total: 0, rows: [], quotePrerequisite: 'forbidden' };
+  const [r, items] = await Promise.all([listWorkItems(db, { organizationId, q, limit: 25 }), listPriceBookItems(db, { organizationId })]);
+  return { total: r.total, rows: r.map(r => ({ id: r.id, title: r.title, detail: `${r.customer?.label ?? 'No contact'} · ${r.status.label}`, meta: '' })),
+    ...(items.length ? {} : { quotePrerequisite: 'catalog' as const }), mayCreateWork: organization.capabilities.includes('work_item.create'), mayManageCatalog: organization.capabilities.includes('price.manage') };
 }
 
 export async function financeReview(organizationId: string, workItemId: string) {

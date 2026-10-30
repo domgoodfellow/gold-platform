@@ -30,9 +30,11 @@ const INITIAL: WorkConfigActionState = { error: null };
 export function CreateStatusForm({
   organizationId,
   typeId,
+  starting = false,
 }: {
   organizationId: string;
   typeId: string;
+  starting?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(createStatusAction, INITIAL);
 
@@ -47,12 +49,11 @@ export function CreateStatusForm({
           type="text"
           required
           maxLength={64}
-          placeholder="Status name, e.g. Awaiting parts"
-          aria-label="Status name"
+          aria-label={starting ? 'Starting stage name' : 'Stage name'}
           className="flex-1"
         />
         <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
-          {pending ? 'Adding…' : 'Add status'}
+          {pending ? 'Adding…' : starting ? 'Add starting stage' : 'Add stage'}
         </Button>
       </div>
 
@@ -182,7 +183,7 @@ export function SchedulingTypeForm({
         </span>
       </label>
       <Button type="submit" disabled={pending || disabled} tone="secondary" className="w-fit">
-        {pending ? 'Saving…' : 'Save'}
+        {pending ? 'Saving…' : 'Save scheduling behavior'}
       </Button>
 
       <ErrorText role="alert">{state.error}</ErrorText>
@@ -265,7 +266,7 @@ export function RenameTypeForm({
         <div className="flex flex-col gap-2 sm:flex-row">
           <TextInput id={`type-name-${typeId}`} name="name" type="text" required maxLength={64} defaultValue={name} className="flex-1" />
           <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
-            {pending ? 'Saving…' : 'Rename'}
+            {pending ? 'Saving…' : 'Save name'}
           </Button>
         </div>
       </div>
