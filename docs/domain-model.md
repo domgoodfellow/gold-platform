@@ -996,6 +996,18 @@ It is not a separate ledger.
 
 ---
 
+### Pricing Scenario
+
+**Definition:** An unsaved tenant Finance estimate of delivering one item or service, distinct from recorded financial facts and from a suggested selling price. `lib/domain/pricing/planning.ts` owns its single pure calculation; it does not replace `priceWorkItem`, `jobEconomics` or reporting aggregates.
+
+- **Recorded:** prices, invoice snapshots, payments and Work costs actually entered. Their amounts and currency snapshots retain their existing semantics. A margin on recorded costs does not prove all delivery costs have been entered.
+- **Estimated:** labor hours (up to three decimal places), cost per hour, materials, supplier and other costs in one explicitly selected currency. Blank means unknown. Every zero contribution requires a written assumption, including a zero labor contribution; an all-zero estimate is valid when documented.
+- **Suggested:** estimated cost divided by `(1 - target margin)`. Margin is profit divided by selling price, distinct from markup on cost. Targets range from zero to less than 100%, with two decimal places. Suggestions are forecasts, never realized margin or recorded prices.
+
+Money is integer minor units with currency-specific precision. Decimal inputs are parsed exactly; excess precision, negative values, unsupported currencies and unsafe ranges are refused. Labor extension rounds half up once to a minor unit. Suggested prices round upward to meet the target after rounding; forecast profit and margin use that rounded price. An all-zero suggested price has undefined margin. Different cost currencies cannot be summed and a foreign-currency catalog item cannot be compared without conversion evidence; E1 introduces no FX model. Catalog comparisons mean one unit before tax, with its unit displayed so the operator can align the delivery scope. Changing scenario currency clears monetary assumptions rather than reinterpreting them.
+
+---
+
 ## Platform commercial model
 
 A **commercial capability** (a sellable item and its price, a quote, an invoice, a payment, and later a subscription, metered usage or prepaid balance) is owned by organization Finance and reused by every Organization, including GildOps selling its platform through its operating Organization (ADR-051). A **commercial record** is one Organization's instance of a capability and belongs to that Organization. The organization price book is a commercial capability; the platform capability registry below (Catalogue Products, Modules, Features, Plans) describes what the platform can enable and entitle, and is not a price book. Provider rates, costs and platform margin are never commercial capabilities.

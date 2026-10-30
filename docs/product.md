@@ -553,6 +553,8 @@ Organization Finance owns the reusable commercial capabilities every Organizatio
 
 Every Organization sells its own products and services through its own Finance. GildOps sells its platform the same way, through its operating Organization's Finance: the seller-side records of a GildOps sale belong there. Each seller's customers pay through that seller's own payment-processing relationship.
 
+Financial reports (`/finance/reports`) also owns Economics & pricing planning: up to three unsaved delivery scenarios for a member with `report.read`, under the same billing/feature availability as reports. Operators enter currency, labor hours and cost per hour, materials, supplier and other estimated costs, and a target gross margin. A current price-book unit may be compared beside the suggestion. Recorded Work costs remain historical report context; entering an estimate neither copies back to Work nor changes a catalog price, quote, invoice or payment. This capability creates no persistence or publishing operation and exposes no platform economics or buyer-side Plan & usage.
+
 ### Platform control plane
 
 Direction:

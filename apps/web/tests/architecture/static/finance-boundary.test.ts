@@ -47,6 +47,15 @@ const COMMERCIAL_PLANE = [
 ];
 
 describe('Finance is tenant Financial Operations', () => {
+  it('guards planning before tenant reads and offers no persistence or publication path', () => {
+    const route = code(join(FINANCE_ROUTES, 'reports/page.tsx'));
+    expect(route).toMatch(/requireOperatingArea\(organizationId, 'finance-reports'\)/);
+    expect(route.indexOf("requireOperatingArea(organizationId, 'finance-reports')")).toBeLessThan(route.indexOf('listPriceBookItems(db'));
+    const planner = code(join(WEB, 'features/finance/pricing-planner.tsx'));
+    const calculation = code(join(WEB, 'lib/domain/pricing/planning.ts'));
+    expect(planner + calculation).not.toMatch(/\.from\(|\.rpc\(|updatePriceBookItem|localStorage|sessionStorage|use server/);
+    expect(calculation).not.toMatch(/import .* from/);
+  });
   it('has routes, features and projections to inspect', () => {
     expect(FINANCE_FILES.length).toBeGreaterThan(8);
   });

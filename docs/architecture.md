@@ -930,6 +930,8 @@ Organization
 
 Owned by the Finance product/domain.
 
+The unsaved Economics & pricing planner is composed within Financial reports. Its route uses `requireOperatingArea(..., 'finance-reports')` before tenant report/catalog reads, preserving organization membership, service access, `report.read` and billing/feature gates. `features/finance/pricing-planner.tsx` holds temporary scenarios; `lib/domain/pricing/planning.ts` alone parses/validates assumptions and calculates suggestions. Recorded context comes from the existing `listInvoicedAndIncurred` reporting authority; catalog comparisons use `listPriceBookItems` under the caller's RLS. There is no write endpoint, scenario table or separate ledger. Any future publication must be separately authorized through the existing price-book update authority. Legacy `/finance/economics` remains a platform redirect.
+
 ### Platform commercial
 
 ```text

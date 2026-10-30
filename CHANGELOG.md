@@ -32,6 +32,10 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-10-29
+
+- Financial reports now includes unsaved Economics & pricing planning: estimate delivery costs, calculate a target-margin selling suggestion and compare up to three scenarios beside current catalog prices. Unknown costs, documented zero assumptions, forecast profit and recorded finances remain distinct. The planner respects Finance report permissions and availability and changes no catalog, Work, invoice or payment records.
+
 ## 2026-10-28
 
 - Organization Home now uses shared dashboard, collection and chart components for one cross-workspace overview. Work exceptions use W3's complete read model, Today/Upcoming include distinct local dates, and records are not repeated across attention, personal priorities and obligations. Attention and reporting controls keep separate URL state; source failures and refused browser-local Customize saves remain explicit.

@@ -2226,6 +2226,10 @@ Do not introduce:
 
 ---
 
+## Finance pricing planning
+
+Financial reports contains a compact `OperationalPanel` for unsaved Economics & pricing planning beneath recorded financial activity. Up to three independently editable scenario fieldsets wrap according to the available container width. Shared inputs, `CurrencyField` and `formatMoney` own input grammar, hydration-safe currency selection and monetary display. Each scenario identifies estimated costs, suggested selling price, estimated gross profit/margin and an optional current catalog unit comparison. Missing assumptions remain Unknown; zero assumptions require an explanation; zero selling price has undefined margin. Currency changes clear monetary inputs, and foreign-currency comparisons state why they cannot be calculated. Current catalog prices remain visibly recorded context. The panel states that scenarios are lost on leaving/reload and update no financial records; no publish control is offered.
+
 ## Document boundaries
 
 This document owns:

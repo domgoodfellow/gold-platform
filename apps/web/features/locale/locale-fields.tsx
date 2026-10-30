@@ -99,13 +99,21 @@ export function CurrencyField({
   id = 'currency',
   defaultValue,
   label = 'Currency',
+  value,
+  onChange,
+  hint = 'Used for new prices and amounts. Existing amounts keep the currency recorded with them.',
 }: {
   id?: string;
   defaultValue?: string;
   label?: string;
+  value?: string;
+  onChange?: (value: string) => void;
+  hint?: string;
 }) {
   const mounted = useIsClient();
   const codes = useMemo(() => mounted ? supported('currency') : null, [mounted]);
+  const current = value ?? defaultValue;
+  const control = value === undefined ? { defaultValue: defaultValue ?? '' } : { value };
 
   // Names, not just the list, are ICU output — and ICU's own CLDR data genuinely differs
   // between Node's build (server render) and a browser's (hydration) for at least some
@@ -130,12 +138,12 @@ export function CurrencyField({
         {label}
       </FieldLabel>
       {codes ? (
-        <SelectInput id={id} name="currency" required defaultValue={defaultValue ?? ''}>
-          {defaultValue && !codes.includes(defaultValue) ? <option value={defaultValue}>{defaultValue}</option> : null}
+        <SelectInput id={id} name="currency" required {...control} onChange={e => onChange?.(e.target.value)}>
+          {current && !codes.includes(current) ? <option value={current}>{current}</option> : null}
           {/* No preselection when founding. There is no neutral currency, so the platform
               does not offer one — and deriving it from the timezone above would be the
               assumption this whole field exists to avoid. */}
-          {defaultValue ? null : (
+          {current ? null : (
             <option value="" disabled>
               Choose a currency
             </option>
@@ -157,13 +165,14 @@ export function CurrencyField({
           required
           maxLength={3}
           minLength={3}
-          defaultValue={defaultValue}
+          {...control}
+          onChange={e => onChange?.(e.target.value.toUpperCase())}
           placeholder="EUR"
           className="uppercase"
         />
       )}
       <Hint weight="subtle" className="text-xs">
-        Used for new prices and amounts. Existing amounts keep the currency recorded with them.
+        {hint}
       </Hint>
     </div>
   );
