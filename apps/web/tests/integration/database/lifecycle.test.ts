@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { describe, expect, it } from 'vitest';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
+import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import {
   computeReadiness,
   computeSetupOverview,
@@ -273,8 +274,14 @@ describe('the setup overview — areas, importance and progress', () => {
   it('counts an area as ready the moment its real fact is true, and orders required gaps first', async () => {
     const { db, organizationId } = await freshOrganization();
 
-    await createWorkItemType(db, { schedulable: true, organizationId, name: 'Repair' });
+    const typeId = await createWorkItemType(db, { schedulable: true, organizationId, name: 'Repair' });
     await enableEntitledBooking(db, organizationId);
+
+    const before = await computeSetupOverview(db, { organizationId });
+    expect(before.areas.find(area => area.key === 'work')).toMatchObject({ state: 'incomplete', importance: 'optional', message: 'Repair needs a starting stage before Work can be created.' });
+    expect(before.areas.find(area => area.key === 'work')?.area.href).toContain(`type=${typeId}&tab=workflow`);
+    expect(before.blockers.map(area => area.key)).toEqual(['booking']);
+    await createWorkItemStatus(db, { organizationId, typeId, name: 'Received', position: 0 });
 
     const overview = await computeSetupOverview(db, { organizationId });
     const byKey = new Map(overview.areas.map((area) => [area.key, area]));

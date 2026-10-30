@@ -7,6 +7,7 @@ import { setupStepHref, type SetupStep } from './setup-guide';
 import type { SetupOverview } from '@/lib/domain/tenancy/lifecycle';
 import { LaunchReview, SetupProgressCard } from './setup-cockpit';
 import { SetupStepNavigation } from './setup-step-navigation';
+import { configurationOwnerPath, withSetupContext } from '@/lib/route/setup-context';
 
 export function GuidedSetup({ organizationId, steps, selected, overview, business, handoff, launch, live }: {
   organizationId: string; steps: SetupStep[]; selected: SetupStep; overview: SetupOverview;
@@ -24,15 +25,15 @@ export function GuidedSetup({ organizationId, steps, selected, overview, busines
           <p className="mt-1 text-sm text-muted">{selected.description}</p>
           {selected.key === 'business' ? business : null}
           {selected.key !== 'business' && selected.destinations.length ? <NavigationList label={`${selected.label} destinations`} className="mt-4" items={selected.destinations.map(entry => {
-            const area = selected.areas.find(candidate => candidate.area.href.split('#')[0] === `/organizations/${organizationId}/${entry.path}`);
-            return { key: entry.key, href: `/organizations/${organizationId}/${entry.path}`, title: <>{entry.title}{area ? <Badge className="ml-2">{area.state === 'complete' ? 'Ready' : area.importance}</Badge> : null}</>, description: area?.message ?? entry.description, chevron: true };
+            const area = selected.areas.find(candidate => configurationOwnerPath(candidate.area.href) === `/organizations/${organizationId}/${entry.path}`);
+            return { key: entry.key, href: withSetupContext(area?.area.href ?? `/organizations/${organizationId}/${entry.path}`, selected.key), title: <>{entry.title}{area ? <Badge className="ml-2">{area.state === 'complete' ? 'Ready' : area.importance}</Badge> : null}</>, description: area?.message ?? entry.description, chevron: true };
           })} /> : null}
           {selected.key === 'review' ? <div className="mt-4 space-y-3">
             <p className="text-sm">{overview.blockers.length ? `${overview.blockers.length} required conditions remain.` : 'All required launch conditions are satisfied.'} Recommendations and optional areas do not prevent launch.</p>
             <ul className="divide-y divide-border">{overview.areas.map((area) => <li key={area.key} className="py-3 text-sm">
               <div className="flex flex-wrap items-center gap-2"><span className="font-medium">{area.label}</span><Badge>{area.state === 'complete' ? 'Ready' : area.importance}</Badge></div>
               <p className="mt-1 text-muted">{area.message}</p>
-              {allowedDestinations.includes(area.area.href.split('#')[0]) ? <ButtonLink href={area.area.href} tone="text" size="small" className="mt-1">Open {area.area.label}</ButtonLink> : area.state === 'incomplete' && area.importance === 'required' ? <p className="mt-1 text-muted">Ask an administrator to resolve this.</p> : null}
+              {allowedDestinations.includes(configurationOwnerPath(area.area.href)) ? <ButtonLink href={withSetupContext(area.area.href, selected.key)} tone="text" size="small" className="mt-1">Open {area.area.label}</ButtonLink> : area.state === 'incomplete' && area.importance === 'required' ? <p className="mt-1 text-muted">Ask an administrator to resolve this.</p> : null}
             </li>)}</ul>
           </div> : null}
           <div className="mt-5 flex flex-wrap justify-between gap-2 border-t border-border pt-4">

@@ -83,7 +83,8 @@ describe('Launch — a review boundary, not a mystery button', () => {
   it('renders no Launch control at all while a blocker stands, and lists each with its owning link', () => {
     const blocked = COCKPIT.slice(COCKPIT.indexOf('blocked ? ('), COCKPIT.indexOf(') : ('));
     expect(blocked).toContain('overview.blockers.map');
-    expect(blocked).toContain('href={area.area.href}');
+    expect(blocked).toContain("withSetupContext(area.area.href, 'review')");
+    expect(blocked).toContain('allowedDestinations.includes(configurationOwnerPath(area.area.href))');
     expect(blocked).not.toContain('{launch}');
     expect(COCKPIT).not.toMatch(/disabled=/);
   });

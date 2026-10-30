@@ -1,4 +1,5 @@
-import type { ComponentProps } from 'react';
+import { Suspense, type ComponentProps } from 'react';
+import { SetupReturnLink } from '@/components/navigation/setup-return-link';
 import { cx } from '../class-names';
 
 /**
@@ -25,5 +26,6 @@ export function AppPage({
   className,
   ...props
 }: ComponentProps<'div'> & { width?: PageWidth }) {
-  return <div {...props} className={cx('min-w-0', widths[width], className)} />;
+  const { children, ...rest } = props;
+  return <div {...rest} className={cx('min-w-0', widths[width], className)}><Suspense fallback={null}><SetupReturnLink /></Suspense>{children}</div>;
 }

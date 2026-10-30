@@ -7,6 +7,7 @@ import { ButtonLink } from '@/components/controls/button';
 import { Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
 import type { SetupArea, SetupOverview } from '@/lib/domain/tenancy/lifecycle';
+import { configurationOwnerPath, withSetupContext } from '@/lib/route/setup-context';
 
 /**
  * The setup cockpit's presentation. It renders the answer `computeSetupOverview` gives and decides
@@ -131,7 +132,7 @@ export function LaunchReview({
                 <span className="min-w-0 flex-1 basis-64">
                   <span className="font-medium">{area.label}.</span> {area.message}
                 </span>
-                {!allowedDestinations || allowedDestinations.includes(area.area.href.split('#')[0]) ? <ButtonLink href={area.area.href} tone="text" size="small" aria-label={`Configure ${area.area.label}`}>
+                {!allowedDestinations || allowedDestinations.includes(configurationOwnerPath(area.area.href)) ? <ButtonLink href={withSetupContext(area.area.href, 'review')} tone="text" size="small" aria-label={`Configure ${area.area.label}`}>
                   Configure
                 </ButtonLink> : <span className="text-xs text-muted">Ask an administrator to resolve this.</span>}
               </li>

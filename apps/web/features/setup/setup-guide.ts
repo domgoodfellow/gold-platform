@@ -1,6 +1,7 @@
 import { SETTINGS_SECTIONS, entryOffered, type SettingsEntry } from '@/features/settings/settings-map';
 import { configTarget, configTargetOffered, type ConfigGate } from '@/lib/navigation';
 import type { SetupArea, SetupOverview } from '@/lib/domain/tenancy/lifecycle';
+import { configurationOwnerPath } from '@/lib/route/setup-context';
 
 export type SetupStep = {
   key: string;
@@ -15,8 +16,8 @@ const GROUPS = [
   { key: 'operations', label: 'Operations', description: 'Define the work you perform and configure scheduling when needed.', targets: ['work-configuration', 'schedule-configuration'] },
   { key: 'people', label: 'People and resources', description: 'Invite your team, assign permissions and configure capacity separately.', targets: ['team', 'resources', 'locations'] },
   { key: 'customers', label: 'Customers and data', description: 'Choose relationship stages, opportunity stages and the information you collect.', targets: ['sales-stages', 'opportunity-stages', 'custom-fields'] },
-  { key: 'communications', label: 'Communications', description: 'Configure calling, messaging and verified email identities.', targets: ['communications', 'call-setup', 'email', 'integrations'] },
-  { key: 'finance', label: 'Finance', description: 'Set up the prices this business charges its customers. Your GildOps subscription stays separate.', targets: ['price-book'] },
+  { key: 'communications', label: 'Communications', description: 'Configure calling, numbers, messaging and verified email identities. Provider account prerequisites belong to Platform operations.', targets: ['phone-numbers', 'communications', 'call-setup', 'email', 'integrations'] },
+  { key: 'finance', label: 'Finance', description: 'Set up the prices this business charges its customers and how customers pay. Your GildOps subscription stays separate.', targets: ['price-book', 'payments'] },
   { key: 'presence', label: 'Public presence', description: 'Review branding, domain verification and your published website.', targets: ['branding', 'public-profile', 'domains', 'website'] },
   { key: 'ai', label: 'AI and Automations', description: 'Configure supported agents and automation rules for this business.', targets: ['ai-agents', 'automation-rules'] },
 ] as const;
@@ -25,6 +26,7 @@ const GROUPS = [
 export function setupGuide(organizationId: string, overview: SetupOverview, gate: ConfigGate): SetupStep[] {
   const entries = SETTINGS_SECTIONS.flatMap((section) => section.entries);
   const extras: SettingsEntry[] = [
+    { key: 'phone-numbers', title: 'Numbers & assignments', description: 'Review the numbers assigned to this business and their provider prerequisites.', path: configTarget('phone-numbers').path },
     { key: 'team', title: 'Access', description: 'Members, invitations and roles.', path: configTarget('team').path },
     { key: 'integrations', title: 'Connections', description: 'Customer-owned connected applications.', path: configTarget('integrations').path },
     { key: 'plan', title: 'Plan & usage', description: 'Subscription status and recorded usage.', path: configTarget('plan').path },
@@ -38,7 +40,7 @@ export function setupGuide(organizationId: string, overview: SetupOverview, gate
         ? configTargetOffered(configTarget(entry.key), gate) : entryOffered(entry, gate)) ? [entry] : [];
     });
     const areas = overview.areas.filter((area) => destinations.some((entry) =>
-      area.area.href.split('#')[0] === `/organizations/${organizationId}/${entry.path}`));
+      configurationOwnerPath(area.area.href) === `/organizations/${organizationId}/${entry.path}`));
     areas.forEach((area) => assigned.add(area.key));
     return destinations.length ? [{ key: group.key, label: group.label, description: group.description, destinations, areas }] : [];
   });

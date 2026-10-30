@@ -38,6 +38,7 @@ async function attempt(organizationId: string, run: () => Promise<unknown>): Pro
   revalidatePath(`/organizations/${organizationId}/crm/contacts`);
   revalidatePath(`/organizations/${organizationId}/crm`);
   revalidatePath(`/organizations/${organizationId}/crm/configuration/relationship-stages`);
+  revalidatePath(`/organizations/${organizationId}/setup`);
   return { error: null };
 }
 

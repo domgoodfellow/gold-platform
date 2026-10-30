@@ -18,7 +18,7 @@ vi.mock('@/lib/domain/tenancy/identity', async importOriginal => ({
   getOrganizationIdentity: vi.fn(async () => EMPTY_IDENTITY),
 }));
 vi.mock('@/app/organizations/[organizationId]/settings/actions', () => ({ updateOrganizationGeneralAction: vi.fn(async () => ({ error: null })) }));
-vi.mock('next/navigation', () => ({ usePathname: () => '/organizations/org/settings/general', redirect: (target: string) => { throw new Error(`REDIRECT:${target}`); } }));
+vi.mock('next/navigation', () => ({ usePathname: () => '/organizations/org/settings/general', useSearchParams: () => new URLSearchParams(), redirect: (target: string) => { throw new Error(`REDIRECT:${target}`); } }));
 vi.mock('@/components/headers/page-header', () => ({ PageHeader: ({ title, meta }: { title: string; meta?: string }) => <header><h1>{title}</h1>{meta}</header> }));
 vi.mock('@/lib/route/workspace-configuration', () => ({
   configurationTargetOffered: vi.fn(async () => true),

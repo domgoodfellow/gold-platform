@@ -7,14 +7,16 @@ import { RESOURCE_CLASS_LABELS } from '@/lib/domain/resources/resource-class';
 import { isEligible, listResourceRequirements, requirementTitle } from '@/lib/domain/work-items/requirements';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
+import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
+import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { platformBillingEnvironment } from '@/lib/adapters/platform-billing';
 import {
   describeServiceAccess,
   getOrganizationServiceAccess,
 } from '@/lib/domain/platform-billing/service-access';
 import { MODULES_WITH_READINESS_CHECK } from './modules';
-import { activeModuleKeys, readinessModuleKey, organizationResolvedFeatureStates, type ResolvedFeatureState } from '@/lib/domain/catalogue/organization-plans';
-import { areaHref, areaLabel, MODULES, moduleConfiguration } from '@/lib/navigation';
+import { activeModuleKeys, availableFeatureKeys, readinessModuleKey, organizationResolvedFeatureStates, type ResolvedFeatureState } from '@/lib/domain/catalogue/organization-plans';
+import { areaHref, areaLabel, configTarget, MODULES, moduleConfiguration } from '@/lib/navigation';
 
 /**
  * SETUP or LIVE. Nothing else, on purpose (see the migration this ships with) — suspension,
@@ -105,7 +107,9 @@ export async function computeReadiness(
     const requirement: ReadinessRequirement = {
       key,
       message,
-      area: moduleConfiguration(input.organizationId, sold),
+      area: key === 'reception'
+        ? { href: `/organizations/${input.organizationId}/${configTarget('phone-numbers').path}`, label: 'Numbers & assignments' }
+        : moduleConfiguration(input.organizationId, sold),
     };
 
     if (blocking.has(key)) {
@@ -154,7 +158,7 @@ const IMPORTANCE_ORDER: Record<string, number> = { required: 0, recommended: 1, 
 
 /**
  * The setup cockpit's whole answer, built from `computeReadiness` (the module areas, and which of
- * them block) plus three plain facts about the kernel configuration a business has or has not
+ * them block) plus observed workflow, relationship and scheduling configuration a business has or has not
  * done. A count of areas, never a count of fields — 4 of 6 means four things are finished.
  *
  * Kernel areas are always optional: a solo tenant with none of them is a valid business, and
@@ -175,6 +179,7 @@ export async function computeSetupOverview(
   // The declaration, read from the types already loaded — the same fact `hasSchedulableWork`
   // answers for navigation, so setup cannot ask for resources the sidebar has withheld.
   const schedulesWork = types.some((type) => type.schedulable);
+  const missingStartingStages = (await Promise.all(types.map(async type => ({ type, stages: await listWorkItemStatuses(db, { organizationId, typeId: type.id }) })))).filter(row => row.stages.length === 0).map(row => row.type);
   const [resources, locations, hours, requirements, everyResource] = schedulesWork
     ? await Promise.all([
         listResources(db, { organizationId, limit: 1 }),
@@ -230,7 +235,11 @@ export async function computeSetupOverview(
   });
 
   areas.push(
-    kernel(
+    missingStartingStages.length ? {
+      key: 'work', label: areaLabel('work'), state: 'incomplete', importance: 'optional',
+      message: `${missingStartingStages.map(type => type.name).join(', ')} ${missingStartingStages.length === 1 ? 'needs a starting stage' : 'need starting stages'} before Work can be created.`,
+      area: { href: `/organizations/${organizationId}/work/configuration?${new URLSearchParams({ type: missingStartingStages[0].id, tab: 'workflow' })}`, label: 'Work types' },
+    } : kernel(
       'work',
       'work',
       `${areaHref(organizationId, 'work')}/configuration`,
@@ -239,6 +248,15 @@ export async function computeSetupOverview(
       'No kinds of work are defined.',
     ),
   );
+
+  if (availableFeatureKeys(states).has('pipeline')) {
+    const stages = await listCustomerStages(db, { organizationId });
+    areas.push({
+      ...kernel('relationship-stages', 'customers', `/organizations/${organizationId}/crm/configuration/relationship-stages`, stages.length,
+        `${stages.length} relationship ${stages.length === 1 ? 'stage is' : 'stages are'} defined.`, 'No relationship stages are defined. These are optional and independent of Work quotes.'),
+      label: 'Relationship stages',
+    });
+  }
 
   // Resources, hours and locations only describe scheduled work. A business whose work is not
   // scheduled is not asked for them — and a scheduling business with none of them yet is asked,
