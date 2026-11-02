@@ -2,6 +2,7 @@ import { Badge } from '@/components/display/data';
 import type { CatalogFeature } from '@/lib/domain/catalogue/catalogue';
 import type { ResolvedFeatureState } from '@/lib/domain/catalogue/organization-plans';
 import { ImplementationStateBadge } from '@/features/catalogue/implementation-state';
+import { featureOperationalState } from '@/lib/domain/catalogue/feature-operational-state';
 
 /**
  * The four independent axes a Feature carries (section 4 of the brief) — never collapsed into
@@ -36,35 +37,21 @@ export function FeatureStatusBadges({ feature }: { feature: CatalogFeature }) {
 }
 
 /**
- * What one organization sees of one Feature — resolved state handed in, never computed here
- * (section 21: "does not receive authorization logic, it receives resolved domain state").
+ * What one organization holds of one Feature, for staff — the same `featureOperationalState`
+ * classification the organization's own Settings → Features reads, so the two never disagree.
+ * An unsupported Feature earns no entitlement badge: `FeatureStatusBadges` beside it already
+ * says Planned or Partial, which is the accurate implementation metadata staff need.
  */
-export type OrganizationFeatureState =
-  | { kind: 'not_implemented' } // catalogue implementation_state is planned/partial and not entitled either
-  | { kind: 'planned' } // implemented nowhere yet, regardless of entitlement
-  | { kind: 'not_included' } // available, but this organization's Plan does not grant it
-  | { kind: 'included_off' } // granted, but not switched on (no runtime mapping is "wanted")
-  | { kind: 'included_on' }; // granted and switched on
-
-/** Combines catalogue implementation with the resolved entitlement/activation facts — never authorization logic of its own, only presentation of what was already resolved (section 21). */
-export function deriveOrganizationFeatureState(resolved: ResolvedFeatureState): OrganizationFeatureState {
-  if (resolved.implementationState !== 'available') return { kind: 'planned' };
-  if (!resolved.entitled) return { kind: 'not_included' };
-  return resolved.activation === 'active' ? { kind: 'included_on' } : { kind: 'included_off' };
-}
-
-export function EntitlementStatus({ state }: { state: OrganizationFeatureState }) {
-  switch (state.kind) {
-    case 'planned':
-      return <Badge>Planned</Badge>;
+export function EntitlementStatus({ state }: { state: ResolvedFeatureState }) {
+  switch (featureOperationalState(state)) {
+    case 'unsupported':
+      return null;
     case 'not_included':
       return <Badge>Not included</Badge>;
-    case 'included_off':
+    case 'disabled':
       return <Badge tone="neutral">Included · Off</Badge>;
-    case 'included_on':
+    case 'ready':
+    case 'setup_required':
       return <Badge tone="success">Included · On</Badge>;
-    case 'not_implemented':
-    default:
-      return <Badge>Not available</Badge>;
   }
 }

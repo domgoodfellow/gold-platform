@@ -3,7 +3,7 @@ import type { ApprovedService } from '@/lib/domain/customers/service-disclosures
 import { ServicePresentation } from '@/features/portal-access/service-presenter';
 import { PORTAL_MODULES, portalPageHref, type PortalContent, type PortalPage, type PortalModule, type PortalModuleInstance } from '@/lib/domain/portal/composition';
 
-export type PortalRecord = { id: string; title: string; detail: string; upcoming?: boolean; action?: ReactNode; service?: ApprovedService; timezone?: string };
+export type PortalRecord = { id: string; title: string; detail: string; upcoming?: boolean; action?: ReactNode; /** An invoice's own PDF, offered whether or not the module takes payments. */ document?: ReactNode; service?: ApprovedService; timezone?: string };
 export type PortalPresentation = Record<PortalModule, PortalRecord[]>;
 export const PORTAL_PREVIEW_RECORDS: PortalPresentation = {
   services: [{id:'example-service',title:'Example website implementation',detail:'',service:{id:'example-service',title:'Example website implementation',serviceKind:'website',summary:'Example approved update: design prepared for review.',status:'Ready for review',publishedAt:'2026-10-14T12:00:00Z',deliverables:[{kind:'website',title:'Example website',summary:'Example deliverable presentation.',status:'Ready for review',url:null}]}}],
@@ -20,6 +20,7 @@ export function PortalModulePresenter({ module, records, available = true, previ
     {!available && module.kind !== 'services' ? <p className="mt-2 text-sm text-muted">{PORTAL_MODULES[module.kind].label} is currently unavailable.</p> : !shown.length ? <p className="mt-2 text-sm text-muted">{module.kind === 'services' ? 'No approved service updates are currently shared.' : module.kind === 'forms' ? 'No Forms are currently offered.' : module.kind === 'invoices' ? 'Nothing invoiced yet.' : 'Nothing recorded yet.'}</p>
       : <ul className={module.config.variant === 'cards' ? 'mt-3 grid gap-3' : 'mt-2 divide-y divide-border'}>{shown.map(record => <li key={record.id} className={module.config.variant === 'cards' ? 'rounded-md border border-border p-3 text-sm' : 'py-3 text-sm'}>
         {module.kind === 'services' && record.service ? <ServicePresentation service={record.service} timezone={record.timezone} summary={module.config.variant === 'summary'}/> : <>{module.config.variant !== 'summary' && (module.kind !== 'forms' || preview || !record.action) ? <p className="break-words font-medium">{record.title}</p> : null}{record.detail ? <p className="mt-1 break-words whitespace-pre-line text-muted">{record.detail}</p> : null}</>}
+        {!preview && module.kind === 'invoices' ? record.document : null}
         {!preview && (module.kind !== 'invoices' || module.config.payments) ? record.action : null}
       </li>)}</ul>}
   </section>;

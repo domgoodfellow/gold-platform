@@ -14,6 +14,7 @@ import { describeSubscriptionPackage } from '@/lib/domain/platform-billing/subsc
 import { getOrganizationServiceAccess } from '@/lib/domain/platform-billing/service-access';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 import { applySubscriptionEvent, type TestSubscriptionEvent } from '@/tests/support/subscription-events';
+import { BILLING_PROVISIONER_API, withBillingProvisionerApi } from '@/tests/support/billing-provisioner';
 
 /**
  * C3: a provider subscription is its items, correlated to the checkout that bought it, and an
@@ -42,7 +43,8 @@ async function newTenant(label: string): Promise<Tenant> {
   return { db, organizationId, userId: created.user.id };
 }
 
-const realFetch = globalThis.fetch.bind(globalThis);
+// apps/api's billing provisioner answered against the real database; everything else passed through.
+const realFetch = withBillingProvisionerApi(globalThis.fetch.bind(globalThis), { supabaseUrl: SUPABASE_URL, anonKey: ANON_KEY, connectionString: CONNECTION });
 let pg: Client;
 let staff: SupabaseClient;
 
@@ -51,6 +53,7 @@ beforeAll(async () => {
   await pg.connect();
   staff = await asPlatformStaff();
   process.env.STRIPE_SECRET_KEY = 'sk_test_subscription_items_suite';
+  process.env.GOLD_API_URL = BILLING_PROVISIONER_API;
 }, 60_000);
 
 afterAll(async () => {
@@ -174,7 +177,7 @@ describe('a checkout puts its own id on the subscription it creates, and the web
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
       if (!url.includes('api.stripe.com')) return realFetch(input as never, init);
-      if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: `cus_${randomUUID().slice(0, 10)}` }), { status: 200 });
+      if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: `cus_${randomUUID().replace(/-/g, '').slice(0, 12)}` }), { status: 200 });
       checkoutBody = String(init?.body ?? '');
       return new Response(JSON.stringify({ id: 'cs_c3', url: 'https://checkout.stripe.test/c3' }), { status: 200 });
     });
@@ -249,7 +252,7 @@ describe('the Plan & usage screen offers checkout whenever the authoritative quo
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
       if (!url.includes('api.stripe.com')) return realFetch(input as never, init);
-      if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: `cus_${randomUUID().slice(0, 10)}` }), { status: 200 });
+      if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: `cus_${randomUUID().replace(/-/g, '').slice(0, 12)}` }), { status: 200 });
       checkoutBody = String(init?.body ?? '');
       return new Response(JSON.stringify({ id: 'cs_agr', url: 'https://checkout.stripe.test/agr' }), { status: 200 });
     });

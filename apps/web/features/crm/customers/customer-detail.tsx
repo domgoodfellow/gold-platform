@@ -13,11 +13,11 @@ import { ActivityList } from '@/features/timeline/activity-list';
 import { CallHistory } from '@/features/communications/voice/call-history';
 import { PortalLinkForm } from '@/features/portal-access/portal-link-form';
 import { PortalInviteList } from '@/features/portal-access/invite-list';
-import { CommercialProposalSection } from './commercial-proposal-section';
+import { CommercialProposalSection, type ProposalInvoicing } from './commercial-proposal-section';
 import { ConfigurationRecommendationSection } from './configuration-recommendation-section';
 import { DiscoverySnapshotSection } from './discovery-snapshot-section';
 import type { Invoice } from '@/lib/domain/billing/invoices';
-import type { Plan } from '@/lib/domain/catalogue/plans';
+import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 import type { CommercialProposal } from '@/lib/domain/customers/commercial-proposals';
 import type { ProposalInvite } from '@/lib/domain/customers/proposal-invites';
 import type { AcceptedProposalHandoff } from '@/lib/domain/customers/proposal-handoff';
@@ -79,10 +79,12 @@ export function CustomerDetail(props: {
   commercialProposals: CommercialProposal[];
   proposalInvites: ProposalInvite[];
   handoffsByProposalId: Record<string, AcceptedProposalHandoff>;
+  invoicesByProposalId?: Record<string, { id: string; number: number }>;
+  /** Set when this person may invoice an accepted proposal here (`invoice.issue`, Billing usable). */
+  proposalInvoicing?: ProposalInvoicing;
   mayHandoff: boolean;
   mayPropose: boolean;
-  plans: Plan[];
-  addonPlans: Plan[];
+  catalogItems: PriceBookItem[];
   origin: string;
   portalOrigin?: string;
   timezone: string;
@@ -93,7 +95,7 @@ export function CustomerDetail(props: {
 }) {
   const { organizationId, customer, stage, stages, definitions, features, permissions, mayPropose, role, timezone } = props;
   const base = `/organizations/${organizationId}/crm/contacts/${customer.id}`;
-  const salesViews: RecordView[] = [...(props.opportunities ? ['opportunities' as const] : []), ...(mayPropose ? ['discovery' as const, 'configuration' as const, 'commercial' as const] : []), ...(features.billing ? ['invoices' as const] : [])];
+  const salesViews: RecordView[] = [...(props.opportunities ? ['opportunities' as const] : []), ...(mayPropose ? ['discovery' as const, 'configuration' as const] : []), ...(features.billing || props.commercialProposals.length > 0 ? ['commercial' as const] : []), ...(features.billing ? ['invoices' as const] : [])];
   const activityViews: RecordView[] = ['timeline', ...(features.voice ? ['calls' as const] : [])];
   const relatedViews: RecordView[] = ['work', 'locations', ...(props.support ? ['support' as const] : []), ...(props.services ? ['services' as const] : [])];
   const available: Availability = {
@@ -133,7 +135,7 @@ export function CustomerDetail(props: {
       case 'opportunities': return props.opportunities;
       case 'discovery': return <DiscoverySnapshotSection organizationId={organizationId} customerId={customer.id} snapshot={props.discoverySnapshot} mayEdit={permissions.edit} role={role} />;
       case 'configuration': return props.configurationRecommendation ? <ConfigurationRecommendationSection recommendation={props.configurationRecommendation} /> : <CompactEmptyState>No proposed configuration yet. It is drawn from the discovery answers.</CompactEmptyState>;
-      case 'commercial': return <CommercialProposalSection accessibleTenantIds={props.accessibleTenantIds} organizationId={organizationId} customerId={customer.id} proposals={props.commercialProposals} invites={props.proposalInvites} handoffsByProposalId={props.handoffsByProposalId} mayHandoff={props.mayHandoff} origin={props.origin} plans={props.plans} addonPlans={props.addonPlans} mayEdit={permissions.priceManage} role={role} currency={props.currency} />;
+      case 'commercial': return <CommercialProposalSection accessibleTenantIds={props.accessibleTenantIds} organizationId={organizationId} customerId={customer.id} proposals={props.commercialProposals} invites={props.proposalInvites} handoffsByProposalId={props.handoffsByProposalId} mayHandoff={props.mayHandoff} origin={props.origin} catalogItems={props.catalogItems} mayBuild={features.billing && permissions.priceManage} mayEdit={permissions.priceManage} role={role} currency={props.currency} invoicesByProposalId={props.invoicesByProposalId} invoicing={props.proposalInvoicing ?? null} />;
       case 'invoices': return <CustomerFinancialSummary organizationId={organizationId} invoices={props.invoices} timezone={timezone} />;
       case 'timeline': return <ActivityList timeline={props.timeline} timezone={timezone} />;
       case 'calls': return <>{<CallHistory organizationId={organizationId} timeZone={timezone} calls={props.calls} empty="No calls with this contact." />}{permissions.call ? null : <Hint className="mt-4">Your role, {role}, cannot call contacts.</Hint>}</>;

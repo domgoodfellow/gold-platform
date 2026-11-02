@@ -3,25 +3,29 @@
 import { useActionState, useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { financeChoices, financeMutation, financeReview, type FinanceActionState, type FinanceChoicesResult } from '@/app/organizations/[organizationId]/finance/actions';
 
-type Kind = 'invoice' | 'quote' | 'payment';
+type Kind = 'invoice' | 'quote' | 'payment' | 'customer';
 export type FinanceReview = Awaited<ReturnType<typeof financeReview>>;
 
 /**
  * The record half of a Finance dialog: search the eligible records, choose one, and load what it
  * holds for review. A preselected record skips the search. Responses that arrive after the person
  * has moved on are dropped, so a slow search never replaces a newer one. `reload` re-reads the
- * chosen record after a successful write, so the review shows what was just recorded.
+ * chosen record after a successful write, so the review shows what was just recorded. `load` reads
+ * the chosen record; by default it is the Work item (`financeReview`), and a dialog that chooses
+ * an invoice or a customer passes its own reader.
  */
-export function useFinanceRecord(organizationId: string, kind: Kind, initialId?: string, options: { includeSettled?: boolean } = {}) {
+export function useFinanceRecord<Review = FinanceReview>(organizationId: string, kind: Kind, initialId?: string, options: { includeSettled?: boolean; load?: (organizationId: string, id: string) => Promise<Review> } = {}) {
   const [q, setQ] = useState('');
   const [selected, setSelected] = useState(initialId ?? '');
   const [choices, setChoices] = useState<FinanceChoicesResult | null>(null);
   // Keyed by the record it was loaded for, so a stale answer is never shown for a newer choice.
-  const [loaded, setLoaded] = useState<{ id: string; review: FinanceReview } | null>(null);
+  const [loaded, setLoaded] = useState<{ id: string; review: Review } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [version, setVersion] = useState(0);
   const includeSettled = options.includeSettled ?? false;
+  // Held, not depended on: a caller passing an inline reader must not re-read on every render.
+  const load = useRef(options.load ?? (financeReview as unknown as (organizationId: string, id: string) => Promise<Review>));
   useEffect(() => {
     if (initialId) return;
     let active = true;
@@ -37,7 +41,7 @@ export function useFinanceRecord(organizationId: string, kind: Kind, initialId?:
   useEffect(() => {
     if (!selected) return;
     let active = true;
-    financeReview(organizationId, selected)
+    load.current(organizationId, selected)
       .then(result => { if (active) { setLoaded({ id: selected, review: result }); setError(null); } })
       .catch(() => { if (active) setError('This record could not be loaded. Choose another.'); });
     return () => { active = false; };

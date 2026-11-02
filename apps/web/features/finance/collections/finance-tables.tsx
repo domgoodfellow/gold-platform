@@ -14,6 +14,14 @@ const date = (iso: string, timezone: string) => new Intl.DateTimeFormat('en-CA',
 
 /** Where a record opens: the work record owns the job, and the customer's own page owns the customer. Finance owns neither. */
 export const workHref = (organizationId: string, workItemId: string) => `/organizations/${organizationId}/work/${workItemId}?tab=financials`;
+/** The customer's commercial proposals in CRM, where an invoiced proposal's version history is read. */
+export const proposalHref = (organizationId: string, customerId: string) => `/organizations/${organizationId}/crm/contacts/${customerId}?section=sales&view=commercial`;
+/**
+ * Where an invoice opens. A Work invoice belongs to its Work item's Financials; a direct or proposal
+ * invoice has no Work record, so it opens in Finance's own invoice inspector. Never a Work link for an invoice without Work.
+ */
+export const invoiceHref = (organizationId: string, invoice: { id: string; workItemId: string | null }) =>
+  invoice.workItemId ? workHref(organizationId, invoice.workItemId) : `/organizations/${organizationId}/finance/invoices?invoice=${invoice.id}`;
 const customerHref = (organizationId: string, customerId: string) => `/organizations/${organizationId}/crm/contacts/${customerId}`;
 
 /** Settled, overdue or outstanding — told by word and icon as well as colour. */
@@ -39,11 +47,11 @@ export function InvoicesTable({ organizationId, rows, empty, mayRecord = false, 
       actions={mayRecord || inspectHref ? row => <>
         {inspectHref ? <Link href={inspectHref(row.id)} scroll={false} data-inspect-invoice={row.id} aria-label={`Preview invoice #${row.number}`} className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium hover:bg-hover"><PanelRight aria-hidden className="size-3.5" />Preview</Link> : null}
         {mayRecord && today ? row.settled
-          ? <PaymentDialog organizationId={organizationId} workItemId={row.workItemId} today={today} entry="correction" label="Correction" ariaLabel={`Record a correction on invoice #${row.number}`} size="tiny" tone="ghost" />
-          : <PaymentDialog organizationId={organizationId} workItemId={row.workItemId} today={today} label="Record payment" ariaLabel={`Record payment for invoice #${row.number}`} size="tiny" /> : null}
+          ? <PaymentDialog organizationId={organizationId} invoiceId={row.id} today={today} entry="correction" label="Correction" ariaLabel={`Record a correction on invoice #${row.number}`} size="tiny" tone="ghost" />
+          : <PaymentDialog organizationId={organizationId} invoiceId={row.id} today={today} label="Record payment" ariaLabel={`Record payment for invoice #${row.number}`} size="tiny" /> : null}
       </> : undefined}
       columns={[
-        { key: 'number', header: 'Invoice', emphasis: 'primary', cell: (row) => <Link className={LINK} href={workHref(organizationId, row.workItemId)}>#{row.number}</Link> },
+        { key: 'number', header: 'Invoice', emphasis: 'primary', cell: (row) => <span className="flex flex-col"><Link className={LINK} href={invoiceHref(organizationId, row)}>#{row.number}</Link>{row.source === 'work_item' ? null : <span className="text-xs text-muted">{row.source === 'direct' ? 'Direct' : 'Proposal'}</span>}</span> },
         { key: 'customer', header: 'Customer', cell: (row) => row.customerId ? <Link className="underline-offset-4 hover:underline" href={customerHref(organizationId, row.customerId)}>{row.billedTo}</Link> : row.billedTo },
         ...(!compact ? [{ key: 'issued', header: 'Issued', cell: (row: FinanceInvoiceRow) => inZone(row.issuedAt), cardValue: () => null }] : []),
         { key: 'due', header: 'Due', cell: (row) => row.dueAt ? inZone(row.dueAt) : 'No due date' },
@@ -66,7 +74,7 @@ export function PaymentsTable({ organizationId, rows, empty, timezone = 'UTC' }:
       tableFrom="wide"
       columns={[
         { key: 'received', header: 'Received', emphasis: 'primary', cell: (row) => date(row.receivedAt, timezone) },
-        { key: 'invoice', header: 'Invoice', cell: (row) => <Link className={LINK} href={workHref(organizationId, row.workItemId)}>#{row.invoiceNumber}</Link> },
+        { key: 'invoice', header: 'Invoice', cell: (row) => <Link className={LINK} href={invoiceHref(organizationId, { id: row.invoiceId, workItemId: row.workItemId })}>#{row.invoiceNumber}</Link> },
         { key: 'customer', header: 'Customer', cell: (row) => row.customerId ? <Link className="underline-offset-4 hover:underline" href={customerHref(organizationId, row.customerId)}>{row.billedTo}</Link> : row.billedTo },
         { key: 'entry', header: 'Entry', cell: (row) => <PaymentEntryBadge amountMinor={row.amountMinor} /> },
         // Only what `payments` stores: no provider means a person wrote it down; nothing else is guessed.

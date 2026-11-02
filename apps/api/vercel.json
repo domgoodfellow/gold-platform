@@ -105,6 +105,10 @@
       "destination": "/api/stripe_platform_billing_webhook"
     },
     {
+      "source": "/platform-billing/customer",
+      "destination": "/api/platform_billing_customer"
+    },
+    {
       "source": "/public_chat",
       "destination": "/api/public_chat"
     },

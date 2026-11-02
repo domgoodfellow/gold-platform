@@ -80,7 +80,7 @@ describe('schema conformance', () => {
         order by t.relname, i.relname`,
     );
 
-    // **Six exceptions, and they share one rule rather than being separate lapses.**
+    // **Eight exceptions, and they share one rule rather than being separate lapses.**
     //
     // Tenant isolation exists so one tenant's uniqueness cannot block another's: two businesses must both be
     // able to call a status "Booked". Every index below is the opposite question — **an
@@ -110,6 +110,11 @@ describe('schema conformance', () => {
     //     holding a form's public key with no tenant in hand, so the key must be unique across
     //     every business or it could not say which form it means. It names only a published form
     //     anybody could already open.
+    //   * `platform_billing_customers_finalized_reference` (20261031000001) is the same shape: a
+    //     signed processor event arrives holding a customer reference and its environment, with no
+    //     tenant in hand, and the webhook must resolve it to exactly one organization. Scoping it by
+    //     `organization_id` would let two businesses claim one processor customer, which is the
+    //     routing defect it exists to prevent. Pending placeholders are excluded; they identify nobody.
     //   * `platform_retail_rates_id_meter_currency_unique` is the inverse case: not an outsider's
     //     secret, but a row that may belong to *no* tenant at all. `platform_retail_rates` gained
     //     an optional `organization_id` in `20261018000001` for a negotiated override; most rows
@@ -157,6 +162,11 @@ describe('schema conformance', () => {
         table_name: 'organization_invitations',
         index_name: 'organization_invitations_token_hash_unique',
         first: 'token_hash',
+      },
+      {
+        table_name: 'platform_billing_customers',
+        index_name: 'platform_billing_customers_finalized_reference',
+        first: 'provider',
       },
       {
         table_name: 'platform_retail_rates',

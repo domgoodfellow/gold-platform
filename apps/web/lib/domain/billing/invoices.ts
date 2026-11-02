@@ -30,9 +30,16 @@ export type Payment = {
   note: string | null;
 };
 
+/** Where an invoice came from. A Work invoice copies its Work item's quote; a direct invoice copies catalog items; a proposal invoice copies an accepted proposal's lines. */
+export type InvoiceSource = 'work_item' | 'direct' | 'proposal';
+
 export type Invoice = {
   id: string;
-  workItemId: string;
+  source: InvoiceSource;
+  /** The Work item it invoiced. Null unless `source` is `work_item` (`invoices_source_reference`). */
+  workItemId: string | null;
+  /** The accepted proposal it invoiced. Null unless `source` is `proposal`. */
+  proposalId: string | null;
   /** Per tenant and human-facing. Two businesses both having an invoice 1 is the ordinary case. */
   number: number;
   /** Who was billed, as it read at issue — snapshotted rather than joined. */
@@ -85,7 +92,7 @@ export async function getInvoiceForWorkItem(
 ): Promise<Invoice | null> {
   const { data, error } = await db
     .from('invoices')
-    .select('id, work_item_id, number, billed_to, customer_id, currency, issued_at, due_at')
+    .select(INVOICE_COLUMNS)
     .eq('organization_id', input.organizationId)
     .eq('work_item_id', input.workItemId)
     .maybeSingle();
@@ -93,30 +100,61 @@ export async function getInvoiceForWorkItem(
   if (error) {
     throw new DomainError(error.message, 'invoices.read_failed');
   }
-  if (!data) return null;
+  return data ? hydrateInvoice(db, input.organizationId, data) : null;
+}
 
+/** One invoice by its own id, whichever source issued it. Null when it is not this organization's or this reader may not see it (RLS). */
+export async function getInvoice(
+  db: Db,
+  input: { organizationId: string; invoiceId: string },
+): Promise<Invoice | null> {
+  const { data, error } = await db
+    .from('invoices')
+    .select(INVOICE_COLUMNS)
+    .eq('organization_id', input.organizationId)
+    .eq('id', input.invoiceId)
+    .maybeSingle();
+
+  if (error) {
+    throw new DomainError(error.message, 'invoices.read_failed');
+  }
+  return data ? hydrateInvoice(db, input.organizationId, data) : null;
+}
+
+async function hydrateInvoice(db: Db, organizationId: string, row: InvoiceRow): Promise<Invoice> {
   const [lines, payments] = await Promise.all([
-    listInvoiceLines(db, { organizationId: input.organizationId, invoiceId: data.id }),
-    listPayments(db, { organizationId: input.organizationId, invoiceId: data.id }),
+    listInvoiceLines(db, { organizationId, invoiceId: row.id }),
+    listPayments(db, { organizationId, invoiceId: row.id }),
   ]);
+  return { ...invoiceFields(row), lines, payments };
+}
 
+/** The database's source column, held to the sources the schema allows rather than cast. */
+export function invoiceSource(value: string): InvoiceSource {
+  if (value === 'work_item' || value === 'direct' || value === 'proposal') return value;
+  throw new DomainError(`Unknown invoice source: ${value}`, 'invoices.source_unknown');
+}
+
+function invoiceFields(row: InvoiceRow): Omit<Invoice, 'lines' | 'payments'> {
   return {
-    id: data.id,
-    workItemId: data.work_item_id,
-    number: data.number,
-    billedTo: data.billed_to,
-    customerId: data.customer_id,
-    currency: data.currency,
-    issuedAt: data.issued_at,
-    dueAt: data.due_at,
-    lines,
-    payments,
+    id: row.id,
+    source: invoiceSource(row.source),
+    workItemId: row.work_item_id,
+    proposalId: row.proposal_id,
+    number: row.number,
+    billedTo: row.billed_to,
+    customerId: row.customer_id,
+    currency: row.currency,
+    issuedAt: row.issued_at,
+    dueAt: row.due_at,
   };
 }
 
 type InvoiceRow = {
   id: string;
-  work_item_id: string;
+  source: string;
+  work_item_id: string | null;
+  proposal_id: string | null;
   number: number;
   billed_to: string;
   customer_id: string | null;
@@ -125,7 +163,7 @@ type InvoiceRow = {
   due_at: string | null;
 };
 
-const INVOICE_COLUMNS = 'id, work_item_id, number, billed_to, customer_id, currency, issued_at, due_at';
+const INVOICE_COLUMNS = 'id, source, work_item_id, proposal_id, number, billed_to, customer_id, currency, issued_at, due_at';
 
 /**
  * **Batched rather than one query per invoice:** two queries scoped to the invoice ids in hand,
@@ -189,22 +227,15 @@ async function hydrateInvoices(db: Db, organizationId: string, invoices: Invoice
   }
 
   return invoices.map((row) => ({
-    id: row.id,
-    workItemId: row.work_item_id,
-    number: row.number,
-    billedTo: row.billed_to,
-    customerId: row.customer_id,
-    currency: row.currency,
-    issuedAt: row.issued_at,
-    dueAt: row.due_at,
+    ...invoiceFields(row),
     lines: linesByInvoice.get(row.id) ?? [],
     payments: paymentsByInvoice.get(row.id) ?? [],
   }));
 }
 
 /**
- * What this customer has actually been billed, across every job they've ever had — not which
- * jobs currently point to them. `invoices.customer_id` is snapshotted at `issue_invoice` and
+ * What this customer has actually been billed, from Work and directly — not which jobs currently
+ * point to them. `invoices.customer_id` is snapshotted at `issue_invoice` and
  * never updated afterward (no update policy exists on `invoices` at all), so filtering on it
  * directly is already the historical truth; nothing here joins through a work item's own,
  * mutable `customer_id`.
@@ -263,7 +294,7 @@ export async function invoicedWorkItemIds(
   if (error) {
     throw new DomainError(error.message, 'invoices.list_failed');
   }
-  return new Set((data ?? []).map((row) => row.work_item_id));
+  return new Set((data ?? []).flatMap((row) => (row.work_item_id ? [row.work_item_id] : [])));
 }
 
 /** A recorded payment together with the invoice it settled, as that invoice read at issue. */
@@ -272,7 +303,9 @@ export type PaymentRecord = Payment & {
   invoiceNumber: number;
   billedTo: string;
   customerId: string | null;
-  workItemId: string;
+  invoiceSource: InvoiceSource;
+  /** Null when the invoice was issued directly rather than from Work. */
+  workItemId: string | null;
   /** The processor's own reference. Null for a payment a person wrote down. */
   providerReference: string | null;
 };
@@ -302,7 +335,7 @@ export async function listOrganizationPayments(
 
   const { data: invoices, error: invoiceError } = await db
     .from('invoices')
-    .select('id, work_item_id, number, billed_to, customer_id')
+    .select('id, source, work_item_id, number, billed_to, customer_id')
     .eq('organization_id', input.organizationId)
     .in('id', [...new Set(rows.map((row) => row.invoice_id))]);
 
@@ -328,6 +361,7 @@ export async function listOrganizationPayments(
         invoiceNumber: invoice.number,
         billedTo: invoice.billed_to,
         customerId: invoice.customer_id,
+        invoiceSource: invoiceSource(invoice.source),
         workItemId: invoice.work_item_id,
       }];
     }),
@@ -451,6 +485,116 @@ export async function issueInvoice(
   }
 
   return data;
+}
+
+/** One line of a direct invoice as a caller asks for it: a catalog item and how many. Never an amount. */
+export type DirectInvoiceLineRequest = { priceBookItemId: string; quantity: number };
+
+const DIRECT_REFUSALS: Record<string, [string, string]> = {
+  GD011: ['That customer is not in this business.', 'invoices.customer_unavailable'],
+  GD012: ['A line names a catalog item this business does not have.', 'invoices.item_unavailable'],
+  GD013: ["Every line must be priced in this business's trading currency.", 'invoices.currency_unsupported'],
+  GD014: ['This invoice request was already used for a different invoice. Start a new invoice.', 'invoices.request_reused'],
+  '22023': ['Each line needs a catalog item and a whole quantity from 1 to 1,000,000.', 'invoices.request_invalid'],
+  '42501': ['You cannot issue invoices here.', 'invoices.forbidden'],
+};
+
+/**
+ * Invoice a customer directly from this business's catalog, with no Work item. The caller names
+ * items and quantities only: `issue_direct_invoice` copies each item's description, unit, price
+ * and currency at issuance and takes the next number from the same sequence as Work invoices.
+ * `issuanceKey` identifies this request, so retrying it returns the invoice it already issued.
+ */
+export async function issueDirectInvoice(
+  db: Db,
+  input: {
+    organizationId: string;
+    customerId: string;
+    lines: DirectInvoiceLineRequest[];
+    issuedAt?: string | null;
+    dueAt?: string | null;
+    issuanceKey: string;
+  },
+): Promise<string> {
+  await requireActor(db);
+
+  if (input.lines.length === 0) {
+    throw new DomainError('Add at least one catalog item to the invoice.', 'invoices.no_lines');
+  }
+  for (const line of input.lines) {
+    if (!Number.isInteger(line.quantity) || line.quantity < 1 || line.quantity > 1_000_000) {
+      throw new DomainError('Quantity is a whole number from 1 to 1,000,000.', 'invoices.quantity_invalid');
+    }
+  }
+
+  const { data, error } = await db.rpc('issue_direct_invoice', {
+    p_organization_id: input.organizationId,
+    p_customer_id: input.customerId,
+    p_lines: input.lines.map((line) => ({ price_book_item_id: line.priceBookItemId, quantity: line.quantity })),
+    // Postgres records no nullability for a function argument.
+    p_issued_at: (input.issuedAt ?? null) as string,
+    p_due_at: (input.dueAt ?? null) as string,
+    p_issuance_key: input.issuanceKey,
+  });
+
+  if (error) {
+    const refusal = DIRECT_REFUSALS[error.code];
+    if (refusal) throw new DomainError(refusal[0], refusal[1]);
+    throw new DomainError(error.message, 'invoices.issue_failed');
+  }
+  return data;
+}
+
+const PROPOSAL_REFUSALS: Record<string, [string, string]> = {
+  GD014: ['This invoice request was already used for a different invoice. Start a new invoice.', 'invoices.request_reused'],
+  GD015: ['This proposal has already been invoiced.', 'invoices.proposal_already_invoiced'],
+  GD019: ['Only an accepted one-off catalog proposal can be invoiced.', 'invoices.proposal_not_invoiceable'],
+  GD020: ["This proposal's lines do not add up to its accepted total, so it cannot be invoiced.", 'invoices.proposal_inconsistent'],
+  '22023': ['The due date is before the invoice date.', 'invoices.request_invalid'],
+  '42501': ['You cannot invoice this proposal.', 'invoices.forbidden'],
+};
+
+/**
+ * Invoice an accepted one-off catalog proposal, completely and once. The caller names the proposal,
+ * optional dates and the request's key only: `issue_invoice_from_proposal` copies the proposal's
+ * own lines, as the customer accepted them, and never reads today's catalog. Retrying with the same
+ * key returns the same invoice; a proposal already invoiced is refused.
+ */
+export async function issueInvoiceFromProposal(
+  db: Db,
+  input: { proposalId: string; issuedAt?: string | null; dueAt?: string | null; issuanceKey: string },
+): Promise<string> {
+  await requireActor(db);
+
+  const { data, error } = await db.rpc('issue_invoice_from_proposal', {
+    p_proposal_id: input.proposalId,
+    // Postgres records no nullability for a function argument.
+    p_issued_at: (input.issuedAt ?? null) as string,
+    p_due_at: (input.dueAt ?? null) as string,
+    p_issuance_key: input.issuanceKey,
+  });
+
+  if (error) {
+    const refusal = PROPOSAL_REFUSALS[error.code];
+    if (refusal) throw new DomainError(refusal[0], refusal[1]);
+    throw new DomainError(error.message, 'invoices.issue_failed');
+  }
+  return data;
+}
+
+/** The invoice issued from each of these proposals, by proposal id. At most one each (`invoices_org_proposal_unique`). */
+export async function listInvoicesForProposals(
+  db: Db,
+  input: { organizationId: string; proposalIds: string[] },
+): Promise<Record<string, { id: string; number: number }>> {
+  if (input.proposalIds.length === 0) return {};
+  const { data, error } = await db
+    .from('invoices')
+    .select('id, number, proposal_id')
+    .eq('organization_id', input.organizationId)
+    .in('proposal_id', input.proposalIds);
+  if (error) throw new DomainError(error.message, 'invoices.list_failed');
+  return Object.fromEntries((data ?? []).flatMap((row) => (row.proposal_id ? [[row.proposal_id, { id: row.id, number: row.number }]] : [])));
 }
 
 /**

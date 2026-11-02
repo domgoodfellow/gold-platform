@@ -312,6 +312,7 @@
         "p_current_period_end",
         "p_current_period_start",
         "p_customer_reference",
+        "p_environment",
         "p_event_reference",
         "p_event_type",
         "p_items",
@@ -819,8 +820,34 @@
       ],
       "sends": [
         "p_customer_reference",
+        "p_environment",
         "p_event_reference",
         "p_event_type"
+      ]
+    },
+    "begin_platform_billing_customer": {
+      "role": "authenticated",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_environment",
+        "p_organization_id",
+        "p_provider"
+      ]
+    },
+    "finalize_platform_billing_customer": {
+      "role": "platform_billing_provisioner",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_customer_reference",
+        "p_environment",
+        "p_organization_id",
+        "p_pending_reference",
+        "p_provider",
+        "p_requested_by"
       ]
     },
     "record_provider_account_verification": {

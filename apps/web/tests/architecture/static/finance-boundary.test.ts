@@ -6,10 +6,13 @@ import { AREAS, WORKSPACES } from '@/lib/navigation';
 import { PLATFORM_DESTINATIONS } from '@/lib/platform-navigation';
 
 /**
- * Three financial planes stay three: Finance is tenant Financial Operations (customer to
- * business); what a business buys from GildOps is Settings → Plan & usage; GildOps' own commercial
- * control plane is Platform. Finance reaching into either of the others is how Finance Home once
- * became a Plan and subscription dashboard, so this test reads the imports rather than the words.
+ * Three financial views stay separate: Finance is each organization's own selling (customer to
+ * business, ADR-051); what a business buys from GildOps is Settings → Plan & usage; GildOps'
+ * private provider economics, and during transition the existing platform-billing records, are
+ * Platform. Finance reaching into either of the others is how Finance Home once became a Plan and
+ * subscription dashboard, so this test reads the imports rather than the words. Moving GildOps'
+ * selling into its operating Organization's Finance means building it on Finance's own
+ * capabilities, never importing these planes.
  */
 
 const WEB = fileURLToPath(new URL('../../..', import.meta.url));
@@ -94,7 +97,7 @@ describe('Finance is tenant Financial Operations', () => {
   });
 });
 
-describe("Plans & Add-ons and GildOps' portfolio economics are Platform's", () => {
+describe("During transition, Plans & Add-ons and GildOps' portfolio economics stay in Platform (ADR-051)", () => {
   it('are registered Platform destinations behind the commercial permission', () => {
     for (const key of ['plans', 'portfolio-economics']) {
       expect(PLATFORM_DESTINATIONS.find((destination) => destination.key === key)?.requires).toBe('platform.commercial');

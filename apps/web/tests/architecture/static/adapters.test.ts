@@ -50,6 +50,9 @@ const VENDORS = [
   'osrm',
   'mapbox',
   'graphhopper',
+  // Document rendering. Named the day the capability landed, so the domain never says which library draws a PDF.
+  'react-pdf',
+  'pdfkit',
 ];
 
 /**
@@ -60,7 +63,7 @@ const VENDORS = [
  * this repository refuses to say in the wrong place, and it is allowed to run ahead of what has
  * been built.
  */
-const CONTRACTS = ['payments', 'platform-billing', 'geocoding', 'routing', 'drafting', 'answering', 'telephony', 'messaging', 'email', 'email-domains', 'tenant-email'];
+const CONTRACTS = ['payments', 'platform-billing', 'geocoding', 'routing', 'drafting', 'answering', 'telephony', 'messaging', 'email', 'email-domains', 'tenant-email', 'documents'];
 
 describe('the adapter boundary', () => {
   it('has no domain file importing a provider implementation', () => {

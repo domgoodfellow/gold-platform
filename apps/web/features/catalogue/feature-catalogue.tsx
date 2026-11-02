@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { ButtonLink } from '@/components/controls/button';
 import { Hint, TextInput } from '@/components/controls/inputs';
 import { EmptyState } from '@/components/surfaces/section';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import type { ResolvedFeatureState } from '@/lib/domain/catalogue/organization-plans';
+import { featureOperationalState, isOperationalFeature, type FeatureOperationalState } from '@/lib/domain/catalogue/feature-operational-state';
 import { FeatureRow } from './feature-row';
 
 export type CatalogueFeature = {
@@ -19,54 +20,45 @@ export type CatalogueFeature = {
   mayConfigure: boolean;
 };
 
-export type FeatureStatus = 'included' | 'setup' | 'disabled' | 'not-included' | 'planned';
+type OperationalFilter = Extract<FeatureOperationalState, 'ready' | 'setup_required' | 'disabled'>;
 
-/** One status per feature, from the resolved facts only (never re-deciding entitlement). */
-export function featureStatus(state: ResolvedFeatureState): FeatureStatus {
-  if (state.implementationState === 'planned') return 'planned';
-  if (!state.entitled) return 'not-included';
-  if (state.activation === 'disabled') return 'disabled';
-  if (state.readiness === 'setup_required') return 'setup';
-  return 'included';
-}
-
-const FILTERS: { key: FeatureStatus | 'all'; label: string }[] = [
+const FILTERS: { key: OperationalFilter | 'all'; label: string }[] = [
   { key: 'all', label: 'All' },
-  { key: 'included', label: 'Included' },
-  { key: 'setup', label: 'Needs setup' },
+  { key: 'ready', label: 'On' },
+  { key: 'setup_required', label: 'Needs setup' },
   { key: 'disabled', label: 'Disabled' },
-  { key: 'not-included', label: 'Not in your plan' },
-  { key: 'planned', label: 'Planned' },
 ];
 
 /**
- * Settings → Features as a catalogue a person can find their way through: what is usable first,
- * grouped by product; what the plan does not include, and what is planned but not built, folded
- * beneath each product with one explanation for the whole group rather than a card and a button
- * per feature. A setup reason shared by several features is said once per product. Search and the
- * status filters narrow the catalogue in place; a search opens the folded groups it matches, so
- * nothing is hidden from someone looking for it.
+ * Settings → Features as operational settings: only what this business can actually use, grouped
+ * by product, with its setup and on/off actions. Planned or partly built capability is not shown
+ * here at all (development status is not operational readiness), and what the plan does not
+ * include is one link to Plan & usage rather than an upgrade list inside settings. A setup reason
+ * shared by several features is said once per product, or once for the page when it spans
+ * products. Search and the status filters narrow the list in place.
  */
 export function FeatureCatalogue({ organizationId, features, mayManage }: { organizationId: string; features: CatalogueFeature[]; mayManage: boolean }) {
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<FeatureStatus | 'all'>('all');
+  const [filter, setFilter] = useState<OperationalFilter | 'all'>('all');
+  const classified = useMemo(() => features.map((feature) => ({ feature, status: featureOperationalState(feature.state) })), [features]);
+  const operational = classified.filter(({ status }) => isOperationalFeature(status));
+  const notIncludedCount = classified.filter(({ status }) => status === 'not_included').length;
   const counts = useMemo(() => {
-    const result: Record<FeatureStatus, number> = { included: 0, setup: 0, disabled: 0, 'not-included': 0, planned: 0 };
-    for (const feature of features) result[featureStatus(feature.state)] += 1;
+    const result: Record<OperationalFilter, number> = { ready: 0, setup_required: 0, disabled: 0 };
+    for (const { status } of operational) result[status as OperationalFilter] += 1;
     return result;
-  }, [features]);
+  }, [operational]);
   const needle = query.trim().toLowerCase();
-  const matches = features.filter((feature) =>
-    (filter === 'all' || featureStatus(feature.state) === filter) &&
-    (!needle || `${feature.label} ${feature.description} ${feature.module} ${feature.product}`.toLowerCase().includes(needle)));
-  const products = [...new Set(matches.map((feature) => feature.product))];
-  // Searching or choosing a folded status shows its features; browsing keeps them folded.
-  const unfold = !!needle || filter === 'not-included' || filter === 'planned';
+  const matches = operational
+    .filter(({ status, feature }) =>
+      (filter === 'all' || status === filter) &&
+      (!needle || `${feature.label} ${feature.description} ${feature.module} ${feature.product}`.toLowerCase().includes(needle)));
+  const products = [...new Set(matches.map(({ feature }) => feature.product))];
   // A setup reason shared by several products is said once for the page; one product's own, once for that product.
   const reasonProducts = new Map<string, Set<string>>();
   const reasonFeatures = new Map<string, string[]>();
-  for (const feature of matches) {
-    if (featureStatus(feature.state) !== 'setup' || !feature.state.reason) continue;
+  for (const { feature, status } of matches) {
+    if (status !== 'setup_required' || !feature.state.reason) continue;
     reasonProducts.set(feature.state.reason, (reasonProducts.get(feature.state.reason) ?? new Set()).add(feature.product));
     reasonFeatures.set(feature.state.reason, [...(reasonFeatures.get(feature.state.reason) ?? []), feature.label]);
   }
@@ -82,7 +74,7 @@ export function FeatureCatalogue({ organizationId, features, mayManage }: { orga
         </label>
         <div role="group" aria-label="Show features" className="flex flex-wrap gap-1">
           {FILTERS.map(({ key, label }) => {
-            const count = key === 'all' ? features.length : counts[key];
+            const count = key === 'all' ? operational.length : counts[key];
             if (key !== 'all' && count === 0) return null;
             return (
               <button key={key} type="button" aria-pressed={filter === key} onClick={() => setFilter(key)}
@@ -96,63 +88,35 @@ export function FeatureCatalogue({ organizationId, features, mayManage }: { orga
       <p role="status" className="sr-only">{matches.length} features shown</p>
 
       {pageReasons.length ? <div role="note" className="rounded-lg border border-border bg-warning/10 px-4 py-3 text-xs">{pageReasons.map((reason) => <p key={reason}><span className="font-medium">Needs setup:</span> {reason} <span className="text-muted">Affects {reasonFeatures.get(reason)!.join(', ')}.</span></p>)}</div> : null}
-      {products.length === 0 ? <EmptyState>No features match{needle ? ` “${query.trim()}”` : ''}.</EmptyState> : null}
+      {products.length === 0 ? <EmptyState>{operational.length === 0 ? 'No features are included for this business yet.' : `No features match${needle ? ` “${query.trim()}”` : ''}.`}</EmptyState> : null}
 
       {products.map((product) => {
-        const inProduct = matches.filter((feature) => feature.product === product);
-        const usable = inProduct.filter((feature) => ['included', 'setup', 'disabled'].includes(featureStatus(feature.state)));
-        const notIncluded = inProduct.filter((feature) => featureStatus(feature.state) === 'not-included');
-        const planned = inProduct.filter((feature) => featureStatus(feature.state) === 'planned');
-        const reasons = [...new Set(usable.filter((feature) => featureStatus(feature.state) === 'setup').map((feature) => feature.state.reason).filter((reason): reason is string => !!reason && !pageReasons.includes(reason)))];
+        const inProduct = matches.filter(({ feature }) => feature.product === product);
+        const reasons = [...new Set(inProduct.filter(({ status }) => status === 'setup_required').map(({ feature }) => feature.state.reason).filter((reason): reason is string => !!reason && !pageReasons.includes(reason)))];
         const headingId = `features-${product.replace(/\W+/g, '-').toLowerCase()}`;
         return (
           <section key={product} aria-labelledby={headingId} className="rounded-lg border border-border bg-surface">
             <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border px-4 py-3">
               <h2 id={headingId} className="text-sm font-semibold">{product}</h2>
-              <p className="text-xs text-muted">{[usable.length && `${usable.length} included`, notIncluded.length && `${notIncluded.length} not in plan`, planned.length && `${planned.length} planned`].filter(Boolean).join(' · ')}</p>
+              <p className="text-xs text-muted">{inProduct.length} included</p>
             </div>
             {reasons.length ? <div className="border-b border-border bg-warning/10 px-4 py-2 text-xs">{reasons.map((reason) => <p key={reason}><span className="font-medium">Needs setup:</span> {reason}</p>)}</div> : null}
-            {usable.length ? (
-              <div className="divide-y divide-border px-4">
-                {usable.map((feature) => (
-                  <FeatureRow key={feature.id} organizationId={organizationId} label={feature.label} description={feature.description} meta={feature.module} state={feature.state} mayManage={mayManage} mayConfigure={feature.mayConfigure} showReason={false} />
-                ))}
-              </div>
-            ) : null}
-            {notIncluded.length ? (
-              <FoldedGroup key={`n-${unfold}`} open={unfold} summary={`Not in your plan (${notIncluded.length})`}
-                note="These are not part of this business's current plan."
-                action={<ButtonLink href={`/organizations/${organizationId}/settings/plan`} tone="secondary" size="small">View plan</ButtonLink>}
-                features={notIncluded} />
-            ) : null}
-            {planned.length ? (
-              <FoldedGroup key={`p-${unfold}`} open={unfold} summary={`Planned (${planned.length})`}
-                note="Planned for GildOps and not available yet, on any plan."
-                features={planned} />
-            ) : null}
+            <div className="divide-y divide-border px-4">
+              {inProduct.map(({ feature }) => (
+                <FeatureRow key={feature.id} organizationId={organizationId} label={feature.label} description={feature.description} meta={feature.module} state={feature.state} mayManage={mayManage} mayConfigure={feature.mayConfigure} showReason={false} />
+              ))}
+            </div>
           </section>
         );
       })}
 
+      {notIncludedCount ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Hint>{notIncludedCount === 1 ? '1 more feature is' : `${notIncludedCount} more features are`} available on other plans.</Hint>
+          <ButtonLink href={`/organizations/${organizationId}/settings/plan`} tone="secondary" size="small">View plan &amp; usage</ButtonLink>
+        </div>
+      ) : null}
       {!mayManage ? <Hint>Your role cannot switch features on or off for this business.</Hint> : null}
     </div>
-  );
-}
-
-function FoldedGroup({ summary, note, action, features, open }: { summary: string; note: string; action?: ReactNode; features: CatalogueFeature[]; open: boolean }) {
-  return (
-    <details open={open} className="group border-t border-border first:border-t-0">
-      <summary className={cx('flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 text-sm text-muted hover:bg-hover', FOCUS_RING)}>
-        <span><span aria-hidden className="mr-1.5 inline-block transition-transform group-open:rotate-90">›</span>{summary}</span>
-      </summary>
-      <div className="px-4 pb-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 py-1"><Hint>{note}</Hint>{action}</div>
-        <ul className="mt-1 grid gap-x-6 gap-y-2 sm:grid-cols-2">
-          {features.map((feature) => (
-            <li key={feature.id} className="min-w-0 text-sm"><span className="font-medium">{feature.label}</span><span className="block text-xs text-muted">{feature.description}</span></li>
-          ))}
-        </ul>
-      </div>
-    </details>
   );
 }

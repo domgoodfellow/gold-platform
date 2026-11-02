@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { seedLegacyPlanProposal } from '@/tests/support/legacy-proposals';
 import { Client } from 'pg';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { getPlan } from '@/lib/domain/catalogue/plans';
 import {
   acceptCommercialProposal,
-  buildCommercialProposal,
   declineCommercialProposal,
   listCommercialProposalsForExternalCustomer,
   markCommercialProposalSent,
@@ -54,7 +54,7 @@ describe('a proposal session', () => {
   let planId: string;
 
   async function sentProposal(forCustomer = customerId) {
-    const built = await buildCommercialProposal(shop.db, {
+    const built = await seedLegacyPlanProposal({ createdBy: (await shop.db.auth.getUser()).data.user!.id,
       organizationId: shop.organizationId,
       customerId: forCustomer,
       planId,

@@ -41,6 +41,7 @@ import api.invitation_email_webhook as invitation_email_webhook
 import api.organization_domains as organization_domains
 import api.organization_email_domains as organization_email_domains
 import api.provider_operations as provider_operations
+import api.platform_billing_customer as platform_billing_customer
 import api.public_chat as public_chat
 import api.routing_preview_inbound as routing_preview_inbound
 import api.routing_preview_outbound as routing_preview_outbound
@@ -560,6 +561,7 @@ PEOPLE = [
     (routing_preview_outbound, "load_domain_settings", "resolve_outbound_identity"),
     (integration_operations, "load_integration_settings", "operate"),
     (provider_operations, "load_provider_operations_settings", "operate"),
+    (platform_billing_customer, "load_platform_billing_provisioning_settings", "ensure_billing_customer"),
     (organization_domains, "load_provider_operations_settings", "run_domain_command"),
     (organization_email_domains, "load_provider_operations_settings", "run_email_domain_command"),
     (invitation_email, "load_provider_operations_settings", "send_invitation_email"),

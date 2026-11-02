@@ -1,11 +1,15 @@
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
-import type { PaymentRecord } from './invoices';
+import { invoiceSource, type InvoiceSource, type PaymentRecord } from './invoices';
 import type { Price } from '@/lib/domain/pricing/prices';
 
 export type FinanceInvoiceRow = {
   id: string;
-  workItemId: string;
+  source: InvoiceSource;
+  /** Null for an invoice issued directly; such an invoice has no Work record to open. */
+  workItemId: string | null;
+  /** The accepted proposal it was issued from; null unless `source` is `proposal`. */
+  proposalId: string | null;
   number: number;
   billedTo: string;
   customerId: string | null;
@@ -102,9 +106,9 @@ export async function readFinanceInvoices(db: Db, organizationId: string, f: Fin
   return { rows, total: count ?? 0 };
 }
 
-type InvoiceRecord = { id: string | null; work_item_id: string | null; number: number | null; billed_to: string | null; customer_id: string | null; currency: string | null; issued_at: string | null; due_at: string | null; total_minor: number | null; paid_minor: number | null; outstanding_minor: number | null; settled: boolean | null; overdue: boolean | null };
+type InvoiceRecord = { id: string | null; source: string | null; work_item_id: string | null; proposal_id: string | null; number: number | null; billed_to: string | null; customer_id: string | null; currency: string | null; issued_at: string | null; due_at: string | null; total_minor: number | null; paid_minor: number | null; outstanding_minor: number | null; settled: boolean | null; overdue: boolean | null };
 function invoiceRow(r: InvoiceRecord): FinanceInvoiceRow {
-  return ({ id: r.id!, workItemId: r.work_item_id!, number: r.number!, billedTo: r.billed_to!, customerId: r.customer_id,
+  return ({ id: r.id!, source: invoiceSource(r.source ?? ''), workItemId: r.work_item_id, proposalId: r.proposal_id, number: r.number!, billedTo: r.billed_to!, customerId: r.customer_id,
     currency: r.currency!, issuedAt: r.issued_at!, dueAt: r.due_at, total: r.total_minor === null ? null : { totalMinor: safeMinor(r.total_minor), currency: r.currency! },
     paidMinor: safeMinor(r.paid_minor ?? 0), outstandingMinor: r.outstanding_minor === null ? null : safeMinor(r.outstanding_minor), settled: r.settled ?? false, overdue: r.overdue ?? false });
 }
@@ -144,7 +148,7 @@ export async function readFinancePayments(db: Db, organizationId: string, f: Fin
   if (f.q && searchTerm(f.q)) { const q = searchTerm(f.q); query = /^#?\d+$/.test(f.q.trim()) ? query.eq('invoice_number', Number(f.q.replace('#', ''))) : query.or(`billed_to.ilike.%${q}%,provider_reference.ilike.%${q}%,note.ilike.%${q}%`); }
   const { data, error, count } = await ordered(query, 'payments', f.sort, 'id').range(...bounds(f));
   if (error) throw new DomainError(error.message, 'payments.list_failed');
-  const rows: PaymentRecord[] = (data ?? []).map(r => ({ id: r.id!, invoiceId: r.invoice_id!, invoiceNumber: r.invoice_number!, workItemId: r.work_item_id!, billedTo: r.billed_to!, customerId: r.customer_id,
+  const rows: PaymentRecord[] = (data ?? []).map(r => ({ id: r.id!, invoiceId: r.invoice_id!, invoiceNumber: r.invoice_number!, invoiceSource: invoiceSource(r.invoice_source ?? ''), workItemId: r.work_item_id, billedTo: r.billed_to!, customerId: r.customer_id,
     amountMinor: safeMinor(r.amount_minor!), currency: r.currency!, receivedAt: r.received_at!, provider: r.provider, providerReference: r.provider_reference, note: r.note }));
   return { rows, total: count ?? 0 };
 }

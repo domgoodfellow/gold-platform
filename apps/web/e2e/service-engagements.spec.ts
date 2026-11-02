@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { seedLegacyPlanProposal } from '../tests/support/legacy-proposals';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
@@ -8,7 +9,7 @@ import { provisionOrganization } from '../lib/domain/platform/provision';
 import { createCustomer } from '../lib/domain/customers/customers';
 import { createWebsite, siteEditorState } from '../lib/domain/public-site/public-site';
 import { getPlan } from '../lib/domain/catalogue/plans';
-import { buildCommercialProposal, markCommercialProposalSent, acceptCommercialProposal } from '../lib/domain/customers/commercial-proposals';
+import { markCommercialProposalSent, acceptCommercialProposal } from '../lib/domain/customers/commercial-proposals';
 import { createProposalInvite, claimProposalInvite } from '../lib/domain/customers/proposal-invites';
 import type { Database } from '../lib/db/types';
 
@@ -119,7 +120,7 @@ test.describe('Batch A CRM managed services', () => {
     expect(website.data).not.toBeNull();
 
     const plan = await getPlan(staff, 'start');
-    const proposal = await buildCommercialProposal(staff,{organizationId:org,customerId:customer,planId:plan!.id,addonPlanIds:[],currency:'CAD',billingInterval:'month'});
+    const proposal = await seedLegacyPlanProposal({ createdBy: staffAccount.data.user.id,organizationId:org,customerId:customer,planId:plan!.id,addonPlanIds:[],currency:'CAD',billingInterval:'month'});
     await markCommercialProposalSent(staff,{organizationId:org,proposalId:proposal.id});
     const token = await createProposalInvite(staff,{customerId:customer});
     const visitor = createClient<Database>(url,process.env.SUPABASE_ANON_KEY!,{auth:{persistSession:false}});

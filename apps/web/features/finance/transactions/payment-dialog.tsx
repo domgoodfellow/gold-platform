@@ -12,7 +12,7 @@ import { ChoiceRow, ConfirmationPanel, LineItems, MoneyTotals, RecordPicker, Rec
 import { invoiceStanding } from '@/lib/domain/billing/invoices';
 import { parseMoneyInput } from '@/lib/domain/pricing/money-input';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
-import type { FinanceActionState } from '@/app/organizations/[organizationId]/finance/actions';
+import { financePaymentReview, type FinanceActionState } from '@/app/organizations/[organizationId]/finance/actions';
 import { CancelButton, TransactionDialog, TransactionError, type TransactionTriggerProps } from './transaction-dialog';
 import { choiceStatus, useFinanceRecord, useFinanceSubmit } from './use-finance-record';
 
@@ -27,18 +27,19 @@ function amountMinor(raw: string, currency: string): number | null {
  * Record money against an issued invoice, by hand. A receipt adds a positive entry; a correction or
  * refund adds a negative one after its own confirmation. Earlier entries are never changed — the
  * history is append-only — and a manual entry claims nothing about a payment processor. Recording
- * is the existing `record_payment` through `financeMutation`.
+ * is the existing `record_payment` through `financeMutation`. The dialog chooses an invoice, of
+ * either source; `invoiceId` preselects one.
  */
-export function PaymentDialog({ organizationId, workItemId, tone, size, initiallyOpen, label = 'Record payment', ariaLabel, open, onOpenChange, trigger, today, entry = 'receipt' }: TransactionTriggerProps & { today: string; entry?: Entry }) {
+export function PaymentDialog({ organizationId, invoiceId, tone, size, initiallyOpen, label = 'Record payment', ariaLabel, open, onOpenChange, trigger, today, entry = 'receipt' }: Omit<TransactionTriggerProps, 'workItemId'> & { invoiceId?: string; today: string; entry?: Entry }) {
   return <TransactionDialog label={label} icon={<CreditCard aria-hidden className="size-4" />} tone={tone} size={size} initiallyOpen={initiallyOpen} ariaLabel={ariaLabel} open={open} onOpenChange={onOpenChange} trigger={trigger}>
-    {close => <PaymentBody organizationId={organizationId} workItemId={workItemId} today={today} initialEntry={entry} close={close} />}
+    {close => <PaymentBody organizationId={organizationId} invoiceId={invoiceId} today={today} initialEntry={entry} close={close} />}
   </TransactionDialog>;
 }
 
-function PaymentBody({ organizationId, workItemId, today, initialEntry, close }: { organizationId: string; workItemId?: string; today: string; initialEntry: Entry; close: () => void }) {
+function PaymentBody({ organizationId, invoiceId, today, initialEntry, close }: { organizationId: string; invoiceId?: string; today: string; initialEntry: Entry; close: () => void }) {
   const id = useId();
   const [includeSettled, setIncludeSettled] = useState(false);
-  const record = useFinanceRecord(organizationId, 'payment', workItemId, { includeSettled });
+  const record = useFinanceRecord(organizationId, 'payment', invoiceId, { includeSettled, load: financePaymentReview });
   // Fixed when the dialog opens: the page behind may refresh after a save (a settled row becoming unpaid again).
   const [opening] = useState<Entry>(initialEntry);
   const [entry, setEntry] = useState<Entry>(initialEntry);
@@ -58,7 +59,7 @@ function PaymentBody({ organizationId, workItemId, today, initialEntry, close }:
   const money = (value: number) => formatMoney(value, invoice!.currency);
   const problem = amount && minor === null ? `Enter a positive amount in ${invoice?.currency ?? 'the invoice currency'}${amount.trim().startsWith('-') ? ' without a minus sign' : ''}.` : !ISO.test(receivedAt) ? 'Enter the date the money was received.' : null;
   const ready = Boolean(invoice && minor !== null && !problem);
-  const send = () => invoice && submit({ organizationId, kind: 'payment', workItemId: record.review!.work.id, entry, amount, receivedAt, note, confirmed: entry === 'correction' ? '1' : '' });
+  const send = () => invoice && submit({ organizationId, kind: 'payment', invoiceId: invoice.id, entry, amount, receivedAt, note, confirmed: entry === 'correction' ? '1' : '' });
   return <>
     {/* Named for how it was opened and kept while open, so assistive technology never meets a renamed dialog mid-task. */}
     <StepHeader title={opening === 'correction' ? 'Record correction' : 'Record payment'} steps={entry === 'correction' && !done ? ['Enter', 'Confirm'] : undefined} current={step === 'entry' ? 0 : 1} />
@@ -71,7 +72,6 @@ function PaymentBody({ organizationId, workItemId, today, initialEntry, close }:
         <div className="flex items-center gap-2"><Checkbox id={`${id}-settled`} checked={includeSettled} onCheckedChange={value => setIncludeSettled(value === true)} /><FieldLabel htmlFor={`${id}-settled`} className="font-normal">Include settled invoices, for a correction or refund</FieldLabel></div>
       </> : null}
       {record.selected && !record.review ? <p role="status" className="text-sm text-muted">{record.loadingReview ? 'Loading invoice…' : ''}</p> : null}
-      {record.review && !invoice ? <p className="text-sm">No invoice has been issued for this Work, so there is nothing to record a payment against.</p> : null}
       {invoice && standing ? <RecordSummary title={`Invoice #${invoice.number}`} subtitle={invoice.billedTo} action={!record.fixed && !done && step === 'entry' ? <Button type="button" tone="text" size="small" onClick={() => record.choose('')}>Change</Button> : null}
         facts={[{ label: 'Currency', value: invoice.currency }, { label: 'Total', value: standing.total ? money(standing.total.totalMinor) : '—' }, { label: 'Already paid', value: money(standing.paidMinor) }]}>
         <MoneyTotals label="Balance" rows={[

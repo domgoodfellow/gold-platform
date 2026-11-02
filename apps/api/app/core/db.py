@@ -36,6 +36,7 @@ import httpx
 from app.core.config import (
     IntegrationSettings,
     InvitationEmailWebhookSettings,
+    PlatformBillingProvisioningSettings,
     PlatformBillingSettings,
     ProviderOperationsSettings,
     Settings,
@@ -188,6 +189,7 @@ def apply_platform_subscription_event(
             "p_provider_event_created_at": event.provider_event_created_at,
             "p_items": event.item_payload,
             "p_checkout_correlation": event.checkout_correlation,
+            "p_environment": event.environment,
         },
         timeout=10.0,
     )
@@ -219,6 +221,7 @@ def record_platform_billing_notice(
             "p_event_reference": event.event_reference,
             "p_event_type": event.event_type,
             "p_customer_reference": event.customer_reference,
+            "p_environment": event.environment,
         },
         timeout=10.0,
     )
@@ -227,6 +230,105 @@ def record_platform_billing_notice(
         raise RuntimeError(f"record_platform_billing_notice failed: {response.status_code}")
 
     return response.json()
+
+
+PLATFORM_BILLING_PROVISIONER_ROLE = "platform_billing_provisioner"
+
+# The billing provisioner's own `auth.users` row, fixed in
+# 20261031000001_billing_customer_identity_is_claimed_once.sql. No email, no password.
+PLATFORM_BILLING_PROVISIONER_ACTOR = "00000000-0000-4000-8000-0000000000b2"
+
+
+class BillingCustomerRefused(Exception):
+    """The database refused a billing-customer command. `sqlstate` is its own code, never echoed."""
+
+    def __init__(self, sqlstate: str | None, status: int) -> None:
+        super().__init__(f"billing customer command refused ({status})")
+        self.sqlstate = sqlstate
+        self.status = status
+
+
+def _refusal(response: httpx.Response) -> BillingCustomerRefused:
+    try:
+        sqlstate = response.json().get("code")
+    except ValueError:
+        sqlstate = None
+    return BillingCustomerRefused(sqlstate if isinstance(sqlstate, str) else None, response.status_code)
+
+
+def begin_platform_billing_customer(
+    settings: PlatformBillingProvisioningSettings,
+    *,
+    token: str,
+    organization_id: str,
+) -> tuple[str, bool]:
+    """Reserve, or read back, this organization's billing customer **as the person asking**.
+
+    The caller's own token, never a machine one: the database checks that this person is a
+    billing manager of the organization before anything is reserved and before the processor is
+    asked. The environment is this deployment's own, read from its key.
+    """
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/begin_platform_billing_customer",
+        headers={
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/vnd.pgrst.object+json",
+        },
+        json={
+            "p_organization_id": organization_id,
+            "p_environment": settings.environment,
+            "p_provider": "stripe",
+        },
+        timeout=10.0,
+    )
+    if response.status_code >= 400:
+        raise _refusal(response)
+    row = response.json()
+    return str(row["customer_reference"]), bool(row["finalized"])
+
+
+def finalize_platform_billing_customer(
+    settings: PlatformBillingProvisioningSettings,
+    *,
+    organization_id: str,
+    pending_reference: str,
+    customer_reference: str,
+    requested_by: str,
+) -> str:
+    """Record the customer the processor just returned to this runtime, once, as the provisioner.
+
+    The only caller of `finalize_platform_billing_customer`, which no human session may execute:
+    a reference a person could type proves nothing about who owns that processor customer, one
+    returned to this runtime by GOLD's own key does. `requested_by` is the verified caller, whom
+    the database checks is still a billing manager here.
+    """
+    token = machine_token(
+        settings.supabase_jwt_secret,
+        role=PLATFORM_BILLING_PROVISIONER_ROLE,
+        sub=PLATFORM_BILLING_PROVISIONER_ACTOR,
+    )
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/finalize_platform_billing_customer",
+        headers={
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "p_organization_id": organization_id,
+            "p_environment": settings.environment,
+            "p_provider": "stripe",
+            "p_pending_reference": pending_reference,
+            "p_customer_reference": customer_reference,
+            "p_requested_by": requested_by,
+        },
+        timeout=10.0,
+    )
+    if response.status_code >= 400:
+        raise _refusal(response)
+    return str(response.json())
 
 
 VOICE_ROLE = "voice_webhook"

@@ -16,6 +16,7 @@ export async function beginPlatformBillingPortalSession(
 
   const { data: customerReference, error } = await db.rpc('begin_platform_billing_portal_session', {
     p_organization_id: input.organizationId,
+    p_environment: provider.environment,
   });
 
   if (error) {

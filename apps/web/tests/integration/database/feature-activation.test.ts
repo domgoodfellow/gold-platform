@@ -131,6 +131,26 @@ describe('feature entitlement, activation and readiness', () => {
     ).resolves.toBeUndefined();
   });
 
+  it('refuses to switch a planned or partly built feature on or off, and an unentitled one, on the server', async () => {
+    const states = await organizationResolvedFeatureStates(db, { organizationId });
+    const unsupported = states.find((s) => s.implementationState !== 'available');
+    const unentitled = states.find((s) => s.implementationState === 'available' && !s.entitled);
+    expect(unsupported).toBeDefined();
+    expect(unentitled).toBeDefined();
+    for (const write of [disableOrganizationFeature, enableOrganizationFeature]) {
+      await expect(write(db, { organizationId, featureId: unsupported!.featureId }))
+        .rejects.toMatchObject({ code: 'organization_plans.feature_unsupported' });
+      await expect(write(db, { organizationId, featureId: unentitled!.featureId }))
+        .rejects.toMatchObject({ code: 'organization_plans.feature_not_entitled' });
+    }
+    const { data } = await db
+      .from('organization_feature_activation_overrides')
+      .select('feature_id')
+      .eq('organization_id', organizationId)
+      .in('feature_id', [unsupported!.featureId, unentitled!.featureId]);
+    expect(data).toEqual([]);
+  });
+
   it('never lets an unentitled feature look enabled for lack of an override', async () => {
     const states = await organizationResolvedFeatureStates(db, { organizationId });
     const unentitled = states.find((s) => !s.entitled);

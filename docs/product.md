@@ -334,18 +334,17 @@ Platform Administration is available only when:
 
 Membership in GildOps' own business does not itself grant Platform authority.
 
-Platform Administration owns cross-organization and SaaS concerns such as:
+Platform Administration owns cross-organization and system concerns such as:
 
-- organization portfolio administration;
-- product/catalogue administration;
-- Plans and Add-ons;
-- GildOps retail pricing;
-- subscriptions and platform billing;
+- organization portfolio administration and tenant provisioning;
+- global feature definitions (the product/catalogue registry) and entitlement enforcement;
 - provider accounts and provider infrastructure;
 - platform AI runtime assignments;
-- usage economics and provider costs;
+- usage economics, provider costs and platform margin;
 - platform failures and health;
 - control-plane policy.
+
+Selling is not a Platform concern (ADR-051). During transition, Platform Administration also holds the existing platform-billing records and their screens: Plans and Add-ons, GildOps retail pricing, plan assignments and agreements, subscriptions and platform billing (see *Two finance planes*).
 
 GildOps' own business uses the ordinary organization product like any other customer.
 

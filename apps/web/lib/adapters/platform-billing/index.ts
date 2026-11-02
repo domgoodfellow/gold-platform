@@ -14,10 +14,6 @@
 
 export type PlatformBillingEnvironment = 'sandbox' | 'live';
 
-export type PlatformBillingCustomer = {
-  customerId: string;
-};
-
 export type CheckoutLineItemRequest = { priceId: string; quantity: number };
 
 export type CheckoutSessionRequest = {
@@ -51,12 +47,9 @@ export type PlatformBillingProvider = {
   /** Derived from which secret this deployment holds (D-restated for this plane, Phase 16) — never a separately-set flag that could drift from the key actually in use. */
   readonly environment: PlatformBillingEnvironment;
 
-  /** Idempotent for retries of the same organization within the provider's own idempotency window; the caller's own database row is still what makes repeat calls a no-op after the first succeeds. */
-  ensureCustomer(input: {
-    organizationId: string;
-    email: string | null;
-    name: string;
-  }): Promise<PlatformBillingCustomer>;
+  // No customer creation here: an organization's processor customer is created and recorded only by
+  // apps/api's billing provisioner (`lib/domain/platform-billing/customers.ts`), so nothing in this
+  // runtime can name a customer reference to the database.
 
   /** Outbound only — being told what happened is webhook ingress, which belongs to Python. */
   createCheckoutSession(input: CheckoutSessionRequest): Promise<CheckoutSessionStarted>;

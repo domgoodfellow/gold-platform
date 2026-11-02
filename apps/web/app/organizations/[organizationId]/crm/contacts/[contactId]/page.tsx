@@ -5,8 +5,9 @@ import { CustomerDetail } from '@/features/crm/customers/customer-detail';
 import { CustomerOpportunities } from '@/features/crm/opportunities/customer-opportunities';
 import { listOpportunities, listOpportunityStages } from '@/lib/domain/opportunities/opportunities';
 import { listMembers } from '@/lib/domain/tenancy/members';
-import { listCustomerInvoices } from '@/lib/domain/billing/invoices';
-import { listPlans } from '@/lib/domain/catalogue/plans';
+import { listCustomerInvoices, listInvoicesForProposals } from '@/lib/domain/billing/invoices';
+import { todayInZone } from '@/lib/domain/scheduling/window';
+import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { listCommercialProposals } from '@/lib/domain/customers/commercial-proposals';
 import { recommendConfiguration } from '@/lib/domain/customers/configuration-recommendation';
 import { getContact } from '@/lib/domain/contacts/contacts';
@@ -44,12 +45,14 @@ export default async function CustomerPage({ params, searchParams }: PageProps<'
   const { db, organization } = await requireOrganization(organizationId);
   const customer = await getContact(db, { organizationId, customerId });
   if (!customer) notFound();
+  // Discovery and configuration describe a GildOps tenant being set up, so they stay with the
+  // platform's own organization. A commercial proposal is any business selling from its catalog.
   const mayPropose = (await loadPlatformContext(db, organizationId)) !== null;
 
   const origin = await requestOrigin();
   const customerPortalOrigin = await portalOrigin(db, organizationId, origin);
   const [opportunities, opportunityStages, members] = await Promise.all([listOpportunities(db, { organizationId, customerId, limit: 20 }), listOpportunityStages(db, { organizationId }), listMembers(db, { organizationId })]);
-  const [documents, definitions, timeline, invites, resolvedFeatures, stages, calls, invoices, work, locations, discoverySnapshot, commercialProposals, proposalInvites, plans, addonPlans] = await Promise.all([
+  const [documents, definitions, timeline, invites, resolvedFeatures, stages, calls, invoices, work, locations, discoverySnapshot, commercialProposals, proposalInvites] = await Promise.all([
     listDocuments(db, { organizationId, attachedTo: { entity: 'customer', id: customerId } }),
     listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
     listCustomerTimeline(db, { organizationId, customerId }),
@@ -61,15 +64,15 @@ export default async function CustomerPage({ params, searchParams }: PageProps<'
     listWorkItems(db, { organizationId, customerId }),
     listLocationsForCustomer(db, { organizationId, customerId }),
     mayPropose ? getDiscoverySnapshot(db, { organizationId, customerId }) : null,
-    mayPropose ? listCommercialProposals(db, { organizationId, customerId }) : [],
-    mayPropose ? listProposalInvites(db, { organizationId, customerId }) : [],
-    mayPropose ? listPlans(db, { kind: 'plan' }) : [],
-    mayPropose ? listPlans(db, { kind: 'addon' }) : [],
+    listCommercialProposals(db, { organizationId, customerId }),
+    listProposalInvites(db, { organizationId, customerId }),
   ]);
   const configurationRecommendation = mayPropose ? await recommendConfiguration(db, {
     answers: discoverySnapshot?.answers ?? {},
   }) : null;
   const modules = activeModuleKeys(resolvedFeatures);
+  const mayPriceManage = organization.capabilities.includes('price.manage');
+  const catalogItems = modules.has('billing') && mayPriceManage ? await listPriceBookItems(db, { organizationId }) : [];
   const followUpsEnabled = await followUpsAvailable(db, organizationId);
   const followUps = followUpsEnabled ? await relatedFollowUps(db, organizationId, customerId) : null;
   const voice = modules.has('reception');
@@ -79,7 +82,8 @@ export default async function CustomerPage({ params, searchParams }: PageProps<'
   const mayManageServices = organization.capabilities.includes('customer.update');
   const tenantOptions = mayHandoff && mayManageServices ? await listExistingTenantOptions(db, organizationId, customerId) : [];
   const mayLink = mayHandoff && mayManageServices && tenantOptions.length > 0;
-  const acceptedProposals = commercialProposals.filter((proposal) => proposal.status === 'accepted');
+  // Only a Platform Plan proposal can have been handed off (`hand_off_accepted_proposal`).
+  const acceptedProposals = commercialProposals.filter((proposal) => proposal.status === 'accepted' && proposal.basis === 'platform_plan');
   const handoffEntries = await Promise.all(
     acceptedProposals.map(async (proposal) => [
       proposal.id,
@@ -90,6 +94,14 @@ export default async function CustomerPage({ params, searchParams }: PageProps<'
   for (const [proposalId, handoff] of handoffEntries) {
     if (handoff) handoffsByProposalId[proposalId] = handoff;
   }
+  // An accepted catalog proposal is invoiced at most once (`invoices_org_proposal_unique`).
+  const invoicesByProposalId = await listInvoicesForProposals(db, {
+    organizationId,
+    proposalIds: commercialProposals.filter((proposal) => proposal.status === 'accepted' && proposal.basis === 'catalog').map((proposal) => proposal.id),
+  });
+  const invoicing = modules.has('billing') && organization.capabilities.includes('invoice.issue')
+    ? { today: todayInZone(organization.timezone), customerName: customer.name }
+    : null;
 
   return (
     <AppPage>
@@ -122,9 +134,10 @@ export default async function CustomerPage({ params, searchParams }: PageProps<'
         commercialProposals={commercialProposals}
         proposalInvites={proposalInvites}
         handoffsByProposalId={handoffsByProposalId}
+        invoicesByProposalId={invoicesByProposalId}
+        proposalInvoicing={invoicing}
         mayHandoff={mayHandoff}
-        plans={plans.filter((plan) => plan.saleStatus === 'active')}
-        addonPlans={addonPlans.filter((plan) => plan.saleStatus === 'active')}
+        catalogItems={catalogItems}
         origin={origin}
         portalOrigin={customerPortalOrigin}
         timezone={organization.timezone}
@@ -136,7 +149,7 @@ export default async function CustomerPage({ params, searchParams }: PageProps<'
           call: organization.capabilities.includes('call.place'),
           attach: organization.capabilities.includes('document.create'),
           portal: organization.capabilities.includes('customer.create'),
-          priceManage: organization.capabilities.includes('price.manage'),
+          priceManage: mayPriceManage,
         }}
       />
     </AppPage>

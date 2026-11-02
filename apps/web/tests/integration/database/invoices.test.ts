@@ -3,6 +3,7 @@ import { Client } from 'pg';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
+  getInvoice,
   getInvoiceForWorkItem,
   invoicedWorkItemIds,
   listInvoices,
@@ -756,7 +757,7 @@ describe('Finance operating reads against real tenant policies', () => {
     expect(summary.outstanding).toEqual([{currency:'CAD',amount:'12000',count:1},{currency:'USD',amount:'11000',count:1}]);
     const rows = await readFinanceInvoices(mixed.db,mixed.organizationId);
     for(const row of rows.rows) {
-      const invoice = await getInvoiceForWorkItem(mixed.db,{organizationId:mixed.organizationId,workItemId:row.workItemId});
+      const invoice = await getInvoice(mixed.db,{organizationId:mixed.organizationId,invoiceId:row.id});
       expect(row.total).toEqual(invoiceStanding(invoice!).total);
       expect(row.outstandingMinor).toBe(invoiceStanding(invoice!).outstandingMinor);
     }

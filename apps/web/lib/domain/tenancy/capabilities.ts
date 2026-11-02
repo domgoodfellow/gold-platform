@@ -89,7 +89,7 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'work_item.price': 'Put priced items on a job',
   'work_item.update': 'Correct a job’s details',
   /** Split from recording payment — deciding a job is finished is whoever runs the work; writing down that money arrived is whoever opens the post. */
-  'invoice.issue': 'Invoice a finished job',
+  'invoice.issue': 'Issue invoices, from Work or directly to a customer',
   'payment.record': 'Record a payment against an invoice',
   /** Its own authority — the one capability a role can hold that acts when nobody is present. */
   'automation.manage': 'Write the rules this business runs on its own',

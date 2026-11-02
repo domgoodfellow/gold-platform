@@ -12,7 +12,7 @@ import {
   type DiscoveryAnswerPatch,
 } from '@/lib/domain/customers/discovery-snapshots';
 import { DISCOVERY_REQUIREMENTS } from '@/lib/domain/customers/discovery-requirements';
-import { buildCommercialProposal, markCommercialProposalSent } from '@/lib/domain/customers/commercial-proposals';
+import { buildCatalogProposal, markCommercialProposalSent } from '@/lib/domain/customers/commercial-proposals';
 import { createProposalInvite } from '@/lib/domain/customers/proposal-invites';
 import { handoffAcceptedProposal } from '@/lib/domain/customers/proposal-handoff';
 import { customValuesFromFormData } from '@/lib/custom-fields';
@@ -216,6 +216,11 @@ export async function editDiscoverySnapshotAction(
 
 export type BuildCommercialProposalState = { error: string | null; created: boolean };
 
+/**
+ * Build a proposal version from this business's own catalog. The form carries item ids, whole
+ * quantities and notes — one `priceBookItemId`/`quantity` pair per line, in order — and nothing
+ * that is money: `build_catalog_proposal` copies every price, and decides who may build.
+ */
 export async function buildCommercialProposalAction(
   _previous: BuildCommercialProposalState,
   formData: FormData,
@@ -224,18 +229,17 @@ export async function buildCommercialProposalAction(
   const organizationId = String(formData.get('organizationId') ?? '');
   await requireOrganization(organizationId);
   const customerId = String(formData.get('customerId') ?? '');
-  const discountMinor = Number(formData.get('discountMinor') ?? 0);
+  const itemIds = formData.getAll('priceBookItemId').map(String);
+  const quantities = formData.getAll('quantity').map((value) => Number(value));
+  if (itemIds.length === 0 || itemIds.length !== quantities.length || itemIds.some((id) => id === '')) {
+    return { error: 'Choose a catalog item for every line.', created: false };
+  }
 
   try {
-    await buildCommercialProposal(db, {
+    await buildCatalogProposal(db, {
       organizationId,
       customerId,
-      planId: String(formData.get('planId') ?? ''),
-      addonPlanIds: formData.getAll('addonPlanIds').map(String),
-      currency: String(formData.get('currency') ?? ''),
-      billingInterval: String(formData.get('billingInterval') ?? 'month') as 'month' | 'year' | 'one_time',
-      discountMinor: Number.isFinite(discountMinor) ? discountMinor : 0,
-      discountReason: String(formData.get('discountReason') ?? ''),
+      lines: itemIds.map((priceBookItemId, index) => ({ priceBookItemId, quantity: quantities[index] })),
       notes: String(formData.get('notes') ?? ''),
     });
   } catch (error) {

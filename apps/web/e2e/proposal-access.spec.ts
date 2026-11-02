@@ -1,11 +1,12 @@
 import path from 'node:path';
+import { seedLegacyPlanProposal } from '../tests/support/legacy-proposals';
 import { config as loadEnv } from 'dotenv';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { test, expect, type Browser, type Page } from '@playwright/test';
 import { BUSINESSES, DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { getPlan } from '../lib/domain/catalogue/plans';
-import { buildCommercialProposal, markCommercialProposalSent } from '../lib/domain/customers/commercial-proposals';
+import { markCommercialProposalSent } from '../lib/domain/customers/commercial-proposals';
 import { createPortalInvite } from '../lib/domain/portal/portal';
 import { createProposalInvite, listProposalInvites, revokeProposalInvite } from '../lib/domain/customers/proposal-invites';
 import { loadDemoContext, OWNER_STORAGE_STATE } from './helpers';
@@ -45,7 +46,7 @@ const shot = async (page: Page, name: string) => {
 
 /** A sent proposal for one customer, and a fresh link to it. */
 async function sentProposalLink(forCustomer: string) {
-  const built = await buildCommercialProposal(owner as never, {
+  const built = await seedLegacyPlanProposal({ createdBy: (await owner.auth.getUser()).data.user!.id,
     organizationId,
     customerId: forCustomer,
     planId,

@@ -2764,13 +2764,79 @@ export type Database = {
           },
         ]
       }
+      customer_commercial_proposal_lines: {
+        Row: {
+          amount_minor: number
+          currency: string
+          id: string
+          name: string
+          organization_id: string
+          position: number
+          price_book_item_id: string
+          proposal_id: string
+          quantity: number
+          unit: string
+          unit_amount_minor: number
+        }
+        Insert: {
+          amount_minor: number
+          currency: string
+          id?: string
+          name: string
+          organization_id: string
+          position: number
+          price_book_item_id: string
+          proposal_id: string
+          quantity: number
+          unit: string
+          unit_amount_minor: number
+        }
+        Update: {
+          amount_minor?: number
+          currency?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          position?: number
+          price_book_item_id?: string
+          proposal_id?: string
+          quantity?: number
+          unit?: string
+          unit_amount_minor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_commercial_proposal_l_organization_id_proposal_id_fkey"
+            columns: ["organization_id", "proposal_id"]
+            isOneToOne: false
+            referencedRelation: "customer_commercial_proposals"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "customer_commercial_proposal_lines_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_commercial_proposal_lines_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_commercial_proposals: {
         Row: {
           accepted_at: string | null
           accepted_by: string | null
           accepted_configuration: Json | null
           addon_price_minor: number
+          basis: string
           billing_interval: string
+          catalog_total_minor: number | null
           created_at: string
           created_by: string
           currency: string
@@ -2782,8 +2848,8 @@ export type Database = {
           id: string
           notes: string
           organization_id: string
-          plan_id: string
-          plan_label: string
+          plan_id: string | null
+          plan_label: string | null
           plan_price_minor: number
           proposed_configuration: Json | null
           status: string
@@ -2795,7 +2861,9 @@ export type Database = {
           accepted_by?: string | null
           accepted_configuration?: Json | null
           addon_price_minor?: number
+          basis?: string
           billing_interval: string
+          catalog_total_minor?: number | null
           created_at?: string
           created_by: string
           currency: string
@@ -2807,8 +2875,8 @@ export type Database = {
           id?: string
           notes?: string
           organization_id: string
-          plan_id: string
-          plan_label: string
+          plan_id?: string | null
+          plan_label?: string | null
           plan_price_minor: number
           proposed_configuration?: Json | null
           status?: string
@@ -2820,7 +2888,9 @@ export type Database = {
           accepted_by?: string | null
           accepted_configuration?: Json | null
           addon_price_minor?: number
+          basis?: string
           billing_interval?: string
+          catalog_total_minor?: number | null
           created_at?: string
           created_by?: string
           currency?: string
@@ -2832,8 +2902,8 @@ export type Database = {
           id?: string
           notes?: string
           organization_id?: string
-          plan_id?: string
-          plan_label?: string
+          plan_id?: string | null
+          plan_label?: string | null
           plan_price_minor?: number
           proposed_configuration?: Json | null
           status?: string
@@ -5689,6 +5759,68 @@ export type Database = {
           },
         ]
       }
+      invoice_documents: {
+        Row: {
+          created_at: string
+          created_by: string
+          invoice_id: string
+          organization_id: string
+          renderer: string
+          sha256: string
+          size_bytes: number
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          invoice_id: string
+          organization_id: string
+          renderer: string
+          sha256: string
+          size_bytes: number
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          invoice_id?: string
+          organization_id?: string
+          renderer?: string
+          sha256?: string
+          size_bytes?: number
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_documents_invoice_fk"
+            columns: ["organization_id", "invoice_id"]
+            isOneToOne: false
+            referencedRelation: "finance_invoice_records"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invoice_documents_invoice_fk"
+            columns: ["organization_id", "invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invoice_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_lines: {
         Row: {
           currency: string
@@ -5754,6 +5886,110 @@ export type Database = {
           },
         ]
       }
+      invoice_presentations: {
+        Row: {
+          accent: string | null
+          address_lines: string[]
+          bill_to_email: string | null
+          bill_to_name: string
+          body_font: string
+          captured_at: string
+          contact_email: string | null
+          contact_phone: string | null
+          country_code: string | null
+          heading_font: string
+          highlight: string | null
+          invoice_id: string
+          layout: string
+          layout_version: number
+          locale: string
+          logo_path: string | null
+          organization_id: string
+          secondary: string | null
+          seller_name: string
+          timezone: string
+          trading_name: string | null
+          website_url: string | null
+        }
+        Insert: {
+          accent?: string | null
+          address_lines?: string[]
+          bill_to_email?: string | null
+          bill_to_name: string
+          body_font?: string
+          captured_at?: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          country_code?: string | null
+          heading_font?: string
+          highlight?: string | null
+          invoice_id: string
+          layout?: string
+          layout_version?: number
+          locale?: string
+          logo_path?: string | null
+          organization_id: string
+          secondary?: string | null
+          seller_name: string
+          timezone: string
+          trading_name?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          accent?: string | null
+          address_lines?: string[]
+          bill_to_email?: string | null
+          bill_to_name?: string
+          body_font?: string
+          captured_at?: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          country_code?: string | null
+          heading_font?: string
+          highlight?: string | null
+          invoice_id?: string
+          layout?: string
+          layout_version?: number
+          locale?: string
+          logo_path?: string | null
+          organization_id?: string
+          secondary?: string | null
+          seller_name?: string
+          timezone?: string
+          trading_name?: string | null
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_presentations_invoice_fk"
+            columns: ["organization_id", "invoice_id"]
+            isOneToOne: false
+            referencedRelation: "finance_invoice_records"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invoice_presentations_invoice_fk"
+            columns: ["organization_id", "invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invoice_presentations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_presentations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           billed_to: string
@@ -5762,10 +5998,14 @@ export type Database = {
           customer_id: string | null
           due_at: string | null
           id: string
+          issuance_fingerprint: string | null
+          issuance_key: string | null
           issued_at: string
           number: number
           organization_id: string
-          work_item_id: string
+          proposal_id: string | null
+          source: string
+          work_item_id: string | null
         }
         Insert: {
           billed_to: string
@@ -5774,10 +6014,14 @@ export type Database = {
           customer_id?: string | null
           due_at?: string | null
           id?: string
+          issuance_fingerprint?: string | null
+          issuance_key?: string | null
           issued_at?: string
           number: number
           organization_id: string
-          work_item_id: string
+          proposal_id?: string | null
+          source?: string
+          work_item_id?: string | null
         }
         Update: {
           billed_to?: string
@@ -5786,10 +6030,14 @@ export type Database = {
           customer_id?: string | null
           due_at?: string | null
           id?: string
+          issuance_fingerprint?: string | null
+          issuance_key?: string | null
           issued_at?: string
           number?: number
           organization_id?: string
-          work_item_id?: string
+          proposal_id?: string | null
+          source?: string
+          work_item_id?: string | null
         }
         Relationships: [
           {
@@ -5826,6 +6074,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_proposal_fk"
+            columns: ["organization_id", "proposal_id"]
+            isOneToOne: false
+            referencedRelation: "customer_commercial_proposals"
+            referencedColumns: ["organization_id", "id"]
           },
           {
             foreignKeyName: "invoices_work_item_same_org"
@@ -14632,7 +14887,9 @@ export type Database = {
           outstanding_minor: number | null
           overdue: boolean | null
           paid_minor: number | null
+          proposal_id: string | null
           settled: boolean | null
+          source: string | null
           total_minor: number | null
           work_item_id: string | null
         }
@@ -14673,6 +14930,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "invoices_proposal_fk"
+            columns: ["organization_id", "proposal_id"]
+            isOneToOne: false
+            referencedRelation: "customer_commercial_proposals"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
             foreignKeyName: "invoices_work_item_same_org"
             columns: ["organization_id", "work_item_id"]
             isOneToOne: false
@@ -14698,6 +14962,7 @@ export type Database = {
           id: string | null
           invoice_id: string | null
           invoice_number: number | null
+          invoice_source: string | null
           note: string | null
           organization_id: string | null
           provider: string | null
@@ -15197,6 +15462,7 @@ export type Database = {
           p_current_period_end: number
           p_current_period_start: number
           p_customer_reference: string
+          p_environment?: string
           p_event_reference: string
           p_event_type: string
           p_items: Json
@@ -15333,8 +15599,19 @@ export type Database = {
         }
         Returns: Json
       }
+      begin_platform_billing_customer: {
+        Args: {
+          p_environment: string
+          p_organization_id: string
+          p_provider: string
+        }
+        Returns: {
+          customer_reference: string
+          finalized: boolean
+        }[]
+      }
       begin_platform_billing_portal_session: {
-        Args: { p_organization_id: string }
+        Args: { p_environment?: string; p_organization_id: string }
         Returns: string
       }
       begin_provider_binding: {
@@ -15389,6 +15666,15 @@ export type Database = {
           p_capabilities: string[]
           p_organization_id: string
           p_role: string
+        }
+        Returns: string
+      }
+      build_catalog_proposal: {
+        Args: {
+          p_customer_id: string
+          p_lines: Json
+          p_notes: string
+          p_organization_id: string
         }
         Returns: string
       }
@@ -16109,6 +16395,17 @@ export type Database = {
         }
         Returns: number
       }
+      finalize_platform_billing_customer: {
+        Args: {
+          p_customer_reference: string
+          p_environment: string
+          p_organization_id: string
+          p_pending_reference: string
+          p_provider: string
+          p_requested_by: string
+        }
+        Returns: string
+      }
       finance_dashboard_summary: {
         Args: { p_from: string; p_organization_id: string; p_to: string }
         Returns: Json
@@ -16284,8 +16581,28 @@ export type Database = {
           margin_minor: number
         }[]
       }
+      issue_direct_invoice: {
+        Args: {
+          p_customer_id: string
+          p_due_at: string
+          p_issuance_key: string
+          p_issued_at: string
+          p_lines: Json
+          p_organization_id: string
+        }
+        Returns: string
+      }
       issue_invoice: {
         Args: { p_due_at: string; p_issued_at: string; p_work_item_id: string }
+        Returns: string
+      }
+      issue_invoice_from_proposal: {
+        Args: {
+          p_due_at: string
+          p_issuance_key: string
+          p_issued_at: string
+          p_proposal_id: string
+        }
         Returns: string
       }
       launch_organization: { Args: { p_id: string }; Returns: undefined }
@@ -16861,6 +17178,10 @@ export type Database = {
         Args: { p_disclosure_id: string }
         Returns: Json
       }
+      preview_invoice_presentation: {
+        Args: { p_customer_id: string; p_organization_id: string }
+        Returns: Json
+      }
       proposal_context: {
         Args: never
         Returns: {
@@ -17330,6 +17651,31 @@ export type Database = {
         }
         Returns: string
       }
+      record_invoice_document: {
+        Args: {
+          p_invoice_id: string
+          p_renderer: string
+          p_sha256: string
+          p_size_bytes: number
+          p_storage_path: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string
+          invoice_id: string
+          organization_id: string
+          renderer: string
+          sha256: string
+          size_bytes: number
+          storage_path: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invoice_documents"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       record_managed_integration_resource: {
         Args: {
           p_connection_id: string
@@ -17486,6 +17832,7 @@ export type Database = {
       record_platform_billing_notice: {
         Args: {
           p_customer_reference: string
+          p_environment?: string
           p_event_reference: string
           p_event_type: string
           p_provider?: string

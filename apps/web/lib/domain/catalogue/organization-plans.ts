@@ -4,6 +4,7 @@ import { requireActor } from '@/lib/domain/tenancy/actor';
 import { getOrganization } from '@/lib/domain/tenancy/organizations';
 import { listCatalogFeatures, listCatalogModules, listCatalogProducts, type CatalogFeature, type CatalogModule, type CatalogProduct } from './catalogue';
 import type { PlanKind } from './plans';
+import { featureOperationalState } from './feature-operational-state';
 import { isModuleKey, moduleConfiguration, MODULES, featureConfigurationTarget, type ModuleKey } from '@/lib/navigation';
 import { listUsableModules, outstandingModuleSetup } from '@/lib/domain/tenancy/modules';
 
@@ -516,6 +517,19 @@ export async function organizationResolvedFeatureStates(
   });
 }
 
+/** Activation is only meaningful for an implemented, entitled Feature; refuse anything else before writing. */
+async function requireActivatableFeature(db: Db, input: { organizationId: string; featureId: string }): Promise<void> {
+  const states = await organizationResolvedFeatureStates(db, input);
+  const state = states.find((candidate) => candidate.featureId === input.featureId);
+  const operational = state ? featureOperationalState(state) : 'unsupported';
+  if (operational === 'unsupported') {
+    throw new DomainError('This feature is not available yet.', 'organization_plans.feature_unsupported');
+  }
+  if (operational === 'not_included') {
+    throw new DomainError('This feature is not included for this business.', 'organization_plans.feature_not_entitled');
+  }
+}
+
 /**
  * Enable (delete the override, idempotent if absent) an entitled feature this organization had
  * disabled. RLS (`organization_feature_activation_overrides_delete`) is the real enforcement —
@@ -530,10 +544,7 @@ export async function enableOrganizationFeature(
   if (!organization?.capabilities.includes('feature.manage')) {
     throw new DomainError('You cannot manage features here.', 'organization_plans.feature_forbidden');
   }
-  const states = await organizationResolvedFeatureStates(db, input);
-  if (!states.some((state) => state.featureId === input.featureId && state.entitled)) {
-    throw new DomainError('This feature is not included for this business.', 'organization_plans.feature_not_entitled');
-  }
+  await requireActivatableFeature(db, input);
 
   const { error } = await db
     .from('organization_feature_activation_overrides')
@@ -558,6 +569,7 @@ export async function disableOrganizationFeature(
   input: { organizationId: string; featureId: string },
 ): Promise<void> {
   const actor = await requireActor(db);
+  await requireActivatableFeature(db, input);
 
   const { error } = await db.from('organization_feature_activation_overrides').insert({
     organization_id: input.organizationId,

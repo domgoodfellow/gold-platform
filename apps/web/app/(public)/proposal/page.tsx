@@ -53,17 +53,19 @@ export default async function ProposalPage() {
   const proposal = proposals[0] ?? null;
   if (!proposal) notFound();
 
-  const snapshot = await getDiscoverySnapshot(db, { organizationId, customerId: proposal.customerId });
+  // Discovery and configuration describe a GildOps tenant being set up: they belong to a Platform
+  // Plan proposal. A catalog proposal is one business's own offer, so it shows only its terms.
+  const platformPlan = proposal.basis === 'platform_plan';
+  const snapshot = platformPlan ? await getDiscoverySnapshot(db, { organizationId, customerId: proposal.customerId }) : null;
   const completeness = discoverySnapshotCompleteness({ answers: snapshot?.answers ?? {} });
-  const recommendation = await recommendConfiguration(db, { answers: snapshot?.answers ?? {} });
-  const preview = previewByWorkspace(recommendation.recommended);
+  const preview = platformPlan ? previewByWorkspace((await recommendConfiguration(db, { answers: snapshot?.answers ?? {} })).recommended) : [];
 
   return (
     <main data-brand className="mx-auto w-full max-w-xl p-6 sm:p-8">
       <BrandStyle brand={brand} />
       <PublicHeader profile={profile} logoUrl={brand.logoPath ? logoUrl(db, brand.logoPath) : null} />
 
-      <Section className="mt-8">
+      {platformPlan ? <Section className="mt-8">
         <SectionHeading>What we understood</SectionHeading>
         <p className="mt-1 text-sm text-subtle">{completeness.answered} of {completeness.total} covered.</p>
         <DefinitionList className="mt-3">
@@ -73,7 +75,7 @@ export default async function ProposalPage() {
             </Detail>
           ))}
         </DefinitionList>
-      </Section>
+      </Section> : null}
 
       {preview.length > 0 ? (
         <Section className="mt-8">
@@ -103,8 +105,19 @@ export default async function ProposalPage() {
           <span className="text-sm font-medium">Version {proposal.version}</span>
           <Badge tone={proposal.status === 'accepted' ? 'success' : 'neutral'}>{proposal.status}</Badge>
         </div>
-        <DefinitionList className="mt-3">
-          <Detail label={proposal.planLabel}>{formatMoney(proposal.planPriceMinor, proposal.currency)}/{proposal.billingInterval}</Detail>
+        {proposal.basis === 'catalog' ? (
+          <DefinitionList className="mt-3">
+            {proposal.lines.map((line) => (
+              <Detail key={line.position} label={line.name}>
+                {line.quantity} {line.unit} × {formatMoney(line.unitAmountMinor, line.currency)} = {formatMoney(line.amountMinor, line.currency)}
+              </Detail>
+            ))}
+            <Detail label="Total">
+              <strong>{formatMoney(commercialProposalTotalMinor(proposal), proposal.currency)}</strong>, one-off
+            </Detail>
+          </DefinitionList>
+        ) : <DefinitionList className="mt-3">
+          <Detail label={proposal.planLabel ?? 'Plan'}>{formatMoney(proposal.planPriceMinor, proposal.currency)}/{proposal.billingInterval}</Detail>
           {proposal.addons.map((addon) => (
             <Detail key={addon.addonPlanId} label={addon.label}>
               {formatMoney(addon.priceMinor, proposal.currency)}/{proposal.billingInterval}
@@ -116,13 +129,13 @@ export default async function ProposalPage() {
           <Detail label="Total">
             <strong>{formatMoney(commercialProposalTotalMinor(proposal), proposal.currency)}/{proposal.billingInterval}</strong>
           </Detail>
-        </DefinitionList>
+        </DefinitionList>}
         {proposal.notes ? <p className="mt-3 text-sm text-subtle">{proposal.notes}</p> : null}
 
         {proposal.status === 'sent' ? (
           <RespondForm proposalId={proposal.id} />
         ) : proposal.status === 'accepted' ? (
-          <p className="mt-4 text-sm text-success">Accepted {new Date(proposal.acceptedAt!).toLocaleDateString()}.</p>
+          <p className="mt-4 text-sm text-success">Accepted {new Date(proposal.acceptedAt!).toLocaleDateString()}. Nothing has been charged.</p>
         ) : proposal.status === 'declined' ? (
           <p className="mt-4 text-sm text-subtle">
             Declined {new Date(proposal.declinedAt!).toLocaleDateString()}. Get in touch if anything should change.

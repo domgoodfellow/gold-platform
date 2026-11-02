@@ -38,18 +38,16 @@ test.beforeAll(async () => {
 test.describe('an owner', () => {
   test.use({ storageState: OWNER_STORAGE_STATE, viewport: { width: 1440, height: 900 } });
 
-  test('Features: grouped, searchable, folded unavailable groups, one shared warning, actions kept', async ({ page }) => {
+  test('Features: grouped, searchable, usable features only, one shared warning, actions kept', async ({ page }) => {
     await page.goto(`/organizations/${loadDemoContext().organizationId}/settings/features`);
     await expect(page.getByRole('heading', { name: 'Features', level: 1 })).toBeVisible();
     const filters = page.getByRole('group', { name: 'Show features' });
     await expect(filters.getByRole('button', { name: /^All \d+$/ })).toHaveAttribute('aria-pressed', 'true');
-    // Planned features are folded and never offered as something to buy.
-    const planned = page.locator('summary').filter({ hasText: /Planned \(\d+\)/ }).first();
-    await expect(planned).toBeVisible();
-    await expect(page.locator('details:not([open])').first()).toBeVisible();
-    await planned.click();
-    await expect(page.getByText('Planned for GildOps and not available yet, on any plan.').first()).toBeVisible();
-    // Search finds a feature wherever it is, opening folded groups.
+    // Operational settings list no roadmap entries and no upgrade groups.
+    await expect(filters.getByRole('button', { name: /^Planned/ })).toHaveCount(0);
+    await expect(page.locator('main details')).toHaveCount(0);
+    await expect(page.getByText(/Planned for GildOps|Not in your plan|Limited availability/)).toHaveCount(0);
+    // Search finds a usable feature wherever it is.
     const search = page.getByRole('searchbox', { name: 'Search features' });
     await search.fill('Assets');
     await expect(page.getByRole('button', { name: 'More actions for Assets' })).toBeVisible();

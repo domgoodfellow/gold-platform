@@ -465,6 +465,8 @@ It may seed a configuration proposal or provisioning handoff after acceptance.
 
 **Definition:** A durable proposal offered to a prospect/customer describing a proposed GildOps commercial and implementation arrangement.
 
+Owned by CRM, with the customer relationship and Opportunity it belongs to. It is a selling record of GildOps' operating Organization, never a Platform Administration record; a handoff into provisioning still requires platform authority (`docs/security.md`).
+
 A proposal is not a Subscription.
 
 Acceptance may create a handoff into provisioning.

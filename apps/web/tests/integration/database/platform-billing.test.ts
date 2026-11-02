@@ -6,7 +6,7 @@ import { createPlan, getPlan, recordPlanPrice } from '@/lib/domain/catalogue/pla
 import { recordPlanAgreement, recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { createRole } from '@/lib/domain/tenancy/roles';
 import { addMember } from '@/lib/domain/tenancy/members';
-import { ensurePlatformBillingCustomer } from '@/lib/domain/platform-billing/customers';
+import { ensurePlatformBillingCustomer, getPlatformBillingCustomer } from '@/lib/domain/platform-billing/customers';
 import { beginPlatformBillingCheckout } from '@/lib/domain/platform-billing/checkout';
 import { buildOrganizationPurchaseQuote } from '@/lib/domain/platform-billing/quote';
 import { beginPlatformBillingPortalSession } from '@/lib/domain/platform-billing/portal';
@@ -14,6 +14,7 @@ import { getOrganizationSubscription } from '@/lib/domain/platform-billing/subsc
 import { provisionAgreementPlanPrice, provisionPlanPrice } from '@/lib/domain/platform-billing/provisioning';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 import { applySubscriptionEvent } from '@/tests/support/subscription-events';
+import { BILLING_PROVISIONER_API, provisionerFinalize, withBillingProvisionerApi } from '@/tests/support/billing-provisioner';
 
 /**
  * GOLD charging the organization for its own subscription — the opposite money direction from
@@ -86,7 +87,11 @@ async function restrictedMember(tenant: Tenant, label: string): Promise<Tenant> 
 // Supabase client's own REST calls included) to this, and only ever fabricates a response for
 // `api.stripe.com` (Phase 18: "no live Stripe calls in the automated test suite", not "no
 // fetch calls at all" — the domain layer's own database reads still need to work).
-const realFetch = globalThis.fetch.bind(globalThis);
+// The network as each test's Stripe mock sees it: apps/api's billing provisioner answered against
+// the real database, everything else passed through.
+const realFetch = withBillingProvisionerApi(globalThis.fetch.bind(globalThis), { supabaseUrl: SUPABASE_URL, anonKey: ANON_KEY, connectionString: CONNECTION });
+// Finalized customer references are unique per provider environment, so a mocked one must not repeat across runs.
+const RUN = randomUUID().replace(/-/g, '').slice(0, 10);
 
 let pg: Client;
 let staff: SupabaseClient;
@@ -110,6 +115,7 @@ beforeAll(async () => {
   // A fixed key so `platformBillingProvider()` resolves to the sandbox stripe implementation —
   // no real network call is ever reached because `fetch` is mocked per test below.
   process.env.STRIPE_SECRET_KEY = 'sk_test_platform_billing_suite';
+  process.env.GOLD_API_URL = BILLING_PROVISIONER_API;
 }, 60_000);
 
 afterAll(async () => {
@@ -336,7 +342,7 @@ describe('one Stripe-shaped Customer per organization', () => {
       const url = String(input);
       if (!url.includes('api.stripe.com')) return realFetch(input as never, init);
       creations += 1;
-      return new Response(JSON.stringify({ id: `cus_${creations}` }), { status: 200 });
+      return new Response(JSON.stringify({ id: `cus_${RUN}${creations}` }), { status: 200 });
     });
 
     const first = await ensurePlatformBillingCustomer(org.db, { organizationId: org.organizationId, email: null, name: 'Idempotent Co' });
@@ -376,6 +382,253 @@ describe('one Stripe-shaped Customer per organization', () => {
   });
 });
 
+describe('billing customer identity, at the database boundary', () => {
+  type Rpc = { data: unknown; error: { code?: string; message: string } | null };
+  const begin = (db: SupabaseClient, organizationId: string, environment: string, provider = 'stripe') =>
+    db.rpc('begin_platform_billing_customer', { p_organization_id: organizationId, p_environment: environment, p_provider: provider }).single() as unknown as Promise<Rpc & { data: { customer_reference: string; finalized: boolean } | null }>;
+  const finalize = (organizationId: string, environment: string, pendingReference: string, customerReference: string, requestedBy: string) =>
+    provisionerFinalize(CONNECTION, { organizationId, environment, pendingReference, customerReference, requestedBy });
+  const stored = async (organizationId: string, environment = 'sandbox') =>
+    (await pg.query(`select customer_reference from public.platform_billing_customers where organization_id = $1 and environment = $2`, [organizationId, environment])).rows.map((row) => row.customer_reference as string);
+  const cus = () => `cus_${randomUUID().replace(/-/g, '').slice(0, 14)}`;
+
+  async function finalized(org: Tenant, environment = 'sandbox'): Promise<string> {
+    const reserved = await begin(org.db, org.organizationId, environment);
+    expect(reserved.error).toBeNull();
+    const reference = cus();
+    const done = await finalize(org.organizationId, environment, reserved.data!.customer_reference, reference, org.userId);
+    expect(done.error).toBeNull();
+    return reference;
+  }
+
+  it('denies a billing manager who submits a well-formed, unclaimed processor customer directly to finalization', async () => {
+    const org = await newTenant('identity-attack');
+    const reserved = await begin(org.db, org.organizationId, 'sandbox');
+    const pending = reserved.data!.customer_reference;
+    const unclaimed = cus();
+    const anywhere = await pg.query(`select count(*)::int as count from public.platform_billing_customers where customer_reference = $1`, [unclaimed]);
+    expect(anywhere.rows[0].count).toBe(0);
+
+    // Through the API surface a browser can reach, with every argument correct.
+    const direct = await org.db.rpc('finalize_platform_billing_customer', {
+      p_organization_id: org.organizationId,
+      p_environment: 'sandbox',
+      p_provider: 'stripe',
+      p_pending_reference: pending,
+      p_customer_reference: unclaimed,
+      p_requested_by: org.userId,
+    });
+    expect(direct.error?.code).toBe('42501');
+    expect(direct.data).toBeNull();
+
+    // At the database itself, as that person's own role and claims.
+    const asPerson = await provisionerFinalize(
+      CONNECTION,
+      { organizationId: org.organizationId, environment: 'sandbox', pendingReference: pending, customerReference: unclaimed, requestedBy: org.userId },
+      { sub: org.userId, role: 'authenticated' },
+    );
+    expect(asPerson.error?.code).toBe('42501');
+
+    // Even the provisioner role is refused unless it is the provisioner's own identity.
+    const borrowedRole = await provisionerFinalize(
+      CONNECTION,
+      { organizationId: org.organizationId, environment: 'sandbox', pendingReference: pending, customerReference: unclaimed, requestedBy: org.userId },
+      { sub: org.userId, role: 'platform_billing_provisioner' },
+    );
+    expect(borrowedRole.error?.code).toBe('42501');
+
+    expect(await stored(org.organizationId)).toEqual([pending]);
+    const { rows } = await pg.query(
+      `select has_function_privilege('authenticated', 'public.finalize_platform_billing_customer(uuid,text,text,text,text,uuid)', 'execute') as authenticated,
+              has_function_privilege('anon', 'public.finalize_platform_billing_customer(uuid,text,text,text,text,uuid)', 'execute') as anon,
+              has_function_privilege('platform_billing_webhook', 'public.finalize_platform_billing_customer(uuid,text,text,text,text,uuid)', 'execute') as webhook,
+              has_function_privilege('platform_billing_provisioner', 'public.finalize_platform_billing_customer(uuid,text,text,text,text,uuid)', 'execute') as provisioner,
+              (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                where n.nspname in ('public', 'app') and p.prokind = 'f' and p.proname <> 'finalize_platform_billing_customer'
+                  and pg_get_functiondef(p.oid) ~ 'finalize_platform_billing_customer') as other_callers`,
+    );
+    expect(rows[0]).toEqual({ authenticated: false, anon: false, webhook: false, provisioner: true, other_callers: 0 });
+  });
+
+  it('gives an ordinary session no direct insert, update or delete on the table', async () => {
+    const org = await newTenant('identity-direct');
+    const reference = await finalized(org);
+
+    const insert = await org.db.from('platform_billing_customers').insert({
+      organization_id: org.organizationId, environment: 'live', provider: 'stripe', customer_reference: cus(), created_by: org.userId,
+    });
+    expect(insert.error?.code).toBe('42501');
+
+    const update = await org.db.from('platform_billing_customers').update({ customer_reference: cus() }).eq('organization_id', org.organizationId).select('id');
+    expect(update.error?.code ?? (update.data?.length === 0 ? 'no rows' : 'updated')).not.toBe('updated');
+    const remove = await org.db.from('platform_billing_customers').delete().eq('organization_id', org.organizationId).select('id');
+    expect(remove.error?.code ?? (remove.data?.length === 0 ? 'no rows' : 'deleted')).not.toBe('deleted');
+
+    expect(await stored(org.organizationId)).toEqual([reference]);
+    const { rows } = await pg.query(
+      `select has_table_privilege('authenticated', 'public.platform_billing_customers', 'INSERT') as table_insert,
+              has_table_privilege('authenticated', 'public.platform_billing_customers', 'UPDATE') as table_update,
+              has_any_column_privilege('authenticated', 'public.platform_billing_customers', 'INSERT') as column_insert,
+              has_any_column_privilege('authenticated', 'public.platform_billing_customers', 'UPDATE') as column_update`,
+    );
+    expect(rows[0]).toEqual({ table_insert: false, table_update: false, column_insert: false, column_update: false });
+  });
+
+  it("refuses to record another business's finalized customer for a second business, even from the provisioner", async () => {
+    const victim = await newTenant('identity-victim');
+    const thief = await newTenant('identity-thief');
+    const victimReference = await finalized(victim);
+
+    const reserved = await begin(thief.db, thief.organizationId, 'sandbox');
+    const claim = await finalize(thief.organizationId, 'sandbox', reserved.data!.customer_reference, victimReference, thief.userId);
+    expect(claim.error?.code).toBe('23505');
+
+    expect(await stored(victim.organizationId)).toEqual([victimReference]);
+    expect((await stored(thief.organizationId))[0]).toMatch(/^pending:/);
+  });
+
+  it('never overwrites a finalized reference, and treats repeating the same finalization as a no-op', async () => {
+    const org = await newTenant('identity-overwrite');
+    const reserved = await begin(org.db, org.organizationId, 'sandbox');
+    const reference = cus();
+    expect((await finalize(org.organizationId, 'sandbox', reserved.data!.customer_reference, reference, org.userId)).data).toBe(reference);
+    expect((await finalize(org.organizationId, 'sandbox', reserved.data!.customer_reference, reference, org.userId)).data).toBe(reference);
+
+    const overwrite = await finalize(org.organizationId, 'sandbox', reserved.data!.customer_reference, cus(), org.userId);
+    expect(overwrite.error?.code).toBe('55000');
+    const again = await begin(org.db, org.organizationId, 'sandbox');
+    expect(again.data).toEqual({ customer_reference: reference, finalized: true });
+    expect(await stored(org.organizationId)).toEqual([reference]);
+  });
+
+  it('refuses a stale placeholder, a placeholder posing as a reference, and a malformed reference', async () => {
+    const org = await newTenant('identity-shapes');
+    const reserved = await begin(org.db, org.organizationId, 'sandbox');
+    const pending = reserved.data!.customer_reference;
+
+    expect((await finalize(org.organizationId, 'sandbox', `pending:${randomUUID()}`, cus(), org.userId)).error?.code).toBe('55000');
+    expect((await finalize(org.organizationId, 'sandbox', pending, `pending:${randomUUID()}`, org.userId)).error?.code).toBe('22023');
+    expect((await finalize(org.organizationId, 'sandbox', pending, 'acct_1Other', org.userId)).error?.code).toBe('22023');
+    expect((await finalize(org.organizationId, 'sandbox', pending, 'cus_ spaced', org.userId)).error?.code).toBe('22023');
+    expect((await finalize(org.organizationId, 'sandbox', cus(), cus(), org.userId)).error?.code).toBe('22023');
+    expect(await stored(org.organizationId)).toEqual([pending]);
+  });
+
+  it('records a customer only for a person who is still a billing manager of that business', async () => {
+    const reserved = await begin(tenant.db, tenant.organizationId, 'live');
+    expect(reserved.error).toBeNull();
+    const pending = reserved.data!.customer_reference;
+
+    expect((await finalize(tenant.organizationId, 'live', pending, cus(), noBillingMember.userId)).error?.code).toBe('42501');
+    expect((await finalize(tenant.organizationId, 'live', pending, cus(), other.userId)).error?.code).toBe('42501');
+    expect((await stored(tenant.organizationId, 'live'))[0]).toBe(pending);
+  });
+
+  it('refuses a reservation to a member without billing.manage, to another business, and for an unknown provider', async () => {
+    expect((await begin(noBillingMember.db, noBillingMember.organizationId, 'live')).error?.code).toBe('42501');
+    expect((await begin(other.db, tenant.organizationId, 'live')).error?.code).toBe('42501');
+    const org = await newTenant('identity-provider');
+    expect((await begin(org.db, org.organizationId, 'sandbox', 'paypal')).error?.code).toBe('22023');
+    expect((await begin(org.db, org.organizationId, 'production')).error?.code).toBe('22023');
+    expect(await stored(org.organizationId)).toEqual([]);
+  });
+
+  it("keeps one organization's sandbox and live customers apart, for lookup, portal and webhook alike", async () => {
+    const org = await newTenant('identity-environments');
+    const sandbox = await finalized(org, 'sandbox');
+    const live = await finalized(org, 'live');
+
+    expect(await getPlatformBillingCustomer(org.db, { organizationId: org.organizationId, environment: 'sandbox' })).toMatchObject({ customerReference: sandbox });
+    expect(await getPlatformBillingCustomer(org.db, { organizationId: org.organizationId, environment: 'live' })).toMatchObject({ customerReference: live });
+
+    const portal = (environment?: string) => org.db.rpc('begin_platform_billing_portal_session', { p_organization_id: org.organizationId, ...(environment ? { p_environment: environment } : {}) });
+    expect((await portal('sandbox')).data).toBe(sandbox);
+    expect((await portal('live')).data).toBe(live);
+    expect((await portal()).error?.code).toBe('21000');
+
+    // A live reference delivered as a sandbox event is not this organization's sandbox customer.
+    const crossed = await applySubscriptionEvent(pg, {
+      customerReference: live, environment: 'sandbox', subscriptionReference: `sub_${randomUUID().slice(0, 8)}`,
+      createdAt: 1_800_000_040, items: [{ priceReference: `price_${randomUUID().slice(0, 8)}` }],
+    });
+    expect(crossed).toBeNull();
+    const matched = await applySubscriptionEvent(pg, {
+      customerReference: live, environment: 'live', subscriptionReference: `sub_${randomUUID().slice(0, 8)}`,
+      createdAt: 1_800_000_041, items: [{ priceReference: `price_${randomUUID().slice(0, 8)}` }],
+    });
+    expect(matched).toBe(org.organizationId);
+  });
+
+  it('never matches a webhook event to a pending placeholder, and records nothing for it', async () => {
+    const org = await newTenant('identity-pending-event');
+    const reserved = await begin(org.db, org.organizationId, 'sandbox');
+    const eventReference = `evt_pending_${randomUUID()}`;
+
+    const applied = await applySubscriptionEvent(pg, {
+      eventReference, customerReference: reserved.data!.customer_reference, subscriptionReference: `sub_${randomUUID().slice(0, 8)}`,
+      createdAt: 1_800_000_050, items: [{ priceReference: `price_${randomUUID().slice(0, 8)}` }],
+    });
+    expect(applied).toBeNull();
+    const notice = await pg.query(`select public.record_platform_billing_notice($1,$2,$3,$4,$5) as result`, [`evt_${randomUUID()}`, 'invoice.paid', reserved.data!.customer_reference, 'stripe', 'sandbox']);
+    expect(notice.rows[0].result).toBeNull();
+    const ledger = await pg.query(`select count(*)::int as count from public.platform_billing_webhook_events where organization_id = $1`, [org.organizationId]);
+    expect(ledger.rows[0].count).toBe(0);
+  });
+
+  it('shares one reservation and one customer between concurrent first-time provisioners', async () => {
+    const org = await newTenant('identity-concurrent');
+    let creations = 0;
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (!url.includes('api.stripe.com')) return realFetch(input as never, init);
+      creations += 1;
+      // Past the provider's idempotency window each call would name a different customer: the
+      // database, not the provider, has to make the callers agree.
+      return new Response(JSON.stringify({ id: cus() }), { status: 200 });
+    });
+
+    const results = await Promise.all([1, 2, 3].map(() =>
+      ensurePlatformBillingCustomer(org.db, { organizationId: org.organizationId, email: null, name: 'Concurrent Co' })));
+    fetchSpy.mockRestore();
+
+    const references = new Set(results.map((result) => result.customerReference));
+    expect(references.size).toBe(1);
+    expect(await stored(org.organizationId)).toEqual([...references]);
+    expect(creations).toBeGreaterThanOrEqual(1);
+  });
+
+  it('keeps the reservation after a refused provider call, and the retry finalizes that same row', async () => {
+    const org = await newTenant('identity-retry');
+    const failing = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (!url.includes('api.stripe.com')) return realFetch(input as never, init);
+      return new Response('{}', { status: 500 });
+    });
+    await expect(ensurePlatformBillingCustomer(org.db, { organizationId: org.organizationId, email: null, name: 'Retry Co' }))
+      .rejects.toMatchObject({ code: 'platform_billing.provider_refused' });
+    failing.mockRestore();
+    const [pending] = await stored(org.organizationId);
+    expect(pending).toMatch(/^pending:/);
+
+    const reference = cus();
+    const fetchSpy = mockStripeFetch({ '/v1/customers': { id: reference } });
+    const result = await ensurePlatformBillingCustomer(org.db, { organizationId: org.organizationId, email: null, name: 'Retry Co' });
+    fetchSpy.mockRestore();
+    expect(result.customerReference).toBe(reference);
+    expect(await stored(org.organizationId)).toEqual([reference]);
+  });
+
+  it('cannot hold one finalized reference for two organizations in one provider environment, even when seeded directly', async () => {
+    const a = await newTenant('identity-unique-a');
+    const b = await newTenant('identity-unique-b');
+    const reference = await finalized(a);
+    await expect(pg.query(
+      `insert into public.platform_billing_customers (organization_id, environment, provider, customer_reference, created_by) values ($1, 'sandbox', 'stripe', $2, $3)`,
+      [b.organizationId, reference, b.userId],
+    )).rejects.toMatchObject({ code: '23505' });
+  });
+});
+
 describe('starting a subscription (Checkout)', () => {
   it('resolves the configured Plan to its provisioned price, and uses subscription mode', async () => {
     const org = await newTenant('checkout-resolve');
@@ -386,7 +639,7 @@ describe('starting a subscription (Checkout)', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
       if (!url.includes('api.stripe.com')) return realFetch(input as never, init);
-      if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: 'cus_checkout_1' }), { status: 200 });
+      if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: `cus_checkout_${randomUUID().replace(/-/g, '').slice(0, 12)}` }), { status: 200 });
       if (url.includes('/v1/checkout/sessions')) {
         checkoutBody = String(init?.body ?? '');
         return new Response(JSON.stringify({ id: 'cs_1', url: 'https://checkout.stripe.test/cs_1' }), { status: 200 });
@@ -491,7 +744,7 @@ describe('starting a subscription (Checkout)', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
       if (!url.includes('api.stripe.com')) return realFetch(input as never, init);
-      if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: 'cus_record_1' }), { status: 200 });
+      if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: `cus_record_${randomUUID().replace(/-/g, '').slice(0, 12)}` }), { status: 200 });
       if (url.includes('/v1/checkout/sessions')) {
         return new Response(JSON.stringify({ id: 'cs_record_1', url: 'https://checkout.stripe.test/cs_record_1' }), { status: 200 });
       }
@@ -535,7 +788,7 @@ describe('multi-line checkout and negotiated prices', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
       if (!url.includes('api.stripe.com')) return realFetch(input as never, init);
-      if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: 'cus_multiline_1' }), { status: 200 });
+      if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: `cus_multiline_${randomUUID().replace(/-/g, '').slice(0, 12)}` }), { status: 200 });
       if (url.includes('/v1/checkout/sessions')) {
         checkoutBody = String(init?.body ?? '');
         return new Response(JSON.stringify({ id: 'cs_multi_1', url: 'https://checkout.stripe.test/cs_multi_1' }), {
@@ -598,7 +851,7 @@ describe('multi-line checkout and negotiated prices', () => {
     const checkoutFetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
       if (!url.includes('api.stripe.com')) return realFetch(input as never, init);
-      if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: 'cus_agreement_1' }), { status: 200 });
+      if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: `cus_agreement_${randomUUID().replace(/-/g, '').slice(0, 12)}` }), { status: 200 });
       if (url.includes('/v1/checkout/sessions')) {
         checkoutBody = String(init?.body ?? '');
         return new Response(JSON.stringify({ id: 'cs_agreement_1', url: 'https://checkout.stripe.test/cs_agreement_1' }), {
@@ -643,7 +896,7 @@ function checkoutStripe(label: string) {
     const url = String(input);
     if (!url.includes('api.stripe.com')) return realFetch(input as never, init);
     captured.providerCalls += 1;
-    if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: `cus_${label}` }), { status: 200 });
+    if (url.includes('/v1/customers')) return new Response(JSON.stringify({ id: `cus_${label}_${randomUUID().replace(/-/g, '').slice(0, 12)}` }), { status: 200 });
     if (url.includes('/v1/checkout/sessions')) {
       captured.checkoutBody = String(init?.body ?? '');
       return new Response(JSON.stringify({ id: `cs_${label}_${randomUUID().slice(0, 6)}`, url: `https://checkout.stripe.test/${label}` }), { status: 200 });
@@ -1121,21 +1374,29 @@ describe('the webhook: applying subscription events (called exactly as platform_
     expect(ledger.rows[0].count).toBe(0);
   });
 
-  it('fails loudly rather than guessing when a customer reference resolves to more than one organization', async () => {
+  it('cannot hold one reference for two organizations in one environment, routes by the event environment, and fails loudly without one', async () => {
     const orgA = await newTenant('webhook-collide-a');
     const orgB = await newTenant('webhook-collide-b');
     const collision = `cus_collide_${randomUUID().slice(0, 10)}`;
     await seedCustomer(orgA.organizationId, collision, orgA.userId);
-    await seedCustomer(orgB.organizationId, collision, orgB.userId);
+    await expect(seedCustomer(orgB.organizationId, collision, orgB.userId)).rejects.toMatchObject({ code: '23505' });
 
-    await expect(
-      applySubscriptionEvent(pg, {
-        customerReference: collision,
-        subscriptionReference: `sub_${randomUUID().slice(0, 8)}`,
-        createdAt: 1_800_000_030,
-        items: [{ priceReference: `price_${randomUUID().slice(0, 8)}` }],
-      }),
-    ).rejects.toThrow();
+    // The same reference in another environment is a different identity.
+    await pg.query(
+      `insert into public.platform_billing_customers (organization_id, environment, customer_reference, created_by) values ($1, 'live', $2, $3)`,
+      [orgB.organizationId, collision, orgB.userId],
+    );
+    const event = (environment: 'sandbox' | 'live' | null, createdAt: number) => applySubscriptionEvent(pg, {
+      customerReference: collision,
+      environment,
+      subscriptionReference: `sub_${randomUUID().slice(0, 8)}`,
+      createdAt,
+      items: [{ priceReference: `price_${randomUUID().slice(0, 8)}` }],
+    });
+    expect(await event('sandbox', 1_800_000_030)).toBe(orgA.organizationId);
+    expect(await event('live', 1_800_000_031)).toBe(orgB.organizationId);
+    // A webhook that states no environment cannot choose between them.
+    await expect(event(null, 1_800_000_032)).rejects.toMatchObject({ code: '21000' });
   });
 
   it('invoice notices are logged for diagnostics only, and never write a subscription row', async () => {
@@ -1154,14 +1415,24 @@ describe('the webhook: applying subscription events (called exactly as platform_
   });
 
   it('nobody but the webhook role holds execute on either function', async () => {
-    const signature =
-      'public.apply_platform_subscription_event(text,text,text,text,text,text,bigint,bigint,boolean,bigint,bigint,jsonb,text,text)';
-    const { rows } = await pg.query(
-      `select has_function_privilege('authenticated', '${signature}', 'execute') as authenticated_apply,
-              has_function_privilege('platform_billing_webhook', '${signature}', 'execute') as webhook_apply`,
+    for (const signature of [
+      'public.apply_platform_subscription_event(text,text,text,text,text,text,bigint,bigint,boolean,bigint,bigint,jsonb,text,text,text)',
+      'public.record_platform_billing_notice(text,text,text,text,text)',
+    ]) {
+      const { rows } = await pg.query(
+        `select has_function_privilege('authenticated', '${signature}', 'execute') as authenticated_execute,
+                has_function_privilege('anon', '${signature}', 'execute') as anon_execute,
+                has_function_privilege('platform_billing_webhook', '${signature}', 'execute') as webhook_execute`,
+      );
+      expect(rows[0], signature).toEqual({ authenticated_execute: false, anon_execute: false, webhook_execute: true });
+    }
+    const internal = await pg.query(
+      `select has_function_privilege('authenticated', 'app.platform_billing_customer_for_event(text,text,text)', 'execute') as resolver,
+              has_function_privilege('platform_billing_webhook', 'app.platform_billing_customer_for_event(text,text,text)', 'execute') as webhook_resolver,
+              has_function_privilege('anon', 'public.finalize_platform_billing_customer(uuid,text,text,text,text,uuid)', 'execute') as anon_finalize,
+              has_function_privilege('platform_billing_webhook', 'public.finalize_platform_billing_customer(uuid,text,text,text,text,uuid)', 'execute') as webhook_finalize`,
     );
-    expect(rows[0].authenticated_apply).toBe(false);
-    expect(rows[0].webhook_apply).toBe(true);
+    expect(internal.rows[0]).toEqual({ resolver: false, webhook_resolver: false, anon_finalize: false, webhook_finalize: false });
   });
 });
 

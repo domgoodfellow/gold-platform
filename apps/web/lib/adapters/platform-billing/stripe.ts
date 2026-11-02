@@ -1,7 +1,6 @@
 import type {
   CheckoutSessionRequest,
   CheckoutSessionStarted,
-  PlatformBillingCustomer,
   PlatformBillingEnvironment,
   PlatformBillingProvider,
   PortalSessionStarted,
@@ -54,31 +53,6 @@ export function stripePlatformBillingProvider(config: { secret: string }): Platf
   return {
     name: 'stripe',
     environment,
-
-    async ensureCustomer(input): Promise<PlatformBillingCustomer> {
-      const body: Record<string, string> = {
-        'metadata[organization_id]': input.organizationId,
-      };
-      if (input.email) body.email = input.email;
-      if (input.name) body.name = input.name;
-
-      const customer = await post<{ id?: string }>(
-        '/customers',
-        config.secret,
-        // Stable per organization: a network retry of this exact call within Stripe's own
-        // idempotency window reuses the same Customer rather than creating a second one. The
-        // caller's own unique (organization_id, environment) row is what makes a call *after*
-        // the window a no-op too.
-        `platform-billing-customer:${input.organizationId}`,
-        body,
-      );
-
-      if (!customer.id) {
-        throw new Error('stripe created a customer without naming one');
-      }
-
-      return { customerId: customer.id };
-    },
 
     async createCheckoutSession(input: CheckoutSessionRequest): Promise<CheckoutSessionStarted> {
       if (input.lineItems.length === 0) {

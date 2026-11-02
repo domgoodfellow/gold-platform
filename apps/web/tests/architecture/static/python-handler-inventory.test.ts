@@ -47,6 +47,7 @@ const INVENTORY: { file: string; route: string; trust: keyof typeof TRUST; runti
   { file: 'routing_preview_outbound', route: '/routing/preview-outbound', trust: 'bearer-token' },
   { file: 'integration_operations', route: '/integrations/operate', trust: 'bearer-token' },
   { file: 'provider_operations', route: '/providers/operate', trust: 'bearer-token' },
+  { file: 'platform_billing_customer', route: '/platform-billing/customer', trust: 'bearer-token' },
   { file: 'organization_domains', route: '/organizations/domains', trust: 'bearer-token' },
   { file: 'organization_email_domains', route: '/organizations/email-domains', trust: 'bearer-token' },
   { file: 'voice_agent_events', route: '/voice/agent/events', trust: 'voice-agent-signature' },

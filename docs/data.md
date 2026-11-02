@@ -48,6 +48,23 @@ the revision it started from and a stale one is refused, never merged; Reset del
 the product default applies. The application validates the layout against the workspace's widget
 registry before writing, and checks bound the stored shape and size. It is never authorization,
 never an organization report dashboard (`dashboards`, `dashboard_reports`) and never appearance.
+
+An organization's processor customer for GildOps' own billing (`platform_billing_customers`) is
+written only through commands (migrations `20261031000001_billing_customer_identity_is_claimed_once.sql`
+and `20261031000002_billing_customer_identity_has_no_direct_writers.sql`). Ordinary sessions hold no
+insert, update or delete grant. `begin_platform_billing_customer` reserves one row per organization
+and environment with a `pending:` placeholder for a billing manager, for the `stripe` provider only.
+`finalize_platform_billing_customer` is executable only by the `platform_billing_provisioner` machine
+role, worn by `apps/api`'s `/platform-billing/customer` after it asked the processor itself with
+GildOps' own key; it refuses any other caller identity, requires the requesting person to still hold
+`billing.manage`, replaces exactly the reserved placeholder once under a row lock, and refuses an
+overwrite, a stale placeholder or a reference already held. No human session can name a processor
+customer reference. A finalized reference is unique per provider and environment; placeholders are
+excluded and never match an event. The subscription and notice webhook functions resolve the
+organization from a finalized reference in the signed event's own provider and environment
+(Stripe's `livemode`), ignore an unknown or pending one, and refuse an ambiguous one. The portal
+lookup is environment-specific. The migration stops, rather than repairs, if two organizations
+already hold one finalized reference.
 The same migration adds nullable, hex-checked `secondary` and `highlight` columns to
 `brand_settings` (`accent` stays the primary, so existing brands are unchanged), column grants for
 them, and the security-invoker `set_brand_palette` write, which records `organization.brand_updated`.
@@ -181,6 +198,14 @@ Every derived representation needs a known upstream source and refresh/synchroni
 ---
 
 ## Finance operating reads
+
+An invoice's `source` is `work_item` or `direct`. A Work invoice names its Work item; a direct invoice names none and carries an issuance key and request fingerprint, and `invoices_source_reference` enforces exactly those combinations. `issue_invoice` and `issue_direct_invoice` are the only invoice writers and `record_payment`/`record_provider_payment` the only payment writers; `authenticated` holds no insert, update or delete on `invoices`, `invoice_lines` or `payments`. Both issuers take numbers from `app.allocate_invoice_number`, which serializes per organization. `issue_direct_invoice` accepts catalog item ids and whole quantities only, copies each item's name, unit, price and currency, requires the organization's trading currency, `invoice.issue` and a usable Billing module, and returns the existing invoice when an issuance key is retried with the same request. Payment events name the invoice when it has no Work item. `invoiced_and_incurred` counts direct invoices under their issued customer; they have no location or resource.
+
+A commercial proposal's `basis` is `platform_plan` or `catalog` (`20261031000005`). A Platform Plan proposal names its plan and copied plan and add-on prices; a catalog proposal names no plan and has one-off terms, no discount, and copied `customer_commercial_proposal_lines` (item id kept as provenance with no foreign key, name, unit, currency, whole quantity, unit price and amount) whose sum is `catalog_total_minor`. A table check holds each shape. `build_catalog_proposal` (`20261031000006`) is the only writer: it requires membership, `price.manage` and usable Billing, copies prices from `price_book_items`, and writes the row, lines and event in one transaction under a per-customer lock so concurrent builds take consecutive versions. Signed-in members keep only the status update that marks a draft sent. `hand_off_accepted_proposal` refuses any basis but `platform_plan`.
+
+A trigger (`20261031000007`) holds every proposal update to draft → sent and, inside the customer's own accept and decline functions only, sent → accepted or declined; no update may change a proposal's terms. An invoice's `source` is `work_item`, `direct` or `proposal`; a proposal invoice names its `proposal_id` (restrict on delete) and no Work, carries an issuance key, and `invoices_org_proposal_unique` allows one invoice per proposal. `issue_invoice_from_proposal` (`20261031000008`) is its only writer: it takes the proposal, optional dates and the key, requires membership, `invoice.issue` and usable Billing, accepts only an accepted one-off catalog proposal whose lines add up to its stored total, copies those lines, and numbers through `app.allocate_invoice_number`.
+
+An issued invoice's presentation is `invoice_presentations` (`20261102000001`), one row per invoice written by an after-insert trigger on `invoices` in the issuing transaction, for every source: seller identity from `organization_identity` and the organization name, bill-to name and email, brand colours and fonts from `brand_settings`, the retained logo path, layout and version, and timezone. It holds no amount, price, payment or status, and nobody updates it. Retained logos and invoice PDFs live in the private `finance-documents` bucket, which has no update or delete policy. `invoice_documents` records one canonical PDF per invoice (path, SHA-256, size, renderer); `record_invoice_document` (`20261102000002`) is its only writer and records once, requiring `invoice.issue`. Members read their business's rows and files; a portal customer reads only their own invoices' rows and PDFs, never retained logos. Invoices issued before `20261102000001` have no presentation and are not backfilled.
 
 Finance operating reads use `finance_invoice_records`, `finance_quote_records` and `finance_payment_records` as security-invoker projections over canonical records. They persist no alternative financial state. Invoice standing projects immutable line totals less signed payments; quote values project snapshotted Work pricing. Collection filters, exact counts and pagination run in PostgreSQL. `finance_dashboard_summary` additionally enforces tenant membership and `report.read`, groups money by stored currency, and applies Organization timezone to selected-period payment boundaries. Receivables aging uses actual due instants and retains a separate no-due-date bucket. No FX conversions, payment-method inference or historical rewrites occur. Aggregate amounts cross the JSON boundary as integer strings; supported-display-range checks refuse unsafe JavaScript integers. Canonical invoiced/incurred report reads retrieve every ordered result page before calculating per-currency totals. Preview limits never define dashboard aggregates.
 

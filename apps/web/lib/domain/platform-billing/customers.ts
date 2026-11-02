@@ -1,4 +1,5 @@
 import { platformBillingProvider } from '@/lib/adapters/platform-billing';
+import { callDomainCommand, requireAccessToken } from '@/lib/api/client';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
@@ -15,9 +16,6 @@ export type PlatformBillingCustomer = {
   customerReference: string;
 };
 
-/** Written by `ensurePlatformBillingCustomer` before the provider answers — never a real reference. */
-const PENDING_PREFIX = 'pending:';
-
 function toCustomer(row: {
   organization_id: string;
   environment: string;
@@ -30,44 +28,46 @@ function toCustomer(row: {
   };
 }
 
+/** This organization's billing customer in one provider environment — never another environment's. */
 export async function getPlatformBillingCustomer(
   db: Db,
-  input: { organizationId: string },
+  input: { organizationId: string; environment: PlatformBillingCustomer['environment'] },
 ): Promise<PlatformBillingCustomer | null> {
   const { data, error } = await db
     .from('platform_billing_customers')
     .select('organization_id, environment, customer_reference')
     .eq('organization_id', input.organizationId)
+    .eq('environment', input.environment)
     .maybeSingle();
   if (error) throw new DomainError(error.message, 'platform_billing.customer_read_failed');
   return data ? toCustomer(data) : null;
 }
 
+const API_REFUSALS: Readonly<Record<string, [string, string]>> = {
+  'api.not_found': ['Only this business’s own billing manager can start a subscription.', 'platform_billing.forbidden'],
+  'api.provider_refused': ['The billing provider would not create a customer.', 'platform_billing.provider_refused'],
+  'api.conflict': ['This business’s billing customer changed while it was being set up. Try again.', 'platform_billing.customer_conflict'],
+};
+
 /**
  * Provision this organization's Stripe Customer if it does not already have one for this
  * deployment's environment, and return it either way.
  *
- * **Ask, then correct — the same order `payment_requests` uses for a one-off request,
- * applied to provisioning.** A placeholder row is written first, under the caller's own
- * `billing.manage`-gated insert; the provider is asked only once that succeeds, and the row is
- * then corrected with its real reference. Calling the provider before proving authorization
- * would let anyone who can merely read this table (any organization member) trigger a live
- * provider call before ever being checked — the earlier draft of this function did exactly that.
+ * **Never recorded from here.** Which processor customer an organization owns may only be written
+ * by `apps/api`'s billing provisioner, from a reference the processor returned to it under GOLD's
+ * own key (`/platform-billing/customer`). This forwards the person's own token, so the database
+ * decides — as that person — whether they may manage this business's billing before the processor
+ * is ever asked, and nothing a browser or this runtime supplies can name a customer reference.
  *
- * **Idempotent in two layers.** The provider's own `Idempotency-Key` covers a network retry of
- * the exact call; the unique `(organization_id, environment)` row this function inserts is what
- * makes a second caller — including a genuine double-click, since the capability check and the
- * write are the same RLS-gated statement — a no-op that returns the row the first caller's
- * insert already won, rather than a second Stripe Customer.
+ * Idempotency, retries and concurrent first requests are the API's and the database's: one
+ * reservation per organization and environment, one processor request per reservation, and a
+ * request that loses a race returns the winner's customer.
  */
 export async function ensurePlatformBillingCustomer(
   db: Db,
   input: { organizationId: string; email: string | null; name: string },
 ): Promise<PlatformBillingCustomer> {
-  const actor = await requireActor(db);
-
-  const existing = await getPlatformBillingCustomer(db, { organizationId: input.organizationId });
-  if (existing && !existing.customerReference.startsWith(PENDING_PREFIX)) return existing;
+  await requireActor(db);
 
   const provider = await platformBillingProvider();
   if (!provider) {
@@ -77,59 +77,25 @@ export async function ensurePlatformBillingCustomer(
     );
   }
 
-  if (!existing) {
-    const placeholder = `${PENDING_PREFIX}${crypto.randomUUID()}`;
-    const { error: insertError } = await db.from('platform_billing_customers').insert({
-      organization_id: input.organizationId,
-      environment: provider.environment,
-      provider: provider.name,
-      customer_reference: placeholder,
-      created_by: actor.id,
-    });
-
-    if (insertError) {
-      if (insertError.code === '42501') {
-        throw new DomainError(
-          'Only this business’s own billing manager can start a subscription.',
-          'platform_billing.forbidden',
-        );
-      }
-      if (insertError.code === '23505') {
-        // Lost the race to a concurrent first-time provision — the row it wrote is the
-        // answer, unless that row is itself still pending, in which case falling through to
-        // retry the provider call below is exactly right rather than returning a fake reference.
-        const winner = await getPlatformBillingCustomer(db, { organizationId: input.organizationId });
-        if (winner && !winner.customerReference.startsWith(PENDING_PREFIX)) return winner;
-      } else {
-        throw new DomainError(insertError.message, 'platform_billing.customer_provision_failed');
-      }
-    }
-  }
-  // else: a placeholder from an earlier attempt whose provider call failed — reuse the same row
-  // rather than inserting a second one, which the unique (organization_id, environment)
-  // constraint would refuse in any case.
-
-  let customerId: string;
+  let result: { customer_reference: string; environment: string };
   try {
-    ({ customerId } = await provider.ensureCustomer({
-      organizationId: input.organizationId,
-      email: input.email,
-      name: input.name,
-    }));
-  } catch {
-    // Deliberately not deleted — the row records that this business asked and the attempt
-    // failed, the same reasoning card-payments.ts gives for a failed payment request.
-    throw new DomainError('The billing provider would not create a customer.', 'platform_billing.provider_refused');
+    result = await callDomainCommand('/platform-billing/customer', {
+      token: await requireAccessToken(db),
+      body: { organization_id: input.organizationId, email: input.email, name: input.name },
+    });
+  } catch (error) {
+    const known = error instanceof DomainError ? API_REFUSALS[error.code] : undefined;
+    if (known) throw new DomainError(known[0], known[1]);
+    throw error;
   }
 
-  const { data: corrected, error: updateError } = await db
-    .from('platform_billing_customers')
-    .update({ customer_reference: customerId })
-    .eq('organization_id', input.organizationId)
-    .eq('environment', provider.environment)
-    .select('organization_id, environment, customer_reference')
-    .single();
-  if (updateError) throw new DomainError(updateError.message, 'platform_billing.customer_correction_failed');
-
-  return toCustomer(corrected);
+  // Both runtimes read the environment from GOLD's own key. If they disagree, the two keys are not
+  // the same account mode, and a checkout must not proceed against the wrong customer.
+  if (result.environment !== provider.environment) {
+    throw new DomainError(
+      'Billing is configured differently in this deployment’s two runtimes.',
+      'platform_billing.environment_mismatch',
+    );
+  }
+  return { organizationId: input.organizationId, environment: provider.environment, customerReference: result.customer_reference };
 }

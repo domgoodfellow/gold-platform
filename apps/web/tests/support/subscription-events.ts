@@ -29,9 +29,11 @@ export type TestSubscriptionEvent = {
   createdAt: number;
   items: TestSubscriptionItem[];
   checkoutCorrelation?: string | null;
+  /** The environment the signed event came from, as the webhook sends it. Null is a webhook that sends none. */
+  environment?: 'sandbox' | 'live' | null;
 };
 
-export const APPLY_SUBSCRIPTION_SQL = `select public.apply_platform_subscription_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14) as result`;
+export const APPLY_SUBSCRIPTION_SQL = `select public.apply_platform_subscription_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14,$15) as result`;
 
 export function subscriptionEventArgs(event: TestSubscriptionEvent): unknown[] {
   return [
@@ -57,6 +59,7 @@ export function subscriptionEventArgs(event: TestSubscriptionEvent): unknown[] {
     ),
     event.checkoutCorrelation ?? null,
     'stripe',
+    event.environment === undefined ? 'sandbox' : event.environment,
   ];
 }
 

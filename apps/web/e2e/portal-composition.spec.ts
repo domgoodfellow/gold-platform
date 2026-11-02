@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { seedLegacyPlanProposal } from '../tests/support/legacy-proposals';
 import path from 'node:path';
 import { config } from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
@@ -16,7 +17,7 @@ import { addPricedLine } from '../lib/domain/pricing/prices';
 import { issueInvoice } from '../lib/domain/billing/invoices';
 import { createForm, createFormDraft, saveFormDraft, publishFormRevision, formEditorState } from '../lib/domain/forms/forms';
 import { setPortalForm } from '../lib/domain/portal/portal-forms';
-import { buildCommercialProposal, markCommercialProposalSent } from '../lib/domain/customers/commercial-proposals';
+import { markCommercialProposalSent } from '../lib/domain/customers/commercial-proposals';
 import { createProposalInvite } from '../lib/domain/customers/proposal-invites';
 import { createPlan, recordPlanPrice } from '../lib/domain/catalogue/plans';
 import type { Database } from '../lib/db/types';
@@ -51,7 +52,7 @@ test.describe('Full Batch B Portal',()=>{
    await saveFormDraft(db,{organizationId:org,revisionId:form.revisionId,definition:{title:'Customer information',submitLabel:'Send response',confirmation:{title:'Response received',message:''},fields:[{id:'notes',type:'short_text',label:'Customer notes',required:true}]}});
    await publishFormRevision(db,{organizationId:org,revisionId:form.revisionId});await setPortalForm(db,{organizationId:org,formId:form.formId,enabled:true});
    const publicForm=await formEditorState(db,org,form.formId);
-   const proposal=await buildCommercialProposal(db,{organizationId:org,customerId:customer,planId,addonPlanIds:[],currency:'CAD',billingInterval:'month'});await markCommercialProposalSent(db,{organizationId:org,proposalId:proposal.id});
+   const proposal=await seedLegacyPlanProposal({ createdBy: account.data.user.id,organizationId:org,customerId:customer,planId,addonPlanIds:[],currency:'CAD',billingInterval:'month'});await markCommercialProposalSent(db,{organizationId:org,proposalId:proposal.id});
    const proposalToken=await createProposalInvite(db,{customerId:customer});
    const token=await createPortalInvite(db,{customerId:customer});const invite=(await listPortalInvites(db,{organizationId:org,customerId:customer}))[0].id;
    await page.goto('/login');await page.getByLabel('Email',{exact:true}).fill(email);await page.getByLabel('Password',{exact:true}).fill(password);await page.getByRole('button',{name:'Log in',exact:true}).click();await page.waitForURL(value=>value.pathname!=='/login');

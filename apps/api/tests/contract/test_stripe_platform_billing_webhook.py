@@ -55,7 +55,13 @@ def subscription_body(**overrides: object) -> str:
         **overrides,
     }
     return json.dumps(
-        {"id": "evt_1", "type": "customer.subscription.updated", "created": 1_750_000_000, "data": {"object": obj}}
+        {
+            "id": "evt_1",
+            "type": "customer.subscription.updated",
+            "created": 1_750_000_000,
+            "livemode": False,
+            "data": {"object": obj},
+        }
     )
 
 
@@ -230,10 +236,38 @@ def test_an_event_without_the_providers_occurrence_time_cannot_be_ordered_and_is
     assert parse(body=body, signature=sign(body), signing_secret=SECRET, now=NOW) is None
 
 
+def test_reads_the_environment_from_the_signed_livemode_flag() -> None:
+    sandbox = subscription_body()
+    parsed = parse(body=sandbox, signature=sign(sandbox), signing_secret=SECRET, now=NOW)
+    assert isinstance(parsed, SubscriptionEvent)
+    assert parsed.environment == "sandbox"
+
+    event = json.loads(subscription_body())
+    event["livemode"] = True
+    live = json.dumps(event)
+    parsed = parse(body=live, signature=sign(live), signing_secret=SECRET, now=NOW)
+    assert isinstance(parsed, SubscriptionEvent)
+    assert parsed.environment == "live"
+
+
+def test_an_event_without_a_readable_livemode_flag_is_about_no_environment_and_is_not_acted_on() -> None:
+    for livemode in (None, "true", 1):
+        event = json.loads(subscription_body())
+        if livemode is None:
+            del event["livemode"]
+        else:
+            event["livemode"] = livemode
+        body = json.dumps(event)
+        assert parse(body=body, signature=sign(body), signing_secret=SECRET, now=NOW) is None
+
+    notice = json.dumps({"id": "evt_7", "type": "invoice.paid", "data": {"object": {"id": "in_1", "customer": "cus_1"}}})
+    assert parse(body=notice, signature=sign(notice), signing_secret=SECRET, now=NOW) is None
+
+
 def test_parses_invoice_events_as_notices_only() -> None:
     for event_type in ("invoice.paid", "invoice.payment_failed"):
         body = json.dumps(
-            {"id": "evt_6", "type": event_type, "data": {"object": {"id": "in_1", "customer": "cus_1"}}}
+            {"id": "evt_6", "type": event_type, "livemode": True, "data": {"object": {"id": "in_1", "customer": "cus_1"}}}
         )
         parsed = parse(body=body, signature=sign(body), signing_secret=SECRET, now=NOW)
 
@@ -241,6 +275,7 @@ def test_parses_invoice_events_as_notices_only() -> None:
         assert parsed.event_reference == "evt_6"
         assert parsed.event_type == event_type
         assert parsed.customer_reference == "cus_1"
+        assert parsed.environment == "live"
         # A notice carries no status, no subscription, no price -- it is not a subscription
         # writer (module docstring).
         assert not hasattr(parsed, "status")

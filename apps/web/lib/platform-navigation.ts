@@ -7,8 +7,8 @@ import type { WorkspaceKey } from '@/lib/navigation';
  * one and refused by another. Presentation (icons) lives with the renderer, keyed by `key`.
  *
  * Administration is a privileged scope inside GildOps' own organization, never a second identity:
- * its routes keep the `/organizations/{goldId}/platform/**` container and its data stays
- * system-scoped. Only live platform permissions offer these destinations.
+ * its routes are served at `/platform/**` for the configured operating organization and its data
+ * stays system-scoped. Only live platform permissions offer these destinations.
  */
 export const ADMINISTRATION_LABEL = 'Administration';
 
@@ -20,14 +20,16 @@ export type PlatformGroupKey = 'product-registry' | 'integration-registry' | 'in
  * `linkedFrom` names a workspace whose own navigation also links in, because GildOps operators
  * reach this administration from that work (AI Runtime from AI). The pages stay in Administration —
  * the link is a way in, never a second home. Commercial administration is not linked from Finance:
- * Finance is the tenant's own ledger, and GildOps' commercial control is platform-only (ADR-051).
+ * it holds the existing platform-billing records and GildOps' private provider economics, which
+ * Finance must never read. Selling itself belongs to organization Finance; these records stay here
+ * only until a reviewed migration moves GildOps' selling there (ADR-051).
  */
 export const PLATFORM_GROUPS: readonly { key: PlatformGroupKey; label: string; linkedFrom?: WorkspaceKey }[] = [
   { key: 'product-registry', label: 'Product Registry' },
   { key: 'integration-registry', label: 'Integration Registry' },
   { key: 'infrastructure', label: 'Infrastructure' },
   { key: 'reliability', label: 'Reliability' },
-  // Not linked from Finance: commercial administration is platform-only and is reached from Administration (ADR-051).
+  // Not linked from Finance: transitional platform-billing records and private economics (ADR-051).
   { key: 'commercial', label: 'Commercial administration' },
 ];
 

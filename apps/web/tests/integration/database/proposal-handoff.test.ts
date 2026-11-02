@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
+import { seedLegacyPlanProposal } from '@/tests/support/legacy-proposals';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { getPlan } from '@/lib/domain/catalogue/plans';
-import { acceptCommercialProposal, buildCommercialProposal, markCommercialProposalSent } from '@/lib/domain/customers/commercial-proposals';
+import { acceptCommercialProposal, markCommercialProposalSent } from '@/lib/domain/customers/commercial-proposals';
 import { createCustomer, getCustomer } from '@/lib/domain/customers/customers';
 import { upsertDiscoverySnapshotAnswers } from '@/lib/domain/customers/discovery-snapshots';
 import { claimProposalInvite, createProposalInvite } from '@/lib/domain/customers/proposal-invites';
@@ -93,7 +94,7 @@ describe('handing off an accepted proposal', () => {
 
     const start = await getPlan(repDb, 'start');
     planId = start!.id;
-    const built = await buildCommercialProposal(repDb, {
+    const built = await seedLegacyPlanProposal({ createdBy: repUserId,
       organizationId: gildOpsOrgId,
       customerId,
       planId: start!.id,
@@ -271,7 +272,7 @@ describe('handing off an accepted proposal', () => {
 
   it('refuses to hand off a proposal that was never accepted', async () => {
     const start = await getPlan(repDb, 'start');
-    const draft = await buildCommercialProposal(repDb, {
+    const draft = await seedLegacyPlanProposal({ createdBy: repUserId,
       organizationId: gildOpsOrgId,
       customerId,
       planId: start!.id,

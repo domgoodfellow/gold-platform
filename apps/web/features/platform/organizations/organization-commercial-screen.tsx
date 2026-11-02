@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/ta
 import type { ComponentPrice, OrganizationCommercialModel } from '@/lib/application/platform/organization-commercial';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { TenantWorkspaceHeader } from '@/features/platform/tenant-workspace';
-import { deriveOrganizationFeatureState, EntitlementStatus, FeatureStatusBadges } from '@/features/catalogue/feature-badges';
+import { EntitlementStatus, FeatureStatusBadges } from '@/features/catalogue/feature-badges';
 import { AssignPlanSheet, ManageAddonsSheet, RecordCommercialTermForm, RecordPlanAgreementSheet, RecordQuotaOverrideSheet } from '@/features/platform/organizations/forms';
 import { ButtonLink } from '@/components/controls/button';
 import type { OrganizationEconomicsModel } from '@/lib/application/platform/economics-overview';
@@ -206,7 +206,7 @@ export function OrganizationCommercialScreen({
                             </div>
                             <div className="flex items-center gap-1.5">
                               {resolved?.readiness === 'setup_required' ? <Badge>Setup required</Badge> : null}
-                              {resolved ? <EntitlementStatus state={deriveOrganizationFeatureState(resolved)} /> : null}
+                              {resolved ? <EntitlementStatus state={resolved} /> : null}
                             </div>
                           </li>
                         ))}

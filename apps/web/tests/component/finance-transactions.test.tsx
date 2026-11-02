@@ -10,13 +10,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * was typed. Server actions are mocked; the database contract is covered by the invoice suites.
  */
 
-const finance = vi.hoisted(() => ({ financeChoices: vi.fn(), financeReview: vi.fn(), financeMutation: vi.fn() }));
+const finance = vi.hoisted(() => ({ financeChoices: vi.fn(), financeReview: vi.fn(), financePaymentReview: vi.fn(), financeDirectInvoiceReview: vi.fn(), financeMutation: vi.fn(), previewInvoiceDocument: vi.fn(), createInvoiceDocument: vi.fn() }));
 vi.mock('@/app/organizations/[organizationId]/finance/actions', () => finance);
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => '/organizations/org/finance' }));
+const router = vi.hoisted(() => ({ refresh: vi.fn(), push: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/organizations/org/finance', useSearchParams: () => new URLSearchParams() }));
 
 const { QuoteDialog } = await import('@/features/finance/transactions/quote-dialog');
 const { InvoiceDialog } = await import('@/features/finance/transactions/invoice-dialog');
 const { PaymentDialog } = await import('@/features/finance/transactions/payment-dialog');
+const { InvoiceInspector } = await import('@/features/finance/collections/invoice-inspector');
+const { PagePanel, WorkspaceRailProvider } = await import('@/components/panels/workspace-right-rail');
 
 const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 260)));
 const sent = () => Object.fromEntries((finance.financeMutation.mock.calls.at(-1)![1] as FormData).entries());
@@ -26,7 +29,7 @@ const items = [
   { id: 'labour', name: 'Labour', unit: 'hour', unitAmountMinor: 9550, currency: 'CAD', createdAt: '' },
   { id: 'consult', name: 'Consultation', unit: 'hour', unitAmountMinor: 18000, currency: 'USD', createdAt: '' },
 ];
-const invoice = (payments: { id: string; amountMinor: number }[] = []) => ({ id: 'i1', number: 7, currency: 'CAD', billedTo: 'North Shore Plumbing', workItemId: 'w1', issuedAt: '2026-10-01T00:00:00Z', dueAt: null, lines: [{ ...line('l1', 'Emergency callout', 27500, 1, 'callout'), position: 0 }], payments: payments.map(p => ({ ...p, currency: 'CAD', receivedAt: '2026-10-10T12:00:00Z', provider: null, providerReference: null, note: null })) });
+const invoice = (payments: { id: string; amountMinor: number }[] = []) => ({ id: 'i1', source: 'work_item' as const, number: 7, currency: 'CAD', billedTo: 'North Shore Plumbing', workItemId: 'w1', issuedAt: '2026-10-01T00:00:00Z', dueAt: null, lines: [{ ...line('l1', 'Emergency callout', 27500, 1, 'callout'), position: 0 }], payments: payments.map(p => ({ ...p, currency: 'CAD', receivedAt: '2026-10-10T12:00:00Z', provider: null, providerReference: null, note: null })) });
 
 beforeEach(() => {
   for (const fn of Object.values(finance)) fn.mockReset();
@@ -171,9 +174,9 @@ describe('New invoice', () => {
 describe('Record payment', () => {
   it('shows the invoice balance and records a receipt as typed', async () => {
     const user = userEvent.setup();
-    finance.financeReview.mockResolvedValue({ work, invoice: invoice([{ id: 'p1', amountMinor: 20000 }]), lines: [], items });
+    finance.financePaymentReview.mockResolvedValue({ invoice: invoice([{ id: 'p1', amountMinor: 20000 }]) });
     finance.financeMutation.mockResolvedValue({ error: null, success: 'Payment recorded.', record: 'CA$75.00 on invoice #7', href: '/x' });
-    render(<PaymentDialog organizationId="org" workItemId="w1" today="2026-10-25" />);
+    render(<PaymentDialog organizationId="org" invoiceId="i1" today="2026-10-25" />);
     await user.click(screen.getByRole('button', { name: 'Record payment' }));
     await settle();
     const dialog = screen.getByRole('dialog', { name: 'Record payment' });
@@ -184,14 +187,14 @@ describe('Record payment', () => {
     expect(within(dialog).getByLabelText('Balance')).toHaveTextContent('Outstanding after thisCA$0.00');
     expect(within(dialog).getByText(/does not confirm the money with a payment processor/)).toBeVisible();
     await user.click(within(dialog).getByRole('button', { name: 'Record payment' }));
-    expect(sent()).toMatchObject({ kind: 'payment', workItemId: 'w1', entry: 'receipt', amount: '75.00', receivedAt: '2026-10-25', confirmed: '' });
+    expect(sent()).toMatchObject({ kind: 'payment', invoiceId: 'i1', entry: 'receipt', amount: '75.00', receivedAt: '2026-10-25', confirmed: '' });
   });
 
   it('records a correction only after confirming it, as a signed entry', async () => {
     const user = userEvent.setup();
-    finance.financeReview.mockResolvedValue({ work, invoice: invoice([{ id: 'p1', amountMinor: 27500 }]), lines: [], items });
+    finance.financePaymentReview.mockResolvedValue({ invoice: invoice([{ id: 'p1', amountMinor: 27500 }]) });
     finance.financeMutation.mockResolvedValue({ error: null, success: 'Correction recorded.', record: '-CA$25.00 on invoice #7', href: '/x' });
-    render(<PaymentDialog organizationId="org" workItemId="w1" today="2026-10-25" entry="correction" label="Correction" />);
+    render(<PaymentDialog organizationId="org" invoiceId="i1" today="2026-10-25" entry="correction" label="Correction" />);
     await user.click(screen.getByRole('button', { name: 'Correction' }));
     await settle();
     const dialog = screen.getByRole('dialog', { name: 'Record correction' });
@@ -209,9 +212,9 @@ describe('Record payment', () => {
 
   it('keeps every typed value when the server refuses, and moves focus to the reason', async () => {
     const user = userEvent.setup();
-    finance.financeReview.mockResolvedValue({ work, invoice: invoice(), lines: [], items });
+    finance.financePaymentReview.mockResolvedValue({ invoice: invoice() });
     finance.financeMutation.mockResolvedValue({ error: 'You cannot record payments here.' });
-    render(<PaymentDialog organizationId="org" workItemId="w1" today="2026-10-25" />);
+    render(<PaymentDialog organizationId="org" invoiceId="i1" today="2026-10-25" />);
     await user.click(screen.getByRole('button', { name: 'Record payment' }));
     await settle();
     await user.type(screen.getByLabelText('Amount (CAD)'), '10.50');
@@ -222,5 +225,160 @@ describe('Record payment', () => {
     expect(screen.getByLabelText('Amount (CAD)')).toHaveValue('10.50');
     expect(screen.getByLabelText(/Note/)).toHaveValue('Cheque 1042');
     await waitFor(() => expect(alert.parentElement).toHaveFocus());
+  });
+});
+
+describe('New invoice, directly from catalog items', () => {
+  const choose = async (user: ReturnType<typeof userEvent.setup>) => {
+    finance.financeChoices.mockResolvedValue({ total: 1, rows: [{ id: 'c1', title: 'North Shore Plumbing', detail: 'office@northshore.test', meta: '' }] });
+    finance.financeDirectInvoiceReview.mockResolvedValue({ customer: { id: 'c1', name: 'North Shore Plumbing' }, items, currency: 'CAD' });
+    render(<InvoiceDialog organizationId="org" today="2026-10-25" />);
+    await user.click(screen.getByRole('button', { name: 'New invoice' }));
+    const dialog = screen.getByRole('dialog', { name: 'New invoice' });
+    await user.click(within(dialog).getByRole('radio', { name: /A customer, from catalog items/ }));
+    await settle();
+    expect(finance.financeChoices).toHaveBeenLastCalledWith('org', 'customer', '', { includeSettled: false });
+    await user.click(within(dialog).getByRole('radio', { name: /North Shore Plumbing/ }));
+    await settle();
+    return dialog;
+  };
+
+  it('sends a customer, catalog items and quantities and never an amount, only after confirming', async () => {
+    const user = userEvent.setup();
+    finance.financeMutation.mockResolvedValue({ error: null, success: 'Invoice issued.', record: 'Invoice #9', href: '/organizations/org/finance/invoices?invoice=i9' });
+    const dialog = await choose(user);
+    expect(within(dialog).getByText('Invoiced directly, with no Work item')).toBeVisible();
+    await user.selectOptions(within(dialog).getByLabelText('Item 1'), 'labour');
+    await user.clear(within(dialog).getByLabelText('Quantity'));
+    await user.type(within(dialog).getByLabelText('Quantity'), '2');
+    // 2 × CA$95.50, through the one price calculation.
+    expect(within(dialog).getByLabelText('Invoice total')).toHaveTextContent('CA$191.00');
+    await user.click(within(dialog).getByRole('button', { name: 'Continue' }));
+    expect(finance.financeMutation).not.toHaveBeenCalled();
+    expect(within(dialog).getByRole('group', { name: 'Confirmation' })).toHaveTextContent('Issue invoice to North Shore Plumbing?');
+    await user.click(within(dialog).getByRole('button', { name: 'Issue invoice' }));
+    const form = sent();
+    expect(form).toMatchObject({ organizationId: 'org', kind: 'invoice', source: 'direct', customerId: 'c1', issuedAt: '2026-10-25', dueAt: '', confirmed: '1' });
+    expect(JSON.parse(String(form.lines))).toEqual([{ priceBookItemId: 'labour', quantity: 2 }]);
+    expect(String(form.issuanceKey)).toMatch(/^[0-9a-f-]{36}$/);
+    expect(Object.keys(form).some((key) => /amount|price(?!BookItemId)|total|discount/i.test(key))).toBe(false);
+    expect(String(form.lines)).not.toMatch(/amount|unit|currency|total|discount/i);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Invoice #9 issued'));
+  });
+
+  it('keeps one issuance key across a refused and a repeated confirmation, so a retry is the same request', async () => {
+    const user = userEvent.setup();
+    finance.financeMutation.mockResolvedValueOnce({ error: 'Another invoice was issued at the same moment. Try again.' }).mockResolvedValue({ error: null, success: 'Invoice issued.', record: 'Invoice #9', href: '/x' });
+    const dialog = await choose(user);
+    await user.selectOptions(within(dialog).getByLabelText('Item 1'), 'labour');
+    await user.click(within(dialog).getByRole('button', { name: 'Continue' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Issue invoice' }));
+    await screen.findByRole('alert');
+    const first = sent().issuanceKey;
+    await user.click(within(dialog).getByRole('button', { name: 'Continue' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Issue invoice' }));
+    expect(sent().issuanceKey).toBe(first);
+  });
+
+  it('refuses to continue with a whole-number problem or an item outside the trading currency', async () => {
+    const user = userEvent.setup();
+    const dialog = await choose(user);
+    await user.selectOptions(within(dialog).getByLabelText('Item 1'), 'consult');
+    expect(within(dialog).getByText(/priced in another currency/)).toBeVisible();
+    expect(within(dialog).getByRole('button', { name: 'Continue' })).toBeDisabled();
+    await user.selectOptions(within(dialog).getByLabelText('Item 1'), 'labour');
+    await user.clear(within(dialog).getByLabelText('Quantity'));
+    await user.type(within(dialog).getByLabelText('Quantity'), '0');
+    expect(within(dialog).getByText(/whole number from 1 to 1,000,000/)).toBeVisible();
+    expect(within(dialog).getByRole('button', { name: 'Continue' })).toBeDisabled();
+  });
+
+  it('from a Work item offers only that Work, never the catalog choice', async () => {
+    const user = userEvent.setup();
+    finance.financeReview.mockResolvedValue({ work, invoice: null, lines: [line('l1', 'Emergency callout', 27500, 1)], items });
+    render(<InvoiceDialog organizationId="org" workItemId="w1" today="2026-10-25" />);
+    await user.click(screen.getByRole('button', { name: 'New invoice' }));
+    await settle();
+    expect(screen.queryByRole('radio', { name: /A customer, from catalog items/ })).toBeNull();
+  });
+});
+
+describe('Invoice documents', () => {
+  it('previews a draft from the review step with the fields issuance would use, and issues nothing', async () => {
+    const user = userEvent.setup();
+    const createObjectURL = vi.fn(() => 'blob:draft-1');
+    Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() });
+    finance.financeReview.mockResolvedValue({ work, invoice: null, lines: [line('l1', 'Emergency callout', 27500, 1, 'callout')], items });
+    finance.previewInvoiceDocument.mockResolvedValue({ pdf: btoa('%PDF-1.3 draft') });
+    render(<InvoiceDialog organizationId="org" workItemId="w1" today="2026-10-25" />);
+    await user.click(screen.getByRole('button', { name: 'New invoice' }));
+    await settle();
+    const dialog = screen.getByRole('dialog', { name: 'New invoice' });
+    await user.click(within(dialog).getByRole('button', { name: 'Preview document' }));
+    expect(finance.previewInvoiceDocument).toHaveBeenCalledWith({ organizationId: 'org', workItemId: 'w1', issuedAt: '2026-10-25', dueAt: '' });
+    const open = await within(dialog).findByRole('link', { name: /Open draft preview/ });
+    expect(open).toHaveAttribute('href', 'blob:draft-1');
+    expect(open).toHaveAttribute('target', '_blank');
+    expect(within(dialog).getByRole('link', { name: 'Download draft' })).toHaveAttribute('download', 'draft-invoice.pdf');
+    expect(within(dialog).getByText(/a draft with today’s branding/)).toBeVisible();
+    expect(finance.financeMutation).not.toHaveBeenCalled();
+    // Changing what would be issued discards the draft.
+    await user.type(within(dialog).getByLabelText(/Due date/), '2026-11-24');
+    expect(within(dialog).queryByRole('link', { name: /Open draft preview/ })).toBeNull();
+    expect(within(dialog).getByRole('button', { name: 'Preview document' })).toBeVisible();
+  });
+
+  it('shows a refused preview without leaving the review', async () => {
+    const user = userEvent.setup();
+    finance.financeReview.mockResolvedValue({ work, invoice: null, lines: [line('l1', 'Emergency callout', 27500, 1, 'callout')], items });
+    finance.previewInvoiceDocument.mockResolvedValue({ error: 'Your role cannot preview invoices.' });
+    render(<InvoiceDialog organizationId="org" workItemId="w1" today="2026-10-25" />);
+    await user.click(screen.getByRole('button', { name: 'New invoice' }));
+    await settle();
+    await user.click(screen.getByRole('button', { name: 'Preview document' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your role cannot preview invoices.');
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled();
+  });
+
+  it('says when an issued invoice’s PDF was not created, without undoing the issue', async () => {
+    const user = userEvent.setup();
+    finance.financeReview.mockResolvedValue({ work, invoice: null, lines: [line('l1', 'Emergency callout', 27500, 1, 'callout')], items });
+    finance.financeMutation.mockResolvedValue({ error: null, success: 'Invoice issued.', record: 'Invoice #8', href: '/organizations/org/finance/invoices?invoice=i8', documentError: 'The invoice PDF could not be drawn. Try again.' });
+    render(<InvoiceDialog organizationId="org" workItemId="w1" today="2026-10-25" />);
+    await user.click(screen.getByRole('button', { name: 'New invoice' }));
+    await settle();
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await user.click(screen.getByRole('button', { name: 'Issue invoice' }));
+    expect(await screen.findByText(/Invoice #8 issued/)).toBeVisible();
+    expect(screen.getByText(/The invoice is issued, but its PDF was not created: The invoice PDF could not be drawn/)).toBeVisible();
+  });
+
+  const row = { id: 'i1', source: 'work_item' as const, workItemId: 'w1', proposalId: null, number: 7, billedTo: 'North Shore Plumbing', customerId: 'c1', currency: 'CAD', issuedAt: '2026-10-01T00:00:00Z', dueAt: null, total: { totalMinor: 27500, currency: 'CAD' }, paidMinor: 0, outstandingMinor: 27500, settled: false, overdue: false };
+  const inspector = (document: { available: boolean; mayCreate: boolean }) => render(<WorkspaceRailProvider><InvoiceInspector organizationId="org" row={row} invoice={{ ...invoice(), customerId: 'c1', proposalId: null }} timezone="America/Toronto" today="2026-10-25" closeHref="/organizations/org/finance/invoices" mayRecord={false} document={document} /><PagePanel /></WorkspaceRailProvider>);
+
+  it('offers the stored PDF as a download from the invoice', async () => {
+    inspector({ available: true, mayCreate: true });
+    expect(await screen.findByRole('link', { name: 'Download PDF' })).toHaveAttribute('href', '/organizations/org/finance/invoices/i1/document');
+    expect(screen.queryByRole('button', { name: 'Create PDF' })).toBeNull();
+  });
+
+  it('creates a missing PDF on request, and offers a retry after a refusal', async () => {
+    const user = userEvent.setup();
+    finance.createInvoiceDocument.mockResolvedValueOnce({ error: 'The invoice document could not be stored. Try again.' }).mockResolvedValueOnce({ error: null });
+    inspector({ available: false, mayCreate: true });
+    expect(await screen.findByText('The PDF of invoice #7 has not been created.')).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Download PDF' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Create PDF' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('could not be stored');
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+    expect(finance.createInvoiceDocument).toHaveBeenCalledWith('org', 'i1');
+  });
+
+  it('offers no creation to someone who may not issue invoices', async () => {
+    inspector({ available: false, mayCreate: false });
+    expect(await screen.findByText('The PDF of invoice #7 has not been created.')).toBeVisible();
+    expect(screen.queryByRole('button', { name: /Create PDF/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Download PDF' })).toBeNull();
   });
 });

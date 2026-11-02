@@ -315,7 +315,7 @@ export function WorkInvoiceSection({ organizationId, workItemId, invoice, standi
   mayBePaid: boolean;
 }) {
   const date = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { timeZone: timezone });
-  const action = invoice && standing ? (mayBePaid && !standing.settled ? <PaymentDialog organizationId={organizationId} workItemId={workItemId} today={today} size="small" /> : null)
+  const action = invoice && standing ? (mayBePaid && !standing.settled ? <PaymentDialog organizationId={organizationId} invoiceId={invoice.id} today={today} size="small" /> : null)
     : mayInvoice && price ? <InvoiceDialog organizationId={organizationId} workItemId={workItemId} today={today} label="Issue invoice" size="small" /> : null;
   return <Section className="mt-8" aria-labelledby="work-invoice-heading">
     <div className="flex flex-wrap items-center justify-between gap-2"><SectionHeading id="work-invoice-heading">Invoice</SectionHeading>{action}</div>

@@ -90,6 +90,45 @@ def load_platform_billing_settings() -> PlatformBillingSettings | None:
 
 
 @dataclass(frozen=True)
+class PlatformBillingProvisioningSettings:
+    """What creating an organization's customer on GOLD's own billing account needs.
+
+    **Separate from the webhook's settings because it holds a different authority.** The webhook
+    only hears from the processor; this asks it, with GOLD's own secret key, and is the only
+    runtime allowed to tell the database which processor customer an organization owns. It signs a
+    60-second token for `platform_billing_provisioner`, a machine role with one execute grant.
+    The environment is read from the key itself, the same rule `apps/web` applies, so a request can
+    never choose it.
+    """
+
+    supabase_url: str
+    supabase_publishable_key: str
+    supabase_jwt_secret: str
+    stripe_secret_key: str
+
+    @property
+    def environment(self) -> str:
+        # Anything that is not unmistakably a live key is treated as sandbox: confusing the two
+        # should never charge for real.
+        return "live" if self.stripe_secret_key.startswith("sk_live_") else "sandbox"
+
+
+def load_platform_billing_provisioning_settings() -> PlatformBillingProvisioningSettings | None:
+    values = {
+        "supabase_url": os.environ.get("SUPABASE_URL"),
+        "supabase_publishable_key": _publishable_key(),
+        "supabase_jwt_secret": os.environ.get("SUPABASE_JWT_SECRET"),
+        # GOLD's own processor account, the same secret `apps/web` bills with. Never a tenant's.
+        "stripe_secret_key": os.environ.get("STRIPE_SECRET_KEY"),
+    }
+
+    if not all(values.values()):
+        return None
+
+    return PlatformBillingProvisioningSettings(**values)  # type: ignore[arg-type]
+
+
+@dataclass(frozen=True)
 class ProviderOperationsSettings:
     """What acting on a GOLD-owned provider account needs.
 

@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
+import { seedLegacyPlanProposal } from '@/tests/support/legacy-proposals';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { getPlan } from '@/lib/domain/catalogue/plans';
 import {
   acceptCommercialProposal,
-  buildCommercialProposal,
   declineCommercialProposal,
   listCommercialProposalsForExternalCustomer,
   markCommercialProposalSent,
@@ -75,7 +75,7 @@ describe('a prospect reviewing their own commercial proposal', () => {
     planId = start!.id;
 
     // A draft, never sent — must stay invisible externally.
-    await buildCommercialProposal(shop.db, {
+    await seedLegacyPlanProposal({ createdBy: (await shop.db.auth.getUser()).data.user!.id,
       organizationId: shop.organizationId,
       customerId,
       planId,
@@ -95,7 +95,7 @@ describe('a prospect reviewing their own commercial proposal', () => {
   });
 
   it('sees a sent proposal, and its discovery snapshot, once one exists', async () => {
-    const built = await buildCommercialProposal(shop.db, {
+    const built = await seedLegacyPlanProposal({ createdBy: (await shop.db.auth.getUser()).data.user!.id,
       organizationId: shop.organizationId,
       customerId,
       planId,
@@ -146,7 +146,7 @@ describe('a prospect reviewing their own commercial proposal', () => {
   });
 
   it('declines a sent proposal, recording who and when', async () => {
-    const built = await buildCommercialProposal(shop.db, {
+    const built = await seedLegacyPlanProposal({ createdBy: (await shop.db.auth.getUser()).data.user!.id,
       organizationId: shop.organizationId,
       customerId,
       planId,

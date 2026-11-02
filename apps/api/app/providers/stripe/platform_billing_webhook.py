@@ -68,6 +68,7 @@ class SubscriptionEvent:
     event_reference: str
     event_type: str
     customer_reference: str
+    environment: str
     subscription_reference: str
     status: str
     currency: str
@@ -106,6 +107,7 @@ class NoticeEvent:
     event_reference: str
     event_type: str
     customer_reference: str
+    environment: str
 
 
 def parse(
@@ -133,11 +135,19 @@ def parse(
     if not isinstance(customer_reference, str):
         return None
 
+    # Which environment the signed event came from decides which customer it can be about. Without
+    # the provider's own flag there is no honest way to choose, so the event is not acted on.
+    livemode = event.get("livemode")
+    if not isinstance(livemode, bool):
+        return None
+    environment = "live" if livemode else "sandbox"
+
     if event_type in NOTICE_EVENTS:
         return NoticeEvent(
             event_reference=event_reference,
             event_type=event_type,
             customer_reference=customer_reference,
+            environment=environment,
         )
 
     subscription_reference = obj.get("id")
@@ -200,6 +210,7 @@ def parse(
         event_reference=event_reference,
         event_type=event_type,
         customer_reference=customer_reference,
+        environment=environment,
         subscription_reference=subscription_reference,
         status=status,
         # Stripe lower-cases currency codes; every currency column in this schema is `^[A-Z]{3}$`.

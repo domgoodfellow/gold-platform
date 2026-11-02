@@ -45,7 +45,9 @@ function invoice(overrides: Partial<Invoice> & { totalMinor: number; paid?: numb
   }));
   return {
     id: overrides.id ?? 'i1',
+    source: 'work_item',
     workItemId: 'w1',
+    proposalId: null,
     number: 1,
     billedTo: 'Customer',
     customerId: null,

@@ -19,6 +19,7 @@
     "@gold/schemas": "workspace:*",
     "@gold/types": "workspace:*",
     "@gold/ui": "workspace:*",
+    "@react-pdf/renderer": "4.3.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.60.0",
     "@twilio/voice-sdk": "^2.18.5",
@@ -60,6 +61,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5",
+    "unpdf": "1.0.0",
     "vitest": "^4.0.18"
   }
 }

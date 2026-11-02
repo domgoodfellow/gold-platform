@@ -1,10 +1,6 @@
 import type { Json } from '@/lib/db/database.types';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
-import { currentPlanPrice, getPlanById, listPlanAddonIds, listPlanPrices } from '@/lib/domain/catalogue/plans';
-import { recommendConfiguration } from '@/lib/domain/customers/configuration-recommendation';
-import { getDiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
-import { requireActor } from '@/lib/domain/tenancy/actor';
 
 export type CommercialProposalStatus = 'draft' | 'sent' | 'accepted' | 'declined';
 
@@ -14,12 +10,33 @@ export type CommercialProposalAddon = {
   priceMinor: number;
 };
 
+/**
+ * What a proposal is priced from. `platform_plan` is every proposal built before ADR-051's catalog
+ * slice — a GildOps Platform Plan offer, still readable and still the only basis the technical
+ * hand-off accepts. `catalog` is the seller's own Finance catalog, copied into `lines`.
+ */
+export type CommercialProposalBasis = 'platform_plan' | 'catalog';
+
+/** One copied catalog line. The price is the one in force when the proposal was built. */
+export type CommercialProposalLine = {
+  position: number;
+  priceBookItemId: string;
+  name: string;
+  unit: string;
+  currency: string;
+  quantity: number;
+  unitAmountMinor: number;
+  amountMinor: number;
+};
+
 export type CommercialProposal = {
   id: string;
   organizationId: string;
   customerId: string;
-  planId: string;
-  planLabel: string;
+  basis: CommercialProposalBasis;
+  /** Platform Plan proposals only; null on a catalog proposal. */
+  planId: string | null;
+  planLabel: string | null;
   currency: string;
   billingInterval: 'month' | 'year' | 'one_time';
   planPriceMinor: number;
@@ -39,22 +56,34 @@ export type CommercialProposal = {
   declinedBy: string | null;
   declinedAt: string | null;
   addons: CommercialProposalAddon[];
+  /** The copied total of a catalog proposal's lines; null on a Platform Plan proposal. */
+  catalogTotalMinor: number | null;
+  lines: CommercialProposalLine[];
 };
 
-/** What GildOps actually charges for this: plan plus add-ons, minus any discount. Derived, never stored. */
-export function commercialProposalTotalMinor(proposal: Pick<CommercialProposal, 'planPriceMinor' | 'addonPriceMinor' | 'discountMinor'>): number {
+/**
+ * What the proposal asks the customer to agree to. A catalog proposal's total was fixed when it
+ * was built; a Platform Plan proposal's is its plan plus add-ons, minus any discount.
+ */
+export function commercialProposalTotalMinor(
+  proposal: Pick<CommercialProposal, 'planPriceMinor' | 'addonPriceMinor' | 'discountMinor'> &
+    Partial<Pick<CommercialProposal, 'basis' | 'catalogTotalMinor'>>,
+): number {
+  if (proposal.basis === 'catalog') return proposal.catalogTotalMinor ?? 0;
   return Math.max(0, proposal.planPriceMinor + proposal.addonPriceMinor - proposal.discountMinor);
 }
 
 const PROPOSAL_COLUMNS =
-  'id, organization_id, customer_id, plan_id, plan_label, currency, billing_interval, plan_price_minor, addon_price_minor, discount_minor, discount_reason, notes, status, version, supersedes_id, created_at, created_by, accepted_by, accepted_at, accepted_configuration, proposed_configuration, declined_by, declined_at';
+  'id, organization_id, customer_id, basis, catalog_total_minor, plan_id, plan_label, currency, billing_interval, plan_price_minor, addon_price_minor, discount_minor, discount_reason, notes, status, version, supersedes_id, created_at, created_by, accepted_by, accepted_at, accepted_configuration, proposed_configuration, declined_by, declined_at';
 
 type ProposalRow = {
   id: string;
   organization_id: string;
   customer_id: string;
-  plan_id: string;
-  plan_label: string;
+  basis: string;
+  catalog_total_minor: number | string | null;
+  plan_id: string | null;
+  plan_label: string | null;
   currency: string;
   billing_interval: string;
   plan_price_minor: number | string;
@@ -75,11 +104,12 @@ type ProposalRow = {
   declined_at: string | null;
 };
 
-function toProposal(row: ProposalRow, addons: CommercialProposalAddon[]): CommercialProposal {
+function toProposal(row: ProposalRow, addons: CommercialProposalAddon[], lines: CommercialProposalLine[]): CommercialProposal {
   return {
     id: row.id,
     organizationId: row.organization_id,
     customerId: row.customer_id,
+    basis: row.basis === 'catalog' ? 'catalog' : 'platform_plan',
     planId: row.plan_id,
     planLabel: row.plan_label,
     currency: row.currency,
@@ -101,7 +131,35 @@ function toProposal(row: ProposalRow, addons: CommercialProposalAddon[]): Commer
     declinedBy: row.declined_by,
     declinedAt: row.declined_at,
     addons,
+    catalogTotalMinor: row.catalog_total_minor === null ? null : Number(row.catalog_total_minor),
+    lines,
   };
+}
+
+async function listLinesFor(db: Db, input: { organizationId: string; proposalId: string }): Promise<CommercialProposalLine[]> {
+  const { data, error } = await db
+    .from('customer_commercial_proposal_lines')
+    .select('position, price_book_item_id, name, unit, currency, quantity, unit_amount_minor, amount_minor')
+    .eq('organization_id', input.organizationId)
+    .eq('proposal_id', input.proposalId)
+    .order('position');
+  if (error) throw new DomainError(error.message, 'commercial_proposals.lines_failed');
+  return (data ?? []).map((row) => ({
+    position: row.position,
+    priceBookItemId: row.price_book_item_id,
+    name: row.name,
+    unit: row.unit,
+    currency: row.currency,
+    quantity: row.quantity,
+    unitAmountMinor: Number(row.unit_amount_minor),
+    amountMinor: Number(row.amount_minor),
+  }));
+}
+
+async function hydrate(db: Db, row: ProposalRow): Promise<CommercialProposal> {
+  const scope = { organizationId: row.organization_id, proposalId: row.id };
+  const [addons, lines] = await Promise.all([listAddonsFor(db, scope), listLinesFor(db, scope)]);
+  return toProposal(row, addons, lines);
 }
 
 async function listAddonsFor(db: Db, input: { organizationId: string; proposalId: string }): Promise<CommercialProposalAddon[]> {
@@ -128,7 +186,7 @@ export async function listCommercialProposals(
   if (error) throw new DomainError(error.message, 'commercial_proposals.list_failed');
 
   const rows = (data ?? []) as ProposalRow[];
-  return Promise.all(rows.map(async (row) => toProposal(row, await listAddonsFor(db, { organizationId: input.organizationId, proposalId: row.id }))));
+  return Promise.all(rows.map((row) => hydrate(db, row)));
 }
 
 /** One proposal by id, or null. Null covers both "no such proposal" and "not yours" indistinguishably, same as every other single-row reader in this domain. */
@@ -144,9 +202,7 @@ export async function getCommercialProposal(
     .maybeSingle();
   if (error) throw new DomainError(error.message, 'commercial_proposals.get_failed');
   if (!data) return null;
-
-  const addons = await listAddonsFor(db, { organizationId: input.organizationId, proposalId: data.id });
-  return toProposal(data as ProposalRow, addons);
+  return hydrate(db, data as ProposalRow);
 }
 
 /**
@@ -163,140 +219,45 @@ export async function listCommercialProposalsForExternalCustomer(db: Db): Promis
   if (error) throw new DomainError(error.message, 'commercial_proposals.list_failed');
 
   const rows = (data ?? []) as ProposalRow[];
-  return Promise.all(
-    rows.map(async (row) => {
-      const { data: addonRows, error: addonError } = await db
-        .from('customer_commercial_proposal_addons')
-        .select('addon_plan_id, label, price_minor')
-        .eq('organization_id', row.organization_id)
-        .eq('proposal_id', row.id);
-      if (addonError) throw new DomainError(addonError.message, 'commercial_proposals.addons_failed');
-      const addons = (addonRows ?? []).map((addon) => ({
-        addonPlanId: addon.addon_plan_id,
-        label: addon.label,
-        priceMinor: Number(addon.price_minor),
-      }));
-      return toProposal(row, addons);
-    }),
-  );
+  return Promise.all(rows.map((row) => hydrate(db, row)));
 }
 
-export type BuildCommercialProposalInput = {
-  organizationId: string;
-  customerId: string;
-  planId: string;
-  addonPlanIds: string[];
-  currency: string;
-  billingInterval: 'month' | 'year' | 'one_time';
-  discountMinor?: number;
-  discountReason?: string;
-  notes?: string;
+export type CatalogProposalLineRequest = { priceBookItemId: string; quantity: number };
+
+const BUILD_REFUSALS: Record<string, [string, string]> = {
+  '42501': ['You cannot build proposals for this business.', 'commercial_proposals.forbidden'],
+  '22023': ['Each line needs a catalog item and a whole quantity from 1 to 1,000,000.', 'commercial_proposals.lines_invalid'],
+  GD011: ['That customer is not in this organization.', 'commercial_proposals.customer_not_found'],
+  GD012: ['A line names a catalog item this business does not have.', 'commercial_proposals.item_not_found'],
+  GD013: ['Every item must be priced in this business’s trading currency.', 'commercial_proposals.currency_mismatch'],
 };
 
 /**
- * Build a new commercial proposal, snapshotting the plan's and each add-on's currently approved
- * price rather than joining to `platform_plan_prices` — a later price change must never
- * silently reprice a proposal a customer already has in hand.
+ * Build a new draft version from this business's own catalog. The caller names items, whole
+ * quantities and notes; `build_catalog_proposal` copies each item's name, unit and price now,
+ * totals the copies and writes the whole version in one transaction — so a later catalog change
+ * never reprices a proposal the customer already holds, and nothing here can name a price.
  *
- * Always a new row. There is no update for a proposal's terms: correcting one is a fresh version,
- * `supersedesId` naming the one it replaces, so a customer's "what changed" is a real question
- * with a real answer rather than an edit history nobody kept.
+ * Always a new row: correcting terms is a fresh version superseding the latest, as before.
  */
-export async function buildCommercialProposal(db: Db, input: BuildCommercialProposalInput): Promise<CommercialProposal> {
-  const actor = await requireActor(db);
-
-  const plan = await getPlanById(db, input.planId);
-  if (!plan || plan.kind !== 'plan') {
-    throw new DomainError('That is not a sellable plan.', 'commercial_proposals.plan_invalid');
-  }
-
-  const planPrices = await listPlanPrices(db, input.planId);
-  const planPrice = currentPlanPrice(planPrices, { currency: input.currency, billingInterval: input.billingInterval });
-  if (!planPrice) {
-    throw new DomainError(
-      `${plan.label} has no approved price in ${input.currency} for that billing interval.`,
-      'commercial_proposals.no_plan_price',
-    );
-  }
-
-  const validAddonIds = new Set(await listPlanAddonIds(db, input.planId));
-  const addonPlanIds = [...new Set(input.addonPlanIds)];
-  const addons: CommercialProposalAddon[] = [];
-  for (const addonPlanId of addonPlanIds) {
-    if (!validAddonIds.has(addonPlanId)) {
-      throw new DomainError('That add-on is not available on this plan.', 'commercial_proposals.addon_invalid');
-    }
-    const addonPlan = await getPlanById(db, addonPlanId);
-    const addonPrices = await listPlanPrices(db, addonPlanId);
-    const addonPrice = currentPlanPrice(addonPrices, { currency: input.currency, billingInterval: input.billingInterval });
-    if (!addonPrice) {
-      throw new DomainError(
-        `${addonPlan?.label ?? 'That add-on'} has no approved price in ${input.currency} for that billing interval.`,
-        'commercial_proposals.no_addon_price',
-      );
-    }
-    addons.push({ addonPlanId, label: addonPlan?.label ?? '', priceMinor: addonPrice.amountMinor });
-  }
-
-  const discountMinor = input.discountMinor ?? 0;
-  if (discountMinor > 0 && !input.discountReason?.trim()) {
-    throw new DomainError('A discount needs a reason.', 'commercial_proposals.discount_reason_required');
-  }
-
-  const existing = await listCommercialProposals(db, { organizationId: input.organizationId, customerId: input.customerId });
-  const previous = existing[0] ?? null;
-  const version = (previous?.version ?? 0) + 1;
-
-  // The authoritative recommendation, snapshotted now rather than left to be recomputed (and
-  // possibly disagree with itself) later — the same reasoning `plan_price_minor` already holds
-  // to, applied to configuration. Acceptance copies this back out; nothing downstream computes
-  // its own second answer to "what was proposed".
-  const snapshot = await getDiscoverySnapshot(db, { organizationId: input.organizationId, customerId: input.customerId });
-  const proposedConfiguration = await recommendConfiguration(db, { answers: snapshot?.answers ?? {} });
-
-  const { data, error } = await db
-    .from('customer_commercial_proposals')
-    .insert({
-      organization_id: input.organizationId,
-      customer_id: input.customerId,
-      plan_id: input.planId,
-      plan_label: plan.label,
-      currency: input.currency,
-      billing_interval: input.billingInterval,
-      plan_price_minor: planPrice.amountMinor,
-      addon_price_minor: addons.reduce((sum, addon) => sum + addon.priceMinor, 0),
-      discount_minor: discountMinor,
-      discount_reason: discountMinor > 0 ? input.discountReason!.trim() : null,
-      notes: input.notes?.trim() ?? '',
-      version,
-      supersedes_id: previous?.id ?? null,
-      proposed_configuration: proposedConfiguration as unknown as Json,
-      created_by: actor.id,
-    })
-    .select(PROPOSAL_COLUMNS)
-    .single();
-
+export async function buildCatalogProposal(
+  db: Db,
+  input: { organizationId: string; customerId: string; lines: CatalogProposalLineRequest[]; notes?: string },
+): Promise<CommercialProposal> {
+  const { data, error } = await db.rpc('build_catalog_proposal', {
+    p_organization_id: input.organizationId,
+    p_customer_id: input.customerId,
+    p_lines: input.lines.map((line) => ({ price_book_item_id: line.priceBookItemId, quantity: line.quantity })),
+    p_notes: input.notes ?? '',
+  });
   if (error) {
-    if (error.code === '23503') {
-      throw new DomainError('That customer is not in this organization.', 'commercial_proposals.customer_not_found');
-    }
+    const refusal = BUILD_REFUSALS[error.code ?? ''];
+    if (refusal) throw new DomainError(refusal[0], refusal[1]);
     throw new DomainError(error.message, 'commercial_proposals.create_failed');
   }
-
-  if (addons.length > 0) {
-    const { error: addonError } = await db.from('customer_commercial_proposal_addons').insert(
-      addons.map((addon) => ({
-        organization_id: input.organizationId,
-        proposal_id: data.id,
-        addon_plan_id: addon.addonPlanId,
-        label: addon.label,
-        price_minor: addon.priceMinor,
-      })),
-    );
-    if (addonError) throw new DomainError(addonError.message, 'commercial_proposals.addon_write_failed');
-  }
-
-  return toProposal(data as ProposalRow, addons);
+  const proposal = await getCommercialProposal(db, { organizationId: input.organizationId, proposalId: data as string });
+  if (!proposal) throw new DomainError('The proposal was built but could not be read back.', 'commercial_proposals.create_failed');
+  return proposal;
 }
 
 /** Mark a draft as sent — the one status move a salesperson makes themselves; acceptance and decline belong to whoever the proposal was sent to. */

@@ -5,7 +5,7 @@ import { WorkspaceHome } from '@/components/patterns/workspace-home';
 import { MetricTile, OperationalPanel, PanelState } from '@/components/operational/primitives';
 import { cx } from '@/components/class-names';
 import { QuoteDialog } from '../transactions/quote-dialog';
-import { workHref } from '../collections/finance-tables';
+import { invoiceHref, workHref } from '../collections/finance-tables';
 import { AttentionCategories, type AttentionCategory } from '@/components/operational/attention-categories';
 import type { FinanceOperating } from '@/lib/application/finance/operating';
 import { DUE_SOON_DAYS } from '@/lib/application/finance/operating';
@@ -49,7 +49,7 @@ export function FinanceHome({ organizationId, timezone, today, data, capabilitie
     <OperationalPanel title="Billing is off"><PanelState kind="not-configured" action={has('feature.manage') ? <ButtonLink tone="secondary" href={`${base}/settings/features`}>Manage features</ButtonLink> : undefined}>This business does not price, quote or invoice in GildOps. Records made while billing was on stay as they were.</PanelState></OperationalPanel>
   </WorkspaceHome>;
 
-  const invoiceRow = (row: (typeof overdue.rows)[number], when: string) => ({ id: row.id, href: workHref(organizationId, row.workItemId), title: `Invoice #${row.number} · ${row.billedTo}`, detail: when, value: row.outstandingMinor === null ? '—' : formatMoney(Math.max(row.outstandingMinor, 0), row.currency), tone: row.overdue ? 'danger' as const : undefined });
+  const invoiceRow = (row: (typeof overdue.rows)[number], when: string) => ({ id: row.id, href: invoiceHref(organizationId, row), title: `Invoice #${row.number} · ${row.billedTo}`, detail: when, value: row.outstandingMinor === null ? '—' : formatMoney(Math.max(row.outstandingMinor, 0), row.currency), tone: row.overdue ? 'danger' as const : undefined });
   const categories: AttentionCategory[] = [
     { key: 'overdue', label: 'Overdue', count: overdue.total, href: `${finance}/invoices?status=overdue&sort=due`, rows: overdue.rows.map(row => invoiceRow(row, `Was due ${row.dueAt ? shortDate(row.dueAt) : ''}`)) },
     { key: 'due-soon', label: 'Due soon', count: dueSoon.total, href: `${finance}/invoices?status=due-soon&sort=due`, rows: dueSoon.rows.map(row => invoiceRow(row, row.dueAt && localDay(row.dueAt) === today ? 'Due today' : `Due ${row.dueAt ? shortDate(row.dueAt) : ''}`)) },
@@ -131,7 +131,7 @@ function FinanceActivity({ organizationId, activity, shortDate, compact = false 
     const correction = event.action === 'payment.recorded' && amount !== null && amount < 0;
     const label = correction ? 'Correction recorded' : event.action === 'invoice.issued' ? `Invoice #${p.number ?? ''} issued` : EVENT_LABEL[event.action] ?? 'Financial change';
     const detail = typeof p.description === 'string' ? p.description : typeof p.name === 'string' ? p.name : amount !== null ? formatMoney(amount, p.currency as string) : event.action === 'invoice.issued' ? `Open invoice${typeof p.currency === 'string' ? ` · ${p.currency}` : ''}` : 'Open record';
-    const href = event.entity_type === 'work_item' ? workHref(organizationId, event.entity_id) : `${base}/finance/catalog`;
+    const href = event.entity_type === 'work_item' ? workHref(organizationId, event.entity_id) : event.entity_type === 'invoice' ? invoiceHref(organizationId, { id: event.entity_id, workItemId: null }) : `${base}/finance/catalog`;
     const Icon = correction ? Undo2 : event.action === 'payment.recorded' ? Banknote : event.action.startsWith('price_book') ? Tag : FileText;
     return <li key={event.id}><Link href={href} className={cx('flex items-start gap-2.5 text-sm hover:bg-hover', compact ? 'py-1.5' : 'py-2.5')}>
       <Icon aria-hidden className={cx('mt-0.5 size-4 shrink-0', correction ? 'text-danger' : 'text-muted')} />

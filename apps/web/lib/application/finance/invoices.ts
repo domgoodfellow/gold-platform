@@ -14,7 +14,9 @@ export function financeInvoiceRow(invoice: Invoice, now: Date): FinanceInvoiceRo
   const standing = invoiceStanding(invoice);
   return {
     id: invoice.id,
+    source: invoice.source,
     workItemId: invoice.workItemId,
+    proposalId: invoice.proposalId,
     number: invoice.number,
     billedTo: invoice.billedTo,
     customerId: invoice.customerId,

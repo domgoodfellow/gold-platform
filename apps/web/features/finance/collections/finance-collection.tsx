@@ -9,7 +9,8 @@ import { QuoteDialog } from '../transactions/quote-dialog';
 import { InvoicesTable, QuotesTable, PaymentsTable } from './finance-tables';
 import { financeFilters } from '@/lib/application/finance/operating';
 import { readFinanceInvoice, readFinanceInvoices, readFinancePayments, readFinanceQuotes } from '@/lib/domain/billing/finance-reads';
-import { getInvoiceForWorkItem } from '@/lib/domain/billing/invoices';
+import { getInvoice } from '@/lib/domain/billing/invoices';
+import { getInvoiceDocumentRecord } from '@/lib/domain/billing/invoice-documents';
 import { InspectorFocusReturn, InvoiceInspector } from './invoice-inspector';
 import { listContacts } from '@/lib/domain/contacts/contacts';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
@@ -72,7 +73,7 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
   const [one, many] = NOUN[kind];
   // The inspector reads only when the address names an invoice, each time under this reader's own access.
   const inspected = kind === 'invoices' && value('invoice') ? await readFinanceInvoice(db, organizationId, value('invoice')) : null;
-  const inspectedInvoice = inspected ? await getInvoiceForWorkItem(db, { organizationId, workItemId: inspected.workItemId }) : null;
+  const [inspectedInvoice, inspectedDocument] = inspected ? await Promise.all([getInvoice(db, { organizationId, invoiceId: inspected.id }), getInvoiceDocumentRecord(db, { organizationId, invoiceId: inspected.id })]) : [null, null];
   const here = href({ page: String(page) });
   const inspectHref = (invoiceId: string) => `${here}${here.includes('?') ? '&' : '?'}invoice=${invoiceId}`;
   const filtered = active.length > 0 || Boolean(scopeValue);
@@ -98,7 +99,7 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
         : <PaymentsTable timezone={organization.timezone} organizationId={organizationId} rows={result.rows as Awaited<ReturnType<typeof readFinancePayments>>['rows']} empty={filtered ? 'No payment entries match this view.' : 'No payments recorded yet. Payments are recorded against issued invoices.'} />}
     </section>
     {kind === 'invoices' ? <InspectorFocusReturn /> : null}
-    {inspected && inspectedInvoice ? <InvoiceInspector key={inspected.id} organizationId={organizationId} row={inspected} invoice={inspectedInvoice} timezone={organization.timezone} today={today} closeHref={here} mayRecord={billing && may('payment.record')} /> : null}
+    {inspected && inspectedInvoice ? <InvoiceInspector key={inspected.id} organizationId={organizationId} row={inspected} invoice={inspectedInvoice} timezone={organization.timezone} today={today} closeHref={here} mayRecord={billing && may('payment.record')} document={{ available: Boolean(inspectedDocument), mayCreate: billing && may('invoice.issue') }} /> : null}
     {result.total > PAGE_SIZE || page > 1 ? <nav aria-label="Pagination" className="mt-4 flex items-center justify-between gap-3 text-sm">
       {page > 1 ? <ButtonLink tone="secondary" size="small" href={href({ page: String(page - 1) })}>Previous</ButtonLink> : <span />}
       <span className="tabular-nums text-muted">Page {page} of {pages} · {result.total} records</span>

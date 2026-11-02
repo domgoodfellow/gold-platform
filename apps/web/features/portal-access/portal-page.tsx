@@ -10,6 +10,7 @@ import { BrandStyle } from '@/features/branding/brand-style';
 import { PublicHeader } from '@/features/public-profile/public-header';
 import { PortalRenderer, type PortalPresentation } from '@/features/studio/portal/portal-renderer';
 import { invoiceStanding, listInvoiceLines, listPayments } from '@/lib/domain/billing/invoices';
+import { listInvoiceDocumentIds } from '@/lib/domain/billing/invoice-documents';
 import { portalCardPaymentAvailable } from '@/lib/domain/billing/card-payments';
 import { portalFormsAvailable } from '@/lib/domain/portal/portal-forms';
 import { portalServiceDisclosures } from '@/lib/domain/customers/service-disclosures';
@@ -46,6 +47,7 @@ export async function CustomerPortalPage({ path }: { path?: string }) {
     needs.has('services') && available.services ? portalServiceDisclosures(db, undefined, Math.max(...page.modules.filter(module => module.kind === 'services').map(module => module.config.limit))) : Promise.resolve([]),
   ]);
   if (items.error || invoices.error) throw new Error('Customer records could not be loaded.');
+  const documents = await listInvoiceDocumentIds(db, { organizationId, invoiceIds: (invoices.data ?? []).map(invoice => invoice.id) });
   const records: PortalPresentation = { work: (items.data ?? []).map(item => {
     const window = parseWindow(item.scheduled_during as string|null);
     const status = Array.isArray(item.status) ? item.status[0] : item.status;
@@ -57,7 +59,8 @@ export async function CustomerPortalPage({ path }: { path?: string }) {
     const date=new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeZone:organization.timezone}).format(new Date(invoice.issued_at));
     const amount=standing.total ? formatMoney(standing.total.totalMinor,standing.total.currency) : 'Total unavailable';
     const balance=standing.settled ? 'paid' : standing.outstandingMinor !== null && standing.total ? `${formatMoney(standing.outstandingMinor,standing.total.currency)} due` : 'Balance unavailable';
-    return { id:invoice.id,title:`#${invoice.number}`,detail:`${date} · ${amount} · ${balance}`,action:payment ? <PayInvoiceForm invoiceId={invoice.id} amountLabel={formatMoney(payment.outstandingMinor,payment.currency)}/> : null };
+    return { id:invoice.id,title:`#${invoice.number}`,detail:`${date} · ${amount} · ${balance}`,action:payment ? <PayInvoiceForm invoiceId={invoice.id} amountLabel={formatMoney(payment.outstandingMinor,payment.currency)}/> : null,
+      document:documents.has(invoice.id) ? <p className="mt-2 text-sm"><a className="underline underline-offset-4" href={`/portal/invoices/${invoice.id}/document`} download>Download PDF<span className="sr-only"> of invoice #{invoice.number}</span></a></p> : null };
   })), forms: forms.map(form => ({id:form.formId,title:form.definition.title,detail:'',action:<PortalForms forms={[form]}/>})), services: await Promise.all(services.map(async service => {
     const reviews = await portalServiceReviews(db, service.id);
     return { id:service.id,title:service.title,detail:'',service,timezone:organization.timezone,action:reviews.length ? <div className="mt-4 space-y-4">{reviews.map(review => <ServiceReviewResponse key={review.id} review={review} timezone={organization.timezone}/>)}</div> : <p className="mt-3 text-xs text-muted">No review requested.</p> };

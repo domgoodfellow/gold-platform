@@ -25,17 +25,14 @@ test.describe('Settings > Features and the shell agree, and a disable removes ex
 
     await expect(page.getByRole('heading', { name: 'Features', level: 1 })).toBeVisible();
 
-    // Entitled Features carry a readiness badge in their product group, never "Not in your plan".
-    await expect(page.getByText('Ready', { exact: true }).first()).toBeVisible();
+    // Entitled, usable Features carry their operational status in their product group.
+    await expect(page.getByText('On', { exact: true }).first()).toBeVisible();
 
-    // A Feature nobody has wanted-and-paid for (card payments isn't part of this business's
-    // default shape) reads honestly as not included, with a way to the Plan screen rather than a
-    // disable control it cannot use.
-    // Batch C: grouped once per product, folded, with one View plan link for the group.
-    const notInPlan = page.locator('summary').filter({ hasText: /^› ?Not in your plan \(\d+\)$/ }).first();
-    await expect(notInPlan).toBeVisible();
-    await notInPlan.click();
-    await expect(page.getByRole('link', { name: 'View plan' }).first()).toBeVisible();
+    // What the plan does not include (card payments isn't part of this business's default shape)
+    // is not listed in operational settings: one line counts it and links to Plan & usage.
+    await expect(page.getByText(/available on other plans\.$/)).toBeVisible();
+    await expect(page.getByRole('link', { name: 'View plan & usage' })).toHaveCount(1);
+    await expect(page.getByText(/Not in your plan|Limited availability/)).toHaveCount(0);
   });
 
   test('disabling the Assets Feature removes Assets from both the sidebar and the phone bar, and restores on re-enable', async ({ page }) => {
