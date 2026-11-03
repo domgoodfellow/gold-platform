@@ -83,7 +83,7 @@ export function RuleBuilder({
   const conditionText = (c: AutomationRule['conditions'][number]) =>
     `${definitions.find((d) => `custom.${d.key}` === c.subjectField)?.label ?? c.subjectField.replace('_id', '')} ${c.operator.replaceAll('_', ' ')} ${statuses.find((s) => s.id === c.value)?.label ?? c.value ?? ''}`;
   const nodeClass = (id: string) =>
-    `w-full rounded-lg border bg-background p-4 text-left shadow-sm transition-colors hover:border-border focus-visible:outline-2 focus-visible:outline-accent ${selected === id ? 'border-accent ring-2 ring-ring/30' : 'border-border'}`;
+    `w-full rounded-lg border bg-background p-4 text-left shadow-sm transition-colors hover:border-border ${selected === id ? 'border-accent ring-2 ring-ring/30' : 'border-border'}`;
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">

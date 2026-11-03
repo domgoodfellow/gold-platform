@@ -2,6 +2,7 @@
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { chooseOption, fieldValue } from '../support/select-field';
 
 /**
  * Finance V2.0 transaction dialogs, driven as an operator would. Each test asserts what reaches the
@@ -51,7 +52,7 @@ describe('New quote', () => {
     await user.click(within(dialog).getByRole('radio', { name: /Boiler repair/ }));
     await settle();
     expect(within(dialog).getByText('North Shore Plumbing')).toBeVisible();
-    await user.selectOptions(within(dialog).getByLabelText('Price item'), 'labour');
+    await chooseOption(within(dialog).getByLabelText('Price item'), 'labour');
     await user.clear(within(dialog).getByLabelText('Quantity'));
     await user.type(within(dialog).getByLabelText('Quantity'), '3');
     expect(within(dialog).getByText('New')).toBeVisible();
@@ -69,7 +70,7 @@ describe('New quote', () => {
     render(<QuoteDialog organizationId="org" workItemId="w1" />);
     await user.click(screen.getByRole('button', { name: 'New quote' }));
     await settle();
-    await user.selectOptions(screen.getByLabelText('Price item'), 'consult');
+    await chooseOption(screen.getByLabelText('Price item'), 'consult');
     expect(screen.getByText(/A quote has one currency/)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Add to quote' })).toBeDisabled();
   });
@@ -81,11 +82,11 @@ describe('New quote', () => {
     const trigger = screen.getByRole('button', { name: 'New quote' });
     await user.click(trigger);
     await settle();
-    await user.selectOptions(screen.getByLabelText('Price item'), 'labour');
+    await chooseOption(screen.getByLabelText('Price item'), 'labour');
     await user.keyboard('{Escape}');
     const confirm = await screen.findByRole('alertdialog', { name: 'Discard unsaved changes?' });
     await user.click(within(confirm).getByRole('button', { name: 'Keep editing' }));
-    expect(screen.getByLabelText('Price item')).toHaveValue('labour');
+    expect(fieldValue(screen.getByLabelText('Price item'))).toBe('labour');
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Discard' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New quote' })).toBeNull());
@@ -248,7 +249,7 @@ describe('New invoice, directly from catalog items', () => {
     finance.financeMutation.mockResolvedValue({ error: null, success: 'Invoice issued.', record: 'Invoice #9', href: '/organizations/org/finance/invoices?invoice=i9' });
     const dialog = await choose(user);
     expect(within(dialog).getByText('Invoiced directly, with no Work item')).toBeVisible();
-    await user.selectOptions(within(dialog).getByLabelText('Item 1'), 'labour');
+    await chooseOption(within(dialog).getByLabelText('Item 1'), 'labour');
     await user.clear(within(dialog).getByLabelText('Quantity'));
     await user.type(within(dialog).getByLabelText('Quantity'), '2');
     // 2 × CA$95.50, through the one price calculation.
@@ -270,7 +271,7 @@ describe('New invoice, directly from catalog items', () => {
     const user = userEvent.setup();
     finance.financeMutation.mockResolvedValueOnce({ error: 'Another invoice was issued at the same moment. Try again.' }).mockResolvedValue({ error: null, success: 'Invoice issued.', record: 'Invoice #9', href: '/x' });
     const dialog = await choose(user);
-    await user.selectOptions(within(dialog).getByLabelText('Item 1'), 'labour');
+    await chooseOption(within(dialog).getByLabelText('Item 1'), 'labour');
     await user.click(within(dialog).getByRole('button', { name: 'Continue' }));
     await user.click(within(dialog).getByRole('button', { name: 'Issue invoice' }));
     await screen.findByRole('alert');
@@ -283,10 +284,10 @@ describe('New invoice, directly from catalog items', () => {
   it('refuses to continue with a whole-number problem or an item outside the trading currency', async () => {
     const user = userEvent.setup();
     const dialog = await choose(user);
-    await user.selectOptions(within(dialog).getByLabelText('Item 1'), 'consult');
+    await chooseOption(within(dialog).getByLabelText('Item 1'), 'consult');
     expect(within(dialog).getByText(/priced in another currency/)).toBeVisible();
     expect(within(dialog).getByRole('button', { name: 'Continue' })).toBeDisabled();
-    await user.selectOptions(within(dialog).getByLabelText('Item 1'), 'labour');
+    await chooseOption(within(dialog).getByLabelText('Item 1'), 'labour');
     await user.clear(within(dialog).getByLabelText('Quantity'));
     await user.type(within(dialog).getByLabelText('Quantity'), '0');
     expect(within(dialog).getByText(/whole number from 1 to 1,000,000/)).toBeVisible();

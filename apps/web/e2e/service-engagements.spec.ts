@@ -12,6 +12,7 @@ import { getPlan } from '../lib/domain/catalogue/plans';
 import { markCommercialProposalSent, acceptCommercialProposal } from '../lib/domain/customers/commercial-proposals';
 import { createProposalInvite, claimProposalInvite } from '../lib/domain/customers/proposal-invites';
 import type { Database } from '../lib/db/types';
+import { chooseOption } from './select-field';
 
 test.describe('Batch A CRM managed services', () => {
   test.use({ storageState: { cookies: [], origins: [] }, hasTouch: true });
@@ -56,7 +57,7 @@ test.describe('Batch A CRM managed services', () => {
     await expect(page.getByText('No GildOps organization linked.')).toBeVisible();
     await expect(page.getByText('No service engagements yet.')).toBeVisible();
     await page.getByText('Link existing organization', { exact: true }).click();
-    await page.getByLabel('Organization', { exact: true }).selectOption(tenant);
+    await chooseOption(page.getByLabel('Organization', { exact: true }), tenant);
     await page.getByLabel('Verified association basis').fill('Verified signed managed-service agreement TEST-42');
     await page.getByRole('button', { name: 'Link organization', exact: true }).click();
     await expect(page.getByText('Organization linked.', { exact: true })).toBeVisible();
@@ -81,15 +82,15 @@ test.describe('Batch A CRM managed services', () => {
       await page.getByRole('button', { name: 'Add engagement', exact: true }).click();
       const create = page.getByRole('dialog', { name: 'New engagement', exact: true });
       await create.getByLabel('Engagement name').fill(name);
-      await create.getByLabel('Service', { exact: true }).selectOption(kind);
-      await create.getByLabel('Linked organization').selectOption({ label: tenantName });
+      await chooseOption(create.getByLabel('Service', { exact: true }), kind);
+      await chooseOption(create.getByLabel('Linked organization'), { label: tenantName });
       await create.getByRole('button', { name: 'Create engagement', exact: true }).click();
       await expect(create).not.toBeVisible();
       const row = page.getByRole('listitem').filter({ has: page.getByText(name, { exact: true }) });
       await row.getByRole('button', { name: 'View engagement' }).click();
       const detail = page.getByRole('dialog', { name, exact: true });
       await expect(detail.getByLabel('Existing artifact').locator(`option[value="${artifactKind}:${artifactId}"]`)).toHaveCount(1);
-      await detail.getByLabel('Existing artifact').selectOption(`${artifactKind}:${artifactId}`);
+      await chooseOption(detail.getByLabel('Existing artifact'), `${artifactKind}:${artifactId}`);
       await detail.getByRole('button', { name: 'Attach deliverable', exact: true }).click();
       await expect(detail.getByText('Saved.', { exact: true })).toBeVisible();
       await expect(detail.getByRole('link', { name: `Open ${artifactKind === 'ai_deployment' ? 'AI deployment' : artifactKind === 'website' ? 'Website' : 'Automation'}`, exact: true })).toBeVisible();
@@ -99,7 +100,7 @@ test.describe('Batch A CRM managed services', () => {
         await page.screenshot({ path: testInfo.outputPath('engagement-phone.png'), fullPage: true });
         expect(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth)).toBe(true);
         await detail.getByText('Manage engagement', { exact: true }).tap();
-        await detail.getByLabel('Engagement status').selectOption('completed');
+        await chooseOption(detail.getByLabel('Engagement status'), 'completed');
         await detail.getByRole('button', { name: 'Update engagement' }).click();
         await expect(detail.getByText('completed', { exact: true })).toBeVisible();
       }

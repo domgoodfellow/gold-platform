@@ -22,7 +22,7 @@ import { DateRangeFilter } from "@/components/operational/date-range-filter";
 import { PageHeader } from "@/components/headers/page-header";
 import { SupportRegistrar } from "@/components/panels/support-registrar";
 import { useWorkspaceRail } from "@/components/panels/workspace-right-rail";
-import { TextInput, SelectInput } from "@/components/controls/inputs";
+import { TextInput } from "@/components/controls/inputs";
 import {
   PRIORITIES,
   STATUSES,
@@ -48,6 +48,7 @@ import {
   OwnerIdentity,
   RelativeTime,
 } from "@/components/operational/primitives";
+import { SelectField } from '@/components/controls/select-field';
 
 export type SupportView =
   | "home"
@@ -341,84 +342,13 @@ export function SupportWorkspace({
           className="pl-8"
         />
       </div>
-      <SelectInput
-        name="status"
-        aria-label="Filter status"
-        defaultValue={query.get("status") ?? ""}
-      >
-        <option value="">All statuses</option>
-        <option value="active">Active Cases</option>
-        {STATUSES.map((s) => (
-          <option key={s}>{s}</option>
-        ))}
-      </SelectInput>
-      <SelectInput
-        name="priority"
-        aria-label="Filter priority"
-        defaultValue={query.get("priority") ?? ""}
-      >
-        <option value="">All priorities</option>
-        {PRIORITIES.map((p) => (
-          <option key={p}>{p}</option>
-        ))}
-      </SelectInput>
-      <SelectInput
-        name="queue"
-        aria-label="Filter queue"
-        defaultValue={query.get("queue") ?? ""}
-      >
-        <option value="">All queues</option>
-        <option value="none">No queue</option>
-        {data.queues.map((q) => (
-          <option key={q.id} value={q.id}>
-            {q.name}
-          </option>
-        ))}
-      </SelectInput>
-      <SelectInput
-        name="owner"
-        aria-label="Filter assignee"
-        defaultValue={query.get("owner") ?? ""}
-      >
-        <option value="">All owners</option>
-        <option value="unassigned">Unassigned</option>
-        {data.members.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.name}
-          </option>
-        ))}
-      </SelectInput>
-      <SelectInput
-        name="sort"
-        aria-label="Sort Cases"
-        defaultValue={query.get("sort") ?? ""}
-      >
-        <option value="">Newest first</option>
-        <option value="oldest">Oldest first</option>
-        <option value="due">SLA target</option>
-      </SelectInput>
-      <SelectInput
-        name="period"
-        aria-label="Case date basis"
-        defaultValue={query.get("period") ?? ""}
-      >
-        <option value="">All dates</option>
-        <option value="created">Created in period</option>
-        <option value="resolved">Resolved in period</option>
-        <option value="due_today">Due today</option>
-        <option value="assigned_today">Assigned today</option>
-        <option value="resolved_today">Resolved today</option>
-      </SelectInput>
-      <SelectInput
-        name="attention"
-        aria-label="Attention filter"
-        defaultValue={query.get("attention") ?? ""}
-      >
-        <option value="">All attention states</option>
-        {Object.keys(data.attention).map((k) => (
-          <option key={k}>{k}</option>
-        ))}
-      </SelectInput>
+      <SelectField name="status" aria-label="Filter status" defaultValue={query.get("status") ?? ""} options={[{ value: '', label: 'All statuses' }, { value: 'active', label: 'Active Cases' }, ...STATUSES.map((s) => ({ value: s, label: s }))]} />
+      <SelectField name="priority" aria-label="Filter priority" defaultValue={query.get("priority") ?? ""} options={[{ value: '', label: 'All priorities' }, ...PRIORITIES.map((p) => ({ value: p, label: p }))]} />
+      <SelectField name="queue" aria-label="Filter queue" defaultValue={query.get("queue") ?? ""} options={[{ value: '', label: 'All queues' }, { value: 'none', label: 'No queue' }, ...data.queues.map((q) => ({ value: q.id, label: q.name }))]} />
+      <SelectField name="owner" aria-label="Filter assignee" defaultValue={query.get("owner") ?? ""} options={[{ value: '', label: 'All owners' }, { value: 'unassigned', label: 'Unassigned' }, ...data.members.map((m) => ({ value: m.id, label: m.name }))]} />
+      <SelectField name="sort" aria-label="Sort Cases" defaultValue={query.get("sort") ?? ""} options={[{ value: '', label: 'Newest first' }, { value: 'oldest', label: 'Oldest first' }, { value: 'due', label: 'SLA target' }]} />
+      <SelectField name="period" aria-label="Case date basis" defaultValue={query.get("period") ?? ""} options={[{ value: '', label: 'All dates' }, { value: 'created', label: 'Created in period' }, { value: 'resolved', label: 'Resolved in period' }, { value: 'due_today', label: 'Due today' }, { value: 'assigned_today', label: 'Assigned today' }, { value: 'resolved_today', label: 'Resolved today' }]} />
+      <SelectField name="attention" aria-label="Attention filter" defaultValue={query.get("attention") ?? ""} options={[{ value: '', label: 'All attention states' }, ...Object.keys(data.attention).map((k) => ({ value: k, label: k }))]} />
       <Button type="submit" size="small" tone="secondary">
         Apply
       </Button>

@@ -5,10 +5,11 @@ import { formatPhoneForDisplay } from '@/lib/display/phone';
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Delete, ExternalLink, Phone } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, FieldLabel, Hint, SelectInput } from '@/components/controls/inputs';
+import { ErrorText, FieldLabel, Hint } from '@/components/controls/inputs';
 import { useDial } from './use-dial';
 import { useDialerPopout } from './dialer-popout-context';
 import { useTelephoneDevice } from './telephone-device';
+import { SelectField } from '@/components/controls/select-field';
 
 export type DialableNumber = { id: string; e164: string; label: string | null };
 
@@ -106,12 +107,7 @@ export function NewCallForm({
             </div>
             <div className="flex flex-col gap-1">
               <FieldLabel htmlFor={`${id}-from`}>Call from</FieldLabel>
-              <SelectInput id={`${id}-from`} value={phoneNumberId} onChange={(event) => setPhoneNumberId(event.target.value)} disabled={unavailable || busy} className="w-full">
-                <option value="" disabled={!defaultNumber}>{defaultNumber ? `My usual number (${defaultNumber.label ?? formatPhoneForDisplay(defaultNumber.e164)})` : unavailable ? 'No outbound number' : 'Select a number'}</option>
-                {numbers.map((number) => (
-                  <option key={number.id} value={number.id}>{number.label ? `${number.label} (${formatPhoneForDisplay(number.e164)})` : formatPhoneForDisplay(number.e164)}</option>
-                ))}
-              </SelectInput>
+              <SelectField id={`${id}-from`} value={phoneNumberId} onValueChange={(next) => setPhoneNumberId(next)} disabled={unavailable || busy} className="w-full" options={[{ value: '', label: defaultNumber ? `My usual number (${defaultNumber.label ?? formatPhoneForDisplay(defaultNumber.e164)})` : unavailable ? 'No outbound number' : 'Select a number', disabled: !defaultNumber }, ...numbers.map((number) => ({ value: number.id, label: number.label ? `${number.label} (${formatPhoneForDisplay(number.e164)})` : formatPhoneForDisplay(number.e164) }))]} />
             </div>
             <Button type="submit" className="h-11 w-full text-base" disabled={disabledCall}>
               <Phone aria-hidden /> {dialing ? 'Calling…' : 'Call'}
@@ -151,12 +147,7 @@ export function NewCallForm({
 
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor={`${id}-from`}>Call from</FieldLabel>
-        <SelectInput id={`${id}-from`} value={phoneNumberId} onChange={(event) => setPhoneNumberId(event.target.value)} disabled={unavailable || busy}>
-          <option value="" disabled={!defaultNumber}>{defaultNumber ? `My usual number (${defaultNumber.label ?? formatPhoneForDisplay(defaultNumber.e164)})` : 'Select a number'}</option>
-          {numbers.map((number) => (
-            <option key={number.id} value={number.id}>{number.label ? `${number.label} (${formatPhoneForDisplay(number.e164)})` : formatPhoneForDisplay(number.e164)}</option>
-          ))}
-        </SelectInput>
+        <SelectField id={`${id}-from`} value={phoneNumberId} onValueChange={(next) => setPhoneNumberId(next)} disabled={unavailable || busy} options={[{ value: '', label: defaultNumber ? `My usual number (${defaultNumber.label ?? formatPhoneForDisplay(defaultNumber.e164)})` : 'Select a number', disabled: !defaultNumber }, ...numbers.map((number) => ({ value: number.id, label: number.label ? `${number.label} (${formatPhoneForDisplay(number.e164)})` : formatPhoneForDisplay(number.e164) }))]} />
         {unavailable ? <Hint>Calling is unavailable. Check number assignments and calling setup.</Hint> : null}
       </div>
 

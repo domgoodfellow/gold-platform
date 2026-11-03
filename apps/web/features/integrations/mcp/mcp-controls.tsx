@@ -3,7 +3,7 @@
 import { useActionState, useState } from 'react';
 import { Button } from '@/components/controls/button';
 import { FormActions, FormField } from '@/components/controls/form';
-import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
 import {
   Dialog,
   DialogClose,
@@ -26,6 +26,7 @@ import {
 import { TOOL_INITIAL, type ToolState } from './tool-state';
 import type { McpTool } from '@/lib/domain/integrations/mcp';
 import type { Agent } from '@/lib/domain/integrations/tool-access';
+import { SelectField } from '@/components/controls/select-field';
 
 type Action = (previous: ToolState, formData: FormData) => Promise<ToolState>;
 
@@ -151,19 +152,7 @@ export function ToolReviewForm({ organizationId, tool }: { organizationId: strin
     <form action={formAction} className="flex flex-wrap items-center gap-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="toolId" value={tool.id} />
-      <SelectInput
-        size="small"
-        name="classification"
-        aria-label={`What kind of tool ${tool.name} is`}
-        defaultValue={tool.classification}
-        disabled={pending || removed}
-      >
-        <option value="unreviewed" disabled>
-          Not reviewed
-        </option>
-        <option value="read">Only reads</option>
-        <option value="write">Can change things</option>
-      </SelectInput>
+      <SelectField size="small" name="classification" aria-label={`What kind of tool ${tool.name} is`} defaultValue={tool.classification} disabled={pending || removed} options={[{ value: 'unreviewed', label: 'Not reviewed', disabled: true }, { value: 'read', label: 'Only reads' }, { value: 'write', label: 'Can change things' }]} />
       {tool.enabled ? (
         <Button type="submit" name="enabled" value="false" tone="secondary" size="small" disabled={pending}>
           Disable
@@ -212,22 +201,9 @@ export function GrantForm({
           <input type="hidden" name="capabilityKey" value={target.capabilityKey} />
         </>
       )}
-      <SelectInput size="small" name="agentId" aria-label="Agent" defaultValue={agents[0]?.id} disabled={pending}>
-        {agents.map((agent) => (
-          <option key={agent.id} value={agent.id}>
-            {agent.name}
-          </option>
-        ))}
-      </SelectInput>
+      <SelectField size="small" name="agentId" aria-label="Agent" defaultValue={agents[0]?.id} disabled={pending} options={[...agents.map((agent) => ({ value: agent.id, label: agent.name }))]} />
       {resources && resources.length > 0 ? (
-        <SelectInput size="small" name="resourceId" aria-label="Limit to" defaultValue="" disabled={pending}>
-          <option value="">Everything it can reach</option>
-          {resources.map((resource) => (
-            <option key={resource.id} value={resource.id}>
-              {resource.label}
-            </option>
-          ))}
-        </SelectInput>
+        <SelectField size="small" name="resourceId" aria-label="Limit to" defaultValue="" disabled={pending} options={[{ value: '', label: 'Everything it can reach' }, ...resources.map((resource) => ({ value: resource.id, label: resource.label }))]} />
       ) : null}
       {alwaysAsks ? (
         <Hint className="whitespace-nowrap">A person approves every use.</Hint>

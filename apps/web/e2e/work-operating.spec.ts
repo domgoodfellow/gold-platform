@@ -18,6 +18,7 @@ import { addMember } from '../lib/domain/tenancy/members';
 import { BUSINESSES } from '../scripts/demo/businesses';
 import { addOperatingHours } from '../lib/domain/scheduling/operating-hours';
 import { todayInZone, zonedTimeToInstant } from '../lib/domain/scheduling/window';
+import { chooseOption, selectFieldValue } from './select-field';
 
 async function capture(page: Page, file: string) {
   // Expand only the shell's scroll frame for a full-content artifact; restore before interacting.
@@ -71,8 +72,8 @@ test.describe('Work operating journey', () => {
       await page.getByRole('button', { name: 'Add status', exact: true }).click();
       await expect(page.getByLabel('Status name', { exact: true })).toHaveValue('');
     }
-    await page.getByLabel('Move from', { exact: true }).selectOption({ label: 'Ready' });
-    await page.getByLabel('Move to', { exact: true }).selectOption({ label: 'Working' });
+    await chooseOption(page.getByLabel('Move from', { exact: true }), { label: 'Ready' });
+    await chooseOption(page.getByLabel('Move to', { exact: true }), { label: 'Working' });
     await page.getByRole('button', { name: 'Allow move', exact: true }).click();
     await expect(page.getByText('Ready → Working', { exact: true })).toBeVisible();
     const type = (await owner.from('work_item_types').select('id').eq('organization_id', organizationId).single()).data!;
@@ -83,7 +84,7 @@ test.describe('Work operating journey', () => {
       await page.getByRole('button', { name: 'Add resource', exact: true }).click();
       const drawer = page.getByRole('dialog', { name: 'New resource', exact: true });
       await drawer.getByLabel('Name', { exact: true }).fill(name);
-      await drawer.getByLabel('Type', { exact: true }).selectOption(resourceClass);
+      await chooseOption(drawer.getByLabel('Type', { exact: true }), resourceClass);
       await drawer.getByRole('button', { name: 'Add resource', exact: true }).click();
       await expect(drawer).toHaveCount(0);
     }
@@ -108,8 +109,8 @@ test.describe('Work operating journey', () => {
     await page.getByRole('link', { name: 'New work', exact: true }).click();
     const createDrawer = page.getByRole('form', { name: 'Create work', exact: true });
     await createDrawer.getByLabel('Job title', { exact: true }).fill('Dental emergency inspection');
-    await createDrawer.getByLabel('Customer', { exact: true }).selectOption(customerId);
-    await createDrawer.getByLabel('Location', { exact: true }).selectOption(locationId);
+    await chooseOption(createDrawer.getByLabel('Customer', { exact: true }), customerId);
+    await chooseOption(createDrawer.getByLabel('Location', { exact: true }), locationId);
     await createDrawer.getByRole('button', { name: 'Create work', exact: true }).click();
     await expect(page).toHaveURL(`${base}/work?type=${type.id}`);
     await page.goto(`${base}/field`);
@@ -174,7 +175,7 @@ test.describe('Work operating journey', () => {
     await expect(page.getByRole('region', { name: 'Assignment board', exact: true })).toContainText(/Map services are not configured|No coordinates recorded/);
     await page.goto(`${base}/field`);
     await page.getByRole('region', { name: 'Upcoming work', exact: true }).getByRole('link', { name: 'View work', exact: false }).click();
-    await expect(page.getByRole('combobox', { name: 'Assignment state', exact: true })).toHaveValue('upcoming');
+    await expect(selectFieldValue(page.getByRole('combobox', { name: 'Assignment state', exact: true }))).toHaveValue('upcoming');
     await expect(page.getByRole('region', { name: 'Work queue', exact: true }).getByRole('listitem')).toHaveCount(6);
     for (const width of [1440, 768, 390]) {
       await page.setViewportSize({ width, height: 1000 });

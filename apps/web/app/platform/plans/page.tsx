@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
 import { Button, ButtonLink } from '@/components/controls/button';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { getDb } from '@/lib/db/server';
 import { listPlanPrices, listPlans } from '@/lib/domain/catalogue/plans';
@@ -12,6 +12,7 @@ import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { CreatePlanSheet } from '@/features/platform/plans/plan-forms';
 import { requirePlatformArea } from '@/lib/route/platform';
 import { platformAncestry } from '@/lib/platform-navigation';
+import { SelectField } from '@/components/controls/select-field';
 
 export const dynamic = 'force-dynamic';
 type Search = Promise<Record<string, string | string[] | undefined>>;
@@ -47,7 +48,7 @@ export default async function PlatformPlansPage({ params, searchParams }: PagePr
   const filters = Boolean(one(query.q) || one(query.kind) || one(query.sale) || one(query.currency));
   return <AppPage>
     <PageHeader title="Plans & Add-ons" crumbs={platformAncestry(organizationId, 'plans')} actions={<CreatePlanSheet />} />
-    <form className="flex flex-wrap gap-2" role="search"><TextInput name="q" defaultValue={one(query.q)} placeholder="Search plans" aria-label="Search plans" size="small" /><SelectInput name="kind" defaultValue={one(query.kind)} aria-label="Type" size="small"><option value="">All types</option><option value="plan">Plans</option><option value="addon">Add-ons</option></SelectInput><SelectInput name="sale" defaultValue={one(query.sale)} aria-label="Sale state" size="small"><option value="">All sale states</option><option value="active">Active</option><option value="unlisted">Unlisted</option><option value="archived">Archived</option></SelectInput><TextInput name="currency" defaultValue={one(query.currency)} placeholder="Currency" aria-label="Currency" size="small" className="w-28" /><Button type="submit" tone="secondary" size="small">Filter</Button>{filters ? <ButtonLink href={plansHref(organizationId)} tone="text" size="small">Clear</ButtonLink> : null}</form>
+    <form className="flex flex-wrap gap-2" role="search"><TextInput name="q" defaultValue={one(query.q)} placeholder="Search plans" aria-label="Search plans" size="small" /><SelectField name="kind" defaultValue={one(query.kind)} aria-label="Type" size="small" options={[{ value: '', label: 'All types' }, { value: 'plan', label: 'Plans' }, { value: 'addon', label: 'Add-ons' }]} /><SelectField name="sale" defaultValue={one(query.sale)} aria-label="Sale state" size="small" options={[{ value: '', label: 'All sale states' }, { value: 'active', label: 'Active' }, { value: 'unlisted', label: 'Unlisted' }, { value: 'archived', label: 'Archived' }]} /><TextInput name="currency" defaultValue={one(query.currency)} placeholder="Currency" aria-label="Currency" size="small" className="w-28" /><Button type="submit" tone="secondary" size="small">Filter</Button>{filters ? <ButtonLink href={plansHref(organizationId)} tone="text" size="small">Clear</ButtonLink> : null}</form>
     <div className="mt-5"><DataTable rows={filtered} rowKey={(row) => row.plan.id} empty="No Plans or Add-ons match these filters." columns={[
       { key: 'name', header: 'Name', emphasis: 'primary', cell: (row) => <div><Link href={plansHref(organizationId, row.plan.key)} className="font-medium underline-offset-4 hover:underline">{row.plan.label}</Link><span className="block text-xs text-muted">{row.plan.saleStatus}</span></div> },
       { key: 'type', header: 'Type', cell: (row) => row.plan.kind === 'addon' ? 'Add-on' : 'Plan' },

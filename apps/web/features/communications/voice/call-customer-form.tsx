@@ -3,12 +3,13 @@
 import { PhoneInput } from '@/components/controls/phone-input';
 import { useActionState, useState } from 'react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, SelectInput } from '@/components/controls/inputs';
+import { ErrorText } from '@/components/controls/inputs';
 import {
   recordCallAction,
   type FormState,
 } from '@/app/organizations/[organizationId]/calls/actions';
 import { useDial } from './use-dial';
+import { SelectField } from '@/components/controls/select-field';
 
 const CALL_INITIAL: FormState = { error: null };
 
@@ -68,10 +69,7 @@ export function CallCustomerForm({
       <form action={recordAction} className="flex flex-col gap-2 sm:flex-row">
         <input type="hidden" name="organizationId" value={organizationId} />
         <input type="hidden" name="customerId" value={customerId} />
-        <SelectInput name="direction" defaultValue="outbound" aria-label="Which way">
-          <option value="outbound">We called them</option>
-          <option value="inbound">They called us</option>
-        </SelectInput>
+        <SelectField name="direction" defaultValue="outbound" aria-label="Which way" options={[{ value: 'outbound', label: 'We called them' }, { value: 'inbound', label: 'They called us' }]} />
         <PhoneInput
           name="fromNumber"
           type="tel"

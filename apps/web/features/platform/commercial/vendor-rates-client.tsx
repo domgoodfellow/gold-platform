@@ -11,11 +11,12 @@ import {
 } from '@/components/panels/page-drawer';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Button } from '@/components/controls/button';
-import { ErrorText, FieldLabel, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, FieldLabel, TextInput } from '@/components/controls/inputs';
 import { DefinitionList, Detail } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import type { Meter, Provider, ProviderCostMeter, ProviderCostRate } from '@/lib/domain/commercial/catalogue';
 import { formatMicrosMoney } from '@/lib/domain/commercial/economics';
+import { SelectField } from '@/components/controls/select-field';
 
 export function AddVendorRate({
   providers,
@@ -33,9 +34,9 @@ export function AddVendorRate({
       <PageDrawerContent>
         <PageDrawerHeader><PageDrawerTitle>Add rate</PageDrawerTitle></PageDrawerHeader>
         <form action={action} className="flex flex-col gap-4 px-4">
-          <div className="grid gap-1"><FieldLabel htmlFor="vendor-provider">Provider</FieldLabel><SelectInput id="vendor-provider" name="providerKey" required><option value="">Choose provider</option>{providers.map((provider) => <option key={provider.key} value={provider.key}>{provider.label}</option>)}</SelectInput></div>
-          <div className="grid gap-1"><FieldLabel htmlFor="vendor-cost-meter">Cost meter</FieldLabel><SelectInput id="vendor-cost-meter" name="costMeterKey" required><option value="">Choose cost meter</option>{costMeters.map((meter) => <option key={meter.key} value={meter.key}>{meter.label}</option>)}</SelectInput></div>
-          <div className="grid gap-1"><FieldLabel htmlFor="vendor-commercial-meter">Commercial meter</FieldLabel><SelectInput id="vendor-commercial-meter" name="commercialMeterId" required><option value="">Choose commercial meter</option>{meters.map((meter) => <option key={meter.id} value={meter.id}>{meter.description}</option>)}</SelectInput></div>
+          <div className="grid gap-1"><FieldLabel htmlFor="vendor-provider">Provider</FieldLabel><SelectField id="vendor-provider" name="providerKey" required options={[{ value: '', label: 'Choose provider' }, ...providers.map((provider) => ({ value: provider.key, label: provider.label }))]} /></div>
+          <div className="grid gap-1"><FieldLabel htmlFor="vendor-cost-meter">Cost meter</FieldLabel><SelectField id="vendor-cost-meter" name="costMeterKey" required options={[{ value: '', label: 'Choose cost meter' }, ...costMeters.map((meter) => ({ value: meter.key, label: meter.label }))]} /></div>
+          <div className="grid gap-1"><FieldLabel htmlFor="vendor-commercial-meter">Commercial meter</FieldLabel><SelectField id="vendor-commercial-meter" name="commercialMeterId" required options={[{ value: '', label: 'Choose commercial meter' }, ...meters.map((meter) => ({ value: meter.id, label: meter.description }))]} /></div>
           <div className="grid grid-cols-[1fr_6rem] gap-3">
             <div className="grid gap-1"><FieldLabel htmlFor="vendor-rate">Rate (micro-minor units)</FieldLabel><TextInput id="vendor-rate" name="unitAmountMicros" type="number" min="0" step="1" required /></div>
             <div className="grid gap-1"><FieldLabel htmlFor="vendor-currency">Currency</FieldLabel><TextInput id="vendor-currency" name="currency" defaultValue="USD" minLength={3} maxLength={3} required /></div>
@@ -43,7 +44,7 @@ export function AddVendorRate({
           <div className="grid gap-1"><FieldLabel htmlFor="vendor-effective">Effective from</FieldLabel><TextInput id="vendor-effective" name="effectiveFrom" type="datetime-local" required /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1"><FieldLabel htmlFor="vendor-region">Region</FieldLabel><TextInput id="vendor-region" name="region" placeholder="CA or Global" /></div>
-            <div className="grid gap-1"><FieldLabel htmlFor="vendor-direction">Direction</FieldLabel><SelectInput id="vendor-direction" name="direction"><option value="">Any</option><option value="inbound">Inbound</option><option value="outbound">Outbound</option></SelectInput></div>
+            <div className="grid gap-1"><FieldLabel htmlFor="vendor-direction">Direction</FieldLabel><SelectField id="vendor-direction" name="direction" options={[{ value: '', label: 'Any' }, { value: 'inbound', label: 'Inbound' }, { value: 'outbound', label: 'Outbound' }]} /></div>
           </div>
           <div className="grid gap-1"><FieldLabel htmlFor="vendor-resource">Resource type</FieldLabel><TextInput id="vendor-resource" name="resourceType" /></div>
           <div className="grid gap-1"><FieldLabel htmlFor="vendor-source">Source</FieldLabel><TextInput id="vendor-source" name="source" placeholder="Provider API, invoice, or verified rate card" required /></div>

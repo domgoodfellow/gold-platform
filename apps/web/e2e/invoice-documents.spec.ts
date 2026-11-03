@@ -14,6 +14,7 @@ import { createCustomer } from '../lib/domain/customers/customers';
 import { createPortalInvite } from '../lib/domain/portal/portal';
 import { listPriceBookItems } from '../lib/domain/pricing/price-book';
 import { setModuleEnabled } from '../lib/domain/tenancy/modules';
+import { chooseOption } from './select-field';
 
 /**
  * Branded invoice documents in a real browser against the production build (Work Order 2G). The
@@ -92,7 +93,7 @@ test.describe.serial('Invoice documents', () => {
       const dialog = page.getByRole('dialog', { name: 'New invoice' });
       await choose(dialog, /A customer, from catalog items/);
       await choose(dialog, /Vertex HVAC/);
-      await dialog.getByLabel('Item 1', { exact: true }).selectOption({ label: 'Labour · CA$95.50 / hour' });
+      await chooseOption(dialog.getByLabel('Item 1', { exact: true }), { label: 'Labour · CA$95.50 / hour' });
       await dialog.getByLabel('Quantity', { exact: true }).fill('3');
 
       await dialog.getByRole('button', { name: 'Preview document' }).click();

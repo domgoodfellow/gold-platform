@@ -138,7 +138,7 @@ Layered adds restrained hierarchy, moderate elevation and a faint brand tint on 
 Expressive adds larger shapes, stronger depth, a brand edge on panels, configuration editors and
 board columns, a brand underline on the selected tab and a richer brand-tinted selection. The preset
 tokens `--visual-border-strength`, `--visual-selected-mix` and `--visual-edge` carry these
-differences; no preset adds animation. None changes status colors, the focus ring or brand
+differences; no preset adds animation. None changes status colors, the focus indicator or brand
 contrast derivation. Color always accompanies a label, icon, border or selection state.
 
 `VisualScope` is an explicit opt-in boundary. Account shells apply only saved personal choices;
@@ -161,6 +161,7 @@ Canonical variant ownership:
 | Selectable card | `components/controls/selectable-card`: native button over shared Button; aria-pressed, visible ring, caller-owned selection policy; no nested actions |
 | Tabs / segmented content | shared Radix Tabs; `TabsList` segmented (default) or line; URL navigation uses `ViewNav` |
 | Menu / popover | shared Radix content: menu default/comfortable density, popover default/compact; scoped tokens preserve keyboard behavior |
+| Select / Combobox | `@gold/ui/components/select` (Radix Select) and `@gold/ui/components/combobox` share one trigger, popup and item style; web `controls/select-field` owns form membership (see Selection controls) |
 | Toolbar | existing `components/display/data` Toolbar: default, quiet, outlined; layout container, not an ARIA toolbar with unimplemented arrow-key behavior |
 | Input / field group | shared Input default/filled (forwarded by TextInput), shared FieldGroup default/inset; web FormField owns label/hint/error association |
 | Feedback | shared Alert adds success/warning alongside default/destructive; operational StatePill remains the status vocabulary |
@@ -383,6 +384,7 @@ Examples include:
 - Sidebar;
 - Tooltip;
 - Popover;
+- Select and Combobox;
 - Breadcrumb;
 - Empty;
 - Skeleton.
@@ -396,6 +398,45 @@ It does **not** know:
 - what a customer record means;
 - where page actions belong;
 - whether a page is a Collection or Record Detail.
+
+---
+
+### Selection controls
+
+There are three kinds of choice. Each has one owner.
+
+| Choice | Use | Owner |
+| --- | --- | --- |
+| One value from a list (a form field or a filter) | Styled Select; a searchable Combobox when the list is long | `SelectField` (`components/controls/select-field.tsx`) over `@gold/ui/components/select` and `@gold/ui/components/combobox` |
+| Free text with suggestions (an industry, a tag) | A text field that suggests values but keeps any text typed | `SuggestionField` (same file) over `ComboboxInput` |
+| An action or a destination (Configure, row actions) | A menu | `DropdownMenu`, as in `ConfigureMenu` |
+
+The application authors no native selection popup: no `<select>`, `<option>` or `<datalist>` element and no `<input list>`. `tests/architecture/static/selection-controls.test.ts` enforces this. A menu never stands in for a value field, and a value field never runs an action.
+
+`SelectField` behaves like the native field it replaced:
+
+- It takes typed `options` (`value`, `label`, optional `disabled`, `group`, `description`, `keywords`). Values are domain values, never display labels.
+- A hidden text input carries `name`, `form`, `required` and the current value. FormData, server actions, required-field validation and `form.reset()` work as before, and an invalid required field sends the browser to the visible trigger.
+- It is controlled (`value` with `onValueChange`) or uncontrolled (`defaultValue`). Handlers receive the value, never an event. With no starting value it chooses the first enabled option, as a native select does, unless a `placeholder` is given. In that case nothing is chosen.
+- An empty-string choice ("None", "Any", "Unassigned", "Default") is a real option and is submitted as the empty string. Radix Select cannot hold an empty value, so the field carries it under an internal key and converts it back. No domain value changes.
+- Choosing an option raises one `change` event inside its form, so form-level listeners (unsaved-change tracking, filter forms that submit on change) still hear it. `submitOnChange` submits a one-control form such as a stage picker.
+- Above 12 options the field becomes a searchable Combobox (`searchable` overrides this). Search ignores case and accents, every typed word must match, and `keywords` adds words such as codes. The list says when nothing matches.
+- The trigger takes its name from a visible label (`htmlFor`/`id`) or `aria-label`, and passes through `aria-describedby`, `aria-invalid` and `aria-required`. The selected option is marked with a check and `aria-selected`; disabled options cannot be chosen.
+- Keyboard: arrows or Enter open it, arrows move, Enter chooses, typing jumps (Select) or searches (Combobox), and Escape closes and returns focus to the trigger. When the choice was made with a pointer, focus returns without the keyboard outline.
+- The popup portals into the nearest `VisualScope`, so theme, preset shape, density and overlay shadow apply. It is never wider than the screen less a small margin.
+
+A dashboard whose only control is its reporting period uses `PeriodSelect` (`components/controls/period-select.tsx`). Each choice is an address built by the page's own query builder, so choosing one navigates straight away and keeps the page's other filters. There is no Apply. Communications and Automations use it. Filter forms with several fields keep their Apply and Reset.
+
+### Focus indicator
+
+Keyboard focus has one indicator everywhere: a 2px outline in `--focus-color`, drawn on the control's own outer edge (`outline-offset` 0). It follows the control's corner radius and leaves no gap of page colour. No control draws a second ring beside it. One rule in `app/globals.css` draws it for links, buttons, fields, summaries and elements with an interactive role or `tabindex="0"`. The rule sits outside every cascade layer, so a utility such as `outline-none` cannot remove it. Menu, list and option items show a highlight instead and are not matched.
+
+- `--focus-color` is the page's own text colour in every theme and forced appearance. It is never a tenant accent, so it keeps its contrast whatever the brand. No preset changes it.
+- `FOCUS_RING` (`components/class-names.ts`) applies the same declaration to a focusable element the rule does not match. `FOCUS_RING_WITHIN` puts it on the visible card or label around a visually hidden radio or checkbox.
+- A control whose outline would be clipped by its container sets `--focus-offset` (for example `-2px`) rather than drawing a different outline.
+- A borderless field inside a composed box (the Agent composer) marks itself `data-focus-indicator="container"`, and the box shows the outline instead.
+- Focus is distinct from the other states: hover changes the background, selection uses `--selected` or a check, pressed uses `--pressed`, and an error uses the danger border. None of these uses the outline.
+- `:focus-visible` keeps a pointer click from leaving the outline behind. Popups that return focus after a pointer choice return it quietly.
 
 ---
 

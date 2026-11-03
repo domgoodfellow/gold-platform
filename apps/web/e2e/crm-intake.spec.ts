@@ -7,6 +7,7 @@ import { loadDemoContext, OWNER_STORAGE_STATE, COLLEAGUE_STORAGE_STATE } from '.
 import { DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { createContact } from '../lib/domain/contacts/contacts';
 import { resetAppearance, saveAppearance } from '../lib/domain/identity/appearance';
+import { chooseOption, selectedLabel } from './select-field';
 
 /**
  * The Add contacts intake in a real browser, against the isolated run's disposable business
@@ -95,10 +96,10 @@ test.describe.serial('Add contacts intake', () => {
       await expect(form.getByLabel('Name', { exact: true })).toHaveValue(`Ida Intake ${run}`);
       await expect(form.getByRole('textbox', { name: /^Email/ })).toHaveValue(`ida-${run}@example.test`);
       await expect(form.getByRole('textbox', { name: /^Job title/ })).toHaveValue('Buyer');
-      await expect(form.getByRole('combobox', { name: /^Company/ }).locator('option:checked')).toHaveText(`Harbour Inline ${run}`);
+      await expect(selectedLabel(form.getByRole('combobox', { name: /^Company/ }))).toHaveText(`Harbour Inline ${run}`);
       await form.getByRole('button', { name: 'Add more details' }).click();
-      await form.getByLabel('Lifecycle', { exact: true }).selectOption('prospect');
-      await form.getByLabel('Lead temperature').selectOption('warm');
+      await chooseOption(form.getByLabel('Lifecycle', { exact: true }), 'prospect');
+      await chooseOption(form.getByLabel('Lead temperature'), 'warm');
       await shot(page, 'intake-details-desktop');
       await form.getByRole('button', { name: 'Save contact' }).click();
       done = page.getByRole('dialog', { name: 'Contact added' });
@@ -150,7 +151,7 @@ test.describe.serial('Add contacts intake', () => {
 
       await expect(progress.locator('[aria-current="step"]')).toContainText('Map fields');
       await expect(page.getByRole('row', { name: /role/ }).getByText('Owner')).toBeVisible();
-      await page.getByLabel('Contact type', { exact: true }).selectOption('person');
+      await chooseOption(page.getByLabel('Contact type', { exact: true }), 'person');
       await shot(page, 'import-2-map-desktop');
       await page.getByRole('button', { name: 'Review changes' }).click();
 

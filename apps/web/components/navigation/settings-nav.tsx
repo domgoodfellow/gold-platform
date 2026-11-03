@@ -95,7 +95,7 @@ export function SettingsNav({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search settings"
-            className="h-8 w-full rounded-md border border-sidebar-border bg-transparent pl-8 pr-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+            className="h-8 w-full rounded-md border border-sidebar-border bg-transparent pl-8 pr-2 text-sm outline-none"
           />
         </label>
       </div>

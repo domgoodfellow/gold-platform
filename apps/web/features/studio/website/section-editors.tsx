@@ -3,9 +3,10 @@
 import type { ReactNode } from 'react';
 import type { PublicLink, SectionKind, SectionOf, WebsiteSection } from '@gold/schemas';
 import { Button, ButtonLink } from '@/components/controls/button';
-import { FieldLabel, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { FieldLabel, Hint, TextArea, TextInput } from '@/components/controls/inputs';
 import { SECTION_REGISTRY, sectionLabel } from '@/lib/domain/public-site/section-registry';
 import type { FormOption } from './types';
+import { SelectField } from '@/components/controls/select-field';
 
 /**
  * How each kind of section is edited. `SECTION_EDITORS` is keyed by every registered kind, so a
@@ -76,9 +77,7 @@ function Hero({ section, onChange }: EditorProps<'hero'>) {
       <Title kind="hero" />
       <FieldLabel className="grid gap-1 text-sm">
         Layout
-        <SelectInput value={section.variant} onChange={(event) => onChange({ ...section, variant: event.target.value as typeof section.variant })}>
-          {variants.map((variant) => <option key={variant.value} value={variant.value}>{variant.label}</option>)}
-        </SelectInput>
+        <SelectField value={section.variant} onValueChange={(next) => onChange({ ...section, variant: next as typeof section.variant })} options={[...variants.map((variant) => ({ value: variant.value, label: variant.label }))]} />
       </FieldLabel>
       <Field label="Eyebrow" value={section.eyebrow} onChange={(value) => onChange({ ...section, eyebrow: value })} />
       <Field label="Heading" value={section.heading} onChange={(value) => onChange({ ...section, heading: value })} />
@@ -193,10 +192,7 @@ function FormEditor({ section, onChange, organizationId, forms }: EditorProps<'f
       <Title kind="form" />
       <FieldLabel className="grid gap-1 text-sm">
         Form
-        <SelectInput value={section.formId} onChange={(event) => onChange({ ...section, formId: event.target.value })}>
-          {chosen ? null : <option value={section.formId}>A form that is no longer available</option>}
-          {forms.map((form) => <option key={form.id} value={form.id}>{form.name}{form.published ? '' : ' (not published)'}</option>)}
-        </SelectInput>
+        <SelectField value={section.formId} onValueChange={(next) => onChange({ ...section, formId: next })} options={[...(chosen ? [] : [{ value: section.formId, label: 'A form that is no longer available' }]), ...forms.map((form) => ({ value: form.id, label: `${form.name}${form.published ? '' : ' (not published)'}` }))]} />
       </FieldLabel>
       {chosen && !chosen.published ? <Hint>This form is not published, so visitors will see nothing here until it is.</Hint> : null}
       <Field label="Heading" value={section.heading} onChange={(value) => onChange({ ...section, heading: value })} />

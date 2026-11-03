@@ -1,7 +1,6 @@
 'use client';
 import { BusinessLabel } from '@/lib/context/business-vocabulary';
 
-import { SelectInput } from '@/components/controls/inputs';
 import { Field, FieldLabel } from '@gold/ui/components/field';
 import { Button } from '@/components/controls/button';
 import { useActionState, useId } from 'react';
@@ -9,6 +8,7 @@ import {
   linkCustomerAction,
   type LocationActionState,
 } from '@/app/organizations/[organizationId]/locations/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: LocationActionState = { error: null, created: false };
 
@@ -60,25 +60,13 @@ export function LinkCustomerLocationForm({ organizationId, customers, locationId
 
       <Field className="min-w-40 flex-1 gap-1">
         <FieldLabel htmlFor={customerFieldId}><BusinessLabel>Customer</BusinessLabel></FieldLabel>
-        <SelectInput id={customerFieldId} name="customerId" className="flex-1">
-          {customers.map((customer) => (
-            <option key={customer.id} value={customer.id}>
-              {customer.name}
-            </option>
-          ))}
-        </SelectInput>
+        <SelectField id={customerFieldId} name="customerId" className="flex-1" options={[...customers.map((customer) => ({ value: customer.id, label: customer.name }))]} />
       </Field>
 
       {locations ? (
         <Field className="min-w-40 flex-1 gap-1">
           <FieldLabel htmlFor={locationFieldId}>Location</FieldLabel>
-          <SelectInput id={locationFieldId} name="locationId" className="flex-1">
-            {locations.map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.label}
-              </option>
-            ))}
-          </SelectInput>
+          <SelectField id={locationFieldId} name="locationId" className="flex-1" options={[...locations.map((location) => ({ value: location.id, label: location.label }))]} />
         </Field>
       ) : null}
 

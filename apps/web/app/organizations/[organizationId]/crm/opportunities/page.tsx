@@ -1,7 +1,7 @@
 import { AppPage } from '@/components/layout/app-page';
 import { CollectionHeader } from '@/components/patterns/collection-header';
 import { Button, ButtonLink } from '@/components/controls/button';
-import { TextInput, SelectInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { FormField } from '@/components/controls/form';
 import { OpportunitySheet } from '@/features/crm/opportunities/opportunity-sheet';
 import { OpportunityTable } from '@/features/crm/opportunities/opportunity-table';
@@ -11,6 +11,7 @@ import { getContact } from '@/lib/domain/contacts/contacts';
 import { requireOrganization } from '@/lib/route/organization';
 import { areaHref } from '@/lib/navigation';
 import { followUpsAvailable } from '@/lib/application/crm/follow-ups';
+import { SelectField } from '@/components/controls/select-field';
 
 export const dynamic = 'force-dynamic';
 export default async function OpportunitiesPage({ params, searchParams }: { params: Promise<{ organizationId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -29,9 +30,9 @@ export default async function OpportunitiesPage({ params, searchParams }: { para
     <CollectionHeader location={{}} actions={<><ButtonLink href={areaHref(organizationId, 'opportunity-pipeline')}>Opportunity pipeline</ButtonLink>{organization.capabilities.includes('opportunity.create') ? <OpportunitySheet organizationId={organizationId} stages={stages} members={members} defaultCurrency={organization.currency ?? ''} customer={customer ?? undefined} /> : null}</>} />
     <form method="get" className="mb-4 grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-5" role="search">
       <FormField id="opportunity-search" label="Search opportunities">{(props) => <TextInput {...props} name="q" type="search" defaultValue={value('q')} />}</FormField>
-      <FormField id="opportunity-kind" label="Classification">{(props) => <SelectInput {...props} name="kind" defaultValue={kind ?? ''}><option value="">All</option><option value="open">Open</option><option value="won">Won</option><option value="lost">Lost</option></SelectInput>}</FormField>
-      <FormField id="opportunity-stage" label="Opportunity stage">{(props) => <SelectInput {...props} name="stage" defaultValue={value('stage')}><option value="">All stages</option><option value="unstaged">Unstaged</option>{stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}</SelectInput>}</FormField>
-      <FormField id="opportunity-owner" label="Owner">{(props) => <SelectInput {...props} name="owner" defaultValue={value('owner')}><option value="">All owners</option><option value="unassigned">Unassigned</option>{members.map((member) => <option key={member.id} value={member.id}>{member.displayName}</option>)}</SelectInput>}</FormField>
+      <FormField id="opportunity-kind" label="Classification">{(props) => <SelectField {...props} name="kind" defaultValue={kind ?? ''} options={[{ value: '', label: 'All' }, { value: 'open', label: 'Open' }, { value: 'won', label: 'Won' }, { value: 'lost', label: 'Lost' }]} />}</FormField>
+      <FormField id="opportunity-stage" label="Opportunity stage">{(props) => <SelectField {...props} name="stage" defaultValue={value('stage')} options={[{ value: '', label: 'All stages' }, { value: 'unstaged', label: 'Unstaged' }, ...stages.map((stage) => ({ value: stage.id, label: stage.name }))]} />}</FormField>
+      <FormField id="opportunity-owner" label="Owner">{(props) => <SelectField {...props} name="owner" defaultValue={value('owner')} options={[{ value: '', label: 'All owners' }, { value: 'unassigned', label: 'Unassigned' }, ...members.map((member) => ({ value: member.id, label: member.displayName }))]} />}</FormField>
       {value('customer') ? <input name="customer" type="hidden" value={value('customer')} /> : null}<Button type="submit" tone="secondary">Apply filters</Button>
       {['next','closeFrom','closeBefore'].map(key=>value(key)?<input key={key} name={key} type="hidden" value={value(key)}/>:null)}
     </form>

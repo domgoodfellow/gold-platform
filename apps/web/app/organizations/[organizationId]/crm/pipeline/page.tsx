@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { SelectInput } from '@/components/controls/inputs';
 import { Board, BoardCard, BoardColumn } from '@/components/patterns/board';
 import { CollectionToolbar } from '@/components/patterns/collection-toolbar';
 import { listContacts } from '@/lib/domain/contacts/contacts';
@@ -15,6 +14,7 @@ import { requireOrganization } from '@/lib/route/organization';
 import { areaHref, configTarget } from '@/lib/navigation';
 import { FollowUpSheet } from '@/features/crm/follow-ups/follow-up-sheet';
 import { followUpsAvailable } from '@/lib/application/crm/follow-ups';
+import { SelectField } from '@/components/controls/select-field';
 
 export const dynamic = 'force-dynamic';
 export default async function OpportunityPipelinePage({ params, searchParams }: { params: Promise<{ organizationId: string }>; searchParams: Promise<Record<string,string|string[]|undefined>> }) {
@@ -48,9 +48,9 @@ export default async function OpportunityPipelinePage({ params, searchParams }: 
     <CollectionHeader location={{}} actions={<><ButtonLink tone="secondary" href={collection}>List view</ButtonLink>{organization.capabilities.includes('field.manage') ? <ButtonLink tone="secondary" href={`/organizations/${organizationId}/${configTarget('opportunity-stages').path}`}>Opportunity stages</ButtonLink> : null}{organization.capabilities.includes('opportunity.create') ? <OpportunitySheet organizationId={organizationId} stages={stages} members={members} defaultCurrency={organization.currency ?? ''} /> : null}</>} />
     {firstRun ? null : <CollectionToolbar className="mb-4" action={base} search={{ name: 'q', value: value('q'), label: 'Search opportunities' }} filterCount={['stage', 'owner', 'customer'].filter(key => value(key)).length}
       filters={<>
-        <label className="flex flex-col gap-1 text-sm">Stage<SelectInput name="stage" defaultValue={value('stage')}><option value="">All stages</option><option value="unstaged">Unstaged</option>{stages.map(stage => <option key={stage.id} value={stage.id}>{stage.name}</option>)}</SelectInput></label>
-        <label className="flex flex-col gap-1 text-sm">Owner<SelectInput name="owner" defaultValue={value('owner')}><option value="">All owners</option><option value="unassigned">Unassigned</option>{members.map(member => <option key={member.id} value={member.id}>{member.displayName}</option>)}</SelectInput></label>
-        <label className="flex flex-col gap-1 text-sm sm:col-span-2">Contact<SelectInput name="customer" defaultValue={value('customer')}><option value="">All contacts</option>{contacts.map(contact => <option key={contact.id} value={contact.id}>{contact.name}</option>)}</SelectInput></label>
+        <label className="flex flex-col gap-1 text-sm">Stage<SelectField name="stage" defaultValue={value('stage')} options={[{ value: '', label: 'All stages' }, { value: 'unstaged', label: 'Unstaged' }, ...stages.map((stage) => ({ value: stage.id, label: stage.name }))]} /></label>
+        <label className="flex flex-col gap-1 text-sm">Owner<SelectField name="owner" defaultValue={value('owner')} options={[{ value: '', label: 'All owners' }, { value: 'unassigned', label: 'Unassigned' }, ...members.map((member) => ({ value: member.id, label: member.displayName }))]} /></label>
+        <label className="flex flex-col gap-1 text-sm sm:col-span-2">Contact<SelectField name="customer" defaultValue={value('customer')} options={[{ value: '', label: 'All contacts' }, ...contacts.map((contact) => ({ value: contact.id, label: contact.name }))]} /></label>
       </>}
       active={active} resetHref={filtered ? base : undefined} />}
     {firstRun ? <section aria-labelledby="pipeline-setup" data-slot="compact-empty" className="flex flex-col gap-3 rounded-[var(--visual-radius,0.625rem)] border border-border bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">

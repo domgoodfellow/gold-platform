@@ -2,7 +2,7 @@
 import { useActionState, useEffect, useId, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/controls/button';
-import { TextInput, SelectInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { FormField, FormError } from '@/components/controls/form';
 import { useDrawerFormSubmit } from '@/components/controls/use-drawer-form-submit';
 import { useFormDirty } from '@/components/controls/use-form-dirty';
@@ -10,6 +10,7 @@ import { PageDrawer, PageDrawerClose, PageDrawerContent, PageDrawerFooter, PageD
 import { saveFollowUpAction, searchFollowUpOpportunities, readFollowUpForDrawer } from '@/app/organizations/[organizationId]/crm/tasks/actions';
 import { searchOpportunityCustomers } from '@/app/organizations/[organizationId]/crm/opportunities/actions';
 import type { CrmTask } from '@/lib/domain/tasks/tasks';
+import { SelectField } from '@/components/controls/select-field';
 export type FollowUpOptions = { organizationId: string; timezone: string; members: { id: string; displayName: string }[]; mayManage: boolean };
 type Props = FollowUpOptions & { item?: CrmTask; reference?: {id:string;title:string}; customer?: { id: string; name: string }; opportunity?: { id: string; title: string }; children?: ReactNode };
 function localInput(instant: string, timezone: string) {
@@ -65,14 +66,14 @@ function FollowUpForm({ organizationId, timezone, members, mayManage, item, cust
     <input type="hidden" name="organizationId" value={organizationId}/><input type="hidden" name="id" value={item?.id ?? ''}/>
     {fixed ? <><input type="hidden" name="customerId" value={fixed.id}/><p className="text-sm">Customer: <strong>{fixed.name}</strong></p></> : <>
       <FormField id={`${prefix}-search`} label="Find customer">{p=><TextInput {...p} type="search" value={search} onChange={e=>setSearch(e.target.value)}/>}</FormField>
-      <FormField id={`${prefix}-customer`} label="Customer">{p=><SelectInput {...p} name="customerId" required value={customerId} onChange={e=>{setCustomerId(e.target.value);setOpportunityId('');}}><option value="">Choose a customer</option>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</SelectInput>}</FormField>
+      <FormField id={`${prefix}-customer`} label="Customer">{p=><SelectField {...p} name="customerId" required value={customerId} onValueChange={(next) => {setCustomerId(next);setOpportunityId('');}} options={[{ value: '', label: 'Choose a customer' }, ...customers.map((c) => ({ value: c.id, label: c.name }))]} />}</FormField>
     </>}
     <fieldset disabled={Boolean(readonly)} className="space-y-4">
-      <FormField id={`${prefix}-opportunity`} label="Opportunity" optional>{p=><SelectInput {...p} name="opportunityId" value={opportunityId} onChange={e=>setOpportunityId(e.target.value)}><option value="">Customer only</option>{opportunities.map(o=><option key={o.id} value={o.id}>{o.title}</option>)}{opportunityId && !opportunities.some(o=>o.id===opportunityId) ? <option value={opportunityId}>{opportunity?.title ?? item?.opportunityTitle}</option> : null}</SelectInput>}</FormField>
-      <FormField id={`${prefix}-kind`} label="Type">{p=><SelectInput {...p} name="kind" defaultValue={item?.kind ?? 'task'}>{['call','email','meeting','task'].map(k=><option key={k} value={k}>{k}</option>)}</SelectInput>}</FormField>
+      <FormField id={`${prefix}-opportunity`} label="Opportunity" optional>{p=><SelectField {...p} name="opportunityId" value={opportunityId} onValueChange={(next) => setOpportunityId(next)} options={[{ value: '', label: 'Customer only' }, ...opportunities.map((o) => ({ value: o.id, label: o.title ?? '' })), ...(opportunityId && !opportunities.some(o=>o.id===opportunityId) ? [{ value: opportunityId, label: opportunity?.title ?? item?.opportunityTitle ?? '' }] : [])]} />}</FormField>
+      <FormField id={`${prefix}-kind`} label="Type">{p=><SelectField {...p} name="kind" defaultValue={item?.kind ?? 'task'} options={[...['call','email','meeting','task'].map((k) => ({ value: k, label: k }))]} />}</FormField>
       <FormField id={`${prefix}-title`} label="Title">{p=><TextInput {...p} name="title" required maxLength={200} defaultValue={item?.title}/>}</FormField>
       <FormField id={`${prefix}-due`} label="Due" hint={timezone}>{p=><TextInput {...p} name="dueAt" required type="datetime-local" defaultValue={item ? localInput(item.dueAt,timezone) : undefined}/>}</FormField>
-      <FormField id={`${prefix}-owner`} label="Owner" optional>{p=><SelectInput {...p} name="ownerMembershipId" defaultValue={item?.ownerMembershipId ?? ''}><option value="">Unassigned</option>{members.map(m=><option key={m.id} value={m.id}>{m.displayName}</option>)}</SelectInput>}</FormField>
+      <FormField id={`${prefix}-owner`} label="Owner" optional>{p=><SelectField {...p} name="ownerMembershipId" defaultValue={item?.ownerMembershipId ?? ''} options={[{ value: '', label: 'Unassigned' }, ...members.map((m) => ({ value: m.id, label: m.displayName }))]} />}</FormField>
       <FormField id={`${prefix}-notes`} label="Notes" optional>{p=><textarea {...p} name="notes" maxLength={10000} defaultValue={item?.notes ?? ''} className="w-full rounded-md border border-border bg-background p-2" rows={4}/>}</FormField>
     </fieldset>
     {item ? <p className="text-sm capitalize text-muted">{item.status}{item.completedAt ? ` · ${new Intl.DateTimeFormat('en-CA',{timeZone:timezone,dateStyle:'medium',timeStyle:'short'}).format(new Date(item.completedAt))}` : ''}</p> : null}

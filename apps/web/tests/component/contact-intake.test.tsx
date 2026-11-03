@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AddContactsTrigger, ContactIntakeProvider } from '@/features/crm/intake/contact-intake';
 import type { ContactIntakeOptions } from '@/lib/application/crm/contact-intake';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
+import { chooseOption, fieldValue } from '../support/select-field';
 
 const customers = vi.hoisted(() => ({ createCustomerAction: vi.fn(), companyOptionsAction: vi.fn(async () => [{ id: 'c-1', name: 'Acme Ltd' }]) }));
 vi.mock('@/app/organizations/[organizationId]/crm/contacts/actions', () => customers);
@@ -100,7 +101,7 @@ describe('Add contacts intake', () => {
     await user.type(screen.getByLabelText('Name'), 'Ben');
     await user.click(screen.getByRole('button', { name: 'Add more details' }));
     expect(screen.getByRole('navigation', { name: 'Progress' }).querySelector('[aria-current="step"]')).toHaveTextContent('Additional information');
-    await user.selectOptions(screen.getByLabelText('Lifecycle'), 'customer');
+    await chooseOption(screen.getByLabelText('Lifecycle'), 'customer');
     await user.type(screen.getByLabelText(/Industry/), 'Marine');
     await user.click(screen.getByRole('button', { name: 'Back to essentials' }));
     expect(screen.getByLabelText('Name')).toHaveValue('Ben');
@@ -125,7 +126,7 @@ describe('Add contacts intake', () => {
     expect(screen.getByLabelText('Name')).toHaveValue('Cy Lund');
     expect(screen.getByLabelText(/^Email/)).toHaveValue('cy@example.test');
     expect(screen.getByLabelText(/^Job title/)).toHaveValue('Buyer');
-    expect(screen.getByRole('combobox', { name: /^Company/ })).toHaveValue('c-2');
+    expect(fieldValue(screen.getByRole('combobox', { name: /^Company/ }))).toBe('c-2');
     expect(Object.fromEntries(customers.createCustomerAction.mock.calls[0][1] as FormData)).toMatchObject({ contactType: 'company', name: 'Harbour Supply' });
     await user.click(screen.getByRole('button', { name: 'Save contact' }));
     await screen.findByRole('dialog', { name: 'Contact added' });

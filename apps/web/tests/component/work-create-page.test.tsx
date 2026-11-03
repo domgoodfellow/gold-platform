@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WorkCreatePage } from '@/features/work/work-create-page';
 import type { WorkCreateOptions } from '@/lib/application/work/create-options';
+import { chooseOption, fieldValue, optionLabels } from '../support/select-field';
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
 const config = vi.hoisted(() => ({ createStatusAction: vi.fn(async () => ({ error: null as string | null })), createTypeAction: vi.fn(async () => ({ error: null, createdTypeId: 'new-type' })) }));
@@ -28,16 +29,16 @@ const open = async (ui: React.ReactElement) => { const user = userEvent.setup();
 
 describe('New work page', () => {
   it('offers every type, starts on the given one, and shows only that type’s stages', async () => {
-    const user = await open(<WorkCreatePage options={options()} mayConfigure={false} initialTypeId="t2" />);
+    await open(<WorkCreatePage options={options()} mayConfigure={false} initialTypeId="t2" />);
     const dialog = screen.getByRole('region', { name: 'New work' });
-    const typeSelect = within(dialog).getByLabelText('Work type') as HTMLSelectElement;
+    const typeSelect = within(dialog).getByLabelText('Work type');
     // A type that cannot start work yet says so in the list, so anyone can choose one that is ready.
-    expect([...typeSelect.options].map(o => o.text)).toEqual(['Install', 'Repair', 'Survey (needs a starting stage)']);
-    expect(typeSelect.value).toBe('t2');
-    const stages = () => [...(within(dialog).getByLabelText('Starting stage') as HTMLSelectElement).options].map(o => o.text);
-    expect(stages()).toEqual(['Diagnosing', 'Fixing']);
-    await user.selectOptions(typeSelect, 't1');
-    expect(stages()).toEqual(['Booked']);
+    expect(await optionLabels(typeSelect)).toEqual(['Install', 'Repair', 'Survey (needs a starting stage)']);
+    expect(fieldValue(typeSelect)).toBe('t2');
+    const stages = () => optionLabels(within(dialog).getByLabelText('Starting stage'));
+    expect(await stages()).toEqual(['Diagnosing', 'Fixing']);
+    await chooseOption(typeSelect, 't1');
+    expect(await stages()).toEqual(['Booked']);
   });
 
   it('explains a type with no stages, offers ready types and no configuration when not permitted', async () => {
@@ -66,7 +67,7 @@ describe('New work page', () => {
     expect(Object.fromEntries(sent)).toEqual({ organizationId: 'org', typeId: 't3', name: 'Booked in' });
     expect(router.refresh).toHaveBeenCalled();
     // The chosen type survives the refresh that brings its new stage in.
-    expect((screen.getByLabelText('Work type') as HTMLSelectElement).value).toBe('t3');
+    expect(fieldValue(screen.getByLabelText('Work type'))).toBe('t3');
     expect(screen.getByRole('link', { name: 'Open Work type settings' })).toHaveAttribute('href', '/organizations/org/work/configuration?type=t3&tab=workflow&returnTo=create');
   });
 

@@ -2,7 +2,7 @@ import { platformParams } from '@/lib/route/platform';
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
 import { Button, ButtonLink } from '@/components/controls/button';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { UsageEventDrawer } from '@/features/platform/commercial/usage-event-drawer';
 import { getDb } from '@/lib/db/server';
@@ -17,6 +17,7 @@ import {
 import { listTenants } from '@/lib/domain/platform/tenants';
 import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import { requirePlatformArea } from '@/lib/route/platform';
+import { SelectField } from '@/components/controls/select-field';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,24 +68,10 @@ export default async function UsageEconomicsPage({
       <form className="flex flex-wrap gap-2" role="search">
         <TextInput type="date" name="from" defaultValue={from} aria-label="From date" size="small" />
         <TextInput type="date" name="to" defaultValue={to} aria-label="To date" size="small" />
-        <SelectInput name="organization" defaultValue={organizationId} aria-label="Organization" size="small">
-          <option value="">All organizations</option>
-          {tenantRows.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}
-        </SelectInput>
-        <SelectInput name="meter" defaultValue={meterId} aria-label="Meter" size="small">
-          <option value="">All meters</option>
-          {meters.map((meter) => <option key={meter.id} value={meter.id}>{meter.label}</option>)}
-        </SelectInput>
-        <SelectInput name="provider" defaultValue={providerKey} aria-label="Provider" size="small">
-          <option value="">All providers</option>
-          {providers.map((provider) => <option key={provider.key} value={provider.key}>{provider.label}</option>)}
-        </SelectInput>
-        <SelectInput name="state" defaultValue={state} aria-label="Cost state" size="small">
-          <option value="">All cost states</option>
-          <option value="reconciled">Reconciled</option>
-          <option value="estimated">Estimated</option>
-          <option value="unknown">Unknown</option>
-        </SelectInput>
+        <SelectField name="organization" defaultValue={organizationId} aria-label="Organization" size="small" options={[{ value: '', label: 'All organizations' }, ...tenantRows.map((organization) => ({ value: organization.id, label: organization.name }))]} />
+        <SelectField name="meter" defaultValue={meterId} aria-label="Meter" size="small" options={[{ value: '', label: 'All meters' }, ...meters.map((meter) => ({ value: meter.id, label: meter.label }))]} />
+        <SelectField name="provider" defaultValue={providerKey} aria-label="Provider" size="small" options={[{ value: '', label: 'All providers' }, ...providers.map((provider) => ({ value: provider.key, label: provider.label }))]} />
+        <SelectField name="state" defaultValue={state} aria-label="Cost state" size="small" options={[{ value: '', label: 'All cost states' }, { value: 'reconciled', label: 'Reconciled' }, { value: 'estimated', label: 'Estimated' }, { value: 'unknown', label: 'Unknown' }]} />
         <Button type="submit" tone="secondary" size="small">Filter</Button>
         {filtersActive ? <ButtonLink href={platformHref(goldId, 'usage')} tone="text" size="small">Clear</ButtonLink> : null}
       </form>

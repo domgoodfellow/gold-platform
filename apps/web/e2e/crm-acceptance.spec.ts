@@ -10,6 +10,7 @@ import { createPriceBookItem } from '../lib/domain/pricing/price-book';
 import { addPricedLine } from '../lib/domain/pricing/prices';
 import { issueInvoice, recordPayment } from '../lib/domain/billing/invoices';
 import { recordCall } from '../lib/domain/reception/calls';
+import { chooseOption, selectFieldValue } from './select-field';
 
 test.use({ storageState: OWNER_STORAGE_STATE });
 
@@ -41,8 +42,8 @@ test('Person and Company identity, multiple affiliations, grouping and classific
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   const edit = page.getByRole('dialog', { name: 'Edit contact', exact: true });
   await edit.getByRole('button', { name: 'Relationship', exact: true }).click();
-  await edit.getByLabel('Lifecycle', { exact: true }).selectOption('customer');
-  await edit.getByLabel('Lead temperature', { exact: true }).selectOption('hot');
+  await chooseOption(edit.getByLabel('Lifecycle', { exact: true }), 'customer');
+  await chooseOption(edit.getByLabel('Lead temperature', { exact: true }), 'hot');
   await edit.getByRole('button', { name: 'Save changes', exact: true }).click();
   await expect(edit).toBeHidden();
   await page.reload();
@@ -50,8 +51,8 @@ test('Person and Company identity, multiple affiliations, grouping and classific
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await expect(edit.locator('input[name="contactType"]')).toHaveValue('person');
   await edit.getByRole('button', { name: 'Relationship', exact: true }).click();
-  await expect(edit.getByLabel('Lifecycle', { exact: true })).toHaveValue('customer');
-  await expect(edit.getByLabel('Lead temperature', { exact: true })).toHaveValue('hot');
+  await expect(selectFieldValue(edit.getByLabel('Lifecycle', { exact: true }))).toHaveValue('customer');
+  await expect(selectFieldValue(edit.getByLabel('Lead temperature', { exact: true }))).toHaveValue('hot');
   await page.keyboard.press('Escape');
   await page.goto(base);
   const companyLink = page.getByRole('link', { name: company, exact: true }).first();
@@ -61,13 +62,13 @@ test('Person and Company identity, multiple affiliations, grouping and classific
   await page.goto(base);
   // V1.4: less frequent criteria live in the Filters panel.
   await page.getByText('Filters', { exact: true }).click();
-  await page.getByLabel('Filter by company', { exact: true }).selectOption(companyId);
-  await page.getByLabel('Contact grouping', { exact: true }).selectOption('company');
+  await chooseOption(page.getByLabel('Filter by company', { exact: true }), companyId);
+  await chooseOption(page.getByLabel('Contact grouping', { exact: true }), 'company');
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`companyId=${companyId}`));
   for (const name of people) await expect(page.getByRole('link', { name, exact: true }).first()).toBeVisible();
   await page.reload();
-  await expect(page.getByLabel('Contact grouping', { exact: true })).toHaveValue('company');
+  await expect(selectFieldValue(page.getByLabel('Contact grouping', { exact: true }))).toHaveValue('company');
   for (const width of [1440, 768, 390]) {
     await page.setViewportSize({ width, height: 1000 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
@@ -97,7 +98,7 @@ test('Contacts and Library enter reviewed CSV import; repeating the same source 
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Map your columns', exact: true })).toBeVisible();
   const sourceUrl = page.url();
-  await page.getByRole('combobox', { name: 'Contact type', exact: true }).selectOption('person');
+  await chooseOption(page.getByRole('combobox', { name: 'Contact type', exact: true }), 'person');
   await page.getByRole('button', { name: 'Review changes', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Review changes', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Possible duplicates', exact: true }).click();
@@ -113,7 +114,7 @@ test('Contacts and Library enter reviewed CSV import; repeating the same source 
   await expect(page).toHaveURL(/\/crm\/contacts\/[a-f0-9-]+$/);
   const identity = page.url();
   await page.goto(sourceUrl);
-  await page.getByRole('combobox', { name: 'Contact type', exact: true }).selectOption('person');
+  await chooseOption(page.getByRole('combobox', { name: 'Contact type', exact: true }), 'person');
   await page.getByRole('button', { name: 'Review changes', exact: true }).click();
   // A newly reviewed mapping proposes an update to the existing contact, not a
   // second identity. Reconfirm it and prove the persisted cardinality and ID.
@@ -172,7 +173,7 @@ test('an existing contact keeps Work, financial, call and opportunity associatio
     const edit = page.getByRole('dialog');
     await edit.getByText('Person', { exact: true }).click();
     await edit.getByRole('button', { name: 'Relationship', exact: true }).click();
-    await edit.getByLabel('Lifecycle', { exact: true }).selectOption('customer');
+    await chooseOption(edit.getByLabel('Lifecycle', { exact: true }), 'customer');
     await edit.getByRole('button', { name: 'Save changes', exact: true }).click();
     await expect(edit).toBeHidden();
     await page.reload();
@@ -227,8 +228,8 @@ test('a simulated synchronized worksheet can lose a row while its imported conta
     }
     await snapshot([{ external_id: 'person-42', display_name: name, metadata: { headers: ['name'], values: [name] }, deleted: false }]);
     await page.goto(`${base}/library/imports/new?resourceId=${resourceId}`);
-    await page.getByRole('combobox', { name: 'Contact type', exact: true }).selectOption('person');
-    await page.getByRole('combobox', { name: 'How often', exact: true }).selectOption('sync');
+    await chooseOption(page.getByRole('combobox', { name: 'Contact type', exact: true }), 'person');
+    await chooseOption(page.getByRole('combobox', { name: 'How often', exact: true }), 'sync');
     await page.getByRole('button', { name: 'Review changes', exact: true }).click();
     await page.getByRole('button', { name: 'Import 1 contact', exact: true }).click();
     await page.getByRole('dialog').getByRole('button', { name: /Import 1 contact/ }).click();

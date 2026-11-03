@@ -24,6 +24,7 @@ import { listPricedLines } from '../lib/domain/pricing/prices';
 import { addTypeChecklistItem } from '../lib/domain/work-items/checklists';
 import { shiftDate, todayInZone, zonedTimeToInstant } from '../lib/domain/scheduling/window';
 import type { Db } from '../lib/db/types';
+import { chooseOption, optionTexts } from './select-field';
 
 /**
  * Work W2 — the Work record, its focused dialogs and type configuration, in a real browser against
@@ -319,7 +320,7 @@ test.describe.serial('Work W2: record, dialogs and type configuration', () => {
       // Quote: a line from the price book, its price snapshotted as it is now.
       await main(page).getByRole('button', { name: 'Add priced line' }).click();
       let dialog = page.getByRole('dialog');
-      await dialog.getByLabel('Price item').selectOption({ label: 'Labour · CA$95.50 / hour' });
+      await chooseOption(dialog.getByLabel('Price item'), { label: 'Labour · CA$95.50 / hour' });
       await dialog.getByLabel('Quantity').fill('3');
       await dialog.getByRole('button', { name: 'Add to quote' }).click();
       await expect(dialog.getByRole('status')).toContainText('Priced line added to quote.');
@@ -438,8 +439,8 @@ test.describe.serial('Work W2: record, dialogs and type configuration', () => {
         await page.goto(record(priced));
         await main(page).getByRole('button', { name: 'Add priced line' }).click();
         const dialog = page.getByRole('dialog');
-        const option = (await dialog.getByLabel('Price item').locator('option', { hasText: priceName }).textContent())!;
-        await dialog.getByLabel('Price item').selectOption({ label: option });
+        const option = (await optionTexts(dialog.getByLabel('Price item'))).find(text => text.includes(priceName))!;
+        await chooseOption(dialog.getByLabel('Price item'), { label: option });
         await dialog.getByLabel('Quantity').fill('5');
         await grant(base);
         await dialog.getByRole('button', { name: 'Add to quote' }).click();

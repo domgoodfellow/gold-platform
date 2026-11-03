@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { AppPage } from '@/components/layout/app-page';
 import { CollectionHeader } from '@/components/patterns/collection-header';
 import { Button,ButtonLink } from '@/components/controls/button';
-import { TextInput,SelectInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { FormField } from '@/components/controls/form';
 import { FollowUpSheet } from '@/features/crm/follow-ups/follow-up-sheet';
 import { FollowUpList } from '@/features/crm/follow-ups/follow-up-list';
@@ -13,6 +13,7 @@ import { followUpsAvailable,dueFilter } from '@/lib/application/crm/follow-ups';
 import { listContacts,getContact } from '@/lib/domain/contacts/contacts';
 import { listOpportunities,getOpportunity } from '@/lib/domain/opportunities/opportunities';
 import { zonedDayRange,shiftDate } from '@/lib/domain/scheduling/window';
+import { SelectField } from '@/components/controls/select-field';
 export const dynamic='force-dynamic';
 export default async function FollowUpsPage({params,searchParams}:{params:Promise<{organizationId:string}>;searchParams:Promise<Record<string,string|undefined>>}) {
   const {organizationId}=await params; const q=await searchParams;
@@ -33,16 +34,16 @@ export default async function FollowUpsPage({params,searchParams}:{params:Promis
   return <AppPage><CollectionHeader location={{}} actions={<><ButtonLink href={`${href}/calendar`}>Calendar</ButtonLink>{options.mayManage?<FollowUpSheet {...options}/>:null}</>}/>
     <form method="get" role="search" className="mb-5 grid grid-cols-2 items-end gap-3 sm:grid-cols-3 xl:grid-cols-6">
       <FormField id="follow-up-q" label="Search follow-ups" className="col-span-2 sm:col-span-1">{p=><TextInput {...p} name="q" type="search" defaultValue={q.q}/>}</FormField>
-      <FormField id="follow-up-status" label="Status">{p=><SelectInput {...p} name="status" defaultValue={q.status??'open'}>{['open','completed','cancelled','all'].map(v=><option key={v} value={v}>{v}</option>)}</SelectInput>}</FormField>
-      <FormField id="follow-up-kind" label="Type">{p=><SelectInput {...p} name="kind" defaultValue={q.kind??''}><option value="">All types</option>{['call','email','meeting','task'].map(v=><option key={v} value={v}>{v}</option>)}</SelectInput>}</FormField>
-      <FormField id="follow-up-owner" label="Owner">{p=><SelectInput {...p} name="owner" defaultValue={q.owner??''}><option value="">All owners</option><option value="unassigned">Unassigned</option>{members.map(m=><option key={m.id} value={m.id}>{m.displayName}</option>)}</SelectInput>}</FormField>
-      <FormField id="follow-up-due" label="Due state">{p=><SelectInput {...p} name="due" defaultValue={q.due??''}><option value="">Any time</option><option value="overdue">Overdue</option><option value="today">Due today</option><option value="upcoming">Upcoming</option></SelectInput>}</FormField>
+      <FormField id="follow-up-status" label="Status">{p=><SelectField {...p} name="status" defaultValue={q.status??'open'} options={[...['open','completed','cancelled','all'].map((v) => ({ value: v, label: v }))]} />}</FormField>
+      <FormField id="follow-up-kind" label="Type">{p=><SelectField {...p} name="kind" defaultValue={q.kind??''} options={[{ value: '', label: 'All types' }, ...['call','email','meeting','task'].map((v) => ({ value: v, label: v }))]} />}</FormField>
+      <FormField id="follow-up-owner" label="Owner">{p=><SelectField {...p} name="owner" defaultValue={q.owner??''} options={[{ value: '', label: 'All owners' }, { value: 'unassigned', label: 'Unassigned' }, ...members.map((m) => ({ value: m.id, label: m.displayName }))]} />}</FormField>
+      <FormField id="follow-up-due" label="Due state">{p=><SelectField {...p} name="due" defaultValue={q.due??''} options={[{ value: '', label: 'Any time' }, { value: 'overdue', label: 'Overdue' }, { value: 'today', label: 'Due today' }, { value: 'upcoming', label: 'Upcoming' }]} />}</FormField>
       <div className="flex gap-2"><Button type="submit">Filter</Button><ButtonLink href={href}>Reset</ButtonLink></div>
       <details className="col-span-full" open={Boolean(q.customer||q.opportunity||q.from||q.to||q.customerSearch||q.opportunitySearch)}><summary className="cursor-pointer text-sm text-muted">Contact, opportunity and date filters</summary><div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
       <FormField id="follow-up-customer-search" label="Find customer filter">{p=><TextInput {...p} name="customerSearch" type="search" defaultValue={q.customerSearch} placeholder="Name, email or phone"/>}</FormField>
-      <FormField id="follow-up-customer" label="Contact">{p=><SelectInput {...p} name="customer" defaultValue={q.customer??''}><option value="">All customers</option>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}{customer && !customers.some(c=>c.id===customer.id)?<option value={customer.id}>{customer.name}</option>:null}</SelectInput>}</FormField>
+      <FormField id="follow-up-customer" label="Contact">{p=><SelectField {...p} name="customer" defaultValue={q.customer??''} options={[{ value: '', label: 'All customers' }, ...customers.map((c) => ({ value: c.id, label: c.name })), ...(customer && !customers.some(c=>c.id===customer.id) ? [{ value: customer.id, label: customer.name }] : [])]} />}</FormField>
       <FormField id="follow-up-opportunity-search" label="Find opportunity filter">{p=><TextInput {...p} name="opportunitySearch" type="search" defaultValue={q.opportunitySearch}/>}</FormField>
-      <FormField id="follow-up-opportunity" label="Opportunity">{p=><SelectInput {...p} name="opportunity" defaultValue={q.opportunity??''}><option value="">All opportunities</option>{opportunities.map(o=><option key={o.id} value={o.id}>{o.title}</option>)}{opportunity && !opportunities.some(o=>o.id===opportunity.id)?<option value={opportunity.id}>{opportunity.title}</option>:null}</SelectInput>}</FormField>
+      <FormField id="follow-up-opportunity" label="Opportunity">{p=><SelectField {...p} name="opportunity" defaultValue={q.opportunity??''} options={[{ value: '', label: 'All opportunities' }, ...opportunities.map((o) => ({ value: o.id, label: o.title })), ...(opportunity && !opportunities.some(o=>o.id===opportunity.id) ? [{ value: opportunity.id, label: opportunity.title }] : [])]} />}</FormField>
       <FormField id="follow-up-from" label="Due from">{p=><TextInput {...p} name="from" type="date" defaultValue={q.from}/>}</FormField><FormField id="follow-up-to" label="Due through">{p=><TextInput {...p} name="to" type="date" defaultValue={q.to}/>}</FormField>
       </div></details>
     </form><p className="mb-2 text-xs text-muted">{items.total} follow-ups · {organization.timezone} · Contact and opportunity choices show up to 20 matches; refine the filter search for more.</p><FollowUpList {...options} items={items}/>

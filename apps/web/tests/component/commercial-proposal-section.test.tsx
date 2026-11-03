@@ -17,6 +17,7 @@ vi.mock('@/app/organizations/[organizationId]/finance/actions', () => finance);
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }), usePathname: () => '/organizations/org/crm/contacts/customer' }));
 
 import { CommercialProposalSection } from '@/features/crm/customers/commercial-proposal-section';
+import { chooseOption, optionLabels } from '../support/select-field';
 
 afterEach(cleanup);
 
@@ -78,15 +79,15 @@ describe('commercial proposal section', () => {
     const user = userEvent.setup();
     const { container } = renderSection({ proposals: [] });
     const item = screen.getByLabelText('Item 1');
-    expect(within(item).queryByRole('option', { name: /Imported plant/ })).toBeNull();
-    await user.selectOptions(item, 'i1');
+    expect((await optionLabels(item)).some(label => /Imported plant/.test(label))).toBe(false);
+    await chooseOption(item, 'i1');
     await user.clear(screen.getByLabelText('Quantity 1'));
     await user.type(screen.getByLabelText('Quantity 1'), '4');
     expect(screen.getByText(/Total at today’s catalog prices: CA\$480\.00/)).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Add line' }));
     expect(screen.getByLabelText('Item 2')).toBeVisible();
 
-    const form = container.querySelector('form:has(select[name="priceBookItemId"])') as HTMLFormElement;
+    const form = container.querySelector('form:has(input[name="priceBookItemId"])') as HTMLFormElement;
     const names = [...new FormData(form).keys()];
     expect(new Set(names)).toEqual(new Set(['organizationId', 'customerId', 'priceBookItemId', 'quantity', 'notes']));
   });

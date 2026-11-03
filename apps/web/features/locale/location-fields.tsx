@@ -3,7 +3,7 @@
 import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Button } from '@/components/controls/button';
 import { FormField } from '@/components/controls/form';
-import { Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { Hint, TextInput } from '@/components/controls/inputs';
 import {
   countryName,
   listCountries,
@@ -11,6 +11,7 @@ import {
   suggestRegionalDefaults,
   timeZoneLabel,
 } from '@/lib/domain/tenancy/regional-defaults';
+import { SelectField } from '@/components/controls/select-field';
 
 export type BusinessLocation = {
   countryCode: string;
@@ -120,25 +121,14 @@ export function BusinessLocationFields({
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField id="biz-country" label="Country" error={errors?.country}>
           {(field) => (
-            <SelectInput {...field} className="w-full" name="countryCode" value={location.countryCode} onChange={(event) => set({ countryCode: event.target.value, region: '' })} required={mode === 'create'}>
-              <option value="">Choose a country</option>
-              {countries.length === 0 && location.countryCode ? <option value={location.countryCode}>{location.countryCode}</option> : null}
-              {countries.map((country) => (
-                <option key={country.code} value={country.code}>{country.name}</option>
-              ))}
-            </SelectInput>
+            <SelectField {...field} className="w-full" name="countryCode" value={location.countryCode} onValueChange={(next) => set({ countryCode: next, region: '' })} required={mode === 'create'} options={[{ value: '', label: 'Choose a country' }, ...(countries.length === 0 && location.countryCode ? [{ value: location.countryCode, label: location.countryCode }] : []), ...countries.map((country) => ({ value: country.code, label: country.name }))]} />
           )}
         </FormField>
 
         <FormField id="biz-region" label={location.countryCode === 'CA' ? 'Province or territory' : location.countryCode === 'US' ? 'State' : 'State, province or region'} optional={regions.length === 0}>
           {(field) =>
             regions.length > 0 ? (
-              <SelectInput {...field} className="w-full" name="region" value={location.region} onChange={(event) => set({ region: event.target.value })} required={mode === 'create'}>
-                <option value="">Choose one</option>
-                {regions.map((region) => (
-                  <option key={region.code} value={region.code}>{region.name}</option>
-                ))}
-              </SelectInput>
+              <SelectField {...field} className="w-full" name="region" value={location.region} onValueChange={(next) => set({ region: next })} required={mode === 'create'} options={[{ value: '', label: 'Choose one' }, ...regions.map((region) => ({ value: region.code, label: region.name }))]} />
             ) : (
               <TextInput {...field} name="region" value={location.region} maxLength={100} onChange={(event) => set({ region: event.target.value })} />
             )
@@ -183,24 +173,12 @@ export function BusinessLocationFields({
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField id="biz-timezone" label="Time zone" hint="Schedules, opening hours and appointment times follow this.">
                 {(field) => (
-                  <SelectInput {...field} className="w-full" value={timeZone} onChange={(event) => setZoneChoice(event.target.value)}>
-                    {zones.includes(timeZone) ? null : <option value={timeZone}>{timeZoneLabel(timeZone)}</option>}
-                    {zones.map((zone) => (
-                      <option key={zone} value={zone}>{timeZoneLabel(zone)}</option>
-                    ))}
-                  </SelectInput>
+                  <SelectField {...field} className="w-full" value={timeZone} onValueChange={(next) => setZoneChoice(next)} options={[...(zones.includes(timeZone) ? [] : [{ value: timeZone, label: timeZoneLabel(timeZone) }]), ...zones.map((zone) => ({ value: zone, label: timeZoneLabel(zone) }))]} />
                 )}
               </FormField>
               <FormField id="biz-currency" label="Currency" hint="What new prices and invoices use. Existing amounts keep the currency they were recorded in.">
                 {(field) => (
-                  <SelectInput {...field} className="w-full" value={currency} onChange={(event) => setCurrencyChoice(event.target.value)}>
-                    {mode === 'create' || !initialCurrency ? <option value="">Decide later</option> : null}
-                    {currency && !currencies.includes(currency) ? <option value={currency}>{currency}</option> : null}
-                    {currencies.map((code) => {
-                      const name = currencyNames?.of(code);
-                      return <option key={code} value={code}>{name && name !== code ? `${code} — ${name}` : code}</option>;
-                    })}
-                  </SelectInput>
+                  <SelectField {...field} className="w-full" value={currency} onValueChange={(next) => setCurrencyChoice(next)} options={[...(mode === 'create' || !initialCurrency ? [{ value: '', label: 'Decide later' }] : []), ...(currency && !currencies.includes(currency) ? [{ value: currency, label: currency }] : []), ...currencies.map((code) => { const name = currencyNames?.of(code); return { value: code, label: name && name !== code ? `${code} — ${name}` : code }; })]} />
                 )}
               </FormField>
               <div className="sm:col-span-2">

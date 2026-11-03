@@ -2,9 +2,10 @@
 import { useActionState, useEffect, useId, useState } from 'react';
 import { Building2, Plus, User } from 'lucide-react';
 import { Button } from '@/components/controls/button';
+import { FOCUS_RING_WITHIN } from '@/components/class-names';
 import { FormError, FormField } from '@/components/controls/form';
 import { PhoneInput } from '@/components/controls/phone-input';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { useDrawerFormSubmit } from '@/components/controls/use-drawer-form-submit';
 import { useFormDirty } from '@/components/controls/use-form-dirty';
 import { CustomFieldInputs } from '@/features/custom-fields/inputs';
@@ -13,6 +14,7 @@ import { createCustomerAction, companyOptionsAction, type CreateCustomerState } 
 import { ContactClassificationFields } from './contact-classification-fields';
 import { DialogBody, DialogFooterBar, StepHeader } from '@/components/panels/dialog-layout';
 import { useGuardedDialogClose, useGuardedDialogDirty } from '@/components/panels/guarded-dialog';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: CreateCustomerState = { error: null, created: false };
 type Identity = 'person' | 'company' | '';
@@ -20,7 +22,7 @@ type Identity = 'person' | 'company' | '';
 const INDUSTRY_KEYS = ['industry', 'sic', 'sic_code', 'naics', 'naics_code'];
 
 export function IdentityChoice({ value, checked, onChange, label, description, Icon }: { value: 'person' | 'company' | 'unspecified'; checked: boolean; onChange: () => void; label: string; description: string; Icon: typeof User }) {
-  return <label data-slot="selectable-card" className="flex min-h-20 cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface p-4 text-left transition-colors hover:bg-hover has-[:checked]:border-accent has-[:checked]:ring-2 has-[:checked]:ring-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent">
+  return <label data-slot="selectable-card" className={`flex min-h-20 cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface p-4 text-left transition-colors hover:bg-hover has-[:checked]:border-accent has-[:checked]:ring-2 has-[:checked]:ring-inset has-[:checked]:ring-accent ${FOCUS_RING_WITHIN}`}>
     <input type="radio" name="contactType" value={value} checked={checked} onChange={onChange} required className="sr-only" />
     <Icon aria-hidden className="mt-0.5 size-5 shrink-0 text-muted" />
     <span><span className="block text-sm font-medium">{label}</span><span className="block text-xs text-muted">{description}</span></span>
@@ -76,7 +78,7 @@ export function CreateContactForm({ organizationId, definitions, initialType = '
               <FormField id={`${formId}-phone`} label="Phone" optional>{field => <PhoneInput {...field} name="phone" type="tel" />}</FormField>
               {person ? <>
                 <FormField id={`${formId}-company`} label="Company" optional hint={companiesError || undefined}>{field => <div className="flex gap-2">
-                  <SelectInput {...field} name="companyId" value={companyId} onChange={event => { setCompanyId(event.target.value); onChange(); }} className="min-w-0 flex-1"><option value="">No company</option>{companies.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}</SelectInput>
+                  <SelectField {...field} name="companyId" value={companyId} onValueChange={(next) => { setCompanyId(next); onChange(); }} className="min-w-0 flex-1" options={[{ value: '', label: 'No company' }, ...companies.map((option) => ({ value: option.id, label: option.name }))]} />
                   <Button type="button" tone="secondary" onClick={() => setStage('company')} aria-label="New company"><Plus aria-hidden /><span className="hidden sm:inline">New</span></Button>
                 </div>}</FormField>
                 <FormField id={`${formId}-title`} label="Job title" optional>{field => <TextInput {...field} name="affiliationTitle" maxLength={200} />}</FormField>

@@ -3,7 +3,7 @@
 import { Button } from '@/components/controls/button';
 import { Card } from '@/components/surfaces/card';
 import { EmptyState } from '@/components/surfaces/section';
-import { Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { Hint, TextArea, TextInput } from '@/components/controls/inputs';
 import { useActionState, useEffect, useState } from 'react';
 import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import {
@@ -33,6 +33,7 @@ import {
   type SetupActionState,
 } from '@/app/organizations/[organizationId]/setup/actions';
 import { Error, Section } from './setup-controls';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: SetupActionState = { error: null };
 
@@ -268,30 +269,16 @@ export function ProposalReview({
             }
           >
             {([['from', from], ['to', to]] as const).map(([which, value]) => (
-              <SelectInput
-                key={which}
-                value={value}
-                aria-label={`Move ${index + 1} ${which}`}
-                onChange={(event) =>
-                  set(
+              <SelectField key={which} value={String(value)} aria-label={`Move ${index + 1} ${which}`} onValueChange={(next) => set(
                     'transitions',
                     shape.transitions.map((pair, at) =>
                       at === index
                         ? which === 'from'
-                          ? [Number(event.target.value), pair[1]]
-                          : [pair[0], Number(event.target.value)]
+                          ? [Number(next), pair[1]]
+                          : [pair[0], Number(next)]
                         : pair,
                     ) as [number, number][],
-                  )
-                }
-                size="small"
-              >
-                {shape.statuses.map((status, at) => (
-                  <option key={at} value={at}>
-                    {status || `Stage ${at + 1}`}
-                  </option>
-                ))}
-              </SelectInput>
+                  )} size="small" options={[...shape.statuses.map((status, at) => ({ value: String(at), label: status || `Stage ${at + 1}` }))]} />
             ))}
           </Row>
         ))}
@@ -390,25 +377,12 @@ export function ProposalReview({
               )
             }
           >
-            <SelectInput
-              value={entry.dayOfWeek}
-              aria-label={`Opening ${index + 1} day`}
-              onChange={(event) =>
-                set(
+            <SelectField value={String(entry.dayOfWeek)} aria-label={`Opening ${index + 1} day`} onValueChange={(next) => set(
                   'hours',
                   shape.hours.map((row, at) =>
-                    at === index ? { ...row, dayOfWeek: Number(event.target.value) } : row,
+                    at === index ? { ...row, dayOfWeek: Number(next) } : row,
                   ),
-                )
-              }
-              size="small"
-            >
-              {DAYS.map((day) => (
-                <option key={day.value} value={day.value}>
-                  {day.label}
-                </option>
-              ))}
-            </SelectInput>
+                )} size="small" options={[...DAYS.map((day) => ({ value: String(day.value), label: day.label }))]} />
             {(['opensAt', 'closesAt'] as const).map((which) => (
               <TextInput
                 key={which}
@@ -602,44 +576,18 @@ export function ProposalReview({
               }
               size="small"
             />
-            <SelectInput
-              value={rule.on}
-              aria-label={`Rule ${index + 1} trigger`}
-              onChange={(event) =>
-                set(
+            <SelectField value={rule.on} aria-label={`Rule ${index + 1} trigger`} onValueChange={(next) => set(
                   'automations',
                   (shape.automations ?? []).map((entry, at) =>
-                    at === index ? { ...entry, on: event.target.value } : entry,
+                    at === index ? { ...entry, on: next } : entry,
                   ),
-                )
-              }
-              size="small"
-            >
-              {TRIGGER_EVENTS.map((event) => (
-                <option key={event.action} value={event.action}>
-                  When {event.label}
-                </option>
-              ))}
-            </SelectInput>
-            <SelectInput
-              value={rule.moveTo}
-              aria-label={`Rule ${index + 1} destination`}
-              onChange={(event) =>
-                set(
+                )} size="small" options={[...TRIGGER_EVENTS.map((event) => ({ value: event.action, label: `When ${event.label}` }))]} />
+            <SelectField value={String(rule.moveTo)} aria-label={`Rule ${index + 1} destination`} onValueChange={(next) => set(
                   'automations',
                   (shape.automations ?? []).map((entry, at) =>
-                    at === index ? { ...entry, moveTo: Number(event.target.value) } : entry,
+                    at === index ? { ...entry, moveTo: Number(next) } : entry,
                   ),
-                )
-              }
-              size="small"
-            >
-              {shape.statuses.map((status, at) => (
-                <option key={at} value={at}>
-                  move it to {status || `Stage ${at + 1}`}
-                </option>
-              ))}
-            </SelectInput>
+                )} size="small" options={[...shape.statuses.map((status, at) => ({ value: String(at), label: `move it to ${status || `Stage ${at + 1}`}` }))]} />
           </Row>
         ))}
         <Button
@@ -732,42 +680,16 @@ export function ProposalReview({
             size="small"
             className="w-28 font-mono"
           />
-          <SelectInput
-            value={shape.brand?.headingFont ?? 'sans'}
-            aria-label="Heading lettering"
-            onChange={(event) =>
-              set('brand', {
+          <SelectField value={shape.brand?.headingFont ?? 'sans'} aria-label="Heading lettering" onValueChange={(next) => set('brand', {
                 accent: shape.brand?.accent ?? '',
-                headingFont: event.target.value,
+                headingFont: next,
                 bodyFont: shape.brand?.bodyFont ?? 'sans',
-              })
-            }
-            size="small"
-          >
-            {FONT_KEYS.map((key) => (
-              <option key={key} value={key}>
-                Headings: {FONT_LABELS[key]}
-              </option>
-            ))}
-          </SelectInput>
-          <SelectInput
-            value={shape.brand?.bodyFont ?? 'sans'}
-            aria-label="Body lettering"
-            onChange={(event) =>
-              set('brand', {
+              })} size="small" options={[...FONT_KEYS.map((key) => ({ value: key, label: `Headings: ${FONT_LABELS[key]}` }))]} />
+          <SelectField value={shape.brand?.bodyFont ?? 'sans'} aria-label="Body lettering" onValueChange={(next) => set('brand', {
                 accent: shape.brand?.accent ?? '',
                 headingFont: shape.brand?.headingFont ?? 'sans',
-                bodyFont: event.target.value,
-              })
-            }
-            size="small"
-          >
-            {FONT_KEYS.map((key) => (
-              <option key={key} value={key}>
-                Text: {FONT_LABELS[key]}
-              </option>
-            ))}
-          </SelectInput>
+                bodyFont: next,
+              })} size="small" options={[...FONT_KEYS.map((key) => ({ value: key, label: `Text: ${FONT_LABELS[key]}` }))]} />
         </div>
       </Section>
 

@@ -30,7 +30,7 @@ function tsxFilesUnder(dir: string): string[] {
 }
 
 describe('M11 — a control spelled by hand', () => {
-  it('has no raw <button> or <select> under app/ — Button, ButtonLink and SelectInput replace both, with no exception', () => {
+  it('has no raw <button> or <select> under app/ — Button, ButtonLink and SelectField replace both, with no exception', () => {
     // `docs/ui-system.md`'s six exceptions are all <input> pickers (file, color, date) and one
     // ternary-classed button on the booking page whose element is still a shared Button — none
     // of them is a raw <button> or <select> tag, so this check names no exception at all.
@@ -80,12 +80,17 @@ describe('M11 — a control file with no focus treatment', () => {
   ];
 
   it('gives every shared interactive control a visible focus ring', () => {
-    // `FOCUS_RING` (`class-names.ts`) is the one ring, referenced rather than copied — so the
-    // check is for the reference, not a literal class string that would only ever appear once,
-    // in the file that defines it.
+    // One indicator (`docs/ui-system.md`, Focus): the global `:focus-visible` rule in globals.css
+    // draws it on every native control and role-bearing element, outside every cascade layer so no
+    // utility can remove it; `FOCUS_RING` (`class-names.ts`) repeats the same declaration for an
+    // element that rule does not match. A control file therefore either renders elements the rule
+    // covers or references `FOCUS_RING` — and never draws a second ring or a gap beside it.
+    const css = readFileSync(fileURLToPath(new URL('../../../app/globals.css', import.meta.url)), 'utf8');
+    expect(css).toMatch(/:where\(a\[href\], button, input, select, textarea[^)]*\)[^{]*:focus-visible \{\s*outline: 2px solid var\(--focus-color\);\s*outline-offset: var\(--focus-offset, 0px\);/);
     for (const file of CONTROL_FILES) {
       const source = readFileSync(file, 'utf8');
-      expect(source, `${file} has no focus-visible ring`).toMatch(/FOCUS_RING|focus-visible:ring/);
+      expect(source, `${file} has no focus-visible indicator`).toMatch(/FOCUS_RING|<(button|a|input|textarea)[\s>]|@gold\/ui\/components\/(button|input|textarea)'/);
+      expect(source, `${file} draws a competing ring or gap`).not.toMatch(/focus-visible:ring|ring-offset|focus-visible:outline-none/);
     }
   });
 });

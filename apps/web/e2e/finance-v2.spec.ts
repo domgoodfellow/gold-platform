@@ -10,6 +10,7 @@ import { addPricedLine, listPricedLines } from '../lib/domain/pricing/prices';
 import { createWorkItem } from '../lib/domain/work-items/work-items';
 import { setModuleEnabled } from '../lib/domain/tenancy/modules';
 import { resetAppearance, saveAppearance } from '../lib/domain/identity/appearance';
+import { chooseOption, selectFieldValue } from './select-field';
 
 /**
  * Finance V2.0 in a real browser against the isolated run (`playwright.isolated.config.ts`): two
@@ -143,7 +144,7 @@ test.describe.serial('Finance V2.0', () => {
       await dialog.getByLabel('Search Work items').fill('Heat pump');
       await choose(dialog, /Heat pump estimate/);
       await expect(dialog.getByText('Cedar Tree Properties')).toBeVisible();
-      await dialog.getByLabel('Price item').selectOption({ label: 'Labour · CA$95.50 / hour' });
+      await chooseOption(dialog.getByLabel('Price item'), { label: 'Labour · CA$95.50 / hour' });
       await dialog.getByLabel('Quantity').fill('2');
       await expect(dialog.getByLabel('Quote totals')).toContainText('Quote after this line');
       await shot(page, 'quote-dialog-desktop');
@@ -287,7 +288,7 @@ test.describe.serial('Finance V2.0', () => {
       await expect(page).toHaveURL(/status=overdue/);
       expect(await count()).toBe((await readFinanceInvoices(owner.db, fx.organizationId, { status: 'overdue' })).total);
       await page.getByText('Filters', { exact: true }).click();
-      await page.getByLabel('Filter by contact').selectOption({ label: 'Vertex HVAC' });
+      await chooseOption(page.getByLabel('Filter by contact'), { label: 'Vertex HVAC' });
       await page.getByRole('button', { name: 'Apply filters' }).click();
       await expect(page).toHaveURL(/customer=/);
       await expect(page).toHaveURL(/status=overdue/);
@@ -298,7 +299,7 @@ test.describe.serial('Finance V2.0', () => {
       await page.getByRole('link', { name: 'Reset' }).click();
       await expect(page).toHaveURL(`${base}/invoices`);
       await page.goto(`${base}/invoices?sort=due&status=outstanding`);
-      await expect(page.getByLabel('Sort invoices')).toHaveValue('due');
+      await expect(selectFieldValue(page.getByLabel('Sort invoices'))).toHaveValue('due');
       await page.goto(`${base}/invoices`);
       const total = (await readFinanceInvoices(owner.db, fx.organizationId)).total;
       await expect(page.getByRole('navigation', { name: 'Pagination' })).toContainText(`Page 1 of 2 · ${total} records`);

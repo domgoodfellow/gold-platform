@@ -4,6 +4,7 @@ import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { FormField } from '@/components/controls/form';
 import { ErrorText, TextInput } from '@/components/controls/inputs';
+import { SuggestionField } from '@/components/controls/select-field';
 import { BusinessLocationFields } from '@/features/locale/location-fields';
 import { INDUSTRY_SUGGESTIONS } from '@/lib/domain/tenancy/industries';
 import { createBusinessAction, type CreateBusinessState } from './actions';
@@ -31,14 +32,7 @@ export function CreateBusinessForm() {
       </fieldset>
 
       <FormField id="business-industry" label="What kind of business is it?" optional>
-        {(field) => (
-          <>
-            <TextInput {...field} name="industry" type="text" maxLength={100} list="industry-suggestions" className="w-full" />
-            <datalist id="industry-suggestions">
-              {INDUSTRY_SUGGESTIONS.map((industry) => <option key={industry} value={industry} />)}
-            </datalist>
-          </>
-        )}
+        {(field) => <SuggestionField {...field} name="industry" type="text" maxLength={100} suggestions={INDUSTRY_SUGGESTIONS} className="w-full" />}
       </FormField>
 
       <div className="flex flex-col gap-3">

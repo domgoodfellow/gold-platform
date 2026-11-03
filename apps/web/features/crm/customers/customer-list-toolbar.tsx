@@ -1,8 +1,8 @@
 import { CONTACT_LIFECYCLES, LEAD_TEMPERATURES, classificationLabel } from '@/lib/domain/customers/classification';
 import { CheckboxField } from '@/components/controls/checkbox-field';
-import { SelectInput } from '@/components/controls/inputs';
 import { CollectionToolbar, type ActiveFilter } from '@/components/patterns/collection-toolbar';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
+import { SelectField } from '@/components/controls/select-field';
 
 export type CustomerDirectoryView = {
   search: string;
@@ -81,17 +81,17 @@ export function CustomerListToolbar({ organizationId, stages, industries, choice
       hidden={{ contactType: view.contactType, review: view.review }}
       filterCount={labels.filter(([key]) => view[key]).length}
       filters={<>
-        <label className="flex flex-col gap-1 text-sm">Lifecycle<SelectInput name="lifecycle" aria-label="Filter by lifecycle" defaultValue={view.lifecycle ?? ''}><option value="">Any lifecycle</option><option value="unclassified">Unclassified</option>{CONTACT_LIFECYCLES.map(value => <option key={value} value={value}>{classificationLabel(value)}</option>)}</SelectInput></label>
-        <label className="flex flex-col gap-1 text-sm">Lead temperature<SelectInput name="temperature" aria-label="Filter by temperature" defaultValue={view.temperature ?? ''}><option value="">Any temperature</option>{LEAD_TEMPERATURES.map(value => <option key={value} value={value}>{classificationLabel(value)}</option>)}</SelectInput></label>
-        <label className="flex flex-col gap-1 text-sm">Company<SelectInput name="companyId" aria-label="Filter by company" defaultValue={view.companyId ?? ''}><option value="">Any company</option>{companies.map(company => <option key={company.id} value={company.id}>{company.name}</option>)}</SelectInput></label>
-        {stages.length > 0 ? <label className="flex flex-col gap-1 text-sm">Relationship stage<SelectInput name="stage" aria-label="Filter by relationship" defaultValue={view.stage}><option value="">Any stage</option><option value="unstaged">No relationship stage</option>{stages.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectInput></label> : null}
-        {industries.length > 0 ? <label className="flex flex-col gap-1 text-sm">Industry<SelectInput name="industry" aria-label="Filter by industry" defaultValue={view.industry}><option value="">Any industry</option>{industries.map(item => <option key={item} value={item}>{item}</option>)}</SelectInput></label> : null}
-        <label className="flex flex-col gap-1 text-sm">Website<SelectInput name="website" aria-label="Filter by website" defaultValue={view.website}><option value="">Any website</option><option value="with">Has a website</option><option value="without">No website</option></SelectInput></label>
-        <label className="flex flex-col gap-1 text-sm">Added<SelectInput name="added" aria-label="Filter by date added" defaultValue={view.added ?? ''}><option value="">Any time</option><option value="30d">In the last 30 days</option></SelectInput></label>
+        <label className="flex flex-col gap-1 text-sm">Lifecycle<SelectField name="lifecycle" aria-label="Filter by lifecycle" defaultValue={view.lifecycle ?? ''} options={[{ value: '', label: 'Any lifecycle' }, { value: 'unclassified', label: 'Unclassified' }, ...CONTACT_LIFECYCLES.map((value) => ({ value: value, label: classificationLabel(value) }))]} /></label>
+        <label className="flex flex-col gap-1 text-sm">Lead temperature<SelectField name="temperature" aria-label="Filter by temperature" defaultValue={view.temperature ?? ''} options={[{ value: '', label: 'Any temperature' }, ...LEAD_TEMPERATURES.map((value) => ({ value: value, label: classificationLabel(value) }))]} /></label>
+        <label className="flex flex-col gap-1 text-sm">Company<SelectField name="companyId" aria-label="Filter by company" defaultValue={view.companyId ?? ''} options={[{ value: '', label: 'Any company' }, ...companies.map((company) => ({ value: company.id, label: company.name }))]} /></label>
+        {stages.length > 0 ? <label className="flex flex-col gap-1 text-sm">Relationship stage<SelectField name="stage" aria-label="Filter by relationship" defaultValue={view.stage} options={[{ value: '', label: 'Any stage' }, { value: 'unstaged', label: 'No relationship stage' }, ...stages.map((item) => ({ value: item.id, label: item.name }))]} /></label> : null}
+        {industries.length > 0 ? <label className="flex flex-col gap-1 text-sm">Industry<SelectField name="industry" aria-label="Filter by industry" defaultValue={view.industry} options={[{ value: '', label: 'Any industry' }, ...industries.map((item) => ({ value: item, label: item }))]} /></label> : null}
+        <label className="flex flex-col gap-1 text-sm">Website<SelectField name="website" aria-label="Filter by website" defaultValue={view.website} options={[{ value: '', label: 'Any website' }, { value: 'with', label: 'Has a website' }, { value: 'without', label: 'No website' }]} /></label>
+        <label className="flex flex-col gap-1 text-sm">Added<SelectField name="added" aria-label="Filter by date added" defaultValue={view.added ?? ''} options={[{ value: '', label: 'Any time' }, { value: '30d', label: 'In the last 30 days' }]} /></label>
       </>}
-      sort={<SelectInput name="sort" aria-label="Sort contacts" defaultValue={view.sort ?? ''} className="w-full md:w-40"><option value="">Newest first</option><option value="name">Name</option><option value="company">Company</option></SelectInput>}
+      sort={<SelectField name="sort" aria-label="Sort contacts" defaultValue={view.sort ?? ''} className="w-full md:w-40" options={[{ value: '', label: 'Newest first' }, { value: 'name', label: 'Name' }, { value: 'company', label: 'Company' }]} />}
       display={<>
-        <SelectInput name="group" aria-label="Contact grouping" defaultValue={view.group ?? ''} className="w-full md:w-44"><option value="">Flat list</option><option value="company">Group by company</option></SelectInput>
+        <SelectField name="group" aria-label="Contact grouping" defaultValue={view.group ?? ''} className="w-full md:w-44" options={[{ value: '', label: 'Flat list' }, { value: 'company', label: 'Group by company' }]} />
         {choices.length > 0 ? <details className="relative">
           <summary className="flex min-h-[var(--control-height,2.25rem)] cursor-pointer list-none items-center rounded-[var(--visual-radius,0.625rem)] border border-border bg-surface px-3 text-sm font-medium hover:bg-hover [&::-webkit-details-marker]:hidden">Columns{view.optional.length > 0 ? ` (${view.optional.length})` : ''}</summary>
           <fieldset className="z-30 mt-2 grid gap-2 rounded-[var(--visual-radius,0.625rem)] border border-border bg-popover p-3 shadow-[var(--visual-overlay-shadow)] sm:grid-cols-2 md:absolute md:right-0 md:w-80">

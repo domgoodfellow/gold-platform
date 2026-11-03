@@ -9,6 +9,7 @@ import { createContact, updateContact } from '../lib/domain/contacts/contacts';
 import { createCustomer } from '../lib/domain/customers/customers';
 import { resetAppearance, saveAppearance } from '../lib/domain/identity/appearance';
 import { createOpportunityStage, listOpportunityStages } from '../lib/domain/opportunities/opportunities';
+import { chooseOption } from './select-field';
 
 /**
  * V1.4 CRM interface refinement in a real browser, on the isolated run's disposable business
@@ -194,7 +195,7 @@ test.describe.serial('CRM workflow refinement', () => {
       await views.getByRole('link', { name: 'All' }).click();
       await expect(page).not.toHaveURL(/review=1/);
       await page.getByText('Filters', { exact: true }).click();
-      await page.getByLabel('Filter by lifecycle').selectOption('prospect');
+      await chooseOption(page.getByLabel('Filter by lifecycle'), 'prospect');
       await page.getByRole('button', { name: 'Apply filters' }).click();
       await expect(page).toHaveURL(/lifecycle=prospect/);
       const chips = page.getByRole('group', { name: 'Active filters' });
@@ -205,7 +206,7 @@ test.describe.serial('CRM workflow refinement', () => {
       await chips.getByRole('link', { name: /Lifecycle: Prospect/ }).click();
       await expect(page).not.toHaveURL(/lifecycle=/);
 
-      await page.getByLabel('Contact grouping').selectOption('company');
+      await chooseOption(page.getByLabel('Contact grouping'), 'company');
       await page.getByRole('button', { name: 'Apply', exact: true }).click();
       await expect(page).toHaveURL(/group=company/);
       // A filter removed through its chip stays removed when the form is submitted again (an empty field is no filter).

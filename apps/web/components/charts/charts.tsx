@@ -4,12 +4,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { CircleAlert, Inbox, Loader2 } from 'lucide-react';
-import { SelectInput } from '../controls/inputs';
 import { cx, FOCUS_RING } from '../class-names';
 import {
   allowedPresentations, describeFormat, formatTick, hasValues, labelStride, linearScale, niceTicks, PRESENTATION_LABEL, resolvePresentation, seriesColor, seriesDash,
   type ChartData, type ChartPresentation, type ChartState,
 } from '@/lib/chart-model';
+import { SelectField } from '@/components/controls/select-field';
 
 export type ChartHeight = 'compact' | 'standard' | 'tall';
 /** Heights from the spacing scale; the plot measures what it is given rather than assuming pixels. */
@@ -276,9 +276,9 @@ export function Chart({ title, data, variants, variant, onVariantChange, present
   const presentation = resolvePresentation(data, onPresentationChange ? requested : local);
   const ready = state ?? (hasValues(data) ? { status: 'ready' as const } : { status: 'empty' as const, message: 'Nothing recorded for this period.' });
   const controls = <>
-    {variants && variants.length > 1 ? <label className="flex items-center gap-1.5 text-xs text-muted"><span className="sr-only">{title}: </span>Currency<SelectInput aria-label={`${title} currency`} size="small" value={variant} onChange={event => onVariantChange?.(event.target.value)} className="w-24">{variants.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}</SelectInput></label> : null}
+    {variants && variants.length > 1 ? <label className="flex items-center gap-1.5 text-xs text-muted"><span className="sr-only">{title}: </span>Currency<SelectField aria-label={`${title} currency`} size="small" value={variant} onValueChange={(next) => onVariantChange?.(next)} className="w-24" options={[...variants.map((option) => ({ value: option.key, label: option.label }))]} /></label> : null}
     {allowed.length > 1 && ready.status === 'ready' ? <label htmlFor={`${id}-presentation`} className="flex items-center gap-1.5 text-xs text-muted"><span className="sr-only">{title}: </span>Show as
-      <SelectInput id={`${id}-presentation`} aria-label={`${title} presentation`} size="small" value={presentation} onChange={event => { setLocal(event.target.value); onPresentationChange?.(event.target.value as ChartPresentation); }} className="w-40">{allowed.map(option => <option key={option} value={option}>{PRESENTATION_LABEL[option]}</option>)}</SelectInput></label> : null}
+      <SelectField id={`${id}-presentation`} aria-label={`${title} presentation`} size="small" value={presentation} onValueChange={(next) => { setLocal(next); onPresentationChange?.(next as ChartPresentation); }} className="w-40" options={[...allowed.map((option) => ({ value: option, label: PRESENTATION_LABEL[option] }))]} /></label> : null}
   </>;
   return <ChartFrame title={title} data={data} controls={controls} state={ready} headingLevel={headingLevel}>
     {presentation === 'table' ? <ChartDataTable title={title} data={data} />

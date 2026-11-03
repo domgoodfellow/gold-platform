@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArrowLeft, Mail, MessageSquare, Paperclip, Send, X } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { useWorkspaceRail } from '@/components/panels/workspace-right-rail';
-import { ErrorText, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { ErrorText, Hint, TextArea, TextInput } from '@/components/controls/inputs';
 import {
   assignAction,
   claimAction,
@@ -24,6 +24,7 @@ import { validateOutboundAttachments } from '@/lib/domain/email/attachment-limit
 import type { ConversationDetail, ConversationStatus, CustomerCandidate } from '@/lib/domain/reception/inbox';
 import { CONVERSATION_STATUS_LABEL, announceInboxChange, formatSize, relativeTime } from './format';
 import { EmailCard, SmsBubble } from './message-views';
+import { SelectField } from '@/components/controls/select-field';
 
 type Member = { membershipId: string; name: string };
 
@@ -249,17 +250,7 @@ function AssigneeControl({
           {assignee === null && myMembershipId ? <Button type="button" size="small" onClick={onClaim}>Claim</Button> : null}
           {assignee !== null && !mine && myMembershipId ? <Button type="button" size="small" tone="secondary" onClick={() => onAssign(myMembershipId)}>Take over</Button> : null}
           {assignee !== null ? <Button type="button" size="small" tone="secondary" onClick={onRelease}>Release</Button> : null}
-          <SelectInput
-            size="small"
-            aria-label="Assign to"
-            value=""
-            onChange={(event) => event.target.value && onAssign(event.target.value)}
-          >
-            <option value="">{assignee ? 'Reassign…' : 'Assign to…'}</option>
-            {members.filter((member) => member.membershipId !== assignee?.membershipId).map((member) => (
-              <option key={member.membershipId} value={member.membershipId}>{member.name}</option>
-            ))}
-          </SelectInput>
+          <SelectField size="small" aria-label="Assign to" value="" onValueChange={(next) => next && onAssign(next)} options={[{ value: '', label: assignee ? 'Reassign…' : 'Assign to…' }, ...members.filter((member) => member.membershipId !== assignee?.membershipId).map((member) => ({ value: member.membershipId, label: member.name }))]} />
         </>
       ) : null}
     </div>

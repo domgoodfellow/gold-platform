@@ -4,6 +4,7 @@ import { PhoneInput } from '@/components/controls/phone-input';
 import Link from 'next/link';
 import { useActionState, useState } from 'react';
 import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
+import { SuggestionField } from '@/components/controls/select-field';
 import { FormField } from '@/components/controls/form';
 import { Button } from '@/components/controls/button';
 import { Card } from '@/components/surfaces/card';
@@ -57,14 +58,7 @@ export function OrganizationSettingsForm({
           {(field) => <TextInput {...field} name="legalName" type="text" maxLength={200} defaultValue={identity.legalName ?? ''} />}
         </FormField>
         <FormField id="org-industry" label="Industry" optional>
-          {(field) => (
-            <>
-              <TextInput {...field} name="industry" type="text" maxLength={100} list="org-industry-suggestions" defaultValue={identity.industry ?? ''} />
-              <datalist id="org-industry-suggestions">
-                {INDUSTRY_SUGGESTIONS.map((industry) => <option key={industry} value={industry} />)}
-              </datalist>
-            </>
-          )}
+          {(field) => <SuggestionField {...field} name="industry" type="text" maxLength={100} suggestions={INDUSTRY_SUGGESTIONS} defaultValue={identity.industry ?? ''} />}
         </FormField>
         </div>
       </Card>

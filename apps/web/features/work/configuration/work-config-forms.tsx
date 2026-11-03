@@ -1,6 +1,6 @@
 'use client';
 
-import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import { useActionState, useEffect, useState } from 'react';
@@ -24,6 +24,7 @@ import {
   updateStatusAction,
   type WorkConfigActionState,
 } from './actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: WorkConfigActionState = { error: null };
 
@@ -216,23 +217,11 @@ export function CreateTransitionForm({
       <input type="hidden" name="typeId" value={typeId} />
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <SelectInput name="fromStatusId" aria-label="Move from" className="flex-1">
-          {statuses.map((status) => (
-            <option key={status.id} value={status.id}>
-              {status.name}
-            </option>
-          ))}
-        </SelectInput>
+        <SelectField name="fromStatusId" aria-label="Move from" className="flex-1" options={[...statuses.map((status) => ({ value: status.id, label: status.name }))]} />
         <span aria-hidden className="text-subtle">
           →
         </span>
-        <SelectInput name="toStatusId" aria-label="Move to" className="flex-1">
-          {statuses.map((status) => (
-            <option key={status.id} value={status.id}>
-              {status.name}
-            </option>
-          ))}
-        </SelectInput>
+        <SelectField name="toStatusId" aria-label="Move to" className="flex-1" options={[...statuses.map((status) => ({ value: status.id, label: status.name }))]} />
         <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
           {pending ? 'Allowing…' : 'Allow move'}
         </Button>
@@ -484,20 +473,7 @@ export function PublishTypeForm({
 
       <label className="text-sm">
         A booking arrives in
-        <SelectInput
-          name="statusId"
-          required
-          defaultValue={booking?.statusId ?? ''}
-          disabled={disabled}
-          className="flex-1 mt-1 block w-full"
-        >
-          <option value="">Choose a stage</option>
-          {statuses.map((status) => (
-            <option key={status.id} value={status.id}>
-              {status.name}
-            </option>
-          ))}
-        </SelectInput>
+        <SelectField name="statusId" required defaultValue={booking?.statusId ?? ''} disabled={disabled} className="flex-1 mt-1 block w-full" options={[{ value: '', label: 'Choose a stage' }, ...statuses.map((status) => ({ value: status.id, label: status.name }))]} />
       </label>
 
       <label className="text-sm">
@@ -516,19 +492,7 @@ export function PublishTypeForm({
 
       <label className="text-sm">
         Shown at this price, if you publish one
-        <SelectInput
-          name="priceItemId"
-          defaultValue={booking?.priceItemId ?? ''}
-          disabled={disabled}
-          className="flex-1 mt-1 block w-full"
-        >
-          <option value="">Do not show a price</option>
-          {prices.map((price) => (
-            <option key={price.id} value={price.id}>
-              {price.name}
-            </option>
-          ))}
-        </SelectInput>
+        <SelectField name="priceItemId" defaultValue={booking?.priceItemId ?? ''} disabled={disabled} className="flex-1 mt-1 block w-full" options={[{ value: '', label: 'Do not show a price' }, ...prices.map((price) => ({ value: price.id, label: price.name }))]} />
       </label>
 
       <div className="flex flex-wrap gap-2">
@@ -592,14 +556,7 @@ function BookingIntakeForm({
       <input type="hidden" name="typeId" value={typeId} />
       <label className="text-sm">
         Additional questions when somebody books
-        <SelectInput name="formId" defaultValue={current ?? ''} disabled={disabled} className="flex-1 mt-1 block w-full">
-          <option value="">No additional questions</option>
-          {forms.map((form) => (
-            <option key={form.id} value={form.id}>
-              {form.name}
-            </option>
-          ))}
-        </SelectInput>
+        <SelectField name="formId" defaultValue={current ?? ''} disabled={disabled} className="flex-1 mt-1 block w-full" options={[{ value: '', label: 'No additional questions' }, ...forms.map((form) => ({ value: form.id, label: form.name }))]} />
       </label>
       <Hint>
         {forms.length === 0
@@ -653,13 +610,11 @@ function BookingPolicyForm({
   const cancel = policy.customerCancellationCutoffMinutes === null ? null : amountAndUnit(policy.customerCancellationCutoffMinutes);
   const releasing = statuses.filter((status) => status.releasesResource);
 
-  const units = (
-    <>
-      <option value="minutes">minutes</option>
-      <option value="hours">hours</option>
-      <option value="days">days</option>
-    </>
-  );
+  const units = [
+    { value: 'minutes', label: 'minutes' },
+    { value: 'hours', label: 'hours' },
+    { value: 'days', label: 'days' },
+  ];
 
   return (
     <form action={formAction} className="mt-6 flex flex-col gap-3">
@@ -678,7 +633,7 @@ function BookingPolicyForm({
         <label htmlFor={`notice-${typeId}`}>How much notice is required?</label>
         <div className="mt-1 flex gap-2">
           <TextInput id={`notice-${typeId}`} name="noticeAmount" type="number" min={0} required defaultValue={notice.amount} disabled={disabled} className="w-28" />
-          <SelectInput name="noticeUnit" aria-label="Notice unit" defaultValue={notice.unit} disabled={disabled}>{units}</SelectInput>
+          <SelectField name="noticeUnit" aria-label="Notice unit" defaultValue={notice.unit} disabled={disabled} options={units} />
         </div>
       </div>
 
@@ -698,12 +653,7 @@ function BookingPolicyForm({
 
       <div className="text-sm">
         <label htmlFor={`cancel-status-${typeId}`}>A cancelled booking moves to</label>
-        <SelectInput id={`cancel-status-${typeId}`} name="cancellationStatusId" defaultValue={policy.cancellationStatusId ?? ''} disabled={disabled} aria-describedby={`cancel-status-hint-${typeId}`} className="mt-1 block w-full">
-          <option value="">Customers cannot cancel online</option>
-          {releasing.map((status) => (
-            <option key={status.id} value={status.id}>{status.name}</option>
-          ))}
-        </SelectInput>
+        <SelectField id={`cancel-status-${typeId}`} name="cancellationStatusId" defaultValue={policy.cancellationStatusId ?? ''} disabled={disabled} aria-describedby={`cancel-status-hint-${typeId}`} className="mt-1 block w-full" options={[{ value: '', label: 'Customers cannot cancel online' }, ...releasing.map((status) => ({ value: status.id, label: status.name }))]} />
         <Hint id={`cancel-status-hint-${typeId}`}>
           {releasing.length === 0
             ? 'No stage frees up its resources yet. Mark one (such as Cancelled) in the workflow first.'
@@ -749,19 +699,7 @@ function CutoffField({
         {unit === 'none' ? null : (
           <TextInput id={id} name={`${name}Amount`} type="number" min={0} required defaultValue={current?.amount ?? 1} disabled={disabled} className="w-28" />
         )}
-        <SelectInput
-          id={unit === 'none' ? id : undefined}
-          name={`${name}Unit`}
-          aria-label={unitLabel}
-          value={unit}
-          onChange={(event) => setUnit(event.target.value)}
-          disabled={disabled}
-        >
-          <option value="none">No cutoff</option>
-          <option value="minutes">minutes</option>
-          <option value="hours">hours</option>
-          <option value="days">days</option>
-        </SelectInput>
+        <SelectField id={unit === 'none' ? id : undefined} name={`${name}Unit`} aria-label={unitLabel} value={unit} onValueChange={(next) => setUnit(next)} disabled={disabled} options={[{ value: 'none', label: 'No cutoff' }, { value: 'minutes', label: 'minutes' }, { value: 'hours', label: 'hours' }, { value: 'days', label: 'days' }]} />
         {unit === 'none' ? null : <span>before the appointment</span>}
       </div>
     </div>

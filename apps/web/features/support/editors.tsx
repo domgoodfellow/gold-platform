@@ -4,7 +4,7 @@ import { useId, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/controls/button";
-import { TextInput, TextArea, SelectInput } from "@/components/controls/inputs";
+import { TextInput, TextArea } from "@/components/controls/inputs";
 import { FormError } from "@/components/controls/form";
 import { ConfirmSubmit } from "@/components/controls/confirm-submit";
 import {
@@ -34,6 +34,7 @@ import {
 } from "@/lib/domain/support/support";
 import type { Json } from "@/lib/db/database.types";
 import { Field } from "./ui";
+import { SelectField } from '@/components/controls/select-field';
 
 export function RecordPicker({
   organizationId,
@@ -81,22 +82,7 @@ export function RecordPicker({
           Search
         </Button>
       </div>
-      <SelectInput
-        name={name}
-        aria-label={`Select ${kind.replaceAll("_", " ")}`}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-      >
-        <option value="">None</option>
-        {initial && !options.some((o) => o.id === initial.id) && (
-          <option value={initial.id}>{initial.name}</option>
-        )}
-        {options.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.name}
-          </option>
-        ))}
-      </SelectInput>
+      <SelectField name={name} aria-label={`Select ${kind.replaceAll("_", " ")}`} value={value} onValueChange={(next) => setValue(next)} options={[{ value: '', label: 'None' }, ...(initial && !options.some((o) => o.id === initial.id) ? [{ value: initial.id, label: initial.name }] : []), ...options.map((o) => ({ value: o.id, label: o.name }))]} />
       <FormError>{error}</FormError>
     </div>
   );
@@ -276,33 +262,18 @@ export function NewCase({
         />
       </Field>
       <Field label="Priority">
-        <SelectInput name="priority" defaultValue="normal">
-          {PRIORITIES.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </SelectInput>
+        <SelectField name="priority" defaultValue="normal" options={[...PRIORITIES.map((p) => ({ value: p, label: p }))]} />
       </Field>
       {mayAssign && <AssignmentFields data={data} />}
       <Field label="Related record type">
-        <SelectInput
-          value={kind}
-          onChange={(e) => setKind(e.target.value as RecordKind)}
-        >
-          {[
+        <SelectField value={kind} onValueChange={(next) => setKind(next as RecordKind)} options={[...[
             "conversation",
             "call",
             "work_item",
             "invoice",
             "asset",
             "location",
-          ].map((k) => (
-            <option key={k} value={k}>
-              {k.replaceAll("_", " ")}
-            </option>
-          ))}
-        </SelectInput>
+          ].map((k) => ({ value: k, label: k.replaceAll("_", " ") }))]} />
       </Field>
       <RecordPicker
         key={kind}
@@ -330,30 +301,11 @@ export function AssignmentFields({
   return (
     <>
       <Field label="Queue">
-        <SelectInput name="queue" defaultValue={c?.queue_id ?? ""}>
-          <option value="">No queue</option>
-          {data.queues
-            .filter((q) => q.active || q.id === c?.queue_id)
-            .map((q) => (
-              <option key={q.id} value={q.id}>
-                {q.name}
-                {!q.active ? " (inactive)" : ""}
-              </option>
-            ))}
-        </SelectInput>
+        <SelectField name="queue" defaultValue={c?.queue_id ?? ""} options={[{ value: '', label: 'No queue' }, ...data.queues
+            .filter((q) => q.active || q.id === c?.queue_id).map((q) => ({ value: q.id, label: `${q.name}${!q.active ? " (inactive)" : ""}` }))]} />
       </Field>
       <Field label="Assignee">
-        <SelectInput
-          name="owner"
-          defaultValue={c?.assigned_membership_id ?? ""}
-        >
-          <option value="">Unassigned</option>
-          {data.members.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}
-            </option>
-          ))}
-        </SelectInput>
+        <SelectField name="owner" defaultValue={c?.assigned_membership_id ?? ""} options={[{ value: '', label: 'Unassigned' }, ...data.members.map((m) => ({ value: m.id, label: m.name }))]} />
       </Field>
     </>
   );
@@ -421,26 +373,11 @@ export function ConfigurationEditor({
       ) : (
         <>
           <Field label="Priority">
-            <SelectInput
-              name="priority"
-              defaultValue={policy?.priority ?? "normal"}
-            >
-              {PRIORITIES.map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-            </SelectInput>
+            <SelectField name="priority" defaultValue={policy?.priority ?? "normal"} options={[...PRIORITIES.map((p) => ({ value: p, label: p }))]} />
           </Field>
           <Field label="Applicable queue">
-            <SelectInput name="queue" defaultValue={policy?.queue_id ?? ""}>
-              <option value="">All queues (fallback)</option>
-              {data.queues
-                .filter((q) => q.active || q.id === policy?.queue_id)
-                .map((q) => (
-                  <option key={q.id} value={q.id}>
-                    {q.name}
-                  </option>
-                ))}
-            </SelectInput>
+            <SelectField name="queue" defaultValue={policy?.queue_id ?? ""} options={[{ value: '', label: 'All queues (fallback)' }, ...data.queues
+                .filter((q) => q.active || q.id === policy?.queue_id).map((q) => ({ value: q.id, label: q.name }))]} />
           </Field>
           <Field label="Resolution target (minutes)">
             <TextInput
@@ -556,11 +493,7 @@ export function CaseDrawer({
       ) : null}
       {kind === "escalate" && (
         <Field label="Priority">
-          <SelectInput name="priority" defaultValue={c.priority}>
-            {PRIORITIES.map((p) => (
-              <option key={p}>{p}</option>
-            ))}
-          </SelectInput>
+          <SelectField name="priority" defaultValue={c.priority} options={[...PRIORITIES.map((p) => ({ value: p, label: p }))]} />
         </Field>
       )}
       {(kind === "assign" || (kind === "escalate" && mayAssign)) && (
@@ -601,23 +534,14 @@ export function CaseDrawer({
       {kind === "link" && (
         <>
           <Field label="Related record type">
-            <SelectInput
-              value={recordKind}
-              onChange={(e) => setRecordKind(e.target.value as RecordKind)}
-            >
-              {[
+            <SelectField value={recordKind} onValueChange={(next) => setRecordKind(next as RecordKind)} options={[...[
                 "conversation",
                 "call",
                 "work_item",
                 "invoice",
                 "asset",
                 "location",
-              ].map((k) => (
-                <option key={k} value={k}>
-                  {k.replaceAll("_", " ")}
-                </option>
-              ))}
-            </SelectInput>
+              ].map((k) => ({ value: k, label: k.replaceAll("_", " ") }))]} />
           </Field>
           <RecordPicker
             key={recordKind}
@@ -634,27 +558,25 @@ export function QuickChange({
   organizationId,
   c,
   kind,
-  children,
   value,
   options,
 }: {
   organizationId: string;
   c: SupportCase;
   kind: "priority" | "status" | "owner";
-  children?: ReactNode;
   value: string;
   options: { value: string; label: string }[];
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   return (
-    <SelectInput
+    <SelectField
       aria-label={`${kind} for ${c.case_number}`}
       size="small"
       value={value}
       disabled={pending}
-      onChange={(e) => {
-        const v = e.target.value;
+      options={options}
+      onValueChange={(v) => {
         start(async () => {
           const result = await supportCommandAction(
             organizationId,
@@ -665,14 +587,7 @@ export function QuickChange({
           router.refresh();
         });
       }}
-    >
-      {children}
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </SelectInput>
+    />
   );
 }
 export function CaseActions({

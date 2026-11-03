@@ -16,6 +16,7 @@ import { createRole } from '../lib/domain/tenancy/roles';
 import { changeTaskStatus } from '../lib/domain/tasks/tasks';
 import { addMember } from '../lib/domain/tenancy/members';
 import type { Db } from '../lib/db/types';
+import { chooseOption } from './select-field';
 
 const PHASE = process.env.H1_PHASE === 'before' ? 'before' : 'after';
 const OUT = path.join(__dirname, '../../../.artifacts/home-h1', PHASE);
@@ -114,7 +115,7 @@ test('Home H1 cross-workspace reconciliation and responsive states', async ({ pa
     await expect(overview).toContainText(String(canonical.todayCount));
     await expect(performance()).toContainText('CA$15.00');
     await expect(performance().locator('[data-slot="chart"]')).toBeVisible();
-    await performance().getByRole('combobox',{name:'Payments recorded presentation'}).selectOption('table');
+    await chooseOption(performance().getByRole('combobox',{name:'Payments recorded presentation'}), 'table');
     await expect(performance().getByRole('table').getByText('-CA$5.00',{exact:true})).toBeVisible();
     await page.setViewportSize({width:390,height:844});
     await guardedShot(page,{url:/home.*when=week/,content:performance()},{path:path.join(OUT,'performance-week-390.png'),fullPage:true});

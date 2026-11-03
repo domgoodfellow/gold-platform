@@ -19,6 +19,7 @@ import { addMember } from '../lib/domain/tenancy/members';
 import { assignPhoneNumber } from '../lib/domain/reception/numbers';
 import { listCallPage, getCallCounts } from '../lib/domain/reception/calls';
 import { todayInZone, zonedDayRange } from '../lib/domain/scheduling/window';
+import { chooseOption, selectedLabel } from './select-field';
 
 async function capture(page: Page, file: string) {
   await page.addStyleTag({ content: '[data-slot="sidebar-wrapper"] { height: auto !important; min-height: 100svh; overflow: visible !important; } [data-slot="sidebar-inset"] { overflow: visible !important; }' });
@@ -99,7 +100,44 @@ test.describe('Communications operating hub', () => {
       await expect.poll(async () => (await listInbox(owner,{organizationId})).items.find(item=>item.id===conversationIds[0])?.assignee?.membershipId).toBe(membershipId);
       // Hubs carry no search; the period control is in the header.
       await expect(page.getByLabel('Search Communications')).toHaveCount(0);
-      await page.getByLabel('Communication date range').filter({visible:true}).selectOption('week'); await page.getByRole('button',{name:'Apply',exact:true}).filter({visible:true}).click(); await expect(page).toHaveURL(/when=week/);
+      // The period is one styled choice: it applies at once (no Apply) and keeps the dashboard's other filters.
+      await page.goto(`${home}?queue=open&channel=sms&attention=unassigned&q=North`);
+      const period = page.getByRole('combobox', { name: 'Communication date range', exact: true }).filter({ visible: true });
+      await expect(selectedLabel(period)).toHaveText('Today');
+      await expect(page.getByRole('button', { name: 'Apply', exact: true })).toHaveCount(0);
+      await period.focus(); await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
+      await expect(period).toBeFocused();
+      // Keyboard focus is the one outline on the control's own edge: no ring, no gap.
+      await expect.poll(() => period.evaluate(el => { const s = getComputedStyle(el); return [s.outlineStyle, s.outlineWidth, s.outlineOffset, s.boxShadow.includes('px 0px 0px 2px')]; })).toEqual(['solid', '2px', '0px', false]);
+      await page.keyboard.press('Enter');
+      const periods = page.getByRole('listbox');
+      await expect(periods.getByRole('option', { name: 'Today', exact: true })).toHaveAttribute('aria-selected', 'true');
+      await expect(periods.getByRole('option')).toHaveText(['Today', 'Last 7 days', 'Last 30 days']);
+      await page.keyboard.press('Escape');
+      await expect(periods).toHaveCount(0); await expect(period).toBeFocused(); expect(new URL(page.url()).searchParams.get('when')).toBeNull();
+      await page.keyboard.press('Enter'); await expect(periods).toBeVisible(); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
+      await expect(page).toHaveURL(/when=week/);
+      expect(Object.fromEntries(new URL(page.url()).searchParams)).toMatchObject({ when: 'week', queue: 'open', channel: 'sms', attention: 'unassigned', q: 'North' });
+      await expect(selectedLabel(period)).toHaveText('Last 7 days');
+      // A pointer choice applies the same way and leaves no keyboard outline behind. (Starting from a click on
+      // the page: a browser rightly keeps showing focus that a keyboard user moved there.)
+      await page.getByText('Missed calls: selected period.', { exact: false }).click();
+      await period.click(); await periods.getByRole('option', { name: 'Last 30 days', exact: true }).click();
+      await expect(page).toHaveURL(/when=month/); await expect(selectedLabel(period)).toHaveText('Last 30 days');
+      expect(Object.fromEntries(new URL(page.url()).searchParams)).toMatchObject({ queue: 'open', channel: 'sms', attention: 'unassigned', q: 'North' });
+      await expect.poll(() => period.evaluate(el => getComputedStyle(el).outlineStyle)).toBe('none');
+      for (const scheme of ['light', 'dark'] as const) for (const [width, height] of [[1440, 1000], [768, 1024], [390, 844]] as const) {
+        await page.emulateMedia({ colorScheme: scheme }); await page.setViewportSize({ width, height });
+        await period.click(); await expect(periods).toBeVisible();
+        const box = (await page.locator('[data-slot=select-content]').boundingBox())!;
+        expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x + box.width).toBeLessThanOrEqual(width);
+        expect(await page.locator('[data-slot=select-content]').evaluate(el => getComputedStyle(el).backgroundColor)).toBe(scheme === 'dark' ? 'rgb(20, 20, 20)' : 'rgb(255, 255, 255)');
+        await expect(periods.getByRole('option', { name: 'Last 30 days', exact: true })).toHaveAttribute('aria-selected', 'true');
+        await page.screenshot({ path: testInfo.outputPath(`period-open-${scheme}-${width}.png`) });
+        await page.keyboard.press('Escape'); await expect(periods).toHaveCount(0);
+      }
+      await page.emulateMedia({ colorScheme: 'light' }); await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.goto(`${home}?when=week`);
       await page.getByRole('button',{name:'New call',exact:true}).click(); await expect(page.getByRole('dialog',{name:'New call',exact:true})).toBeVisible(); await page.getByRole('dialog',{name:'New call',exact:true}).getByRole('button',{name:'Close',exact:true}).click();
       await page.getByRole('region',{name:'Inbox queue',exact:true}).getByRole('link',{name:/North Shore Plumbing/}).click();
       await expect(page).toHaveURL(new RegExp(conversationIds[0]));
@@ -111,7 +149,7 @@ test.describe('Communications operating hub', () => {
       await page.setViewportSize({width:1440,height:1000}); await page.goto(`${base}/calls`); await expect(page.getByRole('heading',{name:'Calls',exact:true})).toBeVisible(); await capture(page, testInfo.outputPath('communications-calls.png'));
       await page.getByRole('button',{name:'Wrap up',exact:true}).first().click();
       const wrapDrawer = page.getByRole('dialog',{name:'Wrap up call',exact:true});
-      await wrapDrawer.getByLabel('How it went').selectOption(outcome); await wrapDrawer.getByLabel('What was said').fill('Acceptance wrap-up persisted');
+      await chooseOption(wrapDrawer.getByLabel('How it went'), outcome); await wrapDrawer.getByLabel('What was said').fill('Acceptance wrap-up persisted');
       await wrapDrawer.getByRole('button',{name:'Save',exact:true}).click();
       await expect.poll(async () => Number((await pg.query('select count(*) from public.calls where organization_id=$1 and note=$2 and outcome_id=$3',[organizationId,'Acceptance wrap-up persisted',outcome])).rows[0].count)).toBe(1);
       await wrapDrawer.getByRole('button',{name:'Close',exact:true}).click();

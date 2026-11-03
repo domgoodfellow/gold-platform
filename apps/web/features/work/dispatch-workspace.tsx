@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
 import { ButtonLink } from '@/components/controls/button';
-import { TextInput, SelectInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { OperationalPanel } from '@/components/operational/primitives';
 import { DispatchMap } from '@/features/work/dispatch-map';
 import { DispatchOperationDialog, DispatchSelectionNotice } from './dispatch-operation-dialog';
@@ -25,6 +25,7 @@ import { mapConfig } from '@/lib/adapters/maps/config';
 
 import type { Db } from '@/lib/db/types';
 import type { Organization } from '@/lib/domain/tenancy/organizations';
+import { SelectField } from '@/components/controls/select-field';
 
 export async function DispatchWorkspace({ organizationId, query, db, organization }: { organizationId: string; query: Record<string, string | string[] | undefined>; db: Db; organization: Organization }) {
   const one = (key: string) => typeof query[key] === 'string' ? query[key] as string : '';
@@ -81,10 +82,10 @@ export async function DispatchWorkspace({ organizationId, query, db, organizatio
       hidden={{ mode }}
       filterCount={[statusId, resourceId, resourceClass, assignment].filter(Boolean).length}
       filters={<>
-        <label className="text-sm">Status<SelectInput name="status" defaultValue={statusId ?? ''}><option value="">All statuses</option>{statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</SelectInput></label>
-        <label className="text-sm">Resource<SelectInput name="resource" defaultValue={resourceId ?? ''}><option value="">All resources</option>{resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</SelectInput></label>
-        <label className="text-sm">Resource class<SelectInput name="class" defaultValue={resourceClass}><option value="">All classes</option>{Object.entries(RESOURCE_CLASS_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</SelectInput></label>
-        <label className="text-sm">Assignment state<SelectInput name="assignment" defaultValue={assignment}>{DISPATCH_ASSIGNMENTS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</SelectInput></label>
+        <label className="text-sm">Status<SelectField name="status" defaultValue={statusId ?? ''} options={[{ value: '', label: 'All statuses' }, ...statuses.map((s) => ({ value: s.id, label: s.name }))]} /></label>
+        <label className="text-sm">Resource<SelectField name="resource" defaultValue={resourceId ?? ''} options={[{ value: '', label: 'All resources' }, ...resources.map((r) => ({ value: r.id, label: r.name }))]} /></label>
+        <label className="text-sm">Resource class<SelectField name="class" defaultValue={resourceClass} options={[{ value: '', label: 'All classes' }, ...Object.entries(RESOURCE_CLASS_LABELS).map(([id, label]) => ({ value: id, label: label }))]} /></label>
+        <label className="text-sm">Assignment state<SelectField name="assignment" defaultValue={assignment} options={[...DISPATCH_ASSIGNMENTS.map(([key, label]) => ({ value: key, label: label }))]} /></label>
       </>}
       display={<ViewNav label="Dispatch presentation" size="small" className="mb-0" items={[['list', 'Queue'], ['schedule', 'Availability'], ['map', 'Map']].map(([key, label]) => ({ key, label, href: href({ mode: key }), current: mode === key }))}/>}
       active={active} resetHref={active.length ? dispatchHref(organizationId, { on: date, mode }) : undefined}/>

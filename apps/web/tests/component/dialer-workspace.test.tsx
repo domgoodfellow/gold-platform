@@ -5,6 +5,7 @@ import { DialerWorkspace } from '@/features/communications/voice/dialer-workspac
 import { DialerPopoutContext } from '@/features/communications/voice/dialer-popout-context';
 import type { CallingOptions } from '@/lib/application/communications/calling-options';
 import type { DialerQueueEntry } from '@/lib/application/communications/dialer-queue';
+import { chooseOption, fieldValue } from '../support/select-field';
 
 const dial = vi.hoisted(() => vi.fn().mockResolvedValue(true));
 const telephone = vi.hoisted(() => ({ value: { activeCall: null as unknown, incoming: null as unknown, status: 'offline', error: null, register: vi.fn(), unregister: vi.fn() } }));
@@ -184,7 +185,7 @@ describe('dialer toolbar composition', () => {
     const value = { container: null, error: null, open, close: vi.fn(), updateDraft: vi.fn(), inlineHost: true, setInlineHost: vi.fn() };
     render(<DialerPopoutContext.Provider value={value}><DialerWorkspace {...common} options={{ ...options, numbers: [...options.numbers, { id: 'other-line', e164: '+14165550999', label: 'Other' }] }} queue={[entry('alice', 'Alice', '+14165550101')]} /></DialerPopoutContext.Provider>);
     fireEvent.change(screen.getByLabelText('Number to call'), { target: { value: '+14165550199' } });
-    fireEvent.change(screen.getByLabelText('Call from'), { target: { value: 'other-line' } });
+    await chooseOption(screen.getByLabelText('Call from'), 'other-line');
     fireEvent.click(screen.getByRole('button', { name: 'Pop out dialer' }));
     const draft = open.mock.calls[0][0];
     expect(draft).toMatchObject({ toNumber: '+14165550199', phoneNumberId: 'other-line', customerId: undefined });
@@ -192,7 +193,7 @@ describe('dialer toolbar composition', () => {
     // The provider invokes this callback when the popup closes.
     act(() => draft.onReturn({ toNumber: '+14165550188', phoneNumberId: 'other-line' }));
     expect(screen.getByLabelText('Number to call')).toHaveValue('(416)555-0188');
-    expect(screen.getByLabelText('Call from')).toHaveValue('other-line');
+    expect(fieldValue(screen.getByLabelText('Call from'))).toBe('other-line');
     fireEvent.click(screen.getByRole('button', { name: 'Call' }));
     await waitFor(() => expect(dial).toHaveBeenCalledWith(expect.objectContaining({ toNumber: '+14165550188', customerId: undefined, phoneNumberId: 'other-line' })));
   });

@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { PricingPlanner } from '@/features/finance/pricing-planner';
+import { chooseOption } from '../support/select-field';
 
 afterEach(cleanup);
 const items = [{ id: 'visit', name: 'Visit', unit: 'visit', unitAmountMinor: 14500, currency: 'CAD', createdAt: '' }, { id: 'usd', name: 'Consultation', unit: 'hour', unitAmountMinor: 10000, currency: 'USD', createdAt: '' }];
@@ -26,24 +27,24 @@ describe('pricing planner interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove scenario 2' }));
     expect(screen.getAllByRole('group')).toHaveLength(2);
   });
-  it('keeps catalog values unchanged and refuses foreign-currency comparisons', () => {
+  it('keeps catalog values unchanged and refuses foreign-currency comparisons', async () => {
     const before = structuredClone(items);
     render(<PricingPlanner currency="CAD" items={items} />);
     const scope = fill(screen.getByRole('group', { name: 'Scenario 1' }));
-    fireEvent.change(scope.getByLabelText('Compare one catalog unit'), { target: { value: 'visit' } });
+    await chooseOption(scope.getByLabelText('Compare one catalog unit'), 'visit');
     expect(scope.getByText(/Current catalog:/)).toHaveTextContent('145.00');
-    fireEvent.change(scope.getByLabelText('Compare one catalog unit'), { target: { value: 'usd' } });
+    await chooseOption(scope.getByLabelText('Compare one catalog unit'), 'usd');
     expect(scope.getByText(/Different currencies/)).toBeVisible();
-    fireEvent.change(scope.getByLabelText('Currency'), { target: { value: 'JPY' } });
+    await chooseOption(scope.getByLabelText('Currency'), 'JPY');
     expect(scope.getByLabelText('Materials cost')).toHaveValue('');
     expect(scope.getByTestId('suggested-price')).toHaveTextContent('Unknown');
     expect(items).toEqual(before);
   });
-  it('requires documentation for zero assumptions and reveals invalid input', () => {
+  it('requires documentation for zero assumptions and reveals invalid input', async () => {
     render(<PricingPlanner currency={null} items={[]} />);
     const group = screen.getByRole('group', { name: 'Scenario 1' });
     const scope = within(group);
-    fireEvent.change(scope.getByLabelText('Currency'), { target: { value: 'CAD' } });
+    await chooseOption(scope.getByLabelText('Currency'), 'CAD');
     fill(group);
     fireEvent.change(scope.getByLabelText('Materials cost'), { target: { value: '0' } });
     expect(scope.getByText(/Explain each zero-cost/)).toBeVisible();

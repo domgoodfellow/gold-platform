@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ButtonLink } from '@/components/controls/button';
-import { Hint, SelectInput } from '@/components/controls/inputs';
+import { Hint } from '@/components/controls/inputs';
 import { FormField } from '@/components/controls/form';
 import { Card } from '@/components/surfaces/card';
 import { SectionHeading } from '@/components/surfaces/section';
@@ -14,6 +14,7 @@ import { StartingStageForm } from './starting-stage-form';
 import { CreateTypeForm } from './configuration/work-config-forms';
 import type { WorkCreateOptions } from '@/lib/application/work/create-options';
 import { withSetupContext } from '@/lib/route/setup-context';
+import { SelectField } from '@/components/controls/select-field';
 
 /**
  * New work, on its own bounded page. A type without a starting stage can never create work; a member
@@ -46,11 +47,11 @@ export function WorkCreatePage({ options, initialTypeId, mayConfigure, returnToQ
   return <Card as="section" aria-label="New work">
     <div className="flex flex-col gap-5">
       {selected ? <FormField id="new-work-type" label="Work type">{field =>
-        <SelectInput {...field} value={typeId} onChange={event => {
+        <SelectField {...field} value={typeId} onValueChange={(next) => {
           if (dirty && !window.confirm('Discard unsaved work and change Work type?')) return;
           setDirty(false);
-          chooseType(event.target.value);
-        }}>{options.types.map(t => <option key={t.id} value={t.id}>{ready(t.id) ? t.name : `${t.name} (needs a starting stage)`}</option>)}</SelectInput>
+          chooseType(next);
+        }} options={[...options.types.map((t) => ({ value: t.id, label: ready(t.id) ? t.name : `${t.name} (needs a starting stage)` }))]} />
       }</FormField> : null}
 
       {returnToQuote ? <Hint>Create the Work item, then continue to its Financials to add a quoted price.</Hint> : null}

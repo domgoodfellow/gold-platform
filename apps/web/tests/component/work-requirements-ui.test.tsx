@@ -6,6 +6,7 @@ import { ResourceRequirementsEditor } from '@/features/work/configuration/resour
 import { WorkRequirementsSection } from '@/features/work/work-item-sections';
 import { runAxe } from '@/tests/support/axe';
 import type { ResourceRequirement } from '@/lib/domain/work-items/requirements';
+import { fieldValue } from '../support/select-field';
 
 /**
  * What a business sees when it says what a kind of work needs, and what a job says back about it.
@@ -50,7 +51,7 @@ describe('the requirement editor', () => {
     const form = screen.getByRole('form', { name: 'Requirement: 2 × Person' });
     const quantity = within(form).getByLabelText('Number needed') as HTMLInputElement;
     expect([quantity.min, quantity.max, quantity.required, quantity.value]).toEqual(['1', '50', true, '2']);
-    expect((within(form).getByLabelText('Kind of resource') as HTMLSelectElement).value).toBe('person');
+    expect(fieldValue(within(form).getByLabelText('Kind of resource'))).toBe('person');
     const group = within(form).getByRole('group', { name: 'Must have all of' });
     expect((within(group).getByRole('checkbox', { name: 'Tire service' }) as HTMLInputElement).checked).toBe(true);
     expect((within(group).getByRole('checkbox', { name: 'Mobile service' }) as HTMLInputElement).checked).toBe(false);
@@ -60,7 +61,7 @@ describe('the requirement editor', () => {
     render(<ResourceRequirementsEditor {...props} requirements={[requirement()]} />);
     expect(screen.getByRole('button', { name: 'Remove requirement 2 × Person' })).toBeTruthy();
     const add = screen.getByRole('form', { name: 'Requirement: new requirement' });
-    expect((within(add).getByLabelText('Kind of resource') as HTMLSelectElement).value).toBe('');
+    expect(fieldValue(within(add).getByLabelText('Kind of resource'))).toBe('');
     expect(within(add).getByRole('button', { name: 'Add requirement' })).toBeTruthy();
   });
 

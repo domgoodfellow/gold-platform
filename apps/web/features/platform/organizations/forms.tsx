@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
 import {
   provisionTwilioAction,
   recordCommercialTermAction,
@@ -29,6 +29,7 @@ import {
   SET_RESOURCE_STATUS_INITIAL,
   TERM_INITIAL,
 } from '@/app/platform/organizations/[targetOrganizationId]/action-states';
+import { SelectField } from '@/components/controls/select-field';
 
 type Option = { value: string; label: string };
 
@@ -44,7 +45,7 @@ export function RegisterPhoneNumberForm({ organizationId }: { organizationId: st
 
 export function SetResourceStatusForm({ organizationId }: { organizationId: string }) {
   const [state, action, pending] = useActionState(setResourceStatusAction, SET_RESOURCE_STATUS_INITIAL);
-  return <form action={action} className="flex max-w-sm flex-col gap-2"><input type="hidden" name="organizationId" value={organizationId} /><TextInput name="resourceId" required placeholder="Resource ID" /><SelectInput name="status" required aria-label="Status"><option value="">Status…</option><option value="active">Active / verified</option><option value="pending">Pending</option><option value="failed">Failed</option><option value="disabled">Disabled</option></SelectInput><TextInput name="errorDetail" placeholder="Error detail, if failed" /><ErrorText>{state.error}</ErrorText>{state.recorded ? <p className="text-sm text-muted-foreground">Recorded.</p> : null}<Button type="submit" size="small" className="w-fit" disabled={pending}>{pending ? 'Recording…' : 'Update resource'}</Button></form>;
+  return <form action={action} className="flex max-w-sm flex-col gap-2"><input type="hidden" name="organizationId" value={organizationId} /><TextInput name="resourceId" required placeholder="Resource ID" /><SelectField name="status" required aria-label="Status" options={[{ value: '', label: 'Status…' }, { value: 'active', label: 'Active / verified' }, { value: 'pending', label: 'Pending' }, { value: 'failed', label: 'Failed' }, { value: 'disabled', label: 'Disabled' }]} /><TextInput name="errorDetail" placeholder="Error detail, if failed" /><ErrorText>{state.error}</ErrorText>{state.recorded ? <p className="text-sm text-muted-foreground">Recorded.</p> : null}<Button type="submit" size="small" className="w-fit" disabled={pending}>{pending ? 'Recording…' : 'Update resource'}</Button></form>;
 }
 
 /** The base-Plan control: `kind=plan` only. An Add-on is a separate, stacking decision — see `ManageAddonsSheet`. */
@@ -70,14 +71,7 @@ export function AssignPlanSheet({ organizationId, plans }: { organizationId: str
         </PageDrawerHeader>
         <form action={action} className="flex flex-col gap-3 px-4">
           <input type="hidden" name="organizationId" value={organizationId} />
-          <SelectInput name="planId" required aria-label="Plan">
-            <option value="">Choose a Plan…</option>
-            {plans.map((plan) => (
-              <option key={plan.value} value={plan.value}>
-                {plan.label}
-              </option>
-            ))}
-          </SelectInput>
+          <SelectField name="planId" required aria-label="Plan" options={[{ value: '', label: 'Choose a Plan…' }, ...plans.map((plan) => ({ value: plan.value, label: plan.label }))]} />
           <div className="grid grid-cols-2 gap-2">
             <TextInput name="periodStart" type="date" required aria-label="Period start" />
             <TextInput name="periodEnd" type="date" required aria-label="Period end" defaultValue="9999-12-31" />
@@ -122,14 +116,7 @@ export function ManageAddonsSheet({ organizationId, addons }: { organizationId: 
         </PageDrawerHeader>
         <form action={action} className="flex flex-col gap-3 px-4">
           <input type="hidden" name="organizationId" value={organizationId} />
-          <SelectInput name="planId" required aria-label="Add-on">
-            <option value="">Choose an Add-on…</option>
-            {addons.map((addon) => (
-              <option key={addon.value} value={addon.value}>
-                {addon.label}
-              </option>
-            ))}
-          </SelectInput>
+          <SelectField name="planId" required aria-label="Add-on" options={[{ value: '', label: 'Choose an Add-on…' }, ...addons.map((addon) => ({ value: addon.value, label: addon.label }))]} />
           <div className="grid grid-cols-2 gap-2">
             <TextInput name="periodStart" type="date" required aria-label="Period start" />
             <TextInput name="periodEnd" type="date" required aria-label="Period end" defaultValue="9999-12-31" />
@@ -148,7 +135,7 @@ export function ManageAddonsSheet({ organizationId, addons }: { organizationId: 
 
 export function RecordCommercialTermForm({ organizationId, products }: { organizationId: string; products: Option[] }) {
   const [state, action, pending] = useActionState(recordCommercialTermAction, TERM_INITIAL);
-  return <form action={action} className="flex max-w-sm flex-col gap-2"><input type="hidden" name="organizationId" value={organizationId} /><SelectInput name="productKey" required aria-label="Product"><option value="">What was sold…</option>{products.map((product) => <option key={product.value} value={product.value}>{product.label}</option>)}</SelectInput><div className="grid grid-cols-2 gap-2"><TextInput name="periodStart" type="date" required aria-label="Period start" /><TextInput name="periodEnd" type="date" required aria-label="Period end" /></div><div className="flex gap-2"><TextInput name="priceMinor" type="number" min={0} step={1} required placeholder="Minor units" /><TextInput name="currency" maxLength={3} placeholder="USD" className="w-24" /></div><ErrorText>{state.error}</ErrorText>{state.recorded ? <p className="text-sm text-muted-foreground">Recorded.</p> : null}<Button type="submit" size="small" className="w-fit" disabled={pending}>{pending ? 'Recording…' : 'Record term'}</Button></form>;
+  return <form action={action} className="flex max-w-sm flex-col gap-2"><input type="hidden" name="organizationId" value={organizationId} /><SelectField name="productKey" required aria-label="Product" options={[{ value: '', label: 'What was sold…' }, ...products.map((product) => ({ value: product.value, label: product.label }))]} /><div className="grid grid-cols-2 gap-2"><TextInput name="periodStart" type="date" required aria-label="Period start" /><TextInput name="periodEnd" type="date" required aria-label="Period end" /></div><div className="flex gap-2"><TextInput name="priceMinor" type="number" min={0} step={1} required placeholder="Minor units" /><TextInput name="currency" maxLength={3} placeholder="USD" className="w-24" /></div><ErrorText>{state.error}</ErrorText>{state.recorded ? <p className="text-sm text-muted-foreground">Recorded.</p> : null}<Button type="submit" size="small" className="w-fit" disabled={pending}>{pending ? 'Recording…' : 'Record term'}</Button></form>;
 }
 
 export function RecordPlanAgreementSheet({ organizationId, planId, planLabel, currency }: { organizationId: string; planId: string; planLabel: string; currency: string }) {
@@ -158,5 +145,5 @@ export function RecordPlanAgreementSheet({ organizationId, planId, planLabel, cu
 
 export function RecordQuotaOverrideSheet({ organizationId, planId, quotas }: { organizationId: string; planId: string; quotas: Array<{ allowanceKey: string; label: string; includedQuantity: number }> }) {
   const [state, action, pending] = useActionState(recordPlanQuotaOverrideAction, QUOTA_OVERRIDE_INITIAL);
-  return <PageDrawer><PageDrawerTrigger asChild><Button type="button" tone="secondary" size="small">Add allowance override</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>Record allowance override</PageDrawerTitle><PageDrawerDescription>Appends an organization-specific value. The Plan default remains visible.</PageDrawerDescription></PageDrawerHeader><form action={action} className="flex flex-col gap-3 px-4"><input type="hidden" name="organizationId" value={organizationId} /><input type="hidden" name="planId" value={planId} /><SelectInput name="allowanceKey" required aria-label="Allowance"><option value="">Choose allowance…</option>{quotas.map((quota) => <option key={quota.allowanceKey} value={quota.allowanceKey}>{quota.label} · Plan default {quota.includedQuantity.toLocaleString()}</option>)}</SelectInput><TextInput name="includedQuantity" type="number" min="0" required aria-label="Included quantity" /><TextInput name="hardLimit" type="number" min="0" aria-label="Hard limit" placeholder="No hard limit" /><TextInput name="effectiveFrom" type="date" required defaultValue={new Date().toISOString().slice(0,10)} aria-label="Effective from" /><TextInput name="note" placeholder="Commercial provenance" /><ErrorText>{state.error}</ErrorText>{state.recorded ? <Hint>Override recorded.</Hint> : null}<Button type="submit" disabled={pending} className="w-fit">{pending ? 'Recording…' : 'Record override'}</Button></form></PageDrawerContent></PageDrawer>;
+  return <PageDrawer><PageDrawerTrigger asChild><Button type="button" tone="secondary" size="small">Add allowance override</Button></PageDrawerTrigger><PageDrawerContent><PageDrawerHeader><PageDrawerTitle>Record allowance override</PageDrawerTitle><PageDrawerDescription>Appends an organization-specific value. The Plan default remains visible.</PageDrawerDescription></PageDrawerHeader><form action={action} className="flex flex-col gap-3 px-4"><input type="hidden" name="organizationId" value={organizationId} /><input type="hidden" name="planId" value={planId} /><SelectField name="allowanceKey" required aria-label="Allowance" options={[{ value: '', label: 'Choose allowance…' }, ...quotas.map((quota) => ({ value: quota.allowanceKey, label: `${quota.label} · Plan default ${quota.includedQuantity.toLocaleString()}` }))]} /><TextInput name="includedQuantity" type="number" min="0" required aria-label="Included quantity" /><TextInput name="hardLimit" type="number" min="0" aria-label="Hard limit" placeholder="No hard limit" /><TextInput name="effectiveFrom" type="date" required defaultValue={new Date().toISOString().slice(0,10)} aria-label="Effective from" /><TextInput name="note" placeholder="Commercial provenance" /><ErrorText>{state.error}</ErrorText>{state.recorded ? <Hint>Override recorded.</Hint> : null}<Button type="submit" disabled={pending} className="w-fit">{pending ? 'Recording…' : 'Record override'}</Button></form></PageDrawerContent></PageDrawer>;
 }

@@ -5,6 +5,7 @@ import { config as loadEnv } from 'dotenv';
 import { addContactManually, loadDemoContext, OWNER_STORAGE_STATE } from './helpers';
 import { DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { createCustomerStage, listCustomerStages } from '../lib/domain/customers/stages';
+import { chooseOption, optionValues, selectFieldValue } from './select-field';
 
 test.describe('CRM reference vertical', () => {
   test.use({ storageState: OWNER_STORAGE_STATE });
@@ -45,16 +46,13 @@ test.describe('CRM reference vertical', () => {
     await page.goto(`${base}/crm/contacts/stages`);
     const stageSelect = page.getByRole('combobox', { name: `Move ${customerName} to a different stage` });
     await expect(stageSelect).toBeVisible();
-    const initialStage = await stageSelect.inputValue();
-    const target = await stageSelect.locator('option').evaluateAll(
-      (options, current) => options.map((option) => (option as HTMLOptionElement).value).find((value) => value && value !== current),
-      initialStage,
-    );
+    const initialStage = await selectFieldValue(stageSelect).inputValue();
+    const target = (await optionValues(stageSelect)).find((value) => value && value !== initialStage);
     expect(target).toBeTruthy();
-    await stageSelect.selectOption(target!);
+    await chooseOption(stageSelect, target!);
     await expect(stageSelect).toBeEnabled();
     await page.reload();
-    await expect(page.getByRole('combobox', { name: `Move ${customerName} to a different stage` })).toHaveValue(target!);
+    await expect(selectFieldValue(page.getByRole('combobox', { name: `Move ${customerName} to a different stage` }))).toHaveValue(target!);
 
     await page.goto(`${base}/crm/contacts`);
     await page.getByRole('button', { name: 'Insights', exact: true }).click();

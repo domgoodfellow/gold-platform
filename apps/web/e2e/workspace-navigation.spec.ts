@@ -14,6 +14,7 @@ import { createPlan, grantPlanProduct } from '../lib/domain/catalogue/plans';
 import { recordPlanAssignment } from '../lib/domain/catalogue/organization-plans';
 import { createRole } from '../lib/domain/tenancy/roles';
 import { addMember } from '../lib/domain/tenancy/members';
+import { chooseOption, optionTexts, selectFieldValue } from './select-field';
 
 /**
  * Rendered evidence for explicit Dashboard navigation (ADR-049): inside an entered
@@ -588,7 +589,7 @@ test('contact lifecycle, multiple opportunities, and reviewed intake from Contac
   const base=`/organizations/${fixture.full}`;
   const suffix=randomUUID().slice(0,8),name=`GuildOps contact ${suffix}`,email=`guildops-${suffix}@example.test`;
   await page.goto(`${base}/crm/contacts`);
-  await addContactManually(page,{type:'person',name,email,details:async details=>{await expect(details.getByLabel('Lifecycle',{exact:true})).toHaveValue('');await details.getByLabel('Lifecycle',{exact:true}).selectOption('lead');await details.getByLabel('Lead temperature').selectOption('warm');}});
+  await addContactManually(page,{type:'person',name,email,details:async details=>{await expect(selectFieldValue(details.getByLabel('Lifecycle',{exact:true}))).toHaveValue('');await chooseOption(details.getByLabel('Lifecycle',{exact:true}), 'lead');await chooseOption(details.getByLabel('Lead temperature'), 'warm');}});
   let dialog=page.getByRole('dialog');
   await page.getByRole('link',{name,exact:true}).filter({visible:true}).first().click();
   await page.waitForURL(/\/crm\/contacts\/[a-f0-9-]+$/);
@@ -597,7 +598,7 @@ test('contact lifecycle, multiple opportunities, and reviewed intake from Contac
     await page.getByRole('button',{name:'Edit',exact:true}).click();dialog=page.getByRole('dialog');
     // V1.4: the edit dialog is sectioned; lifecycle and temperature live under Relationship.
     await dialog.getByRole('button',{name:'Relationship',exact:true}).click();
-    await dialog.getByLabel('Lifecycle',{exact:true}).selectOption(lifecycle);await dialog.getByLabel('Lead temperature').selectOption(temperature);
+    await chooseOption(dialog.getByLabel('Lifecycle',{exact:true}), lifecycle);await chooseOption(dialog.getByLabel('Lead temperature'), temperature);
     await dialog.getByRole('button',{name:'Save changes',exact:true}).click();await expect(dialog).toHaveCount(0);
     await page.reload();expect(page.url()).toBe(identity);
     // V1.4 record header: lifecycle and temperature are labelled chips (term/definition pairs).
@@ -610,8 +611,8 @@ test('contact lifecycle, multiple opportunities, and reviewed intake from Contac
   for(const index of [1,2]) {
     await page.getByRole('button',{name:'New opportunity',exact:true}).click();dialog=page.getByRole('dialog');
     await dialog.getByLabel('Find contact').fill(name);
-    await expect(dialog.getByLabel('Contact',{exact:true}).getByRole('option',{name,exact:true})).toBeAttached();
-    await dialog.getByLabel('Contact',{exact:true}).selectOption({label:name});
+    await expect.poll(() => optionTexts(dialog.getByLabel('Contact',{exact:true}))).toContain(name);
+    await chooseOption(dialog.getByLabel('Contact',{exact:true}), {label:name});
     await dialog.getByLabel('Title',{exact:true}).fill(`GuildOps opportunity ${index} ${suffix}`);
     await dialog.getByRole('button',{name:'Save opportunity',exact:true}).click();await page.waitForURL(/\/crm\/opportunities\/[a-f0-9-]+$/);
     await page.goto(`${base}/crm/pipeline`);
@@ -629,7 +630,7 @@ test('contact lifecycle, multiple opportunities, and reviewed intake from Contac
   const resourceId=new URL(page.url()).searchParams.get('resourceId')!;
   async function reviewAndApply() {
     // V1.3 mapping: contact type is chosen for rows without one; the review step is "Review changes".
-    await page.getByRole('combobox',{name:'Contact type',exact:true}).selectOption('person');
+    await chooseOption(page.getByRole('combobox',{name:'Contact type',exact:true}), 'person');
     await page.getByRole('button',{name:'Review changes',exact:true}).click();await page.waitForURL(/\/library\/imports\/[a-f0-9-]+$/);
     await page.getByRole('button',{name:'Import 1 contact',exact:true}).click();
     await page.getByRole('dialog').getByRole('button',{name:/Import 1 contact/}).click();

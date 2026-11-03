@@ -3,7 +3,7 @@ import { AppPage } from '@/components/layout/app-page';
 import { CollectionHeader } from '@/components/patterns/collection-header';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { FormField } from '@/components/controls/form';
-import { Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { Hint, TextInput } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { DocumentUploadForm, type UploadDocumentState } from '@/features/documents/upload-form';
@@ -24,6 +24,7 @@ import {
 } from '@/lib/domain/documents/library-files';
 import type { Db } from '@/lib/db/types';
 import { libraryHref } from '@/lib/route/library';
+import { SelectField } from '@/components/controls/select-field';
 
 const USAGE_LABELS = {
   any: 'Any record',
@@ -123,30 +124,17 @@ export async function LibraryFilesCollection({
         </FormField>
         <FormField id="library-file-type" label="Type">
           {(field) => (
-            <SelectInput {...field} name="family" defaultValue={filter.family ?? ''}>
-              <option value="">All types</option>
-              {(Object.keys(FILE_FAMILIES) as (keyof typeof FILE_FAMILIES)[]).map((key) => (
-                <option key={key} value={key}>{FILE_FAMILIES[key].label}</option>
-              ))}
-            </SelectInput>
+            <SelectField {...field} name="family" defaultValue={filter.family ?? ''} options={[{ value: '', label: 'All types' }, ...(Object.keys(FILE_FAMILIES) as (keyof typeof FILE_FAMILIES)[]).map((key) => ({ value: key, label: FILE_FAMILIES[key].label }))]} />
           )}
         </FormField>
         <FormField id="library-file-usage" label="Used by">
           {(field) => (
-            <SelectInput {...field} name="usage" defaultValue={filter.usage}>
-              {(Object.keys(USAGE_LABELS) as (keyof typeof USAGE_LABELS)[]).map((key) => (
-                <option key={key} value={key}>{USAGE_LABELS[key]}</option>
-              ))}
-            </SelectInput>
+            <SelectField {...field} name="usage" defaultValue={filter.usage} options={[...(Object.keys(USAGE_LABELS) as (keyof typeof USAGE_LABELS)[]).map((key) => ({ value: key, label: USAGE_LABELS[key] }))]} />
           )}
         </FormField>
         <FormField id="library-file-sort" label="Sort">
           {(field) => (
-            <SelectInput {...field} name="sort" defaultValue={filter.sort}>
-              {(Object.keys(SORT_LABELS) as (keyof typeof SORT_LABELS)[]).map((key) => (
-                <option key={key} value={key}>{SORT_LABELS[key]}</option>
-              ))}
-            </SelectInput>
+            <SelectField {...field} name="sort" defaultValue={filter.sort} options={[...(Object.keys(SORT_LABELS) as (keyof typeof SORT_LABELS)[]).map((key) => ({ value: key, label: SORT_LABELS[key] }))]} />
           )}
         </FormField>
         <Button type="submit" tone="secondary">Filter</Button>

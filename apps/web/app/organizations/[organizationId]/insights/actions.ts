@@ -27,7 +27,7 @@ export type ReportState = { error: string | null };
  * index on a name already used. These actions read a form and call the domain layer, and the
  * `try` blocks exist to turn a `DomainError` into a sentence rather than to make a judgement.
  *
- * An empty string is null on purpose: a `<select>` with nothing chosen posts `""`, and a filter
+ * An empty string is null on purpose: a selection field with nothing chosen posts `""`, and a filter
  * of `""` is not a uuid — it means *any*.
  */
 const orNull = (value: FormDataEntryValue | null) => {

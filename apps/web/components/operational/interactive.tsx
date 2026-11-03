@@ -136,7 +136,7 @@ export function RelativeTime({
             dateTime={value}
             tabIndex={0}
             className={cx(
-              "inline-block whitespace-nowrap text-xs tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+              "inline-block whitespace-nowrap text-xs tabular-nums",
               overdue
                 ? "text-danger"
                 : deadline && active

@@ -11,6 +11,8 @@ import { ConfigurationEditor } from '@/components/patterns/configuration-editor'
 import { RecordSubnavigation } from '@/components/navigation/record-subnavigation';
 import type { Contact } from '@/lib/domain/contacts/contacts';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
+import { chooseOption, fieldValue } from '../support/select-field';
+import { SelectField } from '@/components/controls/select-field';
 
 const actions = vi.hoisted(() => ({ editCustomerAction: vi.fn() }));
 vi.mock('@/app/organizations/[organizationId]/crm/contacts/[contactId]/actions', () => actions);
@@ -33,8 +35,8 @@ describe('Edit contact dialog', () => {
     expect(within(dialog).queryByText(/Edit contact details, lifecycle/)).toBeNull();
     await user.clear(within(dialog).getByLabelText('Company name')); await user.type(within(dialog).getByLabelText('Company name'), 'Harbour View Ltd');
     await user.click(within(dialog).getByRole('button', { name: 'Relationship' }));
-    expect(within(dialog).getByLabelText('Lifecycle')).toHaveValue('customer');
-    await user.selectOptions(within(dialog).getByLabelText(/^Relationship stage/), 's1');
+    expect(fieldValue(within(dialog).getByLabelText('Lifecycle'))).toBe('customer');
+    await chooseOption(within(dialog).getByLabelText(/^Relationship stage/), 's1');
     await user.click(within(dialog).getByRole('button', { name: 'Additional fields' }));
     expect(within(dialog).getByLabelText(/Industry/)).toHaveValue('Marine');
     await user.click(within(dialog).getByRole('button', { name: 'Identity & essentials' }));
@@ -90,7 +92,7 @@ describe('shared presentation contracts', () => {
   });
   it('CollectionToolbar keeps the URL as the view model and lists removable active filters', () => {
     render(<CollectionToolbar action="/contacts" scopes={[{ key: 'all', label: 'All', href: '/contacts', current: true }]} search={{ name: 'q', value: 'ada', label: 'Search contacts' }} hidden={{ contactType: 'person' }}
-      filters={<label>Lifecycle<select name="lifecycle" /></label>} filterCount={1} active={[{ key: 'lifecycle', label: 'Lifecycle: Lead', removeHref: '/contacts' }]} resetHref="/contacts" />);
+      filters={<label>Lifecycle<SelectField name="lifecycle" options={[{ value: '', label: 'Any lifecycle' }]} /></label>} filterCount={1} active={[{ key: 'lifecycle', label: 'Lifecycle: Lead', removeHref: '/contacts' }]} resetHref="/contacts" />);
     expect(screen.getByRole('search')).toHaveAttribute('action', '/contacts');
     expect(screen.getByRole('searchbox', { name: 'Search contacts' })).toHaveValue('ada');
     expect(document.querySelector('input[type=hidden][name=contactType]')).toHaveValue('person');

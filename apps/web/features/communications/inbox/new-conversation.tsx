@@ -6,10 +6,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { Paperclip, Send, X } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { ErrorText, Hint, TextArea, TextInput } from '@/components/controls/inputs';
 import { startEmailAction, startSmsAction } from '@/app/organizations/[organizationId]/comms/inbox/actions';
 import { validateOutboundAttachments } from '@/lib/domain/email/attachment-limits';
 import { announceInboxChange, formatSize } from './format';
+import { SelectField } from '@/components/controls/select-field';
 
 type NumberOption = { id: string; e164: string; label: string | null };
 type SenderOption = { id: string; address: string; displayName: string | null };
@@ -113,13 +114,9 @@ export function NewConversation({
           <label className="flex flex-wrap items-center gap-2 text-sm">
             <span className="w-14 text-muted">From</span>
             {channel === 'sms' ? (
-              <SelectInput size="small" value={numberId} onChange={(event) => setNumberId(event.target.value)} aria-label="Send from">
-                {numbers.map((number) => <option key={number.id} value={number.id}>{number.label ? `${number.label} · ${formatPhoneForDisplay(number.e164)}` : formatPhoneForDisplay(number.e164)}</option>)}
-              </SelectInput>
+              <SelectField size="small" value={numberId} onValueChange={(next) => setNumberId(next)} aria-label="Send from" options={[...numbers.map((number) => ({ value: number.id, label: number.label ? `${number.label} · ${formatPhoneForDisplay(number.e164)}` : formatPhoneForDisplay(number.e164) }))]} />
             ) : (
-              <SelectInput size="small" value={senderId} onChange={(event) => setSenderId(event.target.value)} aria-label="Send from">
-                {senders.map((sender) => <option key={sender.id} value={sender.id}>{sender.displayName ? `${sender.displayName} · ${sender.address}` : sender.address}</option>)}
-              </SelectInput>
+              <SelectField size="small" value={senderId} onValueChange={(next) => setSenderId(next)} aria-label="Send from" options={[...senders.map((sender) => ({ value: sender.id, label: sender.displayName ? `${sender.displayName} · ${sender.address}` : sender.address }))]} />
             )}
           </label>
           <label className="flex items-center gap-2 text-sm">

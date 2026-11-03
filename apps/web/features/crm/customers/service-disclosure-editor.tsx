@@ -3,7 +3,7 @@
 import { useActionState, useId, useRef, useState } from 'react';
 import { Button } from '@/components/controls/button';
 import { FormField } from '@/components/controls/form';
-import { ErrorText, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { ErrorText, TextArea, TextInput } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { disclosureAction, type ServiceActionState } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/service-actions';
 import { SERVICE_KINDS, type Deliverable, type Engagement } from '@/lib/domain/customers/service-engagements';
@@ -12,6 +12,7 @@ import { ServicePresentation } from '@/features/portal-access/service-presenter'
 import { useUnsavedChanges } from '@/components/controls/use-unsaved-changes';
 import { NotificationChoice } from './service-notification-section';
 import type { readEngagementDetails } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/service-actions';
+import { SelectField } from '@/components/controls/select-field';
 
 type Props = {
   organizationId: string; customerId: string; customerName: string; organizationName: string; timezone?: string;
@@ -57,7 +58,7 @@ export function ServiceDisclosureEditor(props: Props) {
     {editing && props.mayManage ? <form action={action} className="mt-4 space-y-4">
       <Context props={props}/><input type="hidden" name="operation" value="save"/><input type="hidden" name="content" value={JSON.stringify(content)}/>
       <FormField id={`${id}-title`} label="Customer-facing title">{p => <TextInput {...p} required maxLength={200} value={content.title} onChange={event => setContent({ ...content, title: event.target.value })}/>}</FormField>
-      <FormField id={`${id}-kind`} label="Service category">{p => <SelectInput {...p} value={content.serviceKind} onChange={event => setContent({ ...content, serviceKind: event.target.value as DisclosureContent['serviceKind'] })}>{Object.entries(SERVICE_KINDS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</SelectInput>}</FormField>
+      <FormField id={`${id}-kind`} label="Service category">{p => <SelectField {...p} value={content.serviceKind} onValueChange={(next) => setContent({ ...content, serviceKind: next as DisclosureContent['serviceKind'] })} options={[...Object.entries(SERVICE_KINDS).map(([key, label]) => ({ value: key, label: label }))]} />}</FormField>
       <FormField id={`${id}-summary`} label="Customer-facing description">{p => <TextArea {...p} required maxLength={3000} value={content.summary} onChange={event => setContent({ ...content, summary: event.target.value })}/>}</FormField>
       <FormField id={`${id}-status`} label="Approved progress">{p => <TextInput {...p} required maxLength={200} value={content.status} onChange={event => setContent({ ...content, status: event.target.value })}/>}</FormField>
       <details><summary className="cursor-pointer py-2 text-sm">Approved deliverables ({content.deliverables.length})</summary><div className="space-y-4">

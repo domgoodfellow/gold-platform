@@ -2,11 +2,12 @@ import { Card } from '@/components/surfaces/card';
 import { CONTACT_LIFECYCLES, classificationLabel } from '@/lib/domain/customers/classification';
 import { FormField } from '@/components/controls/form';
 import { libraryNewImportHref } from '@/lib/route/library';
-import { ErrorText, Hint, SelectInput } from '@/components/controls/inputs';
+import { ErrorText, Hint } from '@/components/controls/inputs';
 import { Button, ButtonLink } from '@/components/controls/button';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { MappingField, MappingTarget } from '@/lib/domain/integrations/mappings';
 import { createMappingAndStageAction } from '@/app/organizations/[organizationId]/library/imports/new/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 function targetValue(target: MappingTarget): string {
   if (target.kind === 'core') return `core:${target.field}`;
@@ -56,10 +57,10 @@ export function MappingEditor({
         <h2 id="mapping-identity" className="text-sm font-semibold">Who these rows are</h2>
         <p className="mt-0.5 text-sm text-muted">Person and Company are kept apart. Rows without a type become Unspecified / Needs classification; GildOps never guesses it from a name.</p>
         <div data-slot="field-group" className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <FormField id="mapping-contact-type" label="Contact type">{field => <SelectInput {...field} name="contactType" defaultValue=""><option value="">Use a mapped column (otherwise Unspecified)</option><option value="person">All rows are People</option><option value="company">All rows are Companies</option></SelectInput>}</FormField>
-          <FormField id="mapping-mode" label="How often">{field => <SelectInput {...field} name="mode" defaultValue="import"><option value="import">Import once</option>{maySynchronize ? <option value="sync">Keep synchronized (review each refresh)</option> : null}</SelectInput>}</FormField>
-          <FormField id="mapping-default-lifecycle" label="Lifecycle for new contacts" hint="A mapped lifecycle column wins per row. Existing contacts keep theirs.">{field => <SelectInput {...field} name="defaultLifecycle" defaultValue=""><option value="">Unclassified</option>{CONTACT_LIFECYCLES.map(value => <option key={value} value={value}>{classificationLabel(value)}</option>)}</SelectInput>}</FormField>
-          <FormField id="mapping-dedupe" label="Duplicate matching">{field => <SelectInput {...field} name="dedupeKey" defaultValue="email"><option value="email">Stable source ID, then email</option><option value="">Stable source ID only</option></SelectInput>}</FormField>
+          <FormField id="mapping-contact-type" label="Contact type">{field => <SelectField {...field} name="contactType" defaultValue="" options={[{ value: '', label: 'Use a mapped column (otherwise Unspecified)' }, { value: 'person', label: 'All rows are People' }, { value: 'company', label: 'All rows are Companies' }]} />}</FormField>
+          <FormField id="mapping-mode" label="How often">{field => <SelectField {...field} name="mode" defaultValue="import" options={[{ value: 'import', label: 'Import once' }, ...(maySynchronize ? [{ value: 'sync', label: 'Keep synchronized (review each refresh)' }] : [])]} />}</FormField>
+          <FormField id="mapping-default-lifecycle" label="Lifecycle for new contacts" hint="A mapped lifecycle column wins per row. Existing contacts keep theirs.">{field => <SelectField {...field} name="defaultLifecycle" defaultValue="" options={[{ value: '', label: 'Unclassified' }, ...CONTACT_LIFECYCLES.map((value) => ({ value: value, label: classificationLabel(value) }))]} />}</FormField>
+          <FormField id="mapping-dedupe" label="Duplicate matching">{field => <SelectField {...field} name="dedupeKey" defaultValue="email" options={[{ value: 'email', label: 'Stable source ID, then email' }, { value: '', label: 'Stable source ID only' }]} />}</FormField>
         </div>
         <Hint className="mt-3 block">Lead temperature stays Unrated unless a column is mapped. {maySynchronize ? 'A synchronized worksheet is reviewed on every refresh: local edits are kept on conflicts and removed rows never delete contacts. Automatic scheduling is not enabled.' : 'Updates to contacts this source created before are reviewed like new rows.'}</Hint>
       </Card>
@@ -81,27 +82,10 @@ export function MappingEditor({
                     <th scope="row" className="px-4 py-2 text-left align-top font-medium">{header}<input type="hidden" name="header" value={header} /></th>
                     <td className="max-w-48 px-4 py-2 align-top text-muted">{examples.length ? examples.map(value => <span key={value} className="block truncate">{value}</span>) : <span>No values in the sample</span>}</td>
                     <td className="px-4 py-2 align-top">
-                      <SelectInput aria-label={`Destination for ${header}`} name={`target_${index}`} size="small" defaultValue={targetValue(field.target)}>
-                        <option value="ignore">Ignore this column</option>
-                        <optgroup label="Contact">
-                          <option value="core:name">Name</option><option value="core:email">Email</option><option value="core:phone">Phone</option>
-                          <option value="core:contact_type">Contact type (Person / Company / Unspecified)</option>
-                          <option value="core:lifecycle">Lifecycle</option><option value="core:lead_temperature">Lead temperature</option>
-                        </optgroup>
-                        <optgroup label="Company affiliation">
-                          <option value="core:company_contact_id">Company contact ID</option><option value="core:affiliation_title">Role or title</option>
-                        </optgroup>
-                        <optgroup label="Location">
-                          <option value="location:address">Address</option><option value="location:city">City</option><option value="location:province">Province</option>
-                        </optgroup>
-                        {definitions.length > 0 ? <optgroup label="Custom fields">{definitions.map(definition => <option key={definition.key} value={`custom:${definition.key}`}>{definition.label}</option>)}</optgroup> : null}
-                      </SelectInput>
+                      <SelectField aria-label={`Destination for ${header}`} name={`target_${index}`} size="small" defaultValue={targetValue(field.target)} options={[{ value: 'ignore', label: 'Ignore this column' }, { value: 'core:name', label: 'Name', group: 'Contact' }, { value: 'core:email', label: 'Email', group: 'Contact' }, { value: 'core:phone', label: 'Phone', group: 'Contact' }, { value: 'core:contact_type', label: 'Contact type (Person / Company / Unspecified)', group: 'Contact' }, { value: 'core:lifecycle', label: 'Lifecycle', group: 'Contact' }, { value: 'core:lead_temperature', label: 'Lead temperature', group: 'Contact' }, { value: 'core:company_contact_id', label: 'Company contact ID', group: 'Company affiliation' }, { value: 'core:affiliation_title', label: 'Role or title', group: 'Company affiliation' }, { value: 'location:address', label: 'Address', group: 'Location' }, { value: 'location:city', label: 'City', group: 'Location' }, { value: 'location:province', label: 'Province', group: 'Location' }, ...(definitions.length > 0 ? [...definitions.map((definition) => ({ value: `custom:${definition.key}`, label: definition.label, group: 'Custom fields' }))] : [])]} />
                     </td>
                     <td className="px-4 py-2 align-top">
-                      <SelectInput aria-label={`Transformation for ${header}`} name={`transform_${index}`} size="small" defaultValue={field.transform}>
-                        <option value="none">None</option><option value="trim_lowercase">Lowercase</option><option value="e164">Phone number</option>
-                        <option value="url">Website address</option><option value="integer">Whole number</option>
-                      </SelectInput>
+                      <SelectField aria-label={`Transformation for ${header}`} name={`transform_${index}`} size="small" defaultValue={field.transform} options={[{ value: 'none', label: 'None' }, { value: 'trim_lowercase', label: 'Lowercase' }, { value: 'e164', label: 'Phone number' }, { value: 'url', label: 'Website address' }, { value: 'integer', label: 'Whole number' }]} />
                     </td>
                   </tr>
                 );

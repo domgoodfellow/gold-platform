@@ -20,8 +20,8 @@ it('hydrates differing ICU catalogues and retains a saved timezone absent from o
   let root: ReturnType<typeof hydrateRoot>;
   await act(async () => { root = hydrateRoot(container, fields, { onRecoverableError: recover }); });
   expect(recover).not.toHaveBeenCalled();
-  expect((container.querySelector('[name="timezone"]') as HTMLSelectElement).value).toBe('UTC');
-  expect((container.querySelector('[name="currency"]') as HTMLSelectElement).value).toBe('EUR');
+  expect((container.querySelector('[name="timezone"]') as HTMLInputElement).value).toBe('UTC');
+  expect((container.querySelector('[name="currency"]') as HTMLInputElement).value).toBe('EUR');
   await act(async () => root.unmount());
   container.remove();
 });

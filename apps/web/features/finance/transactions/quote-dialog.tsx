@@ -3,7 +3,7 @@
 import { useId, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/controls/button';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { FormField } from '@/components/controls/form';
 import { useGuardedDialogDirty } from '@/components/panels/guarded-dialog';
 import { DialogBody, DialogFooterBar, StepHeader } from '@/components/panels/dialog-layout';
@@ -14,6 +14,7 @@ import type { FinanceActionState } from '@/app/organizations/[organizationId]/fi
 import { CancelButton, TransactionDialog, TransactionError, type TransactionTriggerProps } from './transaction-dialog';
 import { choiceStatus, useFinanceRecord, useFinanceSubmit } from './use-finance-record';
 import { newWorkHref } from '@/features/work/new-work-action';
+import { SelectField } from '@/components/controls/select-field';
 
 /** One priced line as the review shows it; its amount is `priceWorkItem` over that line, so no component multiplies money itself. */
 export const lineItem = (line: PricedLine, tone?: LineItem['tone']): LineItem => {
@@ -79,7 +80,7 @@ function QuoteBody({ organizationId, workItemId, mayCreateWork, mayManageCatalog
       </RecordSummary> : null}
       {done ? <TransactionResult title={done.success} detail={review ? `${review.work.title}${current ? ` · quote now ${formatMoney(current.totalMinor, current.currency)}` : ''}` : undefined} actions={<ButtonLink size="small" tone="secondary" href={done.href ?? workHref}>Open Work financials</ButtonLink>} /> : null}
       {review && !done ? review.items.length ? <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_8rem]">
-        <FormField id={`${id}-service`} label="Price item">{field => <SelectInput {...field} value={itemId} onChange={event => setItemId(event.target.value)} required><option value="">Choose a priced item</option>{review.items.map(entry => <option key={entry.id} value={entry.id}>{entry.name} · {formatMoney(entry.unitAmountMinor, entry.currency)} / {entry.unit}</option>)}</SelectInput>}</FormField>
+        <FormField id={`${id}-service`} label="Price item">{field => <SelectField {...field} value={itemId} onValueChange={(next) => setItemId(next)} required options={[{ value: '', label: 'Choose a priced item' }, ...review.items.map((entry) => ({ value: entry.id, label: `${entry.name} · ${formatMoney(entry.unitAmountMinor, entry.currency)} / ${entry.unit}` }))]} />}</FormField>
         <FormField id={`${id}-quantity`} label="Quantity">{field => <TextInput {...field} value={quantity} onChange={event => setQuantity(event.target.value)} type="number" inputMode="numeric" min={1} step={1} required className="tabular-nums" />}</FormField>
         {!validQuantity ? <p className="text-xs text-danger sm:col-span-2">Quantity is a whole number, one or more.</p> : null}
         {mixed ? <p className="text-xs text-danger sm:col-span-2">This Work is priced in {current!.currency}; this price item is in {preview!.currency}. A quote has one currency.</p> : null}

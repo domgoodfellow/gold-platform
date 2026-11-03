@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { Route } from 'lucide-react';
 import { ButtonLink } from '@/components/controls/button';
-import { SelectInput } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
 import { DataTable, type Column } from '@/components/display/table';
 import { ViewNav } from '@/components/navigation/view-nav';
@@ -20,6 +19,7 @@ import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
 import type { WorkItemType } from '@/lib/domain/work-items/types';
 import type { WorkItem } from '@/lib/domain/work-items/work-items';
 import type { CoverageView } from '@/lib/domain/work-items/requirements';
+import { SelectField } from '@/components/controls/select-field';
 
 /**
  * Work items: one Work type at a time, as a List or a Board of its stages. The shared collection
@@ -96,8 +96,8 @@ export function WorkList({ title, crumbs, organizationId, timezone, types, selec
       search={{ name: 'q', value: view.q, label: 'Search work', placeholder: 'Search work titles' }}
       hidden={{ view: view.view === 'board' ? 'board' : undefined }}
       filterCount={view.status ? 1 : 0}
-      filters={view.view === 'list' ? <label className="flex flex-col gap-1 text-sm sm:col-span-2">Status<SelectInput name="status" aria-label="Filter by status" defaultValue={view.status ?? ''}><option value="">Any status</option>{statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</SelectInput></label> : undefined}
-      sort={<SelectInput name="sort" aria-label="Sort work" defaultValue={view.sort} className="w-full md:w-40">{WORK_SORTS.filter(([key]) => scheduled || key !== 'schedule').map(([key, label]) => <option key={key} value={key}>{label}</option>)}</SelectInput>}
+      filters={view.view === 'list' ? <label className="flex flex-col gap-1 text-sm sm:col-span-2">Status<SelectField name="status" aria-label="Filter by status" defaultValue={view.status ?? ''} options={[{ value: '', label: 'Any status' }, ...statuses.map((s) => ({ value: s.id, label: s.name }))]} /></label> : undefined}
+      sort={<SelectField name="sort" aria-label="Sort work" defaultValue={view.sort} className="w-full md:w-40" options={[...WORK_SORTS.filter(([key]) => scheduled || key !== 'schedule').map(([key, label]) => ({ value: key, label: label }))]} />}
       display={<ViewNav label="Work presentation" size="small" className="mb-0" items={[{ key: 'list', label: 'List', href: href({ view: 'list' }), current: view.view === 'list' }, { key: 'board', label: 'Board', href: href({ view: 'board' }), current: view.view === 'board' }]} />}
       active={active} resetHref={filtered ? href({ q: '', status: undefined }) : undefined} />
     <section aria-label={`${typeName} work`} className="min-w-0">

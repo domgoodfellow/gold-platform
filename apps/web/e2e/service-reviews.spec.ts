@@ -15,6 +15,7 @@ import { savePortalDraft, submitPortalDraft, publishPortalDraft, portalEditorSta
 import { saveServiceDisclosure, releaseServiceDisclosure, disclosureEditorState } from '../lib/domain/customers/service-disclosures';
 import { listServiceReviews } from '../lib/domain/customers/service-reviews';
 import { createWebsite, siteEditorState, submitSiteRevision, publishSiteRevision } from '../lib/domain/public-site/public-site';
+import { chooseOption } from './select-field';
 
 test.use({ storageState: { cookies: [], origins: [] }, hasTouch: true });
 test('customer approval, changes into Support, stale review and invitation boundaries', async ({ page, browser }, testInfo) => {
@@ -71,7 +72,7 @@ test('customer approval, changes into Support, stale review and invitation bound
     await page.getByRole('button', { name: 'Log in', exact: true }).click(); await page.waitForURL(value => value.pathname !== '/login');
     await openEngagement(); const drawer = page.getByRole('dialog', { name: 'Website implementation', exact: true });
     const requestReview = async () => {
-      await drawer.getByLabel('Review target').selectOption(deliverable);
+      await chooseOption(drawer.getByLabel('Review target'), deliverable);
       await drawer.getByRole('button', { name: 'Request customer review', exact: true }).click();
       await expect(drawer.getByText('Review pending', { exact: true })).toBeVisible();
     };

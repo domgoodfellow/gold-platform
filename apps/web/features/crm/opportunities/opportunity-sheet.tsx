@@ -3,7 +3,8 @@
 import { useActionState, useEffect, useId, useState, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, type ButtonTone } from '@/components/controls/button';
-import { TextInput, SelectInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
+import { SelectField } from '@/components/controls/select-field';
 import { FormField, FormError } from '@/components/controls/form';
 import { useDrawerFormSubmit } from '@/components/controls/use-drawer-form-submit';
 import { useFormDirty } from '@/components/controls/use-form-dirty';
@@ -69,7 +70,7 @@ function OpportunityForm({ organizationId, stages, members, defaultCurrency, opp
     // Navigate first, then close: the opportunity page is dynamic, so it loads fresh without a refresh that could override the push.
     if (state.savedId) { router.push(`/organizations/${organizationId}/crm/opportunities/${state.savedId}`); onSaved(); }
   }, [state.savedId, onSaved, router, organizationId]);
-  const changeDraft = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const changeDraft = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setDraft((current) => ({ ...current, [name]: value }));
   };
@@ -78,15 +79,15 @@ function OpportunityForm({ organizationId, stages, members, defaultCurrency, opp
     <input type="hidden" name="opportunityId" value={opportunity?.id ?? ''} />
     {fixedCustomer ? <><input type="hidden" name="customerId" value={fixedCustomer.id} /><p className="text-sm">Contact: <strong>{fixedCustomer.name}</strong></p></> : <>
       <FormField id={`${prefix}-search`} label="Find contact" hint="Search by name, email or phone.">{(props) => <TextInput {...props} type="search" value={search} onChange={(event) => setSearch(event.target.value)} />}</FormField>
-      <FormField id={`${prefix}-customer`} label="Contact">{(props) => <SelectInput {...props} name="customerId" required value={draft.customerId} onChange={changeDraft}><option value="">Choose a contact</option>{result.customers.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</SelectInput>}</FormField>
+      <FormField id={`${prefix}-customer`} label="Contact">{(props) => <SelectField {...props} name="customerId" required value={draft.customerId} onValueChange={(next) => setDraft((current) => ({ ...current, customerId: next }))} options={[{ value: '', label: 'Choose a contact' }, ...result.customers.map((entry) => ({ value: entry.id, label: entry.name }))]} />}</FormField>
       <p role="status" className="text-xs text-muted">{searching ? 'Searching…' : result.total > result.customers.length ? `Showing ${result.customers.length} of ${result.total}. Refine your search.` : `${result.total} contacts found.`}</p>
       <FormError>{searchError}</FormError>
     </>}
     <FormField id={`${prefix}-title`} label="Title">{(props) => <TextInput {...props} name="title" required maxLength={200} value={draft.title} onChange={changeDraft} />}</FormField>
-    <FormField id={`${prefix}-stage`} label="Opportunity stage" optional>{(props) => <SelectInput {...props} name="stageId" value={draft.stageId} onChange={changeDraft}><option value="">Unstaged</option>{stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name} ({stage.kind})</option>)}</SelectInput>}</FormField>
+    <FormField id={`${prefix}-stage`} label="Opportunity stage" optional>{(props) => <SelectField {...props} name="stageId" value={draft.stageId} onValueChange={(next) => setDraft((current) => ({ ...current, stageId: next }))} options={[{ value: '', label: 'Unstaged' }, ...stages.map((stage) => ({ value: stage.id, label: `${stage.name} (${stage.kind})` }))]} />}</FormField>
     <FormField id={`${prefix}-value`} label="Value" optional>{(props) => <TextInput {...props} name="value" inputMode="decimal" value={draft.value} onChange={changeDraft} />}</FormField>
     <FormField id={`${prefix}-currency`} label="Currency" hint="Three-letter currency code. Required when a value is entered.">{(props) => <TextInput {...props} name="currency" maxLength={3} value={draft.currency} onChange={changeDraft} />}</FormField>
-    <FormField id={`${prefix}-owner`} label="Owner" optional>{(props) => <SelectInput {...props} name="ownerMembershipId" value={draft.ownerMembershipId} onChange={changeDraft}><option value="">Unassigned</option>{members.map((member) => <option key={member.id} value={member.id}>{member.displayName || 'Member'}</option>)}</SelectInput>}</FormField>
+    <FormField id={`${prefix}-owner`} label="Owner" optional>{(props) => <SelectField {...props} name="ownerMembershipId" value={draft.ownerMembershipId} onValueChange={(next) => setDraft((current) => ({ ...current, ownerMembershipId: next }))} options={[{ value: '', label: 'Unassigned' }, ...members.map((member) => ({ value: member.id, label: member.displayName || 'Member' }))]} />}</FormField>
     <FormField id={`${prefix}-date`} label="Expected close" optional>{(props) => <TextInput {...props} name="expectedCloseOn" type="date" value={draft.expectedCloseOn} onChange={changeDraft} />}</FormField>
     <div ref={errorRef} tabIndex={-1} className="outline-none"><FormError>{state.error}</FormError></div>
   </form>;

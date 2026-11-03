@@ -1,5 +1,5 @@
 import { Button } from '@/components/controls/button';
-import { Hint, SelectInput } from '@/components/controls/inputs';
+import { Hint } from '@/components/controls/inputs';
 import { ViewNav } from '@/components/navigation/view-nav';
 import { DividedList, EmptyState, SectionHeading } from '@/components/surfaces/section';
 import type { Dashboard, DashboardTile } from '@/lib/domain/reporting/dashboards';
@@ -24,6 +24,7 @@ import {
   ReportAudienceForm,
   SaveReportForm,
 } from './report-forms';
+import { SelectField } from '@/components/controls/select-field';
 
 function reportHref({
   organizationId,
@@ -137,10 +138,7 @@ export function ReportFilters({
       {choices.map(([name, label, value, options]) => (
         <label key={name} className="flex min-w-36 flex-1 flex-col gap-1 sm:flex-none">
           <span className="text-muted">{label}</span>
-          <SelectInput name={name} defaultValue={value ?? ''} className="bg-transparent px-2 py-1">
-            <option value="">Any</option>
-            {options.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </SelectInput>
+          <SelectField name={name} defaultValue={value ?? ''} className="bg-transparent px-2 py-1" options={[{ value: '', label: 'Any' }, ...options.map((option) => ({ value: option.id, label: option.label }))]} />
         </label>
       ))}
       <Button type="submit" tone="secondary" size="small">Narrow</Button>

@@ -1,11 +1,10 @@
 import type { ComponentProps } from 'react';
 import { Input } from '@gold/ui/components/input';
 import { Label } from '@gold/ui/components/label';
-import { NativeSelect } from '@gold/ui/components/native-select';
 import { Textarea } from '@gold/ui/components/textarea';
-import { cx, FOCUS_RING } from '../class-names';
+import { cx } from '../class-names';
 
-/** Shadows the native `size` attribute (visible width in characters), unused here and repurposed. */
+/** Shadows the native `size` attribute (visible width in characters), unused here and repurposed. A choice is `SelectField` (select-field.tsx). */
 export type ControlSize = 'default' | 'small';
 
 export function TextInput({
@@ -14,15 +13,7 @@ export function TextInput({
   className,
   ...props
 }: Omit<ComponentProps<'input'>, 'size'> & { size?: ControlSize; variant?: 'default' | 'filled' }) {
-  return <Input {...props} variant={variant} className={cx(FOCUS_RING, size === 'small' && 'h-7 px-2 text-sm', className)} />;
-}
-
-export function SelectInput({
-  size = 'default',
-  className,
-  ...props
-}: Omit<ComponentProps<'select'>, 'size'> & { size?: ControlSize }) {
-  return <NativeSelect {...props} wrapperClassName={className} className={cx(FOCUS_RING, size === 'small' && 'h-7 px-2 py-0 pr-7 text-sm')} />;
+  return <Input {...props} variant={variant} className={cx(size === 'small' && 'h-7 px-2 text-sm', className)} />;
 }
 
 export function TextArea({
@@ -30,7 +21,7 @@ export function TextArea({
   className,
   ...props
 }: ComponentProps<'textarea'> & { size?: ControlSize }) {
-  return <Textarea {...props} className={cx(FOCUS_RING, size === 'small' && 'min-h-16 px-2 py-1 text-sm', className)} />;
+  return <Textarea {...props} className={cx(size === 'small' && 'min-h-16 px-2 py-1 text-sm', className)} />;
 }
 
 /** Names the input; `Hint` explains it. */

@@ -3,9 +3,10 @@
 import { useActionState, useState } from 'react';
 import { Button } from '@/components/controls/button';
 import { CopyField } from '@/components/controls/copy-field';
-import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
 import type { Role } from '@/lib/domain/tenancy/roles';
 import { inviteMemberAction, type InviteMemberState } from '@/app/organizations/[organizationId]/settings/access/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: InviteMemberState = { error: null, link: null, email: null };
 
@@ -48,13 +49,7 @@ export function InviteMemberForm({
           aria-label="Email address"
           className="flex-1"
         />
-        <SelectInput name="roleId" aria-label="Role" className="flex-1">
-          {roles.map((role) => (
-            <option key={role.id} value={role.id}>
-              {role.name}
-            </option>
-          ))}
-        </SelectInput>
+        <SelectField name="roleId" aria-label="Role" className="flex-1" options={[...roles.map((role) => ({ value: role.id, label: role.name }))]} />
       </div>
 
       <Button type="submit" disabled={pending} className="w-fit">

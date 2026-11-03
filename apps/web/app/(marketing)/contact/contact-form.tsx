@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, FieldLabel, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { ErrorText, FieldLabel, Hint, TextArea, TextInput } from '@/components/controls/inputs';
 import { CONTACT_TOPICS, PUBLIC_INTAKE_LIMITS } from '@/lib/domain/public-intake/limits';
+import { SelectField } from '@/components/controls/select-field';
 
 export type ContactState = { error: string | null; done: boolean };
 
@@ -48,9 +49,7 @@ export function ContactForm({
         </div>
         <div className="flex flex-col gap-1">
           <FieldLabel htmlFor="topic">Topic</FieldLabel>
-          <SelectInput id="topic" name="topic" defaultValue="General question">
-            {CONTACT_TOPICS.map((topic) => <option key={topic} value={topic}>{topic}</option>)}
-          </SelectInput>
+          <SelectField id="topic" name="topic" defaultValue="General question" options={[...CONTACT_TOPICS.map((topic) => ({ value: topic, label: topic }))]} />
         </div>
       </div>
 

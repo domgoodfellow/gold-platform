@@ -14,7 +14,7 @@ import {
 import { AppPage } from "@/components/layout/app-page";
 import { PageHeader } from "@/components/headers/page-header";
 import { Button, ButtonLink } from "@/components/controls/button";
-import { TextInput, TextArea, SelectInput } from "@/components/controls/inputs";
+import { TextInput, TextArea } from "@/components/controls/inputs";
 import {
   PageDrawer,
   PageDrawerTrigger,
@@ -36,6 +36,7 @@ import {
 import { saveAgent } from "./actions";
 import { AgentIcon, Badge, Field, cell } from "./ui";
 import { MetricTile, OperationalPanel, PanelState } from "@/components/operational/primitives";
+import { SelectField } from '@/components/controls/select-field';
 
 export function NewAgent({
   organizationId,
@@ -104,18 +105,14 @@ export function NewAgent({
               <TextArea name="description" maxLength={1000} />
             </Field>
             <Field label="Purpose">
-              <SelectInput name="purpose">
-                {[
+              <SelectField name="purpose" options={[...[
                   "General assistant",
                   "Customer service",
                   "Sales assistant",
                   "Support assistant",
                   "Scheduling assistant",
                   "Receptionist",
-                ].map((p) => (
-                  <option key={p}>{p}</option>
-                ))}
-              </SelectInput>
+                ].map((p) => ({ value: p, label: p }))]} />
             </Field>
             <Field label="Starting instructions">
               <TextArea
@@ -440,14 +437,7 @@ export function AiWorkspace({
       <PageHeader
         title={title}
         actions={<>
-          {(!view || view === "activity") && <SelectInput
-          aria-label="Date range"
-          value={data.days}
-          onChange={(e) => filter("days", e.target.value)}
-        >
-          <option value="30">Last 30 days</option>
-          <option value="7">Last 7 days</option>
-        </SelectInput>}
+          {(!view || view === "activity") && <SelectField aria-label="Date range" value={String(data.days)} onValueChange={(next) => filter("days", next)} options={[{ value: '30', label: 'Last 30 days' }, { value: '7', label: 'Last 7 days' }]} />}
           <NewAgent organizationId={organizationId} canManage={canManage} />
           {canManage ? <ButtonLink tone="secondary" href={`${base}/agents`}>
             <Play aria-hidden />
@@ -495,28 +485,8 @@ export function AiWorkspace({
       {["", "agents", "deployments", "activity"].includes(view) && <form
         className="flex flex-wrap gap-2"
               >
-        <SelectInput
-          aria-label="Status"
-          value={search.get(view === "activity" ? "outcome" : "status") ?? ""}
-          onChange={(e) => filter(view === "activity" ? "outcome" : "status", e.target.value)}
-        >
-          <option value="">All statuses</option>
-          {(view === "activity" ? ["answered", "unanswered", "failed"] : ["draft", "active", "disabled"]).map((s) => (
-            <option key={s}>{s}</option>
-          ))}
-        </SelectInput>
-        {view !== "activity" && <SelectInput
-          aria-label="Channel"
-          value={selectedChannel ?? ""}
-          onChange={(e) => filter("channel", e.target.value)}
-        >
-          <option value="">All channels</option>
-          {Object.entries(CHANNELS).map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
-            </option>
-          ))}
-        </SelectInput>}
+        <SelectField aria-label="Status" value={search.get(view === "activity" ? "outcome" : "status") ?? ""} onValueChange={(next) => filter(view === "activity" ? "outcome" : "status", next)} options={[{ value: '', label: 'All statuses' }, ...(view === "activity" ? ["answered", "unanswered", "failed"] : ["draft", "active", "disabled"]).map((s) => ({ value: s, label: s }))]} />
+        {view !== "activity" && <SelectField aria-label="Channel" value={selectedChannel ?? ""} onValueChange={(next) => filter("channel", next)} options={[{ value: '', label: 'All channels' }, ...Object.entries(CHANNELS).map(([key, label]) => ({ value: key, label: label }))]} />}
         
       </form>}
       {!view ? (

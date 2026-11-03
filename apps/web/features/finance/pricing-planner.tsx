@@ -2,12 +2,13 @@
 
 import { useId, useState } from 'react';
 import { Button } from '@/components/controls/button';
-import { TextInput, SelectInput, FieldLabel, ErrorText } from '@/components/controls/inputs';
+import { TextInput, FieldLabel, ErrorText } from '@/components/controls/inputs';
 import { OperationalPanel } from '@/components/operational/primitives';
 import { CurrencyField } from '@/features/locale/locale-fields';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import type { PriceBookItem } from '@/lib/domain/pricing/price-book';
 import { calculatePricingScenario, emptyScenario, type PricingScenario } from '@/lib/domain/pricing/planning';
+import { SelectField } from '@/components/controls/select-field';
 
 const COST_FIELDS = [
   ['laborRate', 'Labor cost per hour'], ['materials', 'Materials cost'],
@@ -64,10 +65,7 @@ function ScenarioCard({ draft, items, onChange, onRemove }: { draft: Draft; item
     </div>
     <div className="space-y-1">
       <FieldLabel htmlFor={`${id}-catalog`}>Compare one catalog unit</FieldLabel>
-      <SelectInput id={`${id}-catalog`} value={catalogId} onChange={e => onChange(s, e.target.value)}>
-        <option value="">No comparison</option>
-        {items.map(item => <option key={item.id} value={item.id}>{item.name} · {item.unit} · {item.currency}</option>)}
-      </SelectInput>
+      <SelectField id={`${id}-catalog`} value={catalogId} onValueChange={(next) => onChange(s, next)} options={[{ value: '', label: 'No comparison' }, ...items.map((item) => ({ value: item.id, label: `${item.name} · ${item.unit} · ${item.currency}` }))]} />
       {item ? <p className="text-sm text-muted">Current catalog: {formatMoney(item.unitAmountMinor, item.currency)} / {item.unit}. Model delivery of one {item.unit} for a meaningful comparison.</p> : null}
     </div>
     <div className="border-t border-border pt-3" aria-live="polite" aria-atomic="true">

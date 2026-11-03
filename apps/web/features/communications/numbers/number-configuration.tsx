@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { CheckboxField } from '@/components/controls/checkbox-field';
-import { ErrorText, FieldLabel, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
 import {
   assignNumberAction,
   configureNumberAction,
@@ -13,6 +13,7 @@ import {
 } from '@/app/organizations/[organizationId]/comms/configuration/numbers/actions';
 import { NUMBER_PURPOSES, type PhoneNumber } from '@/lib/domain/reception/numbers';
 import { PURPOSE_LABEL } from './labels';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: NumberFormState = { error: null };
 
@@ -37,9 +38,7 @@ export function ConfigureNumberForm({ organizationId, number }: { organizationId
 
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor={`purpose-${number.id}`}>Used for</FieldLabel>
-        <SelectInput id={`purpose-${number.id}`} name="purpose" defaultValue={number.purpose}>
-          {NUMBER_PURPOSES.map((purpose) => <option key={purpose} value={purpose}>{PURPOSE_LABEL[purpose]}</option>)}
-        </SelectInput>
+        <SelectField id={`purpose-${number.id}`} name="purpose" defaultValue={number.purpose} options={[...NUMBER_PURPOSES.map((purpose) => ({ value: purpose, label: PURPOSE_LABEL[purpose] }))]} />
       </div>
 
       <fieldset className="flex flex-col gap-2">
@@ -70,10 +69,7 @@ export function AssignNumberForm({ organizationId, phoneNumberId, members }: {
     <form action={formAction} className="mt-3 flex flex-wrap items-center gap-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="phoneNumberId" value={phoneNumberId} />
-      <SelectInput name="memberId" required defaultValue="" aria-label="Assign to">
-        <option value="" disabled>Assign to…</option>
-        {members.map((member) => <option key={member.id} value={member.id}>{member.displayName}</option>)}
-      </SelectInput>
+      <SelectField name="memberId" required defaultValue="" aria-label="Assign to" options={[{ value: '', label: 'Assign to…', disabled: true }, ...members.map((member) => ({ value: member.id, label: member.displayName }))]} />
       <CheckboxField id={`default-${phoneNumberId}`} name="isDefault" label="Their default" />
       <Button type="submit" tone="secondary" size="small" disabled={pending}>{pending ? 'Assigning…' : 'Assign'}</Button>
       <ErrorText>{state.error}</ErrorText>

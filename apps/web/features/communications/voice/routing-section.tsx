@@ -7,7 +7,7 @@ import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
 import { DividedList, EmptyState, GroupHeading } from '@/components/surfaces/section';
-import { ErrorText, FieldLabel, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
 import {
   createRouteAction,
   readRouteTargetsAction,
@@ -23,6 +23,7 @@ import type {
   Route,
   RouteWhenMode,
 } from '@/lib/domain/reception/routing';
+import { SelectField } from '@/components/controls/select-field';
 
 type Member = { id: string; displayName: string };
 type NumberOption = { id: string; e164: string; label: string | null };
@@ -173,19 +174,9 @@ function OrderedMemberPicker({ label, members, selected, onChange }: {
         </ol>
       )}
       {available.length > 0 ? (
-        <SelectInput
-          className="mt-2"
-          size="small"
-          value=""
-          onChange={(event) => {
-            if (event.target.value) onChange([...selected, event.target.value]);
-          }}
-        >
-          <option value="">Add a member…</option>
-          {available.map((member) => (
-            <option key={member.id} value={member.id}>{member.displayName}</option>
-          ))}
-        </SelectInput>
+        <SelectField className="mt-2" size="small" value="" onValueChange={(next) => {
+            if (next) onChange([...selected, next]);
+          }} options={[{ value: '', label: 'Add a member…' }, ...available.map((member) => ({ value: member.id, label: member.displayName }))]} />
       ) : null}
     </div>
   );
@@ -287,41 +278,24 @@ function RouteEditor({ organizationId, route, numbers, members, routes, onDone }
 
       <div>
         <FieldLabel htmlFor="route-number">Number</FieldLabel>
-        <SelectInput id="route-number" className="mt-1" value={numberId} onChange={(event) => setNumberId(event.target.value)}>
-          <option value="">Organization default</option>
-          {numbers.map((number) => (
-            <option key={number.id} value={number.id}>{number.label ? `${formatPhoneForDisplay(number.e164)} (${number.label})` : formatPhoneForDisplay(number.e164)}</option>
-          ))}
-        </SelectInput>
+        <SelectField id="route-number" className="mt-1" value={numberId} onValueChange={(next) => setNumberId(next)} options={[{ value: '', label: 'Organization default' }, ...numbers.map((number) => ({ value: number.id, label: number.label ? `${formatPhoneForDisplay(number.e164)} (${number.label})` : formatPhoneForDisplay(number.e164) }))]} />
       </div>
 
       <div>
         <FieldLabel htmlFor="route-when">When</FieldLabel>
-        <SelectInput id="route-when" className="mt-1" value={whenMode} onChange={(event) => setWhenMode(event.target.value as RouteWhenMode)}>
-          <option value="always">Always</option>
-          <option value="business_hours">Business hours</option>
-        </SelectInput>
+        <SelectField id="route-when" className="mt-1" value={whenMode} onValueChange={(next) => setWhenMode(next as RouteWhenMode)} options={[{ value: 'always', label: 'Always' }, { value: 'business_hours', label: 'Business hours' }]} />
       </div>
 
       <div>
         <FieldLabel htmlFor="route-destination">Send to</FieldLabel>
-        <SelectInput id="route-destination" className="mt-1" value={destinationType} onChange={(event) => setDestinationType(event.target.value as DestinationType)}>
-          <option value="ai_receptionist">AI receptionist</option>
-          <option value="members">Team members</option>
-          <option value="external_number">An external number</option>
-          <option value="route">Another route</option>
-        </SelectInput>
+        <SelectField id="route-destination" className="mt-1" value={destinationType} onValueChange={(next) => setDestinationType(next as DestinationType)} options={[{ value: 'ai_receptionist', label: 'AI receptionist' }, { value: 'members', label: 'Team members' }, { value: 'external_number', label: 'An external number' }, { value: 'route', label: 'Another route' }]} />
       </div>
 
       {destinationType === 'members' ? (
         <>
           <div>
             <FieldLabel htmlFor="route-ring">Ring</FieldLabel>
-            <SelectInput id="route-ring" className="mt-1" value={ringStrategy} onChange={(event) => setRingStrategy(event.target.value as RingStrategy)}>
-              <option value="everyone">Everyone</option>
-              <option value="sequential">Sequential</option>
-              <option value="round_robin">Round robin</option>
-            </SelectInput>
+            <SelectField id="route-ring" className="mt-1" value={ringStrategy} onValueChange={(next) => setRingStrategy(next as RingStrategy)} options={[{ value: 'everyone', label: 'Everyone' }, { value: 'sequential', label: 'Sequential' }, { value: 'round_robin', label: 'Round robin' }]} />
           </div>
           {ringStrategy !== 'everyone' ? (
             <OrderedMemberPicker label="Order" members={members} selected={primaryMemberIds} onChange={setPrimaryMemberIds} />
@@ -344,17 +318,11 @@ function RouteEditor({ organizationId, route, numbers, members, routes, onDone }
           <PhoneInput id="route-external" type="tel" className="mt-1" placeholder="+14165550142" value={destinationExternalNumber}
             onChange={(event) => setDestinationExternalNumber(event.target.value)} />
         </div>
-      ) : destinationType === 'ai_receptionist' ? <Hint>Requires an enabled receptionist, assigned runtime and available budget below. If unavailable, this route uses its fallback.</Hint> : <SelectInput aria-label="Destination route" value={destinationRouteId} onChange={event => setDestinationRouteId(event.target.value)}><option value="">Choose route</option>{routes.filter(candidate => candidate.id !== route?.id).map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</SelectInput>}
+      ) : destinationType === 'ai_receptionist' ? <Hint>Requires an enabled receptionist, assigned runtime and available budget below. If unavailable, this route uses its fallback.</Hint> : <SelectField aria-label="Destination route" value={destinationRouteId} onValueChange={(next) => setDestinationRouteId(next)} options={[{ value: '', label: 'Choose route' }, ...routes.filter(candidate => candidate.id !== route?.id).map((candidate) => ({ value: candidate.id, label: candidate.name }))]} />}
 
       <div>
         <FieldLabel htmlFor="route-fallback">If unanswered</FieldLabel>
-        <SelectInput id="route-fallback" className="mt-1" value={fallbackType} onChange={(event) => setFallbackType(event.target.value as FallbackType)}>
-          <option value="voicemail">Message, then end</option>
-          <option value="members">Team members</option>
-          <option value="external_number">An external number</option>
-          <option value="none">Nothing — the call ends</option>
-          <option value="route">Another route</option>
-        </SelectInput>
+        <SelectField id="route-fallback" className="mt-1" value={fallbackType} onValueChange={(next) => setFallbackType(next as FallbackType)} options={[{ value: 'voicemail', label: 'Message, then end' }, { value: 'members', label: 'Team members' }, { value: 'external_number', label: 'An external number' }, { value: 'none', label: 'Nothing — the call ends' }, { value: 'route', label: 'Another route' }]} />
       </div>
       {fallbackType === 'voicemail' ? <div><FieldLabel htmlFor="fallback-message">Message before ending</FieldLabel><TextInput id="fallback-message" maxLength={2000} value={fallbackMessage} onChange={event => setFallbackMessage(event.target.value)} /><Hint>No recording is collected. An empty message ends the call.</Hint></div> : null}
       {fallbackType === 'members' ? (
@@ -363,7 +331,7 @@ function RouteEditor({ organizationId, route, numbers, members, routes, onDone }
       {fallbackType === 'external_number' ? (
         <PhoneInput type="tel" placeholder="+14165550142" value={fallbackExternalNumber} onChange={(event) => setFallbackExternalNumber(event.target.value)} />
       ) : null}
-      {fallbackType === 'route' ? <SelectInput aria-label="Fallback route" value={fallbackRouteId} onChange={event => setFallbackRouteId(event.target.value)}><option value="">Choose route</option>{routes.filter(candidate => candidate.id !== route?.id).map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</SelectInput> : null}
+      {fallbackType === 'route' ? <SelectField aria-label="Fallback route" value={fallbackRouteId} onValueChange={(next) => setFallbackRouteId(next)} options={[{ value: '', label: 'Choose route' }, ...routes.filter(candidate => candidate.id !== route?.id).map((candidate) => ({ value: candidate.id, label: candidate.name }))]} /> : null}
 
       {error ? <ErrorText>{error}</ErrorText> : null}
 

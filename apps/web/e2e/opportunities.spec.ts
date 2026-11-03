@@ -6,6 +6,7 @@ import { loadDemoContext, OWNER_STORAGE_STATE, COLLEAGUE_STORAGE_STATE } from '.
 import { DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { provisionOrganization } from '../lib/domain/platform/provision';
 import { createCustomer } from '../lib/domain/customers/customers';
+import { chooseOption, optionTexts, selectFieldValue } from './select-field';
 
 test.describe('Opportunity journey', () => {
   test.use({ storageState: OWNER_STORAGE_STATE });
@@ -33,7 +34,7 @@ test.describe('Opportunity journey', () => {
       await page.getByRole('button', { name: 'New opportunity stage', exact: true }).click();
       const drawer = page.getByRole('dialog', { name: 'New opportunity stage', exact: true });
       await drawer.getByLabel('Name', { exact: true }).fill(name);
-      await drawer.getByLabel('Classification', { exact: true }).selectOption(kind);
+      await chooseOption(drawer.getByLabel('Classification', { exact: true }), kind);
       await drawer.getByRole('button', { name: 'Save stage', exact: true }).click();
       await expect(drawer).toBeHidden();
       await expect(page.getByText(`(${kind})`, { exact: true })).toBeVisible();
@@ -44,21 +45,21 @@ test.describe('Opportunity journey', () => {
     const create = page.getByRole('dialog', { name: 'New opportunity', exact: true });
     await expect(create.getByLabel('Find customer')).toBeFocused();
     await create.getByLabel('Find customer').fill('Opportunity acceptance');
-    await expect(create.getByRole('option', { name: 'Opportunity acceptance customer' })).toHaveCount(1);
-    await create.getByLabel('Customer', { exact: true }).selectOption(customerId);
+    await expect.poll(() => optionTexts(create.getByLabel('Customer', { exact: true }))).toContain('Opportunity acceptance customer');
+    await chooseOption(create.getByLabel('Customer', { exact: true }), customerId);
     await create.getByLabel('Title', { exact: true }).fill('Workshop expansion');
-    await create.getByLabel('Opportunity stage').selectOption({ label: 'Discuss (open)' });
+    await chooseOption(create.getByLabel('Opportunity stage'), { label: 'Discuss (open)' });
     await create.getByLabel('Value').fill('1250.50');
     await create.getByLabel('Currency').fill('BAD');
-    await create.getByLabel('Owner').selectOption({ label: 'Opportunity owner' });
+    await chooseOption(create.getByLabel('Owner'), { label: 'Opportunity owner' });
     await create.getByLabel('Expected close').fill('2027-02-01');
     await create.getByLabel('Currency').fill('1');
     await create.getByRole('button', { name: 'Save opportunity' }).click();
     await expect(create.getByRole('alert')).toContainText('three-letter currency');
     await expect(create.getByLabel('Title', { exact: true })).toHaveValue('Workshop expansion');
-    await expect(create.getByLabel('Customer', { exact: true })).toHaveValue(customerId);
-    await expect(create.getByLabel('Opportunity stage')).not.toHaveValue('');
-    await expect(create.getByLabel('Owner')).not.toHaveValue('');
+    await expect(selectFieldValue(create.getByLabel('Customer', { exact: true }))).toHaveValue(customerId);
+    await expect(selectFieldValue(create.getByLabel('Opportunity stage'))).not.toHaveValue('');
+    await expect(selectFieldValue(create.getByLabel('Owner'))).not.toHaveValue('');
     await expect(create.getByLabel('Value')).toHaveValue('1250.50');
     await page.screenshot({ path: testInfo.outputPath('opportunity-error-drawer.png'), fullPage: true });
     await create.getByLabel('Currency').fill('CAD');
@@ -82,7 +83,7 @@ test.describe('Opportunity journey', () => {
     const discuss = page.getByRole('region', { name: 'Discuss', exact: true });
     await expect(discuss.getByRole('link', { name: 'Workshop expansion revised' })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('opportunity-pipeline.png'), fullPage: true });
-    await discuss.getByLabel('Stage for Workshop expansion revised').selectOption({ label: 'Agreed' });
+    await chooseOption(discuss.getByLabel('Stage for Workshop expansion revised'), { label: 'Agreed' });
     await discuss.getByRole('button', { name: 'Move', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Agreed', exact: true }).getByRole('link', { name: 'Workshop expansion revised' })).toBeVisible();
     await page.reload();
@@ -95,11 +96,11 @@ test.describe('Opportunity journey', () => {
     await expect(page.getByRole('dialog', { name: 'New opportunity' }).getByText('Opportunity acceptance customer', { exact: true })).toBeVisible();
     await page.getByRole('dialog', { name: 'New opportunity' }).getByRole('button', { name: 'Close', exact: true }).click();
     await page.goto(`${base}/crm/opportunities`);
-    await page.getByLabel('Classification', { exact: true }).selectOption('won');
+    await chooseOption(page.getByLabel('Classification', { exact: true }), 'won');
     await page.getByRole('button', { name: 'Apply filters' }).click();
     await expect(page).toHaveURL(/kind=won/);
     await page.reload();
-    await expect(page.getByLabel('Classification', { exact: true })).toHaveValue('won');
+    await expect(selectFieldValue(page.getByLabel('Classification', { exact: true }))).toHaveValue('won');
     await expect(page.getByRole('link', { name: 'Workshop expansion revised' })).toBeVisible();
     await page.goto(`${base}/crm`);
     await expect(page.getByRole('link', { name: /Open opportunities\s*0/ })).toBeVisible();

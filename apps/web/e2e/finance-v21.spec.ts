@@ -10,6 +10,7 @@ import { resetAppearance, saveAppearance } from '../lib/domain/identity/appearan
 import { setBrand } from '../lib/domain/branding/brand';
 import { startOfMonth, shiftMonth, todayInZone } from '../lib/domain/scheduling/window';
 import { formatMoney } from '../lib/domain/work-items/consumption';
+import { chooseOption, selectFieldValue } from './select-field';
 
 /**
  * Finance V2.1 in a real browser, against a disposable database: shared charts checked against the
@@ -62,23 +63,23 @@ test.describe.serial('Finance V2.1', () => {
       // Payments received, as a table, equals the summary's CAD trend (net of the correction).
       // The same values as a line, as bars and as a table.
       await widget(page, 'payments-trend').screenshot({ path: path.join(OUT, 'chart-payments-line.png') });
-      await widget(page, 'payments-trend').getByLabel('Payments received presentation').selectOption('bar');
+      await chooseOption(widget(page, 'payments-trend').getByLabel('Payments received presentation'), 'bar');
       await widget(page, 'payments-trend').screenshot({ path: path.join(OUT, 'chart-payments-bar-negative-correction.png') });
       await widget(page, 'aging').screenshot({ path: path.join(OUT, 'chart-receivables-aging.png') });
-      await widget(page, 'payments-trend').getByLabel('Payments received presentation').selectOption('table');
+      await chooseOption(widget(page, 'payments-trend').getByLabel('Payments received presentation'), 'table');
       await widget(page, 'payments-trend').screenshot({ path: path.join(OUT, 'chart-payments-table.png') });
       const trend = summary.trend.filter(row => row.currency === 'CAD').sort((a, b) => a.day.localeCompare(b.day)).map(row => formatMoney(Number(row.amount), 'CAD'));
       expect((await tableRows(page, 'payments-trend')).map(row => row[1])).toEqual(trend);
       expect(trend.some(value => value.startsWith('-'))).toBe(true);
       // Receivables aging per currency; USD is its own dataset, never added to CAD.
-      await widget(page, 'aging').getByLabel('Receivables aging presentation').selectOption('table');
+      await chooseOption(widget(page, 'aging').getByLabel('Receivables aging presentation'), 'table');
       const aging = (currency: string) => summary.aging.filter(row => row.currency === currency).map(row => formatMoney(Number(row.amount), currency));
       expect((await tableRows(page, 'aging')).map(row => row[1]).sort()).toEqual(aging('CAD').sort());
-      await widget(page, 'aging').getByLabel('Receivables aging currency').selectOption('USD');
+      await chooseOption(widget(page, 'aging').getByLabel('Receivables aging currency'), 'USD');
       expect((await tableRows(page, 'aging')).map(row => row[1])).toEqual(aging('USD'));
       await expect(widget(page, 'aging')).toContainText('Current outstanding receivables, as of today · USD');
       // Invoice status counts are the database's counts and add up to all issued invoices.
-      await widget(page, 'invoice-status').getByLabel('Invoices by status presentation').selectOption('table');
+      await chooseOption(widget(page, 'invoice-status').getByLabel('Invoices by status presentation'), 'table');
       const [all, unpaid, overdue] = await Promise.all([readFinanceInvoices(owner.db, fx.organizationId), readFinanceInvoices(owner.db, fx.organizationId, { status: 'outstanding' }), readFinanceInvoices(owner.db, fx.organizationId, { status: 'overdue' })]);
       expect(await tableRows(page, 'invoice-status')).toEqual([['Overdue', String(overdue.total)], ['Unpaid, not overdue', String(unpaid.total - overdue.total)], ['Settled', String(all.total - unpaid.total)]]);
       // Costs the read model does not define would read Unknown; recorded zero reads as recorded.
@@ -198,7 +199,7 @@ test.describe.serial('Finance V2.1', () => {
       await expect(widget(page, 'aging')).toHaveAttribute('data-span', '8');
       // Move a secondary widget earlier, and draw the trend as bars.
       await page.getByRole('button', { name: 'Move Financial activity earlier' }).click();
-      await widget(page, 'payments-trend').getByLabel('Payments received presentation').selectOption('bar');
+      await chooseOption(widget(page, 'payments-trend').getByLabel('Payments received presentation'), 'bar');
       const order = () => page.locator('[data-widget-id]').evaluateAll(nodes => nodes.map(node => (node as HTMLElement).dataset.widgetId));
       const edited = await order();
       expect(edited.indexOf('activity')).toBeLessThan(edited.indexOf('aging'));
@@ -209,13 +210,13 @@ test.describe.serial('Finance V2.1', () => {
       await page.waitForLoadState('networkidle');
       await expect(widget(page, 'aging')).toHaveAttribute('data-span', '8');
       expect(await order()).toEqual(edited);
-      await expect(widget(page, 'payments-trend').getByLabel('Payments received presentation')).toHaveValue('bar');
+      await expect(selectFieldValue(widget(page, 'payments-trend').getByLabel('Payments received presentation'))).toHaveValue('bar');
       await shot(page, 'saved-layout-desktop');
       // Another organization keeps its own (default) layout; coming back restores this one.
       await page.goto(`/organizations/${second}/finance`);
       await page.waitForLoadState('networkidle');
       await expect(widget(page, 'aging')).toHaveAttribute('data-span', '6');
-      await expect(widget(page, 'payments-trend').getByLabel('Payments received presentation')).toHaveValue('line');
+      await expect(selectFieldValue(widget(page, 'payments-trend').getByLabel('Payments received presentation'))).toHaveValue('line');
       await page.goto(base);
       await page.waitForLoadState('networkidle');
       await expect(widget(page, 'aging')).toHaveAttribute('data-span', '8');

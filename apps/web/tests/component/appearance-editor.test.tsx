@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { designProperties } from '@gold/ui/design-system';
 import { AppearanceEditor } from '@/features/appearance/appearance-editor';
 import { updateAppearanceAction } from '@/app/settings/account/actions';
+import { chooseOption, fieldValue } from '../support/select-field';
 
 const refresh = vi.hoisted(() => vi.fn());
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
@@ -61,13 +62,13 @@ it('resolves the preview through the shared design tokens, including overrides',
   for (const [name, value] of Object.entries(resolved({ preset: 'expressive' }))) expect(token(name)).toBe(value);
   await user.click(screen.getByRole('radio', { name: 'Minimal' }));
   expect(token('--visual-elevation')).toBe(resolved({ preset: 'minimal' })['--visual-elevation']);
-  await user.selectOptions(screen.getByLabelText('Shape'), 'square');
-  await user.selectOptions(screen.getByLabelText('Density'), 'compact');
-  await user.selectOptions(screen.getByLabelText('Motion'), 'reduced');
+  await chooseOption(screen.getByLabelText('Shape'), 'square');
+  await chooseOption(screen.getByLabelText('Density'), 'compact');
+  await chooseOption(screen.getByLabelText('Motion'), 'reduced');
   for (const [name, value] of Object.entries(resolved({ preset: 'minimal', shape: 'square', density: 'compact' }))) expect(token(name)).toBe(value);
   expect(preview()).toHaveAttribute('data-density', 'compact');
   expect(preview()).toHaveAttribute('data-motion', 'reduced');
-  await user.selectOptions(screen.getByLabelText('Shape'), '');
+  await chooseOption(screen.getByLabelText('Shape'), '');
   expect(token('--visual-radius')).toBe(resolved({ preset: 'minimal' })['--visual-radius']);
 });
 
@@ -75,9 +76,9 @@ it('previews drafts without saving, discards, and keeps the preview scheme indep
   const user = userEvent.setup(); render(<AppearanceEditor saved={{}} />);
   await user.click(screen.getByRole('radio', { name: 'Expressive' }));
   expect(preview()).toHaveAttribute('data-visual-preset', 'expressive');
-  await user.selectOptions(screen.getByLabelText('Preview theme'), 'dark');
+  await chooseOption(screen.getByLabelText('Preview theme'), 'dark');
   expect(preview()).toHaveAttribute('data-appearance', 'dark');
-  expect(screen.getByLabelText('Theme')).toHaveValue('system');
+  expect(fieldValue(screen.getByLabelText('Theme'))).toBe('system');
   expect(updateAppearanceAction).not.toHaveBeenCalled();
   await user.click(screen.getByRole('button', { name: 'Discard changes' }));
   expect(preview()).not.toHaveAttribute('data-visual-preset');
@@ -87,13 +88,13 @@ it('previews drafts without saving, discards, and keeps the preview scheme indep
 
 it('never turns the preview theme into an unsaved theme change', async () => {
   const user = userEvent.setup(); render(<AppearanceEditor saved={{ appearance: 'light' }} />);
-  await user.selectOptions(screen.getByLabelText('Preview theme'), 'dark');
+  await chooseOption(screen.getByLabelText('Preview theme'), 'dark');
   expect(preview()).toHaveAttribute('data-appearance', 'dark');
-  expect(screen.getByLabelText('Theme')).toHaveValue('light');
+  expect(fieldValue(screen.getByLabelText('Theme'))).toBe('light');
   expect(screen.getByRole('status')).toHaveTextContent('Using saved appearance');
   expect(screen.getByRole('button', { name: 'Save appearance' })).toBeDisabled();
-  await user.selectOptions(screen.getByLabelText('Theme'), 'dark');
-  await user.selectOptions(screen.getByLabelText('Preview theme'), 'light');
+  await chooseOption(screen.getByLabelText('Theme'), 'dark');
+  await chooseOption(screen.getByLabelText('Preview theme'), 'light');
   vi.mocked(updateAppearanceAction).mockResolvedValueOnce({ selection: { appearance: 'dark' } });
   await user.click(screen.getByRole('button', { name: 'Save appearance' }));
   await screen.findByText('Appearance saved.');
@@ -104,9 +105,9 @@ it('never turns the preview theme into an unsaved theme change', async () => {
 it('saves only on explicit action and resets through the domain action', async () => {
   vi.mocked(updateAppearanceAction).mockResolvedValueOnce({ selection: { appearance: 'light', density: 'compact', preset: 'layered' } }).mockResolvedValueOnce({ selection: {} });
   const user = userEvent.setup(); render(<AppearanceEditor saved={{}} />);
-  await user.selectOptions(screen.getByLabelText('Theme'), 'light');
+  await chooseOption(screen.getByLabelText('Theme'), 'light');
   await user.click(screen.getByRole('radio', { name: 'Layered' }));
-  await user.selectOptions(screen.getByLabelText('Density'), 'compact');
+  await chooseOption(screen.getByLabelText('Density'), 'compact');
   await user.click(screen.getByRole('button', { name: 'Save appearance' }));
   await screen.findByText('Appearance saved.');
   expect(refresh).toHaveBeenCalled();
@@ -114,7 +115,7 @@ it('saves only on explicit action and resets through the domain action', async (
   expect(screen.getByRole('radio', { name: 'Layered' })).toBeChecked();
   await user.click(screen.getByRole('button', { name: 'Reset to defaults' }));
   await screen.findByText('Defaults restored.');
-  expect(screen.getByLabelText('Density')).toHaveValue('');
+  expect(fieldValue(screen.getByLabelText('Density'))).toBe('');
   expect(screen.getByRole('radio', { name: 'Platform default' })).toBeChecked();
   expect(updateAppearanceAction).toHaveBeenLastCalledWith({ appearance: 'light', density: 'compact', preset: 'layered' }, true);
 });
@@ -134,10 +135,10 @@ it('locks the choices while saving', async () => {
 it('retains rejected drafts and exposes an actionable error instead of a saved state', async () => {
   vi.mocked(updateAppearanceAction).mockResolvedValue({ error: 'Save refused. Try again.' });
   const user = userEvent.setup(); render(<AppearanceEditor saved={{}} />);
-  await user.selectOptions(screen.getByLabelText('Shape'), 'square');
+  await chooseOption(screen.getByLabelText('Shape'), 'square');
   await user.click(screen.getByRole('button', { name: 'Save appearance' }));
   await screen.findByText('Save refused. Try again.');
   await waitFor(() => expect(screen.getByRole('button', { name: 'Save appearance' })).toBeEnabled());
-  expect(screen.getByLabelText('Shape')).toHaveValue('square');
+  expect(fieldValue(screen.getByLabelText('Shape'))).toBe('square');
   expect(refresh).not.toHaveBeenCalled();
 });

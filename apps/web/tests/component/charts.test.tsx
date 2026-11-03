@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHART_FIXTURES } from '@/components/charts/chart-fixtures';
+import { chooseOption, optionLabels, optionValues } from '../support/select-field';
 
 /**
  * The shared chart family, rendered. Every presentation must show the same values as its table,
@@ -31,13 +32,12 @@ const plotSvg = (container: HTMLElement) => container.querySelector('[aria-roled
 
 describe('every presentation shows the same values', () => {
   it('draws payments as a line, offers bar and table, and the table lists exactly the supplied labels', async () => {
-    const user = userEvent.setup();
     const { data, title } = CHART_FIXTURES.paymentsWithCorrections;
     render(<Chart title={title} data={data} />);
     const select = screen.getByLabelText(`${title} presentation`);
-    expect([...select.querySelectorAll('option')].map(option => option.textContent)).toEqual(['Line', 'Vertical bars', 'Table']);
+    expect(await optionLabels(select)).toEqual(['Line', 'Vertical bars', 'Table']);
     expect(screen.getByText('October 2026 · CAD')).toBeVisible();
-    await user.selectOptions(select, 'table');
+    await chooseOption(select, 'table');
     expect(cells(screen.getByRole('table'))).toEqual([['Oct 1', 'CA$420.50'], ['Oct 2', 'CA$0.00'], ['Oct 9', '-CA$25.00'], ['Oct 20', 'CA$1,200.00'], ['Oct 24', 'CA$229.50']]);
     // A negative correction is marked, not hidden; zero stays a value.
     expect(within(screen.getByRole('table')).getByText('-CA$25.00')).toHaveClass('text-danger');
@@ -57,12 +57,12 @@ describe('every presentation shows the same values', () => {
     expect(cells(screen.getByRole('table'))[1]).toEqual(['Maple Dental', 'CA$443.00', 'Unknown']);
   });
 
-  it('offers the donut only for parts of one whole', () => {
+  it('offers the donut only for parts of one whole', async () => {
     render(<Chart title="Invoices by status" data={CHART_FIXTURES.invoiceStatus.data} />);
-    expect([...screen.getByLabelText('Invoices by status presentation').querySelectorAll('option')].map(o => o.value)).toEqual(['stacked-bar', 'donut', 'table']);
+    expect(await optionValues(screen.getByLabelText('Invoices by status presentation'))).toEqual(['stacked-bar', 'donut', 'table']);
     cleanup();
     render(<Chart title="Receivables aging" data={CHART_FIXTURES.agingLongLabels.data} />);
-    expect([...screen.getByLabelText('Receivables aging presentation').querySelectorAll('option')].map(o => o.value)).toEqual(['horizontal-bar', 'bar', 'table']);
+    expect(await optionValues(screen.getByLabelText('Receivables aging presentation'))).toEqual(['horizontal-bar', 'bar', 'table']);
   });
 
   it('stacks a single-series composition as one bar of parts, each part labelled with its exact value', () => {

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { CapabilitySelector } from '@/features/tenancy/capability-selector';
 import type { Capability } from '@/lib/domain/tenancy/capabilities';
 import { ROLE_PRESETS } from '@/lib/domain/tenancy/role-presets';
+import { SelectField } from '@/components/controls/select-field';
 
 /**
  * The fields Create and Edit share — name and the capability checklist — so the two Sheets stay
@@ -44,12 +45,7 @@ export function RoleEditorFields({
       {withPresets ? (
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-muted">Start from</span>
-          <SelectInput value={preset} onChange={(event) => setPreset(event.target.value)} aria-label="Start from a preset">
-            <option value="">Nothing ticked</option>
-            {ROLE_PRESETS.map((candidate) => (
-              <option key={candidate.key} value={candidate.key}>{candidate.label}</option>
-            ))}
-          </SelectInput>
+          <SelectField value={preset} onValueChange={(next) => setPreset(next)} aria-label="Start from a preset" options={[{ value: '', label: 'Nothing ticked' }, ...ROLE_PRESETS.map((candidate) => ({ value: candidate.key, label: candidate.label }))]} />
         </label>
       ) : null}
       {/* Keyed by preset so choosing another remounts the checklist with that template's boxes ticked. */}

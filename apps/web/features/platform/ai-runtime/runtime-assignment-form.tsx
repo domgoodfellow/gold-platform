@@ -3,10 +3,11 @@
 import { useActionState, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/controls/button';
-import { ErrorText, FieldLabel, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
 import { saveRuntimeAssignmentAction } from '@/app/platform/ai-runtime/actions';
 import { RUNTIME_ASSIGNMENT_FORM_INITIAL } from '@/app/platform/ai-runtime/action-states';
 import type { AiCapability } from '@/lib/domain/ai/runtime';
+import { SelectField } from '@/components/controls/select-field';
 
 export type RuntimeService = { id: string; providerKey: string; providerLabel: string; label: string };
 export type RuntimeAccount = { id: string; providerKey: string; label: string; isUsable: boolean };
@@ -47,32 +48,14 @@ export function RuntimeAssignmentForm({
       <input type="hidden" name="capability" value={capability} />
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="providerServiceId">Provider service</FieldLabel>
-        <SelectInput
-          id="providerServiceId"
-          name="providerServiceId"
-          value={serviceId}
-          onChange={(event) => setServiceId(event.target.value)}
-        >
-          {services.map((service) => (
-            <option key={service.id} value={service.id}>
-              {service.providerLabel} — {service.label}
-            </option>
-          ))}
-        </SelectInput>
+        <SelectField id="providerServiceId" name="providerServiceId" value={serviceId} onValueChange={(next) => setServiceId(next)} options={[...services.map((service) => ({ value: service.id, label: `${service.providerLabel} — ${service.label}` }))]} />
       </div>
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="providerAccountId">Provider account</FieldLabel>
         {accountsForProvider.length === 0 ? (
           <Hint>No account configured for {selectedService?.providerLabel ?? 'this provider'} yet.</Hint>
         ) : (
-          <SelectInput id="providerAccountId" name="providerAccountId" defaultValue={current?.providerAccountId ?? accountsForProvider[0]?.id}>
-            {accountsForProvider.map((account) => (
-              <option key={account.id} value={account.id} disabled={!account.isUsable}>
-                {account.label}
-                {account.isUsable ? '' : ' (not ready)'}
-              </option>
-            ))}
-          </SelectInput>
+          <SelectField id="providerAccountId" name="providerAccountId" defaultValue={current?.providerAccountId ?? accountsForProvider[0]?.id} options={[...accountsForProvider.map((account) => ({ value: account.id, label: `${account.label}${account.isUsable ? '' : ' (not ready)'}`, disabled: !account.isUsable }))]} />
         )}
       </div>
       <div className="flex flex-col gap-1">

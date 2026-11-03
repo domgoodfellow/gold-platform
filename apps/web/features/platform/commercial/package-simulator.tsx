@@ -6,10 +6,11 @@ import { simulatePackageAction, saveDraftScenarioAction, type DraftScenarioState
 import { PageDrawer, PageDrawerContent, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { Button } from '@/components/controls/button';
-import { ErrorText, FieldLabel, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { ErrorText, FieldLabel, TextArea, TextInput } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import type { DraftScenarioSummary, PackageEconomicsResult, SimulationProfile, SimulationSource } from '@/lib/domain/commercial/package-economics';
+import { SelectField } from '@/components/controls/select-field';
 
 type Option = { id: string; label: string };
 type Props = {
@@ -46,7 +47,7 @@ export function DraftScenarioDrawer({ platformOrganizationId, plans, addons, met
           <input type="hidden" name="platformOrganizationId" value={platformOrganizationId} />
           <div className="grid gap-1"><FieldLabel htmlFor="scenario-name">Name</FieldLabel><TextInput id="scenario-name" name="name" placeholder="NextFund candidate" required /></div>
           <div className="grid gap-1"><FieldLabel htmlFor="scenario-notes">Notes</FieldLabel><TextArea id="scenario-notes" name="notes" rows={2} /></div>
-          <div className="grid gap-1"><FieldLabel htmlFor="scenario-plan">Candidate Plan</FieldLabel><SelectInput id="scenario-plan" name="planId" required>{plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.label}</option>)}</SelectInput></div>
+          <div className="grid gap-1"><FieldLabel htmlFor="scenario-plan">Candidate Plan</FieldLabel><SelectField id="scenario-plan" name="planId" required options={[...plans.map((plan) => ({ value: plan.id, label: plan.label }))]} /></div>
           <div className="grid grid-cols-[1fr_5rem] gap-3">
             <div className="grid gap-1"><FieldLabel htmlFor="scenario-prices">Candidate monthly prices</FieldLabel><TextInput id="scenario-prices" name="candidatePrices" placeholder="499, 699, 899, 999" required /></div>
             <div className="grid gap-1"><FieldLabel htmlFor="scenario-currency">Currency</FieldLabel><TextInput id="scenario-currency" name="currency" defaultValue="CAD" minLength={3} maxLength={3} required /></div>
@@ -101,8 +102,8 @@ export function PackageSimulator(props: Props) {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="grid gap-1"><FieldLabel htmlFor="simulation-source-type">Source</FieldLabel><SelectInput id="simulation-source-type" value={sourceType} onChange={(event) => { const type = event.target.value as SimulationSource['type']; const id = sourceOptions(type, props)[0]?.id ?? ''; setSourceType(type); setSourceId(id); run({ sourceType: type, sourceId: id }); }}>{Object.entries(sourceLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectInput></div>
-        <div className="grid min-w-56 gap-1"><FieldLabel htmlFor="simulation-source">Selection</FieldLabel><SelectInput id="simulation-source" value={sourceId} onChange={(event) => { setSourceId(event.target.value); run({ sourceId: event.target.value }); }}>{options.length ? options.map((option) => <option key={option.id} value={option.id}>{option.label}</option>) : <option value="">None available</option>}</SelectInput></div>
+        <div className="grid gap-1"><FieldLabel htmlFor="simulation-source-type">Source</FieldLabel><SelectField id="simulation-source-type" value={sourceType} onValueChange={(next) => { const type = next as SimulationSource['type']; const id = sourceOptions(type, props)[0]?.id ?? ''; setSourceType(type); setSourceId(id); run({ sourceType: type, sourceId: id }); }} options={[...Object.entries(sourceLabels).map(([value, label]) => ({ value: value, label: label }))]} /></div>
+        <div className="grid min-w-56 gap-1"><FieldLabel htmlFor="simulation-source">Selection</FieldLabel><SelectField id="simulation-source" value={sourceId} onValueChange={(next) => { setSourceId(next); run({ sourceId: next }); }} options={[...(options.length ? [...options.map((option) => ({ value: option.id, label: option.label }))] : [{ value: '', label: 'None available' }])]} /></div>
         <DraftScenarioDrawer platformOrganizationId={props.platformOrganizationId} plans={props.plans} addons={props.addons} meters={props.meters} />
       </div>
       <div className="flex flex-wrap gap-2" aria-label="Usage scenario">{(Object.keys(profileLabels) as SimulationProfile[]).map((value) => <Button key={value} type="button" tone={profile === value ? 'primary' : 'secondary'} size="small" disabled={pending} onClick={() => { setProfile(value); run({ profile: value }); }}>{profileLabels[value]}</Button>)}</div>

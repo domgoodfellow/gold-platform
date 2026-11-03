@@ -9,6 +9,7 @@ import { DEFAULT_PORTAL_CONTENT } from '@/lib/domain/portal/composition';
 import { DEFAULT_BRAND } from '@/lib/domain/branding/brand';
 import { PortalModulePresenter } from '@/features/studio/portal/portal-renderer';
 import type { PortalDefinition, PortalRevision } from '@/lib/domain/portal/definitions';
+import { chooseOption } from '../support/select-field';
 vi.mock('@/app/organizations/[organizationId]/studio/portal/actions', () => ({ portalAction: vi.fn() }));
 function render(children:ReactNode){return renderBase(<WorkspaceRailProvider>{children}</WorkspaceRailProvider>);}
 beforeEach(()=>{window.matchMedia=vi.fn().mockImplementation((query:string)=>({matches:false,media:query,addEventListener:vi.fn(),removeEventListener:vi.fn()}));});
@@ -21,7 +22,7 @@ describe('Portal workbench lifecycle and accessible composition',()=>{
   const user=userEvent.setup();render(<PortalWorkbench {...common} definition={definition} history={[]}/>);
   await user.click(screen.getByRole('button',{name:'Add Services'}));
   expect(screen.getByLabelText('Module heading')).toHaveValue('Your services');
-  await user.selectOptions(screen.getByLabelText('Presentation'),'cards');
+  await chooseOption(screen.getByLabelText('Presentation'),'cards');
   expect(screen.getByRole('region',{name:'Canvas'}).querySelector('[data-portal-module="services"]')).toHaveAttribute('data-portal-variant','cards');
   expect(screen.getByText('Example website implementation')).toBeInTheDocument();
   expect(screen.getByRole('button',{name:'Save draft'})).toBeEnabled();

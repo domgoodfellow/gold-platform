@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import { DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { loadDemoContext, OWNER_STORAGE_STATE, COLLEAGUE_STORAGE_STATE } from './helpers';
+import { chooseOption, selectFieldValue } from './select-field';
 
 test.use({ storageState: OWNER_STORAGE_STATE });
 
@@ -52,8 +53,8 @@ test('the business profile persists, proposes a clock without applying it, and k
 
   await page.getByLabel('Legal name').fill('Grachtwerk Verhuur B.V.');
   await page.getByLabel('Industry').fill('Equipment rental');
-  await page.getByLabel('Country').selectOption('CA');
-  await page.getByLabel('Province or territory').selectOption('QC');
+  await chooseOption(page.getByLabel('Country'), 'CA');
+  await chooseOption(page.getByLabel('Province or territory'), 'QC');
   await page.getByLabel('City').fill('Montreal');
   await page.getByLabel('Postal code').fill('H2X 1Y4');
   await page.getByLabel('Street address').fill('123 Rue Example');
@@ -71,11 +72,11 @@ test('the business profile persists, proposes a clock without applying it, and k
   await expect(page.getByText('This business profile is not complete yet')).toHaveCount(0);
 
   // Moving the location proposes the new clock; it is not applied until accepted.
-  await page.getByLabel('Province or territory').selectOption('BC');
+  await chooseOption(page.getByLabel('Province or territory'), 'BC');
   await expect(page.getByText(/usually runs on Pacific/)).toBeVisible();
   await page.getByRole('button', { name: 'Use it' }).first().click();
   await expect(page.getByText(/Pacific/).first()).toBeVisible();
-  await page.getByLabel('Province or territory').selectOption('QC');
+  await chooseOption(page.getByLabel('Province or territory'), 'QC');
 
   // The address is private: the public profile does not carry it.
   await page.goto(`/organizations/${organizationId}/settings/public-profile`);
@@ -84,7 +85,7 @@ test('the business profile persists, proposes a clock without applying it, and k
   // Leave the shared demo business as it was found.
   await page.goto(`/organizations/${organizationId}/settings/general`);
   for (const label of ['Legal name', 'Industry', 'City', 'Postal code', 'Street address', 'Unit or suite', 'Email', 'Phone', 'Website']) await page.getByLabel(label).fill('');
-  await page.getByLabel('Country').selectOption('');
+  await chooseOption(page.getByLabel('Country'), '');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Business profile saved' })).toBeVisible();
 });
@@ -165,8 +166,8 @@ test.describe('founding a business', () => {
     await expect(page).toHaveURL(/\/organizations$/);
 
     await page.getByLabel('What is the business called?').fill(`Montreal Test ${Date.now()}`);
-    await page.getByLabel('Country').selectOption('CA');
-    await page.getByLabel('Province or territory').selectOption('QC');
+    await chooseOption(page.getByLabel('Country'), 'CA');
+    await chooseOption(page.getByLabel('Province or territory'), 'QC');
     await page.getByLabel('City').fill('Montreal');
     await expect(page.getByText(/Based in Montreal, Quebec, Canada/)).toBeVisible();
     await expect(page.getByText(/Eastern Time/)).toBeVisible();
@@ -174,10 +175,10 @@ test.describe('founding a business', () => {
 
     // Overriding the suggestion is deliberate and survives a later change of region.
     await page.getByRole('button', { name: 'Edit' }).click();
-    await page.getByLabel('Currency').selectOption('USD');
-    await page.getByLabel('Province or territory').selectOption('BC');
-    await expect(page.getByLabel('Currency')).toHaveValue('USD');
-    await page.getByLabel('Province or territory').selectOption('QC');
+    await chooseOption(page.getByLabel('Currency'), 'USD');
+    await chooseOption(page.getByLabel('Province or territory'), 'BC');
+    await expect(selectFieldValue(page.getByLabel('Currency'))).toHaveValue('USD');
+    await chooseOption(page.getByLabel('Province or territory'), 'QC');
     await page.getByLabel('What kind of business').fill('Equipment rental');
     await page.getByRole('button', { name: 'Create business' }).click();
 

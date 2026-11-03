@@ -13,10 +13,17 @@ export function cx(...parts: (string | false | null | undefined)[]): string {
 }
 
 /**
- * The one focus ring, shared by every interactive control. `--accent-text`, not `--accent`
- * — a tenant's accent can be too close to the page to read against, and the ring is the one thing
- * whose job is to stay visible (see palette.ts). `focus-visible` so a mouse click doesn't leave a
- * ring on a control that was only clicked, not tabbed to.
+ * The one focus indicator, for an element the global `:focus-visible` rule in globals.css does not
+ * already match (a focusable region or chart, a custom control). It is the same declaration, not a
+ * second treatment: a 2px outline in `--focus-color` on the element's own edge, which follows its
+ * corner radius and leaves no gap. `--focus-color` is the page's text colour, never a tenant
+ * accent, so it stays visible whatever the brand (see palette.ts). `focus-visible` so a mouse click
+ * doesn't leave it behind. Never add a ring or offset beside it; set `--focus-offset` to draw it
+ * inside an edge that would clip it.
  */
 export const FOCUS_RING =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-text focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+  'focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-[var(--focus-offset,0px)] focus-visible:outline-[color:var(--focus-color)]';
+
+/** The same indicator on a choice whose own input is visually hidden: the visible card or label wrapping it shows the focus. */
+export const FOCUS_RING_WITHIN =
+  'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-solid has-[:focus-visible]:outline-offset-[var(--focus-offset,0px)] has-[:focus-visible]:outline-[color:var(--focus-color)]';

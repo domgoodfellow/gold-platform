@@ -8,8 +8,9 @@ import { getAutomationSummary } from '@/lib/domain/automation/monitoring';
 import { workspaceAncestry } from '@/lib/navigation';
 import { RulesTable } from '@/features/automations/rules/rules-table';
 import { NewAutomationSheet } from '@/features/automations/rules/new-automation-sheet';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
+import { SelectField } from '@/components/controls/select-field';
 
 export const dynamic = 'force-dynamic';
 export default async function AutomationRulesPage({
@@ -73,46 +74,10 @@ export default async function AutomationRulesPage({
           className="w-52"
           size="small"
         />
-        <SelectInput
-          name="status"
-          aria-label="Rule status"
-          defaultValue={first('status') ?? ''}
-          size="small"
-        >
-          <option value="">All statuses</option>
-          <option value="enabled">Enabled</option>
-          <option value="disabled">Disabled</option>
-        </SelectInput>
-        <SelectInput
-          name="trigger"
-          aria-label="Trigger kind"
-          defaultValue={first('trigger') ?? ''}
-          size="small"
-        >
-          <option value="">All triggers</option>
-          <option value="event">Event</option>
-          <option value="schedule">Schedule</option>
-          <option value="external_reading">External reading</option>
-          <option value="counter_threshold">Counter threshold</option>
-        </SelectInput>
-        <SelectInput
-          name="health"
-          aria-label="Configuration health"
-          defaultValue={first('health') ?? ''}
-          size="small"
-        >
-          <option value="">All configurations</option>
-          <option value="attention">Needs attention</option>
-        </SelectInput>
-        <SelectInput
-          name="sort"
-          aria-label="Sort rules"
-          defaultValue={first('sort') ?? 'recent'}
-          size="small"
-        >
-          <option value="recent">Newest first</option>
-          <option value="name">Name</option>
-        </SelectInput>
+        <SelectField name="status" aria-label="Rule status" defaultValue={first('status') ?? ''} size="small" options={[{ value: '', label: 'All statuses' }, { value: 'enabled', label: 'Enabled' }, { value: 'disabled', label: 'Disabled' }]} />
+        <SelectField name="trigger" aria-label="Trigger kind" defaultValue={first('trigger') ?? ''} size="small" options={[{ value: '', label: 'All triggers' }, { value: 'event', label: 'Event' }, { value: 'schedule', label: 'Schedule' }, { value: 'external_reading', label: 'External reading' }, { value: 'counter_threshold', label: 'Counter threshold' }]} />
+        <SelectField name="health" aria-label="Configuration health" defaultValue={first('health') ?? ''} size="small" options={[{ value: '', label: 'All configurations' }, { value: 'attention', label: 'Needs attention' }]} />
+        <SelectField name="sort" aria-label="Sort rules" defaultValue={first('sort') ?? 'recent'} size="small" options={[{ value: 'recent', label: 'Newest first' }, { value: 'name', label: 'Name' }]} />
         <Button size="small" tone="secondary">
           Apply filters
         </Button>

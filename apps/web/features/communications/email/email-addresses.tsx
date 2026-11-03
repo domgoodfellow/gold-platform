@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import {
   addEmailAddressAction,
@@ -10,6 +10,7 @@ import {
   type EmailDomainState,
 } from '@/app/organizations/[organizationId]/settings/email/actions';
 import type { EmailIdentityView } from '@/lib/domain/email/identities';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: EmailDomainState = { error: null, notice: null, done: false };
 
@@ -53,11 +54,7 @@ export function AddAddressForm({ organizationId, domains }: { organizationId: st
       <div className="flex flex-wrap items-center gap-2">
         <TextInput name="local" required autoComplete="off" placeholder="hello" aria-label="Address, before the @" className="w-40" />
         <span aria-hidden>@</span>
-        <SelectInput name="resourceId" aria-label="Verified domain" required>
-          {usable.map((domain) => (
-            <option key={domain.resourceId} value={domain.resourceId}>{domain.domain}</option>
-          ))}
-        </SelectInput>
+        <SelectField name="resourceId" aria-label="Verified domain" required options={[...usable.map((domain) => ({ value: domain.resourceId, label: domain.domain }))]} />
         <TextInput name="displayName" autoComplete="off" placeholder="Name shown to the recipient (optional)" aria-label="Display name" className="w-full max-w-72" />
         <Button type="submit" disabled={pending}>{pending ? 'Adding…' : 'Add address'}</Button>
       </div>

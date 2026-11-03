@@ -57,8 +57,8 @@ describe('entry — one decision, made in one place', () => {
 describe('the cockpit — a map of existing configuration, not a second model', () => {
   it('builds its areas from computeSetupOverview and holds no field of any workspace', () => {
     expect(SETUP_PAGE).toContain('computeSetupOverview');
-    expect(SETUP_PAGE).not.toMatch(/<(TextInput|SelectInput|TextArea)/);
-    expect(COCKPIT).not.toMatch(/<(input|form|TextInput|SelectInput|TextArea)/);
+    expect(SETUP_PAGE).not.toMatch(/<(TextInput|SelectField|SelectInput|TextArea)/);
+    expect(COCKPIT).not.toMatch(/<(input|form|TextInput|SelectField|SelectInput|TextArea)/);
   });
 
   it('shows progress as a count of areas, with the semantic count leading', () => {

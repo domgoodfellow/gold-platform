@@ -3,7 +3,7 @@
 import { useActionState, useId } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
 import type { ResourceCapability } from '@/lib/domain/resources/resource-capabilities';
 import {
@@ -11,6 +11,7 @@ import {
   removeResourceCapabilityAction,
   type ResourceEditState,
 } from '@/app/organizations/[organizationId]/resources/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: ResourceEditState = { error: null };
 
@@ -131,14 +132,7 @@ function AddCapability({
           <label htmlFor={selectId} className="text-sm text-muted">
             Add a capability
           </label>
-          <SelectInput id={selectId} name="capabilityId" size="small" defaultValue="">
-            <option value="">Choose…</option>
-            {available.map((capability) => (
-              <option key={capability.id} value={capability.id}>
-                {capability.name}
-              </option>
-            ))}
-          </SelectInput>
+          <SelectField id={selectId} name="capabilityId" size="small" defaultValue="" options={[{ value: '', label: 'Choose…' }, ...available.map((capability) => ({ value: capability.id, label: capability.name }))]} />
         </>
       ) : null}
       {mayAddWord ? (

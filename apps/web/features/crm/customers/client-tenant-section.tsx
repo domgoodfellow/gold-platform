@@ -3,10 +3,11 @@
 import { useActionState, useId, useState, useTransition } from 'react';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { FormField } from '@/components/controls/form';
-import { ErrorText, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { ErrorText, TextArea, TextInput } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { relationshipAction, searchExistingClientTenants } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/service-actions';
 import type { ClientTenantRelationship } from '@/lib/domain/customers/client-tenants';
+import { SelectField } from '@/components/controls/select-field';
 
 function EndRelationship({ organizationId, customerId, relationshipId }: { organizationId: string; customerId: string; relationshipId: string }) {
   const [state, action, pending] = useActionState(relationshipAction, { error: null, saved: false });
@@ -41,7 +42,7 @@ export function ClientTenantSection({ organizationId, customerId, relationships,
         <FormField id={`${id}-search`} label="Find organization">{props => <TextInput {...props} value={search} onChange={event => setSearch(event.target.value)} maxLength={100}/>}</FormField><Button type="submit" tone="secondary" disabled={searching}>{searching ? 'Searching…' : 'Search organizations'}</Button>
       </form><ErrorText role="alert">{searchError}</ErrorText><form action={action} className="mt-4 max-w-lg space-y-4">
       <input type="hidden" name="organizationId" value={organizationId}/><input type="hidden" name="customerId" value={customerId}/><input type="hidden" name="operation" value="link"/>
-      <FormField id={`${id}-tenant`} label="Organization">{props => <SelectInput {...props} name="tenantId" required defaultValue=""><option value="" disabled>Select organization</option>{tenantOptions.filter(t => t.id !== organizationId).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</SelectInput>}</FormField>
+      <FormField id={`${id}-tenant`} label="Organization">{props => <SelectField {...props} name="tenantId" required defaultValue="" options={[{ value: '', label: 'Select organization', disabled: true }, ...tenantOptions.filter(t => t.id !== organizationId).map((t) => ({ value: t.id, label: t.name }))]} />}</FormField>
       {tenantOptions.length >= 100 ? <p className="text-sm text-muted">Showing the newest matches. Search to refine.</p> : null}
       <FormField id={`${id}-basis`} label="Verified association basis" hint="Record the agreement you verified. This action also requires management permission in the receiving organization.">{props => <TextArea {...props} name="authorityBasis" required minLength={10} maxLength={460}/>}</FormField>
       <ErrorText role="alert">{state.error}</ErrorText>{state.saved ? <p role="status" className="text-sm">Organization linked.</p> : null}

@@ -1,6 +1,6 @@
 'use client';
 
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@gold/ui/components/field';
 import { useActionState, useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
@@ -18,6 +18,7 @@ import {
   createResourceAction,
   type CreateResourceState,
 } from '@/app/organizations/[organizationId]/resources/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: CreateResourceState = { error: null, created: false };
 
@@ -89,35 +90,13 @@ export function CreateResourceForm({
 
         <Field>
           <FieldLabel htmlFor={classFieldId}>Type</FieldLabel>
-          <SelectInput
-            id={classFieldId}
-            name="resourceClass"
-            required
-            value={resourceClass}
-            onChange={(event) => setResourceClass(event.target.value as ResourceClass | '')}
-          >
-            <option value="" disabled>
-              Choose a type
-            </option>
-            {RESOURCE_CLASSES.map((value) => (
-              <option key={value} value={value}>
-                {RESOURCE_CLASS_LABELS[value]}
-              </option>
-            ))}
-          </SelectInput>
+          <SelectField id={classFieldId} name="resourceClass" required value={resourceClass} onValueChange={(next) => setResourceClass(next as ResourceClass | '')} options={[{ value: '', label: 'Choose a type', disabled: true }, ...RESOURCE_CLASSES.map((value) => ({ value: value, label: RESOURCE_CLASS_LABELS[value] }))]} />
         </Field>
 
         {resourceClass === 'person' ? (
           <Field>
             <FieldLabel htmlFor={memberFieldId}>Represents member</FieldLabel>
-            <SelectInput id={memberFieldId} name="membershipId" defaultValue="">
-              <option value="">None — not a member</option>
-              {availableMembers.map((member) => (
-                <option key={member.membershipId} value={member.membershipId}>
-                  {member.displayName}
-                </option>
-              ))}
-            </SelectInput>
+            <SelectField id={memberFieldId} name="membershipId" defaultValue="" options={[{ value: '', label: 'None — not a member' }, ...availableMembers.map((member) => ({ value: member.membershipId, label: member.displayName }))]} />
             <FieldDescription>A contractor or technician with no login is still a person.</FieldDescription>
           </Field>
         ) : null}

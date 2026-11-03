@@ -18,6 +18,7 @@ import { createCustomer } from '../lib/domain/customers/customers';
 import { shiftDate, todayInZone, zonedTimeToInstant } from '../lib/domain/scheduling/window';
 import { workOperations } from '../lib/application/work/operations';
 import type { Db } from '../lib/db/types';
+import { chooseOption } from './select-field';
 
 /**
  * Work W1 — Dashboard, Work items and responsive composition, in a real browser against disposable
@@ -211,7 +212,7 @@ test.describe.serial('Work W1: Dashboard and Work items', () => {
       await expect(main(page).getByRole('link', { name: 'Reset' })).toBeVisible();
       await expect(main(page).getByRole('status')).toContainText('2 work items');
       // Choosing another type drops a status that belongs to the first one.
-      await main(page).getByLabel('Work type').selectOption(seeded.estimateTypeId);
+      await chooseOption(main(page).getByLabel('Work type'), seeded.estimateTypeId);
       await expect(page).toHaveURL(new RegExp(`type=${seeded.estimateTypeId}`));
       expect(new URL(page.url()).searchParams.get('status')).toBeNull();
       await expect(main(page).getByRole('link', { name: 'Boiler replacement estimate' })).toBeVisible();

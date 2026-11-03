@@ -3,7 +3,7 @@
 import { useActionState, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import {
   PageDrawer,
   PageDrawerContent,
@@ -27,6 +27,7 @@ import {
   ActionError,
   INITIAL_AUTOMATION_ACTION_STATE as INITIAL,
 } from '../shared';
+import { SelectField } from '@/components/controls/select-field';
 
 export function AddActionSheet({
   organizationId,
@@ -94,47 +95,16 @@ export function AddActionSheet({
           <input type="hidden" name="ruleId" value={rule.id} />
           {action && <input type="hidden" name="actionId" value={action.id} />}
 
-          <SelectInput
-            name="kind"
-            aria-label="What to do"
-            value={kind}
-            onChange={(e) => setKind(e.target.value as typeof kind)}
-          >
-            {ACTION_KINDS.filter(
+          <SelectField name="kind" aria-label="What to do" value={kind} onValueChange={(next) => setKind(next as typeof kind)} options={[...ACTION_KINDS.filter(
               (entry) =>
                 (rule.triggerKind !== 'counter_threshold' ||
                   entry.kind === 'create_work_item') &&
                 (entry.kind !== 'run_tool' || (toolChoices.length > 0 && !action)),
-            ).map((entry) => (
-              <option key={entry.kind} value={entry.kind}>
-                {entry.label}
-              </option>
-            ))}
-          </SelectInput>
+            ).map((entry) => ({ value: entry.kind, label: entry.label }))]} />
 
           {kind === 'run_tool' && (
             <>
-              <SelectInput
-                name="choice"
-                aria-label="What to read"
-                value={choice}
-                onChange={(e) => setChoice(e.target.value)}
-                required
-              >
-                <option value="">Choose what to read</option>
-                {toolChoices.map((connection) => (
-                  <optgroup
-                    key={connection.connectionId}
-                    label={`${connection.connectorName}${connection.accountLabel ? ` — ${connection.accountLabel}` : ''}`}
-                  >
-                    {connection.capabilities.map((capability) => (
-                      <option key={capability.key} value={`${connection.connectionId}|${capability.key}`}>
-                        {capability.summary}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </SelectInput>
+              <SelectField name="choice" aria-label="What to read" value={choice} onValueChange={(next) => setChoice(next)} required options={[{ value: '', label: 'Choose what to read' }, ...toolChoices.flatMap((connection) => [...connection.capabilities.map((capability) => ({ value: `${connection.connectionId}|${capability.key}`, label: capability.summary, group: `${connection.connectorName}${connection.accountLabel ? ` — ${connection.accountLabel}` : ''}` }))])]} />
               <input type="hidden" name="connectorName" value={chosen?.connection.connectorName ?? ''} />
               {chosen?.capability?.fields.map((field) => (
                 <label key={field.name} className="flex flex-col gap-1 text-sm">
@@ -156,48 +126,14 @@ export function AddActionSheet({
           )}
 
           {(kind === 'change_status' || kind === 'create_work_item') && (
-            <SelectInput
-              name="statusId"
-              aria-label="Status"
-              defaultValue={action?.statusId ?? ''}
-              required
-            >
-              <option value="">Choose a Work status</option>
-              {statuses.map((status) => (
-                <option key={status.id} value={status.id}>
-                  {status.label}
-                </option>
-              ))}
-            </SelectInput>
+            <SelectField name="statusId" aria-label="Status" defaultValue={action?.statusId ?? ''} required options={[{ value: '', label: 'Choose a Work status' }, ...statuses.map((status) => ({ value: status.id, label: status.label }))]} />
           )}
 
           {kind === 'notify' && (
             <>
-              <SelectInput
-                name="templateId"
-                aria-label="Message"
-                defaultValue={action?.templateId ?? ''}
-                required
-              >
-                <option value="">Choose a message template</option>
-                {templates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name}
-                  </option>
-                ))}
-              </SelectInput>
+              <SelectField name="templateId" aria-label="Message" defaultValue={action?.templateId ?? ''} required options={[{ value: '', label: 'Choose a message template' }, ...templates.map((template) => ({ value: template.id, label: template.name }))]} />
 
-              <SelectInput
-                name="channel"
-                aria-label="How to reach them"
-                defaultValue={action?.channel ?? 'email'}
-              >
-                {CHANNELS.map((entry) => (
-                  <option key={entry.channel} value={entry.channel}>
-                    {entry.label}
-                  </option>
-                ))}
-              </SelectInput>
+              <SelectField name="channel" aria-label="How to reach them" defaultValue={action?.channel ?? 'email'} options={[...CHANNELS.map((entry) => ({ value: entry.channel, label: entry.label }))]} />
               <p className="text-xs text-subtle">
                 Recipient: the Customer associated with the triggering Work
                 item. Sending requires a configured provider.
@@ -206,19 +142,7 @@ export function AddActionSheet({
           )}
 
           {kind === 'create_work_item' && (
-            <SelectInput
-              name="typeId"
-              aria-label="Kind of work"
-              defaultValue={action?.typeId ?? ''}
-              required
-            >
-              <option value="">Choose a Work type</option>
-              {types.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.name}
-                </option>
-              ))}
-            </SelectInput>
+            <SelectField name="typeId" aria-label="Kind of work" defaultValue={action?.typeId ?? ''} required options={[{ value: '', label: 'Choose a Work type' }, ...types.map((type) => ({ value: type.id, label: type.name }))]} />
           )}
 
           {/* Signed, and negative brings a job forward. */}

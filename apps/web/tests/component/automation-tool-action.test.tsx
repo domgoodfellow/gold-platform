@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AddActionSheet } from '@/features/automations/rules/add-action-sheet';
 import type { AutomationRule } from '@/lib/domain/automation/rules';
 import type { ToolChoice } from '@/lib/domain/integrations/tool-access';
+import { chooseOption, optionLabels } from '../support/select-field';
 
 vi.mock('@/app/organizations/[organizationId]/automations/actions', () => ({
   addActionAction: vi.fn(async () => ({ error: null })),
@@ -55,19 +56,19 @@ function open(props: Partial<Parameters<typeof AddActionSheet>[0]> = {}) {
 describe('using a connected tool from a rule', () => {
   it('is offered only when there is something to read', async () => {
     open({ toolChoices: choices });
-    expect(screen.getByRole('option', { name: 'use a connected tool' })).toBeInTheDocument();
+    expect(await optionLabels(screen.getByLabelText('What to do'))).toContain('use a connected tool');
     cleanup();
 
     open({ toolChoices: [] });
-    expect(screen.queryByRole('option', { name: 'use a connected tool' })).not.toBeInTheDocument();
+    expect(await optionLabels(screen.getByLabelText('What to do'))).not.toContain('use a connected tool');
   });
 
   it('asks only what the chosen tool needs, in plain words, and says it only reads', async () => {
-    const user = open({ toolChoices: choices });
-    await user.selectOptions(screen.getByLabelText('What to do'), 'run_tool');
+    open({ toolChoices: choices });
+    await chooseOption(screen.getByLabelText('What to do'), 'run_tool');
     expect(screen.queryByLabelText(/Repository owner/)).not.toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText('What to read'), 'c1|github.issues.list');
+    await chooseOption(screen.getByLabelText('What to read'), 'c1|github.issues.list');
     expect(screen.getByLabelText('Repository owner')).toBeRequired();
     expect(screen.getByLabelText('Repository name')).toBeRequired();
     const limit = screen.getByLabelText(/How many to return \(default 25\) \(optional\)/);

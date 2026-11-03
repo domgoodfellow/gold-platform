@@ -1,7 +1,6 @@
 import { AppPage } from '@/components/layout/app-page';
 import { CollectionHeader } from '@/components/patterns/collection-header';
 import { Button, ButtonLink } from '@/components/controls/button';
-import { SelectInput } from '@/components/controls/inputs';
 import { CalendarWorkspace } from '@/components/calendar/calendar-workspace';
 import { calendarDates, parseCalendarView, parseCalendarDate } from '@/components/calendar/calendar-period';
 import { EventSheet } from './event-sheet';
@@ -11,6 +10,7 @@ import { loadOrganizationCalendar } from '@/lib/application/calendar/organizatio
 import { todayInZone, shiftDate, startOfMonth, zonedDayRange, localDateTimeToInstant } from '@/lib/domain/scheduling/window';
 import { requireOrganization } from '@/lib/route/organization';
 import { WORKSPACES, areaHref, type WorkspaceKey, workspaceAncestry } from '@/lib/navigation';
+import { SelectField } from '@/components/controls/select-field';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,9 +49,7 @@ export async function WorkspaceCalendarPage({ params, searchParams, workspace }:
     <CalendarWorkspace basePath={calendarPath} view={view} date={date} today={today} filters={filters}
       filterControls={<form method="get" className="flex flex-wrap items-center gap-2">
         <input type="hidden" name="view" value={view}/><input type="hidden" name="on" value={date}/>
-        <SelectInput aria-label="Calendar scope" name="scope" defaultValue={scope}>
-          <option value="workspace">This view</option><option value="organization">This business</option>
-        </SelectInput>
+        <SelectField aria-label="Calendar scope" name="scope" defaultValue={scope} options={[{ value: 'workspace', label: 'This view' }, { value: 'organization', label: 'This business' }]} />
         <Button type="submit">Apply</Button>
       </form>}>
       <OrganizationCalendar selectedDate={date} workspace={workspace} actorId={actor.id} mayManageCalendar={organization.capabilities.includes('organization.manage')} basePath={calendarPath} {...options} events={data.events} dates={dates} view={view} month={startOfMonth(date)} today={today} filters={filters}/>

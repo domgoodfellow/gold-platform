@@ -2,7 +2,7 @@
 
 import { useActionState, useId } from 'react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
 import type { ResourceCapability } from '@/lib/domain/resources/resource-capabilities';
 import {
   RESOURCE_CLASSES,
@@ -16,6 +16,7 @@ import {
   updateRequirementAction,
   type WorkConfigActionState,
 } from './actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: WorkConfigActionState = { error: null };
 
@@ -128,25 +129,7 @@ function RequirementForm({
           </label>
           <label htmlFor={classId} className="flex flex-col gap-1 text-sm">
             <span className="text-muted">Kind of resource</span>
-            <SelectInput
-              id={classId}
-              name="resourceClass"
-              required
-              defaultValue={requirement?.resourceClass ?? ''}
-              disabled={!mayConfigure}
-              size="small"
-            >
-              {requirement ? null : (
-                <option value="" disabled>
-                  Choose a type
-                </option>
-              )}
-              {RESOURCE_CLASSES.map((value: ResourceClass) => (
-                <option key={value} value={value}>
-                  {RESOURCE_CLASS_LABELS[value]}
-                </option>
-              ))}
-            </SelectInput>
+            <SelectField id={classId} name="resourceClass" required defaultValue={requirement?.resourceClass ?? ''} disabled={!mayConfigure} size="small" options={[...(requirement ? [] : [{ value: '', label: 'Choose a type', disabled: true }]), ...RESOURCE_CLASSES.map((value: ResourceClass) => ({ value: value, label: RESOURCE_CLASS_LABELS[value] }))]} />
           </label>
         </div>
 

@@ -3,7 +3,7 @@
 import { useActionState, useState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
-import { cx } from '@/components/class-names';
+import { cx, FOCUS_RING_WITHIN } from '@/components/class-names';
 import { updateBrandAction, type BrandState } from '@/app/organizations/[organizationId]/settings/actions';
 import type { Brand } from '@/lib/domain/branding/brand';
 import {
@@ -85,7 +85,7 @@ export function BrandEditor({
                 const active = normalised.accent === preset.primary && (normalised.secondary || '') === (preset.secondary ?? '') && (normalised.highlight || '') === (preset.highlight ?? '');
                 return <button key={preset.key} type="button" aria-pressed={active}
                   onClick={() => setColours({ accent: preset.primary, secondary: preset.secondary ?? '', highlight: preset.highlight ?? '' })}
-                  className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-2 text-left text-xs font-medium outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50 aria-pressed:border-foreground aria-pressed:bg-selected disabled:cursor-not-allowed disabled:opacity-60">
+                  className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-2 text-left text-xs font-medium hover:bg-hover aria-pressed:border-foreground aria-pressed:bg-selected disabled:cursor-not-allowed disabled:opacity-60">
                   <span aria-hidden className="flex shrink-0">{[preset.primary, preset.secondary, preset.highlight].filter(Boolean).map(value => <span key={value} style={{ background: value! }} className="-ml-1 size-4 rounded-full border border-border first:ml-0" />)}</span>
                   {preset.label}
                 </button>;
@@ -105,7 +105,7 @@ export function BrandEditor({
                   aria-pressed={normalised.accent === preset.value}
                   onClick={() => set('accent', preset.value)}
                   style={{ background: preset.value }}
-                  className="size-7 rounded-full border border-border outline-none focus-visible:ring-3 focus-visible:ring-ring/50 aria-pressed:ring-2 aria-pressed:ring-foreground aria-pressed:ring-offset-2 aria-pressed:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60"
+                  className="size-7 rounded-full border border-border aria-pressed:ring-2 aria-pressed:ring-foreground aria-pressed:ring-offset-2 aria-pressed:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60"
                 />
               ))}
             </div>
@@ -248,7 +248,8 @@ function FontChoice({
           <label
             key={key}
             className={cx(
-              'flex cursor-pointer flex-col items-center gap-0.5 rounded-lg border border-border px-2 py-2 text-center has-[:checked]:border-foreground has-[:checked]:bg-selected has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
+              'flex cursor-pointer flex-col items-center gap-0.5 rounded-lg border border-border px-2 py-2 text-center has-[:checked]:border-foreground has-[:checked]:bg-selected has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
+              FOCUS_RING_WITHIN,
             )}
           >
             <input

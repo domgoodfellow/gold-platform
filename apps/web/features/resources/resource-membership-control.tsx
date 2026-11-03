@@ -1,12 +1,13 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { ErrorText, SelectInput } from '@/components/controls/inputs';
+import { ErrorText } from '@/components/controls/inputs';
 import type { AvailableMember } from './member-options';
 import {
   setResourceMembershipAction,
   type SetResourceMembershipState,
 } from '@/app/organizations/[organizationId]/resources/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: SetResourceMembershipState = { error: null };
 const UNLINKED = '';
@@ -44,24 +45,7 @@ export function ResourceMembershipControl({
     <form action={formAction} className="flex flex-col gap-1">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="resourceId" value={resourceId} />
-      <SelectInput
-        name="membershipId"
-        size="small"
-        value={value}
-        disabled={pending}
-        aria-label="Represents member"
-        onChange={(event) => {
-          setValue(event.target.value);
-          event.currentTarget.form?.requestSubmit();
-        }}
-      >
-        <option value={UNLINKED}>None — not a member</option>
-        {availableMembers.map((member) => (
-          <option key={member.membershipId} value={member.membershipId}>
-            {member.displayName}
-          </option>
-        ))}
-      </SelectInput>
+      <SelectField name="membershipId" size="small" value={value} disabled={pending} aria-label="Represents member" onValueChange={(next) => setValue(next)} submitOnChange options={[{ value: UNLINKED, label: 'None — not a member' }, ...availableMembers.map((member) => ({ value: member.membershipId, label: member.displayName }))]} />
       <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );

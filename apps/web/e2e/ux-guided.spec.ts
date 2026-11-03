@@ -10,6 +10,7 @@ import { computeSetupOverview, launchOrganization } from '../lib/domain/tenancy/
 import { guardedShot } from './visual-guard';
 import { getOrganization } from '../lib/domain/tenancy/organizations';
 import { listCustomerStages } from '../lib/domain/customers/stages';
+import { chooseOption } from './select-field';
 
 const before = process.env.UX_GUIDED_PHASE === 'before';
 const output = path.join(__dirname, '../../../.artifacts/ux-guided', before ? 'before' : 'after');
@@ -117,7 +118,7 @@ test.describe.serial('UX drift and guided configuration', () => {
     await page.getByRole('button', { name: 'Create work', exact: true }).click();
     await expect(page).toHaveURL(/\/work\/[^/?]+\?tab=financials/);
     await page.getByRole('button', { name: 'Add priced line', exact: true }).click();
-    await page.getByRole('dialog').getByLabel('Price item').selectOption({ label: 'Guided delivery · CA$125.00 / visit' });
+    await chooseOption(page.getByRole('dialog').getByLabel('Price item'), { label: 'Guided delivery · CA$125.00 / visit' });
     await page.getByRole('dialog').getByRole('button', { name: 'Add to quote', exact: true }).click();
     await expect(page.getByRole('dialog').getByRole('status')).toContainText('Priced line added to quote.');
     const { db } = await signInOwner();

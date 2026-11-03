@@ -40,7 +40,7 @@ function BreadcrumbLink({ className, ...props }: React.ComponentProps<"a">) {
   return (
     <a
       data-slot="breadcrumb-link"
-      className={cn("rounded underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent", className)}
+      className={cn("rounded underline-offset-4 hover:text-foreground hover:underline", className)}
       {...props}
     />
   )

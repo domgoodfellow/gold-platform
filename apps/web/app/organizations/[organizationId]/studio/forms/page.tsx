@@ -2,12 +2,13 @@ import Link from 'next/link';
 import { AppPage } from '@/components/layout/app-page';
 import { CollectionHeader } from '@/components/patterns/collection-header';
 import { Button, ButtonLink } from '@/components/controls/button';
-import { Hint, TextInput, SelectInput } from '@/components/controls/inputs';
+import { Hint, TextInput } from '@/components/controls/inputs';
 import { EmptyState } from '@/components/surfaces/section';
 import { NewFormDrawer } from '@/features/studio/forms/new-form-drawer';
 import { listForms, placementLabels, stableFormPath, type FormListEntry } from '@/lib/domain/forms/forms';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
+import { SelectField } from '@/components/controls/select-field';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,10 +68,8 @@ export default async function StudioFormsPage({ params, searchParams }: PageProp
         <section className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface" aria-label="Forms collection">
           <form className="flex flex-wrap items-center gap-2 border-b border-border p-3">
             <TextInput name="q" type="search" aria-label="Search forms" placeholder="Search forms..." defaultValue={term} className="w-full sm:w-60" />
-            <SelectInput name="status" aria-label="Publication status" defaultValue={status}>
-              <option value="all">All active</option><option value="draft">Draft</option><option value="published">Published</option><option value="changes">Published with changes</option><option value="archived">Archived</option>
-            </SelectInput>
-            <SelectInput name="sort" aria-label="Sort forms" defaultValue={sort}><option value="updated">Recently updated</option><option value="name">Name</option><option value="responses">Most responses</option></SelectInput>
+            <SelectField name="status" aria-label="Publication status" defaultValue={status} options={[{ value: 'all', label: 'All active' }, { value: 'draft', label: 'Draft' }, { value: 'published', label: 'Published' }, { value: 'changes', label: 'Published with changes' }, { value: 'archived', label: 'Archived' }]} />
+            <SelectField name="sort" aria-label="Sort forms" defaultValue={sort} options={[{ value: 'updated', label: 'Recently updated' }, { value: 'name', label: 'Name' }, { value: 'responses', label: 'Most responses' }]} />
             <Button type="submit" tone="secondary">Apply</Button>
           </form>
           <div className="overflow-x-auto">

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   CreateTypeForm,
@@ -7,6 +7,7 @@ import {
   SchedulingTypeForm,
 } from '@/features/work/configuration/work-config-forms';
 import { runAxe } from '@/tests/support/axe';
+import { chooseOption, fieldValue, optionLabels } from '../support/select-field';
 
 /**
  * The scheduling declaration as a person meets it on Work configuration: asked explicitly when a
@@ -113,7 +114,7 @@ describe('publishing a kind of work to the booking page', () => {
     expect(screen.queryByLabelText(/Additional questions/)).toBeNull();
   });
 
-  it('lets a published kind of work pick one of the business’s forms, and links to Studio to edit it', () => {
+  it('lets a published kind of work pick one of the business’s forms, and links to Studio to edit it', async () => {
     render(
       <PublishTypeForm
         {...props}
@@ -122,9 +123,9 @@ describe('publishing a kind of work to the booking page', () => {
         intakeForms={[{ id: 'f1', name: 'Service intake' }, { id: 'f2', name: 'Vehicle details' }]}
       />,
     );
-    const select = screen.getByLabelText(/Additional questions/) as HTMLSelectElement;
-    expect(select.value).toBe('f1');
-    expect([...select.options].map((option) => option.text)).toEqual(['No additional questions', 'Service intake', 'Vehicle details']);
+    const select = screen.getByLabelText(/Additional questions/);
+    expect(fieldValue(select)).toBe('f1');
+    expect(await optionLabels(select)).toEqual(['No additional questions', 'Service intake', 'Vehicle details']);
     expect(screen.getByRole('link', { name: 'Edit the form' }).getAttribute('href')).toBe('/organizations/org/studio/forms/f1');
   });
 
@@ -132,7 +133,7 @@ describe('publishing a kind of work to the booking page', () => {
     render(<PublishTypeForm {...props} schedulable booking={{ statusId: 's1', durationMinutes: 30, priceItemId: null, intakeFormId: null, policy: POLICY }} />);
     expect(screen.getByText('Publish a form in Studio to ask questions at booking.')).toBeTruthy();
   });
-  it('says booking limits in an owner’s words, with each control labelled and the stored value shown back', () => {
+  it('says booking limits in an owner’s words, with each control labelled and the stored value shown back', async () => {
     render(
       <PublishTypeForm
         {...props}
@@ -152,18 +153,18 @@ describe('publishing a kind of work to the booking page', () => {
     );
     expect((screen.getByLabelText('Start times every, in minutes') as HTMLInputElement).value).toBe('30');
     expect((screen.getByLabelText('How much notice is required?') as HTMLInputElement).value).toBe('2');
-    expect((screen.getByLabelText('Notice unit') as HTMLSelectElement).value).toBe('hours');
+    expect(fieldValue(screen.getByLabelText('Notice unit'))).toBe('hours');
     expect((screen.getByLabelText('How far ahead can customers book, in days?') as HTMLInputElement).value).toBe('30');
     expect((screen.getByLabelText('Allow same-day booking') as HTMLInputElement).checked).toBe(false);
     expect((screen.getByLabelText('Customers can reschedule until') as HTMLInputElement).value).toBe('12');
     // Appointments keep their own length, apart from how often they start.
     expect(screen.getByText(/Appointments still last 90 minutes/)).toBeTruthy();
     // Only a stage that gives its resources back can be where a cancellation goes.
-    const status = screen.getByLabelText('A cancelled booking moves to') as HTMLSelectElement;
-    expect([...status.options].map((option) => option.text)).toEqual(['Customers cannot cancel online', 'Cancelled']);
+    const status = screen.getByLabelText('A cancelled booking moves to');
+    expect(await optionLabels(status)).toEqual(['Customers cannot cancel online', 'Cancelled']);
   });
 
-  it('offers no cutoff as a choice, and takes the amount away when it is chosen', () => {
+  it('offers no cutoff as a choice, and takes the amount away when it is chosen', async () => {
     render(
       <PublishTypeForm
         {...props}
@@ -172,9 +173,9 @@ describe('publishing a kind of work to the booking page', () => {
       />,
     );
     expect(screen.getByRole('spinbutton', { name: 'Customers can cancel until' })).toBeTruthy();
-    fireEvent.change(screen.getByLabelText('Cancellation cutoff unit'), { target: { value: 'none' } });
+    await chooseOption(screen.getByLabelText('Cancellation cutoff unit'), 'none');
     expect(screen.queryByRole('spinbutton', { name: 'Customers can cancel until' })).toBeNull();
     // The reschedule cutoff was never set: it already says so, with no number beside it.
-    expect((screen.getByLabelText('Reschedule cutoff unit') as HTMLSelectElement).value).toBe('none');
+    expect(fieldValue(screen.getByLabelText('Reschedule cutoff unit'))).toBe('none');
   });
 });

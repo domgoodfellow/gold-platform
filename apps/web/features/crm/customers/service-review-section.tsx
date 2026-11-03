@@ -2,7 +2,7 @@
 import { useActionState, useId } from 'react';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { FormField } from '@/components/controls/form';
-import { ErrorText, SelectInput } from '@/components/controls/inputs';
+import { ErrorText } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { serviceReviewAction, type ServiceActionState } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/service-actions';
 import { REVIEW_STATES, type ServiceReview } from '@/lib/domain/customers/service-reviews';
@@ -10,6 +10,7 @@ import { parseDisclosureContent, type DisclosureRevision, type ServiceDisclosure
 import { NotificationChoice } from './service-notification-section';
 import { NOTIFICATION_STATES, type NotificationHistory } from '@/lib/domain/customers/service-notifications';
 import type { readEngagementDetails } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/service-actions';
+import { SelectField } from '@/components/controls/select-field';
 
 export function ServiceReviewSection({ organizationId, customerId, engagementId, disclosure, history, reviews, timezone, mayManage, mayReadSupport, relationshipEnded, onSaved, notificationDetails }: {
   organizationId: string; customerId: string; engagementId: string; disclosure: ServiceDisclosure | null; history: DisclosureRevision[];
@@ -30,7 +31,7 @@ export function ServiceReviewSection({ organizationId, customerId, engagementId,
       {!reviews.length ? <p>Not requested</p> : null}
       {published && approved && !relationshipEnded ? <form action={action} className="space-y-3">{context}<input type="hidden" name="operation" value="release"/><input type="hidden" name="revisionId" value={published.id}/>
         <p className="text-sm">Published disclosure: Revision {published.number}</p>
-        <FormField id={`${id}-target`} label="Review target">{props => <SelectInput className="min-h-11 sm:min-h-0" {...props} name="deliverableId" defaultValue=""><option value="">Entire approved update</option>{approved.deliverables.map(d => <option key={d.deliverableId} value={d.deliverableId}>{d.title}</option>)}</SelectInput>}</FormField>
+        <FormField id={`${id}-target`} label="Review target">{props => <SelectField className="min-h-11 sm:min-h-0" {...props} name="deliverableId" defaultValue="" options={[{ value: '', label: 'Entire approved update' }, ...approved.deliverables.map((d) => ({ value: d.deliverableId, label: d.title }))]} />}</FormField>
         <NotificationChoice configuration={notificationDetails?.notificationConfig} identities={notificationDetails?.emailIdentities} maySend={notificationDetails?.maySend} purpose="service_review_requested"/>
         <Button className="min-h-11 sm:min-h-0" type="submit" disabled={pending}>Request customer review</Button>
         <p className="text-xs text-muted">Each target can be requested once per published revision. Publish a new revision for a new decision.</p>

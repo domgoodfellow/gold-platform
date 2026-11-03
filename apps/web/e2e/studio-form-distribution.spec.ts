@@ -9,6 +9,7 @@ import { BUSINESSES, DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { createPortalInvite } from '../lib/domain/portal/portal';
 import { setPortalForm } from '../lib/domain/portal/portal-forms';
 import { loadDemoContext, OWNER_STORAGE_STATE } from './helpers';
+import { chooseOption } from './select-field';
 
 /**
  * A form placed on every surface that can show one, in a real browser: a website, a business's own
@@ -93,7 +94,7 @@ test('website: place a published form on the website, publish it, and a visitor 
   const structure = page.getByRole('navigation', { name: 'Website structure' });
   await expect(structure).toBeVisible();
   await structure.getByRole('button', { name: 'Add section' }).click();
-  await page.getByRole('region', { name: 'Forms' }).getByRole('combobox').selectOption(form.formId);
+  await chooseOption(page.getByRole('region', { name: 'Forms' }).getByRole('combobox'), form.formId);
   await page.getByRole('button', { name: 'Add form section' }).click();
   // The questions are edited in the form, never here.
   await expect(page.getByRole('link', { name: 'Edit form' })).toHaveAttribute('href', new RegExp(`/studio/forms/${form.formId}$`));

@@ -4,13 +4,14 @@ import { useActionState, useEffect, useId, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { FormField, FormError } from '@/components/controls/form';
 import { useFormDirty } from '@/components/controls/use-form-dirty';
 import { DialogBody, DialogFooterBar, StepHeader } from '@/components/panels/dialog-layout';
 import { GuardedDialog, useGuardedDialogClose, useGuardedDialogDirty } from '@/components/panels/guarded-dialog';
 import { moveOpportunityAction, saveOpportunityStageAction } from '@/app/organizations/[organizationId]/crm/opportunities/actions';
 import type { OpportunityStage } from '@/lib/domain/opportunities/opportunities';
+import { SelectField } from '@/components/controls/select-field';
 
 /** Move one opportunity to another stage: a compact select and an explicit Move, persisted by the existing action. */
 export function OpportunityStageControl({ organizationId, opportunityId, title, stageId, stages }: { organizationId: string; opportunityId: string; title: string; stageId: string | null; stages: OpportunityStage[] }) {
@@ -18,7 +19,7 @@ export function OpportunityStageControl({ organizationId, opportunityId, title, 
   return <form action={action} className="flex flex-col gap-1">
     <input type="hidden" name="organizationId" value={organizationId} /><input type="hidden" name="opportunityId" value={opportunityId} />
     <div className="flex items-center gap-1.5">
-      <SelectInput aria-label={`Stage for ${title}`} name="stageId" size="small" defaultValue={stageId ?? ''} className="min-w-0 flex-1"><option value="">Unstaged</option>{stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}</SelectInput>
+      <SelectField aria-label={`Stage for ${title}`} name="stageId" size="small" defaultValue={stageId ?? ''} className="min-w-0 flex-1" options={[{ value: '', label: 'Unstaged' }, ...stages.map((stage) => ({ value: stage.id, label: stage.name }))]} />
       <Button type="submit" tone="secondary" size="small" disabled={pending}>{pending ? 'Moving…' : 'Move'}</Button>
     </div>
     <FormError>{state.error}</FormError>
@@ -57,7 +58,7 @@ function StageForm({ organizationId, stage, nextPosition, onSaved }: { organizat
         <input type="hidden" name="organizationId" value={organizationId} /><input type="hidden" name="id" value={stage?.id ?? ''} />
         <FormField id={`${prefix}-name`} label="Name">{(props) => <TextInput {...props} name="name" required maxLength={64} defaultValue={stage?.name ?? ''} />}</FormField>
         <FormField id={`${prefix}-position`} label="Position">{(props) => <TextInput {...props} name="position" type="number" min={0} step={1} required defaultValue={stage?.position ?? nextPosition} />}</FormField>
-        <FormField id={`${prefix}-kind`} label="Classification" hint="Once used, a stage keeps its classification. Only one Won and one Lost stage may be configured.">{(props) => <SelectInput {...props} name="kind" defaultValue={stage?.kind ?? 'open'}><option value="open">Open</option><option value="won">Won</option><option value="lost">Lost</option></SelectInput>}</FormField>
+        <FormField id={`${prefix}-kind`} label="Classification" hint="Once used, a stage keeps its classification. Only one Won and one Lost stage may be configured.">{(props) => <SelectField {...props} name="kind" defaultValue={stage?.kind ?? 'open'} options={[{ value: 'open', label: 'Open' }, { value: 'won', label: 'Won' }, { value: 'lost', label: 'Lost' }]} />}</FormField>
         <FormError>{state.error}</FormError>
       </form>
     </DialogBody>

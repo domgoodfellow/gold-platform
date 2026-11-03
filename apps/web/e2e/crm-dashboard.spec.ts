@@ -10,6 +10,7 @@ import { provisionOrganization } from '../lib/domain/platform/provision';
 import { createContact } from '../lib/domain/contacts/contacts';
 import { createTask, changeTaskStatus } from '../lib/domain/tasks/tasks';
 import { createOpportunity, createOpportunityStage } from '../lib/domain/opportunities/opportunities';
+import { selectFieldValue } from './select-field';
 
 /**
  * The relationship-first CRM Dashboard in a real browser, against the isolated run's disposable
@@ -114,7 +115,7 @@ test.describe.serial('Relationship-first CRM Dashboard', () => {
       expect(count).toBeGreaterThanOrEqual(4);
       await tile.click();
       await expect(page).toHaveURL(/\/crm\/contacts\?added=30d$/);
-      await expect(page.getByLabel('Filter by date added')).toHaveValue('30d');
+      await expect(selectFieldValue(page.getByLabel('Filter by date added'))).toHaveValue('30d');
       await expect(page.locator('table tbody tr')).toHaveCount(count);
       await page.goto(`/organizations/${organizationId}/crm?group=company`);
       await page.setViewportSize({ width: 390, height: 844 });

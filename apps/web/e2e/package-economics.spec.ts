@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { platformUrl, STAFF_STORAGE_STATE } from './helpers';
+import { chooseOption, selectFieldValue } from './select-field';
 
 test.describe('package economics', () => {
   test.use({ storageState: STAFF_STORAGE_STATE });
@@ -7,7 +8,7 @@ test.describe('package economics', () => {
   test('keeps Plan, draft scenario, and agreement simulation sources visibly distinct', async ({ page }) => {
     await page.goto(platformUrl('package-economics'));
     await expect(page.getByRole('heading', { name: 'Package economics', level: 1 })).toBeVisible();
-    await expect(page.getByLabel('Source', { exact: true })).toHaveValue('plan_default');
+    await expect(selectFieldValue(page.getByLabel('Source', { exact: true }))).toHaveValue('plan_default');
     await expect(page.getByRole('heading', { name: 'Economics', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Meter economics' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Candidate comparison' })).toBeVisible();
@@ -20,7 +21,7 @@ test.describe('package economics', () => {
     await expect(page.getByText('Scenario saved.')).toBeVisible();
     await page.keyboard.press('Escape');
 
-    await page.getByLabel('Source', { exact: true }).selectOption('draft_scenario');
+    await chooseOption(page.getByLabel('Source', { exact: true }), 'draft_scenario');
     await expect(page.getByText('Draft scenario · planning only · not an organization agreement')).toBeVisible();
     for (const amount of ['$499.00', '$699.00', '$899.00', '$999.00']) {
       await expect(page.getByRole('button', { name: amount }).first()).toBeVisible();

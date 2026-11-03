@@ -3,6 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ClientTenantSection } from '@/features/crm/customers/client-tenant-section';
 import type { ClientTenantRelationship } from '@/lib/domain/customers/client-tenants';
+import { fieldInput } from '../support/select-field';
 
 vi.mock('@/app/organizations/[organizationId]/crm/contacts/[contactId]/service-actions', () => ({ relationshipAction: vi.fn() }));
 afterEach(cleanup);
@@ -25,7 +26,7 @@ describe('Customer relationship disclosure', () => {
   it('navigates only with membership and gives verified operators labeled real selectors', () => {
     render(<ClientTenantSection {...props} mayManage mayLink relationships={[{ ...relationship, may_open: true }]}/>);
     expect(screen.getByRole('link', { name: 'Open organization' })).toHaveAttribute('href', '/organizations/tenant');
-    expect(screen.getByLabelText('Organization')).toHaveAttribute('name', 'tenantId');
+    expect(fieldInput(screen.getByLabelText('Organization'))).toHaveAttribute('name', 'tenantId');
     expect(screen.getByLabelText('Verified association basis')).toHaveAttribute('minlength', '10');
   });
   it('retains ended history without an ending control', () => {

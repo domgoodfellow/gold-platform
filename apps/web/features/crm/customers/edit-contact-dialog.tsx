@@ -5,7 +5,7 @@ import { tabListStyles, tabTriggerStyles } from '@gold/ui/components/tab-styles'
 import { Button, type ButtonTone } from '@/components/controls/button';
 import { FormError, FormField } from '@/components/controls/form';
 import { PhoneInput } from '@/components/controls/phone-input';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { useDrawerFormSubmit } from '@/components/controls/use-drawer-form-submit';
 import { useFormDirty } from '@/components/controls/use-form-dirty';
 import { DialogBody, DialogFooterBar, StepHeader } from '@/components/panels/dialog-layout';
@@ -17,6 +17,7 @@ import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { editCustomerAction, type EditCustomerState } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/actions';
 import { ContactClassificationFields } from './contact-classification-fields';
 import { IdentityChoice } from './create-contact-form';
+import { SelectField } from '@/components/controls/select-field';
 
 export type EditSection = 'identity' | 'relationship' | 'fields';
 const INITIAL: EditCustomerState = { error: null, updated: false };
@@ -88,7 +89,7 @@ function EditContactForm({ organizationId, customer, definitions, stages, initia
         </div>
         <div hidden={section !== 'relationship'} className="flex flex-col gap-4">
           <ContactClassificationFields id={formId} lifecycle={customer.lifecycle ?? null} temperature={customer.leadTemperature} />
-          {stages.length ? <FormField id={`${formId}-stage`} label="Relationship stage" optional>{field => <SelectInput {...field} name="stageId" defaultValue={customer.stageId ?? ''} className="w-fit"><option value="">No stage</option>{stages.map(stage => <option key={stage.id} value={stage.id}>{stage.name}</option>)}</SelectInput>}</FormField>
+          {stages.length ? <FormField id={`${formId}-stage`} label="Relationship stage" optional>{field => <SelectField {...field} name="stageId" defaultValue={customer.stageId ?? ''} className="w-fit" options={[{ value: '', label: 'No stage' }, ...stages.map((stage) => ({ value: stage.id, label: stage.name }))]} />}</FormField>
             : <input type="hidden" name="stageId" value={customer.stageId ?? ''} />}
         </div>
         {definitions.length ? <div hidden={section !== 'fields'} data-slot="field-group" className="grid gap-3"><CustomFieldInputs definitions={definitions} values={customer.custom} /></div> : null}

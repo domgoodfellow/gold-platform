@@ -22,6 +22,7 @@ import { addMember } from '../lib/domain/tenancy/members';
 import { createLocation, setLocationCoordinates } from '../lib/domain/locations/locations';
 import { workOperations } from '../lib/application/work/operations';
 import type { Db } from '../lib/db/types';
+import { chooseOption } from './select-field';
 
 
 const PHASE = process.env.W3_PHASE === 'before' ? 'before' : 'after';
@@ -155,7 +156,7 @@ test('Work W3 dispatch, calendar and resource assignment', async ({ page, browse
   await expect(inspector).toContainText('unavailable');
   // Type changes clear a status, pagination and selection while retaining date/search/presentation.
   await page.goto(`${dispatch}&type=${seeded.serviceTypeId}&status=${seeded.stages.scheduled}&page=2&mode=map`);
-  await page.getByRole('combobox', { name: 'Work type', exact: true }).selectOption(seeded.estimateTypeId);
+  await chooseOption(page.getByRole('combobox', { name: 'Work type', exact: true }), seeded.estimateTypeId);
   await expect(page).toHaveURL(new RegExp(`type=${seeded.estimateTypeId}`));
   for (const key of ['status', 'page', 'selected']) expect(new URL(page.url()).searchParams.has(key)).toBe(false);
   await expect(inspector).toContainText('does not use scheduling');
@@ -179,8 +180,8 @@ test('Work W3 dispatch, calendar and resource assignment', async ({ page, browse
   // Advanced filters submit together, retain presentation, expose active chips and exact matches.
   await page.goto(`${dispatch}&mode=schedule`);
   await page.getByRole('main').locator('[data-slot="collection-toolbar"] summary').click();
-  await page.getByRole('combobox', { name: 'Resource', exact: true }).selectOption({ label: 'Alex Chen' });
-  await page.getByRole('combobox', { name: 'Assignment state', exact: true }).selectOption('scheduled');
+  await chooseOption(page.getByRole('combobox', { name: 'Resource', exact: true }), { label: 'Alex Chen' });
+  await chooseOption(page.getByRole('combobox', { name: 'Assignment state', exact: true }), 'scheduled');
   await page.getByRole('button', { name: 'Apply filters' }).click();
   await expect(page).toHaveURL(/resource=/);
   expect(new URL(page.url()).searchParams.get('mode')).toBe('schedule');
@@ -189,7 +190,7 @@ test('Work W3 dispatch, calendar and resource assignment', async ({ page, browse
   await expect(queue).not.toContainText('Leak inspection');
   await page.getByRole('link', { name: 'Reset', exact: true }).click();
   await page.getByRole('main').locator('[data-slot="collection-toolbar"] summary').click();
-  await page.getByRole('combobox', { name: 'Resource class', exact: true }).selectOption('vehicle');
+  await chooseOption(page.getByRole('combobox', { name: 'Resource class', exact: true }), 'vehicle');
   await page.getByRole('button', { name: 'Apply filters' }).click();
   await expect(page.getByRole('group', { name: 'Active filters' })).toContainText('Class: Vehicle');
   await expect(queue).not.toContainText('Leak inspection');

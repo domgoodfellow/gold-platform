@@ -9,6 +9,7 @@ import { createWorkItemType } from '../lib/domain/work-items/types';
 import { createWorkItemStatus } from '../lib/domain/work-items/statuses';
 import { provisionOrganization } from '../lib/domain/platform/provision';
 import { recordPlanAssignment } from '../lib/domain/catalogue/organization-plans';
+import { chooseOption, selectFieldValue } from './select-field';
 
 const artifact = (file: string) => path.resolve(__dirname, '../../../.artifacts/composition', file);
 // The focused config provisions globally; the full acceptance runner provisions this spec's
@@ -148,14 +149,14 @@ test('creation prerequisites, setup return, unsaved edits, failed and successful
   await page.getByRole('button',{name:'Add status',exact:true}).click();
   await expect(page.getByLabel('Status name',{exact:true})).toHaveValue('');
   await page.getByRole('link',{name:'New work',exact:true}).click();
-  await expect(page.getByLabel('Work type',{exact:true})).toHaveValue(incomplete);
+  await expect(selectFieldValue(page.getByLabel('Work type',{exact:true}))).toHaveValue(incomplete);
   await expect(page.getByLabel('Starting stage',{exact:true})).toBeVisible();
   const missing=await createWorkItemType(db,{organizationId,name:'Needs setup',schedulable:false});
   await page.goto(`${base}/work?create=1&type=${missing}`);
   await expect(page).toHaveURL(`${base}/work/new?type=${missing}`);
   await expect(page.getByText('Needs setup needs a starting stage',{exact:true})).toBeVisible();
   const ready=(await db.from('work_item_statuses').select('type_id,id').eq('organization_id',organizationId).limit(1).single()).data!;
-  await page.getByLabel('Work type',{exact:true}).selectOption(ready.type_id);
+  await chooseOption(page.getByLabel('Work type',{exact:true}), ready.type_id);
   await expect(page.getByLabel('Starting stage',{exact:true})).toBeVisible();
   const title=page.getByLabel('Job title',{exact:true});
   await title.fill('Preserved unsaved title');
@@ -163,18 +164,18 @@ test('creation prerequisites, setup return, unsaved edits, failed and successful
   await page.getByRole('link',{name:'Cancel',exact:true}).click();
   await expect(title).toHaveValue('Preserved unsaved title');
   page.once('dialog',dialog=>dialog.dismiss());
-  await page.getByLabel('Work type',{exact:true}).selectOption(missing);
+  await chooseOption(page.getByLabel('Work type',{exact:true}), missing);
   await expect(title).toHaveValue('Preserved unsaved title');
   // Native required validation accepts whitespace; the real domain action refuses it and must preserve every input.
   await title.fill('   ');
-  await page.getByLabel('Customer',{exact:true}).selectOption(ctx.customerId);
-  await page.getByLabel('Location',{exact:true}).selectOption(ctx.locationId);
+  await chooseOption(page.getByLabel('Customer',{exact:true}), ctx.customerId);
+  await chooseOption(page.getByLabel('Location',{exact:true}), ctx.locationId);
   const resource=page.getByRole('checkbox').first();await resource.check();
   await page.getByRole('button',{name:'Create work',exact:true}).click();
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(title).toHaveValue('   ');
-  await expect(page.getByLabel('Customer',{exact:true})).toHaveValue(ctx.customerId);
-  await expect(page.getByLabel('Location',{exact:true})).toHaveValue(ctx.locationId);
+  await expect(selectFieldValue(page.getByLabel('Customer',{exact:true}))).toHaveValue(ctx.customerId);
+  await expect(selectFieldValue(page.getByLabel('Location',{exact:true}))).toHaveValue(ctx.locationId);
   await expect(resource).toBeChecked();
   await title.fill('Composition created work');
   await page.getByRole('button',{name:'Create work',exact:true}).click();
@@ -204,7 +205,7 @@ test('create-only and non-creating members receive the correct page and actions'
     await expect(page.getByRole('link',{name:'Configure stages',exact:true})).toHaveCount(0);
     await expect(page.getByRole('button',{name:'Create work',exact:true})).toHaveCount(0);
     const ready=await pg.query('select type_id from work_item_statuses where organization_id=$1 limit 1',[organizationId]);
-    await page.getByLabel('Work type',{exact:true}).selectOption(ready.rows[0].type_id);
+    await chooseOption(page.getByLabel('Work type',{exact:true}), ready.rows[0].type_id);
     await expect(page.getByRole('form',{name:'Create work'})).toBeVisible();
     await pg.query('update roles set capabilities=$1 where id=$2',[[],roleId]);
     for(const source of ['field','work']) { await page.goto(`${base}/${source}`);await expect(page.getByRole('link',{name:'New work',exact:true})).toHaveCount(0); }

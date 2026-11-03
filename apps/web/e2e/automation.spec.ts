@@ -29,6 +29,7 @@ import {
   listMessageDeliveries,
   updateMessageTemplate,
 } from '../lib/domain/automation/templates';
+import { chooseOption } from './select-field';
 
 config({ path: '../../.env.test' });
 test.use({ storageState: OWNER_STORAGE_STATE });
@@ -134,8 +135,8 @@ test('authors, executes and monitors rules with responsive operating surfaces', 
   await page
     .getByRole('textbox', { name: 'What this rule is for' })
     .fill('Confirm controlled maintenance');
-  await page.getByLabel('What sets it off').selectOption('event');
-  await page.getByLabel('Which moment').selectOption('work_item.created');
+  await chooseOption(page.getByLabel('What sets it off'), 'event');
+  await chooseOption(page.getByLabel('Which moment'), 'work_item.created');
   await page.getByRole('button', { name: 'Add rule', exact: true }).click();
   await expect(
     page.getByRole('heading', { name: 'Rule workflow' }),
@@ -148,8 +149,8 @@ test('authors, executes and monitors rules with responsive operating surfaces', 
     .getByRole('button', { name: 'Add condition', exact: true })
     .first()
     .click();
-  await page.getByLabel('Part of the job').selectOption('title');
-  await page.getByLabel('Comparison', { exact: true }).selectOption('equals');
+  await chooseOption(page.getByLabel('Part of the job'), 'title');
+  await chooseOption(page.getByLabel('Comparison', { exact: true }), 'equals');
   await page
     .getByRole('textbox', { name: 'Value', exact: true })
     .fill('Controlled maintenance');
@@ -162,8 +163,8 @@ test('authors, executes and monitors rules with responsive operating surfaces', 
     .getByRole('button', { name: 'Add action', exact: true })
     .first()
     .click();
-  await page.getByLabel('What to do').selectOption('change_status');
-  await page.getByLabel('Status', { exact: true }).selectOption(target);
+  await chooseOption(page.getByLabel('What to do'), 'change_status');
+  await chooseOption(page.getByLabel('Status', { exact: true }), target);
   await page
     .getByRole('dialog')
     .getByRole('button', { name: 'Add action', exact: true })
@@ -201,7 +202,7 @@ test('authors, executes and monitors rules with responsive operating surfaces', 
   await page.goto(`${base}/${ruleId}?node=${rule.actions[0].id}`);
   await capture('08-builder-action');
   await page.getByRole('button', { name: 'Edit action', exact: true }).click();
-  await page.getByLabel('Status', { exact: true }).selectOption(target);
+  await chooseOption(page.getByLabel('Status', { exact: true }), target);
   await page.getByRole('button', { name: 'Save action', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('button', { name: 'Enable', exact: true }).click();

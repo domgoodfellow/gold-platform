@@ -2,7 +2,7 @@
 
 import { useActionState, useId, useState } from 'react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, FieldLabel, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { ErrorText, FieldLabel, Hint, TextArea, TextInput } from '@/components/controls/inputs';
 import {
   PageDrawer,
   PageDrawerContent,
@@ -31,6 +31,7 @@ import {
   type PlanActionState,
 } from '@/app/platform/plans/[planKey]/actions';
 import type { Plan, PlanMarginPolicy, PlanQuota, PlanUtilizationAssumption } from '@/lib/domain/catalogue/plans';
+import { SelectField } from '@/components/controls/select-field';
 
 const CREATE_INITIAL: CreatePlanState = { error: null };
 const ACTION_INITIAL: PlanActionState = { error: null, updated: false };
@@ -58,10 +59,7 @@ export function CreatePlanSheet() {
           </div>
           <div className="flex flex-col gap-1">
             <FieldLabel htmlFor="kind">Kind</FieldLabel>
-            <SelectInput id="kind" name="kind" defaultValue="plan">
-              <option value="plan">Plan (one base package per organization)</option>
-              <option value="addon">Add-on (stacks alongside a Plan)</option>
-            </SelectInput>
+            <SelectField id="kind" name="kind" defaultValue="plan" options={[{ value: 'plan', label: 'Plan (one base package per organization)' }, { value: 'addon', label: 'Add-on (stacks alongside a Plan)' }]} />
           </div>
           <div className="flex flex-col gap-1">
             <FieldLabel htmlFor="label">Label</FieldLabel>
@@ -116,11 +114,7 @@ export function EditPlanSheet({ plan }: { plan: Plan }) {
           </div>
           <div className="flex flex-col gap-1">
             <FieldLabel htmlFor="saleStatus">Sale state</FieldLabel>
-            <SelectInput id="saleStatus" name="saleStatus" defaultValue={plan.saleStatus}>
-              <option value="active">Active</option>
-              <option value="unlisted">Unlisted</option>
-              <option value="archived">Archived</option>
-            </SelectInput>
+            <SelectField id="saleStatus" name="saleStatus" defaultValue={plan.saleStatus} options={[{ value: 'active', label: 'Active' }, { value: 'unlisted', label: 'Unlisted' }, { value: 'archived', label: 'Archived' }]} />
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="billable" defaultChecked={plan.billable} /> Billable
@@ -251,13 +245,7 @@ export function QuotaSheet({ planId, planKey, quota }: { planId: string; planKey
             </div>
             <div className="flex flex-1 flex-col gap-1">
               <FieldLabel htmlFor="period">Period</FieldLabel>
-              <SelectInput id="period" name="period" defaultValue={quota?.period ?? 'month'}>
-                <option value="day">Day</option>
-                <option value="week">Week</option>
-                <option value="month">Month</option>
-                <option value="year">Year</option>
-                <option value="none">None</option>
-              </SelectInput>
+              <SelectField id="period" name="period" defaultValue={quota?.period ?? 'month'} options={[{ value: 'day', label: 'Day' }, { value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }, { value: 'year', label: 'Year' }, { value: 'none', label: 'None' }]} />
             </div>
           </div>
           <div className="flex gap-3">
@@ -273,15 +261,11 @@ export function QuotaSheet({ planId, planKey, quota }: { planId: string; planKey
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <FieldLabel htmlFor="allowanceType">Allowance type</FieldLabel>
-              <SelectInput id="allowanceType" name="allowanceType" defaultValue={quota?.allowanceType ?? 'usage'}>
-                <option value="usage">Usage</option><option value="capacity">Count / capacity</option><option value="recurring_resource">Recurring resource</option><option value="boolean">Boolean entitlement</option>
-              </SelectInput>
+              <SelectField id="allowanceType" name="allowanceType" defaultValue={quota?.allowanceType ?? 'usage'} options={[{ value: 'usage', label: 'Usage' }, { value: 'capacity', label: 'Count / capacity' }, { value: 'recurring_resource', label: 'Recurring resource' }, { value: 'boolean', label: 'Boolean entitlement' }]} />
             </div>
             <div className="flex flex-col gap-1">
               <FieldLabel htmlFor="resetSemantics">Reset</FieldLabel>
-              <SelectInput id="resetSemantics" name="resetSemantics" defaultValue={quota?.resetSemantics ?? 'billing_period'}>
-                <option value="billing_period">Billing period</option><option value="calendar_period">Calendar period</option><option value="none">Does not reset</option>
-              </SelectInput>
+              <SelectField id="resetSemantics" name="resetSemantics" defaultValue={quota?.resetSemantics ?? 'billing_period'} options={[{ value: 'billing_period', label: 'Billing period' }, { value: 'calendar_period', label: 'Calendar period' }, { value: 'none', label: 'Does not reset' }]} />
             </div>
           </div>
           <div className="flex flex-col gap-1">
@@ -290,9 +274,7 @@ export function QuotaSheet({ planId, planKey, quota }: { planId: string; planKey
           </div>
           <div className="flex flex-col gap-1">
             <FieldLabel htmlFor="overageBehavior">Overage behavior</FieldLabel>
-            <SelectInput id="overageBehavior" name="overageBehavior" value={overageBehavior} onChange={(event) => setOverageBehavior(event.target.value as PlanQuota['overageBehavior'])}>
-              <option value="metered">Metered</option><option value="hard_limit">Hard limit</option><option value="soft_limit">Soft limit</option><option value="unmetered">Unmetered retail</option><option value="not_applicable">Not applicable</option>
-            </SelectInput>
+            <SelectField id="overageBehavior" name="overageBehavior" value={overageBehavior} onValueChange={(next) => setOverageBehavior(next as PlanQuota['overageBehavior'])} options={[{ value: 'metered', label: 'Metered' }, { value: 'hard_limit', label: 'Hard limit' }, { value: 'soft_limit', label: 'Soft limit' }, { value: 'unmetered', label: 'Unmetered retail' }, { value: 'not_applicable', label: 'Not applicable' }]} />
             <input type="hidden" name="overagePolicy" value={overageBehavior === 'metered' ? 'allowed' : overageBehavior === 'hard_limit' ? 'blocked' : 'not_applicable'} />
           </div>
           <ErrorText role="alert">{state.error}</ErrorText>
@@ -351,11 +333,7 @@ export function RecordPlanPriceSheet({ planId, planKey }: { planId: string; plan
           </div>
           <div className="flex flex-col gap-1">
             <FieldLabel htmlFor="billingInterval">Cadence</FieldLabel>
-            <SelectInput id="billingInterval" name="billingInterval" defaultValue="month">
-              <option value="month">Monthly</option>
-              <option value="year">Yearly</option>
-              <option value="one_time">One-time</option>
-            </SelectInput>
+            <SelectField id="billingInterval" name="billingInterval" defaultValue="month" options={[{ value: 'month', label: 'Monthly' }, { value: 'year', label: 'Yearly' }, { value: 'one_time', label: 'One-time' }]} />
           </div>
           <div className="flex flex-col gap-1">
             <FieldLabel htmlFor="effectiveFrom">Effective from</FieldLabel>

@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import type { PageTemplate, WebsiteContent } from '@gold/schemas';
 import { Button } from '@/components/controls/button';
-import { FieldLabel, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { sectionLabel } from '@/lib/domain/public-site/section-registry';
 import { pagePath } from '@/lib/domain/public-site/paths';
 import type { Selection } from './types';
+import { SelectField } from '@/components/controls/select-field';
 
 /** An icon-less text button small enough to sit on a row; the label is the name a screen reader gets. */
 function RowButton({ label, onClick, disabled, children }: { label: string; onClick: () => void; disabled?: boolean; children: string }) {
@@ -47,10 +48,7 @@ function AddPage({ templates, disabled, onAdd }: { templates: PageTemplate[]; di
       </FieldLabel>
       <FieldLabel className="grid gap-1 text-xs">
         Start from
-        <SelectInput size="small" value={templateKey} onChange={(event) => setTemplateKey(event.target.value)}>
-          <option value="">A blank page</option>
-          {templates.map((template) => <option key={template.key} value={template.key}>{template.name}</option>)}
-        </SelectInput>
+        <SelectField size="small" value={templateKey} onValueChange={(next) => setTemplateKey(next)} options={[{ value: '', label: 'A blank page' }, ...templates.map((template) => ({ value: template.key, label: template.name }))]} />
       </FieldLabel>
       <div className="flex gap-2">
         <Button type="button" size="small" onClick={submit}>Add page</Button>

@@ -2,12 +2,13 @@
 
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { ErrorText, TextArea, TextInput } from '@/components/controls/inputs';
 import type { CallOutcome } from '@/lib/domain/reception/outcomes';
 import {
   wrapUpCallAction,
   type FormState,
 } from '@/app/organizations/[organizationId]/calls/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: FormState = { error: null };
 
@@ -40,21 +41,7 @@ export function WrapUpCallForm({
       <input type="hidden" name="callId" value={callId} />
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <SelectInput
-          name="outcomeId"
-          defaultValue={outcomeId ?? ''}
-          aria-label="How it went"
-          className="flex-1"
-        >
-          {/* Blank first, and it stays selectable: a call nobody has written up yet is an
-              ordinary state, and forcing a word out of somebody produces a wrong one. */}
-          <option value="">Not written up</option>
-          {outcomes.map((outcome) => (
-            <option key={outcome.id} value={outcome.id}>
-              {outcome.name}
-            </option>
-          ))}
-        </SelectInput>
+        <SelectField name="outcomeId" defaultValue={outcomeId ?? ''} aria-label="How it went" className="flex-1" options={[{ value: '', label: 'Not written up' }, ...outcomes.map((outcome) => ({ value: outcome.id, label: outcome.name }))]} />
         <TextInput
           name="durationSeconds"
           type="number"

@@ -19,6 +19,7 @@ import { createWorkItem } from '../lib/domain/work-items/work-items';
 import { scheduleWorkItem } from '../lib/domain/scheduling/schedule';
 import { recordCommercialTerm } from '../lib/domain/commercial/terms';
 import { asPlatformStaff, foundBusiness } from '../tests/support/founding';
+import { chooseOption, selectFieldValue } from './select-field';
 
 /**
  * Booking policy in a real browser: what a visitor is offered under notice, same-day, horizon and
@@ -183,14 +184,14 @@ test('the owner sets booking limits in words, and they are kept', async ({ brows
 
   await page.getByLabel('Start times every, in minutes').fill('15');
   await page.getByLabel('How much notice is required?').fill('2');
-  await page.getByLabel('Notice unit').selectOption('hours');
+  await chooseOption(page.getByLabel('Notice unit'), 'hours');
   await page.getByLabel('How far ahead can customers book, in days?').fill('7');
   await page.getByLabel('Allow same-day booking').uncheck();
-  await page.getByLabel('Reschedule cutoff unit').selectOption('hours');
+  await chooseOption(page.getByLabel('Reschedule cutoff unit'), 'hours');
   await page.getByLabel('Customers can reschedule until').fill('12');
-  await page.getByLabel('Cancellation cutoff unit').selectOption('hours');
+  await chooseOption(page.getByLabel('Cancellation cutoff unit'), 'hours');
   await page.getByLabel('Customers can cancel until').fill('6');
-  await page.getByLabel('A cancelled booking moves to').selectOption({ label: 'Cancelled' });
+  await chooseOption(page.getByLabel('A cancelled booking moves to'), { label: 'Cancelled' });
   await page.getByRole('button', { name: 'Save booking limits' }).click();
   await expect.poll(async () => (await policyOf()).customerCancellationCutoffMinutes).toBe(360);
   expect(await policyOf()).toEqual({
@@ -206,7 +207,7 @@ test('the owner sets booking limits in words, and they are kept', async ({ brows
   // The same form says what it stored, in the owner's units, and refuses nonsense in words.
   await page.reload();
   await expect(page.getByLabel('How much notice is required?')).toHaveValue('2');
-  await expect(page.getByLabel('Notice unit')).toHaveValue('hours');
+  await expect(selectFieldValue(page.getByLabel('Notice unit'))).toHaveValue('hours');
   await page.getByLabel('How far ahead can customers book, in days?').fill('-5');
   await page.getByRole('button', { name: 'Save booking limits' }).click();
   expect(await policyOf()).toMatchObject({ maximumHorizonDays: 7 });

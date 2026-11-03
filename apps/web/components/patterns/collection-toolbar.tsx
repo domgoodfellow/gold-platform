@@ -53,7 +53,7 @@ export function CollectionToolbar({ action, scopes, scopeLabel = 'Views', leadin
         {/* One set of fields: inline on wide screens, behind a View toggle below them. The toggle is an
             unnamed checkbox, so it is never submitted and works without script. */}
         <input id={`${viewId}-view`} type="checkbox" className="peer sr-only lg:hidden" aria-controls={`${viewId}-panel`} />
-        <label htmlFor={`${viewId}-view`} className={cx('flex min-h-[var(--control-height,2.25rem)] cursor-pointer items-center gap-2 rounded-[var(--visual-radius,0.625rem)] border border-border bg-surface px-3 text-sm font-medium hover:bg-hover peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent lg:hidden')}><Rows3 aria-hidden className="size-4" />View</label>
+        <label htmlFor={`${viewId}-view`} className={cx('flex min-h-[var(--control-height,2.25rem)] cursor-pointer items-center gap-2 rounded-[var(--visual-radius,0.625rem)] border border-border bg-surface px-3 text-sm font-medium hover:bg-hover peer-focus-visible:outline-2 peer-focus-visible:outline-solid peer-focus-visible:outline-[color:var(--focus-color)] lg:hidden')}><Rows3 aria-hidden className="size-4" />View</label>
         <div id={`${viewId}-panel`} data-slot="view-panel" className="hidden w-full flex-col gap-2 peer-checked:flex sm:flex-row sm:flex-wrap lg:flex lg:w-auto lg:flex-row">{sort}{display}</div>
       </> : null}
       <Button type="submit" tone="secondary">Apply</Button>

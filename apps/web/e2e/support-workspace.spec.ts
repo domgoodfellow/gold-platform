@@ -14,6 +14,7 @@ import { createWorkItemStatus } from "../lib/domain/work-items/statuses";
 import { createWorkItem } from "../lib/domain/work-items/work-items";
 import { commandSupport, readSupport } from "../lib/domain/support/support";
 import type { Db } from "../lib/db/types";
+import { chooseOption } from './select-field';
 
 const shots = path.resolve(__dirname, "../test-results/support");
 async function capture(page: Page, name: string) {
@@ -103,10 +104,9 @@ test("Support setup, case execution, cross-domain origins, reporting and respons
   await page
     .getByLabel("Policy name", { exact: true })
     .fill("Urgent resolution");
-  await page.getByLabel("Priority", { exact: true }).selectOption("urgent");
-  await page
-    .getByLabel("Applicable queue", { exact: true })
-    .selectOption({ label: "Emergency Service" });
+  await chooseOption(page.getByLabel("Priority", { exact: true }), "urgent");
+  await chooseOption(page
+    .getByLabel("Applicable queue", { exact: true }), { label: "Emergency Service" });
   await page
     .getByLabel("Resolution target (minutes)", { exact: true })
     .fill("240");
@@ -154,12 +154,11 @@ test("Support setup, case execution, cross-domain origins, reporting and respons
     .getByRole("button", { name: "Search", exact: true })
     .first()
     .click();
-  await page
-    .getByLabel("Select customer", { exact: true })
-    .selectOption(customer);
-  await page.getByLabel("Priority", { exact: true }).selectOption("urgent");
-  await page.getByLabel("Queue", { exact: true }).selectOption(queue);
-  await page.getByLabel("Assignee", { exact: true }).selectOption(owner);
+  await chooseOption(page
+    .getByLabel("Select customer", { exact: true }), customer);
+  await chooseOption(page.getByLabel("Priority", { exact: true }), "urgent");
+  await chooseOption(page.getByLabel("Queue", { exact: true }), queue);
+  await chooseOption(page.getByLabel("Assignee", { exact: true }), owner);
   await capture(page, "new-case-drawer");
   await page.getByRole("button", { name: "Create Case", exact: true }).click();
   await expect(page).toHaveURL(/support\/cases\/[\w-]+/);
@@ -177,9 +176,8 @@ test("Support setup, case execution, cross-domain origins, reporting and respons
       { exact: true },
     ),
   ).toBeVisible();
-  await page
-    .getByLabel("priority for CASE-0001", { exact: true })
-    .selectOption("high");
+  await chooseOption(page
+    .getByLabel("priority for CASE-0001", { exact: true }), "high");
   await expect
     .poll(
       async () =>
@@ -188,10 +186,9 @@ test("Support setup, case execution, cross-domain origins, reporting and respons
     )
     .toBe("high");
   await page.getByRole("button", { name: "Assign Case", exact: true }).click();
-  await page
+  await chooseOption(page
     .getByRole("dialog", { name: "Assign Case", exact: true })
-    .getByLabel("Assignee", { exact: true })
-    .selectOption("");
+    .getByLabel("Assignee", { exact: true }), "");
   await page
     .getByRole("dialog", { name: "Assign Case", exact: true })
     .getByRole("button", { name: "Assign Case", exact: true })
@@ -202,24 +199,22 @@ test("Support setup, case execution, cross-domain origins, reporting and respons
   await page
     .getByLabel("Escalation reason", { exact: true })
     .fill("Restore heat before the expected overnight temperature drop.");
-  await page
+  await chooseOption(page
     .getByRole("dialog", { name: "Escalate Case", exact: true })
-    .getByLabel("Assignee", { exact: true })
-    .selectOption(owner);
+    .getByLabel("Assignee", { exact: true }), owner);
   await page
     .getByRole("dialog", { name: "Escalate Case", exact: true })
     .getByRole("button", { name: "Escalate Case", exact: true })
     .click();
-  await page
-    .getByLabel("status for CASE-0001", { exact: true })
-    .selectOption("open");
+  await chooseOption(page
+    .getByLabel("status for CASE-0001", { exact: true }), "open");
   await page.getByRole("button", { name: "Link record", exact: true }).click();
   await page.getByLabel("Search work item", { exact: true }).fill("heating");
   await page
     .getByRole("dialog", { name: "Link record", exact: true })
     .getByRole("button", { name: "Search", exact: true })
     .click();
-  await page.getByLabel("Select work item", { exact: true }).selectOption(work);
+  await chooseOption(page.getByLabel("Select work item", { exact: true }), work);
   await page
     .getByRole("dialog", { name: "Link record", exact: true })
     .getByRole("button", { name: "Link record", exact: true })
@@ -316,12 +311,11 @@ test("Support setup, case execution, cross-domain origins, reporting and respons
     await page
       .getByLabel("Title", { exact: true })
       .fill("Heating follow-up from Conversation");
-    await page.getByLabel("Priority", { exact: true }).selectOption("urgent");
-    await page.getByLabel("Queue", { exact: true }).selectOption(queue);
-    await page
+    await chooseOption(page.getByLabel("Priority", { exact: true }), "urgent");
+    await chooseOption(page.getByLabel("Queue", { exact: true }), queue);
+    await chooseOption(page
       .getByRole("dialog", { name: "New Case", exact: true })
-      .getByLabel("Assignee", { exact: true })
-      .selectOption(owner);
+      .getByLabel("Assignee", { exact: true }), owner);
     await capture(page, "case-from-conversation");
     await page
       .getByRole("button", { name: "Create Case", exact: true })

@@ -6,8 +6,9 @@ import type { FormDefinition, FormField as FormFieldDefinition } from '@gold/sch
 import { Checkbox } from '@gold/ui/components/checkbox';
 import { Button } from '@/components/controls/button';
 import { FormField } from '@/components/controls/form';
-import { FieldLabel, Hint, ErrorText, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { FieldLabel, Hint, ErrorText, TextArea, TextInput } from '@/components/controls/inputs';
 import { cx } from '@/components/class-names';
+import { SelectField } from '@/components/controls/select-field';
 
 /**
  * The one place a form definition becomes fields on a screen. The Studio builder's preview and the
@@ -114,10 +115,7 @@ function RenderedField({ field, id, value, error, disabled, onChange }: FieldPro
             return <TextArea {...control} value={text} disabled={disabled} placeholder={field.placeholder} maxLength={field.maxLength ?? 4000} onChange={(event) => onChange(event.target.value)} rows={4} />;
           case 'select':
             return (
-              <SelectInput {...control} value={text} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
-                <option value="">{field.placeholder || 'Choose…'}</option>
-                {field.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </SelectInput>
+              <SelectField {...control} value={text} disabled={disabled} onValueChange={(next) => onChange(next)} options={[{ value: '', label: field.placeholder || 'Choose…' }, ...field.options.map((option) => ({ value: option.value, label: option.label }))]} />
             );
           case 'phone':
             return <PhoneInput {...control} value={text} disabled={disabled} placeholder={field.placeholder} autoComplete="tel" onChange={(event) => onChange(event.target.value)} />;

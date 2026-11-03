@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Save, Play, Plus, Globe, ShieldCheck } from "lucide-react";
 import { AppPage } from "@/components/layout/app-page";
 import { Button, ButtonLink } from "@/components/controls/button";
-import { TextInput, TextArea, SelectInput } from "@/components/controls/inputs";
+import { TextInput, TextArea } from "@/components/controls/inputs";
 import {
   PageDrawer,
   PageDrawerContent,
@@ -41,6 +41,7 @@ import {
 } from "./actions";
 import { AgentIcon, Badge, Field } from "./ui";
 import { OperationalPanel, PanelState } from "@/components/operational/primitives";
+import { SelectField } from '@/components/controls/select-field';
 
 const SECTIONS = [
   "overview",
@@ -312,17 +313,7 @@ export function AgentWorkbench({
         </nav>
         <div className="min-w-0 space-y-4">
           <div className="lg:hidden">
-            <SelectInput
-              aria-label="Configuration section"
-              value={section}
-              onChange={(e) => selectSection(e.target.value)}
-            >
-              {SECTIONS.map((s) => (
-                <option value={s} key={s}>
-                  {LABELS[s]}
-                </option>
-              ))}
-            </SelectInput>
+            <SelectField aria-label="Configuration section" value={section} onValueChange={(next) => selectSection(next)} options={[...SECTIONS.map((s) => ({ value: s, label: LABELS[s] }))]} />
           </div>
           {section === "overview" && (
             <OperationalPanel title="Agent identity">
@@ -339,22 +330,14 @@ export function AgentWorkbench({
                   />
                 </Field>
                 <Field label="Purpose">
-                  <SelectInput
-                    disabled={!canManage}
-                    value={config.purpose ?? "General assistant"}
-                    onChange={(e) => update("purpose", e.target.value)}
-                  >
-                    {[
+                  <SelectField disabled={!canManage} value={config.purpose ?? "General assistant"} onValueChange={(next) => update("purpose", next)} options={[...[
                       "General assistant",
                       "Customer service",
                       "Sales assistant",
                       "Support assistant",
                       "Scheduling assistant",
                       "Receptionist",
-                    ].map((p) => (
-                      <option key={p}>{p}</option>
-                    ))}
-                  </SelectInput>
+                    ].map((p) => ({ value: p, label: p }))]} />
                 </Field>
                 <Field label="Description">
                   <TextArea
@@ -557,19 +540,7 @@ export function AgentWorkbench({
             <OperationalPanel title="Tools & permissions">
               <div className="space-y-4">
                 <Field label="Action policy">
-                  <SelectInput
-                    disabled={!canManage}
-                    value={config.policy ?? "read_only"}
-                    onChange={(e) => update("policy", e.target.value)}
-                  >
-                    <option value="read_only">Read only</option>
-                    <option value="suggest">
-                      Suggest actions · human decision required
-                    </option>
-                    <option value="human_approval">
-                      Human approval required
-                    </option>
-                  </SelectInput>
+                  <SelectField disabled={!canManage} value={config.policy ?? "read_only"} onValueChange={(next) => update("policy", next)} options={[{ value: 'read_only', label: 'Read only' }, { value: 'suggest', label: 'Suggest actions · human decision required' }, { value: 'human_approval', label: 'Human approval required' }]} />
                 </Field>
                 <p className="text-xs text-muted">
                   These tools are available to the Operator Copilot only.
@@ -846,19 +817,7 @@ function Testing({
           </p>
         </div>
         <Field label="Published version">
-          <SelectInput
-            value={version}
-            onChange={(e) => setVersion(e.target.value)}
-          >
-            {!versions.length && (
-              <option value="">Publish a version first</option>
-            )}
-            {versions.map((v) => (
-              <option key={v.id} value={v.id}>
-                Version {v.version_number}
-              </option>
-            ))}
-          </SelectInput>
+          <SelectField value={version} onValueChange={(next) => setVersion(next)} options={[...(!versions.length ? [{ value: '', label: 'Publish a version first' }] : []), ...versions.map((v) => ({ value: v.id, label: `Version ${v.version_number}` }))]} />
         </Field>
         <Field label="Test question">
           <TextArea
@@ -1056,33 +1015,13 @@ function DeploymentEditor({
         >
           <div className="space-y-5">
             <Field label="Channel">
-              <SelectInput
-                disabled={Boolean(deployment) || !canManage}
-                value={surface}
-                onChange={(e) => {
-                  setSurface(e.target.value as Channel);
+              <SelectField disabled={Boolean(deployment) || !canManage} value={surface} onValueChange={(next) => {
+                  setSurface(next as Channel);
                   setEnabled(false);
-                }}
-              >
-                {Object.entries(CHANNELS).map(([key, label]) => (
-                  <option value={key} key={key}>
-                    {label}
-                  </option>
-                ))}
-              </SelectInput>
+                }} options={[...Object.entries(CHANNELS).map(([key, label]) => ({ value: key, label: label }))]} />
             </Field>
             <Field label="Effective published version">
-              <SelectInput
-                disabled={!canManage}
-                value={version}
-                onChange={(e) => setVersion(e.target.value)}
-              >
-                {versions.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    Version {v.version_number}
-                  </option>
-                ))}
-              </SelectInput>
+              <SelectField disabled={!canManage} value={version} onValueChange={(next) => setVersion(next)} options={[...versions.map((v) => ({ value: v.id, label: `Version ${v.version_number}` }))]} />
             </Field>
             <Field label="Display name">
               <TextInput
@@ -1095,21 +1034,8 @@ function DeploymentEditor({
             </Field>
             {surface === "website_chat" && (
               <Field label="Published website">
-                <SelectInput
-                  disabled={Boolean(deployment) || !canManage}
-                  value={site}
-                  onChange={(e) => setSite(e.target.value)}
-                >
-                  <option value="">Select website</option>
-                  {data.sites
-                    .filter((s) => s.current_published_revision_id)
-                    .map((s) => (
-                      <option
-                        key={s.id}
-                        value={s.id}
-                      >{`Website ${s.id.slice(0, 8)}`}</option>
-                    ))}
-                </SelectInput>
+                <SelectField disabled={Boolean(deployment) || !canManage} value={site} onValueChange={(next) => setSite(next)} options={[{ value: '', label: 'Select website' }, ...data.sites
+                    .filter((s) => s.current_published_revision_id).map((s) => ({ value: s.id, label: `Website ${s.id.slice(0, 8)}` }))]} />
               </Field>
             )}
             {!supported && (

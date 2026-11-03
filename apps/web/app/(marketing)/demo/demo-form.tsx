@@ -4,9 +4,10 @@ import { PhoneInput } from '@/components/controls/phone-input';
 import Link from 'next/link';
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, FieldLabel, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { ErrorText, FieldLabel, Hint, TextArea, TextInput } from '@/components/controls/inputs';
 import { FOCUS_RING, cx } from '@/components/class-names';
 import { PUBLIC_INTAKE_LIMITS } from '@/lib/domain/public-intake/limits';
+import { SelectField } from '@/components/controls/select-field';
 
 export type DemoRequestState = { error: string | null; done: boolean };
 
@@ -69,10 +70,7 @@ export function DemoForm({
 
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="businessType">What do you want help with?</FieldLabel>
-        <SelectInput id="businessType" name="businessType" defaultValue="">
-          <option value="" disabled>Choose one</option>
-          {HELP_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-        </SelectInput>
+        <SelectField id="businessType" name="businessType" defaultValue="" options={[{ value: '', label: 'Choose one', disabled: true }, ...HELP_OPTIONS.map((option) => ({ value: option, label: option }))]} />
       </div>
 
       <div className="flex flex-col gap-1">

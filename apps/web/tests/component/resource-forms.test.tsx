@@ -7,6 +7,7 @@ import { ResourceClassControl } from '@/features/resources/resource-class-contro
 import { ResourceTable } from '@/features/resources/resource-table';
 import type { Resource } from '@/lib/domain/resources/resources';
 import { runAxe } from '@/tests/support/axe';
+import { chooseOption, fieldInput, fieldValue, optionLabels } from '../support/select-field';
 
 /**
  * What a person sees when they say what a resource is. The server actions are replaced — under test
@@ -50,24 +51,25 @@ function renderCreate(mayAddCapability = true) {
 }
 
 describe('creating a resource', () => {
-  it('requires a type and preselects none', () => {
+  it('requires a type and preselects none', async () => {
     renderCreate();
-    const type = screen.getByLabelText('Type') as HTMLSelectElement;
-    expect(type.required).toBe(true);
-    expect(type.value).toBe('');
-    expect([...type.options].map((option) => option.text)).toEqual(['Choose a type', 'Person', 'Vehicle', 'Equipment', 'Facility', 'Other']);
+    const type = screen.getByLabelText('Type');
+    expect(fieldInput(type).required).toBe(true);
+    expect(type).toHaveAttribute('aria-required', 'true');
+    expect(fieldValue(type)).toBe('');
+    expect(await optionLabels(type)).toEqual(['Choose a type', 'Person', 'Vehicle', 'Equipment', 'Facility', 'Other']);
   });
 
-  it('offers the member relationship for a person and for nothing else', () => {
+  it('offers the member relationship for a person and for nothing else', async () => {
     renderCreate();
     const type = screen.getByLabelText('Type');
     expect(screen.queryByLabelText('Represents member')).toBeNull();
 
-    fireEvent.change(type, { target: { value: 'person' } });
+    await chooseOption(type, 'person');
     expect(screen.getByLabelText('Represents member')).toBeTruthy();
 
     for (const other of ['vehicle', 'equipment', 'facility', 'other']) {
-      fireEvent.change(type, { target: { value: other } });
+      await chooseOption(type, other);
       expect(screen.queryByLabelText('Represents member'), other).toBeNull();
     }
   });
@@ -95,14 +97,14 @@ describe('creating a resource', () => {
 });
 
 describe('an existing resource', () => {
-  it('shows its type and offers every class on the control', () => {
+  it('shows its type and offers every class on the control', async () => {
     render(<ResourceClassControl organizationId="org" resourceId="r1" current="vehicle" />);
-    const select = screen.getByLabelText('Type') as HTMLSelectElement;
-    expect(select.value).toBe('vehicle');
-    expect(select.options).toHaveLength(5);
+    const select = screen.getByLabelText('Type');
+    expect(fieldValue(select)).toBe('vehicle');
+    expect(await optionLabels(select)).toHaveLength(5);
   });
 
-  it('names each capability removal for what it removes, and offers only what it does not hold', () => {
+  it('names each capability removal for what it removes, and offers only what it does not hold', async () => {
     render(
       <ResourceCapabilitiesControl
         organizationId="org"
@@ -115,7 +117,7 @@ describe('an existing resource', () => {
       />,
     );
     expect(screen.getByRole('button', { name: 'Remove Tire service from Service Van 1' })).toBeTruthy();
-    const options = [...(screen.getByLabelText('Add a capability') as HTMLSelectElement).options].map((option) => option.text);
+    const options = await optionLabels(screen.getByLabelText('Add a capability'));
     expect(options).toEqual(['Choose…', 'Oil change']);
   });
 

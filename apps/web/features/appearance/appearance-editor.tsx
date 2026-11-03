@@ -9,7 +9,7 @@ import { VisualScope } from '@gold/ui/components/visual-scope';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@gold/ui/components/tabs';
 import { Popover, PopoverTrigger, PopoverContent } from '@gold/ui/components/popover';
 import { Button } from '@/components/controls/button';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { FormField, FormActions, FormError } from '@/components/controls/form';
 import { SelectableCard } from '@/components/controls/selectable-card';
 import { Card } from '@/components/surfaces/card';
@@ -20,8 +20,9 @@ import { ViewNav } from '@/components/navigation/view-nav';
 import { DialogBody, DialogFooterBar, StepHeader } from '@/components/panels/dialog-layout';
 import { Dialog, DialogContent, DialogTrigger } from '@gold/ui/components/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@gold/ui/components/table';
-import { cx } from '@/components/class-names';
+import { cx, FOCUS_RING_WITHIN } from '@/components/class-names';
 import { updateAppearanceAction } from '@/app/settings/account/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const PRESET_CHOICES: { value?: VisualPreset; label: string }[] = [
   { label: 'Platform default' },
@@ -71,7 +72,7 @@ export function AppearanceEditor({ saved }: { saved: PersonalAppearancePreferenc
               const selected = draft.preset === value;
               return <label key={label} data-slot="preset-choice" className={cx(
                 'flex min-h-11 cursor-pointer items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm font-medium',
-                'has-focus-visible:ring-2 has-focus-visible:ring-accent-text has-focus-visible:ring-offset-2 has-focus-visible:ring-offset-background',
+                FOCUS_RING_WITHIN,
                 'has-disabled:cursor-not-allowed has-disabled:opacity-60',
                 selected ? 'border-foreground bg-selected' : 'border-border hover:bg-hover',
               )}>
@@ -83,20 +84,16 @@ export function AppearanceEditor({ saved }: { saved: PersonalAppearancePreferenc
           </div>
         </fieldset>
         <div className="grid gap-4 @md:grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-5">
-          <FormField id="appearance-theme" label="Theme">{props => <SelectInput {...props} value={draft.appearance ?? 'system'} onChange={event => change('appearance', event.target.value as PersonalAppearancePreferences['appearance'])}>
-            <option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option>
-          </SelectInput>}</FormField>
-          <FormField id="appearance-density" label="Density">{props => <SelectInput {...props} value={draft.density ?? ''} onChange={event => change('density', (event.target.value || undefined) as PersonalAppearancePreferences['density'])}><option value="">Platform default</option><option value="compact">Compact</option><option value="comfortable">Comfortable</option></SelectInput>}</FormField>
-          <FormField id="appearance-shape" label="Shape">{props => <SelectInput {...props} value={draft.shape ?? ''} onChange={event => change('shape', (event.target.value || undefined) as PersonalAppearancePreferences['shape'])}><option value="">Inherit from preset</option><option value="square">Square</option><option value="rounded">Rounded</option><option value="soft">Soft</option></SelectInput>}</FormField>
-          <FormField id="appearance-motion" label="Motion">{props => <SelectInput {...props} value={draft.motion ?? 'system'} onChange={event => change('motion', event.target.value as PersonalAppearancePreferences['motion'])}><option value="system">System</option><option value="reduced">Reduced</option></SelectInput>}</FormField>
-          <FormField id="appearance-background" label="Background">{props => <SelectInput {...props} value={draft.background ?? 'none'} onChange={event => change('background', event.target.value === 'none' ? undefined : event.target.value as BackgroundTreatment)}>
-            <option value="none">None</option><option value="gradient">Ambient gradient</option><option value="grid">Fine grid</option><option value="ambient3d">Ambient 3D</option>
-          </SelectInput>}</FormField>
+          <FormField id="appearance-theme" label="Theme">{props => <SelectField {...props} value={draft.appearance ?? 'system'} onValueChange={(next) => change('appearance', next as PersonalAppearancePreferences['appearance'])} options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />}</FormField>
+          <FormField id="appearance-density" label="Density">{props => <SelectField {...props} value={draft.density ?? ''} onValueChange={(next) => change('density', (next || undefined) as PersonalAppearancePreferences['density'])} options={[{ value: '', label: 'Platform default' }, { value: 'compact', label: 'Compact' }, { value: 'comfortable', label: 'Comfortable' }]} />}</FormField>
+          <FormField id="appearance-shape" label="Shape">{props => <SelectField {...props} value={draft.shape ?? ''} onValueChange={(next) => change('shape', (next || undefined) as PersonalAppearancePreferences['shape'])} options={[{ value: '', label: 'Inherit from preset' }, { value: 'square', label: 'Square' }, { value: 'rounded', label: 'Rounded' }, { value: 'soft', label: 'Soft' }]} />}</FormField>
+          <FormField id="appearance-motion" label="Motion">{props => <SelectField {...props} value={draft.motion ?? 'system'} onValueChange={(next) => change('motion', next as PersonalAppearancePreferences['motion'])} options={[{ value: 'system', label: 'System' }, { value: 'reduced', label: 'Reduced' }]} />}</FormField>
+          <FormField id="appearance-background" label="Background">{props => <SelectField {...props} value={draft.background ?? 'none'} onValueChange={(next) => change('background', next === 'none' ? undefined : next as BackgroundTreatment)} options={[{ value: 'none', label: 'None' }, { value: 'gradient', label: 'Ambient gradient' }, { value: 'grid', label: 'Fine grid' }, { value: 'ambient3d', label: 'Ambient 3D' }]} />}</FormField>
         </div>
       </div>
     </fieldset>
     <section aria-label="Appearance preview" className="space-y-3">
-      <div className="flex flex-wrap items-end justify-between gap-3"><h2 className="text-lg font-semibold">Preview</h2><div className="w-40"><FormField id="appearance-preview-scheme" label="Preview theme">{props => <SelectInput {...props} value={previewScheme} onChange={event => setPreviewScheme(event.target.value as 'light' | 'dark')}><option value="light">Light</option><option value="dark">Dark</option></SelectInput>}</FormField></div></div>
+      <div className="flex flex-wrap items-end justify-between gap-3"><h2 className="text-lg font-semibold">Preview</h2><div className="w-40"><FormField id="appearance-preview-scheme" label="Preview theme">{props => <SelectField {...props} value={previewScheme} onValueChange={(next) => setPreviewScheme(next as 'light' | 'dark')} options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />}</FormField></div></div>
       <VisualScope selection={{ ...draft, appearance: previewScheme }} data-testid="appearance-preview" className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4 rounded-xl border border-border p-4 sm:p-6">
         <div data-testid="appearance-preview-intro" className="relative isolate overflow-hidden rounded-(--visual-radius,0.625rem) border border-border px-4 py-5 col-span-full">
           <DecorativeBackground clear="start" />

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { chooseOption, selectedLabel, selectFieldValue } from '../select-field';
 
 const resolveFromWeb = createRequire(`${process.cwd()}/package.json`);
 const axeSource = readFileSync(resolveFromWeb.resolve('axe-core/axe.min.js'), 'utf8');
@@ -42,6 +43,43 @@ test('all presets and schemes: responsive, accessible, interactive and scoped ov
       await scope.getByRole('button', { name: /Resource filter/ }).click();
       await page.getByRole('radio', { name: 'Assigned to me' }).click();
       await expect(scope.getByRole('button', { name: 'Resource filter: Assigned to me' })).toBeVisible();
+      // One focus indicator: a keyboard outline in the scope's own text colour on the control's edge —
+      // no box-shadow ring, no gap — on a button, a text field and a selection trigger alike.
+      const ink = scheme === 'dark' ? 'rgb(237, 237, 237)' : 'rgb(23, 23, 23)';
+      for (const control of [scope.getByRole('button', { name: 'Open modal' }), scope.getByRole('textbox', { name: 'Display name' }), scope.getByRole('combobox', { name: 'Preview status' })]) {
+        await control.focus(); await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
+        await expect(control).toBeFocused();
+        await expect.poll(() => control.evaluate((element) => { const style = getComputedStyle(element); return [style.outlineStyle, style.outlineWidth, style.outlineOffset, style.outlineColor, /\d+px \d+px 0px [1-9]/.test(style.boxShadow)]; })).toEqual(['solid', '2px', '0px', ink, false]);
+      }
+      // The styled Select portals inside the scope, marks its choice, refuses a disabled one and returns focus.
+      const status = scope.getByRole('combobox', { name: 'Preview status' });
+      await expect(selectedLabel(status)).toHaveText('Open');
+      await page.keyboard.press('Enter');
+      const statuses = page.getByRole('listbox');
+      await expect(statuses.getByRole('option', { name: 'Open' })).toHaveAttribute('aria-selected', 'true');
+      await expect(statuses.getByRole('option', { name: 'Closed' })).toHaveAttribute('data-disabled', '');
+      const content = page.locator('[data-slot=select-content]');
+      expect(await content.evaluate((element) => [element.closest('[data-visual-preset]')?.getAttribute('data-visual-preset'), element.closest('[data-appearance]')?.getAttribute('data-appearance')])).toEqual([preset.toLowerCase(), scheme]);
+      // Its corners follow the scope's shape, like the trigger it opened from.
+      expect(await content.evaluate((element) => getComputedStyle(element).borderTopLeftRadius)).toBe(await scope.locator('[data-slot=select-trigger]').first().evaluate((element) => getComputedStyle(element).borderTopLeftRadius));
+      if (preset === 'Expressive') await page.screenshot({ path: testInfo.outputPath(`select-open-${scheme}.png`) });
+      await page.keyboard.press('Escape');
+      await expect(statuses).toHaveCount(0);
+      await expect(status).toBeFocused();
+      await chooseOption(status, 'No status');
+      await expect(selectedLabel(status)).toHaveText('No status');
+      await expect(selectFieldValue(status)).toHaveValue('');
+      // The long list is searchable in the same box; typing filters and Enter chooses.
+      const contact = scope.getByRole('combobox', { name: 'Preview contact' });
+      await contact.click();
+      const search = page.getByRole('textbox', { name: 'Search Preview contact' });
+      await expect(search).toBeFocused();
+      await search.fill('contact 07');
+      await expect(page.getByRole('listbox').getByRole('option')).toHaveText(['Contact 07']);
+      await page.keyboard.press('Enter');
+      await expect(selectedLabel(contact)).toHaveText('Contact 07');
+      await expect(contact).toBeFocused();
+      await expect(selectFieldValue(contact)).toHaveValue('contact-7');
       await scope.screenshot({ path: testInfo.outputPath(`${preset}-${scheme}.png`) });
     }
   }
@@ -53,7 +91,7 @@ test('all presets and schemes: responsive, accessible, interactive and scoped ov
   expect(violations).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(errors).toEqual([]);
-  await page.getByRole('combobox', { name: 'Component density' }).selectOption('compact');
+  await chooseOption(page.getByRole('combobox', { name: 'Component density' }), 'compact');
   const height = await page.locator('[data-visual-system] [data-slot=input]').first().evaluate((element) => element.getBoundingClientRect().height);
   expect(height).toBeGreaterThanOrEqual(testInfo.project.name === 'phone' ? 44 : 32);
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -64,7 +102,7 @@ test('all presets and schemes: responsive, accessible, interactive and scoped ov
 
 test('navigation wraps, variants stay independent and links retain browser history', async ({ page }, testInfo) => {
   await page.goto('/dev/design-system');
-  await page.getByRole('combobox', { name: 'Component density' }).selectOption('compact');
+  await chooseOption(page.getByRole('combobox', { name: 'Component density' }), 'compact');
   for (const preset of ['Minimal', 'Layered', 'Expressive']) {
     for (const scheme of ['light', 'dark']) {
       const scope = page.getByRole('region', { name: `${preset} ${scheme}`, exact: true });

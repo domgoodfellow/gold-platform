@@ -545,6 +545,8 @@ Use E2E strategically for behavior that depends on:
 
 Do not reproduce every unit or database test in Playwright.
 
+Selection fields are styled controls, not native `<select>` elements, so Playwright's `selectOption` and `option` locators do not apply. Specs use `e2e/select-field.ts`: `chooseOption(trigger, choice)` opens the trigger (role `combobox`) and picks the option by its submitted value, its exact label, `{ label }`, `{ value }` or `{ index }`. `selectFieldValue(trigger)` is the hidden input that carries the submitted value, for `toHaveValue`. `optionTexts`, `optionValues` and `selectedLabel` read what is offered and what is shown. An open Select hides the rest of the page from role queries, so find the trigger before opening it. Component tests use the same contract from `tests/support/select-field.ts` (`chooseOption`, `fieldValue`, `fieldInput`, `optionLabels`, `optionValues`).
+
 ---
 
 ### Smoke
@@ -1385,8 +1387,11 @@ The development design gallery has a separate no-fixture browser tier: start the
 server and run `pnpm test:design` (optional `E2E_BASE_URL`). `playwright.design.config.ts` runs
 the manifest-classified `e2e/design` tests at 1440, 768 and 390 pixels. It checks all six
 preset/scheme scopes, selection, disabled/loading/errors, keyboard tabs, modal focus
-restoration, filter/menu portals, real-browser axe including contrast, overflow and reduced
-motion. Captures go to ignored Playwright test results and require visual inspection. These
+restoration, filter/menu portals, the computed keyboard focus outline (2px, no offset, no ring,
+the scope's own text colour) on a button, a field and a selection trigger, the styled Select
+(portal inside its scope, matching corners, chosen and disabled options, Escape returning
+focus, empty choice) and the searchable Combobox (search, Enter, submitted value),
+real-browser axe including contrast, overflow and reduced motion. Captures go to ignored Playwright test results and require visual inspection. These
 tests are excluded from the seeded acceptance config and cannot run against a production
 gallery, which is unavailable. Unit/component checks cover closed token admission, precedence,
 legacy defaults and label/error relationships. No database integration is required for these

@@ -2,10 +2,11 @@
 import { useActionState, useId } from 'react';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { FormField } from '@/components/controls/form';
-import { ErrorText, SelectInput } from '@/components/controls/inputs';
+import { ErrorText } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { notificationAction, type ServiceActionState, type readEngagementDetails } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/service-actions';
 import { NOTIFICATION_PURPOSES, NOTIFICATION_STATES } from '@/lib/domain/customers/service-notifications';
+import { SelectField } from '@/components/controls/select-field';
 
 type Details = Awaited<ReturnType<typeof readEngagementDetails>>;
 export function NotificationChoice({ configuration, maySend, identities, purpose }: { configuration?: Details['notificationConfig']; maySend?: boolean; identities?: Details['emailIdentities']; purpose: keyof typeof NOTIFICATION_PURPOSES }) {
@@ -29,7 +30,7 @@ export function ServiceNotificationSection({ organizationId, customerId, details
     {details.notificationConfig?.suppressed ? <p className="text-sm">Delivery suppressed by Communications.</p> : null}
     {recipient && !recipient.withdrawn_at ? <ul className="text-sm">{Object.entries(NOTIFICATION_PURPOSES).map(([key, label]) => <li key={key}>{label}: {recipient.purposes.includes(key) ? 'Enabled' : 'Off'}</li>)}</ul> : null}
     {details.maySend && details.emailIdentities.length ? <form action={action} className="mt-3 space-y-3">{context}<input type="hidden" name="operation" value="sender"/>
-      <FormField id={`${id}-sender`} label="Communications email identity">{p => <SelectInput {...p} className="w-full [&>select]:min-h-11 sm:[&>select]:min-h-0" name="emailIdentityId" defaultValue={details.notificationConfig?.senderId ?? ''} required><option value="" disabled>Choose a ready sender</option>{details.emailIdentities.map(i => <option key={i.id} value={i.id}>{i.address}</option>)}</SelectInput>}</FormField>
+      <FormField id={`${id}-sender`} label="Communications email identity">{p => <SelectField {...p} className="w-full [&>select]:min-h-11 sm:[&>select]:min-h-0" name="emailIdentityId" defaultValue={details.notificationConfig?.senderId ?? ''} required options={[{ value: '', label: 'Choose a ready sender', disabled: true }, ...details.emailIdentities.map((i) => ({ value: i.id, label: i.address }))]} />}</FormField>
       <Button className="min-h-11 sm:min-h-0" type="submit" disabled={pending}>Save notification sender</Button>
     </form> : <p className="text-sm text-muted">{details.maySend ? 'No ready email identity. Configure Communications email before requesting confirmation.' : 'Email sending permission is required to configure delivery.'}</p>}
     <ButtonLink className="min-h-11 sm:min-h-0" tone="text" href={`/organizations/${organizationId}/settings/email`}>Email sending settings</ButtonLink>

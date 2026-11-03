@@ -14,6 +14,7 @@ import { addPricedLine, listPricedLines } from '../lib/domain/pricing/prices';
 import { getInvoiceForWorkItem, issueInvoice, recordPayment } from '../lib/domain/billing/invoices';
 import { getOrganization, updateOrganization } from '../lib/domain/tenancy/organizations';
 import { todayInZone, shiftDate, zonedTimeToInstant } from '../lib/domain/scheduling/window';
+import { chooseOption } from './select-field';
 
 /** A record choice in a Finance dialog is a whole row; a person clicks the row. */
 const choose = (dialog: Locator, name: RegExp) => dialog.locator('label').filter({ has: dialog.page().getByRole('radio', { name }) }).click();
@@ -73,7 +74,7 @@ test.describe('Finance operating journey', () => {
     let dialog = page.getByRole('dialog',{name:'New quote',exact:true});
     await dialog.getByLabel('Search Work items').fill('Service quote acceptance');
     await choose(dialog,/Service quote acceptance/);
-    await dialog.getByLabel('Price item').selectOption(price.id);
+    await chooseOption(dialog.getByLabel('Price item'), price.id);
     await dialog.getByRole('button',{name:'Add to quote',exact:true}).click();
     await expect(dialog.getByRole('status')).toContainText('Priced line added');
     await dialog.getByRole('button',{name:'Done',exact:true}).click();

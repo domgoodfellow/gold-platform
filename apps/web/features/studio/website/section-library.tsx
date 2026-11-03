@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { SectionKind, SectionPattern, WebsiteSection } from '@gold/schemas';
 import { Button } from '@/components/controls/button';
-import { FieldLabel, Hint, SelectInput } from '@/components/controls/inputs';
+import { FieldLabel, Hint } from '@/components/controls/inputs';
 import { GroupHeading } from '@/components/surfaces/section';
 import {
   PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle,
@@ -11,6 +11,7 @@ import {
 import { newId, sectionFromPattern } from '@/lib/domain/public-site/composition';
 import { SECTION_GROUPS, SECTION_REGISTRY, type SectionGroup } from '@/lib/domain/public-site/section-registry';
 import type { FormOption } from './types';
+import { SelectField } from '@/components/controls/select-field';
 
 type Choice = { key: string; name: string; description: string; make: () => WebsiteSection };
 
@@ -40,10 +41,7 @@ function FormChoice({ forms, onAdd }: { forms: FormOption[]; onAdd: (section: We
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
         <FieldLabel className="grid gap-1 text-xs">
           Form
-          <SelectInput size="small" value={formId} onChange={(event) => setFormId(event.target.value)}>
-            <option value="">Choose a form…</option>
-            {forms.map((form) => <option key={form.id} value={form.id}>{form.name}{form.published ? '' : ' (not published)'}</option>)}
-          </SelectInput>
+          <SelectField size="small" value={formId} onValueChange={(next) => setFormId(next)} options={[{ value: '', label: 'Choose a form…' }, ...forms.map((form) => ({ value: form.id, label: `${form.name}${form.published ? '' : ' (not published)'}` }))]} />
         </FieldLabel>
         <Button
           type="button" tone="secondary" size="small" disabled={!chosen} aria-label="Add form section"

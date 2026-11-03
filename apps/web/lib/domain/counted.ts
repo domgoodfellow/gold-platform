@@ -3,7 +3,7 @@
  * unbounded `select` returns the server's first thousand rows with nothing to say it did, so
  * every list here had a page size nobody chose and a cliff a business would meet unwarned.
  *
- * An array, not `{ items, total }`: most callers read these lists to populate a `<select>`,
+ * An array, not `{ items, total }`: most callers read these lists to populate a selection field,
  * assert in a test, or `.find` one row, and `expect(await listWorkItems(…)).toEqual([])` reads
  * as a sentence where `.items` wouldn't. `total` is lost by `.map`, `.filter` and spreading —
  * correctly, since those produce a different list and the original count says nothing true

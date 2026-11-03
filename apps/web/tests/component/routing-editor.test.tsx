@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RoutingSection } from '@/features/communications/voice/routing-section';
 import type { Route } from '@/lib/domain/reception/routing';
+import { fieldValue } from '../support/select-field';
 const actions = vi.hoisted(() => ({ readRouteTargetsAction: vi.fn(), updateRouteAction: vi.fn(), createRouteAction: vi.fn(), setRouteEnabledAction: vi.fn(), previewInboundRouteAction: vi.fn() }));
 vi.mock('@/app/organizations/[organizationId]/calls/routing-actions', () => actions);
 const route: Route = { id:'route-1',name:'Main reception',numberId:null,enabled:true,whenMode:'always',ringStrategy:'sequential',ringTimeoutSeconds:20,destinationType:'members',destinationExternalNumber:null,destinationRouteId:null,fallbackType:'members',fallbackExternalNumber:null,fallbackRouteId:null,callbackAffinityEnabled:false };
@@ -33,8 +34,8 @@ describe('editing persisted routing', () => {
     render(<RoutingSection organizationId="org-1" routes={[{...route,destinationType:'route',destinationRouteId:'route-2',fallbackType:'route',fallbackRouteId:'route-2'},{...route,id:'route-2',name:'Escalation'}]} numbers={[]} members={members} />);
     await userEvent.click(screen.getAllByRole('button',{name:'Edit'})[0]);
     await waitFor(() => expect(screen.getByRole('button',{name:'Save'})).toBeEnabled());
-    expect(screen.getByLabelText('Destination route')).toHaveValue('route-2');
-    expect(screen.getByLabelText('Fallback route')).toHaveValue('route-2');
+    expect(fieldValue(screen.getByLabelText('Destination route'))).toBe('route-2');
+    expect(fieldValue(screen.getByLabelText('Fallback route'))).toBe('route-2');
     await userEvent.click(screen.getByRole('button',{name:'Save'}));
     expect(actions.updateRouteAction).toHaveBeenCalledWith('org-1','route-1',expect.objectContaining({destinationRouteId:'route-2',fallbackRouteId:'route-2'}));
   });

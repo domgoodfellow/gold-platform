@@ -3,10 +3,11 @@
 import { useActionState, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/controls/button';
-import { ErrorText, FieldLabel, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
 import { saveTelephonyAccountAction } from '@/app/platform/providers/twilio/actions';
 import { ACCOUNT_FORM_INITIAL } from '@/app/platform/providers/twilio/action-states';
 import type { TelephonyCredentialKind } from '@/lib/adapters/telephony';
+import { SelectField } from '@/components/controls/select-field';
 
 /**
  * Account identity and credential, one form. The credential field is write-only: on an existing
@@ -47,11 +48,7 @@ export function TwilioAccountForm({
       </div>
       <div className="flex flex-col gap-1">
         <FieldLabel htmlFor="credentialKind">Credential type</FieldLabel>
-        <SelectInput id="credentialKind" name="credentialKind" value={kind} onChange={(event) => setKind(event.target.value)}>
-          {kinds.map((option) => (
-            <option key={option.key} value={option.key}>{option.label}</option>
-          ))}
-        </SelectInput>
+        <SelectField id="credentialKind" name="credentialKind" value={kind} onValueChange={(next) => setKind(next)} options={[...kinds.map((option) => ({ value: option.key, label: option.label }))]} />
       </div>
       {selected?.identifierLabel ? (
         <div className="flex flex-col gap-1">

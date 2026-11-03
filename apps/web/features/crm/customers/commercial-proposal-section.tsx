@@ -3,7 +3,7 @@
 import { useActionState, useState } from 'react';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { Badge } from '@/components/display/data';
-import { ErrorText, FieldLabel, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { ErrorText, FieldLabel, Hint, TextArea, TextInput } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 import {
@@ -26,6 +26,7 @@ import {
   type SendProposalInviteState,
   type HandoffProposalState,
 } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const BUILD_INITIAL: BuildCommercialProposalState = { error: null, created: false };
 const SEND_INITIAL: SendCommercialProposalState = { error: null };
@@ -202,20 +203,7 @@ function CatalogProposalBuilder({ organizationId, customerId, items, currency }:
         <div key={line.key} className="flex flex-wrap items-end gap-2">
           <div className="flex min-w-0 grow basis-56 flex-col gap-1 sm:max-w-sm">
             <FieldLabel htmlFor={`proposal-item-${line.key}`}>{`Item ${index + 1}`}</FieldLabel>
-            <SelectInput
-              id={`proposal-item-${line.key}`}
-              name="priceBookItemId"
-              value={line.priceBookItemId}
-              onChange={(event) => update(line.key, { priceBookItemId: event.target.value })}
-              required
-            >
-              <option value="">Choose an item</option>
-              {sellable.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} — {formatMoney(item.unitAmountMinor, item.currency)} / {item.unit}
-                </option>
-              ))}
-            </SelectInput>
+            <SelectField id={`proposal-item-${line.key}`} name="priceBookItemId" value={line.priceBookItemId} onValueChange={(next) => update(line.key, { priceBookItemId: next })} required options={[{ value: '', label: 'Choose an item' }, ...sellable.map((item) => ({ value: item.id, label: `${item.name} — ${formatMoney(item.unitAmountMinor, item.currency)} / ${item.unit}` }))]} />
           </div>
           <div className="flex flex-col gap-1">
             <FieldLabel htmlFor={`proposal-quantity-${line.key}`}>{`Quantity ${index + 1}`}</FieldLabel>

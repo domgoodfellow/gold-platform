@@ -1,9 +1,10 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { ErrorText, SelectInput } from '@/components/controls/inputs';
+import { ErrorText } from '@/components/controls/inputs';
 import type { Role } from '@/lib/domain/tenancy/roles';
 import { assignRoleAction, type AssignRoleState } from '@/app/organizations/[organizationId]/settings/access/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: AssignRoleState = { error: null };
 
@@ -12,7 +13,7 @@ const INITIAL: AssignRoleState = { error: null };
  * person is one independent command, so it submits itself rather than waiting on a screen-wide
  * save button.
  *
- * `SelectInput` is controlled rather than left to the browser, for one reason: if `assign_role`
+ * The `SelectField` is controlled rather than left to the browser, for one reason: if `assign_role`
  * refuses the change (most often the last-manager invariant, `roles.last_manager`), the row must
  * visibly revert to the role that is actually still assigned — an uncontrolled control would
  * keep showing the rejected choice, silently lying about the caller's own membership.
@@ -48,23 +49,7 @@ export function RoleAssignmentControl({
     <form action={formAction} className="flex flex-col gap-1">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="membershipId" value={membershipId} />
-      <SelectInput
-        name="roleId"
-        size="small"
-        value={value}
-        disabled={pending}
-        aria-label="Role"
-        onChange={(event) => {
-          setValue(event.target.value);
-          event.currentTarget.form?.requestSubmit();
-        }}
-      >
-        {roles.map((role) => (
-          <option key={role.id} value={role.id}>
-            {role.name}
-          </option>
-        ))}
-      </SelectInput>
+      <SelectField name="roleId" size="small" value={value} disabled={pending} aria-label="Role" onValueChange={(next) => setValue(next)} submitOnChange options={[...roles.map((role) => ({ value: role.id, label: role.name }))]} />
       <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );

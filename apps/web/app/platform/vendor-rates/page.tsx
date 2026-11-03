@@ -2,7 +2,7 @@ import { platformParams } from '@/lib/route/platform';
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
 import { Button, ButtonLink } from '@/components/controls/button';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { AddVendorRate, VendorRateDrawer } from '@/features/platform/commercial/vendor-rates-client';
 import { getDb } from '@/lib/db/server';
@@ -10,6 +10,7 @@ import { listMeters, listProviderCostMeters, listProviderCostRates, listProvider
 import { formatMicrosMoney } from '@/lib/domain/commercial/economics';
 import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import { requirePlatformArea } from '@/lib/route/platform';
+import { SelectField } from '@/components/controls/select-field';
 
 export const dynamic = 'force-dynamic';
 type Search = Promise<Record<string, string | string[] | undefined>>;
@@ -42,10 +43,10 @@ export default async function VendorRatesPage({ params, searchParams }: PageProp
       <PageHeader title="Vendor rates" crumbs={platformAncestry(goldId, 'vendor-rates')} actions={<AddVendorRate providers={providers} meters={meters} costMeters={costMeters} />} />
       <form className="flex flex-wrap gap-2" role="search">
         <TextInput name="q" defaultValue={one(query.q)} placeholder="Search rates" aria-label="Search rates" size="small" />
-        <SelectInput name="provider" defaultValue={providerKey} aria-label="Provider" size="small"><option value="">All providers</option>{providers.map((provider) => <option key={provider.key} value={provider.key}>{provider.label}</option>)}</SelectInput>
-        <SelectInput name="meter" defaultValue={costMeterKey} aria-label="Service" size="small"><option value="">All services</option>{costMeters.map((meter) => <option key={meter.key} value={meter.key}>{meter.label}</option>)}</SelectInput>
+        <SelectField name="provider" defaultValue={providerKey} aria-label="Provider" size="small" options={[{ value: '', label: 'All providers' }, ...providers.map((provider) => ({ value: provider.key, label: provider.label }))]} />
+        <SelectField name="meter" defaultValue={costMeterKey} aria-label="Service" size="small" options={[{ value: '', label: 'All services' }, ...costMeters.map((meter) => ({ value: meter.key, label: meter.label }))]} />
         <TextInput name="region" defaultValue={region} placeholder="Country / region" aria-label="Country or region" size="small" className="w-36" />
-        <SelectInput name="current" defaultValue={currentOnly ? 'current' : 'all'} aria-label="Effective state" size="small"><option value="current">Current only</option><option value="all">All history</option></SelectInput>
+        <SelectField name="current" defaultValue={currentOnly ? 'current' : 'all'} aria-label="Effective state" size="small" options={[{ value: 'current', label: 'Current only' }, { value: 'all', label: 'All history' }]} />
         <Button type="submit" tone="secondary" size="small">Filter</Button>
         {providerKey || costMeterKey || region || one(query.q) || !currentOnly ? <ButtonLink href={platformHref(goldId, 'vendor-rates')} tone="text" size="small">Clear</ButtonLink> : null}
       </form>

@@ -9,6 +9,7 @@ import { COLLEAGUE_STORAGE_STATE, OWNER_STORAGE_STATE, loadDemoContext } from '.
 import { createWorkItemType } from '../lib/domain/work-items/types';
 import { saveAppearance } from '../lib/domain/identity/appearance';
 import type { Db } from '../lib/db/types';
+import { selectFieldValue } from './select-field';
 
 /**
  * Settings, Work and Finance UX correction, in a real browser against disposable businesses:
@@ -131,7 +132,7 @@ test.describe.serial('Settings, Work and Finance UX correction', () => {
     await main(page).getByLabel('Starting stage name').fill('Booked');
     await main(page).getByRole('button', { name: 'Add stage and continue' }).click();
     await expect(main(page).getByRole('form', { name: 'Create work' })).toBeVisible();
-    await expect(main(page).getByLabel('Work type')).toHaveValue(typeId);
+    await expect(selectFieldValue(main(page).getByLabel('Work type'))).toHaveValue(typeId);
     await expect(main(page).getByLabel('Starting stage', { exact: true })).toHaveText('Booked');
     await captureAll(page, 'work-new-recovered', url, p => main(p).getByRole('form', { name: 'Create work' }));
     await page.setViewportSize({ width: 1440, height: 900 });

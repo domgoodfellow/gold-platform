@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { ErrorText, SelectInput } from '@/components/controls/inputs';
+import { ErrorText } from '@/components/controls/inputs';
 import {
   RESOURCE_CLASSES,
   RESOURCE_CLASS_LABELS,
@@ -11,6 +11,7 @@ import {
   setResourceClassAction,
   type ResourceEditState,
 } from '@/app/organizations/[organizationId]/resources/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: ResourceEditState = { error: null };
 
@@ -42,23 +43,7 @@ export function ResourceClassControl({
     <form action={formAction} className="flex flex-col gap-1">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="resourceId" value={resourceId} />
-      <SelectInput
-        name="resourceClass"
-        size="small"
-        value={value}
-        disabled={pending}
-        aria-label="Type"
-        onChange={(event) => {
-          setValue(event.target.value as ResourceClass);
-          event.currentTarget.form?.requestSubmit();
-        }}
-      >
-        {RESOURCE_CLASSES.map((option) => (
-          <option key={option} value={option}>
-            {RESOURCE_CLASS_LABELS[option]}
-          </option>
-        ))}
-      </SelectInput>
+      <SelectField name="resourceClass" size="small" value={value} disabled={pending} aria-label="Type" onValueChange={(next) => setValue(next as ResourceClass)} submitOnChange options={[...RESOURCE_CLASSES.map((option) => ({ value: option, label: RESOURCE_CLASS_LABELS[option] }))]} />
       <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );

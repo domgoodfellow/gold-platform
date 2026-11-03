@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { TextInput, SelectInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import type { PageTemplate, SectionPattern, SiteTemplate } from '@gold/schemas';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { TemplateList } from '@/features/studio/forms/template-list';
@@ -11,6 +11,7 @@ import { PageTemplateList, SectionPatternList, SiteTemplateList } from './websit
 import { PORTAL_TEMPLATES } from '@/lib/domain/portal/composition';
 import { ButtonLink } from '@/components/controls/button';
 import { PortalTemplatePreview } from '@/features/studio/portal/portal-template-preview';
+import { SelectField } from '@/components/controls/select-field';
 
 type Filter = 'all' | 'website' | 'pages' | 'sections' | 'forms' | 'portal';
 type TemplateMetadata = { name: string; description: string; category?: string; kind?: string };
@@ -53,8 +54,8 @@ export function TemplatesBrowser({ organizationId, hasWebsite, hasPortal = false
     <div className="grid gap-5">
       <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-surface p-3">
         <TextInput type="search" aria-label="Search templates" placeholder="Search templates…" value={search} onChange={(event) => setSearch(event.target.value)} className="sm:max-w-sm" />
-        <SelectInput aria-label="Template category" value={category} onChange={(event) => setCategory(event.target.value)}><option value="all">All categories</option>{categories.map((value) => <option key={value} value={value}>{value}</option>)}</SelectInput>
-        <SelectInput aria-label="Sort templates" value={sort} onChange={(event) => setSort(event.target.value)}><option value="recommended">Catalog order</option><option value="name">Name</option></SelectInput>
+        <SelectField aria-label="Template category" value={category} onValueChange={(next) => setCategory(next)} options={[{ value: 'all', label: 'All categories' }, ...categories.map((value) => ({ value: value, label: value }))]} />
+        <SelectField aria-label="Sort templates" value={sort} onValueChange={(next) => setSort(next)} options={[{ value: 'recommended', label: 'Catalog order' }, { value: 'name', label: 'Name' }]} />
       </div>
       <div role="group" aria-label="Kind of template" className="flex flex-wrap gap-1">
         {FILTERS.map((entry) => (

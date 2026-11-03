@@ -5,8 +5,7 @@ import type { ReactNode } from 'react';
 import { ChevronRight, Mail, MessageSquare, Phone, PhoneIncoming, Route, ShieldCheck } from 'lucide-react';
 import { AppPage } from '@/components/layout/app-page';
 import { Badge } from '@/components/display/data';
-import { SelectInput } from '@/components/controls/inputs';
-import { Button, ButtonLink } from '@/components/controls/button';
+import { ButtonLink } from '@/components/controls/button';
 import { PageHeader } from '@/components/headers/page-header';
 import { OperationalPanel, PanelState } from '@/components/operational/primitives';
 import { ReadinessBadge } from '@/components/operational/readiness-badge';
@@ -18,7 +17,9 @@ import { callStatusLabel } from '@/lib/domain/reception/calls';
 import type { InboxItem } from '@/lib/domain/reception/inbox';
 import type { CommunicationsDashboard } from '@/lib/application/communications/dashboard';
 import { ConversationActions, NewCallButton } from './communication-actions';
+import { PeriodSelect } from '@/components/controls/period-select';
 
+const PERIODS = [{ value: 'today', label: 'Today' }, { value: 'week', label: 'Last 7 days' }, { value: 'month', label: 'Last 30 days' }] as const;
 const emptyCell = 'px-3 py-7 text-center text-sm text-muted';
 function Initials({ name }: { name: string }) { return <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-full bg-hover text-xs font-medium text-muted">{name.trim().split(/\s+/).slice(0,2).map(word => word[0]).join('').toUpperCase()}</span>; }
 function ChannelIcon({ channel }: { channel: string }) { const Icon = channel === 'email' ? Mail : channel === 'phone' ? Phone : MessageSquare; return <Icon aria-hidden className={`size-3.5 shrink-0 ${channel === 'phone' ? 'text-success' : 'text-accent-text'}`} />; }
@@ -59,7 +60,7 @@ export function CommunicationsHome({ organizationId, timezone, data, configure }
     <PageHeader
       title="Communications"
       actions={<>
-        <form action={home} className="flex items-center gap-1"><SelectInput aria-label="Communication date range" name="when" defaultValue={params.when} className="h-9 w-28"><option value="today">Today</option><option value="week">Last 7 days</option><option value="month">Last 30 days</option></SelectInput><Button tone="secondary" size="small" type="submit">Apply</Button></form>
+        <PeriodSelect label="Communication date range" size="default" value={params.when} options={PERIODS.map(period => ({ ...period, href: link({ when: period.value }) }))} />
         {mayMessage ? <ButtonLink tone="primary" href={inbox}><MessageSquare aria-hidden /> Open inbox</ButtonLink> : null}
         {data.canCall ? <NewCallButton organizationId={organizationId} /> : null}
         {data.canCompose ? <ButtonLink tone="secondary" href={`${inbox}/new?channel=${data.composeChannel}`}><Mail aria-hidden /> Compose message</ButtonLink> : null}
@@ -85,7 +86,7 @@ export function CommunicationsHome({ organizationId, timezone, data, configure }
         { label:'Routing configuration', value: mayCall ? routingState : 'Restricted', href:`${config}#routing` },
       ].map(row => <Link key={row.label} href={row.href} className="flex items-center justify-between gap-2 py-0.5 text-xs hover:bg-hover"><span className="text-muted">{row.label}</span><span className="ml-auto text-right font-medium tabular-nums">{row.value}</span><ChevronRight aria-hidden className="size-3 shrink-0 text-muted" /></Link>)}</div></OperationalPanel>
       <OperationalPanel density="compact" title="Recent activity" href={mayCall ? calls : inbox}><div className="space-y-1">{data.activity.length ? data.activity.slice(0,5).map(item => <Link key={item.id} href={item.href} className="flex items-start gap-2 text-xs leading-tight hover:bg-hover"><span className="rounded-full bg-hover p-1.5"><ChannelIcon channel={item.channel} /></span><span className="min-w-0 flex-1"><span className="block font-medium">{item.channel === 'sms' ? formatPhoneForDisplay(item.title) : item.title}</span><span className="block truncate text-muted">{item.context}</span></span><span className="shrink-0 text-muted">{new Intl.DateTimeFormat('en-CA',{timeZone:timezone,hour:'numeric',minute:'2-digit'}).format(new Date(item.at))}</span></Link>) : <PanelState>No recent activity recorded.</PanelState>}</div></OperationalPanel>
-      <OperationalPanel density="compact" title="Insights"><p className="mb-2 text-xs text-muted">{params.when === 'today' ? 'Today' : params.when === 'week' ? 'Last 7 days' : 'Last 30 days'} · recorded activity</p><div className="grid grid-cols-2 gap-2"><Link href={`${calls}${callSuffix}`} className="rounded-md border border-border p-2"><span className="text-xs text-muted">Answered calls</span><span className="mt-1 block text-xl font-semibold tabular-nums">{mayCall && !params.search && data.calls?.total ? `${Math.round(data.answered / data.calls.total * 100)}%` : '—'}</span><span className="sr-only">{params.search ? 'Clear search for rate' : mayCall ? `${data.answered} answered` : 'Restricted'}</span></Link><Link href={`${inbox}?view=unread`} className="rounded-md border border-border p-2"><span className="text-xs text-muted">Unread conversations</span><span className="mt-1 block text-xl font-semibold tabular-nums">{data.inboxCounts?.unread ?? '—'}</span><span className="sr-only">Current Inbox</span></Link></div></OperationalPanel>
+      <OperationalPanel density="compact" title="Insights"><p className="mb-2 text-xs text-muted">{PERIODS.find(period => period.value === params.when)?.label ?? 'Today'} · recorded activity</p><div className="grid grid-cols-2 gap-2"><Link href={`${calls}${callSuffix}`} className="rounded-md border border-border p-2"><span className="text-xs text-muted">Answered calls</span><span className="mt-1 block text-xl font-semibold tabular-nums">{mayCall && !params.search && data.calls?.total ? `${Math.round(data.answered / data.calls.total * 100)}%` : '—'}</span><span className="sr-only">{params.search ? 'Clear search for rate' : mayCall ? `${data.answered} answered` : 'Restricted'}</span></Link><Link href={`${inbox}?view=unread`} className="rounded-md border border-border p-2"><span className="text-xs text-muted">Unread conversations</span><span className="mt-1 block text-xl font-semibold tabular-nums">{data.inboxCounts?.unread ?? '—'}</span><span className="sr-only">Current Inbox</span></Link></div></OperationalPanel>
     </aside></div>
   </AppPage>;
 }

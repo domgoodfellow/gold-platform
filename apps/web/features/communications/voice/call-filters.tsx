@@ -2,9 +2,9 @@ import { formatPhoneForDisplay } from '@/lib/display/phone';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/controls/button';
-import { SelectInput } from '@/components/controls/inputs';
 import type { CallFilter } from '@/lib/domain/reception/calls';
 import { calendarDate, shiftDate, todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
+import { SelectField } from '@/components/controls/select-field';
 
 /**
  * The filters of the call history, written in the address so a filtered view can be linked to and
@@ -149,16 +149,10 @@ export function CallFilters({
             .filter(([key]) => key !== 'number' && key !== 'member')
             .map(([key, value]) => <input key={key} type="hidden" name={key} value={value} />)}
           {numbers.length > 1 ? (
-            <SelectInput name="number" defaultValue={params.number ?? ''} aria-label="Number" size="small">
-              <option value="">Every number</option>
-              {numbers.map((number) => <option key={number.id} value={number.id}>{number.label ?? formatPhoneForDisplay(number.e164)}</option>)}
-            </SelectInput>
+            <SelectField name="number" defaultValue={params.number ?? ''} aria-label="Number" size="small" options={[{ value: '', label: 'Every number' }, ...numbers.map((number) => ({ value: number.id, label: number.label ?? formatPhoneForDisplay(number.e164) }))]} />
           ) : null}
           {members.length > 1 ? (
-            <SelectInput name="member" defaultValue={params.member ?? ''} aria-label="Handled by" size="small">
-              <option value="">Everyone</option>
-              {members.map((member) => <option key={member.id} value={member.id}>{member.displayName}</option>)}
-            </SelectInput>
+            <SelectField name="member" defaultValue={params.member ?? ''} aria-label="Handled by" size="small" options={[{ value: '', label: 'Everyone' }, ...members.map((member) => ({ value: member.id, label: member.displayName }))]} />
           ) : null}
           <Button type="submit" tone="secondary" size="small">Apply</Button>
         </form>

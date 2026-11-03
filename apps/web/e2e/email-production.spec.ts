@@ -12,6 +12,7 @@ import { provisionOrganization } from '../lib/domain/platform/provision';
 import { createRole } from '../lib/domain/tenancy/roles';
 import { readyEmailSender, type ReadySender } from '../tests/support/email-sender';
 import { storeFixtureProviderCredential, removeFixtureProviderAccounts } from '../tests/support/provider-credentials';
+import { chooseOption } from './select-field';
 
 /**
  * Email production readiness through the real Web → API path (Phase 3C).
@@ -150,7 +151,7 @@ async function invite(page: Page, email: string) {
   await page.goto(`/organizations/${orgA}/settings/access/invitations`);
   await page.getByRole('button', { name: 'Add member' }).click();
   await page.getByLabel('Email address').fill(email);
-  await page.getByLabel('Role').selectOption({ label: roleName });
+  await chooseOption(page.getByLabel('Role'), { label: roleName });
   await page.getByRole('button', { name: 'Send invitation' }).click();
 }
 

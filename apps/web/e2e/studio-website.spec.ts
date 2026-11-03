@@ -3,6 +3,7 @@ import { config as loadEnv } from 'dotenv';
 import { Client } from 'pg';
 import { test, expect, type Browser, type Page } from '@playwright/test';
 import { loadDemoContext, OWNER_STORAGE_STATE } from './helpers';
+import { chooseOption } from './select-field';
 
 /**
  * A business builds its own website in Studio — no platform step, no hostname — and a stranger
@@ -113,7 +114,7 @@ test('journey A: create a blank website, compose a page, preview it privately, p
 
   // A form is chosen from the business's own forms, never copied in.
   await structure(page).getByRole('button', { name: 'Add section' }).click();
-  await page.getByRole('region', { name: 'Forms' }).getByRole('combobox').selectOption(formId);
+  await chooseOption(page.getByRole('region', { name: 'Forms' }).getByRole('combobox'), formId);
   await page.getByRole('button', { name: 'Add form section' }).click();
   await expect(page.getByRole('link', { name: 'Edit form' })).toHaveAttribute('href', new RegExp(`/studio/forms/${formId}$`));
 
@@ -181,7 +182,7 @@ test('journey C: add a page from a template, link it in the navigation, and it i
 
   await structure(page).getByRole('button', { name: 'Add page' }).click();
   await page.getByLabel('Page name').fill('Services');
-  await page.getByLabel('Start from').selectOption({ label: 'Services' });
+  await chooseOption(page.getByLabel('Start from'), { label: 'Services' });
   await structure(page).getByRole('button', { name: 'Add page', exact: true }).click();
   await expect(pageRow(page, 'Services')).toBeVisible();
   await expect(page.getByLabel('Path')).toHaveValue('services');
@@ -195,9 +196,9 @@ test('journey C: add a page from a template, link it in the navigation, and it i
 
   // Navigation names pages, not addresses.
   await page.getByRole('button', { name: 'Navigation', exact: true }).click();
-  await page.getByLabel('Add a page').selectOption({ label: 'Services' });
+  await chooseOption(page.getByLabel('Add a page'), { label: 'Services' });
   await page.getByRole('button', { name: 'Add page link' }).click();
-  await page.getByLabel('Add a page').selectOption({ label: 'Home' });
+  await chooseOption(page.getByLabel('Add a page'), { label: 'Home' });
   await page.getByRole('button', { name: 'Add page link' }).click();
   await page.getByRole('button', { name: 'Move Home up' }).click();
   await shot(page, '05-navigation-editor');

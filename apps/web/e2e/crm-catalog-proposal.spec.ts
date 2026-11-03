@@ -10,6 +10,7 @@ import { listContacts } from '../lib/domain/contacts/contacts';
 import { getInvoice, invoiceStanding, issueInvoiceFromProposal, listInvoicesForProposals } from '../lib/domain/billing/invoices';
 import { listProposalInvites } from '../lib/domain/customers/proposal-invites';
 import { updatePriceBookItem } from '../lib/domain/pricing/price-book';
+import { chooseOption, optionTexts } from './select-field';
 
 /**
  * A commercial proposal built from an ordinary business's own catalog, in a real browser against
@@ -75,12 +76,12 @@ test.describe.serial('CRM catalog proposals', () => {
       await expect(page.getByRole('link', { name: 'Discovery', exact: true })).toHaveCount(0);
       await expect(page.getByRole('link', { name: 'Proposed configuration', exact: true })).toHaveCount(0);
       // Only items in the business currency are offered; the USD item is not.
-      await expect(main.getByLabel('Item 1', { exact: true }).locator('option', { hasText: 'Cross-border consultation' })).toHaveCount(0);
+      expect((await optionTexts(main.getByLabel('Item 1', { exact: true }))).some(text => text.includes('Cross-border consultation'))).toBe(false);
 
-      await main.getByLabel('Item 1', { exact: true }).selectOption({ label: 'Labour — CA$95.50 / hour' });
+      await chooseOption(main.getByLabel('Item 1', { exact: true }), { label: 'Labour — CA$95.50 / hour' });
       await main.getByLabel('Quantity 1', { exact: true }).fill('3');
       await main.getByRole('button', { name: 'Add line' }).click();
-      await main.getByLabel('Item 2', { exact: true }).selectOption({ label: 'Filter replacement — CA$38.25 / each' });
+      await chooseOption(main.getByLabel('Item 2', { exact: true }), { label: 'Filter replacement — CA$38.25 / each' });
       await main.getByLabel('Quantity 2', { exact: true }).fill('2');
       await main.getByLabel('Notes', { exact: true }).fill('Spring service, parts included.');
       // 3 × 95.50 + 2 × 38.25.
@@ -154,7 +155,7 @@ test.describe.serial('CRM catalog proposals', () => {
         await expect(main.getByText('Labour — 3 hour × CA$95.50 = CA$286.50')).toBeVisible();
         await expect(main.getByRole('button', { name: 'Create this business in GildOps' })).toHaveCount(0);
         // The builder now offers today's price for a new version.
-        await expect(main.getByLabel('Item 1', { exact: true }).locator('option', { hasText: 'Labour — CA$120.00 / hour' })).toHaveCount(1);
+        await expect.poll(async () => (await optionTexts(main.getByLabel('Item 1', { exact: true }))).filter(text => text.includes('Labour — CA$120.00 / hour')).length).toBe(1);
         await fits(page, `seller ${viewport.name}`);
         await guardedShot(page, { url: new RegExp(`^/organizations/${fx.organizationId}/`), content: main.getByRole('heading', { name: 'Commercial proposal' }) }, { path: path.join(OUT, `seller-accepted-${viewport.name}.png`), fullPage: true });
       }

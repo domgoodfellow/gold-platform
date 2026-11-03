@@ -16,6 +16,7 @@ import { listCalendarEvents } from '../lib/domain/calendar/events';
 import { todayInZone, zonedDayRange } from '../lib/domain/scheduling/window';
 import { setModuleEnabled } from '../lib/domain/tenancy/modules';
 import { recordCommercialTerm } from '../lib/domain/commercial/terms';
+import { chooseOption } from './select-field';
 
 test.use({ storageState: { cookies: [], origins: [] }, hasTouch: true, trace: 'off' });
 test('calendar has time blocks, slot creation, event editing and workspace context without a standalone sidebar entry', async ({ page }, testInfo) => {
@@ -94,7 +95,7 @@ test('calendar has time blocks, slot creation, event editing and workspace conte
   await page.reload();
   await expect(page.getByRole('button', { name: 'Proposal meeting', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Calendar installation', exact: true })).toHaveCount(0);
-  await page.getByRole('combobox', { name: 'Calendar scope', exact: true }).selectOption('organization');
+  await chooseOption(page.getByRole('combobox', { name: 'Calendar scope', exact: true }), 'organization');
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Calendar installation', exact: true })).toBeVisible();
   await page.goto(`${base}/field/calendar`);
@@ -103,7 +104,7 @@ test('calendar has time blocks, slot creation, event editing and workspace conte
   await expect(page.getByRole('button', { name: 'Proposal meeting', exact: true })).toHaveCount(0);
   await page.goto(`${base}/crm/calendar?view=day&on=${today}`);
   await expect(page).toHaveURL(new RegExp(`${base}/crm/calendar`));
-  await page.getByRole('combobox', { name: 'Calendar scope', exact: true }).selectOption('organization');
+  await chooseOption(page.getByRole('combobox', { name: 'Calendar scope', exact: true }), 'organization');
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
   for (const [width, height] of [[1600, 1000], [768, 1024], [390, 844]]) {
     await page.setViewportSize({ width, height });

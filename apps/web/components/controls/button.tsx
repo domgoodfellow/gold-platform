@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import type { ComponentProps } from 'react';
 import { Button as ShadcnButton } from '@gold/ui/components/button';
-import { cx, FOCUS_RING } from '@/components/class-names';
 
 /** The one button set — extended per surface, never duplicated. */
 export type ButtonTone = 'primary' | 'secondary' | 'danger' | 'text' | 'soft' | 'ghost';
@@ -22,7 +21,7 @@ export function Button({
   loading = false,
   ...props
 }: ComponentProps<'button'> & { tone?: ButtonTone; size?: ButtonSize; loading?: boolean }) {
-  return <ShadcnButton {...props} loading={loading} variant={TONE[tone]} size={SIZE[size]} className={cx(FOCUS_RING, className)} />;
+  return <ShadcnButton {...props} loading={loading} variant={TONE[tone]} size={SIZE[size]} className={className} />;
 }
 
 /** An anchor styled as a button, never a button doing navigation — browsers treat the two differently (new tab, history, screen readers). */
@@ -33,7 +32,7 @@ export function ButtonLink({
   ...props
 }: ComponentProps<typeof Link> & { tone?: ButtonTone; size?: ButtonSize }) {
   return (
-    <ShadcnButton asChild variant={TONE[tone]} size={SIZE[size]} className={cx(FOCUS_RING, className)}>
+    <ShadcnButton asChild variant={TONE[tone]} size={SIZE[size]} className={className}>
       <Link {...props} />
     </ShadcnButton>
   );

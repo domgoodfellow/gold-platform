@@ -1,6 +1,7 @@
 import { test, expect, type Locator } from '@playwright/test';
 import { loadDemoContext, COLLEAGUE_STORAGE_STATE, OWNER_STORAGE_STATE } from './helpers';
 import { restoreDemoRoles } from './restore-demo-roles';
+import { chooseOption, optionTexts, optionValues, selectFieldValue } from './select-field';
 
 // These specs reassign the demo members' roles. Restore them after every test, pass or fail, so one failure cannot demote the owner for every spec that follows.
 test.afterEach(async () => { await restoreDemoRoles(); });
@@ -20,8 +21,9 @@ test.afterEach(async () => { await restoreDemoRoles(); });
  */
 
 async function optionValue(select: Locator, label: string): Promise<string> {
-  const value = await select.locator('option', { hasText: label }).getAttribute('value');
-  if (!value) throw new Error(`No <option> labelled "${label}" in this select.`);
+  const [texts, values] = [await optionTexts(select), await optionValues(select)];
+  const value = values[texts.findIndex((text) => text.includes(label))];
+  if (!value) throw new Error(`No option labelled "${label}" in this field.`);
   return value;
 }
 
@@ -37,14 +39,14 @@ test.describe('People & Roles — reassigning an existing member', () => {
     const row = page.getByRole('row', { name: 'Joris Bakker' });
     await expect(row).toBeVisible();
     const select = row.getByRole('combobox', { name: 'Role' });
-    await expect(select).toHaveValue(await optionValue(select, 'Werfmedewerker'));
+    await expect(selectFieldValue(select)).toHaveValue(await optionValue(select, 'Werfmedewerker'));
 
     // The control submits itself; wait for that save to answer before reloading, or the reload
     // can be served before the change is committed.
     const saved = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/settings/access'));
-    await select.selectOption({ label: 'Admin' });
+    await chooseOption(select, { label: 'Admin' });
     expect((await saved).ok()).toBe(true);
-    await expect(select).toHaveValue(await optionValue(select, 'Admin'));
+    await expect(selectFieldValue(select)).toHaveValue(await optionValue(select, 'Admin'));
     await expect(row.getByRole('alert')).toHaveCount(0);
 
     // Reload from a clean navigation, proving the change was written, not only reflected
@@ -52,11 +54,11 @@ test.describe('People & Roles — reassigning an existing member', () => {
     await page.reload();
     const reloadedRow = page.getByRole('row', { name: 'Joris Bakker' });
     const reloadedSelect = reloadedRow.getByRole('combobox', { name: 'Role' });
-    await expect(reloadedSelect).toHaveValue(await optionValue(reloadedSelect, 'Admin'));
+    await expect(selectFieldValue(reloadedSelect)).toHaveValue(await optionValue(reloadedSelect, 'Admin'));
 
     // Leave the fixture as it was found — this demo data persists between runs.
-    await reloadedSelect.selectOption({ label: 'Werfmedewerker' });
-    await expect(reloadedSelect).toHaveValue(await optionValue(reloadedSelect, 'Werfmedewerker'));
+    await chooseOption(reloadedSelect, { label: 'Werfmedewerker' });
+    await expect(selectFieldValue(reloadedSelect)).toHaveValue(await optionValue(reloadedSelect, 'Werfmedewerker'));
     await expect(reloadedRow.getByRole('alert')).toHaveCount(0);
   });
 
@@ -70,15 +72,15 @@ test.describe('People & Roles — reassigning an existing member', () => {
     await expect(row).toBeVisible();
     const select = row.getByRole('combobox', { name: 'Role' });
     const adminValue = await optionValue(select, 'Admin');
-    await expect(select).toHaveValue(adminValue);
+    await expect(selectFieldValue(select)).toHaveValue(adminValue);
 
     // Sanne is the organization's only role.manage holder — moving her off Admin would leave
     // nobody who can manage roles, which `assign_role` refuses as a cross-row invariant.
-    await select.selectOption({ label: 'Werfmedewerker' });
+    await chooseOption(select, { label: 'Werfmedewerker' });
 
     await expect(row.getByText('That would leave nobody able to manage roles here.')).toBeVisible();
     // The control shows what is actually still assigned, not the rejected choice.
-    await expect(select).toHaveValue(adminValue);
+    await expect(selectFieldValue(select)).toHaveValue(adminValue);
   });
 });
 

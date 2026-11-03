@@ -9,6 +9,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Client } from "pg";
 import { randomUUID } from "node:crypto";
 import { ALL_CAPABILITIES } from "../lib/domain/tenancy/capabilities";
+import { chooseOption } from './select-field';
 
 test.use({ storageState: OWNER_STORAGE_STATE, actionTimeout: 15000 });
 const shots = path.resolve(__dirname, "../test-results/ai");
@@ -92,9 +93,8 @@ test("AI agent lifecycle, workbench, channel policies and responsive destination
   ).toBeVisible();
   await page.getByRole("button", { name: "Channels", exact: true }).click();
   await page.getByRole("button", { name: "Add channel", exact: true }).click();
-  await page
-    .getByRole("combobox", { name: "Channel", exact: true })
-    .selectOption("voice");
+  await chooseOption(page
+    .getByRole("combobox", { name: "Channel", exact: true }), "voice");
   await expect(
     page.getByText("Runtime unavailable", { exact: true }),
   ).toBeVisible();
@@ -130,9 +130,9 @@ test("AI agent lifecycle, workbench, channel policies and responsive destination
   await capture(page, "testing-result-state");
   for (const width of [768, 390]) {
     await page.setViewportSize({ width, height: 1000 });
-    await page.getByRole("combobox", { name: "Configuration section" }).selectOption("instructions");
+    await chooseOption(page.getByRole("combobox", { name: "Configuration section" }), "instructions");
     await capture(page, `workbench-${width}`);
-    await page.getByRole("combobox", { name: "Configuration section" }).selectOption("versions");
+    await chooseOption(page.getByRole("combobox", { name: "Configuration section" }), "versions");
     await page.getByRole("button", { name: /Version 1/ }).click();
     await expect(page.getByRole("heading", { name: "Published configuration", exact: true })).toBeVisible();
     await capture(page, `version-inspector-${width}`);

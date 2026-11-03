@@ -1,5 +1,6 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { loadDemoContext, OWNER_STORAGE_STATE } from './helpers';
+import { chooseOption } from './select-field';
 
 /**
  * The drawer contract for CRM editing forms, driven in a real browser: footer actions that stay
@@ -86,7 +87,7 @@ for (const viewport of VIEWPORTS) {
       expect(await drawer.getByRole('alert').evaluate((alert) => alert.parentElement === document.activeElement)).toBe(true);
 
       // A long form on a short window: the body scrolls, the footer stays put.
-      await page.getByLabel('Type', { exact: true }).selectOption({ label: 'Choice' });
+      await chooseOption(page.getByLabel('Type', { exact: true }), { label: 'Choice' });
       await page.getByLabel('Choices').fill(Array.from({ length: 12 }, (_, index) => `Option ${index + 1}`).join('\n'));
       await page.setViewportSize({ width: viewport.width, height: 520 });
       await drawer.locator('[data-drawer-body]').evaluate((body) => body.scrollTo(0, body.scrollHeight));

@@ -7,6 +7,7 @@ import { setModuleEnabled } from '../lib/domain/tenancy/modules';
 import { recordCost } from '../lib/domain/work-items/consumption';
 import { organizationResolvedFeatureStates, disableOrganizationFeature, enableOrganizationFeature, currentPlanAssignment, recordPlanAssignment } from '../lib/domain/catalogue/organization-plans';
 import { guardedShot } from './visual-guard';
+import { chooseOption } from './select-field';
 
 const baseline = process.env.FINANCE_E1_BASELINE === '1';
 const out = path.join(__dirname, '../../../.artifacts/finance-e1', baseline ? 'before' : 'after');
@@ -43,7 +44,7 @@ test.describe.serial('Finance pricing planning', () => {
         if (!baseline) {
           const scenario = page.getByRole('group', { name: 'Scenario 1', exact: true });
           await expect(scenario).toContainText('Unknown');
-          await scenario.getByLabel('Currency', { exact: true }).selectOption('EUR');
+          await chooseOption(scenario.getByLabel('Currency', { exact: true }), 'EUR');
           await scenario.getByLabel('Labor quantity (hours)').fill('2');
           await scenario.getByLabel('Labor cost per hour').fill('40');
           await scenario.getByLabel('Materials cost').fill('20');
@@ -52,7 +53,7 @@ test.describe.serial('Finance pricing planning', () => {
           await scenario.getByLabel('Target gross margin (%)').fill('25');
           await expect(scenario.getByTestId('suggested-price')).toContainText('160.00');
           if (populated) {
-            await scenario.getByLabel('Compare one catalog unit').selectOption({ label: 'Service visit · visit · EUR' });
+            await chooseOption(scenario.getByLabel('Compare one catalog unit'), { label: 'Service visit · visit · EUR' });
             await expect(scenario).toContainText('145.00');
           }
           await page.getByRole('button', { name: 'Compare another scenario' }).click();
@@ -96,9 +97,9 @@ test.describe.serial('Finance pricing planning', () => {
     await scenario.getByLabel('Target gross margin (%)').fill('100');
     await expect(scenario.getByLabel('Target gross margin (%)')).toHaveAttribute('aria-invalid', 'true');
     await scenario.getByLabel('Target gross margin (%)').fill('25');
-    await scenario.getByLabel('Compare one catalog unit').selectOption({ label: 'Cross-border consultation · hour · USD' });
+    await chooseOption(scenario.getByLabel('Compare one catalog unit'), { label: 'Cross-border consultation · hour · USD' });
     await expect(scenario).toContainText('Different currencies');
-    await scenario.getByLabel('Currency', { exact: true }).selectOption('JPY');
+    await chooseOption(scenario.getByLabel('Currency', { exact: true }), 'JPY');
     await expect(scenario.getByLabel('Materials cost')).toHaveValue('');
   });
   test('reduced role cannot open reports or planning', async ({ browser }) => {

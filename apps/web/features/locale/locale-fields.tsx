@@ -1,7 +1,8 @@
 'use client';
 
-import { FieldLabel, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
 import { useMemo, useSyncExternalStore } from 'react';
+import { SelectField } from '@/components/controls/select-field';
 
 /** Never changes after mount, so there is nothing to subscribe to — only the two snapshots
  * (server always false, client always true) matter. React's own escape hatch for a value that
@@ -70,14 +71,7 @@ export function TimeZoneField({
         {label}
       </FieldLabel>
       {zones ? (
-        <SelectInput id="timezone" name="timezone" defaultValue={current}>
-          {!zones.includes(current) ? <option value={current}>{current.replace(/_/g, ' ')}</option> : null}
-          {zones.map((zone) => (
-            <option key={zone} value={zone}>
-              {zone.replace(/_/g, ' ')}
-            </option>
-          ))}
-        </SelectInput>
+        <SelectField id="timezone" name="timezone" defaultValue={current} options={[...(!zones.includes(current) ? [{ value: current, label: current.replace(/_/g, ' ') }] : []), ...zones.map((zone) => ({ value: zone, label: zone.replace(/_/g, ' ') }))]} />
       ) : (
         <TextInput
           id="timezone"
@@ -138,25 +132,7 @@ export function CurrencyField({
         {label}
       </FieldLabel>
       {codes ? (
-        <SelectInput id={id} name="currency" required {...control} onChange={e => onChange?.(e.target.value)}>
-          {current && !codes.includes(current) ? <option value={current}>{current}</option> : null}
-          {/* No preselection when founding. There is no neutral currency, so the platform
-              does not offer one — and deriving it from the timezone above would be the
-              assumption this whole field exists to avoid. */}
-          {current ? null : (
-            <option value="" disabled>
-              Choose a currency
-            </option>
-          )}
-          {codes.map((code) => {
-            const name = names?.of(code);
-            return (
-              <option key={code} value={code}>
-                {name && name !== code ? `${code} — ${name}` : code}
-              </option>
-            );
-          })}
-        </SelectInput>
+        <SelectField id={id} name="currency" required {...control} onValueChange={(next) => onChange?.(next)} options={[...(current && !codes.includes(current) ? [{ value: current, label: current }] : []), ...(current ? [] : [{ value: '', label: 'Choose a currency', disabled: true }]), ...codes.map((code) => { const name = names?.of(code); return { value: code, label: name && name !== code ? `${code} — ${name}` : code }; })]} />
       ) : (
         <TextInput
           id={id}

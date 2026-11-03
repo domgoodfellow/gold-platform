@@ -3,7 +3,7 @@
 import { useActionState, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { Hint, TextInput } from '@/components/controls/inputs';
 import {
   PageDrawer,
   PageDrawerContent,
@@ -24,6 +24,7 @@ import {
   ActionError,
   INITIAL_AUTOMATION_ACTION_STATE as INITIAL,
 } from '../shared';
+import { SelectField } from '@/components/controls/select-field';
 
 /**
  * Establishes only a name and a trigger — the domain layer creates a rule with no conditions and
@@ -75,30 +76,10 @@ export function NewAutomationSheet({
             placeholder="What this rule is for"
           />
 
-          <SelectInput
-            name="triggerKind"
-            aria-label="What sets it off"
-            value={kind}
-            onChange={(event) => setKind(event.target.value as TriggerKind)}
-          >
-            <option value="" disabled>
-              What sets it off
-            </option>
-            {TRIGGER_KINDS.map((entry) => (
-              <option key={entry.kind} value={entry.kind}>
-                {entry.label}
-              </option>
-            ))}
-          </SelectInput>
+          <SelectField name="triggerKind" aria-label="What sets it off" value={kind} onValueChange={(next) => setKind(next as TriggerKind)} options={[{ value: '', label: 'What sets it off', disabled: true }, ...TRIGGER_KINDS.map((entry) => ({ value: entry.kind, label: entry.label }))]} />
 
           {kind === 'event' ? (
-            <SelectInput name="triggerEventAction" aria-label="Which moment">
-              {TRIGGER_EVENTS.map((entry) => (
-                <option key={entry.action} value={entry.action}>
-                  {entry.label}
-                </option>
-              ))}
-            </SelectInput>
+            <SelectField name="triggerEventAction" aria-label="Which moment" options={[...TRIGGER_EVENTS.map((entry) => ({ value: entry.action, label: entry.label }))]} />
           ) : null}
 
           {kind === 'schedule' ? (
@@ -115,20 +96,8 @@ export function NewAutomationSheet({
 
           {kind === 'external_reading' ? (
             <>
-              <SelectInput name="triggerMetric" aria-label="What is measured">
-                {METRICS.map((entry) => (
-                  <option key={entry.metric} value={entry.metric}>
-                    {entry.label}
-                  </option>
-                ))}
-              </SelectInput>
-              <SelectInput name="triggerComparison" aria-label="Which way">
-                {COMPARISONS.map((entry) => (
-                  <option key={entry.comparison} value={entry.comparison}>
-                    {entry.label}
-                  </option>
-                ))}
-              </SelectInput>
+              <SelectField name="triggerMetric" aria-label="What is measured" options={[...METRICS.map((entry) => ({ value: entry.metric, label: entry.label }))]} />
+              <SelectField name="triggerComparison" aria-label="Which way" options={[...COMPARISONS.map((entry) => ({ value: entry.comparison, label: entry.label }))]} />
               <TextInput
                 name="triggerThreshold"
                 type="number"

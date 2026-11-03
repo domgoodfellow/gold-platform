@@ -12,13 +12,18 @@ import { Popover, PopoverTrigger, PopoverContent } from '@gold/ui/components/pop
 import { Alert, AlertTitle } from '@gold/ui/components/alert';
 import { FieldGroup } from '@gold/ui/components/field';
 import { Button } from '@/components/controls/button';
-import { TextInput, SelectInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { FormField, FormActions } from '@/components/controls/form';
 import { SelectableCard } from '@/components/controls/selectable-card';
 import { Card } from '@/components/surfaces/card';
 import { KpiCard } from '@/components/surfaces/kpi-card';
 import { Toolbar } from '@/components/display/data';
 import { OperationalPanel, StatePill, FilterMenu } from '@/components/operational/primitives';
+import { SelectField } from '@/components/controls/select-field';
+
+/** Specimens only: one short choice with an empty and a disabled option, and one long enough to search. */
+const GALLERY_STATUSES = [{ value: '', label: 'No status' }, { value: 'open', label: 'Open' }, { value: 'waiting', label: 'Waiting' }, { value: 'closed', label: 'Closed', disabled: true }];
+const GALLERY_CONTACTS = Array.from({ length: 40 }, (_, index) => ({ value: `contact-${index + 1}`, label: `Contact ${String(index + 1).padStart(2, '0')}` }));
 
 function Examples({ preset, appearance, density }: { preset: VisualPreset; appearance: Exclude<Appearance, 'system'>; density: Density }) {
   const id = useId();
@@ -40,6 +45,8 @@ function Examples({ preset, appearance, density }: { preset: VisualPreset; appea
             <FormField id={`${id}-name`} label="Display name" hint="Preview input only; nothing is persisted.">{(props) => <TextInput {...props} defaultValue="Design preview" />}</FormField>
             <FormField id={`${id}-email`} label="Contact email" error="Enter a valid email address.">{(props) => <TextInput {...props} variant="filled" defaultValue="example" />}</FormField>
             <FormField id={`${id}-disabled`} label="Read-only configuration">{(props) => <TextInput {...props} disabled value="Managed elsewhere" />}</FormField>
+            <FormField id={`${id}-status`} label="Preview status">{(props) => <SelectField {...props} name="status" defaultValue="open" options={GALLERY_STATUSES} />}</FormField>
+            <FormField id={`${id}-contact`} label="Preview contact" hint="A long list is searchable.">{(props) => <SelectField {...props} name="contact" placeholder="Choose a contact" options={GALLERY_CONTACTS} />}</FormField>
             <FormActions><Button type="submit">Preview save</Button><Button type="button" loading>Saving…</Button></FormActions>
             {saved && <p role="status">Preview saved locally.</p>}
           </FieldGroup>
@@ -86,7 +93,7 @@ export function DesignGallery() {
   const [density, setDensity] = useState<Density>('comfortable');
   return <main className="mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-8">
     <header id="gallery-controls" className="space-y-3"><h1 className="text-3xl font-semibold">Visual system preview</h1><p className="text-muted">Development examples. Hover, press, tab through controls and open overlays. No business data is read or saved.</p>
-      <FormField id="gallery-density" label="Component density">{(props) => <SelectInput {...props} value={density} onChange={(event) => setDensity(event.target.value as Density)}><option value="comfortable">Comfortable</option><option value="compact">Compact</option></SelectInput>}</FormField>
+      <FormField id="gallery-density" label="Component density">{(props) => <SelectField {...props} value={density} onValueChange={(next) => setDensity(next as Density)} options={[{ value: 'comfortable', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }]} />}</FormField>
     </header>
     {(Object.keys(VISUAL_PRESETS) as VisualPreset[]).flatMap((preset) => (['light', 'dark'] as const).map((appearance) => <Examples key={`${preset}-${appearance}`} preset={preset} appearance={appearance} density={density} />))}
   </main>;

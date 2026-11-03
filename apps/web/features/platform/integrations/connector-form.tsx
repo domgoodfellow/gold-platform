@@ -5,7 +5,7 @@ import { Checkbox } from '@gold/ui/components/checkbox';
 import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@gold/ui/components/field';
 import { Button } from '@/components/controls/button';
 import { CheckboxField } from '@/components/controls/checkbox-field';
-import { ErrorText, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { ErrorText, Hint, TextArea, TextInput } from '@/components/controls/inputs';
 import {
   CONNECTOR_AUTH_METHODS,
   CONNECTOR_CAPABILITIES,
@@ -25,6 +25,7 @@ import {
   uploadLogoAction,
   type ConnectorState,
 } from '@/app/platform/integrations/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: ConnectorState = { error: null, saved: false };
 
@@ -94,27 +95,15 @@ export function ConnectorForm({ connector }: { connector: Connector | null }) {
           <div className="grid gap-3 sm:grid-cols-3">
             <Field>
               <FieldLabel htmlFor="status">Status</FieldLabel>
-              <SelectInput id="status" name="status" defaultValue={connector?.status ?? 'planned'}>
-                {CONNECTOR_STATUSES.map((s) => (
-                  <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-                ))}
-              </SelectInput>
+              <SelectField id="status" name="status" defaultValue={connector?.status ?? 'planned'} options={[...CONNECTOR_STATUSES.map((s) => ({ value: s, label: STATUS_LABEL[s] }))]} />
             </Field>
             <Field>
               <FieldLabel htmlFor="authMethod">Authorizes with</FieldLabel>
-              <SelectInput id="authMethod" name="authMethod" defaultValue={connector?.authMethod ?? 'oauth2'}>
-                {CONNECTOR_AUTH_METHODS.map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </SelectInput>
+              <SelectField id="authMethod" name="authMethod" defaultValue={connector?.authMethod ?? 'oauth2'} options={[...CONNECTOR_AUTH_METHODS.map((m) => ({ value: m, label: m }))]} />
             </Field>
             <Field>
               <FieldLabel htmlFor="connectionMethod">Connects by</FieldLabel>
-              <SelectInput id="connectionMethod" name="connectionMethod" defaultValue={connector?.connectionMethod ?? 'native'}>
-                {CONNECTOR_CONNECTION_METHODS.map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </SelectInput>
+              <SelectField id="connectionMethod" name="connectionMethod" defaultValue={connector?.connectionMethod ?? 'native'} options={[...CONNECTOR_CONNECTION_METHODS.map((m) => ({ value: m, label: m }))]} />
             </Field>
           </div>
 
@@ -224,19 +213,11 @@ export function AppForm({ connectorKey }: { connectorKey: string }) {
       <div className="flex flex-wrap items-end gap-3">
         <Field>
           <FieldLabel htmlFor="app-implementation">GildOps implementation</FieldLabel>
-          <SelectInput id="app-implementation" name="implementationState" size="small" defaultValue="planned" className="w-36">
-            {PROVIDER_SERVICE_IMPLEMENTATION_STATES.map((s) => (
-              <option key={s} value={s}>{IMPLEMENTATION_STATE_LABEL[s]}</option>
-            ))}
-          </SelectInput>
+          <SelectField id="app-implementation" name="implementationState" size="small" defaultValue="planned" className="w-36" options={[...PROVIDER_SERVICE_IMPLEMENTATION_STATES.map((s) => ({ value: s, label: IMPLEMENTATION_STATE_LABEL[s] }))]} />
         </Field>
         <Field>
           <FieldLabel htmlFor="app-vendor-status">Vendor status</FieldLabel>
-          <SelectInput id="app-vendor-status" name="vendorStatus" size="small" defaultValue="generally_available" className="w-40">
-            {PROVIDER_SERVICE_VENDOR_STATUSES.map((s) => (
-              <option key={s} value={s}>{VENDOR_STATUS_LABEL[s]}</option>
-            ))}
-          </SelectInput>
+          <SelectField id="app-vendor-status" name="vendorStatus" size="small" defaultValue="generally_available" className="w-40" options={[...PROVIDER_SERVICE_VENDOR_STATUSES.map((s) => ({ value: s, label: VENDOR_STATUS_LABEL[s] }))]} />
         </Field>
         <Field className="flex-1">
           <FieldLabel htmlFor="app-docs">Docs URL</FieldLabel>

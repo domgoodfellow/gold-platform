@@ -3,7 +3,6 @@
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, EyeOff, GripVertical, LayoutGrid, MoveHorizontal } from 'lucide-react';
 import { Button } from '../controls/button';
-import { SelectInput } from '../controls/inputs';
 import { useUnsavedChanges } from '../controls/use-unsaved-changes';
 import { cx, FOCUS_RING } from '../class-names';
 import { Chart } from '../charts/charts';
@@ -12,6 +11,7 @@ import {
   arrange, canonicalLayout, defaultLayout, HEIGHT_LABEL, moveWidget, resizeWidget, sameLayout, setWidgetOption, SPAN_LABEL, stepWidget, stepWidth, visibleWidgets,
   type DashboardLayout, type WidgetDefinition, type WidgetDensity, type WidgetHeight, type WidgetPlacement, type WidgetSpan,
 } from '@/lib/dashboard-layout';
+import { SelectField } from '@/components/controls/select-field';
 
 /** What a widget draws. A chart widget is drawn here so its presentation follows the layout live; other widgets arrive rendered by the server. */
 export type DashboardWidgetContent =
@@ -194,8 +194,8 @@ function DashboardWidget({ placement, definition, content, className, editing, m
         <span aria-live="polite" className="min-w-16 text-center tabular-nums">{SPAN_LABEL[placement.span as WidgetSpan]}{filled ? <span className="text-muted"> · widened to fill its row</span> : null}</span>
         <Button type="button" size="tiny" tone="ghost" aria-label={`Increase width of ${definition.label}`} disabled={placement.span === Math.max(...definition.spans)} onClick={() => onLayout(layout => stepWidth(layout, registry, placement.id, 1))}>+</Button>
       </span> : null}
-      {definition.heights.length > 1 ? <SelectInput size="small" aria-label={`Height of ${definition.label}`} value={placement.height} onChange={event => onLayout(layout => setWidgetOption(layout, registry, placement.id, { height: event.target.value as WidgetHeight }))} className="w-28">{definition.heights.map(height => <option key={height} value={height}>{HEIGHT_LABEL[height]}</option>)}</SelectInput> : null}
-      {definition.densities ? <SelectInput size="small" aria-label={`Row density of ${definition.label}`} value={placement.density} onChange={event => onLayout(layout => setWidgetOption(layout, registry, placement.id, { density: event.target.value as WidgetDensity }))} className="w-32">{definition.densities.map(density => <option key={density} value={density}>{density === 'compact' ? 'Compact rows' : 'Comfortable rows'}</option>)}</SelectInput> : null}
+      {definition.heights.length > 1 ? <SelectField size="small" aria-label={`Height of ${definition.label}`} value={placement.height} onValueChange={(next) => onLayout(layout => setWidgetOption(layout, registry, placement.id, { height: next as WidgetHeight }))} className="w-28" options={[...definition.heights.map((height) => ({ value: height, label: HEIGHT_LABEL[height] }))]} /> : null}
+      {definition.densities ? <SelectField size="small" aria-label={`Row density of ${definition.label}`} value={placement.density} onValueChange={(next) => onLayout(layout => setWidgetOption(layout, registry, placement.id, { density: next as WidgetDensity }))} className="w-32" options={[...definition.densities.map((density) => ({ value: density, label: density === 'compact' ? 'Compact rows' : 'Comfortable rows' }))]} /> : null}
       {definition.hideable ? <Button type="button" size="tiny" tone="ghost" aria-label={`Hide ${definition.label}`} onClick={() => onLayout(layout => setWidgetOption(layout, registry, placement.id, { hidden: true }))}><EyeOff aria-hidden className="size-3.5" />Hide</Button> : null}
     </div> : null}
     {/* The body fills the cell, so panels sharing a row end at the same line. */}

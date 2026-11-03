@@ -1,12 +1,13 @@
 'use client';
 
 import { useActionState } from 'react';
-import { ErrorText, SelectInput } from '@/components/controls/inputs';
+import { ErrorText } from '@/components/controls/inputs';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 import {
   changeCustomerStageAction,
   type ChangeStageState,
 } from '@/app/organizations/[organizationId]/crm/contacts/stages/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: ChangeStageState = { error: null };
 
@@ -40,21 +41,7 @@ export function CustomerStageControl({
     <form action={formAction}>
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="customerId" value={customerId} />
-      <SelectInput
-        name="stageId"
-        defaultValue={currentStageId ?? ''}
-        disabled={pending}
-        aria-label={`Move ${customerName} to a different stage`}
-        className="w-full text-xs"
-        onChange={(event) => event.currentTarget.form?.requestSubmit()}
-      >
-        <option value="">No stage</option>
-        {stages.map((stage) => (
-          <option key={stage.id} value={stage.id}>
-            {stage.name}
-          </option>
-        ))}
-      </SelectInput>
+      <SelectField name="stageId" defaultValue={currentStageId ?? ''} disabled={pending} aria-label={`Move ${customerName} to a different stage`} className="w-full text-xs" submitOnChange options={[{ value: '', label: 'No stage' }, ...stages.map((stage) => ({ value: stage.id, label: stage.name }))]} />
       {state.error ? <ErrorText className="text-xs">{state.error}</ErrorText> : null}
     </form>
   );

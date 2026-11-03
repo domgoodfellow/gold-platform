@@ -7,6 +7,7 @@ import { OpportunitySheet } from '@/features/crm/opportunities/opportunity-sheet
 import { FollowUpSheet } from '@/features/crm/follow-ups/follow-up-sheet';
 import type { FollowUp } from '@/lib/domain/follow-ups/follow-ups';
 import type { Opportunity } from '@/lib/domain/opportunities/opportunities';
+import { fieldValue } from '../support/select-field';
 
 const customers = vi.hoisted(() => ({ createCustomerAction: vi.fn(), companyOptionsAction: vi.fn(async () => []) }));
 const opportunities = vi.hoisted(() => ({ saveOpportunityAction: vi.fn(), searchOpportunityCustomers: vi.fn(), moveOpportunityAction: vi.fn(), saveOpportunityStageAction: vi.fn() }));
@@ -80,7 +81,7 @@ describe('Opportunity dialog', () => {
     const user = inRail(<OpportunitySheet {...options} opportunity={opportunity} />);
     await user.click(screen.getByRole('button', { name: 'Edit opportunity' }));
     expect(screen.getByLabelText('Title')).toHaveValue('Service contract');
-    expect(screen.getByLabelText(/Owner/)).toHaveValue('m1');
+    expect(fieldValue(screen.getByLabelText(/Owner/))).toBe('m1');
     expect(screen.getByLabelText(/Expected close/)).toHaveValue('2026-11-01');
     await settle();
     await user.keyboard('{Escape}');

@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, Hint, SelectInput } from '@/components/controls/inputs';
+import { ErrorText, Hint } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import {
   sendTestEmailAction,
@@ -10,6 +10,7 @@ import {
   type EmailDomainState,
 } from '@/app/organizations/[organizationId]/settings/email/actions';
 import type { EmailSender, EmailTestSend } from '@/lib/domain/email/sender';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: EmailDomainState = { error: null, notice: null, done: false };
 
@@ -35,12 +36,7 @@ export function ReplyToForm({ organizationId, senders, hasDefault }: { organizat
       ) : (
         <form action={run} className="mt-3 flex flex-wrap items-center gap-2">
           <input type="hidden" name="organizationId" value={organizationId} />
-          <SelectInput name="emailIdentityId" aria-label="Reply-To address" defaultValue={current?.emailIdentityId ?? ''}>
-            <option value="">The default sender address</option>
-            {eligible.map((sender) => (
-              <option key={sender.emailIdentityId} value={sender.emailIdentityId}>{sender.address}</option>
-            ))}
-          </SelectInput>
+          <SelectField name="emailIdentityId" aria-label="Reply-To address" defaultValue={current?.emailIdentityId ?? ''} options={[{ value: '', label: 'The default sender address' }, ...eligible.map((sender) => ({ value: sender.emailIdentityId, label: sender.address }))]} />
           <Button type="submit" tone="secondary" disabled={pending}>{pending ? 'Saving…' : 'Save'}</Button>
           {state.notice ? <Hint role="status">{state.notice}</Hint> : null}
           {state.error ? <ErrorText>{state.error}</ErrorText> : null}

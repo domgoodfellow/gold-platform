@@ -9,6 +9,7 @@ import { getInvoice, getInvoiceForWorkItem, invoiceStanding } from '../lib/domai
 import { readFinanceInvoices } from '../lib/domain/billing/finance-reads';
 import { listContacts } from '../lib/domain/contacts/contacts';
 import { setModuleEnabled } from '../lib/domain/tenancy/modules';
+import { chooseOption } from './select-field';
 
 /**
  * Invoicing a customer directly from catalog items, in a real browser against the isolated run
@@ -58,10 +59,10 @@ test.describe.serial('Finance direct invoices', () => {
       test.setTimeout(120_000);
       await page.setViewportSize(VIEWPORTS[2]);
       const dialog = await startDirectInvoice(page);
-      await dialog.getByLabel('Item 1', { exact: true }).selectOption({ label: 'Labour · CA$95.50 / hour' });
+      await chooseOption(dialog.getByLabel('Item 1', { exact: true }), { label: 'Labour · CA$95.50 / hour' });
       await dialog.getByLabel('Quantity', { exact: true }).fill('2');
       await dialog.getByRole('button', { name: 'Add item' }).click();
-      await dialog.getByLabel('Item 2', { exact: true }).selectOption({ label: 'Filter replacement · CA$38.25 / each' });
+      await chooseOption(dialog.getByLabel('Item 2', { exact: true }), { label: 'Filter replacement · CA$38.25 / each' });
       await dialog.getByLabel('Quantity', { exact: true }).nth(1).fill('3');
       // 2 × 95.50 + 3 × 38.25.
       await expect(dialog.getByLabel('Invoice total')).toContainText('CA$305.75');
@@ -128,7 +129,7 @@ test.describe.serial('Finance direct invoices', () => {
       for (const viewport of VIEWPORTS) {
         await page.setViewportSize(viewport);
         const dialog = await startDirectInvoice(page);
-        await dialog.getByLabel('Item 1', { exact: true }).selectOption({ label: 'Service visit · CA$145.00 / visit' });
+        await chooseOption(dialog.getByLabel('Item 1', { exact: true }), { label: 'Service visit · CA$145.00 / visit' });
         await expect(dialog.getByLabel('Invoice total')).toContainText('CA$145.00');
         await fits(page, `dialog ${viewport.name}`);
         await shot(page, `direct-dialog-${viewport.name}`);

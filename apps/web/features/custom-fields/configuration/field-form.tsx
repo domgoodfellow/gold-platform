@@ -1,6 +1,6 @@
 'use client';
 
-import { SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { TextArea, TextInput } from '@/components/controls/inputs';
 import { CheckboxField } from '@/components/controls/checkbox-field';
 import { FormError, FormField } from '@/components/controls/form';
 import { useDrawerFormSubmit } from '@/components/controls/use-drawer-form-submit';
@@ -21,6 +21,7 @@ import {
   type CreateFieldState,
   type UpdateFieldState,
 } from '@/app/organizations/[organizationId]/settings/custom-fields/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: CreateFieldState = { error: null, created: false };
 const EDIT_INITIAL: UpdateFieldState = { error: null, updated: false };
@@ -126,18 +127,7 @@ export function CreateFieldForm({
         </FormField>
         <FormField id={kindId} label="Type">
           {(field) => (
-            <SelectInput
-              {...field}
-              name="kind"
-              value={kind}
-              onChange={(event) => setKind(event.target.value as FieldKind)}
-            >
-              {FIELD_KINDS.map((option) => (
-                <option key={option} value={option}>
-                  {FIELD_KIND_LABELS[option]}
-                </option>
-              ))}
-            </SelectInput>
+            <SelectField {...field} name="kind" value={kind} onValueChange={(next) => setKind(next as FieldKind)} options={[...FIELD_KINDS.map((option) => ({ value: option, label: FIELD_KIND_LABELS[option] }))]} />
           )}
         </FormField>
       </div>

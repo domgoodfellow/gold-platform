@@ -40,6 +40,9 @@ import { runEvents, type RunEvent } from './run-events';
 import { formatRecent } from './recent-time';
 import { AnswerText } from './answer-text';
 
+/** The composer box shows the field's focus (the field is `data-focus-indicator="container"`); its own buttons keep theirs. */
+const COMPOSER_FOCUS = 'has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:outline-solid has-[textarea:focus-visible]:outline-[color:var(--focus-color)]';
+
 /**
  * The Agent presentation grammar. The panel is a conversation, top to bottom:
  *
@@ -588,7 +591,7 @@ export function AgentComposer({
       onReset={() => setTimeout(() => textareaRef.current && (textareaRef.current.style.height = 'auto'))}
       className="shrink-0 border-t border-border p-3"
     >
-      <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-2 focus-within:border-foreground/40 has-[textarea:disabled]:opacity-70">
+      <div className={cx('flex flex-col gap-2 rounded-xl border border-border bg-surface p-2 has-[textarea:disabled]:opacity-70', COMPOSER_FOCUS)}>
       {hiddenFields}
       {attachments.map((file) =>
         file.state === 'done' && file.documentId ? (
@@ -607,7 +610,8 @@ export function AgentComposer({
         size="small"
         placeholder={placeholder}
         aria-label="Message to the Agent"
-        className="min-h-12 w-full resize-none border-0 bg-transparent px-1 text-base shadow-none focus-visible:ring-0 focus-visible:outline-none md:text-sm"
+        className="min-h-12 w-full resize-none border-0 bg-transparent px-1 text-base shadow-none md:text-sm"
+        data-focus-indicator="container"
         style={{ maxHeight: COMPOSER_MAX_HEIGHT }}
         onInput={(event: FormEvent<HTMLTextAreaElement>) => grow(event.currentTarget)}
         onKeyDown={(event) => {

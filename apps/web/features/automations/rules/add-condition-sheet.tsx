@@ -3,7 +3,7 @@
 import { useActionState, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import {
   PageDrawer,
   PageDrawerContent,
@@ -24,6 +24,7 @@ import {
   ActionError,
   INITIAL_AUTOMATION_ACTION_STATE as INITIAL,
 } from '../shared';
+import { SelectField } from '@/components/controls/select-field';
 
 /** Adding one condition — bounded enough for a PageDrawer, and the domain layer allows only add/remove. */
 export function AddConditionSheet({
@@ -92,66 +93,15 @@ export function AddConditionSheet({
             <input type="hidden" name="conditionId" value={condition.id} />
           )}
 
-          <SelectInput
-            name="subjectField"
-            aria-label="Part of the job"
-            value={field}
-            onChange={(e) => setField(e.target.value)}
-          >
-            {CONDITION_FIELDS.map((entry) => (
-              <option key={entry.field} value={entry.field}>
-                {entry.label}
-              </option>
-            ))}
-            {definitions.map((definition) => (
-              <option key={definition.id} value={`custom.${definition.key}`}>
-                {definition.label}
-              </option>
-            ))}
-          </SelectInput>
+          <SelectField name="subjectField" aria-label="Part of the job" value={field} onValueChange={(next) => setField(next)} options={[...CONDITION_FIELDS.map((entry) => ({ value: entry.field, label: entry.label })), ...definitions.map((definition) => ({ value: `custom.${definition.key}`, label: definition.label }))]} />
 
-          <SelectInput
-            name="operator"
-            aria-label="Comparison"
-            value={operator}
-            onChange={(e) => setOperator(e.target.value as typeof operator)}
-          >
-            {OPERATORS.map((entry) => (
-              <option key={entry.operator} value={entry.operator}>
-                {entry.label}
-              </option>
-            ))}
-          </SelectInput>
+          <SelectField name="operator" aria-label="Comparison" value={operator} onValueChange={(next) => setOperator(next as typeof operator)} options={[...OPERATORS.map((entry) => ({ value: entry.operator, label: entry.label }))]} />
 
           {OPERATORS.find((o) => o.operator === operator)?.takesValue &&
             (choices.length ? (
-              <SelectInput
-                name="value"
-                aria-label="Value"
-                defaultValue={condition?.value ?? ''}
-                required
-              >
-                <option value="">Choose a value</option>
-                {choices.map((choice) => (
-                  <option key={choice.value} value={choice.value}>
-                    {choice.label}
-                  </option>
-                ))}
-              </SelectInput>
+              <SelectField name="value" aria-label="Value" defaultValue={condition?.value ?? ''} required options={[{ value: '', label: 'Choose a value' }, ...choices.map((choice) => ({ value: choice.value, label: choice.label }))]} />
             ) : field === 'status_id' ? (
-              <SelectInput
-                name="value"
-                aria-label="Value"
-                defaultValue={condition?.value ?? ''}
-                required
-              >
-                <option value="">Choose a status</option>
-                {statuses.map((status) => (
-                  <option key={status.id} value={status.id}>
-                    {status.label}
-                  </option>
-                ))}
-              </SelectInput>
+              <SelectField name="value" aria-label="Value" defaultValue={condition?.value ?? ''} required options={[{ value: '', label: 'Choose a status' }, ...statuses.map((status) => ({ value: status.id, label: status.label }))]} />
             ) : (
               <TextInput
                 name="value"

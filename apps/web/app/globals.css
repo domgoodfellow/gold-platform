@@ -55,6 +55,9 @@
   --accent-foreground: var(--on-accent);
   --input: var(--border);
   --ring: rgb(23 23 23 / 0.45);
+  /* The keyboard focus indicator. The page's own text colour, never a brand role, so it keeps
+     its contrast against the page whatever accent a tenant chooses. */
+  --focus-color: var(--foreground);
 
   /* dashboard-01 shell roles. These stay platform-neutral and opaque. */
   --sidebar: #fafafa;
@@ -171,6 +174,7 @@
     --success: #6ee7b7;
     /* The light ring is a 45% near-black, invisible on this page. */
     --ring: rgb(237 237 237 / 0.45);
+    --focus-color: var(--foreground);
   }
 }
 
@@ -210,6 +214,7 @@
   --sidebar-accent-foreground: var(--foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
+  --focus-color: var(--foreground);
   background: var(--background);
   color: var(--foreground);
 }
@@ -248,6 +253,20 @@
   --danger: #f87171;
   --warning: #fbbf24;
   --success: #6ee7b7;
+}
+
+/* The one keyboard focus indicator (docs/ui-system.md, Focus). An outline drawn on the control's
+   own outer edge: it follows the control's corner radius, leaves no gap of page colour, survives
+   forced-colours mode and never stacks with a second ring, because no control draws one. It is
+   deliberately outside every cascade layer, so a utility such as `outline-none` cannot remove it;
+   a control that must draw it inside its own edge (a row in a clipped list) sets
+   `--focus-offset` rather than a competing outline. A borderless field inside a composed box marks
+   itself `data-focus-indicator="container"`, and the box shows the same outline (FOCUS_RING_WITHIN).
+   `:focus-visible` keeps a mouse click from leaving it behind. Menu and list items move a
+   highlight instead, and are not matched. */
+:where(a[href], button, input, select, textarea, summary, [role=button], [role=combobox], [role=tab], [role=switch], [role=checkbox], [role=radio], [role=slider], [tabindex="0"], [contenteditable=true]):not([data-focus-indicator=container]):focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: var(--focus-offset, 0px);
 }
 
 body {
@@ -330,7 +349,6 @@ h1, h2, h3, h4 {
   --surface-accent: color-mix(in srgb, var(--accent) var(--visual-accent-mix, 4%), var(--surface));
   --pressed: color-mix(in srgb, var(--foreground) 18%, transparent);
   --border-strong: color-mix(in srgb, var(--foreground) 30%, transparent);
-  --focus-color: var(--foreground);
   --radius-md: var(--visual-radius);
   --radius-lg: var(--visual-radius);
   --radius-xl: calc(var(--visual-radius) + .125rem);
@@ -372,10 +390,10 @@ h1, h2, h3, h4 {
 :scope :where([data-slot=metric-tile]) {
   box-shadow: var(--visual-elevation);
 }
-:scope :where([data-slot=button], [data-slot=input], [data-slot=native-select], [data-slot=selectable-card], [data-slot=toolbar], [data-slot=field-group]) {
+:scope :where([data-slot=button], [data-slot=input], [data-slot=select-trigger], [data-slot=combobox-trigger], [data-slot=selectable-card], [data-slot=toolbar], [data-slot=field-group]) {
   border-radius: var(--visual-radius);
 }
-:scope[data-density] :where([data-slot=button][data-size=default], [data-slot=input], [data-slot=native-select]) {
+:scope[data-density] :where([data-slot=button][data-size=default], [data-slot=input], [data-slot=select-trigger], [data-slot=combobox-trigger]) {
   min-height: var(--control-height);
 }
 :scope[data-density] :where([data-slot=card], [data-slot=field-group]) {
@@ -392,10 +410,6 @@ h1, h2, h3, h4 {
 }
 :scope :where([data-slot=button][data-variant=destructive]):hover:not(:disabled) {
   background-color: color-mix(in srgb, var(--danger) 16%, var(--surface));
-}
-:scope :where(button, input, select, textarea, a):focus-visible {
-  outline: 2px solid var(--focus-color);
-  outline-offset: 3px;
 }
 /* Preset character (V1.4 final): border strength, brand-tinted selection and the Expressive brand
    edge come from the preset's tokens, so Minimal, Layered and Expressive read differently on the
@@ -428,11 +442,11 @@ h1, h2, h3, h4 {
 :scope[data-density] :where([data-slot=board-card]) { padding: calc(var(--visual-spacing) * .75); }
 :scope[data-density] :where([data-slot=configuration-editor] li) { padding-block: calc(var(--visual-spacing) * .75); }
 :scope[data-density] :where([data-slot=table-cell]) { padding-block: calc(var(--visual-spacing) * .5); }
-:scope :where([data-slot=popover-content], [data-slot=dropdown-menu-content], [data-slot=dialog-content]) {
+:scope :where([data-slot=popover-content], [data-slot=dropdown-menu-content], [data-slot=select-content], [data-slot=combobox-content], [data-slot=dialog-content]) {
   border-radius: var(--visual-radius);
   box-shadow: var(--visual-overlay-shadow);
 }
-[data-slot=dropdown-menu-content][data-density=comfortable] [role=menuitem] {
+[data-slot=dropdown-menu-content][data-density=comfortable] :is([role=menuitem], [role=menuitemradio]) {
   min-height: 2.75rem;
   padding-inline: .75rem;
 }
@@ -452,7 +466,7 @@ h1, h2, h3, h4 {
 /* Comfortable touch targets take priority over compact density on small screens. */
 @media (max-width: 40rem) {
   @scope ([data-visual-system]) to ([data-visual-scope], [data-public-design]) {
-  :is(:scope, :scope[data-density]) :where([data-slot=button], [data-slot=selectable-card], [data-slot=input], [data-slot=native-select], [data-slot=tabs-trigger]) { min-height: 2.75rem; }
+  :is(:scope, :scope[data-density]) :where([data-slot=button], [data-slot=selectable-card], [data-slot=input], [data-slot=select-trigger], [data-slot=combobox-trigger], [data-slot=tabs-trigger]) { min-height: 2.75rem; }
   }
 }
 

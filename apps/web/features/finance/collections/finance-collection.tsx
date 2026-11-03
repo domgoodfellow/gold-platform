@@ -1,7 +1,7 @@
 import { AppPage } from '@/components/layout/app-page';
 import { CollectionHeader } from '@/components/patterns/collection-header';
 import { ButtonLink } from '@/components/controls/button';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { CollectionToolbar, type ActiveFilter } from '@/components/patterns/collection-toolbar';
 import { InvoiceDialog } from '../transactions/invoice-dialog';
 import { PaymentDialog } from '../transactions/payment-dialog';
@@ -19,6 +19,7 @@ import { listContacts } from '@/lib/domain/contacts/contacts';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
 import { todayInZone } from '@/lib/domain/scheduling/window';
 import { requireOrganization } from '@/lib/route/organization';
+import { SelectField } from '@/components/controls/select-field';
 
 type Kind = 'invoices' | 'quotes' | 'payments';
 const PAGE_SIZE = 25;
@@ -97,13 +98,13 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
       hidden={{ [view.scope]: scopeValue || undefined }}
       filterCount={active.filter(filter => filter.key !== 'q').length}
       filters={<>
-        <label className="flex flex-col gap-1 text-sm">Contact<SelectInput name="customer" aria-label="Filter by contact" defaultValue={value('customer')}><option value="">Any contact</option>{customers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</SelectInput></label>
-        {kind === 'payments' ? <label className="flex flex-col gap-1 text-sm">Source<SelectInput name="source" aria-label="Filter by source" defaultValue={value('source')}><option value="">Any source</option><option value="manual">Recorded by hand</option><option value="processor">Payment processor</option></SelectInput></label> : null}
+        <label className="flex flex-col gap-1 text-sm">Contact<SelectField name="customer" aria-label="Filter by contact" defaultValue={value('customer')} options={[{ value: '', label: 'Any contact' }, ...customers.map((customer) => ({ value: customer.id, label: customer.name }))]} /></label>
+        {kind === 'payments' ? <label className="flex flex-col gap-1 text-sm">Source<SelectField name="source" aria-label="Filter by source" defaultValue={value('source')} options={[{ value: '', label: 'Any source' }, { value: 'manual', label: 'Recorded by hand' }, { value: 'processor', label: 'Payment processor' }]} /></label> : null}
         <label className="flex flex-col gap-1 text-sm">{dateLabel} from<TextInput name="from" type="date" aria-label={`${dateLabel} from`} defaultValue={value('from')} /></label>
         <label className="flex flex-col gap-1 text-sm">{dateLabel} before<TextInput name="to" type="date" aria-label={`${dateLabel} before`} defaultValue={value('to')} /></label>
         {kind === 'invoices' ? <label className="flex flex-col gap-1 text-sm">Due on<TextInput name="due" type="date" aria-label="Due on" defaultValue={value('due')} /></label> : null}
       </>}
-      sort={<SelectInput name="sort" aria-label={`Sort ${TITLES[kind].toLowerCase()}`} defaultValue={value('sort')} className="w-full md:w-44">{view.sorts.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</SelectInput>}
+      sort={<SelectField name="sort" aria-label={`Sort ${TITLES[kind].toLowerCase()}`} defaultValue={value('sort')} className="w-full md:w-44" options={[...view.sorts.map(([key, label]) => ({ value: key, label: label }))]} />}
       active={active} resetHref={filtered ? path : undefined} className="mb-4" />
     <section aria-label={`${TITLES[kind]} results`} className="min-w-0">
       <p role="status" className="mb-2 text-sm text-muted"><span className="font-medium text-foreground tabular-nums">{result.total}</span> {result.total === 1 ? one : many}{filtered ? ' match this view' : ''}</p>

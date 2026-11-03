@@ -2,7 +2,7 @@
 
 import { useActionState, useId, useState } from 'react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, FieldLabel, Hint, SelectInput, TextArea, TextInput } from '@/components/controls/inputs';
+import { ErrorText, FieldLabel, Hint, TextArea, TextInput } from '@/components/controls/inputs';
 import {
   PageDrawer,
   PageDrawerContent,
@@ -19,6 +19,7 @@ import {
   updateCatalogProductAction,
   type FormState,
 } from '@/app/platform/catalog/families/[familyKey]/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: FormState = { error: null, updated: false };
 
@@ -56,20 +57,11 @@ export function EditProductSheet({ product }: { product: CatalogProduct }) {
           <div className="flex gap-3">
             <div className="flex flex-1 flex-col gap-1">
               <FieldLabel htmlFor="lifecycle">Lifecycle</FieldLabel>
-              <SelectInput id="lifecycle" name="lifecycle" defaultValue={product.lifecycle}>
-                <option value="experimental">Experimental</option>
-                <option value="beta">Beta</option>
-                <option value="stable">Stable</option>
-                <option value="deprecated">Deprecated</option>
-              </SelectInput>
+              <SelectField id="lifecycle" name="lifecycle" defaultValue={product.lifecycle} options={[{ value: 'experimental', label: 'Experimental' }, { value: 'beta', label: 'Beta' }, { value: 'stable', label: 'Stable' }, { value: 'deprecated', label: 'Deprecated' }]} />
             </div>
             <div className="flex flex-1 flex-col gap-1">
               <FieldLabel htmlFor="saleStatus">Sale state</FieldLabel>
-              <SelectInput id="saleStatus" name="saleStatus" defaultValue={product.saleStatus}>
-                <option value="active">Active</option>
-                <option value="unlisted">Unlisted</option>
-                <option value="archived">Archived</option>
-              </SelectInput>
+              <SelectField id="saleStatus" name="saleStatus" defaultValue={product.saleStatus} options={[{ value: 'active', label: 'Active' }, { value: 'unlisted', label: 'Unlisted' }, { value: 'archived', label: 'Archived' }]} />
             </div>
           </div>
           <div className="flex flex-col gap-1">
@@ -185,42 +177,21 @@ export function FeatureSheet({
             <div className="flex gap-3">
               <div className="flex flex-1 flex-col gap-1">
                 <FieldLabel htmlFor={`feat-lifecycle-${feature.id}`}>Lifecycle</FieldLabel>
-                <SelectInput id={`feat-lifecycle-${feature.id}`} name="lifecycle" defaultValue={feature.lifecycle}>
-                  <option value="experimental">Experimental</option>
-                  <option value="beta">Beta</option>
-                  <option value="stable">Stable</option>
-                  <option value="deprecated">Deprecated</option>
-                </SelectInput>
+                <SelectField id={`feat-lifecycle-${feature.id}`} name="lifecycle" defaultValue={feature.lifecycle} options={[{ value: 'experimental', label: 'Experimental' }, { value: 'beta', label: 'Beta' }, { value: 'stable', label: 'Stable' }, { value: 'deprecated', label: 'Deprecated' }]} />
               </div>
               <div className="flex flex-1 flex-col gap-1">
                 <FieldLabel htmlFor={`feat-implementation-${feature.id}`}>Implementation</FieldLabel>
-                <SelectInput id={`feat-implementation-${feature.id}`} name="implementationState" defaultValue={feature.implementationState}>
-                  {IMPLEMENTATION_OPTIONS.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </SelectInput>
+                <SelectField id={`feat-implementation-${feature.id}`} name="implementationState" defaultValue={feature.implementationState} options={[...IMPLEMENTATION_OPTIONS.map((value) => ({ value: value, label: value }))]} />
               </div>
             </div>
             <div className="flex gap-3">
               <div className="flex flex-1 flex-col gap-1">
                 <FieldLabel htmlFor={`feat-packaging-${feature.id}`}>Packaging default</FieldLabel>
-                <SelectInput id={`feat-packaging-${feature.id}`} name="packagingDefault" defaultValue={feature.packagingDefault}>
-                  {PACKAGING_OPTIONS.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </SelectInput>
+                <SelectField id={`feat-packaging-${feature.id}`} name="packagingDefault" defaultValue={feature.packagingDefault} options={[...PACKAGING_OPTIONS.map((value) => ({ value: value, label: value }))]} />
               </div>
               <div className="flex flex-1 flex-col gap-1">
                 <FieldLabel htmlFor={`feat-sale-${feature.id}`}>Sale state</FieldLabel>
-                <SelectInput id={`feat-sale-${feature.id}`} name="saleStatus" defaultValue={feature.saleStatus}>
-                  <option value="active">Active</option>
-                  <option value="unlisted">Unlisted</option>
-                  <option value="archived">Archived</option>
-                </SelectInput>
+                <SelectField id={`feat-sale-${feature.id}`} name="saleStatus" defaultValue={feature.saleStatus} options={[{ value: 'active', label: 'Active' }, { value: 'unlisted', label: 'Unlisted' }, { value: 'archived', label: 'Archived' }]} />
               </div>
             </div>
 

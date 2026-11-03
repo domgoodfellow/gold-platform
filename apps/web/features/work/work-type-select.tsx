@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { SelectInput } from '@/components/controls/inputs';
+import { SelectField } from '@/components/controls/select-field';
 
 /**
  * The Work type a directory shows. Choosing one opens that type's address straight away, which the
@@ -10,8 +10,5 @@ import { SelectInput } from '@/components/controls/inputs';
  */
 export function WorkTypeSelect({ types, value, hrefs }: { types: { id: string; name: string }[]; value: string; hrefs: Record<string, string> }) {
   const router = useRouter();
-  return <SelectInput name="type" aria-label="Work type" defaultValue={value} className="w-full sm:w-48"
-    onChange={event => { const href = hrefs[event.target.value]; if (href) router.push(href); }}>
-    {types.map(type => <option key={type.id} value={type.id}>{type.name}</option>)}
-  </SelectInput>;
+  return <SelectField name="type" aria-label="Work type" defaultValue={value} className="w-full sm:w-48" onValueChange={(next) => { const href = hrefs[next]; if (href) router.push(href); }} options={[...types.map((type) => ({ value: type.id, label: type.name }))]} />;
 }

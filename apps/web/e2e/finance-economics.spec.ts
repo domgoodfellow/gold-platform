@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Client } from 'pg';
 import { expect, test } from '@playwright/test';
 import { loadDemoContext, OWNER_STORAGE_STATE, platformUrl, STAFF_STORAGE_STATE } from './helpers';
+import { chooseOption } from './select-field';
 
 const CONNECTION = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 const source = `finance-visual-${randomUUID()}`;
@@ -45,7 +46,7 @@ test.describe('staff finance economics', () => {
     await page.goto(platformUrl('usage'));
     await expect(page.getByRole('heading', { name: 'Usage & economics', level: 1 })).toBeVisible();
     const { organizationId } = loadDemoContext();
-    await page.getByLabel('Organization', { exact: true }).selectOption(organizationId);
+    await chooseOption(page.getByLabel('Organization', { exact: true }), organizationId);
     await page.getByRole('button', { name: 'Filter' }).click();
     await expect(page).toHaveURL(new RegExp(`organization=${organizationId}`));
     await expect(page.getByText('Cost unknown').first()).toBeVisible();

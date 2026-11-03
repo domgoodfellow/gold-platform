@@ -13,7 +13,6 @@ import {
 import { Button, ButtonLink } from '@/components/controls/button';
 import { PageHeader } from '@/components/headers/page-header';
 import { MetricTile, OperationalPanel, PanelState } from '@/components/operational/primitives';
-import { SelectInput } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import type { AutomationDashboardData } from '@/lib/application/automations/dashboard';
 import { NewAutomationSheet } from '../rules/new-automation-sheet';
@@ -23,6 +22,7 @@ import {
   automationDiagnostic,
   automationTime,
 } from './operating-ui';
+import { PeriodSelect } from '@/components/controls/period-select';
 
 export function AutomationDashboard({
   organizationId,
@@ -148,16 +148,7 @@ export function AutomationDashboard({
         title="Automations"
         meta={<span className="text-xs">Execution period {data.period.dates[0]} – {data.period.dates.at(-1)} · {timezone}. Rule counts reflect current configuration.</span>}
         actions={<>
-          <form className="flex items-center gap-1"><SelectInput
-              name="when"
-              aria-label="Date range"
-              defaultValue={data.period.when}
-              size="small"
-            >
-              <option value="today">Today</option>
-              <option value="week">Last 7 days</option>
-              <option value="month">Last 30 days</option>
-            </SelectInput><Button size="small" tone="secondary" type="submit">Apply</Button></form>
+          <PeriodSelect label="Date range" value={data.period.when} options={[{ value: 'today', label: 'Today' }, { value: 'week', label: 'Last 7 days' }, { value: 'month', label: 'Last 30 days' }].map((period) => ({ ...period, href: `?when=${period.value}` }))} />
           {mayManage && <NewAutomationSheet organizationId={organizationId} />}
           <ButtonLink href={activity} tone="secondary">View runs</ButtonLink>
           {configure}

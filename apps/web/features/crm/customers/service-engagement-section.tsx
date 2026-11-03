@@ -4,7 +4,7 @@ import { BusinessLabel } from '@/lib/context/business-vocabulary';
 import { useActionState, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { FormField } from '@/components/controls/form';
-import { ErrorText, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, TextInput } from '@/components/controls/inputs';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { PageDrawer, PageDrawerContent, PageDrawerHeader, PageDrawerTitle, PageDrawerTrigger } from '@/components/panels/page-drawer';
 import { engagementAction, readEngagementDetails } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/service-actions';
@@ -13,6 +13,7 @@ import type { ClientTenantRelationship } from '@/lib/domain/customers/client-ten
 import { ServiceDisclosureEditor } from './service-disclosure-editor';
 import { ServiceReviewSection } from './service-review-section';
 import { ServiceNotificationSection } from './service-notification-section';
+import { SelectField } from '@/components/controls/select-field';
 
 type Options = { organizationId: string; customerId: string; mayManage: boolean; relationships: ClientTenantRelationship[]; opportunities: { id: string; title: string }[]; proposals: { id: string; version: number; status: string }[]; work: { id: string; title: string }[] };
 
@@ -27,11 +28,11 @@ function NewEngagement({ options, onSaved }: { options: Options; onSaved: () => 
   return <form action={action} className="flex min-h-0 flex-1 flex-col"><ContextInputs {...options}/><input type="hidden" name="operation" value="create"/>
     <div className="flex-1 space-y-4 overflow-y-auto">
       <FormField id={`${id}-name`} label="Engagement name">{props => <TextInput {...props} name="name" required maxLength={200}/>}</FormField>
-      <FormField id={`${id}-kind`} label="Service">{props => <SelectInput {...props} name="serviceKind" defaultValue="website">{Object.entries(SERVICE_KINDS).map(([key, name]) => <option key={key} value={key}>{name}</option>)}</SelectInput>}</FormField>
-      <FormField id={`${id}-relationship`} label="Linked organization" optional>{props => <SelectInput {...props} name="relationshipId" defaultValue=""><option value="">No tenant yet</option>{options.relationships.filter(r => r.status === 'active').map(r => <option key={r.id} value={r.id}>{r.tenant_name}</option>)}</SelectInput>}</FormField>
+      <FormField id={`${id}-kind`} label="Service">{props => <SelectField {...props} name="serviceKind" defaultValue="website" options={[...Object.entries(SERVICE_KINDS).map(([key, name]) => ({ value: key, label: name }))]} />}</FormField>
+      <FormField id={`${id}-relationship`} label="Linked organization" optional>{props => <SelectField {...props} name="relationshipId" defaultValue="" options={[{ value: '', label: 'No tenant yet' }, ...options.relationships.filter(r => r.status === 'active').map((r) => ({ value: r.id, label: r.tenant_name }))]} />}</FormField>
       <details><summary className="cursor-pointer text-sm">Commercial origin</summary><div className="mt-3 space-y-4">
-        <FormField id={`${id}-opportunity`} label="Opportunity" optional>{props => <SelectInput {...props} name="opportunityId" defaultValue=""><option value="">None</option>{options.opportunities.map(o => <option key={o.id} value={o.id}>{o.title}</option>)}</SelectInput>}</FormField>
-        <FormField id={`${id}-proposal`} label="Accepted proposal" optional>{props => <SelectInput {...props} name="proposalId" defaultValue=""><option value="">None</option>{options.proposals.filter(p => p.status === 'accepted').map(p => <option key={p.id} value={p.id}>Version {p.version}</option>)}</SelectInput>}</FormField>
+        <FormField id={`${id}-opportunity`} label="Opportunity" optional>{props => <SelectField {...props} name="opportunityId" defaultValue="" options={[{ value: '', label: 'None' }, ...options.opportunities.map((o) => ({ value: o.id, label: o.title }))]} />}</FormField>
+        <FormField id={`${id}-proposal`} label="Accepted proposal" optional>{props => <SelectField {...props} name="proposalId" defaultValue="" options={[{ value: '', label: 'None' }, ...options.proposals.filter(p => p.status === 'accepted').map((p) => ({ value: p.id, label: `Version ${p.version}` }))]} />}</FormField>
       </div></details>
       <ErrorText role="alert">{state.error}</ErrorText>
     </div>
@@ -75,7 +76,7 @@ function EngagementDetails({ item, options }: { item: Engagement; options: Optio
     {details && options.mayManage ? <ServiceNotificationSection organizationId={options.organizationId} customerId={options.customerId} details={details} onSaved={refreshDisclosure}/> : null}
     {details?.mayReadSupport ? <ButtonLink tone="text" href={`/organizations/${options.organizationId}/support/cases?customer=${options.customerId}`}>Customer Support Cases</ButtonLink> : null}
     {options.mayManage && open && !item.relationship_id ? <form action={action} className="space-y-3"><ContextInputs {...options} engagementId={item.id}/><input type="hidden" name="operation" value="bind"/>
-      <FormField id={`${id}-tenant`} label="Linked organization">{props => <SelectInput {...props} name="relationshipId" required defaultValue=""><option value="" disabled>Select linked organization</option>{options.relationships.filter(r => r.status === 'active').map(r => <option key={r.id} value={r.id}>{r.tenant_name}</option>)}</SelectInput>}</FormField><Button type="submit" disabled={pending}>Associate tenant</Button>
+      <FormField id={`${id}-tenant`} label="Linked organization">{props => <SelectField {...props} name="relationshipId" required defaultValue="" options={[{ value: '', label: 'Select linked organization', disabled: true }, ...options.relationships.filter(r => r.status === 'active').map((r) => ({ value: r.id, label: r.tenant_name }))]} />}</FormField><Button type="submit" disabled={pending}>Associate tenant</Button>
     </form> : null}
     <Section><SectionHeading>Deliverables</SectionHeading>
       {!details && !error ? <p role="status" className="text-sm text-muted">Loading deliverables…</p> : null}
@@ -88,7 +89,7 @@ function EngagementDetails({ item, options }: { item: Engagement; options: Optio
           <FormField id={`${id}-search`} label="Find artifact">{props => <TextInput {...props} value={search} onChange={event => setSearch(event.target.value)} maxLength={100}/>}</FormField><Button type="submit" tone="secondary">Search</Button>
         </form>
         {details.options.length ? <form action={action} className="space-y-3"><ContextInputs {...options} engagementId={item.id}/><input type="hidden" name="operation" value="attach"/>
-          <FormField id={`${id}-artifact`} label="Existing artifact">{props => <SelectInput {...props} name="artifact" required defaultValue=""><option value="" disabled>Select artifact</option>{details.options.map(a => <option key={`${a.kind}:${a.id}`} value={`${a.kind}:${a.id}`}>{ARTIFACT_KINDS[a.kind as keyof typeof ARTIFACT_KINDS]} · {a.label}</option>)}</SelectInput>}</FormField>
+          <FormField id={`${id}-artifact`} label="Existing artifact">{props => <SelectField {...props} name="artifact" required defaultValue="" options={[{ value: '', label: 'Select artifact', disabled: true }, ...details.options.map((a) => ({ value: `${a.kind}:${a.id}`, label: `${ARTIFACT_KINDS[a.kind as keyof typeof ARTIFACT_KINDS]} · ${a.label}` }))]} />}</FormField>
           {details.options.length === 100 ? <p className="text-sm text-muted">First 100 matches. Refine the search.</p> : null}
           <Button type="submit" disabled={pending}>{pending ? 'Saving…' : 'Attach deliverable'}</Button>
         </form> : <p className="text-sm text-muted">No authorized artifacts available. Tenant access and the owning workspace’s permissions are required.</p>}
@@ -100,13 +101,13 @@ function EngagementDetails({ item, options }: { item: Engagement; options: Optio
         return <li key={workId}>{work ? <ButtonLink tone="text" href={`/organizations/${options.organizationId}/work/${work.id}`}>{work.title}</ButtonLink> : <span className="text-sm text-muted">Work access required</span>}</li>;
       })}</ul> : <p className="text-sm text-muted">No related Work Items.</p>}
       {options.mayManage && open && options.work.length ? <form action={action} className="mt-4 space-y-3"><ContextInputs {...options} engagementId={item.id}/><input type="hidden" name="operation" value="work"/>
-        <FormField id={`${id}-work`} label="Customer Work Item">{props => <SelectInput {...props} name="workItemId" required defaultValue=""><option value="" disabled>Select Work Item</option>{options.work.filter(w => !details?.workIds.includes(w.id)).map(w => <option key={w.id} value={w.id}>{w.title}</option>)}</SelectInput>}</FormField><Button type="submit" disabled={pending}>Attach Work Item</Button>
+        <FormField id={`${id}-work`} label="Customer Work Item">{props => <SelectField {...props} name="workItemId" required defaultValue="" options={[{ value: '', label: 'Select Work Item', disabled: true }, ...options.work.filter(w => !details?.workIds.includes(w.id)).map((w) => ({ value: w.id, label: w.title }))]} />}</FormField><Button type="submit" disabled={pending}>Attach Work Item</Button>
       </form> : null}
     </Section>
     {terms ? <details><summary className="cursor-pointer text-sm">Accepted commercial terms</summary><div className="mt-2 space-y-1 text-sm"><p>{typeof terms.planLabel === 'string' ? terms.planLabel : 'Accepted proposal'}</p><p className="text-muted">Version {typeof terms.version === 'number' ? terms.version : 'unknown'} · {typeof terms.currency === 'string' ? terms.currency : 'Currency unavailable'}</p><p className="text-muted">Terms retained at engagement creation.</p></div></details> : null}
     {options.mayManage && open ? <details><summary className="cursor-pointer text-sm">Manage engagement</summary><form action={action} className="mt-3 space-y-3"><ContextInputs {...options} engagementId={item.id}/><input type="hidden" name="operation" value="transition"/>
       <p className="text-sm text-muted">Completion and cancellation retain history. Tenant artifacts have separate controls.</p>
-      <FormField id={`${id}-status`} label="Engagement status">{props => <SelectInput {...props} name="status" defaultValue={item.status === 'planned' ? 'active' : 'completed'}>{item.status === 'planned' ? <option value="active">Active</option> : null}<option value="completed">Completed</option><option value="cancelled">Cancelled</option></SelectInput>}</FormField>
+      <FormField id={`${id}-status`} label="Engagement status">{props => <SelectField {...props} name="status" defaultValue={item.status === 'planned' ? 'active' : 'completed'} options={[...(item.status === 'planned' ? [{ value: 'active', label: 'Active' }] : []), { value: 'completed', label: 'Completed' }, { value: 'cancelled', label: 'Cancelled' }]} />}</FormField>
       <Button type="submit" disabled={pending}>{pending ? 'Saving…' : 'Update engagement'}</Button>
     </form></details> : null}
   </div>;

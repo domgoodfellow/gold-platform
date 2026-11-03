@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import type { NavigationItem, WebsiteContent } from '@gold/schemas';
 import { Button } from '@/components/controls/button';
-import { FieldLabel, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
 import {
   PageDrawer, PageDrawerContent, PageDrawerDescription, PageDrawerHeader, PageDrawerTitle,
 } from '@/components/panels/page-drawer';
 import { pagePath } from '@/lib/domain/public-site/paths';
+import { SelectField } from '@/components/controls/select-field';
 
 /**
  * The website's navigation: which pages appear in the header, in what order, under what label.
@@ -48,12 +49,7 @@ export function NavigationEditor({ open, onOpenChange, content, disabled, onAddP
                   {item.target.type === 'page' ? (
                     <FieldLabel className="grid gap-1 text-sm">
                       Page
-                      <SelectInput
-                        value={item.target.pageId}
-                        onChange={(event) => onChange({ ...item, target: { type: 'page', pageId: event.target.value } })}
-                      >
-                        {content.pages.map((entry) => <option key={entry.id} value={entry.id}>{entry.name} ({entry.isHome ? 'home' : pagePath(entry)})</option>)}
-                      </SelectInput>
+                      <SelectField value={item.target.pageId} onValueChange={(next) => onChange({ ...item, target: { type: 'page', pageId: next } })} options={[...content.pages.map((entry) => ({ value: entry.id, label: `${entry.name} (${entry.isHome ? 'home' : pagePath(entry)})` }))]} />
                     </FieldLabel>
                   ) : (
                     <FieldLabel className="grid gap-1 text-sm">
@@ -77,10 +73,7 @@ export function NavigationEditor({ open, onOpenChange, content, disabled, onAddP
           <div className="grid gap-2 border-t border-border pt-4">
             <FieldLabel className="grid gap-1 text-sm">
               Add a page
-              <SelectInput value={pageToAdd} onChange={(event) => setPageToAdd(event.target.value)}>
-                <option value="">Choose a page…</option>
-                {content.pages.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
-              </SelectInput>
+              <SelectField value={pageToAdd} onValueChange={(next) => setPageToAdd(next)} options={[{ value: '', label: 'Choose a page…' }, ...content.pages.map((entry) => ({ value: entry.id, label: entry.name }))]} />
             </FieldLabel>
             <div className="flex flex-wrap gap-2">
               <Button type="button" size="small" disabled={!pageToAdd} onClick={() => { onAddPage(pageToAdd); setPageToAdd(''); }}>Add page link</Button>

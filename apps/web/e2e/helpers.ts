@@ -4,6 +4,7 @@ import type { DemoContext } from './global-setup';
 import { createClient } from '@supabase/supabase-js';
 import { provisionOrganization } from '../lib/domain/platform/provision';
 import { DEMO_PASSWORD } from '../scripts/demo/businesses';
+import { chooseOption } from './select-field';
 
 /**
  * Where the context and signed-in browser states live. The demo setup writes them beside this file;
@@ -64,7 +65,7 @@ export async function addContactManually(
   await dialog.getByText(input.type === 'person' ? 'Person' : 'Company', { exact: true }).click();
   await dialog.getByLabel(input.type === 'person' ? 'Name' : 'Company name', { exact: true }).fill(input.name);
   if (input.email) await dialog.getByRole('textbox', { name: /email/i }).fill(input.email);
-  if (input.company) await dialog.getByRole('combobox', { name: /^Company/ }).selectOption({ label: input.company });
+  if (input.company) await chooseOption(dialog.getByRole('combobox', { name: /^Company/ }), { label: input.company });
   if (input.details) { await dialog.getByRole('button', { name: 'Add more details' }).click(); await input.details(dialog); }
   await dialog.getByRole('button', { name: 'Save contact' }).click();
   const done = page.getByRole('dialog', { name: 'Contact added' });

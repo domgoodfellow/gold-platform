@@ -196,7 +196,7 @@ function Segmented<T extends string>({
           aria-pressed={value === key}
           onClick={() => onChange(key)}
           className={cx(
-            'rounded-md px-2.5 py-1 text-xs font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+            'rounded-md px-2.5 py-1 text-xs font-medium',
             value === key ? 'bg-selected text-foreground' : 'text-muted hover:bg-hover',
           )}
         >

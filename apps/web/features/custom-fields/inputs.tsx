@@ -3,7 +3,7 @@
 import { useId } from 'react';
 import { Checkbox } from '@gold/ui/components/checkbox';
 import { FieldSet, FieldLegend } from '@gold/ui/components/field';
-import { SelectInput, TextInput, FieldLabel } from '@/components/controls/inputs';
+import { TextInput, FieldLabel } from '@/components/controls/inputs';
 import { CheckboxField } from '@/components/controls/checkbox-field';
 import { FormField } from '@/components/controls/form';
 import {
@@ -11,6 +11,7 @@ import {
   type CustomValues,
   type FieldDefinition,
 } from '@/lib/domain/fields/field-definitions';
+import { SelectField } from '@/components/controls/select-field';
 
 /**
  * The inputs for whatever fields a tenant has defined for one entity.
@@ -83,16 +84,7 @@ function CustomFieldInput({
     return (
       <FormField id={id} label={definition.label} optional={!definition.required}>
         {(field) => (
-          <SelectInput {...field} name={name} required={definition.required} defaultValue={stored ?? ''}>
-            <option value="">
-              {definition.required ? definition.label : `${definition.label} (optional)`}
-            </option>
-            {choices.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </SelectInput>
+          <SelectField {...field} name={name} required={definition.required} defaultValue={stored ?? ''} options={[{ value: '', label: definition.required ? definition.label : `${definition.label} (optional)` }, ...choices.map((option) => ({ value: option, label: option }))]} />
         )}
       </FormField>
     );

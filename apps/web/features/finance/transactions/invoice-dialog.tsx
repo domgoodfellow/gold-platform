@@ -3,7 +3,7 @@
 import { useId, useState, type ReactNode } from 'react';
 import { FileText, Plus, Trash2 } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/controls/button';
-import { SelectInput, TextInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { FormField } from '@/components/controls/form';
 import { useGuardedDialogDirty } from '@/components/panels/guarded-dialog';
 import { DialogBody, DialogFooterBar, StepHeader } from '@/components/panels/dialog-layout';
@@ -15,6 +15,7 @@ import { CancelButton, TransactionDialog, TransactionError, type TransactionTrig
 import { choiceStatus, useFinanceRecord, useFinanceSubmit } from './use-finance-record';
 import { lineItem } from './quote-dialog';
 import { DraftDocumentPreview } from './document-preview';
+import { SelectField } from '@/components/controls/select-field';
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const readable = (day: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(`${day}T12:00:00Z`));
@@ -205,7 +206,7 @@ function DirectInvoiceBody({ organizationId, today, close, chooser }: { organiza
           {!items.length ? <div className="flex flex-col items-start gap-2 text-sm"><p>Nothing is in Catalog & Pricing yet, so there is nothing to invoice.</p><ButtonLink size="small" tone="secondary" href={`/organizations/${organizationId}/finance/catalog`}>Open Catalog & Pricing</ButtonLink></div>
             : <fieldset className="flex flex-col gap-3"><legend className="mb-1 text-sm font-semibold">Catalog items</legend>
               {lines.map((line, index) => <div key={line.key} className="grid grid-cols-[minmax(0,1fr)_5.5rem_auto] items-end gap-2">
-                <FormField id={`${id}-item-${line.key}`} label={`Item ${index + 1}`}>{field => <SelectInput {...field} value={line.itemId} onChange={event => update(line.key, { itemId: event.target.value })} required><option value="">Choose a catalog item</option>{items.map(entry => <option key={entry.id} value={entry.id}>{entry.name} · {formatMoney(entry.unitAmountMinor, entry.currency)} / {entry.unit}</option>)}</SelectInput>}</FormField>
+                <FormField id={`${id}-item-${line.key}`} label={`Item ${index + 1}`}>{field => <SelectField {...field} value={line.itemId} onValueChange={(next) => update(line.key, { itemId: next })} required options={[{ value: '', label: 'Choose a catalog item' }, ...items.map((entry) => ({ value: entry.id, label: `${entry.name} · ${formatMoney(entry.unitAmountMinor, entry.currency)} / ${entry.unit}` }))]} />}</FormField>
                 <FormField id={`${id}-quantity-${line.key}`} label="Quantity">{field => <TextInput {...field} value={line.quantity} onChange={event => update(line.key, { quantity: event.target.value })} type="number" inputMode="numeric" min={1} max={1000000} step={1} required className="tabular-nums" />}</FormField>
                 <Button type="button" tone="ghost" size="small" aria-label={`Remove item ${index + 1}`} disabled={lines.length === 1} onClick={() => setLines(current => current.filter(entry => entry.key !== line.key))}><Trash2 aria-hidden className="size-4" /></Button>
               </div>)}

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/controls/button';
-import { TextInput, SelectInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import { RESOURCE_CLASS_LABELS, isResourceClass } from '@/lib/domain/resources/resource-class';
 import { listScheduleDays } from '@/lib/domain/scheduling/availability';
 import { todayInZone } from '@/lib/domain/scheduling/window';
@@ -18,6 +18,7 @@ import { listResources } from '@/lib/domain/resources/resources';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOrganization } from '@/lib/route/organization';
+import { SelectField } from '@/components/controls/select-field';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,8 +81,8 @@ export default async function ResourcesPage({
           </ConfigureRegistrar>
         ) : null}
         <form method="get" className="mb-3 flex flex-wrap items-end gap-2 rounded-lg border border-border p-3">
-          <label className="text-xs text-muted">Resource class<SelectInput name="class" defaultValue={resourceClass ?? ''}><option value="">All classes</option>{Object.entries(RESOURCE_CLASS_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</SelectInput></label>
-          <label className="text-xs text-muted">Capability<SelectInput name="capability" defaultValue={typeof query.capability === 'string' ? query.capability : ''}><option value="">All capabilities</option>{vocabulary.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</SelectInput></label>
+          <label className="text-xs text-muted">Resource class<SelectField name="class" defaultValue={resourceClass ?? ''} options={[{ value: '', label: 'All classes' }, ...Object.entries(RESOURCE_CLASS_LABELS).map(([id, label]) => ({ value: id, label: label }))]} /></label>
+          <label className="text-xs text-muted">Capability<SelectField name="capability" defaultValue={typeof query.capability === 'string' ? query.capability : ''} options={[{ value: '', label: 'All capabilities' }, ...vocabulary.map((c) => ({ value: c.id, label: c.name }))]} /></label>
           <label className="text-xs text-muted">Availability date<TextInput type="date" name="on" defaultValue={date}/></label><Button size="small">Apply filters</Button>
         </form>
         <div>

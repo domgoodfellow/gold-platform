@@ -4,7 +4,7 @@ import { useId, type ReactNode } from 'react';
 import { Check, Search } from 'lucide-react';
 import { Card } from '../surfaces/card';
 import { TextInput } from '../controls/inputs';
-import { cx, FOCUS_RING } from '../class-names';
+import { cx, FOCUS_RING, FOCUS_RING_WITHIN } from '../class-names';
 
 /**
  * The shared grammar of a money-moving dialog: choose the record, review what it holds, see the
@@ -37,7 +37,7 @@ export function RecordPicker({ legend, search, choices, selected, onSelect, stat
     {choices.length ? <div data-slot="record-choices" className="flex max-h-64 flex-col divide-y divide-border overflow-y-auto rounded-[var(--visual-radius,0.625rem)] border border-border">
       {choices.map(choice => {
         const checked = choice.id === selected;
-        return <label key={choice.id} className={cx('flex cursor-pointer items-start gap-3 px-3 py-2.5 text-sm hover:bg-hover has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-accent', checked && 'bg-secondary')}>
+        return <label key={choice.id} className={cx('flex cursor-pointer items-start gap-3 px-3 py-2.5 text-sm hover:bg-hover [--focus-offset:-2px]', FOCUS_RING_WITHIN, checked && 'bg-secondary')}>
           <input type="radio" name={name} value={choice.id} checked={checked} onChange={() => onSelect(choice.id)} className="peer sr-only" />
           <span aria-hidden className={cx('mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border', checked ? 'border-accent bg-accent text-on-accent' : 'border-border')}>{checked ? <Check className="size-3" /> : null}</span>
           <span className="min-w-0 flex-1"><span className="block break-words font-medium">{choice.title}</span>{choice.detail ? <span className="block break-words text-xs text-muted">{choice.detail}</span> : null}</span>
@@ -111,7 +111,7 @@ export function ChoiceRow<T extends string>({ legend, value, options, onChange }
   return <fieldset className="flex flex-col gap-2">
     <legend className="mb-1 text-sm font-medium">{legend}</legend>
     <div className="grid gap-2 sm:grid-cols-2">
-      {options.map(option => <label key={option.value} className={cx('flex cursor-pointer flex-col gap-0.5 rounded-[var(--visual-radius,0.625rem)] border px-3 py-2 text-sm has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent', value === option.value ? 'border-accent bg-secondary' : 'border-border hover:bg-hover', FOCUS_RING)}>
+      {options.map(option => <label key={option.value} className={cx('flex cursor-pointer flex-col gap-0.5 rounded-[var(--visual-radius,0.625rem)] border px-3 py-2 text-sm', FOCUS_RING_WITHIN, value === option.value ? 'border-accent bg-secondary' : 'border-border hover:bg-hover', FOCUS_RING)}>
         <span className="flex items-center gap-2 font-medium"><input type="radio" name={name} value={option.value} checked={value === option.value} onChange={() => onChange(option.value)} className="accent-[var(--accent)]" />{option.label}</span>
         {option.hint ? <span className="pl-6 text-xs text-muted">{option.hint}</span> : null}
       </label>)}

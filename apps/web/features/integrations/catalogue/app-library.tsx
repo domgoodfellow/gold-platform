@@ -5,6 +5,7 @@ import { Badge } from '@/components/display/data';
 import { BrandMark } from '@/components/display/brand-mark';
 import { EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
 import { APP_CATEGORIES, APP_WORKSPACES, type LibraryEntry } from '@/lib/domain/integrations/app-library';
+import { SelectField } from '@/components/controls/select-field';
 
 export function AppLibrary({ organizationId, entries, connected, mayManage, q, category, workspace, connectedOnly, page, total }: {
   organizationId: string; entries: LibraryEntry[]; connected: Map<string, { id: string; label: string }[]>; mayManage: boolean;
@@ -17,10 +18,8 @@ export function AppLibrary({ organizationId, entries, connected, mayManage, q, c
     <form className="mt-3 flex flex-wrap items-end gap-3" method="get" action={`${base}#app-library`}>
       <input type="hidden" name="catalog" value="open" />
       <label className="w-full text-sm sm:min-w-56 sm:flex-1">Search applications<TextInput name="q" type="search" defaultValue={q} placeholder="Search apps or products" className="mt-1 w-full" /></label>
-      <label className="w-full text-sm sm:w-auto">Category<select name="category" defaultValue={category} className="mt-1 block w-full rounded border border-border bg-surface p-2">
-        <option value="">All categories</option>{APP_CATEGORIES.map(c=><option key={c}>{c}</option>)}</select></label>
-      <label className="w-full text-sm sm:w-auto">Workspace<select name="workspace" defaultValue={workspace} className="mt-1 block w-full rounded border border-border bg-surface p-2">
-        <option value="">All workspaces</option>{APP_WORKSPACES.map(w=><option key={w} value={w}>{w==='crm'?'CRM':w==='ai'?'AI':w[0].toUpperCase()+w.slice(1)}</option>)}</select></label>
+      <label className="w-full text-sm sm:w-auto">Category<SelectField name="category" defaultValue={category} className='mt-1 block w-full' options={[{ value: '', label: 'All categories' }, ...APP_CATEGORIES.map((c) => ({ value: c, label: c }))]} /></label>
+      <label className="w-full text-sm sm:w-auto">Workspace<SelectField name="workspace" defaultValue={workspace} className='mt-1 block w-full' options={[{ value: '', label: 'All workspaces' }, ...APP_WORKSPACES.map((w) => ({ value: w, label: w==='crm'?'CRM':w==='ai'?'AI':w[0].toUpperCase()+w.slice(1) }))]} /></label>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="filter" value="connected" defaultChecked={connectedOnly} />Connected</label>
       <Button type="submit" tone="secondary" size="small">Search</Button>
     </form>

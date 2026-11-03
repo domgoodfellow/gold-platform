@@ -1,10 +1,11 @@
 'use client';
 
-import { ErrorText, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, Hint, TextInput } from '@/components/controls/inputs';
 import { Button } from '@/components/controls/button';
 import { useActionState, useEffect } from 'react';
 import type { Role } from '@/lib/domain/tenancy/roles';
 import { addMemberAction, type AddMemberState } from '@/app/organizations/[organizationId]/settings/access/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: AddMemberState = { error: null, created: false };
 
@@ -51,13 +52,7 @@ export function AddMemberForm({
           aria-label="Name in this business (optional)"
           className="flex-1"
         />
-        <SelectInput name="roleId" aria-label="Role" className="flex-1">
-          {roles.map((role) => (
-            <option key={role.id} value={role.id}>
-              {role.name}
-            </option>
-          ))}
-        </SelectInput>
+        <SelectField name="roleId" aria-label="Role" className="flex-1" options={[...roles.map((role) => ({ value: role.id, label: role.name }))]} />
       </div>
 
       <Button type="submit" disabled={pending} className="w-fit">

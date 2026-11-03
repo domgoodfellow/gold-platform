@@ -2,9 +2,10 @@
 
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, FieldLabel, Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { ErrorText, FieldLabel, Hint, TextInput } from '@/components/controls/inputs';
 import type { Product } from '@/lib/domain/commercial/catalogue';
 import { updateProductAction, type ProductState } from '@/app/platform/catalog/products/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const PRODUCT_INITIAL: ProductState = { error: null, updated: false };
 
@@ -45,11 +46,7 @@ export function ProductForm({ product }: { product: Product }) {
       <div className="flex flex-col gap-2 sm:flex-row">
         <div className="flex flex-1 flex-col gap-1">
           <FieldLabel htmlFor="saleStatus">Sale state</FieldLabel>
-          <SelectInput id="saleStatus" name="saleStatus" defaultValue={product.saleStatus}>
-            <option value="active">Available for sale</option>
-            <option value="unlisted">Unlisted</option>
-            <option value="archived">Archived</option>
-          </SelectInput>
+          <SelectField id="saleStatus" name="saleStatus" defaultValue={product.saleStatus} options={[{ value: 'active', label: 'Available for sale' }, { value: 'unlisted', label: 'Unlisted' }, { value: 'archived', label: 'Archived' }]} />
         </div>
         <div className="flex flex-col gap-1">
           <FieldLabel htmlFor="displayOrder">Display order</FieldLabel>

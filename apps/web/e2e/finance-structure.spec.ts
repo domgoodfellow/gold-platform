@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { COLLEAGUE_STORAGE_STATE, OWNER_STORAGE_STATE, loadDemoContext } from './helpers';
 import { populateFinanceBusiness, provisionFinanceBusiness, signInOwner, type FinanceFixture } from './finance-fixtures';
 import { assertCapturable, guardedShot } from './visual-guard';
+import { chooseOption, selectFieldValue } from './select-field';
 
 /**
  * Finance Structural Correction in a real browser, against a disposable database: Finance has no
@@ -122,7 +123,7 @@ test.describe.serial('Finance structural correction', () => {
       const regional = page.getByRole('region', { name: 'Regional settings' });
       await expect(regional).toContainText('trading currency CAD');
       await regional.getByRole('button', { name: 'Edit', exact: true }).click();
-      await expect(page.getByLabel('Currency', { exact: true })).toHaveValue('CAD');
+      await expect(selectFieldValue(page.getByLabel('Currency', { exact: true }))).toHaveValue('CAD');
     });
 
     test('an empty business customizes its Dashboard, opens New quote, reaches pricing and comes back unchanged', async ({ page }) => {
@@ -212,7 +213,7 @@ test.describe.serial('Finance structural correction', () => {
         let dialog = page.getByRole('dialog', { name: 'New quote' });
         await dialog.getByLabel('Search Work items').fill('Heat pump');
         await choose(dialog, /Heat pump estimate/);
-        await dialog.getByLabel('Price item').selectOption({ label: 'Labour · CA$95.50 / hour' });
+        await chooseOption(dialog.getByLabel('Price item'), { label: 'Labour · CA$95.50 / hour' });
         await expect(dialog.getByLabel('Quote totals')).toContainText('Quote after this line');
         await capture(`quote-dialog-${v}`, `${base}/finance`, dialog);
         // Invoice review.

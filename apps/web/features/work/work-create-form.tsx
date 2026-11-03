@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation';
 import { createWorkItemAction, type WorkActionState } from '@/app/organizations/[organizationId]/work/actions';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { FormActions, FormError, FormField } from '@/components/controls/form';
-import { Hint, SelectInput, TextInput } from '@/components/controls/inputs';
+import { Hint, TextInput } from '@/components/controls/inputs';
 import { OptionalSelect, type SelectOption } from '@/components/controls/optional-select';
 import { ResourceChecklist } from '@/components/controls/resource-checklist';
 import { CustomFieldInputs } from '@/features/custom-fields/inputs';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import type { WorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { withSetupContext } from '@/lib/route/setup-context';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: WorkActionState = { error: null };
 
@@ -78,13 +79,7 @@ export function CreateWorkItemForm({
         </FormField>
         <FormField id={`new-work-status-${organizationId}`} label="Starting stage">
           {(field) => (
-            <SelectInput {...field} name="statusId">
-              {statuses.map((status) => (
-                <option key={status.id} value={status.id}>
-                  {status.name}
-                </option>
-              ))}
-            </SelectInput>
+            <SelectField {...field} name="statusId" options={[...statuses.map((status) => ({ value: status.id, label: status.name }))]} />
           )}
         </FormField>
       </div>

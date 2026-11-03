@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/display/table';
 import { Button } from '@/components/controls/button';
-import { TextInput, SelectInput } from '@/components/controls/inputs';
+import { TextInput } from '@/components/controls/inputs';
 import {
   PageDrawer,
   PageDrawerContent,
@@ -18,6 +18,7 @@ import {
   automationDiagnostic,
   automationTime,
 } from '../workspace/operating-ui';
+import { SelectField } from '@/components/controls/select-field';
 
 export type ActivityFilters = {
   when: string;
@@ -77,52 +78,12 @@ export function ActivityView({
           className="w-56"
           size="small"
         />
-        <SelectInput
-          name="when"
-          aria-label="History period"
-          defaultValue={filters.when}
-          onChange={(event) => router.push(href({ when: event.target.value, from: '', to: '', page: '1' }))}
-          size="small"
-        >
-          <option value="today">Today</option>
-          <option value="week">Last 7 days</option>
-          <option value="month">Last 30 days</option>
-          <option value="all">All history</option>
-        </SelectInput>
-        <SelectInput
-          name="stream"
-          aria-label="Activity stream"
-          defaultValue={filters.stream}
-          size="small"
-        >
-          <option value="runs">Executions</option>
-          <option value="deliveries">Message deliveries</option>
-        </SelectInput>
+        <SelectField name="when" aria-label="History period" defaultValue={filters.when} onValueChange={(next) => router.push(href({ when: next, from: '', to: '', page: '1' }))} size="small" options={[{ value: 'today', label: 'Today' }, { value: 'week', label: 'Last 7 days' }, { value: 'month', label: 'Last 30 days' }, { value: 'all', label: 'All history' }]} />
+        <SelectField name="stream" aria-label="Activity stream" defaultValue={filters.stream} size="small" options={[{ value: 'runs', label: 'Executions' }, { value: 'deliveries', label: 'Message deliveries' }]} />
         {filters.stream === 'deliveries' ? (
-          <SelectInput
-            name="state"
-            aria-label="Delivery state"
-            defaultValue={filters.state}
-            size="small"
-          >
-            <option value="">All delivery states</option>
-            <option value="queued">Queued</option>
-            <option value="sending">Sending</option>
-            <option value="sent">Sent</option>
-            <option value="failed">Failed</option>
-            <option value="uncertain">Uncertain</option>
-          </SelectInput>
+          <SelectField name="state" aria-label="Delivery state" defaultValue={filters.state} size="small" options={[{ value: '', label: 'All delivery states' }, { value: 'queued', label: 'Queued' }, { value: 'sending', label: 'Sending' }, { value: 'sent', label: 'Sent' }, { value: 'failed', label: 'Failed' }, { value: 'uncertain', label: 'Uncertain' }]} />
         ) : (
-          <SelectInput
-            name="outcome"
-            aria-label="Run outcome"
-            defaultValue={filters.outcome}
-            size="small"
-          >
-            <option value="">All outcomes</option>
-            <option value="done">Completed</option>
-            <option value="failed">Failed</option>
-          </SelectInput>
+          <SelectField name="outcome" aria-label="Run outcome" defaultValue={filters.outcome} size="small" options={[{ value: '', label: 'All outcomes' }, { value: 'done', label: 'Completed' }, { value: 'failed', label: 'Failed' }]} />
         )}
         {filters.rule && (
           <input type="hidden" name="rule" value={filters.rule} />

@@ -6,6 +6,7 @@ import { listWorkItemTypes } from '../lib/domain/work-items/types';
 import { listRoles } from '../lib/domain/tenancy/roles';
 import { listPendingInvitations } from '../lib/domain/tenancy/invitations';
 import type { BusinessShape } from '../lib/domain/configuration/configure';
+import { chooseOption } from './select-field';
 
 async function capture(page: Page, path: string) {
   await expect(page.getByText('This screen did not load', { exact: true })).toHaveCount(0);
@@ -44,7 +45,7 @@ test.describe('configuration onboarding', () => {
     await page.goto(`${root}/settings/access/invitations`);
     await page.getByRole('button', { name: 'Add member', exact: true }).click();
     await page.getByLabel('Email address', { exact: true }).fill('configuration-colleague@example.test');
-    await page.getByLabel('Role', { exact: true }).selectOption({ label: 'Acceptance colleague' });
+    await chooseOption(page.getByLabel('Role', { exact: true }), { label: 'Acceptance colleague' });
     await page.getByRole('button', { name: 'Send invitation', exact: true }).click();
     await expect.poll(async () => (await listPendingInvitations(owner, { organizationId })).map((invite) => invite.email)).toContain('configuration-colleague@example.test');
     await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();

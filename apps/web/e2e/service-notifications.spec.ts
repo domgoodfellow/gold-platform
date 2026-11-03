@@ -17,6 +17,7 @@ import { listServiceReviews } from '../lib/domain/customers/service-reviews';
 import { createEmailIdentity } from '../lib/domain/email/identities';
 import { notificationHistory } from '../lib/domain/customers/service-notifications';
 import { createWebsite, siteEditorState, submitSiteRevision, publishSiteRevision } from '../lib/domain/public-site/public-site';
+import { chooseOption } from './select-field';
 
 test.use({ storageState: { cookies: [], origins: [] }, hasTouch: true, trace: 'off' });
 test('verified recipient consent, notification delivery, retry and responsive operator controls', async ({ page, browser }, testInfo) => {
@@ -73,7 +74,7 @@ test('verified recipient consent, notification delivery, retry and responsive op
     await page.getByRole('button', { name: 'Log in', exact: true }).click(); await page.waitForURL(value => value.pathname !== '/login');
     await openEngagement(); const drawer = page.getByRole('dialog', { name: 'Website implementation', exact: true });
     const requestReview = async () => {
-      await drawer.getByLabel('Review target').selectOption(deliverable);
+      await chooseOption(drawer.getByLabel('Review target'), deliverable);
       await drawer.getByRole('button', { name: 'Request customer review', exact: true }).click();
       await expect(drawer.getByText('Review pending', { exact: true })).toBeVisible();
     };

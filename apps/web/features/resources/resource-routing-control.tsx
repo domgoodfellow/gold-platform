@@ -2,13 +2,14 @@
 
 import { useActionState, useId } from 'react';
 import { Button } from '@/components/controls/button';
-import { ErrorText, SelectInput } from '@/components/controls/inputs';
+import { ErrorText } from '@/components/controls/inputs';
 import { Field, FieldDescription, FieldLabel } from '@gold/ui/components/field';
 import { TRAVEL_MODES, TRAVEL_MODE_LABELS, type TravelMode } from '@/lib/domain/resources/travel-mode';
 import {
   setResourceRoutingAction,
   type ResourceEditState,
 } from '@/app/organizations/[organizationId]/resources/actions';
+import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: ResourceEditState = { error: null };
 const NOT_SAID = '';
@@ -42,26 +43,12 @@ export function ResourceRoutingControl({
 
       <Field>
         <FieldLabel htmlFor={modeId}>How it moves</FieldLabel>
-        <SelectInput id={modeId} name="travelMode" size="small" defaultValue={travelMode ?? NOT_SAID} disabled={pending}>
-          <option value={NOT_SAID}>Not set — travel is not checked</option>
-          {TRAVEL_MODES.map((mode) => (
-            <option key={mode} value={mode}>
-              {TRAVEL_MODE_LABELS[mode]}
-            </option>
-          ))}
-        </SelectInput>
+        <SelectField id={modeId} name="travelMode" size="small" defaultValue={travelMode ?? NOT_SAID} disabled={pending} options={[{ value: NOT_SAID, label: 'Not set — travel is not checked' }, ...TRAVEL_MODES.map((mode) => ({ value: mode, label: TRAVEL_MODE_LABELS[mode] }))]} />
       </Field>
 
       <Field>
         <FieldLabel htmlFor={baseId}>Routing base</FieldLabel>
-        <SelectInput id={baseId} name="baseLocationId" size="small" defaultValue={baseLocationId ?? NOT_SAID} disabled={pending}>
-          <option value={NOT_SAID}>None</option>
-          {locations.map((location) => (
-            <option key={location.id} value={location.id}>
-              {location.label}
-            </option>
-          ))}
-        </SelectInput>
+        <SelectField id={baseId} name="baseLocationId" size="small" defaultValue={baseLocationId ?? NOT_SAID} disabled={pending} options={[{ value: NOT_SAID, label: 'None' }, ...locations.map((location) => ({ value: location.id, label: location.label }))]} />
         <FieldDescription>Used when this resource has no earlier job that day. Not its live position.</FieldDescription>
       </Field>
 
