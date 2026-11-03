@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Download, ExternalLink } from 'lucide-react';
+import { Download, ExternalLink, Mail } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { createInvoiceDocument } from '@/app/organizations/[organizationId]/finance/actions';
 import { PageDrawer, PageDrawerBody, PageDrawerContent, PageDrawerFooter, PageDrawerHeader, PageDrawerTitle } from '@/components/panels/page-drawer';
@@ -14,6 +14,11 @@ import { formatMoney } from '@/lib/domain/work-items/consumption';
 import { lineItem } from '../transactions/quote-dialog';
 import { PaymentDialog } from '../transactions/payment-dialog';
 import { InvoiceStandingBadge, proposalHref, workHref } from './finance-tables';
+import { conversationHref, InvoiceEmailStatus, RetryInvoiceEmail, SendInvoiceDialog } from './invoice-email';
+import type { InvoiceEmailState } from '@/lib/domain/billing/invoice-emails';
+
+/** One send of this invoice, as the inspector shows it. */
+export type InspectedInvoiceEmail = { id: string; conversationId: string; recipient: string; fromAddress: string; createdAt: string; sentAgain: boolean; state: InvoiceEmailState; label: string; detail: string | null };
 
 /** In the business's own words: what the invoice was issued from. */
 const SOURCE_LABEL = { work_item: 'Work', direct: 'Direct, from catalog items', proposal: 'Proposal' } as const;
@@ -47,10 +52,12 @@ export function InspectorFocusReturn() {
  * `?invoice=` address, so Back and Forward open and close it and closing keeps the collection's
  * search, filters, sort and page. Focus returns to the row's Preview control.
  */
-export function InvoiceInspector({ organizationId, row, invoice, timezone, today, closeHref, mayRecord, document }: {
+export function InvoiceInspector({ organizationId, row, invoice, timezone, today, closeHref, mayRecord, document, email }: {
   organizationId: string; row: FinanceInvoiceRow; invoice: Invoice; timezone: string; today: string; closeHref: string; mayRecord: boolean;
   /** Whether the canonical PDF exists, and whether this person may create it when it does not. */
   document: { available: boolean; mayCreate: boolean };
+  /** Whether this person may email the invoice, why the business cannot send yet, and every send so far. */
+  email: { may: boolean; inboxOpen: boolean; senderProblem: string | null; sends: InspectedInvoiceEmail[] };
 }) {
   const router = useRouter();
   const date = (iso: string | null) => iso ? new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(iso)) : 'No due date';
@@ -82,9 +89,13 @@ export function InvoiceInspector({ organizationId, row, invoice, timezone, today
           <p className="mt-2 text-xs text-muted">Entries recorded by hand are not confirmed by a payment processor.</p>
         </section>
         <InvoiceDocumentState organizationId={organizationId} invoiceId={row.id} number={row.number} document={document} />
+        <InvoiceEmailHistory organizationId={organizationId} invoiceId={row.id} email={email} date={iso => new Intl.DateTimeFormat('en-CA', { timeZone: timezone, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(iso))} />
       </div></PageDrawerBody>
       <PageDrawerFooter>
         {document.available ? <ButtonLink href={documentHref(organizationId, row.id)} tone="secondary" size="small" prefetch={false} download><Download aria-hidden className="size-4" />Download PDF</ButtonLink> : null}
+        {document.available && email.may ? email.senderProblem
+          ? <Button type="button" tone="secondary" size="small" disabled aria-describedby="inspector-email-unavailable"><Mail aria-hidden className="size-4" />Send invoice</Button>
+          : <SendInvoiceDialog organizationId={organizationId} invoiceId={row.id} sendAgain={email.sends.length > 0} inboxOpen={email.inboxOpen} /> : null}
         {row.workItemId ? <ButtonLink href={workHref(organizationId, row.workItemId)} tone="secondary" size="small"><ExternalLink aria-hidden className="size-4" />Open Work record</ButtonLink> : null}
         {row.proposalId && row.customerId ? <ButtonLink href={proposalHref(organizationId, row.customerId)} tone="secondary" size="small"><ExternalLink aria-hidden className="size-4" />Open proposal</ButtonLink> : null}
         {mayRecord ? row.settled
@@ -117,6 +128,23 @@ function InvoiceDocumentState({ organizationId, invoiceId, number, document }: {
       <p className="text-muted">{pending ? `Creating the PDF of invoice #${number}…` : `The PDF of invoice #${number} has not been created.`}</p>
       {document.mayCreate ? <Button type="button" tone="secondary" size="small" disabled={pending} onClick={create}>{pending ? 'Creating PDF…' : error ? 'Try again' : 'Create PDF'}</Button> : null}
       {error ? <p role="alert" className="text-xs text-danger">{error}</p> : null}
+    </div>
+  </section>;
+}
+
+/**
+ * Every time this invoice was emailed, newest first, each with its message's own state and a way to
+ * the conversation in Communications. When the business cannot send yet, says why and where to fix it.
+ */
+function InvoiceEmailHistory({ organizationId, invoiceId, email, date }: { organizationId: string; invoiceId: string; email: { may: boolean; inboxOpen: boolean; senderProblem: string | null; sends: InspectedInvoiceEmail[] }; date: (iso: string) => string }) {
+  if (!email.sends.length && !(email.may && email.senderProblem)) return null;
+  return <section aria-labelledby="inspector-email"><h3 id="inspector-email" className="mb-1 text-sm font-semibold">Email</h3>
+    <div className="flex flex-col gap-2">
+      {email.may && email.senderProblem ? <p id="inspector-email-unavailable" className="text-sm text-muted">Invoices cannot be emailed yet. {email.senderProblem} <Link className="underline underline-offset-4" href={`/organizations/${organizationId}/settings/email`}>Open Settings → Email</Link></p> : null}
+      {email.sends.map(send => <InvoiceEmailStatus key={send.id} state={send.state} label={`${send.sentAgain ? 'Sent again' : 'Sent'} ${date(send.createdAt)} to ${send.recipient}: ${send.label}`} detail={[`From ${send.fromAddress}.`, send.detail].filter(Boolean).join(' ')}>
+        {email.inboxOpen ? <ButtonLink href={conversationHref(organizationId, send.conversationId)} tone="secondary" size="small">Open conversation</ButtonLink> : null}
+        {email.may && (send.state === 'queued' || send.state === 'not_sent') ? <RetryInvoiceEmail organizationId={organizationId} invoiceId={invoiceId} invoiceEmailId={send.id} /> : null}
+      </InvoiceEmailStatus>)}
     </div>
   </section>;
 }

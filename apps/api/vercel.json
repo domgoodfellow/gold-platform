@@ -4,11 +4,15 @@
   "installCommand": "npx --yes pnpm@11.4.0 install --filter @gold/integration-library --ignore-scripts --frozen-lockfile",
   "functions": {
     "api/**/*.py": {
-      "excludeFiles": "{tests/**,dev.py,node_modules/**,library/*.mjs}",
+      "excludeFiles": "{tests/**,dev.py,node_modules/**,library/*.mjs,invoice_documents/**}",
       "maxDuration": 300
     },
     "api/library_runtime.mjs": {
       "maxDuration": 60
+    },
+    "api/invoice_documents.mjs": {
+      "maxDuration": 60,
+      "memory": 1024
     }
   },
   "rewrites": [
@@ -139,6 +143,10 @@
     {
       "source": "/voice/agent/events",
       "destination": "/api/voice_agent_events"
+    },
+    {
+      "source": "/invoice-documents",
+      "destination": "/api/invoice_documents"
     }
   ],
   "crons": [

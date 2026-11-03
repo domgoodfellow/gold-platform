@@ -9,6 +9,7 @@ queue, a provider link is never kept -- and the provider module's reading of the
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -232,7 +233,8 @@ class World:
         if path == "conversations":
             return Response(200, [{"email_identity_id": "ident"}])
         if path == "message_attachments":
-            return Response(200, [{"filename": "n.txt", "content_type": "text/plain", "size_bytes": 10, "storage_path": f"{ORG}/outbound/x/n.txt"}] * len(self.files))
+            row = {"filename": "n.txt", "content_type": "text/plain", "size_bytes": 10, "storage_path": f"{ORG}/outbound/x/n.txt"}
+            return Response(200, [{**row, **(file if isinstance(file, dict) else {})} for file in self.files])
         raise AssertionError(path)
 
 
@@ -355,6 +357,32 @@ class TestSendingAQueuedMessage:
         with pytest.raises(ValidationError):
             run(world)
         assert world.sends == []
+
+    INVOICE_PDF = {"filename": "invoice-7.pdf", "content_type": "application/pdf", "storage_bucket": "finance-documents",
+                   "storage_path": f"{ORG}/invoices/inv/invoice-standard-2-x.pdf", "sha256": hashlib.sha256(b"file-bytes").hexdigest()}
+
+    def test_an_invoice_pdf_is_read_where_it_is_recorded_and_sent_when_its_bytes_match(self, monkeypatch) -> None:
+        world = World(monkeypatch, files=[self.INVOICE_PDF])
+        urls: list[str] = []
+        monkeypatch.setattr(ops.httpx, "get", lambda url, **kw: (urls.append(url), Response(200, content=b"file-bytes"))[1])
+        run(world)
+        assert urls == [f"{SETTINGS.supabase_url}/storage/v1/object/finance-documents/{ORG}/invoices/inv/invoice-standard-2-x.pdf"]
+        assert world.sends[0]["attachments"][0]["filename"] == "invoice-7.pdf"
+
+    def test_an_attachment_whose_bytes_differ_from_its_recorded_checksum_is_never_sent(self, monkeypatch) -> None:
+        world = World(monkeypatch, files=[self.INVOICE_PDF])
+        monkeypatch.setattr(ops.httpx, "get", lambda url, **kw: Response(200, content=b"swapped-bytes"))
+        with pytest.raises(ValidationError):
+            run(world)
+        assert world.sends == [] and [r["outcome"] for r in world.recorded] == ["failed"]
+
+    def test_an_attachment_in_any_other_bucket_is_never_read(self, monkeypatch) -> None:
+        world = World(monkeypatch, files=[{**self.INVOICE_PDF, "storage_bucket": "brand"}])
+        urls: list[str] = []
+        monkeypatch.setattr(ops.httpx, "get", lambda url, **kw: (urls.append(url), Response(200, content=b"file-bytes"))[1])
+        with pytest.raises(ValidationError):
+            run(world)
+        assert urls == [] and world.sends == []
 
 
 # --- mail that arrives --------------------------------------------------------------------------

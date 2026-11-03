@@ -26,6 +26,7 @@ case where the answer was lost.
 from __future__ import annotations
 
 import base64
+import hashlib
 from email.utils import formataddr
 
 import httpx
@@ -40,6 +41,9 @@ from app.providers.providers import tenant_email_for
 # when the message is queued, so a mismatch fails there first.
 MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
 MAX_TOTAL_BYTES = 25 * 1024 * 1024
+# The private buckets an attachment may be read from: files sent from Communications, and an issued
+# invoice's recorded PDF. The database allows only these two.
+ATTACHMENT_BUCKETS = frozenset({"communications", "finance-documents"})
 
 
 class ProviderUnavailableError(DomainError):
@@ -78,22 +82,31 @@ def _credential(settings: ProviderOperationsSettings, account_id: str | None) ->
 
 def _attachments(settings: ProviderOperationsSettings, token: str, organization_id: str, message_id: str) -> list[dict]:
     """The files of this message, read back from private storage under the caller's own token --
-    so a path that is not this business's would not open -- and re-checked for size here."""
+    so a path that is not this business's would not open -- and re-checked for size here.
+
+    An attachment the database recorded with a checksum (an issued invoice's PDF, kept in
+    `finance-documents`) is sent only when the bytes read now are exactly those bytes."""
     rows = _rows(
         settings, token, "message_attachments",
-        {"message_id": f"eq.{message_id}", "organization_id": f"eq.{organization_id}", "storage_state": "eq.stored", "select": "filename,content_type,size_bytes,storage_path"},
+        {"message_id": f"eq.{message_id}", "organization_id": f"eq.{organization_id}", "storage_state": "eq.stored",
+         "select": "filename,content_type,size_bytes,storage_path,storage_bucket,sha256"},
     )
     files: list[dict] = []
     total = 0
     for row in rows:
+        bucket = row.get("storage_bucket") or "communications"
+        if bucket not in ATTACHMENT_BUCKETS:
+            raise ValidationError("An attachment could not be read, so the email was not sent.")
         response = httpx.get(
-            f"{settings.supabase_url}/storage/v1/object/communications/{row['storage_path']}",
+            f"{settings.supabase_url}/storage/v1/object/{bucket}/{row['storage_path']}",
             headers={"apikey": settings.supabase_publishable_key, "Authorization": f"Bearer {token}"},
             timeout=60.0,
         )
         if response.status_code >= 400:
             raise ValidationError("An attachment could not be read, so the email was not sent.")
         content = response.content
+        if row.get("sha256") and hashlib.sha256(content).hexdigest() != row["sha256"]:
+            raise ValidationError(f"{row['filename']} is not the file that was recorded, so the email was not sent.")
         total += len(content)
         if len(content) > MAX_ATTACHMENT_BYTES or total > MAX_TOTAL_BYTES:
             raise ValidationError("The attachments are larger than an email may carry.")

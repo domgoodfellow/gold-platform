@@ -5821,6 +5821,100 @@ export type Database = {
           },
         ]
       }
+      invoice_emails: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          customer_id: string
+          document_path: string
+          document_sha256: string
+          email_identity_id: string
+          from_address: string
+          id: string
+          invoice_id: string
+          message_id: string
+          organization_id: string
+          recipient: string
+          sent_again_after: string | null
+          sent_by: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          customer_id: string
+          document_path: string
+          document_sha256: string
+          email_identity_id: string
+          from_address: string
+          id?: string
+          invoice_id: string
+          message_id: string
+          organization_id: string
+          recipient: string
+          sent_again_after?: string | null
+          sent_by: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          customer_id?: string
+          document_path?: string
+          document_sha256?: string
+          email_identity_id?: string
+          from_address?: string
+          id?: string
+          invoice_id?: string
+          message_id?: string
+          organization_id?: string
+          recipient?: string
+          sent_again_after?: string | null
+          sent_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_emails_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_emails_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_emails_organization_id_invoice_id_fkey"
+            columns: ["organization_id", "invoice_id"]
+            isOneToOne: false
+            referencedRelation: "finance_invoice_records"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invoice_emails_organization_id_invoice_id_fkey"
+            columns: ["organization_id", "invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invoice_emails_organization_id_message_id_fkey"
+            columns: ["organization_id", "message_id"]
+            isOneToOne: true
+            referencedRelation: "messages"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "invoice_emails_organization_id_sent_again_after_fkey"
+            columns: ["organization_id", "sent_again_after"]
+            isOneToOne: false
+            referencedRelation: "invoice_emails"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       invoice_lines: {
         Row: {
           currency: string
@@ -5983,6 +6077,54 @@ export type Database = {
           },
           {
             foreignKeyName: "invoice_presentations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "platform_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_retained_logos: {
+        Row: {
+          brand_logo_path: string
+          created_at: string
+          created_by: string
+          format: string
+          organization_id: string
+          sha256: string
+          size_bytes: number
+          storage_path: string
+        }
+        Insert: {
+          brand_logo_path: string
+          created_at?: string
+          created_by: string
+          format: string
+          organization_id: string
+          sha256: string
+          size_bytes: number
+          storage_path: string
+        }
+        Update: {
+          brand_logo_path?: string
+          created_at?: string
+          created_by?: string
+          format?: string
+          organization_id?: string
+          sha256?: string
+          size_bytes?: number
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_retained_logos_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_retained_logos_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "platform_tenants"
@@ -6648,7 +6790,9 @@ export type Database = {
           organization_id: string
           provider_attachment_id: string | null
           rejection_reason: string | null
+          sha256: string | null
           size_bytes: number | null
+          storage_bucket: string
           storage_path: string | null
           storage_state: string
         }
@@ -6663,7 +6807,9 @@ export type Database = {
           organization_id: string
           provider_attachment_id?: string | null
           rejection_reason?: string | null
+          sha256?: string | null
           size_bytes?: number | null
+          storage_bucket?: string
           storage_path?: string | null
           storage_state?: string
         }
@@ -6678,7 +6824,9 @@ export type Database = {
           organization_id?: string
           provider_attachment_id?: string | null
           rejection_reason?: string | null
+          sha256?: string | null
           size_bytes?: number | null
+          storage_bucket?: string
           storage_path?: string | null
           storage_state?: string
         }
@@ -16562,6 +16710,26 @@ export type Database = {
         Args: { p_email: string; p_organization_id: string; p_role_id: string }
         Returns: string
       }
+      invoice_document_requester: {
+        Args: { p_organization_id: string }
+        Returns: string
+      }
+      invoice_document_source: {
+        Args: {
+          p_actor: string
+          p_invoice_id: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
+      invoice_email_preview: {
+        Args: { p_invoice_id: string; p_organization_id: string }
+        Returns: Json
+      }
+      invoice_logo_source: {
+        Args: { p_actor: string; p_organization_id: string }
+        Returns: Json
+      }
       invoiced_and_incurred: {
         Args: {
           p_customer_id?: string
@@ -17318,6 +17486,39 @@ export type Database = {
         }
         Returns: string
       }
+      queue_invoice_email: {
+        Args: {
+          p_idempotency_key: string
+          p_invoice_id: string
+          p_organization_id: string
+          p_recipient: string
+          p_send_again?: boolean
+          p_subject: string
+          p_text: string
+        }
+        Returns: {
+          conversation_id: string
+          created_at: string
+          customer_id: string
+          document_path: string
+          document_sha256: string
+          email_identity_id: string
+          from_address: string
+          id: string
+          invoice_id: string
+          message_id: string
+          organization_id: string
+          recipient: string
+          sent_again_after: string | null
+          sent_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invoice_emails"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       queue_outbound_email: {
         Args: {
           p_attachments: Json
@@ -17653,6 +17854,7 @@ export type Database = {
       }
       record_invoice_document: {
         Args: {
+          p_actor: string
           p_invoice_id: string
           p_renderer: string
           p_sha256: string
@@ -17957,6 +18159,33 @@ export type Database = {
           p_unit_amount_micros: number
         }
         Returns: string
+      }
+      record_retained_logo: {
+        Args: {
+          p_actor: string
+          p_brand_logo_path: string
+          p_format: string
+          p_organization_id: string
+          p_sha256: string
+          p_size_bytes: number
+          p_storage_path: string
+        }
+        Returns: {
+          brand_logo_path: string
+          created_at: string
+          created_by: string
+          format: string
+          organization_id: string
+          sha256: string
+          size_bytes: number
+          storage_path: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invoice_retained_logos"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       record_sms_send_result: {
         Args: {

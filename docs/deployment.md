@@ -233,6 +233,30 @@ Routes may be unavailable when their required optional configuration is not pres
 
 That is preferable to giving an unconfigured feature hidden broad credentials.
 
+### Invoice document writer
+
+`/invoice-documents` (`api/invoice_documents.mjs`, Node) is the only writer of an issued invoice's PDF and of a retained logo. The web app sends it the person's own token; it asks the database who they are and whether they may issue the business's invoices, then signs a 60-second `invoice_document_writer` token and draws, stores and records. It needs `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (or `SUPABASE_ANON_KEY`) and the existing `SUPABASE_JWT_SECRET` in the API project only; without them it answers 503 and issuing is unaffected. The web project needs only `GOLD_API_URL`. Never give the web project the signing secret or a service-role key. `invoice_documents/document.generated.mjs` is bundled from the web app's composition; `pnpm --filter @gold/integration-library check` fails if it is stale.
+
+Rollout, in this order:
+
+1. If `20261102000001` and `20261102000002` are not yet applied (the 2G web release was never deployed), apply `20261102000001` to `20261102000004` together, deploy the API, then the web app, and skip to step 6.
+2. Apply `20261102000003`. It is additive: the writer role, its functions, recorded retained logos and an organization-led path key. It also removes members' logo storage, so a 2G web instance's logo retention now fails quietly and its invoices show the business name. 2G instances keep creating PDFs through the member path until step 5.
+3. Deploy the API. Check that `POST /invoice-documents` with no token answers 401 and with a sandbox member's token creates a PDF whose stored object's `owner_id` is `00000000-0000-4000-8000-0000000000c1`.
+4. Deploy the web app, then retire every 2G web deployment that can still receive traffic: production, aliases and instant-rollback targets. Confirm that `pg_stat_user_functions.calls` for `record_invoice_document(uuid, text, text, bigint, text)` stops rising.
+5. Apply `20261102000004`. It removes members' PDF storage and the member recording function.
+6. Verify: no `insert` policy on `storage.objects` for `finance-documents` names `authenticated`; only `invoice_document_writer` may execute `record_invoice_document`, `record_retained_logo`, `invoice_document_source` and `invoice_logo_source`; a member upload into `finance-documents` is refused. List any document recorded before the writer existed for review: `select d.* from invoice_documents d join storage.objects o on o.bucket_id = 'finance-documents' and o.name = d.storage_path where o.owner_id is distinct from '00000000-0000-4000-8000-0000000000c1'`.
+
+Invoice email (`20261102000005`) follows the writer rollout above and needs no new configuration. It uses the tenant-email runtime (`/communications/email/send`) and the business's own verified sender:
+
+1. Apply `20261102000005`. It is additive: attachment bucket and checksum columns defaulting to today's behaviour, `invoice_emails`, `invoice_email_preview` and `queue_invoice_email`. Nothing can create an invoice email until the web release.
+2. Deploy the API. Its sender reads each attachment's bucket and checksum, so it needs the new columns; deploy it only after step 1.
+3. Deploy the web app.
+4. Verify with a sandbox business whose sender is verified, sending to a tester-controlled mailbox only. Check that the message carries `invoice-<number>.pdf`, that `invoice_emails` names the business sender and the customer address, and that the inspector shows Accepted until a delivery event arrives.
+
+Rollback: rolling back the web app removes Send invoice. Do not roll the API back past step 2 while invoice emails are queued: an older sender reads the PDF from the wrong bucket and records the send as failed, so nothing wrong is sent but those emails fail. Do not remove `20261102000005` once step 2 is live.
+
+Rollback never restores member writes. Before step 5, a web or API rollback returns to the 2G behaviour, which is still vulnerable. After step 5, rolling back the web or API only stops PDF creation, which fails closed: invoices are still issued, and Create PDF can be used once the writer is back. Do not recreate the dropped policies or function. To stop the writer, revoke `execute` on its four functions from `invoice_document_writer`. Fix forward.
+
 ---
 
 ## Scheduled execution

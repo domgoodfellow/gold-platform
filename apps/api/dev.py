@@ -61,13 +61,39 @@ def _routes() -> dict[str, type[BaseHTTPRequestHandler]]:
     config = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
 
     found: dict[str, type[BaseHTTPRequestHandler]] = {}
+    node = os.environ.get("GILDOPS_NODE_DEV_URL")
     for rewrite in config.get("rewrites", []):
         module = rewrite["destination"].strip("/").replace("/", ".")
         if (ROOT / (module.replace('.', '/') + '.mjs')).exists():
+            # A Node handler: `node_dev.mjs` serves it, and this forwards to it when it is running.
+            if node:
+                found[rewrite["source"]] = _forward_to(node.rstrip("/") + rewrite["source"])
             continue
         found[rewrite["source"]] = importlib.import_module(module).handler
 
     return found
+
+
+def _forward_to(url: str) -> type[BaseHTTPRequestHandler]:
+    from urllib.error import HTTPError
+    from urllib.request import Request, urlopen
+
+    class Forward(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:  # noqa: N802
+            body = self.rfile.read(int(self.headers.get("content-length", "0")))
+            headers = {k: v for k, v in self.headers.items() if k.lower() in ("authorization", "content-type")}
+            try:
+                with urlopen(Request(url, data=body, headers=headers, method="POST"), timeout=60) as answer:
+                    status, payload = answer.status, answer.read()
+            except HTTPError as refused:
+                status, payload = refused.code, refused.read()
+            self.send_response(status)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+    return Forward
 
 
 ROUTES = _routes()

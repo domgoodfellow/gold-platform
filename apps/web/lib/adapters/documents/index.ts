@@ -24,8 +24,6 @@ export type InvoiceDocument = {
   facts: { label: string; value: string }[];
   lines: { description: string; quantity: string; unitAmount: string; amount: string }[];
   total: { label: string; value: string };
-  /** Recorded payment activity, labelled with when it was read. Absent when it is not shown. */
-  payments: { heading: string; rows: { label: string; value: string }[]; note: string } | null;
   notes: string[];
   brand: {
     /** Already checked to be readable on white; null uses the neutral ink. */

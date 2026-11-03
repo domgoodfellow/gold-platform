@@ -16,7 +16,7 @@ const FALLBACK = { sellerName: 'Harbour Plumbing', billToName: 'Élodie Bérubé
 const compose = (overrides: Partial<Parameters<typeof composeInvoiceDocument>[0]> = {}) => composeInvoiceDocument({
   status: 'issued', number: 42, issuedAt: '2026-11-02T04:00:00Z', dueAt: '2026-12-02T04:00:00Z', currency: 'CAD',
   lines: [LINE, { ...LINE, description: 'Copper pipe', unit: 'metre', unitAmountMinor: 1200, quantity: 15 }],
-  presentation: PRESENTATION, fallback: FALLBACK, payments: { paidMinor: 5000, outstandingMinor: 30100, asOf: new Date('2026-11-02T15:00:00Z') }, logo: null,
+  presentation: PRESENTATION, fallback: FALLBACK, logo: null,
   ...overrides,
 });
 
@@ -35,11 +35,10 @@ describe('the invoice document', () => {
     expect(JSON.stringify(doc)).not.toMatch(/tax|GST|HST|VAT/i);
   });
 
-  it('labels payment activity with when it was read, apart from the invoice as issued', () => {
+  it('is the invoice as issued, with no payment status that would change with when it is drawn', () => {
     const doc = compose();
-    expect(doc.payments?.heading).toBe('Payment status on Nov 2, 2026');
-    expect(doc.payments?.rows).toEqual([{ label: 'Paid', value: 'CA$50.00' }, { label: 'Outstanding', value: 'CA$301.00' }]);
-    expect(doc.payments?.note).toMatch(/not shown here/);
+    expect(doc).not.toHaveProperty('payments');
+    expect(JSON.stringify(doc)).not.toMatch(/paid|outstanding|payment/i);
   });
 
   it('dates in the business’s clock and names the seller as it was recorded', () => {
@@ -76,14 +75,15 @@ describe('the built-in invoice PDF', () => {
     expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe('%PDF-');
     const { totalPages, text } = await pages(bytes);
     expect(totalPages).toBe(1);
-    for (const expected of ['Invoice', '#42', 'Harbour Plumbing Ltd.', 'Élodie Bérubé', 'Service call (visit)', 'CA$191.00', 'CA$371.00', 'Payment status on Nov 2, 2026', 'Page 1 of 1']) {
+    for (const expected of ['Invoice', '#42', 'Harbour Plumbing Ltd.', 'Élodie Bérubé', 'Service call (visit)', 'CA$191.00', 'CA$371.00', 'Page 1 of 1']) {
       expect(text[0]).toContain(expected);
     }
     expect(text[0]).not.toContain('DRAFT');
+    expect(text[0]).not.toMatch(/Payment|Paid|Outstanding/);
   });
 
   it('marks a draft on every page and gives it no number', async () => {
-    const doc = compose({ status: 'draft', number: null, payments: null });
+    const doc = compose({ status: 'draft', number: null });
     const { text } = await pages(await reactPdfRenderer.renderInvoice(doc));
     expect(text[0]).toContain('DRAFT');
     expect(text[0]).toContain('Assigned on issue');

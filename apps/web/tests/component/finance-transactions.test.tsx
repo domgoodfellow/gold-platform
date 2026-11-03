@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * was typed. Server actions are mocked; the database contract is covered by the invoice suites.
  */
 
-const finance = vi.hoisted(() => ({ financeChoices: vi.fn(), financeReview: vi.fn(), financePaymentReview: vi.fn(), financeDirectInvoiceReview: vi.fn(), financeMutation: vi.fn(), previewInvoiceDocument: vi.fn(), createInvoiceDocument: vi.fn() }));
+const finance = vi.hoisted(() => ({ financeChoices: vi.fn(), financeReview: vi.fn(), financePaymentReview: vi.fn(), financeDirectInvoiceReview: vi.fn(), financeMutation: vi.fn(), previewInvoiceDocument: vi.fn(), createInvoiceDocument: vi.fn(), invoiceEmailDraft: vi.fn(), sendInvoiceEmail: vi.fn(), retryInvoiceEmailSend: vi.fn() }));
 vi.mock('@/app/organizations/[organizationId]/finance/actions', () => finance);
 const router = vi.hoisted(() => ({ refresh: vi.fn(), push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/organizations/org/finance', useSearchParams: () => new URLSearchParams() }));
@@ -354,7 +354,7 @@ describe('Invoice documents', () => {
   });
 
   const row = { id: 'i1', source: 'work_item' as const, workItemId: 'w1', proposalId: null, number: 7, billedTo: 'North Shore Plumbing', customerId: 'c1', currency: 'CAD', issuedAt: '2026-10-01T00:00:00Z', dueAt: null, total: { totalMinor: 27500, currency: 'CAD' }, paidMinor: 0, outstandingMinor: 27500, settled: false, overdue: false };
-  const inspector = (document: { available: boolean; mayCreate: boolean }) => render(<WorkspaceRailProvider><InvoiceInspector organizationId="org" row={row} invoice={{ ...invoice(), customerId: 'c1', proposalId: null }} timezone="America/Toronto" today="2026-10-25" closeHref="/organizations/org/finance/invoices" mayRecord={false} document={document} /><PagePanel /></WorkspaceRailProvider>);
+  const inspector = (document: { available: boolean; mayCreate: boolean }, email: Parameters<typeof InvoiceInspector>[0]['email'] = { may: false, inboxOpen: true, senderProblem: null, sends: [] }) => render(<WorkspaceRailProvider><InvoiceInspector organizationId="org" row={row} invoice={{ ...invoice(), customerId: 'c1', proposalId: null }} timezone="America/Toronto" today="2026-10-25" closeHref="/organizations/org/finance/invoices" mayRecord={false} document={document} email={email} /><PagePanel /></WorkspaceRailProvider>);
 
   it('offers the stored PDF as a download from the invoice', async () => {
     inspector({ available: true, mayCreate: true });
@@ -380,5 +380,84 @@ describe('Invoice documents', () => {
     expect(await screen.findByText('The PDF of invoice #7 has not been created.')).toBeVisible();
     expect(screen.queryByRole('button', { name: /Create PDF/ })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Download PDF' })).toBeNull();
+  });
+});
+
+describe('emailing an issued invoice from its inspector', () => {
+  const row = { id: 'i1', source: 'direct' as const, workItemId: null, proposalId: null, number: 7, billedTo: 'North Shore Plumbing', customerId: 'c1', currency: 'CAD', issuedAt: '2026-10-01T00:00:00Z', dueAt: null, total: { totalMinor: 27500, currency: 'CAD' }, paidMinor: 0, outstandingMinor: 27500, settled: false, overdue: false };
+  const open = (email: Parameters<typeof InvoiceInspector>[0]['email']) => render(<WorkspaceRailProvider><InvoiceInspector organizationId="org" row={row} invoice={{ ...invoice(), customerId: 'c1', proposalId: null }} timezone="America/Toronto" today="2026-10-25" closeHref="/organizations/org/finance/invoices" mayRecord={false} document={{ available: true, mayCreate: true }} email={email} /><PagePanel /></WorkspaceRailProvider>);
+  const draft = (preview: Partial<Record<string, unknown>> = {}) => ({ draft: {
+    number: 7, customer: 'North Shore Plumbing', amount: 'CA$275.00', subject: 'Invoice #7 from Harbour Ltd', text: 'Hello North Shore Plumbing,',
+    preview: { sender: { address: 'billing@harbour.example', name: 'Harbour' }, recipient: { address: 'ap@northshore.example', problem: null, customerId: 'c1', confirmedByCustomer: false },
+      document: { fileName: 'invoice-7.pdf', sizeBytes: 3140 }, sentBefore: false, ...preview },
+  } });
+  const sent = (state: string, label: string, detail: string | null = null) => ({ id: `e-${state}`, conversationId: 'conv1', recipient: 'ap@northshore.example', fromAddress: 'billing@harbour.example', createdAt: '2026-10-25T15:00:00Z', sentAgain: false, state: state as never, label, detail });
+
+  it('shows the sender, recipient, attached PDF and amount, and lets only the subject and message be written', async () => {
+    const user = userEvent.setup();
+    finance.invoiceEmailDraft.mockResolvedValue(draft());
+    open({ may: true, inboxOpen: true, senderProblem: null, sends: [] });
+    await user.click(await screen.findByRole('button', { name: 'Send invoice' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Send invoice' });
+    for (const text of ['billing@harbour.example', 'ap@northshore.example', 'invoice-7.pdf', 'CA$275.00']) expect(await within(dialog).findByText(text, { exact: false })).toBeVisible();
+    expect(within(dialog).getAllByRole('textbox').map(box => box.getAttribute('id'))).toEqual([expect.stringMatching(/subject$/), expect.stringMatching(/message$/)]);
+  });
+
+  it('submits the same key after a refusal, and calls an accepted email accepted, not delivered', async () => {
+    const user = userEvent.setup();
+    finance.invoiceEmailDraft.mockResolvedValue(draft());
+    finance.sendInvoiceEmail.mockResolvedValueOnce({ error: 'Email could not be sent just now.', code: 'invoice_emails.failed' })
+      .mockResolvedValueOnce({ outcome: { invoiceEmailId: 'e1', messageId: 'm1', conversationId: 'conv1', state: 'accepted', label: 'Accepted by the email provider', detail: 'Not yet confirmed as delivered.' } });
+    open({ may: true, inboxOpen: true, senderProblem: null, sends: [] });
+    await user.click(await screen.findByRole('button', { name: 'Send invoice' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Send invoice' });
+    await user.click(await within(dialog).findByRole('button', { name: 'Send invoice' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('could not be sent');
+    await user.click(within(dialog).getByRole('button', { name: 'Send invoice' }));
+    expect(await within(dialog).findByText('Accepted by the email provider')).toBeVisible();
+    expect(within(dialog).queryByText(/^Delivered/)).toBeNull();
+    expect(within(dialog).getByRole('link', { name: 'Open conversation' })).toHaveAttribute('href', '/organizations/org/comms/inbox/conv1');
+    const [first, second] = finance.sendInvoiceEmail.mock.calls.map(call => call[0]);
+    expect(second.idempotencyKey).toBe(first.idempotencyKey);
+    expect(first).toEqual({ organizationId: 'org', invoiceId: 'i1', recipient: 'ap@northshore.example', subject: 'Invoice #7 from Harbour Ltd', text: 'Hello North Shore Plumbing,', idempotencyKey: expect.any(String), sendAgain: false });
+  });
+
+  it('cannot be sent without an address, and says where to add one', async () => {
+    const user = userEvent.setup();
+    finance.invoiceEmailDraft.mockResolvedValue(draft({ recipient: { address: null, problem: 'The customer has no email address. Add one to their contact record first.', customerId: 'c1', confirmedByCustomer: false } }));
+    open({ may: true, inboxOpen: true, senderProblem: null, sends: [] });
+    await user.click(await screen.findByRole('button', { name: 'Send invoice' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Send invoice' });
+    expect(await within(dialog).findByText(/no email address/)).toBeVisible();
+    expect(within(dialog).getByRole('link', { name: 'Open the contact record' })).toHaveAttribute('href', '/organizations/org/crm/contacts/c1');
+    expect(within(dialog).getByRole('button', { name: 'Send invoice' })).toBeDisabled();
+  });
+
+  it('is unavailable with a reason and a way to Settings when the business cannot send', async () => {
+    open({ may: true, inboxOpen: true, senderProblem: 'This business has no default sender address.', sends: [] });
+    expect(await screen.findByRole('button', { name: 'Send invoice' })).toBeDisabled();
+    expect(screen.getByText(/Invoices cannot be emailed yet. This business has no default sender address./)).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Open Settings → Email' })).toHaveAttribute('href', '/organizations/org/settings/email');
+  });
+
+  it('offers no conversation link where this person cannot open the Inbox', async () => {
+    open({ may: true, inboxOpen: false, senderProblem: null, sends: [sent('accepted', 'Accepted by the email provider')] });
+    expect(await screen.findByText(/Accepted by the email provider/)).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Open conversation' })).toBeNull();
+  });
+
+  it('is not offered to someone who may not email invoices', async () => {
+    open({ may: false, inboxOpen: true, senderProblem: null, sends: [] });
+    await screen.findByRole('link', { name: 'Download PDF' });
+    expect(screen.queryByRole('button', { name: /Send invoice|Send again/ })).toBeNull();
+  });
+
+  it('lists each send with its own state, offers a retry only for one that has not left, and asks for Send again after one', async () => {
+    open({ may: true, inboxOpen: true, senderProblem: null, sends: [sent('accepted', 'Accepted by the email provider', 'Not yet confirmed as delivered.'), sent('not_sent', 'Not sent yet', 'Email could not be sent just now.')] });
+    expect(await screen.findByText(/to ap@northshore.example: Accepted by the email provider/)).toBeVisible();
+    expect(screen.queryByText(/: Delivered/)).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Try sending again' })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Send again' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Send invoice' })).toBeNull();
   });
 });

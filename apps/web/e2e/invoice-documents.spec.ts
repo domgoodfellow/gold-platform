@@ -122,7 +122,7 @@ test.describe.serial('Invoice documents', () => {
       invoiceId = issued.id;
       invoiceNumber = issued.number;
       const [record] = await sql<{ sha256: string; storage_path: string }>(`select sha256, storage_path from public.invoice_documents where invoice_id = $1`, [invoiceId]);
-      expect(record.storage_path).toMatch(new RegExp(`^${fx.organizationId}/invoices/${invoiceId}/invoice-standard-1-[0-9a-f-]+\\.pdf$`));
+      expect(record.storage_path).toMatch(new RegExp(`^${fx.organizationId}/invoices/${invoiceId}/invoice-standard-2-[0-9a-f-]+\\.pdf$`));
       issuedSha = record.sha256;
 
       await dialog.getByRole('link', { name: 'Open invoice' }).click();
@@ -134,8 +134,9 @@ test.describe.serial('Invoice documents', () => {
       const bytes = readFileSync((await download.path())!);
       expect(sha(bytes)).toBe(issuedSha);
       const text = await pdfText(bytes);
-      for (const expected of [`#${invoiceNumber}`, 'Northwind Mechanical Inc.', 'Vertex HVAC', 'Labour (hour)', '3', 'CA$95.50', 'CA$286.50', 'Payment status on']) expect(text).toContain(expected);
+      for (const expected of [`#${invoiceNumber}`, 'Northwind Mechanical Inc.', 'Vertex HVAC', 'Labour (hour)', '3', 'CA$95.50', 'CA$286.50']) expect(text).toContain(expected);
       expect(text).not.toContain('DRAFT');
+      expect(text).not.toMatch(/Payment|Paid|Outstanding/);
       for (const viewport of VIEWPORTS) {
         await page.setViewportSize(viewport);
         await expect(downloadLink).toBeVisible();

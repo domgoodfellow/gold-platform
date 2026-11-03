@@ -26,6 +26,7 @@ import { createWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { createWorkItemType } from '@/lib/domain/work-items/types';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
 import { foundBusiness } from '@/tests/support/founding';
+import { startInvoiceDocumentWriter, WRITER_ID, writerToken } from '@/tests/support/invoice-document-writer';
 
 /**
  * An issued invoice's presentation and its one canonical PDF (Work Order 2G).
@@ -50,8 +51,13 @@ type Tenant = { db: SupabaseClient; userId: string; organizationId: string; item
 let pg: Client;
 let alice: Tenant;
 let bob: Tenant;
+let writer: Awaited<ReturnType<typeof startInvoiceDocumentWriter>>;
 
 const anon = () => createClient(SUPABASE_URL, ANON_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
+/** The storage owner, standing in for bytes placed outside the platform's own paths. */
+const admin = () => createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
+/** The writer's own role, to prove what it cannot do even when called directly. */
+const writerDb = () => createClient(SUPABASE_URL, ANON_KEY, { auth: { autoRefreshToken: false, persistSession: false }, global: { headers: { Authorization: `Bearer ${writerToken()}` } } });
 
 async function signIn(label: string): Promise<{ db: SupabaseClient; userId: string; email: string }> {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
@@ -125,11 +131,13 @@ beforeAll(async () => {
   if (!ANON_KEY || !SERVICE_ROLE_KEY) throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
   pg = new Client({ connectionString: CONNECTION });
   await pg.connect();
+  writer = await startInvoiceDocumentWriter();
   alice = await newTenant('docs-alice');
   bob = await newTenant('docs-bob');
 }, 120_000);
 
 afterAll(async () => {
+  await writer?.close();
   await pg?.end();
 });
 
@@ -208,19 +216,32 @@ describe('an invoice records how it was presented, whatever issued it', () => {
     expect((await clerk.db.rpc('preview_invoice_presentation', { p_organization_id: alice.organizationId, p_customer_id: alice.customerId })).error?.code).toBe('42501');
     expect((await anon().rpc('preview_invoice_presentation', { p_organization_id: alice.organizationId, p_customer_id: alice.customerId })).error).not.toBeNull();
 
+    const names = ['invoice_presentation_now', 'capture_invoice_presentation', 'preview_invoice_presentation', 'record_invoice_document',
+      'invoice_document_requester', 'invoice_document_source', 'invoice_logo_source', 'record_retained_logo',
+      'member_has_capability', 'finance_document_slot_open', 'finance_document_is_referenced', 'writer_stored'];
     const { rows } = await pg.query(
-      `select p.proname, has_function_privilege('authenticated', p.oid, 'execute') as member, has_function_privilege('anon', p.oid, 'execute') as visitor
+      `select p.proname, has_function_privilege('authenticated', p.oid, 'execute') as member, has_function_privilege('anon', p.oid, 'execute') as visitor,
+              has_function_privilege('invoice_document_writer', p.oid, 'execute') as writer
          from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-        where p.proname in ('invoice_presentation_now','capture_invoice_presentation','preview_invoice_presentation','record_invoice_document')
-        order by p.proname`);
+        where p.proname = any($1)
+        order by p.proname`, [names]);
+    // Members may only preview and ask who they are; every write and every builder is the writer's or nobody's.
     expect(rows).toEqual([
-      { proname: 'capture_invoice_presentation', member: false, visitor: false },
-      { proname: 'invoice_presentation_now', member: false, visitor: false },
-      { proname: 'preview_invoice_presentation', member: true, visitor: false },
-      { proname: 'record_invoice_document', member: true, visitor: false },
+      { proname: 'capture_invoice_presentation', member: false, visitor: false, writer: false },
+      { proname: 'finance_document_is_referenced', member: false, visitor: false, writer: true },
+      { proname: 'finance_document_slot_open', member: false, visitor: false, writer: true },
+      { proname: 'invoice_document_requester', member: true, visitor: false, writer: false },
+      { proname: 'invoice_document_source', member: false, visitor: false, writer: true },
+      { proname: 'invoice_logo_source', member: false, visitor: false, writer: true },
+      { proname: 'invoice_presentation_now', member: false, visitor: false, writer: false },
+      { proname: 'member_has_capability', member: false, visitor: false, writer: false },
+      { proname: 'preview_invoice_presentation', member: true, visitor: false, writer: false },
+      { proname: 'record_invoice_document', member: false, visitor: false, writer: true },
+      { proname: 'record_retained_logo', member: false, visitor: false, writer: true },
+      { proname: 'writer_stored', member: false, visitor: false, writer: false },
     ]);
     const definer = await pg.query(
-      `select p.proname, p.prosecdef, p.proconfig from pg_proc p where p.proname in ('invoice_presentation_now','capture_invoice_presentation','preview_invoice_presentation','record_invoice_document')`);
+      `select p.proname, p.prosecdef, p.proconfig from pg_proc p where p.proname = any($1)`, [names]);
     for (const fn of definer.rows) {
       expect(fn.prosecdef, fn.proname).toBe(true);
       expect(fn.proconfig, fn.proname).toEqual(['search_path=""']);
@@ -253,6 +274,94 @@ describe('a logo stays with the invoices issued with it', () => {
 
     const record = await ensureInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId });
     expect(record.sizeBytes).toBeGreaterThan(0);
+  });
+
+  it('draws only a copy the writer recorded from the current brand logo, never one placed beside it', async () => {
+    const evil = Buffer.concat([PNG.subarray(0, 8), Buffer.from('not the business logo')]);
+    await uploadLogo(alice.db, { organizationId: alice.organizationId, file: new File([PNG], 'logo-3.png', { type: 'image/png' }) });
+    const brandKey: string = (await pg.query(`select logo_path from public.brand_settings where organization_id = $1`, [alice.organizationId])).rows[0].logo_path;
+    // The old retained name for this logo, and a name in the writer's own pattern: neither is a recorded copy.
+    for (const name of [`${alice.organizationId}/logos/${brandKey.split('/')[1]}`, `${alice.organizationId}/logos/retained-${randomUUID()}.png`]) {
+      expect((await admin().storage.from(DOCUMENT_BUCKET).upload(name, new Blob([evil], { type: 'image/png' }), { contentType: 'image/png' })).error).toBeNull();
+    }
+    const before = await direct(alice, 1);
+    expect((await presentationRow(before)).logo_path).toBeNull();
+
+    const issuer = await clerkWithout(alice, 'organization.manage');
+    await retainCurrentLogo(issuer.db, { organizationId: alice.organizationId });
+    const retained = (await pg.query(`select * from public.invoice_retained_logos where organization_id = $1 and brand_logo_path = $2`, [alice.organizationId, brandKey])).rows[0];
+    expect(retained).toMatchObject({ format: 'png', sha256: createHash('sha256').update(PNG).digest('hex'), created_by: issuer.userId });
+    const after = await direct(alice, 1);
+    expect((await presentationRow(after)).logo_path).toBe(retained.storage_path);
+    const kept = await alice.db.storage.from(DOCUMENT_BUCKET).download(retained.storage_path);
+    expect(Buffer.from(await kept.data!.arrayBuffer()).equals(PNG)).toBe(true);
+    expect((await ensureInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId: after })).sizeBytes).toBeGreaterThan(0);
+    // Nobody records a copy for a logo that is not the business's current one.
+    const stale = await writerDb().rpc('record_retained_logo', { p_actor: alice.userId, p_organization_id: alice.organizationId, p_brand_logo_path: `${alice.organizationId}/${randomUUID()}`, p_storage_path: retained.storage_path, p_sha256: retained.sha256, p_size_bytes: Number(retained.size_bytes), p_format: 'png' });
+    expect(stale.error?.code).toBe('22023');
+    await expect(pg.query(`update public.invoice_retained_logos set sha256 = $2 where storage_path = $1`, [retained.storage_path, '0'.repeat(64)])).rejects.toMatchObject({ code: 'GD021' });
+  });
+
+  it('does not draw an earlier logo after the brand logo changes before issue', async () => {
+    await uploadLogo(alice.db, { organizationId: alice.organizationId, file: new File([PNG], 'logo-4.png', { type: 'image/png' }) });
+    await retainCurrentLogo(alice.db, { organizationId: alice.organizationId });
+    // Replaced after the copy was kept and before issue: the new logo has no recorded copy yet.
+    await uploadLogo(alice.db, { organizationId: alice.organizationId, file: new File([PNG], 'logo-5.png', { type: 'image/png' }) });
+    const invoiceId = await direct(alice, 1);
+    expect((await presentationRow(invoiceId)).logo_path).toBeNull();
+    const text = await pdfText((await readInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId: (await ensureInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId })).invoiceId })).bytes);
+    expect(text).toContain('docs-alice Holdings Inc.');
+  });
+
+  it('keeps no logo it cannot draw, and the invoice shows the business name instead', async () => {
+    const svg = new File(['<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>'], 'logo.svg', { type: 'image/svg+xml' });
+    await uploadLogo(alice.db, { organizationId: alice.organizationId, file: svg });
+    await retainCurrentLogo(alice.db, { organizationId: alice.organizationId });
+    const brandKey: string = (await pg.query(`select logo_path from public.brand_settings where organization_id = $1`, [alice.organizationId])).rows[0].logo_path;
+    expect((await pg.query(`select 1 from public.invoice_retained_logos where brand_logo_path = $1`, [brandKey])).rows).toEqual([]);
+    const invoiceId = await direct(alice, 1);
+    expect((await presentationRow(invoiceId)).logo_path).toBeNull();
+    const text = await pdfText((await readInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId: (await ensureInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId })).invoiceId })).bytes);
+    expect(text).toContain('docs-alice Holdings Inc.');
+  });
+});
+
+describe('the issued document is the invoice as issued', () => {
+  it('states no payment, so a payment before a retried PDF does not change it', async () => {
+    const invoiceId = await direct(alice, 1);
+    const before = (await pg.query(`select * from public.invoices where id = $1`, [invoiceId])).rows[0];
+    const lines = (await pg.query(`select * from public.invoice_lines where invoice_id = $1 order by position`, [invoiceId])).rows;
+    const policy = (await pg.query(`select pg_get_expr(polwithcheck, polrelid) as check from pg_policy where polname = 'finance_documents_writer_insert'`)).rows[0].check as string;
+    await pg.query(`drop policy finance_documents_writer_insert on storage.objects`);
+    try {
+      await expect(ensureInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId })).rejects.toMatchObject({ code: 'invoice_documents.store_failed' });
+    } finally {
+      await pg.query(`create policy finance_documents_writer_insert on storage.objects for insert to invoice_document_writer with check (${policy})`);
+    }
+    await recordPayment(alice.db, { invoiceId, amountMinor: 4_000, receivedAt: null, note: '' });
+
+    await ensureInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId });
+    const text = await pdfText((await readInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId })).bytes);
+    expect(text).toContain('CA$95.50');
+    for (const absent of ['Payment', 'Paid', 'Outstanding', 'CA$40.00', 'CA$55.50']) expect(text).not.toContain(absent);
+    expect((await pg.query(`select * from public.invoices where id = $1`, [invoiceId])).rows[0]).toEqual(before);
+    expect((await pg.query(`select * from public.invoice_lines where invoice_id = $1 order by position`, [invoiceId])).rows).toEqual(lines);
+  });
+
+  it('creates documents for Work and proposal invoices too', async () => {
+    const work = await createWorkItem(alice.db, { organizationId: alice.organizationId, statusId: alice.statusId, title: 'Boiler', customerId: alice.customerId });
+    await addPricedLine(alice.db, { workItemId: work, priceBookItemId: alice.itemId, quantity: 3 });
+    const workInvoice = await issueInvoice(alice.db, { workItemId: work });
+    const built = await buildCatalogProposal(alice.db, { organizationId: alice.organizationId, customerId: alice.customerId, lines: [{ priceBookItemId: alice.itemId, quantity: 4 }] });
+    await markCommercialProposalSent(alice.db, { organizationId: alice.organizationId, proposalId: built.id });
+    const visitor = anon();
+    await claimProposalInvite(visitor, { token: await createProposalInvite(alice.db, { customerId: alice.customerId }) });
+    await acceptCommercialProposal(visitor, { proposalId: built.id });
+    const proposalInvoice = await issueInvoiceFromProposal(alice.db, { proposalId: built.id, issuedAt: null, dueAt: null, issuanceKey: randomUUID() });
+    for (const [invoiceId, total] of [[workInvoice, 'CA$286.50'], [proposalInvoice, 'CA$382.00']] as const) {
+      await ensureInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId });
+      expect(await pdfText((await readInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId })).bytes)).toContain(total);
+    }
   });
 });
 
@@ -293,14 +402,25 @@ describe('one canonical PDF per issued invoice', () => {
     await updatePriceBookItem(alice.db, { id: alice.itemId, name: 'Service call', unit: 'visit', unitAmountMinor: 9_550 });
   });
 
-  it('records bytes stored before a failed record instead of drawing a second document', async () => {
+  it('never adopts an object it did not store, even one named like its own', async () => {
     const invoiceId = await direct(alice, 1);
-    const path = `${alice.organizationId}/invoices/${invoiceId}/invoice-standard-1-${randomUUID()}.pdf`;
-    const orphan = new TextEncoder().encode('%PDF-1.3\n% stored before its record failed\n');
-    expect((await alice.db.storage.from(DOCUMENT_BUCKET).upload(path, new Blob([orphan], { type: 'application/pdf' }), { upsert: false })).error).toBeNull();
+    // What a member could store before 2G.1, placed here by the storage owner to stand in for it.
+    const planted = `${alice.organizationId}/invoices/${invoiceId}/invoice-standard-2-${randomUUID()}.pdf`;
+    const bytes = new TextEncoder().encode('%PDF-1.3\n% planted: pay account 000\n%%EOF\n');
+    expect((await admin().storage.from(DOCUMENT_BUCKET).upload(planted, new Blob([bytes], { type: 'application/pdf' }), { contentType: 'application/pdf' })).error).toBeNull();
+
     const record = await ensureInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId });
-    expect(record.sha256).toBe(createHash('sha256').update(orphan).digest('hex'));
-    expect(record.storagePath).toBe(path);
+    expect(record.storagePath).not.toBe(planted);
+    expect(record.sha256).not.toBe(createHash('sha256').update(bytes).digest('hex'));
+    const text = await pdfText((await readInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId })).bytes);
+    expect(text).not.toContain('planted');
+    const owner = await pg.query(`select owner_id from storage.objects where bucket_id = $1 and name = $2`, [DOCUMENT_BUCKET, record.storagePath]);
+    expect(owner.rows[0].owner_id).toBe(WRITER_ID);
+
+    // Recording the planted object directly is refused too: the writer did not store it.
+    const asWriter = writerDb();
+    const refused = await asWriter.rpc('record_invoice_document', { p_actor: alice.userId, p_invoice_id: await direct(alice, 1), p_storage_path: planted, p_sha256: '0'.repeat(64), p_size_bytes: bytes.length, p_renderer: 'invoice-standard-2' });
+    expect(refused.error?.code).toBe('22023');
   });
 
   it('cannot be replaced or removed once stored, and no second object is accepted once recorded', async () => {
@@ -316,19 +436,78 @@ describe('one canonical PDF per issued invoice', () => {
     await expect(pg.query(`update public.invoice_documents set sha256 = $2 where invoice_id = $1`, [invoiceId, '0'.repeat(64)])).rejects.toMatchObject({ code: 'GD021' });
   });
 
-  it('refuses a recorder who may not issue invoices, another business, a wrong path and a missing object', async () => {
+  it('lets no member store or record a document, whatever they may do', async () => {
     const invoiceId = await direct(alice, 1);
-    const path = `${alice.organizationId}/invoices/${invoiceId}/invoice-standard-1.pdf`;
-    const record = (db: SupabaseClient, storagePath = path) => db.rpc('record_invoice_document', { p_invoice_id: invoiceId, p_storage_path: storagePath, p_sha256: '0'.repeat(64), p_size_bytes: 1, p_renderer: 'invoice-standard-1' });
-    expect((await record(bob.db)).error?.code).toBe('42501');
-    expect((await record(anon())).error).not.toBeNull();
+    const path = `${alice.organizationId}/invoices/${invoiceId}/invoice-standard-2-${randomUUID()}.pdf`;
+    const issuer = await clerkWithout(alice, 'organization.manage');
     const clerk = await clerkWithout(alice, 'invoice.issue');
-    expect((await record(clerk.db)).error?.code).toBe('42501');
-    expect((await clerk.db.storage.from(DOCUMENT_BUCKET).upload(path, new Blob(['%PDF-fake']))).error).not.toBeNull();
-    expect((await record(alice.db, `${bob.organizationId}/invoices/${invoiceId}/invoice-standard-1.pdf`)).error?.code).toBe('22023');
-    expect((await record(alice.db)).error?.code).toBe('22023');
+    const fake = new Blob(['%PDF-1.3 fake'], { type: 'application/pdf' });
+    for (const db of [alice.db, issuer.db, clerk.db, bob.db, anon()]) {
+      expect((await db.storage.from(DOCUMENT_BUCKET).upload(path, fake)).error).not.toBeNull();
+      expect((await db.storage.from(DOCUMENT_BUCKET).upload(`${alice.organizationId}/logos/retained-${randomUUID()}.png`, new Blob([PNG]))).error).not.toBeNull();
+      const record = await db.rpc('record_invoice_document', { p_actor: alice.userId, p_invoice_id: invoiceId, p_storage_path: path, p_sha256: '0'.repeat(64), p_size_bytes: 1, p_renderer: 'invoice-standard-2' });
+      expect(record.error).not.toBeNull();
+      expect((await db.rpc('record_retained_logo', { p_actor: alice.userId, p_organization_id: alice.organizationId, p_brand_logo_path: 'x', p_storage_path: 'x', p_sha256: '0'.repeat(64), p_size_bytes: 1, p_format: 'png' })).error).not.toBeNull();
+      expect((await db.rpc('invoice_document_source', { p_actor: alice.userId, p_organization_id: alice.organizationId, p_invoice_id: invoiceId })).error).not.toBeNull();
+    }
     expect(await getInvoiceDocumentRecord(alice.db, { organizationId: alice.organizationId, invoiceId })).toBeNull();
-    await expect(ensureInvoiceDocument(bob.db, { organizationId: alice.organizationId, invoiceId })).rejects.toMatchObject({ code: 'invoice_documents.not_found' });
+    const { rows } = await pg.query(`select count(*)::int as n from storage.objects where bucket_id = $1 and name like $2`, [DOCUMENT_BUCKET, `${alice.organizationId}/invoices/${invoiceId}/%`]);
+    expect(rows[0].n).toBe(0);
+  });
+
+  it('asks the writer only on behalf of someone who may issue this invoice', async () => {
+    const invoiceId = await direct(alice, 1);
+    const clerk = await clerkWithout(alice, 'invoice.issue');
+    await expect(ensureInvoiceDocument(clerk.db, { organizationId: alice.organizationId, invoiceId })).rejects.toMatchObject({ code: 'invoice_documents.forbidden' });
+    await expect(ensureInvoiceDocument(bob.db, { organizationId: alice.organizationId, invoiceId })).rejects.toMatchObject({ code: 'invoice_documents.forbidden' });
+    // Bob's own business, Alice's invoice: the source is resolved from the invoice, not the request.
+    await expect(ensureInvoiceDocument(bob.db, { organizationId: bob.organizationId, invoiceId })).rejects.toMatchObject({ code: 'invoice_documents.not_found' });
+    // Signed out: refused before any request reaches the writer.
+    await expect(ensureInvoiceDocument(anon(), { organizationId: alice.organizationId, invoiceId })).rejects.toThrow();
+    const forged = await fetch(`${writer.url}/invoice-documents`, { method: 'POST', headers: { authorization: 'Bearer not-a-token', 'content-type': 'application/json' }, body: JSON.stringify({ command: 'create', organization_id: alice.organizationId, invoice_id: invoiceId }) });
+    expect(forged.status).toBe(401);
+    expect(await getInvoiceDocumentRecord(alice.db, { organizationId: alice.organizationId, invoiceId })).toBeNull();
+    const { rows } = await pg.query(`select count(*)::int as n from storage.objects where bucket_id = $1 and name like $2`, [DOCUMENT_BUCKET, `${alice.organizationId}/invoices/${invoiceId}/%`]);
+    expect(rows[0].n).toBe(0);
+
+    // The writer itself records nothing for a person who may not issue, or for another business's invoice.
+    const asWriter = writerDb();
+    const stranger = await asWriter.rpc('record_invoice_document', { p_actor: clerk.userId, p_invoice_id: invoiceId, p_storage_path: 'x', p_sha256: '0'.repeat(64), p_size_bytes: 1, p_renderer: 'invoice-standard-2' });
+    expect(stranger.error?.code).toBe('42501');
+    const neighbour = await asWriter.rpc('invoice_document_source', { p_actor: bob.userId, p_organization_id: bob.organizationId, p_invoice_id: invoiceId });
+    expect(neighbour.error?.code).toBe('42501');
+  });
+
+  it('keeps one recorded object, removes only what it stored and nothing recorded, and retries after a storage failure', async () => {
+    const invoiceId = await direct(alice, 2);
+    const policy = (await pg.query(`select pg_get_expr(polwithcheck, polrelid) as check from pg_policy where polname = 'finance_documents_writer_insert'`)).rows[0].check as string;
+    await pg.query(`drop policy finance_documents_writer_insert on storage.objects`);
+    try {
+      await expect(ensureInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId })).rejects.toMatchObject({ code: 'invoice_documents.store_failed' });
+    } finally {
+      await pg.query(`create policy finance_documents_writer_insert on storage.objects for insert to invoice_document_writer with check (${policy})`);
+    }
+    expect(await getInvoiceDocumentRecord(alice.db, { organizationId: alice.organizationId, invoiceId })).toBeNull();
+
+    const records = await Promise.all([1, 2, 3, 4].map(() => ensureInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId })));
+    expect(new Set(records.map((r) => r.storagePath)).size).toBe(1);
+    const { rows } = await pg.query(`select name from storage.objects where bucket_id = $1 and name like $2`, [DOCUMENT_BUCKET, `${alice.organizationId}/invoices/${invoiceId}/%`]);
+    expect(rows.map((row) => row.name)).toEqual([records[0].storagePath]);
+
+    // The writer cannot remove or replace what was recorded.
+    const asWriter = writerDb();
+    await asWriter.storage.from(DOCUMENT_BUCKET).remove([records[0].storagePath]);
+    expect((await asWriter.storage.from(DOCUMENT_BUCKET).upload(records[0].storagePath, new Blob(['%PDF-x']), { upsert: true })).error).not.toBeNull();
+    const file = await readInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId });
+    expect(createHash('sha256').update(file.bytes).digest('hex')).toBe(records[0].sha256);
+  });
+
+  it('serves no bytes that differ from the recorded checksum', async () => {
+    const invoiceId = await direct(alice, 1);
+    const record = await ensureInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId });
+    // Only the storage owner can do this; it stands in for bytes changed outside the platform.
+    expect((await admin().storage.from(DOCUMENT_BUCKET).update(record.storagePath, new Blob(['%PDF-1.3 swapped']), { contentType: 'application/pdf' })).error).toBeNull();
+    await expect(readInvoiceDocument(alice.db, { organizationId: alice.organizationId, invoiceId })).rejects.toMatchObject({ code: 'invoice_documents.not_found' });
   });
 });
 

@@ -315,7 +315,7 @@ export async function readAttachment(
 ): Promise<{ filename: string; bytes: Uint8Array }> {
   const { data: row, error } = await db
     .from('message_attachments')
-    .select('filename, storage_path, storage_state')
+    .select('filename, storage_path, storage_state, storage_bucket')
     .eq('organization_id', input.organizationId)
     .eq('id', input.attachmentId)
     .maybeSingle();
@@ -324,7 +324,9 @@ export async function readAttachment(
     throw new DomainError('No such attachment here.', 'email.attachment_not_found');
   }
 
-  const { data: blob, error: downloadError } = await db.storage.from(STORAGE_BUCKET).download(row.storage_path);
+  // An emailed invoice carries its recorded PDF where it is kept (`finance-documents`), not a copy.
+  const bucket = row.storage_bucket === 'finance-documents' ? 'finance-documents' : STORAGE_BUCKET;
+  const { data: blob, error: downloadError } = await db.storage.from(bucket).download(row.storage_path);
   if (downloadError || !blob) throw new DomainError('No such attachment here.', 'email.attachment_not_found');
   return { filename: row.filename, bytes: new Uint8Array(await blob.arrayBuffer()) };
 }

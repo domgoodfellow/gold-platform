@@ -734,9 +734,12 @@ voice webhook
 automation runner
 integration operator
 provider operator
+invoice document writer
 ```
 
 Do not let one machine role inherit unrelated grants merely because both run in `apps/api`.
+
+The invoice document writer is the only identity that stores or records an issued invoice's PDF or a retained logo. It acts in `apps/api` after the person's own session shows they may issue that business's invoices. It draws the bytes itself, chooses the storage name and computes the checksum. A member never supplies any of them.
 
 ---
 

@@ -37,7 +37,6 @@ const styles = StyleSheet.create({
   totalValue: { fontSize: 13 },
   section: { marginTop: 24 },
   sectionHeading: { fontSize: 11, marginBottom: 6 },
-  payRow: { flexDirection: 'row', justifyContent: 'space-between', width: '50%', marginBottom: 2 },
   footer: { position: 'absolute', bottom: 28, left: 48, right: 48, fontSize: 8, color: MUTED },
   // No line height is set anywhere: this layout engine multiplies it oddly and drops a render-prop text under an inherited one.
   pageNumber: { position: 'absolute', bottom: 28, right: 48, width: 120, textAlign: 'right', fontSize: 8, color: MUTED },
@@ -109,15 +108,6 @@ function InvoicePdf({ document: doc }: { document: InvoiceDocument }) {
             </View>
           </View>
         </View>
-        {doc.payments ? (
-          <View style={styles.section} wrap={false}>
-            <Text style={[styles.sectionHeading, heading]}>{doc.payments.heading}</Text>
-            {doc.payments.rows.map((row) => (
-              <View key={row.label} style={styles.payRow}><Text>{row.label}</Text><Text>{row.value}</Text></View>
-            ))}
-            <Text style={[styles.muted, { marginTop: 4 }]}>{doc.payments.note}</Text>
-          </View>
-        ) : null}
         {doc.notes.length ? (
           <View style={styles.section}>
             {doc.notes.map((note, index) => <Text key={index} style={styles.muted}>{note}</Text>)}
@@ -129,7 +119,7 @@ function InvoicePdf({ document: doc }: { document: InvoiceDocument }) {
 }
 
 export const reactPdfRenderer: DocumentRenderer = {
-  version: 'invoice-standard-1',
+  version: 'invoice-standard-2',
   async renderInvoice(document) {
     return new Uint8Array(await renderToBuffer(<InvoicePdf document={document} />));
   },

@@ -29,12 +29,15 @@ const TRUST = {
   'shared-key': /x-gold-public-chat-key/,
   'voice-agent-signature': /receive_voice_event\(/,
   'runtime-signature': /verifyRequest\(/,
+  // The person's own session token, which the writer has the database check before anything else.
+  'person-session': /runCommand\(token,/,
 } as const;
 
 const INVENTORY: { file: string; route: string; trust: keyof typeof TRUST; runtime?: 'node' }[] = [
   {file:'app_library',route:'/integrations/library',trust:'bearer-token'},
   {file:'integration_sync_tick',route:'/tasks/integration-sync',trust:'cron-secret'},
   {file:'library_runtime',route:'/integrations/library-runtime',trust:'runtime-signature',runtime:'node'},
+  {file:'invoice_documents',route:'/invoice-documents',trust:'person-session',runtime:'node'},
   { file: 'stripe_webhook', route: '/webhooks/stripe', trust: 'stripe-signature' },
   { file: 'stripe_platform_billing_webhook', route: '/webhooks/stripe-platform-billing', trust: 'stripe-signature' },
   { file: 'automation_tick', route: '/tasks/automation-tick', trust: 'cron-secret' },
@@ -125,6 +128,7 @@ describe('the handler wiring test', () => {
   it('drives every handler, because every one takes input from outside a trust boundary', () => {
     expect(INVENTORY.filter(entry=>entry.runtime!=='node').map((entry) => entry.file).filter((file) => !imported.includes(file))).toEqual([]);
     expect(read('library/runtime.test.mjs')).toContain("../api/library_runtime.mjs");
+    expect(readFileSync(fileURLToPath(new URL('../../support/invoice-document-writer.ts', import.meta.url)), 'utf8')).toContain("api/api/invoice_documents.mjs");
   });
 
   it('drives no handler that no longer exists', () => {

@@ -3,7 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { requireOrganization } from '@/lib/route/organization';
 import { DomainError } from '@/lib/domain/errors';
-import { getInvoice, getInvoiceForWorkItem, issueDirectInvoice, issueInvoice, issueInvoiceFromProposal, recordPayment, type DirectInvoiceLineRequest } from '@/lib/domain/billing/invoices';
+import { getInvoice, getInvoiceForWorkItem, invoiceStanding, issueDirectInvoice, issueInvoice, issueInvoiceFromProposal, recordPayment, type DirectInvoiceLineRequest } from '@/lib/domain/billing/invoices';
+import { previewInvoiceEmail, type InvoiceEmailPreview } from '@/lib/domain/billing/invoice-emails';
+import { retryInvoiceEmail, sendIssuedInvoiceEmail, type InvoiceEmailOutcome } from '@/lib/application/finance/send-invoice-email';
 import { getContact, listContacts } from '@/lib/domain/contacts/contacts';
 import { readFinanceInvoices, readFinanceQuotes } from '@/lib/domain/billing/finance-reads';
 import { getWorkItem, listWorkItems } from '@/lib/domain/work-items/work-items';
@@ -218,5 +220,57 @@ export async function previewInvoiceDocument(fields: Record<string, string>): Pr
     currency = lines[0].currency || currency;
     const pdf = await renderDraftInvoice(db, { organizationId, customerId, billedTo, currency, lines, issuedAt: day(fields.issuedAt), dueAt: day(fields.dueAt), timezone: organization.timezone, organizationName: organization.name });
     return { pdf: Buffer.from(pdf).toString('base64') };
+  } catch (error) { if (error instanceof DomainError) return { error: error.message }; throw error; }
+}
+
+export type InvoiceEmailDraft = {
+  number: number; customer: string; amount: string; preview: InvoiceEmailPreview; subject: string; text: string;
+};
+
+/**
+ * What the Send invoice dialog shows: the sender and recipient the database would use, the PDF it
+ * would attach, and an editable subject and message in the business's own name. Writes nothing.
+ */
+export async function invoiceEmailDraft(organizationId: string, invoiceId: string): Promise<{ draft: InvoiceEmailDraft } | { error: string }> {
+  const { db, organization } = await requireOrganization(organizationId);
+  if (!organization.capabilities.includes('invoice.issue') || !organization.capabilities.includes('message.send')) return { error: 'Your role cannot email invoices.' };
+  try {
+    const [invoice, preview] = await Promise.all([getInvoice(db, { organizationId, invoiceId }), previewInvoiceEmail(db, { organizationId, invoiceId })]);
+    if (!invoice) return { error: 'That invoice is unavailable.' };
+    const total = invoiceStanding(invoice).total;
+    const amount = total ? formatMoney(total.totalMinor, invoice.currency) : '—';
+    const due = invoice.dueAt ? `, due ${new Intl.DateTimeFormat('en-CA', { timeZone: organization.timezone, year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(invoice.dueAt))}` : '';
+    return { draft: {
+      number: invoice.number, customer: invoice.billedTo, amount, preview,
+      subject: `Invoice #${invoice.number} from ${organization.name}`,
+      text: `Hello ${invoice.billedTo},\n\nPlease find invoice #${invoice.number} attached, for ${amount}${due}.\n\nThank you,\n${organization.name}`,
+    } };
+  } catch (error) { if (error instanceof DomainError) return { error: error.message }; throw error; }
+}
+
+/** Send invoice: the invoice's recorded PDF to its customer, from the business's own sender. */
+export async function sendInvoiceEmail(input: {
+  organizationId: string; invoiceId: string; recipient: string; subject: string; text: string; idempotencyKey: string; sendAgain: boolean;
+}): Promise<{ outcome: InvoiceEmailOutcome } | { error: string; code: string }> {
+  const { db, organization } = await requireOrganization(input.organizationId);
+  if (!organization.capabilities.includes('invoice.issue') || !organization.capabilities.includes('message.send')) return { error: 'Your role cannot email invoices.', code: 'invoice_emails.forbidden' };
+  try {
+    const outcome = await sendIssuedInvoiceEmail(db, {
+      organizationId: input.organizationId, invoiceId: input.invoiceId, recipient: String(input.recipient), subject: String(input.subject),
+      text: String(input.text), idempotencyKey: String(input.idempotencyKey), sendAgain: input.sendAgain === true,
+    });
+    revalidatePath(`/organizations/${input.organizationId}/finance`, 'layout');
+    return { outcome };
+  } catch (error) { if (error instanceof DomainError) return { error: error.message, code: error.code }; throw error; }
+}
+
+/** Try once more to hand over a send that has not left. The same message; never a second email. */
+export async function retryInvoiceEmailSend(organizationId: string, invoiceId: string, invoiceEmailId: string): Promise<{ outcome: InvoiceEmailOutcome } | { error: string }> {
+  const { db, organization } = await requireOrganization(organizationId);
+  if (!organization.capabilities.includes('message.send')) return { error: 'Your role cannot send email.' };
+  try {
+    const outcome = await retryInvoiceEmail(db, { organizationId, invoiceId, invoiceEmailId });
+    revalidatePath(`/organizations/${organizationId}/finance`, 'layout');
+    return { outcome };
   } catch (error) { if (error instanceof DomainError) return { error: error.message }; throw error; }
 }

@@ -11,6 +11,9 @@ import { financeFilters } from '@/lib/application/finance/operating';
 import { readFinanceInvoice, readFinanceInvoices, readFinancePayments, readFinanceQuotes } from '@/lib/domain/billing/finance-reads';
 import { getInvoice } from '@/lib/domain/billing/invoices';
 import { getInvoiceDocumentRecord } from '@/lib/domain/billing/invoice-documents';
+import { invoiceEmailState, listInvoiceEmails } from '@/lib/domain/billing/invoice-emails';
+import { emailSendingStatus } from '@/lib/domain/email/sender';
+import { inboxAvailable } from '@/lib/application/communications/inbox-availability';
 import { InspectorFocusReturn, InvoiceInspector } from './invoice-inspector';
 import { listContacts } from '@/lib/domain/contacts/contacts';
 import { listUsableModules } from '@/lib/domain/tenancy/modules';
@@ -74,6 +77,16 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
   // The inspector reads only when the address names an invoice, each time under this reader's own access.
   const inspected = kind === 'invoices' && value('invoice') ? await readFinanceInvoice(db, organizationId, value('invoice')) : null;
   const [inspectedInvoice, inspectedDocument] = inspected ? await Promise.all([getInvoice(db, { organizationId, invoiceId: inspected.id }), getInvoiceDocumentRecord(db, { organizationId, invoiceId: inspected.id })]) : [null, null];
+  // Emailing needs both permissions and usable Billing; the database checks all three again at send.
+  const mayEmail = billing && may('invoice.issue') && may('message.send');
+  const [inspectedSends, sending] = inspected ? await Promise.all([
+    listInvoiceEmails(db, { organizationId, invoiceId: inspected.id }),
+    mayEmail ? emailSendingStatus(db, organizationId) : null,
+  ]) : [[], null];
+  // A send links to its conversation only where this person can open the Inbox, by the same predicate navigation uses.
+  const inboxOpen = inspected && (mayEmail || inspectedSends.length > 0)
+    ? await inboxAvailable(db, { organizationId, capabilities: organization.capabilities })
+    : false;
   const here = href({ page: String(page) });
   const inspectHref = (invoiceId: string) => `${here}${here.includes('?') ? '&' : '?'}invoice=${invoiceId}`;
   const filtered = active.length > 0 || Boolean(scopeValue);
@@ -99,7 +112,9 @@ export async function FinanceCollection({ organizationId, kind, query }: { organ
         : <PaymentsTable timezone={organization.timezone} organizationId={organizationId} rows={result.rows as Awaited<ReturnType<typeof readFinancePayments>>['rows']} empty={filtered ? 'No payment entries match this view.' : 'No payments recorded yet. Payments are recorded against issued invoices.'} />}
     </section>
     {kind === 'invoices' ? <InspectorFocusReturn /> : null}
-    {inspected && inspectedInvoice ? <InvoiceInspector key={inspected.id} organizationId={organizationId} row={inspected} invoice={inspectedInvoice} timezone={organization.timezone} today={today} closeHref={here} mayRecord={billing && may('payment.record')} document={{ available: Boolean(inspectedDocument), mayCreate: billing && may('invoice.issue') }} /> : null}
+    {inspected && inspectedInvoice ? <InvoiceInspector key={inspected.id} organizationId={organizationId} row={inspected} invoice={inspectedInvoice} timezone={organization.timezone} today={today} closeHref={here} mayRecord={billing && may('payment.record')} document={{ available: Boolean(inspectedDocument), mayCreate: billing && may('invoice.issue') }}
+      email={{ may: mayEmail, inboxOpen, senderProblem: sending && sending.state !== 'ready' ? sending.detail ?? 'This business cannot send email yet.' : null,
+        sends: inspectedSends.map(send => ({ id: send.id, conversationId: send.conversationId, recipient: send.recipient, fromAddress: send.fromAddress, createdAt: send.createdAt, sentAgain: send.sentAgain, ...invoiceEmailState(send.status, send.failureReason) })) }} /> : null}
     {result.total > PAGE_SIZE || page > 1 ? <nav aria-label="Pagination" className="mt-4 flex items-center justify-between gap-3 text-sm">
       {page > 1 ? <ButtonLink tone="secondary" size="small" href={href({ page: String(page - 1) })}>Previous</ButtonLink> : <span />}
       <span className="tabular-nums text-muted">Page {page} of {pages} · {result.total} records</span>
