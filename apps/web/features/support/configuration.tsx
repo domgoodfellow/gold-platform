@@ -31,7 +31,6 @@ export function SupportConfigurePanel({ organizationId, data, kinds }: { organiz
    <h2 id={`support-configure-${kind}`} className="text-sm font-semibold">{kind === 'queue' ? 'Queues' : 'Service levels'}</h2>
    <ConfigurationEditor organizationId={organizationId} data={data} kind={kind} />
   </div>
-  <p className="mt-1 text-sm text-muted">{DESCRIPTIONS[kind]}</p>
   <SupportRecords organizationId={organizationId} data={data} kind={kind} />
  </section>)}</div>;
 }
