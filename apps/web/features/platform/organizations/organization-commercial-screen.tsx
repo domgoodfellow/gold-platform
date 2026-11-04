@@ -4,7 +4,7 @@ import { GroupHeading, SectionHeading } from '@/components/surfaces/section';
 import { DataTable } from '@/components/display/table';
 import { AllowanceMeter } from '@/features/catalogue/allowance-meter';
 import { Badge } from '@/components/display/data';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@gold/ui/components/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@gold/ui/components/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import type { ComponentPrice, OrganizationCommercialModel } from '@/lib/application/platform/organization-commercial';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
@@ -85,9 +85,7 @@ export function OrganizationCommercialScreen({
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              {/* ui-copy-allow: label of a label/value stat card, not an eyebrow (MetricTile follow-up) */}
-              <CardDescription>Base Plan</CardDescription>
-              <CardTitle className="text-xl">{basePlan.plan?.label ?? 'No standard Plan'}</CardTitle>
+              <CardTitle className="text-xl">Base Plan: {basePlan.plan?.label ?? 'No standard Plan'}</CardTitle>
               {basePlan.assignment ? (
                 <p className="mt-1 text-xs text-muted-foreground">Effective {formatPeriod(basePlan.assignment.periodStart, basePlan.assignment.periodEnd)}</p>
               ) : (
