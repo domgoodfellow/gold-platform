@@ -1,5 +1,6 @@
 import { Badge, Detail, DefinitionList } from '@/components/display/data';
 import { Section, SectionHeading } from '@/components/surfaces/section';
+import { InfoPopover } from '@/components/controls/info-popover';
 import type { PlatformEmailReadiness } from '@/lib/route/provider-environment';
 
 const STATE: Record<PlatformEmailReadiness['state'], { label: string; tone: 'neutral' | 'success' | 'danger' }> = {
@@ -26,7 +27,12 @@ export function PlatformEmailReadinessSection({ readiness }: { readiness: Platfo
   const badge = STATE[readiness.state];
   return (
     <Section>
-      <SectionHeading>Platform email (team invitations)</SectionHeading>
+      <div className="flex items-center gap-1">
+        <SectionHeading>Platform email (team invitations)</SectionHeading>
+        <InfoPopover label="About this evidence">
+          Reported by the API that sends invitations, not read from this web project. A business&rsquo;s own customer email is set up in its Email sending settings.
+        </InfoPopover>
+      </div>
       <DefinitionList>
         <Detail label="Status"><Badge tone={badge.tone}>{badge.label}</Badge></Detail>
         <Detail label="What this means">{readiness.detail}</Detail>
@@ -46,9 +52,6 @@ export function PlatformEmailReadinessSection({ readiness }: { readiness: Platfo
           ))}
         </ul>
       ) : null}
-      <p className="mt-2 text-sm text-muted">
-        Reported by the API that sends invitations, not read from this web project. A business&rsquo;s own customer email is set up in its Email sending settings.
-      </p>
     </Section>
   );
 }

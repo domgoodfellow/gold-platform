@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/display/table';
 import { Button } from '@/components/controls/button';
 import { TextInput } from '@/components/controls/inputs';
+import { InfoPopover } from '@/components/controls/info-popover';
 import {
   PageDrawer,
   PageDrawerContent,
@@ -98,6 +99,12 @@ export function ActivityView({
           Clear filters
         </Link>
       </form>
+      {filters.stream === 'deliveries' && filters.q ? (
+        <p className="mb-2 text-xs text-subtle">
+          Name matching is a monitoring filter, not proof of an exact
+          run-to-delivery relationship.
+        </p>
+      ) : null}
       <p className="mb-3 text-xs text-subtle">
         {timezone} ·{' '}
         {filters.stream === 'deliveries'
@@ -236,7 +243,14 @@ export function ActivityView({
           <div className="space-y-4 text-sm">
             {selectedRun && (
               <>
-                <AutomationState value={selectedRun.outcome} />
+                <div className="flex items-center gap-1">
+                  <AutomationState value={selectedRun.outcome} />
+                  <InfoPopover label="About execution history">
+                    The rule name above was saved at execution time. Historical
+                    runs do not snapshot individual action configuration or
+                    per-action results. Current configuration may have changed.
+                  </InfoPopover>
+                </div>
                 <dl className="space-y-3">
                   <div>
                     <dt className="text-xs text-subtle">Execution time</dt>
@@ -278,11 +292,6 @@ export function ActivityView({
                     recorded.
                   </p>
                 )}
-                <p className="text-xs text-subtle">
-                  The rule name above was saved at execution time. Historical
-                  runs do not snapshot individual action configuration or
-                  per-action results. Current configuration may have changed.
-                </p>
                 <Link
                   className="block text-accent-text"
                   href={href({
@@ -295,15 +304,22 @@ export function ActivityView({
                 >
                   Inspect deliveries with this recorded rule name
                 </Link>
-                <p className="text-xs text-subtle">
-                  Name matching is a monitoring filter, not proof of an exact
-                  run-to-delivery relationship.
-                </p>
               </>
             )}
             {selectedDelivery && (
               <>
-                <AutomationState value={selectedDelivery.state} />
+                <div className="flex items-center gap-1">
+                  <AutomationState value={selectedDelivery.state} />
+                  <InfoPopover label="About delivery states">
+                    Content was snapshotted when queued. Template edits do not
+                    change it. Sent means the email provider accepted the message
+                    from this business&apos;s own sender address; a later provider report
+                    says whether it was delivered. Uncertain means an attempt may have
+                    reached the provider but was never confirmed: it is not sent again
+                    automatically, so check with the recipient before sending it
+                    yourself.
+                  </InfoPopover>
+                </div>
                 <dl className="space-y-3">
                   <div>
                     <dt className="text-xs text-subtle">Channel / recipient</dt>
@@ -339,15 +355,6 @@ export function ActivityView({
                     {selectedDelivery.body}
                   </p>
                 </div>
-                <p className="text-xs text-subtle">
-                  Content was snapshotted when queued. Template edits do not
-                  change it. Sent means the email provider accepted the message
-                  from this business&apos;s own sender address; a later provider report
-                  says whether it was delivered. Uncertain means an attempt may have
-                  reached the provider but was never confirmed: it is not sent again
-                  automatically, so check with the recipient before sending it
-                  yourself.
-                </p>
               </>
             )}
           </div>

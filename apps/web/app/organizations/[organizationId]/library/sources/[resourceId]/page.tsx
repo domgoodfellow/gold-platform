@@ -36,7 +36,6 @@ export default async function SourcePage({params}:{params:Promise<{organizationI
     </section>
     {mayImport && ['file_upload','google_sheet','microsoft_workbook'].includes(resource.resourceType) ? <section className="mt-6 space-y-3">
       <h2 className="font-medium">CRM Contacts</h2><ButtonLink tone="secondary" href={libraryNewImportHref(organizationId, resourceId)}>Import into CRM</ButtonLink>
-      <p className="text-sm text-muted">Import once creates a snapshot. Keep synchronized saves the mapping and source identities. Sync now refreshes the worksheet and opens a review before applying CRM updates.</p>
       {removed.count ? <p role="status" className="text-sm">{removed.count} source rows removed. Canonical CRM contacts and their history are preserved.</p> : null}
       {mappings.filter(mapping => mapping.syncMode === 'sync').map(mapping => {
         const run = runs.find(run => run.mappingId === mapping.id);
@@ -49,6 +48,7 @@ export default async function SourcePage({params}:{params:Promise<{organizationI
           {confirmed && run?.status !== 'pending' && run?.status !== 'running' ? <form action={reviewCrmSyncAction}>
             <input type="hidden" name="organizationId" value={organizationId}/><input type="hidden" name="resourceId" value={resourceId}/><input type="hidden" name="mappingId" value={mapping.id}/>
             <Button type="submit" tone="secondary" disabled={connectionStatus !== 'active' || !sync?.enabled}>Sync now to CRM</Button>
+            <p className="mt-1 text-xs text-muted">Sync now refreshes the worksheet and opens a review before applying CRM updates.</p>
           </form> : <p className="text-sm">Confirm the pending import before synchronizing again.</p>}
           <form action={disableCrmSyncAction}><input type="hidden" name="organizationId" value={organizationId}/><input type="hidden" name="resourceId" value={resourceId}/><input type="hidden" name="mappingId" value={mapping.id}/><Button type="submit" tone="text">Stop CRM synchronization</Button></form>
         </div>;
