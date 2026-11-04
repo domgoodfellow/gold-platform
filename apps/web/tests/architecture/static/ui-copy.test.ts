@@ -80,7 +80,7 @@ describe('what the check keeps, by structure', () => {
   });
 
   it('public surfaces, which follow docs/public-web.md', () => {
-    for (const file of ['apps/web/app/(marketing)/pricing/page.tsx', 'apps/web/app/(public)/book/[slug]/page.tsx', 'apps/web/app/(auth)/login/page.tsx', 'apps/web/features/public-site/section-renderers.tsx', 'apps/web/components/marketing/product-card.tsx']) {
+    for (const file of ['apps/web/app/(marketing)/pricing/page.tsx', 'apps/web/app/(public)/book/[slug]/page.tsx', 'apps/web/app/(auth)/login/page.tsx', 'apps/web/features/public-site/section-renderers.tsx', 'apps/web/components/marketing/product-card.tsx', 'apps/web/features/portal-access/portal-page.tsx', 'apps/web/features/studio/portal/portal-renderer.tsx']) {
       expect(isExcluded(file), file).toBe(true);
     }
     expect(isExcluded('apps/web/features/crm/customers/customer-detail.tsx')).toBe(false);
