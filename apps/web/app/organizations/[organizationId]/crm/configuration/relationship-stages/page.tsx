@@ -29,7 +29,6 @@ export default async function SalesStagesSettingsPage({
         crumbs={[...workspaceConfigCrumbs(organizationId, 'sales-stages', gate)]}
         actions={mayConfigure ? <RelationshipStageDialog organizationId={organizationId} triggerTone="primary" /> : null}
       />
-      <p className="mb-4 text-sm text-muted">Name the stages your customer relationships move through.</p>
       <ConfigurationEditor
         label="Relationship stages"
         density="compact"

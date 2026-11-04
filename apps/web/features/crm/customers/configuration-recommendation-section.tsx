@@ -43,7 +43,6 @@ export function ConfigurationRecommendationSection({
   return (
     <Section>
       <SectionHeading>Proposed configuration</SectionHeading>
-      <Hint className="mt-1">Drawn from Discovery, recomputed on every visit — nothing here is provisioned.</Hint>
 
       {preview.length > 0 ? (
         <div className="mt-4 rounded-lg border border-border">
