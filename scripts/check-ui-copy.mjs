@@ -97,7 +97,7 @@ function nextSibling(src, from) {
       return tag ? { at: i, tag } : null;
     }
     if (c === '{' || c === '(') { depth++; continue; }
-    if (c === '}' || c === ')') { if (--depth < 0) return null; continue; }
+    if (c === '}' || c === ')') { if (--depth <= 0) return null; continue; } // an expression child sits between
     if (depth > 0 && /[\w.$?:&|!=\[\]'"]/.test(c)) continue;
     return null;
   }
@@ -126,6 +126,25 @@ function keptByStructure(attrs, raw) {
   if (words.length === 0 && /\b\w*(description|summary|intro|purpose|explanation|DESCRIPTIONS)\w*\b|\{\s*text\s*\}/.test(raw)) return null;
   if (words.length < 5) return 'factual metadata';
   return null;
+}
+
+const EMPTY_REGION = /(data-slot|id|aria-labelledby)=["'{`][^"'}`]*empty/i;
+
+// Whether more content follows `from` in the same region: closing wrapper divs and the end of a
+// conditional are skipped; another element means content follows; anything else ends the region.
+function contentFollows(src, from) {
+  const limit = Math.min(src.length, from + 400);
+  for (let i = from; i < limit; i++) {
+    if (/\s/.test(src[i])) continue;
+    if (src.startsWith('</div>', i)) { i += 5; continue; }
+    if (src.startsWith('{/*', i)) { const e = src.indexOf('*/}', i); if (e < 0) return false; i = e + 2; continue; }
+    if (src[i] === '{') return true; // a conditional or mapped child
+    if (/[)}:]/.test(src[i])) continue;
+    if (src.startsWith('null', i)) { i += 3; continue; }
+    if (src[i] === '<') return /[A-Za-z{]/.test(src[i + 1] ?? '');
+    return false;
+  }
+  return false;
 }
 
 function lineStarts(src) {
@@ -157,19 +176,24 @@ export function scanSource(src, rel) {
       const sib = end > 0 ? nextSibling(src, end) : null;
       if (sib && HEADINGS.has(sib.tag.name)) push('eyebrow', m.index, `<${tag.name}> before <${sib.tag.name}>`);
     }
-    const subtitleAt = (sib, where) => {
+    const subtitleAt = (sib, where, headingRaw = '', soleIsState = true) => {
       if (!sib || !PROSE_TAGS.test(sib.tag.name)) return;
       if (sib.tag.name !== 'Hint' && !MUTED.test(sib.tag.attrs)) return;
       const end = elementEnd(src, sib.tag);
       const raw = end > 0 ? src.slice(sib.tag.end, end) : '';
       if (keptByStructure(sib.tag.attrs, raw)) return;
+      // An empty state may say what the section is for: a heading that states the emptiness, or
+      // a region marked as an empty state.
+      if (/^(No|Nothing)\b/.test(literalText(headingRaw)) || EMPTY_REGION.test(src.slice(Math.max(0, m.index - 400), m.index))) return;
+      // A sentence with nothing after it is the section's state, not a subtitle above content.
+      if (soleIsState && end > 0 && !contentFollows(src, end)) return;
       push('subtitle', sib.at, `<${sib.tag.name}> muted ${where}`);
     };
     if (SUBTITLE_AFTER.has(tag.name)) {
       const end = elementEnd(src, tag);
-      if (end > 0) subtitleAt(nextSibling(src, end), `after <${tag.name}>`);
+      if (end > 0) subtitleAt(nextSibling(src, end), `after <${tag.name}>`, tag.self ? '' : src.slice(tag.end, end));
     }
-    if (tag.name === 'OperationalPanel' && !tag.self) subtitleAt(nextSibling(src, tag.end), 'first in <OperationalPanel>');
+    if (tag.name === 'OperationalPanel' && !tag.self) subtitleAt(nextSibling(src, tag.end), 'first in <OperationalPanel>', '', false);
   }
 
   if (/<NavigationList\b/.test(src)) {
