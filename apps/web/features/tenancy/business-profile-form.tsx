@@ -25,7 +25,7 @@ export function BusinessProfileForm({organizationId,profile,destinations,embedde
   // Order matters only among one workspace's pages, so a move swaps with its neighbour in the same workspace.
   function move(key:string,direction:number) {const peers=order.filter(candidate=>workspaceOf.get(candidate)===workspaceOf.get(key));const target=peers.indexOf(key)+direction;if(target<0||target>=peers.length)return;const next=[...order];const from=next.indexOf(key);const to=next.indexOf(peers[target]);[next[from],next[to]]=[next[to],next[from]];setDraft({...draft,navigation:next});}
   const form=<form className="flex flex-col gap-6" onSubmit={event=>{event.preventDefault();setSaved(false);start(async()=>{const result=await saveBusinessProfileAction(organizationId,draft);setError(result.error);if(!result.error){setDraftState({...draft,revision:draft.revision+1});setDirty(false);setSaved(true);router.refresh();}});}}>
-    <Hint>{profile?'These choices change labels only. Access, addresses and existing record names stay the same.':'Choose the words and page labels your business uses. These choices change labels only. Access, addresses and existing record names stay the same.'}</Hint>
+    <Hint>These choices change labels only. Access, addresses and existing record names stay the same.</Hint>
     <Card as="section" aria-labelledby="terminology-nouns-heading">
       <div className="flex flex-col gap-4">
         <SectionHeading id="terminology-nouns-heading">Record names</SectionHeading>

@@ -32,12 +32,11 @@ export default async function SourcePage({params}:{params:Promise<{organizationI
       <p className="mt-1 text-sm">{sync?`${sync.enabled?'Enabled':'Disabled'} · ${sync.state}`:'Not enabled'}</p>
       {sync?.last_success_at?<p className="text-sm text-muted">Last completed: {new Date(sync.last_success_at).toISOString()}</p>:null}
       {sync?.last_error?<p role="alert" className="mt-2 text-sm">{sync.last_error}</p>:null}
-      <p className="mt-2 text-sm text-muted">Files synchronize metadata. Calendars synchronize events. Worksheets reconcile the selected rows. Data remains in this organization’s Library.</p>
       {supported&&resource.status==='active'&&organization.capabilities.includes('integration.manage')?<ResourceSyncControl organizationId={organizationId} resourceId={resourceId} type={resource.resourceType} parameters={(sync?.parameters??{}) as Record<string,unknown>} enabled={sync?.enabled??false}/>:null}
     </section>
     {mayImport && ['file_upload','google_sheet','microsoft_workbook'].includes(resource.resourceType) ? <section className="mt-6 space-y-3">
       <h2 className="font-medium">CRM Contacts</h2><ButtonLink tone="secondary" href={libraryNewImportHref(organizationId, resourceId)}>Import into CRM</ButtonLink>
-      <p className="text-sm text-muted">Import once creates a snapshot. Keep synchronized saves the mapping and source identities. Sync now refreshes the worksheet and opens a review before applying CRM updates. Automatic CRM scheduling is not enabled.</p>
+      <p className="text-sm text-muted">Import once creates a snapshot. Keep synchronized saves the mapping and source identities. Sync now refreshes the worksheet and opens a review before applying CRM updates.</p>
       {removed.count ? <p role="status" className="text-sm">{removed.count} source rows removed. Canonical CRM contacts and their history are preserved.</p> : null}
       {mappings.filter(mapping => mapping.syncMode === 'sync').map(mapping => {
         const run = runs.find(run => run.mappingId === mapping.id);

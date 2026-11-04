@@ -485,8 +485,7 @@ export function AutomationDashboard({
               </div>
             </div>
             <p className="mt-2 text-[10px] text-subtle">
-              Delivery states for messages queued in the selected period. Run
-              completion does not confirm delivery.
+              Run completion does not confirm delivery.
             </p>
             <div className="mt-3 space-y-2">
               {[...data.summary.rules]

@@ -49,7 +49,7 @@ export function MappingEditor({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="resourceId" value={resourceId} />
       <p className="max-w-3xl text-sm text-muted">
-        {totalRows} row{totalRows === 1 ? '' : 's'} found. GildOps has suggested a destination for each column; check them, then review the changes. Nothing is written yet.
+        {totalRows} row{totalRows === 1 ? '' : 's'} found. Nothing is written yet.
       </p>
       {error ? <ErrorText role="alert">{error}</ErrorText> : null}
 
@@ -61,7 +61,7 @@ export function MappingEditor({
           <FormField id="mapping-default-lifecycle" label="Lifecycle for new contacts" hint="A mapped lifecycle column wins per row. Existing contacts keep theirs.">{field => <SelectField {...field} name="defaultLifecycle" defaultValue="" options={[{ value: '', label: 'Unclassified' }, ...CONTACT_LIFECYCLES.map((value) => ({ value: value, label: classificationLabel(value) }))]} />}</FormField>
           <FormField id="mapping-dedupe" label="Duplicate matching">{field => <SelectField {...field} name="dedupeKey" defaultValue="email" options={[{ value: 'email', label: 'Stable source ID, then email' }, { value: '', label: 'Stable source ID only' }]} />}</FormField>
         </div>
-        <Hint className="mt-3 block">Lead temperature stays Unrated unless a column is mapped. {maySynchronize ? 'A synchronized worksheet is reviewed on every refresh: local edits are kept on conflicts and removed rows never delete contacts. Automatic scheduling is not enabled.' : 'Updates to contacts this source created before are reviewed like new rows.'}</Hint>
+        <Hint className="mt-3 block">Lead temperature stays Unrated unless a column is mapped. {maySynchronize ? 'A synchronized worksheet is reviewed on every refresh: local edits are kept on conflicts and removed rows never delete contacts.' : 'Updates to contacts this source created before are reviewed like new rows.'}</Hint>
       </Card>
 
       <Card as="section" aria-labelledby="mapping-columns" className="p-0 py-0">

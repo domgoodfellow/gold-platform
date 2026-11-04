@@ -56,7 +56,6 @@ export default async function NewImportPage({
         <PageHeader title="Import into Contacts" crumbs={[{ label: 'Imports', href: libraryHref(organizationId, 'sources') }]} />
         <LibraryNav organizationId={organizationId} active="sources" />
         <ImportSteps organizationId={organizationId} current={0} />
-        <p className="mb-4 max-w-3xl text-sm text-muted">Choose where the contacts come from. Next you map columns to contact fields and review every change; nothing reaches Contacts until you apply it.</p>
         {typeof error === 'string' ? <ErrorText role="alert" className="mb-4">{error}</ErrorText> : null}
         <ChooseImportSource organizationId={organizationId} resources={resources} files={csvFiles} connectionStatus={new Map(connections.map(connection => [connection.id, connection.status]))} />
       </>

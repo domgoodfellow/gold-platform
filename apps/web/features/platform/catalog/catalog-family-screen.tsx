@@ -53,7 +53,7 @@ export function CatalogFamilyScreen({ goldId, model }: { goldId: string; model: 
             <SectionHeading>Runtime coverage</SectionHeading>
             <p className="mt-1 text-sm text-muted-foreground">
               {byState.available} available, {byState.partial} partial, {byState.planned} planned — out of {totalFeatures}{' '}
-              catalogued Features. Planned Features are real rows, truthfully marked; nothing here claims they run today.
+              catalogued Features.
             </p>
           </Section>
         </TabsContent>

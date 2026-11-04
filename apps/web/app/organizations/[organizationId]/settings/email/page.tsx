@@ -40,10 +40,6 @@ export default async function EmailSendingSettingsPage({ params }: PageProps<'/o
   return (
     <SettingsPageFrame>
       {header}
-      <Hint className="mt-1 max-w-prose">
-        Email your business sends to customers — booking confirmations, automation messages and service notifications —
-        comes from an address on a domain you own. Team invitations come from GildOps and need no setup here.
-      </Hint>
 
       <SendingStatus status={status} senders={senders} />
 

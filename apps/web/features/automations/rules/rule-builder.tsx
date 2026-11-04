@@ -245,9 +245,6 @@ export function RuleBuilder({
                 />
               )}
             </div>
-            <p className="mt-6 text-[11px] text-subtle">
-              End of rule · execution result is recorded by the runtime
-            </p>
           </div>
         </section>
         <aside

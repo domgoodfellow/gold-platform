@@ -24,7 +24,7 @@ export function PricingPlanner({ currency, items }: { currency: string | null; i
   }>
     {/* ui-copy-allow: docs/surfaces/finance.md requires the panel to state that scenarios are lost on leaving or reload */}
     <p className="mb-2 text-sm text-muted">Estimated costs and suggested prices · unsaved. Changes stay on this page and are lost when you leave or reload.</p>
-    <p className="mb-4 text-sm text-muted">Use recorded Work costs in the report above as historical context, then enter your own delivery assumptions below. Forecast profit is not realized profit. Catalog prices, quotes and invoices are unchanged.</p>
+    <p className="mb-4 text-sm text-muted">Forecast profit is not realized profit. Catalog prices, quotes and invoices are unchanged.</p>
     {items.length === 0 ? <p className="mb-4 text-sm text-muted">No catalog items yet. You can still model estimated costs and compare scenarios.</p> : null}
     <div className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
       {drafts.map(draft => <ScenarioCard key={draft.id} draft={draft} items={items} onChange={(scenario, catalogId = draft.catalogId) => update(draft.id, scenario, catalogId)} onRemove={drafts.length > 1 ? () => setDrafts(current => current.filter(d => d.id !== draft.id)) : undefined} />)}

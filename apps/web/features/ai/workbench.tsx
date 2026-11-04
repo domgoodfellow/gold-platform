@@ -708,10 +708,6 @@ export function AgentWorkbench({
           </OperationalPanel>
           <OperationalPanel title="Operator Copilot">
             <ShieldCheck size={20} className="text-accent-text" />
-            <p className="my-3 text-xs text-muted">
-              Work with the assistant in the persistent global Agent rail.
-              Conversations remain private to their operator.
-            </p>
             <Button
               tone="secondary"
               onClick={() => {
@@ -1114,9 +1110,7 @@ function DeploymentEditor({
             )}
             {surface === "sms" && (
               <p className="text-xs text-muted">
-                Human review required. Consent, suppression, sender verification
-                and inbound idempotency remain Communications-owned. No
-                automated SMS will be sent.
+                Replies need human review, and no automated SMS will be sent.
               </p>
             )}
             {surface === "voice" && (
@@ -1140,9 +1134,7 @@ function DeploymentEditor({
                   </Field>
                 ))}
                 <p className="text-xs text-muted">
-                  Operational readiness requires verified inbound events, audio
-                  ingestion/output, turn handling, fallback, transfer and a
-                  successful controlled call. No voice test is recorded.
+                  No voice test is recorded.
                 </p>
               </>
             )}

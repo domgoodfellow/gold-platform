@@ -3,7 +3,6 @@ import { ChannelReadiness } from '@/features/communications/channel-diagnostics'
 import { workspaceConfigCrumbs } from '@/lib/settings-nav';
 import { Section, SectionHeading } from '@/components/surfaces/section';
 import { PageHeader } from '@/components/headers/page-header';
-import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { ButtonLink } from '@/components/controls/button';
 import { requireConfigurationTarget } from '@/lib/route/workspace-configuration';
@@ -38,11 +37,6 @@ export default async function CommunicationsPage({
         ]}
       />
       <ChannelReadiness gate={gate} organizationId={organizationId} diagnostics={channels.diagnostics} maySend={organization.capabilities.includes('message.send')} channel="sms" />
-      <Hint className="mt-1">
-        The phone GildOps runs for this business, and how its website answers a visitor. Never
-        what any of it costs GildOps, and never a secret. Apps a business connects itself are
-        under Integrations.
-      </Hint>
 
       <Section className="mt-8"><SectionHeading>Numbers & assignments</SectionHeading><ButtonLink href={`/organizations/${organizationId}/comms/configuration/numbers`} tone="text">Manage numbers & assignments</ButtonLink></Section>
 

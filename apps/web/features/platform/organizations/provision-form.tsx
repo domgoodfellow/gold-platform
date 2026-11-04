@@ -102,7 +102,7 @@ export function ProvisionForm({ compact = false }: { compact?: boolean }) {
       {state.provisioned ? (
         <Hint>
           {state.provisioned} exists and belongs to its owner. It is empty — no statuses, no
-          types, no hours — which is the next conversation rather than a fault.
+          types, no hours.
         </Hint>
       ) : null}
 

@@ -930,8 +930,7 @@ export function SupportWorkspace({
             Queue-specific policies take precedence over the priority fallback.
             Targets apply on Case creation and retain their original snapshot
             after configuration changes, reassignment, priority changes and
-            reopening. Business-hours clocks and first-response targets are
-            unavailable.
+            reopening.
           </p>
         </>
       )}
@@ -1072,11 +1071,6 @@ export function SupportWorkspace({
               </Table>
             </OperationalPanel>
           </div>
-          <p className="text-xs text-muted">
-            Counts use exact tenant-wide queries. No customer satisfaction,
-            presence, first-contact resolution or response-time estimates are
-            inferred.
-          </p>
         </>
       )}
     </AppPage>

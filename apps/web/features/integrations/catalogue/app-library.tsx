@@ -23,7 +23,7 @@ export function AppLibrary({ organizationId, entries, connected, mayManage, q, c
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="filter" value="connected" defaultChecked={connectedOnly} />Connected</label>
       <Button type="submit" tone="secondary" size="small">Search</Button>
     </form>
-    <p className="mt-4 text-sm text-muted">{total} application {total===1?'family':'families'}. Connection setup and account authorization are separate from available operations.</p>
+    <p className="mt-4 text-sm text-muted">{total} application {total===1?'family':'families'}.</p>
     {entries.length===0 ? <EmptyState className="mt-4">No application matches these filters.</EmptyState> : <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {entries.map(entry=><article key={entry.key} className="flex min-w-0 flex-col gap-3 rounded-lg border border-border p-4">
         <div className="flex items-center gap-3"><BrandMark label={entry.name} src={entry.icon} /><h3 className="font-medium">{entry.name}</h3></div>

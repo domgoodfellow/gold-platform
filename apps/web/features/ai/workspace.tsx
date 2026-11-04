@@ -571,7 +571,7 @@ export function AiWorkspace({
               <OperationalPanel title="Usage & allowance">
                 {data.usage.items.length ? <dl className="space-y-3 text-sm">{data.usage.items.map(item => <div key={item.allowanceKey}><dt className="font-medium">{item.label}</dt><dd className="mt-1 text-xs text-muted">{item.consumed ?? 'Unmeasured'} / {item.included ?? 'Unspecified'} {item.unit} · {item.period}</dd></div>)}</dl> : <p className="text-xl font-semibold">Unavailable</p>}
                 <p className="mt-2 text-xs text-muted">
-                  Canonical allowance windows. Per-agent usage attribution is not yet available. Missing measurements are not zero usage.
+                  Missing measurements are not zero usage.
                 </p>
                 <Link
                   className="mt-3 inline-block text-xs text-accent-text"

@@ -40,7 +40,7 @@ export default async function CommsNumbersPage({
         crumbs={workspaceConfigCrumbs(organizationId, 'phone-numbers', gate)}
       />
       <NumberList organizationId={organizationId} numbers={numbers} assignedCount={assignedCount} />
-      <Hint className="mt-4">Numbers are added to a business by GildOps. What each is used for, and who dials from it, is set on its own page.</Hint>
+      <Hint className="mt-4">Numbers are added to a business by GildOps.</Hint>
     </AppPage>
   );
 }
