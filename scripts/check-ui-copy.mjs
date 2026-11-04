@@ -195,7 +195,19 @@ export function scanSource(src, rel) {
     };
     if (SUBTITLE_AFTER.has(tag.name)) {
       const end = elementEnd(src, tag);
-      if (end > 0) subtitleAt(nextSibling(src, end), `after <${tag.name}>`, tag.self ? '' : src.slice(tag.end, end));
+      if (end > 0) {
+        const headingRaw = tag.self ? '' : src.slice(tag.end, end);
+        const direct = nextSibling(src, end);
+        if (direct && PROSE_TAGS.test(direct.tag.name)) subtitleAt(direct, `after <${tag.name}>`, headingRaw);
+        else {
+          // A heading row: the heading and its actions share a wrapper; a sentence right after the
+          // wrapper is still the heading's subtitle.
+          let pos = end, sib = direct;
+          for (let n = 0; sib && n < 4; n++) { const e = elementEnd(src, sib.tag); if (e < 0) { pos = -1; break; } pos = e; sib = nextSibling(src, pos); }
+          const close = pos > 0 && !sib ? /^\s*<\/div>/.exec(src.slice(pos, pos + 40)) : null;
+          if (close) subtitleAt(nextSibling(src, pos + close[0].length), `after <${tag.name}> row`, headingRaw);
+        }
+      }
     }
     if (tag.name === 'OperationalPanel' && !tag.self) subtitleAt(nextSibling(src, tag.end), 'first in <OperationalPanel>', '', false);
   }
