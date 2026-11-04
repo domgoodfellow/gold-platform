@@ -48,6 +48,7 @@ export function FormSharing({ organizationId, formId, formSlug, publicKey, organ
   return (
     <section id="sharing" aria-labelledby="form-sharing-heading" className="scroll-mt-20 rounded-lg border border-border bg-surface p-4">
       <h2 id="form-sharing-heading" className="text-sm font-semibold">Sharing</h2>
+      {/* ui-copy-allow: actionable blocker, shown only while the form is unpublished */}
       {!published ? <Hint className="mt-1">Publish this form to share it. Links and embeds open the published version only.</Hint> : null}
         <div className="mt-4 grid gap-6 text-sm @min-[48rem]/editor:grid-cols-2">
 
