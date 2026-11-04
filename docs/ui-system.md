@@ -380,7 +380,7 @@ No workspace spells a palette colour. A test (`e2e/workspace-convergence.spec.ts
 | Component | Owns | A workspace still decides |
 | --- | --- | --- |
 | `OperationalPanel` | titled section: heading, count, destination link, action, explicit inset or edge-to-edge body, `compact` or `standard` density | the content and which destination it links to |
-| `MetricTile` | label, value, detail, optional passive icon, linked or plain; `emphasis` only for a platform-reported exception | the figure, its meaning and its destination |
+| `MetricTile` | label, value, detail, optional passive icon, linked or plain; `emphasis` only for a platform-reported exception; gutters follow Display density as cards do | the figure, its meaning and its destination |
 | `StatePill` / `StatusTone` | neutral, accent, success, warning, danger | which platform-owned fact maps to a tone; tenant labels stay neutral |
 | `PanelState` | `empty`, `not-configured`, `unavailable`, `restricted` | the message and any first action |
 | `ViewNav` (`components/navigation/view-nav`) | URL-backed sibling views; segmented by default, optional line; current view uses `aria-current="page"` and weight | the views and their URLs |
