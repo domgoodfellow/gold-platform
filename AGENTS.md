@@ -74,6 +74,7 @@ Users are trained, repeat operators. Screens do not explain themselves.
 - Feedback after an action is a toast. Persistent alerts are for unresolved, account-affecting or safety-critical conditions. Critical information never lives only in a tooltip, a toast or a colour.
 - Container choice (card, panel, list, surface variant) follows the existing shared components and the Appearance presets. Do not change a surface's containers unless the work order asks.
 - Existing code is precedent only where it satisfies these rules.
+- The UI copy check runs in `pnpm check`. A justified exception carries `ui-copy-allow: <reason>` on the line above it.
 
 ## Verification and delivery
 
