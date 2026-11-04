@@ -10,7 +10,7 @@ Users are trained, repeat operators. Screens do not explain themselves.
 - **Group labels are not eyebrows.** A group label over list items (`GroupHeading` over its list) is allowed; a label above another heading is an eyebrow.
 - **No default subtitle.** No subtitle or description under a heading unless it passes the content test below. A sentence under every heading teaches people to skip all of them, including the one that matters.
 - **No restating or describing.** Do not restate a label, describe a feature, or add copy because a surface looks empty. People learn what a feature does once; the sentence stays on screen every visit.
-- **Lightest fit.** When explanation is genuinely needed, use the lightest fit, in this order: a clearer label; an inline helper (format, consequence or actionable blocker); an info popover (supplemental, works by touch); an empty state (what the section is for, shown only while empty); documentation. Never a paragraph on the working surface. Each step down costs the person more attention, so stop at the first that works.
+- **Lightest fit.** When explanation is genuinely needed, use the lightest fit, in this order: a clearer label; an inline helper (format, consequence, an actionable blocker, or the meaning of an unfamiliar business term; never a description of the feature); an info popover (supplemental, works by touch); an empty state (what the section is for, shown only while empty); documentation. Never a paragraph on the working surface. Each step down costs the person more attention, so stop at the first that works.
 - **Tooltips.** Tooltips name icon-only controls or add nonessential clarification. No info icon on every row. A repeated icon becomes noise and hides the one row that needs it.
 - **Feedback.** Feedback after an action is a toast. Persistent alerts are for unresolved, account-affecting or safety-critical conditions. Critical information never lives only in a tooltip, a toast or a colour, because each of those can be missed or not perceived at all.
 - **Containers.** Container choice (card, panel, list, surface variant) follows the existing shared components and the Appearance presets. Do not change a surface's containers unless the work order asks. Shared containers are what carry Appearance and brand to every page.
@@ -42,7 +42,7 @@ Choose the lightest pattern that still lets the person finish the task.
 | Tooltip | A short, nonessential clarification, such as an icon-only control's name, on hover and focus | Guidance the person must read, or anything interactive |
 | Info popover | Supplemental explanation that must also work by touch; opens on click, tap or keyboard | Instructions required before an action |
 | Collapsible region | Optional advanced detail, or a long configuration group | Hiding a required step or an active blocker |
-| Inline helper or validation | An instruction needed before acting, error recovery, or an actionable blocker | Describing a feature or restating the label |
+| Inline helper or validation | An instruction needed before acting, format, consequence, error recovery, an actionable blocker, or the meaning of an unfamiliar business term | Describing a feature or restating the label |
 | Toast | Brief feedback after an action the person just took | The only place a critical message appears, or feature promotion |
 | Persistent alert | Safety-critical, account-affecting or unresolved conditions that need sustained visibility | Routine confirmation |
 
@@ -1667,13 +1667,14 @@ Use semantic grouping.
 
 Every field has an accessible label.
 
-Help text explains:
+Help text explains, when needed:
 
 - format;
 - consequence;
-- domain meaning;
+- an actionable blocker;
+- the meaning of an unfamiliar business term.
 
-when needed.
+Help text never describes the feature.
 
 Do not use placeholder text as the only label.
 

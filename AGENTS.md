@@ -69,7 +69,7 @@ Users are trained, repeat operators. Screens do not explain themselves.
 - No eyebrows: no small, uppercase or letter-spaced label above a page, section, panel or card heading. Location belongs to breadcrumbs and `PageLocation`.
 - No subtitle or description under a heading by default. Add one only if it passes the content test: what decision would be worse without this text?
 - Do not restate a label, describe a feature, or add copy because a surface looks empty.
-- When explanation is genuinely needed, use the lightest fit, in this order: a clearer label; an inline helper (format, consequence or actionable blocker); an info popover (supplemental, works by touch); an empty state (what the section is for, shown only while empty); documentation. Never a paragraph on the working surface.
+- When explanation is genuinely needed, use the lightest fit, in this order: a clearer label; an inline helper (format, consequence, an actionable blocker, or the meaning of an unfamiliar business term; never a description of the feature); an info popover (supplemental, works by touch); an empty state (what the section is for, shown only while empty); documentation. Never a paragraph on the working surface.
 - Tooltips name icon-only controls or add nonessential clarification. No info icon on every row.
 - Feedback after an action is a toast. Persistent alerts are for unresolved, account-affecting or safety-critical conditions. Critical information never lives only in a tooltip, a toast or a colour.
 - Container choice (card, panel, list, surface variant) follows the existing shared components and the Appearance presets. Do not change a surface's containers unless the work order asks.
