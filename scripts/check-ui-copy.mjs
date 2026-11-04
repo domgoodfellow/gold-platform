@@ -44,7 +44,7 @@ const HEADINGS = new Set(['h1', 'h2', 'h3', 'h4', 'CardTitle', 'SectionHeading',
 const SUBTITLE_AFTER = new Set(['h1', 'h2', 'h3', 'CardTitle', 'SectionHeading', 'PageHeading', 'SectionHeader', 'PageHeader', 'CollectionHeader', 'RecordHeader', 'ItemTitle']);
 const MUTED = /text-muted|text-subtle|muted-foreground/;
 const PROSE_TAGS = /^(p|div|span|Hint)$/;
-const INFO_ICONS = /<(Info|InfoIcon|CircleHelp|HelpCircle|CircleQuestionMark)\b/g;
+const INFO_ICONS = /<(Info|InfoIcon|InfoPopover|CircleHelp|HelpCircle|CircleQuestionMark)\b/g;
 
 export function isExcluded(rel) {
   return EXCLUDED_PATHS.some((re) => re.test(rel));

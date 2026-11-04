@@ -47,6 +47,7 @@ describe('what the check flags', () => {
 
   it('an info icon drawn once per row', () => {
     expect(rules('<ul>{rows.map((row) => (<li key={row.id}>{row.name}<Info className="size-4" /></li>))}</ul>')).toEqual(['info-icon']);
+    expect(rules('<ul>{rows.map((row) => (<li key={row.id}>{row.name}<InfoPopover label="About">x</InfoPopover></li>))}</ul>')).toEqual(['info-icon']);
   });
 });
 

@@ -40,7 +40,7 @@ Choose the lightest pattern that still lets the person finish the task.
 | Pattern | Use for | Never for |
 | --- | --- | --- |
 | Tooltip | A short, nonessential clarification, such as an icon-only control's name, on hover and focus | Guidance the person must read, or anything interactive |
-| Info popover | Supplemental explanation that must also work by touch; opens on click, tap or keyboard | Instructions required before an action |
+| Info popover | Supplemental explanation that must also work by touch; opens on click, tap or keyboard. Use the shared `InfoPopover` | Instructions required before an action |
 | Collapsible region | Optional advanced detail, or a long configuration group | Hiding a required step or an active blocker |
 | Inline helper or validation | An instruction needed before acting, format, consequence, error recovery, an actionable blocker, or the meaning of an unfamiliar business term | Describing a feature or restating the label |
 | Toast | Brief feedback after an action the person just took | The only place a critical message appears, or feature promotion |
@@ -514,6 +514,8 @@ Examples include:
 - page patterns.
 
 Use these before introducing another route-local implementation of the same responsibility.
+
+`InfoPopover` (`components/controls/info-popover.tsx`) is the one info popover. It is a ghost icon button named by its `label` (what it explains, such as "About resolution performance"), built on the shared Radix popover: it opens on click, tap and keyboard, exposes its expanded state, closes on Escape and returns focus to the trigger, keeps a 44px touch target on a phone, and portals into the nearest `VisualScope`. It holds supplemental explanation only: what a figure counts, how a state is defined, where evidence comes from. It is never the only place for an instruction needed before acting, and never repeated on every row.
 
 ---
 
