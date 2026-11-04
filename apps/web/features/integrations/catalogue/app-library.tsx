@@ -27,6 +27,7 @@ export function AppLibrary({ organizationId, entries, connected, mayManage, q, c
     {entries.length===0 ? <EmptyState className="mt-4">No application matches these filters.</EmptyState> : <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {entries.map(entry=><article key={entry.key} className="flex min-w-0 flex-col gap-3 rounded-lg border border-border p-4">
         <div className="flex items-center gap-3"><BrandMark label={entry.name} src={entry.icon} /><h3 className="font-medium">{entry.name}</h3></div>
+        {/* ui-copy-allow: each app's own catalogue description, record data a person chooses between */}
         <p className="text-sm text-muted">{entry.description}</p>
         {entry.applications.length>1 ? <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted" aria-label="Products">{entry.applications.map(a=><li key={a.key}>{a.name}</li>)}</ul> : null}
         <p className="text-xs text-muted">{entry.categories.join(' · ')}</p>
