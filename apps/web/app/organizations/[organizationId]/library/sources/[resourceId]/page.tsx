@@ -55,6 +55,7 @@ export default async function SourcePage({params}:{params:Promise<{organizationI
         </div>;
       })}
     </section> : null}
+    {/* ui-copy-allow: factual bound on the records listed, not a description */}
     <section className="mt-8"><h2 className="font-medium">Synchronized records</h2><p className="text-sm text-muted">Showing up to 100 records you have permission to read.</p>
       {records.length?<ul className="mt-3 divide-y divide-border">{records.map(record=><li key={record.external_id} className="py-1"><SourceRecordPreview record={record}/></li>)}</ul>:<p className="mt-3 text-sm text-muted">No synchronized records are available.</p>}
     </section>
