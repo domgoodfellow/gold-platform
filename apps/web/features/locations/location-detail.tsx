@@ -78,10 +78,6 @@ export function LocationDetail({
 
         <Section className="mt-8">
           <SectionHeading>Coordinates</SectionHeading>
-          <Hint className="mt-1">
-            Derived from the address, for weather, travel time and service areas — a place with
-            none is an ordinary place.
-          </Hint>
 
           {mayEdit ? (
             <LocationCoordinatesForm

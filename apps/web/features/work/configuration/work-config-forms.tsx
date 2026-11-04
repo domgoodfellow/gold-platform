@@ -621,6 +621,7 @@ function BookingPolicyForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="typeId" value={typeId} />
       <h3 className="text-sm font-medium">When customers can book</h3>
+      {/* ui-copy-allow: docs/surfaces/work.md requires Booking to state that it governs online requests, not availability */}
       <Hint>These limits apply to customers on the public page. Your own team can still schedule any time that works for the people and resources needed.</Hint>
 
       <div className="text-sm">

@@ -106,7 +106,7 @@ export async function DispatchWorkspace({ organizationId, query, db, organizatio
       </div> : selectedId ? <DispatchSelectionNotice key={selectedId}/> : <p className="text-sm text-muted">Select a work item from the queue.</p>}</OperationalPanel>
         {mode === 'map' ? <OperationalPanel density="compact" body="edge-to-edge" title="Map"><DispatchMap styleUrl={mapConfig()?.styleUrl ?? null} markers={markers} selectedId={selected?.id ?? null} selectionHref={href({ selected: '' })}/></OperationalPanel> : null}
         {mode === 'schedule' ? <OperationalPanel density="compact" title="Resource availability" action={<ButtonLink size="small" tone="secondary" href={calendar()}>Open Schedule</ButtonLink>}>
-          <p className="mb-3 text-xs text-muted">{date} - <span title="Organization timezone">{organization.timezone}</span>. Commitments and free windows from Schedule.</p>
+          <p className="mb-3 text-xs text-muted">{date} - <span title="Organization timezone">{organization.timezone}</span></p>
           <ul className="space-y-3">{lanes.map(lane => <li key={lane.resource.id} className="border-t border-border pt-2 text-xs">
             <Link className="font-medium underline" href={calendar(lane.resource.id)}>{lane.resource.name} - {lane.booked.length} commitments</Link>
             {lane.exceptions.length ? <p className="mt-1 text-muted">{lane.exceptions.length} availability exceptions</p> : null}
