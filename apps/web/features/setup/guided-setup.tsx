@@ -22,7 +22,6 @@ export function GuidedSetup({ organizationId, steps, selected, overview, busines
         <Card as="section" aria-labelledby="current-setup-step">
           <p className="text-xs text-muted">Step {index + 1} of {steps.length}</p>
           <h2 id="current-setup-step" className="mt-1 text-lg font-semibold">{selected.label}</h2>
-          <p className="mt-1 text-sm text-muted">{selected.description}</p>
           {selected.key === 'business' ? business : null}
           {selected.key !== 'business' && selected.destinations.length ? <NavigationList label={`${selected.label} destinations`} className="mt-4" items={selected.destinations.map(entry => {
             const area = selected.areas.find(candidate => configurationOwnerPath(candidate.area.href) === `/organizations/${organizationId}/${entry.path}`);
@@ -46,7 +45,7 @@ export function GuidedSetup({ organizationId, steps, selected, overview, busines
       </div>
       <aside aria-label="Organization readiness" className="min-w-0 space-y-4 lg:col-start-2 xl:col-start-auto">
         <SetupProgressCard overview={overview} />
-        {live ? <Card><h2 className="text-sm font-medium">Organization is Live</h2><p className="mt-1 text-sm text-muted">You can revisit configuration whenever the business changes.</p><ButtonLink href={`/organizations/${organizationId}/home`} tone="secondary" size="small" className="mt-3">Open Home</ButtonLink></Card>
+        {live ? <Card><h2 className="text-sm font-medium">Organization is Live</h2><ButtonLink href={`/organizations/${organizationId}/home`} tone="secondary" size="small" className="mt-3">Open Home</ButtonLink></Card>
           : <LaunchReview overview={overview} launch={launch} allowedDestinations={allowedDestinations} />}
       </aside>
     </div>
