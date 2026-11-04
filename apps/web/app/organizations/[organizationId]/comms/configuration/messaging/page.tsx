@@ -48,10 +48,6 @@ export default async function CommunicationsPage({
 
       <Section className="mt-8">
         <SectionHeading>Email</SectionHeading>
-        <Hint className="mt-1">
-          The domain this business sends email from, and what it still needs to be verified, is
-          configured on its own page.
-        </Hint>
         <ButtonLink
           href={`/organizations/${organizationId}/${configTarget('email').path}`}
           tone="text"

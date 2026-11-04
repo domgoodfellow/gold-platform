@@ -48,11 +48,6 @@ export function SenderAddresses({
   return (
     <Section className="mt-8">
       <SectionHeading>Sender addresses</SectionHeading>
-      <Hint className="mt-1">
-        Addresses on your verified domains that email can come from. Booking confirmations, automation messages and
-        service notifications use the default address; the Inbox replies from the address a conversation is on.
-      </Hint>
-
       {senders.length === 0 ? (
         <Hint className="mt-3">No sender address yet. Add one below once a domain is verified.</Hint>
       ) : (
@@ -75,6 +70,12 @@ export function SenderAddresses({
           ))}
         </ul>
       )}
+      {senders.length ? (
+        <Hint className="mt-2">
+          Booking confirmations, automation messages and service notifications use the default address; the Inbox replies
+          from the address a conversation is on.
+        </Hint>
+      ) : null}
 
       <AddAddressForm organizationId={organizationId} domains={domains} />
     </Section>

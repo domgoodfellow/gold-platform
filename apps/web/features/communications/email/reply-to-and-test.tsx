@@ -26,11 +26,6 @@ export function ReplyToForm({ organizationId, senders, hasDefault }: { organizat
   return (
     <Section className="mt-8">
       <SectionHeading>Where replies go</SectionHeading>
-      <Hint className="mt-1 max-w-prose">
-        When a customer replies to a booking confirmation, automation message or notification, the reply goes to the
-        default sender address unless you choose another of your addresses here. Only addresses on your verified domains
-        can be chosen.
-      </Hint>
       {!hasDefault ? (
         <Hint className="mt-3">Choose a default sender first.</Hint>
       ) : (
@@ -67,10 +62,6 @@ export function TestSendForm({ organizationId, ready, tests }: { organizationId:
   return (
     <Section className="mt-8">
       <SectionHeading>Send a test email</SectionHeading>
-      <Hint className="mt-1 max-w-prose">
-        Sends one short test from your default sender to your own sign-in email address, to check that email from your
-        business arrives. A few tests can be sent each hour.
-      </Hint>
       <form action={run} className="mt-3 flex flex-wrap items-center gap-2">
         <input type="hidden" name="organizationId" value={organizationId} />
         <Button type="submit" tone="secondary" disabled={pending || !ready}>{pending ? 'Sending…' : 'Send test email to me'}</Button>

@@ -125,6 +125,9 @@ function keptByStructure(attrs, raw) {
   // A value drawn from data that is itself a description is still a subtitle.
   if (words.length === 0 && /\b\w*(description|summary|intro|purpose|explanation|DESCRIPTIONS)\w*\b|\{\s*text\s*\}/.test(raw)) return null;
   if (words.length < 5) return 'factual metadata';
+  // Short facts separated by middle dots ("open · anonymous visitor · no Customer created").
+  const facts = literal.split('·');
+  if (facts.length > 1 && facts.every((fact) => fact.trim().split(/\s+/).filter(Boolean).length <= 3)) return 'factual metadata';
   return null;
 }
 

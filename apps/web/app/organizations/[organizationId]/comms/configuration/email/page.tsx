@@ -1,8 +1,6 @@
-import Link from 'next/link';
 import { messagingSenders } from '@/lib/domain/reception/channel-readiness';
 import { ChannelReadiness } from '@/features/communications/channel-diagnostics';
 import { workspaceConfigCrumbs } from '@/lib/settings-nav';
-import { Hint } from '@/components/controls/inputs';
 import { PageHeader } from '@/components/headers/page-header';
 import { EmailAddresses } from '@/features/communications/email/email-addresses';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
@@ -30,11 +28,6 @@ export default async function InboxEmailPage({ params }: PageProps<'/organizatio
   return (
     <SettingsPageFrame>
       <PageHeader title="Inbox email" crumbs={[...workspaceConfigCrumbs(organizationId, 'inbox-email', gate)]} />
-      <Hint className="mt-1 max-w-prose">
-        Domains, sender addresses and the default sender are set up in{' '}
-        <Link className="text-accent-text underline" href={`/organizations/${organizationId}/settings/email`}>Settings → Email sending</Link>.
-        Here you choose which of those addresses receive replies into the Inbox.
-      </Hint>
       <div className="mt-6">
         <ChannelReadiness gate={gate} organizationId={organizationId} diagnostics={channels.diagnostics} maySend={organization.capabilities.includes('message.send')} channel="email" />
       </div>
