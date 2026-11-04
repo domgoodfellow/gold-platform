@@ -32,6 +32,11 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-11-04
+
+- Operator screens (workspaces, Settings, Setup and Platform) no longer print a sentence under a heading that restates it or describes the feature, and no longer put a small label above a card title. About 70 such lines are gone across CRM, Work, AI, Home, Finance, Support, Library, Insights, Setup, Automations, Communications, Settings and Platform. Where a sentence carried a real consequence, such as "turn receiving on only once the domain's mail records point at GildOps", it now sits beside the control it governs instead of under the heading. AI's Recent agent interactions panel is now titled Your recent agent interactions, and AI's text-only Insights panel is gone. Public pages, sign-in and tenant websites are unchanged.
+- The rules for this are written down: `docs/ui-system.md` now opens with Core rules, workspace and feature screen specifications moved to `docs/surfaces/`, and `AGENTS.md` is the agent contract that `CLAUDE.md` imports. `pnpm check:ui-copy` reports any new subtitle, eyebrow or per-row info icon on an operator screen.
+
 ## 2026-11-02
 
 - Every choice from a list now uses one styled control instead of the browser's own dropdown: a Select whose popup matches the rest of the app (theme, visual style, density, light and dark), marks the chosen option and works fully by keyboard, and which becomes searchable for long lists such as contacts, members, time zones and countries. The two industry fields now suggest values in the same style while still accepting any industry typed. Saved values, required fields, "None"/"Any"/"Unassigned" choices and filter addresses are unchanged.
