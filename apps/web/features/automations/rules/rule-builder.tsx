@@ -140,9 +140,6 @@ export function RuleBuilder({
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold">Rule workflow</h2>
-              <p className="mt-1 text-xs text-subtle">
-                Trigger → all conditions → actions in order
-              </p>
             </div>
             <Workflow className="size-5 text-subtle" />
           </div>
