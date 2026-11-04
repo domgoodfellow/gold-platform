@@ -27,6 +27,7 @@ export default async function ContactSupportPage({
         section="Help"
         title="Contact GildOps Support"
       />
+      {/* ui-copy-allow: discloses what a support request sends to GildOps */}
       <Hint className="mb-6">
         This reaches GildOps about the product, for {organization.name}. We record who is asking, which business, and the page you came from. Nothing else from your business is attached, and sending a request does not give GildOps access to it.
       </Hint>
