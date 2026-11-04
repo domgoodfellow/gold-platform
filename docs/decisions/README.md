@@ -33,11 +33,12 @@ Each kind of rule has one owner. Another document may link to it, but must not r
 | Owner | Defines | Does not define |
 | --- | --- | --- |
 | `docs/product.md` | Approved product behavior and information architecture: scopes, workspaces, which destinations exist and how they are grouped | Presentation details, module layout |
-| `docs/ui-system.md` | Presentation, interaction and composition contracts: archetypes, page identity, surfaces, responsive behavior, accessibility | Which destinations exist or how they are grouped |
+| `docs/ui-system.md` | System-wide presentation, interaction and composition contracts: Core rules, archetypes, page identity, surfaces, responsive behavior, accessibility | Which destinations exist or how they are grouped |
+| `docs/surfaces/` | Workspace and feature surface specifications that apply the system-wide contracts | System-wide UI rules |
 | `docs/architecture.md` | Layers, dependency direction, module ownership, including which projection modules own navigation data | Product behavior, presentation |
-| Other canonical docs (see `CLAUDE.md`) | Their named concern | Concerns owned above |
+| Other canonical docs (see `AGENTS.md`) | Their named concern | Concerns owned above |
 | ADRs (this directory) | Why a durable choice was made, its tradeoffs and what it displaced; supersession history | Current detail beyond the decision itself |
-| `CLAUDE.md` | How agents interpret, implement and change these contracts | Product, UI or architecture rules |
+| `AGENTS.md` (imported by `CLAUDE.md`) | How agents interpret, implement and change these contracts | Product, UI or architecture rules |
 | Tests (`test-manifest.json`) | Executable checks derived from approved contracts | New contracts. A test that passes after its expectation was edited proves nothing about authorization |
 
 Accepted product decisions define intended behavior. Current canonical specifications express those decisions. ADRs explain decisions and historical changes. Tests enforce current behavior. Existing code is evidence of implementation, not justification for redefining requirements.

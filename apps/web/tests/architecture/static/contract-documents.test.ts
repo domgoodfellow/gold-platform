@@ -81,12 +81,14 @@ describe('the explicit workspace Dashboard contract (ADR-049, superseding ADR-04
 describe('protected contract paths', () => {
   it('cover the agent contract, the decision record, the canonical contract documents and this guard', () => {
     const patterns = protectedPatterns(read('.github/CODEOWNERS'));
-    const required = ['CLAUDE.md', 'docs/decisions/ADR-046-contextual-workspace-navigation.md', 'docs/product.md', 'docs/architecture.md', 'docs/ui-system.md', 'docs/testing.md', 'scripts/contract-guard.mjs', '.github/workflows/ci.yml', 'test-manifest.json'];
+    const required = ['AGENTS.md', 'CLAUDE.md','docs/decisions/ADR-046-contextual-workspace-navigation.md', 'docs/product.md', 'docs/architecture.md', 'docs/ui-system.md', 'docs/testing.md', 'scripts/contract-guard.mjs', '.github/workflows/ci.yml', 'test-manifest.json'];
     expect(required.filter((path) => !isProtected(path, patterns))).toEqual([]);
   });
 
   it('point agents at the authority model and the change protocol', () => {
-    const agents = read('CLAUDE.md');
+    // AGENTS.md is the agent contract; CLAUDE.md only imports it for Claude Code.
+    expect(read('CLAUDE.md')).toMatch(/^@AGENTS\.md\r?$/m);
+    const agents = read('AGENTS.md');
     expect(agents).toContain('docs/decisions/README.md');
     expect(agents).toMatch(/Contract-Change/);
   });
@@ -100,7 +102,7 @@ describe('approved CRM consolidation governance', () => {
     expect(header('ADR-047-page-location-and-identity.md')).toMatch(/Status:\*\* Accepted/);
   });
   it('keeps approved decisions above implementation evidence and one CRM directory', () => {
-    expect(read('CLAUDE.md')).toContain('Existing code is implementation evidence');
+    expect(read('AGENTS.md')).toContain('Existing code is implementation evidence');
     expect(read('docs/product.md')).toContain('`/crm/contacts/[contactId]`');
     expect(read('docs/product.md')).not.toContain("Dashboard (`/sales`)");
     expect(read('docs/data.md')).toContain('30 consecutive days');

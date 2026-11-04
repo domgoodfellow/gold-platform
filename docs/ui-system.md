@@ -1,5 +1,62 @@
 # GildOps UI System
 
+## Core rules
+
+These rules apply to every UI change on an operator surface: the application workspaces, Settings, Setup and Platform. Public surfaces (the GildOps marketing site, public customer pages, tenant website renderers and sign-in) follow `docs/public-web.md`. Workspace and feature specifications are in `docs/surfaces/`.
+
+Users are trained, repeat operators. Screens do not explain themselves.
+
+- **No eyebrows.** No small, uppercase or letter-spaced label above a page, section, panel or card heading. Location belongs to breadcrumbs and `PageLocation`, so a label above the heading only repeats it.
+- **Group labels are not eyebrows.** A group label over list items (`GroupHeading` over its list) is allowed; a label above another heading is an eyebrow.
+- **No default subtitle.** No subtitle or description under a heading unless it passes the content test below. A sentence under every heading teaches people to skip all of them, including the one that matters.
+- **No restating or describing.** Do not restate a label, describe a feature, or add copy because a surface looks empty. People learn what a feature does once; the sentence stays on screen every visit.
+- **Lightest fit.** When explanation is genuinely needed, use the lightest fit, in this order: a clearer label; an inline helper (format, consequence or actionable blocker); an info popover (supplemental, works by touch); an empty state (what the section is for, shown only while empty); documentation. Never a paragraph on the working surface. Each step down costs the person more attention, so stop at the first that works.
+- **Tooltips.** Tooltips name icon-only controls or add nonessential clarification. No info icon on every row. A repeated icon becomes noise and hides the one row that needs it.
+- **Feedback.** Feedback after an action is a toast. Persistent alerts are for unresolved, account-affecting or safety-critical conditions. Critical information never lives only in a tooltip, a toast or a colour, because each of those can be missed or not perceived at all.
+- **Containers.** Container choice (card, panel, list, surface variant) follows the existing shared components and the Appearance presets. Do not change a surface's containers unless the work order asks. Shared containers are what carry Appearance and brand to every page.
+- **Precedent.** Existing code is precedent only where it satisfies these rules. Older screens predate them and are not a pattern to copy.
+
+### Content test
+
+For every visible supporting sentence, ask:
+
+> What decision would be worse without this text?
+
+If none, remove it or move it to a disclosure the person chooses to open.
+
+A familiar destination needs a page title and nothing more. A route-level description needs a demonstrated orientation or decision purpose. A self-evident label needs neither an icon nor a subtitle.
+
+Defaults:
+
+- Settings row: label plus the operative value, state or control. An explanation is added only where an option is unfamiliar.
+- Record row: primary data plus the key state or action. Metadata and history appear on request.
+- Feature row: name, current state, and the one action allowed. Setup blockers and upgrade detail appear when they apply.
+- Section: heading and content. A section heading earns its place by separating meaningful groups, not by adding a layer.
+
+### Disclosure patterns
+
+Choose the lightest pattern that still lets the person finish the task.
+
+| Pattern | Use for | Never for |
+| --- | --- | --- |
+| Tooltip | A short, nonessential clarification, such as an icon-only control's name, on hover and focus | Guidance the person must read, or anything interactive |
+| Info popover | Supplemental explanation that must also work by touch; opens on click, tap or keyboard | Instructions required before an action |
+| Collapsible region | Optional advanced detail, or a long configuration group | Hiding a required step or an active blocker |
+| Inline helper or validation | An instruction needed before acting, error recovery, or an actionable blocker | Describing a feature or restating the label |
+| Toast | Brief feedback after an action the person just took | The only place a critical message appears, or feature promotion |
+| Persistent alert | Safety-critical, account-affecting or unresolved conditions that need sustained visibility | Routine confirmation |
+
+Requirements for every disclosure:
+
+- it opens and closes by keyboard, with visible focus and a way to dismiss it (Escape for floating content);
+- its trigger has an accessible name and exposes expanded state;
+- it works by touch, with a target large enough to use on a phone;
+- critical information is never held only in a tooltip, a toast or a colour.
+
+Do not add an info icon to every row.
+
+---
+
 ## Purpose
 
 This document defines the **canonical user-interface and interaction system for GildOps**.
@@ -330,7 +387,7 @@ No workspace spells a palette colour. A test (`e2e/workspace-convergence.spec.ts
 | `OperationalTable` | header, row and overflow geometry | columns and rows |
 | `ConfigureLink` (`components/controls`) | the one "Configure" entry on a hub | the destination; it is never a second editor |
 
-Page identity is `PageHeader` (or `WorkspaceHome`). Search and period filters sit in a toolbar under it, not in its actions, so the actions are the workspace's real tasks. The Finance Dashboard is the approved exception: its reporting period leads its header controls, followed by Customize dashboard, Configure and its financial actions, with the one primary action last. The header stays one row: below wide desktop, the secondary actions (New quote, Record payment) and Configure move into one More menu, and on a phone Customize dashboard moves there too, while the reporting period and the primary action stay visible. Choosing a month applies it; Apply remains where there is room. The Work Dashboard follows the same rule with its selected day: date, Configure, Dispatch and New work last, kept to one row on a phone by showing Configure and Dispatch as icons. A restated purpose sentence is not used; factual metadata (period, timezone, working date) is `meta`.
+Page identity is `PageHeader` (or `WorkspaceHome`). Search and period filters sit in a toolbar under it, not in its actions, so the actions are the workspace's real tasks. Dashboard header exceptions: Finance in [docs/surfaces/finance.md](surfaces/finance.md#finance-dashboard-header); Work in [docs/surfaces/work.md](surfaces/work.md#work-dashboard-header). A restated purpose sentence is not used; factual metadata (period, timezone, working date) is `meta`.
 
 Empty states are one of four facts and must not be rendered alike: **empty** (a true zero), **not configured** (something required is missing; link to where), **unavailable** (the read failed or could not be verified; never shown as zero or healthy), **restricted** (about the viewer, not the data). Optional polish, such as a missing logo or introduction, is a suggestion, not an exception.
 
@@ -509,44 +566,7 @@ Interaction and state
 Rendered verification
 ```
 
-### Content test
-
-For every visible supporting sentence, ask:
-
-> What decision would be worse without this text?
-
-If none, remove it or move it to a disclosure the person chooses to open.
-
-A familiar destination needs a page title and nothing more. A route-level description needs a demonstrated orientation or decision purpose. A self-evident label needs neither an icon nor a subtitle.
-
-Defaults:
-
-- Settings row: label plus the operative value, state or control. An explanation is added only where an option is unfamiliar.
-- Record row: primary data plus the key state or action. Metadata and history appear on request.
-- Feature row: name, current state, and the one action allowed. Setup blockers and upgrade detail appear when they apply.
-- Section: heading and content. A section heading earns its place by separating meaningful groups, not by adding a layer.
-
-### Disclosure patterns
-
-Choose the lightest pattern that still lets the person finish the task.
-
-| Pattern | Use for | Never for |
-| --- | --- | --- |
-| Tooltip | A short, nonessential clarification, such as an icon-only control's name, on hover and focus | Guidance the person must read, or anything interactive |
-| Info popover | Supplemental explanation that must also work by touch; opens on click, tap or keyboard | Instructions required before an action |
-| Collapsible region | Optional advanced detail, or a long configuration group | Hiding a required step or an active blocker |
-| Inline helper or validation | An instruction needed before acting, error recovery, or an actionable blocker | Describing a feature or restating the label |
-| Toast | Brief feedback after an action the person just took | The only place a critical message appears, or feature promotion |
-| Persistent alert | Safety-critical, account-affecting or unresolved conditions that need sustained visibility | Routine confirmation |
-
-Requirements for every disclosure:
-
-- it opens and closes by keyboard, with visible focus and a way to dismiss it (Escape for floating content);
-- its trigger has an accessible name and exposes expanded state;
-- it works by touch, with a target large enough to use on a phone;
-- critical information is never held only in a tooltip, a toast or a colour.
-
-Do not add an info icon to every row.
+The content test and disclosure patterns are in **Core rules** at the top of this document.
 
 ### Locked and unavailable capabilities
 
@@ -810,9 +830,7 @@ Finance applies this contract first; every workspace follows it.
 - **Full page: extensive work.** Catalog administration over many records, detailed reporting, later quote composition or subscription management, and multi-step configuration that needs context.
 - **Inline editor: local, reversible changes.** Simple, bounded row edits such as a price item; do not force a dialog where an accessible inline editor already fits.
 
-Website template previews use `components/display/preview-frame.tsx` to render the canonical website sections in an isolated, scaled viewport. Public responsive breakpoints must follow the preview width rather than the application's width. Studio website and form editors share `features/studio/editor-layout.tsx`; secondary panes respond to the available editor container width and open as page drawers on compact layouts. Editing state remains in the workbench owner when a drawer closes.
-
-Studio Home retains a contained website overview, four factual summaries, Forms/content, recent submissions, creation shortcuts and a supporting publishing/attention/public-surface/activity column even when empty. Public website links require both a ready managed hostname and a published revision. A published site can simultaneously have an unpublished working revision. Booking readiness consumes usable module access, published bookable types and a public slug; portal invitations remain in CRM and brand/public-address configuration remains in Organization Settings.
+Studio previews, editors and Studio Home: [docs/surfaces/studio.md](surfaces/studio.md#website-previews-and-editors).
 
 Page geometry is semantic.
 
@@ -932,53 +950,27 @@ The entered-workspace sidebar, with its phone sheet and page-location menu, is t
 
 The organization header carries no workspace Calendar shortcut (ADR-050). Calendars are the projection's registered destinations (`NavItem.calendar`), reached in context: CRM from its Dashboard (when tasks are available) and Tasks, Work from its Dashboard; no address is built by appending `/calendar`. No notification control is shown until an operator notification read model exists. Calendar pages themselves still check only organization membership (open question, Slice 2C).
 
-Inside an entered workspace the heading row is set apart from the workspace's pages by an outlined icon tile and a divider, in the full and the collapsed sidebar, so a page that shares the workspace's glyph (CRM and Customers, Communications and Dialer, Marketing and Campaigns) never reads as the same row. The tile is outlined, not filled, so an inactive heading never looks selected; the selected state is the shared sidebar one.
+Inside an entered workspace the heading row is set apart from the workspace's pages by typography and a divider, in the full and the collapsed sidebar, so a page that shares the workspace's glyph (CRM and Customers, Communications and Dialer, Marketing and Campaigns) never reads as the same row. Workspace glyphs use the same dimensions and alignment as ordinary sidebar rows, without a separate tile (ADR-048, amended 2026-10-21); the selected state is the shared sidebar one.
 
-Sidebar destinations and configuration, by workspace:
-
-- **Marketing:** Campaigns, Audiences, Leads and Performance (`marketing.read` or `marketing.manage`; changes still need `marketing.manage`).
-- **AI:** Agent activity and Evaluations, for any member. Agents, Channel deployments, Knowledge and Tools stay `organization.manage` configuration targets in AI's Configuration branch.
-- **Finance:** Catalog & Pricing (the operating price book; `price.manage`, `work_item.price` or `organization.manage`), Quotes, Invoices, Payments and Financial reports (`report.read`), each behind the billing module. Finance has no Configuration row, Configure control or configuration landing: trading currency belongs to Organization Settings → General (Regional settings) and payment collection to Organization Settings → Customer payments (`settings/payments`, whose card section keeps the `#getting-paid` anchor), and Finance shows no platform link.
-- **Communications:** Numbers and Configuration stay under Configure.
-- **Work:** Dashboard, Work items, Schedule, Resources, Locations and Equipment & Assets as eligible. Work has no Configuration row: Work types & workflow open from Work items and Scheduling & hours from Schedule (each page's Configure control), and that page stays selected while its editor is open. `field/configuration` still redirects to the first editor the member may open.
+Sidebar destinations and configuration, by workspace: [docs/surfaces/shell.md](surfaces/shell.md#sidebar-destinations-and-configuration-by-workspace).
 
 ### Workspace Home
 
-Work Dashboard at `/field` (`WorkspaceHome` with the resolved location, so the workspace bar names Dashboard and the page prints no Work title) draws its widgets on the shared `DashboardLayoutGrid` with the product default layout; personal Work layouts are not stored, so no Customize control is offered. In reading order: Work overview (scheduled on the selected day, unassigned scheduled work, unscheduled work, and requirements met as "n of m", or "Nothing scheduled" instead of a ratio), Needs attention beside the selected day's schedule, the shared scheduled-work chart for the seven days ending on the selected day beside Dispatch capacity, then Upcoming (the seven local dates after the selected day) and recent activity. Every figure comes from `workOperations`; nothing is counted twice or stored. Needs attention uses the shared `AttentionCategories` (Finance's grammar): only categories with records, each linking to Dispatch with the matching `assignment` filter, otherwise one all-clear line. The header holds one `PeriodField` date control (applied on choice, in the organization's zone; no timezone is printed), Configure (icon only on a phone), Dispatch and New work last. Before there is work the overview slot holds the one missing step and its authorized action: no types, a type with no starting stage, or no work yet. Scheduling widgets, the date control and Dispatch appear only where a ready type is scheduled; work that is never scheduled is never asked for a resource. Unconfigured opening hours are stated once in Dispatch capacity; permissive availability semantics remain unchanged. No arrival, GPS, route or productivity metrics are inferred. Ordinary panel bodies own 12px compact or 16px standard gutters on all four sides; edge-to-edge tables and full-width row lists own their cell spacing. `body="inset"` is the default and `body="edge-to-edge"` is explicit; legacy `flush` remains compatible. Callers do not repeat outer padding. Work destinations remain in the canonical sidebar. Workspace heading glyphs use ordinary sidebar row dimensions and alignment; typography and the group divider establish hierarchy.
+Work Dashboard, Dispatch, Work creation, Work items and the Work record: [docs/surfaces/work.md](surfaces/work.md#work-dashboard).
 
-Dispatch at `/work/dispatch` is an operational queue and selected Work inspector using `CollectionToolbar`, URL-backed filters, exact database counts and paging. Date, Work type and search lead; status, resource, resource class and assignment state use the shared filter surface with removable chips and Reset. Changing criteria clears pagination and selection; changing type also clears status. An explicit selection may remain across queue pages, but is read through the same filters and tenant authorization. Unavailable or filtered-out selections have an explanatory empty inspector. On phones, an explicit selection precedes the queue. Queue is the default presentation; Map preserves the MapLibre coordinate behavior; legacy `mode=schedule` shows compact read-only availability from the same scheduling projection as Schedule, with date/resource links to its full Calendar. No second calendar or commitment model exists. The header omits repeated timezone metadata; the date control and scheduling dialog provide timezone context. Assign resources and Schedule/Reschedule open guarded focused dialogs using existing forms and commands, with Cancel, discard protection, preserved input on refusal and focus return. Required staffing, actual assignments and assessed time availability are separate: unscheduled gaps read Not yet staffed, with no invented time conflict. Upcoming uses the same seven local dates after the selected day as Dashboard; its link keeps that selected day. Date intervals do not overlap, while commitments spanning midnight remain visible in each interval they occupy.
-
-Work creation has one persistent route, `/organizations/[organizationId]/work/new`, using the existing domain form and server action. Home, Work Items and Schedule use `NewWorkAction`; `?type=` preserves the intended type and `/work?create=1` redirects here. The page checks creation permission on the server. Types without stages show an inline prerequisite instead of an empty form; only authorized members see Configure stages, with a return action preserving the type. Members may switch to a configured type. Cancel returns to Work Items, dirty changes guard link navigation, type changes and browser unload, refused submissions retain input, and successful creation returns to Work Items. Browser Back has the shared unsaved-changes hook's existing limitation.
-
-
-Dispatch at `/work/dispatch` is a queue, assignment board and selected-Work inspector. Date, type, status, resource, class, assignment state, mode and selection persist in the URL. Schedule mode displays canonical resource commitments/free windows; Map mode uses actual Work Location coordinates and the existing map renderer, with List/Schedule fallback when unavailable. Assignment, scheduling and feasibility invoke the existing Work actions. Work items (`/work`) shows one Work type at a time on the shared `CollectionToolbar`: the type selector leads, then search, Filters (status, List only), sort and the List / Board presentation, all in the address (`features/work/work-directory.ts`). Changing the type or choosing Board drops the status, and an address that keeps an inapplicable status is redirected without it. Dispatch is a header action beside New work, never a third presentation. List is a `DataTable` (a table from a 48rem container, cards below) whose title is the record link; schedule and resource columns appear only for a scheduled type, and the one row action, Schedule or Assign, appears only on work that still needs it. List uses database filters, exact counts and pagination; Board uses the shared `Board`, independently reading each configured status with exact counts, up to 10 cards, only the moves the type's transitions allow, and a link to the full stage collection. Work configuration uses a type-selection workbench and General, Workflow, Requirements, Checklist, Booking and Fields sections. Resources expose class/capability filters and selected-day availability and assignments. Resource availability and Work/Schedule configuration mutations refresh the operational consumers. Workspace navigation preserves canonical record authorities.
-
-The Work record (`/work/{workItem}`) has five URL-backed sections in the shared `RecordSubnavigation`: Overview (the bare record address), Execution, Financials, Documents and Activity (`?section=…`, `features/work/work-record-sections.ts`). Every former `?tab=` value, Finance's `?tab=financials` included, opens the same section; anything else falls back to Overview. Only the chosen section is drawn. The workspace bar names the record; its header line gives the type (linked to that type's Work items), the stage and, for scheduled work only, the time, with Edit details as the one record action. Overview lists who the work is for (the business's own word), who is on it (scheduled work only), location, asset (when Assets is on) and custom fields, each linked to its record and omitted when absent, then intake and linked support cases. Execution leads with Next actions: the moves the type's transitions allow from the current stage, then, for scheduled work, its time and people with Change schedule and Change who is on this as disclosures; then resources needed (scheduled work only, a suggestion offered and never applied), steps and time worked, each add form behind its own disclosure. Financials shows the quote lines as snapshotted, recorded costs, the invoice as issued with its payments and corrections, and what is outstanding. Adding a priced line, issuing the invoice and recording a payment open Finance's own dialogs with this job chosen, so there is one write path for each; a cost is entered as money, not minor units. A margin is shown only for priced work with recorded costs in the same currency. Edit details is a `GuardedDialog` (title, contact, location, asset, custom fields; only the middle scrolls). Work configuration's New type is the same kind of dialog: it creates the type alone (no stage, work or price) and opens its Workflow tab, keeping `returnTo=create`. Workflow lists stages in order with the first marked where new work starts, then the allowed moves in stage order; Booking states that it governs online requests, not availability. A member who may not take an action does not see it; the record carries no role-refusal sentences, and the server checks every command.
-
-Communications Home at `/comms` uses a compact search/date/action toolbar, four readiness summaries, a 70/30 desktop grid with attention categories, an Inbox queue and canonical CallHistory preview, and a Today/status/activity/insights rail. Previews are bounded; exact counts and selected-period call rates come from tenant-scoped database reads. Inbox filters and search survive destination links. Outstanding conversations and wrap-up are current work, while missed/recent calls use the selected organization-timezone period. Empty states retain every panel. Today shows recorded communication activity, not an invented schedule; unsupported presence, callbacks, compliance controls and response-time trends are not simulated.
-
-Dialer uses `/calls` as an A11 console (`features/communications/voice/dialer-workspace.tsx`). `PageLocation` publishes Communications / Dialer; the content retains one semantic h1. One toolbar groups Standard/Focus modes on the left and Pop out dialer, Call history and Configuration actions on the right. Call queue and Customer context are pressed visibility buttons, not navigation tabs. Pop-out is an action through the existing organization telephone; it transfers the number, chosen caller line and matching customer attribution, and returns the edited draft without attaching an unrelated number to the selected customer. The global telephone utility remains available. Configuration retains its canonical Communications destination. At 64rem of actual console width, the queue, central calling console and customer context form a three-column composition that follows its content height up to the available viewport height, with independent scrolling for long regions. Empty side regions stay at their natural height and use compact text rather than tall centred empty-state illustrations. Number entry and the keypad share a row once their own form has 26rem available; narrower forms keep a compact keypad below. Sidebar and Agent/page-panel width therefore affect composition without requiring a viewport resize. Below that width a Queue / Calling / Customer switch selects one mounted region; live calls expose Show call controls when another region is selected. Focus keeps only calling and workflow; Call history returns to Standard before opening its anchor. The central console groups readiness, bounded number entry/dial pad or live controls, and Follow-up/Wrap-up behind one surface with internal dividers. Empty side regions retain truthful context. The history disclosure owns its heading, compact daily summary metrics, URL-backed filters, results and pagination in that order; `#call-history` and count/link semantics are preserved. No transcript, recording, script or fullscreen controls are offered without a source. The development-only `/dev/dialer` fixture uses the real shell with a simulated telephone for live-call layout checks; it is not provider evidence. Calling and messaging permissions, readiness and guarded commands remain unchanged.
+Communications Home and Dialer: [docs/surfaces/communications.md](surfaces/communications.md#communications-home).
 
 **Charts.** `components/charts` is the one chart family for every workspace: line, vertical and horizontal bars, stacked bars and donut over measured SVG, drawn from the data contract in `lib/chart-model.ts`. A chart never queries; it draws supplied values and shows each value's exact label in its tooltip and table. A presentation menu offers only presentations valid for the data's shape (time series: line, bars, table; categorical totals: horizontal bars, vertical bars, table; composition: stacked bar, donut only for one series of known non-negative parts, table), and every presentation shows the same values. One chart holds one currency; several currencies are separate datasets chosen with a Currency control, never one total. Sparse dates are spaced by real time. Unknown values read Unknown, never zero; negative values fall below a marked zero line. Each chart names its period and unit, is one keyboard focus stop (arrows read values aloud, Enter opens an authorized drilldown, Escape hides the tooltip), and offers View as table. Series use the organization palette's theme-adjusted tokens, with dash patterns, markers and hatching so colour is never the only cue; semantic status colours keep their meaning. There is no animation. Empty, loading and unavailable states are distinct and never show sample values.
 
 **Customizable workspace Dashboards.** A workspace Dashboard may register widgets on the shared layout grid (`components/dashboard`). The grid is measured on the dashboard's own container: 12 columns from 64rem, 6 from 40rem, one below, so the sidebar or an open drawer changes it as a smaller window would. Widths are a widget's allowed spans (3, 4, 6, 8 or 12); at 6 columns a widget is half or full width, dense charts full; on a phone every widget is full width in reading order. Rows pack in order and the last widget in a row widens to close it, so there are no gaps or overlaps. In normal use nothing is draggable. Customize dashboard opens an explicit editing state: a toolbar (Reset to default, Cancel, Save changes, hidden widgets to show again) and per-widget controls (drag handle, Earlier/Later, width minus/plus, height, density, Hide for secondary widgets, and each chart's own presentation menu); a resize handle drags in snapped columns, and arrow keys on it, or the width buttons, do the same through the same layout functions. Phones keep Earlier/Later and display choices, without drag or resize handles. Layouts are personal per person, organization and workspace (`docs/data.md`), saved only on Save, refused on a stale revision, and reset by removing the override. A layout never grants a widget: widgets the viewer may not read are not computed or shown, and the remaining widgets close the space.
 
-Finance Dashboard reads, in order: Financial overview (Payments received for the selected month, Outstanding, Overdue and Quoted, not invoiced; amounts per currency for `report.read`, exact counts otherwise, never one figure across currencies); Needs attention, offering only categories with records — Overdue (unpaid past due), Due soon (unpaid and due from now through the seventh day ahead, so never also overdue), Ready to invoice (priced Work without an invoice) and Card payments only when the card module is on without a usable processor account — or one all-clear line; Financial activity from recorded Finance events, each linked to its Work item or the catalog, with corrections marked; then, as Dashboard widgets, Payments received (line by received date, net of corrections), Receivables aging (current balances by band, per currency), Invoiced and recorded costs (top customers for the month; no margin drawn) for `report.read` only, and Invoices by status (overdue, unpaid not overdue, settled, adding up to all issued invoices) for every Finance reader. The default composition on a wide Dashboard is the overview across the grid, Needs attention (one third) beside Payments received (two thirds), Receivables aging beside Financial activity, then Invoiced and recorded costs beside Invoices by status; the overview, Needs attention and Payments received cannot be hidden. Before the first priced Work, invoice or payment the Dashboard keeps its shell: each overview tile reads None with one shared line saying nothing is recorded yet, the Needs attention slot is a compact Getting started panel holding the one primary next step (Set up pricing while nothing is priced, then Price Work), Financial activity appears once a Finance event is recorded, the reporting charts are not drawn, and Customize dashboard remains available. In that first run the header has no primary action, so nothing competes with Getting started; authorized operations (New quote) stay as secondary actions. Afterwards one header action is primary (New invoice where permitted, then Record payment, then New quote), the others secondary; New invoice and Record payment appear once something is recorded. Quotes, Invoices and Payments share the `CollectionToolbar`: quick scopes (Invoices: All, Outstanding, Due soon, Overdue, Settled; Quotes: All, Not invoiced, Invoiced; Payments: All, Receipts, Corrections), search, Filters (contact, dates, due date, payment source) shown as removable chips with Reset, sort, and URL-backed pagination with database counts. Narrow invoice cards keep identity, due date, status and outstanding amount. Finance search and financial reporting stay at `/finance/search` and `/finance/reports`.
+Finance Dashboard and transactions: [docs/surfaces/finance.md](surfaces/finance.md#finance-dashboard).
 
-Finance transactions use purpose-built guarded dialogs over the shared transaction grammar (`components/patterns/transaction-review.tsx`: record picker, record summary, line items, money totals, confirmation, result), not a drawer. New quote starts from a Work item, shows its contact and lines, and adds one snapshotted line chosen from the price book (Price item) with a preview of the new total; it never creates Work or a Work type, and with an empty price book it offers Set up pricing; it explains that quoting needs Work and offers Work creation. New invoice reviews eligible priced Work, its lines, total and dates, then requires a separate confirmation step before canonical issuance (the server refuses an unconfirmed issue); Work that already has an invoice offers that invoice instead. Record payment shows the invoice number, customer, currency, total, already paid and outstanding; a receipt and a correction or refund are chosen explicitly, a correction is entered as a positive amount, shown in the danger tone, previewed and confirmed before it is recorded as its own negative entry, and earlier entries are never changed. Manual entry states that it is not processor-confirmed. Refusals keep typed input and move focus to the reason; unsaved input asks before discard; focus returns to the trigger. Invoice and quote links open `/work/[workItemId]?tab=financials`. Catalog & Pricing is `/finance/catalog`, an operating page with identity-rich rows edited in place; Add price item is always the price book's primary control (beside its heading, also when empty), adding a price item creates no Work or Work type, and quoting copies its price onto the Work as a snapshot. Its header links managers to Payment settings (`/settings/payments`). The old `/finance/configuration`, `/finance/configuration/pricing` and `/settings/commerce` addresses only redirect to Customer payments (General for a member who may not open it), the pricing address as a plain HTTP redirect with a relative Location so `#getting-paid` survives; General forwards its own old `#getting-paid` anchor the same way. Payment configuration remains permission-gated and billing-entitled, and the trading currency has one editor, General's Regional settings. Aggregate financial values require `report.read`; pricing, issuance, payment and organization configuration permissions remain independent.
+Support Home, and the Marketing, Support and AI Home routes and icons: [docs/surfaces/support.md](surfaces/support.md#support-home).
 
-Marketing and Support use domain operating Homes at `/marketing` and `/support`; tenant AI uses an agent-management operating Home at `/ai`. Support's Home at `/support` is dense with four exact KPI drilldowns, attention lists, active Cases, queue workload, resolution performance and a desktop context rail; it does not repeat its sidebar destinations as cards. Its contextual sidebar lists, beneath the Support identity heading and Dashboard destination, Cases (`/support/cases`, including Case detail), Queues (`/support/queues`), Service levels (`/support/service-levels`) and Reports (`/support/reports`). Each is registered in `AREAS` under the Support workspace and requires `support.read`. Its Cases list/board, status, queue, attention and period controls are local view controls, not destinations, and no page carries a second tab strip or Views menu. Queues and service levels are read views for every `support.read` member. Their configuration is reached only from the page-header Configure control, which opens the Configure panel described under *Configure* below; the `/support/configuration/queues` and `/support/configuration/service-levels` addresses remain deep links, and each keeps its destination selected. Every Support page sets its action row the same way: the reporting period (Home, Cases, Queues and Reports), then New Case where authorized, then Configure last; Support's Home is reached from Dashboard. Shared drawers own Case creation and editing; narrow screens use Case summaries and stacked inspectors. Empty views retain usable panel structure and real configuration actions. Support uses Headset, Marketing uses Megaphone, AI uses Bot, and Work retains Wrench. The organization-level directory lists workspaces only; entered workspaces use contextual navigation. The global Agent utility retains Bot and opens the Agent rail; tenant AI exposes neither Platform AI Runtime nor provider credentials. Support's visual and interaction references live in `docs/design/support/`.
+AI Home: [docs/surfaces/ai.md](surfaces/ai.md#ai-home).
 
-AI Home follows the dashboard reference with a compact action/filter toolbar, four exact KPI drilldowns, agent/deployment/activity previews and a contextual readiness, handoff and allowance rail. Empty panels retain useful actions; provider health, missing usage and unavailable runtimes are explicit. Local collection navigation stays inside the AI workspace context. Agent details use section navigation, a central draft editor and a readiness inspector; phones use a section selector and agent cards. Save checks draft concurrency, Publish creates an immutable version, and deployment version changes are deliberate. Unsaved editor changes survive section navigation and can be recovered after reload/back navigation from per-actor tab storage; recovery retains the original draft revision for conflict detection. Channel drawers never expose provider credentials. Knowledge sources are published websites; tests and evaluation verdicts are personal. Execution inspectors link to Communications rather than duplicating public transcripts. Visual targets and interaction evidence live in `docs/design/ai/`.
-
-
-CRM Home launches Customers, Opportunities and the Opportunity pipeline; the feature-gated Customer board is labeled Relationship pipeline. Its primary commercial summary counts only Opportunities whose configured stage is Open. Unstaged Opportunities have a separate count. Stage values are displayed separately per currency. Opportunity routes remain registered CRM children with `sidebar: false`, retaining deep-link ownership and CRM's workspace context without becoming sidebar rows.
-
-Opportunity creation and editing use the shared PageDrawer. The collection preserves filters and pagination in the URL. Pipeline cards share the same records and detail destinations; stage movement uses a labeled select and explicit save action. Each board stage independently previews up to ten Opportunities with exact count and per-currency totals. Unstaged is a visual column, never a stored stage. The example pipeline's column/header/card hierarchy informs the production board without runtime example imports or demo state.
-
-CRM Dashboard is relationship first. In reading order at every width: a Relationship overview (Contacts with People, Companies and, when present, Unspecified counts linked to Contacts filters; New contacts, records created in the last 30 days; and the Lead/Prospect/Customer/Unclassified lifecycle distribution, independent of identity type); Recently active relationships, the primary panel, listing a bounded set of contacts by their latest qualifying relationship event (calls placed, ended or written up; completed tasks; lifecycle transitions; relationship stage moves; opportunities created or moved), never by record edits, with a next action only when an open task exists, an optional URL-backed Group by company presentation that places each person once under their primary active company, and a labelled Recently added contacts fallback when nothing qualifying is recorded; Needs attention beside it on wide screens (Overdue, Due today — later today only, so never both — and, with sales, No next follow-up and Unassigned), replaced by one compact all-clear line when nothing is actionable and absent when neither tasks nor sales apply; then Opportunities & Pipeline (open count, pipeline value per currency, unweighted expected closes and win rate for the selected month, stage strip, unstaged count) when stages or opportunities exist, compact stage-setup guidance for members who may configure stages when neither exists, and nothing otherwise. A new business keeps this structure with real zeros and the Add contacts entry point. Recent history remains in the page-support Activity panel. Follow-ups use one contextual PageDrawer across Home, collection, calendar and Customer/Opportunity sections. Completion is an inline authorized action; edit/reschedule retains its originating context. Calendar is a shared interaction reached inside a workspace, never a standalone organization sidebar row. Workspaces have a local `/calendar` child; CRM Home and Work Home also link into their own Calendar. The workspace context remains active through date/view changes and event editing. Day and Week show a scrollable time grid with duration blocks, overlap columns and selectable half-hour slots; Month uses the shared month board. New event and slot selection open a neutral event drawer for title, start, end and notes. Existing native events can be rescheduled or cancelled through that drawer. The default scope is This business; This view explicitly narrows it using internal provenance. Native events do not require a Customer or Follow-up. CRM Follow-ups and scheduled Work feed the same calendar as domain projections, using their canonical editing paths; a due-only item is identified as Due rather than claiming a duration. Source failures and bounded previews are explicit. Work's resource Schedule remains the availability and dispatch surface. Legacy `/calendar`, `/sales/calendar` and `/follow-ups/calendar` links redirect into CRM's contextual Calendar. Calendar uses the shared navigation, period controls, month board and time-block geometry; compact month cells link to their full day. Follow-ups remains a contextual CRM destination; CRM search remains a page-local action.
-
-The contact record has seven URL-backed sections (`?section=…&view=…`): Overview, Sales (Opportunities, Discovery, Proposed configuration, Commercial proposals, Invoices), Tasks, Activity (Timeline, Calls), Related (Work, Locations, Support cases, Services), Documents and Portal, each offered only where the viewer may open it and the capability applies. Former `?tab=` values resolve to their new place. The header shows identity type, company, labelled Lifecycle / Temperature / Relationship stage chips and primary contact details, with Call and Edit; the name stays in the location bar. Overview holds labelled details (custom fields as label/value rows), affiliations, recent activity and a compact related summary; an Unspecified record offers Classify contact. Editing is a focused dialog in three sections (Identity & essentials, Relationship, Additional fields) on the shared guarded dialog. Opportunity creation and editing, and opportunity-stage editing, also use focused dialogs, with Customer preselected from a record. Opportunity detail prominently shows its next Follow-up and open/recent work. Organization Settings owns Opportunity stages independently of Relationship stages; both use the configuration registry.
+CRM Home, Opportunities, CRM Dashboard, Calendar and the contact record: [docs/surfaces/crm.md](surfaces/crm.md#crm-home).
 
 A Workspace Home is its workspace's parent destination; inside the entered workspace it is reached from the workspace heading (ADR-047). It may also link to destinations in other workspaces without becoming their parent.
 
@@ -1005,19 +997,9 @@ Every card or metric must serve navigation, awareness or action.
 
 Organization Home is cross-workspace.
 
-Settings → Features is operational settings, grouped by product: only features this business can use (on, needing setup, or disabled) as compact rows with their Open, Set up and enable/disable actions. Every status comes from one classification, `featureOperationalState` (`lib/domain/catalogue/feature-operational-state.ts`), which Platform's organization screen also reads. Planned or partly built features are never listed, labelled Included or offered for activation, and the server refuses to switch them on or off; development status belongs to staff catalogue surfaces, which keep the Planned and Partial distinction. What the plan does not include is not listed either: one line counts it and links to Plan & usage, where purchasable upgrades belong. Status filters with counts and search narrow the list in place. A setup reason shared by several products is said once for the page with the features it affects; one product's own reason is said once for that product.
+Settings → Features: [docs/surfaces/settings.md](surfaces/settings.md#settings--features).
 
-Global Home uses the shared `DashboardLayoutGrid` with a fixed product layout and no database preference writes, `MetricTile` overview figures, `DataTable` attention rows, `ViewNav` URL controls and the shared Finance payment-trend projection with `Chart`. The greeting/date header keeps Quick actions and browser-local Customize when optional panels have relevant content. At most four meaningful authorized overview figures are shown; when none is positive, kernel CRM/Work figures retain truthful zeros instead of filling the row with unrelated workspace zeros. Overview figures are organization-wide and independent of attention scope and the Business performance period.
-
-Needs attention leads, prioritized from actual overdue and urgency facts. All/Mine/Urgent/Overdue are URL-backed, as are the Business performance period and Today/Upcoming obligation view (`schedule`). Category totals come from exact source counts and may overlap; previews are labelled and bounded. Bounded configuration checks retain a link to the complete source and do not claim an all-clear result. Work coverage and availability exceptions use W3's complete `workOperations` projection, including exceptions outside the displayed schedule preview, and link to Dispatch's matching date/resource/assignment context. Unscheduled staffing and unassessed time availability are separate. My priorities appears only for distinct assigned responsibilities not already in attention. Dated obligations follow, excluding records already above. Home places a commitment overlapping Today only in Today; Upcoming covers all seven local dates after Today, including the seventh, and excludes the eighth. All-day and continuing commitments carry explicit labels. The displayed obligation preview is bounded and links to the complete authorized source views; those links remain when all previewed records were already shown above.
-
-Business performance follows obligations and contains the existing authorized source metrics and signed payment series, with stored currencies kept separate. Its Today/Last 7 days/This month control affects performance only; current receivables and contact totals retain Current total labels. Recent activity uses bounded source previews, with the shared event feed covering the last seven local dates independently, keeps the latest event per record and does not repeat operational records already displayed. Irrelevant empty secondary panels are omitted. Per-source failures remain unknown, their figures are omitted and healthy sources stay visible; an activity-only failure is identified without discarding a healthy operational summary. Work shape/resource prerequisite failures are isolated to Work. Failed and uncertain Automation deliveries remain separate facts with exact state-filtered links. The existing route loading skeleton is retained, and refresh keeps the current view with an explicit busy state. Narrow containers, including an open Agent rail, use the same shared responsive grammar.
-
-Customize retains `gildops:home:v1:{organizationId}:{membershipId}` in this browser for the performance/activity selections. No database layout format is introduced. A refused storage write reports that the preference could not be saved and retains the saved selection. Core operational information is not hideable.
-
-Quick actions and the organization command palette consume one authorized action list. Actions are grouped by workspace and open owning creation surfaces; invoices open the existing Finance workflow through its collection create query. Search is a command palette opened from the sidebar's Search row, which matches the other primary controls in size and state; it has no keyboard shortcut and no visible shortcut hint. It offers create actions, authorized workspace destinations and supported Agent prompts. The AI workspace manages assistants; the header Agent opens the global conversation rail. Home, Search and Library form one sidebar cluster. Account footers show a saved personal name when available and the organization role.
-
-Setup is onboarding status, not navigation. Organization Home shows one setup banner while the business is in SETUP, computed from `computeSetupOverview`: the count is required blockers only, so recommended and optional areas never block launch. Someone who cannot launch sees the same facts as information with no instruction to act. Live businesses show no banner. The organization switcher carries a quiet "Setup pending" line beneath the business name while setup is open. The checklist, optional recommendations and launch controls stay on the Setup page, and launch uses the existing server-checked command. The shell has no notification bell, notification dialog or setup count. Configuration notifications follow the canonical configuration target's workspace and deduplicate repeated messages. Read failures remain unavailable, and configuration never implies live provider operation. Published website status uses a neutral success presentation even when draft changes also exist. Optional performance/activity panels have browser-local, actor-and-Organization-scoped preferences; core operational panels are not hideable.
+Global Home, Needs attention, Business performance, Customize, Quick actions and the setup banner: [docs/surfaces/home.md](surfaces/home.md#global-home).
 
 It may surface important facts from several domains.
 
@@ -1036,53 +1018,13 @@ It should not replicate every workspace dashboard.
 
 ## Library navigation
 
-Library is shared infrastructure, separate from the Workspace list.
-
-Library is one control in the primary sidebar group. It is a trigger, not a link: it opens an anchored popover whose entries come from `LIBRARY_SECTIONS` and link to each section's route, with the current section marked. `/organizations/{id}/library` redirects to Files. Each section page keeps its tab strip, so the sections stay one click apart. "Library" is a plain-text ancestor, since `/library` only redirects. Target (ADR-047, not yet implemented): a section without working behaviour is hidden from the popover and tab strip in production until it has some, and its route remains. Today Media, Templates, Knowledge, Collections and Trash are still listed.
-
-Its navigation may expose real Library capabilities such as:
-
-- Files;
-- Media;
-- Templates;
-- Knowledge;
-- Collections;
-- Sources;
-- Trash.
-
-Do not expose a destination merely because its eventual taxonomy has been named.
-
-Navigation requires a real surface.
+Moved to [docs/surfaces/shell.md](surfaces/shell.md#library-navigation).
 
 ---
 
 ## Administration navigation
 
-Platform Administration lives at `/platform`, with its own shared-shell composition and permission-filtered navigation. The business switcher lists organizations only. GildOps' configured operating-organization Membership and exact live platform capability remain required; the URL conveys no authority. Old organization-scoped Platform addresses render the organization not-found page.
-
-`lib/platform-navigation.ts` owns destination URLs and required capabilities. The authorized GildOps business sidebar offers Administration as a way into this separate scope. Customer organizations never receive that entry.
-
-Its standalone scope provides its own authorized navigation:
-
-```text
-Overview
-Organizations
-Product Registry
-  Products
-  Meters
-Integration Registry
-  Connectors
-Infrastructure
-  Providers
-  AI Runtime
-Reliability
-  Failures
-Commercial administration
-  Plans & Add-ons / Pricing / Usage & economics / Vendor rates /
-  Package economics / Portfolio economics / Billing
-```
-
-Each destination is offered only to its own permission. Platform's separate sidebar uses the canonical registry; tenant vocabulary does not relabel control-plane concepts. The same shared header, surfaces, focus states and responsive sidebar apply. During an active business call, entering `/platform` opens a separate tab to retain the business telephone runtime.
+Moved to [docs/surfaces/shell.md](surfaces/shell.md#administration-navigation).
 
 ---
 
@@ -1237,11 +1179,11 @@ It does not create a second analytical source.
 
 Configure exposes page/workspace-owned configuration.
 
-Support's Configure opens a nonmodal panel in the page-support rail, beneath the workspace header, through `SupportRegistrar`. The panel lists the queues and service levels the member may configure, using the same configuration read model, editors and commands as the full pages. Each editor opens its own drawer above the panel, and closing it returns to the panel. The trigger appears only when the configuration projection offers at least one of these concerns, so a `support.read`-only member sees no Configure control. Full configuration pages remain addressable. The Configure control never navigates to a landing page.
+Support's Configure panel: [docs/surfaces/support.md](surfaces/support.md#support-configure-panel).
 
 Where configuration belongs to Settings, Configure should link or transition to the authoritative Settings destination rather than create duplicate settings.
 
-No workspace has a Configuration landing page. Every other workspace Home reaches its configuration through `WorkspaceConfigure`, which renders `ConfigureMenu` over the doors `workspaceConfigureItems` grants the member: nothing, one link named for its page, or a Configure menu of direct links. Finance, Marketing and Automations register no doors, so their Homes show no Configure control and their sidebars no Configuration (Finance's price book is its Catalog & Pricing destination; currency is a General setting and payment collection is Settings → Customer payments). A door that configures one of its own workspace's destinations (`destination` in `CONFIG_TARGETS`: Work types → Work items, scheduling hours → Schedule, Support's Queues and Service levels) draws no Configuration row; it is reached from that page's Configure control and the destination stays selected while it is open. Work therefore has no Configuration row; another workspace may still link the same editor (Communications' Business hours). The Dialer offers only its calling doors (Calling & routing, Numbers & assignments). In the sidebar, a workspace's Configuration is a direct link when the member has one door, and otherwise a heading button that expands and collapses the doors; on the collapsed rail it opens the navigation with the group expanded. "Configuration" is a plain-text ancestor in the breadcrumb, and the phone's Up control skips it. Work has no such level: its editors sit under the page they configure (Work items, Schedule), and Work pages name that parent with the business's own label for it. Each old `{home}/configuration` address (`sales`, `comms`, `support`, `field`, `finance`, `studio`, `ai`) redirects on the server to the first door the member may open, or shows not-found when there is none; `finance/configuration` instead redirects to Customer payments (General for a member who may not open it). A configuration-only member's workspace row opens that first door directly. Customers registers no Configure panel, and the Relationship pipeline links straight to Relationship stages for members who may open it.
+Workspace Configure doors, Configuration rows and old configuration addresses: [docs/surfaces/shell.md](surfaces/shell.md#workspace-configure-doors).
 
 ---
 
@@ -1255,9 +1197,7 @@ Agent and page-support rail are independent panels.
 
 They may share shell behavior but not conceptual ownership.
 
-Below 768 px, Agent is a fullscreen native modal dialog, with the shared header-height band, safe-area padding and visual-viewport height/offset so its composer follows the visible viewport. The browser isolates background focus and interaction; nested Radix History and Context popovers portal inside the dialog. Menu closes before handing focus to Agent; closing Agent restores the visible Menu trigger. Escape dismisses a nested popup first, then Agent. Tablet (768–1279 px) keeps the right overlay; desktop (1280 px and above) keeps docking, resizing and persisted width, including the wide layout at 1720 px.
-
-One dialog element and conversation subtree remain in place across layout changes and stay mounted after first opening. Native modal activation changes browser presentation without reparenting React content; lazy organization-keyed bootstrap, drafts, uploads, selections and pending actions remain with the existing controller. Page-support panels retain their separate nonmodal geometry. The permanent operator identity/scope banner is omitted; recoverable errors remain. Context is the one composer popover: it lists what the Agent sees, holds the one per-conversation control (include the open record) and, for people who manage the business, links to Agent settings in the AI workspace. There is no separate Configure and no model choice: GildOps chooses the model. Answers render as formatted text with Copy and Ask again beneath them, and a question in flight waits in an Agent bubble.
+Agent rail layout and composer: [docs/surfaces/shell.md](surfaces/shell.md#agent-rail).
 
 ---
 
@@ -1888,69 +1828,7 @@ A group of unentitled capabilities may be gathered into one labelled area with a
 
 ## Settings UI
 
-Settings reinforces ownership through its grouping, not through a landing page. See A5 and A6.
-
-### Organization → General
-
-General is the business profile, one form with four sections: business identity (name, optional legal name, optional industry), primary business address, business contact, and Regional settings (time zone and trading currency). The same form is rendered in Setup and writes through the same action. Regional settings always shows the stored time zone and currency when editing, including when no country is set; a country only offers a suggestion, and a stored currency is never replaced by one. Customer payments (`settings/payments`: trading currency read-only with a link to General, manual recording, card collection) and Words & navigation (`settings/terminology`: the versioned business profile) are separate Settings pages.
-
-The address is private to members (`organization_identity`) and is never copied to the public profile; publishing an address is the public profile's own field. A location change proposes a time zone and currency and applies neither until the person accepts it.
-
-Organization setup uses an adaptive step navigation, a focused current-step panel and observed
-readiness/launch support panel. Desktop supports three columns, tablet stacks readiness below the
-current task, and phone uses contained horizontally scrollable step navigation. Continue changes the
-step URL only; completion is always derived from saved domain records. Review lists required,
-recommended and optional areas and offers only authorized owning destinations.
-
-Proposal review is a dedicated workbench with independent operations, finance, people, data,
-automation, presence and feature views. Switching views retains edits. Save and Apply are separate;
-unsaved changes disable Apply and protect browser unload. Apply and launch use deliberate confirmation
-dialogs. A failed application reports partial state; an interrupted application asks for inspection
-before any new remainder draft. Roles use a scrolling capability body with a fixed action footer.
-
-Organization Settings does not contain:
-
-- Team/Members;
-- personal Profile;
-- Connections;
-- Plan & usage;
-- workspace-owned configuration (work types, working hours, price book, stages, call routing, agents, automation rules, website).
-
----
-
-### Account
-
-Account is person-owned.
-
-Its local navigation should use the same shared sibling-view grammar as other scope navigation.
-
-Do not maintain a one-off tab implementation solely for Account.
-
----
-
-### Access
-
-Access owns:
-
-```text
-Members
-Invitations
-Roles
-```
-
-Use one local-navigation implementation.
-
-“Team” may appear in descriptive copy if useful, but **Access** is the scope owner.
-
----
-
-### Connections
-
-Connections owns external-system relationships.
-
-Its local navigation must reflect one explicit canonical set of real views.
-
-Do not allow type definitions, comments and rendered tabs to describe different view sets.
+Moved to [docs/surfaces/settings.md](surfaces/settings.md#settings-ui).
 
 ---
 
@@ -2240,6 +2118,7 @@ Before completion:
 Do not introduce:
 
 - title + generic explanatory sentence by default;
+- eyebrow labels above headings;
 - border/card around every section;
 - route-local arbitrary page width;
 - route-local spacing used to repair shared geometry;
@@ -2269,15 +2148,11 @@ Do not introduce:
 
 ## Guided configuration continuity
 
-Schedule uses the shared URL-backed Day/Week/Month navigation, including selected, hover and visible keyboard-focus treatments; its period selector and resource control share one aligned row. Timezone-aware calculations remain unchanged. Opening hours is reached through Configure, with no competing header sentence/link.
-
-Work type settings use Work → Work items → Work types → the selected type. A zero-stage type opens Workflow unless an explicit tab was requested and shows one Add starting stage operation. The chosen tab remains after saving a stage. General states that name and scheduling behavior save separately and labels both operations specifically. Relationship stages retain one prominent Add stage action in the header when empty or populated, with a compact collection below. Focused configuration dialogs use `GuardedDialog`'s compact 32rem maximum; transaction dialogs retain its default 40rem maximum. Both use the same title/body/footer spacing, primary/secondary ordering, mobile footer, discard protection and focus restoration. No focus ring is removed.
-
-Setup's editor links retain a `setupStep` return hint, including specific type/tab deep links. Readiness refreshes from saved domain records and continues to distinguish Required, Recommended and Optional. Live businesses review configuration without relaunching. New quote presents the prerequisite as an action rather than a zero-result search; an explicit Create Work journey returns to that record's Financials. Missing catalog prices link to Catalog & pricing with Return to new quote. Platform adapter/registration readiness says Ready to connect, while account credential verification, assignments and delivery evidence remain separately named.
+Moved to [docs/surfaces/work.md](surfaces/work.md#guided-configuration-continuity).
 
 ## Finance pricing planning
 
-Financial reports contains a compact `OperationalPanel` for unsaved Economics & pricing planning beneath recorded financial activity. Up to three independently editable scenario fieldsets wrap according to the available container width. Shared inputs, `CurrencyField` and `formatMoney` own input grammar, hydration-safe currency selection and monetary display. Each scenario identifies estimated costs, suggested selling price, estimated gross profit/margin and an optional current catalog unit comparison. Missing assumptions remain Unknown; zero assumptions require an explanation; zero selling price has undefined margin. Currency changes clear monetary inputs, and foreign-currency comparisons state why they cannot be calculated. Current catalog prices remain visibly recorded context. The panel states that scenarios are lost on leaving/reload and update no financial records; no publish control is offered.
+Moved to [docs/surfaces/finance.md](surfaces/finance.md#finance-pricing-planning).
 
 ## Document boundaries
 
@@ -2302,29 +2177,19 @@ It does not own:
 - authorization enforcement;
 - deployment;
 - product implementation status;
-- provider contracts.
+- provider contracts;
+- workspace and feature surface specifications (`docs/surfaces/`).
 
 Those belong to their respective canonical documents.
 
 ## Marketing workspace
 
-Marketing Home is a compact operational dashboard: four evidence-backed KPIs scoped by a labelled reporting period, Needs attention showing only categories with items (one sentence when there are none), Running campaigns (drafts awaiting setup are listed under Needs attention, not again), Acquisition in this period (trend and sources together, or one sentence before the first tracked submission), and a Status panel and a Recent activity panel shown only when there is activity. Navigation the sidebar already offers is not repeated as cards. Local Home/Campaigns/Audiences/Leads/Performance navigation preserves the business's contextual workspace sidebar. Campaign detail is deep-linkable; campaign and audience editors and inquiry review use shared PageDrawer primitives. Collection search, review/status/objective/owner/source filters, date bounds and pagination persist in the URL. Table overflow is contained within its panel at narrow widths. Activation expresses Marketing lifecycle, not delivery success; unestablished consent and unavailable promotional delivery are shown explicitly.
+Moved to [docs/surfaces/marketing.md](surfaces/marketing.md#marketing-workspace).
 
 
 ## Persistent application controls
 
-The sidebar footer holds the Account/session menu, which represents the signed-in person: Settings,
-Help & documentation, Contact GildOps Support, then Sign out. Help and Contact are organization-scoped
-and appear only where an organization is in context. Mobile Agent remains a Sheet control. Locked
-organizations keep the Plan & usage recovery destination as their Settings entry. The no-organization
-fallback offers personal Settings without inventing an organization Help or Platform context.
-Platform Administration is reached at `/platform` from
-GildOps' own navigation, only with server-resolved platform authority, and the account menu never
-links to it.
-`AccountMenu` owns the footer presentation, identity and Sign out. `settings-icons.ts` owns recognizable Settings destination icons, used with accessible
-labels and rail tooltips. The existing `SettingsNav` retains search and closes the mobile Sheet
-on navigation. Back to app validates its per-tab hint against current authorized destinations
-and falls back to organization Home. Stored navigation is never an authorization authority.
+Moved to [docs/surfaces/shell.md](surfaces/shell.md#persistent-application-controls).
 
 
 ## Workspace Configuration navigation
@@ -2343,22 +2208,9 @@ task; a section groups content within it; a tab switches necessary alternate vie
 a position in the same document; a drawer supports a focused temporary interaction. Headings alone
 do not earn navigation. Avoid duplicate titles, context, destinations and generic decorative icons.
 
-`CONFIG_TARGETS` and `WORKSPACE_CONFIGURE` retain canonical configuration ownership and authorization. Relevant operational pages link to their configuration roots; entering a workspace shows its own eligible destinations and Configuration, with Home returning to the organization-level directory. Configuration has no landing pages; the sidebar group and the Home's Configure control list its concerns directly. Settings → Words & navigation hosts the versioned business words/navigation editor, as two shared cards (Record names, Workspace pages) with one save; it does not fold that independent save into business identity.
-General Settings is one form, saved once, whose Business identity, Primary business address,
-Business contact and Regional settings groups are separate shared cards beneath the existing Settings sidebar; it has no
-section navigation. Settings groups use shared surfaces so Appearance shape, density and
-elevation reach them. Resolved links use
-text labels, hover, selected and focus roles without a repeated generic icon. Page loading uses the
-existing organization boundary; missing or unauthorized concerns resolve to not-found before data
-reads. No empty configuration root is offered. `WorkspaceConfigure` remains a shortcut to each root.
+Configuration roots, Words & navigation and General Settings: [docs/surfaces/settings.md](surfaces/settings.md#words--navigation-and-general-settings). Platform navigation and the business telephone: [docs/surfaces/shell.md](surfaces/shell.md#platform-navigation-and-the-business-telephone). Channel diagnostics: [docs/surfaces/communications.md](surfaces/communications.md#channel-diagnostics).
 
-
-Platform uses its own authorized registry and shared responsive sidebar. The business switcher changes business context only. `NavigationActivityContext` carries only a retention hint from the persistent telephone owner. During an active call, cross-business and global personal Settings links open a separate tab. Ordinary same-organization configuration, General Settings and workspace navigation reuse the existing telephone runtime. This does not provide call continuation after reload or browser termination.
-
-Channel diagnostics reuse `messagingSenders` and the existing sender/provider facts. The UI distinguishes planned/unentitled/disabled features, missing provider/callback/relay configuration, inactive or non-SMS numbers, missing active identities, and unverified sending domains. Sender configuration does not grant `message.send`; configuration checks passing never asserts provider acceptance or delivery. Outbound email and mailbox synchronization remain separate capabilities.
 
 ### CRM Contacts and opportunity Pipeline
 
-Add contacts is CRM's one contact-intake entry point, on the Dashboard, the Contacts directory and their empty states. It opens one centered dialog offering Create manually, Import records and Connect & synchronize. Each choice follows the capability its destination enforces: creation needs `customer.create`; Library import needs `integration.manage`, with `customer.create` for new rows and `customer.update` for updates; synchronized worksheets need `integration.manage`, and connecting a provider is Connections' own door, entitled by the Integrations module. A choice the member cannot complete shows its reason instead of an action, and the trigger is absent when no choice is open. Manual creation happens in that dialog in two stages over one form: Essentials (Person or Company chosen explicitly, then name, email, phone, and for a person an optional company and job title; for a company, its website when the business defines that field) and Additional information (lifecycle, lead temperature, and the business's own fields, industry first). Either stage can save. A person's company can be created inline in the same dialog, and the person's values are kept. Closing a changed form asks before discarding, and focus returns to the trigger. Success offers View contact, Add another and Close. `?create=1&type=person|company` opens straight into manual creation. Imports and synchronization stay Library's: the import is a guided page flow (Choose source, Map fields, Review changes, Apply, Results). Review counts only what staging recorded; local-edit conflicts surface at apply time as failures. Applying needs an explicit confirmation, and Results reports the run's own counters with links to Contacts, problem rows and the saved source. No Google Contacts or Outlook contact-book source is offered.
-
-Contacts leads each row with identity (type icon, name, and company or type) followed by lifecycle, phone, email and actual last visible activity; temperature and custom fields are optional columns. It uses the collection/table grammar with Add contacts as its primary action and a CollectionToolbar: quick scopes All, People, Companies and Needs review (Unspecified identity or no lifecycle), search, sort and display (grouping, columns), with lifecycle, temperature, company, relationship stage, industry, website and added date inside Filters, shown as removable chips with Reset. Group by company shows each company's own record first and its people beneath, then No company and Needs classification; nobody appears twice. Filters, scopes, grouping and pagination stay in the URL and are applied by the database. A filtered empty result retains its controls. Creation and editing share independent Lifecycle and Lead temperature fields; existing optional relationship-stage controls retain their meaning. Contact profiles preserve related operational records and permission-gated actions. The relationship-stage board is reached contextually from Contacts, while the primary Pipeline opens opportunities; the two never share stages. Both boards scroll sideways inside a labelled, keyboard-focusable region, with column names, counts, compact empty columns and identity-first cards; stage changes use the existing persisted controls (no drag-and-drop). Relationship stages are managed in place on their configuration page (ordered list, add/rename dialog, Move up/down, removal only when no contact or audience uses a stage). Board/list controls are page-local views over the same opportunity records. No persistent Follow-ups row or duplicate workspace strip is introduced.
+Moved to [docs/surfaces/crm.md](surfaces/crm.md#crm-contacts-and-opportunity-pipeline).

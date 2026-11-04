@@ -1280,6 +1280,7 @@ Different concerns have different authoritative sources.
 | Database schema | forward migrations + current database |
 | Authorization/data policy | schema/RLS/grants + `docs/security.md` |
 | UI grammar | `docs/ui-system.md` |
+| Workspace and feature surface specifications | `docs/surfaces/` |
 | Integration/provider conventions | `docs/integrations.md` |
 | Public web / publishing / domains | `docs/public-web.md` |
 | Test procedure | `docs/testing.md` |
@@ -1288,7 +1289,7 @@ Different concerns have different authoritative sources.
 | Runtime operations | `docs/operations.md` |
 | Work sequencing/status | `docs/roadmap.md` |
 | Shipped change history | `CHANGELOG.md` |
-| Agent working rules | `CLAUDE.md` |
+| Agent working rules | `AGENTS.md` (imported by `CLAUDE.md`) |
 
 A decision record explains why a rule exists.
 
