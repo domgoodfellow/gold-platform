@@ -85,7 +85,6 @@ export function ImportRunDetail({
       ) : run.status === 'pending' || run.status === 'running' ? (
         <Card as="section" aria-labelledby="import-review">
           <h2 id="import-review" className="text-sm font-semibold">Review changes</h2>
-          <p className="mt-0.5 text-sm text-muted">This is what applying would do. Nothing has been written to Contacts yet.</p>
           <dl className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Staged changes">
             {[['New contacts', summary.created], ['Updates to existing contacts', summary.updated], ['Possible duplicates (not applied)', summary.duplicates], ['Skipped or rejected', summary.skipped]].map(([label, value]) =>
               <div key={label} className="rounded-md bg-secondary px-3 py-2"><dt className="text-xs text-muted">{label}</dt><dd className="text-xl font-semibold tabular-nums">{value}</dd></div>)}
@@ -93,6 +92,7 @@ export function ImportRunDetail({
           {summary.unclassified ? <p role="status" className="mt-3 text-sm">{summary.unclassified} new contact{summary.unclassified === 1 ? '' : 's'} will be saved as Unspecified / Needs classification because no contact type was mapped.</p> : null}
           <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
             <p className="text-sm font-medium">Apply</p>
+            <Hint>Nothing has been written to Contacts yet.</Hint>
             <ApplyImportForm organizationId={organizationId} runId={runId} readyCount={readyCount} />
             {run.status === 'pending' ? (
               <form action={resumeImportStagingAction}>

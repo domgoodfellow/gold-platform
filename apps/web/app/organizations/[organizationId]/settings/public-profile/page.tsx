@@ -25,9 +25,6 @@ export default async function PublicProfileSettingsPage({
           ...workspaceConfigCrumbs(organizationId, 'public-profile'),
         ]}
       />
-      <Hint className="mt-1 max-w-prose">
-        What customers read before they book. A field left empty is simply not shown.
-      </Hint>
       {mayManage ? (
         <div className="max-w-xl">
           <ProfileForm organizationId={organizationId} profile={profile} action={updateProfileAction} />

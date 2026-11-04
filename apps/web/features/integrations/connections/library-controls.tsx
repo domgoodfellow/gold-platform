@@ -24,7 +24,7 @@ export function LibraryReads({organizationId,connectionId,applications}:{organiz
   const operation=actions.find(a=>a.capability===selected);
   if(!actions.length)return null;
   return <section className="mt-8 max-w-3xl">
-    <h2 className="font-medium">Read connected data</h2><p className="mt-1 text-sm text-muted">Requests use this account’s authorization and are recorded in execution history.</p>
+    <h2 className="font-medium">Read connected data</h2>
     <form action={action} className="mt-3 space-y-3">
       <input type="hidden" name="organizationId" value={organizationId}/><input type="hidden" name="connectionId" value={connectionId}/>
       <label className="block text-sm">Operation<SelectField name="capability" value={selected} onValueChange={(next) => setSelected(next)} className='mt-1 block w-full' options={[...actions.map((a) => ({ value: a.capability, label: a.name }))]} /></label>

@@ -44,9 +44,6 @@ export function ConnectionCapabilities({
   return (
     <Section className="mt-8">
       <SectionHeading>What an agent can do with this</SectionHeading>
-      <Hint className="mt-1 max-w-2xl">
-        Connecting does not let the agent use any of this. Give it each use you want. These only read from the app; none of them changes anything in it.
-      </Hint>
       <DividedList className="mt-3">
         {capabilities.map((capability) => {
           const given = grants.filter((grant) => grant.capabilityKey === capability.key);
@@ -93,6 +90,9 @@ export function ConnectionCapabilities({
           );
         })}
       </DividedList>
+      <Hint className="mt-2 max-w-2xl">
+        Connecting does not let the agent use any of this. Give it each use you want. These only read from the app; none of them changes anything in it.
+      </Hint>
     </Section>
   );
 }

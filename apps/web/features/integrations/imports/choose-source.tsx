@@ -13,6 +13,7 @@ const date = (value: string) => new Intl.DateTimeFormat('en-CA', { dateStyle: 'm
 function Option({ icon: Icon, title, description, children, id }: { icon: typeof Upload; title: string; description: string; children: ReactNode; id: string }) {
   return <Card as="section" aria-labelledby={id}>
     <div className="flex items-start gap-3"><Icon aria-hidden className="mt-0.5 size-5 shrink-0 text-muted" />
+      {/* ui-copy-allow: each source option's description is what a person chooses between */}
       <div className="min-w-0 flex-1"><h2 id={id} className="text-sm font-semibold">{title}</h2><p className="mt-0.5 text-sm text-muted">{description}</p><div className="mt-3">{children}</div></div>
     </div>
   </Card>;

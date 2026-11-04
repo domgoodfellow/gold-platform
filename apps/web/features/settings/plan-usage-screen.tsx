@@ -215,9 +215,6 @@ export function PlanUsageScreen({
       {allowances.length > 0 ? (
         <Section className="mt-8">
           <SectionHeading>What’s included</SectionHeading>
-          <Hint className="mt-1">
-            What this business’s plan allows, how much of it has been used, and when it resets.
-          </Hint>
           <DividedList as="div" className="mt-2">
             {allowances.map((allowance) => (
               <AllowanceMeter key={allowance.allowanceKey} state={allowance} />
@@ -249,9 +246,6 @@ export function PlanUsageScreen({
 
       <Section className="mt-8">
         <SectionHeading>Usage</SectionHeading>
-        <Hint className="mt-1">
-          What GildOps charged for what this business used. Recent activity, most recent first.
-        </Hint>
         {usage.length === 0 ? (
             <EmptyState className="mt-2">No usage has been reported. Provider reporting can be delayed; this does not establish zero consumption.</EmptyState>
         ) : (

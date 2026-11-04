@@ -83,13 +83,13 @@ export function OrganizationSettingsForm({
             <div className="flex flex-col gap-4">
               <div>
                 <SectionHeading id="address-heading">Primary business address</SectionHeading>
-                <Hint className="mt-1">
-                  This address is private to your team.
-                  To show an address on your website, add it to the{' '}
-                  <Link href={`/organizations/${organizationId}/settings/public-profile`} className="text-accent-text hover:underline">public profile</Link>.
-                </Hint>
               </div>
               {location}
+              <Hint>
+                This address is private to your team.
+                To show an address on your website, add it to the{' '}
+                <Link href={`/organizations/${organizationId}/settings/public-profile`} className="text-accent-text hover:underline">public profile</Link>.
+              </Hint>
             </div>
           </Card>
           {contact}
@@ -97,7 +97,7 @@ export function OrganizationSettingsForm({
             <div className="flex flex-col gap-3">
               <div>
                 <SectionHeading id="regional-heading">Regional settings</SectionHeading>
-                <Hint className="mt-1">The time zone schedules follow and the trading currency new prices and invoices use.</Hint>
+                
               </div>
               {regional}
             </div>

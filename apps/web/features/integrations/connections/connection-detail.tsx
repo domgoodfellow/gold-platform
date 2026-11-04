@@ -85,9 +85,6 @@ export function ConnectionDetail({
       ) : (
         <Section className="mt-8">
           <SectionHeading>Resources</SectionHeading>
-          <Hint className="mt-1">
-            What GildOps can reach through this connection. Connecting does not let the assistant read any of it — turn that on for each resource.
-          </Hint>
           <div className="mt-3">
             <DataTable
               rows={resources}
@@ -121,6 +118,7 @@ export function ConnectionDetail({
               ]}
             />
           </div>
+          <Hint className="mt-2">Connecting does not let the assistant read any of it — turn that on for each resource.</Hint>
         </Section>
       )}
     </>
@@ -143,9 +141,9 @@ function RepositoriesSection({
   return (
     <Section className="mt-8">
       <SectionHeading>Repositories</SectionHeading>
-      <Hint className="mt-1">
-        GildOps may read only these. {connectionStatus === 'active' ? '' : 'This connection is not active, so none of them is available to use until it is reconnected.'}
-      </Hint>
+      {connectionStatus === 'active' ? null : (
+        <Hint role="status" className="mt-1">This connection is not active, so none of them is available to use until it is reconnected.</Hint>
+      )}
       <div className="mt-3">
         <DataTable
           rows={repositories}

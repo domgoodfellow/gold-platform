@@ -32,6 +32,7 @@ export const EXCLUDED_PATHS = [
   /^apps\/web\/app\/\(auth\)\//, // sign-in
   /^apps\/web\/features\/public-site\//, // tenant website renderers
   /^apps\/web\/features\/forms\//, // public form renderer
+  /^apps\/web\/features\/branding\/brand-preview\.tsx$/, // sample public pages drawn in a brand preview
   /^apps\/web\/features\/communications\/public-widget\.tsx$/, // website chat widget
   /^apps\/web\/app\/dev\//, /^apps\/web\/features\/appearance\/design-gallery\.tsx$/, // development-only gallery
   /(^|\/)(not-found|error|global-error|loading)\.tsx$/, // state pages and error boundaries

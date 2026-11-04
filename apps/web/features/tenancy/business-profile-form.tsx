@@ -34,7 +34,7 @@ export function BusinessProfileForm({organizationId,profile,destinations,embedde
     </Card>
     <Card as="section" aria-labelledby="terminology-pages-heading">
       <div className="flex flex-col gap-4">
-        <div><SectionHeading id="terminology-pages-heading">Workspace pages</SectionHeading><Hint className="mt-1">Rename and reorder pages within their workspace.</Hint></div>
+        <div><SectionHeading id="terminology-pages-heading">Workspace pages</SectionHeading></div>
         {groups.map(group=>{const members=order.filter(key=>(workspaceOf.get(key)??'Organization')===group);return <fieldset key={group} className="flex flex-col gap-2"><legend className="mb-1 text-xs font-medium uppercase tracking-wide text-subtle">{group}</legend><ol className="flex flex-col gap-2">{members.map((key,index)=>{const item=destinations.find(item=>item.key===key)!;return <li key={key} className="flex items-end gap-2"><label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-muted">{item.label}<TextInput maxLength={80} aria-label={`${item.label} navigation label`} value={draft.labels[key]??item.label} onChange={event=>setDraft({...draft,labels:{...draft.labels,[key]:event.target.value}})}/></label><Button type="button" tone="secondary" aria-label={`Move ${item.label} up`} disabled={index===0||pending} onClick={()=>move(key,-1)}>↑</Button><Button type="button" tone="secondary" aria-label={`Move ${item.label} down`} disabled={index===members.length-1||pending} onClick={()=>move(key,1)}>↓</Button></li>;})}</ol></fieldset>;})}
       </div>
     </Card>
