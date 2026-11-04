@@ -33,7 +33,7 @@ export const EXCLUDED_PATHS = [
   /^apps\/web\/features\/public-site\//, // tenant website renderers
   /^apps\/web\/features\/forms\//, // public form renderer
   /^apps\/web\/features\/portal-access\//, // customer portal
-  /^apps\/web\/features\/studio\/portal\//, // customer portal renderer and its Studio preview
+  /^apps\/web\/features\/studio\/portal\/portal-renderer\.tsx$/, // customer portal renderer, also drawn in Studio previews
   /^apps\/web\/features\/branding\/brand-preview\.tsx$/, // sample public pages drawn in a brand preview
   /^apps\/web\/features\/communications\/public-widget\.tsx$/, // website chat widget
   /^apps\/web\/app\/dev\//, /^apps\/web\/features\/appearance\/design-gallery\.tsx$/, // development-only gallery

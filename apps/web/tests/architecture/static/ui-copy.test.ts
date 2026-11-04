@@ -85,5 +85,6 @@ describe('what the check keeps, by structure', () => {
       expect(isExcluded(file), file).toBe(true);
     }
     expect(isExcluded('apps/web/features/crm/customers/customer-detail.tsx')).toBe(false);
+    expect(isExcluded('apps/web/features/studio/portal/portal-workbench.tsx')).toBe(false);
   });
 });
