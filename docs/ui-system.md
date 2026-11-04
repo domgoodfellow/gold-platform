@@ -1853,6 +1853,8 @@ Platform may use denser information presentation because its users perform admin
 
 Density is not permission to abandon hierarchy.
 
+Platform Administration has no `VisualScope`: personal Appearance (preset, density, shape) does not apply there, and shared popups (popovers including `InfoPopover`, selects, comboboxes and menus) portal to the page body instead of a scope. This is the accepted current behaviour; a shared popup still works there because each falls back to the body when no scope is present.
+
 ---
 
 ## Responsive behavior
