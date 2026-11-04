@@ -55,11 +55,6 @@ export function ChooseCurrencyForm({ organizationId, currentCurrency }: { organi
       <input type="hidden" name="organizationId" value={organizationId} />
 
       <SectionHeading>{currentCurrency ? 'Trading currency' : 'First, what do you charge in?'}</SectionHeading>
-      <Hint className="mt-1">
-        Every amount is recorded in the currency it was written in, so this is a starting point
-        rather than a setting that reaches backwards. You can change it later without
-        reinterpreting anything already priced.
-      </Hint>
 
       <div className="mt-4 flex flex-col gap-3">
         <CurrencyField id="finance-trading-currency" defaultValue={currentCurrency ?? undefined} />

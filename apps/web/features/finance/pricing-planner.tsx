@@ -22,6 +22,7 @@ export function PricingPlanner({ currency, items }: { currency: string | null; i
   return <OperationalPanel title="Economics & pricing planning" density="compact" action={
     <Button tone="secondary" disabled={drafts.length >= 3} onClick={() => setDrafts(current => [...current, { ...structuredClone(current[current.length - 1]), id: Math.max(...current.map(d => d.id)) + 1 }])}>Compare another scenario</Button>
   }>
+    {/* ui-copy-allow: docs/surfaces/finance.md requires the panel to state that scenarios are lost on leaving or reload */}
     <p className="mb-2 text-sm text-muted">Estimated costs and suggested prices · unsaved. Changes stay on this page and are lost when you leave or reload.</p>
     <p className="mb-4 text-sm text-muted">Use recorded Work costs in the report above as historical context, then enter your own delivery assumptions below. Forecast profit is not realized profit. Catalog prices, quotes and invoices are unchanged.</p>
     {items.length === 0 ? <p className="mb-4 text-sm text-muted">No catalog items yet. You can still model estimated costs and compare scenarios.</p> : null}
