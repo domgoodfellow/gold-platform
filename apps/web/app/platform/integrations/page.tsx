@@ -34,7 +34,6 @@ export default async function PlatformIntegrationsPage({ params }: PageProps<'/p
         crumbs={platformAncestry(goldId, 'connectors')}
         actions={<ButtonLink href={platformHref(goldId, 'integrations/new')} size="small">New connector</ButtonLink>}
       />
-      <Hint className="mb-4 block">Who GildOps buys infrastructure from is under Providers.</Hint>
       {detail === null ? (
         <Hint className="mb-4 block" role="status">
           The API did not answer, so adapter and registration state cannot be shown. Nothing below is guessed.

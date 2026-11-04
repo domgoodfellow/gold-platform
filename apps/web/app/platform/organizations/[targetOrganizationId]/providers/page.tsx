@@ -7,7 +7,7 @@ import { AppPage } from '@/components/layout/app-page';
 import { SectionHeading } from '@/components/surfaces/section';
 import { DataTable } from '@/components/display/table';
 import { DefinitionList, Detail } from '@/components/display/data';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@gold/ui/components/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@gold/ui/components/card';
 import { getDb } from '@/lib/db/server';
 import { telephonyProviderKey } from '@/lib/adapters/telephony';
 import { getTenant } from '@/lib/domain/platform/tenants';
@@ -79,7 +79,6 @@ export default async function TenantProviders({ params }: PageProps<'/platform/o
       <div className="mt-8 grid gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardDescription>Existing tenant resource</CardDescription>
             <CardTitle>Register number</CardTitle>
           </CardHeader>
           <CardContent>
@@ -88,7 +87,6 @@ export default async function TenantProviders({ params }: PageProps<'/platform/o
         </Card>
         <Card>
           <CardHeader>
-            <CardDescription>Verification state</CardDescription>
             <CardTitle>Update resource</CardTitle>
           </CardHeader>
           <CardContent>

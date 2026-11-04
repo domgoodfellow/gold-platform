@@ -89,13 +89,6 @@ export default async function PlatformBillingPage({ params }: PageProps<'/platfo
   return (
     <AppPage>
       <PageHeader title="Billing" crumbs={platformAncestry(goldId, 'billing')} />
-      <Hint className="mb-4 block">
-        Plans and prices are managed at{' '}
-        <Link href={platformHref(goldId, 'plans')} className="underline underline-offset-4">
-          Finance → Plans
-        </Link>
-        .
-      </Hint>
 
       {!provider ? (
         <EmptyState className="mt-6">
@@ -209,10 +202,6 @@ export default async function PlatformBillingPage({ params }: PageProps<'/platfo
       </div>
 
       <SectionHeading className="mt-8">Provider items</SectionHeading>
-      <Hint className="mt-1">
-        What the billing provider says is on each subscription. This is not what GildOps sold and not what is
-        entitled — a difference is evidence to repair, never an automatic change.
-      </Hint>
       {subscriptions.length === 0 ? (
         <EmptyState className="mt-2">No provider subscription recorded yet.</EmptyState>
       ) : (
@@ -254,6 +243,12 @@ export default async function PlatformBillingPage({ params }: PageProps<'/platfo
           ))}
         </div>
       )}
+      {subscriptions.length > 0 ? (
+        <Hint className="mt-2">
+          What the billing provider says is on each subscription. This is not what GildOps sold and not what is
+          entitled — a difference is evidence to repair, never an automatic change.
+        </Hint>
+      ) : null}
 
       <SectionHeading className="mt-8">Recent webhook deliveries</SectionHeading>
       {events.length === 0 ? (

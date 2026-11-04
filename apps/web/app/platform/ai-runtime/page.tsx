@@ -54,12 +54,13 @@ export default async function AiRuntimePage({ params }: PageProps<'/platform/ai-
   return (
     <AppPage>
       <PageHeader title="AI Runtime" crumbs={platformAncestry(goldId, 'ai-runtime')} />
-      <Hint className="mb-4 block">
+      <AiRuntimeWorkspace assignments={assignments} services={services} accounts={accounts} />
+      <Hint className="mt-3 block">
         An unassigned capability keeps this deployment&rsquo;s existing default; an assigned one never silently falls back to another vendor. Assignments select a service, account and model; they do not verify a provider run.
       </Hint>
-      <AiRuntimeWorkspace assignments={assignments} services={services} accounts={accounts} />
-      <Section className="mt-6"><SectionHeading>Recent voice sessions</SectionHeading><Hint>The latest 25 admitted sessions. Unknown usage retains the maximum reservation; an uncertain transfer or connection needs provider/carrier reconciliation.</Hint>
+      <Section className="mt-6"><SectionHeading>Recent voice sessions</SectionHeading>
         {voiceSessions.length?<ul className="mt-3 divide-y divide-border">{voiceSessions.map(session=><li key={session.id} className="space-y-1 py-3 text-sm"><p>{session.provider_account_label} ? {session.state}</p><p className="break-all text-muted">Business {session.organization_id} ? Call {session.call_id}</p><p>{session.reported_seconds===null?`Usage unknown; ${session.max_seconds} seconds reserved`:`${session.reported_seconds} reported seconds`}</p></li>)}</ul>:<p className="mt-3 text-sm text-muted">No admitted voice sessions.</p>}
+        {voiceSessions.length ? <Hint className="mt-2">The latest 25 admitted sessions. Unknown usage retains the maximum reservation; an uncertain transfer or connection needs provider/carrier reconciliation.</Hint> : null}
       </Section>
     </AppPage>
   );

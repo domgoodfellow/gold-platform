@@ -68,9 +68,6 @@ export default async function ProductPage({
 
       <Section className="mt-10">
         <SectionHeading>Presentation and sale state</SectionHeading>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Key, kind and module mapping are code/deployment-owned and are not editable here.
-        </p>
         <ProductForm product={product} />
       </Section>
     </>

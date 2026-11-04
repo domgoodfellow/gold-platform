@@ -4,7 +4,6 @@ import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 import Link from 'next/link';
 import { AppPage } from '@/components/layout/app-page';
 import { PageHeader } from '@/components/headers/page-header';
-import { Hint } from '@/components/controls/inputs';
 import { DataTable } from '@/components/display/table';
 import { Badge } from '@/components/display/data';
 import { getDb } from '@/lib/db/server';
@@ -57,7 +56,6 @@ export default async function ProvidersPage({ params }: PageProps<'/platform/pro
   return (
     <AppPage>
       <PageHeader title="Providers" crumbs={platformAncestry(goldId, 'providers')} />
-      <Hint className="mb-4 block">Credentials are never read or displayed here.</Hint>
       <DataTable
         rows={providers}
         rowKey={(provider) => provider.key}
