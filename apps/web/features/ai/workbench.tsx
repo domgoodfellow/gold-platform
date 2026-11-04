@@ -433,10 +433,6 @@ export function AgentWorkbench({
                 </Button>
               }
             >
-              <p className="mb-4 text-xs text-muted">
-                One agent, multiple deployments. Each deployment selects a
-                published version and applies channel restrictions.
-              </p>
               <div className="divide-y divide-border">
                 {deployments.map((d) => (
                   <button
@@ -475,11 +471,6 @@ export function AgentWorkbench({
           )}
           {section === "knowledge" && (
             <OperationalPanel title="Knowledge sources">
-              <p className="mb-4 text-xs text-muted">
-                Published websites only. Source selections update the draft;
-                publish a new version to deploy them. Private Library ingestion
-                is unavailable.
-              </p>
               <div className="space-y-4">
                 {data.sites
                   .filter((s) => s.current_published_revision_id)
@@ -648,11 +639,6 @@ export function AgentWorkbench({
           )}
           {section === "activity" && (
             <OperationalPanel title="Agent activity">
-              <p className="mb-4 text-xs text-muted">
-                Agent-specific execution attribution is not yet available for
-                legacy runs. Your operator runs and public conversation metadata
-                are accessible in Activity.
-              </p>
               <ButtonLink tone="secondary" href={`${base}/activity`}>
                 Open activity inspector
               </ButtonLink>
@@ -677,10 +663,6 @@ export function AgentWorkbench({
           )}
           {section === "versions" && (
             <OperationalPanel title="Published versions">
-              <p className="mb-4 text-xs text-muted">
-                Versions are immutable. Select a previous published version in a
-                deployment for deliberate rollback.
-              </p>
               {versions.map((v) => (
                 <button
                   key={v.id}

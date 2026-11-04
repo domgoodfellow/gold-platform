@@ -339,16 +339,13 @@ export function AiWorkspace({
   );
   const activity = (
     <OperationalPanel
-      title="Recent agent interactions"
+      title="Your recent agent interactions"
       action={
         <Link href={`${base}/activity`} className="text-xs text-accent-text">
           View all
         </Link>
       }
     >
-      <p className="mb-3 text-xs text-muted">
-        Your operator runs only. Public conversations remain in Communications.
-      </p>
       <div className="divide-y divide-border">
         {data.runs.map((r) => (
           <button
@@ -600,13 +597,6 @@ export function AiWorkspace({
                   <PanelState>No failures in your recent runs.</PanelState>
                 )}
               </OperationalPanel>
-              <OperationalPanel title="Insights">
-                <p className="text-xs text-muted">
-                  Operator metrics are personal. Website conversations and
-                  handoffs are Communications-owned. Vendor costs remain in
-                  Platform Administration.
-                </p>
-              </OperationalPanel>
             </aside>
           </div>
         </>
@@ -637,11 +627,6 @@ export function AiWorkspace({
       )}
       {view === "knowledge" && (
         <OperationalPanel title="Published website knowledge">
-          <p className="mb-4 text-sm text-muted">
-            Select sources in an agent’s Knowledge section, then publish a
-            version. Public retrieval uses only the current published website
-            snapshot, bounded to three sources.
-          </p>
           {data.sites
             .filter((s) => s.current_published_revision_id)
             .map((s) => (
@@ -663,10 +648,6 @@ export function AiWorkspace({
       )}
       {view === "tools" && (
         <OperationalPanel title="Governed tool catalogue">
-          <p className="mb-4 text-sm text-muted">
-            Operator tools execute as the signed-in person, under existing
-            domain RLS. Public chat and safe previews have no business tools.
-          </p>
           <div className="divide-y divide-border">
             {TOOL_CATALOGUE.map((t) => (
               <div
@@ -700,10 +681,6 @@ export function AiWorkspace({
       )}
       {view === "evaluations" && (
         <OperationalPanel title="Your recent evaluations">
-          <p className="mb-3 text-xs text-muted">
-            Safe preview responses with human-assessed criteria. No fabricated
-            quality score.
-          </p>
           {data.evaluations.map((e) => (
             <Link
               key={e.id}
