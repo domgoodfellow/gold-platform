@@ -229,7 +229,6 @@ export function ReportManagement({
       {definitions.length > 0 ? (
         <section className="mt-8">
           <SectionHeading>Saved reports, and who sees them</SectionHeading>
-          <Hint className="mt-1">A report is for the roles ticked below. Somebody whose role is not ticked does not see it at all — the report is not hidden from them, it is not theirs to read.</Hint>
           <DividedList className="mt-2">
             {definitions.map((definition) => (
               <li key={definition.id}><ReportAudienceForm organizationId={organizationId} report={definition} roles={roles} shared={shared.find((row) => row.id === definition.id)?.roleIds ?? []} /></li>
@@ -260,7 +259,6 @@ export function DashboardManagement({
   return (
       <section className="mt-8">
         <SectionHeading>Dashboards</SectionHeading>
-        <Hint className="mt-1">A dashboard is saved reports side by side. It has no audience of its own — somebody sees it when something on it is theirs to read, which is why this platform ships none and a business builds its own.</Hint>
         <CreateDashboardForm organizationId={organizationId} />
         {dashboards.length > 0 ? (
           <DividedList className="mt-2">

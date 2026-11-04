@@ -58,10 +58,6 @@ export function SaveReportForm({
       <input type="hidden" name="location" value={filters.locationId ?? ''} />
 
       <SectionHeading>Keep this view</SectionHeading>
-      <Hint>
-        Saves what is on screen now — this grouping, this period and whatever it is narrowed to.
-        Nothing is copied: the figures are worked out again each time somebody opens it.
-      </Hint>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <FormField id="report-name" label="Report name" className="sm:flex-1">
