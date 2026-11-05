@@ -174,7 +174,8 @@ The documentation system is deliberately small.
 | [`docs/product.md`](docs/product.md) | Product identity, outcomes, workspaces and product boundaries |
 | [`docs/domain-model.md`](docs/domain-model.md) | Canonical business concepts, ownership and invariants |
 | [`docs/architecture.md`](docs/architecture.md) | Runtime, repository and dependency architecture |
-| [`docs/ui-system.md`](docs/ui-system.md) | UI grammar, navigation, archetypes, responsive behavior |
+| [`docs/ui-system.md`](docs/ui-system.md) | System-wide UI grammar, navigation, archetypes, responsive behavior |
+| [`docs/surfaces/`](docs/surfaces/) | Workspace and feature surface specifications |
 | [`docs/security.md`](docs/security.md) | Identity, authorization, tenant isolation and trust boundaries |
 | [`docs/data.md`](docs/data.md) | Persistence, schema conventions, history and migrations |
 | [`docs/integrations.md`](docs/integrations.md) | Providers, Connectors, Connections, webhooks, imports and adapters |
@@ -186,7 +187,7 @@ The documentation system is deliberately small.
 | [`docs/roadmap.md`](docs/roadmap.md) | Current sequencing and outcome gates |
 | [`docs/decisions/README.md`](docs/decisions/README.md) | ADR format, lifecycle and decision index |
 | [`CHANGELOG.md`](CHANGELOG.md) | Dated shipped changes |
-| [`CLAUDE.md`](CLAUDE.md) | Repository operating instructions for coding agents |
+| [`AGENTS.md`](AGENTS.md) | Repository operating instructions for coding agents (imported by [`CLAUDE.md`](CLAUDE.md)) |
 
 The database itself remains executable authority for schema through forward migrations.
 
@@ -600,7 +601,7 @@ Before changing the repository:
 5. verify the actual requirement;
 6. report what was and was not verified.
 
-Repository-specific agent instructions are in [`CLAUDE.md`](CLAUDE.md).
+Repository-specific agent instructions are in [`AGENTS.md`](AGENTS.md), which [`CLAUDE.md`](CLAUDE.md) imports.
 
 Most importantly:
 

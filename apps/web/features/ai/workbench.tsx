@@ -433,10 +433,6 @@ export function AgentWorkbench({
                 </Button>
               }
             >
-              <p className="mb-4 text-xs text-muted">
-                One agent, multiple deployments. Each deployment selects a
-                published version and applies channel restrictions.
-              </p>
               <div className="divide-y divide-border">
                 {deployments.map((d) => (
                   <button
@@ -475,11 +471,6 @@ export function AgentWorkbench({
           )}
           {section === "knowledge" && (
             <OperationalPanel title="Knowledge sources">
-              <p className="mb-4 text-xs text-muted">
-                Published websites only. Source selections update the draft;
-                publish a new version to deploy them. Private Library ingestion
-                is unavailable.
-              </p>
               <div className="space-y-4">
                 {data.sites
                   .filter((s) => s.current_published_revision_id)
@@ -648,11 +639,6 @@ export function AgentWorkbench({
           )}
           {section === "activity" && (
             <OperationalPanel title="Agent activity">
-              <p className="mb-4 text-xs text-muted">
-                Agent-specific execution attribution is not yet available for
-                legacy runs. Your operator runs and public conversation metadata
-                are accessible in Activity.
-              </p>
               <ButtonLink tone="secondary" href={`${base}/activity`}>
                 Open activity inspector
               </ButtonLink>
@@ -677,10 +663,6 @@ export function AgentWorkbench({
           )}
           {section === "versions" && (
             <OperationalPanel title="Published versions">
-              <p className="mb-4 text-xs text-muted">
-                Versions are immutable. Select a previous published version in a
-                deployment for deliberate rollback.
-              </p>
               {versions.map((v) => (
                 <button
                   key={v.id}
@@ -726,10 +708,6 @@ export function AgentWorkbench({
           </OperationalPanel>
           <OperationalPanel title="Operator Copilot">
             <ShieldCheck size={20} className="text-accent-text" />
-            <p className="my-3 text-xs text-muted">
-              Work with the assistant in the persistent global Agent rail.
-              Conversations remain private to their operator.
-            </p>
             <Button
               tone="secondary"
               onClick={() => {
@@ -1132,9 +1110,7 @@ function DeploymentEditor({
             )}
             {surface === "sms" && (
               <p className="text-xs text-muted">
-                Human review required. Consent, suppression, sender verification
-                and inbound idempotency remain Communications-owned. No
-                automated SMS will be sent.
+                Replies need human review, and no automated SMS will be sent.
               </p>
             )}
             {surface === "voice" && (
@@ -1158,9 +1134,7 @@ function DeploymentEditor({
                   </Field>
                 ))}
                 <p className="text-xs text-muted">
-                  Operational readiness requires verified inbound events, audio
-                  ingestion/output, turn handling, fallback, transfer and a
-                  successful controlled call. No voice test is recorded.
+                  No voice test is recorded.
                 </p>
               </>
             )}

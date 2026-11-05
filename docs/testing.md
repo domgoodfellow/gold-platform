@@ -429,6 +429,8 @@ Architecture tests are appropriate for rules that otherwise regress silently dur
 
 Do not encode arbitrary style preferences as architecture tests.
 
+The UI copy check (`scripts/check-ui-copy.mjs`, run by `tests/architecture/static/ui-copy.test.ts`, and on its own as `pnpm check:ui-copy`) is a content-discipline gate approved by the UI copy discipline work order, not a style preference. It enforces the Core rules in `docs/ui-system.md` on operator surfaces: no eyebrow above a heading, no default subtitle, no CardDescription and no info icon on every row. Public surfaces are excluded by path; a justified exception carries `ui-copy-allow: <reason>` on the line above it.
+
 ---
 
 ### Database architecture

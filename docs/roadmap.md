@@ -135,6 +135,7 @@ Canonical set:
 
 ```text
 README.md
+AGENTS.md
 CLAUDE.md
 CHANGELOG.md
 
@@ -143,6 +144,7 @@ docs/
   domain-model.md
   architecture.md
   ui-system.md
+  surfaces/
   security.md
   data.md
   integrations.md

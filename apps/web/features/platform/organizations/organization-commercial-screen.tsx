@@ -4,7 +4,7 @@ import { GroupHeading, SectionHeading } from '@/components/surfaces/section';
 import { DataTable } from '@/components/display/table';
 import { AllowanceMeter } from '@/features/catalogue/allowance-meter';
 import { Badge } from '@/components/display/data';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@gold/ui/components/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@gold/ui/components/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@gold/ui/components/tabs';
 import type { ComponentPrice, OrganizationCommercialModel } from '@/lib/application/platform/organization-commercial';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
@@ -85,8 +85,7 @@ export function OrganizationCommercialScreen({
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <CardDescription>Base Plan</CardDescription>
-              <CardTitle className="text-xl">{basePlan.plan?.label ?? 'No standard Plan'}</CardTitle>
+              <CardTitle className="text-xl">Base Plan: {basePlan.plan?.label ?? 'No standard Plan'}</CardTitle>
               {basePlan.assignment ? (
                 <p className="mt-1 text-xs text-muted-foreground">Effective {formatPeriod(basePlan.assignment.periodStart, basePlan.assignment.periodEnd)}</p>
               ) : (
@@ -379,7 +378,6 @@ export function OrganizationCommercialScreen({
 
           <div>
             <SectionHeading>Legacy module entitlement</SectionHeading>
-            <p className="mt-1 text-sm text-muted-foreground">Wanted∩paid, computed the same way it was before Plans existed.</p>
             <div className="mt-3">
               <DataTable
                 rows={states}
@@ -397,11 +395,6 @@ export function OrganizationCommercialScreen({
 
         <TabsContent value="legacy" className="mt-4">
           <SectionHeading>Legacy per-product terms</SectionHeading>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Recorded before Plans existed, or as a standalone custom agreement outside any Plan. Never rewritten by a
-            Plan assignment, and not part of the Plan/Add-on model above — a compatibility surface, kept readable
-            rather than migrated in this slice.
-          </p>
           <div className="mt-3">
             <DataTable
               rows={legacy.terms}

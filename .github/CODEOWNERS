@@ -10,6 +10,7 @@
 # file only requests a review; it blocks nothing.
 
 # Agent contract and decision records
+/AGENTS.md                                                    @domgoodfellow
 /CLAUDE.md                                                    @domgoodfellow
 /docs/decisions/                                              @domgoodfellow
 

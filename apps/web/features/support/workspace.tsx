@@ -23,6 +23,7 @@ import { PageHeader } from "@/components/headers/page-header";
 import { SupportRegistrar } from "@/components/panels/support-registrar";
 import { useWorkspaceRail } from "@/components/panels/workspace-right-rail";
 import { TextInput } from "@/components/controls/inputs";
+import { InfoPopover } from "@/components/controls/info-popover";
 import {
   PRIORITIES,
   STATUSES,
@@ -930,8 +931,7 @@ export function SupportWorkspace({
             Queue-specific policies take precedence over the priority fallback.
             Targets apply on Case creation and retain their original snapshot
             after configuration changes, reassignment, priority changes and
-            reopening. Business-hours clocks and first-response targets are
-            unavailable.
+            reopening.
           </p>
         </>
       )}
@@ -984,14 +984,18 @@ export function SupportWorkspace({
                 </Table>
               </div>
             </OperationalPanel>
-            <OperationalPanel title="Resolution performance">
+            <OperationalPanel
+              title="Resolution performance"
+              action={
+                <InfoPopover label="About resolution performance" align="end">
+                  Reopened Cases are excluded until resolved again. Duration
+                  includes elapsed time since initial creation through the latest
+                  resolution, including time spent previously resolved. SLA
+                  adherence includes only historically targeted Cases.
+                </InfoPopover>
+              }
+            >
               {performance}
-              <div className="mt-4 border-t border-border pt-4 text-xs text-muted">
-                Reopened Cases are excluded until resolved again. Duration
-                includes elapsed time since initial creation through the latest
-                resolution, including time spent previously resolved. SLA
-                adherence includes only historically targeted Cases.
-              </div>
             </OperationalPanel>
             <OperationalPanel body="edge-to-edge" title="Current queue backlog">{queueTable}</OperationalPanel>
             <OperationalPanel body="edge-to-edge" title="Case volume by queue">
@@ -1072,11 +1076,6 @@ export function SupportWorkspace({
               </Table>
             </OperationalPanel>
           </div>
-          <p className="text-xs text-muted">
-            Counts use exact tenant-wide queries. No customer satisfaction,
-            presence, first-contact resolution or response-time estimates are
-            inferred.
-          </p>
         </>
       )}
     </AppPage>

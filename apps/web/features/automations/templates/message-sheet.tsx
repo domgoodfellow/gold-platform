@@ -3,7 +3,7 @@
 import { useActionState, useState } from 'react';
 import { Pencil, Plus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { Hint, TextArea, TextInput } from '@/components/controls/inputs';
+import { TextArea, TextInput } from '@/components/controls/inputs';
 import {
   PageDrawer,
   PageDrawerContent,
@@ -170,11 +170,6 @@ export function MessageSheet({
             </p>
           </section>
 
-          <Hint>
-            Whether messages can be sent at all depends on what this
-            installation is connected to — each delivery says what happened to
-            it, in Activity.
-          </Hint>
 
           <Button type="submit" disabled={pending} className="w-fit">
             {pending ? 'Saving…' : template ? 'Save' : 'Add message'}

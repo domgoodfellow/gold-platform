@@ -176,7 +176,7 @@ export default async function ResourcePage({
           {affectedWork.length > 0 ? (
             <section aria-labelledby="affected-heading" className="flex flex-col gap-2">
               <h2 id="affected-heading" className="text-base font-semibold">Scheduled work outside this availability</h2>
-              <p className="text-sm text-muted">These jobs were booked before the hours or time off above. Nothing has been moved.</p>
+              <p className="text-sm text-muted">Nothing has been moved.</p>
               <DividedList>
                 {affectedWork.map((item) => (
                   <li key={item.id} className="py-2">

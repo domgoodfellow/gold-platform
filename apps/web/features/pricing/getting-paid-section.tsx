@@ -62,7 +62,7 @@ export async function GettingPaidSection({ organizationId, outcome }: { organiza
     </Card>
 
     <p className="text-xs text-muted">
-      This is how your customers pay you. What this business pays GildOps is {organization.capabilities.includes('billing.manage')
+      What this business pays GildOps is in {organization.capabilities.includes('billing.manage')
         ? <Link href={`/organizations/${organizationId}/settings/plan`} className={link}>Plan &amp; usage</Link>
         : 'Plan & usage'}.
     </p>

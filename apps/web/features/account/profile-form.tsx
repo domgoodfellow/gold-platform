@@ -38,7 +38,6 @@ export function PersonalProfileForm({ profile, email }: { profile: AccountProfil
     <form action={action} aria-label="Personal profile" className="flex flex-col gap-6" aria-busy={pending}>
       <Card as="section" aria-labelledby="personal-profile-heading" className={panel}>
         <SectionHeading id="personal-profile-heading">Personal profile</SectionHeading>
-        <Hint className="mt-1">Personal information used across GildOps.</Hint>
         <div className="mt-6 grid min-w-0 gap-6 md:grid-cols-[9rem_minmax(0,1fr)]">
           <div className="flex items-center gap-4 md:flex-col md:items-start">
             <Avatar className="size-20" role="img" aria-label={displayName ? `Profile photo for ${displayName}` : 'Profile photo'}>
@@ -59,7 +58,6 @@ export function PersonalProfileForm({ profile, email }: { profile: AccountProfil
       </Card>
       <Card as="section" aria-labelledby="contact-heading" className={panel}>
         <SectionHeading id="contact-heading">Contact information</SectionHeading>
-        <Hint className="mt-1">Optional personal contact details, private to your account.</Hint>
         <div className={`mt-6 ${grid}`}>
           <FormField id="profile-email" label="Email" hint="Change your sign-in email using the verification flow below.">
             {(field) => <TextInput {...field} type="email" autoComplete="email" value={email} readOnly />}
@@ -71,7 +69,7 @@ export function PersonalProfileForm({ profile, email }: { profile: AccountProfil
             </FormField>
           ))}
         </div>
-        <Hint className="mt-3">For Country, use a two-letter code such as CA, GB or JP.</Hint>
+        <Hint className="mt-3">Optional personal contact details, private to your account. For Country, use a two-letter code such as CA, GB or JP.</Hint>
       </Card>
       <Card as="section" aria-labelledby="regional-heading" className={panel}>
         <SectionHeading id="regional-heading">Regional preferences</SectionHeading>
@@ -99,7 +97,6 @@ export function ChangeEmailForm({ email, pendingEmail }: { email: string; pendin
   return (
     <Card as="section" aria-labelledby="email-change-heading" className={panel}>
       <SectionHeading id="email-change-heading">Email verification / change email</SectionHeading>
-      <Hint className="mt-1">Verify your current address before requesting a sign-in email change.</Hint>
       <div className="mt-6 flex flex-col gap-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0"><Hint>Current email</Hint><p className="break-all text-sm font-medium">{email}</p></div>

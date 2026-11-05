@@ -1,8 +1,5 @@
-import Link from 'next/link';
 import { PageHeader } from '@/components/headers/page-header';
 import { areaLabel } from '@/lib/navigation';
-
-import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame } from '@/features/settings/settings-page-frame';
 import { ScheduleConfiguration } from '@/features/scheduling/configuration/schedule-configuration';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
@@ -23,14 +20,6 @@ export default async function ScheduleConfigurationPage({
   return (
     <SettingsPageFrame>
       <PageHeader title="Schedule configuration" crumbs={[{ label: areaLabel('schedule'), href: `/organizations/${organizationId}/schedule` }]} />
-      <Hint className="mt-1">
-        Opening hours used by the{' '}
-        <Link href={`/organizations/${organizationId}/schedule`} className="underline underline-offset-4">
-          schedule
-        </Link>{' '}
-        to work out what is free.
-      </Hint>
-
       <div className="mt-6">
         <ScheduleConfiguration
           organizationId={organizationId}

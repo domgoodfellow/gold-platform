@@ -390,8 +390,7 @@ export function ConfigurationEditor({
             />
           </Field>
           <p className="text-xs text-muted">
-            Clock basis: elapsed time, including nights and weekends. Business
-            operating time and first-response targets are unavailable.
+            Clock basis: elapsed time, including nights and weekends.
           </p>
         </>
       )}

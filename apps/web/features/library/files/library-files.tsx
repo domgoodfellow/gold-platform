@@ -109,9 +109,6 @@ export async function LibraryFilesCollection({
       {mayUpload ? (
         <Section className="mt-6" aria-labelledby="add-file-heading">
           <SectionHeading id="add-file-heading">Add a file</SectionHeading>
-          <p className="mt-1 max-w-2xl text-sm text-muted">
-            A file here belongs to the business. Any workspace can use it, and a record can reference it.
-          </p>
           <DocumentUploadForm action={upload} hiddenFields={{ organizationId }} submitLabel="Add to Library" />
         </Section>
       ) : (

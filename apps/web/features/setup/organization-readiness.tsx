@@ -137,7 +137,6 @@ export function OrganizationReadiness({
           {agentAvailable ? (
             <section className="border-t border-border pt-5">
               <p className="font-medium">Agent-assisted setup</p>
-              <p className="mt-1 text-sm text-muted">Describe how the business works, review the proposed configuration, and apply only what is approved.</p>
               <ButtonLink href={`/organizations/${organizationId}/setup#agent-setup`} className="mt-3" size="small">
                 Open Agent-assisted setup
               </ButtonLink>

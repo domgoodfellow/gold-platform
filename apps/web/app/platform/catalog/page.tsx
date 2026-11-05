@@ -65,6 +65,7 @@ export default async function CatalogPage({ params }: PageProps<'/platform/catal
                 <CardTitle>{product.label}</CardTitle>
                 {product.lifecycle !== 'stable' ? <Badge>{product.lifecycle}</Badge> : null}
               </div>
+              {/* ui-copy-allow: the product's own description field, record data the catalog lists */}
               <CardDescription>{product.description}</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
@@ -131,9 +132,6 @@ export default async function CatalogPage({ params }: PageProps<'/platform/catal
       </div>
 
       <h2 className="mt-10 text-lg font-semibold">Shared workspace</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Capability every Product reuses. A Plan may grant it, but it is not a Product a business buys, and it has no operating workspace of its own.
-      </p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {products.filter((product) => product.kind === 'workspace').map(renderProduct)}
       </div>

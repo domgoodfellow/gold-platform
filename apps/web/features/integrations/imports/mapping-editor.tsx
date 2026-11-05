@@ -49,25 +49,23 @@ export function MappingEditor({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="resourceId" value={resourceId} />
       <p className="max-w-3xl text-sm text-muted">
-        {totalRows} row{totalRows === 1 ? '' : 's'} found. GildOps has suggested a destination for each column; check them, then review the changes. Nothing is written yet.
+        {totalRows} row{totalRows === 1 ? '' : 's'} found. Nothing is written yet.
       </p>
       {error ? <ErrorText role="alert">{error}</ErrorText> : null}
 
       <Card as="section" aria-labelledby="mapping-identity">
         <h2 id="mapping-identity" className="text-sm font-semibold">Who these rows are</h2>
-        <p className="mt-0.5 text-sm text-muted">Person and Company are kept apart. Rows without a type become Unspecified / Needs classification; GildOps never guesses it from a name.</p>
         <div data-slot="field-group" className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <FormField id="mapping-contact-type" label="Contact type">{field => <SelectField {...field} name="contactType" defaultValue="" options={[{ value: '', label: 'Use a mapped column (otherwise Unspecified)' }, { value: 'person', label: 'All rows are People' }, { value: 'company', label: 'All rows are Companies' }]} />}</FormField>
-          <FormField id="mapping-mode" label="How often">{field => <SelectField {...field} name="mode" defaultValue="import" options={[{ value: 'import', label: 'Import once' }, ...(maySynchronize ? [{ value: 'sync', label: 'Keep synchronized (review each refresh)' }] : [])]} />}</FormField>
+          <FormField id="mapping-contact-type" label="Contact type" hint="Rows without a type become Unspecified / Needs classification; GildOps never guesses it from a name.">{field => <SelectField {...field} name="contactType" defaultValue="" options={[{ value: '', label: 'Use a mapped column (otherwise Unspecified)' }, { value: 'person', label: 'All rows are People' }, { value: 'company', label: 'All rows are Companies' }]} />}</FormField>
+          <FormField id="mapping-mode" label="How often">{field => <SelectField {...field} name="mode" defaultValue="import" options={[{ value: 'import', label: 'Import once', description: 'Import once creates a snapshot.' }, ...(maySynchronize ? [{ value: 'sync', label: 'Keep synchronized (review each refresh)', description: 'Keep synchronized saves the mapping and source identities.' }] : [])]} />}</FormField>
           <FormField id="mapping-default-lifecycle" label="Lifecycle for new contacts" hint="A mapped lifecycle column wins per row. Existing contacts keep theirs.">{field => <SelectField {...field} name="defaultLifecycle" defaultValue="" options={[{ value: '', label: 'Unclassified' }, ...CONTACT_LIFECYCLES.map((value) => ({ value: value, label: classificationLabel(value) }))]} />}</FormField>
           <FormField id="mapping-dedupe" label="Duplicate matching">{field => <SelectField {...field} name="dedupeKey" defaultValue="email" options={[{ value: 'email', label: 'Stable source ID, then email' }, { value: '', label: 'Stable source ID only' }]} />}</FormField>
         </div>
-        <Hint className="mt-3 block">Lead temperature stays Unrated unless a column is mapped. {maySynchronize ? 'A synchronized worksheet is reviewed on every refresh: local edits are kept on conflicts and removed rows never delete contacts. Automatic scheduling is not enabled.' : 'Updates to contacts this source created before are reviewed like new rows.'}</Hint>
+        <Hint className="mt-3 block">Lead temperature stays Unrated unless a column is mapped. {maySynchronize ? 'A synchronized worksheet is reviewed on every refresh: local edits are kept on conflicts and removed rows never delete contacts.' : 'Updates to contacts this source created before are reviewed like new rows.'}</Hint>
       </Card>
 
       <Card as="section" aria-labelledby="mapping-columns" className="p-0 py-0">
-        <div className="px-4 pt-4"><h2 id="mapping-columns" className="text-sm font-semibold">Columns</h2>
-          <p className="mt-0.5 text-sm text-muted">Ignored columns are not written to contacts; they stay with the import&apos;s source data.</p></div>
+        <div className="px-4 pt-4"><h2 id="mapping-columns" className="text-sm font-semibold">Columns</h2></div>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[40rem] text-sm">
             <thead><tr className="border-y border-border bg-secondary/50 text-left text-xs text-muted">
@@ -94,6 +92,7 @@ export function MappingEditor({
           </table>
         </div>
         <Hint className="block px-4 py-3">
+          Ignored columns are not written to contacts; they stay with the import&apos;s source data.
           Worksheet imports match stable provider row IDs within the selected resource. For CSV updates, supply a source_record_id column; otherwise matching uses email when selected, or unchanged row content within the same filename. Historical contact dates do not create call activity.
         </Hint>
       </Card>

@@ -86,11 +86,6 @@ export function EmailAddresses({
   return (
     <Section className="mt-8">
       <SectionHeading>Addresses</SectionHeading>
-      <Hint className="mt-1">
-        An address is named beneath a verified domain and can send once that domain is verified. Receiving is separate: turn it on
-        only once the domain&apos;s mail records point at GildOps, otherwise nothing sent to the address will arrive.
-      </Hint>
-
       {identities.length === 0 ? (
         <Hint className="mt-3">No address has been named yet.</Hint>
       ) : (
@@ -121,6 +116,10 @@ export function EmailAddresses({
               ))}
             </tbody>
           </table>
+          <Hint className="mt-2">
+            Receiving is separate: turn it on only once the domain&apos;s mail records point at GildOps, otherwise nothing
+            sent to the address will arrive.
+          </Hint>
         </div>
       )}
 

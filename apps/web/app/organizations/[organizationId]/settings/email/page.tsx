@@ -40,22 +40,16 @@ export default async function EmailSendingSettingsPage({ params }: PageProps<'/o
   return (
     <SettingsPageFrame>
       {header}
-      <Hint className="mt-1 max-w-prose">
-        Email your business sends to customers — booking confirmations, automation messages and service notifications —
-        comes from an address on a domain you own. Team invitations come from GildOps and need no setup here.
-      </Hint>
 
       <SendingStatus status={status} senders={senders} />
 
       <Section className="mt-8">
         <SectionHeading>Sending domains</SectionHeading>
-        <Hint className="mt-1 max-w-prose">
-          Prove that you own a domain by adding a few DNS records at the company that manages it. If that is an account this
-          business has connected, GildOps can publish them for you after you have read them. Your website address is not
-          automatically verified for email. Verifying a domain lets you send from it; it does not create a mailbox:
-          replies and other mail to your addresses still go wherever the domain&rsquo;s mail records point today.
-        </Hint>
         <AddSendingDomainForm organizationId={organizationId} />
+        <Hint className="mt-2 max-w-prose">
+          Verifying a domain lets you send from it; it does not create a mailbox: replies and other mail to your
+          addresses still go wherever the domain&rsquo;s mail records point today.
+        </Hint>
       </Section>
       <SendingDomains
         organizationId={organizationId}

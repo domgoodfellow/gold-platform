@@ -73,6 +73,7 @@ export default async function CallDetailPage({
       />
 
       {live ? (
+        // ui-copy-allow: persistent notice for an unresolved condition: a live call no one from the business may be on
         <Hint className="mb-4">
           This call is still going. It is operated from the call bar at the bottom of the screen on the browser that placed it; if that
           browser was closed or reloaded, no one from the business is on it until it ends.

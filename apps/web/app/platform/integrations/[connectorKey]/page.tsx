@@ -67,11 +67,6 @@ export default async function ConnectorPage({ params }: PageProps<'/platform/int
 
       <Section className="mt-8">
         <SectionHeading>Apps inside this connector</SectionHeading>
-        <Hint className="mt-1 block">
-          One authorization can reach several apps. These describe what it covers; they are not
-          separate connections — and each carries its own GildOps implementation state, never
-          inherited from the connector above it.
-        </Hint>
         {connector.apps.length === 0 ? (
           <Hint className="mt-2 block">None.</Hint>
         ) : (

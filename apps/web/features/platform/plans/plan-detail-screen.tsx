@@ -194,7 +194,7 @@ export function PlanDetailScreen({ organizationId, model }: { organizationId: st
 
         <TabsContent value="economics" className="mt-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><SectionHeading>Planning assumptions</SectionHeading><p className="mt-1 text-sm text-muted">Low defaults to 25%; Max allowance is always 100%. Expected and Heavy are versioned per allowance.</p></div>
+            <div><SectionHeading>Planning assumptions</SectionHeading></div>
             <div className="flex gap-2"><ButtonLink href={`${platformHref(organizationId, 'package-economics')}?source=plan_default&id=${plan.id}`} tone="secondary">Open simulator</ButtonLink><PlanEconomicsSettingsSheet planId={plan.id} planKey={plan.key} currency={currentPrice?.currency ?? 'CAD'} quotas={quotas} policy={marginPolicy} assumptions={assumptions} /></div>
           </div>
           <dl className="mt-5 grid grid-cols-3 gap-4 border-y border-border py-3 text-sm"><div><dt className="text-muted">Target margin</dt><dd className="font-medium">{marginPolicy ? `${(marginPolicy.targetMargin * 100).toFixed(1)}%` : 'Not set'}</dd></div><div><dt className="text-muted">Warning below</dt><dd>{marginPolicy ? `${(marginPolicy.warningMargin * 100).toFixed(1)}%` : '—'}</dd></div><div><dt className="text-muted">Hard floor</dt><dd>{marginPolicy ? `${(marginPolicy.hardFloorMargin * 100).toFixed(1)}%` : '—'}</dd></div></dl>

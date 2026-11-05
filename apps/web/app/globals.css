@@ -440,6 +440,9 @@ h1, h2, h3, h4 {
 :scope :where([data-slot=board-card]) { box-shadow: var(--visual-elevation); }
 :scope[data-density] :where([data-slot=entity-row]) { padding-block: calc(var(--visual-spacing) * .75); }
 :scope[data-density] :where([data-slot=board-card]) { padding: calc(var(--visual-spacing) * .75); }
+/* Metric tiles follow Display density as cards do: the default gutters (1rem across, .75rem down,
+   .75rem gap) at comfortable, and tighter ones at compact. */
+:scope[data-density] :where([data-slot=metric-tile]) { padding: calc(var(--visual-spacing) * .75) var(--visual-spacing); gap: calc(var(--visual-spacing) * .75); }
 :scope[data-density] :where([data-slot=configuration-editor] li) { padding-block: calc(var(--visual-spacing) * .75); }
 :scope[data-density] :where([data-slot=table-cell]) { padding-block: calc(var(--visual-spacing) * .5); }
 :scope :where([data-slot=popover-content], [data-slot=dropdown-menu-content], [data-slot=select-content], [data-slot=combobox-content], [data-slot=dialog-content]) {

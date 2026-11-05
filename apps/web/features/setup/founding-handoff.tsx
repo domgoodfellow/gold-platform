@@ -31,13 +31,13 @@ export function FoundingHandoff({ handoff }: { handoff: AcceptedProposalHandoff 
   return (
     <Card as="section" aria-labelledby="founding-handoff-heading">
       <SectionHeading id="founding-handoff-heading">Where this business came from</SectionHeading>
+      {/* ui-copy-allow: provenance facts are this section's content, not a subtitle */}
       <p className="mt-1 text-sm text-muted">
         Created from an accepted proposal. {handoff.confirmedRequirements} discovery{' '}
         {handoff.confirmedRequirements === 1 ? 'question was' : 'questions were'} confirmed before it was sent.
       </p>
       {knownFacts ? <div className="mt-4">
         <h3 className="text-sm font-medium">Here’s what we understood about your business</h3>
-        <p className="mt-1 text-sm text-muted">Confirm or change these facts in the configuration steps. This discovery snapshot stays as historical evidence.</p>
         <p className="mt-3 whitespace-pre-wrap text-sm">{knownFacts}</p>
       </div> : null}
 

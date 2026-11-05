@@ -123,7 +123,7 @@ export function CustomerDetail(props: {
       case 'tasks': return props.followUps;
       case 'documents': return <DocumentsSection organizationId={organizationId} documents={props.documents} mayAttach={permissions.attach} roleLabel={role} uploadAction={uploadCustomerDocumentAction} hiddenFields={{ organizationId, customerId: customer.id }} className="mt-0" />;
       case 'portal': return <>
-        <Hint>A link this contact can open to see their own work and invoices. Anyone holding it is them.</Hint>
+        <Hint>Anyone holding this link can see this contact’s own work and invoices.</Hint>
         {permissions.portal ? <><PortalLinkForm organizationId={organizationId} customerId={customer.id} origin={props.portalOrigin ?? props.origin} createAction={createPortalInviteAction} /><PortalInviteList organizationId={organizationId} customerId={customer.id} invites={props.invites} origin={props.portalOrigin ?? props.origin} revokeAction={revokePortalInviteAction} /></> : <Hint className="mt-3">Your role, {role}, cannot manage this contact&apos;s portal access.</Hint>}
       </>;
       default: return renderView(currentView);

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { AppPage } from '@/components/layout/app-page';
 import { SectionHeading } from '@/components/surfaces/section';
-import { Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
 import { getDb } from '@/lib/db/server';
@@ -45,9 +44,6 @@ export default async function TenantIntegrations({ params }: PageProps<'/platfor
       <TenantWorkspaceHeader goldId={goldId} id={organizationId} name={tenant.name} currency={tenant.currency} />
       <section className="mt-6">
         <SectionHeading>Connected apps</SectionHeading>
-        <Hint className="mt-1 block">
-          A business&apos;s own authorizations to outside apps. Infrastructure GildOps runs for it is under Providers.
-        </Hint>
         <div className="mt-3">
           <DataTable
             rows={connections}

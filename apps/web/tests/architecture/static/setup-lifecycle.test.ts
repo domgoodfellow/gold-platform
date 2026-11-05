@@ -119,7 +119,9 @@ describe('AI drafting — an accelerator the cockpit does not depend on', () => 
     expect(SETUP_PAGE).toContain('Set up faster with Agent');
     expect(SETUP_PAGE).toContain('/setup/proposal');
     expect(REVIEW).toContain('<ProposalReview');
-    expect(SETUP_PAGE).toContain('nothing takes effect until you apply it');
+    // Nothing a draft proposes takes effect until it is applied: the Setup page no longer repeats
+    // that under its heading (UI copy discipline), so it is pinned where the person applies.
+    expect(read('../../../features/setup/proposal-review.tsx')).toContain('Apply the saved proposal through each configuration owner');
   });
 
   it('renders the areas and Launch outside every drafting condition', () => {

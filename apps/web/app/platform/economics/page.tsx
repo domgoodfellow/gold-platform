@@ -44,8 +44,7 @@ export default async function PortfolioEconomicsPage({ params }: PageProps<'/pla
         crumbs={platformAncestry(organizationId, 'portfolio-economics')}
       />
       <Hint className="mb-4">
-        {new Date(period.start).toLocaleDateString('en-CA', { month: 'long', year: 'numeric' })} · amounts in {reportingCurrency} ·
-        every organization with a composed charge this month, ranked by what it owes.
+        {new Date(period.start).toLocaleDateString('en-CA', { month: 'long', year: 'numeric' })} · amounts in {reportingCurrency}
       </Hint>
 
       <dl className="mb-5 grid grid-cols-2 gap-x-6 gap-y-3 border-y border-border py-3 text-sm sm:grid-cols-3">

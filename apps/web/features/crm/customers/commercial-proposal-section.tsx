@@ -316,7 +316,6 @@ export function CommercialProposalSection({
   return (
     <Section>
       <SectionHeading>Commercial proposal</SectionHeading>
-      <Hint className="mt-1">Every version stays here — a changed term is a new one, never an edit.</Hint>
 
       <div className="mt-4 flex flex-col gap-3">
         {proposals.length === 0 ? (

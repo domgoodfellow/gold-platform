@@ -27,7 +27,7 @@ export default async function FinanceReports({ params, searchParams }: PageProps
       <TextInput type="month" name="month" aria-label="Reporting month" defaultValue={period.month} className="w-48" />
       <Button tone="secondary" type="submit">Apply</Button>
     </form>
-    <p className="mb-4 text-sm text-muted">Recorded: invoiced and incurred by Customer · {organization.timezone}. Payments received are shown separately in Finance. Margin uses recorded costs; missing entries do not establish the full cost of delivery.</p>
+    <p className="mb-4 text-sm text-muted">Recorded: invoiced and incurred by Customer · {organization.timezone}. Margin uses recorded costs; missing entries do not establish the full cost of delivery.</p>
     <DataTable rows={rows} rowKey={r => `${r.groupId}-${r.currency}`} empty="No financial activity in this period." columns={[
       { key: 'customer', header: 'Customer', emphasis: 'primary', cell: r => r.label ?? 'Unattributed' },
       { key: 'currency', header: 'Currency', cell: r => r.currency },

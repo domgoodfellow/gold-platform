@@ -8,11 +8,6 @@ import { workspaceConfigCrumbs } from '@/lib/settings-nav';
 
 export type SupportConfigurationKind = 'queue' | 'policy';
 
-const DESCRIPTIONS: Record<SupportConfigurationKind, string> = {
- queue: 'Queues group cases by responsibility. Case assignment remains on each case; automatic assignment policies are unavailable.',
- policy: 'Elapsed-time resolution targets. Queue-specific policies take precedence over the priority fallback. Business-time and first-response targets are unavailable.',
-};
-
 /** One kind's records, each with its own editor. Shared by the configuration page and the Configure panel. */
 function SupportRecords({ organizationId, data, kind }: { organizationId: string; data: SupportConfiguration; kind: SupportConfigurationKind }) {
  const records = kind === 'queue' ? data.queues : data.policies;
@@ -25,7 +20,6 @@ export async function SupportConfigurationPage({ organizationId, kind }: { organ
  const { db, gate } = await requireConfigurationTarget(organizationId, key);
  const data = await readSupportConfiguration(db, organizationId);
  return <AppPage><PageHeader title={kind === 'queue' ? 'Queues & assignment' : 'Service levels'} crumbs={workspaceConfigCrumbs(organizationId, key, gate)} actions={<ConfigurationEditor organizationId={organizationId} data={data} kind={kind} />} />
- <p className="text-sm text-muted">{DESCRIPTIONS[kind]}</p>
  <SupportRecords organizationId={organizationId} data={data} kind={kind} />
  </AppPage>;
 }
@@ -37,7 +31,6 @@ export function SupportConfigurePanel({ organizationId, data, kinds }: { organiz
    <h2 id={`support-configure-${kind}`} className="text-sm font-semibold">{kind === 'queue' ? 'Queues' : 'Service levels'}</h2>
    <ConfigurationEditor organizationId={organizationId} data={data} kind={kind} />
   </div>
-  <p className="mt-1 text-sm text-muted">{DESCRIPTIONS[kind]}</p>
   <SupportRecords organizationId={organizationId} data={data} kind={kind} />
  </section>)}</div>;
 }
