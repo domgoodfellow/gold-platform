@@ -3,8 +3,11 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { describe, expect, it } from 'vitest';
+import type { Db } from '@/lib/db/types';
+import { DomainError, SIGN_IN_UNREACHABLE, SignInUnreachableError } from '@/lib/domain/errors';
 import { decideRedirect, isPublic } from '@/lib/route/access';
 import { classifySessionUser, resolveSessionIdentity } from '@/lib/domain/identity/session';
+import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
  * The anonymous-session model gives a booking/portal visitor a real, RLS-visible `auth.uid()` — which used to collapse,
@@ -20,13 +23,18 @@ const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
-function freshClient(): SupabaseClient {
+function freshClient(fetcher?: typeof fetch): SupabaseClient {
   return createClient(SUPABASE_URL, ANON_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
+    ...(fetcher ? { global: { fetch: fetcher } } : {}),
   });
 }
 
-async function signUp(label: string): Promise<{ db: SupabaseClient; userId: string }> {
+function adminClient(): SupabaseClient {
+  return createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
+}
+
+async function signUp(label: string, fetcher?: typeof fetch): Promise<{ db: SupabaseClient; userId: string }> {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -39,7 +47,7 @@ async function signUp(label: string): Promise<{ db: SupabaseClient; userId: stri
   });
   if (error) throw error;
 
-  const db = freshClient();
+  const db = freshClient(fetcher);
   const { error: signInError } = await db.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
 
@@ -67,6 +75,47 @@ describe('resolveSessionIdentity, against real sessions', () => {
     const { db, userId } = await signUp('identity-account');
     const identity = await resolveSessionIdentity(db);
     expect(identity).toEqual({ kind: 'account', userId });
+  });
+});
+
+describe('requireActor: signed out, or the check could not complete', () => {
+  it('says sign in when the sign-in service answers that there is no valid session', async () => {
+    await expect(requireActor(freshClient() as unknown as Db)).rejects.toMatchObject({ code: 'auth.required' });
+
+    // A real session ended on the server: the token still reads as valid, and the service says it is gone.
+    const { db } = await signUp('actor-revoked');
+    const { data } = await db.auth.getSession();
+    const { error } = await adminClient().auth.admin.signOut(data.session!.access_token, 'global');
+    if (error) throw error;
+    const failure = await requireActor(db as unknown as Db).catch((caught: unknown) => caught);
+    expect(failure).toBeInstanceOf(DomainError);
+    expect(failure).toMatchObject({ code: 'auth.required' });
+  });
+
+  it('is a service error, not sign in, when the check cannot complete', async () => {
+    // Each way the question "who is signed in?" can go unanswered, from a session that is fine.
+    const failures: Record<string, () => Promise<Response>> = {
+      'no connection': () => Promise.reject(new TypeError('fetch failed')),
+      'a server error': async () => Response.json({ message: 'unavailable' }, { status: 503 }),
+      'a gateway page': async () => new Response('<html>Bad gateway</html>', { status: 502 }),
+      'a reply that is not the service': async () => new Response('<html>Not found</html>', { status: 404 }),
+      'too many requests': async () => Response.json({ message: 'rate limited' }, { status: 429 }),
+    };
+    for (const [label, fail] of Object.entries(failures)) {
+      let down = false;
+      const fetcher: typeof fetch = (input, init) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        return down && url.includes('/auth/v1/user') ? fail() : fetch(input, init);
+      };
+      const { db, userId } = await signUp('actor-unreachable', fetcher);
+      expect(await requireActor(db as unknown as Db)).toEqual({ id: userId });
+
+      down = true;
+      const failure = await requireActor(db as unknown as Db).catch((caught: unknown) => caught);
+      expect(failure, label).toBeInstanceOf(SignInUnreachableError);
+      expect(failure, label).not.toBeInstanceOf(DomainError);
+      expect(failure, label).toMatchObject({ digest: SIGN_IN_UNREACHABLE });
+    }
   });
 });
 

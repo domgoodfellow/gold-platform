@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { SIGN_IN_UNREACHABLE } from '@/lib/domain/errors';
 
 /**
  * The last boundary: something threw in the root layout itself.
@@ -21,6 +22,10 @@ import { useEffect } from 'react';
  * fonts and renders `{children}` — so anything that throws in it is a build or runtime fault
  * rather than a data problem. Every failure with a business in hand is caught one boundary down
  * by `organizations/[organizationId]/error.tsx`, which can afford to keep the shell.
+ *
+ * One expected visitor: a sign-in check that could not complete (`requireActor`) in a business's
+ * layout or on a page outside any business, neither of which has a boundary of its own above it.
+ * Its digest is fixed, so it gets its own sentence and shows no reference.
  */
 export default function GlobalError({
   error,
@@ -32,6 +37,8 @@ export default function GlobalError({
   useEffect(() => {
     console.error(error);
   }, [error]);
+
+  const signInUnreachable = error.digest === SIGN_IN_UNREACHABLE;
 
   return (
     <html lang="en">
@@ -52,7 +59,9 @@ export default function GlobalError({
             GildOps did not load
           </h1>
           <p style={{ marginTop: '0.5rem', opacity: 0.7 }}>
-            Something went wrong before any of your businesses could be read. Nothing was changed.
+            {signInUnreachable
+              ? "We couldn't confirm you're signed in. Try again in a moment."
+              : 'Something went wrong before any of your businesses could be read. Nothing was changed.'}
           </p>
 
           <p style={{ marginTop: '1.5rem' }}>
@@ -73,7 +82,7 @@ export default function GlobalError({
             </button>
           </p>
 
-          {error.digest ? (
+          {error.digest && !signInUnreachable ? (
             <p style={{ marginTop: '1rem', opacity: 0.6, fontFamily: 'ui-monospace, monospace' }}>
               Reference {error.digest}
             </p>
