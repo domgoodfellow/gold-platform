@@ -38,6 +38,8 @@ import { cx, FOCUS_RING } from '@/components/class-names';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useContext, useEffect, useState, type ReactNode } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/controls/confirm-submit';
+import { CreateBusinessForm } from '@/app/organizations/create-business-form';
 import {
   BarChart3,
   Bot,
@@ -447,12 +449,15 @@ export function OrgSidebar({
   displayName,
   setupPending,
   organizationId,
+  onNewBusiness,
   ...props
 }: {
   organizationId: string;
   displayName?: string;
   /** True while the business is in SETUP: the switcher says so, quietly, beneath its name. */
   setupPending?: boolean;
+  /** Opens the create-business form, for a person who may start another business. */
+  onNewBusiness?: () => void;
   mark: ReactNode;
   name: string;
   organizations: SwitchableOrganization[];
@@ -467,7 +472,7 @@ export function OrgSidebar({
   return (
     <Sidebar collapsible="icon" mobileSide="right" {...props}>
       <SidebarHeader className={cx(SIDEBAR_HEADER_HEIGHT, 'justify-center border-b border-sidebar-border pr-12 md:pr-2')}>
-        <ContextSwitcher mark={mark} current={current} organizations={organizations} setupPending={setupPending} />
+        <ContextSwitcher mark={mark} current={current} organizations={organizations} setupPending={setupPending} onNewBusiness={onNewBusiness} />
       </SidebarHeader>
       <SidebarContent>
         {settings ? (
@@ -602,6 +607,9 @@ export function OrganizationFrame({
     }
   }, [pathname, organizationId]);
   const current: SwitcherContext = { kind: 'business', organizationId, name, role };
+  // Somebody who manages a business may start another: the first-time owner's form, then its starting points.
+  const [creating, setCreating] = useState(false);
+  const mayCreate = organizations.some((organization) => organization.manages);
   // A locked GildOps keeps Administration working: recovery replaces the sidebar everywhere else.
   const recovery = locked && !inPlatformScope(pathname);
   const administration = sections.find((section) => section.key === 'administration')?.items[0];
@@ -611,7 +619,7 @@ export function OrganizationFrame({
   return (
     <CommandCenterProvider key={organizationId} organizationId={organizationId} displayName={displayName}><WorkspaceShell
       locationNavigation={{ organizationId, sections: recovery ? [] : settingsContext ? settings : sections, configurationHrefs: recovery ? [] : settingsSearch.map((item) => item.href), ...(recovery || !locationAccess ? {} : { access: locationAccess }) }}
-      sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} role={role} administration={administration} {...shared} /> : <OrgSidebar {...shared} organizationId={organizationId} displayName={displayName} setupPending={setupPending} current={current} sections={sections} settings={settingsContext ? { organizationId, sections: settings, search: settingsSearch } : null} />}
+      sidebar={recovery ? <LockedOrgSidebar organizationId={organizationId} role={role} administration={administration} {...shared} /> : <OrgSidebar {...shared} organizationId={organizationId} displayName={displayName} setupPending={setupPending} onNewBusiness={mayCreate ? () => setCreating(true) : undefined} current={current} sections={sections} settings={settingsContext ? { organizationId, sections: settings, search: settingsSearch } : null} />}
       header={
         <WorkspaceHeader
           navigationTrigger="always"
@@ -626,6 +634,16 @@ export function OrganizationFrame({
       agent={agent}
     >
       {children}
+      {mayCreate ? (
+        <Dialog open={creating} onOpenChange={setCreating}>
+          <DialogContent className="max-h-[90dvh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>New business</DialogTitle>
+            </DialogHeader>
+            <CreateBusinessForm />
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </WorkspaceShell></CommandCenterProvider>
   );
 }

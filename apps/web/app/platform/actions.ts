@@ -72,7 +72,9 @@ export async function setTemplatePublishedAction(_previous: TemplateState, formD
 
 export async function renameTemplateAction(_previous: TemplateState, formData: FormData): Promise<TemplateState> {
   return changeTemplate(
-    async () => renameIndustryTemplate(await getDb(), { key: String(formData.get('key') ?? ''), name: String(formData.get('name') ?? '') }),
+    async () => renameIndustryTemplate(await getDb(), {
+      key: String(formData.get('key') ?? ''), name: String(formData.get('name') ?? ''), category: String(formData.get('category') ?? ''),
+    }),
     'Template renamed.',
   );
 }

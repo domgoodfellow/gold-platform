@@ -51,9 +51,10 @@ describe('the switcher', () => {
     expect(switcher).toContain('organization.id !== current.organizationId');
   });
 
-  it('is a plain label, not an empty menu, when there is nowhere else to go', () => {
+  it('is a plain label, not an empty menu, when there is nowhere else to go and nothing to start', () => {
     expect(switcher).toContain('!view.hasChoices');
-    expect(switcher).toContain('hasChoices: businesses.length > 0 }');
+    // Work Order 3.1, Part B: a person who manages a business may start another from here.
+    expect(switcher).toContain('hasChoices: businesses.length > 0 || canCreate }');
   });
 
   it('the server resolves Administration into the projected sections before the shared frame renders them', () => {
@@ -130,5 +131,11 @@ describe('moving between organizations', () => {
 
   it('has nowhere to go for a person with one organization', () => {
     expect(deriveSwitcherView(current, [gold]).hasChoices).toBe(false);
+  });
+
+  it('is a menu for a person with one organization who may start another', () => {
+    const view = deriveSwitcherView(current, [gold], true);
+    expect(view.hasChoices).toBe(true);
+    expect(view.businesses).toEqual([]);
   });
 });

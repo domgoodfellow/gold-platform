@@ -3,6 +3,7 @@
 import { useActionState, useId, useState } from 'react';
 import { toast } from 'sonner';
 import { renameTemplateAction, setTemplatePublishedAction, type TemplateState } from '@/app/platform/actions';
+import { INDUSTRY_SUGGESTIONS } from '@/lib/domain/tenancy/industries';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, Hint, TextArea, TextInput } from '@/components/controls/inputs';
 import {
@@ -21,7 +22,7 @@ import {
   updateCatalogProductAction,
   type FormState,
 } from '@/app/platform/catalog/families/[familyKey]/actions';
-import { SelectField } from '@/components/controls/select-field';
+import { SelectField, SuggestionField } from '@/components/controls/select-field';
 
 const INITIAL: FormState = { error: null, updated: false };
 
@@ -339,7 +340,7 @@ export function TemplatePublishToggle({ templateKey, name, published }: { templa
   );
 }
 
-export function RenameTemplateSheet({ templateKey, name }: { templateKey: string; name: string }) {
+export function RenameTemplateSheet({ templateKey, name, category }: { templateKey: string; name: string; category: string }) {
   const [open, setOpen] = useState(false);
   const formId = useId();
   const [state, action, pending] = useActionState(withFeedback(renameTemplateAction, () => setOpen(false)), TEMPLATE_INITIAL);
@@ -357,6 +358,10 @@ export function RenameTemplateSheet({ templateKey, name }: { templateKey: string
           <div className="flex flex-col gap-1">
             <FieldLabel htmlFor={`${formId}-name`}>Name</FieldLabel>
             <TextInput id={`${formId}-name`} name="name" required maxLength={120} defaultValue={name} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <FieldLabel htmlFor={`${formId}-category`}>Category</FieldLabel>
+            <SuggestionField id={`${formId}-category`} name="category" required maxLength={60} suggestions={INDUSTRY_SUGGESTIONS} defaultValue={category} />
           </div>
           <ErrorText role="alert">{state.error}</ErrorText>
         </form>

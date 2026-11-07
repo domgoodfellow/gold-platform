@@ -46,6 +46,9 @@ export async function saveAsTemplateAction(_: SaveTemplateState, f: FormData): P
   return attempt<SaveTemplateState>(async () => {
     await requirePlatformCapability('platform.catalogue');
     const db = await getDb();
-    await saveBusinessAsTemplate(db, { organizationId: String(f.get('organizationId') ?? ''), name, description: String(f.get('description') ?? '') });
+    await saveBusinessAsTemplate(db, {
+      organizationId: String(f.get('organizationId') ?? ''), name,
+      description: String(f.get('description') ?? ''), category: String(f.get('category') ?? ''),
+    });
   }, { saved: name });
 }

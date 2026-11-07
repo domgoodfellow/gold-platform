@@ -29,6 +29,7 @@ export async function loadOrganizationShellModel(db: Db, input: { organizationId
     email: userData.user?.email ?? '',
     switchable: myOrganizations.map((organization) => ({
       id: organization.id, name: organization.name, role: organization.role, operationalState: organization.operationalState,
+      manages: organization.capabilities.includes('organization.manage'),
     })),
     sections: platform ? withAdministration(business, organizationId, platform.permissions) : business,
     configGate: { enabledModules, featureAvailability, capabilities, schedulableWork },

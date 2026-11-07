@@ -15,6 +15,7 @@ import {
   fitShapeToPlan,
   listIndustryTemplates,
   listManagedIndustryTemplates,
+  renameIndustryTemplate,
   saveBusinessAsTemplate,
   setIndustryTemplatePublished,
   reviseConfigurationProposal,
@@ -738,10 +739,12 @@ describe('a business setup can be read back, copied and saved as a template', ()
       .rejects.toMatchObject({ code: 'templates.forbidden' });
 
     const staff = await asPlatformStaff();
-    const key = await saveBusinessAsTemplate(staff, { organizationId: owner.source, name: 'Saved clinic', description: 'A clinic saved by staff.' });
+    // A category no seeded template uses, so it is this template that a new owner in it is offered first.
+    const category = `Test clinics ${randomUUID().slice(0, 6)}`;
+    const key = await saveBusinessAsTemplate(staff, { organizationId: owner.source, name: 'Saved clinic', description: 'A clinic saved by staff.', category });
     try {
       const saved = (await listManagedIndustryTemplates(staff)).find((template) => template.key === key)!;
-      expect(saved).toMatchObject({ name: 'Saved clinic', published: false });
+      expect(saved).toMatchObject({ name: 'Saved clinic', published: false, category });
       expect(saved.shape).toEqual(await readBusinessSetup(owner.db, owner.source));
 
       expect((await listIndustryTemplates(owner.db)).map((template) => template.key)).not.toContain(key);
@@ -749,6 +752,11 @@ describe('a business setup can be read back, copied and saved as a template', ()
 
       await setIndustryTemplatePublished(staff, { key, published: true });
       expect((await listIndustryTemplates(owner.db)).map((template) => template.key)).toContain(key);
+      expect(suggestedTemplateKey(await listIndustryTemplates(owner.db), category)).toBe(key);
+      // Refiled when renamed, and found under its new category.
+      const refiled = `${category} refiled`;
+      await renameIndustryTemplate(staff, { key, name: 'Saved clinic', category: refiled });
+      expect(suggestedTemplateKey(await listIndustryTemplates(owner.db), refiled)).toBe(key);
       const fromSaved = await draftFromTemplate(owner.db, { organizationId: owner.blank, templateKey: key });
       expect((await applyConfigurationProposal(owner.db, { organizationId: owner.blank, proposalId: fromSaved.id })).outcome).toBe('applied');
       expect(await readBusinessSetup(owner.db, owner.blank)).toEqual(saved.shape);

@@ -23,6 +23,8 @@ import {
   DialogTrigger,
 } from '@/components/controls/confirm-submit';
 import { FieldLabel, TextArea } from '@/components/controls/inputs';
+import { SuggestionField } from '@/components/controls/select-field';
+import { INDUSTRY_SUGGESTIONS } from '@/lib/domain/tenancy/industries';
 import {
   PageDrawer,
   PageDrawerContent,
@@ -164,7 +166,7 @@ export function RecordQuotaOverrideSheet({ organizationId, planId, quotas }: { o
  * Save this business's setup as a starting template. It is saved unpublished: owners never see it
  * until it is published from Products. Its customers, jobs and money are never part of it.
  */
-export function SaveTemplateDialog({ organizationId, businessName }: { organizationId: string; businessName: string }) {
+export function SaveTemplateDialog({ organizationId, businessName, industry }: { organizationId: string; businessName: string; industry: string | null }) {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(async (previous: typeof SAVE_TEMPLATE_INITIAL, data: FormData) => {
     const result = await saveAsTemplateAction(previous, data);
@@ -188,6 +190,11 @@ export function SaveTemplateDialog({ organizationId, businessName }: { organizat
           <div className="flex flex-col gap-1">
             <FieldLabel htmlFor="template-name">Name</FieldLabel>
             <TextInput id="template-name" name="name" required maxLength={120} defaultValue={businessName} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <FieldLabel htmlFor="template-category">Category</FieldLabel>
+            <SuggestionField id="template-category" name="category" required maxLength={60} suggestions={INDUSTRY_SUGGESTIONS} defaultValue={industry ?? ''} />
+            <Hint>A new owner who gives this industry has it chosen for them.</Hint>
           </div>
           <div className="flex flex-col gap-1">
             <FieldLabel htmlFor="template-description">Description</FieldLabel>

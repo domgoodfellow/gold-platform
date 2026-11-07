@@ -27,10 +27,14 @@ const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const CONNECTION = process.env.SUPABASE_DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
+/**
+ * `X` and two letters, never `XZ?`: `XZZ` is the currency the suite asks about as one with no
+ * prices, so a run that drew it priced its own "nothing here" answer (about one run in 676).
+ */
 function code(): string {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const pick = () => letters[Math.floor(Math.random() * 26)];
-  return `X${pick()}${pick()}`;
+  const pick = (from: string) => from[Math.floor(Math.random() * from.length)];
+  return `X${pick(letters.slice(0, 25))}${pick(letters)}`;
 }
 
 const CURRENCY = code();

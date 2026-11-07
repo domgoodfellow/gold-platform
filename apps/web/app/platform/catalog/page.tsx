@@ -155,7 +155,7 @@ export default async function CatalogPage({ params }: PageProps<'/platform/catal
                     <span className="text-sm text-muted-foreground">{template.category}</span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <RenameTemplateSheet templateKey={template.key} name={template.name} />
+                    <RenameTemplateSheet templateKey={template.key} name={template.name} category={template.category} />
                     <TemplatePublishToggle templateKey={template.key} name={template.name} published={template.published} />
                   </div>
                 </li>

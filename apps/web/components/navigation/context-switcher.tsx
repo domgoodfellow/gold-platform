@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@gold/ui/components/dropdown-menu';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@gold/ui/components/sidebar';
-import { Building2, ChevronsUpDown } from 'lucide-react';
+import { Building2, ChevronsUpDown, Plus } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
 import { organizationHomeHref } from '@/lib/navigation';
@@ -30,6 +30,8 @@ export type SwitchableOrganization = {
   name: string;
   role: string;
   operationalState: OperationalState;
+  /** Whether this person manages that business; somebody who manages one may start another. */
+  manages?: boolean;
 };
 
 export type SwitcherContext =
@@ -43,6 +45,8 @@ type SwitcherProps = {
   organizations: SwitchableOrganization[];
   /** Subordinate to the name: a status line for the current business only, never a header control. */
   setupPending?: boolean;
+  /** Opens the create-business form, for a person who may start another business. */
+  onNewBusiness?: () => void;
 };
 
 /**
@@ -50,7 +54,7 @@ type SwitcherProps = {
  * Platform Administration is a scope inside GildOps' own organization, reached from its
  * navigation, never a context of its own here.
  */
-export function deriveSwitcherView(current: SwitcherContext, organizations: SwitchableOrganization[]) {
+export function deriveSwitcherView(current: SwitcherContext, organizations: SwitchableOrganization[], canCreate = false) {
   const triggerName = current.kind === 'business' ? current.name : PLATFORM_NAME;
   const triggerRole = current.kind === 'business' ? current.role : 'Choose where to work';
   const avatarInitial = current.kind === 'business' ? triggerName.charAt(0).toUpperCase() : 'G';
@@ -59,7 +63,8 @@ export function deriveSwitcherView(current: SwitcherContext, organizations: Swit
       ? organizations.filter((organization) => organization.id !== current.organizationId)
       : organizations;
 
-  return { triggerName, triggerRole, avatarInitial, businesses, hasChoices: businesses.length > 0 };
+  // Another business to go to, or a new one to start: either makes this a menu.
+  return { triggerName, triggerRole, avatarInitial, businesses, hasChoices: businesses.length > 0 || canCreate };
 }
 
 function ContextSwitcherMenuContent({
@@ -68,6 +73,7 @@ function ContextSwitcherMenuContent({
   avatarInitial,
   businesses,
   current,
+  onNewBusiness,
 }: SwitcherProps & ReturnType<typeof deriveSwitcherView>) {
   const preserveActivity = useContext(NavigationActivityContext);
   return (
@@ -101,12 +107,22 @@ function ContextSwitcherMenuContent({
           ))}
         </>
       ) : null}
+
+      {onNewBusiness ? (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={onNewBusiness} className="flex items-center gap-2">
+            <Plus aria-hidden className="shrink-0" />
+            New business
+          </DropdownMenuItem>
+        </>
+      ) : null}
     </DropdownMenuContent>
   );
 }
 
-export function ContextSwitcher({ mark, current, organizations, setupPending = false }: SwitcherProps) {
-  const view = deriveSwitcherView(current, organizations);
+export function ContextSwitcher({ mark, current, organizations, setupPending = false, onNewBusiness }: SwitcherProps) {
+  const view = deriveSwitcherView(current, organizations, Boolean(onNewBusiness));
 
   // Nowhere else to go: a label, not a menu with nothing in it. `asChild` swaps the underlying
   // element for a non-interactive `<div>` — which means the button's own `flex` row classes land
@@ -168,6 +184,7 @@ export function ContextSwitcher({ mark, current, organizations, setupPending = f
             mark={mark}
             current={current}
             organizations={organizations}
+            onNewBusiness={onNewBusiness}
             {...view}
           />
         </DropdownMenu>

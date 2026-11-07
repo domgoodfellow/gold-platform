@@ -661,14 +661,32 @@ function templateKeyFor(name: string): string {
   return `${stem || 'template'}_${crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`;
 }
 
+/** A template's category: the industry a new owner types that pre-selects it. */
+function templateCategory(value: string): string {
+  const category = value.trim();
+  if (!category || category.length > 60) throw new DomainError('Give the template a category of up to 60 characters.', 'templates.category_invalid');
+  return category;
+}
+
+/** The industry a business gave, as staff saving it as a template see it; null when it gave none or has no setup to read. */
+export async function businessIndustry(db: Db, organizationId: string): Promise<string | null> {
+  try {
+    return (await readBusinessSetupWithIndustry(db, organizationId)).industry;
+  } catch (error) {
+    if (error instanceof DomainError) return null;
+    throw error;
+  }
+}
+
 /**
  * Save a business's setup as a starting template, unpublished: platform staff look it over and
  * publish it when it is ready. Read with `readBusinessSetup`, so it carries no customer, job or
- * money data. Filed under the business's industry, which is what pre-selects it for a new owner.
+ * money data. Filed under the category staff choose — by default the business's own industry —
+ * which is what pre-selects it for a new owner who gives that industry.
  */
 export async function saveBusinessAsTemplate(
   db: Db,
-  input: { organizationId: string; name: string; description: string },
+  input: { organizationId: string; name: string; description: string; category?: string },
 ): Promise<string> {
   await requireActor(db);
   const name = input.name.trim();
@@ -676,12 +694,13 @@ export async function saveBusinessAsTemplate(
   if (!name || name.length > 120) throw new DomainError('Give the template a name of up to 120 characters.', 'templates.name_invalid');
   if (!description || description.length > 300) throw new DomainError('Describe the template in up to 300 characters.', 'templates.description_invalid');
   const { shape, industry } = await readBusinessSetupWithIndustry(db, input.organizationId);
+  const category = input.category?.trim() ? templateCategory(input.category) : (industry ?? '').trim().slice(0, 60) || 'Other';
   const { data: last } = await db.from('industry_templates').select('position').order('position', { ascending: false }).limit(1).maybeSingle();
   const key = templateKeyFor(name);
   const { error } = await db.from('industry_templates').insert({
     key,
     name,
-    category: (industry ?? '').trim().slice(0, 60) || 'Other',
+    category,
     description,
     shape: shape as never,
     published: false,
@@ -703,12 +722,14 @@ export async function setIndustryTemplatePublished(db: Db, input: { key: string;
   if (error || !data) throw new DomainError('Only staff who look after the catalogue can change templates.', 'templates.forbidden');
 }
 
-export async function renameIndustryTemplate(db: Db, input: { key: string; name: string }): Promise<void> {
+/** Rename a template, and refile it under another category when one is given. */
+export async function renameIndustryTemplate(db: Db, input: { key: string; name: string; category?: string }): Promise<void> {
   await requireActor(db);
   const name = input.name.trim();
   if (!name || name.length > 120) throw new DomainError('Give the template a name of up to 120 characters.', 'templates.name_invalid');
+  const category = input.category === undefined ? undefined : templateCategory(input.category);
   const { data, error } = await db.from('industry_templates')
-    .update({ name, updated_at: new Date().toISOString() })
+    .update({ name, ...(category ? { category } : {}), updated_at: new Date().toISOString() })
     .eq('key', input.key).select('key').maybeSingle();
   if (error || !data) throw new DomainError('Only staff who look after the catalogue can change templates.', 'templates.forbidden');
 }
