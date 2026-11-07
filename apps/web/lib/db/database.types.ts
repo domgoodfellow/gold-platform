@@ -2135,45 +2135,57 @@ export type Database = {
       configuration_proposals: {
         Row: {
           applied_at: string | null
+          copied_from: string | null
           created_at: string
           created_by: string
+          deferred_at: string | null
           description: string
           detail: string | null
           drafted_by: string
           gaps: Json
           id: string
           organization_id: string
+          origin: string
           outcome: string
           result: Json | null
           shape: Json
+          template_key: string | null
         }
         Insert: {
           applied_at?: string | null
+          copied_from?: string | null
           created_at?: string
           created_by: string
+          deferred_at?: string | null
           description: string
           detail?: string | null
           drafted_by: string
           gaps?: Json
           id?: string
           organization_id: string
+          origin?: string
           outcome?: string
           result?: Json | null
           shape: Json
+          template_key?: string | null
         }
         Update: {
           applied_at?: string | null
+          copied_from?: string | null
           created_at?: string
           created_by?: string
+          deferred_at?: string | null
           description?: string
           detail?: string | null
           drafted_by?: string
           gaps?: Json
           id?: string
           organization_id?: string
+          origin?: string
           outcome?: string
           result?: Json | null
           shape?: Json
+          template_key?: string | null
         }
         Relationships: [
           {
@@ -4872,6 +4884,45 @@ export type Database = {
             referencedColumns: ["organization_id", "id"]
           },
         ]
+      }
+      industry_templates: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          key: string
+          name: string
+          position: number
+          published: boolean
+          shape: Json
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          key: string
+          name: string
+          position?: number
+          published?: boolean
+          shape: Json
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          key?: string
+          name?: string
+          position?: number
+          published?: boolean
+          shape?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
       integration_action_queue: {
         Row: {
@@ -7868,6 +7919,8 @@ export type Database = {
           organization_id: string
           postal_code: string | null
           region: string | null
+          serves: string | null
+          starting_template_key: string | null
           updated_at: string
           updated_by: string
           website_url: string | null
@@ -7884,6 +7937,8 @@ export type Database = {
           organization_id: string
           postal_code?: string | null
           region?: string | null
+          serves?: string | null
+          starting_template_key?: string | null
           updated_at?: string
           updated_by: string
           website_url?: string | null
@@ -7900,6 +7955,8 @@ export type Database = {
           organization_id?: string
           postal_code?: string | null
           region?: string | null
+          serves?: string | null
+          starting_template_key?: string | null
           updated_at?: string
           updated_by?: string
           website_url?: string | null
@@ -7918,6 +7975,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "platform_tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_identity_starting_template_key_fkey"
+            columns: ["starting_template_key"]
+            isOneToOne: false
+            referencedRelation: "industry_templates"
+            referencedColumns: ["key"]
           },
         ]
       }
@@ -17371,6 +17435,7 @@ export type Database = {
           p_name: string
           p_owner_email: string
           p_role: string
+          p_template_key?: string
           p_timezone: string
         }
         Returns: string
@@ -17543,6 +17608,10 @@ export type Database = {
           recipient: string
           subject_line: string
         }[]
+      }
+      read_business_setup: {
+        Args: { p_organization_id: string }
+        Returns: Json
       }
       read_form_revision: {
         Args: {
@@ -18197,6 +18266,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_starting_template: {
+        Args: { p_organization_id: string; p_template_key: string }
+        Returns: undefined
+      }
       record_usage_reconciliation: {
         Args: {
           p_note?: string
@@ -18424,6 +18497,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      retry_configuration_proposal: {
+        Args: { p_proposal_id: string }
+        Returns: string
+      }
       retry_service_notification: {
         Args: { p_intent_id: string; p_organization_id: string }
         Returns: undefined
@@ -18626,6 +18703,10 @@ export type Database = {
           p_heading_font: string
           p_organization_id: string
         }
+        Returns: undefined
+      }
+      set_business_serves: {
+        Args: { p_organization_id: string; p_serves: string }
         Returns: undefined
       }
       set_call_leg_provider_id: {

@@ -11,7 +11,7 @@ import {
 } from '@/components/controls/confirm-submit';
 import { ProvisionForm } from '@/features/platform/organizations/provision-form';
 
-export function ProvisionOrganizationDialog() {
+export function ProvisionOrganizationDialog({ templates }: { templates: { key: string; name: string }[] }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -22,7 +22,7 @@ export function ProvisionOrganizationDialog() {
           <DialogTitle>Provision organization</DialogTitle>
           <DialogDescription>Create the tenant and assign its existing GildOps account owner.</DialogDescription>
         </DialogHeader>
-        <ProvisionForm compact />
+        <ProvisionForm compact templates={templates} />
       </DialogContent>
     </Dialog>
   );

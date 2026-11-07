@@ -2,6 +2,8 @@ import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import type { BookingPolicy } from '@/lib/domain/booking/policy';
+import { createWorkItemStatus, updateWorkItemStatus } from '@/lib/domain/work-items/statuses';
+import { createWorkItemTransition } from '@/lib/domain/work-items/transitions';
 
 /**
  * What kind of work this is, in the tenant's own vocabulary.
@@ -50,13 +52,25 @@ export async function listWorkItemTypes(
 }
 
 /**
+ * The three stages a kind of work made by hand starts with, so it is never empty: Booked, In
+ * progress and Done, with Booked → In progress → Done and Booked → Done. Done counts as done and
+ * frees the resource. They are ordinary stages; the business renames or deletes them freely.
+ */
+export const STARTER_STAGES = ['Booked', 'In progress', 'Done'] as const;
+
+/**
  * **The business states whether this work is scheduled, every time — there is no default.** The
  * platform does not answer *does this business schedule* from its name, its resources or what it
  * has booked, so the argument is required here and the column has no default in the database.
+ *
+ * `withStarterStages` adds `STARTER_STAGES`. The hand-made path (Work configuration) asks for
+ * them; a caller that writes its own stages straight after (a reviewed setup, a test) does not.
+ * Each stage is its own call, so a failure part-way leaves a type with fewer stages, which the
+ * owner completes in Work configuration like any other.
  */
 export async function createWorkItemType(
   db: Db,
-  input: { organizationId: string; name: string; schedulable: boolean },
+  input: { organizationId: string; name: string; schedulable: boolean; withStarterStages?: boolean },
 ): Promise<string> {
   await requireActor(db);
 
@@ -91,6 +105,15 @@ export async function createWorkItemType(
       );
     }
     throw new DomainError(error.message, 'work_item_types.create_failed');
+  }
+
+  if (input.withStarterStages) {
+    const [booked, inProgress, done] = await Promise.all(STARTER_STAGES.map((stage, position) =>
+      createWorkItemStatus(db, { organizationId: input.organizationId, typeId: data, name: stage, position })));
+    for (const [from, to] of [[booked, inProgress], [inProgress, done], [booked, done]]) {
+      await createWorkItemTransition(db, { organizationId: input.organizationId, typeId: data, fromStatusId: from, toStatusId: to });
+    }
+    await updateWorkItemStatus(db, { id: done, name: STARTER_STAGES[2], position: 2, releasesResource: true, marksComplete: true });
   }
 
   return data;

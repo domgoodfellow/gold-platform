@@ -1,3 +1,4 @@
+
 """An operator moving a customer along the pipeline.
 
 **The first CRM endpoint, and the same authorization story `ai_ask.py` already tells.** There is

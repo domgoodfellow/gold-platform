@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { e2eEnvironmentProblems, e2eTargetProblems } from '../../e2e/environment-guard';
 import { e2eInstanceIdentity } from '@/lib/testing/e2e-instance';
+import { developmentSupabaseTarget } from '@/lib/db/server';
 
 const TOKEN = 'a'.repeat(40);
 const local = { SUPABASE_URL: 'http://127.0.0.1:54321', SUPABASE_DB_URL: 'postgresql://postgres:x@127.0.0.1:54322/postgres', E2E_INSTANCE_TOKEN: TOKEN };
@@ -55,5 +56,37 @@ describe('a server reveals its identity only to the matching token and never in 
     expect(e2eInstanceIdentity(server, 'b'.repeat(40))).toBeNull();
     expect(e2eInstanceIdentity(server, null)).toBeNull();
     expect(e2eInstanceIdentity({ ...server, NODE_ENV: 'production' }, TOKEN)).toBeNull();
+  });
+});
+
+describe('a development server says which Supabase it is using', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('is local only for a loopback Supabase under next dev', () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://127.0.0.1:54321');
+    expect(developmentSupabaseTarget()).toBe('local');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://localhost:54321');
+    expect(developmentSupabaseTarget()).toBe('local');
+  });
+
+  it('is hosted for any other address, and for a missing or unreadable one', () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://project.supabase.co');
+    expect(developmentSupabaseTarget()).toBe('hosted');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'not a url');
+    expect(developmentSupabaseTarget()).toBe('hosted');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', '');
+    expect(developmentSupabaseTarget()).toBe('hosted');
+  });
+
+  it('says nothing outside next dev, so production and tests never draw the badge or demo sign-in', () => {
+    for (const mode of ['production', 'test']) {
+      vi.stubEnv('NODE_ENV', mode);
+      vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://project.supabase.co');
+      expect(developmentSupabaseTarget()).toBeNull();
+      vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://127.0.0.1:54321');
+      expect(developmentSupabaseTarget()).toBeNull();
+    }
   });
 });

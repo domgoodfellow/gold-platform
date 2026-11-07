@@ -9,8 +9,9 @@ import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
 import { recordProviderResource, setProviderResourceStatus } from '@/lib/domain/providers/bindings';
 import { provisionTelephonySubaccount } from '@/lib/domain/providers/twilio-provisioning';
 import { endSupportSession, startSupportSession } from '@/lib/domain/platform/support';
+import { saveBusinessAsTemplate } from '@/lib/domain/configuration/proposals';
 import { TELEPHONY_RESOURCE_TYPES, telephonyProviderKey } from '@/lib/adapters/telephony';
-import type { ProvisionTwilioState, RegisterResourceState, SetResourceStatusState, SupportSessionState, RecordTermState, RecordPlanAssignmentState, RecordPlanAgreementState, RecordQuotaOverrideState } from './action-states';
+import type { ProvisionTwilioState, RegisterResourceState, SetResourceStatusState, SupportSessionState, RecordTermState, RecordPlanAssignmentState, RecordPlanAgreementState, RecordQuotaOverrideState, SaveTemplateState } from './action-states';
 
 
 /**
@@ -37,4 +38,14 @@ export async function initializeGoldWorkspaceAction(organizationId: string) {
   const db = await getDb();
   await bootstrapOperatingOrganization(db, { organizationId });
   redirect(`/organizations/${organizationId}`);
+}
+
+/** Save this business's setup as an unpublished starting template. `platform.catalogue` on the server, and again in the table's own policy. */
+export async function saveAsTemplateAction(_: SaveTemplateState, f: FormData): Promise<SaveTemplateState> {
+  const name = String(f.get('name') ?? '').trim();
+  return attempt<SaveTemplateState>(async () => {
+    await requirePlatformCapability('platform.catalogue');
+    const db = await getDb();
+    await saveBusinessAsTemplate(db, { organizationId: String(f.get('organizationId') ?? ''), name, description: String(f.get('description') ?? '') });
+  }, { saved: name });
 }

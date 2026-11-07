@@ -129,7 +129,7 @@ test.describe.serial('UX drift and guided configuration', () => {
     await expect(page.getByRole('dialog').getByRole('link', { name: 'Create Work', exact: true })).toHaveCount(0);
   });
 
-  test('a new type has no automatic stage; Workflow leads to Work creation and explicit General stays General', async ({ page }) => {
+  test('a new type starts with Booked, In progress and Done; Workflow leads to Work creation and explicit General stays General', async ({ page }) => {
     if (before) return;
     await page.setViewportSize({ width: 1440, height: 1000 });
     const base = `/organizations/${organizationId}`;
@@ -143,15 +143,20 @@ test.describe.serial('UX drift and guided configuration', () => {
     await expect(page.getByRole('tab', { name: 'Workflow', exact: true })).toHaveAttribute('aria-selected', 'true');
     const createdType = new URL(page.url()).searchParams.get('type')!;
     const { db } = await signInOwner();
-    expect((await db.from('work_item_statuses').select('id').eq('type_id', createdType)).data).toEqual([]);
+    // Work Order 2, Part E: a hand-made type is never empty. Done counts as done and frees the resource.
+    expect((await db.from('work_item_statuses').select('name, position, marks_complete, releases_resource').eq('type_id', createdType).order('position')).data).toEqual([
+      { name: 'Booked', position: 0, marks_complete: false, releases_resource: false },
+      { name: 'In progress', position: 1, marks_complete: false, releases_resource: false },
+      { name: 'Done', position: 2, marks_complete: true, releases_resource: true },
+    ]);
+    expect((await db.from('work_item_transitions').select('id').eq('type_id', createdType)).data).toHaveLength(3);
     await page.goto(`${base}/work/configuration?type=${createdType}&tab=general`);
     await expect(page.getByRole('tab', { name: 'General', exact: true })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('button', { name: 'Save name', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Save scheduling behavior', exact: true })).toBeVisible();
+    // Only a type with no stages opens on Workflow; this one has its three, so it opens on General.
     await page.goto(`${base}/work/configuration?type=${createdType}`);
-    await expect(page.getByRole('tab', { name: 'Workflow', exact: true })).toHaveAttribute('aria-selected', 'true');
-    await page.getByLabel('Starting stage name', { exact: true }).fill('Ready to start');
-    await page.getByRole('button', { name: 'Add starting stage', exact: true }).click();
+    await expect(page.getByRole('tab', { name: 'General', exact: true })).toHaveAttribute('aria-selected', 'true');
     await page.getByRole('link', { name: 'New work', exact: true }).click();
     await page.getByLabel('Job title', { exact: true }).fill('Work from type configuration');
     await page.getByRole('button', { name: 'Create work', exact: true }).click();

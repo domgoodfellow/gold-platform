@@ -13,6 +13,8 @@ import { currentPlanAssignment, listOrganizationPlanAgreements } from '@/lib/dom
 import { computeReadiness, launchOrganization } from '@/lib/domain/tenancy/lifecycle';
 import { requireOrganization, requireOrganizationForBillingRecovery, serviceLockedHref } from '@/lib/route/organization';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
+import { awaitsFirstReview, currentConfigurationProposal } from '@/lib/domain/configuration/proposals';
+import { listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { applySubscriptionEvent } from '@/tests/support/subscription-events';
 
 // The route guards, observed as thrown values; `getDb` returns whichever signed-in client the test names.
@@ -368,5 +370,45 @@ describe('handing off an accepted proposal', () => {
     } finally {
       await pg.end();
     }
+  }, 60_000);
+  /** A second prospect whose accepted proposal agreed a starting setup, accepted the way a prospect accepts. */
+  async function acceptedWithAgreedSetup(label: string, template: unknown): Promise<{ proposalId: string; email: string; password: string }> {
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
+    const email = `${label}-${randomUUID().slice(0, 8)}@example.test`;
+    const password = `pw-${randomUUID()}`;
+    const { error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+    if (error) throw error;
+    const prospect = await createCustomer(repDb, { organizationId: gildOpsOrgId, name: `${label} Answering Co`, email });
+    const built = await seedLegacyPlanProposal({ createdBy: repUserId, organizationId: gildOpsOrgId, customerId: prospect,
+      planId, addonPlanIds: [], currency: 'CAD', billingInterval: 'month', proposedConfiguration: { template } });
+    await markCommercialProposalSent(repDb, { organizationId: gildOpsOrgId, proposalId: built.id });
+    const visitor = anonClient();
+    await claimProposalInvite(visitor, { token: await createProposalInvite(repDb, { customerId: prospect }) });
+    await acceptCommercialProposal(visitor, { proposalId: built.id });
+    return { proposalId: built.id, email, password };
+  }
+
+  it('turns an agreed starting setup, with its adjustment, into a draft the new owner reviews first', async () => {
+    const weekend = [{ dayOfWeek: 6, opensAt: '09:00', closesAt: '13:00' }];
+    const { proposalId, email, password } = await acceptedWithAgreedSetup('agreed', { key: 'answering_service', adjustments: { hours: weekend } });
+    const handoff = await handoffAcceptedProposal(repDb, { organizationId: gildOpsOrgId, proposalId });
+
+    const owner = anonClient();
+    const signedIn = await owner.auth.signInWithPassword({ email, password });
+    if (signedIn.error) throw signedIn.error;
+    const draft = await currentConfigurationProposal(owner, { organizationId: handoff.createdOrganizationId });
+    expect(draft).toMatchObject({ origin: 'agreed', templateKey: 'answering_service', outcome: 'draft', description: 'Answering service' });
+    expect(draft!.shape.hours).toEqual(weekend);
+    expect(draft!.shape.workTypes?.map((type) => type.name)).toEqual(['Inbound call', 'Callback']);
+    expect(awaitsFirstReview(draft)).toBe(true);
+    // Offered, never applied: the new business has no work types until its owner applies it.
+    expect(await listWorkItemTypes(owner, { organizationId: handoff.createdOrganizationId })).toEqual([]);
+  }, 60_000);
+
+  it('refuses an agreed starting setup that is not a published template, creating nothing', async () => {
+    const { proposalId } = await acceptedWithAgreedSetup('unknown', { key: 'no_such_template' });
+    await expect(handoffAcceptedProposal(repDb, { organizationId: gildOpsOrgId, proposalId }))
+      .rejects.toMatchObject({ code: 'proposal_handoff.template_unknown' });
+    expect(await getProposalHandoff(repDb, { organizationId: gildOpsOrgId, proposalId })).toBeNull();
   }, 60_000);
 });

@@ -27,6 +27,8 @@ export async function provisionOrganization(
     displayName?: string;
     timezone?: string;
     currency: string;
+    /** A starting template to offer the owner as a draft. Nothing is applied: the owner reviews it first. */
+    templateKey?: string;
   },
 ): Promise<string> {
   await requireActor(db);
@@ -62,6 +64,7 @@ export async function provisionOrganization(
     // London clock because of where the operator was sitting.
     p_timezone: (input.timezone || 'UTC') as string,
     p_currency: currency,
+    p_template_key: input.templateKey || undefined,
   });
 
   if (error) {

@@ -55,7 +55,7 @@ export function WorkCreatePage({ options, initialTypeId, mayConfigure, returnToQ
       }</FormField> : null}
 
       {returnToQuote ? <Hint>Create the Work item, then continue to its Financials to add a quoted price.</Hint> : null}
-      {selected && statuses.length ? <CreateWorkItemForm key={typeId} {...options} statuses={statuses} onDirtyChange={setDirty} cancelHref={cancelHref} returnToQuote={returnToQuote} setupStep={setupStep} />
+      {selected && statuses.length ? <CreateWorkItemForm key={typeId} {...options} typeId={typeId} statuses={statuses} onDirtyChange={setDirty} cancelHref={cancelHref} returnToQuote={returnToQuote} setupStep={setupStep} />
         : <div className="flex flex-col gap-4" role="region" aria-labelledby="new-work-prerequisite">
           <div>
             <SectionHeading id="new-work-prerequisite">{selected ? `${selected.name} needs a starting stage` : 'No work types yet'}</SectionHeading>

@@ -217,7 +217,7 @@ A service restart causes the local Supabase runtime to re-read its configuration
 
 ### Reset local database
 
-Use after schema/seed work:
+Use when the local database should start over:
 
 ```bash
 pnpm db:reset
@@ -225,9 +225,13 @@ pnpm db:reset
 
 This:
 
-- destroys local database state;
+- destroys local database state, including every local account;
 - reapplies migrations;
-- runs the configured seed.
+- reseeds by running the demo (`pnpm demo`), which ends by printing the sign-in table.
+
+There is no SQL seed: `supabase/config.toml` has the seed turned off, and the demo script is the seed.
+
+The `infra` stack (`pnpm db:start`) is the working development database. Run `db:reset` there only when somebody wants their local data rebuilt. Verification that needs a database to start empty, or that is destructive, runs on a disposable stack instead (see `docs/testing.md`, "clean database run"), never on `infra`.
 
 It does **not** replace the need to restart Supabase after changing runtime configuration.
 
@@ -326,11 +330,17 @@ With Supabase already running:
 pnpm demo
 ```
 
-To reset the local database first and then build the demo:
+It is safe to run again: whatever an earlier run made is found and left alone, so a repeat adds nothing. A demo business that exists but never launched means an earlier run stopped part-way; the script then stops and asks for `pnpm db:reset`.
 
-```bash
-pnpm demo:fresh
-```
+It makes, and prints as a sign-in table:
+
+- `staff@gold.test`: platform staff with all five platform capabilities and a member of GildOps' operating organization (`GOLD`), so Platform works;
+- an owner and a staff member for each business in `apps/web/scripts/demo/businesses.ts`;
+- a customer portal link for one customer of the first business.
+
+All accounts share the password `DEMO_PASSWORD` in `businesses.ts`. While `next dev` uses a local Supabase, the log-in page also shows one button per demo account.
+
+`pnpm db:reset` (or its alias `pnpm demo:fresh`) rebuilds the local database and then runs the demo.
 
 Use the demo for:
 
@@ -368,13 +378,13 @@ Terminal 3, when API-backed features are needed:
 python apps/api/dev.py
 ```
 
-Prepare/reset demo state as needed:
+Prepare demo state if the database has none yet (safe to repeat):
 
 ```bash
-pnpm demo:fresh
+pnpm demo
 ```
 
-If `demo:fresh` resets the database while the app is open, refresh/re-authenticate as appropriate.
+If `db:reset` rebuilds the database while the app is open, sign in again: the old session's account no longer exists.
 
 ---
 
@@ -405,6 +415,11 @@ that project's URL and low-privilege publishable key in both runtimes:
   `GOLD_API_URL=http://127.0.0.1:8787`.
 - API: `ASSISTANT_BASE_URL=http://127.0.0.1:11434/v1` and
   `ASSISTANT_MODEL=llama3.1:8b`, after confirming that exact tag with `ollama list`.
+
+The default is local. Keep the hosted pair as a commented block labelled
+`HOSTED — switch deliberately` in `apps/web/.env.local` and `apps/api/.env`, swap it in only
+for such a session, and swap back afterwards. While `next dev` reads a non-local Supabase,
+the organization header shows a `HOSTED DATA` badge and the log-in page offers no demo accounts.
 
 Preserve unrelated environment entries and existing secrets. A local Supabase key
 does not authenticate against the hosted project. Ollama needs no paid-model API
@@ -579,7 +594,7 @@ Typical local Playwright acceptance flow:
 
 ```bash
 pnpm db:start
-pnpm demo:fresh
+pnpm demo
 pnpm --filter @gold/web dev
 ```
 

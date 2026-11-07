@@ -15,6 +15,7 @@ import { INDUSTRY_SUGGESTIONS } from '@/lib/domain/tenancy/industries';
 import type { OrganizationIdentity } from '@/lib/domain/tenancy/identity';
 
 const INITIAL: SettingsActionState & { saved: boolean } = { error: null, saved: false };
+const SERVES = [['people', 'People'], ['companies', 'Companies'], ['both', 'Both']] as const;
 
 /**
  * The business profile: who the business is, where it is, how it can be reached and which clock and
@@ -60,6 +61,17 @@ export function OrganizationSettingsForm({
         <FormField id="org-industry" label="Industry" optional>
           {(field) => <SuggestionField {...field} name="industry" type="text" maxLength={100} suggestions={INDUSTRY_SUGGESTIONS} defaultValue={identity.industry ?? ''} />}
         </FormField>
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-sm font-medium">Who you serve</legend>
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            {SERVES.map(([value, label]) => (
+              <label key={value} className="flex items-center gap-2 text-sm">
+                <input type="radio" name="serves" value={value} defaultChecked={identity.serves === value} />
+                {label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
         </div>
       </Card>
 

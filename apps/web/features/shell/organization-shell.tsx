@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { OrganizationFrame } from '@/app/organizations/[organizationId]/org-shell';
 import { logoUrl } from '@/lib/domain/branding/brand';
-import { getDb } from '@/lib/db/server';
+import { developmentSupabaseTarget, getDb } from '@/lib/db/server';
 import { signOut } from '@/lib/domain/identity/credentials';
 import { requireOrganizationForBillingRecovery } from '@/lib/route/organization';
 import { loadOrganizationShellModel } from '@/lib/application/shell/organization-shell';
@@ -109,6 +109,7 @@ export async function OrganizationShell({
         organizationId={organizationId}
         displayName={displayName}
         setupPending={setupPending}
+        hostedData={developmentSupabaseTarget() === 'hosted'}
         name={organization.name}
         role={organization.role}
         mark={mark}

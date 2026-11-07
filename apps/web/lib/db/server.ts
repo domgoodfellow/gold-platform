@@ -44,6 +44,24 @@ export async function getDb(): Promise<Db> {
   );
 }
 
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/**
+ * Which Supabase a development server is using: `local` (this machine) or `hosted`.
+ *
+ * Null whenever this is not `next dev`. Next.js fixes `NODE_ENV` at build time, so in a production
+ * build the first line is a constant `return null` and nothing that branches on this can render.
+ * Unset or unreadable URLs count as hosted, so a mistake shows the warning rather than hiding it.
+ */
+export function developmentSupabaseTarget(): 'local' | 'hosted' | null {
+  if (process.env.NODE_ENV !== 'development') return null;
+  try {
+    return LOOPBACK_HOSTS.has(new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').hostname) ? 'local' : 'hosted';
+  } catch {
+    return 'hosted';
+  }
+}
+
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) {

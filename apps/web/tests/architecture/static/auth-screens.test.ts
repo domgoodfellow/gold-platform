@@ -64,3 +64,20 @@ describe('the credential screens share one composition', () => {
     }
   });
 });
+
+describe('demo sign-in exists only for next dev against a local Supabase', () => {
+  const login = read('app/(auth)/login/page.tsx');
+
+  it('gates the demo buttons on the development Supabase target before drawing them', () => {
+    expect(login).toMatch(/if \(developmentSupabaseTarget\(\) !== 'local'\) return null;[\s\S]*<DemoAccountButtons/);
+  });
+
+  it('signs demo accounts in through the same log-in action as the form, with no route of its own', () => {
+    expect(login).toMatch(/<DemoAccountButtons action=\{logInAction\}/);
+  });
+
+  it('marks a development server reading hosted data in the organization header', () => {
+    expect(read('features/shell/organization-shell.tsx')).toMatch(/hostedData=\{developmentSupabaseTarget\(\) === 'hosted'\}/);
+    expect(read('app/organizations/[organizationId]/org-shell.tsx')).toMatch(/hostedData \? <Badge[^>]*>HOSTED DATA<\/Badge>/);
+  });
+});

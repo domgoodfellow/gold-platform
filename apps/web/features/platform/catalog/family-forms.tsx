@@ -1,6 +1,8 @@
 'use client';
 
 import { useActionState, useId, useState } from 'react';
+import { toast } from 'sonner';
+import { renameTemplateAction, setTemplatePublishedAction, type TemplateState } from '@/app/platform/actions';
 import { Button } from '@/components/controls/button';
 import { ErrorText, FieldLabel, Hint, TextArea, TextInput } from '@/components/controls/inputs';
 import {
@@ -302,6 +304,65 @@ export function FeatureSheet({
             </div>
           </details>
         </div>
+      </PageDrawerContent>
+    </PageDrawer>
+  );
+}
+
+const TEMPLATE_INITIAL: TemplateState = { error: null, done: null };
+
+/** A toast after a template changes; an error stays beside the control until the next try. */
+function withFeedback(action: (previous: TemplateState, data: FormData) => Promise<TemplateState>, after?: () => void) {
+  return async (previous: TemplateState, data: FormData) => {
+    const result = await action(previous, data);
+    if (result.done) {
+      toast.success(result.done);
+      after?.();
+    }
+    return result;
+  };
+}
+
+/** Offer a starting template to new businesses, or stop offering it. */
+export function TemplatePublishToggle({ templateKey, name, published }: { templateKey: string; name: string; published: boolean }) {
+  const [state, action, pending] = useActionState(withFeedback(setTemplatePublishedAction), TEMPLATE_INITIAL);
+  return (
+    <form action={action} className="flex flex-col items-end gap-1">
+      <input type="hidden" name="key" value={templateKey} />
+      <input type="hidden" name="name" value={name} />
+      <input type="hidden" name="published" value={published ? 'false' : 'true'} />
+      <Button type="submit" tone={published ? 'secondary' : 'primary'} size="small" disabled={pending}>
+        {published ? 'Unpublish' : 'Publish'}
+      </Button>
+      <ErrorText role="alert">{state.error}</ErrorText>
+    </form>
+  );
+}
+
+export function RenameTemplateSheet({ templateKey, name }: { templateKey: string; name: string }) {
+  const [open, setOpen] = useState(false);
+  const formId = useId();
+  const [state, action, pending] = useActionState(withFeedback(renameTemplateAction, () => setOpen(false)), TEMPLATE_INITIAL);
+  return (
+    <PageDrawer open={open} onOpenChange={setOpen}>
+      <PageDrawerTrigger asChild>
+        <Button type="button" tone="secondary" size="small">Rename</Button>
+      </PageDrawerTrigger>
+      <PageDrawerContent>
+        <PageDrawerHeader>
+          <PageDrawerTitle>Rename {name}</PageDrawerTitle>
+        </PageDrawerHeader>
+        <form id={formId} action={action} className="flex flex-col gap-3">
+          <input type="hidden" name="key" value={templateKey} />
+          <div className="flex flex-col gap-1">
+            <FieldLabel htmlFor={`${formId}-name`}>Name</FieldLabel>
+            <TextInput id={`${formId}-name`} name="name" required maxLength={120} defaultValue={name} />
+          </div>
+          <ErrorText role="alert">{state.error}</ErrorText>
+        </form>
+        <PageDrawerFooter>
+          <Button type="submit" form={formId} disabled={pending}>{pending ? 'Saving…' : 'Save'}</Button>
+        </PageDrawerFooter>
       </PageDrawerContent>
     </PageDrawer>
   );

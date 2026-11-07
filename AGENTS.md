@@ -80,6 +80,7 @@ Users are trained, repeat operators. Screens do not explain themselves.
 
 Register every test in test-manifest.json. scripts/test.mjs owns category execution.
 Run proportionate focused checks; pnpm check is the broad repository gate.
+The `infra` local stack is the owner's working database. `pnpm db:reset` wipes it and reseeds demo data; run it only when the owner asks. Empty-database or destructive verification uses a disposable stack (docs/testing.md), never `infra`.
 Test database invariants against local PostgreSQL, including negative authorization cases.
 Inspect rendered UI at desktop/tablet/phone and verify relevant interactions/states.
 Distinguish mocks, local runtime, hosted evidence, provider sandbox and production.

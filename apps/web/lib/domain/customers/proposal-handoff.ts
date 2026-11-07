@@ -1,6 +1,9 @@
 import type { Json } from '@/lib/db/database.types';
 import type { Db } from '@/lib/db/types';
 import { DomainError } from '@/lib/domain/errors';
+import type { BusinessShape } from '@/lib/domain/configuration/configure';
+import { listIndustryTemplates } from '@/lib/domain/configuration/proposals';
+import { adjustShape } from '@/lib/domain/configuration/shape';
 import {
   discoverySnapshotCompleteness,
   unresolvedDiscoveryRequirements,
@@ -12,8 +15,9 @@ import {
  * default modules are already `provisionOrganization`'s own doing; `hand_off_accepted_proposal`
  * additionally records the commercial agreement and enters the accepted Plan and Add-ons onto
  * `organization_plan_assignments`, in the same transaction — a handed-off business is entitled to
- * what it bought the moment it exists. Initial configuration, readiness and launch are not: nothing
- * here calls `configureBusiness` or `launchOrganization`. What Setup does with the handoff — seeding
+ * what it bought the moment it exists. When the proposal agreed a starting setup, the new business
+ * also gets it as a draft its owner reviews (`agreedStartingSetup`). Initial configuration,
+ * readiness and launch are not done here: nothing calls `configureBusiness` or `launchOrganization`. What Setup does with the handoff — seeding
  * a configuration draft from `discoverySnapshot` rather than asking again — is `describeDiscoverySnapshot`
  * (`discovery-snapshots.ts`) and the setup page, not this file.
  *
@@ -103,6 +107,46 @@ export async function getFoundingHandoff(
 }
 
 /**
+ * The starting setup an accepted proposal agreed, if any: `accepted_configuration.template`, a
+ * published template key plus `adjustments` — top-level parts of the setup that replace the
+ * template's (for example its opening hours). Checked here, before anything is created, so an
+ * agreement that names a missing template or a malformed part is refused rather than handed to
+ * the new owner as a draft they cannot open.
+ */
+export type AgreedStartingSetup = { key: string; adjustments?: Partial<BusinessShape> };
+
+export function agreedStartingSetup(configuration: Json | null): AgreedStartingSetup | null {
+  if (!configuration || typeof configuration !== 'object' || Array.isArray(configuration)) return null;
+  const template = (configuration as Record<string, Json>).template;
+  if (!template || typeof template !== 'object' || Array.isArray(template)) return null;
+  const key = (template as Record<string, Json>).key;
+  if (typeof key !== 'string' || key.trim() === '') return null;
+  const adjustments = (template as Record<string, Json>).adjustments;
+  return { key: key.trim(), ...(adjustments && typeof adjustments === 'object' && !Array.isArray(adjustments) ? { adjustments: adjustments as Partial<BusinessShape> } : {}) };
+}
+
+async function checkAgreedStartingSetup(db: Db, input: { organizationId: string; proposalId: string }): Promise<void> {
+  const { data, error } = await db
+    .from('customer_commercial_proposals')
+    .select('accepted_configuration')
+    .eq('organization_id', input.organizationId)
+    .eq('id', input.proposalId)
+    .maybeSingle();
+  if (error || !data) return; // The SQL door reports a missing or unreadable proposal in its own words.
+  const agreed = agreedStartingSetup(data.accepted_configuration);
+  if (!agreed) return;
+  const template = (await listIndustryTemplates(db)).find((candidate) => candidate.key === agreed.key);
+  if (!template) {
+    throw new DomainError(`The agreed starting setup, ${agreed.key}, is not a published template.`, 'proposal_handoff.template_unknown');
+  }
+  try {
+    adjustShape(template.shape, { replace: agreed.adjustments });
+  } catch {
+    throw new DomainError('The agreed changes to the starting setup are not valid, so the business was not created.', 'proposal_handoff.template_invalid');
+  }
+}
+
+/**
  * Create the prospect's own business from an accepted proposal, and record having done so.
  *
  * One atomic call. Safe to call again for the same proposal — a prior success is returned
@@ -113,6 +157,7 @@ export async function handoffAcceptedProposal(
   db: Db,
   input: { organizationId: string; proposalId: string },
 ): Promise<AcceptedProposalHandoff> {
+  await checkAgreedStartingSetup(db, input);
   const { error } = await db.rpc('hand_off_accepted_proposal', { p_proposal_id: input.proposalId });
 
   if (error) {

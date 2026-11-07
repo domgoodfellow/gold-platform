@@ -3,11 +3,13 @@ import { DraftingNotEntitledError, draftingProvider, type ConfigurationGap } fro
 import { DomainError } from '@/lib/domain/errors';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
-import { getOrganization } from '@/lib/domain/tenancy/organizations';
+import { getOrganization, listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { listRoles } from '@/lib/domain/tenancy/roles';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { listWorkItemTypes } from '@/lib/domain/work-items/types';
-import { configureBusiness, type BusinessShape } from './configure';
+import { organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
+import { MODULES, type ModuleKey } from '@/lib/navigation';
+import { configureBusiness, readBusinessSetup, readBusinessSetupWithIndustry, type BusinessShape } from './configure';
 import { readBusinessShape } from './shape';
 
 /**
@@ -23,6 +25,16 @@ import { readBusinessShape } from './shape';
 export type { ConfigurationGap };
 
 export type ConfigurationProposalOutcome = 'draft' | 'applying' | 'applied' | 'failed' | 'discarded';
+
+/**
+ * Where a draft came from: the business's own description (`drafted`), a starting template the
+ * owner chose (`template`), one GildOps staff chose when creating the business (`provisioned`), one
+ * agreed in an accepted sales proposal (`agreed`), or another business of the same person's
+ * (`copied`). Every one of them is reviewed and applied by the business the same way; the origin
+ * only decides how the review screen introduces it.
+ */
+export type ConfigurationProposalOrigin = 'drafted' | 'template' | 'provisioned' | 'agreed' | 'copied';
+const ORIGINS: ConfigurationProposalOrigin[] = ['drafted', 'template', 'provisioned', 'agreed', 'copied'];
 
 export type ConfigurationProposal = {
   id: string;
@@ -40,7 +52,26 @@ export type ConfigurationProposal = {
   draftedBy: string;
   createdAt: string;
   appliedAt: string | null;
+  origin: ConfigurationProposalOrigin;
+  /** The industry template this started from, if any. */
+  templateKey: string | null;
+  /** When the owner set it aside for later; it is still a draft. */
+  deferredAt: string | null;
+  /** For a copy, the business it was copied from. Its name is the description. */
+  copiedFrom: string | null;
 };
+
+/** A platform-wide starting setup (`industry_templates`). Organizations read published ones only. */
+export type IndustryTemplate = {
+  key: string;
+  name: string;
+  category: string;
+  description: string;
+  shape: BusinessShape;
+};
+
+/** A template as platform staff manage it, published or not. */
+export type ManagedIndustryTemplate = IndustryTemplate & { published: boolean };
 
 const DESCRIPTION_MAX = 8000;
 
@@ -62,6 +93,10 @@ function toProposal(row: {
   drafted_by: string;
   created_at: string;
   applied_at: string | null;
+  origin: string;
+  template_key: string | null;
+  deferred_at: string | null;
+  copied_from: string | null;
 }): ConfigurationProposal {
   return {
     id: row.id,
@@ -74,11 +109,15 @@ function toProposal(row: {
     draftedBy: row.drafted_by,
     createdAt: row.created_at,
     appliedAt: row.applied_at,
+    origin: ORIGINS.find((origin) => origin === row.origin) ?? 'drafted',
+    templateKey: row.template_key,
+    deferredAt: row.deferred_at,
+    copiedFrom: row.copied_from,
   };
 }
 
 const COLUMNS =
-  'id, description, shape, gaps, outcome, detail, result, drafted_by, created_at, applied_at';
+  'id, description, shape, gaps, outcome, detail, result, drafted_by, created_at, applied_at, origin, template_key, deferred_at, copied_from';
 
 /** Includes the discarded and failed ones deliberately — the table has no delete grant, since a turned-down proposal is a decision someone made and worth keeping beside the ones that stuck. */
 export async function listConfigurationProposals(
@@ -117,6 +156,14 @@ export async function currentConfigurationProposal(
 
   const row = (data ?? [])[0];
   return row ? toProposal(row) : null;
+}
+
+/**
+ * A starting setup GildOps prepared or agreed that its owner has not looked at yet: entering the
+ * business opens it for review until it is applied, discarded or set aside with "Not now".
+ */
+export function awaitsFirstReview(proposal: ConfigurationProposal | null): boolean {
+  return proposal !== null && (proposal.origin === 'provisioned' || proposal.origin === 'agreed') && proposal.deferredAt === null;
 }
 
 /** Lets a screen say "can't draft" rather than rendering a form that fails after somebody's written three paragraphs. */
@@ -278,6 +325,45 @@ export async function reviseConfigurationProposal(
   return toProposal(data);
 }
 
+/**
+ * A template's document, with what this business's plan does not include left out. A template
+ * describes a kind of business, not a purchase, so a part of it outside the plan is dropped rather
+ * than failing the whole apply (`configureBusiness` refuses anything unentitled). A grouped module
+ * whose dependency was dropped goes with it. A business's own drafted proposal is never trimmed:
+ * there the refusal is the honest answer.
+ */
+export async function fitShapeToPlan(
+  db: Db,
+  organizationId: string,
+  shape: BusinessShape,
+): Promise<{ shape: BusinessShape; leftOut: string[] }> {
+  if (!shape.modules?.length && !shape.featureKeys?.length) return { shape, leftOut: [] };
+  const states = await organizationResolvedFeatureStates(db, { organizationId });
+  const usable = (match: (state: (typeof states)[number]) => boolean) =>
+    states.some((state) => match(state) && state.entitled && state.implementationState === 'available');
+  let modules = (shape.modules ?? []).filter((key) => usable((state) => state.moduleKey === key));
+  // A module that needs one dropped above does nothing on its own.
+  for (let changed = true; changed;) {
+    const before = modules.length;
+    modules = modules.filter((key) => {
+      const entry = MODULES.find((candidate) => candidate.key === key);
+      const needs = entry && 'requires' in entry ? (entry.requires as ModuleKey) : undefined;
+      return !needs || modules.includes(needs);
+    });
+    changed = modules.length !== before;
+  }
+  const featureKeys = (shape.featureKeys ?? []).filter((key) => usable((state) => state.featureKey === key));
+  const label = (key: string) => MODULES.find((entry) => entry.key === key)?.label ?? key;
+  const leftOut = [
+    ...(shape.modules ?? []).filter((key) => !modules.includes(key)).map(label),
+    ...(shape.featureKeys ?? []).filter((key) => !featureKeys.includes(key)),
+  ];
+  return {
+    shape: { ...shape, ...(shape.modules ? { modules } : {}), ...(shape.featureKeys ? { featureKeys } : {}) },
+    leftOut,
+  };
+}
+
 /** What this business actually has right now — an observation, not a report from the sequence that just ran. `configureBusiness` throws on the first failing step with no way to hand back partial progress, so a failed apply reads the business back instead, same as any screen would. */
 async function observeConfiguration(
   db: Db,
@@ -302,15 +388,17 @@ async function observeConfiguration(
 /**
  * Apply one, under the acting person's own session. Adds no capability — every write goes
  * through `configureBusiness`, whose steps already run against `app.has_capability` policies, so
- * a check here would be a second copy of a rule that already exists. A failure is recorded, not
- * rolled back: making the sequence atomic would need one privileged function taking the
- * shape as JSON, which is a second configuration path (the same mistake the one-creation-path rule forbids elsewhere).
- * Re-applying is a new draft, not an edit — the update policy matches drafts only.
+ * a check here would be a second copy of a rule that already exists.
+ *
+ * A failure is recorded, not rolled back, and a new draft of the same document is offered at
+ * once (`retry_configuration_proposal`): applying is safe to repeat, so applying that draft
+ * finishes what this one started, with nothing made twice. The failed row stays as the record of
+ * what went wrong. `retryId` names the new draft.
  */
 export async function applyConfigurationProposal(
   db: Db,
   input: { organizationId: string; proposalId: string },
-): Promise<ConfigurationProposal> {
+): Promise<ConfigurationProposal & { retryId?: string }> {
   await requireActor(db);
 
   // Read through the tenant boundary, then atomically claim exactly that draft below.
@@ -353,8 +441,18 @@ export async function applyConfigurationProposal(
   let detail: string | null = null;
 
   try {
-    const configured = await configureBusiness(db, input.organizationId, proposal.shape);
-    result = { ...configured };
+    const fitted = proposal.origin === 'drafted'
+      ? { shape: proposal.shape, leftOut: [] as string[] }
+      : await fitShapeToPlan(db, input.organizationId, proposal.shape);
+    const configured = await configureBusiness(db, input.organizationId, fitted.shape);
+    if (proposal.templateKey) {
+      const { error } = await db.rpc('record_starting_template', {
+        p_organization_id: input.organizationId,
+        p_template_key: proposal.templateKey,
+      });
+      if (error) throw new DomainError('The setup ran, but which template it started from could not be recorded.', 'proposals.template_unrecorded');
+    }
+    result = { ...configured, ...(fitted.leftOut.length ? { leftOut: fitted.leftOut } : {}) };
   } catch (error) {
     // A `DomainError` is a sentence somebody may read; anything else is an infrastructure failure recorded as what it is, not dressed up.
     detail =
@@ -379,14 +477,17 @@ export async function applyConfigurationProposal(
     .single();
 
   if (error) {
-    // The configuration landed and the record of it didn't — worth saying plainly, since re-applying would try the whole sequence again against a business that already has half of it.
+    // The configuration landed and the record of it didn't — worth saying plainly.
     throw new DomainError(
       'The setup ran, but this proposal could not be marked as applied. Check the business’s configuration before applying anything else.',
       'proposals.apply_unrecorded',
     );
   }
 
-  return toProposal(data);
+  const applied = toProposal(data);
+  if (applied.outcome !== 'failed') return applied;
+  const { data: retryId, error: retryError } = await db.rpc('retry_configuration_proposal', { p_proposal_id: applied.id });
+  return retryError ? applied : { ...applied, retryId: retryId as string };
 }
 
 /** An outcome, not a delete — a decision to turn a proposal down stays on the record beside the ones that stuck. */
@@ -409,4 +510,205 @@ export async function discardConfigurationProposal(
     throw new DomainError(error.message, 'proposals.discard_failed');
   }
   if (!data) throw new DomainError('That proposal is not an editable draft here.', 'proposals.not_a_draft');
+}
+
+/** Set a draft aside for later. It stays a draft, reachable from Setup, until applied or discarded. */
+export async function deferConfigurationProposal(
+  db: Db,
+  input: { organizationId: string; proposalId: string },
+): Promise<void> {
+  await requireActor(db);
+  const { data, error } = await db
+    .from('configuration_proposals')
+    .update({ deferred_at: new Date().toISOString() })
+    .eq('id', input.proposalId)
+    .eq('organization_id', input.organizationId)
+    .eq('outcome', 'draft')
+    .select('id')
+    .maybeSingle();
+  if (error) throw new DomainError(error.message, 'proposals.defer_failed');
+  if (!data) throw new DomainError('That proposal is not an editable draft here.', 'proposals.not_a_draft');
+}
+
+/** The published starting templates, in catalogue order. */
+export async function listIndustryTemplates(db: Db): Promise<IndustryTemplate[]> {
+  const { data, error } = await db
+    .from('industry_templates')
+    .select('key, name, category, description, shape')
+    .eq('published', true)
+    .order('position', { ascending: true });
+  if (error) throw new DomainError(error.message, 'templates.list_failed');
+  return (data ?? []).map((row) => ({
+    key: row.key,
+    name: row.name,
+    category: row.category,
+    description: row.description,
+    shape: readBusinessShape(row.shape),
+  }));
+}
+
+/**
+ * The template that matches what a business said it does, if one plainly does: the same name or
+ * category, or one inside the other. The industry is free text, so this only ever pre-selects.
+ */
+export function suggestedTemplateKey(templates: readonly IndustryTemplate[], industry: string | null): string | null {
+  const said = (industry ?? '').trim().toLocaleLowerCase();
+  if (!said) return null;
+  const match = templates.find((template) => [template.name, template.category].some((word) => {
+    const known = word.toLocaleLowerCase();
+    return known === said || known.includes(said) || said.includes(known);
+  }));
+  return match?.key ?? null;
+}
+
+/**
+ * Open a starting template as a draft for this business to review. Nothing is applied: the owner
+ * sees the whole document, can change any of it, and applies it from the review screen. What the
+ * plan does not include is left out now, so the draft shows what will actually be set up.
+ */
+export async function draftFromTemplate(
+  db: Db,
+  input: { organizationId: string; templateKey: string },
+): Promise<ConfigurationProposal> {
+  const actor = await requireActor(db);
+  const waiting = await currentConfigurationProposal(db, { organizationId: input.organizationId });
+  if (waiting) {
+    throw new DomainError('A setup is already waiting. Apply or discard it first.', 'proposals.draft_waiting');
+  }
+  const template = (await listIndustryTemplates(db)).find((candidate) => candidate.key === input.templateKey);
+  if (!template) throw new DomainError('That starting point is not available.', 'templates.not_found');
+  const { shape } = await fitShapeToPlan(db, input.organizationId, template.shape);
+
+  const { data, error } = await db
+    .from('configuration_proposals')
+    .insert({
+      organization_id: input.organizationId,
+      description: template.name,
+      shape: shape as never,
+      drafted_by: 'Starting template',
+      created_by: actor.id,
+      template_key: template.key,
+      origin: 'template',
+    })
+    .select(COLUMNS)
+    .single();
+  if (error) {
+    if (error.code === '42501') throw new DomainError('You cannot set up this business.', 'proposals.forbidden');
+    throw new DomainError(error.message, 'proposals.create_failed');
+  }
+  return toProposal(data);
+}
+
+/** The other businesses this person manages, which a new business may copy its setup from. */
+export async function listCopySources(db: Db, input: { organizationId: string }): Promise<{ id: string; name: string }[]> {
+  return (await listMyOrganizations(db))
+    .filter((organization) => organization.id !== input.organizationId && organization.capabilities.includes('organization.manage'))
+    .map((organization) => ({ id: organization.id, name: organization.name }));
+}
+
+/**
+ * Open another business's setup as a draft for this one: read it back (`readBusinessSetup`, which
+ * never reads customers, jobs or money), leave out what this business's plan does not include, and
+ * label it with where it came from. Nothing is applied until the owner applies it.
+ */
+export async function draftFromBusiness(
+  db: Db,
+  input: { organizationId: string; sourceOrganizationId: string },
+): Promise<ConfigurationProposal> {
+  const actor = await requireActor(db);
+  const waiting = await currentConfigurationProposal(db, { organizationId: input.organizationId });
+  if (waiting) {
+    throw new DomainError('A setup is already waiting. Apply or discard it first.', 'proposals.draft_waiting');
+  }
+  const source = (await listCopySources(db, input)).find((candidate) => candidate.id === input.sourceOrganizationId);
+  if (!source) throw new DomainError('You can only copy a business you manage.', 'proposals.copy_forbidden');
+  const { shape } = await fitShapeToPlan(db, input.organizationId, await readBusinessSetup(db, source.id));
+
+  const { data, error } = await db
+    .from('configuration_proposals')
+    .insert({
+      organization_id: input.organizationId,
+      description: source.name,
+      shape: shape as never,
+      drafted_by: 'Copied setup',
+      created_by: actor.id,
+      origin: 'copied',
+      copied_from: source.id,
+    })
+    .select(COLUMNS)
+    .single();
+  if (error) {
+    if (error.code === '42501') throw new DomainError('You cannot set up this business.', 'proposals.forbidden');
+    throw new DomainError(error.message, 'proposals.create_failed');
+  }
+  return toProposal(data);
+}
+
+/** Every template, published or not, for platform staff who look after them (`platform.catalogue`). */
+export async function listManagedIndustryTemplates(db: Db): Promise<ManagedIndustryTemplate[]> {
+  const { data, error } = await db
+    .from('industry_templates')
+    .select('key, name, category, description, shape, published')
+    .order('position', { ascending: true })
+    .order('created_at', { ascending: true });
+  if (error) throw new DomainError(error.message, 'templates.list_failed');
+  return (data ?? []).map((row) => ({ ...row, shape: readBusinessShape(row.shape) }));
+}
+
+/** A key a template can be found by: its name in plain letters, made unique. */
+function templateKeyFor(name: string): string {
+  const stem = name.toLocaleLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').replace(/^[^a-z]+/, '').slice(0, 36);
+  return `${stem || 'template'}_${crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`;
+}
+
+/**
+ * Save a business's setup as a starting template, unpublished: platform staff look it over and
+ * publish it when it is ready. Read with `readBusinessSetup`, so it carries no customer, job or
+ * money data. Filed under the business's industry, which is what pre-selects it for a new owner.
+ */
+export async function saveBusinessAsTemplate(
+  db: Db,
+  input: { organizationId: string; name: string; description: string },
+): Promise<string> {
+  await requireActor(db);
+  const name = input.name.trim();
+  const description = input.description.trim();
+  if (!name || name.length > 120) throw new DomainError('Give the template a name of up to 120 characters.', 'templates.name_invalid');
+  if (!description || description.length > 300) throw new DomainError('Describe the template in up to 300 characters.', 'templates.description_invalid');
+  const { shape, industry } = await readBusinessSetupWithIndustry(db, input.organizationId);
+  const { data: last } = await db.from('industry_templates').select('position').order('position', { ascending: false }).limit(1).maybeSingle();
+  const key = templateKeyFor(name);
+  const { error } = await db.from('industry_templates').insert({
+    key,
+    name,
+    category: (industry ?? '').trim().slice(0, 60) || 'Other',
+    description,
+    shape: shape as never,
+    published: false,
+    position: (last?.position ?? 0) + 10,
+  });
+  if (error) {
+    if (error.code === '42501') throw new DomainError('Only staff who look after the catalogue can save templates.', 'templates.forbidden');
+    throw new DomainError(error.message, 'templates.save_failed');
+  }
+  return key;
+}
+
+/** Offer a template to new businesses, or stop offering it. A business that started from it keeps what it applied. */
+export async function setIndustryTemplatePublished(db: Db, input: { key: string; published: boolean }): Promise<void> {
+  await requireActor(db);
+  const { data, error } = await db.from('industry_templates')
+    .update({ published: input.published, updated_at: new Date().toISOString() })
+    .eq('key', input.key).select('key').maybeSingle();
+  if (error || !data) throw new DomainError('Only staff who look after the catalogue can change templates.', 'templates.forbidden');
+}
+
+export async function renameIndustryTemplate(db: Db, input: { key: string; name: string }): Promise<void> {
+  await requireActor(db);
+  const name = input.name.trim();
+  if (!name || name.length > 120) throw new DomainError('Give the template a name of up to 120 characters.', 'templates.name_invalid');
+  const { data, error } = await db.from('industry_templates')
+    .update({ name, updated_at: new Date().toISOString() })
+    .eq('key', input.key).select('key').maybeSingle();
+  if (error || !data) throw new DomainError('Only staff who look after the catalogue can change templates.', 'templates.forbidden');
 }

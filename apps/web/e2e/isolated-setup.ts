@@ -18,7 +18,7 @@ import { createLocation } from '../lib/domain/locations/locations';
 import { createCustomer } from '../lib/domain/customers/customers';
 import { createWorkItem } from '../lib/domain/work-items/work-items';
 import { createAsset } from '../lib/domain/assets/assets';
-import { BUSINESSES, DEMO_PASSWORD } from '../scripts/demo/businesses';
+import { BUSINESSES, DEMO_PASSWORD, demoShape } from '../scripts/demo/businesses';
 import { cleanupAbandonedRuns } from './isolated-cleanup';
 
 /**
@@ -88,11 +88,12 @@ export default async function isolatedSetup(config: FullConfig): Promise<void> {
     record();
     for (const { key } of (await pg.query<{ key: string }>('select key from platform_catalog_products')).rows) await grantPlanProduct(ownerDb, { planId, productKey: key });
     await recordPlanAssignment(ownerDb, { organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
-    for (const key of template.shape.modules ?? []) {
+    const shape = await demoShape(ownerDb, template);
+    for (const key of shape.modules ?? []) {
       if (key === 'billing' || key === 'drafting') continue;
       await recordCommercialTerm(ownerDb, { organizationId, productKey: `module:${key}`, periodStart: new Date().toISOString().slice(0, 10), periodEnd: '9999-12-31', priceMinor: 0, note: `Isolated E2E fixture ${run}` });
     }
-    const configured = await configureBusiness(ownerDb, organizationId, template.shape);
+    const configured = await configureBusiness(ownerDb, organizationId, shape);
     await addMember(ownerDb, { organizationId, email: colleague.email, displayName: template.member.displayName, roleId: configured.roleIds[0] });
     const resourceIds: string[] = [];
     for (const resource of template.resources) resourceIds.push(await createResource(ownerDb, { organizationId, name: resource.name, resourceClass: resource.resourceClass, capabilityIds: [] }));

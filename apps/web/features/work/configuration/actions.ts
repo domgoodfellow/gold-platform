@@ -96,6 +96,7 @@ export async function createTypeAction(
       organizationId,
       name: String(formData.get('name') ?? ''),
       schedulable: answer === 'yes',
+      withStarterStages: true,
     });
   } catch (error) {
     if (error instanceof DomainError) {

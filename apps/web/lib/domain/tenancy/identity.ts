@@ -9,6 +9,11 @@ import { isCountryCode, postalCodeValid } from '@/lib/domain/tenancy/regional-de
  * strangers stays on `organization_profiles`. This is the third thing — a record only members can
  * read — and nothing here is published without the business doing so deliberately.
  */
+/** Who a business serves. */
+export const BUSINESS_SERVES = ['people', 'companies', 'both'] as const;
+export type BusinessServes = (typeof BUSINESS_SERVES)[number];
+export const isBusinessServes = (value: unknown): value is BusinessServes => (BUSINESS_SERVES as readonly unknown[]).includes(value);
+
 export type OrganizationIdentity = {
   legalName: string | null;
   industry: string | null;
@@ -21,19 +26,21 @@ export type OrganizationIdentity = {
   contactEmail: string | null;
   contactPhone: string | null;
   websiteUrl: string | null;
+  /** Who it serves; null until it says. Written by `setBusinessServes`, not with the rest. */
+  serves: BusinessServes | null;
 };
 
-export type OrganizationIdentityInput = { [K in keyof OrganizationIdentity]: string };
+export type OrganizationIdentityInput = { [K in Exclude<keyof OrganizationIdentity, 'serves'>]: string };
 
 export const EMPTY_IDENTITY: OrganizationIdentity = {
   legalName: null, industry: null, countryCode: null, region: null, city: null, postalCode: null,
-  addressLine1: null, addressLine2: null, contactEmail: null, contactPhone: null, websiteUrl: null,
+  addressLine1: null, addressLine2: null, contactEmail: null, contactPhone: null, websiteUrl: null, serves: null,
 };
 
 export async function getOrganizationIdentity(db: Db, organizationId: string): Promise<OrganizationIdentity> {
   const { data, error } = await db
     .from('organization_identity')
-    .select('legal_name, industry, country_code, region, city, postal_code, address_line1, address_line2, contact_email, contact_phone, website_url')
+    .select('legal_name, industry, country_code, region, city, postal_code, address_line1, address_line2, contact_email, contact_phone, website_url, serves')
     .eq('organization_id', organizationId)
     .maybeSingle();
 
@@ -44,7 +51,21 @@ export async function getOrganizationIdentity(db: Db, organizationId: string): P
     legalName: data.legal_name, industry: data.industry, countryCode: data.country_code, region: data.region,
     city: data.city, postalCode: data.postal_code, addressLine1: data.address_line1, addressLine2: data.address_line2,
     contactEmail: data.contact_email, contactPhone: data.contact_phone, websiteUrl: data.website_url,
+    serves: isBusinessServes(data.serves) ? data.serves : null,
   };
+}
+
+/** Say who the business serves. `organization.manage`, enforced by the database policy. */
+export async function setBusinessServes(db: Db, input: { organizationId: string; serves: BusinessServes }): Promise<void> {
+  await requireActor(db);
+  if (!isBusinessServes(input.serves)) {
+    throw new DomainError('Choose people, companies or both.', 'identity.serves_invalid');
+  }
+  const { error } = await db.rpc('set_business_serves', { p_organization_id: input.organizationId, p_serves: input.serves });
+  if (error) {
+    if (error.code === '42501') throw new DomainError('You cannot change this business’s identity.', 'identity.forbidden');
+    throw new DomainError(error.message, 'identity.update_failed');
+  }
 }
 
 /** What a business still has to say about where it is. Only the location blocks being "complete"; legal name and the rest are optional by design. */

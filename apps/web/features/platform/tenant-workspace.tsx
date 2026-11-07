@@ -25,6 +25,7 @@ export function TenantWorkspaceHeader({
   name,
   currency,
   canOpenBusiness,
+  actions,
 }: {
   /** GOLD's own organization — the context these pages are drawn in, not the organization being viewed. */
   goldId: string;
@@ -32,6 +33,8 @@ export function TenantWorkspaceHeader({
   name: string;
   currency: string;
   canOpenBusiness?: boolean;
+  /** Further page actions for this organization, such as saving it as a template. */
+  actions?: React.ReactNode;
 }) {
   const pathname = usePathname();
   const base = platformHref(goldId, `organizations/${id}`);
@@ -42,11 +45,16 @@ export function TenantWorkspaceHeader({
         title={name}
         crumbs={[...platformAncestry(goldId, 'organizations'), { label: 'Organizations', href: platformHref(goldId, 'organizations') }]}
         actions={
-          canOpenBusiness ? (
-            <ButtonLink href={`/organizations/${id}`} tone="secondary" size="small" className="gap-1.5">
-              Open business
-              <ArrowUpRight aria-hidden size={14} />
-            </ButtonLink>
+          canOpenBusiness || actions ? (
+            <>
+              {actions}
+              {canOpenBusiness ? (
+                <ButtonLink href={`/organizations/${id}`} tone="secondary" size="small" className="gap-1.5">
+                  Open business
+                  <ArrowUpRight aria-hidden size={14} />
+                </ButtonLink>
+              ) : null}
+            </>
           ) : null
         }
       />

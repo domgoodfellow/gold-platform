@@ -282,7 +282,7 @@ See [`docs/development.md`](docs/development.md).
 pnpm db:start
 ```
 
-For a fresh local database:
+For a fresh local database (wipes every local account and record, then reseeds the demo and prints the sign-in table):
 
 ```bash
 pnpm db:reset
@@ -296,7 +296,7 @@ pnpm db:reset
 pnpm demo
 ```
 
-Or reset and rebuild it:
+Safe to run again; it adds only what is missing. `pnpm demo:fresh` is an alias for `pnpm db:reset`:
 
 ```bash
 pnpm demo:fresh

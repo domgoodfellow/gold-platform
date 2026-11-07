@@ -32,6 +32,21 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-11-07
+
+- A new business can start from another business its owner manages: "Choose a starting point" lists those businesses beside the templates. Choosing one copies its setup (kinds of work and their stages, steps, needs and online booking, fields, roles, opening hours, wording and menu order, who it serves, brand and customer forms) into a draft labelled with where it came from, to review and apply as usual. Customers, jobs, invoices, payments and prices are never copied. Setup offers the same choice until the business launches.
+- Platform staff who look after the catalogue can save a business as a starting template from its page under Organizations. It is saved unpublished; Products lists every starting template, where staff publish, unpublish or rename them. Owners only see published ones.
+- Business information asks who the business serves: people, companies or both. The three starting templates say who they serve.
+- The demo records which template each business started from, and 小石川クリニック's owner also manages Grachtwerk Verhuur.
+
+## 2026-11-06
+
+- A new business can start from an industry template: Answering service, Rental and field service, or Appointment clinic. After creating a business the owner sees Choose a starting point, with the template matching their industry already chosen, or Start blank. The template opens on the setup review screen, where everything can be changed before Apply; nothing is set up until the owner applies it. Staff can choose a starting setup when provisioning a business, and an accepted sales proposal can carry one; either way the owner sees it on first sign-in, labelled as prepared by or agreed with GildOps, and can apply it, discard it or choose Not now. A setup can now describe several kinds of work, what each stage means, steps on each job, what each job needs, online booking, the business's own words and menu order, and forms customers can send from the portal. Applying is safe to repeat: if it stops part-way, the same setup is offered again and applying it finishes without making anything twice. The demo businesses are now built from two of these templates.
+- A kind of work created in Work configuration starts with three stages, Booked, In progress and Done, instead of none. New work starts on the type's first stage.
+- Platform pages now show confirmation messages after an action, such as provisioning a business or saving a provider account, and follow the signed-in person's appearance setting, as the rest of the app already did.
+- Local development: `pnpm db:reset` now rebuilds the local database and then reseeds it with the demo, ending with a sign-in table (platform admin, owner and staff per demo business, and a customer portal link). The demo can be run again safely and adds nothing the second time. `staff@gold.test` now always holds every platform capability and belongs to the GildOps operating organization. The unused SQL seed entry is turned off.
+- While `next dev` uses a local Supabase, the log-in page offers one button per demo account. While it uses any other Supabase, the organization header shows a HOSTED DATA badge. Neither appears in a production build.
+
 ## 2026-11-04
 
 - Operator screens (workspaces, Settings, Setup and Platform) no longer print a sentence under a heading that restates it or describes the feature, and no longer put a small label above a card title. About 70 such lines are gone across CRM, Work, AI, Home, Finance, Support, Library, Insights, Setup, Automations, Communications, Settings and Platform. Where a sentence carried a real consequence, such as "turn receiving on only once the domain's mail records point at GildOps", it now sits beside the control it governs instead of under the heading. AI's Recent agent interactions panel is now titled Your recent agent interactions, and AI's text-only Insights panel is gone. Public pages, sign-in and tenant websites are unchanged.

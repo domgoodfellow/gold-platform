@@ -25,7 +25,7 @@ type CommercialTerms = {
 export function FoundingHandoff({ handoff }: { handoff: AcceptedProposalHandoff }) {
   const terms = handoff.commercialTerms as CommercialTerms;
   const recommendation = handoff.acceptedConfiguration as ConfigurationRecommendation | null;
-  const preview = recommendation ? previewByWorkspace(recommendation.recommended) : [];
+  const preview = recommendation?.recommended ? previewByWorkspace(recommendation.recommended) : [];
   const knownFacts = describeDiscoverySnapshot({ answers: handoff.discoverySnapshot });
 
   return (

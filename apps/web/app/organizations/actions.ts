@@ -4,15 +4,13 @@ import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { createOrganization } from '@/lib/domain/tenancy/organizations';
-import { organizationHomeHref } from '@/lib/navigation';
 
 export type CreateBusinessState = { error: string | null };
 
 /**
- * Make a business and enter it the way every entry does — a business that has just been created
- * is in SETUP, so `organizationHomeHref` sends it to Setup. Whether this deployment can draft is
- * not part of that: Setup is the map of manual configuration first, and drafting is one optional
- * card on it.
+ * Make a business, then offer it a starting point: the review screen with no draft waiting shows
+ * the published templates and "Start blank". Choosing one opens it as a draft to review; nothing
+ * is applied until the owner applies it, and Start blank goes to Setup as before.
  */
 export async function createBusinessAction(
   _previous: CreateBusinessState,
@@ -43,5 +41,5 @@ export async function createBusinessAction(
   }
 
   // Outside the try — `redirect` works by throwing, so catching around it would turn success into an error.
-  redirect(organizationHomeHref(organizationId, 'setup'));
+  redirect(`/organizations/${organizationId}/setup/proposal`);
 }

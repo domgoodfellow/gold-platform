@@ -10,7 +10,7 @@ import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { listMyOrganizations } from '@/lib/domain/tenancy/organizations';
 import { callerOperatingOrganization } from '@/lib/domain/platform/operating-organization';
 import { organizationHomeHref } from '@/lib/navigation';
-import { readLastOrganizationId, resolveOrganizationsLanding } from '@/lib/route/landing';
+import { firstReviewHref, readLastOrganizationId, resolveOrganizationsLanding } from '@/lib/route/landing';
 import { CreateBusinessForm } from './create-business-form';
 import { AccountAppearance } from '@/features/appearance/account-appearance';
 
@@ -68,7 +68,7 @@ export default async function OrganizationsPage() {
     redirect('/platform');
   }
   if (landing.kind === 'enter') {
-    redirect(organizationHomeHref(landing.organizationId, landing.operationalState));
+    redirect(await firstReviewHref(db, landing) ?? organizationHomeHref(landing.organizationId, landing.operationalState));
   }
 
   return (

@@ -11,6 +11,7 @@ import { Badge } from '@/components/display/data';
 import { ProvisionOrganizationDialog } from '@/features/platform/organizations/provision-organization-dialog';
 import { getDb } from '@/lib/db/server';
 import { listTenants } from '@/lib/domain/platform/tenants';
+import { listIndustryTemplates } from '@/lib/domain/configuration/proposals';
 
 export default async function PlatformOrganizationsPage({
   params,
@@ -18,7 +19,8 @@ export default async function PlatformOrganizationsPage({
 }: PageProps<'/platform/organizations'>) {
   const { organizationId: goldId } = await platformParams(params);
   await requirePlatformArea(goldId, 'platform.organizations');
-  const { tenants, total } = await listTenants(await getDb());
+  const db = await getDb();
+  const [{ tenants, total }, templates] = await Promise.all([listTenants(db), listIndustryTemplates(db)]);
   const query = String((await searchParams).q ?? '').trim().toLowerCase();
   const visible = query ? tenants.filter((tenant) => tenant.name.toLowerCase().includes(query) || tenant.id.toLowerCase().includes(query)) : tenants;
 
@@ -28,7 +30,7 @@ export default async function PlatformOrganizationsPage({
         title="Organizations"
         crumbs={platformAncestry(goldId, 'organizations')}
         meta={`${total === 1 ? '1 organization' : `${total} organizations`} on GildOps`}
-        actions={<ProvisionOrganizationDialog />}
+        actions={<ProvisionOrganizationDialog templates={templates.map(({ key, name }) => ({ key, name }))} />}
       />
       <form method="get" role="search" className="relative max-w-md">
         <Search aria-hidden size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />

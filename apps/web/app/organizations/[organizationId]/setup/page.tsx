@@ -8,9 +8,11 @@ import { GuidedSetup } from '@/features/setup/guided-setup';
 import { setupGuide, resumeSetupStep, setupStepHref } from '@/features/setup/setup-guide';
 import { OrganizationSettingsForm } from '@/features/tenancy/organization-settings-form';
 import { ButtonLink } from '@/components/controls/button';
+import { redirect } from 'next/navigation';
 import { activeModuleKeys, availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { hasSchedulableWork } from '@/lib/domain/work-items/types';
 import {
+  awaitsFirstReview,
   canDraftConfiguration,
   currentConfigurationProposal,
   listConfigurationProposals,
@@ -66,6 +68,12 @@ export default async function SetupPage({
     hasSchedulableWork(db, { organizationId }),
   ]);
 
+  // A starting setup GildOps prepared opens for review the first time; "Not now" brings the owner here.
+  if (inSetup && awaitsFirstReview(proposal)) redirect(`/organizations/${organizationId}/setup/proposal`);
+  const startingSetup = proposal !== null && proposal.origin !== 'drafted';
+  // Until launch, a business with nothing waiting may start from a template or another of its owner's businesses.
+  const mayStart = inSetup && proposal === null;
+
   // Asking for a proposal is its own authority; applying one is not, because every step of
   // applying is already gated by the capability that step needs. Offered owner links and
   // Launch still respect this actor's authority; each write independently rechecks that authority.
@@ -94,7 +102,11 @@ export default async function SetupPage({
     <AppPage>
       <PageHeader
         title={inSetup ? 'Set up your organization' : 'Organization setup'}
-        actions={<ButtonLink href={setupStepHref(organizationId, resume.key)} tone="secondary" size="small">Resume setup</ButtonLink>}
+        actions={<>
+          {startingSetup ? <ButtonLink href={`/organizations/${organizationId}/setup/proposal`} size="small">Review starting setup</ButtonLink> : null}
+          {mayStart && mayPropose ? <ButtonLink href={`/organizations/${organizationId}/setup/proposal`} tone="secondary" size="small">Choose a starting point</ButtonLink> : null}
+          <ButtonLink href={setupStepHref(organizationId, resume.key)} tone="secondary" size="small">Resume setup</ButtonLink>
+        </>}
         meta={
           inSetup
             ? `Complete the required setup for ${organization.name}.`

@@ -10,7 +10,7 @@ import {
 } from '@/lib/domain/catalogue/organization-plans';
 import { removeLogo, setBrand, uploadLogo } from '@/lib/domain/branding/brand';
 import { updateOrganization } from '@/lib/domain/tenancy/organizations';
-import { setOrganizationIdentity } from '@/lib/domain/tenancy/identity';
+import { isBusinessServes, setBusinessServes, setOrganizationIdentity } from '@/lib/domain/tenancy/identity';
 import { setPublicProfile } from '@/lib/domain/tenancy/profile';
 import { invalidateGoldHomepageIfReferenced } from '@/lib/domain/public-site/cached';
 import { requireOrganization } from '@/lib/route/organization';
@@ -49,6 +49,9 @@ export async function updateOrganizationGeneralAction(
       contactPhone: String(formData.get('contactPhone') ?? ''),
       websiteUrl: String(formData.get('websiteUrl') ?? ''),
     });
+    // Not chosen yet stays unsaid; once chosen it is changed, never cleared.
+    const serves = formData.get('serves');
+    if (isBusinessServes(serves)) await setBusinessServes(db, { organizationId, serves });
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
     throw error;

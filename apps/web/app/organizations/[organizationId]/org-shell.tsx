@@ -5,6 +5,7 @@ import { LibraryMenu } from '@/features/library/library-nav';
 
 import { NavigationActivityContext } from '@/components/navigation/activity-context';
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
+import { Badge } from '@/components/display/data';
 import { SIDEBAR_HEADER_HEIGHT } from '@/components/layout/workspace-geometry';
 import { WorkspaceShell } from '@/components/layout/workspace-shell';
 import { AccountMenu } from '@/components/navigation/account-menu';
@@ -564,9 +565,11 @@ export function LockedOrgSidebar({
  */
 export function OrganizationFrame({
   organizationId, name, role, mark, organizations, sections, utilities, settings, settingsSearch,
-  locked, email, signOutAction, agent, children, displayName = '', setupPending = false, locationAccess,
+  locked, email, signOutAction, agent, children, displayName = '', setupPending = false, locationAccess, hostedData = false,
 }: {
   displayName?: string;
+  /** A development server reading the hosted project (`developmentSupabaseTarget`). Never true in production. */
+  hostedData?: boolean;
   /** The shell's entitlement and permission facts, for pages whose location the resolver owns. */
   locationAccess?: SerializedLocationAccess;
   setupPending?: boolean;
@@ -614,7 +617,10 @@ export function OrganizationFrame({
           navigationTrigger="always"
           agentTrigger="md"
           utilities={utilities}
-          beforeActions={!recovery ? <CommandPalette /> : null}
+          beforeActions={<>
+            {hostedData ? <Badge tone="danger" className="shrink-0 font-semibold">HOSTED DATA</Badge> : null}
+            {!recovery ? <CommandPalette /> : null}
+          </>}
         />
       }
       agent={agent}

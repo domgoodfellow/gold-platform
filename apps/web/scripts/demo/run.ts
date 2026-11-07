@@ -4,11 +4,15 @@ import { Client } from 'pg';
 import { issueInvoice, recordPayment } from '@/lib/domain/billing/invoices';
 import { createContact } from '@/lib/domain/contacts/contacts';
 import { createLocation, linkCustomerLocation } from '@/lib/domain/locations/locations';
-import { configureBusiness } from '@/lib/domain/configuration/configure';
+import { configureBusiness, type BusinessShape } from '@/lib/domain/configuration/configure';
+import { workTypesOf } from '@/lib/domain/configuration/shape';
 import { recordCommercialTerm } from '@/lib/domain/commercial/terms';
 import { createPlan, grantPlanModule, grantPlanProduct } from '@/lib/domain/catalogue/plans';
 import { recordPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { provisionOrganization } from '@/lib/domain/platform/provision';
+import { bootstrapOperatingOrganization, callerOperatingOrganization } from '@/lib/domain/platform/operating-organization';
+import { createPortalInvite, listPortalInvites } from '@/lib/domain/portal/portal';
+import { listUsableModules, setModuleEnabled } from '@/lib/domain/tenancy/modules';
 import { addPricedLine } from '@/lib/domain/pricing/prices';
 import { createDashboard, pinReport } from '@/lib/domain/reporting/dashboards';
 import { saveReportDefinition, setReportRoles } from '@/lib/domain/reporting/definitions';
@@ -16,22 +20,22 @@ import { createResourceCapability } from '@/lib/domain/resources/resource-capabi
 import { createResource } from '@/lib/domain/resources/resources';
 import { scheduleWorkItem } from '@/lib/domain/scheduling/schedule';
 import { addMember } from '@/lib/domain/tenancy/members';
+import { listRoles } from '@/lib/domain/tenancy/roles';
 import { launchOrganization } from '@/lib/domain/tenancy/lifecycle';
 import { getOrganization, updateOrganization } from '@/lib/domain/tenancy/organizations';
-import { listWorkItemTypes, setTypeBookable } from '@/lib/domain/work-items/types';
 import { recordCost, recordTime } from '@/lib/domain/work-items/consumption';
-import { updateWorkItemStatus } from '@/lib/domain/work-items/statuses';
 import { changeWorkItemStatus } from '@/lib/domain/work-items/transitions';
 import { createWorkItem } from '@/lib/domain/work-items/work-items';
-import { BUSINESSES, DEMO_PASSWORD, type DemoBusiness, type DemoJob } from './businesses';
+import { PLATFORM_NAME } from '@/lib/brand';
+import { BUSINESSES, DEMO_PASSWORD, demoShape, type DemoBusiness, type DemoJob } from './businesses';
 
 /**
- * A populated pair of businesses, in one command.
+ * A populated pair of businesses, a platform admin and a portal customer, in one command.
  *
- * **Nothing here is seeded.** Every line below is a real domain call under a real session, so a
- * fresh database stays genuinely empty until somebody runs this on purpose — which is the
- * point: an empty organization is the product working. The only SQL
- * is the `platform_staff` row, because no application path may write one.
+ * **This is the local seed**: `pnpm db:reset` runs it after rebuilding the database, and it is
+ * safe to run again on its own. Every line below is still a real domain call under a real
+ * session rather than inserted rows. The only SQL writes are the `platform_staff` row, because no
+ * application path may write one, and lookups of what an earlier run already made.
  *
  * **There is no branch on which business this is holding**, and that is the property that makes
  * the script evidence rather than only a convenience. Everything that differs lives in
@@ -86,20 +90,28 @@ function admin(): SupabaseClient {
   });
 }
 
-/** An account with a password somebody can actually use, and a session on it. */
-async function account(email: string): Promise<SupabaseClient> {
+/**
+ * Makes the account unless it is already there. An existing demo account keeps whatever password
+ * it has; the sign-in in `account` is what proves it is still the demo one.
+ */
+async function ensureUser(email: string): Promise<void> {
   const { error } = await admin().auth.admin.createUser({
     email,
     password: DEMO_PASSWORD,
     email_confirm: true,
   });
-  if (error) throw error;
+  if (error && error.code !== 'email_exists' && !/already been registered/i.test(error.message)) throw error;
+}
+
+/** An account with a password somebody can actually use, and a session on it. */
+async function account(email: string): Promise<SupabaseClient> {
+  await ensureUser(email);
 
   const db = createClient(SUPABASE_URL, ANON_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const signIn = await db.auth.signInWithPassword({ email, password: DEMO_PASSWORD });
-  if (signIn.error) throw signIn.error;
+  if (signIn.error) throw new Error(`Could not sign in as ${email} with the demo password: ${signIn.error.message}`);
   return db;
 }
 
@@ -124,6 +136,7 @@ function daysAgo(days: number): string {
 async function buildJob(
   db: SupabaseClient,
   business: DemoBusiness,
+  transitions: [number, number][],
   ids: {
     organizationId: string;
     statusIds: string[];
@@ -170,7 +183,7 @@ async function buildJob(
   const route =
     job.status === 0
       ? []
-      : business.shape.transitions.some((pair) => pair[0] === 0 && pair[1] === job.status)
+      : transitions.some((pair) => pair[0] === 0 && pair[1] === job.status)
         ? [job.status]
         : Array.from({ length: job.status }, (_, step) => step + 1);
 
@@ -217,6 +230,7 @@ async function buildJob(
 async function standUp(
   staff: SupabaseClient,
   business: DemoBusiness,
+  shape: BusinessShape,
   planId: string,
 ): Promise<{ organizationId: string }> {
   const ownerDb = await account(business.owner.email);
@@ -240,16 +254,16 @@ async function standUp(
   // outside the plan. The demo plan is assigned through the same command a sale uses.
   await recordPlanAssignment(staff, { organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
 
-  // Modules are part of the shape now, so `configureBusiness` switches them on — one path,
-  // the same one a proposal takes.
-  const configured = await configureBusiness(ownerDb, organizationId, business.shape);
+  // The template, in this business's words: stages and what they mean, fields, hours, roles,
+  // modules and online booking all come from it, through the same call a reviewed draft takes.
+  const configured = await configureBusiness(ownerDb, organizationId, shape);
 
   // **The wanted-versus-paid entitlement rule's own trigger, applied to this script.** Only `billing` and `drafting` carry a term
   // from founding (`app.grant_founding_terms`); anything else a shape names sits wanted-but-
   // unpaid until GOLD records one. A demo business is meant to be seen fully working, so the
   // staff session that just provisioned it also records a term for whatever else it switched
   // on — the same act a real sale would perform, through the same door.
-  for (const key of business.shape.modules ?? []) {
+  for (const key of shape.modules ?? []) {
     if (key === 'billing' || key === 'drafting') continue;
     await recordCommercialTerm(staff, {
       organizationId,
@@ -258,18 +272,6 @@ async function standUp(
       periodEnd: '9999-12-31',
       priceMinor: 0,
       note: 'Demo: switched on and paid for, so nothing this business uses is hidden.',
-    });
-  }
-
-  // The two questions the platform asks about a status, answered through the same call the Work
-  // screen makes. A shape says what a business calls its work; these say what its words *mean*.
-  for (const [index, name] of business.shape.statuses.entries()) {
-    await updateWorkItemStatus(ownerDb, {
-      id: configured.statusIds[index],
-      name,
-      position: index,
-      releasesResource: business.releasesResource.includes(index),
-      marksComplete: business.marksComplete.includes(index),
     });
   }
 
@@ -322,6 +324,7 @@ async function standUp(
     await buildJob(
       ownerDb,
       business,
+      workTypesOf(shape)[0].transitions,
       {
         organizationId,
         statusIds: configured.statusIds,
@@ -373,19 +376,212 @@ async function standUp(
   // Three months of jobs, invoices and reports is not a business "still being set up" — the
   // real path a person building one of these by hand would have launched it long before now,
   // and the demo-seed decision says this script takes the real path, not a shortcut around it.
-  // Online booking is sold, so launch requires it to be usable: a public address and one bookable
-  // type, set the way the owner sets them in Settings and Work configuration.
+  // Online booking is sold, so launch requires it to be usable: a public address, set the way the
+  // owner sets it in Settings, and one bookable type, which the template already says.
   const organization = (await getOrganization(ownerDb, organizationId))!;
   await updateOrganization(ownerDb, {
     id: organizationId, name: organization.name, timezone: organization.timezone, currency: organization.currency,
     bufferMinutes: organization.bufferMinutes, slug: business.owner.email.split('@')[1].split('.')[0],
   });
-  const [bookableType] = await listWorkItemTypes(ownerDb, { organizationId });
-  await setTypeBookable(ownerDb, { id: bookableType.id, statusId: configured.statusIds[0], durationMinutes: 60 });
 
   await launchOrganization(ownerDb, { organizationId });
 
   return { organizationId };
+}
+
+const STAFF_EMAIL = 'staff@gold.test';
+const PLATFORM_CAPABILITIES = [
+  'platform.organizations',
+  'platform.catalogue',
+  'platform.commercial',
+  'platform.providers',
+  'platform.health',
+];
+const APP_ORIGIN = 'http://localhost:3000';
+
+/**
+ * Platform staff with every platform capability, and a member of GildOps' operating organization
+ * so Platform has somewhere to render. Both steps are safe to repeat.
+ *
+ * The staff row goes in over a direct connection because nothing in the application may write
+ * one. The operating organization goes through the same two acts `e2e/global-setup.ts` uses: a
+ * staff-provisioned business, then `bootstrap_gold_internal_workspace`. When one is already
+ * designated and staff are already a member, nothing is written; designated without that
+ * membership, the bootstrap is asked again for that same business, which repairs it.
+ */
+async function ensurePlatformAdmin(pg: Client): Promise<{ staff: SupabaseClient; goldOrganizationId: string }> {
+  await ensureUser(STAFF_EMAIL);
+  const { rows: users } = await pg.query<{ id: string }>('select id from auth.users where email = $1', [STAFF_EMAIL]);
+  await pg.query(
+    `insert into public.platform_staff (user_id, name, capabilities) values ($1, $2, $3)
+       on conflict (user_id) do update set capabilities = excluded.capabilities`,
+    [users[0].id, 'GildOps (demo)', PLATFORM_CAPABILITIES],
+  );
+
+  const staff = await account(STAFF_EMAIL);
+
+  const { rows: settings } = await pg.query<{ id: string | null }>(
+    'select operating_organization_id as id from public.platform_settings where singleton',
+  );
+  const designated = settings[0]?.id ?? null;
+  const member = await callerOperatingOrganization(staff);
+  if (designated && member?.id === designated) return { staff, goldOrganizationId: designated };
+
+  const goldOrganizationId =
+    designated ??
+    (await provisionOrganization(staff, {
+      ownerEmail: STAFF_EMAIL,
+      name: PLATFORM_NAME,
+      displayName: `${PLATFORM_NAME} staff`,
+      timezone: 'Europe/Amsterdam',
+      currency: 'EUR',
+    }));
+  await bootstrapOperatingOrganization(staff, { organizationId: goldOrganizationId });
+
+  return { staff, goldOrganizationId };
+}
+
+/**
+ * One deterministic, non-billable demo plan, created by platform staff through the catalogue
+ * commands, or found again by its key. It grants everything except card payments: launch requires
+ * a connected payment account for those, which a local demo cannot have.
+ */
+async function ensureDemoPlan(pg: Client, staff: SupabaseClient): Promise<string> {
+  const { rows: existing } = await pg.query<{ id: string }>(
+    "select id from public.platform_plans where key = 'demo_complete'",
+  );
+  if (existing[0]) return existing[0].id;
+
+  const planId = await createPlan(staff, {
+    key: 'demo_complete', kind: 'plan', label: 'Demo',
+    description: 'Local demo only: every catalogue module except card payments.', billable: false,
+  });
+  const NOT_SOLD = new Set(['payments']);
+  const modules = await pg.query<{ product: string; module: string; id: string }>(
+    `select p.key as product, m.key as module, m.id from public.platform_catalog_modules m
+       join public.platform_catalog_products p on p.id = m.product_id order by p.key, m.key`,
+  );
+  const partial = new Set(modules.rows.filter((row) => NOT_SOLD.has(row.module)).map((row) => row.product));
+  for (const product of new Set(modules.rows.map((row) => row.product))) {
+    if (!partial.has(product)) await grantPlanProduct(staff, { planId, productKey: product });
+  }
+  for (const row of modules.rows) {
+    if (partial.has(row.product) && !NOT_SOLD.has(row.module)) await grantPlanModule(staff, { planId, moduleId: row.id });
+  }
+  return planId;
+}
+
+/**
+ * A business this script already finished, found by its name and its owner's address.
+ *
+ * Launch is the last thing `standUp` does, so a live business is a whole one and is left alone.
+ * One that exists but never launched was cut off part-way by an earlier run; finishing it would
+ * mean guessing which steps ran, so the run stops and says how to start clean instead.
+ */
+async function existingBusiness(pg: Client, business: DemoBusiness): Promise<string | null> {
+  const { rows } = await pg.query<{ id: string; operational_state: string }>(
+    `select o.id, o.operational_state from public.organizations o
+       join public.memberships m on m.organization_id = o.id
+       join auth.users u on u.id = m.user_id
+      where o.name = $1 and u.email = $2`,
+    [business.name, business.owner.email],
+  );
+  if (!rows[0]) return null;
+  if (rows[0].operational_state !== 'live') {
+    throw new Error(
+      `${business.name} exists but was never launched, so an earlier run stopped part-way. ` +
+        'Run `pnpm db:reset` to rebuild the local database from scratch.',
+    );
+  }
+  return rows[0].id;
+}
+
+/**
+ * A portal link for one customer of the first business, so the customer's side can be opened.
+ *
+ * The portal module is switched on and paid for the same way `e2e/global-setup.ts` does it (no
+ * demo shape asks for it). The last customer is used, so specs that work on the first one are not
+ * handed an extra link. An unrevoked link from an earlier run is reused.
+ */
+async function ensurePortalCustomer(
+  pg: Client,
+  staff: SupabaseClient,
+  business: DemoBusiness,
+  organizationId: string,
+): Promise<{ email: string; url: string }> {
+  const ownerDb = await account(business.owner.email);
+  if (!(await listUsableModules(ownerDb, { organizationId })).has('portal')) {
+    await setModuleEnabled(ownerDb, { organizationId, key: 'portal', enabled: true });
+    await recordCommercialTerm(staff, {
+      organizationId,
+      productKey: 'module:portal',
+      periodStart: new Date().toISOString().slice(0, 10),
+      periodEnd: '9999-12-31',
+      priceMinor: 0,
+      note: 'Demo: switched on and paid for, so the customer portal can be opened.',
+    });
+  }
+
+  const customer = business.customers[business.customers.length - 1];
+  const { rows } = await pg.query<{ id: string }>(
+    'select id from public.customers where organization_id = $1 and name = $2',
+    [organizationId, customer.name],
+  );
+  if (!rows[0]) throw new Error(`${business.name} has no customer named ${customer.name}.`);
+
+  const live = (await listPortalInvites(ownerDb, { organizationId, customerId: rows[0].id }))
+    .find((invite) => invite.revokedAt === null);
+  const token = live?.token ?? (await createPortalInvite(ownerDb, { customerId: rows[0].id }));
+  return { email: customer.email, url: `${APP_ORIGIN}/portal/${token}` };
+}
+
+/**
+ * Which template each demo business started from, recorded the way applying a template draft
+ * records it. Written once; a business that already says leaves it alone.
+ */
+async function ensureStartingTemplate(pg: Client, business: DemoBusiness, organizationId: string): Promise<void> {
+  const { rows } = await pg.query<{ key: string | null }>(
+    'select starting_template_key as key from public.organization_identity where organization_id = $1', [organizationId]);
+  if (rows[0]?.key) return;
+  const ownerDb = await account(business.owner.email);
+  const { error } = await ownerDb.rpc('record_starting_template', { p_organization_id: organizationId, p_template_key: business.template });
+  if (error) throw new Error(`${business.name} could not record its starting template: ${error.message}`);
+}
+
+/**
+ * One owner who runs two businesses: the second business's owner also manages the first, on its
+ * founding role, so "start from one of my businesses" has something to offer them. Added once.
+ */
+async function ensureSecondBusiness(
+  pg: Client,
+  first: { business: DemoBusiness; organizationId: string },
+  second: { business: DemoBusiness },
+): Promise<void> {
+  const { rows } = await pg.query(
+    `select 1 from public.memberships m join auth.users u on u.id = m.user_id
+      where m.organization_id = $1 and lower(u.email) = lower($2)`,
+    [first.organizationId, second.business.owner.email],
+  );
+  if (rows.length) return;
+  const ownerDb = await account(first.business.owner.email);
+  const [founding] = await listRoles(ownerDb, { organizationId: first.organizationId });
+  await addMember(ownerDb, {
+    organizationId: first.organizationId,
+    email: second.business.owner.email,
+    displayName: second.business.owner.displayName,
+    roleId: founding.id,
+  });
+}
+
+function printLoginTable(rows: { role: string; business: string; email: string; credential: string }[]): void {
+  const headings = { role: 'Role', business: 'Business', email: 'Email', credential: 'Password or link' };
+  const all = [headings, ...rows];
+  const width = (key: keyof typeof headings) => Math.max(...all.map((row) => row[key].length));
+  const line = (row: typeof headings) =>
+    `${row.role.padEnd(width('role'))}  ${row.business.padEnd(width('business'))}  ${row.email.padEnd(width('email'))}  ${row.credential}`;
+  process.stdout.write(`\nSign in at ${APP_ORIGIN}/login\n\n${line(headings)}\n`);
+  for (const row of rows) process.stdout.write(`${line(row)}\n`);
+  process.stdout.write('\n');
 }
 
 async function main(): Promise<void> {
@@ -399,82 +595,38 @@ async function main(): Promise<void> {
   await pg.connect();
 
   try {
-    // **Refused rather than half-done.** A second run dies part-way on a unique customer address
-    // or a duplicate report name, leaving a business somebody then has to unpick by hand.
-    const { rows } = await pg.query<{ count: string }>(
-      'select count(*)::text as count from public.organizations',
-    );
-    if (rows[0].count !== '0') {
-      throw new Error(
-        'This database already holds organizations. Run `pnpm demo:fresh` to reset it first.',
-      );
-    }
+    // **Safe to run again.** Every step finds what an earlier run made before making anything, so
+    // a second run adds nothing and ends with the same sign-in table.
+    const { staff } = await ensurePlatformAdmin(pg);
+    const planId = await ensureDemoPlan(pg, staff);
 
-    // The staff row goes in over a direct connection because nothing in the application may write
-    // one, and it goes in *before* the sign-in below, because the role claim is minted at
-    // sign-in and promoting somebody afterwards does not refresh their token.
-    const staffEmail = 'staff@gold.test';
-    const { data: created, error } = await admin().auth.admin.createUser({
-      email: staffEmail,
-      password: DEMO_PASSWORD,
-      email_confirm: true,
-    });
-    if (error) throw error;
-
-    await pg.query('insert into public.platform_staff (user_id, name) values ($1, $2)', [
-      created.user.id,
-      'GildOps (demo)',
-    ]);
-
-    const staff = createClient(SUPABASE_URL, ANON_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-    const signIn = await staff.auth.signInWithPassword({
-      email: staffEmail,
-      password: DEMO_PASSWORD,
-    });
-    if (signIn.error) throw signIn.error;
-
-    // One deterministic, non-billable demo plan, created by platform staff through the catalogue
-    // commands. It grants everything except card payments: launch requires a connected payment
-    // account for those, which a local demo cannot have. Online booking is granted and set up below.
-    const planId = await createPlan(staff, {
-      key: 'demo_complete', kind: 'plan', label: 'Demo',
-      description: 'Local demo only: every catalogue module except card payments.', billable: false,
-    });
-    const NOT_SOLD = new Set(['payments']);
-    const modules = await pg.query<{ product: string; module: string; id: string }>(
-      `select p.key as product, m.key as module, m.id from public.platform_catalog_modules m
-         join public.platform_catalog_products p on p.id = m.product_id order by p.key, m.key`,
-    );
-    const partial = new Set(modules.rows.filter((row) => NOT_SOLD.has(row.module)).map((row) => row.product));
-    for (const product of new Set(modules.rows.map((row) => row.product))) {
-      if (!partial.has(product)) await grantPlanProduct(staff, { planId, productKey: product });
-    }
-    for (const row of modules.rows) {
-      if (partial.has(row.product) && !NOT_SOLD.has(row.module)) await grantPlanModule(staff, { planId, moduleId: row.id });
-    }
-
-    const stood: { business: DemoBusiness; organizationId: string }[] = [];
+    const stood: { business: DemoBusiness; shape: BusinessShape; organizationId: string }[] = [];
     for (const business of BUSINESSES) {
+      const shape = await demoShape(staff, business);
+      const found = await existingBusiness(pg, business);
+      if (found) {
+        process.stdout.write(`${business.name} is already there.\n`);
+        stood.push({ business, shape, organizationId: found });
+        continue;
+      }
       process.stdout.write(`Standing up ${business.name}…\n`);
-      const { organizationId } = await standUp(staff, business, planId);
-      stood.push({ business, organizationId });
+      const { organizationId } = await standUp(staff, business, shape, planId);
+      stood.push({ business, shape, organizationId });
     }
 
-    process.stdout.write(`\nOne password for everybody: ${DEMO_PASSWORD}\n\n`);
-    process.stdout.write(`GildOps staff  http://localhost:3000/platform\n`);
-    process.stdout.write(`            ${staffEmail}\n\n`);
+    for (const { business, organizationId } of stood) await ensureStartingTemplate(pg, business, organizationId);
+    await ensureSecondBusiness(pg, stood[0], stood[1]);
 
-    for (const { business, organizationId } of stood) {
-      process.stdout.write(`${business.name}\n`);
-      process.stdout.write(`            http://localhost:3000/organizations/${organizationId}\n`);
-      process.stdout.write(`  owner     ${business.owner.email}\n`);
-      process.stdout.write(
-        `  ${business.shape.roles[0].name.padEnd(9)} ${business.member.email}` +
-          `  (no report.read — the Reports screen explains itself)\n\n`,
-      );
-    }
+    const portal = await ensurePortalCustomer(pg, staff, stood[0].business, stood[0].organizationId);
+
+    printLoginTable([
+      { role: 'Platform admin', business: PLATFORM_NAME, email: STAFF_EMAIL, credential: DEMO_PASSWORD },
+      ...stood.flatMap(({ business, shape }) => [
+        { role: 'Org owner', business: business.name, email: business.owner.email, credential: DEMO_PASSWORD },
+        { role: `Org staff (${shape.roles[0].name})`, business: business.name, email: business.member.email, credential: DEMO_PASSWORD },
+      ]),
+      { role: 'Portal customer', business: stood[0].business.name, email: portal.email, credential: portal.url },
+    ]);
   } finally {
     await pg.end();
   }

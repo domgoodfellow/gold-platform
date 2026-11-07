@@ -35,8 +35,10 @@ describe('entry — one decision, made in one place', () => {
     expect(NAVIGATION).toContain('areaHref(organizationId, AREAS[0].segment)');
   });
 
-  it('a newly created business enters through it, without asking whether drafting exists', () => {
-    expect(CREATE_ACTION).toContain("organizationHomeHref(organizationId, 'setup')");
+  it('a newly created business is offered its starting points, without asking whether drafting exists', () => {
+    // Work Order 2, Part D: self-serve creation opens "Choose a starting point" on the review
+    // screen; Start blank continues to Setup. Nothing is applied by entering.
+    expect(CREATE_ACTION).toContain('/setup/proposal');
     expect(CREATE_ACTION).not.toContain('canDraftConfiguration');
   });
 
@@ -121,7 +123,7 @@ describe('AI drafting — an accelerator the cockpit does not depend on', () => 
     expect(REVIEW).toContain('<ProposalReview');
     // Nothing a draft proposes takes effect until it is applied: the Setup page no longer repeats
     // that under its heading (UI copy discipline), so it is pinned where the person applies.
-    expect(read('../../../features/setup/proposal-review.tsx')).toContain('Apply the saved proposal through each configuration owner');
+    expect(read('../../../features/setup/proposal-review.tsx')).toContain('Sets up your business as shown here.');
   });
 
   it('renders the areas and Launch outside every drafting condition', () => {

@@ -4,19 +4,43 @@ import { join } from 'node:path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { beforeAll, describe, expect, it } from 'vitest';
-import type { BusinessShape } from '@/lib/domain/configuration/configure';
+import { configureBusiness, readBusinessSetup, type BusinessShape } from '@/lib/domain/configuration/configure';
 import {
   applyConfigurationProposal,
+  awaitsFirstReview,
   currentConfigurationProposal,
+  deferConfigurationProposal,
+  draftFromBusiness,
+  draftFromTemplate,
+  fitShapeToPlan,
+  listIndustryTemplates,
+  listManagedIndustryTemplates,
+  saveBusinessAsTemplate,
+  setIndustryTemplatePublished,
   reviseConfigurationProposal,
   discardConfigurationProposal,
+  suggestedTemplateKey,
 } from '@/lib/domain/configuration/proposals';
+import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
+import { listForms } from '@/lib/domain/forms/forms';
+import { provisionOrganization } from '@/lib/domain/platform/provision';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
+import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
+import { getBusinessProfile } from '@/lib/domain/tenancy/business-profile';
 import { CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
-import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
-import { listWorkItemTypes } from '@/lib/domain/work-items/types';
+import { ROLE_PRESETS } from '@/lib/domain/tenancy/role-presets';
+import { assignRole, createRole, listRoles } from '@/lib/domain/tenancy/roles';
+import { listTypeChecklistItems } from '@/lib/domain/work-items/checklists';
+import { listResourceRequirements } from '@/lib/domain/work-items/requirements';
+import { listWorkItemStatuses } from '@/lib/domain/work-items/statuses';
+import { listWorkItemTransitions } from '@/lib/domain/work-items/transitions';
+import { createWorkItemType, listWorkItemTypes } from '@/lib/domain/work-items/types';
 import { createOrganization } from '@/lib/domain/tenancy/organizations';
-import { foundBusiness } from '@/tests/support/founding';
+import { getOrganizationIdentity, setBusinessServes } from '@/lib/domain/tenancy/identity';
+import { createCustomer } from '@/lib/domain/customers/customers';
+import { createWorkItem } from '@/lib/domain/work-items/work-items';
+import { asPlatformStaff, foundBusiness, newAccountEmail } from '@/tests/support/founding';
+import { BUSINESSES, demoShape } from '../../../scripts/demo/businesses';
 
 /**
  * The row between the drafting and the applying (the draft-then-apply rule, ADR-039).
@@ -307,7 +331,7 @@ describe('a proposal is a row between the drafting and the applying', () => {
     // configuration, and this one reads the record of what was approved.
     const result = applied.result as { typeId: string; statusIds: string[] };
     expect(typeof result.typeId).toBe('string');
-    expect(result.statusIds).toHaveLength(WORKSHOP_SHAPE.statuses.length);
+    expect(result.statusIds).toHaveLength(WORKSHOP_SHAPE.statuses!.length);
   });
 
   it('refuses a forged organization even when the actor owns both businesses', async () => {
@@ -436,4 +460,307 @@ describe('a proposal is a row between the drafting and the applying', () => {
 
     expect(after?.id).toBe(id);
   });
+});
+
+/**
+ * Work Order 2: a business starts from an industry template, and the owner always confirms it
+ * on the review screen. Whichever door the template arrives through — the owner choosing it,
+ * staff choosing it when provisioning, or a sales hand-off — it is a draft until applied.
+ */
+describe('a business can start from an industry template', () => {
+  beforeAll(() => {
+    if (!ANON_KEY || !SERVICE_ROLE_KEY) throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
+  });
+
+  it('publishes three templates whose roles are copies of the role presets', async () => {
+    const reader = await newTenant('tpl-reader');
+    const templates = await listIndustryTemplates(reader.db);
+    // Staff may publish more after these (Work Order 3), so the seeded three are checked as the first three.
+    expect(templates.slice(0, 3).map((template) => template.key)).toEqual(['answering_service', 'rental_field_service', 'appointment_clinic']);
+    const answering = templates[0];
+    for (const role of answering.shape.roles) {
+      const preset = ROLE_PRESETS.find((candidate) => candidate.label === role.name);
+      expect(preset, `${role.name} names a role preset`).toBeDefined();
+      expect([...role.capabilities].sort()).toEqual([...preset!.capabilities].sort());
+    }
+    expect(answering.shape.wording?.nouns).toMatchObject({ work: { singular: 'Call' }, customer: { singular: 'Client' } });
+    expect(suggestedTemplateKey(templates, 'health and wellness')).toBe('appointment_clinic');
+    expect(suggestedTemplateKey(templates, 'Answering service')).toBe('answering_service');
+    expect(suggestedTemplateKey(templates, 'Bakery')).toBeNull();
+  });
+
+  it('refuses an organization member writing to the catalogue, and hides unpublished templates', async () => {
+    const member = await newTenant('tpl-writer');
+    const insert = await member.db.from('industry_templates').insert({ key: `x_${randomUUID().slice(0, 6)}`, name: 'Mine', category: 'Mine', description: 'Mine', shape: {} });
+    expect(insert.error?.code).toBe('42501');
+    const update = await member.db.from('industry_templates').update({ name: 'Renamed' }).eq('key', 'answering_service').select('key');
+    expect(update.data ?? []).toEqual([]);
+  });
+
+  it('opens a template as a draft, applies it, records it, and finishes after a forced failure with nothing twice', async () => {
+    const owner = await newTenant('tpl-answering');
+    const draft = await draftFromTemplate(owner.db, { organizationId: owner.organizationId, templateKey: 'answering_service' });
+    expect(draft).toMatchObject({ origin: 'template', templateKey: 'answering_service', outcome: 'draft', description: 'Answering service' });
+    // A founded business's plan does not include Reception, so the draft leaves it out rather than failing later.
+    expect(draft.shape.modules ?? []).not.toContain('reception');
+    await expect(draftFromTemplate(owner.db, { organizationId: owner.organizationId, templateKey: 'appointment_clinic' }))
+      .rejects.toMatchObject({ code: 'proposals.draft_waiting' });
+
+    // Force a failure part-way: prices are applied after work types, stages, fields and hours.
+    await reviseConfigurationProposal(owner.db, {
+      organizationId: owner.organizationId,
+      proposalId: draft.id,
+      shape: { ...draft.shape, prices: [{ name: 'Per call', unit: 'call', amountMinor: -1 }] },
+    });
+    const failed = await applyConfigurationProposal(owner.db, { organizationId: owner.organizationId, proposalId: draft.id });
+    expect(failed.outcome).toBe('failed');
+    expect(failed.detail).toContain('negative');
+    expect(failed.retryId).toBeTruthy();
+
+    // The same document is waiting again, still saying where it came from.
+    const retry = await currentConfigurationProposal(owner.db, { organizationId: owner.organizationId });
+    expect(retry).toMatchObject({ id: failed.retryId, origin: 'template', templateKey: 'answering_service' });
+    await reviseConfigurationProposal(owner.db, {
+      organizationId: owner.organizationId,
+      proposalId: retry!.id,
+      shape: { ...retry!.shape, prices: [{ name: 'Per call', unit: 'call', amountMinor: 150 }] },
+    });
+    const applied = await applyConfigurationProposal(owner.db, { organizationId: owner.organizationId, proposalId: retry!.id });
+    expect(applied.outcome).toBe('applied');
+
+    const organizationId = owner.organizationId;
+    const types = await listWorkItemTypes(owner.db, { organizationId });
+    expect(types.map((type) => type.name).sort()).toEqual(['Callback', 'Inbound call']);
+    const callback = types.find((type) => type.name === 'Callback')!;
+    expect(callback.schedulable).toBe(true);
+    const stages = await listWorkItemStatuses(owner.db, { organizationId, typeId: callback.id });
+    expect(stages.map(({ name, marksComplete, releasesResource }) => ({ name, marksComplete, releasesResource }))).toEqual([
+      { name: 'Booked', marksComplete: false, releasesResource: false },
+      { name: 'Calling', marksComplete: false, releasesResource: false },
+      { name: 'Done', marksComplete: true, releasesResource: true },
+      { name: 'No answer', marksComplete: false, releasesResource: true },
+    ]);
+    expect(await listWorkItemTransitions(owner.db, { organizationId, typeId: callback.id })).toHaveLength(4);
+    expect((await listTypeChecklistItems(owner.db, { organizationId, typeId: callback.id })).map((step) => step.label)).toEqual(['Check who to call back', 'Record the outcome']);
+    expect(await listResourceRequirements(owner.db, { organizationId, typeId: callback.id })).toMatchObject([{ resourceClass: 'person', quantity: 1 }]);
+    expect((await listRoles(owner.db, { organizationId })).map((role) => role.name).filter((name) => name !== 'Admin').sort()).toEqual(['Manager', 'Support']);
+    expect(await listOperatingHours(owner.db, { organizationId })).toHaveLength(5);
+    expect((await listFieldDefinitions(owner.db, { organizationId, entityType: 'customer' })).map((field) => field.key)).toEqual(['answer_as', 'cover_hours', 'call_instructions']);
+    expect((await listPriceBookItems(owner.db, { organizationId })).map((price) => price.name)).toEqual(['Per call']);
+    const profile = await getBusinessProfile(owner.db, organizationId);
+    expect(profile?.nouns).toMatchObject({ work: { singular: 'Call', plural: 'Calls' }, customer: { singular: 'Client', plural: 'Clients' } });
+    expect(profile?.navigation).toEqual(['home', 'calls', 'work', 'customers', 'schedule']);
+    const forms = await listForms(owner.db, organizationId);
+    expect(forms.filter((form) => form.name === 'Contact us')).toHaveLength(1);
+    const { data: identity } = await owner.db.from('organization_identity').select('starting_template_key').eq('organization_id', organizationId).single();
+    expect(identity?.starting_template_key).toBe('answering_service');
+  });
+
+  it('lets staff offer a template when provisioning, which waits for the owner and cannot be forged by a member', async () => {
+    const staff = await asPlatformStaff();
+    const ownerEmail = await newAccountEmail('tpl-provisioned');
+    const organizationId = await provisionOrganization(staff, { ownerEmail, name: 'Provisioned clinic', currency: 'JPY', templateKey: 'appointment_clinic' });
+    const pg = new Client(CONNECTION);
+    await pg.connect();
+    try {
+      const { rows } = await pg.query<{ origin: string; outcome: string; template_key: string; types: number }>(
+        `select p.origin, p.outcome, p.template_key,
+                (select count(*)::int from public.work_item_types t where t.organization_id = p.organization_id) as types
+           from public.configuration_proposals p where p.organization_id = $1`, [organizationId]);
+      // Offered, never applied: nothing is set up until the owner applies it.
+      expect(rows).toEqual([{ origin: 'provisioned', outcome: 'draft', template_key: 'appointment_clinic', types: 0 }]);
+    } finally {
+      await pg.end();
+    }
+    await expect(provisionOrganization(staff, { ownerEmail, name: 'Unknown start', currency: 'EUR', templateKey: 'no_such_template' }))
+      .rejects.toThrow(/no published starting template/i);
+
+    // A member cannot write a draft that claims GildOps prepared or agreed it.
+    const member = await newTenant('tpl-forger');
+    const forged = await member.db.from('configuration_proposals').insert({
+      organization_id: member.organizationId, description: 'Forged', shape: EMPTY_SHAPE, gaps: [], drafted_by: 'me', created_by: member.userId, origin: 'agreed',
+    });
+    expect(forged.error?.code).toBe('42501');
+  });
+
+  it('sets a waiting draft aside without discarding it', async () => {
+    const owner = await newTenant('tpl-later');
+    const draft = await draftFromTemplate(owner.db, { organizationId: owner.organizationId, templateKey: 'rental_field_service' });
+    expect(awaitsFirstReview(draft)).toBe(false);
+    await deferConfigurationProposal(owner.db, { organizationId: owner.organizationId, proposalId: draft.id });
+    const waiting = await currentConfigurationProposal(owner.db, { organizationId: owner.organizationId });
+    expect(waiting?.id).toBe(draft.id);
+    expect(waiting?.deferredAt).not.toBeNull();
+  });
+
+  it('gives a kind of work made by hand three starting stages', async () => {
+    const owner = await newTenant('tpl-starter');
+    const typeId = await createWorkItemType(owner.db, { organizationId: owner.organizationId, name: 'Visit', schedulable: true, withStarterStages: true });
+    const stages = await listWorkItemStatuses(owner.db, { organizationId: owner.organizationId, typeId });
+    expect(stages.map(({ name, position, marksComplete, releasesResource }) => ({ name, position, marksComplete, releasesResource }))).toEqual([
+      { name: 'Booked', position: 0, marksComplete: false, releasesResource: false },
+      { name: 'In progress', position: 1, marksComplete: false, releasesResource: false },
+      { name: 'Done', position: 2, marksComplete: true, releasesResource: true },
+    ]);
+    const moves = await listWorkItemTransitions(owner.db, { organizationId: owner.organizationId, typeId });
+    const name = (id: string) => stages.find((stage) => stage.id === id)!.name;
+    expect(moves.map((move) => `${name(move.fromStatusId)}→${name(move.toStatusId)}`).sort()).toEqual(['Booked→Done', 'Booked→In progress', 'In progress→Done']);
+  });
+});
+
+/**
+ * Work Order 3: a business's setup is read back out (`readBusinessSetup`), and what is read can be
+ * applied to another business to make the same setup. Copying never carries customers, jobs or
+ * money, and only somebody who manages both businesses may copy. Staff who look after the catalogue
+ * can save a business as an unpublished template, which owners never see until it is published.
+ */
+describe('a business setup can be read back, copied and saved as a template', () => {
+  beforeAll(() => {
+    if (!ANON_KEY || !SERVICE_ROLE_KEY) throw new Error('SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be set.');
+  });
+
+  /** One person who owns two businesses: one to set up, and a blank one to copy it into. */
+  async function ownerOfTwo(label: string): Promise<{ db: SupabaseClient; source: string; blank: string; email: string }> {
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
+    const email = `${label}-${randomUUID().slice(0, 8)}@example.test`;
+    const password = `pw-${randomUUID()}`;
+    const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+    if (created.error) throw created.error;
+    const source = await foundBusiness({ ownerEmail: email, name: `${label} source`, currency: 'EUR' });
+    const blank = await foundBusiness({ ownerEmail: email, name: `${label} copy`, currency: 'EUR' });
+    const db = createClient(SUPABASE_URL, ANON_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
+    const signedIn = await db.auth.signInWithPassword({ email, password });
+    if (signedIn.error) throw signedIn.error;
+    return { db, source, blank, email };
+  }
+
+  /** Data a business holds that is not setup: a customer and a job for them. */
+  async function addCustomerAndJob(db: SupabaseClient, organizationId: string): Promise<void> {
+    const customerId = await createCustomer(db, { organizationId, name: 'A customer', email: 'customer@example.test' });
+    const [type] = await listWorkItemTypes(db, { organizationId });
+    const [stage] = await listWorkItemStatuses(db, { organizationId, typeId: type.id });
+    await createWorkItem(db, { organizationId, title: 'A job', statusId: stage.id, customerId });
+  }
+
+  /** Read the source, copy it into the blank business, read that: the two must be the same setup. */
+  async function copiesExactly(owner: Awaited<ReturnType<typeof ownerOfTwo>>): Promise<BusinessShape> {
+    const before = await readBusinessSetup(owner.db, owner.source);
+    const draft = await draftFromBusiness(owner.db, { organizationId: owner.blank, sourceOrganizationId: owner.source });
+    expect(draft).toMatchObject({ origin: 'copied', copiedFrom: owner.source, outcome: 'draft' });
+    const applied = await applyConfigurationProposal(owner.db, { organizationId: owner.blank, proposalId: draft.id });
+    expect(applied.detail).toBeNull();
+    expect(applied.outcome).toBe('applied');
+    expect(await readBusinessSetup(owner.db, owner.blank)).toEqual(before);
+
+    // Setup only: none of the source's customers, jobs or money came across.
+    const pg = new Client(CONNECTION);
+    await pg.connect();
+    try {
+      const { rows } = await pg.query<{ customers: number; jobs: number; invoices: number; prices: number }>(
+        `select (select count(*)::int from public.contacts where organization_id = $1) as customers,
+                (select count(*)::int from public.work_items where organization_id = $1) as jobs,
+                (select count(*)::int from public.invoices where organization_id = $1) as invoices,
+                (select count(*)::int from public.price_book_items where organization_id = $1) as prices`, [owner.blank]);
+      expect(rows[0]).toEqual({ customers: 0, jobs: 0, invoices: 0, prices: 0 });
+    } finally {
+      await pg.end();
+    }
+    return before;
+  }
+
+  for (const key of ['answering_service', 'rental_field_service', 'appointment_clinic']) {
+    it(`copies a business started from the ${key} template, and nothing but its setup`, async () => {
+      const owner = await ownerOfTwo(`copy-${key.slice(0, 6)}`);
+      const draft = await draftFromTemplate(owner.db, { organizationId: owner.source, templateKey: key });
+      expect((await applyConfigurationProposal(owner.db, { organizationId: owner.source, proposalId: draft.id })).outcome).toBe('applied');
+      await addCustomerAndJob(owner.db, owner.source);
+      const shape = await copiesExactly(owner);
+      const template = (await listIndustryTemplates(owner.db)).find((candidate) => candidate.key === key)!;
+      // What was read back is the template's setup, as applied.
+      expect(shape.workTypes?.map((type) => type.name).sort()).toEqual(template.shape.workTypes!.map((type) => type.name).sort());
+      expect(shape.serves).toBe(template.shape.serves);
+      expect(shape.prices).toEqual([]);
+    }, 120_000);
+  }
+
+  for (const business of BUSINESSES) {
+    it(`copies a business set up like the ${business.name} demo, its own prices and customers staying behind`, async () => {
+      const owner = await ownerOfTwo(`copy-demo-${business.template.slice(0, 6)}`);
+      const { shape } = await fitShapeToPlan(owner.db, owner.source, await demoShape(owner.db, business));
+      await configureBusiness(owner.db, owner.source, shape);
+      await addCustomerAndJob(owner.db, owner.source);
+      const read = await copiesExactly(owner);
+      expect(read.workTypes?.map((type) => type.stages.map((stage) => stage.name))).toEqual(shape.workTypes?.map((type) => type.stages.map((stage) => stage.name)));
+      expect(read.hours).toEqual(shape.hours);
+    }, 120_000);
+  }
+
+  it('lets only somebody who manages both businesses copy, and nobody else read a setup', async () => {
+    const owner = await ownerOfTwo('copy-guard');
+    const draft = await draftFromTemplate(owner.db, { organizationId: owner.source, templateKey: 'rental_field_service' });
+    await applyConfigurationProposal(owner.db, { organizationId: owner.source, proposalId: draft.id });
+    const stranger = await newTenant('copy-stranger');
+
+    await expect(draftFromBusiness(stranger.db, { organizationId: stranger.organizationId, sourceOrganizationId: owner.source }))
+      .rejects.toMatchObject({ code: 'proposals.copy_forbidden' });
+    await expect(readBusinessSetup(stranger.db, owner.source)).rejects.toMatchObject({ code: 'configuration.read_forbidden' });
+    // Writing the row directly, naming a business the author does not manage, is refused too.
+    const forged = await stranger.db.from('configuration_proposals').insert({
+      organization_id: stranger.organizationId, description: 'Forged copy', shape: EMPTY_SHAPE, gaps: [], drafted_by: 'me',
+      created_by: stranger.userId, origin: 'copied', copied_from: owner.source,
+    });
+    expect(forged.error?.code).toBe('42501');
+
+    // A member without `organization.manage` cannot read their own business's setup either.
+    await limitTo(stranger, CAPABILITIES.filter((capability) => capability !== 'organization.manage'));
+    await expect(readBusinessSetup(stranger.db, stranger.organizationId)).rejects.toMatchObject({ code: 'configuration.read_forbidden' });
+  }, 120_000);
+
+  it('records who a business serves, from its information and from a setup', async () => {
+    const owner = await newTenant('serves');
+    expect((await getOrganizationIdentity(owner.db, owner.organizationId)).serves).toBeNull();
+    await setBusinessServes(owner.db, { organizationId: owner.organizationId, serves: 'people' });
+    expect((await getOrganizationIdentity(owner.db, owner.organizationId)).serves).toBe('people');
+    const draft = await draftFromTemplate(owner.db, { organizationId: owner.organizationId, templateKey: 'answering_service' });
+    expect(draft.shape.serves).toBe('companies');
+    await applyConfigurationProposal(owner.db, { organizationId: owner.organizationId, proposalId: draft.id });
+    expect((await getOrganizationIdentity(owner.db, owner.organizationId)).serves).toBe('companies');
+  }, 120_000);
+
+  it('saves a business as an unpublished template that owners only see once staff publish it', async () => {
+    const owner = await ownerOfTwo('save-template');
+    const draft = await draftFromTemplate(owner.db, { organizationId: owner.source, templateKey: 'appointment_clinic' });
+    await applyConfigurationProposal(owner.db, { organizationId: owner.source, proposalId: draft.id });
+    await addCustomerAndJob(owner.db, owner.source);
+
+    // An owner is not catalogue staff.
+    await expect(saveBusinessAsTemplate(owner.db, { organizationId: owner.source, name: 'Mine', description: 'Mine' }))
+      .rejects.toMatchObject({ code: 'templates.forbidden' });
+
+    const staff = await asPlatformStaff();
+    const key = await saveBusinessAsTemplate(staff, { organizationId: owner.source, name: 'Saved clinic', description: 'A clinic saved by staff.' });
+    try {
+      const saved = (await listManagedIndustryTemplates(staff)).find((template) => template.key === key)!;
+      expect(saved).toMatchObject({ name: 'Saved clinic', published: false });
+      expect(saved.shape).toEqual(await readBusinessSetup(owner.db, owner.source));
+
+      expect((await listIndustryTemplates(owner.db)).map((template) => template.key)).not.toContain(key);
+      await expect(draftFromTemplate(owner.db, { organizationId: owner.blank, templateKey: key })).rejects.toMatchObject({ code: 'templates.not_found' });
+
+      await setIndustryTemplatePublished(staff, { key, published: true });
+      expect((await listIndustryTemplates(owner.db)).map((template) => template.key)).toContain(key);
+      const fromSaved = await draftFromTemplate(owner.db, { organizationId: owner.blank, templateKey: key });
+      expect((await applyConfigurationProposal(owner.db, { organizationId: owner.blank, proposalId: fromSaved.id })).outcome).toBe('applied');
+      expect(await readBusinessSetup(owner.db, owner.blank)).toEqual(saved.shape);
+
+      await expect(setIndustryTemplatePublished(owner.db, { key, published: false })).rejects.toMatchObject({ code: 'templates.forbidden' });
+    } finally {
+      // Published templates are offered to every new business on this database; this one was only for the test.
+      const pg = new Client(CONNECTION);
+      await pg.connect();
+      await pg.query('update public.organization_identity set starting_template_key = null where starting_template_key = $1', [key]);
+      await pg.query('delete from public.industry_templates where key = $1', [key]);
+      await pg.end();
+    }
+  }, 120_000);
 });

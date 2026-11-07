@@ -14,3 +14,5 @@ export type RecordPlanAgreementState = RegisterResourceState;
 export const PLAN_AGREEMENT_INITIAL: RecordPlanAgreementState = { error: null, recorded: false };
 export type RecordQuotaOverrideState = RegisterResourceState;
 export const QUOTA_OVERRIDE_INITIAL: RecordQuotaOverrideState = { error: null, recorded: false };
+export type SaveTemplateState = { error: string | null; saved: string | null };
+export const SAVE_TEMPLATE_INITIAL: SaveTemplateState = { error: null, saved: null };

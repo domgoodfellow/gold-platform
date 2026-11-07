@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createWorkItemAction, type WorkActionState } from '@/app/organizations/[organizationId]/work/actions';
 import { Button, ButtonLink } from '@/components/controls/button';
@@ -19,6 +20,7 @@ const INITIAL: WorkActionState = { error: null };
 /** Creation is the Work board's primary action; stage and schedule controls live with operations. */
 export function CreateWorkItemForm({
   organizationId,
+  typeId,
   statuses,
   customers,
   locations,
@@ -32,6 +34,7 @@ export function CreateWorkItemForm({
   setupStep,
 }: {
   organizationId: string;
+  typeId: string;
   statuses: WorkItemStatus[];
   customers: SelectOption[];
   locations: SelectOption[];
@@ -57,7 +60,9 @@ export function CreateWorkItemForm({
   if (statuses.length === 0) {
     return (
       <Hint>
-        Add a status before recording work. A work item without a state is not on the board.
+        Add a stage before recording work.{' '}
+        <Link href={`/organizations/${organizationId}/work/configuration?${new URLSearchParams({ type: typeId, tab: 'workflow' })}`}
+          className="text-accent-text underline-offset-4 hover:underline">Add a stage</Link>
       </Hint>
     );
   }
@@ -79,7 +84,7 @@ export function CreateWorkItemForm({
         </FormField>
         <FormField id={`new-work-status-${organizationId}`} label="Starting stage">
           {(field) => (
-            <SelectField {...field} name="statusId" options={[...statuses.map((status) => ({ value: status.id, label: status.name }))]} />
+            <SelectField {...field} name="statusId" defaultValue={statuses[0].id} options={[...statuses.map((status) => ({ value: status.id, label: status.name }))]} />
           )}
         </FormField>
       </div>

@@ -1,9 +1,17 @@
+import type { Db } from '@/lib/db/types';
 import type { ResourceClass } from '@/lib/domain/resources/resource-class';
 import type { BusinessShape } from '@/lib/domain/configuration/configure';
+import { listIndustryTemplates } from '@/lib/domain/configuration/proposals';
+import { adjustShape } from '@/lib/domain/configuration/shape';
 import type { Grouping, Measure, PeriodPreset } from '@/lib/domain/reporting/shape';
 
 /**
  * Two businesses, entirely words and numbers.
+ *
+ * **Their setup is not defined here.** Each starts from a published industry template
+ * (`industry_templates`, seeded by its migration) — the same starting point any new business can
+ * choose — and adds only its own words and prices. The sample data below (resources, customers,
+ * jobs, reports) is what makes each one look lived in.
  *
  * **Everything that differs between them lives here and nowhere else**. `run.ts` contains no
  * branch on which of these it is holding, which is what makes the script a small piece of
@@ -35,9 +43,9 @@ export type DemoJob = {
   startsInDays: number | null;
   startHour: number;
   minutes: number;
-  /** How far along its own lifecycle it has walked. An index into `shape.statuses`. */
+  /** How far along its own lifecycle it has walked. An index into the work type's stages. */
   status: number;
-  /** Priced lines, as `[index into shape.prices, quantity]`. */
+  /** Priced lines, as `[index into the business's prices, quantity]`. */
   lines: [number, number][];
   costs: { description: string; amountMinor: number; daysAgo: number }[];
   time: { hours: number; daysAgo: number; note: string } | null;
@@ -58,17 +66,13 @@ export type DemoBusiness = {
   owner: { email: string; displayName: string };
   /** One colleague on a reduced role, so the UI-is-not-authorization rule is something to look at rather than read about. */
   member: { email: string; displayName: string };
-  shape: BusinessShape;
+  /** The industry template this business starts from, by key. */
+  template: string;
   /**
-   * The two questions the platform asks about a status, answered per business.
-   *
-   * Indices into `shape.statuses`. `configureBusiness` creates statuses without either answer,
-   * because a shape is what a business says about its work and these are what it says about its
-   * *consequences* — so the script answers them afterwards, through the same screen an operator
-   * would use.
+   * The business's own words for the template's (`rename`), and the parts it states itself
+   * (`replace`): its prices, in its own currency. Structure stays the template's.
    */
-  releasesResource: number[];
-  marksComplete: number[];
+  adjust: { rename: Record<string, string>; replace: Partial<BusinessShape> };
   /** A resource states its class; capabilities are the business's own words for what it can do, optional. */
   resources: { name: string; resourceClass: ResourceClass; capabilities?: string[] }[];
   locations: { label: string; address: string }[];
@@ -86,9 +90,9 @@ export type DemoBusiness = {
 };
 
 /**
- * An equipment hire yard on an Amsterdam canal.
+ * An equipment hire yard on an Amsterdam canal, from "Rental and field service".
  *
- * Six statuses, a long lifecycle, and a fleet. Only *Geannuleerd* frees the machine: a job that
+ * Six stages, a long lifecycle, and a fleet. Only *Geannuleerd* frees the machine: a job that
  * was done still held it for the afternoon it took, and saying otherwise would erase that from
  * every report about how the fleet was used.
  */
@@ -98,72 +102,34 @@ const GRACHTWERK: DemoBusiness = {
   currency: 'EUR',
   owner: { email: 'sanne@grachtwerk.test', displayName: 'Sanne de Vries' },
   member: { email: 'joris@grachtwerk.test', displayName: 'Joris Bakker' },
-  shape: {
-    // Inside the shape rather than beside it, so the demo takes the same path a proposal does
-    //. Different lengths from the clinic's, so the two sidebars differ.
-    modules: ['billing', 'assets', 'reporting'],
-    typeName: 'Verhuring', // a hire
-    schedulable: true,
-    statuses: [
-      'Aangevraagd', // requested
-      'Ingepland', // scheduled
-      'Uitgeleverd', // out with the customer
-      'Retour', // back in the yard
-      'Afgerond', // finished
-      'Geannuleerd', // cancelled
-    ],
-    // A straight line, plus a way out of the first three. Written as pairs of indices because a
-    // shape is written before anything has an id.
-    transitions: [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [3, 4],
-      [0, 5],
-      [1, 5],
-      [2, 5],
-    ],
-    fields: {
-      work_item: [
-        { key: 'inzetlocatie', label: 'Inzetlocatie', kind: 'text', required: false },
-        { key: 'kenteken', label: 'Kenteken', kind: 'text', required: false },
-        // A choice and a date, in this yard's own words. Nothing about a hire yard makes
-        // these the right three states -- they are what this business would have typed, and
-        // the clinic below answers the same kinds with nothing in common.
-        {
-          key: 'staat',
-          label: 'Staat bij uitgifte',
-          kind: 'select',
-          required: false,
-          options: ['Nieuw', 'Goed', 'Onderhoud nodig'],
-        },
-        { key: 'retourdatum', label: 'Verwachte retourdatum', kind: 'date', required: false },
-      ],
-      customer: [{ key: 'kvk', label: 'KvK-nummer', kind: 'text', required: false }],
+  template: 'rental_field_service',
+  adjust: {
+    rename: {
+      Hire: 'Verhuring',
+      Requested: 'Aangevraagd',
+      Scheduled: 'Ingepland',
+      'Out with customer': 'Uitgeleverd',
+      Returned: 'Retour',
+      Finished: 'Afgerond',
+      Cancelled: 'Geannuleerd',
+      'Site location': 'Inzetlocatie',
+      Registration: 'Kenteken',
+      'Condition at hand-out': 'Staat bij uitgifte',
+      New: 'Nieuw',
+      Good: 'Goed',
+      'Needs maintenance': 'Onderhoud nodig',
+      'Expected return date': 'Verwachte retourdatum',
+      'Company number': 'KvK-nummer',
+      'Yard hand': 'Werfmedewerker',
     },
-    prices: [
-      { name: 'Hoogwerker per dag', unit: 'dag', amountMinor: 24_500 },
-      { name: 'Aanhanger per dag', unit: 'dag', amountMinor: 7_500 },
-      { name: 'Bezorging binnen de ring', unit: 'rit', amountMinor: 4_000 },
-    ],
-    hours: [
-      { dayOfWeek: 1, opensAt: '07:00', closesAt: '17:30' },
-      { dayOfWeek: 2, opensAt: '07:00', closesAt: '17:30' },
-      { dayOfWeek: 3, opensAt: '07:00', closesAt: '17:30' },
-      { dayOfWeek: 4, opensAt: '07:00', closesAt: '17:30' },
-      { dayOfWeek: 5, opensAt: '07:00', closesAt: '16:00' },
-      { dayOfWeek: 6, opensAt: '08:00', closesAt: '12:00' },
-    ],
-    // The founder's role is not here — `configureBusiness` only creates the ones beside it.
-    roles: [
-      {
-        name: 'Werfmedewerker', // yard hand
-        capabilities: ['work_item.create', 'work_item.transition', 'work_item.record'],
-      },
-    ],
+    replace: {
+      prices: [
+        { name: 'Hoogwerker per dag', unit: 'dag', amountMinor: 24_500 },
+        { name: 'Aanhanger per dag', unit: 'dag', amountMinor: 7_500 },
+        { name: 'Bezorging binnen de ring', unit: 'rit', amountMinor: 4_000 },
+      ],
+    },
   },
-  releasesResource: [5],
-  marksComplete: [4],
   resources: [
     { name: 'Hoogwerker 12m', resourceClass: 'equipment', capabilities: ['Hoogwerken'] },
     { name: 'Hoogwerker 18m', resourceClass: 'equipment', capabilities: ['Hoogwerken'] },
@@ -319,9 +285,9 @@ const GRACHTWERK: DemoBusiness = {
 };
 
 /**
- * A small clinic in Tokyo.
+ * A small clinic in Tokyo, from "Appointment clinic".
  *
- * Four statuses where the yard has six, yen where the yard has euro, and two modules where the
+ * Four stages where the yard has six, yen where the yard has euro, and two modules where the
  * yard has three. Nothing about the platform changes; every one of those is a row.
  */
 const KOISHIKAWA: DemoBusiness = {
@@ -330,69 +296,35 @@ const KOISHIKAWA: DemoBusiness = {
   currency: 'JPY',
   owner: { email: 'harada@koishikawa.test', displayName: '原田 美咲' },
   member: { email: 'ito@koishikawa.test', displayName: '伊藤 健' },
-  shape: {
-    modules: ['billing', 'reporting'],
-    typeName: '診察', // a consultation
-    schedulable: true,
-    statuses: [
-      '受付', // received
-      '予約済', // booked
-      '完了', // done
-      'キャンセル', // cancelled
-    ],
-    transitions: [
-      [0, 1],
-      [1, 2],
-      [0, 3],
-      [1, 3],
-    ],
-    fields: {
-      work_item: [
-        { key: 'shoken', label: '所見', kind: 'text', required: false },
-        {
-          key: 'jushin_kubun',
-          label: '受診区分',
-          kind: 'select',
-          required: false,
-          options: ['初診', '再診', '健診'],
-        },
-      ],
-      customer: [
-        { key: 'hokensho', label: '保険証番号', kind: 'text', required: false },
-        // The multi_select in this pair, and a clinic is where one is obviously right: a
-        // patient has any number of these, including none, and a business that ships a fixed
-        // allergy list would be answering a medical question on somebody else's behalf.
-        {
-          key: 'allergie',
-          label: 'アレルギー',
-          kind: 'multi_select',
-          required: false,
-          options: ['花粉', '薬剤', '食物'],
-        },
-      ],
+  template: 'appointment_clinic',
+  adjust: {
+    rename: {
+      Consultation: '診察',
+      Received: '受付',
+      Booked: '予約済',
+      Done: '完了',
+      Cancelled: 'キャンセル',
+      Findings: '所見',
+      'Visit type': '受診区分',
+      'First visit': '初診',
+      'Follow-up': '再診',
+      'Check-up': '健診',
+      'Insurance number': '保険証番号',
+      Allergies: 'アレルギー',
+      Pollen: '花粉',
+      Medication: '薬剤',
+      Food: '食物',
+      Reception: '受付',
     },
     // Yen has no minor unit, so these are whole yen and the money formatting has to know it.
-    prices: [
-      { name: '初診', unit: '回', amountMinor: 5_500 },
-      { name: '再診', unit: '回', amountMinor: 2_800 },
-      { name: '健康診断', unit: '回', amountMinor: 12_000 },
-    ],
-    hours: [
-      { dayOfWeek: 1, opensAt: '09:00', closesAt: '18:00' },
-      { dayOfWeek: 2, opensAt: '09:00', closesAt: '18:00' },
-      { dayOfWeek: 3, opensAt: '09:00', closesAt: '12:30' },
-      { dayOfWeek: 4, opensAt: '09:00', closesAt: '18:00' },
-      { dayOfWeek: 5, opensAt: '09:00', closesAt: '18:00' },
-    ],
-    roles: [
-      {
-        name: '受付', // reception
-        capabilities: ['work_item.create', 'work_item.transition', 'work_item.record'],
-      },
-    ],
+    replace: {
+      prices: [
+        { name: '初診', unit: '回', amountMinor: 5_500 },
+        { name: '再診', unit: '回', amountMinor: 2_800 },
+        { name: '健康診断', unit: '回', amountMinor: 12_000 },
+      ],
+    },
   },
-  releasesResource: [3],
-  marksComplete: [2],
   resources: [
     { name: '第一診察室', resourceClass: 'facility' },
     { name: '第二診察室', resourceClass: 'facility' },
@@ -503,6 +435,13 @@ const KOISHIKAWA: DemoBusiness = {
 };
 
 export const BUSINESSES: DemoBusiness[] = [GRACHTWERK, KOISHIKAWA];
+
+/** A demo business's setup: its template, in its own words and prices. Any signed-in session can read a published template. */
+export async function demoShape(db: Db, business: DemoBusiness): Promise<BusinessShape> {
+  const template = (await listIndustryTemplates(db)).find((candidate) => candidate.key === business.template);
+  if (!template) throw new Error(`The ${business.template} template is not published. Apply the migrations first.`);
+  return adjustShape(template.shape, business.adjust);
+}
 
 /**
  * The one password, printed at the end so somebody can sign in as anybody.

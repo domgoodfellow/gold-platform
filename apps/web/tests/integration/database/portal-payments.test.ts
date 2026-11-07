@@ -508,6 +508,8 @@ describe('card payments also require plan entitlement and Portal invoice payment
       description: 'Test plan without card payments.', billable: false,
     });
     await grantPlanProduct(staff, { planId, productKey: 'workspace' });
+    // A plan selling the shared Workspace also sells Agents (gild-taxonomy's "no Plan lost reach").
+    await grantPlanProduct(staff, { planId, productKey: 'agents' });
     await recordPlanAssignment(staff, { organizationId: unsold.organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
 
     // A published Portal whose invoices module does not offer payments.

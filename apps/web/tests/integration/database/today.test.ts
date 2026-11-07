@@ -69,10 +69,11 @@ describe('Home, with nothing recorded yet', () => {
     const source = readFileSync(TODAY_FEATURE, 'utf8');
     expect(source).toContain('Nothing needs attention.');
     expect(source).toContain('Nothing assigned to you needs attention.');
-    expect(source).toContain('No performance data for this period.');
+    // An empty Business performance panel is omitted rather than shown empty (docs/surfaces/home.md).
+    expect(source).toContain("relevantPerformance.length || unavailable.some(result => result.source === 'Finance') ? ['performance']");
     // A source that failed is unknown, never presented as an empty queue.
     expect(source).toContain('Some sources are temporarily unavailable');
-    expect(source).toContain('No items from the sources that loaded.');
+    expect(source).toContain('No matching items from the sources that loaded.');
   });
 });
 

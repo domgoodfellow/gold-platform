@@ -7,6 +7,7 @@ import { LAST_ORGANIZATION_COOKIE } from '@/lib/route/last-organization';
 import { consumePendingInviteDestination } from '@/lib/route/pending-invite';
 import type { Db } from '@/lib/db/types';
 import type { OperationalState } from '@/lib/domain/tenancy/lifecycle';
+import { awaitsFirstReview, currentConfigurationProposal } from '@/lib/domain/configuration/proposals';
 
 /**
  * Where `/organizations` sends somebody, decided from two independent facts about one identity:
@@ -69,6 +70,24 @@ export function destinationFor(landing: OrganizationsLanding): string {
   }
 }
 
+/**
+ * Where entering a business lands. The one exception to its home: a business GildOps prepared a
+ * starting setup for, whose owner has not looked at it yet, opens that setup for review. Applying,
+ * discarding or "Not now" ends it, so it is a first visit, never a route that keeps somebody out.
+ */
+export async function entryDestination(db: Db, landing: OrganizationsLanding): Promise<string> {
+  return await firstReviewHref(db, landing) ?? destinationFor(landing);
+}
+
+/** The review a business entered for the first time opens on, or null when it opens on its home. */
+export async function firstReviewHref(db: Db, landing: OrganizationsLanding): Promise<string | null> {
+  if (landing.kind === 'enter' && landing.operationalState === 'setup'
+    && awaitsFirstReview(await currentConfigurationProposal(db, { organizationId: landing.organizationId }))) {
+    return `/organizations/${landing.organizationId}/setup/proposal`;
+  }
+  return null;
+}
+
 export async function readLastOrganizationId(): Promise<string | null> {
   return (await cookies()).get(LAST_ORGANIZATION_COOKIE)?.value ?? null;
 }
@@ -80,7 +99,8 @@ export async function resolvePostAuthDestination(db: Db): Promise<string> {
 
   const [staff, organizations] = await Promise.all([isPlatformStaff(db), listMyOrganizations(db)]);
   const preferredOrganization = await callerOperatingOrganization(db);
-  return destinationFor(
+  return entryDestination(
+    db,
     resolveOrganizationsLanding({
       organizations,
       staff,

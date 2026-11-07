@@ -161,7 +161,7 @@ describe('customers', () => {
 describe('contact lifecycle and temperature', () => {
   it('keeps identity and history through independent classification changes', async () => {
     const id = await createCustomer(alice.db, {organizationId:alice.organizationId,name:'Classification fixture'});
-    expect(await getCustomer(alice.db,{organizationId:alice.organizationId,customerId:id})).toMatchObject({id,lifecycle:'lead',leadTemperature:'unrated'});
+    expect(await getCustomer(alice.db,{organizationId:alice.organizationId,customerId:id})).toMatchObject({id,lifecycle:null,leadTemperature:'unrated'});
     for (const [lifecycle,leadTemperature] of [['lead','hot'],['prospect','hot'],['customer','cold']] as const) {
       await updateCustomer(alice.db,{organizationId:alice.organizationId,customerId:id,name:'Classification fixture',lifecycle,leadTemperature});
       expect(await getCustomer(alice.db,{organizationId:alice.organizationId,customerId:id})).toMatchObject({id,lifecycle,leadTemperature,stageId:null});
@@ -206,7 +206,7 @@ describe('canonical person and company identity', () => {
     const linked=await alice.db.rpc('save_contact_affiliation',{p_organization_id:organizationId,p_person_id:person,p_company_id:other,p_title:'Advisor',p_active:false});
     expect(linked.error).toBeNull();
     expect(await getContact(alice.db,{organizationId,customerId:company})).toMatchObject({id:company,contactType:'company',lifecycle:'customer'});
-    expect(await getContact(alice.db,{organizationId,customerId:person})).toMatchObject({id:person,contactType:'person',lifecycle:'lead'});
+    expect(await getContact(alice.db,{organizationId,customerId:person})).toMatchObject({id:person,contactType:'person',lifecycle:null});
     const legacy=await alice.db.from('customers').select('id').eq('id',company).single();expect(legacy.data?.id).toBe(company);
     const affiliations=await alice.db.from('contact_affiliations').select('*').eq('organization_id',organizationId).eq('company_id',company);
     expect(affiliations.data?.map(row=>row.person_id).sort()).toEqual([person,second].sort());

@@ -118,3 +118,41 @@ export function CredentialsForm({
     </form>
   );
 }
+
+/**
+ * Local demo accounts, one button each, submitted through the same log-in action as the form
+ * above. The pressed button supplies the email; all demo accounts share one password. The log-in
+ * page renders this only for `next dev` against a local Supabase.
+ */
+export function DemoAccountButtons({
+  action,
+  accounts,
+  password,
+}: {
+  action: Props['action'];
+  accounts: { label: string; email: string }[];
+  password: string;
+}) {
+  const [state, formAction, pending] = useActionState(action, INITIAL);
+  return (
+    <form action={formAction} aria-label="Demo accounts" className="mt-6 flex flex-col gap-2">
+      <input type="hidden" name="password" value={password} />
+      {accounts.map((account) => (
+        <Button
+          key={account.email}
+          type="submit"
+          name="email"
+          value={account.email}
+          tone="secondary"
+          size="small"
+          disabled={pending}
+          className="h-auto w-full flex-wrap justify-between gap-x-3 whitespace-normal py-1.5 text-left"
+        >
+          <span>{account.label}</span>
+          <span className="min-w-0 break-all text-muted-foreground">{account.email}</span>
+        </Button>
+      ))}
+      <FormError>{state.error}</FormError>
+    </form>
+  );
+}

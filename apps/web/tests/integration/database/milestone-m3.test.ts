@@ -490,7 +490,7 @@ describe('M3 — a second business shape, without a pull request', () => {
       expect(source).not.toContain(shape.typeName);
       expect(source).not.toContain(`'${identity.currency}'`);
       expect(source).not.toContain(identity.timezone);
-      for (const status of shape.statuses) expect(source).not.toContain(status);
+      for (const status of shape.statuses ?? []) expect(source).not.toContain(status);
       for (const role of shape.roles) expect(source).not.toContain(role.name);
       for (const price of shape.prices) expect(source).not.toContain(price.name);
       for (const fields of Object.values(shape.fields)) {

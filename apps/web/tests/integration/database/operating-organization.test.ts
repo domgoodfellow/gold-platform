@@ -207,7 +207,7 @@ describe('Administration in the organization shell', () => {
 
   it("draws GildOps' Administration for its staff, with GildOps as the organization", async () => {
     const model = await shellOf(operator, gildops);
-    expect(await administrationKeys(operator, gildops)).toEqual(['administration', 'platform-link-ai-runtime', 'platform-link-commercial']);
+    expect(await administrationKeys(operator, gildops)).toEqual(['administration', 'platform-link-ai-runtime']);
     expect(model.switchable.map((organization) => organization.id)).toEqual(expect.arrayContaining([gildops, otherBusiness]));
     expect(model).not.toHaveProperty('platform');
   });
