@@ -43,7 +43,7 @@ export default async function ProductPage({
       <DefinitionList>
         <Detail label="Key">{product.key}</Detail>
         <Detail label="Kind">{product.kind}</Detail>
-        <Detail label="Linked module">
+        <Detail label="Linked feature">
           {product.moduleKey ? (
             <Link href={platformHref(goldId, 'catalog/modules')} className="underline underline-offset-4">
               {product.moduleKey}

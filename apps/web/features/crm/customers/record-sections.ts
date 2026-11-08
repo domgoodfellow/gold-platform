@@ -12,7 +12,7 @@ export type RecordView =
 
 export const SECTION_LABELS: Record<RecordSection, string> = { overview: 'Overview', sales: 'Sales', tasks: 'Tasks', activity: 'Activity', related: 'Related', documents: 'Documents', portal: 'Portal' };
 export const VIEW_LABELS: Record<RecordView, string> = {
-  opportunities: 'Opportunities', discovery: 'Discovery', configuration: 'Proposed configuration', commercial: 'Commercial proposals', invoices: 'Invoices',
+  opportunities: 'Opportunities', discovery: 'Discovery', configuration: 'Proposed setup', commercial: 'Commercial proposals', invoices: 'Invoices',
   timeline: 'Timeline', calls: 'Calls', work: 'Work', locations: 'Locations', support: 'Support cases', services: 'Services',
 };
 export const SECTION_VIEWS: Record<RecordSection, readonly RecordView[]> = {

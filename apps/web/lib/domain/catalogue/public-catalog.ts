@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * The one public-safe read of the commercial catalogue (F1, section 13): active, billable Plans
@@ -60,7 +60,7 @@ export async function publicPlanCatalog(db: Db): Promise<PublicPlan[]> {
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const from = page * PAGE_SIZE;
     const { data, error } = await db.rpc('public_plan_catalog').range(from, from + PAGE_SIZE - 1);
-    if (error) throw new DomainError(error.message, 'public_catalog.plans_failed');
+    if (error) throw fromDatabaseError(error, 'public_catalog.plans_failed');
     rows.push(...(data ?? []));
     if ((data?.length ?? 0) < PAGE_SIZE) break;
   }

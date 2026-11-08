@@ -1,6 +1,6 @@
 import { geocodingProvider, type Coordinates } from '@/lib/adapters/geocoding';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
 import {
   resolveCustom,
@@ -81,7 +81,7 @@ async function attachCustomers(
     .in('location_id', rows.map((row) => row.id));
 
   if (error) {
-    throw new DomainError(error.message, 'locations.links_failed');
+    throw fromDatabaseError(error, 'locations.links_failed');
   }
 
   const byLocation = new Map<string, LinkedCustomer[]>();
@@ -128,7 +128,7 @@ export async function listLocations(
     .limit(input.limit ?? LIST_LIMIT);
 
   if (error) {
-    throw new DomainError(error.message, 'locations.list_failed');
+    throw fromDatabaseError(error, 'locations.list_failed');
   }
 
   const locations = await attachCustomers(db, input.organizationId, (data ?? []) as LocationRow[]);
@@ -152,7 +152,7 @@ export async function listLocationsForCustomer(
     .eq('customer_id', input.customerId);
 
   if (linkError) {
-    throw new DomainError(linkError.message, 'locations.links_failed');
+    throw fromDatabaseError(linkError, 'locations.links_failed');
   }
 
   const locationIds = (links ?? []).map((link) => link.location_id);
@@ -166,7 +166,7 @@ export async function listLocationsForCustomer(
     .order('created_at', { ascending: false });
 
   if (error) {
-    throw new DomainError(error.message, 'locations.list_failed');
+    throw fromDatabaseError(error, 'locations.list_failed');
   }
 
   return attachCustomers(db, input.organizationId, (data ?? []) as LocationRow[]);
@@ -191,7 +191,7 @@ export async function getLocation(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'locations.get_failed');
+    throw fromDatabaseError(error, 'locations.get_failed');
   }
   if (!data) return null;
 
@@ -269,9 +269,9 @@ export async function createLocation(
       throw new DomainError('You cannot add locations here.', 'locations.forbidden');
     }
     if (error.code === '23514') {
-      throw new DomainError(error.message, 'locations.custom_invalid');
+      throw fromDatabaseError(error, 'locations.custom_invalid');
     }
-    throw new DomainError(error.message, 'locations.create_failed');
+    throw fromDatabaseError(error, 'locations.create_failed');
   }
 
   return data;
@@ -316,7 +316,7 @@ export async function linkCustomerLocation(
     if (error.code === '42501') {
       throw new DomainError('You cannot add locations here.', 'locations.forbidden');
     }
-    throw new DomainError(error.message, 'locations.link_failed');
+    throw fromDatabaseError(error, 'locations.link_failed');
   }
 }
 
@@ -342,7 +342,7 @@ export async function locateAddress(input: { address: string }): Promise<Coordin
   const provider = await geocodingProvider();
   if (!provider) {
     throw new DomainError(
-      'This deployment cannot look an address up, so coordinates are typed in by hand.',
+      'Address lookup isn’t available yet, so type the coordinates in.',
       'locations.geocoding_unavailable',
     );
   }
@@ -426,7 +426,7 @@ export async function setLocationCoordinates(
         'locations.coordinates_incomplete',
       );
     }
-    throw new DomainError(error.message, 'locations.update_failed');
+    throw fromDatabaseError(error, 'locations.update_failed');
   }
 
   if ((data ?? []).length === 0) {

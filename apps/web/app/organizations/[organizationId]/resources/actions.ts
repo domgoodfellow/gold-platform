@@ -38,7 +38,7 @@ async function capabilityIdByName(db: Db, organizationId: string, typed: string)
   if (existing) {
     if (existing.archived) {
       throw new DomainError(
-        `${existing.name} is archived. Restore it in Resources configuration to use it again.`,
+        `${existing.name} is archived. Restore it in Resources settings to use it again.`,
         'resource_capabilities.archived',
       );
     }
@@ -206,7 +206,7 @@ export async function assignResourceCapabilityAction(
     const chosen = String(formData.get('capabilityId') ?? '').trim();
     const capabilityId = typed.length > 0 ? await capabilityIdByName(db, organizationId, typed) : chosen;
     if (!capabilityId) {
-      throw new DomainError('Choose a capability, or type a new one.', 'resource_capabilities.required');
+      throw new DomainError('Choose a skill, or type a new one.', 'resource_capabilities.required');
     }
     await assignResourceCapability(db, { resourceId, capabilityId });
   } catch (error) {

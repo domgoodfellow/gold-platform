@@ -55,7 +55,7 @@ export default async function OpportunityPipelinePage({ params, searchParams }: 
       active={active} resetHref={filtered ? base : undefined} />}
     {firstRun ? <section aria-labelledby="pipeline-setup" data-slot="compact-empty" className="flex flex-col gap-3 rounded-[var(--visual-radius,0.625rem)] border border-border bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0"><h2 id="pipeline-setup" className="text-base font-semibold">Set up your pipeline</h2><p className="mt-1 text-sm text-muted">Stages organize opportunities from first conversation to won or lost.</p></div>
-      {mayConfigureStages ? <ButtonLink tone="primary" href={`/organizations/${organizationId}/${configTarget('opportunity-stages').path}`}>Configure stages</ButtonLink> : <p className="text-sm text-muted">Someone who manages CRM configuration sets up stages.</p>}
+      {mayConfigureStages ? <ButtonLink tone="primary" href={`/organizations/${organizationId}/${configTarget('opportunity-stages').path}`}>Set up stages</ButtonLink> : <p className="text-sm text-muted">Someone who manages CRM settings sets up stages.</p>}
     </section> : <>
     {!stages.length ? <p className="mb-3 text-sm text-muted">No opportunity stages yet, so opportunities are Unstaged.</p> : null}
     <p className="mb-3 text-xs text-muted">{filtered ? 'Up to 100 matching opportunities; counts describe the cards shown. Use List view to page through more.' : 'Up to 10 opportunities per stage, by expected close. Counts and totals include every opportunity.'}</p>

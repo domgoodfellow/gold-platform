@@ -15,7 +15,7 @@ export function ResourceSyncControl({organizationId,resourceId,type,parameters,e
       <label className="block text-sm">Range<TextInput className="mt-1 w-full" name="range" required defaultValue={String(parameters.range??(type==='google_sheet'?'Sheet1!A1:Z501':'A1:Z501'))}/></label>
       {type==='microsoft_workbook'?<label className="block text-sm">Worksheet<TextInput className="mt-1 w-full" name="worksheet" required defaultValue={String(parameters.worksheet??'Sheet1')}/></label>:null}
       <label className="block text-sm">Stable key column (first column is 0)<TextInput className="mt-1 w-full" type="number" min={0} max={100} name="key_column" required defaultValue={Number(parameters.key_column??0)}/></label>
-      <p className="text-sm text-muted">The first row supplies column names. Select at most 500 data rows. Each row needs a unique, stable key. Synchronization updates the Library snapshot and marks missing source rows as removed. CRM contacts are never deleted.</p>
+      <p className="text-sm text-muted">The first row holds column names. Up to 500 rows, each with its own ID.</p>
     </>:null}
     {type==='microsoft_calendar'?<>
       <label className="block text-sm">Start date and time<TextInput name="start" className="mt-1 w-full" required placeholder="2026-10-01T00:00:00Z" defaultValue={String(parameters.start??'')}/></label>

@@ -169,7 +169,7 @@ describe('Administration inside GildOps', () => {
   it('links AI to AI Runtime and never links Finance to Commercial administration', () => {
     // Finance is the tenant's own ledger; GildOps' commercial control is reached from Administration only (ADR-051).
     expect(row('workspace-finance')?.administration).toBeUndefined();
-    expect(row('workspace-ai')?.administration).toEqual({ key: 'platform-link-ai-runtime', label: 'AI Runtime', href: platformHref(ORG, 'ai-runtime'), section: 'workspaces' });
+    expect(row('workspace-ai')?.administration).toEqual({ key: 'platform-link-ai-runtime', label: 'AI answering', href: platformHref(ORG, 'ai-runtime'), section: 'workspaces' });
     expect(projectedItems(workspaceNavigation(gildops, `/organizations/${ORG}/finance`)!.sections).map((item) => item.key)).not.toContain('platform-link-commercial');
     expect(workspaceNavigation(gildops, platformHref(ORG, 'plans/base'))?.workspace.key).toBe('administration');
     expect(workspaceNavigation(gildops, platformHref(ORG, 'ai-runtime'))?.workspace.key).toBe('administration');

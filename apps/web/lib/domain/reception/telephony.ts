@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * The number one business dials from.
@@ -34,7 +34,7 @@ export async function callingNumber(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'telephony.read_failed');
+    throw fromDatabaseError(error, 'telephony.read_failed');
   }
 
   return data?.calling_number ?? null;

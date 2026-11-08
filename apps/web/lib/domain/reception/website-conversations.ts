@@ -1,5 +1,5 @@
 import type { Db } from "@/lib/db/types";
-import { DomainError } from "@/lib/domain/errors";
+import { fromDatabaseError } from "@/lib/domain/errors";
 export async function websiteConversations(
   db: Db,
   organizationId: string,
@@ -13,7 +13,7 @@ export async function websiteConversations(
     .order("updated_at", { ascending: false })
     .limit(50);
   if (threads.error)
-    throw new DomainError(threads.error.message, "communications.read_failed");
+    throw fromDatabaseError(threads.error, "communications.read_failed");
   const selected = threadId
     ? await db
         .from("communication_threads")
@@ -24,7 +24,7 @@ export async function websiteConversations(
         .maybeSingle()
     : null;
   if (selected?.error)
-    throw new DomainError(selected.error.message, "communications.read_failed");
+    throw fromDatabaseError(selected.error, "communications.read_failed");
   const entries = selected?.data
     ? await db
         .from("communication_entries")
@@ -35,7 +35,7 @@ export async function websiteConversations(
         .limit(50)
     : null;
   if (entries?.error)
-    throw new DomainError(entries.error.message, "communications.read_failed");
+    throw fromDatabaseError(entries.error, "communications.read_failed");
   return {
     threads: threads.data ?? [],
     selected: selected?.data ?? null,

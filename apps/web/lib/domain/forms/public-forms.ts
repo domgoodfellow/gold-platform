@@ -1,6 +1,6 @@
 import { checkFormAnswers, FormProjectionSchema, type FormProjection } from '@gold/schemas';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { openPublicSession } from '@/lib/domain/identity/anonymous-session';
 
 /**
@@ -14,26 +14,26 @@ import { openPublicSession } from '@/lib/domain/identity/anonymous-session';
 function parse(data: unknown): FormProjection | null {
   if (!data) return null;
   const parsed = FormProjectionSchema.safeParse(data);
-  if (!parsed.success) throw new DomainError('The published form does not match its supported schema.', 'forms.invalid_projection');
+  if (!parsed.success) throw new DomainError('This form can’t be shown right now.', 'forms.invalid_projection');
   return parsed.data;
 }
 
 export async function publishedForm(db: Db, organizationSlug: string, formSlug: string): Promise<FormProjection | null> {
   const { data, error } = await db.rpc('published_form', { p_organization_slug: organizationSlug, p_form_slug: formSlug });
-  if (error) throw new DomainError(error.message, 'forms.read_failed');
+  if (error) throw fromDatabaseError(error, 'forms.read_failed');
   return parse(data);
 }
 
 export async function publishedFormByKey(db: Db, publicKey: string): Promise<FormProjection | null> {
   const { data, error } = await db.rpc('published_form_by_key', { p_key: publicKey });
-  if (error) throw new DomainError(error.message, 'forms.read_failed');
+  if (error) throw fromDatabaseError(error, 'forms.read_failed');
   return parse(data);
 }
 
 /** A form at a business's own hostname. The business is whatever the hostname resolver says it is. */
 export async function publishedHostnameForm(db: Db, hostname: string, formSlug: string): Promise<FormProjection | null> {
   const { data, error } = await db.rpc('published_hostname_form', { p_hostname: hostname, p_form_slug: formSlug });
-  if (error) throw new DomainError(error.message, 'forms.read_failed');
+  if (error) throw fromDatabaseError(error, 'forms.read_failed');
   return parse(data);
 }
 

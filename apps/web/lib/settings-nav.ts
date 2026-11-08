@@ -102,6 +102,6 @@ export function workspaceConfigCrumbs(organizationId: string, targetKey: string,
   if (target.destination && workspaceKey === 'field') {
     const destination = AREAS.find(area => area.segment === target.destination)!;
     crumbs.push({ label: destination.label, href: !gate || areaAvailable(destination.segment, { ...gate, enabled: gate.enabledModules }) ? areaHref(organizationId, destination.segment) : undefined });
-  } else if (!target.treatment) crumbs.push({ label: 'Configuration' });
+  } else if (!target.treatment) crumbs.push({ label: 'Settings' });
   return crumbs;
 }

@@ -247,7 +247,7 @@ export function PlanUsageScreen({
       <Section className="mt-8">
         <SectionHeading>Usage</SectionHeading>
         {usage.length === 0 ? (
-            <EmptyState className="mt-2">No usage has been reported. Provider reporting can be delayed; this does not establish zero consumption.</EmptyState>
+            <EmptyState className="mt-2">No usage reported yet. Reports can arrive late.</EmptyState>
         ) : (
           <DividedList as="div" className="mt-2">
             {usage.map((entry) => (
@@ -273,7 +273,7 @@ export function PlanUsageScreen({
           </Hint>
         ) : (
           <EmptyState className="mt-2">
-            This deployment has not priced any channel for this business, so nothing is drawn down.
+            No channel has a price for this business yet, so nothing is used up.
           </EmptyState>
         )}
       </Section>

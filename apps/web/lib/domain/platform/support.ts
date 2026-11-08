@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -31,7 +31,7 @@ export async function startSupportSession(
     if (error.code === '42501') {
       throw new DomainError('Only platform staff may open a support session.', 'support.forbidden');
     }
-    throw new DomainError(error.message, 'support.start_failed');
+    throw fromDatabaseError(error, 'support.start_failed');
   }
 
   return data as string;
@@ -41,7 +41,7 @@ export async function endSupportSession(db: Db, input: { id: string }): Promise<
   const { error } = await db.rpc('end_support_session', { p_id: input.id });
 
   if (error) {
-    throw new DomainError(error.message, 'support.end_failed');
+    throw fromDatabaseError(error, 'support.end_failed');
   }
 }
 
@@ -70,7 +70,7 @@ export async function activeSupportSession(
     .limit(1);
 
   if (error) {
-    throw new DomainError(error.message, 'support.session_lookup_failed');
+    throw fromDatabaseError(error, 'support.session_lookup_failed');
   }
 
   const row = data?.[0];
@@ -108,7 +108,7 @@ export async function listMembersForSupport(
     .order('created_at', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'support.members_failed');
+    throw fromDatabaseError(error, 'support.members_failed');
   }
 
   return (data ?? []).map((row) => ({

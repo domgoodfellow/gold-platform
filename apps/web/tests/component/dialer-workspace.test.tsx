@@ -53,7 +53,7 @@ describe('dialer workspace', () => {
     expect(screen.getByRole('region', { name: 'Customer' })).toHaveTextContent(/appear here when you call from a follow-up/);
     const readiness = screen.getByRole('region', { name: 'Calling readiness' });
     expect(within(readiness).getByText('No outbound number')).toBeVisible();
-    expect(within(readiness).getByText('Needs configuration')).toBeVisible();
+    expect(within(readiness).getByText('Needs setting up')).toBeVisible();
     expect(within(readiness).getByRole('status')).toHaveTextContent('No ready outbound number is assigned.');
     expect(within(readiness).getByRole('link', { name: 'Set up numbers' })).toHaveAttribute('href', '/organizations/tenant/comms/configuration/numbers');
     expect(screen.getByRole('group', { name: 'Dial pad' })).toBeVisible();
@@ -62,7 +62,7 @@ describe('dialer workspace', () => {
   });
   it.each([
     ['restricted', 'Your role cannot place calls.', 'Restricted'],
-    ['unavailable', 'The calling provider is not ready.', 'Unavailable'],
+    ['unavailable', 'Calling isn’t ready yet.', 'Unavailable'],
   ] as const)('words a %s blocker as its own state, with no setup link', (kind, reason, state) => {
     render(<DialerWorkspace {...common} queue={[]} queueTotal={0} options={blocked(kind, reason)} setupHref="/never" />);
     const readiness = screen.getByRole('region', { name: 'Calling readiness' });

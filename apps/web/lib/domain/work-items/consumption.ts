@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { parseWindow, type Window } from '@/lib/domain/scheduling/window';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
@@ -71,7 +71,7 @@ export async function listTimeEntries(
     .eq('work_item_id', input.workItemId);
 
   if (error) {
-    throw new DomainError(error.message, 'time_entries.list_failed');
+    throw fromDatabaseError(error, 'time_entries.list_failed');
   }
 
   return (data ?? []).flatMap((row) => {
@@ -140,7 +140,7 @@ export async function recordTime(
     if (error.code === '42501') {
       throw new DomainError('You cannot record time here.', 'time_entries.forbidden');
     }
-    throw new DomainError(error.message, 'time_entries.create_failed');
+    throw fromDatabaseError(error, 'time_entries.create_failed');
   }
 
   return data;
@@ -158,7 +158,7 @@ export async function listCosts(
     .order('incurred_at', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'costs.list_failed');
+    throw fromDatabaseError(error, 'costs.list_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -244,7 +244,7 @@ export async function recordCost(
     if (error.code === '42501') {
       throw new DomainError('You cannot record costs here.', 'costs.forbidden');
     }
-    throw new DomainError(error.message, 'costs.create_failed');
+    throw fromDatabaseError(error, 'costs.create_failed');
   }
 
   return data;

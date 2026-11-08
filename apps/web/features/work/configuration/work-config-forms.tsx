@@ -104,7 +104,7 @@ export function CreateTypeForm({
           maxLength={64}
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder="e.g. Installation"
+          placeholder="e.g. Boiler service"
           className="w-full font-normal"
         />
       </label>
@@ -206,7 +206,7 @@ export function CreateTransitionForm({
   if (statuses.length < 2) {
     return (
       <Hint>
-        Add a second status before wiring moves between them.
+        Add a second stage to set up moves.
       </Hint>
     );
   }
@@ -286,7 +286,7 @@ export function EditStatusForm({
         required
         maxLength={64}
         defaultValue={status.name}
-        aria-label={`Name of status ${status.name}`}
+        aria-label={`Name of stage ${status.name}`}
         size="small"
         className="min-w-40 flex-1"
       />
@@ -297,7 +297,7 @@ export function EditStatusForm({
         min={0}
         step={1}
         defaultValue={status.position}
-        aria-label={`Position of status ${status.name}`}
+        aria-label={`Position of stage ${status.name}`}
         size="small"
         className="w-20"
       />

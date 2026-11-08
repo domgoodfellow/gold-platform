@@ -204,14 +204,14 @@ describe('Communications and the Dialer', () => {
 
   it('places a configuration record beneath its target and the plain-text Configuration level', () => {
     const number = at(`${ORG}/comms/configuration/numbers/n1`, { records: { phoneNumberId: { state: 'ready', label: '+1 555 0100' } } });
-    expect(trail(number)).toEqual([`Communications → ${ORG}/comms`, 'Configuration', `Numbers & assignments → ${ORG}/comms/configuration/numbers`]);
+    expect(trail(number)).toEqual([`Communications → ${ORG}/comms`, 'Settings', `Numbers & assignments → ${ORG}/comms/configuration/numbers`]);
     expect(number.open).toContain('U-3');
   });
 
   it('leaves the workspace as plain text for a member who may configure it but not operate it', () => {
     const gate = { ...everything, capabilities: new Set<Capability>(['organization.manage']) };
     const location = resolved(resolveLocation({ pathname: `${ORG}/comms/configuration/calling`, access: { gate } }));
-    expect(trail(location)).toEqual(['Communications', 'Configuration']);
+    expect(trail(location)).toEqual(['Communications', 'Settings']);
     expect(location.current.label).toBe('Calling & routing');
     // Neither ancestor is a page this member may open, so Up goes to the organization Home.
     expect(location.up).toBe(`${ORG}/home`);

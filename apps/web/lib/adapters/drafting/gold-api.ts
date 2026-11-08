@@ -46,6 +46,7 @@ const FIELD_SCHEMA = {
       key: {
         type: 'string',
         description:
+          // ui-copy-allow: instructions to the drafting model, never shown to a person
           'A short stable identifier in snake_case. Never changes once the business is configured.',
       },
       label: { type: 'string', description: "What the business calls it, in its own words." },
@@ -115,6 +116,7 @@ function responseSchema(): Record<string, unknown> {
           schedulable: {
             type: 'boolean',
             description:
+              // ui-copy-allow: instructions to the drafting model, never shown to a person
               'True when this work happens at a time the business plans (visits, appointments, installations); false when it has no set time (an enquiry, a sales opportunity). Ask if the description does not say.',
           },
           statuses: {
@@ -215,6 +217,7 @@ function responseSchema(): Record<string, unknown> {
             // anybody remembering this file, and one removed cannot be proposed.
             description: [
               'Which parts of the platform this business needs, from what they described. Only',
+              // ui-copy-allow: instructions to the drafting model, never shown to a person
               'what they actually said they do — a module nobody mentioned is something they',
               'have to pay for, so leave it out and ask instead. What each one is:',
               ...MODULES.map((module) => `- ${module.key}: ${module.description}`),
@@ -267,6 +270,7 @@ function responseSchema(): Record<string, unknown> {
             field: {
               type: 'string',
               description:
+                // ui-copy-allow: instructions to the drafting model, never shown to a person
                 'Which part of the shape the question concerns: typeName, schedulable, statuses, transitions, fields, prices, hours, roles, automations, modules, voice or brand.',
             },
             question: {
@@ -410,7 +414,7 @@ export function goldApiDraftingProvider(config: { baseUrl: string }): DraftingPr
       if (body.outcome === 'declined') return null;
 
       if (body.outcome !== 'drafted') {
-        throw new Error(body.detail || 'The drafting provider returned no configuration.');
+        throw new Error(body.detail || 'No setup came back. Try again.');
       }
 
       // `narrow` returns null for a malformed answer, which reads as a decline. That is the same

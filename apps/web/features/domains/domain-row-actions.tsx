@@ -40,7 +40,7 @@ export function DomainRowActions({
   canApply: boolean;
   canMakePrimary: boolean;
 }) {
-  const recheck = useCommand(recheckDomainAction, 'Checked with the hosting provider.');
+  const recheck = useCommand(recheckDomainAction, 'Checked.');
   const apply = useCommand(applyDnsAutomationFormAction, `Publishing DNS for ${hostname}.`);
   const primary = useCommand(setPrimaryDomainAction, `${hostname} is now the primary domain.`);
   const remove = useCommand(removeDomainAction, `${hostname} removed.`);

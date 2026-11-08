@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 import type { ContactLifecycle } from '../customers/classification';
 import type { ContactType } from './contacts';
 
@@ -11,7 +11,7 @@ export type RelationshipOverview = {
 /** Exact counts over the whole directory: identity type and lifecycle are separate dimensions. */
 export async function relationshipOverview(db: Db, organizationId: string): Promise<RelationshipOverview> {
   const { data, error } = await db.rpc('crm_relationship_overview', { p_organization_id: organizationId });
-  if (error) throw new DomainError(error.message, 'crm.overview_failed');
+  if (error) throw fromDatabaseError(error, 'crm.overview_failed');
   const row = data as Record<string, number>;
   return { total: row.total, people: row.people, companies: row.companies, unspecified: row.unspecified, newLast30Days: row.newLast30Days,
     lifecycles: { lead: row.lead, prospect: row.prospect, customer: row.customer, unclassified: row.unclassified } };
@@ -35,7 +35,7 @@ export type RelationshipRow = {
  */
 export async function listRecentRelationships(db: Db, input: { organizationId: string; limit?: number; includeNextTask: boolean }): Promise<RelationshipRow[]> {
   const { data, error } = await db.rpc('crm_recent_relationships', { p_organization_id: input.organizationId, p_limit: input.limit ?? 8, p_include_next: input.includeNextTask });
-  if (error) throw new DomainError(error.message, 'crm.recent_relationships_failed');
+  if (error) throw fromDatabaseError(error, 'crm.recent_relationships_failed');
   return (data ?? []).map(row => ({
     id: row.contact_id, name: row.name, contactType: row.contact_type as ContactType, lifecycle: row.lifecycle as ContactLifecycle | null,
     companyId: row.company_id, companyName: row.company_name,
@@ -49,7 +49,7 @@ export async function listRecentlyAddedContacts(db: Db, input: { organizationId:
   const { data, error } = await db.from('contact_directory')
     .select('id, name, contact_type, lifecycle, directory_company_id, directory_company_name, created_at')
     .eq('organization_id', input.organizationId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(input.limit ?? 8);
-  if (error) throw new DomainError(error.message, 'crm.recent_contacts_failed');
+  if (error) throw fromDatabaseError(error, 'crm.recent_contacts_failed');
   return (data ?? []).map(row => ({
     id: row.id!, name: row.name!, contactType: row.contact_type as ContactType, lifecycle: row.lifecycle as ContactLifecycle | null,
     companyId: row.contact_type === 'person' ? row.directory_company_id : null, companyName: row.contact_type === 'person' ? row.directory_company_name : null,

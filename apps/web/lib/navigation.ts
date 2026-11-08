@@ -216,7 +216,7 @@ export const MODULES = [
     label: 'Agent',
     // The one description that says where data goes, since it's the one module that sends any.
     description:
-      'Ask the Agent about this business in plain words, from any screen, and get an answer built from what you can already see. It reads and changes nothing until a person approves a proposed action. Questions, and the rows read to answer them, are sent to whichever model this installation uses. A business that would rather look at the screens itself runs without it.',
+      'Ask the Agent about this business in plain words, from any screen, and get an answer built from what you can already see. It reads and changes nothing until a person approves a proposed action. Questions, and the rows read to answer them, are sent to the AI model GildOps uses. A business that would rather look at the screens itself runs without it.',
     outside: 'the Agent, opened from any workspace',
     // The Agent is a rail on every workspace, not an area — nothing to configure, so the switch leads to the features list where it is turned on.
     configuredAt: { segment: 'settings', path: 'features' },
@@ -583,7 +583,7 @@ export type ConfigGate = {
 
 export function configTarget(key: string): ConfigTarget {
   const target = CONFIG_TARGETS.find((candidate) => candidate.key === key);
-  if (!target) throw new Error(`No configuration target has the key "${key}".`);
+  if (!target) throw new Error(`No settings target has the key "${key}".`);
   return target;
 }
 
@@ -841,7 +841,7 @@ export const WORKSPACE_CONFIGURE: Partial<Record<WorkspaceKey, readonly Workspac
   // Organization Settings → General and payment collection to Settings → Customer payments. No Configuration row, Configure control or landing.
   ai: [
     { target: 'ai-agents', label: 'Agents' },
-    { target: 'ai-deployments', label: 'Channel deployments' },
+    { target: 'ai-deployments', label: 'Where agents answer' },
     { target: 'ai-knowledge', label: 'Knowledge' },
     { target: 'ai-tools', label: 'Tools & permissions' },
   ],

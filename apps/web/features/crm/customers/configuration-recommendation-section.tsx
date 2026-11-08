@@ -34,7 +34,7 @@ export function ConfigurationRecommendationSection({
   if (recommended.length === 0 && optional.length === 0 && notNeeded.length === 0) {
     return (
       <Section>
-        <SectionHeading>Proposed configuration</SectionHeading>
+        <SectionHeading>Proposed setup</SectionHeading>
         <Hint className="mt-1">Answer some of Discovery to see what this suggests.</Hint>
       </Section>
     );
@@ -42,7 +42,7 @@ export function ConfigurationRecommendationSection({
 
   return (
     <Section>
-      <SectionHeading>Proposed configuration</SectionHeading>
+      <SectionHeading>Proposed setup</SectionHeading>
 
       {preview.length > 0 ? (
         <div className="mt-4 rounded-lg border border-border">

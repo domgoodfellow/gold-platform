@@ -23,7 +23,7 @@ function useCommand(action: typeof verifyTelephonyAccountAction, success: string
 }
 
 export function VerifyAccountButton({ accountId }: { accountId: string }) {
-  const { state, run, pending } = useCommand(verifyTelephonyAccountAction, 'The provider accepted this credential.');
+  const { state, run, pending } = useCommand(verifyTelephonyAccountAction, 'Twilio accepted this credential.');
   return (
     <form action={run} className="flex flex-col gap-1">
       <input type="hidden" name="accountId" value={accountId} />
@@ -94,8 +94,8 @@ export function AccountStatusControl({ accountId, status }: { accountId: string;
 
 const HEALTH_LABEL: Record<string, string> = {
   in_sync: 'in sync',
-  remote_missing: 'missing at the provider',
-  remote_changed: 'changed at the provider',
+  remote_missing: 'missing at Twilio',
+  remote_changed: 'changed at Twilio',
   unchecked: 'not compared',
   not_provisioned: 'not provisioned',
   provisioning: 'provisioning',
@@ -119,7 +119,7 @@ export function ReconcileControl({
       <form action={run} className="flex items-center gap-3">
         <input type="hidden" name="accountId" value={accountId} />
         <Button type="submit" tone="secondary" size="small" disabled={pending}>
-          {pending ? 'Reconciling…' : 'Reconcile with provider'}
+          {pending ? 'Reconciling…' : 'Reconcile with Twilio'}
         </Button>
         {state.checkedAt ? (
           <span className="text-sm text-muted">
@@ -134,13 +134,13 @@ export function ReconcileControl({
         <Alert>
           <AlertTitle>Nothing needs attention</AlertTitle>
           <AlertDescription>
-            Every active subaccount GildOps expects exists, and the provider holds none GildOps does not know.
+            Every active subaccount GildOps expects exists, and Twilio holds none GildOps does not know.
           </AlertDescription>
         </Alert>
       ) : null}
       {state.findings.length > 0 ? (
         <Alert variant="destructive">
-          <AlertTitle>Organizations that differ from the provider</AlertTitle>
+          <AlertTitle>Businesses that differ from Twilio</AlertTitle>
           <AlertDescription>
             <ul className="mt-1 list-disc pl-4">
               {state.findings.map((finding) => (
@@ -157,7 +157,7 @@ export function ReconcileControl({
         <Alert>
           <AlertTitle>Subaccounts GildOps has no record of</AlertTitle>
           <AlertDescription>
-            <p>Reported only. GildOps does not adopt or close these; decide what each is at the provider.</p>
+            <p>Reported only. GildOps does not adopt or close these; decide what each is at Twilio.</p>
             <ul className="mt-1 list-disc pl-4">
               {state.unmanaged.map((row) => (
                 <li key={row.sid}>

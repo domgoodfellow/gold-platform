@@ -86,7 +86,7 @@ export function AppearanceEditor({ saved }: { saved: PersonalAppearancePreferenc
         <div className="grid gap-4 @md:grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-5">
           <FormField id="appearance-theme" label="Theme">{props => <SelectField {...props} value={draft.appearance ?? 'system'} onValueChange={(next) => change('appearance', next as PersonalAppearancePreferences['appearance'])} options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />}</FormField>
           <FormField id="appearance-density" label="Density">{props => <SelectField {...props} value={draft.density ?? ''} onValueChange={(next) => change('density', (next || undefined) as PersonalAppearancePreferences['density'])} options={[{ value: '', label: 'Platform default' }, { value: 'compact', label: 'Compact' }, { value: 'comfortable', label: 'Comfortable' }]} />}</FormField>
-          <FormField id="appearance-shape" label="Shape">{props => <SelectField {...props} value={draft.shape ?? ''} onValueChange={(next) => change('shape', (next || undefined) as PersonalAppearancePreferences['shape'])} options={[{ value: '', label: 'Inherit from preset' }, { value: 'square', label: 'Square' }, { value: 'rounded', label: 'Rounded' }, { value: 'soft', label: 'Soft' }]} />}</FormField>
+          <FormField id="appearance-shape" label="Shape">{props => <SelectField {...props} value={draft.shape ?? ''} onValueChange={(next) => change('shape', (next || undefined) as PersonalAppearancePreferences['shape'])} options={[{ value: '', label: 'Same as style' }, { value: 'square', label: 'Square' }, { value: 'rounded', label: 'Rounded' }, { value: 'soft', label: 'Soft' }]} />}</FormField>
           <FormField id="appearance-motion" label="Motion">{props => <SelectField {...props} value={draft.motion ?? 'system'} onValueChange={(next) => change('motion', next as PersonalAppearancePreferences['motion'])} options={[{ value: 'system', label: 'System' }, { value: 'reduced', label: 'Reduced' }]} />}</FormField>
           <FormField id="appearance-background" label="Background">{props => <SelectField {...props} value={draft.background ?? 'none'} onValueChange={(next) => change('background', next === 'none' ? undefined : next as BackgroundTreatment)} options={[{ value: 'none', label: 'None' }, { value: 'gradient', label: 'Ambient gradient' }, { value: 'grid', label: 'Fine grid' }, { value: 'ambient3d', label: 'Ambient 3D' }]} />}</FormField>
         </div>
@@ -98,13 +98,13 @@ export function AppearanceEditor({ saved }: { saved: PersonalAppearancePreferenc
         <div data-testid="appearance-preview-intro" className="relative isolate overflow-hidden rounded-(--visual-radius,0.625rem) border border-border px-4 py-5 col-span-full">
           <DecorativeBackground clear="start" />
           <h3 className="text-lg font-semibold">Good morning</h3>
-          <p className="text-sm text-muted">Dashboard introduction. {draft.background && draft.background !== 'none' ? 'Decorates introductions only.' : 'No background.'}</p>
+          <p className="text-sm text-muted">Dashboard introduction. {draft.background && draft.background !== 'none' ? 'Shown behind introductions.' : 'No background.'}</p>
         </div>
         <Card className="space-y-4">
           <h3 className="font-semibold">Your workspace</h3>
           <FormField id="appearance-example-input" label="Example input">{props => <TextInput {...props} placeholder="Enter a preview value" />}</FormField>
           <Toolbar><Tabs defaultValue="overview"><TabsList variant="segmented" aria-label="Preview views"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="activity">Activity</TabsTrigger></TabsList><TabsContent value="overview">Overview preview</TabsContent><TabsContent value="activity">Activity preview</TabsContent></Tabs>
-            <Popover><PopoverTrigger asChild><Button tone="secondary">Open preview filter</Button></PopoverTrigger><PopoverContent><p>Filters inherit your appearance.</p></PopoverContent></Popover>
+            <Popover><PopoverTrigger asChild><Button tone="secondary">Open preview filter</Button></PopoverTrigger><PopoverContent><p>Sample filter.</p></PopoverContent></Popover>
           </Toolbar>
           <FormActions><Button type="button">Primary action</Button><Button type="button" tone="secondary" aria-pressed>Selected control</Button></FormActions>
         </Card>
@@ -114,7 +114,7 @@ export function AppearanceEditor({ saved }: { saved: PersonalAppearancePreferenc
               {surface}<span className="text-xs font-normal text-muted">{previewSurface === surface ? 'Selected' : 'Choose'}</span>
             </SelectableCard>)}
           </div>
-          <Card variant="accent" className="space-y-1"><h3 className="font-semibold">Accent surface</h3><p className="text-sm text-muted">Highlighted content keeps neutral text.</p></Card>
+          <Card variant="accent" className="space-y-1"><h3 className="font-semibold">Accent surface</h3><p className="text-sm text-muted">Sample highlighted content.</p></Card>
         </div>
         {/* Representative operational surfaces, drawn with the real shared components so every preset,
             density and shape is shown on rows, tables, selected views, filters and dialogs. */}

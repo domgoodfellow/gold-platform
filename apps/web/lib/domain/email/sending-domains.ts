@@ -7,7 +7,7 @@ import {
 } from '@/lib/adapters/email-domains';
 import { requireAccessToken } from '@/lib/api/client';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { PROVIDER_UNAVAILABLE_MESSAGE } from './presentation';
 
 /**
@@ -102,7 +102,7 @@ export async function listSendingDomains(db: Db, organizationId: string): Promis
     .eq('organization_id', organizationId)
     .eq('resource_type', SENDING_DOMAIN_RESOURCE_TYPE)
     .order('created_at');
-  if (error) throw new DomainError(error.message, 'email.read_failed');
+  if (error) throw fromDatabaseError(error, 'email.read_failed');
 
   return (data ?? []).map((row) => {
     const config = (row.config ?? {}) as Config;
@@ -149,9 +149,9 @@ function failureOutcome(resourceId: string, error: unknown): SendingDomainOutcom
 }
 
 function refusal(error: { code?: string; message: string }): DomainError {
-  if (error.code === '42501') return new DomainError('Your role cannot configure this business’s sending domains.', 'email.forbidden');
-  if (error.code === '22023') return new DomainError(error.message, 'email.invalid');
-  return new DomainError(error.message, 'email.write_failed');
+  if (error.code === '42501') return new DomainError('Your role cannot change this business’s sending domains.', 'email.forbidden');
+  if (error.code === '22023') return fromDatabaseError(error, 'email.invalid');
+  return fromDatabaseError(error, 'email.write_failed');
 }
 
 /**

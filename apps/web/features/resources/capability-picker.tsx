@@ -26,7 +26,7 @@ export function CapabilityPicker({
   return (
     <Field>
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm font-medium">Capabilities</legend>
+        <legend className="text-sm font-medium">Skills</legend>
         {capabilities.length > 0 ? (
           <div className="flex flex-wrap gap-x-4 gap-y-2">
             {capabilities.map((capability) => (
@@ -41,7 +41,7 @@ export function CapabilityPicker({
       {mayAdd ? (
         <>
           <FieldLabel htmlFor={newId} className="font-normal">
-            Add a capability
+            Add a skill
           </FieldLabel>
           <TextInput id={newId} name="newCapability" type="text" maxLength={64} placeholder="Tire service" />
           <FieldDescription>Optional. What this resource can do, in your own words.</FieldDescription>

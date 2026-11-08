@@ -1,4 +1,4 @@
-import type { SessionIdentity } from '@/lib/domain/identity/session';
+import type { SessionCheck } from '@/lib/domain/identity/session';
 
 /**
  * Routes reachable without a session. Everything else redirects to the log-in screen.
@@ -130,8 +130,13 @@ export function isPublic(pathname: string): boolean {
  * operator/organization identity, so it is redirected to `/login` exactly like no session at
  * all — and, unlike an anonymous session before this, must still be able to *reach* `/login`
  * and `/sign-up` rather than being bounced away from them the way a genuine account is.
+ *
+ * `'unverified'` (the sign-in service could not be asked) goes through unchanged: the person may
+ * well be signed in, and the page's `requireActor` shows the service error with Try again.
  */
-export function decideRedirect(identity: SessionIdentity, pathname: string): string | null {
+export function decideRedirect(identity: SessionCheck, pathname: string): string | null {
+  if (identity.kind === 'unverified') return null;
+
   if (identity.kind !== 'account' && !isPublic(pathname)) {
     return '/login';
   }

@@ -153,11 +153,11 @@ function TypeDetail({
     <div className="flex min-w-0 flex-col gap-4">
       <div className="min-w-0">
         <h2 className="wrap-break-word text-lg font-semibold">{selectedType.name}</h2>
-        <p className="mt-1 text-sm text-muted">{selectedType.schedulable ? 'Scheduled work' : 'Not scheduled'} · {statuses.length === 1 ? '1 stage' : `${statuses.length} stages`}{mayConfigure ? '' : ' · You can view this configuration but not change it'}.</p>
+        <p className="mt-1 text-sm text-muted">{selectedType.schedulable ? 'Scheduled work' : 'Not scheduled'} · {statuses.length === 1 ? '1 stage' : `${statuses.length} stages`}{mayConfigure ? '' : ' · View only'}.</p>
       </div>
 
       <Tabs key={`${selectedType.id}:${initialTab ?? 'default'}`} defaultValue={startTab} className="min-w-0 gap-5">
-        <TabsList aria-label="Work configuration">
+        <TabsList aria-label="Work settings">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="workflow">Workflow</TabsTrigger>
           {selectedType.schedulable ? <TabsTrigger value="requirements">Requirements</TabsTrigger> : null}

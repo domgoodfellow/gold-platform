@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/server';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireOrganization } from '@/lib/route/organization';
 
 export type CommunicationProfileState = { error: string | null; success?: string };
@@ -30,7 +30,7 @@ export async function saveCommunicationProfileAction(_state: CommunicationProfil
       p_handoff_message: String(formData.get('handoffMessage') ?? ''),
       p_handoff_destination: String(formData.get('handoffDestination') ?? ''),
     });
-    if (result.error) throw new DomainError(result.error.message, 'communications.profile_save_failed');
+    if (result.error) throw fromDatabaseError(result.error, 'communications.profile_save_failed');
   } catch (error) {
     if (error instanceof DomainError) return { error: error.message };
     return { error: error instanceof Error ? error.message : 'Website messaging could not be saved.' };

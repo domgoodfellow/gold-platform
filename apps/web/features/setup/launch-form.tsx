@@ -19,7 +19,7 @@ export function LaunchForm({ organizationId }: { organizationId: string }) {
     <form id={`launch-${organizationId}`} action={action}>
       <input type="hidden" name="organizationId" value={organizationId} />
       <ConfirmSubmit formId={`launch-${organizationId}`} label="Finish setup" confirmLabel="Launch organization" tone="primary" pending={pending}
-        description="This makes the organization Live and opens Home. Required setup is checked again before launch. You can continue changing configuration in Settings." />
+        description="This makes the organization Live and opens Home. Required setup is checked again before launch. You can keep changing settings afterwards." />
       <Error state={state} />
     </form>
   );

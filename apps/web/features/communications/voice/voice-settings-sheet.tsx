@@ -55,11 +55,11 @@ export function VoiceSettingsContent({ organizationId, number, outcomes, routes,
           </section>
           <section id="recording" className="scroll-mt-20 rounded-lg border border-border bg-surface p-4">
             <GroupHeading>Recording & compliance (information)</GroupHeading>
-            <Hint className="mt-2">Provider calls request recording. A recording appears on call detail only after the provider confirms it is available. Manually recorded calls may have no audio. Recording cannot be turned off here.</Hint>
+            <Hint className="mt-2">Calls placed here are recorded.</Hint>
           </section>
           <section id="compliance" className="scroll-mt-20 rounded-lg border border-border bg-surface p-4">
             <GroupHeading>Compliance (information)</GroupHeading>
-            <Hint className="mt-2">No compliance controls are configurable here yet.</Hint>
+            <Hint className="mt-2">No compliance settings here yet.</Hint>
           </section>
         </div>
  );

@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * Every GildOps cost that is not a `usage_cost_components` reading: a recurring resource's
@@ -100,7 +100,7 @@ export async function listOrganizationInfrastructureCosts(
   if (input.from) query = query.gte('billing_period', input.from);
   if (input.to) query = query.lt('billing_period', input.to);
   const { data, error } = await query.order('billing_period', { ascending: false });
-  if (error) throw new DomainError(error.message, 'infrastructure_costs.list_failed');
+  if (error) throw fromDatabaseError(error, 'infrastructure_costs.list_failed');
   return (data ?? []).map(toComponent);
 }
 
@@ -113,7 +113,7 @@ export async function listSharedInfrastructureCosts(
   if (input.from) query = query.gte('billing_period', input.from);
   if (input.to) query = query.lt('billing_period', input.to);
   const { data, error } = await query.order('billing_period', { ascending: false });
-  if (error) throw new DomainError(error.message, 'infrastructure_costs.shared_list_failed');
+  if (error) throw fromDatabaseError(error, 'infrastructure_costs.shared_list_failed');
   return (data ?? []).map(toComponent);
 }
 

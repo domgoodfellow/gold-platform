@@ -45,7 +45,7 @@ export function ResourceRequirementsEditor({
     <div className="flex flex-col gap-3">
       <Hint>
         {requirements.length === 0
-          ? `${typeName} does not say what it needs yet. Optional: say how many of which kind of resource a job needs, and which capabilities they must have.`
+          ? `${typeName} does not say what it needs yet. Optional: say how many of which kind of resource a job needs, and which skills they must have.`
           : `A ${typeName} job needs at least this much. More resources can always be added, and a job can be scheduled before it has them all.`}
       </Hint>
 
@@ -153,7 +153,7 @@ function RequirementForm({
             </div>
           </fieldset>
         ) : (
-          <Hint>No capabilities defined yet — a class alone is enough, or add some under Resources configuration.</Hint>
+          <Hint>No skills yet. A kind of resource is enough, or add skills in Resources settings.</Hint>
         )}
 
         {mayConfigure ? (

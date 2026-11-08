@@ -1,6 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { createHash } from 'node:crypto';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { importValue, normalizeImportRow, type MappingField } from '@/lib/domain/integrations/mappings';
@@ -116,7 +116,7 @@ export async function listImportRuns(db: Db, input: { organizationId: string }):
     .order('started_at', { ascending: false });
 
   if (error) {
-    throw new DomainError(error.message, 'integrations.runs_list_failed');
+    throw fromDatabaseError(error, 'integrations.runs_list_failed');
   }
   return (data ?? []).map(toRun);
 }
@@ -133,7 +133,7 @@ export async function getImportRun(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'integrations.run_get_failed');
+    throw fromDatabaseError(error, 'integrations.run_get_failed');
   }
   return data ? toRun(data) : null;
 }
@@ -156,7 +156,7 @@ export async function listStagingRows(
   const data = [];
   for (let offset = 0; ; offset += 1000) {
     const page = await query.order('id').range(offset, offset + 999);
-    if (page.error) throw new DomainError(page.error.message, 'integrations.staging_list_failed');
+    if (page.error) throw fromDatabaseError(page.error, 'integrations.staging_list_failed');
     data.push(...(page.data ?? []));
     if (!page.data || page.data.length < 1000) break;
   }
@@ -190,7 +190,7 @@ export async function beginImportRun(
     if (error.code === '42501') {
       throw new DomainError('You cannot run imports here.', 'integrations.forbidden');
     }
-    throw new DomainError(error.message, 'integrations.begin_failed');
+    throw fromDatabaseError(error, 'integrations.begin_failed');
   }
 
   return data;
@@ -238,7 +238,7 @@ export async function stageRows(
     });
     if (error) {
       if (error.code === '42501') throw new DomainError('You cannot run imports here.', 'integrations.forbidden');
-      throw new DomainError(`Staging stopped after ${offset} source rows. Resume this run to continue.`, 'integrations.stage_failed');
+      throw new DomainError(`Stopped after ${offset} rows. Resume to continue.`, 'integrations.stage_failed');
     }
     count = data;
   }
@@ -265,6 +265,6 @@ export async function applyImportRun(
     if (error.code === '22023' && error.message.includes('already been applied')) {
       throw new DomainError('This import has already run.', 'integrations.already_applied');
     }
-    throw new DomainError(error.message, 'integrations.apply_failed');
+    throw fromDatabaseError(error, 'integrations.apply_failed');
   }
 }

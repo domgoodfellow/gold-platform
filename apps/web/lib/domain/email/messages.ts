@@ -1,7 +1,7 @@
 import { emailProvider } from '@/lib/adapters/tenant-email';
 import { requireAccessToken } from '@/lib/api/client';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import type { MessageStatus } from '@/lib/domain/reception/messaging';
 import { listEmailIdentities } from './identities';
@@ -65,9 +65,9 @@ function refusal(error: { code?: string; message: string }): DomainError {
       return new DomainError('That address cannot send email right now. Its domain has to be verified first.', 'email.sender_not_ready');
     case '22023':
     case '54000':
-      return new DomainError(error.message, 'email.invalid');
+      return fromDatabaseError(error, 'email.invalid');
     default:
-      return new DomainError(error.message, 'email.write_failed');
+      return fromDatabaseError(error, 'email.write_failed');
   }
 }
 
@@ -81,7 +81,7 @@ export async function listEmailThread(db: Db, input: { organizationId: string; c
     .eq('conversation_id', input.conversationId)
     .eq('requested_transport', 'email')
     .order('created_at', { ascending: true });
-  if (error) throw new DomainError(error.message, 'email.thread_failed');
+  if (error) throw fromDatabaseError(error, 'email.thread_failed');
   const ids = (messages ?? []).map((message) => message.id);
   if (ids.length === 0) return [];
 
@@ -91,7 +91,7 @@ export async function listEmailThread(db: Db, input: { organizationId: string; c
     db.from('message_events').select('message_id, event_type, occurred_at, provider_event_at').eq('organization_id', input.organizationId).in('message_id', ids).order('occurred_at'),
   ]);
   for (const result of [details, attachments, events]) {
-    if (result.error) throw new DomainError(result.error.message, 'email.thread_failed');
+    if (result.error) throw fromDatabaseError(result.error, 'email.thread_failed');
   }
 
   const detailBy = new Map((details.data ?? []).map((row) => [row.message_id, row]));
@@ -177,7 +177,7 @@ export type SendEmailResult = {
 /** Hand one queued message to the provider runtime. Safe to repeat: the same message is the same send. */
 export async function dispatchQueuedEmail(db: Db, input: { organizationId: string; messageId: string }): Promise<{ outcome: SendEmailResult['outcome']; detail: string | null }> {
   const provider = await emailProvider({ token: await requireAccessToken(db) });
-  if (!provider) return { outcome: 'unavailable', detail: 'This deployment cannot send email yet.' };
+  if (!provider) return { outcome: 'unavailable', detail: 'Sending email isn’t available yet.' };
 
   const result = await provider.sendEmail({ organizationId: input.organizationId, messageId: input.messageId });
   switch (result.status) {
@@ -222,7 +222,7 @@ async function queueAndSend(db: Db, input: QueueInput): Promise<SendEmailResult>
     .eq('organization_id', input.organizationId)
     .eq('idempotency_key', input.idempotencyKey)
     .maybeSingle();
-  if (existing.error) throw new DomainError(existing.error.message, 'email.write_failed');
+  if (existing.error) throw fromDatabaseError(existing.error, 'email.write_failed');
 
   let messageId: string;
   if (existing.data) {
@@ -254,7 +254,7 @@ async function queueAndSend(db: Db, input: QueueInput): Promise<SendEmailResult>
     .eq('organization_id', input.organizationId)
     .eq('id', messageId)
     .single();
-  if (readError) throw new DomainError(readError.message, 'email.write_failed');
+  if (readError) throw fromDatabaseError(readError, 'email.write_failed');
 
   // Only a message still waiting is sent. One already taken, sent or ended is reported as it stands.
   if (message.status !== 'queued') return { messageId, conversationId: message.conversation_id, outcome: 'in_progress', detail: null };
@@ -319,7 +319,7 @@ export async function readAttachment(
     .eq('organization_id', input.organizationId)
     .eq('id', input.attachmentId)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'email.attachment_failed');
+  if (error) throw fromDatabaseError(error, 'email.attachment_failed');
   if (!row || row.storage_state !== 'stored' || !row.storage_path) {
     throw new DomainError('No such attachment here.', 'email.attachment_not_found');
   }

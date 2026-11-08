@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { FOUNDING_ROLE } from '@/lib/domain/tenancy/organizations';
 
@@ -64,11 +64,11 @@ export async function bootstrapOperatingOrganization(
     }
     if (error.code === '23503') {
       throw new DomainError(
-        'No such organization or GOLD Internal Plan.',
+        'No such business, or no GildOps Internal plan.',
         'operating_organization.bootstrap_not_found',
       );
     }
-    throw new DomainError(error.message, 'operating_organization.bootstrap_failed');
+    throw fromDatabaseError(error, 'operating_organization.bootstrap_failed');
   }
 
   return data as string;

@@ -1,6 +1,6 @@
 import { readAutomationCollection } from './monitoring';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -139,7 +139,7 @@ export async function createMessageTemplate(
         'messages.forbidden',
       );
     }
-    throw new DomainError(error.message, 'messages.create_failed');
+    throw fromDatabaseError(error, 'messages.create_failed');
   }
 
   return data.id;
@@ -183,7 +183,7 @@ export async function updateMessageTemplate(
         'messages.forbidden',
       );
     }
-    throw new DomainError(error.message, 'messages.update_failed');
+    throw fromDatabaseError(error, 'messages.update_failed');
   }
 
   if ((data ?? []).length === 0) {
@@ -221,7 +221,7 @@ export async function deleteMessageTemplate(
         'messages.forbidden',
       );
     }
-    throw new DomainError(error.message, 'messages.delete_failed');
+    throw fromDatabaseError(error, 'messages.delete_failed');
   }
 
   if ((data ?? []).length === 0) {
@@ -276,7 +276,7 @@ export async function listMessageDeliveries(
   const { data, error } = await query;
 
   if (error) {
-    throw new DomainError(error.message, 'messages.deliveries_failed');
+    throw fromDatabaseError(error, 'messages.deliveries_failed');
   }
 
   return (data ?? []).map((row) => ({

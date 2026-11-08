@@ -47,8 +47,8 @@ type Presentation = { label: string; tone: 'neutral' | 'success' | 'warning' | '
 
 export const READINESS_PRESENTATION: Record<ReadinessState, Presentation> = {
   operational: { label: 'Operational', tone: 'success' },
-  configured: { label: 'Configured', tone: 'neutral' },
-  'configuration-required': { label: 'Needs configuration', tone: 'warning' },
+  configured: { label: 'Set up', tone: 'neutral' },
+  'configuration-required': { label: 'Needs setting up', tone: 'warning' },
   'verification-required': { label: 'Needs verification', tone: 'warning' },
   unavailable: { label: 'Unavailable', tone: 'danger' },
   restricted: { label: 'Restricted', tone: 'neutral' },

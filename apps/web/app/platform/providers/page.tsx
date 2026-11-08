@@ -55,15 +55,15 @@ export default async function ProvidersPage({ params }: PageProps<'/platform/pro
 
   return (
     <AppPage>
-      <PageHeader title="Providers" crumbs={platformAncestry(goldId, 'providers')} />
+      <PageHeader title="Vendors" crumbs={platformAncestry(goldId, 'providers')} />
       <DataTable
         rows={providers}
         rowKey={(provider) => provider.key}
-        empty="No providers recorded."
+        empty="No vendors recorded."
         columns={[
           {
             key: 'provider',
-            header: 'Provider',
+            header: 'Vendor',
             emphasis: 'primary',
             cell: (provider) => (
               <Link

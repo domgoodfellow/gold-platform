@@ -1,6 +1,6 @@
 import { messagingCallbackBase, messagingProvider } from '@/lib/adapters/messaging';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { getPhoneNumber } from './numbers';
 
@@ -100,7 +100,7 @@ export async function listConversations(db: Db, input: { organizationId: string;
   let query = db.from('conversations').select(CONVERSATION_SELECT).eq('organization_id', input.organizationId);
   if (input.channel) query = query.eq('channel', input.channel);
   const { data, error } = await query.order('last_message_at', { ascending: false });
-  if (error) throw new DomainError(error.message, 'messaging.conversations_failed');
+  if (error) throw fromDatabaseError(error, 'messaging.conversations_failed');
   return (data ?? []).map(toConversation);
 }
 
@@ -111,7 +111,7 @@ export async function getConversation(db: Db, input: { organizationId: string; c
     .eq('organization_id', input.organizationId)
     .eq('id', input.conversationId)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'messaging.conversation_failed');
+  if (error) throw fromDatabaseError(error, 'messaging.conversation_failed');
   return data ? toConversation(data) : null;
 }
 
@@ -156,7 +156,7 @@ export async function listMessages(db: Db, input: { organizationId: string; conv
     .eq('organization_id', input.organizationId)
     .eq('conversation_id', input.conversationId)
     .order('created_at', { ascending: true });
-  if (error) throw new DomainError(error.message, 'messaging.messages_failed');
+  if (error) throw fromDatabaseError(error, 'messaging.messages_failed');
   return (data ?? []).map(toMessage);
 }
 
@@ -166,7 +166,7 @@ export async function markConversationRead(db: Db, input: { organizationId: stri
     .update({ unread: false })
     .eq('organization_id', input.organizationId)
     .eq('id', input.conversationId);
-  if (error) throw new DomainError(error.message, 'messaging.mark_read_failed');
+  if (error) throw fromDatabaseError(error, 'messaging.mark_read_failed');
 }
 
 /** Whether this deployment has said `sendMessage` may reach this recipient (the messaging rules' own restated rule, for suppression). */
@@ -177,7 +177,7 @@ async function isSuppressed(db: Db, input: { organizationId: string; externalNum
     .eq('organization_id', input.organizationId)
     .eq('external_number', input.externalNumber)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'messaging.suppression_check_failed');
+  if (error) throw fromDatabaseError(error, 'messaging.suppression_check_failed');
   return data?.opted_out ?? false;
 }
 
@@ -193,7 +193,7 @@ async function findOrCreateConversation(
     .eq('phone_number_id', input.phoneNumberId)
     .eq('external_number', input.externalNumber)
     .maybeSingle();
-  if (existing.error) throw new DomainError(existing.error.message, 'messaging.conversation_lookup_failed');
+  if (existing.error) throw fromDatabaseError(existing.error, 'messaging.conversation_lookup_failed');
   if (existing.data) return existing.data.id;
 
   const created = await db
@@ -206,7 +206,7 @@ async function findOrCreateConversation(
     })
     .select('id')
     .single();
-  if (created.error) throw new DomainError(created.error.message, 'messaging.conversation_create_failed');
+  if (created.error) throw fromDatabaseError(created.error, 'messaging.conversation_create_failed');
   return created.data.id;
 }
 
@@ -289,7 +289,7 @@ export async function sendSms(
     .eq('organization_id', input.organizationId)
     .eq('idempotency_key', input.idempotencyKey)
     .maybeSingle();
-  if (existing.error) throw new DomainError(existing.error.message, 'messaging.idempotency_check_failed');
+  if (existing.error) throw fromDatabaseError(existing.error, 'messaging.idempotency_check_failed');
   if (existing.data) return toMessage(existing.data);
 
   const sender = await resolveSmsSender(db, { organizationId: input.organizationId, phoneNumberId: input.phoneNumberId });
@@ -301,7 +301,7 @@ export async function sendSms(
   const reportTo = messagingCallbackBase();
   const provider = await messagingProvider();
   if (!provider || !reportTo) {
-    throw new DomainError('This deployment cannot send messages yet.', 'messaging.unconfigured');
+    throw new DomainError('Sending texts isn’t available yet.', 'messaging.unconfigured');
   }
 
   const conversationId = await findOrCreateConversation(db, {

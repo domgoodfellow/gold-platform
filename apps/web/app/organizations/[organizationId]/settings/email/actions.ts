@@ -222,9 +222,9 @@ export async function sendTestEmailAction(_previous: EmailDomainState, form: For
   try {
     const outcome = await sendTestEmail(await getDb(), organizationId);
     refresh(organizationId);
-    if (outcome.state === 'sent') return { error: null, notice: `Test email accepted for delivery to ${outcome.recipient}. Check that inbox; whether it arrived is shown below once the provider reports it.`, done: true };
-    if (outcome.state === 'uncertain') return { error: `The test may or may not have been sent: ${outcome.detail ?? 'the provider did not confirm it'}. Check ${outcome.recipient} before trying again.`, notice: null, done: false };
-    return { error: `The test email was not sent: ${outcome.detail ?? 'the provider did not say why'}`, notice: null, done: false };
+    if (outcome.state === 'sent') return { error: null, notice: `Test email accepted for delivery to ${outcome.recipient}. Check that inbox; whether it arrived is shown below once the email service reports it.`, done: true };
+    if (outcome.state === 'uncertain') return { error: `The test may or may not have been sent: ${outcome.detail ?? 'the email service did not confirm it'}. Check ${outcome.recipient} before trying again.`, notice: null, done: false };
+    return { error: `The test email was not sent: ${outcome.detail ?? 'the email service did not say why'}`, notice: null, done: false };
   } catch (error) {
     if (error instanceof DomainError && (error.code === 'api.unreachable' || error.code === 'api.unconfigured')) {
       return { error: 'GildOps’ email service could not be reached, so no test was sent.', notice: null, done: false };

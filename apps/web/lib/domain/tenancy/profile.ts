@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -34,7 +34,7 @@ export async function publicProfile(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'profile.read_failed');
+    throw fromDatabaseError(error, 'profile.read_failed');
   }
 
   return {
@@ -95,6 +95,6 @@ export async function setPublicProfile(
     if (error.code === '23514') {
       throw new DomainError('That is longer than this page allows.', 'profile.too_long');
     }
-    throw new DomainError(error.message, 'profile.update_failed');
+    throw fromDatabaseError(error, 'profile.update_failed');
   }
 }

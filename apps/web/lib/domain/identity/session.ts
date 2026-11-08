@@ -1,4 +1,4 @@
-import type { AuthUser as User } from '@supabase/supabase-js';
+import { isAuthApiError, isAuthError, isAuthRetryableFetchError, type AuthUser as User } from '@supabase/supabase-js';
 import type { Db } from '@/lib/db/types';
 
 /**
@@ -18,6 +18,13 @@ export type SessionIdentity =
   | { kind: 'anonymous'; userId: string }
   | { kind: 'account'; userId: string };
 
+/**
+ * What the proxy learned from the sign-in service: an answer (`SessionIdentity`), or
+ * `unverified` when the question went unanswered. An unanswered check is not "signed out": the
+ * proxy lets the request through and the page's own `requireActor` raises the service error.
+ */
+export type SessionCheck = SessionIdentity | { kind: 'unverified' };
+
 /** Pure, so the routing decisions built on it (proxy.ts) are testable with no session at all. */
 export function classifySessionUser(user: User | null): SessionIdentity {
   if (!user) return { kind: 'none' };
@@ -29,4 +36,28 @@ export function classifySessionUser(user: User | null): SessionIdentity {
 export async function resolveSessionIdentity(db: Db): Promise<SessionIdentity> {
   const { data } = await db.auth.getUser();
   return classifySessionUser(data.user);
+}
+
+/** The reply to `auth.getUser()`, read as an answer about the session or as no answer at all. */
+export function classifySessionCheck(reply: { data: { user: User | null }; error: unknown }): SessionCheck {
+  if (reply.error && signInUnreachable(reply.error)) return { kind: 'unverified' };
+  return classifySessionUser(reply.error ? null : reply.data.user);
+}
+
+/** `classifySessionCheck`, for a caller holding a database client. What the proxy runs. */
+export async function checkSession(db: Pick<Db, 'auth'>): Promise<SessionCheck> {
+  return classifySessionCheck(await db.auth.getUser());
+}
+
+/**
+ * The check did not get an answer about the session. The sign-in library reports no connection,
+ * a timeout or a 5xx reply as retryable; a reply it could not read at all as unknown. A 429 is a
+ * refusal to answer now, not a statement about the session. Everything else (no session, an
+ * expired, revoked or malformed token, a deleted user) is an answer, and means sign in.
+ * The one rule both the proxy and `requireActor` apply.
+ */
+export function signInUnreachable(error: unknown): boolean {
+  if (isAuthRetryableFetchError(error)) return true;
+  if (isAuthError(error) && error.name === 'AuthUnknownError') return true;
+  return isAuthApiError(error) && (error.status >= 500 || error.status === 429);
 }

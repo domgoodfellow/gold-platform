@@ -49,7 +49,7 @@ export default async function PipelinePage({ params }: PageProps<'/organizations
           title="No stages named"
           description={stagesDoor
             ? 'Name the stages this business moves customer relationships through in Relationship stages.'
-            : 'Someone who manages CRM configuration names the stages customer relationships move through.'}
+            : 'Someone who manages CRM settings names these stages.'}
           action={stagesDoor ? <ConfigureLink href={stagesDoor.href} label={stagesDoor.label} /> : undefined}
         />
       ) : (

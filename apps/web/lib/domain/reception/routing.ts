@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -83,7 +83,7 @@ export async function listRoutes(db: Db, input: { organizationId: string }): Pro
     .select(ROUTE_SELECT)
     .eq('organization_id', input.organizationId)
     .order('name', { ascending: true });
-  if (error) throw new DomainError(error.message, 'routing.list_failed');
+  if (error) throw fromDatabaseError(error, 'routing.list_failed');
   return (data ?? []).map(toRoute);
 }
 
@@ -94,7 +94,7 @@ export async function getRoute(db: Db, input: { organizationId: string; routeId:
     .eq('organization_id', input.organizationId)
     .eq('id', input.routeId)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'routing.read_failed');
+  if (error) throw fromDatabaseError(error, 'routing.read_failed');
   return data ? toRoute(data) : null;
 }
 
@@ -110,7 +110,7 @@ export async function getEffectiveRoute(
       .eq('organization_id', input.organizationId)
       .eq('number_id', input.numberId)
       .maybeSingle();
-    if (own.error) throw new DomainError(own.error.message, 'routing.read_failed');
+    if (own.error) throw fromDatabaseError(own.error, 'routing.read_failed');
     if (own.data) return toRoute(own.data);
   }
   const fallback = await db
@@ -119,7 +119,7 @@ export async function getEffectiveRoute(
     .eq('organization_id', input.organizationId)
     .is('number_id', null)
     .maybeSingle();
-  if (fallback.error) throw new DomainError(fallback.error.message, 'routing.read_failed');
+  if (fallback.error) throw fromDatabaseError(fallback.error, 'routing.read_failed');
   return fallback.data ? toRoute(fallback.data) : null;
 }
 
@@ -235,7 +235,7 @@ export async function listRouteTargets(
     .eq('route_id', input.routeId)
     .order('slot', { ascending: true })
     .order('position', { ascending: true });
-  if (error) throw new DomainError(error.message, 'routing.targets_failed');
+  if (error) throw fromDatabaseError(error, 'routing.targets_failed');
   return (data ?? []).map((row) => ({ id: row.id, routeId: row.route_id, slot: row.slot as RouteTarget['slot'], memberId: row.member_id, position: row.position }));
 }
 

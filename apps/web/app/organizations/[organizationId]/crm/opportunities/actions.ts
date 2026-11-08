@@ -52,7 +52,7 @@ export async function moveOpportunityAction(_previous: OpportunityActionState, f
 export async function saveOpportunityStageAction(_previous: OpportunityActionState, form: FormData): Promise<OpportunityActionState> {
   const organizationId = field(form, 'organizationId');
   const { db, organization } = await requireOrganization(organizationId);
-  if (!organization.capabilities.includes('field.manage')) return { error: 'Your role cannot configure stages.', savedId: null };
+  if (!organization.capabilities.includes('field.manage')) return { error: 'Your role cannot change stages.', savedId: null };
   try {
     const id = field(form, 'id');
     const input = { organizationId, name: field(form, 'name'), position: Number(field(form, 'position')), kind: field(form, 'kind') as OpportunityKind };

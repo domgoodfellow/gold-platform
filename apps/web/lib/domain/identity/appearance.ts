@@ -24,7 +24,7 @@ export function validateAppearance(input: unknown): PersonalAppearancePreference
 
 async function accountId(db: Db) {
   const { data, error } = await db.auth.getUser();
-  if (error || !data.user || data.user.is_anonymous) throw new DomainError('Sign in to configure your appearance.', 'auth.required');
+  if (error || !data.user || data.user.is_anonymous) throw new DomainError('Sign in to change your appearance.', 'auth.required');
   return data.user.id;
 }
 

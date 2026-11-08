@@ -58,9 +58,7 @@ export function NewAutomationSheet({
         <PageDrawerHeader>
           <PageDrawerTitle>New automation</PageDrawerTitle>
           <PageDrawerDescription>
-            Name it and choose its trigger. The new rule starts disabled.
-            Configure conditions and actions in the Rule Builder, review
-            diagnostics, then enable it deliberately.
+            The new rule starts switched off.
           </PageDrawerDescription>
         </PageDrawerHeader>
 

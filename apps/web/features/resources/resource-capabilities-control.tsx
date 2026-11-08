@@ -42,7 +42,7 @@ export function ResourceCapabilitiesControl({
   return (
     <div className="flex flex-col gap-2">
       {held.length === 0 ? (
-        <Hint>None. Capabilities are optional.</Hint>
+        <Hint>None. Skills are optional.</Hint>
       ) : (
         <ul className="flex flex-wrap gap-2">
           {held.map((capability) => (
@@ -130,7 +130,7 @@ function AddCapability({
       {available.length > 0 ? (
         <>
           <label htmlFor={selectId} className="text-sm text-muted">
-            Add a capability
+            Add a skill
           </label>
           <SelectField id={selectId} name="capabilityId" size="small" defaultValue="" options={[{ value: '', label: 'Choose…' }, ...available.map((capability) => ({ value: capability.id, label: capability.name }))]} />
         </>
@@ -138,7 +138,7 @@ function AddCapability({
       {mayAddWord ? (
         <>
           <label htmlFor={newId} className="text-sm text-muted">
-            {available.length > 0 ? 'or a new one' : 'Add a capability'}
+            {available.length > 0 ? 'or a new one' : 'Add a skill'}
           </label>
           <TextInput id={newId} name="newCapability" type="text" maxLength={64} size="small" placeholder="Tire service" />
         </>

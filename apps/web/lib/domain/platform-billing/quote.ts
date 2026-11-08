@@ -6,7 +6,7 @@ import {
   currentPlanAssignment,
   organizationPlanPrice,
 } from '@/lib/domain/catalogue/organization-plans';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * Exactly what an organization is about to buy, resolved entirely server-side from its
@@ -108,7 +108,7 @@ async function purchasedOneTimeAssignmentIds(
     .eq('source_domain', 'catalogue.addon_assignment')
     .in('source_record_id', input.assignmentIds)
     .not('finalized_at', 'is', null);
-  if (error) throw new DomainError(error.message, 'platform_billing.one_time_history_failed');
+  if (error) throw fromDatabaseError(error, 'platform_billing.one_time_history_failed');
   return new Set((data ?? []).map((row) => row.source_record_id));
 }
 

@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import {
   isoDayOfWeek,
   zonedTimeToInstant,
@@ -56,7 +56,7 @@ export async function listOperatingHours(
     .order('opens_at', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'operating_hours.list_failed');
+    throw fromDatabaseError(error, 'operating_hours.list_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -116,7 +116,7 @@ export async function addOperatingHours(
         'operating_hours.forbidden',
       );
     }
-    throw new DomainError(error.message, 'operating_hours.create_failed');
+    throw fromDatabaseError(error, 'operating_hours.create_failed');
   }
 
   return data;
@@ -134,7 +134,7 @@ export async function removeOperatingHours(db: Db, input: { id: string }): Promi
         'operating_hours.forbidden',
       );
     }
-    throw new DomainError(error.message, 'operating_hours.delete_failed');
+    throw fromDatabaseError(error, 'operating_hours.delete_failed');
   }
 }
 

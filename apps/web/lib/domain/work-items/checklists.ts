@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -34,7 +34,7 @@ export async function listChecklistItems(
     .order('position', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'checklists.list_failed');
+    throw fromDatabaseError(error, 'checklists.list_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -90,7 +90,7 @@ export async function addChecklistItem(
     if (error.code === '42501') {
       throw new DomainError('You cannot add steps here.', 'checklists.forbidden');
     }
-    throw new DomainError(error.message, 'checklists.create_failed');
+    throw fromDatabaseError(error, 'checklists.create_failed');
   }
 
   return data;
@@ -117,7 +117,7 @@ export async function setChecklistItemDone(
     if (error.code === '42501') {
       throw new DomainError('You cannot change that step.', 'checklists.forbidden');
     }
-    throw new DomainError(error.message, 'checklists.update_failed');
+    throw fromDatabaseError(error, 'checklists.update_failed');
   }
 }
 
@@ -147,7 +147,7 @@ export async function listTypeChecklistItems(
     .order('position', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'checklist_templates.list_failed');
+    throw fromDatabaseError(error, 'checklist_templates.list_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -199,11 +199,11 @@ export async function addTypeChecklistItem(
     }
     if (error.code === '42501') {
       throw new DomainError(
-        'You cannot configure steps here.',
+        'Your role cannot change steps.',
         'checklist_templates.forbidden',
       );
     }
-    throw new DomainError(error.message, 'checklist_templates.create_failed');
+    throw fromDatabaseError(error, 'checklist_templates.create_failed');
   }
 
   return data;
@@ -226,10 +226,10 @@ export async function removeTypeChecklistItem(
   if (error) {
     if (error.code === '42501') {
       throw new DomainError(
-        'You cannot configure steps here.',
+        'Your role cannot change steps.',
         'checklist_templates.forbidden',
       );
     }
-    throw new DomainError(error.message, 'checklist_templates.delete_failed');
+    throw fromDatabaseError(error, 'checklist_templates.delete_failed');
   }
 }

@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -43,7 +43,7 @@ export async function createPortalInvite(
     if (error.code === '42501') {
       throw new DomainError('You cannot invite customers here.', 'portal.forbidden');
     }
-    throw new DomainError(error.message, 'portal.invite_failed');
+    throw fromDatabaseError(error, 'portal.invite_failed');
   }
 
   return data as string;
@@ -62,7 +62,7 @@ export async function listPortalInvites(
     .order('created_at', { ascending: false });
 
   if (error) {
-    throw new DomainError(error.message, 'portal.list_failed');
+    throw fromDatabaseError(error, 'portal.list_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -83,14 +83,14 @@ export async function organizationPortalInviteCount(
     .from('customer_portal_invites')
     .select('id', { count: 'exact', head: true })
     .eq('organization_id', input.organizationId);
-  if (totalError) throw new DomainError(totalError.message, 'portal.list_failed');
+  if (totalError) throw fromDatabaseError(totalError, 'portal.list_failed');
 
   const { count: active, error: activeError } = await db
     .from('customer_portal_invites')
     .select('id', { count: 'exact', head: true })
     .eq('organization_id', input.organizationId)
     .is('revoked_at', null);
-  if (activeError) throw new DomainError(activeError.message, 'portal.list_failed');
+  if (activeError) throw fromDatabaseError(activeError, 'portal.list_failed');
 
   return { total: total ?? 0, active: active ?? 0 };
 }
@@ -113,7 +113,7 @@ export async function revokePortalInvite(db: Db, input: { id: string }): Promise
     .select('id');
 
   if (error) {
-    throw new DomainError(error.message, 'portal.revoke_failed');
+    throw fromDatabaseError(error, 'portal.revoke_failed');
   }
   if (!data || data.length === 0) {
     throw new DomainError('No such link, or you may not revoke it.', 'portal.revoke_forbidden');
@@ -147,7 +147,7 @@ export async function claimPortalInvite(db: Db, input: { token: string; hostname
         'portal.invalid_link',
       );
     }
-    throw new DomainError(error.message, 'portal.claim_failed');
+    throw fromDatabaseError(error, 'portal.claim_failed');
   }
 
   return data as string;

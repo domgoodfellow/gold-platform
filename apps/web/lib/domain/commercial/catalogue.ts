@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * What can be metered, what GOLD sells, and what each costs — GOLD selling GOLD, never a
@@ -116,7 +116,7 @@ export async function listMeters(db: Db): Promise<Meter[]> {
     .select('id, label, unit, description, aggregation, writer')
     .order('label');
 
-  if (error) throw new DomainError(error.message, 'commercial.meters_failed');
+  if (error) throw fromDatabaseError(error, 'commercial.meters_failed');
 
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -145,7 +145,7 @@ export async function listProviders(db: Db): Promise<Provider[]> {
     .select('key, label')
     .order('key');
 
-  if (error) throw new DomainError(error.message, 'commercial.providers_failed');
+  if (error) throw fromDatabaseError(error, 'commercial.providers_failed');
 
   return data ?? [];
 }
@@ -156,7 +156,7 @@ export async function listProviderCostMeters(db: Db): Promise<ProviderCostMeter[
     .select('key, service, unit, label')
     .order('service')
     .order('label');
-  if (error) throw new DomainError(error.message, 'commercial.provider_cost_meters_failed');
+  if (error) throw fromDatabaseError(error, 'commercial.provider_cost_meters_failed');
   return data ?? [];
 }
 
@@ -174,7 +174,7 @@ export async function listProviderCostRates(
   if (input.region) query = query.eq('region', input.region);
   if (input.currentOnly) query = query.lte('effective_from', new Date().toISOString()).or(`effective_to.is.null,effective_to.gt.${new Date().toISOString()}`);
   const { data, error } = await query;
-  if (error) throw new DomainError(error.message, 'commercial.provider_cost_rates_failed');
+  if (error) throw fromDatabaseError(error, 'commercial.provider_cost_rates_failed');
   return (data ?? []).map((row) => ({
     ...toRate(row),
     costMeterKey: row.cost_meter_key,
@@ -229,7 +229,7 @@ export async function listProducts(db: Db): Promise<Product[]> {
     .order('display_order')
     .order('key');
 
-  if (error) throw new DomainError(error.message, 'commercial.products_failed');
+  if (error) throw fromDatabaseError(error, 'commercial.products_failed');
 
   return (data ?? []).map((row) => ({
     key: row.key,
@@ -250,7 +250,7 @@ export async function getProduct(db: Db, key: string): Promise<Product | null> {
     .eq('key', key)
     .maybeSingle();
 
-  if (error) throw new DomainError(error.message, 'commercial.product_failed');
+  if (error) throw fromDatabaseError(error, 'commercial.product_failed');
   if (!data) return null;
 
   return {
@@ -285,14 +285,14 @@ export async function updateProduct(
 
 export async function listMeterUsageObservations(db: Db): Promise<Map<string, number>> {
   const { data, error } = await db.rpc('platform_meter_observations');
-  if (error) throw new DomainError(error.message, 'commercial.meter_observations_failed');
+  if (error) throw fromDatabaseError(error, 'commercial.meter_observations_failed');
   return new Map((data ?? []).map((row) => [row.meter_id, Number(row.usage_event_count)]));
 }
 
 /** GOLD's global, append-only list-price card. It deliberately has no organization id. */
 export async function listProductPrices(db: Db): Promise<ProductPrice[]> {
   const { data, error } = await db.from('platform_product_prices').select('id, product_key, currency, amount_minor, billing_interval, effective_from, approval_state, source, note').order('product_key').order('effective_from', { ascending: false });
-  if (error) throw new DomainError(error.message, 'commercial.product_prices_failed');
+  if (error) throw fromDatabaseError(error, 'commercial.product_prices_failed');
   return (data ?? []).map((row) => ({ id: row.id, productKey: row.product_key, currency: row.currency, amountMinor: Number(row.amount_minor), billingInterval: row.billing_interval as ProductPrice['billingInterval'], effectiveFrom: row.effective_from, approvalState: isApprovalState(row.approval_state) ? row.approval_state : 'approved', source: row.source, note: row.note }));
 }
 
@@ -318,7 +318,7 @@ export async function listProviderRates(
 
   const { data, error } = await query;
 
-  if (error) throw new DomainError(error.message, 'commercial.provider_rates_failed');
+  if (error) throw fromDatabaseError(error, 'commercial.provider_rates_failed');
 
   return (data ?? []).map(toRate);
 }
@@ -337,7 +337,7 @@ export async function listRetailRates(db: Db, input: { meterId?: string } = {}):
 
   const { data, error } = await query;
 
-  if (error) throw new DomainError(error.message, 'commercial.retail_rates_failed');
+  if (error) throw fromDatabaseError(error, 'commercial.retail_rates_failed');
 
   return (data ?? []).map((row) => toRate({ ...row, provider_key: null }));
 }
@@ -401,9 +401,9 @@ export async function recordProviderRate(db: Db, input: RecordProviderRateInput)
 
   if (error) {
     if (error.code === '42501') {
-      throw new DomainError('Only platform staff may record a provider rate.', 'commercial.forbidden');
+      throw new DomainError('Only platform staff may record a vendor rate.', 'commercial.forbidden');
     }
-    throw new DomainError(error.message, 'commercial.record_provider_rate_failed');
+    throw fromDatabaseError(error, 'commercial.record_provider_rate_failed');
   }
 
   return data as string;
@@ -426,7 +426,7 @@ export async function recordRetailRate(db: Db, input: RecordRetailRateInput): Pr
     if (error.code === '42501') {
       throw new DomainError('Only platform staff may record a retail rate.', 'commercial.forbidden');
     }
-    throw new DomainError(error.message, 'commercial.record_retail_rate_failed');
+    throw fromDatabaseError(error, 'commercial.record_retail_rate_failed');
   }
 
   return data as string;

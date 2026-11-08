@@ -58,7 +58,7 @@ export async function GET(request: Request) {
   };
 
   const denied = url.searchParams.get('error_description') ?? url.searchParams.get('error');
-  if (denied) return failed(`The provider did not connect: ${denied.slice(0, 200)}`);
+  if (denied) return failed(`The other service did not connect: ${denied.slice(0, 200)}`);
 
   try {
     const done = await completeOAuth(await getDb(), {

@@ -52,7 +52,7 @@ describe('the Settings configuration map', () => {
       'Pricing',
       'Customer data',
       'Brand & public presence',
-      'Communications configuration',
+      'Communications settings',
       'AI & Automations',
       'Features',
     ]);

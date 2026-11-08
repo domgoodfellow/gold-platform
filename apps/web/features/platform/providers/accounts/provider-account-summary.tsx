@@ -20,7 +20,7 @@ export function ProviderAccountSummary({ account }: { account: ProviderAccount |
       {account ? (
         <DefinitionList>
           <Detail label="Label">{account.label}</Detail>
-          <Detail label="Credential">{account.credentialSetAt ? <Badge>Set</Badge> : <Badge tone="neutral">Not configured</Badge>}</Detail>
+          <Detail label="Credential">{account.credentialSetAt ? <Badge>Set</Badge> : <Badge tone="neutral">Not set</Badge>}</Detail>
           <Detail label="Credential verification">
             <Badge tone={VERIFICATION_TONE[account.verificationState]}>{account.verificationState}</Badge>
           </Detail>
@@ -29,7 +29,7 @@ export function ProviderAccountSummary({ account }: { account: ProviderAccount |
           </Detail>
         </DefinitionList>
       ) : (
-        <p className="mt-2 text-sm text-muted">Not configured. Use Configure to add a GildOps account.</p>
+        <p className="mt-2 text-sm text-muted">Not set up. Use Edit to add a GildOps account.</p>
       )}
     </Section>
   );

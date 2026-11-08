@@ -18,7 +18,7 @@ export function nominatimGeocodingProvider(config: { contact: string }): Geocodi
       const response = await fetch(`${API}?${query.toString()}`, {
         headers: {
           // Their usage policy requires identifying the caller — a deployment with no contact never reaches this file.
-          'User-Agent': `GOLD platform (${config.contact})`,
+          'User-Agent': `GildOps (${config.contact})`,
           Accept: 'application/json',
         },
       });

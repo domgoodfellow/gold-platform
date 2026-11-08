@@ -69,7 +69,7 @@ export default async function LocationsPage({
         />
         {mayConfigure ? (
           <ConfigureRegistrar
-            title="Locations configuration"
+            title="Locations settings"
             settingsHref={`/organizations/${organizationId}/settings/custom-fields`}
           >
             <LocationConfiguration

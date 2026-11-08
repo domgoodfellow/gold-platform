@@ -56,7 +56,7 @@ export default async function TenantProviders({ params }: PageProps<'/platform/o
           </div>
           <DefinitionList>
             <Detail label="Owned by GildOps account">
-              {standing?.bindingId ? (account ? account.label : 'Deployment credential (no account recorded)') : '—'}
+              {standing?.bindingId ? (account ? account.label : 'GildOps’ own credential (no account recorded)') : '—'}
             </Detail>
             <Detail label="Subaccount">{standing?.externalAccountId ?? '—'}</Detail>
             <Detail label="Resources">{standing?.resourceCount ?? 0}</Detail>
@@ -99,9 +99,9 @@ export default async function TenantProviders({ params }: PageProps<'/platform/o
         <DataTable
           rows={bindings}
           rowKey={(row) => row.id}
-          empty="No provider bindings."
+          empty="No vendor bindings."
           columns={[
-            { key: 'provider', header: 'Provider', emphasis: 'primary', cell: (row) => row.providerKey },
+            { key: 'provider', header: 'Vendor', emphasis: 'primary', cell: (row) => row.providerKey },
             { key: 'status', header: 'Status', cell: (row) => row.status },
             { key: 'external', header: 'External account ID', cell: (row) => row.externalAccountId ?? '—' },
             { key: 'verified', header: 'Last verified', cell: (row) => (row.lastVerifiedAt ? new Date(row.lastVerifiedAt).toLocaleString() : 'Not verified') },
@@ -113,7 +113,7 @@ export default async function TenantProviders({ params }: PageProps<'/platform/o
         <DataTable
           rows={resources}
           rowKey={(row) => row.id}
-          empty="No provider resources."
+          empty="No vendor resources."
           columns={[
             { key: 'type', header: 'Resource', emphasis: 'primary', cell: (row) => row.resourceType },
             { key: 'external', header: 'External ID', cell: (row) => row.externalId },

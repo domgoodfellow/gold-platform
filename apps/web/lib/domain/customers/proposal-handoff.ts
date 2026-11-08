@@ -1,6 +1,6 @@
 import type { Json } from '@/lib/db/database.types';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import type { BusinessShape } from '@/lib/domain/configuration/configure';
 import { listIndustryTemplates } from '@/lib/domain/configuration/proposals';
 import { adjustShape } from '@/lib/domain/configuration/shape';
@@ -83,7 +83,7 @@ export async function getProposalHandoff(
     .eq('organization_id', input.organizationId)
     .eq('proposal_id', input.proposalId)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'proposal_handoff.get_failed');
+  if (error) throw fromDatabaseError(error, 'proposal_handoff.get_failed');
   return data ? toHandoff(data) : null;
 }
 
@@ -102,7 +102,7 @@ export async function getFoundingHandoff(
     .select('id, organization_id, customer_id, proposal_id, created_organization_id, discovery_snapshot, accepted_configuration, commercial_terms, created_at, created_by')
     .eq('created_organization_id', input.organizationId)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'proposal_handoff.get_failed');
+  if (error) throw fromDatabaseError(error, 'proposal_handoff.get_failed');
   return data ? toHandoff(data) : null;
 }
 
@@ -167,17 +167,17 @@ export async function handoffAcceptedProposal(
     // caller who already cleared organization membership to get here.
     if (error.code === '42501') {
       if (error.message.includes('only platform staff')) {
-        throw new DomainError(error.message, 'proposal_handoff.not_staff');
+        throw fromDatabaseError(error, 'proposal_handoff.not_staff');
       }
       if (error.message.includes('only an accepted proposal')) {
-        throw new DomainError(error.message, 'proposal_handoff.not_accepted');
+        throw fromDatabaseError(error, 'proposal_handoff.not_accepted');
       }
-      throw new DomainError(error.message, 'proposal_handoff.forbidden');
+      throw fromDatabaseError(error, 'proposal_handoff.forbidden');
     }
     if (error.code === '23514') {
-      throw new DomainError(error.message, 'proposal_handoff.owner_email_required');
+      throw fromDatabaseError(error, 'proposal_handoff.owner_email_required');
     }
-    throw new DomainError(error.message, 'proposal_handoff.failed');
+    throw fromDatabaseError(error, 'proposal_handoff.failed');
   }
 
   const handoff = await getProposalHandoff(db, input);

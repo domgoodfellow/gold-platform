@@ -1,6 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { dispatchQueuedEmail } from '@/lib/domain/email/messages';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import type { MessageStatus } from '@/lib/domain/reception/messaging';
 
 /**
@@ -29,10 +29,10 @@ type PreviewRow = {
 function refusal(error: { code?: string; message: string }): DomainError {
   switch (error.code) {
     case '42501': return new DomainError('Your role cannot email this business’s invoices.', 'invoice_emails.forbidden');
-    case 'GD022': return new DomainError(error.message, 'invoice_emails.already_sent');
-    case '54000': return new DomainError(error.message, 'invoice_emails.too_large');
-    case '55000': case '58000': return new DomainError(error.message, 'invoice_emails.not_ready');
-    case '22023': return new DomainError(error.message, 'invoice_emails.invalid');
+    case 'GD022': return fromDatabaseError(error, 'invoice_emails.already_sent');
+    case '54000': return fromDatabaseError(error, 'invoice_emails.too_large');
+    case '55000': case '58000': return fromDatabaseError(error, 'invoice_emails.not_ready');
+    case '22023': return fromDatabaseError(error, 'invoice_emails.invalid');
     default: return new DomainError('The invoice could not be emailed. Try again.', 'invoice_emails.failed');
   }
 }
@@ -72,11 +72,11 @@ export function invoiceEmailState(status: MessageStatus, failureReason: string |
     case 'queued':
       return failureReason
         ? { state: 'not_sent', label: 'Not sent yet', detail: failureReason }
-        : { state: 'queued', label: 'Queued', detail: 'Not handed to the email provider yet.' };
+        : { state: 'queued', label: 'Queued', detail: 'Not sent yet.' };
     case 'sending':
-      return { state: 'sending', label: 'Sending', detail: 'Handed to the email provider; its answer has not been recorded, so delivery is uncertain.' };
+      return { state: 'sending', label: 'Sending', detail: 'Sent to the email service; no answer yet, so it may not have arrived.' };
     case 'sent':
-      return { state: 'accepted', label: 'Accepted by the email provider', detail: 'Not yet confirmed as delivered.' };
+      return { state: 'accepted', label: 'Accepted for delivery', detail: 'Not yet confirmed as delivered.' };
     case 'delivered':
     case 'read':
       return { state: 'delivered', label: 'Delivered', detail: null };
@@ -107,11 +107,11 @@ export async function listInvoiceEmails(db: Db, input: { organizationId: string;
     .select('id, message_id, conversation_id, from_address, recipient, document_sha256, sent_again_after, created_at')
     .eq('organization_id', input.organizationId).eq('invoice_id', input.invoiceId)
     .order('created_at', { ascending: false });
-  if (error) throw new DomainError(error.message, 'invoice_emails.read_failed');
+  if (error) throw fromDatabaseError(error, 'invoice_emails.read_failed');
   if (!sends?.length) return [];
   const { data: messages, error: messageError } = await db.from('messages').select('id, status, failure_reason')
     .eq('organization_id', input.organizationId).in('id', sends.map((send) => send.message_id));
-  if (messageError) throw new DomainError(messageError.message, 'invoice_emails.read_failed');
+  if (messageError) throw fromDatabaseError(messageError, 'invoice_emails.read_failed');
   const byId = new Map((messages ?? []).map((message) => [message.id, message]));
   return sends.map((send) => ({
     id: send.id, messageId: send.message_id, conversationId: send.conversation_id, fromAddress: send.from_address,

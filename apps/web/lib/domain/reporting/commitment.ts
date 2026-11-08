@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 import type { Filters, Grouping, Period } from '@/lib/domain/reporting/shape';
 
 /**
@@ -38,7 +38,7 @@ export async function listTimeCommitted(
   });
 
   if (error) {
-    throw new DomainError(error.message, 'reporting.commitment_failed');
+    throw fromDatabaseError(error, 'reporting.commitment_failed');
   }
 
   return (data ?? []).map((row) => ({

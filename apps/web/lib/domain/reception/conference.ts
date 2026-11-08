@@ -1,6 +1,6 @@
 import { callbackBase, telephonyProvider, type CallStatus, type TelephonyProvider } from '@/lib/adapters/telephony';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { actingTelephonyAccount } from '@/lib/domain/reception/calls';
 import { currentMembershipId } from '@/lib/domain/reception/inbox';
 
@@ -76,7 +76,7 @@ async function readLegs(db: Db, input: { organizationId: string; callId: string 
     .eq('call_id', input.callId)
     .order('created_at', { ascending: true });
 
-  if (error) throw new DomainError(error.message, 'conference.participants_failed');
+  if (error) throw fromDatabaseError(error, 'conference.participants_failed');
   return data ?? [];
 }
 
@@ -99,7 +99,7 @@ async function callContext(db: Db, input: { organizationId: string; callId: stri
     .eq('id', input.callId)
     .maybeSingle();
 
-  if (error) throw new DomainError(error.message, 'conference.call_failed');
+  if (error) throw fromDatabaseError(error, 'conference.call_failed');
   if (!data) throw new DomainError('That call is not here.', 'conference.no_call');
   if (!data.conference_name) {
     throw new DomainError('This call has no room to change.', 'conference.no_room');
@@ -118,7 +118,7 @@ function requireLive(context: CallContext): void {
 async function carrier(db: Db, organizationId: string): Promise<TelephonyProvider> {
   const provider = await telephonyProvider(await actingTelephonyAccount(db, organizationId));
   if (!provider) {
-    throw new DomainError('This deployment cannot place calls yet.', 'conference.telephony_unconfigured');
+    throw new DomainError('Calling from GildOps isn’t available yet.', 'conference.telephony_unconfigured');
   }
   return provider;
 }
@@ -173,7 +173,7 @@ export async function addCallParticipant(
   const reportTo = callbackBase();
   const provider = await carrier(db, input.organizationId);
   if (!reportTo) {
-    throw new DomainError('This deployment cannot place calls yet.', 'conference.telephony_unconfigured');
+    throw new DomainError('Calling from GildOps isn’t available yet.', 'conference.telephony_unconfigured');
   }
 
   const context = await callContext(db, input);

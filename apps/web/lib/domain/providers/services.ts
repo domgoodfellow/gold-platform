@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * The provider-service catalogue — one capability a Provider exposes. `platform_providers`
@@ -130,7 +130,7 @@ export async function listProviderServices(db: Db): Promise<ProviderService[]> {
     .select(COLUMNS)
     .order('provider_key')
     .order('display_order');
-  if (error) throw new DomainError(error.message, 'providers.services_list_failed');
+  if (error) throw fromDatabaseError(error, 'providers.services_list_failed');
   return (data as unknown as Row[]).map(fromRow);
 }
 
@@ -140,14 +140,14 @@ export async function listProviderServicesFor(db: Db, providerKey: string): Prom
     .select(COLUMNS)
     .eq('provider_key', providerKey)
     .order('display_order');
-  if (error) throw new DomainError(error.message, 'providers.services_list_failed');
+  if (error) throw fromDatabaseError(error, 'providers.services_list_failed');
   return (data as unknown as Row[]).map(fromRow);
 }
 
 function forbidden(error: { code?: string; message: string }, code: string): DomainError {
-  if (error.code === '42501') return new DomainError('Only platform staff can edit the provider-service catalogue.', 'providers.forbidden');
-  if (error.code === '23503') return new DomainError('No such provider, service or feature.', 'providers.not_found');
-  return new DomainError(error.message, code);
+  if (error.code === '42501') return new DomainError('Only platform staff can edit the vendor services list.', 'providers.forbidden');
+  if (error.code === '23503') return new DomainError('No such vendor, service or feature.', 'providers.not_found');
+  return fromDatabaseError(error, code);
 }
 
 export async function upsertProviderService(db: Db, input: ProviderServiceInput): Promise<string> {

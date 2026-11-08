@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * The canonical customer-facing catalogue: Product -> Module -> Feature.
@@ -165,7 +165,7 @@ export async function listCatalogProducts(db: Db): Promise<CatalogProduct[]> {
     .from('platform_catalog_products')
     .select(PRODUCT_COLUMNS)
     .order('display_order');
-  if (error) throw new DomainError(error.message, 'catalogue.products_failed');
+  if (error) throw fromDatabaseError(error, 'catalogue.products_failed');
   return (data ?? []).map(toProduct);
 }
 
@@ -175,7 +175,7 @@ export async function getCatalogProduct(db: Db, key: string): Promise<CatalogPro
     .select(PRODUCT_COLUMNS)
     .eq('key', key)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'catalogue.product_failed');
+  if (error) throw fromDatabaseError(error, 'catalogue.product_failed');
   return data ? toProduct(data) : null;
 }
 
@@ -183,7 +183,7 @@ export async function listCatalogModules(db: Db, input: { productId?: string } =
   let query = db.from('platform_catalog_modules').select(MODULE_COLUMNS).order('display_order');
   if (input.productId) query = query.eq('product_id', input.productId);
   const { data, error } = await query;
-  if (error) throw new DomainError(error.message, 'catalogue.modules_failed');
+  if (error) throw fromDatabaseError(error, 'catalogue.modules_failed');
   return (data ?? []).map(toModule);
 }
 
@@ -193,7 +193,7 @@ export async function getCatalogModule(db: Db, moduleId: string): Promise<Catalo
     .select(MODULE_COLUMNS)
     .eq('id', moduleId)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'catalogue.module_failed');
+  if (error) throw fromDatabaseError(error, 'catalogue.module_failed');
   return data ? toModule(data) : null;
 }
 
@@ -201,7 +201,7 @@ export async function listCatalogFeatures(db: Db, input: { moduleId?: string } =
   let query = db.from('platform_catalog_features').select(FEATURE_COLUMNS).order('display_order');
   if (input.moduleId) query = query.eq('module_id', input.moduleId);
   const { data, error } = await query;
-  if (error) throw new DomainError(error.message, 'catalogue.features_failed');
+  if (error) throw fromDatabaseError(error, 'catalogue.features_failed');
   return (data ?? []).map(toFeature);
 }
 
@@ -211,7 +211,7 @@ export async function getCatalogFeature(db: Db, featureId: string): Promise<Cata
     .select(FEATURE_COLUMNS)
     .eq('id', featureId)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'catalogue.feature_failed');
+  if (error) throw fromDatabaseError(error, 'catalogue.feature_failed');
   return data ? toFeature(data) : null;
 }
 
@@ -222,7 +222,7 @@ export async function listRuntimeMappings(db: Db, featureId?: string): Promise<R
     .order('mapping_kind');
   if (featureId) query = query.eq('feature_id', featureId);
   const { data, error } = await query;
-  if (error) throw new DomainError(error.message, 'catalogue.runtime_mappings_failed');
+  if (error) throw fromDatabaseError(error, 'catalogue.runtime_mappings_failed');
   return (data ?? []).map((row) => ({
     id: row.id,
     featureId: row.feature_id,
@@ -242,7 +242,7 @@ export async function listFeaturesByRuntimeMapping(
     .select(`feature:platform_catalog_features!inner(${FEATURE_COLUMNS})`)
     .eq('mapping_kind', input.mappingKind)
     .eq('mapping_value', input.mappingValue);
-  if (error) throw new DomainError(error.message, 'catalogue.features_by_mapping_failed');
+  if (error) throw fromDatabaseError(error, 'catalogue.features_by_mapping_failed');
   return (data ?? []).flatMap((row) => {
     const feature = row.feature as unknown as Parameters<typeof toFeature>[0] | null;
     return feature ? [toFeature(feature)] : [];
@@ -255,7 +255,7 @@ export async function listFeatureDependencies(db: Db, featureId?: string): Promi
     .select('feature_id, requires_feature_id');
   if (featureId) query = query.eq('feature_id', featureId);
   const { data, error } = await query;
-  if (error) throw new DomainError(error.message, 'catalogue.dependencies_failed');
+  if (error) throw fromDatabaseError(error, 'catalogue.dependencies_failed');
   return (data ?? []).map((row) => ({ featureId: row.feature_id, requiresFeatureId: row.requires_feature_id }));
 }
 

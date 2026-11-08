@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import {
   runReportDefinition,
@@ -64,7 +64,7 @@ export async function listDashboards(
     .order('name', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'dashboards.list_failed');
+    throw fromDatabaseError(error, 'dashboards.list_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -98,7 +98,7 @@ export async function createDashboard(
         'dashboards.name_taken',
       );
     }
-    throw new DomainError(error.message, 'dashboards.create_failed');
+    throw fromDatabaseError(error, 'dashboards.create_failed');
   }
 
   return data.id;
@@ -110,7 +110,7 @@ export async function deleteDashboard(db: Db, input: { id: string }): Promise<vo
   const { error } = await db.from('dashboards').delete().eq('id', input.id);
 
   if (error) {
-    throw new DomainError(error.message, 'dashboards.delete_failed');
+    throw fromDatabaseError(error, 'dashboards.delete_failed');
   }
 }
 
@@ -138,7 +138,7 @@ export async function pinReport(
     if (error.code === '23505') {
       throw new DomainError('That report is already on this dashboard.', 'dashboards.pinned');
     }
-    throw new DomainError(error.message, 'dashboards.pin_failed');
+    throw fromDatabaseError(error, 'dashboards.pin_failed');
   }
 }
 
@@ -156,7 +156,7 @@ export async function unpinReport(
     .eq('report_id', input.reportId);
 
   if (error) {
-    throw new DomainError(error.message, 'dashboards.unpin_failed');
+    throw fromDatabaseError(error, 'dashboards.unpin_failed');
   }
 }
 
@@ -183,7 +183,7 @@ export async function readDashboard(
     .order('position', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'dashboards.read_failed');
+    throw fromDatabaseError(error, 'dashboards.read_failed');
   }
 
   const pinned = (data ?? []).flatMap((row) => {

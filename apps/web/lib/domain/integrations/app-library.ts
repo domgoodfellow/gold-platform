@@ -25,9 +25,9 @@ export function buildAppLibrary(connectors: Connector[], readiness: Map<string, 
       const canConnect = !!ready?.configured && !!ready?.implemented;
       entry = { key: app.connector_key, name: native?.name ?? app.name, description: native?.description ?? app.description,
         icon: app.icon, applications: [], categories: [], workspaces: [], authMethod: native?.authMethod ?? app.auth.type,
-        canConnect, blocker: canConnect ? null : !ready ? 'Connection service is unavailable. Ask your administrator to check API configuration.'
-          : !ready.implemented ? 'This application needs an authentication configuration that this deployment does not support.'
-          : 'Your administrator needs to configure this application before you can authorize it.', actionCount: 0 };
+        canConnect, blocker: canConnect ? null : !ready ? 'Connecting apps isn’t available right now.'
+          : !ready.implemented ? 'Connecting this app isn’t available yet.'
+          : 'Your administrator needs to set up this app before you can connect it.', actionCount: 0 };
       entries.set(entry.key, entry);
     }
     entry.applications.push(app);
@@ -40,7 +40,7 @@ export function buildAppLibrary(connectors: Connector[], readiness: Map<string, 
     if (entries.has(connector.key) || connector.connectionMethod === 'mcp' || !ready?.implemented) continue;
     entries.set(connector.key, { key: connector.key, name: connector.name, description: connector.description, icon: null,
       applications: [], categories: [connector.category], workspaces: [], authMethod: connector.authMethod,
-      canConnect: ready.configured, blocker: ready.configured ? null : 'Your administrator needs to configure this application.', actionCount: 0 });
+      canConnect: ready.configured, blocker: ready.configured ? null : 'Your administrator needs to set up this app.', actionCount: 0 });
   }
   return [...entries.values()].sort((a,b) => a.name.localeCompare(b.name));
 }

@@ -74,7 +74,7 @@ describe('Work configuration layout', () => {
     render(<WorkConfiguration {...props({ mayConfigure: false })} />);
     expect(screen.queryByRole('button', { name: 'New type' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Rename' })).toBeNull();
-    expect(screen.getByText(/can view this configuration but not change it/)).toBeTruthy();
+    expect(screen.getByText(/View only/)).toBeTruthy();
   });
 
   it('shows Requirements only for scheduled work, and treats the earlier ?tab=types as General', () => {

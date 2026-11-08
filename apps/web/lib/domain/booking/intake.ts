@@ -1,7 +1,7 @@
 import { FormDefinitionSchema, FormPublicationSchema, type FormDefinition, type FormPublication } from '@gold/schemas';
 import type { Db } from '@/lib/db/types';
 import { listForms } from '@/lib/domain/forms/forms';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * A booking's own questions. Booking owns the booking — service, slot, resources, price, status;
@@ -16,7 +16,7 @@ import { DomainError } from '@/lib/domain/errors';
 /** What a visitor is asked for one bookable type: the published revision, or null when it asks nothing. */
 export async function bookingIntake(db: Db, input: { typeId: string }): Promise<FormPublication | null> {
   const { data, error } = await db.rpc('booking_intake_available', { p_type_id: input.typeId });
-  if (error) throw new DomainError(error.message, 'booking.intake_failed');
+  if (error) throw fromDatabaseError(error, 'booking.intake_failed');
   return data ? FormPublicationSchema.parse(data) : null;
 }
 
@@ -45,7 +45,7 @@ export async function setTypeBookingIntake(db: Db, input: { typeId: string; form
       throw new DomainError('Publish this kind of work for booking before it asks questions.', 'booking.intake_needs_booking');
     }
     if (error.code === '42501') throw new DomainError('You cannot change what this booking asks.', 'booking.intake_forbidden');
-    throw new DomainError(error.message, 'booking.intake_config_failed');
+    throw fromDatabaseError(error, 'booking.intake_config_failed');
   }
 }
 
@@ -65,7 +65,7 @@ export async function workItemIntake(db: Db, input: { organizationId: string; wo
   const { data, error } = await db.rpc('work_item_intake', { p_organization_id: input.organizationId, p_work_item_id: input.workItemId });
   if (error) {
     if (error.code === '42501') return null;
-    throw new DomainError(error.message, 'booking.intake_read_failed');
+    throw fromDatabaseError(error, 'booking.intake_read_failed');
   }
   if (!data) return null;
   const raw = data as unknown as BookingIntakeResponse;

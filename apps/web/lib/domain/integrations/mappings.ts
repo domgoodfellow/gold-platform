@@ -1,6 +1,6 @@
 import { CONTACT_LIFECYCLES, LEAD_TEMPERATURES } from '@/lib/domain/customers/classification';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import {
   parseCustom,
@@ -75,7 +75,7 @@ export async function listMappings(
     .order('created_at', { ascending: false });
 
   if (error) {
-    throw new DomainError(error.message, 'integrations.mappings_list_failed');
+    throw fromDatabaseError(error, 'integrations.mappings_list_failed');
   }
 
   return (data ?? []).map(toMapping);
@@ -93,7 +93,7 @@ export async function getMapping(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'integrations.mapping_get_failed');
+    throw fromDatabaseError(error, 'integrations.mapping_get_failed');
   }
   return data ? toMapping(data) : null;
 }
@@ -148,7 +148,7 @@ export async function createMapping(
     if (error.code === '42501') {
       throw new DomainError('You cannot create mappings here.', 'integrations.forbidden');
     }
-    throw new DomainError(error.message, 'integrations.mapping_create_failed');
+    throw fromDatabaseError(error, 'integrations.mapping_create_failed');
   }
 
   return data;

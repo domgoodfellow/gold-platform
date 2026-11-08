@@ -79,7 +79,7 @@ export function SourceRecordPreview({ record }: { record: SourceRecord }) {
         <p className="mt-2 text-sm text-muted">This record has no details to show.</p>
       )}
       <details className="mt-3">
-        <summary className="min-h-11 cursor-pointer content-center text-sm text-muted">View raw metadata</summary>
+        <summary className="min-h-11 cursor-pointer content-center text-sm text-muted">View all details</summary>
         <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify(record.metadata, null, 2)}</pre>
       </details>
     </details>

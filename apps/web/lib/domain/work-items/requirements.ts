@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { maximumMatching } from '@/lib/domain/matching';
 import { listResources, type Resource } from '@/lib/domain/resources/resources';
 import { isResourceClass, type ResourceClass } from '@/lib/domain/resources/resource-class';
@@ -77,7 +77,7 @@ export async function listResourceRequirements(
   if (input.typeId) query = query.eq('type_id', input.typeId);
 
   const { data, error } = await query;
-  if (error) throw new DomainError(error.message, 'resource_requirements.list_failed');
+  if (error) throw fromDatabaseError(error, 'resource_requirements.list_failed');
 
   return (data ?? []).map((row) => toRequirement(row as unknown as RequirementRow));
 }
@@ -106,21 +106,21 @@ function failure(error: { code?: string; message: string }): DomainError {
     );
   }
   if (error.code === 'GD007') {
-    return new DomainError('That capability is archived and cannot be newly required.', 'resource_requirements.capability_archived');
+    return new DomainError('That skill is archived, so it cannot be required.', 'resource_requirements.capability_archived');
   }
   if (error.code === '23503') {
-    return new DomainError('No such capability here.', 'resource_requirements.capability_not_found');
+    return new DomainError('That skill no longer exists.', 'resource_requirements.capability_not_found');
   }
   if (error.code === '23505') {
-    return new DomainError('That capability is already required here.', 'resource_requirements.capability_duplicate');
+    return new DomainError('That skill is already required here.', 'resource_requirements.capability_duplicate');
   }
   if (error.code === '23514') {
     return new DomainError('The number needed is a whole number from 1 to 50.', 'resource_requirements.quantity_invalid');
   }
   if (error.code === '42501') {
-    return new DomainError('You cannot configure what this work needs.', 'resource_requirements.forbidden');
+    return new DomainError('Your role cannot change what this work needs.', 'resource_requirements.forbidden');
   }
-  return new DomainError(error.message, 'resource_requirements.failed');
+  return fromDatabaseError(error, 'resource_requirements.failed');
 }
 
 export async function createResourceRequirement(

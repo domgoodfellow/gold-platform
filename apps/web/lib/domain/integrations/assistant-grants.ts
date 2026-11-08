@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -20,7 +20,7 @@ export async function listGrantedResourceIds(
     .select('resource_id')
     .eq('organization_id', input.organizationId)
     .in('resource_id', [...input.resourceIds]);
-  if (error) throw new DomainError(error.message, 'integrations.grants_list_failed');
+  if (error) throw fromDatabaseError(error, 'integrations.grants_list_failed');
   return new Set((data ?? []).map((row) => row.resource_id));
 }
 
@@ -52,11 +52,11 @@ export async function assistantMayRead(db: Db, input: { organizationId: string; 
     p_organization_id: input.organizationId,
     p_resource_id: input.resourceId,
   });
-  if (error) throw new DomainError(error.message, 'integrations.grant_check_failed');
+  if (error) throw fromDatabaseError(error, 'integrations.grant_check_failed');
   return data === true;
 }
 
 function grantError(error: { code?: string; message: string }): DomainError {
   if (error.code === '42501') return new DomainError('You cannot change what the assistant may read here.', 'integrations.forbidden');
-  return new DomainError(error.message, 'integrations.grant_failed');
+  return fromDatabaseError(error, 'integrations.grant_failed');
 }

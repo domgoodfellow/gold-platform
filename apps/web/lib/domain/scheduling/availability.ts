@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 import {
   listOperatingHours,
   openWindows,
@@ -240,10 +240,10 @@ export async function listSchedule(
   ]);
 
   if (resources.error) {
-    throw new DomainError(resources.error.message, 'availability.resources_failed');
+    throw fromDatabaseError(resources.error, 'availability.resources_failed');
   }
   if (committed.error) {
-    throw new DomainError(committed.error.message, 'availability.committed_failed');
+    throw fromDatabaseError(committed.error, 'availability.committed_failed');
   }
 
   const resourceRows = resources.data ?? [];
@@ -330,10 +330,10 @@ export async function listScheduleDays(
   ]);
 
   if (resources.error) {
-    throw new DomainError(resources.error.message, 'availability.resources_failed');
+    throw fromDatabaseError(resources.error, 'availability.resources_failed');
   }
   if (committed.error) {
-    throw new DomainError(committed.error.message, 'availability.committed_failed');
+    throw fromDatabaseError(committed.error, 'availability.committed_failed');
   }
 
   const resourceRows = resources.data ?? [];

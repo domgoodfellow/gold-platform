@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { counted, type Counted } from '@/lib/domain/counted';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { memberDisplayNames } from '@/lib/domain/tenancy/members';
@@ -22,9 +22,9 @@ export type OpportunityInput = {
 const SELECT = 'id, customer_id, title, stage_id, amount_minor, currency, owner_membership_id, expected_close_on, created_at, next_follow_up_id, next_follow_up_title, next_follow_up_due_at, customer:contacts!opportunities_customer_same_org(name), stage:opportunity_stages!opportunities_stage_same_org(id,name,kind,position), owner:memberships!opportunities_owner_same_org(display_name)';
 
 function failure(error: { message: string }, code: string): never {
-  if (error.message.includes('opportunity_stages_org_terminal')) throw new DomainError('Only one Won stage and one Lost stage may be configured.', 'opportunities.stage_terminal_taken');
+  if (error.message.includes('opportunity_stages_org_terminal')) throw new DomainError('A pipeline has only one Won stage and one Lost stage.', 'opportunities.stage_terminal_taken');
   if (error.message.includes('opportunity_stages_org_name')) throw new DomainError('An opportunity stage with that name already exists.', 'opportunities.stage_name_taken');
-  throw new DomainError(error.message, `opportunities.${code}`);
+  throw fromDatabaseError(error, `opportunities.${code}`);
 }
 type ReadRow = {
   id: string; customer_id: string; title: string; stage_id: string | null; amount_minor: number | null;

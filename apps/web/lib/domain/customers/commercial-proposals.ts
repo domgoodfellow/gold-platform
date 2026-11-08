@@ -1,6 +1,6 @@
 import type { Json } from '@/lib/db/database.types';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 export type CommercialProposalStatus = 'draft' | 'sent' | 'accepted' | 'declined';
 
@@ -143,7 +143,7 @@ async function listLinesFor(db: Db, input: { organizationId: string; proposalId:
     .eq('organization_id', input.organizationId)
     .eq('proposal_id', input.proposalId)
     .order('position');
-  if (error) throw new DomainError(error.message, 'commercial_proposals.lines_failed');
+  if (error) throw fromDatabaseError(error, 'commercial_proposals.lines_failed');
   return (data ?? []).map((row) => ({
     position: row.position,
     priceBookItemId: row.price_book_item_id,
@@ -168,7 +168,7 @@ async function listAddonsFor(db: Db, input: { organizationId: string; proposalId
     .select('addon_plan_id, label, price_minor')
     .eq('organization_id', input.organizationId)
     .eq('proposal_id', input.proposalId);
-  if (error) throw new DomainError(error.message, 'commercial_proposals.addons_failed');
+  if (error) throw fromDatabaseError(error, 'commercial_proposals.addons_failed');
   return (data ?? []).map((row) => ({ addonPlanId: row.addon_plan_id, label: row.label, priceMinor: Number(row.price_minor) }));
 }
 
@@ -183,7 +183,7 @@ export async function listCommercialProposals(
     .eq('organization_id', input.organizationId)
     .eq('customer_id', input.customerId)
     .order('version', { ascending: false });
-  if (error) throw new DomainError(error.message, 'commercial_proposals.list_failed');
+  if (error) throw fromDatabaseError(error, 'commercial_proposals.list_failed');
 
   const rows = (data ?? []) as ProposalRow[];
   return Promise.all(rows.map((row) => hydrate(db, row)));
@@ -200,7 +200,7 @@ export async function getCommercialProposal(
     .eq('organization_id', input.organizationId)
     .eq('id', input.proposalId)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'commercial_proposals.get_failed');
+  if (error) throw fromDatabaseError(error, 'commercial_proposals.get_failed');
   if (!data) return null;
   return hydrate(db, data as ProposalRow);
 }
@@ -216,7 +216,7 @@ export async function listCommercialProposalsForExternalCustomer(db: Db): Promis
     .from('customer_commercial_proposals')
     .select(PROPOSAL_COLUMNS)
     .order('version', { ascending: false });
-  if (error) throw new DomainError(error.message, 'commercial_proposals.list_failed');
+  if (error) throw fromDatabaseError(error, 'commercial_proposals.list_failed');
 
   const rows = (data ?? []) as ProposalRow[];
   return Promise.all(rows.map((row) => hydrate(db, row)));
@@ -253,7 +253,7 @@ export async function buildCatalogProposal(
   if (error) {
     const refusal = BUILD_REFUSALS[error.code ?? ''];
     if (refusal) throw new DomainError(refusal[0], refusal[1]);
-    throw new DomainError(error.message, 'commercial_proposals.create_failed');
+    throw fromDatabaseError(error, 'commercial_proposals.create_failed');
   }
   const proposal = await getCommercialProposal(db, { organizationId: input.organizationId, proposalId: data as string });
   if (!proposal) throw new DomainError('The proposal was built but could not be read back.', 'commercial_proposals.create_failed');
@@ -268,7 +268,7 @@ export async function markCommercialProposalSent(db: Db, input: { organizationId
     .eq('organization_id', input.organizationId)
     .eq('id', input.proposalId)
     .eq('status', 'draft');
-  if (error) throw new DomainError(error.message, 'commercial_proposals.send_failed');
+  if (error) throw fromDatabaseError(error, 'commercial_proposals.send_failed');
 }
 
 /**
@@ -284,7 +284,7 @@ export async function acceptCommercialProposal(db: Db, input: { proposalId: stri
     if (error.code === '42501') {
       throw new DomainError('This proposal is not open for a response.', 'commercial_proposals.accept_forbidden');
     }
-    throw new DomainError(error.message, 'commercial_proposals.accept_failed');
+    throw fromDatabaseError(error, 'commercial_proposals.accept_failed');
   }
 }
 
@@ -295,6 +295,6 @@ export async function declineCommercialProposal(db: Db, input: { proposalId: str
     if (error.code === '42501') {
       throw new DomainError('This proposal is not open for a response.', 'commercial_proposals.decline_forbidden');
     }
-    throw new DomainError(error.message, 'commercial_proposals.decline_failed');
+    throw fromDatabaseError(error, 'commercial_proposals.decline_failed');
   }
 }

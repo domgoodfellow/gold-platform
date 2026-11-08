@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { requireOrganization } from '@/lib/route/organization';
 import { endClientTenantRelationship, linkExistingTenant, listExistingTenantOptions } from '@/lib/domain/customers/client-tenants';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { isPlatformStaff } from '@/lib/domain/platform/tenants';
 import { getContact } from '@/lib/domain/contacts/contacts';
 import { notificationConfiguration, notificationHistory } from '@/lib/domain/customers/service-notifications';
@@ -42,7 +42,7 @@ export async function engagementAction(_previous: ServiceActionState, form: Form
         await transitionServiceEngagement(db, organizationId, engagementId, status);
       } else if (operation === 'attach') {
         const [kind, artifactId] = String(form.get('artifact') ?? '').split(':');
-        if (!Object.hasOwn(ARTIFACT_KINDS, kind)) throw new DomainError('Choose a supported artifact.', 'engagement.invalid_kind');
+        if (!Object.hasOwn(ARTIFACT_KINDS, kind)) throw new DomainError('Choose something to link.', 'engagement.invalid_kind');
         await attachEngagementDeliverable(db, organizationId, engagementId, kind as ArtifactKind, artifactId);
       } else if (operation === 'work') {
         await attachEngagementWork(db, organizationId, engagementId, String(form.get('workItemId') ?? ''));
@@ -67,7 +67,7 @@ export async function readEngagementDetails(organizationId: string, customerId: 
     listDeliverableOptions(db, organizationId, engagementId, search),
     db.from('engagement_work_items').select('work_item_id').eq('organization_id', organizationId).eq('engagement_id', engagementId),
   ]);
-  if (work.error) throw new DomainError(work.error.message, 'engagement.work_failed');
+  if (work.error) throw fromDatabaseError(work.error, 'engagement.work_failed');
   const updates = await disclosureEditorState(db, organizationId, customerId, engagementId);
   const reviews = organization.capabilities.includes('customer.update') ? await listServiceReviews(db, organizationId, customerId, engagementId) : [];
   const customer = await getContact(db, { organizationId, customerId });

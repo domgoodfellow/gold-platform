@@ -7,21 +7,85 @@
 //   subtitle          a muted sentence immediately after a heading, or first inside a titled OperationalPanel
 //   nav-description   a NavigationList item whose description is a written sentence
 //   info-icon         an info or help icon drawn inside a list's .map(), i.e. one per row
+//   word              a banned word (docs/ui-system.md → Words we use) in text a person reads
 //
-// Public surfaces follow docs/public-web.md and are excluded by path. Cases the rules keep are
-// excluded by structure, not by comment: status and alert messages, permission blockers, short
-// factual metadata, empty-state text, and error and not-found pages. A justified exception carries
-// `ui-copy-allow: <reason>` on the line above it; keep those rare.
+// Public surfaces follow docs/public-web.md and are excluded by path from the layout rules above.
+// Cases the rules keep are excluded by structure, not by comment: status and alert messages,
+// permission blockers, short factual metadata, empty-state text, and error and not-found pages.
+//
+// The word rule reads every product surface, public ones included, plus lib/ and the error,
+// not-found and loading pages. It parses each file with TypeScript and reads JSX text (fragments
+// too), the literal parts of strings with {…}, visible props (title, label, placeholder,
+// aria-label, tooltip, content, description and the like), messages passed to error constructors
+// and toasts, and any other string that reads as prose. Keys, codes, class names and query text
+// are not read. Deferred areas are listed in WORD_EXEMPT with a reason.
+//
+// A justified exception carries `ui-copy-allow: <reason>` on the line above it; keep those rare.
 //
 // Usage:
 //   node scripts/check-ui-copy.mjs            report findings, grouped by workspace (exit 0)
 //   node scripts/check-ui-copy.mjs --strict   exit 1 when anything is found
 //   node scripts/check-ui-copy.mjs --json     findings as JSON
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join, relative, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// TypeScript is a dependency of the web app, not of the repository root.
+const ts = createRequire(new URL('../apps/web/package.json', import.meta.url))('typescript');
+
 export const SCOPES = ['apps/web/app', 'apps/web/features', 'apps/web/components', 'packages/ui/src'];
+export const WORD_SCOPES = [...SCOPES, 'apps/web/lib'];
+
+// Banned words (docs/ui-system.md → Words we use), whole words, any case.
+export const BANNED_WORDS = [
+  'configuration', 'configurations', 'configured', 'configure', 'configuring', 'configurable', 'reconfigure',
+  'deployment', 'deployments', 'installation', 'installations',
+  'provider', 'providers', 'capability', 'capabilities',
+  'module', 'modules', 'entitlement', 'entitlements', 'entitled',
+  'preset', 'presets', 'tenant', 'tenants',
+  'canonical', 'runtime', 'runtimes', 'schema', 'schemas', 'diagnostic', 'diagnostics',
+  'prerequisite', 'prerequisites', 'advisory', 'metadata', 'artifact', 'artifacts', 'payload', 'payloads', 'slice', 'slices',
+  'constraint', 'constraints',
+];
+const BANNED = new RegExp(`\\b(${BANNED_WORDS.join('|')})\\b`, 'i');
+// Phrases: "status" or "state" for work is a stage; maths ranges; GOLD is the old name (case-sensitive).
+const BANNED_PHRASES = [/\bwork (item )?(status|statuses|state)\b/i, /\b(end|start) (exclusive|inclusive)\b/i, /\bGOLD\b/];
+
+// Deferred areas the word rule does not read yet (Work Order 4). Nothing else is exempt.
+export const WORD_EXEMPT = [
+  // AI and Agent workspace: audit rows 73–77, deferred to the AI wording work order.
+  [/^apps\/web\/features\/ai\/workbench\.tsx$/, 'AI workspace, deferred (audit rows 73–75)'],
+  [/^apps\/web\/features\/ai\/workspace\.tsx$/, 'AI workspace, deferred (audit rows 73, 75)'],
+  [/^apps\/web\/lib\/domain\/ai\/agents\.ts$/, 'Agent domain messages, deferred (audit row 76)'],
+  [/^apps\/web\/features\/agent\/agent-shared\.tsx$/, 'Agent panel, deferred (audit row 77)'],
+  [/^apps\/web\/lib\/domain\/assistant\/questions\.ts$/, 'Agent questions, deferred (audit row 77)'],
+  // Platform-only screens, audit rows 92–100: seen by GildOps platform staff only, deferred.
+  [/^apps\/web\/features\/platform\/catalog\/family-forms\.tsx$/, 'Platform catalogue, deferred (audit rows 92–93)'],
+  [/^apps\/web\/app\/platform\/catalog\/(page|modules\/page|products\/page)\.tsx$/, 'Platform catalogue, deferred (audit row 93)'],
+  [/^apps\/web\/app\/platform\/billing\/page\.tsx$/, 'Platform billing, deferred (audit row 94)'],
+  [/^apps\/web\/app\/platform\/ai-runtime\/page\.tsx$/, 'Platform AI runtime, deferred (audit row 95)'],
+  [/^apps\/web\/features\/platform\/ai-runtime\/runtime-assignment-(form|row)\.tsx$/, 'Platform AI runtime, deferred (audit row 95)'],
+  [/^apps\/web\/app\/platform\/integrations\/page\.tsx$/, 'Platform integrations, deferred (audit row 96)'],
+  [/^apps\/web\/app\/platform\/pricing\/page\.tsx$/, 'Platform pricing, deferred (audit row 97)'],
+  [/^apps\/web\/features\/platform\/plans\/plan-forms\.tsx$/, 'Platform plans, deferred (audit row 97)'],
+  [/^apps\/web\/features\/platform\/commercial\/(package-simulator|usage-event-drawer)\.tsx$/, 'Platform commercial, deferred (audit rows 97–98)'],
+  [/^apps\/web\/app\/platform\/(usage|vendor-rates)\/page\.tsx$/, 'Platform usage and rates, deferred (audit row 98)'],
+  [/^apps\/web\/features\/platform\/organizations\/organization-commercial-screen\.tsx$/, 'Platform commercial, deferred (audit row 98)'],
+  [/^apps\/web\/lib\/domain\/providers\/(status|twilio-provisioning)\.ts$/, 'Platform providers, deferred (audit row 99)'],
+  [/^apps\/web\/features\/platform\/providers\/twilio-provider-screen\.tsx$/, 'Platform providers, deferred (audit row 99)'],
+  [/^apps\/web\/lib\/domain\/platform-billing\/reconciliation\.ts$/, 'Platform billing reconciliation, deferred (audit row 100)'],
+];
+
+// Not product text at all: tests, generated types, development-only pages.
+const WORD_EXCLUDED_PATHS = [
+  /\/node_modules\//, /\/tests?\//, /\/e2e\//, /\.(test|spec)\.tsx?$/, /\.d\.ts$/,
+  /^apps\/web\/lib\/db\/(database\.)?types\.ts$/, /^apps\/web\/lib\/testing\//,
+  /^apps\/web\/app\/dev\//, /^apps\/web\/features\/appearance\/design-gallery\.tsx$/,
+  /^apps\/web\/lib\/catalogue-surface-coverage\.ts$/, // an internal build-coverage register read only by tests
+];
+
+export const wordExempt = (rel) => WORD_EXEMPT.find(([re]) => re.test(rel))?.[1] ?? null;
 
 // Not operator surfaces, or not product UI at all.
 export const EXCLUDED_PATHS = [
@@ -231,19 +295,139 @@ export function scanSource(src, rel) {
   return findings;
 }
 
-function walk(root, dir, out) {
+// ---- word rule ---------------------------------------------------------------------------------
+
+// JSX props a person reads.
+const VISIBLE_PROP = /^(title|label|placeholder|aria-label|aria-description|aria-valuetext|alt|tooltip|content|description|hint|helper|helperText|message|heading|subtitle|summary|caption|emptyMessage|empty|confirm|cta|[a-z][A-Za-z]*(Label|Title|Text|Message|Description|Hint|Placeholder|Heading|Tooltip|Caption|Summary))$/;
+// Object keys whose string is shown, or sent to a person (server action results, emails).
+const VISIBLE_KEY = /^(title|label|placeholder|tooltip|content|description|definition|hint|helper|message|heading|subtitle|summary|caption|error|reason|detail|note|blocker|subject|text|html|body|preheader|intro|outro|cta|empty|state|status|value|[a-z][A-Za-z]*(Label|Title|Text|Message|Description|Hint|Placeholder|Heading|Tooltip|Caption|Summary|Reason|Detail|Error))$/;
+// Object keys that hold codes, routes, classes or query text.
+const CODE_KEY = /^(id|key|keys|kind|type|code|codes|segment|path|href|route|url|src|icon|variant|tone|className|class|select|table|column|columns|order|rpc|channel|digest|sql|query|pattern|method|accept|testId|dataKey)$/;
+// Calls whose string arguments are never read by a person.
+const CODE_CALL = /^(cn|clsx|cva|twMerge|from|rpc|select|eq|neq|in|is|not|order|match|filter|or|like|ilike|contains|containedBy|gt|gte|lt|lte|range|limit|single|maybeSingle|channel|on|upload|remove|download|createSignedUrl|getPublicUrl|get|set|has|delete|getAll|append|startsWith|endsWith|includes|indexOf|replace|replaceAll|split|join|test|exec|padStart|padEnd|localeCompare|redirect|permanentRedirect|revalidatePath|revalidateTag|notFound|encodeURIComponent|decodeURIComponent|fetch|require|import|RegExp|Symbol|describe|it|test|expect|addEventListener|removeEventListener|querySelector|querySelectorAll|getElementById|setAttribute|getAttribute|createElement|log|warn|info|debug|error|trace|parse|stringify|DateTimeFormat|NumberFormat|toLocaleString|toLocaleDateString|toLocaleTimeString|useSearchParams|header|cookies|headers|requireEnv|env|assertNever|invariant|areaHref|workspaceHref|href|route|path|pathFor|z|enum|literal|object|string|matchMedia|track|emit|dispatchEvent|CustomEvent|Event|postMessage|digest|createHash|update|randomUUID|sql)$/;
+
+const isKeyLike = (text) => !/\s/.test(text.trim()) && (/^[a-z0-9_$#@./:=\-]/.test(text.trim()) || /[._/:=#@]/.test(text) || /^[A-Z0-9_]+$/.test(text.trim()));
+// Class lists ("flex items-center gap-2"), query text ("id, name") and code are not prose.
+const looksLikeCode = (t) => {
+  const tokens = t.split(/\s+/).filter(Boolean);
+  if (tokens.every((x) => /^[a-z0-9:\-[\]/.%!#()&>~*+_]+$/.test(x)) && tokens.some((x) => /[-:[]/.test(x))) return true;
+  return /=>|\(\)|\s===?\s|<\/?[a-z]|^\s*(select|insert|update|delete|with)\s/i.test(t);
+};
+const isProse = (text) => {
+  const t = text.trim();
+  if (!/\s/.test(t)) return /^[A-Z][a-z]+$/.test(t); // a single capitalised word is a label
+  if (looksLikeCode(t)) return false;
+  return /^[A-Z]/.test(t) || /[.?!]$/.test(t) || /[A-Za-z]{2,} [A-Za-z]{2,}/.test(t);
+};
+
+function calleeName(expr) {
+  if (ts.isIdentifier(expr)) return expr.text;
+  if (ts.isPropertyAccessExpression(expr)) return expr.name.text;
+  if (ts.isCallExpression(expr)) return calleeName(expr.expression);
+  return '';
+}
+
+function stringText(node) {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
+  if (ts.isTemplateExpression(node)) return node.head.text + node.templateSpans.map((s) => `{}${s.literal.text}`).join('');
+  if (ts.isJsxText(node)) return node.text;
+  return null;
+}
+
+// Whether a person reads this string: 'visible', 'prose' (read if it reads as prose) or null.
+function readership(node) {
+  if (ts.isJsxText(node)) return 'visible';
+  let child = node, parent = node.parent;
+  // Climb through expression glue (and out of `${…}`) to the place the value is used.
+  while (parent && (ts.isParenthesizedExpression(parent) || ts.isConditionalExpression(parent) && parent.condition !== child
+    || ts.isBinaryExpression(parent) && [ts.SyntaxKind.QuestionQuestionToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.PlusToken].includes(parent.operatorToken.kind)
+    || ts.isAsExpression(parent) || ts.isSatisfiesExpression?.(parent) || ts.isTemplateSpan(parent) || ts.isArrayLiteralExpression(parent))) {
+    if (ts.isTemplateSpan(parent)) { child = parent.parent; parent = child.parent; continue; }
+    child = parent; parent = parent.parent;
+  }
+  if (!parent) return 'prose';
+  if (ts.isImportDeclaration(parent) || ts.isExportDeclaration(parent) || ts.isExternalModuleReference(parent) || ts.isLiteralTypeNode(parent) || ts.isImportTypeNode?.(parent)) return null;
+  if (ts.isCaseClause(parent) || ts.isElementAccessExpression(parent)) return null;
+  if (ts.isPropertyAccessExpression(parent)) return 'prose'; // [...].map(...), 'text'.trim()
+  if (ts.isBinaryExpression(parent)) return null; // comparisons, `in`, assignments to keys
+  if (ts.isPropertyAssignment(parent)) {
+    if (parent.name === child) return null;
+    const key = parent.name.getText().replace(/^['"]|['"]$/g, '');
+    if (VISIBLE_KEY.test(key)) return 'visible';
+    if (CODE_KEY.test(key)) return null;
+    return 'prose';
+  }
+  if (ts.isJsxExpression(parent)) {
+    const holder = parent.parent;
+    if (ts.isJsxAttribute(holder)) return VISIBLE_PROP.test(holder.name.getText()) ? 'visible' : null;
+    return 'visible'; // a child expression
+  }
+  if (ts.isJsxAttribute(parent)) return VISIBLE_PROP.test(parent.name.getText()) ? 'visible' : null;
+  if (ts.isNewExpression(parent)) {
+    const name = calleeName(parent.expression);
+    if (/Error$/.test(name) && parent.arguments?.[0] === child) return 'visible';
+    return /^(URL|RegExp|Date|Map|Set|Intl)/.test(name) ? null : 'prose';
+  }
+  if (ts.isCallExpression(parent)) {
+    if (parent.expression === child) return null;
+    const name = calleeName(parent.expression);
+    const target = ts.isPropertyAccessExpression(parent.expression) ? parent.expression.expression.getText() : '';
+    if (name === 'toast' || target === 'toast') return 'visible';
+    if (target === 'console' || target === 'process.env' || target === 'JSON' || target === 'Object' || target === 'z') return null;
+    // The first argument of these calls is a key, a column or a class; later ones may be text
+    // (`outstanding.set('drafting', 'This deployment cannot…')`).
+    if (CODE_CALL.test(name) && parent.arguments[0] === child) return null;
+    return 'prose';
+  }
+  if (ts.isEnumMember(parent) || ts.isComputedPropertyName(parent) || ts.isTypeReferenceNode(parent) || ts.isIndexedAccessTypeNode(parent)) return null;
+  if (ts.isTaggedTemplateExpression(parent)) return null;
+  return 'prose';
+}
+
+export function scanWords(src, rel) {
+  if (wordExempt(rel)) return [];
+  const file = ts.createSourceFile(rel, src, ts.ScriptTarget.Latest, true, rel.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  const lines = src.split('\n');
+  const findings = [];
+  const visit = (node) => {
+    const text = stringText(node);
+    if (text !== null && /[A-Za-z]/.test(text)) {
+      const reader = readership(node);
+      const read = reader === 'visible' ? !isKeyLike(text) : reader === 'prose' ? isProse(text) : false;
+      if (read) {
+        const hit = BANNED.exec(text)?.[1] ?? BANNED_PHRASES.map((re) => re.exec(text)?.[0]).find(Boolean);
+        if (hit) {
+          const start = node.getStart(file);
+          const offset = Math.max(0, text.indexOf(hit));
+          const line = file.getLineAndCharacterOfPosition(ts.isJsxText(node) ? node.pos + node.getFullText(file).indexOf(hit) : start).line + 1;
+          if (!/ui-copy-allow:\s*\S/.test(lines[line - 2] ?? '') && !/ui-copy-allow:\s*\S/.test(lines[file.getLineAndCharacterOfPosition(start).line - 1] ?? '')) {
+            findings.push({ rule: 'word', file: rel, line, detail: `"${hit}" in "${text.replace(/\s+/g, ' ').trim().slice(Math.max(0, offset - 30), offset + 50)}"` });
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return findings;
+}
+
+function walk(root, dir, out, { words = false } = {}) {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
     const rel = relative(root, p).replace(/\\/g, '/');
-    if (statSync(p).isDirectory()) { if (!/node_modules|\.next/.test(name)) walk(root, p, out); }
-    else if (p.endsWith('.tsx') && !isExcluded(rel)) out.push(rel);
+    if (statSync(p).isDirectory()) { if (!/node_modules|\.next/.test(name)) walk(root, p, out, { words }); }
+    else if (words ? /\.tsx?$/.test(p) && !WORD_EXCLUDED_PATHS.some((re) => re.test(rel)) : p.endsWith('.tsx') && !isExcluded(rel)) out.push(rel);
   }
   return out;
 }
 
 export function scan(root) {
   const files = SCOPES.flatMap((scope) => walk(root, join(root, scope), []));
-  return files.flatMap((rel) => scanSource(readFileSync(join(root, rel), 'utf8'), rel));
+  const layout = files.flatMap((rel) => scanSource(readFileSync(join(root, rel), 'utf8'), rel));
+  const wordFiles = WORD_SCOPES.flatMap((scope) => walk(root, join(root, scope), [], { words: true }));
+  const words = wordFiles.flatMap((rel) => scanWords(readFileSync(join(root, rel), 'utf8'), rel));
+  return [...layout, ...words];
 }
 
 const WORKSPACES = [

@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * Which Provider Service, Provider Account and model answers one AI capability.
@@ -24,7 +24,7 @@ export const AI_CAPABILITY_LABEL: Record<AiCapability, string> = {
   voice_receptionist: 'Voice receptionist',
   operator_assistant: 'Operator assistant',
   public_assistant: 'Public assistant',
-  configuration_drafting: 'Configuration drafting',
+  configuration_drafting: 'Setup drafting',
 };
 
 export type AiRuntimeAssignment = {
@@ -68,13 +68,13 @@ function fromRow(row: Row): AiRuntimeAssignment {
 /** Staff only: the underlying table has no select grant, so anyone else reads an empty list. */
 export async function listAiRuntimeAssignments(db: Db): Promise<AiRuntimeAssignment[]> {
   const { data, error } = await db.rpc('platform_ai_runtime_assignment_overview');
-  if (error) throw new DomainError(error.message, 'ai_runtime.list_failed');
+  if (error) throw fromDatabaseError(error, 'ai_runtime.list_failed');
   return ((data ?? []) as Row[]).map(fromRow);
 }
 
 function writeError(error: { code?: string; message: string }): DomainError {
-  if (error.code === '42501') return new DomainError('Only platform staff may assign AI runtime.', 'ai_runtime.forbidden');
-  return new DomainError(error.message, 'ai_runtime.write_failed');
+  if (error.code === '42501') return new DomainError('Only platform staff may assign AI answering.', 'ai_runtime.forbidden');
+  return fromDatabaseError(error, 'ai_runtime.write_failed');
 }
 
 /**
@@ -106,6 +106,6 @@ export async function recordAiRuntimeAssignment(
 export type VoiceSessionOperation={id:string;organization_id:string;call_id:string;state:string;reported_seconds:number|null;max_seconds:number;created_at:string;provider_account_label:string};
 export async function voiceSessionOperations(db:Db):Promise<VoiceSessionOperation[]> {
   const {data,error}=await db.rpc('voice_agent_session_overview');
-  if(error)throw new DomainError(error.message,'ai.voice_operations_failed');
+  if(error)throw fromDatabaseError(error, 'ai.voice_operations_failed');
   return data as unknown as VoiceSessionOperation[];
 }

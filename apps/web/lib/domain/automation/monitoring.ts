@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 
 export type AutomationSummary = {
   runs: number;
@@ -26,7 +26,7 @@ export async function presentAutomationRuleIds(
     .select('id')
     .eq('organization_id', input.organizationId)
     .in('id', input.ids);
-  if (error) throw new DomainError(error.message, 'automations.list_failed');
+  if (error) throw fromDatabaseError(error, 'automations.list_failed');
   return (data ?? []).map((row) => row.id);
 }
 
@@ -39,7 +39,7 @@ export async function getAutomationSummary(
     p_since: input.since,
     p_until: input.until,
   });
-  if (error) throw new DomainError(error.message, 'automations.summary_failed');
+  if (error) throw fromDatabaseError(error, 'automations.summary_failed');
   return data as unknown as AutomationSummary;
 }
 
@@ -53,7 +53,7 @@ export async function readAutomationCollection<T>(
   for (let offset = 0; ; offset += 500) {
     const { data, error } = await read(offset, offset + 499);
     if (error)
-      throw new DomainError(error.message, 'automations.collection_failed');
+      throw fromDatabaseError(error, 'automations.collection_failed');
     result.push(...(data ?? []));
     if ((data?.length ?? 0) < 500) return result;
   }

@@ -25,7 +25,7 @@ describe('source record preview', () => {
     expect(screen.getByText('Row 42')).toBeInTheDocument();
     expect(screen.getByText(/Updated 2026-01-02 03:04 UTC/)).toBeInTheDocument();
     expect(screen.getByText('name').nextElementSibling).toHaveTextContent('Alice');
-    expect(screen.getByText('View raw metadata')).toBeInTheDocument();
+    expect(screen.getByText('View all details')).toBeInTheDocument();
     expect(container.querySelector('pre')?.textContent).toBe(JSON.stringify(metadata, null, 2));
     expect(metadata).toEqual({ headers: ['id', 'name'], values: ['42', 'Alice'] });
   });

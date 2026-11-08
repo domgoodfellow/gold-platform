@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import {
   feasibleSlots,
   judgeInterval,
@@ -51,7 +51,7 @@ export async function resolveBookingSlug(db: Db, slug: string): Promise<string |
   const { data, error } = await db.rpc('booking_organization', { p_slug: slug });
 
   if (error) {
-    throw new DomainError(error.message, 'booking.slug_failed');
+    throw fromDatabaseError(error, 'booking.slug_failed');
   }
 
   return (data as string | null) ?? null;
@@ -84,7 +84,7 @@ export async function beginBooking(db: Db, input: { organizationId: string }): P
 
   // 23505 is this visitor already having a binding — the ordinary case on a reload.
   if (error && error.code !== '23505') {
-    throw new DomainError(error.message, 'booking.begin_failed');
+    throw fromDatabaseError(error, 'booking.begin_failed');
   }
 }
 
@@ -102,7 +102,7 @@ export async function listBookableTypes(
     .order('name', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'booking.types_failed');
+    throw fromDatabaseError(error, 'booking.types_failed');
   }
 
   return (data ?? []).flatMap((row) => {
@@ -219,7 +219,7 @@ export async function bookSlot(
     .eq('organization_id', input.organizationId)
     .eq('id', input.typeId)
     .maybeSingle();
-  if (typeError) throw new DomainError(typeError.message, 'booking.failed');
+  if (typeError) throw fromDatabaseError(typeError, 'booking.failed');
   if (!type?.booking_duration_minutes) {
     throw new DomainError('This business is not taking that booking.', 'booking.forbidden');
   }
@@ -328,7 +328,7 @@ export async function bookSlot(
     // An answer the published revision refuses. The browser and the action check first; this is the
     // database's own refusal, and it too leaves no booking behind.
     if (error.code === '23514') {
-      throw new DomainError(error.message, 'booking.intake_invalid');
+      throw fromDatabaseError(error, 'booking.intake_invalid');
     }
     // `create_booking` reasserts what the page offered: the resource must still be eligible for what
     // this kind of work needs, and a type that needs more than one resource cannot be booked here.
@@ -352,7 +352,7 @@ export async function bookSlot(
         'booking.forbidden',
       );
     }
-    throw new DomainError(error.message, 'booking.failed');
+    throw fromDatabaseError(error, 'booking.failed');
   }
 
   return data as string;

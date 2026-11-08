@@ -62,7 +62,7 @@ export async function OrganizationShell({
   const settings = locked ? [] : projectSettingsNav(organizationId, configGate);
   const settingsSearch = locked ? [] : settingsSearchItems(organizationId, settings, [
     ...offeredSections(configGate).flatMap(section => section.entries),
-    ...WORKSPACES.flatMap(workspace => workspaceConfigureItems(organizationId, workspace.key, configGate)).map(section => ({ key: section.key.split('#')[0], title: section.label, description: 'Workspace configuration', path: configTarget(section.key.split('#')[0]).path })),
+    ...WORKSPACES.flatMap(workspace => workspaceConfigureItems(organizationId, workspace.key, configGate)).map(section => ({ key: section.key.split('#')[0], title: section.label, description: 'Workspace settings', path: configTarget(section.key.split('#')[0]).path })),
   ].filter((entry, index, entries) => entries.findIndex(candidate => candidate.path === entry.path) === index));
 
   async function signOutAction() {

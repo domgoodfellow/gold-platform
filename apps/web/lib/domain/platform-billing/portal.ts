@@ -1,6 +1,6 @@
 import { platformBillingProvider } from '@/lib/adapters/platform-billing';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * Opening the billing portal. `begin_platform_billing_portal_session` checks `billing.manage`
@@ -26,7 +26,7 @@ export async function beginPlatformBillingPortalSession(
         'platform_billing.forbidden',
       );
     }
-    throw new DomainError(error.message, 'platform_billing.portal_failed');
+    throw fromDatabaseError(error, 'platform_billing.portal_failed');
   }
 
   // No customer yet — nothing to manage. The screen simply shows no control, the same shape

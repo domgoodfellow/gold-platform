@@ -134,8 +134,8 @@ describe('AI drafting — an accelerator the cockpit does not depend on', () => 
   });
 
   it('says so, and points at the areas, when this installation cannot draft', () => {
-    expect(SETUP_PAGE).toContain('This installation cannot draft a setup.');
-    expect(SETUP_PAGE).toContain('Every area above can still be configured');
+    expect(SETUP_PAGE).toContain('Drafting a setup isn’t available yet.');
+    expect(SETUP_PAGE).toContain('Every area above can still be set up');
   });
 });
 

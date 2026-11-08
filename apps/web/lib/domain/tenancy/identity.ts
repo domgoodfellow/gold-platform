@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { isCountryCode, postalCodeValid } from '@/lib/domain/tenancy/regional-defaults';
 
@@ -44,7 +44,7 @@ export async function getOrganizationIdentity(db: Db, organizationId: string): P
     .eq('organization_id', organizationId)
     .maybeSingle();
 
-  if (error) throw new DomainError(error.message, 'identity.read_failed');
+  if (error) throw fromDatabaseError(error, 'identity.read_failed');
   if (!data) return EMPTY_IDENTITY;
 
   return {
@@ -64,7 +64,7 @@ export async function setBusinessServes(db: Db, input: { organizationId: string;
   const { error } = await db.rpc('set_business_serves', { p_organization_id: input.organizationId, p_serves: input.serves });
   if (error) {
     if (error.code === '42501') throw new DomainError('You cannot change this business’s identity.', 'identity.forbidden');
-    throw new DomainError(error.message, 'identity.update_failed');
+    throw fromDatabaseError(error, 'identity.update_failed');
   }
 }
 
@@ -143,6 +143,6 @@ export async function setOrganizationIdentity(
     if (error.code === '23514') {
       throw new DomainError('One of those values is longer or shorter than this allows.', 'identity.invalid');
     }
-    throw new DomainError(error.message, 'identity.update_failed');
+    throw fromDatabaseError(error, 'identity.update_failed');
   }
 }

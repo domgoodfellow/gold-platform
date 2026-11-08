@@ -22,7 +22,7 @@ export default function HowItWorksPage() {
           You review every step before it goes live.
         </h1>
         <p className="max-w-xl text-lg leading-relaxed text-muted">
-          Nothing in GildOps is switched on for your business without you seeing it configured first.
+          Nothing in GildOps is switched on for your business without you seeing it set up first.
         </p>
       </div>
 

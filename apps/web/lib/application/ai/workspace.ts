@@ -3,7 +3,7 @@ import {
   readAgentResources,
   deploymentReadiness,
 } from "@/lib/domain/ai/agents";
-import { DomainError } from "@/lib/domain/errors";
+import { fromDatabaseError } from "@/lib/domain/errors";
 import { organizationAllowanceStates } from '@/lib/domain/commercial/allowances';
 
 export async function loadAiWorkspace(
@@ -50,7 +50,7 @@ export async function loadAiWorkspace(
   ]);
   for (const result of [summary, entitlement, runs, threads])
     if (result.error)
-      throw new DomainError(result.error.message, "ai.read_failed");
+      throw fromDatabaseError(result.error, "ai.read_failed");
   const entitled = entitlement.data === true;
   const runtimeConfigured = Boolean(process.env.ASSISTANT_API_URL);
   return {

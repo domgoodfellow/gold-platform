@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { invoiceSource, type InvoiceSource, type PaymentRecord } from './invoices';
 import type { Price } from '@/lib/domain/pricing/prices';
 
@@ -66,7 +66,7 @@ export type FinanceSummary = {
 
 export async function readFinanceSummary(db: Db, organizationId: string, from: string, to: string): Promise<FinanceSummary> {
   const { data, error } = await db.rpc('finance_dashboard_summary', { p_organization_id: organizationId, p_from: from, p_to: to });
-  if (error) throw new DomainError(error.message, 'finance.summary_failed');
+  if (error) throw fromDatabaseError(error, 'finance.summary_failed');
   const result = data as unknown as FinanceSummary;
   for (const row of [...result.outstanding, ...result.quoted, ...result.received, ...result.aging, ...result.trend]) safeMinor(row.amount);
   return result;
@@ -84,7 +84,7 @@ const bounds = (f: FinanceFilter) => { const size = Math.min(50, Math.max(1, f.l
 export async function readFinanceActivity(db: Db, organizationId: string, limit = 5) {
   const { data, error } = await db.from('events').select('id,entity_type,entity_id,action,payload,occurred_at').eq('organization_id', organizationId)
     .in('action', ['invoice.issued', 'payment.recorded', 'work_item.line_added', 'work_item.line_removed', 'price_book_item.created', 'price_book_item.updated']).order('occurred_at', { ascending: false }).limit(Math.min(20, Math.max(1, limit)));
-  if (error) throw new DomainError(error.message, 'finance.activity_failed');
+  if (error) throw fromDatabaseError(error, 'finance.activity_failed');
   return data ?? [];
 }
 
@@ -100,7 +100,7 @@ export async function readFinanceInvoices(db: Db, organizationId: string, f: Fin
   if (f.dueTo) query = query.lt('due_at', f.dueTo);
   if (f.q && searchTerm(f.q)) { const q = searchTerm(f.q); query = /^#?\d+$/.test(f.q.trim()) ? query.eq('number', Number(f.q.replace('#', ''))) : query.ilike('billed_to', `%${q}%`); }
   const { data, error, count } = await ordered(query, 'invoices', f.sort, 'id').range(...bounds(f));
-  if (error) throw new DomainError(error.message, 'invoices.list_failed');
+  if (error) throw fromDatabaseError(error, 'invoices.list_failed');
   if (count === null) throw new DomainError('Invoice count unavailable.', 'invoices.count_failed');
   const rows: FinanceInvoiceRow[] = (data ?? []).map(invoiceRow);
   return { rows, total: count ?? 0 };
@@ -117,7 +117,7 @@ function invoiceRow(r: InvoiceRecord): FinanceInvoiceRow {
 export async function readFinanceInvoice(db: Db, organizationId: string, invoiceId: string): Promise<FinanceInvoiceRow | null> {
   if (!/^[0-9a-f-]{36}$/.test(invoiceId)) return null;
   const { data, error } = await db.from('finance_invoice_records').select('*').eq('organization_id', organizationId).eq('id', invoiceId).maybeSingle();
-  if (error) throw new DomainError(error.message, 'invoices.read_failed');
+  if (error) throw fromDatabaseError(error, 'invoices.read_failed');
   return data ? invoiceRow(data) : null;
 }
 
@@ -130,7 +130,7 @@ export async function readFinanceQuotes(db: Db, organizationId: string, f: Finan
   if (f.to) query = query.lt('created_at', f.to);
   if (f.q && searchTerm(f.q)) { const q = searchTerm(f.q); query = query.or(`title.ilike.%${q}%,customer_name.ilike.%${q}%`); }
   const { data, error, count } = await ordered(query, 'quotes', f.sort, 'work_item_id').range(...bounds(f));
-  if (error) throw new DomainError(error.message, 'quotes.list_failed');
+  if (error) throw fromDatabaseError(error, 'quotes.list_failed');
   const rows: FinanceQuoteRow[] = (data ?? []).map(r => ({ workItemId: r.work_item_id!, title: r.title!, status: r.status ?? '', customer: r.customer_id ? { id: r.customer_id, name: r.customer_name ?? 'Customer' } : null,
     createdAt: r.created_at!, lineCount: r.line_count ?? 0, quoted: r.total_minor === null ? null : { totalMinor: safeMinor(r.total_minor), currency: r.currency! }, invoiced: r.invoiced ?? false }));
   return { rows, total: count ?? 0 };
@@ -147,7 +147,7 @@ export async function readFinancePayments(db: Db, organizationId: string, f: Fin
   if (f.source === 'processor') query = query.not('provider', 'is', null);
   if (f.q && searchTerm(f.q)) { const q = searchTerm(f.q); query = /^#?\d+$/.test(f.q.trim()) ? query.eq('invoice_number', Number(f.q.replace('#', ''))) : query.or(`billed_to.ilike.%${q}%,provider_reference.ilike.%${q}%,note.ilike.%${q}%`); }
   const { data, error, count } = await ordered(query, 'payments', f.sort, 'id').range(...bounds(f));
-  if (error) throw new DomainError(error.message, 'payments.list_failed');
+  if (error) throw fromDatabaseError(error, 'payments.list_failed');
   const rows: PaymentRecord[] = (data ?? []).map(r => ({ id: r.id!, invoiceId: r.invoice_id!, invoiceNumber: r.invoice_number!, invoiceSource: invoiceSource(r.invoice_source ?? ''), workItemId: r.work_item_id, billedTo: r.billed_to!, customerId: r.customer_id,
     amountMinor: safeMinor(r.amount_minor!), currency: r.currency!, receivedAt: r.received_at!, provider: r.provider, providerReference: r.provider_reference, note: r.note }));
   return { rows, total: count ?? 0 };

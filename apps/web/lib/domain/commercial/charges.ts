@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * The customer-side charge model (Work Order B, B7/B8). **A charge is an obligation, not an
@@ -83,7 +83,7 @@ export async function listOrganizationCharges(
     .eq('billing_period_start', input.billingPeriodStart)
     .eq('billing_period_end', input.billingPeriodEnd)
     .order('component_type');
-  if (error) throw new DomainError(error.message, 'charges.list_failed');
+  if (error) throw fromDatabaseError(error, 'charges.list_failed');
   return (data ?? []).map(toComponent);
 }
 

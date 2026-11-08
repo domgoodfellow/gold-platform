@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 
 export const BUSINESS_NOUNS = {
   customer: { singular: 'Customer', plural: 'Customers' }, opportunity: { singular: 'Opportunity', plural: 'Opportunities' },
@@ -44,11 +44,11 @@ export function businessLabel(profile: BusinessProfile | null, label: string): s
 
 export const getBusinessProfile = cache(async (db: Db, organizationId: string): Promise<BusinessProfile | null> => {
   const {data,error} = await db.from('organization_business_profiles').select('revision,nouns,navigation,labels').eq('organization_id',organizationId).maybeSingle();
-  if(error) throw new DomainError(error.message,'business_profile.read_failed');
+  if(error) throw fromDatabaseError(error, 'business_profile.read_failed');
   return data as BusinessProfile | null;
 });
 
 export async function saveBusinessProfile(db: Db, organizationId: string, profile: BusinessProfile): Promise<void> {
   const {error} = await db.rpc('save_business_profile',{p_organization_id:organizationId,p_revision:profile.revision,p_nouns:profile.nouns,p_navigation:profile.navigation,p_labels:profile.labels});
-  if(error) throw new DomainError(error.message,'business_profile.save_failed');
+  if(error) throw fromDatabaseError(error, 'business_profile.save_failed');
 }

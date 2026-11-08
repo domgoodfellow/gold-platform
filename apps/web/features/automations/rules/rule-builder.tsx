@@ -29,8 +29,13 @@ import { AddConditionSheet } from './add-condition-sheet';
 import { RuleWarnings } from '../review/rule-warnings';
 import { AutomationState } from '../workspace/operating-ui';
 
+// Plain words for the codes a rule stores; a code is never shown as stored.
+const FIELD_WORD: Record<string, string> = { title: 'Title', status_id: 'Stage', type_id: 'Kind of work', customer_id: 'Customer', resource_id: 'Resource', location_id: 'Location', asset_id: 'Asset' };
+const OPERATOR_WORD: Record<string, string> = { equals: 'is', not_equals: 'is not', is_set: 'has been filled in', is_empty: 'is empty' };
+const CHANNEL_WORD: Record<string, string> = { email: 'Email', sms: 'Text message' };
+
 const actionNames = {
-  change_status: 'Change Work status',
+  change_status: 'Change stage',
   notify: 'Notify Customer',
   shift_schedule: 'Shift scheduled Work',
   create_work_item: 'Create Work item',
@@ -76,12 +81,12 @@ export function RuleBuilder({
     a.kind === 'run_tool'
       ? `${a.toolLabel ?? 'A connected tool'} · reads only`
       : a.kind === 'notify'
-      ? `${templates.find((t) => t.id === a.templateId)?.name ?? 'Missing template'} · ${a.channel} · Work Customer`
+      ? `${templates.find((t) => t.id === a.templateId)?.name ?? 'Missing template'} · ${(a.channel && CHANNEL_WORD[a.channel]) ?? 'Message'} · the job's customer`
       : a.kind === 'shift_schedule'
         ? `${Math.abs(a.shiftMinutes ?? 0)} minutes ${(a.shiftMinutes ?? 0) < 0 ? 'earlier' : 'later'}`
-        : `${a.kind === 'create_work_item' ? `${types.find((t) => t.id === a.typeId)?.name ?? 'Missing Work type'} · ` : ''}${statuses.find((s) => s.id === a.statusId)?.label ?? 'Missing status'}`;
+        : `${a.kind === 'create_work_item' ? `${types.find((t) => t.id === a.typeId)?.name ?? 'Missing kind of work'} · ` : ''}${statuses.find((s) => s.id === a.statusId)?.label ?? 'Missing stage'}`;
   const conditionText = (c: AutomationRule['conditions'][number]) =>
-    `${definitions.find((d) => `custom.${d.key}` === c.subjectField)?.label ?? c.subjectField.replace('_id', '')} ${c.operator.replaceAll('_', ' ')} ${statuses.find((s) => s.id === c.value)?.label ?? c.value ?? ''}`;
+    `${definitions.find((d) => `custom.${d.key}` === c.subjectField)?.label ?? FIELD_WORD[c.subjectField] ?? 'A field'} ${OPERATOR_WORD[c.operator] ?? 'is'} ${statuses.find((s) => s.id === c.value)?.label ?? c.value ?? ''}`;
   const nodeClass = (id: string) =>
     `w-full rounded-lg border bg-background p-4 text-left shadow-sm transition-colors hover:border-border ${selected === id ? 'border-accent ring-2 ring-ring/30' : 'border-border'}`;
   return (
@@ -101,7 +106,7 @@ export function RuleBuilder({
             onClick={() => select('diagnostics')}
           >
             <ShieldCheck className="size-3.5" />{' '}
-            {warnings.length ? `${warnings.length} warnings` : 'Diagnostics'}
+            {warnings.length ? `${warnings.length} warnings` : 'Checks'}
           </Button>
           <Button
             size="tiny"
@@ -230,8 +235,7 @@ export function RuleBuilder({
               ))}
               {!rule.actions.length && (
                 <div className="rounded-lg border border-dashed border-warning/30 p-4 text-xs text-subtle">
-                  No actions configured. This rule is incomplete and performs no
-                  business operation.
+                  No actions yet. This rule does nothing until you add one.
                 </div>
               )}
               {mayManage && (
@@ -254,15 +258,15 @@ export function RuleBuilder({
           <div className="flex items-center justify-between border-b border-border p-4">
             <h2 className="text-sm font-semibold">
               {selected === 'trigger'
-                ? 'Trigger configuration'
+                ? 'Trigger'
                 : selected === 'preview'
                   ? 'Read-only inspection'
                   : selected === 'diagnostics'
-                    ? 'Rule diagnostics'
+                    ? 'Checks'
                     : condition
-                      ? 'Condition configuration'
+                      ? 'Condition'
                       : action
-                        ? 'Action configuration'
+                        ? 'Action'
                         : 'Select a node'}
             </h2>
             <Button
@@ -294,10 +298,10 @@ export function RuleBuilder({
                   rule.triggerKind === 'schedule') && (
                   <p className="rounded-md border border-warning/30 p-3 text-xs text-subtle">
                     {rule.triggerKind === 'external_reading'
-                      ? 'Requires matching incoming readings in exactly the configured unit. Provider monitoring is not verified by this definition.'
+                      ? 'Needs incoming readings in exactly this unit.'
                       : rule.triggerKind === 'schedule'
-                        ? 'Requires scheduled Work and the background scheduler. The offset is relative to Work start, not a recurring cron schedule.'
-                        : 'Requires canonical Asset readings in the configured unit. Only Create Work is applicable to an Asset.'}
+                        ? 'Runs for scheduled work, counted from when the work starts. It does not repeat.'
+                        : 'Needs asset readings in this unit. The only action for an asset is Create work.'}
                   </p>
                 )}
               </>
@@ -360,8 +364,7 @@ export function RuleBuilder({
             {(selected === 'diagnostics' || selected === 'preview') && (
               <>
                 <p className="text-xs text-subtle">
-                  Read-only configuration inspection. No messages are sent and
-                  no Work is created, changed, or rescheduled.
+                  Nothing is sent or changed here.
                 </p>
                 <dl className="space-y-3 text-xs">
                   <div>
@@ -380,7 +383,7 @@ export function RuleBuilder({
                     <dt className="text-subtle">Structure</dt>
                     <dd>
                       {rule.actions.length
-                        ? 'Actions configured'
+                        ? 'Has actions'
                         : 'Incomplete: add an action'}
                     </dd>
                   </div>
@@ -389,14 +392,11 @@ export function RuleBuilder({
                   <RuleWarnings warnings={warnings} />
                 ) : (
                   <p className="rounded-md border border-border p-3 text-xs">
-                    No configuration warnings detected. This does not verify
-                    provider readiness or successful execution.
+                    No warnings.
                   </p>
                 )}
                 <p className="text-xs text-subtle">
-                  Enabling evaluates matching future triggers. Actions can
-                  change live Work or queue Customer messages. Review
-                  configuration before enabling.
+                  Once switched on, actions can change live work and send messages to customers.
                 </p>
                 <ButtonLink
                   href={`${base}/activity?when=all&rule=${rule.id}`}

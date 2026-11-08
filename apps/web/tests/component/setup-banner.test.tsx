@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { ReactNode } from 'react';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SetupBanner } from '@/features/setup/setup-banner';
 import type { SetupOverview } from '@/lib/domain/tenancy/lifecycle';
@@ -31,7 +31,10 @@ function overview(required: number, optional = 0): SetupOverview {
 }
 
 describe('organization setup banner on Home', () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    sessionStorage.clear();
+  });
 
   it('names the required steps that remain, with a direct review action, for someone who can launch', () => {
     render(<SetupBanner organizationId={ORG} overview={overview(2)} mayLaunch />);
@@ -71,5 +74,29 @@ describe('organization setup banner on Home', () => {
     render(<SetupBanner organizationId={ORG} overview={null} mayLaunch />);
     expect(screen.getByRole('heading', { name: 'Setup status is unavailable' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Review setup' })).toHaveAttribute('href', SETUP);
+  });
+
+  it('can be closed, stays closed on the next visit, and returns when the remaining steps change', () => {
+    const first = render(<SetupBanner organizationId={ORG} overview={overview(2)} mayLaunch />);
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Close setup notice' })));
+    expect(screen.queryByRole('region', { name: 'Organization setup' })).not.toBeInTheDocument();
+    first.unmount();
+
+    // A reload in the same session: still closed while two steps remain.
+    render(<SetupBanner organizationId={ORG} overview={overview(2)} mayLaunch />);
+    expect(screen.queryByRole('region', { name: 'Organization setup' })).not.toBeInTheDocument();
+    cleanup();
+
+    // One step done: the banner is back.
+    render(<SetupBanner organizationId={ORG} overview={overview(1)} mayLaunch />);
+    expect(screen.getByRole('heading', { name: 'Setup required — 1 required step remains before launch.' })).toBeInTheDocument();
+  });
+
+  it('is closed per business', () => {
+    render(<SetupBanner organizationId={ORG} overview={overview(2)} mayLaunch />);
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Close setup notice' })));
+    cleanup();
+    render(<SetupBanner organizationId="org-2" overview={overview(2)} mayLaunch />);
+    expect(screen.getByRole('region', { name: 'Organization setup' })).toBeInTheDocument();
   });
 });

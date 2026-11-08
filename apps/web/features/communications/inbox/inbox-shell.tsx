@@ -50,7 +50,7 @@ function emptyMessage(filter: InboxFilter): string {
   if (filter.channel === 'sms') return 'No text conversations match.';
   if (filter.channel === 'email') return 'No email conversations match.';
   if (filter.status === 'closed') return 'No closed conversations.';
-  if (filter.status === 'open' || filter.status === 'waiting') return `No ${filter.status} conversations.`;
+  if (filter.status === 'open' || filter.status === 'waiting') return `No ${CONVERSATION_STATUS_LABEL[filter.status].toLowerCase()} conversations.`;
   return 'No conversations yet.';
 }
 

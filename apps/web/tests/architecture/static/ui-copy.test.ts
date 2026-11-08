@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { isExcluded, scan, scanSource } from '../../../../../scripts/check-ui-copy.mjs';
+import { isExcluded, scan, scanSource, scanWords, wordExempt, WORD_EXEMPT } from '../../../../../scripts/check-ui-copy.mjs';
 
 /**
  * The UI copy check (AGENTS.md → UI rules; docs/ui-system.md → Core rules). It is a content-discipline
@@ -80,11 +80,87 @@ describe('what the check keeps, by structure', () => {
     expect(rules('<Section><SectionHeading>Booking</SectionHeading>\n{/* ui-copy-allow: the spec requires this statement */}\n<Hint>These limits apply only to customers booking online.</Hint><Form /></Section>')).toEqual([]);
   });
 
-  it('public surfaces, which follow docs/public-web.md', () => {
+  it('public surfaces, which follow docs/public-web.md for layout', () => {
     for (const file of ['apps/web/app/(marketing)/pricing/page.tsx', 'apps/web/app/(public)/book/[slug]/page.tsx', 'apps/web/app/(auth)/login/page.tsx', 'apps/web/features/public-site/section-renderers.tsx', 'apps/web/components/marketing/product-card.tsx', 'apps/web/features/portal-access/portal-page.tsx', 'apps/web/features/studio/portal/portal-renderer.tsx']) {
       expect(isExcluded(file), file).toBe(true);
     }
     expect(isExcluded('apps/web/features/crm/customers/customer-detail.tsx')).toBe(false);
     expect(isExcluded('apps/web/features/studio/portal/portal-workbench.tsx')).toBe(false);
+  });
+});
+
+/** The word rule (docs/ui-system.md → Words we use): banned words in text a person reads. */
+const words = (source: string, file = 'apps/web/features/example/view.tsx') => scanWords(source, file).map((f: { detail: string }) => f.detail);
+
+describe('what the word rule flags', () => {
+  it('a banned word in JSX text, whole word and any case', () => {
+    expect(words('<p>No resources Configured</p>')).toEqual(['"Configured" in "No resources Configured"']);
+    expect(words('<p>Reconfiguration and preconfigured are other words</p>')).toEqual([]);
+  });
+
+  it('JSX text inside a fragment, and the literal parts around {…}', () => {
+    expect(words('<>{label} - {from} to {to} (end exclusive).</>')).toHaveLength(1);
+    expect(words('<p>Shaded time is {who}&rsquo;s own, and the exclusion constraint decides.</p>')).toHaveLength(1);
+  });
+
+  it('visible props: title, label, placeholder, aria-label, tooltip, content, description', () => {
+    for (const prop of ['title', 'label', 'placeholder', 'aria-label', 'tooltip', 'content', 'description', 'emptyLabel']) {
+      expect(words(`<Field ${prop}="Choose a capability" />`), prop).toHaveLength(1);
+      expect(words(`<Field ${prop}={\`Choose a \${x} capability\`} />`), prop).toHaveLength(1);
+    }
+  });
+
+  it('not props a person never reads', () => {
+    expect(words('<Field className="module-grid" href="/configuration" data-provider="x" />')).toEqual([]);
+  });
+
+  it('messages passed to error constructors and toasts, in lib/ too', () => {
+    const file = 'apps/web/lib/domain/example/example.ts';
+    expect(words("throw new DomainError('This deployment cannot place calls yet.', 'calls.unavailable');", file)).toHaveLength(1);
+    expect(words('throw new DomainError(`No module called ${key}.`, code);', file)).toHaveLength(1);
+    expect(words("toast.success('Receptionist configuration saved.');")).toHaveLength(1);
+    expect(words("toast({ title: 'Saved', description: 'The provider accepted it.' });")).toHaveLength(1);
+  });
+
+  it('a label held in data, a returned sentence and a Map value', () => {
+    expect(words("const AREAS = [{ segment: 'assets', label: 'Assets configuration' }];", 'apps/web/lib/navigation.ts')).toHaveLength(1);
+    expect(words("function label(s) { return s === 'ok' ? 'Configured' : 'Needs configuration'; }", 'apps/web/lib/x.ts')).toHaveLength(2);
+    expect(words("outstanding.set('drafting', 'This deployment cannot draft a setup.');", 'apps/web/lib/x.ts')).toHaveLength(1);
+  });
+
+  it('the old name GOLD, in capitals only, and status for work', () => {
+    expect(words('<p>Assigns the GOLD Internal Plan.</p>')).toHaveLength(1);
+    expect(words('<p>Gold, silver or bronze</p>')).toEqual([]);
+    expect(words('<Select label="Work status" />')).toHaveLength(1);
+  });
+
+  it('public pages, lib/, and error, not-found and loading pages', () => {
+    for (const file of ['apps/web/app/(public)/book/[slug]/page.tsx', 'apps/web/app/(marketing)/page.tsx', 'apps/web/app/organizations/[organizationId]/error.tsx', 'apps/web/app/not-found.tsx']) {
+      expect(words('<p>This deployment cannot send email yet.</p>', file), file).toHaveLength(1);
+    }
+    expect(words("return { error: 'This deployment cannot send email yet.' };", 'apps/web/lib/domain/email/messages.ts')).toHaveLength(1);
+  });
+});
+
+describe('what the word rule keeps', () => {
+  it('keys, codes, routes, class names and query text', () => {
+    const file = 'apps/web/lib/domain/example/example.ts';
+    expect(words("const { error } = await db.from('provider_accounts').select('id, configuration, module_key').eq('provider', key);", file)).toEqual([]);
+    expect(words("if (kind === 'configured') return fromDatabaseError(error, 'providers.configuration_failed');", file)).toEqual([]);
+    expect(words("const href = `/organizations/${id}/work/configuration`;", file)).toEqual([]);
+    expect(words("import { capability } from '@/lib/domain/tenancy/capabilities';", file)).toEqual([]);
+    expect(words("console.error('provider runtime failed', cause);", file)).toEqual([]);
+  });
+
+  it('a line marked with a reason', () => {
+    expect(words('<div>\n{/* ui-copy-allow: the vendor calls it this */}\n<p>Provider</p></div>')).toEqual([]);
+  });
+
+  it('the deferred areas named in the exemption list, each with a reason', () => {
+    expect(wordExempt('apps/web/features/ai/workbench.tsx')).toMatch(/deferred/);
+    expect(wordExempt('apps/web/app/platform/billing/page.tsx')).toMatch(/deferred/);
+    expect(words('<p>Runtime deployment</p>', 'apps/web/features/ai/workbench.tsx')).toEqual([]);
+    expect(wordExempt('apps/web/features/work/work-list.tsx')).toBeNull();
+    for (const [, reason] of WORD_EXEMPT) expect(reason).toMatch(/\S/);
   });
 });

@@ -262,7 +262,7 @@ describe('Configure menu separates Organization Settings pages', () => {
       { key: 'call-setup', label: 'Calling & routing', href: '/o/comms/configuration/calling' },
       { key: 'email', label: 'Email sending', href: '/o/settings/email', owner: 'settings' },
     ]} />);
-    await user.click(screen.getByRole('button', { name: 'Configure' }));
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
     const menu = await screen.findByRole('menu');
     const group = within(menu).getByRole('group', { name: 'Organization settings' });
     expect(within(group).getByRole('menuitem', { name: 'Email sending' })).toHaveAttribute('href', '/o/settings/email');

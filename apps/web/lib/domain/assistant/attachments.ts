@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { getOrganization } from '@/lib/domain/tenancy/organizations';
 import { BUCKET } from '@/lib/domain/documents/documents';
@@ -72,7 +72,7 @@ export async function uploadAgentAttachment(
   const { error: uploadError } = await db.storage
     .from(BUCKET)
     .upload(path, bytes, { contentType: checked.mimeType, upsert: false });
-  if (uploadError) throw new DomainError(uploadError.message, 'assistant.attachment_upload_failed');
+  if (uploadError) throw fromDatabaseError(uploadError, 'assistant.attachment_upload_failed');
 
   const { data, error } = await db
     .from('documents')
@@ -90,7 +90,7 @@ export async function uploadAgentAttachment(
 
   if (error) {
     await db.storage.from(BUCKET).remove([path]);
-    throw new DomainError(error.message, 'assistant.attachment_record_failed');
+    throw fromDatabaseError(error, 'assistant.attachment_record_failed');
   }
   return toAttachment(data);
 }
@@ -121,7 +121,7 @@ export async function removeAgentAttachment(
     .eq('organization_id', input.organizationId)
     .eq('id', input.documentId)
     .select('id');
-  if (error) throw new DomainError(error.message, 'assistant.attachment_remove_failed');
+  if (error) throw fromDatabaseError(error, 'assistant.attachment_remove_failed');
   if (!removed || removed.length === 0) {
     throw new DomainError('That file has already been sent.', 'assistant.attachment_sent');
   }
@@ -156,7 +156,7 @@ export async function readAttachmentsForQuestion(
     .eq('organization_id', input.organizationId)
     .not('agent_user_id', 'is', null)
     .in('id', ids);
-  if (error) throw new DomainError(error.message, 'assistant.attachment_read_failed');
+  if (error) throw fromDatabaseError(error, 'assistant.attachment_read_failed');
   if ((data ?? []).length !== ids.length) {
     throw new DomainError('One of those files is no longer available.', 'assistant.attachment_not_found');
   }
@@ -202,7 +202,7 @@ export async function linkAttachmentsToRun(
       document_id: documentId,
     })),
   );
-  if (error) throw new DomainError(error.message, 'assistant.attachment_link_failed');
+  if (error) throw fromDatabaseError(error, 'assistant.attachment_link_failed');
 }
 
 /** The files each of these questions was sent with — what a reopened conversation shows again. */
@@ -219,7 +219,7 @@ export async function listAttachmentsByRun(
     .eq('organization_id', input.organizationId)
     .in('run_id', input.runIds)
     .order('created_at', { ascending: true });
-  if (error) throw new DomainError(error.message, 'assistant.attachment_read_failed');
+  if (error) throw fromDatabaseError(error, 'assistant.attachment_read_failed');
   if (!links || links.length === 0) return byRun;
 
   const { data: documents, error: documentsError } = await db
@@ -227,7 +227,7 @@ export async function listAttachmentsByRun(
     .select(COLUMNS)
     .eq('organization_id', input.organizationId)
     .in('id', links.map((link) => link.document_id));
-  if (documentsError) throw new DomainError(documentsError.message, 'assistant.attachment_read_failed');
+  if (documentsError) throw fromDatabaseError(documentsError, 'assistant.attachment_read_failed');
 
   const known = new Map((documents ?? []).map((row) => [row.id, toAttachment(row)]));
   for (const link of links) {

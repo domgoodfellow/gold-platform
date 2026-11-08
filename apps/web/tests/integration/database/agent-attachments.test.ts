@@ -345,7 +345,7 @@ describe('a file is refused before it is stored, in words a person can act on', 
     const failing = vi.spyOn(yard.db.storage, 'from').mockImplementation(() => ({
       upload: async () => ({ data: null, error: { message: 'the storage service is down' } }),
     }) as never);
-    await expect(upload(csv('down.csv'))).rejects.toThrow('the storage service is down');
+    await expect(upload(csv('down.csv'))).rejects.toThrow('Something went wrong. Try again.');
     failing.mockRestore();
 
     const after = await sql<{ n: string }>('select count(*)::text as n from public.documents where agent_user_id = $1', [yard.userId]);

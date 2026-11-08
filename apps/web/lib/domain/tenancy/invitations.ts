@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -51,7 +51,7 @@ export async function inviteMember(
         'invitations.already_member',
       );
     }
-    throw new DomainError(error.message, 'invitations.invite_failed');
+    throw fromDatabaseError(error, 'invitations.invite_failed');
   }
 
   return data as string;
@@ -78,7 +78,7 @@ export async function listPendingInvitations(
     .order('created_at', { ascending: false });
 
   if (error) {
-    throw new DomainError(error.message, 'invitations.list_failed');
+    throw fromDatabaseError(error, 'invitations.list_failed');
   }
 
   return (data ?? []).map((row) => {
@@ -109,7 +109,7 @@ export async function revokeInvitation(db: Db, input: { id: string }): Promise<v
     if (error.code === '42501') {
       throw new DomainError('You cannot revoke that invitation.', 'invitations.revoke_forbidden');
     }
-    throw new DomainError(error.message, 'invitations.revoke_failed');
+    throw fromDatabaseError(error, 'invitations.revoke_failed');
   }
 }
 
@@ -131,7 +131,7 @@ export async function reissueInvitation(db: Db, input: { id: string }): Promise<
     if (error.code === '22023') {
       throw new DomainError('That invitation can no longer be sent again.', 'invitations.reissue_invalid');
     }
-    throw new DomainError(error.message, 'invitations.reissue_failed');
+    throw fromDatabaseError(error, 'invitations.reissue_failed');
   }
 
   return data as string;
@@ -169,7 +169,7 @@ export async function listInvitationDeliveryStatus(
     .eq('organization_id', input.organizationId);
 
   if (error) {
-    throw new DomainError(error.message, 'invitations.delivery_read_failed');
+    throw fromDatabaseError(error, 'invitations.delivery_read_failed');
   }
 
   // Two clocks, never compared with each other. GildOps' own clock (`occurred_at`) says which send
@@ -240,7 +240,7 @@ export type InvitationPreview =
  */
 export async function previewInvitation(db: Db, token: string): Promise<InvitationPreview> {
   const { data, error } = await db.rpc('invitation_preview', { p_token: token });
-  if (error) throw new DomainError(error.message, 'invitation.preview_failed');
+  if (error) throw fromDatabaseError(error, 'invitation.preview_failed');
   const row = (data ?? [])[0];
   if (!row || row.state !== 'valid' || !row.business_name || !row.role_name || !row.email || !row.expires_at) return { state: 'invalid' };
   return { state: 'valid', businessName: row.business_name, roleName: row.role_name, email: row.email, expiresAt: row.expires_at };

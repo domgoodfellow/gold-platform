@@ -1,6 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { callDomainCommand, requireAccessToken } from '@/lib/api/client';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * The business's own email sender, as the database resolves it for every email the business sends
@@ -32,7 +32,7 @@ export type EmailSendingStatus =
 
 export async function emailSendingStatus(db: Db, organizationId: string): Promise<EmailSendingStatus> {
   const { data, error } = await db.rpc('organization_email_sender_status', { p_organization_id: organizationId });
-  if (error) throw new DomainError(error.message, 'email_sender.status_failed');
+  if (error) throw fromDatabaseError(error, 'email_sender.status_failed');
   const row = (data ?? [])[0];
   if (!row || row.state === 'missing' || !row.address) return { state: 'missing', address: null, detail: row?.detail ?? 'This business has no default sender address.' };
   return { state: row.state as EmailSenderState, address: row.address, detail: row.detail };
@@ -40,7 +40,7 @@ export async function emailSendingStatus(db: Db, organizationId: string): Promis
 
 export async function listEmailSenders(db: Db, organizationId: string): Promise<EmailSender[]> {
   const { data, error } = await db.rpc('organization_email_senders', { p_organization_id: organizationId });
-  if (error) throw new DomainError(error.message, 'email_sender.list_failed');
+  if (error) throw fromDatabaseError(error, 'email_sender.list_failed');
   return (data ?? []).map((row) => ({
     emailIdentityId: row.email_identity_id,
     address: row.address,
@@ -86,7 +86,7 @@ export type EmailTestSend = {
 export async function listEmailTestSends(db: Db, organizationId: string): Promise<EmailTestSend[]> {
   const { data, error } = await db.from('email_test_sends').select('id, recipient, from_address, state, provider_state, detail, created_at')
     .eq('organization_id', organizationId).order('created_at', { ascending: false }).limit(3);
-  if (error) throw new DomainError(error.message, 'email_sender.tests_failed');
+  if (error) throw fromDatabaseError(error, 'email_sender.tests_failed');
   return (data ?? []).map((row) => ({ id: row.id, recipient: row.recipient, fromAddress: row.from_address, state: row.state as EmailTestSend['state'], providerState: row.provider_state, detail: row.detail, createdAt: row.created_at }));
 }
 

@@ -9,7 +9,7 @@ import {
   type ProposedAction,
   type ToolCallRecord,
 } from '@/lib/adapters/answering';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { executorFor, reasonActionCannotRun } from './actions';
 import { getOrganization } from '@/lib/domain/tenancy/organizations';
@@ -221,7 +221,7 @@ export async function listAgentConversationSummaries(
     .limit(input.limit ?? CONVERSATION_LIST_LIMIT);
 
   if (error) {
-    throw new DomainError(error.message, 'assistant.list_failed');
+    throw fromDatabaseError(error, 'assistant.list_failed');
   }
 
   return (data ?? []).map(toSummary);
@@ -240,7 +240,7 @@ export async function getAgentConversation(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'assistant.list_failed');
+    throw fromDatabaseError(error, 'assistant.list_failed');
   }
 
   return data ? toSummary(data) : null;
@@ -260,7 +260,7 @@ export async function listAgentConversationRuns(
     .limit(CONVERSATION_RUN_LIMIT);
 
   if (error) {
-    throw new DomainError(error.message, 'assistant.list_failed');
+    throw fromDatabaseError(error, 'assistant.list_failed');
   }
 
   const runs = (data ?? []).map(toRun);
@@ -290,7 +290,7 @@ async function priorTurnsOf(
     .limit(CONTEXT_MAX_TURNS);
 
   if (error) {
-    throw new DomainError(error.message, 'assistant.list_failed');
+    throw fromDatabaseError(error, 'assistant.list_failed');
   }
 
   return boundPriorTurns((data ?? []).reverse());
@@ -441,7 +441,7 @@ export async function askQuestion(
       .select('id')
       .single();
     if (created.error) {
-      throw new DomainError(created.error.message, 'assistant.record_failed');
+      throw fromDatabaseError(created.error, 'assistant.record_failed');
     }
     conversationId = created.data.id;
   }
@@ -472,7 +472,7 @@ export async function askQuestion(
     .single();
 
   if (error) {
-    throw new DomainError(error.message, 'assistant.record_failed');
+    throw fromDatabaseError(error, 'assistant.record_failed');
   }
 
   await linkAttachmentsToRun(db, {
@@ -553,7 +553,7 @@ export async function decideOnAction(
     .single();
 
   if (error) {
-    throw new DomainError(error.message, 'assistant.decision_failed');
+    throw fromDatabaseError(error, 'assistant.decision_failed');
   }
 
   return toRun(data);

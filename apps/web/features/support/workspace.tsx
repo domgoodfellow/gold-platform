@@ -51,6 +51,9 @@ import {
 } from "@/components/operational/primitives";
 import { SelectField } from '@/components/controls/select-field';
 
+
+const CASE_STATUS: Record<string, string> = { new: 'New', open: 'Open', waiting: 'Waiting', resolved: 'Resolved', closed: 'Closed' };
+const CASE_PRIORITY: Record<string, string> = { low: 'Low', normal: 'Normal', high: 'High', urgent: 'Urgent' };
 export type SupportView =
   | "home"
   | "cases"
@@ -615,7 +618,7 @@ export function SupportWorkspace({
           )}
         </>}
       />
-      {configure ? <SupportRegistrar mode="configure" title="Configure">{configure}</SupportRegistrar> : null}
+      {configure ? <SupportRegistrar mode="configure" title="Settings">{configure}</SupportRegistrar> : null}
       {view === "reports" && (
         <div className="grid grid-cols-2 @3xl:grid-cols-4 gap-3">
           {kpis.map(([label, value, Icon, filters, color]) => (
@@ -756,7 +759,7 @@ export function SupportWorkspace({
                   )}
                 </div>
               ))}
-              {!data.queues.length && <PanelState kind="not-configured">No queues are configured. Cases can still be created without one.</PanelState>}
+              {!data.queues.length && <PanelState kind="not-configured">No queues yet. Cases can still be created without one.</PanelState>}
             </div>
           </OperationalPanel>
           <div className="min-w-0">
@@ -901,7 +904,7 @@ export function SupportWorkspace({
                 "Actions",
               ]}
               hasRows={data.policies.length > 0}
-              empty="No service levels configured. Cases without a matching policy have no SLA target."
+              empty="No service levels yet."
             >
               {data.policies.map((p) => (
                 <tr key={p.id}>
@@ -930,7 +933,7 @@ export function SupportWorkspace({
           <p className="text-xs text-muted">
             Queue-specific policies take precedence over the priority fallback.
             Targets apply on Case creation and retain their original snapshot
-            after configuration changes, reassignment, priority changes and
+            after settings change, reassignment, priority changes and
             reopening.
           </p>
         </>
@@ -1002,7 +1005,7 @@ export function SupportWorkspace({
               <Table
                 headings={["Queue", "Created in period", "Latest resolved"]}
                 hasRows
-                empty="No queues configured."
+                empty="No queues yet."
               >
                 {data.queues.map((q) => (
                   <tr key={q.id}>
@@ -1158,9 +1161,9 @@ function eventChange(e: CaseEvent) {
     e.kind === "closed" ||
     e.kind === "resolved"
   )
-    return `${e.previous_value?.status ?? "new"} → ${e.new_value.status}`;
+    return `${CASE_STATUS[e.previous_value?.status ?? "new"] ?? "New"} → ${CASE_STATUS[e.new_value.status] ?? "Changed"}`;
   if (e.kind === "priority")
-    return `${e.previous_value?.priority ?? "normal"} → ${e.new_value.priority}`;
+    return `${CASE_PRIORITY[e.previous_value?.priority ?? "normal"] ?? "Normal"} → ${CASE_PRIORITY[e.new_value.priority] ?? "Changed"}`;
   if (e.kind === "assignment")
     return `${e.previous_value?.owner_name ?? "Unassigned"} → ${e.new_value.owner_name ?? "Unassigned"}`;
   if (e.kind === "queue")

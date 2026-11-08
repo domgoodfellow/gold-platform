@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { BUCKET as DOCUMENTS_BUCKET } from '@/lib/domain/documents/documents';
 import { contentMatchesFormat } from '@/lib/domain/files/content';
@@ -40,7 +40,7 @@ export async function listResources(
   const { data, error } = await query;
 
   if (error) {
-    throw new DomainError(error.message, 'integrations.resources_list_failed');
+    throw fromDatabaseError(error, 'integrations.resources_list_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -60,7 +60,7 @@ export async function getResourceSync(db: Db, organizationId: string, resourceId
   const {data,error}=await db.from('integration_resource_syncs')
     .select('enabled,parameters,state,last_success_at,last_error,next_run_at')
     .eq('organization_id',organizationId).eq('resource_id',resourceId).maybeSingle();
-  if(error)throw new DomainError(error.message,'integrations.sync_read_failed');
+  if(error)throw fromDatabaseError(error, 'integrations.sync_read_failed');
   return data;
 }
 
@@ -68,7 +68,7 @@ export async function listResourceRecords(db: Db, organizationId: string, resour
   const {data,error}=await db.from('integration_resource_records')
     .select('external_id,display_name,metadata,source_updated_at').eq('organization_id',organizationId)
     .eq('resource_id',resourceId).eq('deleted',false).order('display_name').limit(100);
-  if(error)throw new DomainError(error.message,'integrations.records_read_failed');
+  if(error)throw fromDatabaseError(error, 'integrations.records_read_failed');
   return data??[];
 }
 
@@ -131,7 +131,7 @@ export async function uploadImportFile(
     if (error.code === '42501') {
       throw new DomainError('You cannot add data sources here.', 'integrations.forbidden');
     }
-    throw new DomainError(error.message, 'integrations.resource_create_failed');
+    throw fromDatabaseError(error, 'integrations.resource_create_failed');
   }
 
   return { resourceId: data, parsed };
@@ -150,7 +150,7 @@ export async function getResourceStoragePath(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'integrations.resource_get_failed');
+    throw fromDatabaseError(error, 'integrations.resource_get_failed');
   }
   return data?.storage_path ?? null;
 }
@@ -168,13 +168,13 @@ export async function downloadImportFile(
   if (!path) {
     const {data:resource,error:resourceError}=await db.from('integration_resources').select('resource_type,status')
       .eq('organization_id',input.organizationId).eq('id',input.resourceId).maybeSingle();
-    if(resourceError)throw new DomainError(resourceError.message,'integrations.resource_get_failed');
+    if(resourceError)throw fromDatabaseError(resourceError, 'integrations.resource_get_failed');
     if(!resource||resource.status!=='active'||!['google_sheet','microsoft_workbook'].includes(resource.resource_type))return null;
     const sync=await getResourceSync(db,input.organizationId,input.resourceId);
     if(!sync?.last_success_at||sync.state!=='idle')throw new DomainError('Complete synchronization before mapping this worksheet.','integrations.sync_incomplete');
     const {data,error}=await db.from('integration_resource_records').select('external_id,metadata').eq('organization_id',input.organizationId)
       .eq('resource_id',input.resourceId).eq('deleted',false).order('external_id').limit(501);
-    if(error)throw new DomainError(error.message,'integrations.rows_read_failed');
+    if(error)throw fromDatabaseError(error, 'integrations.rows_read_failed');
     if(!data?.length)return null;
     const values=data.map(record=>record.metadata as {headers:string[];values:unknown[]});
     const headers=values[0].headers;
@@ -208,6 +208,6 @@ export async function attachLibraryFileForImport(db: Db, organizationId: string,
     p_external_id: null as unknown as string, p_storage_path: document.storage_path,
     p_metadata: { format: checked.artifact.format.id, headers: parsed.headers, totalRows: parsed.totalRows, library_document_id: document.id },
   });
-  if (result.error) throw new DomainError(result.error.message, 'integrations.resource_create_failed');
+  if (result.error) throw fromDatabaseError(result.error, 'integrations.resource_create_failed');
   return result.data;
 }

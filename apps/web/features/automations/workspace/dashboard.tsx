@@ -111,7 +111,7 @@ export function AutomationDashboard({
               id: `${w.ruleId}-${i}`,
               name: data.rules.find((r) => r.id === w.ruleId)?.name ?? 'Rule',
               problem: w.message,
-              at: 'Current configuration',
+              at: 'Now',
               state: 'Review',
               href: `${base}/${w.ruleId}?node=diagnostics`,
             }));
@@ -146,7 +146,7 @@ export function AutomationDashboard({
     <div className="flex min-w-0 flex-col gap-3">
       <PageHeader
         title="Automations"
-        meta={<span className="text-xs">Execution period {data.period.dates[0]} – {data.period.dates.at(-1)} · {timezone}. Rule counts reflect current configuration.</span>}
+        meta={<span className="text-xs">Execution period {data.period.dates[0]} – {data.period.dates.at(-1)} · {timezone}. Rule counts are as of now.</span>}
         actions={<>
           <PeriodSelect label="Date range" value={data.period.when} options={[{ value: 'today', label: 'Today' }, { value: 'week', label: 'Last 7 days' }, { value: 'month', label: 'Last 30 days' }].map((period) => ({ ...period, href: `?when=${period.value}` }))} />
           {mayManage && <NewAutomationSheet organizationId={organizationId} />}
@@ -251,8 +251,7 @@ export function AutomationDashboard({
               />
             ) : (
               <PanelState>
-                No issues recorded in this category. Provider availability is
-                verified separately.
+                No issues in this category.
               </PanelState>
             )}
           </OperationalPanel>
@@ -441,8 +440,7 @@ export function AutomationDashboard({
               ))}
             </dl>
             <p className="mt-2 text-[10px] text-subtle">
-              No history may mean no matching trigger. Configuration checks do
-              not verify external providers.
+              No history may mean nothing has triggered the rule yet.
             </p>
           </OperationalPanel>
           <OperationalPanel density="compact"

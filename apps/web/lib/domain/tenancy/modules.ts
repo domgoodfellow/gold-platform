@@ -1,7 +1,7 @@
 import { paymentProvider } from '@/lib/adapters/payments';
 import type { Db } from '@/lib/db/types';
 import { getPaymentAccount } from '@/lib/domain/billing/payment-accounts';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { draftingProvider } from '@/lib/adapters/drafting';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { callingNumber } from '@/lib/domain/reception/telephony';
@@ -40,7 +40,7 @@ export async function listEnabledModules(
     .eq('organization_id', input.organizationId);
 
   if (error) {
-    throw new DomainError(error.message, 'modules.list_failed');
+    throw fromDatabaseError(error, 'modules.list_failed');
   }
 
   return new Set((data ?? []).map((row) => row.module_key).filter(isModuleKey));
@@ -61,7 +61,7 @@ export async function listUsableModules(
   });
 
   if (error) {
-    throw new DomainError(error.message, 'modules.list_failed');
+    throw fromDatabaseError(error, 'modules.list_failed');
   }
 
   return new Set((data ?? []).filter(isModuleKey));
@@ -78,7 +78,7 @@ export async function listModuleSettings(
     .eq('organization_id', input.organizationId);
 
   if (error) {
-    throw new DomainError(error.message, 'modules.list_failed');
+    throw fromDatabaseError(error, 'modules.list_failed');
   }
 
   const on = new Map((data ?? []).map((row) => [row.module_key, row.enabled_at]));
@@ -98,7 +98,7 @@ export async function setModuleEnabled(
   const actor = await requireActor(db);
 
   if (!isModuleKey(input.key)) {
-    throw new DomainError('This platform has no such module.', 'modules.unknown');
+    throw new DomainError('GildOps has no such feature.', 'modules.unknown');
   }
 
   // A plain insert, not an upsert — there's no update policy on the table, since off is always
@@ -127,7 +127,7 @@ export async function setModuleEnabled(
         'modules.forbidden',
       );
     }
-    throw new DomainError(error.message, 'modules.update_failed');
+    throw fromDatabaseError(error, 'modules.update_failed');
   }
 
   if (!input.enabled && (data ?? []).length === 0) {
@@ -206,7 +206,7 @@ export async function outstandingModuleSetup(
         .limit(1);
 
       if (error) {
-        throw new DomainError(error.message, 'modules.readiness_failed');
+        throw fromDatabaseError(error, 'modules.readiness_failed');
       }
 
       if ((data ?? []).length === 0) {
@@ -224,7 +224,7 @@ export async function outstandingModuleSetup(
     if (!provider) {
       outstanding.set(
         'card_payments',
-        'This deployment has no payment processor yet, so there is nothing to connect.',
+        'Taking cards isn’t available yet, so there is nothing to connect.',
       );
     } else {
       const account = await getPaymentAccount(db, {
@@ -248,7 +248,7 @@ export async function outstandingModuleSetup(
     if ((await draftingProvider()) === null) {
       outstanding.set(
         'drafting',
-        'This deployment cannot draft a setup, so nothing can be proposed here. Every part of it can still be filled in on the screens above.',
+        'Drafting a setup isn’t available yet. Every part of it can still be filled in on the screens above.',
       );
     }
   }
@@ -258,7 +258,7 @@ export async function outstandingModuleSetup(
     if (!number) {
       outstanding.set(
         'reception',
-        'No calling number is configured yet, so nothing can ring through.',
+        'No calling number yet, so nothing can ring through.',
       );
     }
   }

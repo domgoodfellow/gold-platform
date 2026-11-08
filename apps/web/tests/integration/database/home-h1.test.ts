@@ -132,9 +132,9 @@ describe('Home H1 reconciles existing workspace authorities', () => {
       const automation=sources(await home()).find(source=>source.source==='Automations')!;
       expect(automation.categories.find(category=>category.key==='delivery')).toMatchObject({total:1,href:expect.stringContaining('state=failed')});
       expect(automation.categories.find(category=>category.key==='uncertain-delivery')).toMatchObject({total:1,href:expect.stringContaining('state=uncertain')});
-      expect(automation.attention.find(row=>row.record.id===ids[1])?.description).toBe('Uncertain sms delivery');
-      expect(automation.attention.find(row=>row.record.id===ids[0])?.description).toBe('Failed sms delivery');
-      expect(automation.activity.find(row=>row.recordKey===`Automations:delivery:${ids[1]}`)?.title).toContain('Delivery uncertain');
+      expect(automation.attention.find(row=>row.record.id===ids[1])?.description).toBe('Text not confirmed');
+      expect(automation.attention.find(row=>row.record.id===ids[0])?.description).toBe('Text not delivered');
+      expect(automation.activity.find(row=>row.recordKey===`Automations:delivery:${ids[1]}`)?.title).toContain('Delivery not confirmed');
     } finally { if(ids.length)await pg.query('delete from public.message_deliveries where id=any($1::uuid[])',[ids]);await pg.end(); }
   });
   it('keeps healthy metrics when recent activity fails and keeps source failures unknown', async () => {

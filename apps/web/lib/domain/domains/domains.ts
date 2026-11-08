@@ -8,7 +8,7 @@ import {
 } from '@/lib/adapters/domains';
 import { requireAccessToken } from '@/lib/api/client';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { checkHostname, HOSTNAME_PROBLEM } from './hostname';
 import { CONFLICT_MESSAGE, PROVIDER_UNAVAILABLE_MESSAGE, type DomainSurface } from './presentation';
 
@@ -62,7 +62,7 @@ export async function getManagedHostname(db: Db, input: { slug: string | null })
 /** The deployment's managed zone, or null when it offers none. Not a secret: it is in every managed address. */
 export async function platformPublicDomain(db: Db): Promise<string | null> {
   const { data, error } = await db.rpc('platform_public_domain');
-  if (error) throw new DomainError(error.message, 'domains.read_failed');
+  if (error) throw fromDatabaseError(error, 'domains.read_failed');
   return data ?? null;
 }
 
@@ -88,7 +88,7 @@ export async function listDomains(db: Db, organizationId: string): Promise<Custo
     .eq('organization_id', organizationId)
     .is('released_at', null)
     .order('created_at');
-  if (error) throw new DomainError(error.message, 'domains.read_failed');
+  if (error) throw fromDatabaseError(error, 'domains.read_failed');
 
   const resourceIds = (data ?? []).map((row) => row.provider_resource_id).filter((id): id is string => Boolean(id));
   const configs = new Map<string, unknown>();
@@ -98,7 +98,7 @@ export async function listDomains(db: Db, organizationId: string): Promise<Custo
       .select('id, config')
       .eq('organization_id', organizationId)
       .in('id', resourceIds);
-    if (resources.error) throw new DomainError(resources.error.message, 'domains.read_failed');
+    if (resources.error) throw fromDatabaseError(resources.error, 'domains.read_failed');
     for (const resource of resources.data ?? []) configs.set(resource.id, resource.config);
   }
 
@@ -153,8 +153,8 @@ function failureOutcome(domainId: string, error: unknown): DomainOutcome {
 function refusal(error: { code?: string; message: string }): DomainError {
   if (error.code === '23505') return new DomainError(CONFLICT_MESSAGE, 'domains.conflict');
   if (error.code === '42501') return new DomainError('You cannot manage this business’s domains.', 'domains.forbidden');
-  if (error.code === '22023') return new DomainError(error.message, 'domains.invalid');
-  return new DomainError(error.message, 'domains.write_failed');
+  if (error.code === '22023') return fromDatabaseError(error, 'domains.invalid');
+  return fromDatabaseError(error, 'domains.write_failed');
 }
 
 /**
@@ -226,7 +226,7 @@ export async function removeDomain(db: Db, input: { organizationId: string; doma
     .eq('organization_id', input.organizationId)
     .is('released_at', null)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'domains.read_failed');
+  if (error) throw fromDatabaseError(error, 'domains.read_failed');
   if (!data) throw new DomainError('No such domain.', 'domains.missing');
 
   if (!data.provider_resource_id) {

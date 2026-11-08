@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { ALL_CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import {
@@ -68,7 +68,7 @@ export async function provisionOrganization(
   });
 
   if (error) {
-    throw new DomainError(error.message, 'platform.provision_failed');
+    throw fromDatabaseError(error, 'platform.provision_failed');
   }
 
   return data as string;

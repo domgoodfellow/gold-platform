@@ -65,14 +65,14 @@ export async function configureTelephonyAccount(
 /** Asks the carrier whether the stored credential works. The outcome is on the account row. */
 export async function verifyTelephonyAccount(db: Db, input: { accountId: string }): Promise<ProviderAccount> {
   const account = await getProviderAccount(db, input.accountId);
-  if (!account) throw new DomainError('No such provider account.', 'providers.account_missing');
+  if (!account) throw new DomainError('No such calling account.', 'providers.account_missing');
   if (!account.credentialSetAt) throw new DomainError('Set a credential before verifying.', 'providers.credential_missing');
 
   const operations = await telephonyAccountOperations({ token: await requireAccessToken(db), accountId: account.id });
   await operations.verify();
 
   const after = await getProviderAccount(db, input.accountId);
-  if (!after) throw new DomainError('No such provider account.', 'providers.account_missing');
+  if (!after) throw new DomainError('No such calling account.', 'providers.account_missing');
   return after;
 }
 
@@ -86,7 +86,7 @@ export type ReconciliationResult = Reconciliation & { checkedAt: string };
  */
 export async function reconcileTelephonyAccount(db: Db, input: { accountId: string }): Promise<ReconciliationResult> {
   const account = await getProviderAccount(db, input.accountId);
-  if (!account) throw new DomainError('No such provider account.', 'providers.account_missing');
+  if (!account) throw new DomainError('No such calling account.', 'providers.account_missing');
   if (account.verificationState !== 'verified') {
     throw new DomainError('Verify this account before reconciling it.', 'providers.account_unverified');
   }

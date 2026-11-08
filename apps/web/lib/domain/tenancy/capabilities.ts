@@ -63,7 +63,7 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'support.case.update': 'Edit and escalate Cases and add internal notes',
   'support.case.assign': 'Assign Support Cases and queues',
   'support.case.resolve': 'Resolve, close and explicitly reopen Support Cases',
-  'support.configure': 'Configure Support queues and service levels',
+  'support.configure': 'Set up Support queues and service levels',
   'marketing.read': 'View campaigns, audiences and acquisition results',
   'marketing.manage': 'Manage campaigns and audiences and review acquisition inquiries',
   'customer.create': 'Add customers',
@@ -108,7 +108,7 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   /** Connecting a source and applying what it imports are split from `customer.create`/`customer.update` on purpose — an import run still checks those per row, so this alone cannot write a customer. */
   'integration.manage': 'Connect external data sources and run imports',
   /** Deactivating or reactivating an entitled feature, not entitlement itself — a tenant cannot self-entitle. */
-  'feature.manage': 'Switch entitled features on or off for this business',
+  'feature.manage': 'Switch features in your plan on or off for this business',
   /** GOLD → organization money (domain-model.md's own plane), never the Commerce capabilities this business collects from its own customers with. */
   'billing.manage': 'Start or manage this business’s own subscription with GildOps',
   /** Its own authority, not part of `integration.manage`: connecting a spreadsheet and handing over a private key are different decisions, and a stored value is never read back by anyone who holds this. */

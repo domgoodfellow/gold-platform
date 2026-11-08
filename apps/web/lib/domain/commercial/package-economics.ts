@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { getPlanById, listPlanPrices, listPlanQuotas, type PlanQuota } from '@/lib/domain/catalogue/plans';
 import {
   currentAddonAssignments,
@@ -359,24 +359,24 @@ export function calculatePackageEconomics(
 
 async function latestDraft(db: Db, scenarioId: string) {
   const { data: scenario, error: scenarioError } = await db.from('commercial_draft_scenarios').select('id,name,notes').eq('id', scenarioId).is('archived_at', null).single();
-  if (scenarioError) throw new DomainError(scenarioError.message, 'package_economics.draft_failed');
+  if (scenarioError) throw fromDatabaseError(scenarioError, 'package_economics.draft_failed');
   const { data: version, error: versionError } = await db.from('commercial_draft_scenario_versions').select('id,revision,plan_id,currency,candidate_prices_minor,expected_seats,expected_resource_count').eq('scenario_id', scenarioId).order('revision', { ascending: false }).limit(1).single();
-  if (versionError) throw new DomainError(versionError.message, 'package_economics.draft_failed');
+  if (versionError) throw fromDatabaseError(versionError, 'package_economics.draft_failed');
   const [inputs, addons, costs] = await Promise.all([
     db.from('commercial_draft_scenario_inputs').select('allowance_key,meter_id,expected_quantity,utilization').eq('version_id', version.id),
     db.from('commercial_draft_scenario_addons').select('addon_plan_id').eq('version_id', version.id),
     db.from('commercial_draft_scenario_direct_costs').select('label,amount_minor,currency,note').eq('version_id', version.id),
   ]);
-  for (const result of [inputs, addons, costs]) if (result.error) throw new DomainError(result.error.message, 'package_economics.draft_failed');
+  for (const result of [inputs, addons, costs]) if (result.error) throw fromDatabaseError(result.error, 'package_economics.draft_failed');
   return { scenario, version, inputs: inputs.data ?? [], addons: addons.data ?? [], costs: costs.data ?? [] };
 }
 
 export async function listDraftScenarios(db: Db): Promise<DraftScenarioSummary[]> {
   const { data, error } = await db.from('commercial_draft_scenarios').select('id,name,notes').is('archived_at', null).order('name');
-  if (error) throw new DomainError(error.message, 'package_economics.drafts_failed');
+  if (error) throw fromDatabaseError(error, 'package_economics.drafts_failed');
   return Promise.all((data ?? []).map(async (scenario) => {
     const { data: version, error: versionError } = await db.from('commercial_draft_scenario_versions').select('revision,plan_id,currency,candidate_prices_minor').eq('scenario_id', scenario.id).order('revision', { ascending: false }).limit(1).single();
-    if (versionError) throw new DomainError(versionError.message, 'package_economics.drafts_failed');
+    if (versionError) throw fromDatabaseError(versionError, 'package_economics.drafts_failed');
     return { id: scenario.id, name: scenario.name, notes: scenario.notes, revision: version.revision, planId: version.plan_id, currency: version.currency, candidatePricesMinor: version.candidate_prices_minor.map(Number) };
   }));
 }
@@ -465,7 +465,7 @@ async function loadContext(db: Db, source: SimulationSource): Promise<Calculatio
     candidatePricesMinor = [basePriceMinor];
     quotas = (await listPlanQuotas(db, planId)).map((quota) => ({ ...quota, provenance: 'Plan default' }));
     const { data, error } = await db.from('platform_plan_addons').select('addon_plan_id').eq('plan_id', planId).eq('included_by_default', true);
-    if (error) throw new DomainError(error.message, 'package_economics.addons_failed');
+    if (error) throw fromDatabaseError(error, 'package_economics.addons_failed');
     addonIds = (data ?? []).map((row) => row.addon_plan_id);
   }
 
@@ -510,7 +510,7 @@ async function loadContext(db: Db, source: SimulationSource): Promise<Calculatio
       : Promise.resolve({ data: [], error: null }),
   ]);
   for (const result of [assumptionsResult, modelsResult, providerRatesResult, fxResult, retailResult, policyResult, infrastructureResult]) {
-    if (result.error) throw new DomainError(result.error.message, 'package_economics.context_failed');
+    if (result.error) throw fromDatabaseError(result.error, 'package_economics.context_failed');
   }
   const infrastructureRates: InfrastructureRate[] = (infrastructureResult.data ?? [])
     .filter((row): row is NonNullable<typeof row> & { driver_basis: string; driver_quantity: number } =>

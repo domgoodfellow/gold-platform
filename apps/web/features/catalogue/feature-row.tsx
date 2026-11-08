@@ -142,7 +142,7 @@ export function FeatureRow({
               <DialogTitle>Disable {label}?</DialogTitle>
               <DialogDescription>
                 This surface becomes unavailable to this business. Nothing it has already
-                recorded or configured here is removed, and re-enabling restores access
+                recorded or set up here is removed, and re-enabling restores access
                 exactly as it was.
               </DialogDescription>
             </DialogHeader>

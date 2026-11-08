@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * Whether this business has already connected the DNS that answers for a hostname (work order 1,
@@ -20,7 +20,7 @@ export async function listConnectedDnsZones(db: Db, organizationId: string): Pro
     .eq('organization_id', organizationId)
     .eq('connector_key', CONNECTOR_KEY)
     .eq('status', 'active');
-  if (error) throw new DomainError(error.message, 'domains.dns_zones_read_failed');
+  if (error) throw fromDatabaseError(error, 'domains.dns_zones_read_failed');
 
   const zones = new Set<string>();
   for (const connection of data ?? []) {

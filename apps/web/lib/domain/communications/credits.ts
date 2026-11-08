@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * What a business has left to spend on reaching people, and what it has spent.
@@ -63,7 +63,7 @@ export async function creditBalance(
   });
 
   if (error) {
-    throw new DomainError(error.message, 'credits.balance_failed');
+    throw fromDatabaseError(error, 'credits.balance_failed');
   }
 
   return Number(data ?? 0);
@@ -91,7 +91,7 @@ export async function listRates(
   });
 
   if (error) {
-    throw new DomainError(error.message, 'credits.rates_failed');
+    throw fromDatabaseError(error, 'credits.rates_failed');
   }
 
   return (data ?? []).flatMap((row) =>

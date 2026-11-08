@@ -63,7 +63,7 @@ export function osrmRoutingProvider(config: { baseUrl: string }): RoutingProvide
         throw new RoutingError('invalid_coordinates', 'The routing service refused those coordinates.');
       }
       if (response.status === 429) {
-        throw new RoutingError('quota_exceeded', 'The routing service is rate limiting this deployment.');
+        throw new RoutingError('quota_exceeded', 'The routing service is busy. Try again in a moment.');
       }
       if (!response.ok || body?.code !== 'Ok') {
         throw new RoutingError('provider_unavailable', `The routing service failed with status ${response.status}.`);

@@ -21,7 +21,7 @@ export default function DemoPage() {
           Request a demo
         </h1>
         <p className="max-w-lg text-muted">
-          Tell us how your business runs today. We&rsquo;ll show you GildOps against it, configure a
+          Tell us how your business runs today. We&rsquo;ll show you GildOps against it, set up a
           workspace around it, and you review exactly what&rsquo;s been set up before anything
           launches. Filling this in does not create an account or a business in GildOps.
         </p>

@@ -1,6 +1,6 @@
 import { callDomainCommand, requireAccessToken } from '@/lib/api/client';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * A business's MCP servers and the tools they advertise.
@@ -48,8 +48,8 @@ export async function listMcpServers(db: Db, input: { organizationId: string }):
     db.from('integration_mcp_servers').select('*').eq('organization_id', input.organizationId).order('created_at'),
     db.from('integration_mcp_tools').select('*').eq('organization_id', input.organizationId).order('name'),
   ]);
-  if (servers.error) throw new DomainError(servers.error.message, 'integrations.mcp_list_failed');
-  if (tools.error) throw new DomainError(tools.error.message, 'integrations.mcp_list_failed');
+  if (servers.error) throw fromDatabaseError(servers.error, 'integrations.mcp_list_failed');
+  if (tools.error) throw fromDatabaseError(tools.error, 'integrations.mcp_list_failed');
 
   return (servers.data ?? []).map((server) => ({
     id: server.id,
@@ -132,7 +132,7 @@ export async function setMcpServerEnabled(db: Db, input: { organizationId: strin
 
 export function toolError(error: { code?: string; message: string }): DomainError {
   if (error.code === '42501') return new DomainError('You cannot change integrations for this business.', 'integrations.forbidden');
-  if (error.code === '22023') return new DomainError(error.message, 'integrations.tool_invalid');
+  if (error.code === '22023') return fromDatabaseError(error, 'integrations.tool_invalid');
   if (error.code === '23505') return new DomainError('That is already granted.', 'integrations.tool_duplicate');
   return new DomainError('That could not be completed.', 'integrations.tool_failed');
 }

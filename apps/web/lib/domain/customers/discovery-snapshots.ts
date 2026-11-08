@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import {
   DISCOVERY_REQUIREMENTS,
@@ -102,7 +102,7 @@ export async function getDiscoverySnapshot(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'discovery_snapshots.get_failed');
+    throw fromDatabaseError(error, 'discovery_snapshots.get_failed');
   }
   if (!data) return null;
 
@@ -160,7 +160,7 @@ export async function upsertDiscoverySnapshotAnswers(
       .single();
 
     if (error) {
-      throw new DomainError(error.message, 'discovery_snapshots.update_failed');
+      throw fromDatabaseError(error, 'discovery_snapshots.update_failed');
     }
 
     return readSnapshot(data);
@@ -184,7 +184,7 @@ export async function upsertDiscoverySnapshotAnswers(
         'discovery_snapshots.customer_not_found',
       );
     }
-    throw new DomainError(error.message, 'discovery_snapshots.create_failed');
+    throw fromDatabaseError(error, 'discovery_snapshots.create_failed');
   }
 
   return readSnapshot(data);

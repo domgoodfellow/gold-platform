@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { getConnector } from './connectors';
 import { disconnectOAuth } from './oauth';
@@ -35,7 +35,7 @@ export async function listConnections(
     .order('created_at', { ascending: false });
 
   if (error) {
-    throw new DomainError(error.message, 'integrations.connections_list_failed');
+    throw fromDatabaseError(error, 'integrations.connections_list_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -63,7 +63,7 @@ export async function getConnection(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'integrations.connection_get_failed');
+    throw fromDatabaseError(error, 'integrations.connection_get_failed');
   }
   if (!data) return null;
 
@@ -109,7 +109,7 @@ export async function recordConnection(
     if (error.code === '42501') {
       throw new DomainError('You cannot connect data sources here.', 'integrations.forbidden');
     }
-    throw new DomainError(error.message, 'integrations.connect_failed');
+    throw fromDatabaseError(error, 'integrations.connect_failed');
   }
 
   return data;
@@ -144,6 +144,6 @@ export async function disconnectConnection(
     if (error.code === '42501') {
       throw new DomainError('You cannot disconnect this.', 'integrations.forbidden');
     }
-    throw new DomainError(error.message, 'integrations.disconnect_failed');
+    throw fromDatabaseError(error, 'integrations.disconnect_failed');
   }
 }

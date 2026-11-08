@@ -1,6 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { HomeStudioSummarySchema } from '@gold/schemas';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import type { Counted } from '@/lib/domain/counted';
 import { listContacts } from '@/lib/domain/contacts/contacts';
 import { listOpportunities } from '@/lib/domain/opportunities/opportunities';
@@ -20,12 +20,19 @@ import { emptySource, type HomeAttentionItem, type HomeSource, type HomeSourceDa
 
 export type ReadContext = { db: Db; organizationId: string; membershipId: string; resourceId: string | null; schedulable: boolean; date: string; timezone: string; now: string; query: HomeQuery; period: ReturnType<typeof homePeriod>; features: Set<string>; capabilities: Set<string>; assistantEntitled: boolean };
 const LIMIT = 5;
+// Plain labels for codes Home shows; a code is never printed as it is stored.
+const CHANNEL_LABEL: Record<string, string> = { sms: 'Text', email: 'Email', voice: 'Call', whatsapp: 'WhatsApp', chat: 'Chat', web_chat: 'Chat', website_chat: 'Chat' };
+const channelLabel = (channel: string) => CHANNEL_LABEL[channel] ?? channel.charAt(0).toUpperCase() + channel.slice(1).replaceAll('_', ' ');
+const CONVERSATION_STATUS: Record<string, string> = { open: 'Open', waiting: 'Waiting', closed: 'Closed' };
+const INQUIRY_STATUS: Record<string, string> = { new: 'New', in_review: 'In review' };
+const CASE_EVENT: Record<string, string> = { created: 'Case opened', status: 'Case moved', priority: 'Case priority changed', assignment: 'Case reassigned', reopened: 'Case reopened', closed: 'Case closed', resolved: 'Case resolved', escalated: 'Case escalated', note: 'Case note added', comment: 'Case note added' };
+const AGENT_STATE: Record<string, string> = { Enabled: 'On', Configured: 'Not on yet', Unavailable: 'Not available' };
 function countedTotal<T>(rows: Counted<T>): number {
   if (typeof rows.exactCount !== 'number') throw new DomainError('The source did not return an exact count.', 'home.count_unavailable');
   return rows.exactCount;
 }
 function checked<T>(result: { data: T | null; error: { message: string } | null }): T {
-  if (result.error) throw new DomainError(result.error.message, 'home.source_unavailable');
+  if (result.error) throw fromDatabaseError(result.error, 'home.source_unavailable');
   if (result.data === null) throw new DomainError('The source returned no projection.', 'home.source_unavailable');
   return result.data;
 }
@@ -57,7 +64,7 @@ export async function readCrm(c: ReadContext): Promise<HomeSourceData> {
     listOpportunities(c.db, { organizationId: c.organizationId, kind: 'open', limit: 1 }),
   ]);
   d.metrics.push({ key: 'opportunities', label: 'Open opportunities', value: countedTotal(opportunities), definition: 'Current opportunities in stages classified Open', href: `${base}/crm/opportunities?kind=open` });
-  d.performance.push({ key: 'customers', label: 'Contacts', value: countedTotal(customers), definition: 'All recorded people, companies and unspecified contacts · current', href: `${base}/crm/contacts` });
+  d.performance.push({ key: 'customers', label: 'Contacts', value: countedTotal(customers), definition: 'All contacts', href: `${base}/crm/contacts` });
   if (!c.features.has('follow_ups')) return d;
   const scope = c.query.scope === 'mine' ? { ownerMembershipId: c.membershipId } : {};
   const cutoff = c.query.attention === 'all' ? day.endsAt : c.now;
@@ -78,7 +85,7 @@ export async function readWork(c: ReadContext): Promise<HomeSourceData> {
   const d = emptySource('Work'), base = `/organizations/${c.organizationId}`, day = zonedDayRange(c.date, c.timezone);
   if (!c.schedulable) {
     const active = await listWorkItems(c.db, { organizationId: c.organizationId, active: true, limit: 1 });
-    d.metrics.push({ key: 'active-work', label: 'Active Work', value: countedTotal(active), definition: 'Work in statuses that retain resources - current organization total', href: `${base}/work` });
+    d.metrics.push({ key: 'active-work', label: 'Active Work', value: countedTotal(active), definition: 'Open work · all dates', href: `${base}/work` });
     return d;
   }
   // The complete W3 read model owns day coverage/conflicts; Home never infers safety from a preview.
@@ -166,7 +173,7 @@ export async function readSupportHome(c: ReadContext): Promise<HomeSourceData> {
   d.obligationTotals = { today: exact(dated), upcoming: exact(next) };
   d.categories.push(...queues.map((q, i) => ({ key: `case-${filters[i].key}`, label: filters[i].label, total: exact(q), href: `${base}/cases?status=active${filters[i].href}${c.query.scope === 'mine' ? `&owner=${c.membershipId}` : ''}` })));
   d.metrics.push({ key: 'cases', label: 'Active Support Cases', value: exact(all), definition: 'Organization total: New, Open and Waiting; excludes Resolved and Closed', href: `${base}/cases?status=active` });
-  d.activity = checked(events).map(e => ({ key: `Support:event:${e.id}`, source: 'Support', title: `Case ${e.kind.replaceAll('_', ' ')}`, at: e.occurred_at, href: `${base}/cases/${e.case_id}`, recordKey: `Support:case:${e.case_id}` }));
+  d.activity = checked(events).map(e => ({ key: `Support:event:${e.id}`, source: 'Support', title: CASE_EVENT[e.kind] ?? 'Case changed', at: e.occurred_at, href: `${base}/cases/${e.case_id}`, recordKey: `Support:case:${e.case_id}` }));
   return d;
 }
 
@@ -203,7 +210,7 @@ export async function readCommunications(c: ReadContext): Promise<HomeSourceData
       c.query.scope === 'organization' ? listInbox(c.db, { organizationId: c.organizationId, filter: { view: 'unassigned' }, limit: LIMIT }) : null,
     ]);
     if ([unread, mine, waiting, ...(unassigned ? [unassigned] : [])].some(r => r.total === undefined)) throw new DomainError('Inbox count unavailable.', 'home.count_unavailable');
-    const project = (r: typeof unread.items[number]) => item(c, 'Communications', 'conversation', r.id, r.subject ?? r.title, `${r.channel.toUpperCase()} · ${r.status}${r.unread ? ' · Unread' : ''}`, `${base}/comms/inbox/${r.id}`, { occurredAt: r.lastActivityAt, ownerMembershipId: r.assignee?.membershipId, ownerName: r.assignee?.name });
+    const project = (r: typeof unread.items[number]) => item(c, 'Communications', 'conversation', r.id, r.subject ?? r.title, `${channelLabel(r.channel)} · ${CONVERSATION_STATUS[r.status] ?? 'Conversation'}${r.unread ? ' · Unread' : ''}`, `${base}/comms/inbox/${r.id}`, { occurredAt: r.lastActivityAt, ownerMembershipId: r.assignee?.membershipId, ownerName: r.assignee?.name });
     if (c.query.attention === 'all') {
       d.attention.push(...[...new Map([...unread.items, ...waiting.items, ...(unassigned?.items ?? [])].map(r => [r.id,r])).values()].map(project));
       d.categories.push({ key: 'conversation', label: c.query.scope === 'mine' ? 'My active conversations' : 'Unread active conversations', total: unread.total!, href: `${base}/comms/inbox?view=${c.query.scope === 'mine' ? 'mine' : 'unread'}` }, { key: 'conversation-open', label: 'Conversations awaiting response', total: waiting.total!, href: `${base}/comms/inbox?status=open${c.query.scope === 'mine' ? '&view=mine' : ''}` });
@@ -229,7 +236,7 @@ export async function readMarketingHome(c: ReadContext): Promise<HomeSourceData>
   d.metrics.push({ key: 'inquiries', label: 'Inquiries awaiting review', value: exact(queue), definition: 'New and In review acquisition inquiries · current', href: `${base}/leads` });
   d.performance.push({ key: 'acquired', label: 'Acquisition inquiries received', value: exact(acquired), definition: 'Inquiries captured during the selected period · not Customers', href: `${base}/performance?from=${c.period.from}&to=${shiftDate(c.period.to, -1)}` });
   if (c.query.scope === 'organization' && c.query.attention === 'all') {
-    d.attention = rows.map(r => item(c, 'Marketing', 'inquiry', r.id, r.form_name_at_capture, `${r.campaign_name_at_capture ?? 'Unattributed'} · ${r.status.replaceAll('_', ' ')}`, `${base}/leads?inquiry=${r.id}`, { occurredAt: r.occurred_at }));
+    d.attention = rows.map(r => item(c, 'Marketing', 'inquiry', r.id, r.form_name_at_capture, `${r.campaign_name_at_capture ?? 'No campaign'} · ${INQUIRY_STATUS[r.status] ?? 'Inquiry'}`, `${base}/leads?inquiry=${r.id}`, { occurredAt: r.occurred_at }));
     d.categories.push({ key: 'inquiry', label: 'Inquiries awaiting review', total: exact(queue), href: `${base}/leads` });
     d.attention.push(...checked(setup).map(r => item(c, 'Marketing', 'campaign', r.id, r.name, 'Acquisition campaign has no Form source associated', `${base}/campaigns/${r.id}`, { occurredAt: r.created_at, ownerMembershipId: r.owner_membership_id })));
     d.categories.push({ key: 'campaign-setup', label: 'Campaigns needing source setup', total: exact(setup), href: `${base}/campaigns?attention=setup` });
@@ -251,11 +258,11 @@ export async function readFinanceHome(c: ReadContext): Promise<HomeSourceData> {
     d.categories.push({ key: 'invoice', label: 'Overdue invoices', total: overdue.total, href: `${base}/invoices?status=overdue` });
   }
   for (const [name, rows, definition, href] of [
-    ['Payments recorded', summary.received, 'Signed payment records · selected period · not invoiced value', `${base}/payments?from=${c.period.from}&to=${c.period.to}`],
-    ['Outstanding invoices', summary.outstanding, 'Current all-time receivables · no currency conversion', `${base}/invoices?status=outstanding`],
+    ['Payments recorded', summary.received, 'Payments recorded in this period', `${base}/payments?from=${c.period.from}&to=${c.period.to}`],
+    ['Outstanding invoices', summary.outstanding, 'Unpaid now, whatever the period', `${base}/invoices?status=outstanding`],
   ] as const) for (const r of rows) d.performance.push({ key: `${name}:${r.currency}`, label: `${name} · ${r.currency}`, value: formatMoney(Number(r.amount), r.currency), definition, href });
   for (const currency of new Set(summary.trend.map(r => r.currency))) d.trends.push({ currency, points: summary.trend.filter(r => r.currency === currency).map(r => ({ day: r.day, amountMinor: Number(r.amount) })) });
-  for (const row of financials) for (const [label, amount] of [['Invoiced', row.invoicedMinor], ['Incurred Work costs', row.incurredMinor]] as const) if (amount !== null) d.performance.push({ key: `${label}:${row.currency}`, label: `${label} · ${row.currency}`, value: formatMoney(amount, row.currency), definition: `${label === 'Invoiced' ? 'Invoice issue dates' : 'Recorded Work cost dates'} · selected period · canonical financial report`, href: label === 'Invoiced' ? `${base}/invoices?from=${c.period.from}&to=${c.period.to}` : base });
+  for (const row of financials) for (const [label, amount] of [['Invoiced', row.invoicedMinor], ['Incurred Work costs', row.incurredMinor]] as const) if (amount !== null) d.performance.push({ key: `${label}:${row.currency}`, label: `${label} · ${row.currency}`, value: formatMoney(amount, row.currency), definition: label === 'Invoiced' ? 'Invoices issued in this period' : 'Work costs recorded in this period', href: label === 'Invoiced' ? `${base}/invoices?from=${c.period.from}&to=${c.period.to}` : base });
   return d;
 }
 
@@ -271,15 +278,15 @@ export async function readAutomationHome(c: ReadContext): Promise<HomeSourceData
   const runRows = checked(runs), messageRows = [...checked(failedDeliveries), ...checked(uncertainDeliveries)];
   d.metrics.push({ key: 'failed-runs', label: 'Failed Automation runs', value: exact(runs), definition: 'Execution outcome Failed · today · separate from deliveries', href: `${base}/activity?outcome=failed&when=all&from=${operationalPeriod.from}&to=${operationalPeriod.to}` });
   if (c.query.scope === 'organization' && c.query.attention !== 'overdue') {
-    d.attention = [...runRows.map(r => item(c, 'Automations', 'run', r.id, r.rule_name, 'Failed execution · inspect recorded evidence', `${base}/activity?run=${r.id}`, { urgency: 'high', occurredAt: r.occurred_at })), ...messageRows.map(r => item(c, 'Automations', 'delivery', r.id, r.rule_name, `${r.state === 'uncertain' ? 'Uncertain' : 'Failed'} ${r.channel} delivery`, `${base}/activity?delivery=${r.id}`, { urgency: 'high', occurredAt: r.queued_at }))];
+    d.attention = [...runRows.map(r => item(c, 'Automations', 'run', r.id, r.rule_name, 'Rule failed', `${base}/activity?run=${r.id}`, { urgency: 'high', occurredAt: r.occurred_at })), ...messageRows.map(r => item(c, 'Automations', 'delivery', r.id, r.rule_name, `${channelLabel(r.channel)} ${r.state === 'uncertain' ? 'not confirmed' : 'not delivered'}`, `${base}/activity?delivery=${r.id}`, { urgency: 'high', occurredAt: r.queued_at }))];
     d.categories.push({ key: 'run', label: 'Failed runs', total: exact(runs), href: `${base}/activity?outcome=failed&when=all&from=${operationalPeriod.from}&to=${operationalPeriod.to}` });
-    for (const [state, rows] of [['failed', failedDeliveries], ['uncertain', uncertainDeliveries]] as const) d.categories.push({ key: state === 'failed' ? 'delivery' : 'uncertain-delivery', label: state === 'failed' ? 'Failed deliveries' : 'Uncertain deliveries', total: exact(rows), href: `${base}/activity?state=${state}&when=all&from=${operationalPeriod.from}&to=${operationalPeriod.to}&stream=deliveries` });
+    for (const [state, rows] of [['failed', failedDeliveries], ['uncertain', uncertainDeliveries]] as const) d.categories.push({ key: state === 'failed' ? 'delivery' : 'uncertain-delivery', label: state === 'failed' ? 'Messages not delivered' : 'Deliveries not confirmed', total: exact(rows), href: `${base}/activity?state=${state}&when=all&from=${operationalPeriod.from}&to=${operationalPeriod.to}&stream=deliveries` });
   }
-  d.activity = [...runRows.map(r => ({ key: `Automations:run:${r.id}`, source: 'Automations' as const, title: `Execution failed · ${r.rule_name}`, at: r.occurred_at, href: `${base}/activity?run=${r.id}`, recordKey: `Automations:run:${r.id}` })), ...messageRows.map(r => ({ key: `Automations:delivery:${r.id}`, source: 'Automations' as const, title: `Delivery ${r.state} · ${r.rule_name}`, at: r.queued_at, href: `${base}/activity?delivery=${r.id}`, recordKey: `Automations:delivery:${r.id}` }))];
-  if (exact(runs) || exact(failedDeliveries) || exact(uncertainDeliveries)) d.health.push({ key: 'automation-failures', source: 'Automations', state: 'Execution or delivery issues recorded', detail: `${exact(runs)} failed runs - ${exact(failedDeliveries)} failed and ${exact(uncertainDeliveries)} uncertain deliveries today`, href: `${base}/activity`, warning: true });
+  d.activity = [...runRows.map(r => ({ key: `Automations:run:${r.id}`, source: 'Automations' as const, title: `Rule failed · ${r.rule_name}`, at: r.occurred_at, href: `${base}/activity?run=${r.id}`, recordKey: `Automations:run:${r.id}` })), ...messageRows.map(r => ({ key: `Automations:delivery:${r.id}`, source: 'Automations' as const, title: `${r.state === 'uncertain' ? 'Delivery not confirmed' : 'Not delivered'} · ${r.rule_name}`, at: r.queued_at, href: `${base}/activity?delivery=${r.id}`, recordKey: `Automations:delivery:${r.id}` }))];
+  if (exact(runs) || exact(failedDeliveries) || exact(uncertainDeliveries)) d.health.push({ key: 'automation-failures', source: 'Automations', state: 'Rules or messages failed today', detail: `${exact(runs)} rules failed · ${exact(failedDeliveries)} messages not delivered · ${exact(uncertainDeliveries)} not confirmed`, href: `${base}/activity`, warning: true });
   if (exact(rules)) {
-    d.health.push({ key: 'rule-readiness', source: 'Automations', state: 'Enabled rules without actions', detail: `${exact(rules)} rules have no configured action. Full diagnostics remain in Rules.`, href: `${base}/rules?health=attention`, warning: true });
-    if (c.query.scope === 'organization' && c.query.attention === 'all') d.attention.push(...checked(rules).map(r => item(c, 'Automations', 'rule', r.id, r.name, 'Enabled rule has no configured action', `${base}/${r.id}`, { occurredAt: r.created_at })));
+    d.health.push({ key: 'rule-readiness', source: 'Automations', state: 'Rules with no action', detail: `${exact(rules)} switched-on rules do nothing yet`, href: `${base}/rules?health=attention`, warning: true });
+    if (c.query.scope === 'organization' && c.query.attention === 'all') d.attention.push(...checked(rules).map(r => item(c, 'Automations', 'rule', r.id, r.name, 'Switched on, but has no action', `${base}/${r.id}`, { occurredAt: r.created_at })));
   }
   return d;
 }
@@ -310,14 +317,14 @@ export async function readAiHome(c: ReadContext): Promise<HomeSourceData> {
   if (!c.capabilities.has('organization.manage')) return d;
   const deployments = await c.db.from('ai_assistant_deployments').select('id,assistant_id,surface,version_id,enabled,display_name,updated_at', { count: 'exact' }).eq('organization_id', c.organizationId).eq('enabled', true).order('updated_at', { ascending: false }).order('id').limit(LIMIT);
   const ds = checked(deployments);
-  if (!ds.length) d.health.push({ key: 'deployments-empty', source: 'AI', state: 'No enabled deployments', detail: 'Configuration and activation do not establish live provider operation.', href: `${base}/deployments`, warning: false });
+  if (!ds.length) d.health.push({ key: 'deployments-empty', source: 'AI', state: 'No agent is answering', detail: 'Switch an agent on for a channel to start.', href: `${base}/deployments`, warning: false });
   const states = ds.length ? checked(await c.db.from('ai_assistants').select('id,status').eq('organization_id', c.organizationId).in('id', ds.map(r => r.assistant_id))) : [];
   for (const dep of ds) {
     const readiness = deploymentReadiness(dep, states.find(a => a.id === dep.assistant_id), c.assistantEntitled, !!process.env.ASSISTANT_API_URL && (dep.surface !== 'website_chat' || !!process.env.PUBLIC_CHAT_API_SECRET));
-    d.health.push({ key: `deployment:${dep.id}`, source: 'AI', state: readiness.state === 'Enabled' ? 'Enabled · runtime unverified' : readiness.state, detail: `${dep.display_name || dep.surface} · ${readiness.reason}`, href: `${base}/agents/${dep.assistant_id}?section=channels`, warning: readiness.state !== 'Enabled' });
+    d.health.push({ key: `deployment:${dep.id}`, source: 'AI', state: AGENT_STATE[readiness.state] ?? readiness.state, detail: `${dep.display_name || dep.surface} · ${readiness.reason}`, href: `${base}/agents/${dep.assistant_id}?section=channels`, warning: readiness.state !== 'Enabled' });
     if (readiness.state !== 'Enabled' && c.query.scope === 'organization' && c.query.attention !== 'overdue') d.attention.push(item(c, 'AI', 'deployment', dep.id, dep.display_name || dep.surface, readiness.reason, `${base}/agents/${dep.assistant_id}?section=channels`, { urgency: 'high', occurredAt: dep.updated_at }));
   }
-  if (exact(deployments) > ds.length) d.health.push({ key: 'deployments-more', source: 'AI', state: 'Bounded deployment preview', detail: `${ds.length} of ${exact(deployments)} enabled deployments inspected`, href: `${base}/agents`, warning: false });
+  if (exact(deployments) > ds.length) d.health.push({ key: 'deployments-more', source: 'AI', state: 'More agents than shown', detail: `${ds.length} of ${exact(deployments)} switched-on channels shown`, href: `${base}/agents`, warning: false });
   return d;
 }
 
@@ -326,10 +333,10 @@ export async function readStudioHome(c: ReadContext): Promise<HomeSourceData> {
   const summary = HomeStudioSummarySchema.parse(checked(await c.db.rpc('home_studio_summary', { p_organization_id: c.organizationId })));
   const revisions = summary.working, drafts = summary.drafts, live = summary.published;
   if (c.query.scope === 'organization' && c.query.attention === 'all') {
-    d.attention = [...revisions.map(r => item(c, 'Studio', 'website-revision', r.id, `Website revision ${r.revision_number}`, r.status === 'in_review' ? 'Publication awaiting review' : 'Unpublished draft', `${base}/website`, { occurredAt: r.created_at })), ...drafts.map(r => item(c, 'Studio', 'form-draft', r.id, r.name, 'Unpublished Form draft · review before publishing', `${base}/forms/${r.form_id}`, { occurredAt: r.created_at }))];
+    d.attention = [...revisions.map(r => item(c, 'Studio', 'website-revision', r.id, `Website revision ${r.revision_number}`, r.status === 'in_review' ? 'Publication awaiting review' : 'Unpublished draft', `${base}/website`, { occurredAt: r.created_at })), ...drafts.map(r => item(c, 'Studio', 'form-draft', r.id, r.name, 'Unpublished form draft', `${base}/forms/${r.form_id}`, { occurredAt: r.created_at }))];
     d.categories.push({ key: 'website-revision', label: summary.workingTotal === 1 ? 'Unpublished website revision' : 'Unpublished website revisions', total: summary.workingTotal, href: `${base}/website` }, { key: 'form-draft', label: 'Form drafts', total: summary.draftTotal, href: `${base}/forms` });
   }
-  d.health.push({ key: 'website', source: 'Studio', state: live.length ? 'Website published' : 'No published website', detail: revisions.length ? live.length ? 'Unpublished changes exist; public content stays on its published revision.' : 'A working draft exists; no website revision has been published.' : live.length ? 'Saved and published are separate states.' : 'Create and publish a website when required.', href: `${base}/website`, warning: !live.length });
+  d.health.push({ key: 'website', source: 'Studio', state: live.length ? 'Website published' : 'No published website', detail: revisions.length ? live.length ? 'Unpublished changes are waiting.' : 'A draft is waiting; nothing is published yet.' : live.length ? 'Up to date.' : 'Nothing published yet.', href: `${base}/website`, warning: !live.length });
   d.activity = live.filter(r => r.published_at && r.published_at >= homePeriod(c.date, c.timezone, 'week').since && r.published_at < homePeriod(c.date, c.timezone, 'week').until).map(r => ({ key: `Studio:published:${r.id}`, source: 'Studio', title: `Website revision ${r.revision_number} published`, at: r.published_at!, href: `${base}/website`, recordKey: `Studio:website-revision:${r.id}` }));
   return d;
 }

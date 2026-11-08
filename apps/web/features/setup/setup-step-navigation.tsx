@@ -24,7 +24,7 @@ export function SetupStepNavigation({ organizationId, steps, selectedKey }: { or
         return <li key={step.key} className="shrink-0 lg:shrink">
           <Link href={setupStepHref(organizationId, step.key)} aria-current={step.key === selectedKey ? 'step' : undefined}
             className={`${FOCUS_RING} flex items-center gap-2 rounded-md px-3 py-2.5 text-sm ${step.key === selectedKey ? 'bg-hover font-medium' : 'text-muted hover:bg-hover'}`}>
-            {complete ? <CircleCheck aria-label="Observed configuration ready" className="size-4 shrink-0" /> : <span className="tabular-nums">{position + 1}.</span>}
+            {complete ? <CircleCheck aria-label="Done" className="size-4 shrink-0" /> : <span className="tabular-nums">{position + 1}.</span>}
             <span>{step.label}</span>
             {gaps ? <span className="ml-auto tabular-nums">{gaps}</span> : null}
           </Link>

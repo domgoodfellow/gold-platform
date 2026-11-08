@@ -51,7 +51,7 @@ export const SERVICEABLE_SUBSCRIPTION_STATUS: Readonly<Record<SubscriptionStatus
 export type ServiceAccessCode =
   /** No current base Plan: nothing has said this organization owes GOLD a subscription. */
   | 'no_plan'
-  /** The current base Plan is not billable (GOLD Internal). */
+  /** The current base Plan is not billable (GildOps Internal). */
   | 'non_billable_plan'
   | 'subscription_serviceable'
   /** In SETUP with a billable Plan and no subscription that ever took effect. Permitted; Launch is not. */

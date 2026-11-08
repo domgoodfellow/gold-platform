@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import type { AllowanceType, OverageBehavior, OveragePolicy, QuotaPeriod } from '@/lib/domain/catalogue/plans';
 
 /**
@@ -200,7 +200,7 @@ export async function organizationAllowanceStates(
     if (error.code === '42501') {
       throw new DomainError('You cannot read this business’s allowances.', 'allowances.forbidden');
     }
-    throw new DomainError(error.message, 'allowances.states_failed');
+    throw fromDatabaseError(error, 'allowances.states_failed');
   }
 
   return ((data ?? []) as unknown as StateRow[]).map(toState);
@@ -263,7 +263,7 @@ export async function allowanceDecision(
     if (error.code === '42501') {
       throw new DomainError('You cannot read this business’s allowances.', 'allowances.forbidden');
     }
-    throw new DomainError(error.message, 'allowances.decision_failed');
+    throw fromDatabaseError(error, 'allowances.decision_failed');
   }
 
   const row = ((data ?? []) as unknown as Record<string, string | number | boolean | null>[])[0];

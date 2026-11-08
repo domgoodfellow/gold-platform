@@ -129,7 +129,7 @@ export default async function SetupPage({
                 them — and the areas above stay fully usable. */}
             {!canDraft ? (
               <p className="mt-4 max-w-2xl rounded border border-border p-3 text-sm">
-                This installation cannot draft a setup. Every area above can still be configured
+                Drafting a setup isn’t available yet. Every area above can still be set up
                 directly.
               </p>
             ) : null}
@@ -150,7 +150,7 @@ export default async function SetupPage({
             ) : null}
 
             {proposal ? (
-              <ButtonLink href={`/organizations/${organizationId}/setup/proposal`} tone="secondary" className="mt-4">Review proposed configuration</ButtonLink>
+              <ButtonLink href={`/organizations/${organizationId}/setup/proposal`} tone="secondary" className="mt-4">Review proposed setup</ButtonLink>
             ) : (
               canDraft && (
                 <EmptyState className="mt-6 max-w-2xl">Nothing is waiting to be reviewed.</EmptyState>

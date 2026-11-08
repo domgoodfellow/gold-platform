@@ -76,17 +76,17 @@ describe('creating a resource', () => {
 
   it('lets capabilities be chosen from the vocabulary, and a new one be typed when the caller may configure', () => {
     renderCreate();
-    const group = screen.getByRole('group', { name: 'Capabilities' });
+    const group = screen.getByRole('group', { name: 'Skills' });
     const boxes = within(group).getAllByRole('checkbox') as HTMLInputElement[];
     expect(boxes.map((box) => box.parentElement?.textContent)).toEqual(['Tire service', 'Oil change']);
     fireEvent.click(boxes[0]);
     expect(boxes[0].checked).toBe(true);
-    expect(screen.getByLabelText('Add a capability')).toBeTruthy();
+    expect(screen.getByLabelText('Add a skill')).toBeTruthy();
   });
 
   it('does not offer to add vocabulary to somebody who may not configure it', () => {
     renderCreate(false);
-    expect(screen.queryByLabelText('Add a capability')).toBeNull();
+    expect(screen.queryByLabelText('Add a skill')).toBeNull();
     expect(screen.getAllByRole('checkbox')).toHaveLength(2);
   });
 
@@ -117,7 +117,7 @@ describe('an existing resource', () => {
       />,
     );
     expect(screen.getByRole('button', { name: 'Remove Tire service from Service Van 1' })).toBeTruthy();
-    const options = await optionLabels(screen.getByLabelText('Add a capability'));
+    const options = await optionLabels(screen.getByLabelText('Add a skill'));
     expect(options).toEqual(['Choose…', 'Oil change']);
   });
 

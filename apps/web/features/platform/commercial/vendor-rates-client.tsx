@@ -34,7 +34,7 @@ export function AddVendorRate({
       <PageDrawerContent>
         <PageDrawerHeader><PageDrawerTitle>Add rate</PageDrawerTitle></PageDrawerHeader>
         <form action={action} className="flex flex-col gap-4 px-4">
-          <div className="grid gap-1"><FieldLabel htmlFor="vendor-provider">Provider</FieldLabel><SelectField id="vendor-provider" name="providerKey" required options={[{ value: '', label: 'Choose provider' }, ...providers.map((provider) => ({ value: provider.key, label: provider.label }))]} /></div>
+          <div className="grid gap-1"><FieldLabel htmlFor="vendor-provider">Vendor</FieldLabel><SelectField id="vendor-provider" name="providerKey" required options={[{ value: '', label: 'Choose vendor' }, ...providers.map((provider) => ({ value: provider.key, label: provider.label }))]} /></div>
           <div className="grid gap-1"><FieldLabel htmlFor="vendor-cost-meter">Cost meter</FieldLabel><SelectField id="vendor-cost-meter" name="costMeterKey" required options={[{ value: '', label: 'Choose cost meter' }, ...costMeters.map((meter) => ({ value: meter.key, label: meter.label }))]} /></div>
           <div className="grid gap-1"><FieldLabel htmlFor="vendor-commercial-meter">Commercial meter</FieldLabel><SelectField id="vendor-commercial-meter" name="commercialMeterId" required options={[{ value: '', label: 'Choose commercial meter' }, ...meters.map((meter) => ({ value: meter.id, label: meter.description }))]} /></div>
           <div className="grid grid-cols-[1fr_6rem] gap-3">
@@ -47,7 +47,7 @@ export function AddVendorRate({
             <div className="grid gap-1"><FieldLabel htmlFor="vendor-direction">Direction</FieldLabel><SelectField id="vendor-direction" name="direction" options={[{ value: '', label: 'Any' }, { value: 'inbound', label: 'Inbound' }, { value: 'outbound', label: 'Outbound' }]} /></div>
           </div>
           <div className="grid gap-1"><FieldLabel htmlFor="vendor-resource">Resource type</FieldLabel><TextInput id="vendor-resource" name="resourceType" /></div>
-          <div className="grid gap-1"><FieldLabel htmlFor="vendor-source">Source</FieldLabel><TextInput id="vendor-source" name="source" placeholder="Provider API, invoice, or verified rate card" required /></div>
+          <div className="grid gap-1"><FieldLabel htmlFor="vendor-source">Source</FieldLabel><TextInput id="vendor-source" name="source" placeholder="Vendor API, invoice, or verified rate card" required /></div>
           <div className="grid gap-1"><FieldLabel htmlFor="vendor-note">Note</FieldLabel><TextInput id="vendor-note" name="note" /></div>
           <ErrorText>{state.error}</ErrorText>
           {state.recorded ? <p className="text-sm text-muted">Rate version recorded.</p> : null}

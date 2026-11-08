@@ -38,7 +38,7 @@ export function RuleEnabledToggle({
           formId={`enable-rule-${rule.id}`}
           label="Enable"
           confirmLabel="Enable automation"
-          description={`${rule.actions.length ? 'Matching future triggers can change Work and queue Customer messages.' : 'This rule has no actions and will perform no business operation.'} Review diagnostics and provider prerequisites before enabling.`}
+          description={rule.actions.length ? 'From now on, matching triggers can change work and send messages to customers.' : 'This rule has no actions, so it will do nothing.'}
           pending={pending}
           tone="text"
           size={size}

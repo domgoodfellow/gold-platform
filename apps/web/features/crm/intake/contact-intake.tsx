@@ -69,7 +69,7 @@ export function ContactIntakeProvider({ organizationId, definitions, options, ch
                       <span className="min-w-0"><span className="block font-medium">{source.name}</span><span className="text-muted">{source.type} · connection {source.connection.replaceAll('_', ' ')}</span></span>
                       <Link href={source.href} className={cx('font-medium text-accent-text underline underline-offset-4', FOCUS_RING)}>Refresh and review</Link></span>)}</span>
                       : <span className="text-xs text-muted">No worksheet is connected yet.</span>}
-                    <span className="text-xs text-muted">Refreshing re-reads the worksheet and opens a review; nothing reaches CRM until you apply it. Removed rows never delete contacts, and local edits are kept.</span>
+                    <span className="text-xs text-muted">Nothing reaches CRM until you apply the review.</span>
                     {options.sync.connectHref ? <Link href={options.sync.connectHref} className={cx('w-fit text-xs font-medium text-accent-text underline underline-offset-4', FOCUS_RING)}>Connect Google Workspace or Microsoft 365 (beta) in Connections</Link> : null}
                   </span>}
                 </ChoiceBody>

@@ -84,7 +84,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   },
   {
     key: 'connections',
-    title: 'Communications configuration',
+    title: 'Communications settings',
     entries: [
       entry('communications', 'Phone and messaging', 'The phone numbers this business has, and how its website answers a visitor.'),
       entry('call-setup', 'Call setup', 'The words this business uses for how a call went, routing, and caller identity.'),
@@ -95,8 +95,8 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     key: 'ai-automations',
     title: 'AI & Automations',
     entries: [
-      entry('ai-agents', 'Agent deployments', 'Configure this business’s agents and their deployment state.'),
-      entry('automation-rules', 'Automation rules', 'Configure triggers, conditions and actions through Automations.'),
+      entry('ai-agents', 'Agents', 'This business’s agents and where they answer.'),
+      entry('automation-rules', 'Automation rules', 'Triggers, conditions and actions, in Automations.'),
     ],
   },
   {

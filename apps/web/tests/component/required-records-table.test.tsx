@@ -70,6 +70,6 @@ describe('the records a sending domain still needs', () => {
   it('says nothing is required rather than drawing an empty table', () => {
     render(<RequiredRecordsTable records={[]} />);
 
-    expect(screen.getByText('The provider has not asked for any records yet.')).toBeTruthy();
+    expect(screen.getByText('No records are needed yet.')).toBeTruthy();
   });
 });

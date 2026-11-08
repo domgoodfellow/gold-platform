@@ -41,7 +41,7 @@ export function GuidedSetup({ organizationId, steps, selected, overview, busines
           </div>
         </Card>
         {selected.key === 'business' ? handoff : null}
-        <p className="text-xs text-muted">Progress reflects saved configuration. Continuing between steps does not mark anything complete.</p>
+        
       </div>
       <aside aria-label="Organization readiness" className="min-w-0 space-y-4 lg:col-start-2 xl:col-start-auto">
         <SetupProgressCard overview={overview} />

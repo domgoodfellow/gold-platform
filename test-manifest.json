@@ -2490,6 +2490,7 @@
       ],
       "note": "Webhook function called directly; no Stripe traffic. next/navigation and getDb are replaced so the route guard can be driven."
     },
+    "apps/web/tests/integration/database/database-errors.test.ts": {"category": "database-integration", "concerns": ["errors", "content"], "note": "fromDatabaseError turns real PostgreSQL refusals (unique, foreign key both ways, check, row security) into plain sentences, passes RAISE sentences through, and logs unknown failures without showing them."},
     "apps/web/tests/integration/database/session-identity.test.ts": {
       "category": "database-integration",
       "concerns": [
@@ -3044,6 +3045,7 @@
       "category": "component",
       "concerns": ["navigation", "ui", "accessibility"]
     },
+    "apps/web/tests/component/toaster.test.tsx": {"category": "component", "concerns": ["ui", "feedback"], "note": "The shared Toaster: every toast has a named close button; success closes on its own; an error toast stays until closed (Work Order 4, Part F)."},
     "apps/web/tests/component/setup-banner.test.tsx": {
       "category": "component",
       "concerns": ["navigation", "setup"]

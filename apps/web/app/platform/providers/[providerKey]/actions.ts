@@ -75,7 +75,7 @@ export async function verifyProviderAccountAction(_: AccountCommandState, form: 
   // own words at the moment they press the button.
   const after = await getProviderAccount(db, accountId);
   if (after && after.verificationState !== 'verified') {
-    return { error: after.verificationError ?? 'The provider did not accept this credential.', done: false };
+    return { error: after.verificationError ?? 'The vendor did not accept this credential.', done: false };
   }
   return state;
 }

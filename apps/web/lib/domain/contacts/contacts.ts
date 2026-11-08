@@ -4,7 +4,7 @@ import {
   type CustomInput,
   type CustomValues,
 } from '@/lib/domain/fields/field-definitions';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
@@ -66,7 +66,7 @@ export async function listContacts(
     .limit(input.limit ?? LIST_LIMIT);
 
   if (error) {
-    throw new DomainError(error.message, 'customers.list_failed');
+    throw fromDatabaseError(error, 'customers.list_failed');
   }
 
   return counted(
@@ -126,7 +126,7 @@ export async function listContactPage(
   let affiliatedIds: string[] | undefined;
   if (filter.companyId) {
     const {data,error} = await db.from('contact_affiliations').select('person_id').eq('organization_id', input.organizationId).eq('company_id',filter.companyId).eq('active',true);
-    if(error) throw new DomainError(error.message,'contacts.affiliations_failed');
+    if(error) throw fromDatabaseError(error, 'contacts.affiliations_failed');
     affiliatedIds=(data ?? []).map(row=>row.person_id);
   }
   let query = db
@@ -159,7 +159,7 @@ export async function listContactPage(
     .range(from, from + CONTACT_PAGE_SIZE - 1);
 
   if (error) {
-    throw new DomainError(error.message, 'customers.list_failed');
+    throw fromDatabaseError(error, 'customers.list_failed');
   }
 
   return counted(
@@ -202,7 +202,7 @@ export async function listContactLocationLabels(
     .order('created_at', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'customers.locations_failed');
+    throw fromDatabaseError(error, 'customers.locations_failed');
   }
 
   const labels: Record<string, string> = {};
@@ -290,9 +290,9 @@ export async function createContact(
     // resolveCustom above catches this first for anything arriving through the domain, so
     // reaching here means the row was built somewhere that skipped it.
     if (error.code === '23514') {
-      throw new DomainError(error.message, 'customers.custom_invalid');
+      throw fromDatabaseError(error, 'customers.custom_invalid');
     }
-    throw new DomainError(error.message, 'customers.create_failed');
+    throw fromDatabaseError(error, 'customers.create_failed');
   }
 
   return data;
@@ -318,7 +318,7 @@ export async function getContact(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'customers.get_failed');
+    throw fromDatabaseError(error, 'customers.get_failed');
   }
   if (!data) return null;
 
@@ -421,7 +421,7 @@ export async function updateContact(
       );
     }
     if (error.code === '23514') {
-      throw new DomainError(error.message, 'customers.custom_invalid');
+      throw fromDatabaseError(error, 'customers.custom_invalid');
     }
     // 42501 is the function refusing a row this caller may not change, and it is deliberately
     // indistinguishable from the row not existing.
@@ -431,7 +431,7 @@ export async function updateContact(
         'customers.update_refused',
       );
     }
-    throw new DomainError(error.message, 'customers.update_failed');
+    throw fromDatabaseError(error, 'customers.update_failed');
   }
 }
 
@@ -439,7 +439,7 @@ export async function updateContact(
 export async function listContactLastActivity(db: Db, input: {organizationId:string; customerIds:readonly string[]}): Promise<Record<string,string>> {
   const entries = await Promise.all([...new Set(input.customerIds)].map(async customerId => {
     const {data,error}=await db.from('customer_activity').select('occurred_at').eq('organization_id',input.organizationId).eq('customer_id',customerId).order('occurred_at',{ascending:false}).limit(1).maybeSingle();
-    if(error)throw new DomainError(error.message,'customers.activity_failed');
+    if(error)throw fromDatabaseError(error, 'customers.activity_failed');
     return data?.occurred_at ? [customerId,data.occurred_at] as const : null;
   }));
   return Object.fromEntries(entries.filter((entry):entry is readonly [string,string]=>entry!==null));
@@ -448,12 +448,12 @@ export async function listContactLastActivity(db: Db, input: {organizationId:str
 
 export async function listCompanies(db: Db, organizationId: string) {
  const {data,error}=await db.from('contacts').select('id,name').eq('organization_id',organizationId).eq('contact_type','company').order('name').limit(500);
- if(error) throw new DomainError(error.message,'contacts.companies_failed');
+ if(error) throw fromDatabaseError(error, 'contacts.companies_failed');
  return data ?? [];
 }
 export async function listAffiliations(db:Db,organizationId:string,contactId:string) {
  const {data,error}=await db.from('contact_affiliations').select('id,person_id,company_id,title,is_primary,active,person:contacts!contact_affiliations_organization_id_person_id_person_type_fkey(id,name),company:contacts!contact_affiliations_organization_id_company_id_company_ty_fkey(id,name)')
  .eq('organization_id',organizationId).or(`person_id.eq.${contactId},company_id.eq.${contactId}`).order('active',{ascending:false}).order('is_primary',{ascending:false});
- if(error) throw new DomainError(error.message,'contacts.affiliations_failed');
+ if(error) throw fromDatabaseError(error, 'contacts.affiliations_failed');
  return data ?? [];
 }

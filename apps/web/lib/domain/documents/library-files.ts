@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * The Library's view of its files: what a person can filter by, one page of rows, the totals above
@@ -112,7 +112,7 @@ export async function listLibraryFiles(
     p_limit: FILE_PAGE_SIZE,
     p_offset: (filter.page - 1) * FILE_PAGE_SIZE,
   });
-  if (error) throw new DomainError(error.message, 'library.files_list_failed');
+  if (error) throw fromDatabaseError(error, 'library.files_list_failed');
 
   const rows = (data ?? []).map((row) => ({
     id: row.id,
@@ -128,7 +128,7 @@ export async function listLibraryFiles(
 
 export async function readLibrarySummary(db: Db, input: { organizationId: string }): Promise<LibraryFileSummary> {
   const { data, error } = await db.rpc('library_file_summary', { p_organization_id: input.organizationId });
-  if (error) throw new DomainError(error.message, 'library.summary_failed');
+  if (error) throw fromDatabaseError(error, 'library.summary_failed');
   const row = data?.[0];
   return {
     fileCount: Number(row?.file_count ?? 0),
@@ -153,7 +153,7 @@ export async function readLibraryFile(
     .eq('id', input.fileId)
     .is('agent_user_id', null)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'library.file_read_failed');
+  if (error) throw fromDatabaseError(error, 'library.file_read_failed');
   if (!file) return null;
 
   const { data: links, error: linkError } = await db
@@ -161,7 +161,7 @@ export async function readLibraryFile(
     .select('customer_id, location_id, asset_id, work_item_id')
     .eq('organization_id', input.organizationId)
     .eq('document_id', input.fileId);
-  if (linkError) throw new DomainError(linkError.message, 'library.file_read_failed');
+  if (linkError) throw fromDatabaseError(linkError, 'library.file_read_failed');
 
   const ids = {
     customer: (links ?? []).map((link) => link.customer_id).filter((id): id is string => id !== null),
@@ -177,7 +177,7 @@ export async function readLibraryFile(
     ids.work_item.length ? db.from('work_items').select('id, title').in('id', ids.work_item) : { data: [], error: null },
   ]);
   for (const result of [customers, locations, assets, workItems]) {
-    if (result.error) throw new DomainError(result.error.message, 'library.file_read_failed');
+    if (result.error) throw fromDatabaseError(result.error, 'library.file_read_failed');
   }
 
   const uses: FileUse[] = [

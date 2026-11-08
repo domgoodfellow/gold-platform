@@ -44,7 +44,7 @@ describe('New work page', () => {
   it('explains a type with no stages, offers ready types and no configuration when not permitted', async () => {
     await open(<WorkCreatePage options={options()} mayConfigure={false} initialTypeId="t3" />);
     expect(screen.getByText(/A starting stage is required/)).toBeInTheDocument();
-    expect(screen.getByText(/An administrator must configure the type/)).toBeInTheDocument();
+    expect(screen.getByText(/has to finish setting up this kind of work/)).toBeInTheDocument();
     expect(screen.getByText(/choose a Work type that is ready/)).toBeInTheDocument();
     expect(screen.queryByRole('form', { name: /Add a starting stage/ })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Open Work type settings' })).toBeNull();

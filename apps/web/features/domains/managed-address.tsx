@@ -27,7 +27,7 @@ export function ManagedAddress({ address, generalHref }: { address: ManagedAddre
           to get your GildOps address.
         </Hint>
       ) : (
-        <Hint className="mt-2">This deployment does not offer GildOps addresses.</Hint>
+        <Hint className="mt-2">GildOps addresses aren’t available yet.</Hint>
       )}
     </Section>
   );

@@ -1,6 +1,6 @@
 import { paymentProvider, type ConnectedAccount, type PaymentProvider } from '@/lib/adapters/payments';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { getInvoiceForWorkItem, invoiceStanding } from '@/lib/domain/billing/invoices';
 import { getPaymentAccount } from '@/lib/domain/billing/payment-accounts';
 import { requireActor } from '@/lib/domain/tenancy/actor';
@@ -58,7 +58,7 @@ async function askProviderToCollect(input: {
     // Deliberately not deleted — the row records that this business asked and the attempt
     // failed, which is truer history than a gap and makes a repeated failure visible.
     throw new DomainError(
-      'The payment provider would not take that request.',
+      'The payment service would not take that request.',
       'card_payments.provider_refused',
     );
   }
@@ -133,7 +133,7 @@ export async function requestCardPayment(
     if (error.code === '42501') {
       throw new DomainError('You cannot take payments here.', 'card_payments.forbidden');
     }
-    throw new DomainError(error.message, 'card_payments.request_failed');
+    throw fromDatabaseError(error, 'card_payments.request_failed');
   }
 
   return askProviderToCollect({
@@ -151,7 +151,7 @@ export async function requestCardPayment(
         .eq('id', requestId);
 
       if (referenceError) {
-        throw new DomainError(referenceError.message, 'card_payments.reference_failed');
+        throw fromDatabaseError(referenceError, 'card_payments.reference_failed');
       }
     },
   });
@@ -195,7 +195,7 @@ export async function requestPortalCardPayment(
         'card_payments.nothing_outstanding',
       );
     }
-    throw new DomainError(error.message, 'card_payments.request_failed');
+    throw fromDatabaseError(error, 'card_payments.request_failed');
   }
   if (!data) return null;
 
@@ -216,7 +216,7 @@ export async function requestPortalCardPayment(
         p_provider_reference: providerReference,
       });
       if (referenceError) {
-        throw new DomainError(referenceError.message, 'card_payments.reference_failed');
+        throw fromDatabaseError(referenceError, 'card_payments.reference_failed');
       }
     },
   });
@@ -243,7 +243,7 @@ export async function portalCardPaymentAvailable(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'card_payments.availability_failed');
+    throw fromDatabaseError(error, 'card_payments.availability_failed');
   }
   if (!data) return null;
 

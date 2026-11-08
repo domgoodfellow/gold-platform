@@ -78,7 +78,7 @@ export function PaymentsTable({ organizationId, rows, empty, timezone = 'UTC' }:
         { key: 'customer', header: 'Customer', cell: (row) => row.customerId ? <Link className="underline-offset-4 hover:underline" href={customerHref(organizationId, row.customerId)}>{row.billedTo}</Link> : row.billedTo },
         { key: 'entry', header: 'Entry', cell: (row) => <PaymentEntryBadge amountMinor={row.amountMinor} /> },
         // Only what `payments` stores: no provider means a person wrote it down; nothing else is guessed.
-        { key: 'source', header: 'Source', cell: (row: PaymentRecord) => row.provider ? `Through ${row.provider}` : 'Recorded by hand' },
+        { key: 'source', header: 'Source', cell: (row: PaymentRecord) => row.provider ? `Through ${row.provider === 'stripe' ? 'Stripe' : 'card payment'}` : 'Recorded by hand' },
         { key: 'reference', header: 'Reference', cell: (row: PaymentRecord) => row.providerReference ?? row.note ?? '—', cardValue: (row: PaymentRecord) => row.providerReference ?? row.note ?? null },
         { key: 'amount', header: 'Amount', numeric: true, cell: (row) => <span className={row.amountMinor < 0 ? 'text-danger' : 'font-semibold'}>{formatMoney(row.amountMinor, row.currency)}</span> },
       ]}
@@ -103,7 +103,7 @@ export function QuotesTable({ organizationId, rows, empty, mayIssue = false, tod
         { key: 'lines', header: 'Lines', numeric: true, cell: (row) => row.lineCount, cardValue: () => null },
         { key: 'invoiced', header: 'Invoice', cell: (row) => row.invoiced ? <Badge className="gap-1"><CheckCircle2 aria-hidden className="size-3" />Invoiced</Badge> : <Badge>Not invoiced</Badge> },
         // The tenant's own status word, rendered as written (`docs/ui-system.md`).
-        { key: 'status', header: 'Work status', cell: (row) => row.status },
+        { key: 'status', header: 'Stage', cell: (row) => row.status },
       ]}
     />
   );

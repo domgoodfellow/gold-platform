@@ -1,6 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { priceWorkItem, type Price, type PricedLine } from '@/lib/domain/pricing/prices';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
@@ -98,7 +98,7 @@ export async function getInvoiceForWorkItem(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'invoices.read_failed');
+    throw fromDatabaseError(error, 'invoices.read_failed');
   }
   return data ? hydrateInvoice(db, input.organizationId, data) : null;
 }
@@ -116,7 +116,7 @@ export async function getInvoice(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'invoices.read_failed');
+    throw fromDatabaseError(error, 'invoices.read_failed');
   }
   return data ? hydrateInvoice(db, input.organizationId, data) : null;
 }
@@ -191,10 +191,10 @@ async function hydrateInvoices(db: Db, organizationId: string, invoices: Invoice
   ]);
 
   if (linesResult.error) {
-    throw new DomainError(linesResult.error.message, 'invoices.lines_failed');
+    throw fromDatabaseError(linesResult.error, 'invoices.lines_failed');
   }
   if (paymentsResult.error) {
-    throw new DomainError(paymentsResult.error.message, 'payments.list_failed');
+    throw fromDatabaseError(paymentsResult.error, 'payments.list_failed');
   }
 
   const linesByInvoice = new Map<string, InvoiceLine[]>();
@@ -252,7 +252,7 @@ export async function listCustomerInvoices(
     .order('issued_at', { ascending: false });
 
   if (error) {
-    throw new DomainError(error.message, 'invoices.customer_read_failed');
+    throw fromDatabaseError(error, 'invoices.customer_read_failed');
   }
   return hydrateInvoices(db, input.organizationId, invoices ?? []);
 }
@@ -274,7 +274,7 @@ export async function listInvoices(
     .limit(input.limit ?? LIST_LIMIT);
 
   if (error) {
-    throw new DomainError(error.message, 'invoices.list_failed');
+    throw fromDatabaseError(error, 'invoices.list_failed');
   }
   return counted(await hydrateInvoices(db, input.organizationId, data ?? []), count);
 }
@@ -292,7 +292,7 @@ export async function invoicedWorkItemIds(
     .in('work_item_id', input.workItemIds);
 
   if (error) {
-    throw new DomainError(error.message, 'invoices.list_failed');
+    throw fromDatabaseError(error, 'invoices.list_failed');
   }
   return new Set((data ?? []).flatMap((row) => (row.work_item_id ? [row.work_item_id] : [])));
 }
@@ -328,7 +328,7 @@ export async function listOrganizationPayments(
     .limit(input.limit ?? LIST_LIMIT);
 
   if (error) {
-    throw new DomainError(error.message, 'payments.list_failed');
+    throw fromDatabaseError(error, 'payments.list_failed');
   }
   const rows = data ?? [];
   if (rows.length === 0) return counted([], count);
@@ -340,7 +340,7 @@ export async function listOrganizationPayments(
     .in('id', [...new Set(rows.map((row) => row.invoice_id))]);
 
   if (invoiceError) {
-    throw new DomainError(invoiceError.message, 'invoices.list_failed');
+    throw fromDatabaseError(invoiceError, 'invoices.list_failed');
   }
   const byId = new Map((invoices ?? []).map((invoice) => [invoice.id, invoice]));
 
@@ -381,7 +381,7 @@ export async function listInvoiceLines(
     .order('position', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'invoices.lines_failed');
+    throw fromDatabaseError(error, 'invoices.lines_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -407,7 +407,7 @@ export async function listPayments(
     .order('received_at', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'payments.list_failed');
+    throw fromDatabaseError(error, 'payments.list_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -481,7 +481,7 @@ export async function issueInvoice(
     if (error.code === '42501') {
       throw new DomainError('You cannot issue invoices here.', 'invoices.forbidden');
     }
-    throw new DomainError(error.message, 'invoices.issue_failed');
+    throw fromDatabaseError(error, 'invoices.issue_failed');
   }
 
   return data;
@@ -540,7 +540,7 @@ export async function issueDirectInvoice(
   if (error) {
     const refusal = DIRECT_REFUSALS[error.code];
     if (refusal) throw new DomainError(refusal[0], refusal[1]);
-    throw new DomainError(error.message, 'invoices.issue_failed');
+    throw fromDatabaseError(error, 'invoices.issue_failed');
   }
   return data;
 }
@@ -577,7 +577,7 @@ export async function issueInvoiceFromProposal(
   if (error) {
     const refusal = PROPOSAL_REFUSALS[error.code];
     if (refusal) throw new DomainError(refusal[0], refusal[1]);
-    throw new DomainError(error.message, 'invoices.issue_failed');
+    throw fromDatabaseError(error, 'invoices.issue_failed');
   }
   return data;
 }
@@ -593,7 +593,7 @@ export async function listInvoicesForProposals(
     .select('id, number, proposal_id')
     .eq('organization_id', input.organizationId)
     .in('proposal_id', input.proposalIds);
-  if (error) throw new DomainError(error.message, 'invoices.list_failed');
+  if (error) throw fromDatabaseError(error, 'invoices.list_failed');
   return Object.fromEntries((data ?? []).flatMap((row) => (row.proposal_id ? [[row.proposal_id, { id: row.id, number: row.number }]] : [])));
 }
 
@@ -655,7 +655,7 @@ export async function recordPayment(
     if (error.code === '42501') {
       throw new DomainError('You cannot record payments here.', 'payments.forbidden');
     }
-    throw new DomainError(error.message, 'payments.record_failed');
+    throw fromDatabaseError(error, 'payments.record_failed');
   }
 
   return data;

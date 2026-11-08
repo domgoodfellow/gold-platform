@@ -29,6 +29,7 @@ export function ScheduleWorkspace({
   shortfalls,
   resourcesHref,
   mayAddResource,
+  hoursHref = null,
 }: {
   organizationId: string;
   view: ScheduleView;
@@ -49,6 +50,8 @@ export function ScheduleWorkspace({
   /** Where Day's zero-Resource state sends a dispatcher to add one. */
   resourcesHref: string;
   mayAddResource: boolean;
+  /** The opening-hours editor, for someone who may change hours. */
+  hoursHref?: string | null;
 }) {
   const activeDay = days.find((day) => day.date === date) ?? days[0];
 
@@ -86,6 +89,7 @@ export function ScheduleWorkspace({
             timezone={timezone}
             resourcesHref={resourcesHref}
             mayAddResource={mayAddResource}
+            hoursHref={hoursHref}
           />
         )}
     </CalendarWorkspace>

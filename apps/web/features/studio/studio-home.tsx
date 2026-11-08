@@ -14,6 +14,8 @@ function State({ children }: { children: ReactNode }) {
   return <span className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">{children}</span>;
 }
 
+const REVISION_STATUS: Record<string, string> = { draft: 'Draft', in_review: 'In review', published: 'Published', archived: 'Archived' };
+
 export function StudioHome({ organizationId, timezone, mayManage, overview: data, configure }: { organizationId: string; timezone: string; mayManage: boolean; overview: StudioOverview; configure?: ReactNode }) {
   const base = `/organizations/${organizationId}`, studio = `${base}/studio`;
   const website = `${studio}/website`, forms = `${studio}/forms`, templates = `${studio}/templates`;
@@ -56,16 +58,16 @@ export function StudioHome({ organizationId, timezone, mayManage, overview: data
         <OperationalPanel title="Templates & creation" href={templates}><div className="grid gap-3 sm:grid-cols-3">{[['Website starters', 'A complete set of editable pages.', 'website'], ['Pages & sections', 'Build on your existing website.', 'pages'], ['Form templates', 'Start with useful questions.', 'forms']].map(([title, note, filter]) => <Link key={title} href={`${templates}?kind=${filter}`} className="rounded-md border border-border p-3 hover:bg-hover"><Layers aria-hidden className="mb-3 size-5 text-accent-text" /><p className="text-sm font-medium">{title}</p><p className="mt-1 text-xs text-muted">{note}</p></Link>)}</div></OperationalPanel>
       </div>
       <aside className="grid min-w-0 gap-3">
-        <OperationalPanel title="Publishing status"><dl className="space-y-3 text-sm"><div className="flex justify-between gap-2"><dt className="text-muted">Website</dt><dd><State>{websiteLabel}</State></dd></div><div className="flex justify-between gap-2"><dt className="text-muted">Unpublished revision</dt><dd>{data.website?.working ? `Revision ${data.website.working.number}` : 'None'}</dd></div><div className="flex justify-between gap-2"><dt className="text-muted">Forms with drafts</dt><dd>{data.forms?.withDraft ?? 'Restricted'}</dd></div></dl><div className="mt-3"><ButtonLink tone="text" size="small" href={website}>Review publishing & history</ButtonLink></div></OperationalPanel>
+        <OperationalPanel title="Publishing"><dl className="space-y-3 text-sm"><div className="flex justify-between gap-2"><dt className="text-muted">Website</dt><dd><State>{websiteLabel}</State></dd></div><div className="flex justify-between gap-2"><dt className="text-muted">Unpublished revision</dt><dd>{data.website?.working ? `Revision ${data.website.working.number}` : 'None'}</dd></div><div className="flex justify-between gap-2"><dt className="text-muted">Forms with drafts</dt><dd>{data.forms?.withDraft ?? 'Restricted'}</dd></div></dl><div className="mt-3"><ButtonLink tone="text" size="small" href={website}>Review publishing & history</ButtonLink></div></OperationalPanel>
         <OperationalPanel title="Needs attention">{data.attention.length ? <NavigationList label="Studio needs attention" density="compact" items={data.attention.map(item => ({ key: item.key, title: item.label, href: attentionHref(item.key), icon: <span className="block size-1.5 rounded-full bg-warning" /> }))} /> : <PanelState>Nothing needs attention.</PanelState>}</OperationalPanel>
         {data.suggestions.length ? <OperationalPanel title="Suggestions"><NavigationList label="Studio suggestions" density="compact" items={data.suggestions.map(item => ({ key: item.key, title: item.label, href: attentionHref(item.key) }))} /></OperationalPanel> : null}
         <OperationalPanel title="Public surfaces"><NavigationList label="Public surfaces" density="compact" items={[
-          ['Branding', data.brand.logoConfigured ? 'Logo configured' : 'No logo (optional)', `${base}/settings/branding`],
-          ['Public address', data.hostname ?? 'Not configured', `${base}/settings/domains`],
-          ['Booking', data.booking.available ? `${data.booking.bookableTypeCount} published types` : 'Needs configuration', `${base}/work/configuration`],
+          ['Branding', data.brand.logoConfigured ? 'Logo added' : 'No logo (optional)', `${base}/settings/branding`],
+          ['Public address', data.hostname ?? 'Not set', `${base}/settings/domains`],
+          ['Booking', data.booking.available ? `${data.booking.bookableTypeCount} published types` : 'Needs setting up', `${base}/work/configuration`],
           ['Customer portal', data.portal.activeInviteCount ? `${data.portal.activeInviteCount} customers invited` : 'No active invitations', `${studio}/portal`],
         ].map(([label, value, href]) => ({ key: label, title: label, description: value, href }))} /><p className="mt-2 text-xs text-muted">Invite customers to their portal from their Customer page.</p></OperationalPanel>
-        <OperationalPanel title="Recent activity"><ul className="divide-y divide-border">{data.recentPublishing.length ? data.recentPublishing.map((revision) => <li key={revision.id}><Link href={`/preview/${organizationId}/${revision.id}`} target="_blank" className="flex justify-between gap-2 py-2.5 text-sm hover:text-accent-text"><span>Website revision {revision.number}</span><State>{revision.status.replace('_', ' ')}</State></Link></li>) : <li><PanelState>No website revisions yet.</PanelState></li>}</ul></OperationalPanel>
+        <OperationalPanel title="Recent activity"><ul className="divide-y divide-border">{data.recentPublishing.length ? data.recentPublishing.map((revision) => <li key={revision.id}><Link href={`/preview/${organizationId}/${revision.id}`} target="_blank" className="flex justify-between gap-2 py-2.5 text-sm hover:text-accent-text"><span>Website revision {revision.number}</span><State>{REVISION_STATUS[revision.status] ?? 'Draft'}</State></Link></li>) : <li><PanelState>No website revisions yet.</PanelState></li>}</ul></OperationalPanel>
       </aside>
     </div>
   </AppPage>;

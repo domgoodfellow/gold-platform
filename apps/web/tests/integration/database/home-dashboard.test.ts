@@ -154,6 +154,6 @@ describe('Global Home against canonical local data and RLS', () => {
     const deployment = await owner.db.rpc('save_ai_deployment', { p_organization_id, p_id: nullId, p_assistant_id: assistant.data!, p_version_id: version.data!, p_surface: 'operator_copilot', p_site_id: nullId, p_enabled: true, p_display_name: 'Home operator', p_greeting: 'Hello', p_handoff: 'Request help', p_configuration: {} });
     expect(deployment.error).toBeNull();
     const ai = sources(await home()).find(s => s.source === 'AI')!;
-    expect(ai.health.find(h => h.key === `deployment:${deployment.data}`)?.state).toBe(process.env.ASSISTANT_API_URL ? 'Enabled · runtime unverified' : 'Unavailable');
+    expect(ai.health.find(h => h.key === `deployment:${deployment.data}`)?.state).toBe(process.env.ASSISTANT_API_URL ? 'On' : 'Not available');
   });
 });

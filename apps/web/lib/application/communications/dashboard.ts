@@ -1,9 +1,9 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 import { callbackBase, telephonyProvider } from '@/lib/adapters/telephony';
 import { messagingSenders } from '@/lib/domain/reception/channel-readiness';
 import { availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
-import { listCallPage, getCallCounts } from '@/lib/domain/reception/calls';
+import { listCallPage, getCallCounts, callStatusLabel } from '@/lib/domain/reception/calls';
 import { currentMembershipId, getInboxCounts, listInbox, type InboxFilter } from '@/lib/domain/reception/inbox';
 import { listPhoneNumbers, resolveOutboundNumber } from '@/lib/domain/reception/numbers';
 import { communicationsProviderReadiness } from '@/lib/domain/reception/provider-readiness';
@@ -68,10 +68,10 @@ export async function loadCommunicationsDashboard(db: Db, input: { organizationI
     mayCall ? listCallPage(db, { organizationId, limit: 6 }) : null,
     mayMessage ? listInbox(db, { organizationId, filter: { status: 'any' }, limit: 6 }) : null,
   ]);
-  for (const result of [answered, recorded]) if (result?.error) throw new DomainError(result.error.message, 'communications.summary_failed');
+  for (const result of [answered, recorded]) if (result?.error) throw fromDatabaseError(result.error, 'communications.summary_failed');
   const base = `/organizations/${organizationId}`;
   const projectActivity = (callItems: NonNullable<typeof calls>['items'], inboxItems: NonNullable<typeof queue>['items']) => [
-    ...callItems.map(call => ({ id: `call-${call.id}`, at: call.startedAt, title: `${call.direction === 'inbound' ? 'Inbound' : 'Outbound'} call · ${call.status === 'no_answer' && call.direction === 'inbound' ? 'Missed' : call.status.replace('_', ' ')}`, context: call.customerName ?? call.externalNumber ?? 'Withheld number', href: `${base}/calls/${call.id}`, channel: 'phone' as const })),
+    ...callItems.map(call => ({ id: `call-${call.id}`, at: call.startedAt, title: `${call.direction === 'inbound' ? 'Incoming' : 'Outgoing'} call · ${callStatusLabel(call)}`, context: call.customerName ?? call.externalNumber ?? 'Withheld number', href: `${base}/calls/${call.id}`, channel: 'phone' as const })),
     ...inboxItems.map(item => ({ id: `conversation-${item.id}`, at: item.lastActivityAt, title: `${item.channel === 'email' ? 'Email' : 'SMS'} conversation activity`, context: item.title, href: `${base}/comms/inbox/${item.id}`, channel: item.channel })),
   ].sort((a,b) => b.at.localeCompare(a.at)).slice(0, 6);
   const activity = projectActivity(recentCalls?.items ?? [], recentInbox?.items ?? []);

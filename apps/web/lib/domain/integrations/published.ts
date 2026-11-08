@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 import type { ConnectorStatus } from './connectors';
 
 /**
@@ -24,7 +24,7 @@ export type PublishedConnector = {
 
 export async function publishedConnectors(db: Db): Promise<PublishedConnector[]> {
   const { data, error } = await db.rpc('published_connectors');
-  if (error) throw new DomainError(error.message, 'integrations.published_failed');
+  if (error) throw fromDatabaseError(error, 'integrations.published_failed');
   return (data ?? []).map((row) => ({
     key: row.key,
     name: row.name,

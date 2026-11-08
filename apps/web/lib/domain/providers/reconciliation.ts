@@ -80,13 +80,13 @@ export function compareWithRemote(input: {
       };
     }
     if (remote.status !== 'active') {
-      return { organizationId: row.organizationId, health: 'remote_changed', detail: `The provider reports it as ${remote.status ?? 'unknown'}.` };
+      return { organizationId: row.organizationId, health: 'remote_changed', detail: `The vendor reports it as ${remote.status ?? 'unknown'}.` };
     }
     if (remote.friendlyName !== input.expectedName(row.organizationId)) {
       return {
         organizationId: row.organizationId,
         health: 'remote_changed',
-        detail: `Its name at the provider is now ${remote.friendlyName ?? 'empty'}.`,
+        detail: `Its name at the vendor is now ${remote.friendlyName ?? 'empty'}.`,
       };
     }
     return { organizationId: row.organizationId, health: 'in_sync', detail: null };

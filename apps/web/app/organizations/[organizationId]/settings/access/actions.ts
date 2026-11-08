@@ -120,7 +120,7 @@ export type InviteMemberState = {
 async function emailInvitation(db: Awaited<ReturnType<typeof getDb>>, input: { organizationId: string; invitationId: string; link: string }): Promise<InvitationEmailOutcome> {
   if (!input.invitationId) return { accepted: false, reason: 'The invitation was created, but GildOps could not find it again to email it.' };
   const sender = await platformEmailSender({ token: await requireAccessToken(db) });
-  if (!sender) return { accepted: false, reason: 'Invitation email is not set up on this deployment yet.' };
+  if (!sender) return { accepted: false, reason: 'Sending invitation emails isn’t available yet. Share the invitation link instead.' };
   try {
     const receipt = await sender.sendInvitationEmail(input);
     return receipt.sent ? { accepted: true, reason: null } : { accepted: false, reason: receipt.detail ?? 'GildOps’ mail service did not accept the invitation.' };

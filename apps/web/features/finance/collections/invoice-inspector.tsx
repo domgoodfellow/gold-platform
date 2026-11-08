@@ -84,7 +84,7 @@ export function InvoiceInspector({ organizationId, row, invoice, timezone, today
           <LineItems label="Invoiced lines" items={invoice.lines.map(line => lineItem(line))} empty="This invoice has no lines." /></section>
         <section aria-labelledby="inspector-payments"><h3 id="inspector-payments" className="mb-1 text-sm font-semibold">Payment history</h3>
           <LineItems label="Payment history" empty="No payments recorded." items={invoice.payments.map(payment => ({ key: payment.id, tone: payment.amountMinor < 0 ? 'correction' as const : undefined,
-            description: payment.amountMinor < 0 ? 'Correction' : payment.provider ? `Paid through ${payment.provider}` : 'Recorded by hand',
+            description: payment.amountMinor < 0 ? 'Correction' : payment.provider ? `Paid through ${payment.provider === 'stripe' ? 'Stripe' : 'card payment'}` : 'Recorded by hand',
             detail: [date(payment.receivedAt), payment.note].filter(Boolean).join(' · '), amount: money(payment.amountMinor) }))} />
           <p className="mt-2 text-xs text-muted">Entries recorded by hand are not confirmed by a payment processor.</p>
         </section>

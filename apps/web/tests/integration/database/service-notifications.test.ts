@@ -135,7 +135,7 @@ describe('customer notification consent, queue and evidence', () => {
     const key = randomUUID(); await event('delivered', key); await event('delivered', key); await event('sent');
     expect((await current()).state).toBe('delivered'); expect((await current()).events.filter(e => e.type === 'delivered')).toHaveLength(1);
     const timeline = await listCustomerTimeline(operator, { organizationId: org, customerId: customer });
-    expect(timeline.some(e => e.action === 'notification.delivered' && e.description.includes('reported') && e.actorName === 'Email delivery')).toBe(true);
+    expect(timeline.some(e => e.action === 'notification.delivered' && e.description === 'Customer notification delivered' && e.actorName === 'Email delivery')).toBe(true);
     await event('bounced'); expect((await current()).state).toBe('bounced');
     expect((await notificationConfiguration(operator, org, customer)).suppressed).toBe(true);
     const later = await fixture(); expect((await notificationHistory(operator, org, customer, later.engagement)).every(n => n.state === 'suppressed')).toBe(true);

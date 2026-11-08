@@ -1,6 +1,6 @@
 import { memberDisplayNames } from '@/lib/domain/tenancy/members';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
 import {
   resolveCustom,
@@ -132,7 +132,7 @@ export async function listResources(
       .eq('organization_id', input.organizationId)
       .in('capability_id', wanted);
     if (holdersError) {
-      throw new DomainError(holdersError.message, 'resources.list_failed');
+      throw fromDatabaseError(holdersError, 'resources.list_failed');
     }
     const held = new Map<string, Set<string>>();
     for (const holder of holders ?? []) {
@@ -147,7 +147,7 @@ export async function listResources(
   const { data, error, count } = await query;
 
   if (error) {
-    throw new DomainError(error.message, 'resources.list_failed');
+    throw fromDatabaseError(error, 'resources.list_failed');
   }
 
   const names = await memberDisplayNames(db, input.organizationId);
@@ -176,7 +176,7 @@ export async function getResource(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'resources.get_failed');
+    throw fromDatabaseError(error, 'resources.get_failed');
   }
   if (!data) return null;
 
@@ -260,11 +260,11 @@ export async function createResource(
       if (error.message.includes('resources_member_is_person')) {
         throw new DomainError('Only a person can represent a member.', 'resources.member_requires_person');
       }
-      throw new DomainError(error.message, 'resources.custom_invalid');
+      throw fromDatabaseError(error, 'resources.custom_invalid');
     }
     // An archived capability given at creation.
     if (error.code === 'GD007') {
-      throw new DomainError('That capability is archived and cannot be given to anything new.', 'resource_capabilities.archived');
+      throw new DomainError('That skill is archived, so it can’t be given to anything new.', 'resource_capabilities.archived');
     }
     // The composite reference refusing a Membership that is not in this tenant.
     if (error.code === '23503') {
@@ -277,7 +277,7 @@ export async function createResource(
         'resources.member_already_linked',
       );
     }
-    throw new DomainError(error.message, 'resources.create_failed');
+    throw fromDatabaseError(error, 'resources.create_failed');
   }
 
   return data;
@@ -326,7 +326,7 @@ export async function setResourceMembership(
         'resources.member_already_linked',
       );
     }
-    throw new DomainError(error.message, 'resources.update_failed');
+    throw fromDatabaseError(error, 'resources.update_failed');
   }
 }
 
@@ -362,7 +362,7 @@ export async function setResourceClass(
         'resources.member_requires_person',
       );
     }
-    throw new DomainError(error.message, 'resources.update_failed');
+    throw fromDatabaseError(error, 'resources.update_failed');
   }
 }
 
@@ -397,7 +397,7 @@ export async function setResourceRouting(
     if (error.code === '23503') {
       throw new DomainError("That place is not one of this business's locations.", 'resources.base_location_invalid');
     }
-    throw new DomainError(error.message, 'resources.update_failed');
+    throw fromDatabaseError(error, 'resources.update_failed');
   }
 }
 
@@ -425,7 +425,7 @@ export async function getResourceForCurrentMember(
     .maybeSingle();
 
   if (membershipError) {
-    throw new DomainError(membershipError.message, 'resources.current_member_failed');
+    throw fromDatabaseError(membershipError, 'resources.current_member_failed');
   }
   if (!membership) return null;
 
@@ -437,7 +437,7 @@ export async function getResourceForCurrentMember(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'resources.current_member_failed');
+    throw fromDatabaseError(error, 'resources.current_member_failed');
   }
   if (!data) return null;
 

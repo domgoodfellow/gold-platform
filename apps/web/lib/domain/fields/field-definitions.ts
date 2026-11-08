@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /** Platform vocabulary, not tenant configuration — a tenant defines *fields*, not core entities. Mirrors the check constraint on `field_definitions.entity_type`. */
@@ -103,7 +103,7 @@ export async function listFieldDefinitions(
     .order('created_at', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'fields.list_failed');
+    throw fromDatabaseError(error, 'fields.list_failed');
   }
 
   // Discards anything a future migration adds that this build doesn't know how to render, rather than rendering it wrongly.
@@ -230,7 +230,7 @@ export async function createFieldDefinition(
     if (error.code === '42501') {
       throw new DomainError('You cannot manage fields here.', 'fields.forbidden');
     }
-    throw new DomainError(error.message, 'fields.create_failed');
+    throw fromDatabaseError(error, 'fields.create_failed');
   }
 
   return data;
@@ -290,7 +290,7 @@ export async function updateFieldDefinition(
     if (error.code === '42501') {
       throw new DomainError('You cannot manage fields here.', 'fields.forbidden');
     }
-    throw new DomainError(error.message, 'fields.update_failed');
+    throw fromDatabaseError(error, 'fields.update_failed');
   }
 }
 

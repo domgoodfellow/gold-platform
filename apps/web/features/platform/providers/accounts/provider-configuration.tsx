@@ -23,7 +23,7 @@ function when(value: string | null): string {
  * No "Provisioning" section: nothing here is provisioned per organization. GOLD holds one account
  * and every assignment naming it answers from it directly (`app.ai.runtime`).
  */
-const DEFAULT_ACCOUNT_HINT = 'The account an AI runtime assignment uses when more than one exists for this provider.';
+const DEFAULT_ACCOUNT_HINT = 'The account AI answering uses when this vendor has more than one.';
 
 export function ProviderConfiguration({
   providerKey,
@@ -40,7 +40,7 @@ export function ProviderConfiguration({
       <div className="flex flex-col gap-4">
         <div>
           <GroupHeading>Add a GildOps account</GroupHeading>
-          <Hint>The credential GildOps uses to answer through this provider.</Hint>
+          <Hint>The credential GildOps uses to answer through this vendor.</Hint>
         </div>
         <ProviderAccountForm providerKey={providerKey} />
       </div>

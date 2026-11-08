@@ -2,7 +2,7 @@ import { platformBillingProvider } from '@/lib/adapters/platform-billing';
 import type { Db } from '@/lib/db/types';
 import { currentPlanAssignment } from '@/lib/domain/catalogue/organization-plans';
 import { getPlan } from '@/lib/domain/catalogue/plans';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { ensurePlatformBillingCustomer } from '@/lib/domain/platform-billing/customers';
 import { resolveCheckoutLineItems } from '@/lib/domain/platform-billing/line-items';
 import { assertQuoteMatchesReview, buildOrganizationPurchaseQuote } from '@/lib/domain/platform-billing/quote';
@@ -51,7 +51,7 @@ export async function beginPlatformBillingCheckout(
 
   const provider = await platformBillingProvider();
   if (!provider) {
-    throw new DomainError('Billing is not configured for this deployment.', 'platform_billing.not_configured');
+    throw new DomainError('Billing isn’t set up for GildOps yet.', 'platform_billing.not_configured');
   }
 
   const existing = await getOrganizationSubscription(db, { organizationId: input.organizationId });
@@ -130,7 +130,7 @@ export async function beginPlatformBillingCheckout(
         'platform_billing.forbidden',
       );
     }
-    throw new DomainError(sessionError.message, 'platform_billing.session_failed');
+    throw fromDatabaseError(sessionError, 'platform_billing.session_failed');
   }
 
   let started;
@@ -146,14 +146,14 @@ export async function beginPlatformBillingCheckout(
   } catch {
     // Deliberately not deleted, the same reasoning card-payments.ts gives: the row records that
     // this business asked and the attempt failed, which is truer history than a gap.
-    throw new DomainError('The billing provider would not start that checkout.', 'platform_billing.provider_refused');
+    throw new DomainError('The billing service would not start that checkout.', 'platform_billing.provider_refused');
   }
 
   const { error: updateError } = await db
     .from('platform_billing_checkout_sessions')
     .update({ provider_reference: started.providerReference })
     .eq('id', session.id);
-  if (updateError) throw new DomainError(updateError.message, 'platform_billing.session_update_failed');
+  if (updateError) throw fromDatabaseError(updateError, 'platform_billing.session_update_failed');
 
   return { url: started.url };
 }

@@ -1,6 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { requireAccessToken, callDomainCommand } from '@/lib/api/client';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * GOLD's own accounts with an upstream provider — the parent every organization's scope sits
@@ -82,13 +82,13 @@ export async function listProviderAccounts(db: Db, input: { providerKey?: string
   let query = db.from('platform_provider_accounts').select(ACCOUNT_COLUMNS);
   if (input.providerKey) query = query.eq('provider_key', input.providerKey);
   const { data, error } = await query.order('created_at', { ascending: true });
-  if (error) throw new DomainError(error.message, 'providers.accounts_failed');
+  if (error) throw fromDatabaseError(error, 'providers.accounts_failed');
   return (data ?? []).map(toAccount);
 }
 
 export async function getProviderAccount(db: Db, id: string): Promise<ProviderAccount | null> {
   const { data, error } = await db.from('platform_provider_accounts').select(ACCOUNT_COLUMNS).eq('id', id).maybeSingle();
-  if (error) throw new DomainError(error.message, 'providers.account_failed');
+  if (error) throw fromDatabaseError(error, 'providers.account_failed');
   return data ? toAccount(data) : null;
 }
 
@@ -100,7 +100,7 @@ export async function getDefaultProviderAccount(db: Db, providerKey: string): Pr
     .eq('is_default', true)
     .eq('status', 'active')
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'providers.account_failed');
+  if (error) throw fromDatabaseError(error, 'providers.account_failed');
   return data ? toAccount(data) : null;
 }
 
@@ -134,7 +134,7 @@ export async function recordProviderAccount(
     p_credential_identifier: input.credentialIdentifier?.trim() ?? '', // the function reads an empty string as none
     p_account_id: input.accountId,
   });
-  if (error) throw staffWriteError(error, 'change a provider account');
+  if (error) throw staffWriteError(error, 'change a vendor account');
   return data as string;
 }
 
@@ -145,7 +145,7 @@ export async function storeProviderAccountCredential(db: Db, input: { accountId:
     p_account_id: input.accountId,
     p_secret: input.secret,
   });
-  if (error) throw staffWriteError(error, 'store a provider credential');
+  if (error) throw staffWriteError(error, 'store a vendor credential');
 }
 
 /** Disabling stops new provisioning under the account. It never touches a binding or upstream. */
@@ -154,12 +154,12 @@ export async function setProviderAccountStatus(
   input: { accountId: string; status: ProviderAccount['status'] },
 ): Promise<void> {
   const { error } = await db.rpc('set_provider_account_status', { p_account_id: input.accountId, p_status: input.status });
-  if (error) throw staffWriteError(error, 'change a provider account');
+  if (error) throw staffWriteError(error, 'change a vendor account');
 }
 
 export async function setDefaultProviderAccount(db: Db, input: { accountId: string }): Promise<void> {
   const { error } = await db.rpc('set_default_provider_account', { p_account_id: input.accountId });
-  if (error) throw staffWriteError(error, 'change a provider account');
+  if (error) throw staffWriteError(error, 'change a vendor account');
 }
 
 /**
@@ -172,7 +172,7 @@ export async function setDefaultProviderAccount(db: Db, input: { accountId: stri
  */
 export async function verifyProviderAccount(db: Db, input: { accountId: string }): Promise<ProviderAccount> {
   const account = await getProviderAccount(db, input.accountId);
-  if (!account) throw new DomainError('No such provider account.', 'providers.account_missing');
+  if (!account) throw new DomainError('No such vendor account.', 'providers.account_missing');
   if (!account.credentialSetAt) throw new DomainError('Set a credential before verifying.', 'providers.credential_missing');
 
   await callDomainCommand('/providers/operate', {
@@ -181,7 +181,7 @@ export async function verifyProviderAccount(db: Db, input: { accountId: string }
   });
 
   const after = await getProviderAccount(db, input.accountId);
-  if (!after) throw new DomainError('No such provider account.', 'providers.account_missing');
+  if (!after) throw new DomainError('No such vendor account.', 'providers.account_missing');
   return after;
 }
 
@@ -212,7 +212,7 @@ export async function listProviderOrganizationStandings(
     p_provider_key: input.providerKey,
     p_organization_id: input.organizationId,
   });
-  if (error) throw staffWriteError(error, 'read provider standings');
+  if (error) throw staffWriteError(error, 'read vendor standings');
 
   return (data ?? []).map((row) => ({
     organizationId: row.organization_id,

@@ -5,7 +5,7 @@ import {
   type SectionPattern, type SiteTemplate, type WebsiteContent, type WebsitePage,
 } from '@gold/schemas';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 export type { PublicSiteProjection, PublicWebsiteSnapshot } from '@gold/schemas';
 
 /**
@@ -40,13 +40,13 @@ export type WebsiteEditorState = {
 };
 
 function forbiddenOr(error: { code?: string; message: string }, code: string): DomainError {
-  return new DomainError(error.message, error.code === '42501' ? 'public_site.forbidden' : code);
+  return fromDatabaseError(error, error.code === '42501' ? 'public_site.forbidden' : code);
 }
 
 function projection(value: unknown): PublicSiteProjection {
   const parsed = PublicSiteProjectionSchema.safeParse(value);
   if (!parsed.success) {
-    throw new DomainError('The published website does not match its supported schema.', 'public_site.invalid_projection');
+    throw new DomainError('This website can’t be shown right now.', 'public_site.invalid_projection');
   }
   return parsed.data;
 }
@@ -54,14 +54,14 @@ function projection(value: unknown): PublicSiteProjection {
 export function snapshot(value: unknown): PublicWebsiteSnapshot {
   const parsed = PublicWebsiteSnapshotSchema.safeParse(value);
   if (!parsed.success) {
-    throw new DomainError('The website does not match its supported schema.', 'public_site.invalid_projection');
+    throw new DomainError('This website can’t be shown right now.', 'public_site.invalid_projection');
   }
   return parsed.data;
 }
 
 export async function publishedGoldHomepage(db: Db): Promise<PublicSiteProjection> {
   const { data, error } = await db.rpc('published_gold_homepage');
-  if (error) throw new DomainError(error.message, 'public_site.read_failed');
+  if (error) throw fromDatabaseError(error, 'public_site.read_failed');
   if (!data) throw new DomainError('No GildOps homepage has been published.', 'public_site.not_published');
   return projection(data);
 }
@@ -115,18 +115,18 @@ export async function publishSiteRevision(db: Db, organizationId: string, revisi
 
 export async function listSiteTemplates(db: Db): Promise<SiteTemplate[]> {
   const { data, error } = await db.rpc('list_site_templates');
-  if (error) throw new DomainError(error.message, 'public_site.templates_failed');
+  if (error) throw fromDatabaseError(error, 'public_site.templates_failed');
   return SiteTemplatesSchema.parse(data ?? []);
 }
 
 export async function listPageTemplates(db: Db): Promise<PageTemplate[]> {
   const { data, error } = await db.rpc('list_page_templates');
-  if (error) throw new DomainError(error.message, 'public_site.templates_failed');
+  if (error) throw fromDatabaseError(error, 'public_site.templates_failed');
   return PageTemplatesSchema.parse(data ?? []);
 }
 
 export async function listSectionPatterns(db: Db): Promise<SectionPattern[]> {
   const { data, error } = await db.rpc('list_section_patterns');
-  if (error) throw new DomainError(error.message, 'public_site.templates_failed');
+  if (error) throw fromDatabaseError(error, 'public_site.templates_failed');
   return SectionPatternsSchema.parse(data ?? []);
 }

@@ -1,6 +1,6 @@
-import { isAuthApiError, isAuthError, isAuthRetryableFetchError } from '@supabase/supabase-js';
 import type { Db } from '@/lib/db/types';
 import { DomainError, SignInUnreachableError } from '@/lib/domain/errors';
+import { signInUnreachable } from '@/lib/domain/identity/session';
 
 export type Actor = {
   id: string;
@@ -31,16 +31,4 @@ export async function requireActor(db: Db): Promise<Actor> {
   }
 
   return { id: data.user.id };
-}
-
-/**
- * The check did not get an answer about the session. The sign-in library reports no connection,
- * a timeout or a 5xx reply as retryable; a reply it could not read at all as unknown. A 429 is a
- * refusal to answer now, not a statement about the session. Everything else (no session, an
- * expired, revoked or malformed token, a deleted user) is an answer, and means sign in.
- */
-function signInUnreachable(error: unknown): boolean {
-  if (isAuthRetryableFetchError(error)) return true;
-  if (isAuthError(error) && error.name === 'AuthUnknownError') return true;
-  return isAuthApiError(error) && (error.status >= 500 || error.status === 429);
 }

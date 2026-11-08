@@ -1,7 +1,7 @@
 import type { FormDefinition } from '@gold/schemas';
 import type { Db } from '@/lib/db/types';
 import type { Json } from '@/lib/db/database.types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 
 export const OBJECTIVES = { lead_generation: 'Lead generation', engagement: 'Form engagement', reengagement: 'Customer re-engagement', awareness: 'General awareness' } as const;
 export type CampaignStatus = 'draft' | 'active' | 'paused' | 'completed' | 'archived';
@@ -37,12 +37,12 @@ export type MarketingData = {
 
 export async function readMarketing<T = MarketingData>(db: Db, organizationId: string, view: string, filters: Record<string, string> = {}): Promise<T> {
   const { data, error } = await db.rpc('marketing_read', { p_organization_id: organizationId, p_view: view, p_filters: filters });
-  if (error) throw new DomainError(error.message, 'marketing.read_failed');
+  if (error) throw fromDatabaseError(error, 'marketing.read_failed');
   return data as unknown as T;
 }
 
 export async function commandMarketing(db: Db, organizationId: string, command: string, input: Record<string, Json | undefined>): Promise<string> {
   const { data, error } = await db.rpc('marketing_command', { p_organization_id: organizationId, p_command: command, p_input: input });
-  if (error) throw new DomainError(error.message, 'marketing.write_failed');
+  if (error) throw fromDatabaseError(error, 'marketing.write_failed');
   return data;
 }

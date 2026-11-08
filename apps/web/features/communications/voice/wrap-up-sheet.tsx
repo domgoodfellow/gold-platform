@@ -12,7 +12,7 @@ export function WrapUpCallSheet({ organizationId, call, outcomes }: { organizati
     <PageDrawer>
       <PageDrawerTrigger asChild><Button type="button" tone="text" size="tiny"><ClipboardCheck aria-hidden /> Wrap up</Button></PageDrawerTrigger>
       <PageDrawerContent>
-        <PageDrawerHeader><PageDrawerTitle>Wrap up call</PageDrawerTitle><PageDrawerDescription>Record how the call went without changing the network’s status.</PageDrawerDescription></PageDrawerHeader>
+        <PageDrawerHeader><PageDrawerTitle>Wrap up call</PageDrawerTitle><PageDrawerDescription>Record how the call went.</PageDrawerDescription></PageDrawerHeader>
         <div><WrapUpCallForm organizationId={organizationId} callId={call.id} outcomes={outcomes} note={call.note} outcomeId={call.outcome?.id ?? null} /></div>
       </PageDrawerContent>
     </PageDrawer>

@@ -34,7 +34,7 @@ export default async function PlatformOrganizationsPage({
       />
       <form method="get" role="search" className="relative max-w-md">
         <Search aria-hidden size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <TextInput name="q" defaultValue={query} placeholder="Search organizations or tenant IDs" aria-label="Search organizations" className="pl-9" />
+        <TextInput name="q" defaultValue={query} placeholder="Search businesses or business IDs" aria-label="Search organizations" className="pl-9" />
       </form>
       <div className="mt-6">
         <DataTable
@@ -45,7 +45,7 @@ export default async function PlatformOrganizationsPage({
             { key: 'name', header: 'Organization', emphasis: 'primary', cell: (tenant) => <div><Link className="font-medium underline underline-offset-4" href={platformHref(goldId, `organizations/${tenant.id}`)}>{tenant.name}</Link><span className="block text-xs text-muted-foreground">{tenant.id}</span></div> },
             { key: 'lifecycle', header: 'Lifecycle', cell: () => <Badge>provisioned</Badge> },
             { key: 'currency', header: 'Currency / timezone', cell: (tenant) => <div>{tenant.currency || '—'}<span className="block text-xs text-muted-foreground">{tenant.timezone}</span></div> },
-            { key: 'modules', header: 'Modules', cell: (tenant) => tenant.moduleKeys.length ? <div className="flex max-w-md flex-wrap gap-1">{tenant.moduleKeys.map((key) => <Badge key={key}>{key}</Badge>)}</div> : 'Kernel only' },
+            { key: 'modules', header: 'Features', cell: (tenant) => tenant.moduleKeys.length ? <div className="flex max-w-md flex-wrap gap-1">{tenant.moduleKeys.map((key) => <Badge key={key}>{key}</Badge>)}</div> : 'Kernel only' },
             { key: 'activity', header: 'Last activity', cell: (tenant) => tenant.lastActivityAt ? new Date(tenant.lastActivityAt).toLocaleString('en-CA', { timeZone: tenant.timezone }) : 'Nothing yet' },
           ]}
         />

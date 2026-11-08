@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * A business's numbers, as identities it operates — not as carrier resources.
@@ -82,7 +82,7 @@ async function readinessByNumber(db: Db, organizationId: string): Promise<Map<st
     .from('phone_number_readiness')
     .select('phone_number_id, readiness')
     .eq('organization_id', organizationId);
-  if (error) throw new DomainError(error.message, 'numbers.readiness_failed');
+  if (error) throw fromDatabaseError(error, 'numbers.readiness_failed');
   return new Map((data ?? []).map((row) => [row.phone_number_id as string, row.readiness as NumberReadiness]));
 }
 
@@ -91,7 +91,7 @@ export async function listPhoneNumbers(db: Db, input: { organizationId: string }
     db.from('phone_numbers').select(NUMBER_COLUMNS).eq('organization_id', input.organizationId).order('e164'),
     readinessByNumber(db, input.organizationId),
   ]);
-  if (error) throw new DomainError(error.message, 'numbers.list_failed');
+  if (error) throw fromDatabaseError(error, 'numbers.list_failed');
   return (data ?? []).map((row) => toPhoneNumber(row, readiness.get(row.id) ?? 'unavailable'));
 }
 
@@ -109,7 +109,7 @@ export async function getPhoneNumber(
       .maybeSingle(),
     readinessByNumber(db, input.organizationId),
   ]);
-  if (error) throw new DomainError(error.message, 'numbers.read_failed');
+  if (error) throw fromDatabaseError(error, 'numbers.read_failed');
   return data ? toPhoneNumber(data, readiness.get(data.id) ?? 'unavailable') : null;
 }
 
@@ -208,7 +208,7 @@ export async function resolveOutboundNumber(
     p_organization_id: input.organizationId,
     p_phone_number_id: input.phoneNumberId ?? undefined,
   });
-  if (error) throw new DomainError(error.message, 'numbers.resolve_failed');
+  if (error) throw fromDatabaseError(error, 'numbers.resolve_failed');
   const row = (data ?? [])[0];
   return row ? { phoneNumberId: row.phone_number_id, e164: row.e164, source: row.source as OutboundNumberSource } : null;
 }
@@ -231,7 +231,7 @@ export async function listPhoneNumberAssignments(
     .select('id, phone_number_id, member_id, resource_id, is_default')
     .eq('organization_id', input.organizationId)
     .is('released_at', null);
-  if (error) throw new DomainError(error.message, 'numbers.assignments_failed');
+  if (error) throw fromDatabaseError(error, 'numbers.assignments_failed');
   return (data ?? []).map((row) => ({
     id: row.id,
     phoneNumberId: row.phone_number_id,

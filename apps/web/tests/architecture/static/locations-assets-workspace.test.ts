@@ -76,7 +76,7 @@ describe('coordinate UI is feature-owned, one implementation for list and detail
     expect(form).toContain('value="save"');
     expect(form).toContain('value="look-up"');
     expect(form).toContain('Found. Check it, then save.');
-    expect(form).toContain('cannot look an address up');
+    expect(form).toContain('Address lookup isn’t available yet');
   });
 });
 

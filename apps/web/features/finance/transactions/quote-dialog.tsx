@@ -60,7 +60,7 @@ function QuoteBody({ organizationId, workItemId, mayCreateWork, mayManageCatalog
   return <>
     <StepHeader title="New quote" />
     <DialogBody><div className="flex flex-col gap-4">
-      {!record.fixed && !record.selected && prerequisite ? <section aria-label="Quote prerequisite" className="space-y-3 text-sm">
+      {!record.fixed && !record.selected && prerequisite ? <section aria-label="Before you can quote" className="space-y-3 text-sm">
         {prerequisite === 'forbidden' ? <p>Your role cannot price Work. Ask an authorized member to prepare this quote.</p>
           : prerequisite === 'catalog' ? <><p>Add a price-book item before pricing Work. Catalog & pricing owns what this business charges.</p>{canManageCatalog ? <ButtonLink size="small" tone="primary" href={`${base}/finance/catalog?returnTo=quote`}>Open Catalog & pricing</ButtonLink> : <p className="text-muted">Ask someone who manages the catalog to add a price item.</p>}</>
           : <><p>A quote starts from a Work item. Create Work first, then add a price from its Financials.</p>{canCreateWork ? <ButtonLink size="small" tone="primary" href={newWorkHref(organizationId, undefined, { returnTo: 'quote' })}>Create Work</ButtonLink> : <p className="text-muted">Your role cannot create Work. Ask an authorized member to add it.</p>}</>}

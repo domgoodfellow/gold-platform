@@ -1,7 +1,7 @@
 import type { Db } from '@/lib/db/types';
 import { callDomainCommand, requireAccessToken } from '@/lib/api/client';
 import { documentRenderer, type InvoiceDocument } from '@/lib/adapters/documents';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import {
   composeInvoiceDocument,
   drawWithLogoFallback,
@@ -44,7 +44,7 @@ const PRESENTATION_COLUMNS = 'seller_name, trading_name, address_lines, country_
 export async function getInvoicePresentation(db: Db, input: { organizationId: string; invoiceId: string }): Promise<InvoicePresentation | null> {
   const { data, error } = await db.from('invoice_presentations').select(PRESENTATION_COLUMNS)
     .eq('organization_id', input.organizationId).eq('invoice_id', input.invoiceId).maybeSingle();
-  if (error) throw new DomainError(error.message, 'invoice_documents.read_failed');
+  if (error) throw fromDatabaseError(error, 'invoice_documents.read_failed');
   return data ? presentationFrom(data) : null;
 }
 
@@ -53,7 +53,7 @@ export async function previewInvoicePresentation(db: Db, input: { organizationId
   const { data, error } = await db.rpc('preview_invoice_presentation', { p_organization_id: input.organizationId, p_customer_id: input.customerId as string });
   if (error) {
     if (error.code === '42501') throw new DomainError('Your role cannot preview this business’s invoices.', 'invoice_documents.forbidden');
-    throw new DomainError(error.message, 'invoice_documents.preview_failed');
+    throw fromDatabaseError(error, 'invoice_documents.preview_failed');
   }
   return presentationFrom(data as unknown as PresentationRow);
 }
@@ -61,7 +61,7 @@ export async function previewInvoicePresentation(db: Db, input: { organizationId
 export async function getInvoiceDocumentRecord(db: Db, input: { organizationId: string; invoiceId: string }): Promise<InvoiceDocumentRecord | null> {
   const { data, error } = await db.from('invoice_documents').select('invoice_id, storage_path, sha256, size_bytes, renderer, created_at')
     .eq('organization_id', input.organizationId).eq('invoice_id', input.invoiceId).maybeSingle();
-  if (error) throw new DomainError(error.message, 'invoice_documents.read_failed');
+  if (error) throw fromDatabaseError(error, 'invoice_documents.read_failed');
   return data ? { invoiceId: data.invoice_id, storagePath: data.storage_path, sha256: data.sha256, sizeBytes: data.size_bytes, renderer: data.renderer, createdAt: data.created_at } : null;
 }
 
@@ -70,7 +70,7 @@ export async function listInvoiceDocumentIds(db: Db, input: { organizationId: st
   if (input.invoiceIds.length === 0) return new Set();
   const { data, error } = await db.from('invoice_documents').select('invoice_id')
     .eq('organization_id', input.organizationId).in('invoice_id', input.invoiceIds);
-  if (error) throw new DomainError(error.message, 'invoice_documents.read_failed');
+  if (error) throw fromDatabaseError(error, 'invoice_documents.read_failed');
   return new Set((data ?? []).map((row) => row.invoice_id));
 }
 
@@ -93,7 +93,7 @@ async function writer<T>(db: Db, body: Record<string, unknown>): Promise<T> {
     return await callDomainCommand<T>('/invoice-documents', { token, body, timeoutMs: 30_000 });
   } catch (error) {
     if (error instanceof DomainError && error.code.startsWith('api.invoice_documents.')) {
-      throw new DomainError(error.message, error.code.slice('api.'.length));
+      throw fromDatabaseError(error, error.code.slice('api.'.length));
     }
     throw error;
   }

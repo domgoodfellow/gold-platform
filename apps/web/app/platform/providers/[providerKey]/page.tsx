@@ -80,7 +80,7 @@ export default async function ProviderDetailPage({
     <AppPage>
       <PageHeader
         title={provider.label}
-        crumbs={[...platformAncestry(goldId, 'providers'), { label: 'Providers', href: platformHref(goldId, 'providers') }]}
+        crumbs={[...platformAncestry(goldId, 'providers'), { label: 'Vendors', href: platformHref(goldId, 'providers') }]}
         meta={<ProviderIcon providerKey={provider.key} label={provider.label} size="large" />}
         configure={hasAccountModel}
       />
@@ -102,9 +102,9 @@ export default async function ProviderDetailPage({
 
           {isAiRuntimeProvider ? (
             <Section>
-              <SectionHeading>AI runtime</SectionHeading>
+              <SectionHeading>AI answering</SectionHeading>
               {runtimeUsage.length === 0 ? (
-                <p className="mt-2 text-sm text-muted">Not assigned to any AI capability yet.</p>
+                <p className="mt-2 text-sm text-muted">Not assigned to any AI job yet.</p>
               ) : (
                 <DefinitionList>
                   {runtimeUsage.map((assignment) => (
@@ -118,7 +118,7 @@ export default async function ProviderDetailPage({
                 href={platformHref(goldId, 'ai-runtime')}
                 className="mt-2 inline-block text-sm text-muted underline-offset-4 hover:underline"
               >
-                Open AI Runtime →
+                Open AI answering →
               </a>
             </Section>
           ) : null}
@@ -127,7 +127,7 @@ export default async function ProviderDetailPage({
 
       {hasAccountModel ? (
         <ConfigureRegistrar
-          title={`Configure ${provider.label}`}
+          title={`Edit ${provider.label}`}
           settingsHref={platformHref(goldId, `providers/${providerKey}`)}
         >
           <ProviderConfiguration
@@ -136,7 +136,7 @@ export default async function ProviderDetailPage({
             defaultAccountHint={
               isAiRuntimeProvider
                 ? undefined
-                : 'The account used when more than one exists for this provider.'
+                : 'The account used when this vendor has more than one.'
             }
           />
         </ConfigureRegistrar>

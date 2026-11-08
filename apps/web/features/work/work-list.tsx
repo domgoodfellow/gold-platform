@@ -69,7 +69,7 @@ export function WorkList({ title, crumbs, organizationId, timezone, types, selec
   const filtered = Boolean(view.q || view.status);
   const active: ActiveFilter[] = [
     ...(view.q ? [{ key: 'q', label: `Search: ${view.q}`, removeHref: href({ q: '' }) }] : []),
-    ...(view.status && statusName.has(view.status) ? [{ key: 'status', label: `Status: ${statusName.get(view.status)}`, removeHref: href({ status: undefined }) }] : []),
+    ...(view.status && statusName.has(view.status) ? [{ key: 'status', label: `Stage: ${statusName.get(view.status)}`, removeHref: href({ status: undefined }) }] : []),
   ];
   const total = view.view === 'board' ? statuses.reduce((sum, status) => sum + (stages[status.id]?.total ?? 0), 0) : workItems.total;
   const pages = Math.max(1, Math.ceil(workItems.total / WORK_PAGE_SIZE));
@@ -83,7 +83,7 @@ export function WorkList({ title, crumbs, organizationId, timezone, types, selec
       { key: 'schedule', header: 'Scheduled', cell: (w: WorkItem) => <span className="whitespace-nowrap tabular-nums text-muted">{w.window ? formatWindow(w.window, timezone) : 'Unscheduled'}</span> },
       { key: 'resources', header: 'Resources', cell: (w: WorkItem) => w.resources.length ? w.resources.map(r => r.label).join(', ') : <span className="text-muted">Unassigned</span> },
     ] : []),
-    { key: 'status', header: 'Status', cell: w => <span className="flex flex-col items-start gap-1"><Badge>{w.status.label}</Badge>{shortfall(w.id) ? <span className="text-xs text-danger">{!w.window ? 'Not yet staffed - ' : 'Required resources missing - '}{shortfall(w.id)}</span> : null}</span> },
+    { key: 'status', header: 'Stage', cell: w => <span className="flex flex-col items-start gap-1"><Badge>{w.status.label}</Badge>{shortfall(w.id) ? <span className="text-xs text-danger">{!w.window ? 'Not yet staffed - ' : 'Required resources missing - '}{shortfall(w.id)}</span> : null}</span> },
   ];
   // The one contextual action: placing work that is not yet scheduled or not yet staffed. Opening a record is its title.
   const placement = (w: WorkItem) => maySchedule && w.type.schedulable && (!w.window || !w.resources.length)
@@ -96,7 +96,7 @@ export function WorkList({ title, crumbs, organizationId, timezone, types, selec
       search={{ name: 'q', value: view.q, label: 'Search work', placeholder: 'Search work titles' }}
       hidden={{ view: view.view === 'board' ? 'board' : undefined }}
       filterCount={view.status ? 1 : 0}
-      filters={view.view === 'list' ? <label className="flex flex-col gap-1 text-sm sm:col-span-2">Status<SelectField name="status" aria-label="Filter by status" defaultValue={view.status ?? ''} options={[{ value: '', label: 'Any status' }, ...statuses.map((s) => ({ value: s.id, label: s.name }))]} /></label> : undefined}
+      filters={view.view === 'list' ? <label className="flex flex-col gap-1 text-sm sm:col-span-2">Stage<SelectField name="status" aria-label="Filter by stage" defaultValue={view.status ?? ''} options={[{ value: '', label: 'Any stage' }, ...statuses.map((s) => ({ value: s.id, label: s.name }))]} /></label> : undefined}
       sort={<SelectField name="sort" aria-label="Sort work" defaultValue={view.sort} className="w-full md:w-40" options={[...WORK_SORTS.filter(([key]) => scheduled || key !== 'schedule').map(([key, label]) => ({ value: key, label: label }))]} />}
       display={<ViewNav label="Work presentation" size="small" className="mb-0" items={[{ key: 'list', label: 'List', href: href({ view: 'list' }), current: view.view === 'list' }, { key: 'board', label: 'Board', href: href({ view: 'board' }), current: view.view === 'board' }]} />}
       active={active} resetHref={filtered ? href({ q: '', status: undefined }) : undefined} />

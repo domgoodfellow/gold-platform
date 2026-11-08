@@ -52,7 +52,7 @@ export function PlanDetailScreen({ organizationId, model }: { organizationId: st
       <Tabs defaultValue="entitlements" className="mt-8">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="entitlements">Entitlements</TabsTrigger>
+          <TabsTrigger value="entitlements">What’s included</TabsTrigger>
           <TabsTrigger value="quotas">Quotas</TabsTrigger>
           <TabsTrigger value="pricing">Pricing</TabsTrigger>
           <TabsTrigger value="economics">Economics</TabsTrigger>
@@ -62,7 +62,7 @@ export function PlanDetailScreen({ organizationId, model }: { organizationId: st
         <TabsContent value="overview" className="mt-4 text-sm text-muted-foreground">
           <p>
             {productGrants.length} Product{productGrants.length === 1 ? '' : 's'} granted whole, {moduleGrantSet.size}{' '}
-            Module{moduleGrantSet.size === 1 ? '' : 's'} granted individually, {featureGrants.length} Feature-level override
+            Feature{moduleGrantSet.size === 1 ? '' : 's'} granted individually, {featureGrants.length} Feature-level override
             {featureGrants.length === 1 ? '' : 's'}, {quotas.length} quota definition{quotas.length === 1 ? '' : 's'}.
           </p>
         </TabsContent>

@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -130,7 +130,7 @@ async function backingFor(db: Db, organizationId: string, identities: EmailIdent
       .select('id, status')
       .eq('organization_id', organizationId)
       .in('id', resourceIds);
-    if (error) throw new DomainError(error.message, 'email_identity.read_failed');
+    if (error) throw fromDatabaseError(error, 'email_identity.read_failed');
     for (const row of data ?? []) resources.set(row.id, row.status);
   }
 
@@ -141,7 +141,7 @@ async function backingFor(db: Db, organizationId: string, identities: EmailIdent
       .select('id, status')
       .eq('organization_id', organizationId)
       .in('id', connectionIds);
-    if (error) throw new DomainError(error.message, 'email_identity.read_failed');
+    if (error) throw fromDatabaseError(error, 'email_identity.read_failed');
     for (const row of data ?? []) connections.set(row.id, row.status);
   }
 
@@ -162,7 +162,7 @@ export async function listEmailIdentities(db: Db, input: { organizationId: strin
     .select(COLUMNS)
     .eq('organization_id', input.organizationId)
     .order('address');
-  if (error) throw new DomainError(error.message, 'email_identity.read_failed');
+  if (error) throw fromDatabaseError(error, 'email_identity.read_failed');
 
   const identities = (data ?? []).map(toIdentity);
   const backing = await backingFor(db, input.organizationId, identities);
@@ -200,8 +200,8 @@ export async function createEmailIdentity(
   if (error) {
     if (error.code === '42501') throw new DomainError('Your role cannot add email addresses for this business.', 'email_identity.forbidden');
     if (error.code === '23505') throw new DomainError('This business already has that address.', 'email_identity.duplicate');
-    if (error.code === '23514' || error.code === '23503') throw new DomainError(error.message, 'email_identity.invalid');
-    throw new DomainError(error.message, 'email_identity.write_failed');
+    if (error.code === '23514' || error.code === '23503') throw fromDatabaseError(error, 'email_identity.invalid');
+    throw fromDatabaseError(error, 'email_identity.write_failed');
   }
   return toIdentity(data);
 }
@@ -221,7 +221,7 @@ export async function resolveEmailSender(
     .eq('organization_id', input.organizationId)
     .eq('id', input.emailIdentityId)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'email_identity.read_failed');
+  if (error) throw fromDatabaseError(error, 'email_identity.read_failed');
   if (!data) throw new DomainError('That address does not belong to this business.', 'email_identity.not_found');
 
   const identity = toIdentity(data);
@@ -253,7 +253,7 @@ export async function setEmailIdentityReceiving(
     .eq('organization_id', input.organizationId)
     .eq('id', input.emailIdentityId)
     .select('id');
-  if (error) throw new DomainError(error.message, 'email_identity.write_failed');
+  if (error) throw fromDatabaseError(error, 'email_identity.write_failed');
   // RLS answers "not yours" and "your role cannot" with the same empty result.
   if (!data || data.length === 0) throw new DomainError('Your role cannot change this address.', 'email_identity.forbidden');
 }

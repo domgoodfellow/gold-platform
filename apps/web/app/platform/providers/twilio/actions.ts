@@ -63,7 +63,7 @@ export async function verifyTelephonyAccountAction(_: AccountCommandState, form:
   // words at the moment they press the button.
   const account = await getProviderAccount(await getDb(), accountId);
   if (account && account.verificationState !== 'verified') {
-    return { error: account.verificationError ?? 'The provider did not accept this credential.', done: false };
+    return { error: account.verificationError ?? 'Twilio did not accept this credential.', done: false };
   }
   return state;
 }

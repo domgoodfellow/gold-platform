@@ -56,7 +56,7 @@ export async function GettingPaidSection({ organizationId, outcome }: { organiza
         <SectionHeading id="payments-card-heading">Card payments</SectionHeading>
         {!cards ? <Hint>Card payments are not switched on for this business.</Hint>
           : provider ? <PaymentAccountRow organizationId={organizationId} provider={provider.name} accountId={account?.account.accountId ?? null} connectedAt={account?.connectedAt ?? null} mayManage={organization.capabilities.includes('organization.manage')} />
-          : <Hint>Card payments are switched on, but this installation has no payment processor.</Hint>}
+          : <Hint>Card payments are switched on, but taking cards isn’t available yet.</Hint>}
         <Link href={`/organizations/${organizationId}/settings/features`} className={`w-fit text-sm ${link}`}>{organization.capabilities.includes('feature.manage') ? 'Manage payment features' : 'View available payment features'}</Link>
       </div>
     </Card>

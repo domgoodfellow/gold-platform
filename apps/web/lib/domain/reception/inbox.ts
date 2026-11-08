@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { createContact, listContacts } from '@/lib/domain/contacts/contacts';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { getConversation, listMessages, type Conversation, type ConversationChannel, type Message } from './messaging';
@@ -112,7 +112,7 @@ export async function currentMembershipId(db: Db, input: { organizationId: strin
     .eq('organization_id', input.organizationId)
     .eq('user_id', actor.id)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'inbox.membership_failed');
+  if (error) throw fromDatabaseError(error, 'inbox.membership_failed');
   return data?.id ?? null;
 }
 
@@ -155,7 +155,7 @@ export async function listInbox(
     .order('last_message_at', { ascending: false })
     .order('id', { ascending: false })
     .limit(limit + 1);
-  if (error) throw new DomainError(error.message, 'inbox.list_failed');
+  if (error) throw fromDatabaseError(error, 'inbox.list_failed');
 
   const rows = (data ?? []) as unknown as InboxRow[];
   const page = rows.slice(0, limit).map(toItem);
@@ -176,7 +176,7 @@ export async function getInboxCounts(db: Db, input: { organizationId: string; me
     input.membershipId ? base().eq('assignee_membership_id', input.membershipId).neq('status', 'closed') : Promise.resolve({ count: 0, error: null }),
   ]);
   for (const result of [unread, open, waiting, unassigned, mine]) {
-    if (result.error) throw new DomainError(result.error.message, 'inbox.counts_failed');
+    if (result.error) throw fromDatabaseError(result.error, 'inbox.counts_failed');
   }
   return { unread: unread.count ?? 0, open: open.count ?? 0, waiting: waiting.count ?? 0, unassigned: unassigned.count ?? 0, mine: mine.count ?? 0 };
 }
@@ -247,7 +247,7 @@ export async function getConversationDetail(db: Db, input: { organizationId: str
     .eq('organization_id', input.organizationId)
     .eq('id', input.conversationId)
     .single();
-  if (error) throw new DomainError(error.message, 'inbox.detail_failed');
+  if (error) throw fromDatabaseError(error, 'inbox.detail_failed');
 
   const [timeline, events, assigneeRow, customerRow, candidates] = await Promise.all([
     conversation.channel === 'sms'
@@ -265,7 +265,7 @@ export async function getConversationDetail(db: Db, input: { organizationId: str
       : db.rpc('conversation_customer_candidates', { p_organization_id: input.organizationId, p_conversation_id: conversation.id }),
   ]);
   for (const result of [events, assigneeRow, customerRow, candidates]) {
-    if (result.error) throw new DomainError(result.error.message, 'inbox.detail_failed');
+    if (result.error) throw fromDatabaseError(result.error, 'inbox.detail_failed');
   }
 
   // Names for the people and customers an event mentions: read from where they live, never copied onto the event.
@@ -315,8 +315,8 @@ export async function getConversationDetail(db: Db, input: { organizationId: str
 
 function refusal(error: { code?: string; message: string }): DomainError {
   if (error.code === '42501') return new DomainError('Your role cannot do that, or that is not this business’s.', 'conversation.forbidden');
-  if (error.code === '22023') return new DomainError(error.message, 'conversation.invalid');
-  return new DomainError(error.message, 'conversation.write_failed');
+  if (error.code === '22023') return fromDatabaseError(error, 'conversation.invalid');
+  return fromDatabaseError(error, 'conversation.write_failed');
 }
 
 export async function setConversationStatus(db: Db, input: { organizationId: string; conversationId: string; status: ConversationStatus }): Promise<void> {
@@ -389,8 +389,8 @@ export async function listAssignableMembers(db: Db, input: { organizationId: str
     db.from('memberships').select('id, display_name, role_id').eq('organization_id', input.organizationId).order('display_name'),
     db.from('roles').select('id, capabilities').eq('organization_id', input.organizationId),
   ]);
-  if (members.error) throw new DomainError(members.error.message, 'inbox.members_failed');
-  if (roles.error) throw new DomainError(roles.error.message, 'inbox.members_failed');
+  if (members.error) throw fromDatabaseError(members.error, 'inbox.members_failed');
+  if (roles.error) throw fromDatabaseError(roles.error, 'inbox.members_failed');
   const able = new Set((roles.data ?? []).filter((role) => (role.capabilities ?? []).includes('message.send')).map((role) => role.id));
   return (members.data ?? []).filter((member) => able.has(member.role_id)).map((member) => ({ membershipId: member.id, name: member.display_name }));
 }

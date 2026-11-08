@@ -152,7 +152,7 @@ describe('no hardcoded default city, and no public tile host treated as producti
 
   it('the Map pane explains an unconfigured deployment rather than falling back to a hardcoded style', () => {
     const workspace = read(`${MAP}/location-map-workspace.tsx`);
-    expect(workspace).toContain('Map rendering is not configured for this deployment.');
+    expect(workspace).toContain('Maps aren’t available yet.');
   });
 });
 

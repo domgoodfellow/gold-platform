@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -82,8 +82,8 @@ export async function countTenantsByOperationalState(db: Db): Promise<TenantOper
   ]);
 
   if (liveResult.error || setupResult.error) {
-    throw new DomainError(
-      liveResult.error?.message ?? setupResult.error?.message ?? 'Organization counts were unavailable.',
+    throw fromDatabaseError(
+      liveResult.error ?? setupResult.error,
       'platform.tenants_failed',
     );
   }
@@ -109,7 +109,7 @@ export async function getTenant(db: Db, organizationId: string): Promise<Tenant 
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'platform.tenant_failed');
+    throw fromDatabaseError(error, 'platform.tenant_failed');
   }
 
   return data ? toTenant(data) : null;
@@ -123,7 +123,7 @@ export async function listTenantsByIds(db: Db, organizationIds: string[]): Promi
     .from('platform_tenants')
     .select('id, name, created_at, timezone, currency, slug, module_keys, last_activity_at, operational_state')
     .in('id', [...new Set(organizationIds)]);
-  if (error) throw new DomainError(error.message, 'platform.tenants_failed');
+  if (error) throw fromDatabaseError(error, 'platform.tenants_failed');
   return (data ?? []).map(toTenant).filter((tenant): tenant is Tenant => tenant !== null);
 }
 
@@ -152,7 +152,7 @@ export async function listTenants(
     .limit(limit);
 
   if (error) {
-    throw new DomainError(error.message, 'platform.tenants_failed');
+    throw fromDatabaseError(error, 'platform.tenants_failed');
   }
 
   const tenants = (data ?? [])
@@ -214,7 +214,7 @@ export async function listFailures(
     .limit(input.limit ?? 50);
 
   if (error) {
-    throw new DomainError(error.message, 'platform.failures_failed');
+    throw fromDatabaseError(error, 'platform.failures_failed');
   }
 
   return (data ?? [])
@@ -237,7 +237,7 @@ export async function countFailures(db: Db): Promise<number> {
     .select('kind', { count: 'exact' })
     .limit(1);
 
-  if (error) throw new DomainError(error.message, 'platform.failures_failed');
+  if (error) throw fromDatabaseError(error, 'platform.failures_failed');
 
   return count ?? 0;
 }

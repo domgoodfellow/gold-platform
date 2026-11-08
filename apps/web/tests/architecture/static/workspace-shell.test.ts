@@ -520,7 +520,7 @@ describe('Resources — the reference page for the workspace/page hierarchy', ()
 
   it('keeps its Configure panel registration and the create-sheet provider around the header', () => {
     expect(resourcesPage).toContain('<ConfigureRegistrar');
-    expect(resourcesPage).toContain('title="Resources configuration"');
+    expect(resourcesPage).toContain('title="Resources settings"');
     expect(beforeHeader).toContain('<CreateResourceSheetProvider');
   });
 

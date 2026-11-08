@@ -28,7 +28,7 @@ export default async function SecurityPage({ searchParams }: PageProps<'/setting
             {hasPassword ? (
               <ChangePasswordForm />
             ) : (
-              <Hint className="mt-2">Manage your password with your connected sign-in provider.</Hint>
+              <Hint className="mt-2">Manage your password with the service you sign in with, such as Google.</Hint>
             )}
           </Section>
         </>

@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * What a business used, and — on the staff-only path — what it cost GOLD. Two return shapes on
@@ -86,7 +86,7 @@ export async function listUsageEvents(
     .order('occurred_at', { ascending: false })
     .limit(input.limit ?? 100);
 
-  if (error) throw new DomainError(error.message, 'commercial.usage_failed');
+  if (error) throw fromDatabaseError(error, 'commercial.usage_failed');
 
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -156,7 +156,7 @@ export async function organizationCommercialSummary(
     if (error.code === '42501' || error.code === 'PGRST202' || error.code === '42883') {
       throw new DomainError('Only platform staff may read this.', 'commercial.forbidden');
     }
-    throw new DomainError(error.message, 'commercial.summary_failed');
+    throw fromDatabaseError(error, 'commercial.summary_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -225,7 +225,7 @@ export async function organizationUsageDetail(
     if (error.code === '42501' || error.code === 'PGRST202' || error.code === '42883') {
       throw new DomainError('Only platform staff may read this.', 'commercial.forbidden');
     }
-    throw new DomainError(error.message, 'commercial.usage_detail_failed');
+    throw fromDatabaseError(error, 'commercial.usage_detail_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -298,7 +298,7 @@ export async function recordUsageReconciliation(
     if (error.code === '23503') {
       throw new DomainError('No such usage event.', 'commercial.usage_event_missing');
     }
-    throw new DomainError(error.message, 'commercial.record_reconciliation_failed');
+    throw fromDatabaseError(error, 'commercial.record_reconciliation_failed');
   }
 
   return data as string;
@@ -331,7 +331,7 @@ export async function listProviderSyncFailures(
 
   const { data, error } = await query;
 
-  if (error) throw new DomainError(error.message, 'commercial.sync_failures_failed');
+  if (error) throw fromDatabaseError(error, 'commercial.sync_failures_failed');
 
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -349,7 +349,7 @@ export async function countProviderSyncFailures(db: Db): Promise<number> {
     .select('id', { count: 'exact' })
     .limit(1);
 
-  if (error) throw new DomainError(error.message, 'commercial.sync_failures_failed');
+  if (error) throw fromDatabaseError(error, 'commercial.sync_failures_failed');
 
   return count ?? 0;
 }

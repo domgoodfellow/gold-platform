@@ -8,7 +8,7 @@ vi.mock('@/features/crm/intake/contact-intake',()=>({AddContactsTrigger:()=> <bu
 vi.mock('@/features/crm/opportunities/opportunity-sheet',()=>({OpportunitySheet:()=> <button>New opportunity</button>}));
 vi.mock('@/features/crm/follow-ups/follow-up-sheet',()=>({FollowUpSheet:({children,item}:{children?:string;item?:unknown})=><button>{children??(item?'Edit follow-up':'New follow-up')}</button>}));
 vi.mock('@/features/crm/follow-ups/follow-up-list',()=>({FollowUpList:({items}:{items:{title:string}[]})=><ul>{items.map(item=><li key={item.title}>{item.title}</li>)}</ul>}));
-vi.mock('@/components/panels/workspace-right-rail',()=>({SupportTrigger:({mode}:{mode:string})=> <button>{mode==='activity'?'Activity':mode==='insights'?'Insights':'Configure'}</button>}));
+vi.mock('@/components/panels/workspace-right-rail',()=>({SupportTrigger:({mode}:{mode:string})=> <button>{mode==='activity'?'Activity':mode==='insights'?'Insights':'Settings'}</button>}));
 const row=(id:string,name:string,contactType:RelationshipRow['contactType'],extra:Partial<RelationshipRow>={}):RelationshipRow=>({id,name,contactType,lifecycle:null,companyId:null,companyName:null,activity:{action:'follow_up.completed',detail:{kind:'call',title:`Call ${name}`},occurredAt:'2026-10-20T15:00:00Z'},nextTask:null,...extra});
 const rows=[row('p1','Ada Person','person',{companyId:'c1',companyName:'Acme Ltd',lifecycle:'prospect',nextTask:{id:'t1',title:'Send proposal',dueAt:'2026-10-25T15:00:00Z'}}),row('c1','Acme Ltd','company',{lifecycle:'customer'}),row('p2','Ben Person','person',{companyId:'c1',companyName:'Acme Ltd'}),row('p3','Cy Solo','person')];
 const stage={stageId:'s1',name:'Discovery',kind:'open',position:0,count:4,values:[]};
@@ -49,8 +49,8 @@ describe('relationship-first CRM dashboard',()=>{
     expect(within(recent).getByRole('link',{name:'Acme Ltd'})).toHaveAttribute('href','/organizations/org/crm/contacts/c1');
     // V1.4: identity and affiliation on the secondary line; lifecycle as a labelled status.
     expect(within(recent).getAllByText('Person · Acme Ltd')).toHaveLength(2);
-    expect(within(recent).getByLabelText('Ada Person lifecycle')).toHaveTextContent('LifecycleProspect');
-    expect(within(recent).getByLabelText('Acme Ltd lifecycle')).toHaveTextContent('LifecycleCustomer');
+    expect(within(recent).getByLabelText('Ada Person stage')).toHaveTextContent('StageProspect');
+    expect(within(recent).getByLabelText('Acme Ltd stage')).toHaveTextContent('StageCustomer');
     expect(within(recent).getByText('Call task completed: Call Ada Person')).toBeInTheDocument();
     expect(within(recent).getAllByText(/^Next:/)).toHaveLength(1);
   });
@@ -145,11 +145,11 @@ describe('relationship-first CRM dashboard',()=>{
   });
   it('keeps reduced roles read-only',()=>{
     render(<CrmHome {...defaults}/>);
-    for(const name of ['Add contacts','New opportunity','New follow-up','Configure'])expect(screen.queryByRole('button',{name})).toBeNull();
+    for(const name of ['Add contacts','New opportunity','New follow-up','Settings'])expect(screen.queryByRole('button',{name})).toBeNull();
     expect(screen.getByRole('button',{name:'Activity'})).toBeInTheDocument();
   });
   it('offers canonical drawers and configuration only for authorized mutation',()=>{
     render(<CrmHome {...defaults} mayAddContacts mayCreateOpportunity mayConfigure configureItems={[{key:'sales-stages',label:'Relationship stages',href:'/organizations/org/crm/configuration/relationship-stages'},{key:'opportunity-stages',label:'Opportunity stages',href:'/organizations/org/crm/configuration/opportunity-stages'}]} followUpOptions={{...defaults.followUpOptions,mayManage:true}}/>);
-    for(const name of ['Add contacts','New opportunity','New follow-up','Configure'])expect(screen.getByRole('button',{name})).toBeInTheDocument();
+    for(const name of ['Add contacts','New opportunity','New follow-up','Settings'])expect(screen.getByRole('button',{name})).toBeInTheDocument();
   });
 });

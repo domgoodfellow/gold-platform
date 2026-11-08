@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from './actor';
 import { listLocations } from '@/lib/domain/locations/locations';
 import { listResources } from '@/lib/domain/resources/resources';
@@ -68,7 +68,7 @@ export async function computeReadiness(
 ): Promise<Readiness> {
   const states = resolved ?? await organizationResolvedFeatureStates(db, input);
   const outstanding = new Map(states.filter((state) => state.moduleKey && state.readiness === 'setup_required')
-    .map((state) => [state.moduleKey!, state.reason ?? 'Configuration is required.']));
+    .map((state) => [state.moduleKey!, state.reason ?? 'This needs setting up.']));
   const [blocking, serviceIfLive] = await Promise.all([
     launchBlockers(db, { organizationId: input.organizationId }),
     // The one service-access resolver, asked the question Launch is: would this business be
@@ -355,7 +355,7 @@ async function launchBlockers(
   });
 
   if (error) {
-    throw new DomainError(error.message, 'organizations.readiness_failed');
+    throw fromDatabaseError(error, 'organizations.readiness_failed');
   }
 
   return new Set(data ?? []);
@@ -404,6 +404,6 @@ export async function launchOrganization(
         'organizations.not_ready',
       );
     }
-    throw new DomainError(error.message, 'organizations.launch_failed');
+    throw fromDatabaseError(error, 'organizations.launch_failed');
   }
 }

@@ -82,7 +82,7 @@ export default async function SchedulePage({
   const resourcesHref = `/organizations/${organizationId}/resources`;
 
   // Hours are read for every viewer, not only one who may configure them: whether this business
-  // has configured anything at all changes what Day view is honest to draw (see `DaySchedule`).
+  // has set any hours at all changes what Day view is honest to draw (see `DaySchedule`).
   const [days, hours] = await Promise.all([
     listScheduleDays(db, { organizationId, dates, timeZone: organization.timezone }),
     listOperatingHours(db, { organizationId }),
@@ -123,7 +123,7 @@ export default async function SchedulePage({
     <AppPage className="flex h-full min-h-0 flex-1 flex-col">
       {mayConfigure ? (
         <ConfigureRegistrar
-          title="Schedule configuration"
+          title={`${areaLabel('schedule')} settings`}
           settingsHref={`/organizations/${organizationId}/schedule/configuration`}
         >
           <ScheduleConfiguration
@@ -158,6 +158,7 @@ export default async function SchedulePage({
         shortfalls={shortfalls}
         resourcesHref={resourcesHref}
         mayAddResource={mayAddResource}
+        hoursHref={mayConfigure ? `/organizations/${organizationId}/schedule/configuration` : null}
       />
     </AppPage>
   );

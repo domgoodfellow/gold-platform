@@ -65,7 +65,7 @@ export function FoundingHandoff({ handoff }: { handoff: AcceptedProposalHandoff 
 
       {preview.length > 0 ? (
         <div className="mt-4">
-          <p className="text-sm font-medium">Suggested by discovery</p>
+          <p className="text-sm font-medium">Suggested from your first conversation with GildOps</p>
           <p className="text-sm text-muted">Nothing below has been switched on. Turn any of it on from the area it belongs to.</p>
           <div className="mt-2 divide-y divide-border rounded-md border border-border">
             {preview.map((workspace) => (

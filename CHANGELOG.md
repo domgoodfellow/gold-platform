@@ -34,6 +34,14 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-11-07
 
+- Plain wording across the app. A "Words we use" list in docs/ui-system.md replaces configuration, deployment, provider, capability, module, preset, tenant and similar words; the copy check in `pnpm check` now reads every screen, public page, email and domain message (lib/ included) and fails on those words. Workspace "Configuration" is now "Settings"; resource capabilities are skills; work statuses are stages; codes such as call, message and case statuses show as plain labels.
+- A refusal from the database never reaches the screen in the database's own words: a duplicate says "That already exists.", a missing permission "You don't have access to that.", and an unknown failure "Something went wrong. Try again." with the original kept in the server log.
+- Schedule says "No opening hours yet" with a Set hours link when a business has none, and shades a day it is closed as "Closed". Home keeps the tiles that ignore the period (contacts, unpaid invoices) beside the other overview tiles, and calls its middle period "Last 7 days".
+- Every toast has a close button, and error toasts stay until closed. The setup banner on Home and Home's "couldn't load" notice can be closed for the rest of the browser session, and come back when what they report changes.
+- When the sign-in service cannot be reached, the request gateway no longer sends people to the sign-in page either; the page shows the "couldn't confirm you're signed in" screen instead.
+- The stored names "GOLD Internal Admin", "GOLD Internal" and "GOLD Platform" are now "GildOps Admin", "GildOps Internal" and "GildOps Platform".
+- The marketing site no longer claims what the product does not do today: pricing shows the Start, Operate, Scale and Enterprise plans and the add-ons instead of separately sold Sales, Operations and Customer Service products, and claims about keeping your existing number and inbox, automatic resource assignment, a website assistant that answers and books, and a workspace that sets itself up are removed.
+- Seven messages from Support and Marketing (such as "Queue unavailable" and "Invalid campaign transition") are now plain sentences.
 - Somebody who manages a business can start another from the business switcher: New business opens the same form a first-time owner fills in, then Choose a starting point, which lists their other businesses to copy from.
 - Saving a business as a template asks for its category, from the industry suggestions and by default the business's own industry. A new owner who gives that industry has the template chosen for them. Staff can change the category when renaming a template.
 - The usage-economics database test no longer fails now and then: it could pick, as its own made-up currency, the code it uses for "a currency with no prices".

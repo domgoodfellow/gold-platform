@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createPortalClient } from './portal';
 import { createProposalClient } from './proposal';
-import { classifySessionUser, type SessionIdentity } from '@/lib/domain/identity/session';
+import { checkSession, type SessionCheck } from '@/lib/domain/identity/session';
 import type { Database } from './types';
 
 /**
@@ -22,7 +22,7 @@ import type { Database } from './types';
 export async function updateSession(
   request: NextRequest,
   { portal = false, proposal = false }: { portal?: boolean; proposal?: boolean } = {},
-): Promise<{ response: NextResponse; identity: SessionIdentity }> {
+): Promise<{ response: NextResponse; identity: SessionCheck }> {
   let response = NextResponse.next({ request });
 
   const jar = {
@@ -49,10 +49,12 @@ export async function updateSession(
 
   // getUser() rather than getSession(): it revalidates the token against the auth server
   // instead of trusting whatever the cookie claims. This call is what performs the refresh,
-  // so it must not be removed as "unused".
-  const { data } = await db.auth.getUser();
+  // so it must not be removed as "unused". A check that could not complete (no connection, a
+  // timeout, a 5xx or 429, a reply that is not the sign-in service) is `unverified`, not signed
+  // out: the request goes through and the page's `requireActor` raises the service error.
+  const identity = await checkSession(db);
 
-  return { response, identity: classifySessionUser(data.user) };
+  return { response, identity };
 }
 
 function requireEnv(name: string): string {

@@ -1,6 +1,6 @@
 import { routingProvider, type RoutingProvider } from '@/lib/adapters/routing';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { maximumMatching } from '@/lib/domain/matching';
 import { listResources } from '@/lib/domain/resources/resources';
 import type { TravelMode } from '@/lib/domain/resources/travel-mode';
@@ -565,7 +565,7 @@ export async function loadFeasibilityData(
     })(),
     listResourceAvailabilityExceptions(db, { organizationId: input.organizationId, within: input.range }),
   ]);
-  if (committedRows.error) throw new DomainError(committedRows.error.message, 'feasibility.commitments_failed');
+  if (committedRows.error) throw fromDatabaseError(committedRows.error, 'feasibility.commitments_failed');
 
   const resources = [...resourceList].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
   const ids = resources.map((resource) => resource.id);
@@ -635,15 +635,15 @@ async function loadTravelFacts(
     mobile.length > 0 ? assignments : Promise.resolve({ data: [], error: null }),
     db.from('organizations').select('buffer_minutes').eq('id', input.organizationId).maybeSingle(),
   ]);
-  if (assigned.error) throw new DomainError(assigned.error.message, 'feasibility.travel_failed');
-  if (organization.error) throw new DomainError(organization.error.message, 'feasibility.travel_failed');
+  if (assigned.error) throw fromDatabaseError(assigned.error, 'feasibility.travel_failed');
+  if (organization.error) throw fromDatabaseError(organization.error, 'feasibility.travel_failed');
 
   const workItemIds = [...new Set((assigned.data ?? []).map((row) => row.work_item_id))];
   const items =
     workItemIds.length > 0
       ? await db.from('work_items').select('id, location_id').eq('organization_id', input.organizationId).in('id', workItemIds)
       : { data: [], error: null };
-  if (items.error) throw new DomainError(items.error.message, 'feasibility.travel_failed');
+  if (items.error) throw fromDatabaseError(items.error, 'feasibility.travel_failed');
   const locationOfWork = new Map((items.data ?? []).map((item) => [item.id, item.location_id]));
 
   const locationIds = [
@@ -659,7 +659,7 @@ async function loadTravelFacts(
     locationIds.length > 0
       ? await db.from('locations').select('id, latitude, longitude').eq('organization_id', input.organizationId).in('id', locationIds)
       : { data: [], error: null };
-  if (locations.error) throw new DomainError(locations.error.message, 'feasibility.travel_failed');
+  if (locations.error) throw fromDatabaseError(locations.error, 'feasibility.travel_failed');
   const places = new Map<string, Place>(
     (locations.data ?? []).map((row) => [
       row.id,
@@ -876,9 +876,9 @@ export async function loadPublicFeasibilityData(
     db.from('resource_commitments').select('resource_id, occupies').eq('organization_id', input.organizationId).overlaps('occupies', rangeText),
     input.excludeWorkItemId ? db.rpc('booking_own_commitments', { p_work_item_id: input.excludeWorkItemId }) : Promise.resolve(null),
   ]);
-  if (candidates.error) throw new DomainError(candidates.error.message, 'feasibility.candidates_failed');
-  if (commitments.error) throw new DomainError(commitments.error.message, 'feasibility.commitments_failed');
-  if (own?.error) throw new DomainError(own.error.message, 'feasibility.commitments_failed');
+  if (candidates.error) throw fromDatabaseError(candidates.error, 'feasibility.candidates_failed');
+  if (commitments.error) throw fromDatabaseError(commitments.error, 'feasibility.commitments_failed');
+  if (own?.error) throw fromDatabaseError(own.error, 'feasibility.commitments_failed');
 
   // A resource cannot hold two commitments over the same time (the exclusion constraint), so a row
   // identical to one of the booking's own is that booking and nothing else.

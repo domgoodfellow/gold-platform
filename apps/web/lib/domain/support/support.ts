@@ -1,6 +1,6 @@
 import type { Db } from "@/lib/db/types";
 import type { Json } from "@/lib/db/database.types";
-import { DomainError } from "@/lib/domain/errors";
+import { DomainError, fromDatabaseError } from "@/lib/domain/errors";
 
 export const STATUSES = [
   "new",
@@ -141,7 +141,7 @@ export async function readSupport<T = SupportData>(
     p_view: view,
     p_filters: filters,
   });
-  if (error) throw new DomainError(error.message, "support.read_failed");
+  if (error) throw fromDatabaseError(error, "support.read_failed");
   if (view === 'detail') {
     const result = data as unknown as SupportData;
     if (result.selected) {
@@ -163,7 +163,7 @@ export async function commandSupport(
     p_command: command,
     p_input: input,
   });
-  if (error) throw new DomainError(error.message, "support.write_failed");
+  if (error) throw fromDatabaseError(error, "support.write_failed");
   return data;
 }
 export function recordHref(

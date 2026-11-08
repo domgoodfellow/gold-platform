@@ -1,6 +1,6 @@
 import { FormPublicationSchema, type FormPublication } from '@gold/schemas';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { checkAgainst, submissionFailure, type SubmitFormResult } from '@/lib/domain/forms/public-forms';
 
 /**
@@ -17,14 +17,14 @@ export async function setPortalForm(db: Db, input: { organizationId: string; for
   const { error } = await db.rpc('set_portal_form', { p_organization_id: input.organizationId, p_form_id: input.formId, p_enabled: input.enabled });
   if (error) {
     if (error.code === '42501') throw new DomainError('Your role cannot manage forms.', 'portal.forms_forbidden');
-    throw new DomainError(error.message, 'portal.forms_failed');
+    throw fromDatabaseError(error, 'portal.forms_failed');
   }
 }
 
 /** The published forms this portal customer is offered, from their own binding. */
 export async function portalFormsAvailable(db: Db): Promise<FormPublication[]> {
   const { data, error } = await db.rpc('portal_forms_available');
-  if (error) throw new DomainError(error.message, 'portal.forms_read_failed');
+  if (error) throw fromDatabaseError(error, 'portal.forms_read_failed');
   return FormPublicationSchema.array().parse(data ?? []);
 }
 

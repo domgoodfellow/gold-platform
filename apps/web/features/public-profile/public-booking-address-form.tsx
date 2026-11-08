@@ -58,7 +58,7 @@ export function PublicBookingAddressForm({
         <Hint className="text-xs">
           {slug
             ? 'Not reachable yet — publish at least one bookable kind of work first.'
-            : 'No public booking address is configured.'}
+            : 'No public booking address yet.'}
         </Hint>
       )}
     </div>

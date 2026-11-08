@@ -132,7 +132,7 @@ export function LocationMapWorkspace({
       <div className="h-72 overflow-hidden rounded-md border border-border lg:h-full lg:flex-1">
         {!mapStyleUrl ? (
           <EmptyState className="flex h-full items-center justify-center text-center">
-            Map rendering is not configured for this deployment.
+            Maps aren’t available yet.
           </EmptyState>
         ) : !hasAnyMapped ? (
           <EmptyState className="flex h-full flex-col items-center justify-center gap-1 text-center">

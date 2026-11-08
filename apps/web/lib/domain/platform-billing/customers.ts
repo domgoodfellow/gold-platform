@@ -1,7 +1,7 @@
 import { platformBillingProvider } from '@/lib/adapters/platform-billing';
 import { callDomainCommand, requireAccessToken } from '@/lib/api/client';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -39,13 +39,13 @@ export async function getPlatformBillingCustomer(
     .eq('organization_id', input.organizationId)
     .eq('environment', input.environment)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'platform_billing.customer_read_failed');
+  if (error) throw fromDatabaseError(error, 'platform_billing.customer_read_failed');
   return data ? toCustomer(data) : null;
 }
 
 const API_REFUSALS: Readonly<Record<string, [string, string]>> = {
   'api.not_found': ['Only this business’s own billing manager can start a subscription.', 'platform_billing.forbidden'],
-  'api.provider_refused': ['The billing provider would not create a customer.', 'platform_billing.provider_refused'],
+  'api.provider_refused': ['The billing service would not create a customer.', 'platform_billing.provider_refused'],
   'api.conflict': ['This business’s billing customer changed while it was being set up. Try again.', 'platform_billing.customer_conflict'],
 };
 
@@ -72,7 +72,7 @@ export async function ensurePlatformBillingCustomer(
   const provider = await platformBillingProvider();
   if (!provider) {
     throw new DomainError(
-      'Billing is not configured for this deployment.',
+      'Billing isn’t set up for GildOps yet.',
       'platform_billing.not_configured',
     );
   }
@@ -93,7 +93,7 @@ export async function ensurePlatformBillingCustomer(
   // the same account mode, and a checkout must not proceed against the wrong customer.
   if (result.environment !== provider.environment) {
     throw new DomainError(
-      'Billing is configured differently in this deployment’s two runtimes.',
+      'Billing is set up differently in GildOps’ two services.',
       'platform_billing.environment_mismatch',
     );
   }

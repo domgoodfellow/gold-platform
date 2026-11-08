@@ -44,7 +44,7 @@ export function PersonalProfileForm({ profile, email }: { profile: AccountProfil
               {profile.avatar ? <AvatarImage src={profile.avatar} alt="" /> : null}
               <AvatarFallback className="text-xl">{initials}</AvatarFallback>
             </Avatar>
-            <Hint className="max-w-48 text-xs">Your photo, when available, comes from your sign-in provider.</Hint>
+            <Hint className="max-w-48 text-xs">Your photo, when available, comes from the service you sign in with.</Hint>
           </div>
           <div className={grid}>
             {names.map(({ name, label, autoComplete, maxLength }) => (

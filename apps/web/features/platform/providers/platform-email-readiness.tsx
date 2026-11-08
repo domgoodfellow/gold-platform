@@ -4,10 +4,10 @@ import { InfoPopover } from '@/components/controls/info-popover';
 import type { PlatformEmailReadiness } from '@/lib/route/provider-environment';
 
 const STATE: Record<PlatformEmailReadiness['state'], { label: string; tone: 'neutral' | 'success' | 'danger' }> = {
-  not_configured: { label: 'Not configured', tone: 'danger' },
+  not_configured: { label: 'Not set up', tone: 'danger' },
   misconfigured: { label: 'Misconfigured', tone: 'danger' },
-  provider_unavailable: { label: 'Provider unavailable', tone: 'danger' },
-  configured_unverified: { label: 'Configured, not yet verified', tone: 'neutral' },
+  provider_unavailable: { label: 'Email service unavailable', tone: 'danger' },
+  configured_unverified: { label: 'Set up, not yet verified', tone: 'neutral' },
   ready_for_test: { label: 'Ready for an authorized test', tone: 'neutral' },
   live_verified: { label: 'Live delivery verified', tone: 'success' },
   api_unreachable: { label: 'API not reachable', tone: 'danger' },

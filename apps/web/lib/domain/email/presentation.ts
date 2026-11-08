@@ -38,7 +38,7 @@ export function sendingDomainPresentation(domain: {
 }
 
 export const PROVIDER_UNAVAILABLE_MESSAGE =
-  'Custom sending domains cannot be set up on this deployment yet. Nothing is wrong with your domain or your DNS.';
+  'Sending from your own domain isn’t available yet. Nothing is wrong with your domain or your DNS.';
 
 /**
  * What GildOps' own managed sending offers a business today: nothing.
@@ -85,14 +85,14 @@ export function sendingDomainSentence(
     case 'manual_dns':
       return `Add the ${domain.outstandingRecords} record${domain.outstandingRecords === 1 ? '' : 's'} below at the company that manages DNS for this domain, then check verification. Changes can take a while to spread.`;
     case 'checking':
-      return 'The provider is checking your DNS. This can take a few minutes — check again shortly.';
+      return 'Your DNS is being checked. This can take a few minutes — check again shortly.';
     case 'not_created':
-      return 'Not set up with the email provider yet. Start setup to find out which records to publish.';
+      return 'Not set up yet. Start setup to find out which records to publish.';
     case 'provider_unavailable':
       return PROVIDER_UNAVAILABLE_MESSAGE;
     case 'provider_error':
       return domain.errorMessage ?? 'The last attempt did not get an answer.';
     case 'failed':
-      return domain.errorMessage ?? 'The email provider will not take this domain.';
+      return domain.errorMessage ?? 'This domain can’t be used for sending.';
   }
 }

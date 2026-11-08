@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
 import {
   resolveCustom,
@@ -139,7 +139,7 @@ export async function listWorkItems(
     .range(offset, offset + limit - 1);
 
   if (error) {
-    throw new DomainError(error.message, 'work_items.list_failed');
+    throw fromDatabaseError(error, 'work_items.list_failed');
   }
 
   return counted(
@@ -190,7 +190,7 @@ export async function getWorkItem(
     .eq('organization_id', input.organizationId)
     .eq('id', input.workItemId)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'work_items.read_failed');
+  if (error) throw fromDatabaseError(error, 'work_items.read_failed');
   if (!row) return null;
 
   const type = one(row.type);
@@ -291,9 +291,9 @@ export async function createWorkItem(
       throw new DomainError('You cannot add work items here.', 'work_items.forbidden');
     }
     if (error.code === '23514') {
-      throw new DomainError(error.message, 'work_items.custom_invalid');
+      throw fromDatabaseError(error, 'work_items.custom_invalid');
     }
-    throw new DomainError(error.message, 'work_items.create_failed');
+    throw fromDatabaseError(error, 'work_items.create_failed');
   }
 
   return data;
@@ -372,8 +372,8 @@ export async function updateWorkItem(
       throw new DomainError('You cannot edit work items here.', 'work_items.forbidden');
     }
     if (error.code === '23514') {
-      throw new DomainError(error.message, 'work_items.custom_invalid');
+      throw fromDatabaseError(error, 'work_items.custom_invalid');
     }
-    throw new DomainError(error.message, 'work_items.update_failed');
+    throw fromDatabaseError(error, 'work_items.update_failed');
   }
 }

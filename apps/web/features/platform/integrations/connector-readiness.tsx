@@ -46,7 +46,7 @@ export function ConnectorRuntime({
 
   return (
     <Section className="mt-6">
-      <SectionHeading>Runtime</SectionHeading>
+      <SectionHeading>In GildOps</SectionHeading>
       <DividedList className="mt-2">
         <Row label="Product status">
           <Badge tone={connector.status === 'live' ? 'success' : connector.status === 'beta' ? 'accent' : 'neutral'}>{connector.status}</Badge>
@@ -56,7 +56,7 @@ export function ConnectorRuntime({
           <>
             <Row label="Authorization">OAuth 2</Row>
             <Row label="Client registration">
-              {connector.status === 'planned' || !readiness?.implemented ? '—' : readiness.configured ? 'Configured' : 'Missing'}
+              {connector.status === 'planned' || !readiness?.implemented ? '—' : readiness.configured ? 'Set up' : 'Missing'}
             </Row>
             {redirectUri ? <Row label="Redirect URI"><span className="break-all">{redirectUri}</span></Row> : null}
           </>
@@ -68,7 +68,7 @@ export function ConnectorRuntime({
       <Hint className="mt-3">Adapter and registration readiness permit connecting. They do not verify a business connection or data synchronization.</Hint>
       {readiness && readiness.reason === 'oauth_client_missing' ? (
         <Hint className="mt-3 block" role="status">
-          Not offered to businesses until this deployment holds the vendor&apos;s registration. Required configuration:{' '}
+          Not offered to businesses until GildOps holds the vendor&apos;s registration. Needs:{' '}
           {readiness.requiredConfiguration.join(', ')}.
         </Hint>
       ) : null}

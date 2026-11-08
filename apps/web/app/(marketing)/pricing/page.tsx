@@ -4,11 +4,11 @@ import { PRICING_PACKAGES, PRICING_FACTORS } from '@/lib/marketing/content';
 
 export const metadata: Metadata = {
   title: 'Pricing · GildOps',
-  description: 'What each GildOps product includes, and what changes the cost of implementation.',
+  description: 'The GildOps plans, and what changes the cost of implementation.',
   alternates: { canonical: '/pricing' },
   openGraph: {
     title: 'Pricing · GildOps',
-    description: 'What each GildOps product includes, and what changes the cost of implementation.',
+    description: 'The GildOps plans, and what changes the cost of implementation.',
     url: '/pricing',
   },
 };
@@ -19,27 +19,19 @@ export default function PricingPage() {
       <div className="flex flex-col gap-4">
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-subtle">Pricing</p>
         <h1 className="max-w-2xl text-4xl font-semibold leading-[1.04] tracking-tight sm:text-5xl">
-          Priced by product, not by guesswork.
+          Priced by plan, not by guesswork.
         </h1>
         <p className="max-w-xl text-lg leading-relaxed text-muted">
-          GildOps is not one flat price. Sales, Operations and Customer Service are each switched on
-          independently, and what a business pays depends on which of them it uses. A demo is
-          where you get a real number for your business — this page is what shapes it.
+          GildOps is not one flat price. A demo is where you get a real number for your business —
+          this page is what shapes it.
         </p>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {PRICING_PACKAGES.map((pkg) => (
-          <div key={pkg.slug} className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-6">
+          <div key={pkg.key} className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-6">
             <h2 className="text-lg font-semibold">{pkg.name}</h2>
-            <ul className="flex flex-col gap-2 text-sm leading-relaxed text-muted">
-              {pkg.includes.map((item) => (
-                <li key={item} className="flex gap-2">
-                  <span aria-hidden>—</span>
-                  {item}
-                </li>
-              ))}
-            </ul>
+            <p className="text-sm leading-relaxed text-muted">{pkg.summary}</p>
           </div>
         ))}
       </div>
@@ -58,7 +50,7 @@ export default function PricingPage() {
 
       <CtaBand
         heading="Get a number for your own business."
-        body="Request a demo — we'll walk through which products fit and what implementation looks like for you."
+        body="Request a demo — we'll walk through which plan fits and what implementation looks like for you."
       />
     </div>
   );

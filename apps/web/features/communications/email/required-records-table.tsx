@@ -21,7 +21,7 @@ export function RequiredRecordsTable({ records }: { records: RequiredDnsRecord[]
     <DataTable
       rows={records}
       rowKey={(record) => `${record.type}:${record.name}:${record.value}`}
-      empty="The provider has not asked for any records yet."
+      empty="No records are needed yet."
       columns={[
         {
           key: 'purpose',

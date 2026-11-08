@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -84,7 +84,7 @@ export async function listPriceBookItems(
     .order('name', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'prices.list_failed');
+    throw fromDatabaseError(error, 'prices.list_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -126,7 +126,7 @@ export async function createPriceBookItem(
     if (error.code === '42501') {
       throw new DomainError('You cannot manage prices here.', 'prices.forbidden');
     }
-    throw new DomainError(error.message, 'prices.create_failed');
+    throw fromDatabaseError(error, 'prices.create_failed');
   }
 
   return data;
@@ -166,6 +166,6 @@ export async function updatePriceBookItem(
     if (error.code === '42501') {
       throw new DomainError('You cannot manage prices here.', 'prices.forbidden');
     }
-    throw new DomainError(error.message, 'prices.update_failed');
+    throw fromDatabaseError(error, 'prices.update_failed');
   }
 }

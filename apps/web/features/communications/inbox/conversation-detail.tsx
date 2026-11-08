@@ -195,7 +195,7 @@ export function ConversationDetailView({
           onError={setError}
         />
       ) : (
-        <div className="border-t border-border p-3"><Hint>{mayHandle ? 'This channel is not ready to send. Check number or email configuration before replying.' : 'Your role can read this conversation but not reply to it.'}</Hint></div>
+        <div className="border-t border-border p-3"><Hint>{mayHandle ? 'This channel can’t send yet. Check the number or email settings.' : 'Your role can read this conversation but not reply to it.'}</Hint></div>
       )}
     </div>
   );
@@ -395,7 +395,7 @@ function Composer({
     setKey(crypto.randomUUID());
     const outcome = result.data;
     if (outcome.channel === 'email' && outcome.outcome === 'unavailable') onSent(outcome.detail ?? 'Email could not be sent just now. The message is saved; try sending it again.');
-    else if (outcome.channel === 'email' && outcome.outcome === 'rejected') onSent(`The email provider refused this message${outcome.detail ? `: ${outcome.detail}` : '.'}`);
+    else if (outcome.channel === 'email' && outcome.outcome === 'rejected') onSent(`The email service refused this message${outcome.detail ? `: ${outcome.detail}` : '.'}`);
     else onSent(null);
   };
 

@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { parseWindow, zonedDayRange, zonedTimeToInstant, type Window } from '@/lib/domain/scheduling/window';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
@@ -109,8 +109,8 @@ export async function getResourceWorkingHours(
       .order('opens_at', { ascending: true }),
   ]);
 
-  if (schedule.error) throw new DomainError(schedule.error.message, 'resource_hours.read_failed');
-  if (hours.error) throw new DomainError(hours.error.message, 'resource_hours.read_failed');
+  if (schedule.error) throw fromDatabaseError(schedule.error, 'resource_hours.read_failed');
+  if (hours.error) throw fromDatabaseError(hours.error, 'resource_hours.read_failed');
 
   // The mode is the schedule row, never the presence of hours rows.
   if (!schedule.data) return { mode: 'inherit' };
@@ -150,7 +150,7 @@ export async function setResourceWorkingHours(
     if (error.code === '23P01') {
       throw new DomainError('Two working periods on the same day overlap.', 'resource_hours.overlap');
     }
-    throw new DomainError(error.message, 'resource_hours.set_failed');
+    throw fromDatabaseError(error, 'resource_hours.set_failed');
   }
 }
 
@@ -164,7 +164,7 @@ export async function inheritOrganizationHours(db: Db, input: { resourceId: stri
     if (error.code === '42501') {
       throw new DomainError('You cannot change this resource’s working hours.', 'resource_hours.forbidden');
     }
-    throw new DomainError(error.message, 'resource_hours.clear_failed');
+    throw fromDatabaseError(error, 'resource_hours.clear_failed');
   }
 }
 
@@ -190,7 +190,7 @@ export async function listResourceAvailabilityExceptions(
   if (input.within) query = query.lt('starts_at', input.within.endsAt).gt('ends_at', input.within.startsAt);
 
   const { data, error } = await query;
-  if (error) throw new DomainError(error.message, 'resource_exceptions.list_failed');
+  if (error) throw fromDatabaseError(error, 'resource_exceptions.list_failed');
 
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -219,7 +219,7 @@ function exceptionFailure(error: { code?: string; message: string }, code: strin
   if (error.code === '42501') {
     return new DomainError('You cannot change this resource’s availability.', 'resource_exceptions.forbidden');
   }
-  return new DomainError(error.message, code);
+  return fromDatabaseError(error, code);
 }
 
 /**
@@ -284,7 +284,7 @@ export async function listResourceOpenWindows(
     p_from: input.within.startsAt,
     p_to: input.within.endsAt,
   });
-  if (error) throw new DomainError(error.message, 'resource_open.read_failed');
+  if (error) throw fromDatabaseError(error, 'resource_open.read_failed');
 
   const open = new Map<string, Window[]>(input.resourceIds.map((id) => [id, []]));
   for (const row of data ?? []) {
@@ -310,7 +310,7 @@ export async function listAvailabilityConflicts(
     p_from: input.within.startsAt,
     p_to: input.within.endsAt,
   });
-  if (error) throw new DomainError(error.message, 'resource_conflicts.read_failed');
+  if (error) throw fromDatabaseError(error, 'resource_conflicts.read_failed');
 
   return (data ?? []).map((row) => ({
     workItemId: row.work_item_id,

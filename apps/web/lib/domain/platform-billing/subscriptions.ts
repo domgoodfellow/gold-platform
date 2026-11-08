@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * The provider's own facts about an organization's GOLD subscription, cached by the
@@ -197,7 +197,7 @@ export async function getOrganizationSubscription(
     .select(COLUMNS)
     .eq('organization_id', input.organizationId)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'platform_billing.subscription_read_failed');
+  if (error) throw fromDatabaseError(error, 'platform_billing.subscription_read_failed');
   return data ? toSubscription(data) : null;
 }
 
@@ -215,7 +215,7 @@ export async function listSubscriptionsForOrganization(
     .from('organization_platform_subscriptions')
     .select(COLUMNS)
     .eq('organization_id', input.organizationId);
-  if (error) throw new DomainError(error.message, 'platform_billing.subscription_read_failed');
+  if (error) throw fromDatabaseError(error, 'platform_billing.subscription_read_failed');
   return (data ?? []).map(toSubscription);
 }
 
@@ -237,7 +237,7 @@ export async function getOrganizationBillingSubscriptionState(
     .eq('environment', subscription.environment)
     .eq('subscription_reference', subscription.subscriptionReference)
     .order('provider_item_reference', { ascending: true });
-  if (error) throw new DomainError(error.message, 'platform_billing.subscription_items_read_failed');
+  if (error) throw fromDatabaseError(error, 'platform_billing.subscription_items_read_failed');
   return { subscription, items: (data ?? []).map(toItem) };
 }
 
@@ -256,7 +256,7 @@ export async function listSubscriptionItems(
     .select(ITEM_COLUMNS)
     .in('organization_id', [...new Set(subscriptions.map((s) => s.organizationId))])
     .order('provider_item_reference', { ascending: true });
-  if (error) throw new DomainError(error.message, 'platform_billing.subscription_items_read_failed');
+  if (error) throw fromDatabaseError(error, 'platform_billing.subscription_items_read_failed');
   const current = new Set(subscriptions.map((s) => `${s.organizationId}:${s.environment}:${s.subscriptionReference}`));
   return (data ?? [])
     .map(toItem)
@@ -272,7 +272,7 @@ export async function listOrganizationsRequiringAttention(
     .select(COLUMNS)
     .in('status', ['past_due', 'unpaid'])
     .order('updated_at', { ascending: false });
-  if (error) throw new DomainError(error.message, 'platform_billing.attention_list_failed');
+  if (error) throw fromDatabaseError(error, 'platform_billing.attention_list_failed');
   return (data ?? []).map(toSubscription);
 }
 
@@ -282,6 +282,6 @@ export async function listOrganizationSubscriptions(db: Db): Promise<Organizatio
     .from('organization_platform_subscriptions')
     .select(COLUMNS)
     .order('updated_at', { ascending: false });
-  if (error) throw new DomainError(error.message, 'platform_billing.subscription_list_failed');
+  if (error) throw fromDatabaseError(error, 'platform_billing.subscription_list_failed');
   return (data ?? []).map(toSubscription);
 }

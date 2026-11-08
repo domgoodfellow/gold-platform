@@ -1,6 +1,6 @@
 import { callDomainCommand, requireAccessToken } from '@/lib/api/client';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { listConnections } from './connections';
 import { listConnectors } from './connectors';
 import { listMcpServers, toolError } from './mcp';
@@ -60,7 +60,7 @@ export async function listGrantableAgents(db: Db, input: { organizationId: strin
     .eq('organization_id', input.organizationId)
     .eq('surface', 'operator_copilot')
     .eq('enabled', true);
-  if (error) throw new DomainError(error.message, 'integrations.agents_list_failed');
+  if (error) throw fromDatabaseError(error, 'integrations.agents_list_failed');
   const agents = new Map<string, Agent>();
   for (const row of data ?? []) {
     const assistant = Array.isArray(row.ai_assistants) ? row.ai_assistants[0] : row.ai_assistants;
@@ -77,7 +77,7 @@ export async function listActiveGrants(db: Db, input: { organizationId: string }
     .eq('status', 'active')
     .not('assistant_id', 'is', null)
     .order('granted_at');
-  if (error) throw new DomainError(error.message, 'integrations.grants_list_failed');
+  if (error) throw fromDatabaseError(error, 'integrations.grants_list_failed');
   return (data ?? []).map((row) => ({
     id: row.id,
     agentId: row.assistant_id as string,
@@ -102,7 +102,7 @@ export async function listExecutions(db: Db, input: { organizationId: string; li
     .eq('organization_id', input.organizationId)
     .order('requested_at', { ascending: false })
     .limit(input.limit ?? 25);
-  if (error) throw new DomainError(error.message, 'integrations.executions_list_failed');
+  if (error) throw fromDatabaseError(error, 'integrations.executions_list_failed');
   return (data ?? []).map((row) => ({
     id: row.id,
     requestedAt: row.requested_at,
@@ -253,7 +253,7 @@ export async function listAgentTools(db: Db, input: { organizationId: string; ag
     const key = grant.connectionId ? connectionConnector.get(grant.connectionId) : undefined;
     return {
       id: grant.id,
-      label: (key && grant.capabilityKey ? summaries.get(`${key}:${grant.capabilityKey}`) : undefined) ?? grant.capabilityKey ?? 'A capability',
+      label: (key && grant.capabilityKey ? summaries.get(`${key}:${grant.capabilityKey}`) : undefined) ?? grant.capabilityKey ?? 'An action',
       source: key ? (connectorName.get(key) ?? key) : 'A connected app',
       needsApproval: grant.requiresApproval,
     };

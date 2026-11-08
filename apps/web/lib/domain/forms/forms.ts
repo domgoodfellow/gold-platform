@@ -1,6 +1,6 @@
 import { FormDefinitionSchema, formIsPublishable, type FormDefinition, type FormSource } from '@gold/schemas';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * A business's forms: creating, editing a draft, publishing, archiving and reading what was
@@ -111,8 +111,8 @@ export function placementLabels(placements: FormPlacements): string[] {
 
 function fail(error: { code?: string; message: string }, fallback: string): never {
   if (error.code === '42501') throw new DomainError('Your role cannot manage forms.', 'forms.forbidden');
-  if (error.code === 'GD001' || error.code === '23514' || error.code === '55000') throw new DomainError(error.message, 'forms.refused');
-  throw new DomainError(error.message || fallback, 'forms.failed');
+  if (error.code === 'GD001' || error.code === '23514' || error.code === '55000') throw fromDatabaseError(error, 'forms.refused');
+  throw error.message ? fromDatabaseError(error, 'forms.failed') : new DomainError(fallback, 'forms.failed');
 }
 
 function parseRevision(raw: unknown): FormRevision | null {

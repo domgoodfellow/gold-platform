@@ -6,7 +6,7 @@ import {
 } from '@/lib/adapters/telephony';
 import { randomUUID } from 'node:crypto';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
 import { getProviderBinding } from '@/lib/domain/providers/bindings';
 import { resolveOutboundNumber } from '@/lib/domain/reception/numbers';
@@ -170,7 +170,7 @@ export async function listCalls(
     .limit(input.limit ?? LIST_LIMIT);
 
   if (error) {
-    throw new DomainError(error.message, 'calls.list_failed');
+    throw fromDatabaseError(error, 'calls.list_failed');
   }
 
   return counted(((data ?? []) as unknown as CallRow[]).map(toCall), count);
@@ -190,7 +190,7 @@ export async function listCustomerCalls(
     .limit(input.limit ?? LIST_LIMIT);
 
   if (error) {
-    throw new DomainError(error.message, 'calls.list_failed');
+    throw fromDatabaseError(error, 'calls.list_failed');
   }
 
   return ((data ?? []) as unknown as CallRow[]).map(toCall);
@@ -269,7 +269,7 @@ export async function listCallPage(
     .order('started_at', { ascending: false })
     .order('id', { ascending: false })
     .limit(limit + 1);
-  if (error) throw new DomainError(error.message, 'calls.list_failed');
+  if (error) throw fromDatabaseError(error, 'calls.list_failed');
 
   const rows = (data ?? []) as unknown as CallRow[];
   const page = rows.slice(0, limit).map(toCall);
@@ -292,7 +292,7 @@ export async function getCallCounts(
     base().is('outcome_id', null).eq('status', 'completed'),
   ]);
   for (const result of [active, today, missed, wrap]) {
-    if (result.error) throw new DomainError(result.error.message, 'calls.counts_failed');
+    if (result.error) throw fromDatabaseError(result.error, 'calls.counts_failed');
   }
   return { active: active.count ?? 0, today: today.count ?? 0, missedToday: missed.count ?? 0, needsWrapUp: wrap.count ?? 0 };
 }
@@ -327,7 +327,7 @@ export async function getCall(
     .eq('organization_id', input.organizationId)
     .eq('id', input.callId)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'calls.read_failed');
+  if (error) throw fromDatabaseError(error, 'calls.read_failed');
   if (!data) return null;
 
   const { data: legs, error: legError } = await db
@@ -336,7 +336,7 @@ export async function getCall(
     .eq('organization_id', input.organizationId)
     .eq('call_id', input.callId)
     .order('created_at', { ascending: true });
-  if (legError) throw new DomainError(legError.message, 'calls.read_failed');
+  if (legError) throw fromDatabaseError(legError, 'calls.read_failed');
 
   return {
     ...toCall(data as unknown as CallRow),
@@ -394,7 +394,7 @@ export async function placeCall(
   const provider = await telephonyProvider(actingAccount);
   if (!provider || !reportTo) {
     throw new DomainError(
-      'This deployment cannot place calls yet. Record the call instead once you have made it.',
+      'Calling from GildOps isn’t available yet. Log the call once you have made it.',
       'calls.telephony_unconfigured',
     );
   }
@@ -520,7 +520,7 @@ export async function browserTelephoneToken(db: Db, input: { organizationId: str
   const provider = await telephonyProvider();
   if (!provider) {
     throw new DomainError(
-      'This deployment cannot place calls yet.',
+      'Calling from GildOps isn’t available yet.',
       'calls.telephony_unconfigured',
     );
   }
@@ -582,7 +582,7 @@ export async function recordCall(
     .single();
 
   if (error) {
-    throw new DomainError(error.message, 'calls.record_failed');
+    throw fromDatabaseError(error, 'calls.record_failed');
   }
 
   await writeCallEvent(db, {
@@ -637,7 +637,7 @@ export async function getCallRecording(
 
   const provider = await telephonyProvider(await actingTelephonyAccount(db, input.organizationId));
   if (!provider) {
-    throw new DomainError('This deployment cannot fetch recordings.', 'calls.telephony_unconfigured');
+    throw new DomainError('Recordings aren’t available yet.', 'calls.telephony_unconfigured');
   }
   return provider.fetchRecording({ reference: data as string });
 }
@@ -670,6 +670,6 @@ async function writeCallEvent(
   });
 
   if (error) {
-    throw new DomainError(error.message, 'calls.event_failed');
+    throw fromDatabaseError(error, 'calls.event_failed');
   }
 }

@@ -46,7 +46,7 @@ export function CapabilityVocabulary({
       {mayConfigure ? (
         <AddCapabilityForm organizationId={organizationId} />
       ) : (
-        <Hint>Your role, {role}, cannot configure capabilities here.</Hint>
+        <Hint>Your role, {role}, cannot change skills.</Hint>
       )}
     </div>
   );
@@ -85,7 +85,7 @@ function CapabilityRow({
             required
             maxLength={64}
             defaultValue={capability.name}
-            aria-label={`Name of capability ${capability.name}`}
+            aria-label={`Name of skill ${capability.name}`}
             size="small"
           />
           <Button type="submit" disabled={renaming} tone="secondary" size="tiny">
@@ -121,12 +121,12 @@ function AddCapabilityForm({ organizationId }: { organizationId: string }) {
           type="text"
           required
           maxLength={64}
-          placeholder="Capability name, e.g. Tire service"
-          aria-label="Capability name"
+          placeholder="Skill, e.g. Tire service"
+          aria-label="Skill name"
           className="flex-1"
         />
         <Button type="submit" disabled={pending} tone="secondary" className="w-fit">
-          {pending ? 'Adding…' : 'Add capability'}
+          {pending ? 'Adding…' : 'Add skill'}
         </Button>
       </div>
       <ErrorText role="alert">{state.error}</ErrorText>

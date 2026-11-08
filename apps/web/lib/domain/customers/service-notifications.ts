@@ -8,7 +8,7 @@ export const NOTIFICATION_PURPOSES = {
 } as const;
 export const NOTIFICATION_STATES: Record<string, string> = {
   not_requested: 'Not requested', suppressed: 'Suppressed / ineligible', queued: 'Queued',
-  accepted: 'Accepted by provider', sent: 'Sent', delivered: 'Delivered', delayed: 'Delayed',
+  accepted: 'Accepted for delivery', sent: 'Sent', delivered: 'Delivered', delayed: 'Delayed',
   bounced: 'Bounced', rejected: 'Rejected', failed: 'Failed', uncertain: 'Delivery uncertain',
 };
 export type NotificationHistory = {
@@ -30,7 +30,7 @@ export async function notificationConfiguration(db: Db, organizationId: string, 
     db.from('customer_notification_recipients').select('email_address,purposes,verified_at,withdrawn_at').eq('organization_id', organizationId).eq('customer_id', customerId).maybeSingle(),
     db.from('customer_notification_settings').select('email_identity_id').eq('organization_id', organizationId).eq('customer_id', customerId).maybeSingle(),
   ]);
-  if (recipient.error || sender.error) throw new DomainError('Notification configuration could not be loaded.', 'notification.read_failed');
+  if (recipient.error || sender.error) throw new DomainError('Notification settings could not be loaded.', 'notification.read_failed');
   const suppression = recipient.data ? await db.from('email_recipient_suppressions').select('reason').eq('organization_id', organizationId).eq('email_address', recipient.data.email_address).maybeSingle() : null;
   if (suppression?.error) throw new DomainError('Recipient eligibility could not be loaded.', 'notification.read_failed');
   return { recipient: recipient.data, senderId: sender.data?.email_identity_id ?? null, suppressed: !!suppression?.data };

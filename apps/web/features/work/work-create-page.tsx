@@ -65,7 +65,7 @@ export function WorkCreatePage({ options, initialTypeId, mayConfigure, returnToQ
             ? selected
               ? <StartingStageForm key={typeId} organizationId={options.organizationId} typeId={typeId} typeName={selected.name} onAdded={() => router.refresh()} />
               : <CreateTypeForm organizationId={options.organizationId} onCreated={created => { chooseType(created); router.refresh(); }} />
-            : <p className="text-sm">An administrator must configure the type. Ask someone who manages Work types to {selected ? 'add a starting stage to it' : 'add one'}.</p>}
+            : <p className="text-sm">Someone who manages Work has to finish setting up this kind of work. Ask someone who manages Work types to {selected ? 'add a starting stage to it' : 'add one'}.</p>}
           {otherReady ? <Hint>Or choose a Work type that is ready from the list above.</Hint> : null}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-4 text-sm">
             <ButtonLink size="small" tone="secondary" href={cancelHref}>Cancel</ButtonLink>

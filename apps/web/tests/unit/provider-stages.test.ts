@@ -33,7 +33,7 @@ describe('how far along a provider is', () => {
 
   it('needs an assignment only where the provider offers an AI runtime', () => {
     const unassigned = providerStages({ accountAdapter: true, accounts: [verified], services: [runtimeService], runtimeAssignments: 0 });
-    expect(unassigned).toMatchObject({ operational: false, blocker: 'Not assigned to an AI capability', runtime: { applicable: true, assigned: 0 } });
+    expect(unassigned).toMatchObject({ operational: false, blocker: 'Not assigned to an AI job', runtime: { applicable: true, assigned: 0 } });
 
     const infrastructure = providerStages({
       accountAdapter: true, accounts: [verified], services: [{ kind: 'infrastructure', implementationState: 'available' }], runtimeAssignments: 0,

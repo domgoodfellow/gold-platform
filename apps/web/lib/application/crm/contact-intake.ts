@@ -49,7 +49,7 @@ export async function contactIntakeOptions(db: Db, input: {
   const connectHref = input.modules.has('integrations') ? `/organizations/${organizationId}/settings/connections` : undefined;
   const sync = sources.length || connectHref
     ? { state: 'available' as const, href: libraryHref(organizationId, 'sources'), sources, connectHref }
-    : { state: 'unavailable' as const, reason: 'No worksheet is connected, and connecting one needs the Integrations module.', sources };
+    : { state: 'unavailable' as const, reason: 'No worksheet is connected, and connecting one needs Integrations in your plan.', sources };
   return { manual, import: importChoice, sync };
 }
 

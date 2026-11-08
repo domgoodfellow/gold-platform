@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from './actor';
 import { isCapability, type Capability } from './capabilities';
 
@@ -36,7 +36,7 @@ export async function listMembers(
     .order('created_at', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'members.list_failed');
+    throw fromDatabaseError(error, 'members.list_failed');
   }
 
   const names = await memberDisplayNames(db, input.organizationId);
@@ -129,7 +129,7 @@ export async function addMember(
     if (error.code === '42501') {
       throw new DomainError('You cannot manage people here.', 'members.forbidden');
     }
-    throw new DomainError(error.message, 'members.add_failed');
+    throw fromDatabaseError(error, 'members.add_failed');
   }
 
   return data;

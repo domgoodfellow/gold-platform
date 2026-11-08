@@ -36,7 +36,7 @@ describe('locating an address', () => {
     expect(url.searchParams.get('q')).toBe('Keizersgracht 1, Amsterdam');
     expect(url.searchParams.get('format')).toBe('jsonv2');
     expect(url.searchParams.get('limit')).toBe('1');
-    expect(seen.headers[0]).toMatchObject({ 'User-Agent': 'GOLD platform (ops@gold.example)' });
+    expect(seen.headers[0]).toMatchObject({ 'User-Agent': 'GildOps (ops@gold.example)' });
   });
 
   it('reads the first result as a numeric point', async () => {

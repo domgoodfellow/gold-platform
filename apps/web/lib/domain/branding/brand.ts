@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { LOGO_MAX_BYTES, LOGO_TYPES } from './logo-rules';
 import { FONT_KEYS, isFontKey, normaliseBrandColour, type FontKey } from './palette';
@@ -47,7 +47,7 @@ export async function getBrand(db: Db, input: { organizationId: string }): Promi
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'brand.read_failed');
+    throw fromDatabaseError(error, 'brand.read_failed');
   }
 
   if (!data) return DEFAULT_BRAND;
@@ -132,7 +132,7 @@ export async function setBrand(
     if (error.code === '23514') {
       throw new DomainError('That is not a colour this platform can store.', 'brand.colour_invalid');
     }
-    throw new DomainError(error.message, 'brand.write_failed');
+    throw fromDatabaseError(error, 'brand.write_failed');
   }
 }
 
@@ -174,7 +174,7 @@ export async function uploadLogo(
     upsert: false,
   });
   if (upload.error) {
-    throw new DomainError(upload.error.message, 'brand.logo_upload_failed');
+    throw fromDatabaseError(upload.error, 'brand.logo_upload_failed');
   }
 
   const { error } = await db.rpc('set_brand_logo', {
@@ -188,7 +188,7 @@ export async function uploadLogo(
     if (error.code === '42501') {
       throw new DomainError('You cannot change how this business looks.', 'brand.forbidden');
     }
-    throw new DomainError(error.message, 'brand.logo_write_failed');
+    throw fromDatabaseError(error, 'brand.logo_write_failed');
   }
 
   if (previous) {
@@ -213,7 +213,7 @@ export async function removeLogo(db: Db, input: { organizationId: string }): Pro
     if (error.code === '42501') {
       throw new DomainError('You cannot change how this business looks.', 'brand.forbidden');
     }
-    throw new DomainError(error.message, 'brand.logo_write_failed');
+    throw fromDatabaseError(error, 'brand.logo_write_failed');
   }
 
   // The row first this time — the bytes are what a stranger can still reach.

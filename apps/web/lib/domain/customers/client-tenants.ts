@@ -1,11 +1,11 @@
 import type { Database, Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 export type ClientTenantRelationship = Omit<Database['public']['Functions']['client_tenant_summaries']['Returns'][number], 'ended_at'> & { ended_at: string | null };
 
 export async function getClientTenantRelationships(db: Db, organizationId: string, customerId: string): Promise<ClientTenantRelationship[]> {
   const { data, error } = await db.rpc('client_tenant_summaries', { p_organization_id: organizationId, p_customer_id: customerId });
-  if (error) throw new DomainError(error.message, 'client_tenant.read_failed');
+  if (error) throw fromDatabaseError(error, 'client_tenant.read_failed');
   return data ?? [];
 }
 
@@ -23,5 +23,5 @@ export async function linkExistingTenant(db: Db, input: { organizationId: string
 
 export async function endClientTenantRelationship(db: Db, organizationId: string, relationshipId: string): Promise<void> {
   const { error } = await db.rpc('end_client_tenant_relationship', { p_organization_id: organizationId, p_relationship_id: relationshipId });
-  if (error) throw new DomainError(error.message, 'client_tenant.end_failed');
+  if (error) throw fromDatabaseError(error, 'client_tenant.end_failed');
 }

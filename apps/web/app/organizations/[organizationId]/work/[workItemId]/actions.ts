@@ -226,7 +226,7 @@ export async function requestCardPaymentAction(
     });
 
     if (!requested) {
-      return { error: 'This business has no card processor configured.', payUrl: null };
+      return { error: 'Card payments aren’t set up for this business.', payUrl: null };
     }
 
     revalidate(organizationId, workItemId);

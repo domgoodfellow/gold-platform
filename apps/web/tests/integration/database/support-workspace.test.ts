@@ -167,7 +167,7 @@ describe("Support operating workspace", () => {
         id: caseId,
         status: "closed",
       }),
-    ).rejects.toThrow("Unsupported");
+    ).rejects.toThrow("This case can’t move to that status from where it is now.");
     await expect(
       commandSupport(a.db, a.org, "case.resolve", {
         id: caseId,

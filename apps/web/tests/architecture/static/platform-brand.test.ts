@@ -35,9 +35,6 @@ const FIRST_PARTY = [
   'scripts/demo',
 ];
 
-// "GOLD Internal" is the label of a seeded Plan: catalogue data, renamed by a migration or not at all.
-const PLAN_LABEL = /GOLD Internal/g;
-
 describe('the platform is named GildOps on its own surfaces', () => {
   it('names the platform once, as GildOps', () => {
     expect(PLATFORM_NAME).toBe('GildOps');
@@ -45,7 +42,7 @@ describe('the platform is named GildOps on its own surfaces', () => {
 
   it('never renders the legacy name on a first-party public, auth or shell surface', () => {
     for (const file of FIRST_PARTY.flatMap(files)) {
-      const text = rendered(readFileSync(file, 'utf8')).replace(PLAN_LABEL, '');
+      const text = rendered(readFileSync(file, 'utf8'));
       expect(text, `${file} renders GOLD`).not.toMatch(/\bGOLD\b/);
     }
   });

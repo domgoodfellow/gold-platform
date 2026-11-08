@@ -1,6 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -64,7 +64,7 @@ export async function listPricedLines(
     .order('created_at', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'prices.lines_failed');
+    throw fromDatabaseError(error, 'prices.lines_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -110,7 +110,7 @@ export async function listPricedWork(
     .limit(input.limit ?? LIST_LIMIT);
 
   if (error) {
-    throw new DomainError(error.message, 'prices.work_failed');
+    throw fromDatabaseError(error, 'prices.work_failed');
   }
 
   const first = <T,>(value: T | T[] | null): T | null => (Array.isArray(value) ? (value[0] ?? null) : value);
@@ -174,7 +174,7 @@ export async function addPricedLine(
     if (error.code === '42501') {
       throw new DomainError('You cannot price work here.', 'prices.forbidden');
     }
-    throw new DomainError(error.message, 'prices.line_failed');
+    throw fromDatabaseError(error, 'prices.line_failed');
   }
 
   return data;
@@ -190,6 +190,6 @@ export async function removePricedLine(db: Db, input: { id: string }): Promise<v
     if (error.code === '42501') {
       throw new DomainError('You cannot price work here.', 'prices.forbidden');
     }
-    throw new DomainError(error.message, 'prices.remove_failed');
+    throw fromDatabaseError(error, 'prices.remove_failed');
   }
 }

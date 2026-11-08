@@ -28,7 +28,7 @@ export function ConfigureMenu({ items, size, compact = false }: { items: { key: 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button tone="secondary" size={size}><Settings2 aria-hidden /> <span className={compact ? 'max-sm:sr-only' : undefined}>Configure</span></Button>
+        <Button tone="secondary" size={size}><Settings2 aria-hidden /> <span className={compact ? 'max-sm:sr-only' : undefined}>Settings</span></Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-52">
         {own.map(link)}

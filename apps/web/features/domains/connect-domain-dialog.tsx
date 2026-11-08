@@ -172,10 +172,10 @@ export function ConnectDomainStep({
             <DialogTitle>{state.hostname}</DialogTitle>
             <DialogDescription>
               {state.action === 'apply'
-                ? 'Publishing DNS through your connected account, then checking with the hosting provider…'
+                ? 'Publishing DNS through your connected account, then checking…'
                 : state.action === 'check'
-                  ? 'Checking with the hosting provider…'
-                  : 'Registering with the hosting provider…'}
+                  ? 'Checking…'
+                  : 'Registering…'}
             </DialogDescription>
           </DialogHeader>
         </div>

@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import type { ConnectorReadiness } from './readiness';
 
 /**
@@ -154,13 +154,13 @@ export async function listConnectors(db: Db): Promise<Connector[]> {
     .select(COLUMNS)
     .order('display_order')
     .order('name');
-  if (error) throw new DomainError(error.message, 'integrations.connectors_list_failed');
+  if (error) throw fromDatabaseError(error, 'integrations.connectors_list_failed');
   return (data as unknown as Row[]).map(fromRow);
 }
 
 export async function getConnector(db: Db, key: string): Promise<Connector | null> {
   const { data, error } = await db.from('platform_connectors').select(COLUMNS).eq('key', key).maybeSingle();
-  if (error) throw new DomainError(error.message, 'integrations.connector_get_failed');
+  if (error) throw fromDatabaseError(error, 'integrations.connector_get_failed');
   return data ? fromRow(data as unknown as Row) : null;
 }
 
@@ -264,13 +264,13 @@ export function validateConnectorInput(input: ConnectorInput): ConnectorInput {
     status: oneOf(input.status, CONNECTOR_STATUSES, 'Choose planned, beta or live.'),
     authMethod: oneOf(input.authMethod, CONNECTOR_AUTH_METHODS, 'Choose how it authorizes.'),
     connectionMethod: oneOf(input.connectionMethod, CONNECTOR_CONNECTION_METHODS, 'Choose how it connects.'),
-    capabilities: input.capabilities.map((c) => oneOf(c, CONNECTOR_CAPABILITIES, `Unknown capability ${c}.`)),
+    capabilities: input.capabilities.map((c) => oneOf(c, CONNECTOR_CAPABILITIES, `Unknown action ${c}.`)),
   };
 }
 
 function forbidden(error: { code?: string; message: string }, code: string): DomainError {
   if (error.code === '42501') return new DomainError('Only platform staff can edit the connector catalogue.', 'integrations.forbidden');
-  return new DomainError(error.message, code);
+  return fromDatabaseError(error, code);
 }
 
 export async function upsertConnector(db: Db, input: ConnectorInput): Promise<string> {
@@ -366,7 +366,7 @@ export async function uploadConnectorLogo(db: Db, input: { key: string; file: Fi
 
   const path = `${input.key}/${crypto.randomUUID()}`;
   const upload = await db.storage.from('connector-logos').upload(path, input.file, { contentType: input.file.type, upsert: false });
-  if (upload.error) throw new DomainError(upload.error.message, 'integrations.logo_upload_failed');
+  if (upload.error) throw fromDatabaseError(upload.error, 'integrations.logo_upload_failed');
 
   try {
     await upsertConnector(db, { ...connector, iconRef: path });
@@ -400,7 +400,7 @@ export async function listOrganizationConnections(db: Db, input: { organizationI
   const { data, error } = await db.rpc('organization_integration_connections', { p_organization_id: input.organizationId });
   if (error) {
     if (error.code === '42501') throw new DomainError('Only platform staff can read this.', 'integrations.forbidden');
-    throw new DomainError(error.message, 'integrations.connections_list_failed');
+    throw fromDatabaseError(error, 'integrations.connections_list_failed');
   }
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -423,7 +423,7 @@ export async function connectorUsage(db: Db): Promise<Map<string, ConnectorUsage
   const { data, error } = await db.rpc('platform_connector_usage');
   if (error) {
     if (error.code === '42501') throw new DomainError('Only platform staff can read this.', 'integrations.forbidden');
-    throw new DomainError(error.message, 'integrations.usage_failed');
+    throw fromDatabaseError(error, 'integrations.usage_failed');
   }
   return new Map(
     (data ?? []).map((row) => [

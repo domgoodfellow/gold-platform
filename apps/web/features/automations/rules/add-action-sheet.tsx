@@ -85,8 +85,7 @@ export function AddActionSheet({
             {action ? 'Edit action' : 'Add an action'}
           </PageDrawerTitle>
           <PageDrawerDescription>
-            Actions run in the displayed order. Saving replaces this
-            configuration atomically.
+            Actions run in the order shown.
           </PageDrawerDescription>
         </PageDrawerHeader>
 
@@ -126,7 +125,7 @@ export function AddActionSheet({
           )}
 
           {(kind === 'change_status' || kind === 'create_work_item') && (
-            <SelectField name="statusId" aria-label="Status" defaultValue={action?.statusId ?? ''} required options={[{ value: '', label: 'Choose a Work status' }, ...statuses.map((status) => ({ value: status.id, label: status.label }))]} />
+            <SelectField name="statusId" aria-label="Stage" defaultValue={action?.statusId ?? ''} required options={[{ value: '', label: 'Choose a stage' }, ...statuses.map((status) => ({ value: status.id, label: status.label }))]} />
           )}
 
           {kind === 'notify' && (
@@ -135,22 +134,20 @@ export function AddActionSheet({
 
               <SelectField name="channel" aria-label="How to reach them" defaultValue={action?.channel ?? 'email'} options={[...CHANNELS.map((entry) => ({ value: entry.channel, label: entry.label }))]} />
               <p className="text-xs text-subtle">
-                Recipient: the Customer associated with the triggering Work
-                item. Sending requires a configured provider.
+                Sent to the customer on the job.
               </p>
             </>
           )}
 
           {kind === 'create_work_item' && (
-            <SelectField name="typeId" aria-label="Kind of work" defaultValue={action?.typeId ?? ''} required options={[{ value: '', label: 'Choose a Work type' }, ...types.map((type) => ({ value: type.id, label: type.name }))]} />
+            <SelectField name="typeId" aria-label="Kind of work" defaultValue={action?.typeId ?? ''} required options={[{ value: '', label: 'Choose a kind of work' }, ...types.map((type) => ({ value: type.id, label: type.name }))]} />
           )}
 
           {/* Signed, and negative brings a job forward. */}
           {kind === 'shift_schedule' && (
             <>
               <p className="text-xs text-subtle">
-                Signed minutes: negative moves Work earlier, positive moves it
-                later. Availability and overlap constraints still apply.
+                Minutes: negative moves work earlier, positive moves it later. Availability still applies.
               </p>
               <TextInput
                 name="shiftMinutes"

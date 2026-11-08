@@ -1968,6 +1968,26 @@ Use consistent verbs.
 
 If an action is called “Invite member” in one Access screen, do not call the same action “Create user” elsewhere.
 
+### Words we use
+
+Applies to every screen, message, email and public page. `scripts/check-ui-copy.mjs` enforces the banned words in `pnpm check`.
+
+| Instead of | Say |
+| --- | --- |
+| configuration, configured | "settings", "set up", or nothing. An area is "X settings", not "X configuration". |
+| deployment, installation (a gap on GildOps' side) | "isn't available yet", worded as GildOps' gap, never the owner's. Where the owner can't act, say so or hide the control. |
+| status, state (of work) | "stage", or the business's own noun through `businessLabel`. |
+| provider | The real service (Stripe, Twilio, Google) where known; otherwise "your email service", "the payment service" and so on. |
+| capability | "skill" for resources; "permission" for roles. |
+| module, entitlement | "feature"; "your plan". |
+| preset | "starting point" for roles; "style" for appearance and branding. |
+| tenant | "business". |
+
+- Never on screen: canonical, runtime, schema, diagnostics, prerequisite, advisory, metadata, artifacts, payload, slice.
+- Never show a raw code. Map status and event codes to plain labels.
+- Prefer deleting an explanatory sentence over rewriting it.
+- A database refusal reaches a person only through `fromDatabaseError` (`lib/domain/errors.ts`), never as the database's own text.
+
 ---
 
 ## Loading, error and permission boundaries

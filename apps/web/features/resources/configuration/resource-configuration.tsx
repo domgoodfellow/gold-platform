@@ -28,7 +28,7 @@ export function ResourceConfiguration({
   return (
     <div className="flex flex-col gap-8">
     <FieldSet>
-      <FieldLegend>Capabilities</FieldLegend>
+      <FieldLegend>Skills</FieldLegend>
       <FieldGroup>
         <CapabilityVocabulary organizationId={organizationId} capabilities={capabilities} mayConfigure={mayConfigure} role={role} />
       </FieldGroup>

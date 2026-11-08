@@ -13,8 +13,8 @@ export function ProviderStagesSection({ stages }: { stages: ProviderStages }) {
       <SectionHeading>Readiness</SectionHeading>
       <DefinitionList className="mt-3">
         <Detail label="Catalogued">Yes</Detail>
-        <Detail label="Account configurable">
-          {stages.accountAdapter ? 'Yes' : <span className="text-muted">No — nothing in GildOps can use an account for this provider yet</span>}
+        <Detail label="Account can be set up">
+          {stages.accountAdapter ? 'Yes' : <span className="text-muted">No — nothing in GildOps can use an account for this vendor yet</span>}
         </Detail>
         <Detail label="Credential">
           {stages.accountAdapter ? (
@@ -30,7 +30,7 @@ export function ProviderStagesSection({ stages }: { stages: ProviderStages }) {
             ? 'No services catalogued'
             : `${stages.implemented.available} of ${stages.implemented.catalogued} catalogued services`}
         </Detail>
-        <Detail label="AI runtime assigned">
+        <Detail label="AI answering assigned">
           {!stages.runtime.applicable ? '—' : stages.runtime.assigned > 0 ? `${stages.runtime.assigned} capabilit${stages.runtime.assigned === 1 ? 'y' : 'ies'}` : 'Not assigned'}
         </Detail>
         <Detail label="Operational">

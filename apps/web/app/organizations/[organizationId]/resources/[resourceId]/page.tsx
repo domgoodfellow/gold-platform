@@ -102,7 +102,7 @@ export default async function ResourcePage({
             )}
           </div>
           <div>
-            <div className="text-sm font-medium text-muted">Capabilities</div>
+            <div className="text-sm font-medium text-muted">Skills</div>
             <ResourceCapabilitiesControl
               organizationId={organizationId}
               resourceId={resourceId}

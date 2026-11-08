@@ -101,7 +101,7 @@ export function AddConditionSheet({
             (choices.length ? (
               <SelectField name="value" aria-label="Value" defaultValue={condition?.value ?? ''} required options={[{ value: '', label: 'Choose a value' }, ...choices.map((choice) => ({ value: choice.value, label: choice.label }))]} />
             ) : field === 'status_id' ? (
-              <SelectField name="value" aria-label="Value" defaultValue={condition?.value ?? ''} required options={[{ value: '', label: 'Choose a status' }, ...statuses.map((status) => ({ value: status.id, label: status.label }))]} />
+              <SelectField name="value" aria-label="Value" defaultValue={condition?.value ?? ''} required options={[{ value: '', label: 'Choose a stage' }, ...statuses.map((status) => ({ value: status.id, label: status.label }))]} />
             ) : (
               <TextInput
                 name="value"

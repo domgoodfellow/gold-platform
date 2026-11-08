@@ -8,8 +8,8 @@ const LABEL: Record<TenantHealth, string> = {
   failed: 'Failed',
   suspended: 'Suspended',
   in_sync: 'In sync',
-  remote_missing: 'Missing at provider',
-  remote_changed: 'Changed at provider',
+  remote_missing: 'Missing at the vendor',
+  remote_changed: 'Changed at the vendor',
   unchecked: 'Provisioned',
 };
 
@@ -30,7 +30,7 @@ export function TenantHealthBadge({ health }: { health: TenantHealth }) {
 export function ReadinessBadge({ state }: { state: ProviderReadiness['state'] }) {
   return (
     <Badge tone={state === 'operational' ? 'success' : state === 'attention' ? 'danger' : 'neutral'}>
-      {state === 'operational' ? 'Operational' : state === 'attention' ? 'Needs attention' : 'Not configured'}
+      {state === 'operational' ? 'Operational' : state === 'attention' ? 'Needs attention' : 'Not set up'}
     </Badge>
   );
 }

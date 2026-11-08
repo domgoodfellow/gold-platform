@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import type { Filters, Grouping, Period } from '@/lib/domain/reporting/shape';
 
 /**
@@ -47,7 +47,7 @@ export async function listInvoicedAndIncurred(
     }).order('currency').order('group_id', { nullsFirst: true }).order('group_label', { nullsFirst: true }).range(offset, offset + pageSize - 1);
 
     if (error) {
-      throw new DomainError(error.message, 'reporting.financials_failed');
+      throw fromDatabaseError(error, 'reporting.financials_failed');
     }
 
     groups.push(...(data ?? []).map((row) => ({
@@ -72,7 +72,7 @@ export type PeriodTotal = {
 /** Same canonical facts and access boundary, grouped in Postgres rather than in the web process. */
 export async function readFinancialTotals(db: Db, organizationId: string, from: string, to: string): Promise<PeriodTotal[]> {
   const { data, error } = await db.rpc('home_financial_totals', { p_organization_id: organizationId, p_from: from, p_to: to });
-  if (error) throw new DomainError(error.message, 'reporting.financials_failed');
+  if (error) throw fromDatabaseError(error, 'reporting.financials_failed');
   const amount = (value: number) => {
     const n = Number(value);
     if (!Number.isSafeInteger(n)) throw new DomainError('Financial amount exceeds the supported display range.', 'reporting.amount_out_of_range');

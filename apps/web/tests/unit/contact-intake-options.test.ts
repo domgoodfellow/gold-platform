@@ -30,7 +30,7 @@ describe('contact intake permission contract', () => {
     expect(result.import.state).toBe('available');
     expect(result.sync).toMatchObject({ state: 'available', connectHref: undefined });
     sources.listResources.mockResolvedValue([]);
-    expect((await options(['customer.create', 'customer.update', 'integration.manage'])).sync).toMatchObject({ state: 'unavailable', reason: expect.stringContaining('Integrations module') });
+    expect((await options(['customer.create', 'customer.update', 'integration.manage'])).sync).toMatchObject({ state: 'unavailable', reason: expect.stringContaining('Integrations in your plan') });
   });
   it('explains each refused path separately and never reads sources without integration.manage', async () => {
     const result = await options(['customer.update']);

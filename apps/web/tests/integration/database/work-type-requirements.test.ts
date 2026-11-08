@@ -241,7 +241,7 @@ describe('a work type says what resources it needs', () => {
       const id = await createResourceRequirement(shop.db, { typeId, resourceClass: 'person', quantity: 1, capabilityIds: [word] });
       await expect(setResourceCapabilityArchived(shop.db, { id: word, archived: true })).rejects.toMatchObject({
         code: 'resource_capabilities.required',
-        message: expect.stringContaining('Soon archived is required by one or more work types'),
+        message: expect.stringContaining('Soon archived is required by one or more kinds of work'),
       });
       const raw = await shop.db.from('resource_capabilities').update({ archived_at: new Date().toISOString() }).eq('id', word);
       expect(raw.error?.code).toBe('GD010');

@@ -408,14 +408,14 @@ describe('emailing an issued invoice from its inspector', () => {
     const user = userEvent.setup();
     finance.invoiceEmailDraft.mockResolvedValue(draft());
     finance.sendInvoiceEmail.mockResolvedValueOnce({ error: 'Email could not be sent just now.', code: 'invoice_emails.failed' })
-      .mockResolvedValueOnce({ outcome: { invoiceEmailId: 'e1', messageId: 'm1', conversationId: 'conv1', state: 'accepted', label: 'Accepted by the email provider', detail: 'Not yet confirmed as delivered.' } });
+      .mockResolvedValueOnce({ outcome: { invoiceEmailId: 'e1', messageId: 'm1', conversationId: 'conv1', state: 'accepted', label: 'Accepted for delivery', detail: 'Not yet confirmed as delivered.' } });
     open({ may: true, inboxOpen: true, senderProblem: null, sends: [] });
     await user.click(await screen.findByRole('button', { name: 'Send invoice' }));
     const dialog = await screen.findByRole('dialog', { name: 'Send invoice' });
     await user.click(await within(dialog).findByRole('button', { name: 'Send invoice' }));
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('could not be sent');
     await user.click(within(dialog).getByRole('button', { name: 'Send invoice' }));
-    expect(await within(dialog).findByText('Accepted by the email provider')).toBeVisible();
+    expect(await within(dialog).findByText('Accepted for delivery')).toBeVisible();
     expect(within(dialog).queryByText(/^Delivered/)).toBeNull();
     expect(within(dialog).getByRole('link', { name: 'Open conversation' })).toHaveAttribute('href', '/organizations/org/comms/inbox/conv1');
     const [first, second] = finance.sendInvoiceEmail.mock.calls.map(call => call[0]);
@@ -442,8 +442,8 @@ describe('emailing an issued invoice from its inspector', () => {
   });
 
   it('offers no conversation link where this person cannot open the Inbox', async () => {
-    open({ may: true, inboxOpen: false, senderProblem: null, sends: [sent('accepted', 'Accepted by the email provider')] });
-    expect(await screen.findByText(/Accepted by the email provider/)).toBeVisible();
+    open({ may: true, inboxOpen: false, senderProblem: null, sends: [sent('accepted', 'Accepted for delivery')] });
+    expect(await screen.findByText(/Accepted for delivery/)).toBeVisible();
     expect(screen.queryByRole('link', { name: 'Open conversation' })).toBeNull();
   });
 
@@ -454,8 +454,8 @@ describe('emailing an issued invoice from its inspector', () => {
   });
 
   it('lists each send with its own state, offers a retry only for one that has not left, and asks for Send again after one', async () => {
-    open({ may: true, inboxOpen: true, senderProblem: null, sends: [sent('accepted', 'Accepted by the email provider', 'Not yet confirmed as delivered.'), sent('not_sent', 'Not sent yet', 'Email could not be sent just now.')] });
-    expect(await screen.findByText(/to ap@northshore.example: Accepted by the email provider/)).toBeVisible();
+    open({ may: true, inboxOpen: true, senderProblem: null, sends: [sent('accepted', 'Accepted for delivery', 'Not yet confirmed as delivered.'), sent('not_sent', 'Not sent yet', 'Email could not be sent just now.')] });
+    expect(await screen.findByText(/to ap@northshore.example: Accepted for delivery/)).toBeVisible();
     expect(screen.queryByText(/: Delivered/)).toBeNull();
     expect(screen.getAllByRole('button', { name: 'Try sending again' })).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Send again' })).toBeVisible();

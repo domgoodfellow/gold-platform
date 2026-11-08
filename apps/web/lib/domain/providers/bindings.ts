@@ -1,6 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import type { Json } from '@/lib/db/database.types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * Which external provider scope belongs to an organization, and what GOLD created there.
@@ -131,7 +131,7 @@ export async function listProviderBindings(
     .eq('organization_id', input.organizationId)
     .order('provider_key', { ascending: true });
 
-  if (error) throw new DomainError(error.message, 'providers.bindings_failed');
+  if (error) throw fromDatabaseError(error, 'providers.bindings_failed');
 
   return (data ?? []).map(toBinding).filter((row): row is ProviderBinding => row !== null);
 }
@@ -141,7 +141,7 @@ export async function listProviderBindingCounts(db: Db): Promise<Map<string, num
   const { data, error } = await db
     .from('organization_provider_bindings')
     .select('provider_key');
-  if (error) throw new DomainError(error.message, 'providers.binding_counts_failed');
+  if (error) throw fromDatabaseError(error, 'providers.binding_counts_failed');
   const counts = new Map<string, number>();
   for (const row of data ?? []) counts.set(row.provider_key, (counts.get(row.provider_key) ?? 0) + 1);
   return counts;
@@ -150,7 +150,7 @@ export async function listProviderBindingCounts(db: Db): Promise<Map<string, num
 /** Per-provider binding totals and how many are failed — counts only, for the control plane. */
 export async function listProviderBindingSummary(db: Db): Promise<Map<string, { total: number; failed: number }>> {
   const { data, error } = await db.from('organization_provider_bindings').select('provider_key, status');
-  if (error) throw new DomainError(error.message, 'providers.binding_counts_failed');
+  if (error) throw fromDatabaseError(error, 'providers.binding_counts_failed');
   const summary = new Map<string, { total: number; failed: number }>();
   for (const row of data ?? []) {
     const entry = summary.get(row.provider_key) ?? { total: 0, failed: 0 };
@@ -173,7 +173,7 @@ export async function getProviderBinding(
     .eq('provider_key', input.providerKey)
     .maybeSingle();
 
-  if (error) throw new DomainError(error.message, 'providers.binding_failed');
+  if (error) throw fromDatabaseError(error, 'providers.binding_failed');
 
   return data ? toBinding(data) : null;
 }
@@ -196,7 +196,7 @@ export async function listProviderResources(
 
   const { data, error } = await query.order('created_at', { ascending: true });
 
-  if (error) throw new DomainError(error.message, 'providers.resources_failed');
+  if (error) throw fromDatabaseError(error, 'providers.resources_failed');
 
   return (data ?? []).map(toResource).filter((row): row is ProviderResource => row !== null);
 }
@@ -219,7 +219,7 @@ export async function beginProviderBinding(
     p_provider_account_id: input.providerAccountId,
   });
 
-  if (error) throw staffWriteError(error, 'begin a provider binding');
+  if (error) throw staffWriteError(error, 'begin a vendor binding');
   return data as string;
 }
 
@@ -241,7 +241,7 @@ export async function setProviderBindingStatus(
     p_error: input.error ?? undefined,
   });
 
-  if (error) throw staffWriteError(error, 'change a provider binding');
+  if (error) throw staffWriteError(error, 'change a vendor binding');
 }
 
 export async function recordProviderResource(
@@ -264,7 +264,7 @@ export async function recordProviderResource(
     p_status: input.status ?? 'active',
   });
 
-  if (error) throw staffWriteError(error, 'record a provider resource');
+  if (error) throw staffWriteError(error, 'record a vendor resource');
   return data as string;
 }
 
@@ -279,7 +279,7 @@ export async function setProviderResourceStatus(
     p_error: input.error ?? undefined,
   });
 
-  if (error) throw staffWriteError(error, 'change a provider resource');
+  if (error) throw staffWriteError(error, 'change a vendor resource');
 }
 
 /**
@@ -297,5 +297,5 @@ export async function storeProviderSecret(
     p_secret: input.secret,
   });
 
-  if (error) throw staffWriteError(error, 'store a provider secret');
+  if (error) throw staffWriteError(error, 'store a vendor secret');
 }

@@ -23,7 +23,7 @@ function useCommand(action: typeof verifyProviderAccountAction, success: string)
 }
 
 export function VerifyProviderAccountButton({ accountId }: { accountId: string }) {
-  const { state, run, pending } = useCommand(verifyProviderAccountAction, 'The provider accepted this credential.');
+  const { state, run, pending } = useCommand(verifyProviderAccountAction, 'The vendor accepted this credential.');
   return (
     <form action={run} className="flex flex-col gap-1">
       <input type="hidden" name="accountId" value={accountId} />
@@ -81,8 +81,8 @@ export function ProviderAccountStatusControl({ accountId, status }: { accountId:
       {confirming ? (
         <>
           <p className="text-sm text-muted">
-            Any AI runtime assignment naming this account keeps naming it, and will fail rather than
-            silently answer through another provider.
+            Any AI answering assignment naming this account keeps naming it, and will fail rather than
+            silently answer through another vendor.
           </p>
           <div className="flex gap-2">
             <Button type="submit" tone="danger" size="small" disabled={pending}>Confirm disable</Button>

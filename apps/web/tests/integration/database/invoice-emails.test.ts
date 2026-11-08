@@ -268,7 +268,7 @@ describe('once, and honestly', () => {
     // The second attempt is accepted, once, whatever is recorded twice.
     await asRole('provider_operator', `select claim_email_for_send($1,$2)`, [alice.organizationId, outcome.messageId]);
     for (let i = 0; i < 2; i += 1) await asRole('provider_operator', `select record_email_send_result($1,$2,'accepted','re_${outcome.messageId}')`, [alice.organizationId, outcome.messageId]);
-    expect(await state()).toMatchObject({ state: 'accepted', label: 'Accepted by the email provider' });
+    expect(await state()).toMatchObject({ state: 'accepted', label: 'Accepted for delivery' });
     expect(await count(`select count(*)::int n from public.messages where organization_id = $1 and conversation_id = $2`, [alice.organizationId, outcome.conversationId])).toBe(1);
     await asRole('tenant_email_webhook', `select record_email_event($1,'delivered',$2,null,'{}'::jsonb,now())`, [`re_${outcome.messageId}`, `evt-${randomUUID()}`]);
     expect(await state()).toMatchObject({ state: 'delivered', label: 'Delivered' });

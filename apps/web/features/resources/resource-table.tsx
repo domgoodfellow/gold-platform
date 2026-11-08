@@ -45,7 +45,7 @@ export function ResourceTable({
         },
         {
           key: 'capabilities',
-          header: 'Capabilities',
+          header: 'Skills',
           cell: (resource) =>
             resource.capabilities.length === 0 ? (
               '—'

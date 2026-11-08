@@ -107,7 +107,7 @@ export function ImportRunDetail({
         <Hint className="mt-6">This import is still running.</Hint>
       )}
 
-      <section aria-label="Staged rows" className="mt-8">
+      <section aria-label="Rows to import" className="mt-8">
         <div className="flex flex-wrap items-center gap-2">
           {FILTERS.map((filter) => (
             <ButtonLink
@@ -150,7 +150,7 @@ export function ImportRunDetail({
                   row.validationErrors.length > 0 ? <span className="text-danger">{row.validationErrors.join(' ')}</span> : '—',
               },
               // The stable source key is long and machine-made; its end is enough to tell rows apart, and the whole key stays available.
-              { key: 'key', header: 'Source row', visibility: 'card-only', cell: (row) => <span title={row.sourceRecordKey} className="font-mono text-xs text-muted">…{row.sourceRecordKey.slice(-8)}</span> },
+              { key: 'key', header: 'Row', visibility: 'card-only', cell: (row) => <span title={row.sourceRecordKey} className="font-mono text-xs text-muted">…{row.sourceRecordKey.slice(-8)}</span> },
             ]}
           />
         </div>

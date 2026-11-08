@@ -1,6 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { DraftingNotEntitledError, draftingProvider, type ConfigurationGap } from '@/lib/adapters/drafting';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { listPriceBookItems } from '@/lib/domain/pricing/price-book';
 import { listOperatingHours } from '@/lib/domain/scheduling/operating-hours';
 import { getOrganization, listMyOrganizations } from '@/lib/domain/tenancy/organizations';
@@ -131,7 +131,7 @@ export async function listConfigurationProposals(
     .order('created_at', { ascending: false });
 
   if (error) {
-    throw new DomainError(error.message, 'proposals.list_failed');
+    throw fromDatabaseError(error, 'proposals.list_failed');
   }
 
   return (data ?? []).map(toProposal);
@@ -151,7 +151,7 @@ export async function currentConfigurationProposal(
     .limit(1);
 
   if (error) {
-    throw new DomainError(error.message, 'proposals.read_failed');
+    throw fromDatabaseError(error, 'proposals.read_failed');
   }
 
   const row = (data ?? [])[0];
@@ -206,7 +206,7 @@ export async function proposeConfiguration(
   const provider = await draftingProvider();
   if (!provider) {
     throw new DomainError(
-      'This installation cannot draft a setup. Everything here can still be configured by hand.',
+      'Drafting a setup isn’t available yet. Everything here can still be set up by hand.',
       'proposals.no_provider',
     );
   }
@@ -214,7 +214,7 @@ export async function proposeConfiguration(
   // Read through the domain layer rather than the table, so RLS and membership decide this the same way they decide everything else.
   const organization = await getOrganization(db, input.organizationId);
   if (!organization) {
-    throw new DomainError('That business is not yours to configure.', 'proposals.forbidden');
+    throw new DomainError('That business is not yours to set up.', 'proposals.forbidden');
   }
 
   const { data: session } = await db.auth.getSession();
@@ -240,7 +240,7 @@ export async function proposeConfiguration(
     // Not holding guided setup is a fact about the business, not an outage, and the sentence says so.
     if (failure instanceof DraftingNotEntitledError) {
       throw new DomainError(
-        'This business does not have guided setup. Everything it would propose can still be configured by hand.',
+        'This business does not have guided setup. Everything it would propose can still be set up by hand.',
         'proposals.not_entitled',
       );
     }
@@ -281,7 +281,7 @@ export async function proposeConfiguration(
         'proposals.forbidden',
       );
     }
-    throw new DomainError(error.message, 'proposals.create_failed');
+    throw fromDatabaseError(error, 'proposals.create_failed');
   }
 
   return toProposal(data);
@@ -319,7 +319,7 @@ export async function reviseConfigurationProposal(
     if (error.code === '42501') {
       throw new DomainError('You cannot change this setup here.', 'proposals.forbidden');
     }
-    throw new DomainError(error.message, 'proposals.revise_failed');
+    throw fromDatabaseError(error, 'proposals.revise_failed');
   }
 
   return toProposal(data);
@@ -410,7 +410,7 @@ export async function applyConfigurationProposal(
     .maybeSingle();
 
   if (readError) {
-    throw new DomainError(readError.message, 'proposals.read_failed');
+    throw fromDatabaseError(readError, 'proposals.read_failed');
   }
   if (!row) {
     throw new DomainError('That proposal is not there.', 'proposals.not_found');
@@ -479,7 +479,7 @@ export async function applyConfigurationProposal(
   if (error) {
     // The configuration landed and the record of it didn't — worth saying plainly.
     throw new DomainError(
-      'The setup ran, but this proposal could not be marked as applied. Check the business’s configuration before applying anything else.',
+      'The setup ran, but could not be marked as applied. Check the business’s settings before applying anything else.',
       'proposals.apply_unrecorded',
     );
   }
@@ -507,7 +507,7 @@ export async function discardConfigurationProposal(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'proposals.discard_failed');
+    throw fromDatabaseError(error, 'proposals.discard_failed');
   }
   if (!data) throw new DomainError('That proposal is not an editable draft here.', 'proposals.not_a_draft');
 }
@@ -526,7 +526,7 @@ export async function deferConfigurationProposal(
     .eq('outcome', 'draft')
     .select('id')
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'proposals.defer_failed');
+  if (error) throw fromDatabaseError(error, 'proposals.defer_failed');
   if (!data) throw new DomainError('That proposal is not an editable draft here.', 'proposals.not_a_draft');
 }
 
@@ -537,7 +537,7 @@ export async function listIndustryTemplates(db: Db): Promise<IndustryTemplate[]>
     .select('key, name, category, description, shape')
     .eq('published', true)
     .order('position', { ascending: true });
-  if (error) throw new DomainError(error.message, 'templates.list_failed');
+  if (error) throw fromDatabaseError(error, 'templates.list_failed');
   return (data ?? []).map((row) => ({
     key: row.key,
     name: row.name,
@@ -594,7 +594,7 @@ export async function draftFromTemplate(
     .single();
   if (error) {
     if (error.code === '42501') throw new DomainError('You cannot set up this business.', 'proposals.forbidden');
-    throw new DomainError(error.message, 'proposals.create_failed');
+    throw fromDatabaseError(error, 'proposals.create_failed');
   }
   return toProposal(data);
 }
@@ -639,7 +639,7 @@ export async function draftFromBusiness(
     .single();
   if (error) {
     if (error.code === '42501') throw new DomainError('You cannot set up this business.', 'proposals.forbidden');
-    throw new DomainError(error.message, 'proposals.create_failed');
+    throw fromDatabaseError(error, 'proposals.create_failed');
   }
   return toProposal(data);
 }
@@ -651,7 +651,7 @@ export async function listManagedIndustryTemplates(db: Db): Promise<ManagedIndus
     .select('key, name, category, description, shape, published')
     .order('position', { ascending: true })
     .order('created_at', { ascending: true });
-  if (error) throw new DomainError(error.message, 'templates.list_failed');
+  if (error) throw fromDatabaseError(error, 'templates.list_failed');
   return (data ?? []).map((row) => ({ ...row, shape: readBusinessShape(row.shape) }));
 }
 
@@ -708,7 +708,7 @@ export async function saveBusinessAsTemplate(
   });
   if (error) {
     if (error.code === '42501') throw new DomainError('Only staff who look after the catalogue can save templates.', 'templates.forbidden');
-    throw new DomainError(error.message, 'templates.save_failed');
+    throw fromDatabaseError(error, 'templates.save_failed');
   }
   return key;
 }

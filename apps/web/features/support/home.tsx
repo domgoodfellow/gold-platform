@@ -484,7 +484,7 @@ export function SupportHome({
             ))}
             {!data.queues.length && (
               <div className="py-5 text-center text-xs text-muted">
-                No queues configured.
+                No queues yet.
               </div>
             )}
           </div>

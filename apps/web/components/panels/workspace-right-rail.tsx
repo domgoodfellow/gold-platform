@@ -99,7 +99,7 @@ export type SupportMode = (typeof SUPPORT_MODES)[number];
 const SUPPORT_MODE_LABELS: Record<SupportMode, { label: string; icon: LucideIcon }> = {
   activity: { label: 'Activity', icon: History },
   insights: { label: 'Insights', icon: BarChart3 },
-  configure: { label: 'Configure', icon: Settings },
+  configure: { label: 'Settings', icon: Settings },
 };
 
 type RailContextValue = {

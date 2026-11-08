@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -46,7 +46,7 @@ export async function listCustomerStages(
     .order('created_at', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'customer_stages.list_failed');
+    throw fromDatabaseError(error, 'customer_stages.list_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -83,7 +83,7 @@ export async function createCustomerStage(
         'customer_stages.name_taken',
       );
     }
-    throw new DomainError(error.message, 'customer_stages.create_failed');
+    throw fromDatabaseError(error, 'customer_stages.create_failed');
   }
 
   return data.id;
@@ -121,7 +121,7 @@ export async function updateCustomerStage(
         'customer_stages.name_taken',
       );
     }
-    throw new DomainError(error.message, 'customer_stages.update_failed');
+    throw fromDatabaseError(error, 'customer_stages.update_failed');
   }
 
   // No row means the policy refused it or it belongs to another business, and those are
@@ -143,15 +143,15 @@ export async function deleteCustomerStage(db: Db, input: { organizationId: strin
   await requireActor(db);
   const { error } = await db.rpc('delete_relationship_stage', { p_organization_id: input.organizationId, p_stage_id: input.id });
   if (!error) return;
-  if (error.code === '23503') throw new DomainError(error.message, 'customer_stages.in_use');
+  if (error.code === '23503') throw fromDatabaseError(error, 'customer_stages.in_use');
   if (error.code === '42501') throw new DomainError('That stage is not yours to remove.', 'customer_stages.delete_refused');
-  throw new DomainError(error.message, 'customer_stages.delete_failed');
+  throw fromDatabaseError(error, 'customer_stages.delete_failed');
 }
 
 /** How many contacts are on each stage, keyed by stage id. */
 export async function customerStageUsage(db: Db, organizationId: string): Promise<Map<string, number>> {
   const { data, error } = await db.rpc('relationship_stage_usage', { p_organization_id: organizationId });
-  if (error) throw new DomainError(error.message, 'customer_stages.usage_failed');
+  if (error) throw fromDatabaseError(error, 'customer_stages.usage_failed');
   return new Map((data ?? []).map(row => [row.stage_id, row.contacts]));
 }
 

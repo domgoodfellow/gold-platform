@@ -261,7 +261,7 @@ describe('what a business has switched on', () => {
         key: 'work',
         enabled: false,
       }),
-    ).rejects.toThrow(/no such module/i);
+    ).rejects.toThrow(/no such feature/i);
 
     await setModuleEnabled(shop.db, {
       organizationId: shop.organizationId,
@@ -286,7 +286,7 @@ describe('what a business has switched on', () => {
         key: 'inventory',
         enabled: true,
       }),
-    ).rejects.toThrow(/no such module/i);
+    ).rejects.toThrow(/no such feature/i);
   });
 
   it('is not authorization, and a role with everything but organization.manage proves it', async () => {
@@ -710,7 +710,7 @@ describe('the modules a configuration asks for', () => {
 
     await expect(
       configureBusiness(business.db, business.organizationId, minimal(['telepathy'])),
-    ).rejects.toThrow(/no module called telepathy/i);
+    ).rejects.toThrow(/no feature called telepathy/i);
 
     // The whole point of validating up front: a refusal partway would have left a type, two
     // statuses and a transition behind for a name nobody could act on.

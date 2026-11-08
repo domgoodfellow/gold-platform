@@ -8,7 +8,7 @@ import { ButtonLink, type ButtonSize } from './button';
  * rail's Configure mode (`PageHeader configure`) is for workspaces whose configuration opens
  * in-place; those and this do not appear together.
  */
-export function ConfigureLink({ href, label = 'Configure', title, size, compact = false }: { href: string; label?: string; title?: string; size?: ButtonSize; compact?: boolean }) {
+export function ConfigureLink({ href, label = 'Settings', title, size, compact = false }: { href: string; label?: string; title?: string; size?: ButtonSize; compact?: boolean }) {
   return (
     <ButtonLink href={href} tone="secondary" title={title ?? (compact ? label : undefined)} size={size}>
       <Settings2 aria-hidden />

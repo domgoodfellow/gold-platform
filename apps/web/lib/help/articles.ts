@@ -20,14 +20,14 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     opens: { label: 'Open Setup', path: 'setup' },
     sections: [
       { heading: 'Setup comes first', body: [
-        'A new business starts in Setup. It lists what is finished, what still blocks launch, and where each thing is configured.',
+        'A new business starts in Setup. It lists what is finished, what still blocks launch, and where each thing is set up.',
         'Each item opens the workspace that owns it: working hours in Work, prices in Finance, phone routing in Communications. Setup does not copy those screens.',
       ] },
       { heading: 'Your business profile', body: [
         'Settings → General holds the business name, industry, primary address, contact details, time zone and currency. Only the details a workspace truly needs block launch; the rest can be added whenever you like.',
       ] },
       { heading: 'Launching', body: [
-        'Launching is a deliberate step that moves the business from Setup to Live. Everything you configured stays; Setup remains available for review.',
+        'Launching is a deliberate step that moves the business from Setup to Live. Everything you set up stays; Setup remains available for review.',
       ] },
     ],
   },
@@ -41,7 +41,7 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
         'The CRM workspace owns the relationship: who the customer is, where they are in your process, and what follow-up is due. Other workspaces show that record; they do not keep their own copy.',
       ] },
       { heading: 'Stages and extra details', body: [
-        'Relationship stages and opportunity stages are configured in the CRM. Custom fields add details your business records about customers, jobs and places.',
+        'Relationship stages and opportunity stages are set up in the CRM. Custom fields add details your business records about customers, jobs and places.',
       ] },
     ],
   },
@@ -55,7 +55,7 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
         'Communications keeps calls, messages and email as business conversations tied to the customer, rather than in individual inboxes.',
       ] },
       { heading: 'Numbers, routing and email', body: [
-        'Phone numbers, call routing, call outcomes and the email domain you send from are configured in Communications. Connecting an outside provider account is done under Settings → Connections.',
+        'Phone numbers, call routing, call outcomes and the email domain you send from are set up in Communications. Connecting an outside account is done under Settings → Connections.',
       ] },
     ],
   },
@@ -65,8 +65,8 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     summary: 'Work items, schedules, resources, locations and working hours.',
     opens: { label: 'Open Work', path: 'field' },
     sections: [
-      { heading: 'What is configured in Work', body: [
-        'The kinds of work you do, their stages, working hours, resources and locations are all configured in the Work workspace, next to the schedule they affect.',
+      { heading: 'What is set up in Work', body: [
+        'The kinds of work you do, their stages, working hours, resources and locations are all set up in the Work workspace, next to the schedule they affect.',
       ] },
       { heading: 'Members and resources', body: [
         'A member is someone who can sign in. A resource is something that can be scheduled: a person, a vehicle or a room. One person can be a member, a resource, or both, and changing one does not change the other.',
@@ -83,7 +83,7 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     opens: { label: 'Open Finance', path: 'finance' },
     sections: [
       { heading: 'Money your customers owe you', body: [
-        'Finance holds the price book, quotes, invoices and payments between your customers and your business. Prices and wording are configured in Finance.',
+        'Finance holds the price book, quotes, invoices and payments between your customers and your business. Prices and wording are set up in Finance.',
       ] },
       { heading: 'Currency', body: [
         'The currency in Settings → General is used for new prices. Existing quotes and invoices keep the currency they were created in, and changing the setting never rewrites them.',
@@ -158,7 +158,7 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
       { heading: 'What a connection is', body: [
         'A connection links your business to an outside application using an account your business owns. Connections show whether they are authorised and ready, and can be reconnected or disconnected at any time.',
       ] },
-      { heading: 'Connecting is not configuring', body: [
+      { heading: 'Connecting is not setting up', body: [
         'A connection lets GildOps reach the other system. How a workspace uses it, such as call routing, stays in that workspace.',
       ] },
     ],

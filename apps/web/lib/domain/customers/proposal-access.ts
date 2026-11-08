@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { claimProposalInvite } from './proposal-invites';
 
 /**
@@ -27,7 +27,7 @@ export async function proposalAccessContext(db: Db): Promise<ProposalAccessConte
   // No session at all reaches the database as `anon`, which holds no execute on the function: the
   // same answer as every other way of not being a recipient.
   if (error?.code === '42501') return null;
-  if (error) throw new DomainError(error.message, 'proposal_access.context_failed');
+  if (error) throw fromDatabaseError(error, 'proposal_access.context_failed');
   const row = data?.[0];
   if (!row || !row.customer_id) return null;
   return {

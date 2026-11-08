@@ -1,6 +1,6 @@
 import { PublicWebsiteSnapshotSchema, type PublicWebsiteSnapshot } from '@gold/schemas';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import type { PublicProfile } from '@/lib/domain/tenancy/profile';
 import type { DomainSurface } from './domains';
 
@@ -27,7 +27,7 @@ export async function resolveHostname(db: Db, host: string): Promise<HostnameBin
   const hostname = normalizeRequestHost(host);
   if (!hostname) return null;
   const { data, error } = await db.rpc('hostname_binding', { p_hostname: hostname });
-  if (error) throw new DomainError(error.message, 'domains.resolve_failed');
+  if (error) throw fromDatabaseError(error, 'domains.resolve_failed');
   const row = data?.[0];
   if (!row?.organization_id) return null;
   return { organizationId: row.organization_id, surface: row.surface as DomainSurface };
@@ -45,7 +45,7 @@ export async function publishedHostnameSite(db: Db, host: string): Promise<Hoste
   const hostname = normalizeRequestHost(host);
   if (!hostname) return null;
   const { data, error } = await db.rpc('published_hostname_site', { p_hostname: hostname });
-  if (error) throw new DomainError(error.message, 'domains.resolve_failed');
+  if (error) throw fromDatabaseError(error, 'domains.resolve_failed');
   if (!data) return null;
 
   const raw = data as { surface: DomainSurface; profile: PublicProfile; site: unknown };
@@ -53,7 +53,7 @@ export async function publishedHostnameSite(db: Db, host: string): Promise<Hoste
   if (raw.site) {
     const parsed = PublicWebsiteSnapshotSchema.safeParse(raw.site);
     if (!parsed.success) {
-      throw new DomainError('The published website does not match its supported schema.', 'public_site.invalid_projection');
+      throw new DomainError('This website can’t be shown right now.', 'public_site.invalid_projection');
     }
     site = parsed.data;
   }

@@ -223,8 +223,8 @@ describe('Schedule configuration reaches into no Settings UI', () => {
   });
 
   it('states the two different meanings of an unconfigured day truthfully — no claim at all, versus closed', () => {
-    expect(editor).toMatch(/No opening hours are configured for any day[\s\S]{0,80}treats every hour as open/);
-    expect(editor).toContain('Closed — no hours configured for this day.');
+    expect(editor).toMatch(/No opening hours yet\.[\s\S]{0,80}every hour counts as open/);
+    expect(editor).toContain("'Closed'");
   });
 });
 
@@ -357,7 +357,7 @@ describe('the Schedule canvas exists and fills the workspace even when there is 
     const day = code(read(`${CALENDAR}/day-schedule.tsx`));
     // The old defect: an early `return <EmptyState>…` before the grid is ever drawn.
     expect(day).not.toMatch(/if \(resources\.length === 0\)\s*{?\s*return\s*\(?\s*<EmptyState/);
-    expect(day).toContain('No resources configured');
+    expect(day).toContain('No resources yet');
     expect(day).toContain('resources.length === 0');
   });
 

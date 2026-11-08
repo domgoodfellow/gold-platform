@@ -75,7 +75,7 @@ describe('the page sells outcomes and only demonstrated behavior', () => {
   });
 
   it('labels the product rendering as an example rather than tenant evidence', () => {
-    expect(renderer).toContain('Example configuration');
+    expect(renderer).toContain('Example setup');
   });
 });
 

@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -42,7 +42,7 @@ export async function listWorkItemStatuses(
     .order('name', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'statuses.list_failed');
+    throw fromDatabaseError(error, 'statuses.list_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -63,7 +63,7 @@ export async function createWorkItemStatus(
 
   const name = input.name.trim();
   if (name.length === 0) {
-    throw new DomainError('A status needs a name.', 'statuses.name_required');
+    throw new DomainError('A stage needs a name.', 'statuses.name_required');
   }
   if (name.length > NAME_MAX) {
     throw new DomainError(
@@ -73,7 +73,7 @@ export async function createWorkItemStatus(
   }
 
   if (!input.typeId) {
-    throw new DomainError('A status belongs to a work item type.', 'statuses.type_required');
+    throw new DomainError('A stage belongs to a kind of work.', 'statuses.type_required');
   }
 
   let position = input.position;
@@ -101,15 +101,15 @@ export async function createWorkItemStatus(
 
   if (error) {
     if (error.code === '23505') {
-      throw new DomainError(`A status called ${name} already exists here.`, 'statuses.name_taken');
+      throw new DomainError(`A stage called ${name} already exists here.`, 'statuses.name_taken');
     }
     if (error.code === '23503') {
-      throw new DomainError('No such work item type here.', 'statuses.type_not_found');
+      throw new DomainError('That kind of work no longer exists.', 'statuses.type_not_found');
     }
     if (error.code === '42501') {
-      throw new DomainError('You cannot configure statuses here.', 'statuses.forbidden');
+      throw new DomainError('Your role cannot change stages.', 'statuses.forbidden');
     }
-    throw new DomainError(error.message, 'statuses.create_failed');
+    throw fromDatabaseError(error, 'statuses.create_failed');
   }
 
   return data;
@@ -135,7 +135,7 @@ export async function updateWorkItemStatus(
 
   const name = input.name.trim();
   if (name.length === 0) {
-    throw new DomainError('A status needs a name.', 'statuses.name_required');
+    throw new DomainError('A stage needs a name.', 'statuses.name_required');
   }
   if (name.length > NAME_MAX) {
     throw new DomainError(
@@ -160,19 +160,19 @@ export async function updateWorkItemStatus(
 
   if (error) {
     if (error.code === '23505') {
-      throw new DomainError(`A status called ${name} already exists here.`, 'statuses.name_taken');
+      throw new DomainError(`A stage called ${name} already exists here.`, 'statuses.name_taken');
     }
     // Reachable only when releasesResource flips true → false — the tenant just asserted that
     // two overlapping jobs both hold the same resource.
     if (error.code === '23P01') {
       throw new DomainError(
-        'Work already in this status overlaps on the same resource, so it cannot start holding one again. Reschedule that work first.',
+        'Some work in this stage overlaps on the same resource. Reschedule it first.',
         'statuses.release_conflict',
       );
     }
     if (error.code === '42501') {
-      throw new DomainError('You cannot configure statuses here.', 'statuses.forbidden');
+      throw new DomainError('Your role cannot change stages.', 'statuses.forbidden');
     }
-    throw new DomainError(error.message, 'statuses.update_failed');
+    throw fromDatabaseError(error, 'statuses.update_failed');
   }
 }

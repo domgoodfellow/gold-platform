@@ -1,6 +1,6 @@
 import type { Db } from '@/lib/db/types';
 import { readBusinessShape, workTypesOf } from './shape';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import {
   createFieldDefinition,
   listFieldDefinitions,
@@ -257,7 +257,7 @@ function validateModules(shape: BusinessShape): void {
   for (const key of asked) {
     if (!isModuleKey(key)) {
       throw new DomainError(
-        `This platform has no module called ${key}.`,
+        `GildOps has no feature called ${key}.`,
         'configuration.module_unknown',
       );
     }
@@ -309,7 +309,7 @@ export async function configureBusiness(
   }
   for (const key of shape.modules ?? []) {
     if (!featureStates.some((state) => state.moduleKey === key && state.entitled && state.implementationState === 'available')) {
-      throw new DomainError('This proposal includes a capability outside this business’s plan.', 'configuration.module_not_entitled');
+      throw new DomainError('This setup includes a feature outside this business’s plan.', 'configuration.module_not_entitled');
     }
   }
 
@@ -617,7 +617,7 @@ export async function readBusinessSetupWithIndustry(db: Db, organizationId: stri
   const { data, error } = await db.rpc('read_business_setup', { p_organization_id: organizationId });
   if (error) {
     if (error.code === '42501') throw new DomainError('You cannot read this business’s setup.', 'configuration.read_forbidden');
-    throw new DomainError(error.message, 'configuration.read_failed');
+    throw fromDatabaseError(error, 'configuration.read_failed');
   }
   const rows = data as unknown as SetupRows;
   if (rows.types.length === 0) {

@@ -1,5 +1,5 @@
 import type { Database, Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { SERVICE_KINDS, type ServiceKind } from './service-engagements';
 
 export type DisclosureContent = {
@@ -34,13 +34,13 @@ export async function disclosureEditorState(db: Db, organizationId: string, cust
 }
 export async function saveServiceDisclosure(db: Db, organizationId: string, customerId: string, engagementId: string, version: number, content: DisclosureContent) {
   const { data, error } = await db.rpc('save_service_disclosure', { p_organization_id: organizationId, p_customer_id: customerId, p_engagement_id: engagementId, p_expected_version: version, p_content: parseDisclosureContent(content) });
-  if (error) throw new DomainError(error.message, 'disclosure.save_failed');
+  if (error) throw fromDatabaseError(error, 'disclosure.save_failed');
   return data;
 }
 export async function releaseServiceDisclosure(db: Db, organizationId: string, customerId: string, engagementId: string, version: number, operation: 'publish' | 'withdraw', notify?: boolean) {
   const args = { p_organization_id: organizationId, p_customer_id: customerId, p_engagement_id: engagementId, p_expected_version: version };
   const { error } = operation === 'publish' && notify !== undefined ? await db.rpc('publish_service_disclosure_notification', { ...args, p_notify: notify }) : await db.rpc(operation === 'publish' ? 'publish_service_disclosure' : 'withdraw_service_disclosure', args);
-  if (error) throw new DomainError(error.message, `disclosure.${operation}_failed`);
+  if (error) throw fromDatabaseError(error, `disclosure.${operation}_failed`);
 }
 export async function portalServiceDisclosures(db: Db, disclosureId?: string, limit = 100): Promise<ApprovedService[]> {
   const { data, error } = await db.rpc('portal_service_disclosures', { p_disclosure_id: disclosureId, p_limit: limit });

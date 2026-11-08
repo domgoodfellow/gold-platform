@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import type { Db } from '@/lib/db/types';
 import { DomainError, SIGN_IN_UNREACHABLE, SignInUnreachableError } from '@/lib/domain/errors';
 import { decideRedirect, isPublic } from '@/lib/route/access';
-import { classifySessionUser, resolveSessionIdentity } from '@/lib/domain/identity/session';
+import { checkSession, classifySessionUser, resolveSessionIdentity } from '@/lib/domain/identity/session';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -115,6 +115,50 @@ describe('requireActor: signed out, or the check could not complete', () => {
       expect(failure, label).toBeInstanceOf(SignInUnreachableError);
       expect(failure, label).not.toBeInstanceOf(DomainError);
       expect(failure, label).toMatchObject({ digest: SIGN_IN_UNREACHABLE });
+    }
+  });
+});
+
+describe('the proxy session check: signed out, or the check could not complete', () => {
+  it('still sends people to sign in when the service answers that there is no valid session', async () => {
+    const none = await checkSession(freshClient());
+    expect(none).toEqual({ kind: 'none' });
+    expect(decideRedirect(none, '/organizations')).toBe('/login');
+
+    // A real session ended on the server is an answer too.
+    const { db } = await signUp('proxy-revoked');
+    const { data } = await db.auth.getSession();
+    const { error } = await adminClient().auth.admin.signOut(data.session!.access_token, 'global');
+    if (error) throw error;
+    const revoked = await checkSession(db);
+    expect(revoked).toEqual({ kind: 'none' });
+    expect(decideRedirect(revoked, '/organizations/some-business/home')).toBe('/login');
+  });
+
+  it('lets the request through to the page when the check cannot complete', async () => {
+    const failures: Record<string, () => Promise<Response>> = {
+      'no connection': () => Promise.reject(new TypeError('fetch failed')),
+      'a timeout': () => Promise.reject(new DOMException('The operation timed out.', 'TimeoutError')),
+      'a server error': async () => Response.json({ message: 'unavailable' }, { status: 503 }),
+      'too many requests': async () => Response.json({ message: 'rate limited' }, { status: 429 }),
+      'a reply that is not the service': async () => new Response('<html>Not found</html>', { status: 404 }),
+    };
+    for (const [label, fail] of Object.entries(failures)) {
+      let down = false;
+      const fetcher: typeof fetch = (input, init) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        return down && url.includes('/auth/v1/user') ? fail() : fetch(input, init);
+      };
+      const { db, userId } = await signUp('proxy-unreachable', fetcher);
+      expect(await checkSession(db), label).toEqual({ kind: 'account', userId });
+
+      down = true;
+      const check = await checkSession(db);
+      expect(check, label).toEqual({ kind: 'unverified' });
+      expect(decideRedirect(check, '/organizations'), label).toBeNull();
+      expect(decideRedirect(check, '/organizations/some-business/home'), label).toBeNull();
+      // On the page, the same failure is the service error, never sign in.
+      await expect(requireActor(db as unknown as Db), label).rejects.toBeInstanceOf(SignInUnreachableError);
     }
   });
 });

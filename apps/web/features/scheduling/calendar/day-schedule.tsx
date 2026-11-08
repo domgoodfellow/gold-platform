@@ -22,8 +22,10 @@ const LANE_HEADER_PX = 36;
  * collide.
  *
  * The board itself is never replaced by prose (`CLAUDE.md`'s empty-state rules): zero Resources,
- * zero bookings and unconfigured hours each change what is drawn *inside* the grid, never whether
- * the grid exists.
+ * zero bookings and hours not yet set each change what is drawn *inside* the grid, never whether
+ * the grid exists. Two different states, never mixed: no opening hours set for the business at
+ * all ("No opening hours yet", with a link to set them), and hours set but none on this day
+ * ("Closed", every lane shaded).
  */
 
 export function DaySchedule({
@@ -39,6 +41,7 @@ export function DaySchedule({
   timezone,
   resourcesHref,
   mayAddResource,
+  hoursHref = null,
 }: {
   organizationId: string;
   date: string;
@@ -53,13 +56,15 @@ export function DaySchedule({
   resourceNames: ReadonlyMap<string, string>;
   /** What each scheduled job is short of, by work item id — only jobs that are short appear. */
   shortfalls: Readonly<Record<string, string>>;
-  /** Whether this business has configured opening hours anywhere at all. */
+  /** Whether this business has set opening hours for any day at all. */
   hasConfiguredHours: boolean;
   timezone: string;
   resourcesHref: string;
   mayAddResource: boolean;
+  /** The opening-hours editor, for someone who may change hours; otherwise no link is offered. */
+  hoursHref?: string | null;
 }) {
-  const { bounds, hasRealContent } = computeDisplayAxisBounds({
+  const { bounds } = computeDisplayAxisBounds({
     date,
     timeZone: timezone,
     within,
@@ -81,18 +86,17 @@ export function DaySchedule({
   const showNowLine = date === todayInZone(timezone) && now >= bounds.startsAt && now <= bounds.endsAt;
   const nowTopPx = LANE_HEADER_PX + (offsetPct(now) / 100) * laneHeight;
 
+  // A closed day is shaded across every lane, so "closed" is drawn as well as said.
+  const laneShade = closedDay ? ' bg-hover/60' : '';
+
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between gap-3 border-b border-border px-1 pb-2 text-xs text-muted">
-        <span>Shaded time is that resource&rsquo;s own free time, and advisory — the exclusion constraint decides at the moment of booking.</span>
-        {!hasRealContent ? <span className="shrink-0 text-subtle">Showing a default {formatHourLabel(bounds.startsAt, timezone)}–{formatHourLabel(bounds.endsAt, timezone)} range</span> : null}
-      </div>
-
       {closedDay ? (
-        <div className="border-b border-border bg-hover/60 px-3 py-1.5 text-xs text-muted">Closed — no hours are configured for this day.</div>
+        <div role="status" className="border-b border-border bg-hover/60 px-3 py-1.5 text-xs text-muted">Closed</div>
       ) : !hasConfiguredHours ? (
-        <div className="flex items-center justify-between gap-3 border-b border-border bg-hover/60 px-3 py-1.5 text-xs text-muted">
-          <span>Opening hours not configured — every displayed hour is shown, none is claimed as open.</span>
+        <div role="status" className="flex items-center justify-between gap-3 border-b border-border px-3 py-1.5 text-xs text-muted">
+          <span>No opening hours yet</span>
+          {hoursHref ? <ButtonLink href={hoursHref} size="small" tone="text">Set hours</ButtonLink> : null}
         </div>
       ) : null}
 
@@ -135,11 +139,11 @@ export function DaySchedule({
             <div className="flex min-w-0 flex-1 flex-col border-l border-border">
               <div className="h-9 shrink-0" aria-hidden />
               <div
-                className="relative flex flex-1 items-center justify-center border-t border-border"
+                className={`relative flex flex-1 items-center justify-center border-t border-border${laneShade}`}
                 style={{ minHeight: `${laneHeight}px` }}
               >
                 <div className="flex flex-col items-center gap-2 px-6 text-center">
-                  <p className="text-sm font-medium">No resources configured</p>
+                  <p className="text-sm font-medium">No resources yet</p>
                   <p className="max-w-xs text-xs text-muted">
                     Add a technician, vehicle, room or equipment Resource to schedule work against.
                   </p>
@@ -162,7 +166,7 @@ export function DaySchedule({
                       : `, working ${entry.open.map((window) => `${formatHourLabel(window.startsAt, timezone)} to ${formatHourLabel(window.endsAt, timezone)}`).join(' and ')}`}
                   </span>
                 </div>
-                <div className="relative flex-1 border-t border-border" style={{ minHeight: `${laneHeight}px` }}>
+                <div className={`relative flex-1 border-t border-border${laneShade}`} style={{ minHeight: `${laneHeight}px` }}>
                   {hourMarks.slice(1, -1).map((mark) => (
                     <div
                       key={mark}
@@ -236,7 +240,7 @@ export function DaySchedule({
           {unassigned.length > 0 ? (
             <div className="flex min-w-44 flex-1 basis-44 flex-col border-l border-border">
               <div className="flex h-9 shrink-0 items-end truncate px-2 pb-1 text-sm font-medium">Unassigned</div>
-              <div className="relative flex-1 border-t border-border" style={{ minHeight: `${laneHeight}px` }}>
+              <div className={`relative flex-1 border-t border-border${laneShade}`} style={{ minHeight: `${laneHeight}px` }}>
                 {hourMarks.slice(1, -1).map((mark) => (
                   <div
                     key={mark}

@@ -79,7 +79,7 @@ export default async function ProposalPage() {
 
       {preview.length > 0 ? (
         <Section className="mt-8">
-          <SectionHeading>How this would be configured</SectionHeading>
+          <SectionHeading>How this would be set up</SectionHeading>
           <div className="mt-3 rounded-lg border border-border">
             <div className="divide-y divide-border">
               {preview.map((workspace) => (

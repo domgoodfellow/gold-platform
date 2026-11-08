@@ -78,9 +78,7 @@ export function AssignPlanSheet({ organizationId, plans }: { organizationId: str
         <PageDrawerHeader>
           <PageDrawerTitle>Assign a base Plan</PageDrawerTitle>
           <PageDrawerDescription>
-            The base Plan determines entitlement. Available entitled features are active by default;
-            the organization can switch them off. Provider-backed features may still need setup.
-            A new assignment does not end an existing one on an overlapping period — end it first.
+            A new assignment does not end an overlapping one — end that first.
           </PageDrawerDescription>
         </PageDrawerHeader>
         <form action={action} className="flex flex-col gap-3 px-4">

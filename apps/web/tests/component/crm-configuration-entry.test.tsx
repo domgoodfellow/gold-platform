@@ -47,14 +47,14 @@ describe('CRM Home Configure control (ConfigureMenu over workspaceConfigureItems
   it('links straight to the only door, named for what it opens', () => {
     const fields = workspaceConfigureItems(ORG, 'crm', gate()).find((item) => item.key === 'customer-fields')!;
     render(<ConfigureMenu items={[fields]} />);
-    expect(screen.queryByRole('button', { name: 'Configure' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Customer fields' })).toHaveAttribute('href', `/organizations/${ORG}/crm/configuration/fields`);
   });
 
   it('opens a menu of direct links from the keyboard, and Escape returns focus to the control', async () => {
     const user = userEvent.setup();
     render(<ConfigureMenu items={workspaceConfigureItems(ORG, 'crm', gate())} />);
-    const trigger = screen.getByRole('button', { name: 'Configure' });
+    const trigger = screen.getByRole('button', { name: 'Settings' });
     trigger.focus();
     await user.keyboard('{Enter}');
     const items = await screen.findAllByRole('menuitem');
@@ -75,16 +75,16 @@ describe('CRM configuration page identity', () => {
   it('names Configuration as a plain-text ancestor on a CRM configuration page', () => {
     expect(workspaceConfigCrumbs(ORG, 'sales-stages', gate())).toEqual([
       { label: 'CRM', href: `/organizations/${ORG}/crm` },
-      { label: 'Configuration', href: undefined },
+      { label: 'Settings', href: undefined },
     ]);
     // No workspace has a landing to link to (Batch A).
-    expect(workspaceConfigCrumbs(ORG, 'call-setup', gate())[1]).toEqual({ label: 'Configuration' });
+    expect(workspaceConfigCrumbs(ORG, 'call-setup', gate())[1]).toEqual({ label: 'Settings' });
   });
 
   it('resolves CRM configuration under a non-linking Configuration level, with Up going to CRM', () => {
     const location = resolveLocation({ pathname: `/organizations/${ORG}/crm/configuration/relationship-stages`, access: { gate: gate() } }) as ResolvedLocation;
     expect(location.status).toBe('resolved');
-    const configuration = location.trail.find((crumb) => crumb.label === 'Configuration');
+    const configuration = location.trail.find((crumb) => crumb.label === 'Settings');
     expect(configuration).toBeDefined();
     expect(configuration?.href).toBeUndefined();
     expect(location.up).toBe(`/organizations/${ORG}/crm`);

@@ -30,7 +30,7 @@ export function RulesTable({
       <DataTable
         rows={rules}
         rowKey={(r) => r.id}
-        empty="No matching automations. Create a rule to configure its trigger, conditions and actions."
+        empty="No matching automations."
         columns={[
           {
             key: 'name',
@@ -64,7 +64,7 @@ export function RulesTable({
                       .map(
                         (a) =>
                           ({
-                            change_status: 'Change status',
+                            change_status: 'Change stage',
                             notify: 'Notify Customer',
                             shift_schedule: 'Shift schedule',
                             create_work_item: 'Create Work',
@@ -85,7 +85,7 @@ export function RulesTable({
           },
           {
             key: 'health',
-            header: 'Configuration',
+            header: 'Set up',
             cell: (r) => (
               <Link
                 href={`${base}/${r.id}?node=diagnostics`}

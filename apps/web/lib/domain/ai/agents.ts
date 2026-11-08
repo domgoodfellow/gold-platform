@@ -1,5 +1,5 @@
 import type { Database, Db } from "@/lib/db/types";
-import { DomainError } from "@/lib/domain/errors";
+import { fromDatabaseError } from "@/lib/domain/errors";
 
 export type Agent = Database["public"]["Tables"]["ai_assistants"]["Row"];
 export type Deployment =
@@ -147,7 +147,7 @@ export async function readAgentResources(
   ]);
   for (const result of results)
     if (result.error)
-      throw new DomainError(result.error.message, "ai.read_failed");
+      throw fromDatabaseError(result.error, "ai.read_failed");
   const [agents, deployments, versions, knowledge, sites, evaluations, agentStates] =
     results;
   return {

@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -89,7 +89,7 @@ export async function scheduleWorkItem(
     // The assignment trigger's own sentence names the resource and what is wrong ("Alex is not
     // working at that time"), so it is passed through rather than replaced by a generic one.
     if (error.code === 'GD013') {
-      throw new DomainError(error.message, 'scheduling.resource_not_working');
+      throw fromDatabaseError(error, 'scheduling.resource_not_working');
     }
     if (error.code === '23503') {
       throw new DomainError('No such resource here.', 'scheduling.resource_not_found');
@@ -97,7 +97,7 @@ export async function scheduleWorkItem(
     if (error.code === '42501') {
       throw new DomainError('You cannot schedule that work item.', 'scheduling.forbidden');
     }
-    throw new DomainError(error.message, 'scheduling.failed');
+    throw fromDatabaseError(error, 'scheduling.failed');
   }
 }
 
@@ -129,7 +129,7 @@ export async function setWorkItemResources(
     // The assignment trigger's own sentence names the resource and what is wrong ("Alex is not
     // working at that time"), so it is passed through rather than replaced by a generic one.
     if (error.code === 'GD013') {
-      throw new DomainError(error.message, 'scheduling.resource_not_working');
+      throw fromDatabaseError(error, 'scheduling.resource_not_working');
     }
     if (error.code === '23503') {
       throw new DomainError('No such resource here.', 'scheduling.resource_not_found');
@@ -137,7 +137,7 @@ export async function setWorkItemResources(
     if (error.code === '42501') {
       throw new DomainError('You cannot change who is on that work item.', 'scheduling.forbidden');
     }
-    throw new DomainError(error.message, 'scheduling.failed');
+    throw fromDatabaseError(error, 'scheduling.failed');
   }
 }
 
@@ -156,6 +156,6 @@ export async function unscheduleWorkItem(
     if (error.code === '42501') {
       throw new DomainError('You cannot schedule that work item.', 'scheduling.forbidden');
     }
-    throw new DomainError(error.message, 'scheduling.failed');
+    throw fromDatabaseError(error, 'scheduling.failed');
   }
 }

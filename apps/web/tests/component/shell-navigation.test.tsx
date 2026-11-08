@@ -70,7 +70,7 @@ describe('Administration inside GildOps', () => {
     const { rerender } = render(view(withAdministration(business(), org, new Set(PLATFORM_CAPABILITIES))));
     expect(screen.getAllByRole('link', { name: 'Administration' })).toHaveLength(1);
     expect(screen.getByRole('link', { name: 'Administration' })).toHaveAttribute('href', `/platform`);
-    expect(screen.queryByRole('link', { name: 'Providers' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Vendors' })).not.toBeInTheDocument();
     rerender(view(business()));
     expect(screen.queryByRole('link', { name: 'Administration' })).not.toBeInTheDocument();
   });
@@ -81,14 +81,14 @@ describe('Administration inside GildOps', () => {
     render(view(withAdministration(business(), org, new Set(PLATFORM_CAPABILITIES))));
     expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', `${base}/home`);
     expect(screen.queryByRole('link', { name: 'CRM' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Providers' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Vendors' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByRole('link', { name: 'Meters' })).not.toBeInTheDocument();
     const expand = screen.getByRole('button', { name: 'Expand Product Registry' });
     expand.focus();
     await user.keyboard('{Enter}');
     expect(screen.getByRole('link', { name: 'Meters' })).toHaveAttribute('href', `/platform/catalog/meters`);
     await user.click(screen.getByRole('button', { name: 'Collapse Infrastructure' }));
-    expect(screen.queryByRole('link', { name: 'Providers' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Vendors' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Plans/ })).not.toBeInTheDocument();
   });
 
@@ -154,8 +154,8 @@ describe('contextual sidebar rendering', () => {
     const sections = projectShell({ organizationId: org, enabledModules: new Set(['reception']), featureAvailability: new Set(AREAS.flatMap(area => area.featureKeys ?? [])), capabilities: new Set(ALL_CAPABILITIES) });
     route.pathname = `/organizations/${org}/crm/configuration/relationship-stages`;
     render(<TooltipProvider><SidebarProvider><OrgNav sections={sections} organizationId={org} /></SidebarProvider></TooltipProvider>);
-    expect(screen.queryByRole('link', { name: 'Configuration' })).not.toBeInTheDocument();
-    const heading = screen.getByRole('button', { name: 'Configuration' });
+    expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument();
+    const heading = screen.getByRole('button', { name: 'Settings' });
     expect(heading).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('link', { name: 'Relationship stages' })).toHaveAttribute('aria-current', 'page');
     for (const name of ['Relationship stages', 'Opportunity stages', 'Customer fields']) expect(screen.getByRole('link', { name }).querySelector('svg')).toBeNull();
@@ -331,7 +331,7 @@ describe('workspace header controls', () => {
     expect(within(row).queryByRole('navigation')).toBeNull();
     expect(screen.queryByRole('navigation', { name: 'Marketing destinations' })).toBeNull();
     for (const destination of ['Campaigns', 'Audiences', 'Leads', 'Performance']) expect(within(row).queryByRole('link', { name: destination })).toBeNull();
-    expect(within(row).getAllByRole('button').map((button) => button.textContent)).toEqual(['Create', 'Activity', 'Insights', 'Configure']);
+    expect(within(row).getAllByRole('button').map((button) => button.textContent)).toEqual(['Create', 'Activity', 'Insights', 'Settings']);
   });
 
   it('publishes one collection heading without repeating its global-header identity', () => {

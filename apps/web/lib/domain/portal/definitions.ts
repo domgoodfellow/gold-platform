@@ -1,5 +1,5 @@
 import type { Db, Database } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { parsePortalContent, type PortalContent } from './composition';
 
 export type PortalDefinition = Database['public']['Tables']['portal_definitions']['Row'];
@@ -20,19 +20,19 @@ export async function portalEditorState(db: Db, organizationId: string) {
 }
 export async function savePortalDraft(db: Db, organizationId: string, version: number, content: PortalContent) {
   const { error } = await db.rpc('save_portal_draft', { p_organization_id: organizationId, p_expected_version: version, p_content: parsePortalContent(content) });
-  if (error) throw new DomainError(error.message, 'portal.save_failed');
+  if (error) throw fromDatabaseError(error, 'portal.save_failed');
 }
 export async function submitPortalDraft(db: Db, organizationId: string, version: number) {
   const { error } = await db.rpc('submit_portal_draft', { p_organization_id: organizationId, p_expected_version: version });
-  if (error) throw new DomainError(error.message, 'portal.review_failed');
+  if (error) throw fromDatabaseError(error, 'portal.review_failed');
 }
 export async function publishPortalDraft(db: Db, organizationId: string, version: number) {
   const { error } = await db.rpc('publish_portal_draft', { p_organization_id: organizationId, p_expected_version: version });
-  if (error) throw new DomainError(error.message, 'portal.publish_failed');
+  if (error) throw fromDatabaseError(error, 'portal.publish_failed');
 }
 export async function unpublishPortal(db: Db, organizationId: string, version: number) {
   const { error } = await db.rpc('unpublish_portal', { p_organization_id: organizationId, p_expected_version: version });
-  if (error) throw new DomainError(error.message, 'portal.unpublish_failed');
+  if (error) throw fromDatabaseError(error, 'portal.unpublish_failed');
 }
 export async function publishedPortalContent(db: Db): Promise<PortalContent | null> {
   const { data, error } = await db.rpc('portal_published_composition');

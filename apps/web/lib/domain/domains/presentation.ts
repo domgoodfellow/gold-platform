@@ -40,4 +40,4 @@ export const CONFLICT_MESSAGE =
   'That domain is already connected elsewhere. If it is yours, remove it where it is connected first.';
 
 export const PROVIDER_UNAVAILABLE_MESSAGE =
-  'Custom domains cannot be connected on this deployment yet. Nothing is wrong with your domain or your DNS.';
+  'Connecting your own domain isn’t available yet. Nothing is wrong with your domain or your DNS.';

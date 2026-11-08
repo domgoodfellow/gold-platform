@@ -318,7 +318,7 @@ function RouteEditor({ organizationId, route, numbers, members, routes, onDone }
           <PhoneInput id="route-external" type="tel" className="mt-1" placeholder="+14165550142" value={destinationExternalNumber}
             onChange={(event) => setDestinationExternalNumber(event.target.value)} />
         </div>
-      ) : destinationType === 'ai_receptionist' ? <Hint>Requires an enabled receptionist, assigned runtime and available budget below. If unavailable, this route uses its fallback.</Hint> : <SelectField aria-label="Destination route" value={destinationRouteId} onValueChange={(next) => setDestinationRouteId(next)} options={[{ value: '', label: 'Choose route' }, ...routes.filter(candidate => candidate.id !== route?.id).map((candidate) => ({ value: candidate.id, label: candidate.name }))]} />}
+      ) : destinationType === 'ai_receptionist' ? <Hint>Needs a receptionist that is on and budget below. Otherwise this route uses its fallback.</Hint> : <SelectField aria-label="Destination route" value={destinationRouteId} onValueChange={(next) => setDestinationRouteId(next)} options={[{ value: '', label: 'Choose route' }, ...routes.filter(candidate => candidate.id !== route?.id).map((candidate) => ({ value: candidate.id, label: candidate.name }))]} />}
 
       <div>
         <FieldLabel htmlFor="route-fallback">If unanswered</FieldLabel>

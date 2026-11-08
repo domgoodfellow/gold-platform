@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { listTimeCommitted, type CommitmentGroup } from '@/lib/domain/reporting/commitment';
 import { listWorkMarkedComplete, type CompletionGroup } from '@/lib/domain/reporting/completion';
@@ -111,7 +111,7 @@ export async function listReportDefinitions(
     .order('name', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'reports.list_failed');
+    throw fromDatabaseError(error, 'reports.list_failed');
   }
 
   return (data ?? []).map(rowToDefinition);
@@ -129,7 +129,7 @@ export async function getReportDefinition(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'reports.read_failed');
+    throw fromDatabaseError(error, 'reports.read_failed');
   }
 
   // Null covers "no such report" and "not shared with your role" indistinguishably, because the
@@ -198,7 +198,7 @@ export async function saveReportDefinition(
         'reports.name_taken',
       );
     }
-    throw new DomainError(error.message, 'reports.save_failed');
+    throw fromDatabaseError(error, 'reports.save_failed');
   }
 
   return data.id;
@@ -216,7 +216,7 @@ export async function renameReportDefinition(
     .eq('id', input.id);
 
   if (error) {
-    throw new DomainError(error.message, 'reports.rename_failed');
+    throw fromDatabaseError(error, 'reports.rename_failed');
   }
 }
 
@@ -226,7 +226,7 @@ export async function deleteReportDefinition(db: Db, input: { id: string }): Pro
   const { error } = await db.from('report_definitions').delete().eq('id', input.id);
 
   if (error) {
-    throw new DomainError(error.message, 'reports.delete_failed');
+    throw fromDatabaseError(error, 'reports.delete_failed');
   }
 }
 
@@ -242,7 +242,7 @@ export async function listReportRoles(
     .eq('report_id', input.reportId);
 
   if (error) {
-    throw new DomainError(error.message, 'reports.roles_failed');
+    throw fromDatabaseError(error, 'reports.roles_failed');
   }
 
   return (data ?? []).map((row) => row.role_id);
@@ -284,7 +284,7 @@ export async function setReportRoles(
     .select('id');
 
   if (cleared) {
-    throw new DomainError(cleared.message, 'reports.share_failed');
+    throw fromDatabaseError(cleared, 'reports.share_failed');
   }
 
   if (before.length > 0 && (removed ?? []).length === 0) {
@@ -310,7 +310,7 @@ export async function setReportRoles(
   );
 
   if (error) {
-    throw new DomainError(error.message, 'reports.share_failed');
+    throw fromDatabaseError(error, 'reports.share_failed');
   }
 }
 

@@ -1,6 +1,6 @@
 import type { ConnectedAccount } from '@/lib/adapters/payments';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -29,7 +29,7 @@ export async function getPaymentAccount(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'payment_accounts.read_failed');
+    throw fromDatabaseError(error, 'payment_accounts.read_failed');
   }
   if (!data) return null;
 
@@ -56,7 +56,7 @@ export async function connectPaymentAccount(
   const accountId = input.account.accountId.trim();
   if (accountId.length === 0) {
     throw new DomainError(
-      'The payment provider did not name an account.',
+      'The payment service did not name an account.',
       'payment_accounts.account_missing',
     );
   }
@@ -81,7 +81,7 @@ export async function connectPaymentAccount(
         'payment_accounts.forbidden',
       );
     }
-    throw new DomainError(error.message, 'payment_accounts.connect_failed');
+    throw fromDatabaseError(error, 'payment_accounts.connect_failed');
   }
 }
 
@@ -112,7 +112,7 @@ export async function disconnectPaymentAccount(
         'payment_accounts.forbidden',
       );
     }
-    throw new DomainError(error.message, 'payment_accounts.disconnect_failed');
+    throw fromDatabaseError(error, 'payment_accounts.disconnect_failed');
   }
 
   if ((data ?? []).length === 0) {

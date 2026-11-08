@@ -26,10 +26,10 @@ export default async function ConfigureTwilioPage({ params, searchParams }: Page
   return (
     <AppPage>
       <PageHeader
-        title={account ? `Configure ${account.label}` : 'Add a Twilio account'}
+        title={account ? `Edit ${account.label}` : 'Add a Twilio account'}
         crumbs={[
           ...platformAncestry(goldId, 'providers'),
-          { label: 'Providers', href: platformHref(goldId, 'providers') },
+          { label: 'Vendors', href: platformHref(goldId, 'providers') },
           { label: 'Twilio', href: platformHref(goldId, `providers/${key}`) },
         ]}
       />

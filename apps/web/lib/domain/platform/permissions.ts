@@ -29,7 +29,7 @@ export const PLATFORM_CAPABILITY_LABELS: Record<PlatformCapability, string> = {
   'platform.organizations': 'Organizations, provisioning and support',
   'platform.catalogue': 'Products, plans, meters and connectors',
   'platform.commercial': 'Pricing and billing',
-  'platform.providers': 'Provider accounts and bindings',
+  'platform.providers': 'Vendor accounts and bindings',
   'platform.health': 'Overview and failures',
 };
 

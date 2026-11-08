@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
 import {
   resolveCustom,
@@ -57,7 +57,7 @@ export async function listAssets(
     .limit(input.limit ?? LIST_LIMIT);
 
   if (error) {
-    throw new DomainError(error.message, 'assets.list_failed');
+    throw fromDatabaseError(error, 'assets.list_failed');
   }
 
   return counted(
@@ -96,7 +96,7 @@ export async function getAsset(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'assets.get_failed');
+    throw fromDatabaseError(error, 'assets.get_failed');
   }
   if (!data) return null;
 
@@ -171,9 +171,9 @@ export async function createAsset(
       throw new DomainError('You cannot add assets here.', 'assets.forbidden');
     }
     if (error.code === '23514') {
-      throw new DomainError(error.message, 'assets.custom_invalid');
+      throw fromDatabaseError(error, 'assets.custom_invalid');
     }
-    throw new DomainError(error.message, 'assets.create_failed');
+    throw fromDatabaseError(error, 'assets.create_failed');
   }
 
   return data;

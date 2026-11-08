@@ -22,6 +22,6 @@ export async function configurationSummary(db: Db, organization: Organization): 
     account: 'Personal identity across all your organizations',
     access: `${members.count ?? 'Unknown'} members · Your role: ${organization.role}`,
     connections: `${connections.count ?? 'Unknown'} active connections${attention.count ? ` · ${attention.count} need attention` : ''}`,
-    plan: plan ? `${plan.label} · View subscription and recorded usage` : 'No current catalogue plan assignment · View commercial status',
+    plan: plan ? `${plan.label} · View plan and usage` : 'No plan yet · View plan',
   };
 }

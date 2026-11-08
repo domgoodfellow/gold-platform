@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * The wanted-versus-paid entitlement rule, built: what a business has bought, and what it is entitled to use right now — the
@@ -38,7 +38,7 @@ export async function listOrganizationTerms(
     .eq('organization_id', input.organizationId)
     .order('period_start', { ascending: false });
 
-  if (error) throw new DomainError(error.message, 'commercial.terms_failed');
+  if (error) throw fromDatabaseError(error, 'commercial.terms_failed');
 
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -63,7 +63,7 @@ export async function moduleCommercialState(
     p_organization_id: input.organizationId,
   });
 
-  if (error) throw new DomainError(error.message, 'commercial.module_state_failed');
+  if (error) throw fromDatabaseError(error, 'commercial.module_state_failed');
 
   return (data ?? []).map((row) => ({
     moduleKey: row.module_key,
@@ -107,7 +107,7 @@ export async function recordCommercialTerm(db: Db, input: RecordTermInput): Prom
         'commercial.term_overlap',
       );
     }
-    throw new DomainError(error.message, 'commercial.record_term_failed');
+    throw fromDatabaseError(error, 'commercial.record_term_failed');
   }
 
   return data as string;

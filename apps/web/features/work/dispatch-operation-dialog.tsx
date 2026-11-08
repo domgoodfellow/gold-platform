@@ -14,7 +14,7 @@ export function DispatchOperationDialog({ operation, ...props }: ComponentProps<
   return <>
     <Button type="button" tone="secondary" size="small" onClick={() => { setRevision(value => value + 1); setOpen(true); }}>{title}</Button>
     <GuardedDialog open={open} onOpenChange={setOpen}>
-      <StepHeader title={title} description={operation === 'assign' ? 'Change participants while keeping the scheduled time.' : `Times in ${props.timezone}. Checking is advisory; saving checks availability again.`}/>
+      <StepHeader title={title} description={operation === 'assign' ? 'Change participants while keeping the scheduled time.' : `Times in ${props.timezone}. Saving checks availability again.`}/>
       <DialogBody>
         {operation === 'assign'
           ? <AssignResourcesForm key={revision} {...props} onSaved={() => setOpen(false)}/>

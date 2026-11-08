@@ -30,7 +30,7 @@ export async function loadHome(db: Db, organization: Organization, rawQuery: Rec
   const period = homePeriod(date, organization.timezone, query.when), now = new Date().toISOString();
   const c: ReadContext = { db, organizationId, membershipId, resourceId: resource.data?.id ?? null, schedulable, date, timezone: organization.timezone, now, query, period, capabilities, features, assistantEntitled: enabled.has('assistant') };
   const jobs: [HomeSource, () => Promise<HomeSourceData>][] = [['CRM', () => readCrm(c)]];
-  jobs.push(['Work', () => { if (workShape.failed || resource.error) throw new DomainError('Work prerequisites unavailable.', 'home.work_unavailable'); return readWork(c); }]);
+  jobs.push(['Work', () => { if (workShape.failed || resource.error) throw new DomainError('Work could not load.', 'home.work_unavailable'); return readWork(c); }]);
   if (available('comms')) jobs.push(['Communications', () => readCommunications(c)]);
   if (available('marketing')) jobs.push(['Marketing', () => readMarketingHome(c)]);
   if (available('support')) jobs.push(['Support', () => readSupportHome(c)]);
@@ -40,6 +40,8 @@ export async function loadHome(db: Db, organization: Organization, rawQuery: Rec
   if (capabilities.has('organization.manage')) jobs.push(['Studio', () => readStudioHome(c)]);
   const results = await Promise.all(jobs.map(([source, read]) => isolateSource(source, read)));
   // Metadata only: no notes, message previews, transcripts, money or Agent conversations in the shared event feed.
+  // Plain titles for the event codes Home lists; a code is never shown as stored.
+  const ACTIVITY_TITLE: Record<string, string> = { 'customer.created': 'Contact added', 'customer.updated': 'Contact changed', 'opportunity.created': 'Opportunity added', 'opportunity.stage_changed': 'Opportunity moved', 'follow_up.created': 'Follow-up added', 'follow_up.completed': 'Follow-up done', 'work_item.created': 'Work added', 'work_item.scheduled': 'Work scheduled', 'work_item.unscheduled': 'Work unscheduled', 'work_item.assigned': 'Work assigned', 'work_item.status_changed': 'Work moved to a new stage', 'invoice.issued': 'Invoice issued', 'payment.recorded': 'Payment recorded', 'marketing_campaign.created': 'Campaign added', 'marketing_campaign.updated': 'Campaign changed', 'marketing_inquiry.reviewed': 'Inquiry reviewed', 'marketing_inquiry.handed_off': 'Inquiry handed off' };
   const eventGroups: [HomeSource, string[], (kind: string, id: string) => string][] = [
     ['CRM', ['customer.created', 'customer.updated', 'opportunity.created', 'opportunity.stage_changed', 'follow_up.created', 'follow_up.completed'], (kind, id) => kind === 'customer' ? `/organizations/${organizationId}/crm/contacts/${id}` : kind === 'opportunity' ? `/organizations/${organizationId}/crm/opportunities/${id}` : `/organizations/${organizationId}/crm/tasks?selected=${id}&status=all`],
     ['Work', ['work_item.created', 'work_item.scheduled', 'work_item.unscheduled', 'work_item.assigned', 'work_item.status_changed'], (_, id) => `/organizations/${organizationId}/work/${id}`],
@@ -56,7 +58,7 @@ export async function loadHome(db: Db, organization: Organization, rawQuery: Rec
       result.data.health.push({ key: `${source}:activity-unavailable`, source, state: 'Activity unavailable', detail: 'The operational summary is available; recent activity could not be read.', href: areaHref(organizationId, source === 'CRM' ? 'sales' : source === 'Work' ? 'field' : source.toLowerCase()), warning: true });
       return;
     }
-    result.data.activity.push(...(events.data ?? []).map(e => ({ key: `${source}:event:${e.id}`, source, title: e.action.replaceAll('_', ' ').replace('.', ' · '), at: e.occurred_at, href: href(e.entity_type, e.entity_id), recordKey: `${e.entity_type === 'work_item' ? 'Work' : source}:${e.entity_type === 'work_item' ? 'work-item' : e.entity_type === 'follow_up' ? 'follow-up' : e.entity_type}:${e.entity_id}` })));
+    result.data.activity.push(...(events.data ?? []).map(e => ({ key: `${source}:event:${e.id}`, source, title: ACTIVITY_TITLE[e.action] ?? 'Activity', at: e.occurred_at, href: href(e.entity_type, e.entity_id), recordKey: `${e.entity_type === 'work_item' ? 'Work' : source}:${e.entity_type === 'work_item' ? 'work-item' : e.entity_type === 'follow_up' ? 'follow-up' : e.entity_type}:${e.entity_id}` })));
   }));
   assignSetupHealth(results, featureStates, capabilities);
   const priorities = ['scheduled', 'overdue-invoices', 'opportunities', 'cases', 'inbox', 'inquiries', 'failed-runs', 'missed', 'active-work'];
@@ -72,7 +74,7 @@ export async function loadHome(db: Db, organization: Organization, rawQuery: Rec
   if (available('support')) add('case', 'support.case.create', 'New case', `${base}/support/cases?create=1`, 'Open Cases and create a problem or request');
   if (available('marketing')) add('campaign', 'marketing.manage', 'New campaign', `${base}/marketing/campaigns?create=1`, 'Open Campaigns and create a draft');
   if (available('finance-invoices')) add('invoice', 'invoice.issue', 'New invoice', `${base}/finance/invoices?create=1`, 'Open Finance and issue an invoice');
-  if (available('comms-inbox')) add('message', 'message.send', 'Compose message', `${base}/comms/inbox/new`, 'Open Inbox and compose through the configured channel');
+  if (available('comms-inbox')) add('message', 'message.send', 'Compose message', `${base}/comms/inbox/new`, 'Open Inbox and write a message');
   if (available('automations')) add('rule', 'automation.manage', 'New automation', `${base}/automations/rules?create=1`, 'Create an automation');
   add('form', 'organization.manage', 'New form', `${base}/studio/forms?create=1`, 'Open Forms and create a draft');
   const search = [{ label: 'CRM', href: `${base}/crm/search` }, { label: 'Work', href: `${base}/work` }, ...results.filter(r => !['CRM', 'Work', 'Studio', 'AI', 'Finance', 'Automations'].includes(r.source)).map(r => ({ label: r.source, href: r.source === 'Support' ? `${base}/support/cases` : r.source === 'Marketing' ? `${base}/marketing/leads` : available('comms-inbox') ? `${base}/comms/inbox` : `${base}/calls` }))];
@@ -95,7 +97,7 @@ export function assignSetupHealth(results: HomeResult[], features: readonly Pick
       if (target ? !target.permission.some(permission => capabilities.has(permission)) : !capabilities.has('organization.manage')) continue;
       const owner = WORKSPACES.find(w => w.key === target?.workspace)?.label ?? result.source;
       const destination = results.find(r => r.source === owner);
-      if (destination?.state === 'ready') destination.data.health.push({ key: `feature:${f.featureKey}`, source: owner, state: 'Needs setup', detail: f.reason ?? f.featureKey.replaceAll('_', ' '), href: f.setupHref, warning: true });
+      if (destination?.state === 'ready') destination.data.health.push({ key: `feature:${f.featureKey}`, source: owner, state: 'Needs setup', detail: f.reason ?? 'This feature needs setting up.', href: f.setupHref, warning: true });
     }
   }
   for (const result of results) if (result.state === 'ready') {

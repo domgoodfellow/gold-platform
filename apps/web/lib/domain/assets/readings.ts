@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -44,7 +44,7 @@ export async function listAssetReadings(
     .limit(input.limit ?? 20);
 
   if (error) {
-    throw new DomainError(error.message, 'assets.readings_failed');
+    throw fromDatabaseError(error, 'assets.readings_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -84,7 +84,7 @@ export async function listLatestAssetReadings(
     .order('read_at', { ascending: false });
 
   if (error) {
-    throw new DomainError(error.message, 'assets.readings_failed');
+    throw fromDatabaseError(error, 'assets.readings_failed');
   }
 
   const latest = new Map<string, AssetReading>();
@@ -157,6 +157,6 @@ export async function recordAssetReading(
     if (error.code === '23503') {
       throw new DomainError('No such asset here.', 'assets.not_found');
     }
-    throw new DomainError(error.message, 'assets.reading_failed');
+    throw fromDatabaseError(error, 'assets.reading_failed');
   }
 }

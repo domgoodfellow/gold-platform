@@ -6,7 +6,7 @@ import { supabaseFileStore } from '@/lib/adapters/storage/supabase-file-store';
 import { redirect } from 'next/navigation';
 import { CONTACT_LIFECYCLES, type ContactLifecycle } from '@/lib/domain/customers/classification';
 import { getDb } from '@/lib/db/server';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { uploadImportFile, attachLibraryFileForImport, getResourceSync } from '@/lib/domain/integrations/resources';
 import {
   createMapping,
@@ -95,7 +95,7 @@ export async function createMappingAndStageAction(formData: FormData): Promise<v
     });
 
     const sync = await db.rpc('configure_crm_import_sync', { p_organization_id: organizationId, p_mapping_id: mappingId, p_enabled: formData.get('mode') === 'sync' });
-    if (sync.error) throw new DomainError(sync.error.message, 'integrations.sync_configuration_failed');
+    if (sync.error) throw fromDatabaseError(sync.error, 'integrations.sync_configuration_failed');
     runId = await beginImportRun(db, { organizationId, mappingId });
 
     await resumeImportStaging(db, { organizationId, runId });
@@ -146,6 +146,6 @@ export async function disableCrmSyncAction(formData: FormData): Promise<void> {
   const organizationId = String(formData.get('organizationId') ?? '');
   const { db } = await requireOrganization(organizationId);
   const result = await db.rpc('configure_crm_import_sync', { p_organization_id: organizationId, p_mapping_id: String(formData.get('mappingId') ?? ''), p_enabled: false });
-  if (result.error) throw new DomainError(result.error.message, 'integrations.sync_configuration_failed');
+  if (result.error) throw fromDatabaseError(result.error, 'integrations.sync_configuration_failed');
   redirect(`/organizations/${organizationId}/library/sources/${String(formData.get('resourceId') ?? '')}`);
 }

@@ -1,6 +1,6 @@
 import { readAutomationCollection } from './monitoring';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 import type { AutomationRule } from '@/lib/domain/automation/rules';
 
@@ -96,10 +96,7 @@ export async function reviewAutomationRules(
   ]);
 
   if (transitions.error) {
-    throw new DomainError(
-      transitions.error.message,
-      'automations.review_failed',
-    );
+    throw fromDatabaseError(transitions.error, 'automations.review_failed');
   }
 
   const reachable = new Set(
@@ -127,7 +124,7 @@ export async function reviewAutomationRules(
     if (rule.actions.length === 0) {
       say(
         rule.id,
-        'This rule has no actions. Configure an action before expecting a business operation.',
+        'This rule has no actions, so it does nothing yet.',
       );
     }
 
@@ -217,7 +214,7 @@ export async function reviewAutomationRules(
       if (!units.counters.size)
         say(
           rule.id,
-          'No Asset counter readings are recorded. Matching readings in the configured unit are required.',
+          'No asset readings yet. The rule needs readings in its unit.',
         );
       if (units.counters.size > 0 && !units.counters.has(rule.triggerUnit)) {
         say(

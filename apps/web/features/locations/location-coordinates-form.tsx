@@ -104,7 +104,7 @@ export function LocationCoordinatesForm({
         </Button>
       ) : (
         <span className="text-xs text-subtle">
-          This deployment cannot look an address up, so these are typed in.
+          Address lookup isn’t available yet, so type these in.
         </span>
       )}
 

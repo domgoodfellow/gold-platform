@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { bookableSlots, type BookableType, type Slot } from '@/lib/domain/booking/booking';
 import {
   describeBookingPolicyReason,
@@ -34,7 +34,7 @@ export type BookingChangeOptions = {
 
 export async function getBookingChangeOptions(db: Db, input: { workItemId: string }): Promise<BookingChangeOptions | null> {
   const { data, error } = await db.rpc('booking_change_options', { p_work_item_id: input.workItemId });
-  if (error) throw new DomainError(error.message, 'booking.change_options_failed');
+  if (error) throw fromDatabaseError(error, 'booking.change_options_failed');
   return (data as BookingChangeOptions | null) ?? null;
 }
 
@@ -48,7 +48,7 @@ export async function cancelBooking(db: Db, input: { workItemId: string }): Prom
   if (!error) return;
   if (error.code === 'GD017') throw refusal(error.message) ?? new DomainError('That cannot be changed online.', 'booking.change_refused');
   if (error.code === '42501') throw new DomainError('That booking is not yours to change.', 'booking.forbidden');
-  throw new DomainError(error.message, 'booking.cancel_failed');
+  throw fromDatabaseError(error, 'booking.cancel_failed');
 }
 
 /** The times this booking could move to on one day: the public slots, with its own time set aside. */
@@ -87,7 +87,7 @@ export async function rescheduleBooking(
     .eq('organization_id', input.organizationId)
     .eq('id', input.workItemId)
     .maybeSingle();
-  if (itemError) throw new DomainError(itemError.message, 'booking.reschedule_failed');
+  if (itemError) throw fromDatabaseError(itemError, 'booking.reschedule_failed');
   const window = parseWindow(item?.scheduled_during as string | null | undefined);
   if (!item || !window) throw new DomainError('That booking is not yours to change.', 'booking.forbidden');
 
@@ -141,6 +141,6 @@ export async function rescheduleBooking(
     if (error.code === 'GD017') throw refusal(error.message) ?? new DomainError('That cannot be changed online.', 'booking.change_refused');
     if (error.code === '23P01' || error.code === 'GD013' || error.code === 'GD012' || error.code === 'GD014') throw gone();
     if (error.code === '42501') throw new DomainError('That booking is not yours to change.', 'booking.forbidden');
-    throw new DomainError(error.message, 'booking.reschedule_failed');
+    throw fromDatabaseError(error, 'booking.reschedule_failed');
   }
 }

@@ -93,7 +93,7 @@ export function MappingEditor({
         </div>
         <Hint className="block px-4 py-3">
           Ignored columns are not written to contacts; they stay with the import&apos;s source data.
-          Worksheet imports match stable provider row IDs within the selected resource. For CSV updates, supply a source_record_id column; otherwise matching uses email when selected, or unchanged row content within the same filename. Historical contact dates do not create call activity.
+          For CSV updates, include a source_record_id column.
         </Hint>
       </Card>
 

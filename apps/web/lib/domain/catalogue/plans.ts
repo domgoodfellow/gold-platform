@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * Plans and Add-ons: reusable packaging over the canonical catalogue (`catalogue.ts`).
@@ -101,19 +101,19 @@ export async function listPlans(db: Db, input: { kind?: PlanKind } = {}): Promis
   let query = db.from('platform_plans').select(PLAN_COLUMNS).order('display_order');
   if (input.kind) query = query.eq('kind', input.kind);
   const { data, error } = await query;
-  if (error) throw new DomainError(error.message, 'plans.list_failed');
+  if (error) throw fromDatabaseError(error, 'plans.list_failed');
   return (data ?? []).map(toPlan);
 }
 
 export async function getPlan(db: Db, key: string): Promise<Plan | null> {
   const { data, error } = await db.from('platform_plans').select(PLAN_COLUMNS).eq('key', key).maybeSingle();
-  if (error) throw new DomainError(error.message, 'plans.get_failed');
+  if (error) throw fromDatabaseError(error, 'plans.get_failed');
   return data ? toPlan(data) : null;
 }
 
 export async function getPlanById(db: Db, planId: string): Promise<Plan | null> {
   const { data, error } = await db.from('platform_plans').select(PLAN_COLUMNS).eq('id', planId).maybeSingle();
-  if (error) throw new DomainError(error.message, 'plans.get_failed');
+  if (error) throw fromDatabaseError(error, 'plans.get_failed');
   return data ? toPlan(data) : null;
 }
 
@@ -172,7 +172,7 @@ export async function listPlanProductGrants(db: Db, planId: string): Promise<str
     .from('platform_plan_product_grants')
     .select('product:platform_catalog_products!inner(key)')
     .eq('plan_id', planId);
-  if (error) throw new DomainError(error.message, 'plans.product_grants_failed');
+  if (error) throw fromDatabaseError(error, 'plans.product_grants_failed');
   return (data ?? []).map((row) => (row.product as unknown as { key: string }).key);
 }
 
@@ -185,7 +185,7 @@ export async function listPlanProductGrantsForPlans(db: Db, planIds: string[]): 
     .from('platform_plan_product_grants')
     .select('plan_id, product:platform_catalog_products!inner(key)')
     .in('plan_id', [...new Set(planIds)]);
-  if (error) throw new DomainError(error.message, 'plans.product_grants_failed');
+  if (error) throw fromDatabaseError(error, 'plans.product_grants_failed');
   return (data ?? []).map((row) => ({
     planId: row.plan_id,
     productKey: (row.product as unknown as { key: string }).key,
@@ -197,7 +197,7 @@ export async function listPlanModuleGrants(db: Db, planId: string): Promise<stri
     .from('platform_plan_module_grants')
     .select('module_id')
     .eq('plan_id', planId);
-  if (error) throw new DomainError(error.message, 'plans.module_grants_failed');
+  if (error) throw fromDatabaseError(error, 'plans.module_grants_failed');
   return (data ?? []).map((row) => row.module_id);
 }
 
@@ -208,14 +208,14 @@ export async function listPlanFeatureGrants(db: Db, planId: string): Promise<Pla
     .from('platform_plan_feature_grants')
     .select('feature_id, included')
     .eq('plan_id', planId);
-  if (error) throw new DomainError(error.message, 'plans.feature_grants_failed');
+  if (error) throw fromDatabaseError(error, 'plans.feature_grants_failed');
   return (data ?? []).map((row) => ({ featureId: row.feature_id, included: row.included }));
 }
 
 /** Every Feature this Plan currently entitles, resolved server-side (override > module grant > product grant, `available` only). */
 export async function planEntitledFeatureIds(db: Db, planId: string): Promise<Set<string>> {
   const { data, error } = await db.rpc('plan_entitled_features', { p_plan_id: planId });
-  if (error) throw new DomainError(error.message, 'plans.entitled_features_failed');
+  if (error) throw fromDatabaseError(error, 'plans.entitled_features_failed');
   return new Set((data ?? []).map((row: { feature_id: string }) => row.feature_id));
 }
 
@@ -225,7 +225,7 @@ export type PlanEntitledFeature = { planId: string; featureId: string };
 export async function planEntitledFeatureIdsForPlans(db: Db, planIds: string[]): Promise<PlanEntitledFeature[]> {
   if (planIds.length === 0) return [];
   const { data, error } = await db.rpc('plan_entitled_features_bulk', { p_plan_ids: [...new Set(planIds)] });
-  if (error) throw new DomainError(error.message, 'plans.entitled_features_failed');
+  if (error) throw fromDatabaseError(error, 'plans.entitled_features_failed');
   return (data ?? []).map((row: { plan_id: string; feature_id: string }) => ({
     planId: row.plan_id,
     featureId: row.feature_id,
@@ -311,7 +311,7 @@ export async function listPlanQuotas(db: Db, planId: string): Promise<PlanQuota[
     .select('id, plan_id, allowance_key, label, unit, included_quantity, period, hard_limit, overage_policy, service_class, meter_id, display_order, allowance_type, reset_semantics, overage_behavior')
     .eq('plan_id', planId)
     .order('display_order');
-  if (error) throw new DomainError(error.message, 'plans.quotas_failed');
+  if (error) throw fromDatabaseError(error, 'plans.quotas_failed');
   return (data ?? []).map(toQuota);
 }
 
@@ -390,7 +390,7 @@ export async function listPlanPrices(db: Db, planId: string): Promise<PlanPrice[
     .select('id, plan_id, currency, amount_minor, billing_interval, effective_from, effective_to, approval_state, source, note')
     .eq('plan_id', planId)
     .order('effective_from', { ascending: false });
-  if (error) throw new DomainError(error.message, 'plans.prices_failed');
+  if (error) throw fromDatabaseError(error, 'plans.prices_failed');
   return (data ?? []).map(toPrice);
 }
 
@@ -445,7 +445,7 @@ export async function listPlanOverageRates(db: Db, planId: string): Promise<Plan
   const { data, error } = await db.from('platform_retail_rates')
     .select('id,plan_id,meter_id,currency,unit_amount_micros,effective_from,effective_to,source')
     .eq('plan_id', planId).is('organization_id', null).order('effective_from', { ascending: false });
-  if (error) throw new DomainError(error.message, 'plans.overage_rates_failed');
+  if (error) throw fromDatabaseError(error, 'plans.overage_rates_failed');
   return (data ?? []).map((row) => ({ id: row.id, planId: row.plan_id!, meterId: row.meter_id, currency: row.currency, unitAmountMicros: Number(row.unit_amount_micros), effectiveFrom: row.effective_from, effectiveTo: row.effective_to, source: row.source }));
 }
 
@@ -469,13 +469,13 @@ export async function recordPlanOverageRate(db: Db, input: { planId: string; met
 
 export async function currentPlanMarginPolicy(db: Db, planId: string, currency: string): Promise<PlanMarginPolicy | null> {
   const { data, error } = await db.from('platform_plan_margin_policies').select('target_margin,warning_margin,hard_floor_margin,currency,effective_from').eq('plan_id', planId).eq('currency', currency).lte('effective_from', new Date().toISOString()).order('effective_from', { ascending: false }).limit(1).maybeSingle();
-  if (error) throw new DomainError(error.message, 'plans.margin_policy_failed');
+  if (error) throw fromDatabaseError(error, 'plans.margin_policy_failed');
   return data ? { targetMargin: Number(data.target_margin), warningMargin: Number(data.warning_margin), hardFloorMargin: Number(data.hard_floor_margin), currency: data.currency, effectiveFrom: data.effective_from } : null;
 }
 
 export async function listPlanUtilizationAssumptions(db: Db, planId: string): Promise<PlanUtilizationAssumption[]> {
   const { data, error } = await db.from('platform_plan_utilization_assumptions').select('scenario,allowance_key,utilization,effective_from').eq('plan_id', planId).lte('effective_from', new Date().toISOString()).order('effective_from', { ascending: false });
-  if (error) throw new DomainError(error.message, 'plans.utilization_assumptions_failed');
+  if (error) throw fromDatabaseError(error, 'plans.utilization_assumptions_failed');
   const seen = new Set<string>();
   return (data ?? []).flatMap((row) => { const key = `${row.scenario}:${row.allowance_key}`; if (seen.has(key)) return []; seen.add(key); return [{ scenario: row.scenario as PlanUtilizationAssumption['scenario'], allowanceKey: row.allowance_key, utilization: Number(row.utilization), effectiveFrom: row.effective_from }]; });
 }
@@ -494,7 +494,7 @@ export async function recordPlanUtilizationAssumption(db: Db, input: { planId: s
 
 export async function listPlanAddonIds(db: Db, planId: string): Promise<string[]> {
   const { data, error } = await db.from('platform_plan_addons').select('addon_plan_id').eq('plan_id', planId);
-  if (error) throw new DomainError(error.message, 'plans.addons_failed');
+  if (error) throw fromDatabaseError(error, 'plans.addons_failed');
   return (data ?? []).map((row) => row.addon_plan_id);
 }
 

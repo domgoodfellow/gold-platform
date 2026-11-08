@@ -39,7 +39,7 @@ export function CustomerLocationMap({
       <div className="h-56 overflow-hidden rounded-md border border-border">
         {!mapStyleUrl ? (
           <EmptyState className="flex h-full items-center justify-center text-center">
-            Map rendering is not configured for this deployment.
+            Maps aren’t available yet.
           </EmptyState>
         ) : mapped.length === 0 ? (
           <EmptyState className="flex h-full items-center justify-center text-center">

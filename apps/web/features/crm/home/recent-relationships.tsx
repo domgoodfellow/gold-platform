@@ -16,7 +16,7 @@ function Row({row,base,timezone,showCompany}:{row:RelationshipRow;base:string;ti
   const type=TYPE[row.contactType]??TYPE.unspecified; const date=row.activity?.occurredAt??row.createdAt;
   return <EntityRow
     identity={<EntityIdentity icon={type.Icon} kind={type.label} name={row.name} href={`${base}/crm/contacts/${row.id}`} secondary={showCompany&&row.companyName?`${type.label} · ${row.companyName}`:type.label}/>}
-    status={row.lifecycle?<StatusSummary label={`${row.name} lifecycle`} items={[{label:'Lifecycle',value:classificationLabel(row.lifecycle)}]}/>:null}
+    status={row.lifecycle?<StatusSummary label={`${row.name} stage`} items={[{label:'Stage',value:classificationLabel(row.lifecycle)}]}/>:null}
     activity={<>{row.activity?relationshipActivityLabel(row.activity):<span className="text-muted">Added</span>}{row.nextTask?<span className="block text-muted">Next: {row.nextTask.title}</span>:null}</>}
     timestamp={date?<time className="tabular-nums" dateTime={date}>{new Intl.DateTimeFormat('en-CA',{timeZone:timezone,dateStyle:'medium'}).format(new Date(date))}</time>:null}/>;
 }

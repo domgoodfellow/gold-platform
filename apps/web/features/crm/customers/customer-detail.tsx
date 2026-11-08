@@ -134,7 +134,7 @@ export function CustomerDetail(props: {
     switch (currentView) {
       case 'opportunities': return props.opportunities;
       case 'discovery': return <DiscoverySnapshotSection organizationId={organizationId} customerId={customer.id} snapshot={props.discoverySnapshot} mayEdit={permissions.edit} role={role} />;
-      case 'configuration': return props.configurationRecommendation ? <ConfigurationRecommendationSection recommendation={props.configurationRecommendation} /> : <CompactEmptyState>No proposed configuration yet. It is drawn from the discovery answers.</CompactEmptyState>;
+      case 'configuration': return props.configurationRecommendation ? <ConfigurationRecommendationSection recommendation={props.configurationRecommendation} /> : <CompactEmptyState>No proposed setup yet. It comes from the answers on Discovery.</CompactEmptyState>;
       case 'commercial': return <CommercialProposalSection accessibleTenantIds={props.accessibleTenantIds} organizationId={organizationId} customerId={customer.id} proposals={props.commercialProposals} invites={props.proposalInvites} handoffsByProposalId={props.handoffsByProposalId} mayHandoff={props.mayHandoff} origin={props.origin} catalogItems={props.catalogItems} mayBuild={features.billing && permissions.priceManage} mayEdit={permissions.priceManage} role={role} currency={props.currency} invoicesByProposalId={props.invoicesByProposalId} invoicing={props.proposalInvoicing ?? null} />;
       case 'invoices': return <CustomerFinancialSummary organizationId={organizationId} invoices={props.invoices} timezone={timezone} />;
       case 'timeline': return <ActivityList timeline={props.timeline} timezone={timezone} />;

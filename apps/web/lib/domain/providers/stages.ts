@@ -64,7 +64,7 @@ export function providerStages(input: {
           : available === 0
             ? 'No service implemented'
             : runtimeApplicable && input.runtimeAssignments === 0
-              ? 'Not assigned to an AI capability'
+              ? 'Not assigned to an AI job'
               : null;
 
   return {
@@ -82,5 +82,5 @@ export const CREDENTIAL_LABEL: Record<ProviderCredentialState, string> = {
   stored: 'Stored, not verified',
   verified: 'Verified',
   failed: 'Failed verification',
-  deployment: 'Deployment credential',
+  deployment: 'GildOps’ own credential',
 };

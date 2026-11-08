@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from './actor';
 import { isCapability, type Capability } from './capabilities';
 
@@ -23,7 +23,7 @@ export async function listRoles(
     .order('created_at', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'roles.list_failed');
+    throw fromDatabaseError(error, 'roles.list_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -64,7 +64,7 @@ export async function createRole(
   const unknown = input.capabilities.filter((capability) => !isCapability(capability));
   if (unknown.length > 0) {
     throw new DomainError(
-      `Not a capability: ${unknown.join(', ')}.`,
+      `Not a permission: ${unknown.join(', ')}.`,
       'roles.capability_unknown',
     );
   }
@@ -84,7 +84,7 @@ export async function createRole(
     if (error.code === '42501') {
       throw new DomainError('You cannot manage roles here.', 'roles.forbidden');
     }
-    throw new DomainError(error.message, 'roles.create_failed');
+    throw fromDatabaseError(error, 'roles.create_failed');
   }
 
   return data;
@@ -119,7 +119,7 @@ export async function updateRoleCapabilities(
   const unknown = input.capabilities.filter((capability) => !isCapability(capability));
   if (unknown.length > 0) {
     throw new DomainError(
-      `Not a capability: ${unknown.join(', ')}.`,
+      `Not a permission: ${unknown.join(', ')}.`,
       'roles.capability_unknown',
     );
   }
@@ -145,7 +145,7 @@ export async function updateRoleCapabilities(
     if (error.code === '42501') {
       throw new DomainError('You cannot manage roles here.', 'roles.forbidden');
     }
-    throw new DomainError(error.message, 'roles.update_failed');
+    throw fromDatabaseError(error, 'roles.update_failed');
   }
 }
 
@@ -183,6 +183,6 @@ export async function assignRole(
     if (error.code === '23503') {
       throw new DomainError('No such role here.', 'roles.role_not_found');
     }
-    throw new DomainError(error.message, 'roles.assign_failed');
+    throw fromDatabaseError(error, 'roles.assign_failed');
   }
 }

@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 import { todayInZone, zonedDayRange, type Window } from '@/lib/domain/scheduling/window';
 
 /**
@@ -192,7 +192,7 @@ export async function getEffectiveBookingPolicy(
     .eq('id', input.typeId)
     .maybeSingle();
 
-  if (error) throw new DomainError(error.message, 'booking.policy_read_failed');
+  if (error) throw fromDatabaseError(error, 'booking.policy_read_failed');
   if (!data || data.booking_status_id === null) return null;
 
   return {

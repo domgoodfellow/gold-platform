@@ -108,7 +108,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<'/org
       ) : null}
       {mayConfigure ? (
         <ConfigureRegistrar
-          title="Work configuration"
+          title="Work settings"
           settingsHref={`/organizations/${organizationId}/work/configuration${selectedType ? `?type=${selectedType.id}` : ''}`}
         >
           <WorkConfiguration

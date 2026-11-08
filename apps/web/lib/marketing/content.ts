@@ -64,7 +64,7 @@ export const PRODUCTS: Product[] = [
     integrations: ['Twilio', 'Resend'],
     faq: [
       { question: 'Does this replace our phone system?', answer: 'GildOps places and receives calls through Twilio and logs every one against the customer it concerns, so you keep a number and gain the history that used to live only in someone’s head.' },
-      { question: 'Can we keep our existing pipeline stages?', answer: 'Pipeline stages are configured by your team, not fixed by GildOps — you set them to match how you actually sell.' },
+      { question: 'Can we keep our existing pipeline stages?', answer: 'Pipeline stages are set by your team, not fixed by GildOps — you set them to match how you actually sell.' },
       { question: 'Does the AI send messages on its own?', answer: 'No. AI can draft a reply or summarize a call; a person still decides what goes out.' },
     ],
   },
@@ -80,7 +80,7 @@ export const PRODUCTS: Product[] = [
     workflows: [
       { title: 'Jobs', body: 'Every job tracked from request to completion, with its own history.' },
       { title: 'Scheduling', body: 'One schedule your whole team sees, with no double-booking.' },
-      { title: 'Dispatch', body: 'Assign the right resource to the right job automatically.' },
+      { title: 'Dispatch', body: 'Assign the right resource to the right job.' },
       { title: 'Quotes & invoices', body: 'Price a job from your own catalogue and invoice from the same numbers.' },
       { title: 'Payments', body: 'Take payment against the invoice it belongs to, and see it land.' },
     ],
@@ -113,23 +113,19 @@ export const PRODUCTS: Product[] = [
     workflows: [
       { title: 'Phone', body: 'Calls answered and routed, with every one logged against the customer.' },
       { title: 'SMS & email', body: 'Message a customer without leaving the record their history is on.' },
-      { title: 'Website assistant', body: 'Answer common questions on your site without a person typing every reply.' },
       { title: 'Booking', body: 'Let a customer book straight onto your schedule, in your business’s name.' },
       { title: 'Escalation', body: 'Hand a conversation to a person the moment it needs one.' },
     ],
     featureGroups: [
       { title: 'Channels', items: ['Phone', 'SMS', 'Email', 'Website conversations'] },
       { title: 'Continuity', items: ['One history per customer across every channel', 'Reception and call handling'] },
-      { title: 'Self-service', items: ['Customer-facing booking', 'AI-assisted answers, with escalation to a person'] },
+      { title: 'Self-service', items: ['Customer-facing booking'] },
     ],
     connectsTo: [
       'Every conversation lands on the same customer record Sales and Operations already use — nobody explains themselves twice.',
-      'A booking made through the website assistant lands straight on the schedule.',
     ],
     integrations: ['Twilio', 'Resend'],
     faq: [
-      { question: 'Does the AI assistant talk to customers unsupervised?', answer: 'It answers what it’s configured to answer and hands off to a person for anything consequential — it does not act on a customer’s behalf.' },
-      { question: 'Will our number and email stay the same?', answer: 'Yes — GildOps connects the number and inbox you already use rather than issuing new ones.' },
     ],
   },
 ];
@@ -140,41 +136,40 @@ export function productBySlug(slug: string): Product | undefined {
 
 export const HOW_IT_WORKS_STEPS: { title: string; body: string }[] = [
   { title: 'Show us how the business works', body: 'A short conversation about the work you do today — the tools you use, and where they fall short.' },
-  { title: 'We configure your workspace', body: 'Your work types, pricing, hours and roles get set up in GildOps — not a template, your operation.' },
-  { title: 'Connect the tools you already use', body: 'Your phone number, inbox and payments connect to the workspace rather than being replaced by new ones.' },
+  { title: 'We set up your workspace', body: 'Your work types, pricing, hours and roles get set up in GildOps — not a template, your operation.' },
   { title: 'Test it with your team', body: 'Everyone who will use GildOps tries the real workflows before anything goes live.' },
   { title: 'Launch', body: 'You decide when it’s ready. Nothing goes live before you’ve reviewed it.' },
   { title: 'Improve and expand over time', body: 'Turn on more of GildOps as the business needs it, without starting over.' },
 ];
 
 export interface PricingPackage {
-  slug: ProductSlug;
+  key: 'start' | 'operate' | 'scale' | 'enterprise';
   name: string;
-  includes: string[];
+  summary: string;
 }
 
 export const PRICING_PACKAGES: PricingPackage[] = [
-  { slug: 'sales', name: 'Sales', includes: ['Pipeline and customer records', 'Calling and messaging', 'Automated follow-up', 'Reporting and AI assistance'] },
-  { slug: 'operations', name: 'Operations', includes: ['Jobs, scheduling and dispatch', 'Quotes, invoices and payments', 'Customer portal', 'Automation and reporting'] },
-  { slug: 'customer-service', name: 'Customer Service', includes: ['Phone, SMS and email', 'Website assistant', 'Reception and booking', 'Escalation to a person'] },
+  { key: 'start', name: 'Start', summary: 'For a smaller business beginning to run meaningful parts of its operation through GildOps.' },
+  { key: 'operate', name: 'Operate', summary: 'For an established small business running sales, work and finance together.' },
+  { key: 'scale', name: 'Scale', summary: 'For higher volume: more users, more automation and more included usage.' },
+  { key: 'enterprise', name: 'Enterprise', summary: 'Volume, allowances, onboarding, support and terms agreed with you.' },
 ];
 
 export const PRICING_FACTORS: { title: string; body: string }[] = [
-  { title: 'Which products you switch on', body: 'Sales, Operations and Customer Service are priced and enabled independently — use one, or all three.' },
+  { title: 'Which plan', body: 'Start, Operate, Scale or Enterprise. Enterprise is priced by agreement.' },
+  { title: 'Add-ons', body: 'Extra users and calling users, local phone numbers, AI Standard or AI Pro, advanced routing, premium support, and one-time implementation or migration.' },
   { title: 'Team size', body: 'How many people need a seat in the workspace.' },
-  { title: 'Usage', body: 'Call minutes, messages and email volume, billed at what they cost to carry.' },
-  { title: 'Managed setup', body: 'Whether GildOps configures the workspace for you or your team does it directly.' },
+  { title: 'Usage', body: 'Call minutes, messages and email volume.' },
+  { title: 'Managed setup', body: 'Whether GildOps sets up the workspace for you or your team does it directly.' },
   { title: 'Integrations', body: 'Which of your existing tools and channels need connecting.' },
 ];
 
 export const HOMEPAGE_FAQ: { question: string; answer: string }[] = [
   { question: 'What is GildOps?', answer: 'GildOps is one connected system for running a service business — sales, operations and customer service in one place instead of several disconnected tools.' },
   { question: 'Is GildOps a CRM?', answer: 'A CRM is part of it. GildOps also runs your scheduling, jobs, invoicing, payments and customer communication — the parts that happen after a lead becomes a customer.' },
-  { question: 'Does GildOps replace all our existing software?', answer: 'Not necessarily. GildOps connects to the phone, email and payment tools you already use rather than requiring you to abandon them on day one.' },
   { question: 'What kinds of businesses fit GildOps?', answer: 'Service businesses that sell, schedule and deliver work — and need customer, communication and job information to stay in one place.' },
   { question: 'Can GildOps integrate with software we already use?', answer: 'See /integrations for what’s connected today. GildOps is built to connect to the tools a business already runs on, not replace them wholesale.' },
-  { question: 'How does implementation work?', answer: 'See how it works: a conversation about how you run today, a configured workspace, a review with your team, then launch on your own timeline.' },
-  { question: 'Do we have to change our entire operation at once?', answer: 'No — Sales, Operations and Customer Service can be switched on separately, in the order that matters to your business.' },
+  { question: 'How does implementation work?', answer: 'See how it works: a conversation about how you run today, a workspace set up for you, a review with your team, then launch on your own timeline.' },
   { question: 'How does AI fit into GildOps?', answer: 'AI drafts, summarizes and assists across every product. It does not take consequential action or publish anything without a person reviewing it.' },
   { question: 'What happens after I request a demo?', answer: 'Someone from GildOps follows up to understand how your business runs today and show you the parts of GildOps that fit it.' },
 ];

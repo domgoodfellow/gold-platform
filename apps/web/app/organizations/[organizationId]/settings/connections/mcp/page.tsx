@@ -49,7 +49,7 @@ export default async function McpServersPage({ params }: PageProps<'/organizatio
         <EmptyState
           className="mt-6"
           title="Custom MCP servers are not available here yet"
-          description="This deployment has not been set up to let a business connect a server of its own. It can be turned on without changing anything you already have."
+          description="Connecting a server of your own isn’t available yet."
         />
       ) : (
         <McpOverview

@@ -51,9 +51,9 @@ export function SendingDomainActions({
   canStart: boolean;
   canApply: boolean;
 }) {
-  const check = useCommand(checkSendingDomainAction, `Checked ${domain} with the email provider.`);
+  const check = useCommand(checkSendingDomainAction, `Checked ${domain}.`);
   const apply = useCommand(applySendingDomainDnsAction, `Published DNS for ${domain}.`);
-  const start = useCommand(requestSendingDomainAction, `Set up ${domain} with the email provider.`);
+  const start = useCommand(requestSendingDomainAction, `Started setting up ${domain}.`);
   const remove = useCommand(releaseSendingDomainAction, `${domain} removed.`);
   const removeFormId = `release-sending-domain-${useId().replace(/:/g, '')}`;
 
@@ -100,7 +100,7 @@ export function SendingDomainActions({
           formId={removeFormId}
           label="Remove"
           confirmLabel="Remove domain"
-          description={`${domain} stops being authorized for sending, and the email provider forgets it. Your DNS records are not changed.`}
+          description={`${domain} can no longer be used for sending. Your DNS records are not changed.`}
           pending={remove.pending}
           ariaLabel={`Remove ${domain}`}
         />

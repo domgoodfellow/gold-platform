@@ -2,7 +2,7 @@ import { platformBillingProvider } from '@/lib/adapters/platform-billing';
 import type { Db } from '@/lib/db/types';
 import { organizationPlanPrice } from '@/lib/domain/catalogue/organization-plans';
 import { getPlanById, listPlanPrices } from '@/lib/domain/catalogue/plans';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * Staff provisioning a Plan's recorded price with the billing provider (Phase 4: GOLD
@@ -32,7 +32,7 @@ export async function listProvisionedPlanPrices(
     .select('plan_price_id, product_reference, price_reference')
     .in('plan_price_id', input.planPriceIds)
     .eq('environment', input.environment);
-  if (error) throw new DomainError(error.message, 'platform_billing.provisioned_prices_read_failed');
+  if (error) throw fromDatabaseError(error, 'platform_billing.provisioned_prices_read_failed');
   return (data ?? []).map((row) => ({
     planPriceId: row.plan_price_id,
     productReference: row.product_reference,
@@ -50,7 +50,7 @@ export async function getProvisionedPlanPrice(
     .eq('plan_price_id', input.planPriceId)
     .eq('environment', input.environment)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'platform_billing.provisioned_price_read_failed');
+  if (error) throw fromDatabaseError(error, 'platform_billing.provisioned_price_read_failed');
   return data ? toProvisioned(data) : null;
 }
 
@@ -60,7 +60,7 @@ export async function provisionPlanPrice(
 ): Promise<ProvisionedPlanPrice> {
   const provider = await platformBillingProvider();
   if (!provider) {
-    throw new DomainError('Billing is not configured for this deployment.', 'platform_billing.not_configured');
+    throw new DomainError('Billing isn’t set up for GildOps yet.', 'platform_billing.not_configured');
   }
 
   const plan = await getPlanById(db, input.planId);
@@ -98,7 +98,7 @@ export async function provisionPlanPrice(
     if (error.code === '42501') {
       throw new DomainError('Only platform staff can provision billing prices.', 'platform_billing.forbidden');
     }
-    throw new DomainError(error.message, 'platform_billing.provision_failed');
+    throw fromDatabaseError(error, 'platform_billing.provision_failed');
   }
 
   return { productReference: productId, priceReference: priceId };
@@ -117,7 +117,7 @@ export async function provisionAgreementPlanPrice(
 ): Promise<ProvisionedPlanPrice> {
   const provider = await platformBillingProvider();
   if (!provider) {
-    throw new DomainError('Billing is not configured for this deployment.', 'platform_billing.not_configured');
+    throw new DomainError('Billing isn’t set up for GildOps yet.', 'platform_billing.not_configured');
   }
 
   const plan = await getPlanById(db, input.planId);
@@ -150,7 +150,7 @@ export async function provisionAgreementPlanPrice(
     .eq('environment', provider.environment)
     .eq('billing_interval', input.billingInterval)
     .maybeSingle();
-  if (readError) throw new DomainError(readError.message, 'platform_billing.agreement_price_lookup_failed');
+  if (readError) throw fromDatabaseError(readError, 'platform_billing.agreement_price_lookup_failed');
   if (existing) {
     return { productReference: existing.product_reference, priceReference: existing.price_reference };
   }
@@ -177,7 +177,7 @@ export async function provisionAgreementPlanPrice(
     if (error.code === '42501') {
       throw new DomainError('Only platform staff can provision billing prices.', 'platform_billing.forbidden');
     }
-    throw new DomainError(error.message, 'platform_billing.provision_failed');
+    throw fromDatabaseError(error, 'platform_billing.provision_failed');
   }
 
   return { productReference: productId, priceReference: priceId };

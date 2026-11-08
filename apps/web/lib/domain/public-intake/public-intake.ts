@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { openPublicSession } from '@/lib/domain/identity/anonymous-session';
 import { PUBLIC_INTAKE_LIMITS, type PublicInquiryKind } from './limits';
 
@@ -105,11 +105,11 @@ export async function submitPublicInquiry(
 
   if (error) {
     if (error.code === 'GD001') {
-      throw new DomainError('This form is not accepting messages on this deployment right now.', 'public_intake.not_configured');
+      throw new DomainError('This form isn’t taking messages right now.', 'public_intake.not_configured');
     }
     if (error.code === '23514') {
       throw new DomainError('Please tell us your name.', 'public_intake.name_required');
     }
-    throw new DomainError(error.message, 'public_intake.failed');
+    throw fromDatabaseError(error, 'public_intake.failed');
   }
 }

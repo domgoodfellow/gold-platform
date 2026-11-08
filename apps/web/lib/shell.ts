@@ -245,9 +245,9 @@ export function projectShell(input: ShellInput): ShellSection[] {
     }).map(concern => concern.href.split('#')[0]);
     // One page is a direct link; several are a group that expands and collapses, never a page that lists them again.
     const configuration: NavItem | undefined = branch.length === 1
-      ? { key: 'workspace-configuration', label: 'Configuration', href: branch[0].href, activeHrefs: [configurationHref, ...ownPages], section: 'workspaces' }
+      ? { key: 'workspace-configuration', label: 'Settings', href: branch[0].href, activeHrefs: [configurationHref, ...ownPages], section: 'workspaces' }
       : branch.length ? {
-        key: 'workspace-configuration', label: 'Configuration', href: configurationHref, group: true,
+        key: 'workspace-configuration', label: 'Settings', href: configurationHref, group: true,
         activeHrefs: ownPages,
         section: 'workspaces',
         children: branch.map(concern => ({ ...concern, section: 'workspaces' as const })),

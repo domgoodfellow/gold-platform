@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import type { AllowanceApplication, RetailState } from './usage';
 
 export type CostState = 'estimated' | 'reconciled' | 'unknown';
@@ -78,7 +78,7 @@ export async function listEconomicsEvents(
   });
   if (error) {
     throw new DomainError(
-      error.code === '42501' ? 'Only platform staff may inspect provider economics.' : error.message,
+      error.code === '42501' ? 'Only platform staff may see vendor costs.' : 'Something went wrong. Try again.',
       'commercial.economics_failed',
     );
   }
@@ -119,7 +119,7 @@ export async function listCostComponents(db: Db, usageEventId: string): Promise<
   const { data, error } = await db.rpc('platform_usage_cost_components', {
     p_usage_event_id: usageEventId,
   });
-  if (error) throw new DomainError(error.message, 'commercial.cost_components_failed');
+  if (error) throw fromDatabaseError(error, 'commercial.cost_components_failed');
   return (data ?? []).map((row) => ({
     id: row.id,
     key: row.component_key,

@@ -1,7 +1,7 @@
 import { readAutomationCollection } from './monitoring';
 import { CHANNELS } from '@/lib/domain/automation/templates';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { listNativeCapabilities } from '@/lib/domain/integrations/tool-access';
 
@@ -87,7 +87,7 @@ export type TriggerEvent = (typeof TRIGGER_EVENTS)[number]['action'];
 /** The parts of a job a condition can look at, besides this tenant's own fields. */
 export const CONDITION_FIELDS = [
   { field: 'title', label: 'title' },
-  { field: 'status_id', label: 'status' },
+  { field: 'status_id', label: 'stage' },
   { field: 'type_id', label: 'kind of work' },
   { field: 'customer_id', label: 'customer' },
   { field: 'resource_id', label: 'resource' },
@@ -448,7 +448,7 @@ export async function createAutomationRule(
         'automations.forbidden',
       );
     }
-    throw new DomainError(error.message, 'automations.create_failed');
+    throw fromDatabaseError(error, 'automations.create_failed');
   }
 
   return data.id;
@@ -517,7 +517,7 @@ export async function updateAutomationRule(
         'automations.forbidden',
       );
     }
-    throw new DomainError(error.message, 'automations.update_failed');
+    throw fromDatabaseError(error, 'automations.update_failed');
   }
 
   if ((data ?? []).length === 0) {
@@ -554,7 +554,7 @@ export async function deleteAutomationRule(
         'automations.forbidden',
       );
     }
-    throw new DomainError(error.message, 'automations.delete_failed');
+    throw fromDatabaseError(error, 'automations.delete_failed');
   }
 
   if ((data ?? []).length === 0) {
@@ -636,7 +636,7 @@ export async function addAutomationCondition(
   const { error } = result;
   if (!error && !result.data?.length)
     throw new DomainError(
-      'No such configuration here, or your role cannot change it.',
+      'That no longer exists, or your role cannot change it.',
       'automations.not_found',
     );
 
@@ -658,7 +658,7 @@ export async function addAutomationCondition(
         'automations.forbidden',
       );
     }
-    throw new DomainError(error.message, 'automations.condition_failed');
+    throw fromDatabaseError(error, 'automations.condition_failed');
   }
 }
 
@@ -681,7 +681,7 @@ export async function removeAutomationCondition(
         'automations.forbidden',
       );
     }
-    throw new DomainError(error.message, 'automations.condition_failed');
+    throw fromDatabaseError(error, 'automations.condition_failed');
   }
 
   if ((data ?? []).length === 0) {
@@ -808,7 +808,7 @@ export async function addAutomationAction(
   const { error } = result;
   if (!error && !result.data?.length)
     throw new DomainError(
-      'No such configuration here, or your role cannot change it.',
+      'That no longer exists, or your role cannot change it.',
       'automations.not_found',
     );
 
@@ -825,7 +825,7 @@ export async function addAutomationAction(
         'automations.forbidden',
       );
     }
-    throw new DomainError(error.message, 'automations.action_failed');
+    throw fromDatabaseError(error, 'automations.action_failed');
   }
 }
 
@@ -848,7 +848,7 @@ export async function removeAutomationAction(
         'automations.forbidden',
       );
     }
-    throw new DomainError(error.message, 'automations.action_failed');
+    throw fromDatabaseError(error, 'automations.action_failed');
   }
 
   if ((data ?? []).length === 0) {
@@ -904,7 +904,7 @@ export async function listAutomationRuns(
   const { data, error } = await query;
 
   if (error) {
-    throw new DomainError(error.message, 'automations.runs_failed');
+    throw fromDatabaseError(error, 'automations.runs_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -973,7 +973,7 @@ export async function addAutomationToolAction(
     if (error.code === '42501') {
       throw new DomainError('Adding a connected tool needs the right to manage both automations and integrations.', 'automations.forbidden');
     }
-    if (error.code === '22023') throw new DomainError(error.message, 'automations.tool_invalid');
+    if (error.code === '22023') throw fromDatabaseError(error, 'automations.tool_invalid');
     throw new DomainError('That could not be completed.', 'automations.tool_failed');
   }
 }

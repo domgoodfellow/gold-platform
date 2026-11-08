@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from './actor';
 import { isCountryCode, postalCodeValid } from './regional-defaults';
 import {
@@ -140,7 +140,7 @@ export async function listMyOrganizations(db: Db): Promise<Organization[]> {
     // Platform staff hold `select` on `memberships` and none on `roles`, so the embed
     // fails for them outright — treated as "a member of nothing" rather than a crash.
     if (error.code === '42501') return [];
-    throw new DomainError(error.message, 'organizations.list_failed');
+    throw fromDatabaseError(error, 'organizations.list_failed');
   }
 
   return (data ?? [])
@@ -168,7 +168,7 @@ export async function getOrganization(db: Db, id: string): Promise<Organization 
     // them outright — a staff member typing a tenant URL should get the same 404 a stranger
     // gets, not a 500. Narrow to 42501 (insufficient_privilege) so every other failure surfaces.
     if (error.code === '42501') return null;
-    throw new DomainError(error.message, 'organizations.get_failed');
+    throw fromDatabaseError(error, 'organizations.get_failed');
   }
 
   const row = (data ?? [])[0];
@@ -252,7 +252,7 @@ export async function createOrganization(
         'organizations.invalid',
       );
     }
-    throw new DomainError(error.message, 'organizations.create_failed');
+    throw fromDatabaseError(error, 'organizations.create_failed');
   }
 
   return data;
@@ -350,7 +350,7 @@ export async function updateOrganization(
         'organizations.forbidden',
       );
     }
-    throw new DomainError(error.message, 'organizations.update_failed');
+    throw fromDatabaseError(error, 'organizations.update_failed');
   }
 }
 

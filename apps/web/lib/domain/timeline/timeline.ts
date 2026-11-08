@@ -1,6 +1,6 @@
 import { classificationLabel } from '@/lib/domain/customers/classification';
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 
 /**
@@ -13,6 +13,8 @@ import { formatMoney } from '@/lib/domain/work-items/consumption';
  * extraction away the day the work item screen wants one.
  */
 
+
+const FOLLOW_UP_EVENT: Record<string, string> = { 'follow_up.created': 'created', 'follow_up.updated': 'updated', 'follow_up.completed': 'completed', 'follow_up.cancelled': 'cancelled' };
 export type TimelineEntry = {
   id: string;
   record?: { type: string; id: string };
@@ -164,29 +166,29 @@ function describe(row: EventRow, words: Vocabulary, perspective?: 'location'): s
     case 'notification.delivery_requested':
       return 'Customer notification queued for email delivery';
     case 'notification.accepted':
-      return 'Customer notification accepted by email provider';
+      return 'Customer notification accepted for delivery';
     case 'notification.delivered':
-      return 'Email provider reported customer notification delivered';
+      return 'Customer notification delivered';
     case 'notification.bounced':
       return 'Customer notification bounced; recipient suppressed';
     case 'notification.failed':
       return 'Customer notification delivery failed';
     case 'notification.rejected':
-      return 'Email provider rejected customer notification';
+      return 'Customer notification was refused';
     case 'notification.consent_recorded':
       return 'Notification address verified and selected email preferences recorded';
     case 'notification.consent_withdrawn':
       return 'Customer email notification consent withdrawn';
     case 'client_tenant.linked':
-      return 'Tenant relationship linked';
+      return 'Business linked';
     case 'client_tenant.ended':
-      return 'Tenant relationship ended';
+      return 'Business link ended';
     case 'service_engagement.created':
       return 'Service engagement created';
     case 'service_engagement.status_changed':
       return `Service engagement ${text(row.payload, 'to') ?? 'status changed'}`;
     case 'service_engagement.tenant_bound':
-      return 'Tenant associated with a service engagement';
+      return 'Business added to a service engagement';
     case 'service_engagement.deliverable_attached':
       return 'Deliverable attached to a service engagement';
     case 'service_engagement.work_attached':
@@ -209,7 +211,7 @@ function describe(row: EventRow, words: Vocabulary, perspective?: 'location'): s
     case 'follow_up.updated':
     case 'follow_up.completed':
     case 'follow_up.cancelled':
-      return `Follow-up ${row.action.split('.')[1]}: ${text(row.payload, 'title') ?? 'Untitled'}`;
+      return `Follow-up ${FOLLOW_UP_EVENT[row.action] ?? 'changed'}: ${text(row.payload, 'title') ?? 'Untitled'}`;
     case 'opportunity.created':
       return `Opportunity created: ${text(row.payload, 'title') ?? 'Untitled'}`;
     case 'opportunity.updated':
@@ -267,7 +269,7 @@ function describe(row: EventRow, words: Vocabulary, perspective?: 'location'): s
     case 'work_item.status_changed': {
       const to = text(row.payload, 'to_status_id');
       const name = to ? words.statuses.get(to) : null;
-      return `Moved to ${name ?? 'a status that no longer exists'}${on}`;
+      return `Moved to ${name ?? 'a stage that no longer exists'}${on}`;
     }
     case 'work_item.scheduled': {
       const names = resourceIdsOf(row.payload).flatMap((id) => words.resources.get(id) ?? []);
@@ -331,7 +333,7 @@ export async function listCustomerTimeline(
     .eq('customer_id', input.customerId);
 
   if (jobsError) {
-    throw new DomainError(jobsError.message, 'timeline.work_items_failed');
+    throw fromDatabaseError(jobsError, 'timeline.work_items_failed');
   }
 
   const workItems = new Map((jobs ?? []).map((job) => [job.id, job.title]));
@@ -346,7 +348,7 @@ export async function listCustomerTimeline(
     .limit(limit);
 
   if (error) {
-    throw new DomainError(error.message, 'timeline.list_failed');
+    throw fromDatabaseError(error, 'timeline.list_failed');
   }
 
   const rows = (data ?? []).map((row) => ({ ...row, id: row.event_id })) as EventRow[];
@@ -434,7 +436,7 @@ export async function listRecentActivity(
     .limit(limit);
 
   if (error) {
-    throw new DomainError(error.message, 'timeline.activity_failed');
+    throw fromDatabaseError(error, 'timeline.activity_failed');
   }
 
   const rows = (data ?? []) as EventRow[];
@@ -511,10 +513,10 @@ export async function listWorkItemTimeline(
   ]);
 
   if (ownEvents.error) {
-    throw new DomainError(ownEvents.error.message, 'timeline.work_item_failed');
+    throw fromDatabaseError(ownEvents.error, 'timeline.work_item_failed');
   }
   if (documentEvents.error) {
-    throw new DomainError(documentEvents.error.message, 'timeline.work_item_failed');
+    throw fromDatabaseError(documentEvents.error, 'timeline.work_item_failed');
   }
 
   const rows = [...(ownEvents.data ?? []), ...(documentEvents.data ?? [])]
@@ -600,13 +602,13 @@ export async function listLocationTimeline(
   ]);
 
   if (ownEvents.error) {
-    throw new DomainError(ownEvents.error.message, 'timeline.location_failed');
+    throw fromDatabaseError(ownEvents.error, 'timeline.location_failed');
   }
   if (documentEvents.error) {
-    throw new DomainError(documentEvents.error.message, 'timeline.location_failed');
+    throw fromDatabaseError(documentEvents.error, 'timeline.location_failed');
   }
   if (workItemEvents.error) {
-    throw new DomainError(workItemEvents.error.message, 'timeline.location_failed');
+    throw fromDatabaseError(workItemEvents.error, 'timeline.location_failed');
   }
 
   const rows = [
@@ -719,13 +721,13 @@ export async function listAssetTimeline(
   ]);
 
   if (ownEvents.error) {
-    throw new DomainError(ownEvents.error.message, 'timeline.asset_failed');
+    throw fromDatabaseError(ownEvents.error, 'timeline.asset_failed');
   }
   if (documentEvents.error) {
-    throw new DomainError(documentEvents.error.message, 'timeline.asset_failed');
+    throw fromDatabaseError(documentEvents.error, 'timeline.asset_failed');
   }
   if (workItemEvents.error) {
-    throw new DomainError(workItemEvents.error.message, 'timeline.asset_failed');
+    throw fromDatabaseError(workItemEvents.error, 'timeline.asset_failed');
   }
 
   const rows = [

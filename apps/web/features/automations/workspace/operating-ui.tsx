@@ -24,9 +24,9 @@ export function automationTime(at: string, timezone: string) {
   }).format(new Date(at));
 }
 export function automationDiagnostic(detail: string | null) {
-  if (!detail) return 'No diagnostic recorded';
+  if (!detail) return 'No detail recorded';
   if (/may not move from status|status transition/i.test(detail))
-    return 'Work status transition refused. Review the allowed lifecycle transitions.';
+    return 'That stage change is not allowed. Check the moves allowed between stages.';
   if (/overlap|exclusion constraint/i.test(detail))
     return 'Scheduling conflict. The proposed change overlaps an existing commitment.';
   if (/customer.*(missing|no|not)|no customer/i.test(detail))

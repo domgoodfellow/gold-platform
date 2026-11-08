@@ -80,7 +80,7 @@ export function BrandEditor({
 
           <fieldset disabled={readOnly} className="flex flex-col gap-3">
             <legend className="mb-2 text-sm font-medium">Brand palette</legend>
-            <div role="group" aria-label="Palette presets" className="grid grid-cols-2 gap-2">
+            <div role="group" aria-label="Colour styles" className="grid grid-cols-2 gap-2">
               {PALETTE_PRESETS.map(preset => {
                 const active = normalised.accent === preset.primary && (normalised.secondary || '') === (preset.secondary ?? '') && (normalised.highlight || '') === (preset.highlight ?? '');
                 return <button key={preset.key} type="button" aria-pressed={active}
@@ -95,7 +95,7 @@ export function BrandEditor({
 
           <fieldset disabled={readOnly} className="flex flex-col gap-2">
             <legend className="mb-2 text-sm font-medium">Primary colour</legend>
-            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Colour presets">
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Colour styles">
               {BRAND_PRESETS.map((preset) => (
                 <button
                   key={preset.value}

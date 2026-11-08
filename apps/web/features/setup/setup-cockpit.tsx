@@ -87,9 +87,9 @@ export function SetupAreaList({ areas }: { areas: SetupArea[] }) {
                 href={area.area.href}
                 tone="secondary"
                 size="small"
-                aria-label={`${area.state === 'complete' ? 'Open' : 'Configure'} ${area.area.label}`}
+                aria-label={`${area.state === 'complete' ? 'Open' : 'Set up'} ${area.area.label}`}
               >
-                {area.state === 'complete' ? 'Open' : 'Configure'}
+                {area.state === 'complete' ? 'Open' : 'Set up'}
               </ButtonLink>
             </li>
           );
@@ -132,8 +132,8 @@ export function LaunchReview({
                 <span className="min-w-0 flex-1 basis-64">
                   <span className="font-medium">{area.label}.</span> {area.message}
                 </span>
-                {!allowedDestinations || allowedDestinations.includes(configurationOwnerPath(area.area.href)) ? <ButtonLink href={withSetupContext(area.area.href, 'review')} tone="text" size="small" aria-label={`Configure ${area.area.label}`}>
-                  Configure
+                {!allowedDestinations || allowedDestinations.includes(configurationOwnerPath(area.area.href)) ? <ButtonLink href={withSetupContext(area.area.href, 'review')} tone="text" size="small" aria-label={`Set up ${area.area.label}`}>
+                  Set up
                 </ButtonLink> : <span className="text-xs text-muted">Ask an administrator to resolve this.</span>}
               </li>
             ))}
@@ -151,8 +151,7 @@ export function LaunchReview({
             <dd>{overview.optionalOpen === 0 ? 'None unfinished' : `${overview.optionalOpen} unfinished`}</dd>
           </dl>
           <Hint className="mt-3">
-            Finishing setup makes Home the default workspace for this business. Every area above stays
-            configurable from Settings.
+            Finishing setup makes Home the default workspace for this business.
           </Hint>
           <div className="mt-4">
             {launch}

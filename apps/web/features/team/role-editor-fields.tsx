@@ -45,7 +45,7 @@ export function RoleEditorFields({
       {withPresets ? (
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-muted">Start from</span>
-          <SelectField value={preset} onValueChange={(next) => setPreset(next)} aria-label="Start from a preset" options={[{ value: '', label: 'Nothing ticked' }, ...ROLE_PRESETS.map((candidate) => ({ value: candidate.key, label: candidate.label }))]} />
+          <SelectField value={preset} onValueChange={(next) => setPreset(next)} aria-label="Starting point" options={[{ value: '', label: 'Nothing ticked' }, ...ROLE_PRESETS.map((candidate) => ({ value: candidate.key, label: candidate.label }))]} />
         </label>
       ) : null}
       {/* Keyed by preset so choosing another remounts the checklist with that template's boxes ticked. */}

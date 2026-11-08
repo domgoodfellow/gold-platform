@@ -58,7 +58,7 @@ function StageForm({ organizationId, stage, nextPosition, onSaved }: { organizat
         <input type="hidden" name="organizationId" value={organizationId} /><input type="hidden" name="id" value={stage?.id ?? ''} />
         <FormField id={`${prefix}-name`} label="Name">{(props) => <TextInput {...props} name="name" required maxLength={64} defaultValue={stage?.name ?? ''} />}</FormField>
         <FormField id={`${prefix}-position`} label="Position">{(props) => <TextInput {...props} name="position" type="number" min={0} step={1} required defaultValue={stage?.position ?? nextPosition} />}</FormField>
-        <FormField id={`${prefix}-kind`} label="Classification" hint="Once used, a stage keeps its classification. Only one Won and one Lost stage may be configured.">{(props) => <SelectField {...props} name="kind" defaultValue={stage?.kind ?? 'open'} options={[{ value: 'open', label: 'Open' }, { value: 'won', label: 'Won' }, { value: 'lost', label: 'Lost' }]} />}</FormField>
+        <FormField id={`${prefix}-kind`} label="Classification" hint="Once used, a stage keeps this. A pipeline has one Won and one Lost stage.">{(props) => <SelectField {...props} name="kind" defaultValue={stage?.kind ?? 'open'} options={[{ value: 'open', label: 'Open' }, { value: 'won', label: 'Won' }, { value: 'lost', label: 'Lost' }]} />}</FormField>
         <FormError>{state.error}</FormError>
       </form>
     </DialogBody>

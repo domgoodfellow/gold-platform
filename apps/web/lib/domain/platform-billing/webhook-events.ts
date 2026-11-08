@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { fromDatabaseError } from '@/lib/domain/errors';
 
 /**
  * The platform-billing webhook's own idempotency ledger, read-only here — a staff diagnostic
@@ -28,7 +28,7 @@ export async function listRecentPlatformBillingEvents(
     .select('id, provider, event_type, environment, organization_id, received_at, provider_event_created_at, application')
     .order('received_at', { ascending: false })
     .limit(input.limit ?? 20);
-  if (error) throw new DomainError(error.message, 'platform_billing.events_list_failed');
+  if (error) throw fromDatabaseError(error, 'platform_billing.events_list_failed');
   return (data ?? []).map((row) => ({
     id: row.id,
     provider: row.provider,

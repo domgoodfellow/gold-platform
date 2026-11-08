@@ -104,7 +104,7 @@ function DayEditor({
   dayOfWeek: number;
   periods: OperatingHours[];
   mayConfigure: boolean;
-  /** Whether this business has configured hours anywhere at all — see `OperatingHoursEditor`. */
+  /** Whether this business has set hours anywhere at all — see `OperatingHoursEditor`. */
   anyConfigured: boolean;
 }) {
   return (
@@ -114,8 +114,8 @@ function DayEditor({
       {periods.length === 0 ? (
         <Hint weight="subtle">
           {anyConfigured
-            ? 'Closed — no hours configured for this day.'
-            : 'Nothing configured.'}
+            ? 'Closed'
+            : 'Not set'}
         </Hint>
       ) : (
         <div className="flex flex-col gap-1.5">
@@ -175,8 +175,7 @@ export function OperatingHoursEditor({
 
       {anyConfigured ? null : (
         <Hint className="mt-1">
-          No opening hours are configured for any day. Until at least one is added, the schedule
-          treats every hour as open.
+          No opening hours yet. Until you add some, every hour counts as open.
         </Hint>
       )}
 

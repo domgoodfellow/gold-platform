@@ -107,7 +107,7 @@ export function AllowanceMeter({
 
       {state.state === 'configuration_error' ? (
         <p className="mt-1 text-sm text-muted">
-          {state.configurationError ?? 'This allowance is configured inconsistently.'}
+          {state.configurationError ?? 'This allowance can’t be shown right now.'}
         </p>
       ) : state.consumed === null || state.included === null ? (
         <>

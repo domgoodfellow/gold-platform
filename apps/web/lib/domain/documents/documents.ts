@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { contentMatchesFormat } from '@/lib/domain/files/content';
 import { identifyFormat } from '@/lib/domain/files/formats';
 import type { FileStore } from '@/lib/domain/files/storage-port';
@@ -67,7 +67,7 @@ export async function listDocuments(
     .order('created_at', { referencedTable: 'documents', ascending: false });
 
   if (error) {
-    throw new DomainError(error.message, 'documents.list_failed');
+    throw fromDatabaseError(error, 'documents.list_failed');
   }
 
   return (data ?? []).map(({ documents: row }) => ({
@@ -168,9 +168,9 @@ export async function uploadDocument(
     // from every other 23514 check violation — `create_document`'s own storage-allowance check
     // raises with this wording and no other 23514 here does.
     if (error.code === '23514' && error.message.includes('storage limit')) {
-      throw new DomainError(error.message, 'documents.storage_limit_reached');
+      throw fromDatabaseError(error, 'documents.storage_limit_reached');
     }
-    throw new DomainError(error.message, 'documents.create_failed');
+    throw fromDatabaseError(error, 'documents.create_failed');
   }
 
   return data;
@@ -188,7 +188,7 @@ export async function getDocumentUrl(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'documents.get_failed');
+    throw fromDatabaseError(error, 'documents.get_failed');
   }
   if (!row) {
     // Covers "no such document" and "not yours" indistinguishably, for free, via RLS.

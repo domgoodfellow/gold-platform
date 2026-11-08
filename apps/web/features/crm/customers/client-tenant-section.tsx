@@ -13,7 +13,7 @@ function EndRelationship({ organizationId, customerId, relationshipId }: { organ
   const [state, action, pending] = useActionState(relationshipAction, { error: null, saved: false });
   return <details><summary className="cursor-pointer text-sm">Manage relationship</summary><form action={action} className="mt-3 space-y-3">
     <input type="hidden" name="organizationId" value={organizationId}/><input type="hidden" name="customerId" value={customerId}/><input type="hidden" name="relationshipId" value={relationshipId}/><input type="hidden" name="operation" value="end"/>
-    <p className="text-sm text-muted">Ending retains service history. Subscription, membership and tenant artifacts have separate controls.</p>
+    <p className="text-sm text-muted">Ending keeps the service history.</p>
     <ErrorText>{state.error}</ErrorText><Button type="submit" tone="secondary" disabled={pending}>{pending ? 'Ending…' : 'End relationship'}</Button>
   </form></details>;
 }
@@ -34,7 +34,7 @@ export function ClientTenantSection({ organizationId, customerId, relationships,
     {relationships.length ? <ul className="divide-y divide-border">{relationships.map(r => <li key={r.id} className="space-y-3 py-4">
       <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-medium">{r.tenant_name}</p><p className="text-sm text-muted">{r.status === 'ended' ? 'Relationship ended' : `Organization · ${r.operational_state === 'live' ? 'Live' : 'Setup'}`}</p></div>
       {r.may_open ? <ButtonLink tone="text" href={`/organizations/${r.tenant_organization_id}`}>Open organization</ButtonLink> : null}</div>
-      <p className="text-sm text-muted">{r.origin === 'proposal_handoff' ? 'Linked through accepted proposal' : 'Linked by authorized tenant manager'} · {new Intl.DateTimeFormat('en-CA', { dateStyle: 'medium', timeZone: timezone }).format(new Date(r.created_at))}</p>
+      <p className="text-sm text-muted">{r.origin === 'proposal_handoff' ? 'Linked through accepted proposal' : 'Linked by a business manager'} · {new Intl.DateTimeFormat('en-CA', { dateStyle: 'medium', timeZone: timezone }).format(new Date(r.created_at))}</p>
       {mayManage && r.status === 'active' ? <EndRelationship organizationId={organizationId} customerId={customerId} relationshipId={r.id}/> : null}
     </li>)}</ul> : <p className="text-sm text-muted">No GildOps organization linked.</p>}
     {mayLink ? <details className="mt-4"><summary className="cursor-pointer text-sm font-medium">Link existing organization</summary>

@@ -74,7 +74,7 @@ async function renderPage(query: Record<string, string> = {}) {
 // Discovery and configuration describe a GildOps tenant being set up and stay with platform
 // authority in the operating organization. Commercial proposals are any business selling from its
 // own catalog (ADR-051): offered wherever the catalog is usable, or wherever there is history.
-const PLATFORM_VIEWS = ['Discovery', 'Proposed configuration'];
+const PLATFORM_VIEWS = ['Discovery', 'Proposed setup'];
 const PROPOSAL_VIEWS = [...PLATFORM_VIEWS, 'Commercial proposals'];
 
 beforeEach(() => {

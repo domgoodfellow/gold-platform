@@ -29,7 +29,7 @@ export function ProvisionPriceControl({
   const [state, action, pending] = useActionState(provisionPlanPriceAction, INITIAL);
 
   if (!environment) {
-    return <Hint weight="subtle">Billing is not configured for this deployment.</Hint>;
+    return <Hint weight="subtle">Billing isn’t set up for GildOps yet.</Hint>;
   }
 
   if (provisioned) {

@@ -27,7 +27,7 @@ export function ProductPreview({ areaLabel, nav, stats, rows }: ProductPreviewPr
     <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <span className="text-sm font-semibold">{areaLabel}</span>
-        <span className="font-mono text-xs text-subtle">Example configuration</span>
+        <span className="font-mono text-xs text-subtle">Example setup</span>
       </div>
       <div className="grid sm:grid-cols-[150px_1fr]">
         <nav aria-label={`${areaLabel} preview`} className="hidden border-r border-border p-3 sm:block">

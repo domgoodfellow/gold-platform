@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import type { BookingPolicy } from '@/lib/domain/booking/policy';
 import { createWorkItemStatus, updateWorkItemStatus } from '@/lib/domain/work-items/statuses';
@@ -45,7 +45,7 @@ export async function listWorkItemTypes(
     .order('name', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'work_item_types.list_failed');
+    throw fromDatabaseError(error, 'work_item_types.list_failed');
   }
 
   return (data ?? []).map((row) => ({ id: row.id, name: row.name, schedulable: row.schedulable }));
@@ -100,11 +100,11 @@ export async function createWorkItemType(
     }
     if (error.code === '42501') {
       throw new DomainError(
-        'You cannot configure work item types here.',
+        'Your role cannot change kinds of work.',
         'work_item_types.forbidden',
       );
     }
-    throw new DomainError(error.message, 'work_item_types.create_failed');
+    throw fromDatabaseError(error, 'work_item_types.create_failed');
   }
 
   if (input.withStarterStages) {
@@ -154,11 +154,11 @@ export async function renameWorkItemType(
     }
     if (error.code === '42501') {
       throw new DomainError(
-        'You cannot configure work item types here.',
+        'Your role cannot change kinds of work.',
         'work_item_types.forbidden',
       );
     }
-    throw new DomainError(error.message, 'work_item_types.update_failed');
+    throw fromDatabaseError(error, 'work_item_types.update_failed');
   }
 }
 
@@ -180,7 +180,7 @@ export async function hasSchedulableWork(
     .limit(1);
 
   if (error) {
-    throw new DomainError(error.message, 'work_item_types.schedulable_read_failed');
+    throw fromDatabaseError(error, 'work_item_types.schedulable_read_failed');
   }
 
   return (data ?? []).length > 0;
@@ -226,11 +226,11 @@ export async function setWorkItemTypeSchedulable(
     }
     if (error.code === '42501') {
       throw new DomainError(
-        'You cannot configure work item types here.',
+        'Your role cannot change kinds of work.',
         'work_item_types.forbidden',
       );
     }
-    throw new DomainError(error.message, 'work_item_types.scheduling_failed');
+    throw fromDatabaseError(error, 'work_item_types.scheduling_failed');
   }
 }
 
@@ -270,7 +270,7 @@ export async function getTypeBooking(
     .maybeSingle();
 
   if (error) {
-    throw new DomainError(error.message, 'work_item_types.booking_read_failed');
+    throw fromDatabaseError(error, 'work_item_types.booking_read_failed');
   }
 
   // A status and a duration are the whole of what "published" means, and
@@ -344,7 +344,7 @@ export async function setTypeBookingPolicy(
     if (error.code === '42501') {
       throw new DomainError('Publish this kind of work to the booking page first, or you may not change it.', 'types.booking_policy_forbidden');
     }
-    throw new DomainError(error.message, 'types.booking_policy_failed');
+    throw fromDatabaseError(error, 'types.booking_policy_failed');
   }
 }
 
@@ -403,7 +403,7 @@ export async function setTypeBookable(
     // price book item that is not this tenant's.
     if (error.code === '23503') {
       throw new DomainError(
-        'That status belongs to a different kind of work, or that price is not this business’s.',
+        'That stage belongs to a different kind of work, or that price is not this business’s.',
         'types.booking_reference_invalid',
       );
     }
@@ -416,13 +416,13 @@ export async function setTypeBookable(
         );
       }
       throw new DomainError(
-        'A bookable type needs both a status and a duration.',
+        'A bookable kind of work needs both a stage and a duration.',
         'types.booking_incomplete',
       );
     }
     if (error.code === '42501') {
-      throw new DomainError('You cannot configure work item types here.', 'types.forbidden');
+      throw new DomainError('Your role cannot change kinds of work.', 'types.forbidden');
     }
-    throw new DomainError(error.message, 'types.booking_failed');
+    throw fromDatabaseError(error, 'types.booking_failed');
   }
 }

@@ -34,7 +34,7 @@ export function CatalogFamilyScreen({ goldId, model }: { goldId: string; model: 
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Modules" value={modules.length} />
+        <StatCard label="Features" value={modules.length} />
         <StatCard label="Features" value={totalFeatures} />
         <StatCard label="Metered Features" value={meteredCount} />
         <StatCard label="Plans including this" value={plansIncludingProduct.length} />
@@ -43,14 +43,14 @@ export function CatalogFamilyScreen({ goldId, model }: { goldId: string; model: 
       <Tabs defaultValue="overview" className="mt-8">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="modules">Modules &amp; Features</TabsTrigger>
+          <TabsTrigger value="modules">Features</TabsTrigger>
           <TabsTrigger value="plans">Plans</TabsTrigger>
           <TabsTrigger value="requirements">Requirements</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-4">
           <Section className="border-t-0 pt-0">
-            <SectionHeading>Runtime coverage</SectionHeading>
+            <SectionHeading>What is built</SectionHeading>
             <p className="mt-1 text-sm text-muted-foreground">
               {byState.available} available, {byState.partial} partial, {byState.planned} planned — out of {totalFeatures}{' '}
               catalogued Features.
@@ -138,9 +138,9 @@ export function CatalogFamilyScreen({ goldId, model }: { goldId: string; model: 
         </TabsContent>
 
         <TabsContent value="requirements" className="mt-4">
-          <SectionHeading>Provider capabilities required</SectionHeading>
+          <SectionHeading>Vendor services required</SectionHeading>
           {providerCapabilities.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">No Feature in this Product declares a provider requirement yet.</p>
+            <p className="mt-2 text-sm text-muted-foreground">No feature in this product needs a vendor yet.</p>
           ) : (
             <ul className="mt-2 flex flex-wrap gap-1.5">
               {providerCapabilities.map((capability) => (

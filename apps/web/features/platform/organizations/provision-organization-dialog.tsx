@@ -20,7 +20,7 @@ export function ProvisionOrganizationDialog({ templates }: { templates: { key: s
       <DialogContent className="w-[min(48rem,calc(100%-2rem))] max-w-none">
         <DialogHeader>
           <DialogTitle>Provision organization</DialogTitle>
-          <DialogDescription>Create the tenant and assign its existing GildOps account owner.</DialogDescription>
+          <DialogDescription>Create the business and name its owner, who already has a GildOps account.</DialogDescription>
         </DialogHeader>
         <ProvisionForm compact templates={templates} />
       </DialogContent>

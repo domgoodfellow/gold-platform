@@ -97,9 +97,9 @@ export function CapabilitySelector({
 const grouped = new Set(GROUPS.flatMap((g) => g.capabilities));
 for (const capability of CAPABILITIES) {
   if (!grouped.has(capability)) {
-    throw new Error(`CapabilitySelector has no group for capability "${capability}".`);
+    throw new Error(`CapabilitySelector has no group for "${capability}".`);
   }
 }
 if (grouped.size !== CAPABILITIES.length) {
-  throw new Error('CapabilitySelector groups a capability that capabilities.ts no longer declares.');
+  throw new Error('CapabilitySelector groups a key that is no longer declared.');
 }

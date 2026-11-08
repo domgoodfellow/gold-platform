@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -37,7 +37,7 @@ export async function listWorkItemTransitions(
     .eq('type_id', input.typeId);
 
   if (error) {
-    throw new DomainError(error.message, 'transitions.list_failed');
+    throw fromDatabaseError(error, 'transitions.list_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -70,14 +70,14 @@ export async function createWorkItemTransition(
 
   if (!input.fromStatusId || !input.toStatusId) {
     throw new DomainError(
-      'A transition needs a status to move from and a status to move to.',
+      'Choose a stage to move from and a stage to move to.',
       'transitions.statuses_required',
     );
   }
 
   if (input.fromStatusId === input.toStatusId) {
     throw new DomainError(
-      'A status cannot move to itself.',
+      'A stage cannot move to itself.',
       'transitions.self_transition',
     );
   }
@@ -98,14 +98,14 @@ export async function createWorkItemTransition(
     // fact: not a status on this board.
     if (error.code === '23503') {
       throw new DomainError(
-        'No such status on this work item type.',
+        'That stage is not part of this kind of work.',
         'transitions.status_not_found',
       );
     }
     if (error.code === '42501') {
-      throw new DomainError('You cannot configure transitions here.', 'transitions.forbidden');
+      throw new DomainError('Your role cannot change moves between stages.', 'transitions.forbidden');
     }
-    throw new DomainError(error.message, 'transitions.create_failed');
+    throw fromDatabaseError(error, 'transitions.create_failed');
   }
 
   return data;
@@ -126,7 +126,7 @@ export async function changeWorkItemStatus(
   await requireActor(db);
 
   if (!input.toStatusId) {
-    throw new DomainError('A work item needs a status.', 'work_items.status_required');
+    throw new DomainError('Choose a stage.', 'work_items.status_required');
   }
 
   const { error } = await db.rpc('change_work_item_status', {
@@ -147,6 +147,6 @@ export async function changeWorkItemStatus(
     if (error.code === '42501') {
       throw new DomainError('You cannot move that work item.', 'work_items.transition_forbidden');
     }
-    throw new DomainError(error.message, 'work_items.transition_failed');
+    throw fromDatabaseError(error, 'work_items.transition_failed');
   }
 }

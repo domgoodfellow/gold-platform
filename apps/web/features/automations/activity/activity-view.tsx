@@ -82,7 +82,7 @@ export function ActivityView({
         <SelectField name="when" aria-label="History period" defaultValue={filters.when} onValueChange={(next) => router.push(href({ when: next, from: '', to: '', page: '1' }))} size="small" options={[{ value: 'today', label: 'Today' }, { value: 'week', label: 'Last 7 days' }, { value: 'month', label: 'Last 30 days' }, { value: 'all', label: 'All history' }]} />
         <SelectField name="stream" aria-label="Activity stream" defaultValue={filters.stream} size="small" options={[{ value: 'runs', label: 'Executions' }, { value: 'deliveries', label: 'Message deliveries' }]} />
         {filters.stream === 'deliveries' ? (
-          <SelectField name="state" aria-label="Delivery state" defaultValue={filters.state} size="small" options={[{ value: '', label: 'All delivery states' }, { value: 'queued', label: 'Queued' }, { value: 'sending', label: 'Sending' }, { value: 'sent', label: 'Sent' }, { value: 'failed', label: 'Failed' }, { value: 'uncertain', label: 'Uncertain' }]} />
+          <SelectField name="state" aria-label="Delivery" defaultValue={filters.state} size="small" options={[{ value: '', label: 'All deliveries' }, { value: 'queued', label: 'Queued' }, { value: 'sending', label: 'Sending' }, { value: 'sent', label: 'Sent' }, { value: 'failed', label: 'Failed' }, { value: 'uncertain', label: 'Uncertain' }]} />
         ) : (
           <SelectField name="outcome" aria-label="Run outcome" defaultValue={filters.outcome} size="small" options={[{ value: '', label: 'All outcomes' }, { value: 'done', label: 'Completed' }, { value: 'failed', label: 'Failed' }]} />
         )}
@@ -106,10 +106,8 @@ export function ActivityView({
         </p>
       ) : null}
       <p className="mb-3 text-xs text-subtle">
-        {timezone} ·{' '}
-        {filters.stream === 'deliveries'
-          ? 'Delivery states are independent of execution outcomes.'
-          : 'Completed means the rule runtime completed. Inspect message delivery separately.'}
+        {timezone}
+        {filters.stream === 'deliveries' ? null : ' · Completed means the rule ran. Messages it sent are under Deliveries.'}
       </p>
       {filters.rule && (
         <p className="mb-3 text-xs">
@@ -202,7 +200,7 @@ export function ActivityView({
             },
             {
               key: 'detail',
-              header: 'Diagnostic',
+              header: 'Detail',
               cell: (r) => (
                 <span className="line-clamp-2 text-xs text-subtle">
                   {r.detail
@@ -246,9 +244,7 @@ export function ActivityView({
                 <div className="flex items-center gap-1">
                   <AutomationState value={selectedRun.outcome} />
                   <InfoPopover label="About execution history">
-                    The rule name above was saved at execution time. Historical
-                    runs do not snapshot individual action configuration or
-                    per-action results. Current configuration may have changed.
+                    The rule name is as it was when the rule ran. The rule may have changed since.
                   </InfoPopover>
                 </div>
                 <dl className="space-y-3">
@@ -261,7 +257,7 @@ export function ActivityView({
                     <dd className="mt-1 break-words">
                       {selectedRun.detail
                         ? automationDiagnostic(selectedRun.detail)
-                        : 'The runtime completed this rule.'}
+                        : 'The rule ran.'}
                     </dd>
                   </div>
                   <div>
@@ -311,13 +307,7 @@ export function ActivityView({
                 <div className="flex items-center gap-1">
                   <AutomationState value={selectedDelivery.state} />
                   <InfoPopover label="About delivery states">
-                    Content was snapshotted when queued. Template edits do not
-                    change it. Sent means the email provider accepted the message
-                    from this business&apos;s own sender address; a later provider report
-                    says whether it was delivered. Uncertain means an attempt may have
-                    reached the provider but was never confirmed: it is not sent again
-                    automatically, so check with the recipient before sending it
-                    yourself.
+                    The message is kept as it was when queued; later template edits do not change it. Sent means the email service accepted it from this business&apos;s address; a later report says whether it arrived. Uncertain means it may have gone but was never confirmed. It is not sent again, so check with the recipient before sending it yourself.
                   </InfoPopover>
                 </div>
                 <dl className="space-y-3">

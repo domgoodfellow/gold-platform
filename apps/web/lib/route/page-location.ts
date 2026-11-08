@@ -128,7 +128,7 @@ const LOCATION_METADATA: readonly LocationNode[] = [
   // Help and Setup
   { id: 'record:help-article', scope: 'organization', kind: 'record', pattern: 'help/[slug]', parent: 'area:help', record: 'slug' },
   { id: 'view:help-contact', scope: 'organization', kind: 'view', pattern: 'help/contact', parent: 'area:help', label: 'Contact GildOps Support' },
-  { id: 'view:setup-proposal', scope: 'organization', kind: 'view', pattern: 'setup/proposal', parent: 'area:setup', label: 'Proposed configuration' },
+  { id: 'view:setup-proposal', scope: 'organization', kind: 'view', pattern: 'setup/proposal', parent: 'area:setup', label: 'Proposed setup' },
   // Settings
   { id: 'view:access-members', scope: 'settings', kind: 'view', pattern: 'settings/access/members', parent: 'target:team', label: 'Members' },
   { id: 'view:access-invitations', scope: 'settings', kind: 'view', pattern: 'settings/access/invitations', parent: 'target:team', label: 'Invitations' },
@@ -142,7 +142,7 @@ const LOCATION_METADATA: readonly LocationNode[] = [
   ...(['commercial', 'failures', 'integrations', 'providers', 'usage'] as const).map((tab): LocationNode => ({
     id: `view:platform-tenant-${tab}`, scope: 'platform', kind: 'view', pattern: `organizations/[targetOrganizationId]/${tab}`, parent: 'record:platform-tenant', label: tab.charAt(0).toUpperCase() + tab.slice(1), open: 'U-10',
   })),
-  { id: 'view:platform-modules', scope: 'platform', kind: 'view', pattern: 'catalog/modules', parent: 'platform:products', label: 'Modules', open: 'U-9' },
+  { id: 'view:platform-modules', scope: 'platform', kind: 'view', pattern: 'catalog/modules', parent: 'platform:products', label: 'Features', open: 'U-9' },
   { id: 'view:platform-line-items', scope: 'platform', kind: 'view', pattern: 'catalog/products', parent: 'platform:products', label: 'Line items', open: 'U-9' },
   { id: 'record:platform-product', scope: 'platform', kind: 'record', pattern: 'catalog/products/[productKey]', parent: 'platform:products', record: 'productKey' },
   { id: 'record:platform-family', scope: 'platform', kind: 'record', pattern: 'catalog/families/[familyKey]', parent: 'platform:products', record: 'familyKey' },
@@ -150,7 +150,7 @@ const LOCATION_METADATA: readonly LocationNode[] = [
   { id: 'record:platform-connector', scope: 'platform', kind: 'record', pattern: 'integrations/[connectorKey]', parent: 'platform:connectors', record: 'connectorKey' },
   { id: 'record:platform-provider', scope: 'platform', kind: 'record', pattern: 'providers/[providerKey]', parent: 'platform:providers', record: 'providerKey' },
   { id: 'view:platform-twilio', scope: 'platform', kind: 'view', pattern: 'providers/twilio', parent: 'platform:providers', label: 'Twilio' },
-  { id: 'view:platform-twilio-configure', scope: 'platform', kind: 'view', pattern: 'providers/twilio/configure', parent: 'view:platform-twilio', label: 'Configure' },
+  { id: 'view:platform-twilio-configure', scope: 'platform', kind: 'view', pattern: 'providers/twilio/configure', parent: 'view:platform-twilio', label: 'Edit' },
   { id: 'record:platform-plan', scope: 'platform', kind: 'record', pattern: 'plans/[planKey]', parent: 'platform:plans', record: 'planKey' },
   { id: 'record:platform-tenant-economics', scope: 'platform', kind: 'record', pattern: 'economics/[targetOrganizationId]', parent: 'platform:portfolio-economics', record: 'targetOrganizationId' },
 ];
@@ -201,7 +201,7 @@ function deriveNodes(): LocationNode[] {
     nodes.push({ id: `workspace:${workspace.key}`, scope: 'organization', kind: 'workspace', pattern: areaRoute(workspace.home), area: workspace.home, workspace: workspace.key });
     if (hasConfigurationLevel(workspace.key)) {
       // No workspace has a Configuration landing: the address only redirects to a door, so the level is plain text.
-      nodes.push({ id: `configuration:${workspace.key}`, scope: 'organization', kind: 'configuration', pattern: `${areaRoute(workspace.home)}/configuration`, parent: `workspace:${workspace.key}`, workspace: workspace.key, label: 'Configuration', redirect: true });
+      nodes.push({ id: `configuration:${workspace.key}`, scope: 'organization', kind: 'configuration', pattern: `${areaRoute(workspace.home)}/configuration`, parent: `workspace:${workspace.key}`, workspace: workspace.key, label: 'Settings', redirect: true });
     }
   }
 

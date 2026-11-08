@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -40,7 +40,7 @@ export async function listCallOutcomes(
     .order('created_at', { ascending: true });
 
   if (error) {
-    throw new DomainError(error.message, 'call_outcomes.list_failed');
+    throw fromDatabaseError(error, 'call_outcomes.list_failed');
   }
 
   return (data ?? []).map((row) => ({
@@ -87,7 +87,7 @@ export async function createCallOutcome(
         'call_outcomes.name_taken',
       );
     }
-    throw new DomainError(error.message, 'call_outcomes.create_failed');
+    throw fromDatabaseError(error, 'call_outcomes.create_failed');
   }
 
   return data.id;

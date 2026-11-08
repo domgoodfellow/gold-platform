@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import type { PurchaseQuoteLine } from '@/lib/domain/platform-billing/quote';
 
 export type CheckoutLineItem = { priceReference: string; quantity: number };
@@ -27,7 +27,7 @@ export async function resolveCheckoutLineItems(
         p_environment: input.environment,
         p_billing_interval: line.billingInterval,
       });
-      if (error) throw new DomainError(error.message, 'platform_billing.agreement_price_lookup_failed');
+      if (error) throw fromDatabaseError(error, 'platform_billing.agreement_price_lookup_failed');
       reference = data;
     } else {
       const { data, error } = await db.rpc('plan_price_provider_reference', {
@@ -35,13 +35,13 @@ export async function resolveCheckoutLineItems(
         p_plan_price_id: line.priceSourceId,
         p_environment: input.environment,
       });
-      if (error) throw new DomainError(error.message, 'platform_billing.price_lookup_failed');
+      if (error) throw fromDatabaseError(error, 'platform_billing.price_lookup_failed');
       reference = data;
     }
 
     if (!reference) {
       throw new DomainError(
-        `${line.label} has not been provisioned with the billing provider yet — ask platform staff to provision this price.`,
+        `${line.label} isn’t set up in the billing service yet — ask platform staff to add this price.`,
         'platform_billing.price_not_provisioned',
       );
     }

@@ -41,8 +41,8 @@ export default async function ConfigurationProposalPage({ params }: PageProps<'/
     const offer = organization.operationalState === 'setup' && organization.capabilities.includes('configuration.propose');
     if (!offer) {
       return <AppPage>
-        <PageHeader title="Review proposed configuration" crumbs={crumbs} />
-        <EmptyState>No configuration proposal is waiting to be reviewed.</EmptyState>
+        <PageHeader title="Review proposed setup" crumbs={crumbs} />
+        <EmptyState>No proposed setup is waiting.</EmptyState>
       </AppPage>;
     }
     const [templates, identity, businesses] = await Promise.all([
@@ -58,7 +58,7 @@ export default async function ConfigurationProposalPage({ params }: PageProps<'/
   const states = await organizationResolvedFeatureStates(db, { organizationId }, { features, modules, products });
   const starting = proposal.origin !== 'drafted';
   return <AppPage>
-    <PageHeader title={starting ? 'Review your starting setup' : 'Review proposed configuration'} crumbs={crumbs} meta={provenance(proposal)} />
+    <PageHeader title={starting ? 'Review your starting setup' : 'Review proposed setup'} crumbs={crumbs} meta={provenance(proposal)} />
     {/* Edited in the several-kinds-of-work form whichever form it was stored in. */}
     <ProposalReview organizationId={organizationId} proposal={{ ...proposal, shape: withWorkTypes(proposal.shape) }} featureStates={states} features={features} />
   </AppPage>;

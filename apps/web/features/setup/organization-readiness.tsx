@@ -31,7 +31,7 @@ function summary(overview: SetupOverview): { title: string; detail: string } {
 
   const remaining = [
     overview.recommendedOpen ? countLabel(overview.recommendedOpen, 'recommendation') : null,
-    overview.optionalOpen ? countLabel(overview.optionalOpen, 'optional capability') : null,
+    overview.optionalOpen ? countLabel(overview.optionalOpen, 'optional step') : null,
   ].filter(Boolean);
 
   return {
@@ -62,10 +62,10 @@ function ReadinessGroup({ importance, areas, allowedDestinations }: { importance
             </div>
             {!allowedDestinations || allowedDestinations.includes(area.area.href.split('#')[0]) ? (
               <ButtonLink href={area.area.href} size="small" className="shrink-0">
-                Configure
+                Set up
               </ButtonLink>
             ) : (
-              <span className="shrink-0 text-xs text-muted">Your role cannot configure this</span>
+              <span className="shrink-0 text-xs text-muted">Your role cannot change this</span>
             )}
           </li>
         ))}
@@ -132,7 +132,7 @@ export function OrganizationReadiness({
           <ReadinessGroup importance="recommended" areas={overview.areas} allowedDestinations={allowedDestinations} />
           <ReadinessGroup importance="optional" areas={overview.areas} allowedDestinations={allowedDestinations} />
           {overview.areas.every((area) => area.state === 'complete') ? (
-            <p className="text-sm text-muted">Every setup area is ready. Configuration remains available in Settings and each workspace.</p>
+            <p className="text-sm text-muted">Every setup area is ready.</p>
           ) : null}
           {agentAvailable ? (
             <section className="border-t border-border pt-5">

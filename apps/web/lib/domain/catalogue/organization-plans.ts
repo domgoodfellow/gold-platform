@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 import { getOrganization } from '@/lib/domain/tenancy/organizations';
 import { listCatalogFeatures, listCatalogModules, listCatalogProducts, type CatalogFeature, type CatalogModule, type CatalogProduct } from './catalogue';
@@ -80,7 +80,7 @@ export async function listAssignmentsForPlan(db: Db, planId: string): Promise<Pl
     .select('id, organization_id, plan_id, plan_kind, period_start, period_end, assigned_at, note')
     .eq('plan_id', planId)
     .order('period_start', { ascending: false });
-  if (error) throw new DomainError(error.message, 'organization_plans.assignments_for_plan_failed');
+  if (error) throw fromDatabaseError(error, 'organization_plans.assignments_for_plan_failed');
   return (data ?? []).map((row) => ({
     id: row.id,
     organizationId: row.organization_id,
@@ -99,7 +99,7 @@ export async function listOrganizationPlanAssignments(db: Db, input: { organizat
     .select('id, organization_id, plan_id, plan_kind, period_start, period_end, assigned_at, note')
     .eq('organization_id', input.organizationId)
     .order('period_start', { ascending: false });
-  if (error) throw new DomainError(error.message, 'organization_plans.assignments_failed');
+  if (error) throw fromDatabaseError(error, 'organization_plans.assignments_failed');
   return (data ?? []).map((row) => ({
     id: row.id,
     organizationId: row.organization_id,
@@ -125,7 +125,7 @@ export async function currentPlanAssignment(db: Db, input: { organizationId: str
     .order('period_start', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) throw new DomainError(error.message, 'organization_plans.current_assignment_failed');
+  if (error) throw fromDatabaseError(error, 'organization_plans.current_assignment_failed');
   if (!data) return null;
   return {
     id: data.id,
@@ -150,7 +150,7 @@ export async function currentAddonAssignments(db: Db, input: { organizationId: s
     .lte('period_start', today)
     .gt('period_end', today)
     .order('period_start', { ascending: false });
-  if (error) throw new DomainError(error.message, 'organization_plans.current_addons_failed');
+  if (error) throw fromDatabaseError(error, 'organization_plans.current_addons_failed');
   return (data ?? []).map((row) => ({
     id: row.id,
     organizationId: row.organization_id,
@@ -202,7 +202,7 @@ export async function listOrganizationPlanAgreements(
     .order('effective_from', { ascending: false });
   if (input.planId) query = query.eq('plan_id', input.planId);
   const { data, error } = await query;
-  if (error) throw new DomainError(error.message, 'organization_plans.agreements_failed');
+  if (error) throw fromDatabaseError(error, 'organization_plans.agreements_failed');
   return (data ?? []).map((row) => ({
     id: row.id,
     organizationId: row.organization_id,
@@ -260,7 +260,7 @@ export async function listOrganizationPlanQuotaOverrides(
     .select('id, organization_id, plan_id, allowance_key, included_quantity, hard_limit, effective_from, note')
     .eq('organization_id', input.organizationId)
     .order('effective_from', { ascending: false });
-  if (error) throw new DomainError(error.message, 'organization_plans.quota_overrides_failed');
+  if (error) throw fromDatabaseError(error, 'organization_plans.quota_overrides_failed');
   return (data ?? []).map((row) => ({
     id: row.id,
     organizationId: row.organization_id,
@@ -296,7 +296,7 @@ export async function organizationEffectiveEntitlements(
     p_organization_id: input.organizationId,
     p_at: input.at ?? new Date().toISOString(),
   });
-  if (error) throw new DomainError(error.message, 'organization_plans.effective_entitlements_failed');
+  if (error) throw fromDatabaseError(error, 'organization_plans.effective_entitlements_failed');
   return (data ?? []).map((row: { feature_id: string; plan_id: string; plan_key: string }) => ({
     featureId: row.feature_id,
     planId: row.plan_id,
@@ -314,7 +314,7 @@ export async function organizationPlanPrice(
     p_at: input.at ?? new Date().toISOString(),
     p_billing_interval: input.billingInterval ?? 'month',
   });
-  if (error) throw new DomainError(error.message, 'organization_plans.plan_price_failed');
+  if (error) throw fromDatabaseError(error, 'organization_plans.plan_price_failed');
   const row = (data ?? [])[0] as
     | { amount_minor: string | number; currency: string; source: string; source_id: string }
     | undefined;
@@ -335,7 +335,7 @@ export async function organizationEffectiveQuotas(
     p_organization_id: input.organizationId,
     p_at: input.at ?? new Date().toISOString(),
   });
-  if (error) throw new DomainError(error.message, 'organization_plans.effective_quotas_failed');
+  if (error) throw fromDatabaseError(error, 'organization_plans.effective_quotas_failed');
   return (data ?? []).map(
     (row: {
       allowance_key: string;
@@ -428,10 +428,10 @@ export async function organizationResolvedFeatureStates(
       currentPlanAssignment(db, { organizationId: input.organizationId }),
     ]);
   if (mappingsResult.error) {
-    throw new DomainError(mappingsResult.error.message, 'organization_plans.resolved_features_failed');
+    throw fromDatabaseError(mappingsResult.error, 'organization_plans.resolved_features_failed');
   }
   if (overridesResult.error) {
-    throw new DomainError(overridesResult.error.message, 'organization_plans.resolved_features_failed');
+    throw fromDatabaseError(overridesResult.error, 'organization_plans.resolved_features_failed');
   }
 
   const moduleKeyByFeature = new Map<string, ModuleKey>();
@@ -556,7 +556,7 @@ export async function enableOrganizationFeature(
     if (error.code === '42501') {
       throw new DomainError('You cannot manage features here.', 'organization_plans.feature_forbidden');
     }
-    throw new DomainError(error.message, 'organization_plans.enable_feature_failed');
+    throw fromDatabaseError(error, 'organization_plans.enable_feature_failed');
   }
 }
 
@@ -583,7 +583,7 @@ export async function disableOrganizationFeature(
     if (error.code === '42501') {
       throw new DomainError('You cannot manage features here.', 'organization_plans.feature_forbidden');
     }
-    throw new DomainError(error.message, 'organization_plans.disable_feature_failed');
+    throw fromDatabaseError(error, 'organization_plans.disable_feature_failed');
   }
 }
 

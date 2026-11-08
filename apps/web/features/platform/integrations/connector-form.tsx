@@ -118,7 +118,7 @@ export function ConnectorForm({ connector }: { connector: Connector | null }) {
             {/* Repeated raw Checkbox, not CheckboxField: several boxes share one name
                 ("capabilities"), each needing its own `value` — the same reason multi_select's
                 custom-field inputs use this shape rather than the single-boolean helper. */}
-            <FieldLegend variant="label">GildOps capabilities it exposes</FieldLegend>
+            <FieldLegend variant="label">What it lets GildOps do</FieldLegend>
             <div className="mt-1 grid gap-1 sm:grid-cols-2">
               {CONNECTOR_CAPABILITIES.map((capability) => {
                 const id = `capability-${capability}`;

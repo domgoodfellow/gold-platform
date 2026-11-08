@@ -9,7 +9,7 @@ import { Hint } from '@/components/controls/inputs';
 import { PageHeader } from '@/components/headers/page-header';
 import { platformAncestry, platformHref } from '@/lib/platform-navigation';
 
-const sections = [['Overview', ''], ['Plan & Entitlements', '/commercial'], ['Providers', '/providers'], ['Integrations', '/integrations'], ['Usage', '/usage'], ['Failures', '/failures']] as const;
+const sections = [['Overview', ''], ['Plan', '/commercial'], ['Vendors', '/providers'], ['Integrations', '/integrations'], ['Usage', '/usage'], ['Failures', '/failures']] as const;
 
 /**
  * A Platform view OF an organization — never the organization's own tenant shell. `canOpenBusiness`
@@ -59,9 +59,9 @@ export function TenantWorkspaceHeader({
         }
       />
       <Hint className="block">
-        Tenant ID: {id} · Trades in {currency || 'an unconfigured currency'}.
+        Business ID: {id} · Trades in {currency || 'a currency not yet set'}.
       </Hint>
-      <nav aria-label="Tenant workspace" className="mt-4 flex gap-1 overflow-x-auto border-b border-border">
+      <nav aria-label="Business" className="mt-4 flex gap-1 overflow-x-auto border-b border-border">
         {sections.map(([label, suffix]) => {
           const href = `${base}${suffix}`;
           const active = pathname === href;

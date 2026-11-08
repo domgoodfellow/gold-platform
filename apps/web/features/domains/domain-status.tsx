@@ -32,7 +32,7 @@ export function domainStateSentence(
     case 'pending_dns':
       return 'Publish the records below at your DNS host, then check again. Changes can take a while to spread.';
     case 'not_registered':
-      return 'The hosting provider has not accepted this domain yet. Check again to retry.';
+      return 'This domain isn’t accepted yet. Check again to retry.';
     case 'provider_unavailable':
       return PROVIDER_UNAVAILABLE_MESSAGE;
     case 'provider_error':

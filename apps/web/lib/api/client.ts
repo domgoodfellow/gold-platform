@@ -31,7 +31,7 @@ export async function callDomainCommand<TResult>(
   const baseUrl = process.env.GOLD_API_URL;
   if (!baseUrl) {
     throw new DomainError(
-      'This deployment has no API configured for this action.',
+      'This isn’t available yet.',
       'api.unconfigured',
     );
   }

@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
@@ -24,7 +24,7 @@ export async function createProposalInvite(db: Db, input: { customerId: string }
     if (error.code === '42501') {
       throw new DomainError('You cannot send proposals to customers here.', 'proposal_invites.forbidden');
     }
-    throw new DomainError(error.message, 'proposal_invites.create_failed');
+    throw fromDatabaseError(error, 'proposal_invites.create_failed');
   }
   return data as string;
 }
@@ -40,7 +40,7 @@ export async function listProposalInvites(
     .eq('organization_id', input.organizationId)
     .eq('customer_id', input.customerId)
     .order('created_at', { ascending: false });
-  if (error) throw new DomainError(error.message, 'proposal_invites.list_failed');
+  if (error) throw fromDatabaseError(error, 'proposal_invites.list_failed');
 
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -59,7 +59,7 @@ export async function revokeProposalInvite(db: Db, input: { id: string }): Promi
     .update({ revoked_at: new Date().toISOString() })
     .eq('id', input.id)
     .select('id');
-  if (error) throw new DomainError(error.message, 'proposal_invites.revoke_failed');
+  if (error) throw fromDatabaseError(error, 'proposal_invites.revoke_failed');
   if (!data || data.length === 0) {
     throw new DomainError('No such link, or you may not revoke it.', 'proposal_invites.revoke_forbidden');
   }
@@ -86,7 +86,7 @@ export async function claimProposalInvite(db: Db, input: { token: string }): Pro
     if (error.code === '42501') {
       throw new DomainError('That link is not valid. Ask GildOps for a new one.', 'proposal_invites.invalid_link');
     }
-    throw new DomainError(error.message, 'proposal_invites.claim_failed');
+    throw fromDatabaseError(error, 'proposal_invites.claim_failed');
   }
   return data as string;
 }

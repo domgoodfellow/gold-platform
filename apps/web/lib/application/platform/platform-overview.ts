@@ -1,5 +1,5 @@
 import type { Db } from '@/lib/db/types';
-import { DomainError } from '@/lib/domain/errors';
+import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import type { Tenant } from '@/lib/domain/platform/tenants';
 
 export type PlatformOverview = {
@@ -32,7 +32,7 @@ export async function platformOverview(
     p_recent_limit: options.recentLimit ?? 8,
   });
   if (error || !data) {
-    throw new DomainError(error?.message ?? 'Platform summary unavailable.', 'platform.overview_forbidden');
+    throw error ? fromDatabaseError(error, 'platform.overview_forbidden') : new DomainError('Platform summary unavailable.', 'platform.overview_forbidden');
   }
   return data as unknown as PlatformOverview;
 }
