@@ -19,10 +19,13 @@ update public.platform_plans
    set description = replace(replace(description, 'GOLD''s', 'GildOps'''), 'GOLD ', 'GildOps ')
  where description like '%GOLD%' and key in ('gold_internal', 'platform');
 
--- The old default website title, wherever a revision still stores it.
+-- The old default website title, in revisions still being edited. Published and archived
+-- revisions are a fixed record (app.guard_public_site_revision) and keep their wording until
+-- the business publishes again.
 update public.public_site_revisions
    set pages = replace(pages::text, 'GOLD | One operating system for your business', 'GildOps')::jsonb
- where pages::text like '%GOLD | One operating system for your business%';
+ where status not in ('published', 'archived')
+   and pages::text like '%GOLD | One operating system for your business%';
 
 -- The bootstrap names the role it creates "GildOps Admin" from now on.
 create or replace function public.bootstrap_gold_internal_workspace(
