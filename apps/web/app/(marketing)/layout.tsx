@@ -39,7 +39,7 @@ export default async function MarketingLayout({ children }: LayoutProps<'/'>) {
       <MarketingShell
         name={PLATFORM_NAME}
         logoUrl={site.brand.logoPath ? getPublicDb().storage.from('brand').getPublicUrl(site.brand.logoPath).data.publicUrl : null}
-        tagline={site.profile.tagline ?? 'Sales, operations and customer service in one connected system.'}
+        tagline={site.profile.tagline ?? null}
         contactEmail={site.profile.contactEmail}
         contactPhone={site.profile.contactPhone}
       >

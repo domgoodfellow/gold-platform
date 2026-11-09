@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { CtaBand } from '@/components/marketing/cta-band';
 import { FaqSection, faqStructuredData } from '@/components/marketing/faq-section';
 import { ButtonLink } from '@/components/controls/button';
@@ -7,12 +6,10 @@ import type { Product } from '@/lib/marketing/content';
 
 /**
  * The shared skeleton for `/sales`, `/operations` and `/customer-service`: hero, problem, key
- * workflows, a product demonstration, feature groups, how it connects, integrations, FAQ, CTA.
- * The one thing each page supplies for itself is `preview` — the illustrated `ProductPreview`,
- * because its icons and sample rows are genuinely different per product and a shared default
- * would be the generic feature dump this rebuild exists to remove.
+ * workflows, feature groups, how it connects, integrations, FAQ, CTA. No illustrated dashboard:
+ * a made-up screen with sample customers is not a picture of what the visitor would get.
  */
-export function ProductLanding({ product, preview }: { product: Product; preview: ReactNode }) {
+export function ProductLanding({ product }: { product: Product }) {
   const structuredData = {
     '@context': 'https://schema.org',
     '@graph': [{ ...faqStructuredData(product.faq), '@id': `${canonicalUrl(product.href).toString()}#faq` }],
@@ -25,7 +22,7 @@ export function ProductLanding({ product, preview }: { product: Product; preview
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }}
       />
 
-      <section className="grid gap-12 lg:grid-cols-[1fr_460px] lg:items-center lg:gap-16">
+      <section className="max-w-3xl">
         <div className="flex flex-col items-start gap-6">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-subtle">{product.name}</p>
           <h1 className="max-w-2xl text-4xl font-semibold leading-[1.04] tracking-tight sm:text-5xl">
@@ -34,7 +31,6 @@ export function ProductLanding({ product, preview }: { product: Product; preview
           <p className="max-w-xl text-lg leading-relaxed text-muted">{product.problem}</p>
           <ButtonLink href="/demo" tone="primary">Request a demo</ButtonLink>
         </div>
-        {preview}
       </section>
 
       <section>

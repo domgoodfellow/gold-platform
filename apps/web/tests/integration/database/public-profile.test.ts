@@ -255,8 +255,8 @@ describe('what a business says about itself', () => {
 
 describe("GOLD's chrome, and the one place it must never appear", () => {
   /**
-   * `SiteShell` (credential screens) and `MarketingShell` (the marketing site) are each a header
-   * saying GOLD and a footer saying GOLD. On those pages that is correct — the business making claims there is GOLD.
+   * `MarketingShell` (the marketing site and the credential screens) and `SiteShell` (the platform
+   * not-found page) are each a header saying GOLD and a footer saying GOLD. On those pages that is correct — the business making claims there is GOLD.
    *
    * On `/book/{slug}` and `/portal/{token}` it would be our wordmark on somebody else's shop
    * front. That is the same failure the rest of this file guards against, in structural form
@@ -276,7 +276,7 @@ describe("GOLD's chrome, and the one place it must never appear", () => {
 
   it('dresses GOLD’s own pages in it', () => {
     // Both, because the point of the shell is that the two stop feeling like two applications.
-    for (const [group, shell] of [['(marketing)', 'MarketingShell'], ['(auth)', 'SiteShell']] as const) {
+    for (const [group, shell] of [['(marketing)', 'MarketingShell'], ['(auth)', 'MarketingShell']] as const) {
       const uses = sourcesIn(group).some((source) => source.includes(shell));
       expect(uses, `${group} should render inside ${shell}`).toBe(true);
     }

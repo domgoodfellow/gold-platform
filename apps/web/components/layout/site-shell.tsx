@@ -4,8 +4,9 @@ import { cx, FOCUS_RING } from '../class-names';
 import { PLATFORM_NAME } from '@/lib/brand';
 
 /**
- * GOLD's own chrome: a header and a footer around the pages that belong to GOLD rather than to a
- * business. The marketing page and the three auth screens, and nothing else.
+ * GOLD's own plain chrome: a header and a footer around the platform's not-found page, which
+ * belongs to GOLD rather than to a business. The marketing pages and the credential screens wear
+ * `MarketingShell` instead.
  *
  * **Never the `(public)` surfaces, and this is the whole reason it is a separate component from
  * `AppShell`.** `/book/{slug}` and `/portal/{token}` belong to a *tenant* — a customer of theirs
