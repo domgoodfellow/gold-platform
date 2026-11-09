@@ -58,7 +58,7 @@ test('Dialer console keeps its operating composition empty, populated, focused a
       await pg.query("insert into organization_commercial_terms(organization_id,product_key,period_start,period_end,quantity,price_minor,currency,recorded_by,note) values($1,'module:reception','2020-01-01','9999-12-31',1,0,'CAD',$2,'Local Dialer console fixture')", [organizationId, made.data.user.id]);
       await recordPlanAssignment(db, { organizationId, planId, periodStart: '2020-01-01', periodEnd: '9999-12-31' });
     }
-    // The populated business: a locally assigned outbound number and a real queue of call follow-ups.
+    // The populated business: a locally assigned outbound number and a real call list.
     const number = (await pg.query("insert into public.phone_numbers (organization_id,e164,label,origin,lifecycle,purpose,voice_outbound_enabled,sms_outbound_enabled,voice_inbound_enabled,sms_inbound_enabled) values ($1,'+14385550100','Main line','external','active','main',true,false,false,false) returning id", [populated])).rows[0].id;
     await assignPhoneNumber(db, { organizationId: populated, phoneNumberId: number, memberId: (await currentMembershipId(db, { organizationId: populated }))!, isDefault: true });
     const people: [string, string | null, string | null, string][] = [
@@ -97,11 +97,11 @@ test('Dialer console keeps its operating composition empty, populated, focused a
       await expect(page.getByRole('region', { name: 'Calling readiness' })).toBeVisible();
       await expect(page.getByRole('group', { name: 'Dial pad' })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Call', exact: true })).toBeDisabled();
-      desktop = await page.locator('[data-presentation]').filter({ visible: true }).evaluate(element => element.clientWidth >= 1024);
+      desktop = await page.locator('[data-presentation]:not([data-slot])').filter({ visible: true }).evaluate(element => element.clientWidth >= 1024);
       if (desktop) {
-        await expect(page.getByRole('region', { name: 'Call queue' })).toContainText('No open call follow-ups');
+        await expect(page.getByRole('region', { name: 'Call list' })).toContainText('No one to call');
         await expect(page.getByRole('region', { name: 'Customer' })).toBeVisible();
-        const queueBox = (await page.getByRole('region', { name: 'Call queue' }).boundingBox())!;
+        const queueBox = (await page.getByRole('region', { name: 'Call list' }).boundingBox())!;
         const consoleBox = (await page.getByRole('region', { name: 'Calling console' }).boundingBox())!;
         expect(consoleBox.width).toBeGreaterThan(queueBox.width * 1.6);
         expect(Math.abs(queueBox.y - (consoleBox.y - (await page.getByRole('region', { name: 'Calling readiness' }).boundingBox())!.height))).toBeLessThanOrEqual(2);
@@ -115,17 +115,17 @@ test('Dialer console keeps its operating composition empty, populated, focused a
       await expect(page.getByRole('heading', { name: 'Sarah Mitchell', level: 2 })).toBeVisible();
       await expect(page.getByRole('textbox', { name: 'Number to call' })).toHaveValue('(438)555-0194');
       if (desktop) await expect(page.getByRole('region', { name: 'Customer' })).toContainText('sarah@northshore.example.test');
-      desktop = await page.locator('[data-presentation]').filter({ visible: true }).evaluate(element => element.clientWidth >= 1024);
+      desktop = await page.locator('[data-presentation]:not([data-slot])').filter({ visible: true }).evaluate(element => element.clientWidth >= 1024);
       const toolbar = page.getByRole('group', { name: 'Dialer toolbar', exact: true });
       await expect(toolbar.getByRole('button', { name: 'Standard', exact: true })).toBeVisible();
       await expect(toolbar.getByRole('button', { name: 'Pop out dialer', exact: true })).toBeVisible();
       await expect(toolbar.getByRole('link', { name: 'Call history', exact: true })).toBeVisible();
-      await expect(toolbar.getByRole('link', { name: 'Configuration', exact: true })).toBeVisible();
+      await expect(toolbar.getByRole('button', { name: 'Settings', exact: true })).toBeVisible();
       if (desktop) await expect(page.getByRole('group', { name: 'Dialer region', exact: true })).toBeHidden();
       else await expect(page.getByRole('group', { name: 'Dialer region', exact: true })).toBeVisible();
       if (!desktop) {
-        await page.getByRole('group', { name: 'Dialer region', exact: true }).getByRole('button', { name: 'Queue', exact: true }).click();
-        await expect(page.getByRole('region', { name: 'Call queue', exact: true })).toBeVisible();
+        await page.getByRole('group', { name: 'Dialer region', exact: true }).getByRole('button', { name: 'Call list', exact: true }).click();
+        await expect(page.getByRole('region', { name: 'Call list', exact: true })).toBeVisible();
         await page.getByRole('button', { name: /Mike Chen/ }).click();
         await expect(page.getByRole('textbox', { name: 'Number to call' })).toHaveValue('(438)555-0123');
       }
@@ -151,16 +151,16 @@ test('Dialer console keeps its operating composition empty, populated, focused a
     await page.goto(`/organizations/${populated}/calls`);
     await page.getByRole('tab', { name: 'Wrap-up' }).click();
     await expect(page.getByRole('button', { name: 'Wrap up' })).toBeVisible();
-    await page.getByRole('tab', { name: 'Follow-up' }).click();
+    await page.getByRole('tab', { name: 'Details' }).click();
     await page.getByRole('button', { name: 'Focus', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Focus', exact: true })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByRole('region', { name: 'Call queue' })).toBeHidden();
+    await expect(page.getByRole('region', { name: 'Call list' })).toBeHidden();
     await expect(page.getByRole('region', { name: 'Customer' })).toBeHidden();
     await expect(page.locator('#call-history:visible')).toHaveCount(0);
     await expect(page.getByRole('textbox', { name: 'Number to call' })).toHaveValue('(438)555-0194');
     await page.screenshot({ path: testInfo.outputPath('focus-wide.png') });
     await page.getByRole('button', { name: 'Standard', exact: true }).click();
-    await expect(page.getByRole('region', { name: 'Call queue' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Call list' })).toBeVisible();
 
     const popupEvent = page.waitForEvent('popup');
     await page.getByRole('button', { name: 'Pop out dialer' }).click();
@@ -179,23 +179,23 @@ test('Dialer console keeps its operating composition empty, populated, focused a
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`/organizations/${populated}/calls`);
     await page.locator('header').getByRole('button', { name: 'Toggle Sidebar', exact: true }).click();
-    await expect(page.getByRole('region', { name: 'Call queue' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Call list' })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('sidebar-collapsed.png') });
     await page.locator('header').getByRole('button', { name: 'Toggle Sidebar', exact: true }).click();
     await page.getByRole('button', { name: 'Agent', exact: true }).filter({ visible: true }).click();
     await expect(page.getByRole('button', { name: 'Close Agent', exact: true })).toBeVisible();
     await expect(page.getByRole('group', { name: 'Dialer region', exact: true })).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Call queue', exact: true })).toBeHidden();
+    await expect(page.getByRole('region', { name: 'Call list', exact: true })).toBeHidden();
     await expect(page.getByRole('complementary', { name: 'Agent', exact: true }).getByText(/^Loading/)).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath('agent-open.png') });
     await noHorizontalScroll(page);
     await page.getByRole('button', { name: 'Close Agent', exact: true }).click();
-    await page.getByRole('button', { name: 'Queue panel', exact: true }).click();
-    await expect(page.getByRole('region', { name: 'Call queue', exact: true })).toBeHidden();
-    await page.getByRole('button', { name: 'Queue panel', exact: true }).click();
-    await expect(page.getByRole('region', { name: 'Call queue', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Call list panel', exact: true }).click();
+    await expect(page.getByRole('region', { name: 'Call list', exact: true })).toBeHidden();
+    await page.getByRole('button', { name: 'Call list panel', exact: true }).click();
+    await expect(page.getByRole('region', { name: 'Call list', exact: true })).toBeVisible();
     // A Configure rail applies the same available-canvas constraint as Agent.
-    await page.locator('[data-presentation]').filter({ visible: true }).evaluate(element => { element.style.width = '640px'; element.style.maxWidth = '100%'; });
+    await page.locator('[data-presentation]:not([data-slot])').filter({ visible: true }).evaluate(element => { element.style.width = '640px'; element.style.maxWidth = '100%'; });
     await expect(page.getByRole('group', { name: 'Dialer region', exact: true })).toBeVisible();
     await noHorizontalScroll(page);
     await page.screenshot({ path: testInfo.outputPath('constrained-canvas.png') });
@@ -211,7 +211,7 @@ test('Dialer console keeps its operating composition empty, populated, focused a
       await expect(page.getByLabel('Call duration')).toBeVisible();
       await expect(page.getByRole('textbox', { name: 'Number to call' })).toHaveCount(0);
       if (width < 1024) {
-        await page.getByRole('group', { name: 'Dialer region', exact: true }).getByRole('button', { name: 'Queue', exact: true }).click();
+        await page.getByRole('group', { name: 'Dialer region', exact: true }).getByRole('button', { name: 'Call list', exact: true }).click();
         await expect(controls).toBeHidden();
         await page.getByRole('button', { name: 'Show call controls', exact: true }).click();
         await expect(controls).toBeVisible();

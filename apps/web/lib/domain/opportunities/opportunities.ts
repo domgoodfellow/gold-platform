@@ -39,7 +39,7 @@ function opportunity(row: ReadRow, ownerNames?: Map<string, string>): Opportunit
     amountMinor: row.amount_minor, currency: row.currency, ownerMembershipId: row.owner_membership_id,
     ownerName: row.owner_membership_id ? ownerNames?.get(row.owner_membership_id) ?? row.owner?.display_name ?? 'Member' : null,
     expectedCloseOn: row.expected_close_on, createdAt: row.created_at,
-    nextFollowUp: row.next_follow_up_id && row.next_follow_up_due_at ? { id: row.next_follow_up_id, title: row.next_follow_up_title ?? 'Follow-up', dueAt: row.next_follow_up_due_at } : null };
+    nextFollowUp: row.next_follow_up_id && row.next_follow_up_due_at ? { id: row.next_follow_up_id, title: row.next_follow_up_title ?? 'Task', dueAt: row.next_follow_up_due_at } : null };
 }
 
 /** Exact total plus a bounded page; all filters run in Postgres under organization RLS. */

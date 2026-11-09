@@ -21,6 +21,7 @@ import { loadCallingOptions } from '@/lib/application/communications/calling-opt
 import { loadDialerQueue } from '@/lib/application/communications/dialer-queue';
 import { followUpsAvailable } from '@/lib/application/crm/follow-ups';
 import { DialerWorkspace } from '@/features/communications/voice/dialer-workspace';
+import { callListAvailable } from '@/lib/application/communications/call-list';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +36,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
   const prefill = typeof query.to === 'string' && /^\+[1-9][0-9]{7,14}$/.test(query.to) ? query.to : '';
   const day = zonedDayRange(todayInZone(organization.timezone), organization.timezone);
   const mayCall = organization.capabilities.includes('call.place');
+  const mayAddToList = await callListAvailable(db, organization);
   const base = `/organizations/${organizationId}/calls`;
 
   const [page, counts, todays, outcomes, numbers, members, options, queueAvailable, doors, toWrapUp] = await Promise.all([
@@ -71,6 +73,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
         prefill={prefill}
         setupHref={setupHref}
         recentCalls={recentCalls}
+        mayAddToList={mayAddToList}
         actions={
           <>
             <ButtonLink href="#call-history" tone="secondary">Call history</ButtonLink>

@@ -59,7 +59,7 @@ describe('shared organization calendar', () => {
     reads.followUps.mockRejectedValue(new Error('read failed'));
     const result = await loadOrganizationCalendar(db, input);
     expect(result.events.map(e => e.source)).toEqual(['work']);
-    expect(result.notices).toContain('Follow-ups are unavailable. Other calendar sources may still be shown.');
+    expect(result.notices).toContain('Tasks are unavailable. Other calendar sources may still be shown.');
   });
   it('honors source selection and discloses truncated or unknown totals', async () => {
     reads.work.mockResolvedValue(counted([work], 501));

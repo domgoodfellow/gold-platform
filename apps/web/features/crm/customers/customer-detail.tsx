@@ -39,6 +39,7 @@ import {
 } from '@/app/organizations/[organizationId]/crm/contacts/[contactId]/actions';
 import { CustomerFinancialSummary } from './customer-financial-summary';
 import { CustomerHeader } from './customer-header';
+import type { CallListStanding } from '@/features/communications/voice/add-to-list-menu';
 import { CustomerLocationsSection } from './customer-locations-section';
 import { CustomerRelatedWork } from './customer-related-work';
 import { EditContactDialog } from './edit-contact-dialog';
@@ -91,6 +92,8 @@ export function CustomerDetail(props: {
   currency: string;
   role: string;
   features: { voice: boolean; billing: boolean; portal: boolean };
+  /** This contact's standing on the Dialer's call list, when Add to is offered. */
+  callList?: CallListStanding;
   permissions: { edit: boolean; call: boolean; attach: boolean; portal: boolean; priceManage: boolean };
 }) {
   const { organizationId, customer, stage, stages, definitions, features, permissions, mayPropose, role, timezone } = props;
@@ -111,7 +114,7 @@ export function CustomerDetail(props: {
 
   return (
     <>
-      <CustomerHeader organizationId={organizationId} customer={customer} stage={stage} definitions={definitions} stages={editStages} mayEdit={permissions.edit} mayCall={features.voice && permissions.call} openEditOn={classify === 'identity' ? 'identity' : classify === 'lifecycle' ? 'relationship' : undefined} />
+      <CustomerHeader organizationId={organizationId} customer={customer} stage={stage} definitions={definitions} stages={editStages} mayEdit={permissions.edit} mayCall={features.voice && permissions.call} openEditOn={classify === 'identity' ? 'identity' : classify === 'lifecycle' ? 'relationship' : undefined} callList={props.callList} />
       <RecordSubnavigation label="Contact sections" sections={sectionItems} current={section} subsections={viewItems} currentSubsection={view} />
       <div className="min-w-0">{renderSection(section, view)}</div>
     </>

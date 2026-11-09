@@ -33,7 +33,7 @@ export default async function FollowUpsPage({params,searchParams}:{params:Promis
   const pageHref=(p:number)=>{const state=new URLSearchParams();for(const [key,value] of Object.entries(q))if(value && key!=='page')state.set(key,value);state.set('page',String(p));return `${href}?${state}`;};
   return <AppPage><CollectionHeader location={{}} actions={<><ButtonLink href={`${href}/calendar`}>Calendar</ButtonLink>{options.mayManage?<FollowUpSheet {...options}/>:null}</>}/>
     <form method="get" role="search" className="mb-5 grid grid-cols-2 items-end gap-3 sm:grid-cols-3 xl:grid-cols-6">
-      <FormField id="follow-up-q" label="Search follow-ups" className="col-span-2 sm:col-span-1">{p=><TextInput {...p} name="q" type="search" defaultValue={q.q}/>}</FormField>
+      <FormField id="follow-up-q" label="Search tasks" className="col-span-2 sm:col-span-1">{p=><TextInput {...p} name="q" type="search" defaultValue={q.q}/>}</FormField>
       <FormField id="follow-up-status" label="Status">{p=><SelectField {...p} name="status" defaultValue={q.status??'open'} options={[...['open','completed','cancelled','all'].map((v) => ({ value: v, label: v }))]} />}</FormField>
       <FormField id="follow-up-kind" label="Type">{p=><SelectField {...p} name="kind" defaultValue={q.kind??''} options={[{ value: '', label: 'All types' }, ...['call','email','meeting','task'].map((v) => ({ value: v, label: v }))]} />}</FormField>
       <FormField id="follow-up-owner" label="Owner">{p=><SelectField {...p} name="owner" defaultValue={q.owner??''} options={[{ value: '', label: 'All owners' }, { value: 'unassigned', label: 'Unassigned' }, ...members.map((m) => ({ value: m.id, label: m.displayName }))]} />}</FormField>
@@ -46,7 +46,7 @@ export default async function FollowUpsPage({params,searchParams}:{params:Promis
       <FormField id="follow-up-opportunity" label="Opportunity">{p=><SelectField {...p} name="opportunity" defaultValue={q.opportunity??''} options={[{ value: '', label: 'All opportunities' }, ...opportunities.map((o) => ({ value: o.id, label: o.title })), ...(opportunity && !opportunities.some(o=>o.id===opportunity.id) ? [{ value: opportunity.id, label: opportunity.title }] : [])]} />}</FormField>
       <FormField id="follow-up-from" label="Due from">{p=><TextInput {...p} name="from" type="date" defaultValue={q.from}/>}</FormField><FormField id="follow-up-to" label="Due through">{p=><TextInput {...p} name="to" type="date" defaultValue={q.to}/>}</FormField>
       </div></details>
-    </form><p className="mb-2 text-xs text-muted">{items.total} follow-ups · {organization.timezone} · Contact and opportunity choices show up to 20 matches; refine the filter search for more.</p><FollowUpList {...options} items={items}/>
+    </form><p className="mb-2 text-xs text-muted">{items.total} tasks · {organization.timezone} · Contact and opportunity choices show up to 20 matches; refine the filter search for more.</p><FollowUpList {...options} items={items}/>
     <div className="mt-4 flex gap-2">{page>1?<ButtonLink href={pageHref(page-1)}>Previous</ButtonLink>:null}{page*50<items.total?<ButtonLink href={pageHref(page+1)}>Next</ButtonLink>:null}</div>
   </AppPage>;
 }

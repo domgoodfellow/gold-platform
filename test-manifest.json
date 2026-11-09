@@ -169,6 +169,9 @@
       "category": "component",
       "concerns": ["communications", "crm", "calling"]
     },
+    "apps/web/tests/component/add-to-call-list.test.tsx": {"category": "component", "concerns": ["communications", "crm", "accessibility"], "note": "Dialer Add to list: pick several contacts across searches, people already on the list or without a phone cannot be picked, refusal keeps the dialog open, unsaved choices ask before discarding."},
+    "apps/web/tests/component/add-to-list-menu.test.tsx": {"category": "component", "concerns": ["communications", "crm", "accessibility"], "note": "Add to: one contact added at once or refused with the reason shown, everyone-matching and ticked rows confirmed with counts and skips first, ticking and select-all with the selection bar, ticks dropped when the shown rows change."},
+    "apps/web/tests/integration/database/call-list.test.ts": {"category": "database-integration", "concerns": ["communications", "crm", "rbac", "tenant-isolation"], "note": "Dialer call list: several contacts added at once as open Call tasks, never twice, all-or-nothing, refused for another business or a role without task permission."},
     "apps/web/tests/integration/database/calendar-events.test.ts": {"category":"database-integration","concerns":["calendar","security","tenant-isolation"]},
     "apps/web/tests/unit/calendar-time-layout.test.ts": {"category":"unit","concerns":["calendar","ui"]},
     "apps/web/tests/component/navigation-components.test.tsx": {"category":"component","concerns":["navigation","accessibility"]},

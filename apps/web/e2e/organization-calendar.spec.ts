@@ -57,7 +57,7 @@ test('calendar has time blocks, slot creation, event editing and workspace conte
   await page.getByRole('link', { name: 'View calendar', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${base}/crm/calendar$`));
   await expect(page.getByRole('heading', { name: 'Calendar', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'New follow-up', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'New task', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'New event', exact: true })).toBeVisible();
   const today = todayInZone('America/Toronto');
   const slot = page.getByRole('button', { name: new RegExp(`Add event ${today} 9:00 a`) });

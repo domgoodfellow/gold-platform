@@ -35,6 +35,8 @@ import { ClientTenantSection } from '@/features/crm/customers/client-tenant-sect
 import { getClientTenantRelationships, listExistingTenantOptions } from '@/lib/domain/customers/client-tenants';
 import { ServiceEngagementSection } from '@/features/crm/customers/service-engagement-section';
 import { listServiceEngagements } from '@/lib/domain/customers/service-engagements';
+import { callListAvailable } from '@/lib/application/communications/call-list';
+import { openCallCustomerIds } from '@/lib/domain/tasks/tasks';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,6 +78,10 @@ export default async function CustomerPage({ params, searchParams }: PageProps<'
   const followUpsEnabled = await followUpsAvailable(db, organizationId);
   const followUps = followUpsEnabled ? await relatedFollowUps(db, organizationId, customerId) : null;
   const voice = modules.has('reception');
+  // Add to the call list: offered only with the Dialer and task permission; the menu says why it cannot add.
+  const callList = await callListAvailable(db, organization)
+    ? (await openCallCustomerIds(db, { organizationId, customerIds: [customerId] })).has(customerId) ? 'on-list' as const : customer.phone ? 'ready' as const : 'no-phone' as const
+    : undefined;
 
   const mayHandoff = await isPlatformStaff(db);
   const [relationships, engagements] = await Promise.all([getClientTenantRelationships(db, organizationId, customerId), listServiceEngagements(db, organizationId, customerId)]);
@@ -110,6 +116,7 @@ export default async function CustomerPage({ params, searchParams }: PageProps<'
         query={{ section: one('section'), view: one('view'), tab: one('tab'), classify: one('classify') }}
         opportunityCount={opportunities.total}
         openTaskCount={followUps?.open.length}
+        callList={callList}
         customer={customer}
         affiliations={<ContactAffiliations db={db} organizationId={organizationId} contact={customer} mayEdit={organization.capabilities.includes('customer.update')}/>}
         accessibleTenantIds={relationships.filter(r => r.may_open).map(r => r.tenant_organization_id)}

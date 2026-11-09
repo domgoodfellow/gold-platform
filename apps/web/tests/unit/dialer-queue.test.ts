@@ -8,7 +8,7 @@ import { counted } from '@/lib/domain/counted';
 vi.mock('@/lib/domain/tasks/tasks', () => ({ listTasks: vi.fn() }));
 vi.mock('@/lib/domain/contacts/contacts', () => ({ getContact: vi.fn() }));
 vi.mock('@/lib/domain/reception/calls', () => ({ listCallPage: vi.fn() }));
-it('loads real open call follow-ups and deduplicated customer context in the same organization', async () => {
+it('loads real open Call tasks and deduplicated customer context in the same organization', async () => {
   vi.mocked(listTasks).mockResolvedValue(counted([{ id: 'first', customerId: 'customer' }, { id: 'second', customerId: 'customer' }] as never, 45));
   vi.mocked(getContact).mockResolvedValue({ id: 'customer', name: 'Customer' } as never);
   vi.mocked(listCallPage).mockResolvedValue({ items: [{ id: 'call' }], nextCursor: null } as never);
@@ -17,7 +17,7 @@ it('loads real open call follow-ups and deduplicated customer context in the sam
   expect(listTasks).toHaveBeenCalledWith(db, { organizationId: 'tenant', kind: 'call', status: 'open', limit: 25 });
   expect(getContact).toHaveBeenCalledExactlyOnceWith(db, { organizationId: 'tenant', customerId: 'customer' });
   expect(listCallPage).toHaveBeenCalledExactlyOnceWith(db, { organizationId: 'tenant', filter: { customerId: 'customer' }, limit: 3 });
-  expect(queue.total).toBe(45); expect(queue.items.map(item => item.followUp.id)).toEqual(['first', 'second']);
+  expect(queue.total).toBe(45); expect(queue.items.map(item => item.task.id)).toEqual(['first', 'second']);
   expect(queue.items[0].customer?.name).toBe('Customer');
   expect(queue.items[1].recentCalls.map(call => call.id)).toEqual(['call']);
 });

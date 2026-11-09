@@ -60,6 +60,24 @@ export async function createTask(db: Db, input: TaskInput): Promise<string> {
   if (error) failure(error.message);
   return data.id;
 }
+/** Of these contacts, the ones that already have an open Call task: on the Dialer's call list. */
+export async function openCallCustomerIds(db: Db, input: { organizationId: string; customerIds: readonly string[] }): Promise<Set<string>> {
+  if (!input.customerIds.length) return new Set();
+  const { data, error } = await db.from('crm_tasks').select('customer_id').eq('organization_id', input.organizationId)
+    .eq('status', 'open').eq('kind', 'call').in('customer_id', [...input.customerIds]);
+  if (error) failure(error.message);
+  return new Set((data ?? []).map(row => row.customer_id));
+}
+/** One open Call task per contact, in one statement: every contact is added or none is. */
+export async function createCallTasks(db: Db, input: { organizationId: string; customerIds: readonly string[]; title: string; dueAt: string }): Promise<number> {
+  const actor = await requireActor(db);
+  if (!input.customerIds.length) return 0;
+  const shared = values({ organizationId: input.organizationId, customerId: '', kind: 'call', title: input.title, dueAt: input.dueAt });
+  const rows = input.customerIds.map(customerId => ({ ...shared, organization_id: input.organizationId, customer_id: customerId, created_by: actor.id }));
+  const { data, error } = await db.from('crm_tasks').insert(rows).select('id');
+  if (error) failure(error.message);
+  return data.length;
+}
 export async function updateTask(db: Db, input: TaskInput & { id: string }): Promise<void> {
   await requireActor(db);
   const { data, error } = await db.from('crm_tasks').update(values(input)).eq('organization_id', input.organizationId).eq('customer_id',input.customerId).eq('id',input.id).eq('status','open').select('id');

@@ -32,6 +32,10 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-11-09
+
+- The Dialer's list of people to call is now the Call list. Each entry shows who to call and why. The middle tab is Details and the link is Show all. Add to list opens your contacts inside the Dialer: search, tick several people (choices stay ticked between searches) and add them all at once, with an optional reason. Anyone already on the list or without a phone number cannot be picked, and nobody is added twice. Contacts can be put on the call list from CRM too: Add to → Call list on a contact's page adds them at once; on Contacts, tick rows (or Select all) and use Add to in the selection bar, or use Add to in the header for everyone matching the current search and filters. Each bulk add first says how many will be added and who is skipped. These appear only for businesses with the Dialer, to people who may manage tasks. Across CRM, Home, the calendar, roles and plan features these records are called Tasks. "Follow-up" is no longer used as a name for the list ("No next follow-up" is now "No next action"), and changing a completed task gives a plain message.
+
 ## 2026-11-07
 
 - Plain wording across the app. A "Words we use" list in docs/ui-system.md replaces configuration, deployment, provider, capability, module, preset, tenant and similar words; the copy check in `pnpm check` now reads every screen, public page, email and domain message (lib/ included) and fails on those words. Workspace "Configuration" is now "Settings"; resource capabilities are skills; work statuses are stages; codes such as call, message and case statuses show as plain labels.

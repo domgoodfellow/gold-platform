@@ -74,7 +74,7 @@ export default async function OpportunityPipelinePage({ params, searchParams }: 
               <dt className="sr-only">Expected close</dt><dd className="text-right text-muted">{item.expectedCloseOn ? `Closes ${item.expectedCloseOn}` : 'No close date'}</dd>
               <dt className="sr-only">Owner</dt><dd className="col-span-2 text-muted">{item.ownerName ?? 'Unassigned'}</dd>
             </dl>
-            {followUpsEnabled ? item.nextFollowUp ? <div className="rounded-md bg-secondary px-2 py-1.5 text-xs"><FollowUpSheet organizationId={organizationId} timezone={organization.timezone} members={members} mayManage={organization.capabilities.includes('follow_up.manage')} reference={item.nextFollowUp} /><p className="mt-0.5 text-muted">{dateFormat.format(new Date(item.nextFollowUp.dueAt))}</p></div> : <p className="text-xs text-muted">No next follow-up</p> : null}
+            {followUpsEnabled ? item.nextFollowUp ? <div className="rounded-md bg-secondary px-2 py-1.5 text-xs"><FollowUpSheet organizationId={organizationId} timezone={organization.timezone} members={members} mayManage={organization.capabilities.includes('follow_up.manage')} reference={item.nextFollowUp} /><p className="mt-0.5 text-muted">{dateFormat.format(new Date(item.nextFollowUp.dueAt))}</p></div> : <p className="text-xs text-muted">No next action</p> : null}
           </BoardCard>) : null}
         </BoardColumn>;
       })}

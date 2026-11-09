@@ -9,6 +9,7 @@ import type { CustomerStage } from '@/lib/domain/customers/stages';
 import type { FieldDefinition } from '@/lib/domain/fields/field-definitions';
 import { CallCustomerSheet } from './customer-action-sheets';
 import { EditContactDialog } from './edit-contact-dialog';
+import { AddToListMenu, type CallListStanding } from '@/features/communications/voice/add-to-list-menu';
 
 const TYPE = { person: { label: 'Person', Icon: User }, company: { label: 'Company', Icon: Building2 }, unspecified: { label: 'Needs classification', Icon: CircleHelp } } as const;
 
@@ -17,8 +18,10 @@ const TYPE = { person: { label: 'Person', Icon: User }, company: { label: 'Compa
  * shows what it is: identity type, company, the independent classifications as labelled chips, and
  * the primary ways to reach them. Call keeps its own surface; Edit opens the focused dialog.
  */
-export function CustomerHeader({ organizationId, customer, stage, definitions, stages, mayEdit, mayCall, openEditOn }: {
+export function CustomerHeader({ organizationId, customer, stage, definitions, stages, mayEdit, mayCall, openEditOn, callList }: {
   organizationId: string; customer: Contact; stage: CustomerStage | null; definitions: FieldDefinition[]; stages: CustomerStage[]; mayEdit: boolean; mayCall: boolean;
+  /** This contact's standing on the call list; absent when the business has no Dialer or the member may not manage tasks. */
+  callList?: CallListStanding;
   /** Open the edit dialog on load, on this section (a Needs review link). */
   openEditOn?: 'identity' | 'relationship';
 }) {
@@ -40,7 +43,7 @@ export function CustomerHeader({ organizationId, customer, stage, definitions, s
           ...(stages.length ? [{ label: 'Relationship stage', value: stage?.name ?? 'None' }] : []),
         ]} />
       </div>}
-      actions={<>{mayCall ? <CallCustomerSheet organizationId={organizationId} customer={customer} /> : null}{mayEdit ? <EditContactDialog organizationId={organizationId} customer={customer} definitions={definitions} stages={stages} defaultOpen={Boolean(openEditOn)} initialSection={openEditOn ?? 'identity'} /> : null}</>}
+      actions={<>{mayCall ? <CallCustomerSheet organizationId={organizationId} customer={customer} /> : null}{callList ? <AddToListMenu organizationId={organizationId} target={{ customerIds: [customer.id] }} standing={callList} /> : null}{mayEdit ? <EditContactDialog organizationId={organizationId} customer={customer} definitions={definitions} stages={stages} defaultOpen={Boolean(openEditOn)} initialSection={openEditOn ?? 'identity'} /> : null}</>}
     />
   );
 }

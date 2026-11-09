@@ -6,12 +6,11 @@ import { availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/d
 import { createTask, updateTask, changeTaskStatus, listTasks, type TaskKind } from '@/lib/domain/tasks/tasks';
 import { listOpportunities } from '@/lib/domain/opportunities/opportunities';
 import { localDateTimeToInstant } from '@/lib/domain/scheduling/window';
+import { assertTaskManagement } from '@/lib/application/crm/follow-ups';
 export type FollowUpActionState = { error: string | null; savedId: string | null };
 const field = (form: FormData, key: string) => String(form.get(key) ?? '');
 async function assertFollowUpAccess(result: Awaited<ReturnType<typeof requireOrganization>>, organizationId: string) {
-  if (!result.organization.capabilities.includes('follow_up.manage')) throw new DomainError('Your role cannot manage follow-ups.', 'follow_ups.forbidden');
-  const states = await organizationResolvedFeatureStates(result.db, { organizationId });
-  if (!availableFeatureKeys(states).has('follow_ups')) throw new DomainError('Follow-ups are not active for this organization.', 'follow_ups.unavailable');
+  await assertTaskManagement(result.db, { id: organizationId, capabilities: result.organization.capabilities });
 }
 export async function searchFollowUpOpportunities(organizationId: string, customerId: string) {
   const { db } = await requireOrganization(organizationId);

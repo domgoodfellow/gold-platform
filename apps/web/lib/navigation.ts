@@ -358,7 +358,7 @@ export const AREAS: readonly Area[] = [
   { segment: 'pipeline', label: 'Relationship stages', group: 'workspaces', workspace: 'crm', route: 'crm/contacts/stages', sidebar: false, module: 'reception', featureKeys: ['pipeline', 'configurable_stages', 'qualification_state'] },
   { segment: 'opportunities', route: 'crm/opportunities', label: 'Opportunities', group: 'workspaces', workspace: 'crm', sidebar: false },
   { segment: 'opportunity-pipeline', label: 'Pipeline', group: 'workspaces', workspace: 'crm', route: 'crm/pipeline' },
-  { segment: 'follow-ups', route: 'crm/tasks', label: 'Follow-ups', group: 'workspaces', workspace: 'crm', sidebar: false, featureKeys: ['follow_ups'] },
+  { segment: 'follow-ups', route: 'crm/tasks', label: 'Tasks', group: 'workspaces', workspace: 'crm', sidebar: false, featureKeys: ['follow_ups'] },
   { segment: 'crm-search', label: 'Search CRM', group: 'workspaces', workspace: 'crm', route: 'crm/search', sidebar: false },
   // Communications. Home is the workspace's own destination, so it is offered to anyone who can
   // operate **any** of its channels — placing calls (`call.place`) or sending texts

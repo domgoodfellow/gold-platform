@@ -101,12 +101,12 @@ describe('Follow-up drawer', () => {
   it('a refused save keeps the title, due time and notes it used to clear, and focuses the reason', async () => {
     followUps.saveFollowUpAction.mockResolvedValue({ error: 'Choose a due date and time.', savedId: null });
     const user = inRail(<FollowUpSheet {...options} mayManage customer={customer} />);
-    await user.click(screen.getByRole('button', { name: 'New follow-up' }));
+    await user.click(screen.getByRole('button', { name: 'New task' }));
     await user.type(screen.getByLabelText('Title'), 'Send the quote');
     await user.type(screen.getByLabelText(/Notes/), 'Include the second site');
     const due = screen.getByLabelText(/Due/) as HTMLInputElement;
     await user.type(due, '2026-10-22T09:30');
-    await user.click(screen.getByRole('button', { name: 'Save follow-up' }));
+    await user.click(screen.getByRole('button', { name: 'Save task' }));
     const alert = await screen.findByRole('alert');
     expect(screen.getByLabelText('Title')).toHaveValue('Send the quote');
     expect(screen.getByLabelText(/Notes/)).toHaveValue('Include the second site');
@@ -120,24 +120,24 @@ describe('Follow-up drawer', () => {
     const save = deferred();
     followUps.saveFollowUpAction.mockReturnValue(save.promise);
     const user = inRail(<FollowUpSheet {...options} mayManage item={item()} />);
-    await user.click(screen.getByRole('button', { name: 'Edit follow-up' }));
+    await user.click(screen.getByRole('button', { name: 'Edit task' }));
     await user.type(screen.getByLabelText(/Notes/), ' and parking');
-    await user.click(screen.getByRole('button', { name: 'Save follow-up' }));
+    await user.click(screen.getByRole('button', { name: 'Save task' }));
     await save.resolve({ error: null, savedId: 'f1' });
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Edit follow-up' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Edit task' })).toBeNull());
     expect(router.refresh).toHaveBeenCalled();
     expect(confirmation()).toBeNull();
   });
 
   it('shows an open follow-up with its saved values; Cancel asks only after a change', async () => {
     const user = inRail(<FollowUpSheet {...options} mayManage item={item()} />);
-    await user.click(screen.getByRole('button', { name: 'Edit follow-up' }));
+    await user.click(screen.getByRole('button', { name: 'Edit task' }));
     expect(screen.getByLabelText('Title')).toHaveValue('Call back');
     expect(screen.getByLabelText(/Notes/)).toHaveValue('Ask about the second site');
     await settle();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(confirmation()).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Edit follow-up' }));
+    await user.click(screen.getByRole('button', { name: 'Edit task' }));
     await user.type(screen.getByLabelText(/Notes/), '!');
     await settle();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -150,11 +150,11 @@ describe('Follow-up drawer', () => {
   ])('is read-only for %s: no footer actions, and it closes at once', async (_label, mayManage, followUp) => {
     const user = inRail(<FollowUpSheet {...options} mayManage={mayManage} item={followUp}>Open it</FollowUpSheet>);
     await user.click(screen.getByRole('button', { name: 'Open it' }));
-    const drawer = screen.getByRole('dialog', { name: 'Follow-up' });
-    expect(within(drawer).queryByRole('button', { name: 'Save follow-up' })).toBeNull();
+    const drawer = screen.getByRole('dialog', { name: 'Task' });
+    expect(within(drawer).queryByRole('button', { name: 'Save task' })).toBeNull();
     expect(drawer.querySelector('[data-drawer-footer]')).toBeNull();
     await user.click(within(drawer).getByRole('button', { name: 'Close' }));
     expect(confirmation()).toBeNull();
-    expect(screen.queryByRole('dialog', { name: 'Follow-up' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Task' })).toBeNull();
   });
 });

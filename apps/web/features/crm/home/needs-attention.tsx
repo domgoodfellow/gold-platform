@@ -18,7 +18,7 @@ export function NeedsAttention({counts,overdue,today,noNext,unassigned,options,f
   const base=`/organizations/${options.organizationId}`;
   const tabs=[
     ...(followUpsEnabled?[{key:'overdue',label:'Overdue',count:counts.overdue,href:`${base}/crm/tasks?status=open&due=overdue`},{key:'today',label:'Due today',count:counts.today,href:`${base}/crm/tasks?status=open&due=today`}]:[]),
-    ...(followUpsEnabled&&salesEnabled?[{key:'noNext',label:'No next follow-up',count:counts.noNext,href:`${base}/crm/opportunities?kind=open&next=none`}]:[]),
+    ...(followUpsEnabled&&salesEnabled?[{key:'noNext',label:'No next action',count:counts.noNext,href:`${base}/crm/opportunities?kind=open&next=none`}]:[]),
     ...(salesEnabled?[{key:'unassigned',label:'Unassigned',count:counts.unassigned,href:`${base}/crm/opportunities?kind=open&owner=unassigned`}]:[]),
   ].filter(t=>t.count>0);
   const [chosen,setTab]=useState<string|null>(null); const tab=tabs.find(t=>t.key===chosen)??tabs[0];

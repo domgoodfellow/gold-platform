@@ -34,11 +34,11 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
   {
     slug: 'customers-and-crm',
     title: 'Customers and the CRM',
-    summary: 'Where relationships, stages and follow-up live.',
+    summary: 'Where relationships, stages and tasks live.',
     opens: { label: 'Open CRM', path: 'sales' },
     sections: [
       { heading: 'One customer record', body: [
-        'The CRM workspace owns the relationship: who the customer is, where they are in your process, and what follow-up is due. Other workspaces show that record; they do not keep their own copy.',
+        'The CRM workspace owns the relationship: who the customer is, where they are in your process, and which tasks are due. Other workspaces show that record; they do not keep their own copy.',
       ] },
       { heading: 'Stages and extra details', body: [
         'Relationship stages and opportunity stages are set up in the CRM. Custom fields add details your business records about customers, jobs and places.',

@@ -51,7 +51,7 @@ describe('operating CRM under real PostgreSQL RLS',()=>{
     await expect(updateFollowUp(owner.db,{...input,id})).rejects.toBeInstanceOf(Error);
     expect((await owner.db.from('crm_follow_ups').update({status:'open'}).eq('id',id)).error).not.toBeNull();
     expect((await owner.db.from('crm_follow_ups').update({completed_by:outsider.id}).eq('id',id)).error).not.toBeNull();
-    const timeline=await listCustomerTimeline(owner.db,{organizationId,customerId});expect(timeline.some(e=>e.description==='Follow-up completed: Review revised')).toBe(true);
+    const timeline=await listCustomerTimeline(owner.db,{organizationId,customerId});expect(timeline.some(e=>e.description==='Task completed: Review revised')).toBe(true);
     expect((await listRecentActivity(owner.db,{organizationId,scope:'crm'})).some(e=>e.action==='follow_up.completed')).toBe(true);
   });
   it('derives next action by earliest open due time and removes completed/cancelled actions',async()=>{

@@ -371,7 +371,7 @@ function crmRoutes() {
   const base = `/organizations/${fixture.plain}`;
   const crm = { label: 'CRM', href: `${base}/crm` };
   const followUps = fixture.followUps
-    ? { trail: [crm], current: 'Follow-ups', heading: 'Follow-ups' }
+    ? { trail: [crm], current: 'Tasks', heading: 'Tasks' }
     : { trail: [crm], current: 'Not found', heading: 'This page does not exist', stateHeading: true };
   return {
     'workspace:crm': { path: `${base}/crm`, expected: { trail: [], current: 'CRM', heading: 'CRM', up: `${base}/home` } },

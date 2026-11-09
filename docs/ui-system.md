@@ -398,7 +398,7 @@ Empty states are one of four facts and must not be rendered alike: **empty** (a 
 - `ViewModeSwitcher` owns in-place collection presentation, using pressed buttons.
 - `NavigationList` owns destination lists: named `nav`, `ul`, `li` and full-row links, optional icons, supporting text and chevrons, compact or standard spacing. Rows are undivided by default.
 - `DividedList` owns divided record lists, including documents and chronological activity.
-- `DataTable` owns structured comparable records, including financial records.
+- `DataTable` owns structured comparable records, including financial records. Its optional `select` adds a leading tick column (and a labelled Select all above cards); the caller owns the selection and shows a selection bar (count, actions, Clear) only while something is ticked. A partly ticked Select all shows a dash, never a tick.
 - `OperationalPanel` owns operational content containers, not navigation or record semantics.
 
 Tabs, ViewNav and interactive selection groups share the server-importable `tab-styles` contract.
@@ -689,7 +689,7 @@ The shared page-identity components own this responsibility.
 
 ### Page location contract (ADR-047)
 
-**Status.** This is the approved target. Migration is per route (`RESOLVED_LOCATION_ROUTES` in `lib/route/page-location.ts`). Today the CRM operating pages take their location from the resolver: CRM Home, Customers and Customer detail, Relationship pipeline, Opportunities and Opportunity detail, Follow-ups, CRM Calendar and CRM Search. The Opportunity pipeline (open decision U-17), CRM configuration (Batch 3) and every other workspace still publish their own trail through `PageLocation`. A route uses exactly one of the two, never both. On a migrated route the shell resolves the location once, and the bar, the phone's Up control and the page's `h1` read that one answer; loading and refused states keep the known ancestors.
+**Status.** This is the approved target. Migration is per route (`RESOLVED_LOCATION_ROUTES` in `lib/route/page-location.ts`). Today the CRM operating pages take their location from the resolver: CRM Home, Customers and Customer detail, Relationship pipeline, Opportunities and Opportunity detail, Tasks, CRM Calendar and CRM Search. The Opportunity pipeline (open decision U-17), CRM configuration (Batch 3) and every other workspace still publish their own trail through `PageLocation`. A route uses exactly one of the two, never both. On a migrated route the shell resolves the location once, and the bar, the phone's Up control and the page's `h1` read that one answer; loading and refused states keep the known ancestors.
 
 - **One location.** Every page inside the organization, Settings and Platform shells shows one location: its ancestors and the current page, resolved by `resolveLocation` (`lib/route/page-location.ts`) from the canonical registries. A page supplies only server-known record labels; it never writes its own ancestors.
 - **Loading and missing.** A loading page keeps its known ancestors and shows the record name only once it is known. A missing, deleted or unauthorized record shows not-found inside its nearest valid ancestors, without disclosing which it was. Record data is never invented.

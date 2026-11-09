@@ -211,7 +211,7 @@ function describe(row: EventRow, words: Vocabulary, perspective?: 'location'): s
     case 'follow_up.updated':
     case 'follow_up.completed':
     case 'follow_up.cancelled':
-      return `Follow-up ${FOLLOW_UP_EVENT[row.action] ?? 'changed'}: ${text(row.payload, 'title') ?? 'Untitled'}`;
+      return `Task ${FOLLOW_UP_EVENT[row.action] ?? 'changed'}: ${text(row.payload, 'title') ?? 'Untitled'}`;
     case 'opportunity.created':
       return `Opportunity created: ${text(row.payload, 'title') ?? 'Untitled'}`;
     case 'opportunity.updated':

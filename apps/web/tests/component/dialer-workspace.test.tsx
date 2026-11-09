@@ -11,9 +11,10 @@ const dial = vi.hoisted(() => vi.fn().mockResolvedValue(true));
 const telephone = vi.hoisted(() => ({ value: { activeCall: null as unknown, incoming: null as unknown, status: 'offline', error: null, register: vi.fn(), unregister: vi.fn() } }));
 vi.mock('@/features/communications/voice/use-dial', () => ({ useDial: () => ({ dial, dialing: false, error: null }) }));
 vi.mock('@/features/communications/voice/telephone-device', () => ({ useTelephoneDevice: () => telephone.value }));
+vi.mock('@/features/communications/voice/add-to-call-list', () => ({ AddToCallList: () => <button type="button">Add to list</button> }));
 vi.mock('@/features/communications/voice/active-call-dock', () => ({ ActiveCallDock: ({ placement }: { placement: string }) => <div data-testid="live-call">Live call controls ({placement})</div> }));
 const entry = (id: string, name: string, phone: string | null, customerId = id): DialerQueueEntry => ({
-  followUp: { id, customerId, customerName: name, title: `Call ${name}`, notes: `Recorded notes for ${name}`, dueAt: '2026-10-17T12:00:00Z', kind: 'call', status: 'open', opportunityId: null, opportunityTitle: null, ownerMembershipId: null, ownerName: null, completedAt: null, createdAt: '2026-10-16T12:00:00Z' },
+  task: { id, customerId, customerName: name, title: `Call ${name}`, notes: `Recorded notes for ${name}`, dueAt: '2026-10-17T12:00:00Z', kind: 'call', status: 'open', opportunityId: null, opportunityTitle: null, ownerMembershipId: null, ownerName: null, completedAt: null, createdAt: '2026-10-16T12:00:00Z' },
   customer: { id: customerId, name, phone, email: null, stageId: null, custom: {}, createdAt: '2026-10-16T12:00:00Z' },
   recentCalls: [],
 });
@@ -48,9 +49,9 @@ describe('dialer workspace', () => {
   });
   it('keeps every region of the console when the business has nothing recorded and cannot call yet', () => {
     render(<DialerWorkspace {...common} queue={[]} queueTotal={0} options={blocked('not-configured', 'No ready outbound number is assigned.', 'phone-numbers')} setupHref="/organizations/tenant/comms/configuration/numbers" />);
-    expect(screen.getByRole('region', { name: 'Call queue' })).toHaveTextContent(/No open call follow-ups/);
-    expect(screen.getByRole('link', { name: 'Open follow-ups' })).toHaveAttribute('href', '/organizations/tenant/crm/tasks');
-    expect(screen.getByRole('region', { name: 'Customer' })).toHaveTextContent(/appear here when you call from a follow-up/);
+    expect(screen.getByRole('region', { name: 'Call list' })).toHaveTextContent(/No one to call/);
+    expect(screen.getByRole('link', { name: 'Show all' })).toHaveAttribute('href', '/organizations/tenant/crm/tasks?status=open&kind=call');
+    expect(screen.getByRole('region', { name: 'Customer' })).toHaveTextContent(/appear here when you call someone from the call list/);
     const readiness = screen.getByRole('region', { name: 'Calling readiness' });
     expect(within(readiness).getByText('No outbound number')).toBeVisible();
     expect(within(readiness).getByText('Needs setting up')).toBeVisible();
@@ -70,12 +71,22 @@ describe('dialer workspace', () => {
     expect(within(readiness).getByRole('status')).toHaveAttribute('data-state', kind);
     expect(within(readiness).queryByRole('link')).not.toBeInTheDocument();
   });
-  it('states the bounded queue and an unavailable queue', () => {
+  it('offers Add to list in the empty list and in the list header, only to members who may manage tasks', () => {
+    const app = render(<DialerWorkspace {...common} queue={[]} queueTotal={0} mayAddToList />);
+    expect(within(screen.getByRole('region', { name: 'Call list' })).getByRole('button', { name: 'Add to list' })).toBeVisible();
+    app.rerender(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101')]} mayAddToList />);
+    expect(within(screen.getByRole('region', { name: 'Call list' })).getAllByRole('button', { name: 'Add to list' })).toHaveLength(1);
+    app.rerender(<DialerWorkspace {...common} queue={[]} queueTotal={0} />);
+    expect(screen.queryByRole('button', { name: 'Add to list' })).not.toBeInTheDocument();
+    app.rerender(<DialerWorkspace {...common} queue={[]} queueAvailable={false} mayAddToList />);
+    expect(screen.queryByRole('button', { name: 'Add to list' })).not.toBeInTheDocument();
+  });
+  it('states the bounded call list and an unavailable call list', () => {
     const app = render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', null)]} queueTotal={45} />);
     expect(screen.getByText(/Showing the first 1 of 45/)).toBeVisible();
     app.rerender(<DialerWorkspace {...common} queue={[]} queueAvailable={false} />);
-    expect(screen.getByText(/Follow-ups are not included for this business/)).toBeVisible();
-    expect(screen.queryByRole('link', { name: /All call follow-ups/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/Tasks are not included for this business, so there is no call list/)).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Show all' })).not.toBeInTheDocument();
   });
 });
 
@@ -85,16 +96,16 @@ describe('dialer console presentation', () => {
     const root = container.firstElementChild!;
     expect(root).toHaveAttribute('data-presentation', 'standard');
     expect(screen.getByRole('button', { name: 'Standard' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Queue panel' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Call list panel' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Context panel' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Focus' }));
     expect(screen.getByRole('button', { name: 'Focus' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Queue panel' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Call list panel' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Context panel' })).toBeDisabled();
     expect(screen.getByLabelText('Number to call')).toBeVisible();
     expect(root).toHaveAttribute('data-presentation', 'focus');
     fireEvent.click(screen.getByRole('button', { name: 'Standard' }));
-    expect(screen.getByRole('button', { name: 'Queue panel' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Call list panel' })).toBeEnabled();
   });
   it('selecting a queue row fills the number without dialing', () => {
     render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101'), entry('bob', 'Bob', '+14165550102')]} />);
@@ -102,16 +113,16 @@ describe('dialer console presentation', () => {
     expect(screen.getByLabelText('Number to call')).toHaveValue('(416)555-0102');
     expect(dial).not.toHaveBeenCalled();
   });
-  it('searches only the loaded follow-ups and says so when that is not the whole queue', () => {
+  it('searches only the calls loaded and says so when that is not the whole list', () => {
     render(<DialerWorkspace {...common} queueTotal={30} queue={[entry('alice', 'Alice', '+14165550101'), entry('bob', 'Bob', '+14165550102')]} />);
-    fireEvent.change(screen.getByRole('searchbox', { name: 'Search loaded call follow-ups' }), { target: { value: 'bob' } });
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search call list' }), { target: { value: 'bob' } });
     expect(screen.queryByRole('button', { name: /Alice/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Bob/ })).toBeVisible();
-    expect(screen.getByText('Searches the 2 follow-ups loaded here, not the whole queue.')).toBeVisible();
-    fireEvent.change(screen.getByRole('searchbox', { name: 'Search loaded call follow-ups' }), { target: { value: 'nobody' } });
-    expect(screen.getByText('No loaded follow-ups match.')).toBeVisible();
+    expect(screen.getByText('Searches the 2 calls shown here, not the whole list.')).toBeVisible();
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search call list' }), { target: { value: 'nobody' } });
+    expect(screen.getByText('No calls match.')).toBeVisible();
   });
-  it('dials a number handed over by a link, with no follow-up selected', () => {
+  it('dials a number handed over by a link, with no one in the call list selected', () => {
     render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101')]} prefill="+14165550199" />);
     expect(screen.getByLabelText('Number to call')).toHaveValue('(416)555-0199');
     expect(screen.getByRole('heading', { name: 'New call' })).toBeVisible();
@@ -122,7 +133,7 @@ describe('dialer console presentation', () => {
     expect(screen.getByRole('button', { name: 'Start calling' })).toHaveAttribute('form', 'dialer-call-form');
     expect(screen.getByRole('button', { name: 'Start calling' })).toBeEnabled();
   });
-  it('shows the customer’s other open follow-ups and their recorded calls', () => {
+  it('shows the customer’s other calls in the list and their recorded calls', () => {
     render(<DialerWorkspace {...common} queue={[entry('first', 'Alice', '+14165550101', 'alice'), entry('second', 'Alice', '+14165550101', 'alice')]} recentCalls={{ alice: <p>Recorded call with Alice</p> }} />);
     const context = screen.getByRole('region', { name: 'Customer' });
     expect(within(context).getByText('Recorded call with Alice')).toBeVisible();
@@ -169,13 +180,13 @@ describe('dialer toolbar composition', () => {
     expect(within(toolbar).getByRole('button', { name: 'Configuration' })).toBeVisible();
     const panels = within(toolbar).getByRole('group', { name: 'Panel visibility' });
     expect(panels).not.toHaveAttribute('data-slot', 'tabs-list');
-    fireEvent.click(within(panels).getByRole('button', { name: 'Queue panel' }));
+    fireEvent.click(within(panels).getByRole('button', { name: 'Call list panel' }));
     fireEvent.click(within(panels).getByRole('button', { name: 'Context panel' }));
-    expect(within(panels).getByRole('button', { name: 'Queue panel' })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(panels).getByRole('button', { name: 'Call list panel' })).toHaveAttribute('aria-pressed', 'false');
     expect(within(panels).getByRole('button', { name: 'Context panel' })).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(within(toolbar).getByRole('button', { name: 'Focus' }));
     fireEvent.click(within(toolbar).getByRole('button', { name: 'Standard' }));
-    expect(within(panels).getByRole('button', { name: 'Queue panel' })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(panels).getByRole('button', { name: 'Call list panel' })).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(within(toolbar).getByRole('button', { name: 'Focus' }));
     fireEvent.click(within(toolbar).getByRole('link', { name: 'Call history' }));
     expect(within(toolbar).getByRole('button', { name: 'Standard' })).toHaveAttribute('aria-pressed', 'true');

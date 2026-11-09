@@ -129,19 +129,19 @@ for (const viewport of VIEWPORTS) {
       await expectGuardedDiscard(page, opportunity, newOpportunity);
 
       await page.getByRole('link', { name: 'Tasks', exact: true }).click();
-      const newFollowUp = page.getByRole('button', { name: 'New follow-up' });
-      const followUp = page.getByRole('dialog', { name: 'New follow-up' });
+      const newFollowUp = page.getByRole('button', { name: 'New task' });
+      const followUp = page.getByRole('dialog', { name: 'New task' });
       await newFollowUp.click();
       await expectFooterBelowBody(page, followUp);
       await followUp.getByLabel('Title', { exact: true }).fill('   ');
       await followUp.getByLabel('Due', { exact: true }).fill('2027-01-15T09:30');
       await followUp.getByLabel('Notes').fill(`Kept after refusal ${run}`);
-      await followUp.getByRole('button', { name: 'Save follow-up' }).click();
+      await followUp.getByRole('button', { name: 'Save task' }).click();
       await expect(followUp.getByRole('alert')).toContainText('Enter a title');
       await expect(followUp.getByLabel('Due', { exact: true })).toHaveValue('2027-01-15T09:30');
       await expect(followUp.getByLabel('Notes')).toHaveValue(`Kept after refusal ${run}`);
       await followUp.getByLabel('Title', { exact: true }).fill(`Drawer follow-up ${run}`);
-      await followUp.getByRole('button', { name: 'Save follow-up' }).click();
+      await followUp.getByRole('button', { name: 'Save task' }).click();
       await expect(followUp).toBeHidden();
       await expect(confirmation(page)).toBeHidden();
       await expect(page.getByRole('button', { name: `Drawer follow-up ${run}` }).first()).toBeVisible();

@@ -6,7 +6,7 @@ import { CrmHome,type CrmHomeProps } from '@/features/crm/home/crm-home';
 import type { RelationshipRow } from '@/lib/domain/contacts/relationship-activity';
 vi.mock('@/features/crm/intake/contact-intake',()=>({AddContactsTrigger:()=> <button>Add contacts</button>}));
 vi.mock('@/features/crm/opportunities/opportunity-sheet',()=>({OpportunitySheet:()=> <button>New opportunity</button>}));
-vi.mock('@/features/crm/follow-ups/follow-up-sheet',()=>({FollowUpSheet:({children,item}:{children?:string;item?:unknown})=><button>{children??(item?'Edit follow-up':'New follow-up')}</button>}));
+vi.mock('@/features/crm/follow-ups/follow-up-sheet',()=>({FollowUpSheet:({children,item}:{children?:string;item?:unknown})=><button>{children??(item?'Edit task':'New task')}</button>}));
 vi.mock('@/features/crm/follow-ups/follow-up-list',()=>({FollowUpList:({items}:{items:{title:string}[]})=><ul>{items.map(item=><li key={item.title}>{item.title}</li>)}</ul>}));
 vi.mock('@/components/panels/workspace-right-rail',()=>({SupportTrigger:({mode}:{mode:string})=> <button>{mode==='activity'?'Activity':mode==='insights'?'Insights':'Settings'}</button>}));
 const row=(id:string,name:string,contactType:RelationshipRow['contactType'],extra:Partial<RelationshipRow>={}):RelationshipRow=>({id,name,contactType,lifecycle:null,companyId:null,companyName:null,activity:{action:'follow_up.completed',detail:{kind:'call',title:`Call ${name}`},occurredAt:'2026-10-20T15:00:00Z'},nextTask:null,...extra});
@@ -90,7 +90,7 @@ describe('relationship-first CRM dashboard',()=>{
   });
   it('drops task categories when follow-ups are off and has no attention at all without tasks or sales',()=>{
     const {unmount}=render(<CrmHome {...defaults} followUpsEnabled={false}/>);
-    expect(within(panel('Needs attention')).queryByRole('button',{name:/Overdue|Due today|No next follow-up/})).toBeNull();
+    expect(within(panel('Needs attention')).queryByRole('button',{name:/Overdue|Due today|No next action/})).toBeNull();
     expect(within(panel('Needs attention')).getByText(/Unassigned/)).toBeInTheDocument();
     unmount();
     render(<CrmHome {...defaults} {...relationshipOnly} followUpsEnabled={false}/>);
@@ -145,11 +145,11 @@ describe('relationship-first CRM dashboard',()=>{
   });
   it('keeps reduced roles read-only',()=>{
     render(<CrmHome {...defaults}/>);
-    for(const name of ['Add contacts','New opportunity','New follow-up','Settings'])expect(screen.queryByRole('button',{name})).toBeNull();
+    for(const name of ['Add contacts','New opportunity','New task','Settings'])expect(screen.queryByRole('button',{name})).toBeNull();
     expect(screen.getByRole('button',{name:'Activity'})).toBeInTheDocument();
   });
   it('offers canonical drawers and configuration only for authorized mutation',()=>{
     render(<CrmHome {...defaults} mayAddContacts mayCreateOpportunity mayConfigure configureItems={[{key:'sales-stages',label:'Relationship stages',href:'/organizations/org/crm/configuration/relationship-stages'},{key:'opportunity-stages',label:'Opportunity stages',href:'/organizations/org/crm/configuration/opportunity-stages'}]} followUpOptions={{...defaults.followUpOptions,mayManage:true}}/>);
-    for(const name of ['Add contacts','New opportunity','New follow-up','Settings'])expect(screen.getByRole('button',{name})).toBeInTheDocument();
+    for(const name of ['Add contacts','New opportunity','New task','Settings'])expect(screen.getByRole('button',{name})).toBeInTheDocument();
   });
 });

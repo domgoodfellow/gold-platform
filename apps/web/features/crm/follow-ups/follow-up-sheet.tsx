@@ -26,19 +26,19 @@ export function FollowUpSheet(props: Props) {
   const formId=useId();
   const item=props.item??loaded??undefined;
   const showForm=open && (!props.reference || Boolean(item));
-  // The same read-only rule as the form: no permission, or a follow-up that is no longer open.
+  // The same read-only rule as the form: no permission, or a task that is no longer open.
   const editable=showForm && props.mayManage && (!item || item.status==='open');
   const changeOpen=(next:boolean)=>{
     setOpen(next);
-    if(next && props.reference){setLoaded(null);setLoadError(null);void readFollowUpForDrawer(props.organizationId,props.reference.id).then(result=>{setLoaded(result);if(!result)setLoadError('This follow-up is no longer available.');}).catch(()=>setLoadError('Follow-up could not be loaded. Close and try again.'));}
+    if(next && props.reference){setLoaded(null);setLoadError(null);void readFollowUpForDrawer(props.organizationId,props.reference.id).then(result=>{setLoaded(result);if(!result)setLoadError('This task is no longer available.');}).catch(()=>setLoadError('Task could not be loaded. Close and try again.'));}
   };
   return <PageDrawer open={open} onOpenChange={changeOpen}>
-    <PageDrawerTrigger asChild><Button tone={props.item || props.reference ? 'text' : 'primary'} className={props.children || props.reference ? 'h-auto justify-start whitespace-normal p-0 text-left' : undefined}>{props.children ?? props.reference?.title ?? (props.item ? 'Edit follow-up' : 'New follow-up')}</Button></PageDrawerTrigger>
-    <PageDrawerContent><PageDrawerHeader><PageDrawerTitle>{item ? props.mayManage && item.status==='open' ? 'Edit follow-up' : 'Follow-up' : props.reference?'Follow-up':'New follow-up'}</PageDrawerTitle></PageDrawerHeader>
-      {showForm ? <FollowUpForm {...props} item={item} formId={formId} onSaved={()=>setOpen(false)} onPendingChange={setPending} /> : <div><p role="status">{loadError??'Loading follow-up…'}</p></div>}
-      {/* A read-only follow-up keeps only the drawer's own close control, as before. */}
+    <PageDrawerTrigger asChild><Button tone={props.item || props.reference ? 'text' : 'primary'} className={props.children || props.reference ? 'h-auto justify-start whitespace-normal p-0 text-left' : undefined}>{props.children ?? props.reference?.title ?? (props.item ? 'Edit task' : 'New task')}</Button></PageDrawerTrigger>
+    <PageDrawerContent><PageDrawerHeader><PageDrawerTitle>{item ? props.mayManage && item.status==='open' ? 'Edit task' : 'Task' : props.reference?'Task':'New task'}</PageDrawerTitle></PageDrawerHeader>
+      {showForm ? <FollowUpForm {...props} item={item} formId={formId} onSaved={()=>setOpen(false)} onPendingChange={setPending} /> : <div><p role="status">{loadError??'Loading task…'}</p></div>}
+      {/* A read-only task keeps only the drawer's own close control, as before. */}
       {editable ? <PageDrawerFooter>
-        <Button type="submit" form={formId} disabled={pending}>{pending ? 'Saving…' : 'Save follow-up'}</Button>
+        <Button type="submit" form={formId} disabled={pending}>{pending ? 'Saving…' : 'Save task'}</Button>
         <PageDrawerClose asChild><Button type="button" tone="secondary">Cancel</Button></PageDrawerClose>
       </PageDrawerFooter> : null}
     </PageDrawerContent>

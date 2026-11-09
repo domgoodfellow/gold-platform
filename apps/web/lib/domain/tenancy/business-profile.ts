@@ -17,7 +17,7 @@ export function businessNoun(profile: BusinessProfile | null, entity: BusinessEn
 
 /** Resolve authored labels only. Record titles and user-authored content never pass through here. */
 export function businessLabel(profile: BusinessProfile | null, label: string): string {
-  const destinations: Record<string,string> = {Home:'home',Customers:'customers',Contacts:'customers',Pipeline:'opportunity-pipeline',Dialer:'calls',Inbox:'comms-inbox',Marketing:'marketing',Support:'support',Agents:'ai',Quotes:'finance-quotes',Invoices:'finance-invoices',Payments:'finance-payments',Work:'work',Schedule:'schedule',Resources:'resources',Locations:'locations',Assets:'assets',Calendar:'calendar','Follow-ups':'follow-ups'};
+  const destinations: Record<string,string> = {Home:'home',Customers:'customers',Contacts:'customers',Pipeline:'opportunity-pipeline',Dialer:'calls',Inbox:'comms-inbox',Marketing:'marketing',Support:'support',Agents:'ai',Quotes:'finance-quotes',Invoices:'finance-invoices',Payments:'finance-payments',Work:'work',Schedule:'schedule',Resources:'resources',Locations:'locations',Assets:'assets',Calendar:'calendar',Tasks:'follow-ups','Follow-ups':'follow-ups'};
   const destination = destinations[label];
   if (destination && profile?.labels[destination]) return profile.labels[destination];
   const contactWords = profile?.nouns.customer;

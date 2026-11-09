@@ -9,6 +9,7 @@ import type { CustomerStage } from '@/lib/domain/customers/stages';
 import { formatPhoneForDisplay } from '@/lib/display/phone';
 import { Building2, CircleHelp, User } from 'lucide-react';
 import { EntityIdentity } from '@/components/display/entity-row';
+import { SelectAllContacts, SelectContact } from './contact-selection';
 
 const IDENTITY = { person: { Icon: User, label: 'Person' }, company: { Icon: Building2, label: 'Company' }, unspecified: { Icon: CircleHelp, label: 'Needs classification' } } as const;
 
@@ -50,6 +51,7 @@ export function CustomerTable({
   empty = 'No contacts yet.',
   inGroup = false,
   reviewMode = false,
+  selectable = false,
 }: {
   organizationId: string;
   groupByCompany?:boolean;
@@ -67,6 +69,8 @@ export function CustomerTable({
   inGroup?: boolean;
   /** Needs review: say why each row is here and link straight to classifying it. */
   reviewMode?: boolean;
+  /** Rows can be ticked for Add to; the page wraps the table in `ContactSelection`. */
+  selectable?: boolean;
 }) {
   if (groupByCompany && customers.length) {
     // Each contact appears once: a company heads its own group, a person sits under their one primary
@@ -87,7 +91,7 @@ export function CustomerTable({
     const ordered = [...groups.entries()].sort(([a], [b]) => Number(a.startsWith('~')) - Number(b.startsWith('~')));
     return <div className="flex flex-col gap-6">{ordered.map(([key, group]) => <section key={key} aria-label={group.label} className="flex flex-col gap-2">
       <h2 className="flex items-center gap-2 text-sm font-semibold">{group.companyId ? <><Building2 aria-hidden className="size-4 text-muted" /><Link href={`/organizations/${organizationId}/crm/contacts/${group.companyId}`} className="hover:underline">{group.label}</Link></> : group.label}<span className="font-normal tabular-nums text-muted">{group.rows.length}</span></h2>
-      <CustomerTable organizationId={organizationId} customers={group.rows} definitions={definitions} stages={stages} locationLabels={locationLabels} optional={optional} lastActivity={lastActivity} timezone={timezone} empty={empty} inGroup reviewMode={reviewMode} />
+      <CustomerTable organizationId={organizationId} customers={group.rows} definitions={definitions} stages={stages} locationLabels={locationLabels} optional={optional} lastActivity={lastActivity} timezone={timezone} empty={empty} inGroup reviewMode={reviewMode} selectable={selectable} />
     </section>)}</div>;
   }
   const stageNames = new Map(stages.map((stage) => [stage.id, stage.name]));
@@ -199,6 +203,7 @@ export function CustomerTable({
       rowKey={(customer) => customer.id}
       empty={<BusinessLabel>{empty}</BusinessLabel>}
       columns={columns}
+      select={selectable ? { header: <SelectAllContacts ids={customers.map((customer) => customer.id)} />, cardHeader: <SelectAllContacts ids={customers.map((customer) => customer.id)} labelled />, cell: (customer) => <SelectContact id={customer.id} name={customer.name} /> } : undefined}
     />
   );
 }

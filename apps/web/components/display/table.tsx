@@ -50,6 +50,12 @@ export type DataTableProps<T> = {
   footer?: ReactNode;
   /** `medium` and `wide` keep cards until a wider container, for tables whose columns would otherwise be clipped. */
   tableFrom?: 'default' | 'medium' | 'wide';
+  /**
+   * A leading selection control: `header` (select all shown) heads the column and `cell` starts each
+   * row and each card; `cardHeader` replaces `header` above the cards, where it has no column to name it.
+   * The caller owns what is selected and what can be done with it.
+   */
+  select?: { header: ReactNode; cell: (row: T) => ReactNode; cardHeader?: ReactNode };
 };
 
 // Container breakpoints, spelled out so the class names exist at build time.
@@ -63,6 +69,7 @@ export function DataTable<T>({
   empty,
   footer,
   tableFrom = 'default',
+  select,
 }: DataTableProps<T>) {
   if (rows.length === 0) return <EmptyState>{empty}</EmptyState>;
 
@@ -78,6 +85,7 @@ export function DataTable<T>({
         <Table>
           <TableHeader>
             <TableRow>
+              {select ? <TableHead scope="col" className="w-10 py-2 pr-2">{select.header}</TableHead> : null}
               {wide.map((column) => (
                 <TableHead
                   key={column.key}
@@ -97,6 +105,7 @@ export function DataTable<T>({
           <TableBody>
             {rows.map((row) => (
               <TableRow key={rowKey(row)}>
+                {select ? <ShadcnTableCell className="w-10 py-2 pr-2 align-middle">{select.cell(row)}</ShadcnTableCell> : null}
                 {wide.map((column) => (
                   <ShadcnTableCell
                     key={column.key}
@@ -122,6 +131,7 @@ export function DataTable<T>({
         </Table>
       </div>
 
+      {select ? <div className={cx(TABLE_FROM[tableFrom].cards, 'mb-3 px-3')}>{select.cardHeader ?? select.header}</div> : null}
       <ul className={TABLE_FROM[tableFrom].cards}>
         {rows.map((row) => {
           const heading = columns.filter((column) => column.emphasis === 'primary');
@@ -132,8 +142,8 @@ export function DataTable<T>({
           return (
             <li key={rowKey(row)} className="rounded border border-border p-3">
               {heading.map((column) => (
-                <div key={column.key} className="font-medium">
-                  {column.cell(row)}
+                <div key={column.key} className={cx('font-medium', select && 'flex items-start gap-3')}>
+                  {select ? <><span className="pt-0.5">{select.cell(row)}</span><div className="min-w-0 flex-1">{column.cell(row)}</div></> : column.cell(row)}
                 </div>
               ))}
 

@@ -118,22 +118,20 @@ export type ContactPageFilter = {
  * is different: it must page, and the count must describe the filtered set, not every customer,
  * so every filter here applies to both the rows and the total.
  */
-export async function listContactPage(
-  db: Db,
-  input: { organizationId: string; filter: ContactPageFilter },
-): Promise<Counted<Contact>> {
-  const { filter } = input;
-  let affiliatedIds: string[] | undefined;
-  if (filter.companyId) {
-    const {data,error} = await db.from('contact_affiliations').select('person_id').eq('organization_id', input.organizationId).eq('company_id',filter.companyId).eq('active',true);
-    if(error) throw fromDatabaseError(error, 'contacts.affiliations_failed');
-    affiliatedIds=(data ?? []).map(row=>row.person_id);
-  }
-  let query = db
-    .from('contact_directory')
-    .select('id, name, email, phone, custom, stage_id, contact_type, lifecycle, lead_temperature, directory_company_id, directory_company_name, created_at', { count: 'exact' })
-    .eq('organization_id', input.organizationId);
+/** The directory's filters without paging or order: what "every contact matching this view" means. */
+export type ContactDirectoryFilter = Omit<ContactPageFilter, 'page' | 'sort'>;
 
+/** The people affiliated with the filtered company, read once so the filter can include them. */
+async function affiliatedPeople(db: Db, organizationId: string, filter: ContactDirectoryFilter): Promise<string[] | undefined> {
+  if (!filter.companyId) return undefined;
+  const {data,error} = await db.from('contact_affiliations').select('person_id').eq('organization_id', organizationId).eq('company_id',filter.companyId).eq('active',true);
+  if(error) throw fromDatabaseError(error, 'contacts.affiliations_failed');
+  return (data ?? []).map(row=>row.person_id);
+}
+
+/** Every directory filter, applied in the database. One definition for the page and for anything acting on "all matching". */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the builder's generic type differs per select list; only filter methods are used.
+function applyDirectoryFilter<Q extends { or: any; eq: any; in: any; is: any; not: any; gte: any }>(query: Q, filter: ContactDirectoryFilter, affiliatedIds: string[] | undefined): Q {
   const search = filter.search?.trim().replace(/[%_,()]/g, ' ');
   if (search) {
     query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
@@ -150,6 +148,19 @@ export async function listContactPage(
   if (filter.website === 'without') query = query.or('custom->>website.is.null,custom->>website.eq.');
   if (filter.addedSince) query = query.gte('created_at', filter.addedSince);
   if (filter.needsReview) query = query.or('contact_type.eq.unspecified,lifecycle.is.null');
+  return query;
+}
+
+export async function listContactPage(
+  db: Db,
+  input: { organizationId: string; filter: ContactPageFilter },
+): Promise<Counted<Contact>> {
+  const { filter } = input;
+  const affiliatedIds = await affiliatedPeople(db, input.organizationId, filter);
+  const query = applyDirectoryFilter(db
+    .from('contact_directory')
+    .select('id, name, email, phone, custom, stage_id, contact_type, lifecycle, lead_temperature, directory_company_id, directory_company_name, created_at', { count: 'exact' })
+    .eq('organization_id', input.organizationId), filter, affiliatedIds);
 
   const from = (filter.page - 1) * CONTACT_PAGE_SIZE;
   const { data, error, count } = await query
@@ -179,6 +190,33 @@ export async function listContactPage(
     })),
     count,
   );
+}
+
+/**
+ * Every contact matching a directory view, as id and phone, up to `limit`. The count is the whole
+ * matching set, so a caller can refuse a request larger than it will act on rather than act on part.
+ */
+export async function listContactPhonesMatching(
+  db: Db,
+  input: { organizationId: string; filter: ContactDirectoryFilter; limit: number },
+): Promise<Counted<{ id: string; phone: string | null }>> {
+  const affiliatedIds = await affiliatedPeople(db, input.organizationId, input.filter);
+  const { data, error, count } = await applyDirectoryFilter(db
+    .from('contact_directory')
+    .select('id, phone', { count: 'exact' })
+    .eq('organization_id', input.organizationId), input.filter, affiliatedIds)
+    .order('id')
+    .range(0, Math.max(0, input.limit - 1));
+  if (error) throw fromDatabaseError(error, 'customers.list_failed');
+  return counted((data ?? []).map((row) => ({ id: row.id!, phone: row.phone })), count);
+}
+
+/** The recorded phone of each of these contacts in this organization; an id not found is absent. */
+export async function listContactPhones(db: Db, input: { organizationId: string; ids: readonly string[] }): Promise<Map<string, string | null>> {
+  if (!input.ids.length) return new Map();
+  const { data, error } = await db.from('contacts').select('id, phone').eq('organization_id', input.organizationId).in('id', [...input.ids]);
+  if (error) throw fromDatabaseError(error, 'customers.list_failed');
+  return new Map((data ?? []).map((row) => [row.id, row.phone]));
 }
 
 /**

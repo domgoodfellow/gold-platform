@@ -1,4 +1,3 @@
-import { CONTACT_LIFECYCLES, LEAD_TEMPERATURES, type ContactLifecycle, type LeadTemperature } from '@/lib/domain/customers/classification';
 import { BusinessLabel } from '@/lib/context/business-vocabulary';
 import { AppPage } from '@/components/layout/app-page';
 import { SupportRegistrar } from '@/components/panels/support-registrar';
@@ -21,7 +20,6 @@ import {
   listContactLocationLabels,
   listContactPage,
   listCompanies,
-  type ContactType,
   listContactLastActivity,
 } from '@/lib/domain/contacts/contacts';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
@@ -32,9 +30,10 @@ import { areaAvailable } from '@/lib/navigation';
 import { CustomersInsights } from '@/features/insights/workspace-insights';
 import { WorkspaceActivity } from '@/features/timeline/workspace-activity';
 import { requireOrganization } from '@/lib/route/organization';
-
-/** The CRM Dashboard's New contacts window: the 30 days before the request. */
-function thirtyDaysAgo(now: Date) { return new Date(now.getTime() - 30 * 86400000).toISOString(); }
+import { directoryFilter, directoryFiltered } from '@/lib/application/crm/contact-directory';
+import { callListAvailable } from '@/lib/application/communications/call-list';
+import { AddToListMenu } from '@/features/communications/voice/add-to-list-menu';
+import { ContactSelection, ContactSelectionBar } from '@/features/crm/customers/contact-selection';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,24 +90,11 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
     optional: (Array.isArray(query.column) ? query.column : query.column ? [query.column] : []).filter((id) => validChoices.has(id)),
   };
   const companies=await listCompanies(db,organizationId);
-  const filtered = Boolean(view.contactType || view.companyId || view.lifecycle || view.temperature || view.search || view.stage || view.industry || view.website || view.added || view.review);
+  const filtered = directoryFiltered(view);
 
   const customers = await listContactPage(db, {
     organizationId,
-    filter: {
-      search: view.search,
-      contactType:['person','company','unspecified'].includes(view.contactType ?? '')?view.contactType as ContactType:undefined,
-      companyId: view.companyId || undefined,
-      sort:view.group==='company'||view.sort==='company'?'company':view.sort==='name'?'name':undefined,
-      lifecycle: view.lifecycle === 'unclassified' ? 'unclassified' : CONTACT_LIFECYCLES.includes(view.lifecycle as ContactLifecycle) ? view.lifecycle as ContactLifecycle : undefined,
-      temperature: LEAD_TEMPERATURES.includes(view.temperature as LeadTemperature) ? view.temperature as LeadTemperature : undefined,
-      stageId: view.stage === 'unstaged' ? null : view.stage || undefined,
-      industry: view.industry || undefined,
-      website: view.website === 'with' || view.website === 'without' ? view.website : undefined,
-      addedSince: view.added === '30d' ? thirtyDaysAgo(new Date()) : undefined,
-      needsReview: view.review === '1',
-      page,
-    },
+    filter: { ...directoryFilter(view), page },
   });
   const [locationLabels,lastActivity] = await Promise.all([listContactLocationLabels(db, {
     organizationId,
@@ -119,6 +105,10 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
   // person has no way to change it.
   const emptyCollection = customers.total === 0 && !filtered;
   const mayCreate = organization.capabilities.includes('customer.create');
+  // Add to (the Dialer's call list) is offered only where the business has the Dialer and this member may manage tasks.
+  const mayAddToList = !emptyCollection && customers.total > 0 && await callListAvailable(db, organization);
+  // The view as the URL states it, without the display-only column choice, so Add to reaches exactly who the filters match.
+  const directoryView = { ...view, optional: undefined };
 
   const hrefFor = (target: number) => directoryHref(organizationId, view, { page: String(target) });
   const lastPage = Math.max(1, Math.ceil(customers.total / CONTACT_PAGE_SIZE));
@@ -131,6 +121,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
           actions={!emptyCollection ? (
             <>
               {relationshipBoardAvailable ? <ButtonLink tone="secondary" href={`/organizations/${organizationId}/crm/contacts/stages`}>Relationship stages</ButtonLink> : null}
+              {mayAddToList ? <AddToListMenu organizationId={organizationId} target={{ view: directoryView }} /> : null}
               {mayIntake ? <AddContactsTrigger /> : null}
             </>
           ) : undefined}
@@ -184,6 +175,8 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
             />
           </div>
           <div className="mt-4">
+          <ContactSelection pageIds={mayAddToList ? customers.map((customer) => customer.id) : []}>
+          {mayAddToList ? <ContactSelectionBar organizationId={organizationId} /> : null}
           <CustomerTable
             organizationId={organizationId}
             customers={customers}
@@ -196,7 +189,9 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
               timezone={organization.timezone}
             optional={view.optional}
             empty={filtered ? 'No contacts match these filters.' : 'No contacts yet.'}
+            selectable={mayAddToList}
           />
+          </ContactSelection>
           </div>
           {customers.total > CONTACT_PAGE_SIZE ? (
             <nav aria-label="Contact pages" className="mt-4 flex items-center justify-between gap-3 text-sm text-muted">

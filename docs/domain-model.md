@@ -420,7 +420,9 @@ CRM Home, the Opportunity collection/pipeline and the Customer's Opportunities t
 
 A Task is an actionable obligation. A Follow-up is an optional task purpose or workflow; an Activity records something that happened. The current CRM task model remains specialized: every task requires one Contact and a due instant, optionally references an Opportunity for that same Contact, and has kind Call, Email, Meeting or Task, an optional owner Membership, and Open, Completed or Cancelled status. It is not a general organization task system.
 
-Contact and Opportunity detail, Pipeline, dashboard attention and the shared Organization Calendar project the same `crm_tasks` records. The old Follow-ups API and URLs remain compatibility adapters. Neither Follow-ups nor Tasks is a primary CRM navigation destination. Calendar does not copy task records or own their pipeline stages or resource scheduling. Completed and cancelled tasks remain historical. Broader task architecture is deferred.
+Contact and Opportunity detail, Pipeline, dashboard attention and the shared Organization Calendar project the same `crm_tasks` records. The old Follow-ups API and URLs remain compatibility adapters. Tasks is not a primary CRM navigation destination.
+
+On screen these records are always Tasks (owner decision, 2026-11-09). Follow-up is one reason a task exists, such as a call to return, never the name of the list, a page, a panel or a control; code may keep its older follow-up names, but nothing a business sees does. The Dialer shows open Call tasks as its Call list. Calendar does not copy task records or own their pipeline stages or resource scheduling. Completed and cancelled tasks remain historical. Broader task architecture is deferred.
 
 CRM Home forecasts currently Open Opportunity values with an expected-close date in the selected month, unweighted and grouped by currency. Win rate is Won / (Won + Lost), using the last recorded closed transition per Opportunity in the selected month, including creation in a terminal stage. Reclosures count once per Opportunity in that month. Later reopening does not erase recorded closure evidence. A period with no closures has no defined win rate.
 
@@ -840,7 +842,7 @@ Readings can inform maintenance/automation policy without turning the Asset into
 
 ### Calendar event
 
-A native Calendar Event is an Organization-owned appointment with workspace context, title, start/end instants, optional notes, creator and Scheduled/Cancelled status. It is independent of Customers, Follow-ups and Work. Calendar events can overlap and do not reserve Resources or imply scheduling feasibility. Each workspace reads its events by default; All workspaces broadens the view explicitly. Follow-ups and Work remain projections from their own canonical records, never copied into Calendar Events.
+A native Calendar Event is an Organization-owned appointment with workspace context, title, start/end instants, optional notes, creator and Scheduled/Cancelled status. It is independent of Customers, CRM tasks and Work. Calendar events can overlap and do not reserve Resources or imply scheduling feasibility. Each workspace reads its events by default; All workspaces broadens the view explicitly. CRM tasks and Work remain projections from their own canonical records, never copied into Calendar Events.
 
 
 ### Schedule

@@ -75,7 +75,7 @@ export async function readCrm(c: ReadContext): Promise<HomeSourceData> {
     listTasks(c.db, { organizationId: c.organizationId, status: 'open', ownerMembershipId: c.membershipId, before: day.endsAt, limit: 3 }),
   ]);
   d.attention = due.map(f => followUp(c, f)); d.priorities = mine.map(f => followUp(c, f));
-  d.categories.push({ key: 'follow-up', label: c.query.attention === 'all' ? 'Follow-ups due by today' : 'Overdue follow-ups', total: countedTotal(due), href: `${base}/crm/tasks?status=open&${c.query.attention === 'all' ? `to=${c.date}` : 'due=overdue'}${c.query.scope === 'mine' ? `&owner=${c.membershipId}` : ''}` });
+  d.categories.push({ key: 'follow-up', label: c.query.attention === 'all' ? 'Tasks due by today' : 'Overdue tasks', total: countedTotal(due), href: `${base}/crm/tasks?status=open&${c.query.attention === 'all' ? `to=${c.date}` : 'due=overdue'}${c.query.scope === 'mine' ? `&owner=${c.membershipId}` : ''}` });
   obligations(d, [...dated, ...next].map(f => followUp(c, f)), c);
   d.obligationTotals = { today: countedTotal(dated), upcoming: countedTotal(next) };
   return d;

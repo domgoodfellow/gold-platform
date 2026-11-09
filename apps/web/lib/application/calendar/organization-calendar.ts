@@ -59,7 +59,7 @@ export async function loadOrganizationCalendar(db: Db, input: {
         listMembers(db, { organizationId: input.organizationId }),
       ]);
       members = owners;
-      if (items.exactCount === null || items.total > items.length) notices.push('Follow-ups preview may be incomplete. Choose a shorter period or open Follow-ups for all records.');
+      if (items.exactCount === null || items.total > items.length) notices.push('Tasks preview may be incomplete. Choose a shorter period or open Tasks for all records.');
       return items;
     })(),
     input.source !== 'all' && input.source !== 'work' ? Promise.resolve([]) : listWorkItems(db, {
@@ -72,7 +72,7 @@ export async function loadOrganizationCalendar(db: Db, input: {
   ]);
   if (native.status === 'rejected') notices.push('Calendar events are unavailable.');
   else if (native.value.exactCount === null || native.value.total > native.value.length) notices.push('Event preview is limited. Choose a shorter period to see all events.');
-  if (crm.status === 'rejected') notices.push('Follow-ups are unavailable. Other calendar sources may still be shown.');
+  if (crm.status === 'rejected') notices.push('Tasks are unavailable. Other calendar sources may still be shown.');
   if (work.status === 'rejected') notices.push('Scheduled work is unavailable. Other calendar sources may still be shown.');
   const events = calendarEvents(crm.status === 'fulfilled' ? crm.value : [], work.status === 'fulfilled' ? work.value : []);
   if (native.status === 'fulfilled') for (const event of native.value) events.push({ key: `event:${event.id}`, source: 'calendar', event, title: event.title, startsAt: event.startsAt, endsAt: event.endsAt, context: '', status: event.status });
