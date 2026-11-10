@@ -116,20 +116,31 @@ function Content({ section, onChange }: EditorProps<'content'>) {
 }
 
 function Capabilities({ section, onChange }: EditorProps<'capabilities'>) {
+  const variants = SECTION_REGISTRY.capabilities.variants ?? [];
   return (
     <div className="grid gap-4">
       <Title kind="capabilities" />
+      <FieldLabel className="grid gap-1 text-sm">
+        Layout
+        <SelectField value={section.variant ?? 'cards'} onValueChange={(next) => onChange({ ...section, variant: next as NonNullable<typeof section.variant> })} options={variants.map((variant) => ({ value: variant.value, label: variant.label }))} />
+      </FieldLabel>
       <Field label="Eyebrow" value={section.eyebrow} onChange={(value) => onChange({ ...section, eyebrow: value })} />
       <Field label="Heading" value={section.heading} onChange={(value) => onChange({ ...section, heading: value })} />
       <Field label="Body" multiline value={section.body} onChange={(value) => onChange({ ...section, body: value })} />
-      <ItemList label="Card" items={section.items} min={1} max={9} blank={() => ({ title: 'New card', body: 'A sentence about it.' })} onChange={(items) => onChange({ ...section, items })}>
+      <ItemList<SectionOf<'capabilities'>['items'][number]> label="Card" items={section.items} min={1} max={9} blank={() => ({ title: 'New card', body: 'A sentence about it.' })} onChange={(items) => onChange({ ...section, items })}>
         {(item, change, index) => (
           <>
             <Field label={`Card ${index + 1} title`} value={item.title} onChange={(value) => change({ ...item, title: value })} />
             <Field label={`Card ${index + 1} body`} multiline value={item.body} onChange={(value) => change({ ...item, body: value })} />
+            <Field
+              label={`Card ${index + 1} link (optional)`}
+              value={item.href ?? ''}
+              onChange={(value) => change(value.trim() ? { ...item, href: value } : { title: item.title, body: item.body })}
+            />
           </>
         )}
       </ItemList>
+      <Hint className="text-xs">A card link is a path inside this website, like /services or /services#repairs.</Hint>
     </div>
   );
 }

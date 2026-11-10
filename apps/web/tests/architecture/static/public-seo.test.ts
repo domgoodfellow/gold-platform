@@ -36,7 +36,7 @@ describe('crawl surface', () => {
   it('lists only deliberate marketing routes in the sitemap', () => {
     const urls = sitemap().map((entry) => new URL(entry.url).pathname);
     expect(urls).toEqual([
-      '/', '/sales', '/operations', '/customer-service', '/how-it-works', '/integrations',
+      '/', '/products', '/dialer', '/sales', '/operations', '/customer-service', '/how-it-works', '/integrations',
       '/pricing', '/contact', '/demo', '/privacy', '/terms',
     ]);
     expect(urls).not.toContain('/login');

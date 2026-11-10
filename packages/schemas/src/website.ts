@@ -11,17 +11,29 @@ import { FormPublicationSchema } from './forms';
  * URL field; text is text and React escapes it. A link may point only within the website.
  */
 
+/**
+ * A path inside this website, optionally followed by an anchor (`/products#booking`), or an anchor
+ * on the same page (`#contact`). `app.public_internal_href_ok` repeats this in the database.
+ */
+const InternalHrefSchema = z.string().trim().regex(/^(?:\/[A-Za-z0-9\-/_]*(?:#[A-Za-z][A-Za-z0-9-]*)?|#[A-Za-z][A-Za-z0-9-]*)$/);
+
 const PublicLinkSchema = z.object({
   label: z.string().trim().min(1).max(80),
   // Content editors may link only within this website. External redirects and executable URL
   // schemes are not part of the section vocabulary.
-  href: z.string().trim().regex(/^(?:\/[A-Za-z0-9\-/_]*|#[A-Za-z][A-Za-z0-9-]*)$/),
+  href: InternalHrefSchema,
 }).strict();
 
 const PublicTextItemSchema = z.object({
   title: z.string().trim().min(1).max(120),
   body: z.string().trim().min(1).max(500),
 }).strict();
+
+/** A card in a `capabilities` section. Its title is the link text when it has a link. */
+const PublicCardItemSchema = PublicTextItemSchema.extend({ href: InternalHrefSchema.optional() }).strict();
+
+/** How a `capabilities` section lays out its cards. Absent means `cards`, the original layout. */
+export const CAPABILITIES_VARIANTS = ['cards', 'list'] as const;
 
 const id = z.string().uuid();
 /** An eyebrow is a small label above a heading; a business may not want one. */
@@ -65,10 +77,11 @@ export const WebsiteSectionSchema = z.discriminatedUnion('kind', [
   }).strict(),
   z.object({
     id, kind: z.literal('capabilities'),
+    variant: z.enum(CAPABILITIES_VARIANTS).optional(),
     eyebrow,
     heading: z.string().trim().min(1).max(240),
     body: z.string().trim().min(1).max(600),
-    items: z.array(PublicTextItemSchema).min(1).max(9),
+    items: z.array(PublicCardItemSchema).min(1).max(9),
   }).strict(),
   z.object({
     id, kind: z.literal('process'),

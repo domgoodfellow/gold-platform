@@ -20,10 +20,12 @@ const PUBLIC_PATHS = [
   '/verify-email',
   '/auth/confirm',
   '/forgot-password',
-  // GOLD's own marketing site: the three product pages, how it works, integrations, pricing,
-  // the demo request itself, contact, and the two legal pages — same public standing as the four screens above. A visitor
+  // GildOps' own marketing site: the products overview and each product page, how it works,
+  // integrations, pricing, the demo request itself, contact, and the two legal pages — same public standing as the four screens above. A visitor
   // arrives with no session, and `/demo`'s and `/contact`'s `submitPublicInquiry` gives them a one-shot
   // anonymous one for exactly as long as the single privileged write takes.
+  '/products',
+  '/dialer',
   '/sales',
   '/operations',
   '/customer-service',

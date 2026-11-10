@@ -4,7 +4,7 @@ import { MarketingHeader } from './marketing-header';
 import { MobileDemoCta } from './mobile-demo-cta';
 
 /** Footer line when GildOps' own profile has no tagline, or could not be read. */
-const FALLBACK_TAGLINE = 'Sales, operations and customer service in one connected system.';
+const FALLBACK_TAGLINE = 'AI, automation and business software, set up around how you work.';
 
 /**
  * The one frame every GildOps marketing page and credential screen wears: header, page, footer,

@@ -5,9 +5,11 @@ import { canonicalUrl } from '@/lib/seo/site';
 import type { Product } from '@/lib/marketing/content';
 
 /**
- * The shared skeleton for `/sales`, `/operations` and `/customer-service`: hero, problem, key
- * workflows, feature groups, how it connects, integrations, FAQ, CTA. No illustrated dashboard:
- * a made-up screen with sample customers is not a picture of what the visitor would get.
+ * The shared skeleton for the connected applications, `/sales`, `/operations` and
+ * `/customer-service`: hero, problem, key workflows, feature groups, how it works with other
+ * products, integrations, FAQ, CTA. No illustrated dashboard: a made-up screen with sample
+ * customers is not a picture of what the visitor would get. The FAQ is drawn, and claimed in
+ * structured data, only when the product has questions to answer.
  */
 export function ProductLanding({ product }: { product: Product }) {
   const structuredData = {
@@ -17,10 +19,12 @@ export function ProductLanding({ product }: { product: Product }) {
 
   return (
     <div className="flex flex-col gap-24 py-6 sm:gap-32 sm:py-10">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }}
-      />
+      {product.faq.length ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }}
+        />
+      ) : null}
 
       <section className="max-w-3xl">
         <div className="flex flex-col items-start gap-6">
@@ -63,8 +67,7 @@ export function ProductLanding({ product }: { product: Product }) {
 
       <section className="grid gap-8 rounded-xl border border-border bg-surface p-6 sm:p-10 lg:grid-cols-3">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-subtle">Connected, not standalone</p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-tight">How {product.name} connects to the rest of GildOps</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">How {product.name} works with other GildOps products</h2>
         </div>
         <div className="grid gap-6 text-sm leading-relaxed text-muted sm:grid-cols-2 lg:col-span-2">
           {product.connectsTo.map((point) => <p key={point}>{point}</p>)}
@@ -79,7 +82,7 @@ export function ProductLanding({ product }: { product: Product }) {
         </p>
       </section>
 
-      <FaqSection items={product.faq} />
+      {product.faq.length ? <FaqSection items={product.faq} /> : null}
 
       <CtaBand
         heading={`See ${product.name} on your own operation.`}

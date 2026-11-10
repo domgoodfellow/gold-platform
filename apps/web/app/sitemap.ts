@@ -4,6 +4,8 @@ import { MARKETING_PATHS } from '@/lib/marketing/navigation';
 
 const PRIORITY: Record<string, number> = {
   '/': 1,
+  '/products': 0.9,
+  '/dialer': 0.9,
   '/sales': 0.9,
   '/operations': 0.9,
   '/customer-service': 0.9,

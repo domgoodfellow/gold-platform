@@ -61,6 +61,27 @@ describe('website content', () => {
     expect(WebsiteSectionSchema.safeParse({ ...sectionOf('hero'), heading: '' }).success).toBe(false);
   });
 
+  it('lets a link name an anchor on another page of the website, and nothing outside it', () => {
+    const cta = sectionOf('cta');
+    for (const href of ['/products#booking', '/services', '#contact', '/']) {
+      expect(WebsiteSectionSchema.safeParse({ ...cta, primaryCta: { label: 'Go', href } }).success, href).toBe(true);
+    }
+    for (const href of ['/products#', '/products#1x', '//evil.test', 'javascript:alert(1)', '/a b', '/x#y#z']) {
+      expect(WebsiteSectionSchema.safeParse({ ...cta, primaryCta: { label: 'Go', href } }).success, href).toBe(false);
+    }
+  });
+
+  it('lets a services card link inside the website, and a services section choose cards or a list', () => {
+    const services = sectionOf('capabilities');
+    const linked = { ...services, variant: 'list', items: [{ title: 'Repairs', body: 'We fix it.', href: '/services#repairs' }] };
+    expect(WebsiteSectionSchema.safeParse(linked).success).toBe(true);
+    // A section saved before layouts existed has neither field, and stays valid.
+    expect(WebsiteSectionSchema.safeParse(services).success).toBe(true);
+    expect(WebsiteSectionSchema.safeParse({ ...linked, variant: 'grid' }).success).toBe(false);
+    expect(WebsiteSectionSchema.safeParse({ ...linked, items: [{ title: 'Away', body: 'Elsewhere.', href: 'https://example.test' }] }).success).toBe(false);
+    expect(WebsiteSectionSchema.safeParse({ ...linked, items: [{ title: 'Odd', body: 'Extra.', icon: 'star' }] }).success).toBe(false);
+  });
+
   it('keeps navigation pointing at pages that exist', () => {
     const base = site();
     const withNav = addNavigationPage(base, base.pages[0]!.id);

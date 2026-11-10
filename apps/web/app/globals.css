@@ -310,6 +310,25 @@ h1, h2, h3, h4 {
   50% { opacity: 0.09; }
 }
 
+/* GildOps' own homepage: each section after the hero rises into place as it scrolls into view.
+   Scoped to `data-marketing-home` (app/(marketing)/page.tsx), so a business's website, Studio's
+   canvas and previews never move. Scroll-linked rather than timed, so nothing waits on a timer;
+   a browser without view timelines, or a visitor who asked for reduced motion, sees the page
+   still. The hero never animates: it is the first thing read. */
+@keyframes marketing-rise {
+  from { opacity: 0.15; transform: translateY(1.5rem); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    [data-marketing-home] [data-section]:not([data-section=hero]) {
+      animation: marketing-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 5% entry 55%;
+    }
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;

@@ -1,4 +1,4 @@
-import { PRODUCTS } from './content';
+import { OFFERINGS } from './content';
 
 /**
  * Every link the marketing header and footer draw, in one list. `marketing-shell.test.ts` proves
@@ -25,12 +25,23 @@ export const ACCOUNT_LINKS = [
   { href: '/demo', label: 'Request a demo' },
 ] as const;
 
-export const PRODUCT_LINKS = PRODUCTS.map((product) => ({ href: product.href, label: product.name }));
+/** The overview of everything GildOps offers; the Products menu and the footer both lead to it. */
+export const PRODUCTS_OVERVIEW = { href: '/products', label: 'All products' } as const;
+
+/** Products with a page of their own. Everything else is an entry on `/products`. */
+export const PRODUCT_PAGES = OFFERINGS.filter((offering) => offering.page).map((offering) => ({
+  href: offering.page!,
+  label: offering.name,
+}));
+
+/** The footer's Products column: the overview, then every product page. */
+export const PRODUCT_LINKS = [PRODUCTS_OVERVIEW, ...PRODUCT_PAGES];
 
 /** Every crawlable marketing path, in sitemap order. */
 export const MARKETING_PATHS = [
   '/',
-  ...PRODUCTS.map((product) => product.href),
+  PRODUCTS_OVERVIEW.href,
+  ...PRODUCT_PAGES.map((page) => page.href),
   '/how-it-works',
   '/integrations',
   '/pricing',

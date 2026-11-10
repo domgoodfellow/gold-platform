@@ -34,7 +34,10 @@ export default async function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }} />
-      <PageSections sections={site.sections} context={{ mode: 'live', forms: site.forms }} />
+      {/* `data-marketing-home` scopes the homepage's scroll entrance (globals.css) to this page. */}
+      <div data-marketing-home>
+        <PageSections sections={site.sections} context={{ mode: 'live', forms: site.forms }} />
+      </div>
       <PublicSiteCommunication siteId={site.siteId} />
     </>
   );

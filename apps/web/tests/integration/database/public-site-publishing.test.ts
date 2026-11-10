@@ -172,7 +172,28 @@ describe('a business\'s own website: pages, sections and one coherent publicatio
     expect((await attempt([home, { ...services, sections: [{ ...SECTION_REGISTRY.cta.create(newId()), primaryCta: { label: 'Out', href: 'https://example.test' } }] }])).error?.code).toBe('23514');
     expect((await attempt([home, services], [{ id: newId(), label: 'Gone', target: { type: 'page', pageId: newId() } }])).error?.code).toBe('23514');
     expect((await attempt([home, services], [{ id: newId(), label: 'Bad', target: { type: 'external', href: 'javascript:alert(1)' } }])).error?.code).toBe('23514');
+    const cards = SECTION_REGISTRY.capabilities.create(newId());
+    const card = { title: 'Repairs', body: 'We fix it.' };
+    expect((await attempt([home, { ...services, sections: [{ ...cards, items: [{ ...card, href: 'https://example.test' }] }] }])).error?.code).toBe('23514');
+    expect((await attempt([home, { ...services, sections: [{ ...cards, items: [{ ...card, icon: 'star' }] }] }])).error?.code).toBe('23514');
+    expect((await attempt([home, { ...services, sections: [{ ...cards, variant: 'grid' }] }])).error?.code).toBe('23514');
     expect((await attempt([home, services])).error).toBeNull();
+  });
+
+  it('accepts a services section laid out as a list whose cards link inside the website', async () => {
+    const draftId = await createSiteDraft(tenant.db, { organizationId: tenant.organizationId });
+    const { content } = await workingContent(tenant);
+    const [home, services] = content.pages as [typeof content.pages[number], typeof content.pages[number]];
+    const list = {
+      ...SECTION_REGISTRY.capabilities.create(newId()),
+      variant: 'list',
+      items: [{ title: 'Repairs', body: 'We fix it.', href: `/${services.slug}#repairs` }, { title: 'Advice', body: 'No link.' }],
+    };
+    const { error } = await tenant.db.rpc('update_public_site_draft', {
+      p_organization_id: tenant.organizationId, p_revision_id: draftId,
+      p_pages: [home, { ...services, sections: [...services.sections, list] }] as never, p_navigation: content.navigation as never,
+    });
+    expect(error).toBeNull();
   });
 
   it('serves a hostname\'s pages from the active revision, and nothing for an unknown business', async () => {
@@ -251,8 +272,14 @@ describe('a business\'s own website: pages, sections and one coherent publicatio
     await pgQuery('update public.platform_settings set gold_public_organization_id = $1, gold_public_site_id = (select id from public.public_sites where organization_id = $1) where singleton', [gold.organizationId]);
     const page = await publishedGoldHomepage(anon());
     expect(page.organizationId).toBe(gold.organizationId);
-    expect(page.sections.map((section) => section.kind)).toEqual(['hero', 'problem', 'capabilities', 'process', 'trust', 'cta']);
-    expect(page.sections[0]).toMatchObject({ kind: 'hero', variant: 'preview' });
+    expect(page.sections.map((section) => section.kind)).toEqual(['hero', 'capabilities', 'capabilities', 'capabilities', 'process', 'trust', 'cta']);
+    expect(page.sections[0]).toMatchObject({ kind: 'hero', variant: 'left' });
+    // Products are linked lists: the links are content, not something the renderer guesses.
+    for (const section of page.sections) {
+      if (section.kind !== 'capabilities') continue;
+      expect(section.variant).toBe('list');
+      for (const item of section.items) expect(item.href).toMatch(/^\/(dialer|sales|operations|customer-service|products#[a-z-]+)$/);
+    }
     // Bootstrapping again changes nothing.
     await pgQuery('select app.bootstrap_gold_public_site($1)', [gold.organizationId]);
     expect((await pgQuery('select count(*)::int as n from public.public_site_revisions where organization_id = $1', [gold.organizationId])).rows[0].n).toBe(1);

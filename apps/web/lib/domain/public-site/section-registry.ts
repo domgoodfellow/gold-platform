@@ -57,6 +57,10 @@ export const SECTION_REGISTRY: { [K in SectionKind]: SectionDefinition<K> } = {
   capabilities: {
     kind: 'capabilities', label: 'Services', group: 'Features',
     description: 'Up to nine cards: what you offer, with a line on each.',
+    variants: [
+      { value: 'cards', label: 'Cards' },
+      { value: 'list', label: 'List' },
+    ],
     create: (id) => ({
       id, kind: 'capabilities', eyebrow: '', heading: 'What we do', body: 'One card for each kind of work.',
       items: [{ title: 'First service', body: 'A sentence about it.' }, { title: 'Second service', body: 'A sentence about it.' }],

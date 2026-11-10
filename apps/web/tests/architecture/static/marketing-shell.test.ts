@@ -34,7 +34,7 @@ describe('the marketing header and footer have no dead links', () => {
 
   it('carries the header links the brief names', () => {
     expect(HEADER_LINKS.map((link) => link.label)).toEqual(['How it works', 'Integrations', 'Pricing', 'Contact']);
-    expect(PRODUCT_LINKS.map((link) => link.label)).toEqual(['Sales', 'Operations', 'Customer Service']);
+    expect(PRODUCT_LINKS.map((link) => link.label)).toEqual(['All products', 'Dialer', 'Sales', 'Operations', 'Customer Service']);
   });
 });
 

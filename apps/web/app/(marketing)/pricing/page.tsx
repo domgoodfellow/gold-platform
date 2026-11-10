@@ -19,11 +19,11 @@ export default function PricingPage() {
       <div className="flex flex-col gap-4">
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-subtle">Pricing</p>
         <h1 className="max-w-2xl text-4xl font-semibold leading-[1.04] tracking-tight sm:text-5xl">
-          Priced by plan, not by guesswork.
+          A quote for what you actually use.
         </h1>
         <p className="max-w-xl text-lg leading-relaxed text-muted">
-          GildOps is not one flat price. A demo is where you get a real number for your business —
-          this page is what shapes it.
+          A single tool, AI set up with you and a connected system are priced differently. We give
+          you a number after a short conversation; this page lists what shapes it.
         </p>
       </div>
 

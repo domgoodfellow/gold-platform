@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowRight, CalendarDays, ClipboardList, Headset, Layers, MessageSquare, TrendingUp, Users, Workflow, type LucideIcon } from 'lucide-react';
+import { ArrowRight, CalendarDays, ClipboardList, Layers, MessageSquare, Users } from 'lucide-react';
 import type { PublicLink, SectionKind, SectionOf, WebsiteSection } from '@gold/schemas';
 import { ButtonLink } from '@/components/controls/button';
 import { FOCUS_RING, cx } from '@/components/class-names';
@@ -26,23 +26,6 @@ function Secondary({ link, context }: { link: PublicLink | undefined; context: F
   if (!link) return null;
   return <a href={internal(link.href, context)} className={cx('rounded text-sm font-medium text-muted hover:text-foreground', FOCUS_RING)}>{link.label}</a>;
 }
-
-/**
- * The three commercial doors, in the order the `capabilities` section's items are seeded for
- * GildOps' own homepage. A title this map does not recognise renders as plain text rather than a
- * link — a business whose cards happen to share a title degrades to an unlinked card.
- */
-const PRODUCT_HREF_BY_TITLE: Record<string, string> = {
-  Sales: '/sales',
-  Operations: '/operations',
-  'Customer Service': '/customer-service',
-};
-
-const PRODUCT_ICON_BY_TITLE: Record<string, LucideIcon> = {
-  Sales: TrendingUp,
-  Operations: Workflow,
-  'Customer Service': Headset,
-};
 
 function ProductPreview() {
   const rows = [
@@ -97,8 +80,8 @@ function Hero({ section, context }: RenderProps<'hero'>) {
   const text = (
     <div className={cx('flex flex-col gap-6', centered ? 'mx-auto w-full max-w-3xl items-center text-center' : 'items-start')}>
       <Eyebrow>{section.eyebrow}</Eyebrow>
-      <h1 className={cx('font-semibold tracking-tight', preview ? 'max-w-2xl text-4xl leading-[1.04] @min-[40rem]/site:text-6xl' : 'text-4xl leading-[1.06] @min-[40rem]/site:text-5xl')}>{section.heading}</h1>
-      <p className="max-w-xl text-lg leading-relaxed text-muted">{section.body}</p>
+      <h1 className={cx('text-balance font-semibold tracking-tight', preview ? 'max-w-2xl text-4xl leading-[1.04] @min-[40rem]/site:text-6xl' : 'text-4xl leading-[1.06] @min-[40rem]/site:text-5xl')}>{section.heading}</h1>
+      <p className="max-w-xl text-pretty text-lg leading-relaxed text-muted">{section.body}</p>
       {actions}
     </div>
   );
@@ -129,28 +112,73 @@ function Content({ section }: RenderProps<'content'>) {
   );
 }
 
-function Capabilities({ section, anchored }: RenderProps<'capabilities'>) {
+/**
+ * What a business offers. `cards` (the default, and every section saved before layouts existed) is
+ * a grid of boxed cards; `list` is an index: the heading beside a ruled list, one row per item, for
+ * a section whose items are places to go next rather than things to read. A card links only when
+ * its own `href` says where, so nothing here guesses a destination from a title.
+ */
+function Capabilities({ section, context, anchored }: RenderProps<'capabilities'>) {
+  const heading = (
+    <div className="flex max-w-2xl flex-col gap-3">
+      <Eyebrow>{section.eyebrow}</Eyebrow>
+      <h2 className="text-balance text-2xl font-semibold tracking-tight @min-[40rem]/site:text-3xl">{section.heading}</h2>
+      <p className="text-pretty text-muted">{section.body}</p>
+    </div>
+  );
+
+  if (section.variant === 'list') {
+    return (
+      <section id={anchored ? 'products' : undefined} className="grid scroll-mt-24 gap-8 @min-[56rem]/site:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] @min-[56rem]/site:gap-16">
+        <div className="@min-[56rem]/site:sticky @min-[56rem]/site:top-28 @min-[56rem]/site:self-start">{heading}</div>
+        <ul className="border-t border-border">
+          {section.items.map((item, index) => {
+            const row = (
+              <>
+                <h3 className="text-lg font-semibold tracking-tight">{item.title}</h3>
+                <p className="col-start-1 text-pretty text-sm leading-relaxed text-muted">{item.body}</p>
+              </>
+            );
+            return (
+              <li key={index} className="border-b border-border">
+                {item.href ? (
+                  <Link
+                    href={internal(item.href, context)}
+                    className={cx('group -mx-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-1 rounded-md px-3 py-5 transition-colors hover:bg-secondary', FOCUS_RING)}
+                  >
+                    {row}
+                    <ArrowRight aria-hidden size={18} className="col-start-2 row-span-2 row-start-1 text-muted transition-transform group-hover:text-foreground motion-safe:group-hover:translate-x-1" />
+                  </Link>
+                ) : (
+                  <div className="grid gap-y-1 py-5">{row}</div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    );
+  }
+
   return (
     <section id={anchored ? 'products' : undefined} className="scroll-mt-24">
-      <div className="flex max-w-2xl flex-col gap-3"><Eyebrow>{section.eyebrow}</Eyebrow><h2 className="text-2xl font-semibold tracking-tight @min-[40rem]/site:text-3xl">{section.heading}</h2><p className="text-muted">{section.body}</p></div>
+      {heading}
       <div className="mt-10 grid gap-5 @min-[40rem]/site:grid-cols-2 @min-[64rem]/site:grid-cols-3">
         {section.items.map((item, index) => {
-          const href = PRODUCT_HREF_BY_TITLE[item.title];
-          const Icon = PRODUCT_ICON_BY_TITLE[item.title] ?? Layers;
           const body = (
             <>
               <span className="mb-5 flex size-10 items-center justify-center rounded-lg bg-foreground text-background">
-                <Icon aria-hidden size={18} />
+                <Layers aria-hidden size={18} />
               </span>
               <h3 className="flex items-center gap-1.5 text-lg font-semibold">
                 {item.title}
-                {href ? <ArrowRight aria-hidden size={14} className="text-muted transition-transform group-hover:translate-x-0.5" /> : null}
+                {item.href ? <ArrowRight aria-hidden size={14} className="text-muted transition-transform motion-safe:group-hover:translate-x-0.5" /> : null}
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-muted">{item.body}</p>
             </>
           );
-          return href ? (
-            <Link key={index} href={href} className={cx('group block rounded-xl border border-border bg-surface p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-foreground/40 hover:shadow-md', FOCUS_RING)}>
+          return item.href ? (
+            <Link key={index} href={internal(item.href, context)} className={cx('group block rounded-xl border border-border bg-surface p-6 shadow-sm transition hover:border-foreground/40 hover:shadow-md motion-safe:hover:-translate-y-0.5', FOCUS_RING)}>
               {body}
             </Link>
           ) : (
@@ -201,7 +229,7 @@ export const SECTION_RENDERERS: { [K in SectionKind]: (props: RenderProps<K>) =>
 /** One section, rendered exactly as the public website would. */
 export function SectionView({ section, context, anchored = true }: { section: WebsiteSection; context: FormSectionContext; anchored?: boolean }) {
   const Render = SECTION_RENDERERS[section.kind] as (props: RenderProps<SectionKind>) => ReactNode;
-  return <div className="@container/site min-w-0">{Render({ section: section as never, context, anchored })}</div>;
+  return <div data-section={section.kind} className="@container/site min-w-0">{Render({ section: section as never, context, anchored })}</div>;
 }
 
 /** The sections of a page, in order. A page never holds two elements with one anchor id. */

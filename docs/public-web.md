@@ -458,6 +458,16 @@ Industry, resource, integration-directory or pricing pages should be published o
 
 Public marketing language such as "Sales" or "Customer Service" does not redefine the operator workspace taxonomy.
 
+GildOps is presented as individual tools, AI and automation, and connected applications, so a visitor can buy one product without adopting the whole platform. The product inventory lives in `apps/web/lib/marketing/content.ts` and is grouped by how a business gets each product:
+
+- **Tools you can use on their own:** Dialer, Websites and forms, Online booking.
+- **AI and automation, set up with the business:** AI receptionist, Website chat assistant, Workflow automation, Business assistant.
+- **Connected business applications:** Sales, Operations, Customer Service.
+
+The header's Products menu and `/products` follow that grouping. `/products` describes every product (what it does, what a business needs to start, what it works with) under a stable anchor. A product gets a page of its own only when it has enough distinct content: today `/dialer`, `/sales`, `/operations` and `/customer-service`. An inventory entry describes only behavior the application has today; prices are quoted, not published.
+
+GildOps' homepage stays a published site revision edited in Studio. Its product rows are `capabilities` sections in the `list` layout whose cards link to those pages. A card link is typed content (`href` on the card), never inferred by the shared renderer from a card's title.
+
 ---
 
 ## Metadata and search
