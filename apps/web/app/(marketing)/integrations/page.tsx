@@ -23,7 +23,7 @@ export default async function IntegrationsPage() {
   const groups = groupByCategory(await getPublishedConnectors());
 
   return (
-    <div className="flex flex-col gap-16 py-6 sm:gap-24 sm:py-10">
+    <div className="flex flex-col gap-14 py-6 sm:gap-20 sm:py-10">
       <div className="flex flex-col gap-4">
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-subtle">Integrations</p>
         <h1 className="max-w-2xl text-4xl font-semibold leading-[1.04] tracking-tight sm:text-5xl">

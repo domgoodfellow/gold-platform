@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowRight, CalendarDays, ClipboardList, Layers, MessageSquare, Users } from 'lucide-react';
+import { ArrowRight, CalendarDays, ClipboardList, MessageSquare, Users } from 'lucide-react';
 import type { PublicLink, SectionKind, SectionOf, WebsiteSection } from '@gold/schemas';
 import { ButtonLink } from '@/components/controls/button';
 import { FOCUS_RING, cx } from '@/components/class-names';
@@ -70,7 +70,7 @@ type RenderProps<K extends SectionKind> = { section: SectionOf<K>; context: Form
 
 function Hero({ section, context }: RenderProps<'hero'>) {
   const actions = (
-    <div className={cx('mt-2 flex flex-col gap-4 @min-[40rem]/site:flex-row @min-[40rem]/site:items-center', section.variant === 'centered' && '@min-[40rem]/site:justify-center')}>
+    <div className={cx('mt-2 flex flex-wrap items-center gap-x-6 gap-y-3', section.variant === 'centered' && 'justify-center')}>
       <ButtonLink href={internal(section.primaryCta.href, context)} tone="primary">{section.primaryCta.label}</ButtonLink>
       <Secondary link={section.secondaryCta} context={context} />
     </div>
@@ -114,9 +114,11 @@ function Content({ section }: RenderProps<'content'>) {
 
 /**
  * What a business offers. `cards` (the default, and every section saved before layouts existed) is
- * a grid of boxed cards; `list` is an index: the heading beside a ruled list, one row per item, for
- * a section whose items are places to go next rather than things to read. A card links only when
- * its own `href` says where, so nothing here guesses a destination from a title.
+ * a grid of ruled columns, one per item; `list` is an index: the heading beside a ruled list, one
+ * row per item, for a section whose items are places to go next rather than things to read. Neither
+ * boxes its items: a page where every section is a rounded panel gives nothing more weight than
+ * anything else. A card links only when its own `href` says where, so nothing here guesses a
+ * destination from a title.
  */
 function Capabilities({ section, context, anchored }: RenderProps<'capabilities'>) {
   const heading = (
@@ -147,7 +149,7 @@ function Capabilities({ section, context, anchored }: RenderProps<'capabilities'
                     className={cx('group -mx-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-1 rounded-md px-3 py-5 transition-colors hover:bg-secondary', FOCUS_RING)}
                   >
                     {row}
-                    <ArrowRight aria-hidden size={18} className="col-start-2 row-span-2 row-start-1 text-muted transition-transform group-hover:text-foreground motion-safe:group-hover:translate-x-1" />
+                    <ArrowRight aria-hidden size={18} className="col-start-2 row-span-2 row-start-1 text-muted transition-transform group-hover:text-accent-text motion-safe:group-hover:translate-x-1" />
                   </Link>
                 ) : (
                   <div className="grid gap-y-1 py-5">{row}</div>
@@ -163,26 +165,23 @@ function Capabilities({ section, context, anchored }: RenderProps<'capabilities'
   return (
     <section id={anchored ? 'products' : undefined} className="scroll-mt-24">
       {heading}
-      <div className="mt-10 grid gap-5 @min-[40rem]/site:grid-cols-2 @min-[64rem]/site:grid-cols-3">
+      <div className="mt-8 grid gap-x-8 gap-y-8 @min-[40rem]/site:grid-cols-2 @min-[64rem]/site:grid-cols-3">
         {section.items.map((item, index) => {
           const body = (
             <>
-              <span className="mb-5 flex size-10 items-center justify-center rounded-lg bg-foreground text-background">
-                <Layers aria-hidden size={18} />
-              </span>
-              <h3 className="flex items-center gap-1.5 text-lg font-semibold">
+              <h3 className="flex items-center gap-1.5 text-lg font-semibold tracking-tight">
                 {item.title}
-                {item.href ? <ArrowRight aria-hidden size={14} className="text-muted transition-transform motion-safe:group-hover:translate-x-0.5" /> : null}
+                {item.href ? <ArrowRight aria-hidden size={14} className="text-muted transition-transform group-hover:text-accent-text motion-safe:group-hover:translate-x-0.5" /> : null}
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted">{item.body}</p>
+              <p className="mt-2 text-pretty text-sm leading-relaxed text-muted">{item.body}</p>
             </>
           );
           return item.href ? (
-            <Link key={index} href={internal(item.href, context)} className={cx('group block rounded-xl border border-border bg-surface p-6 shadow-sm transition hover:border-foreground/40 hover:shadow-md motion-safe:hover:-translate-y-0.5', FOCUS_RING)}>
+            <Link key={index} href={internal(item.href, context)} className={cx('group block rounded-sm border-t-2 border-foreground pt-4', FOCUS_RING)}>
               {body}
             </Link>
           ) : (
-            <article key={index} className="rounded-xl border border-border bg-surface p-6 shadow-sm">{body}</article>
+            <article key={index} className="border-t-2 border-foreground pt-4">{body}</article>
           );
         })}
       </div>
@@ -194,16 +193,16 @@ function Process({ section, anchored }: RenderProps<'process'>) {
   return (
     <section id={anchored ? 'how-it-works' : undefined} className="scroll-mt-24"><div className="grid gap-10 @min-[64rem]/site:grid-cols-[0.7fr_1fr] @min-[64rem]/site:gap-20">
       <div><Eyebrow>{section.eyebrow}</Eyebrow><h2 className="mt-3 text-2xl font-semibold tracking-tight @min-[40rem]/site:text-3xl">{section.heading}</h2></div>
-      <ol className="flex flex-col gap-3">{section.items.map((item, index) => <li key={index} className="grid gap-2 rounded-xl border border-border bg-surface p-5 shadow-sm @min-[40rem]/site:grid-cols-[3rem_12rem_1fr] @min-[40rem]/site:gap-4"><span className="font-mono text-xs text-subtle">{item.step}</span><h3 className="text-sm font-semibold">{item.title}</h3><p className="text-sm leading-relaxed text-muted">{item.body}</p></li>)}</ol>
+      <ol className="border-t border-border">{section.items.map((item, index) => <li key={index} className="grid gap-1.5 border-b border-border py-5 @min-[40rem]/site:grid-cols-[3rem_12rem_1fr] @min-[40rem]/site:gap-4"><span className="font-mono text-xs leading-6 text-subtle">{item.step}</span><h3 className="text-base font-semibold tracking-tight">{item.title}</h3><p className="text-pretty text-sm leading-relaxed text-muted">{item.body}</p></li>)}</ol>
     </div></section>
   );
 }
 
 function Trust({ section }: RenderProps<'trust'>) {
   return (
-    <section className="grid gap-8 rounded-xl border border-border bg-surface p-6 @min-[40rem]/site:p-10 @min-[64rem]/site:grid-cols-3">
+    <section className="grid gap-8 border-t border-border pt-8 @min-[64rem]/site:grid-cols-3 @min-[64rem]/site:gap-16">
       <div><Eyebrow>{section.eyebrow}</Eyebrow><h2 className="mt-3 text-2xl font-semibold tracking-tight">{section.heading}</h2></div>
-      <div className="grid gap-8 text-sm leading-relaxed text-muted @min-[40rem]/site:grid-cols-2 @min-[64rem]/site:col-span-2">{section.items.map((item, index) => <div key={index}><h3 className="font-semibold text-foreground">{item.title}</h3><p className="mt-2">{item.body}</p></div>)}</div>
+      <div className="grid gap-x-8 gap-y-6 text-sm leading-relaxed text-muted @min-[40rem]/site:grid-cols-2 @min-[64rem]/site:col-span-2">{section.items.map((item, index) => <div key={index}><h3 className="font-semibold text-foreground">{item.title}</h3><p className="mt-1.5 text-pretty">{item.body}</p></div>)}</div>
     </section>
   );
 }
@@ -232,11 +231,14 @@ export function SectionView({ section, context, anchored = true }: { section: We
   return <div data-section={section.kind} className="@container/site min-w-0">{Render({ section: section as never, context, anchored })}</div>;
 }
 
-/** The sections of a page, in order. A page never holds two elements with one anchor id. */
+/**
+ * The sections of a page, in order. A page never holds two elements with one anchor id. The gap is
+ * the whole rhythm of the page: sections carry no outer margin of their own.
+ */
 export function PageSections({ sections, context = NO_FORMS }: { sections: WebsiteSection[]; context?: FormSectionContext }) {
   const seen = new Set<SectionKind>();
   return (
-    <div className="@container/site flex min-w-0 flex-col gap-24 py-6 @min-[40rem]/site:gap-32 @min-[40rem]/site:py-10">
+    <div className="@container/site flex min-w-0 flex-col gap-14 py-6 @min-[40rem]/site:gap-20 @min-[40rem]/site:py-10">
       {sections.map((section) => {
         const anchored = !seen.has(section.kind);
         seen.add(section.kind);

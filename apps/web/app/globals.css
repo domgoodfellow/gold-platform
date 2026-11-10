@@ -178,6 +178,59 @@
   }
 }
 
+/* GildOps' own marketing frame (`MarketingShell`, `data-marketing-site`): charcoal lettering on warm
+   ivory, gold for the primary action and for links, and steel blue for the technical details that
+   `--subtle` carries (step numbers, eyebrows, times). Scoped to that frame, so a business's
+   published website, Studio's canvas and every operator surface keep the neutral roles above. An
+   accent GildOps saves in Studio still wins: `BrandStyle` writes `--accent` after this sheet. The
+   neutral roles are literal here and every alias is declared again, because an alias resolves
+   where it is written, not where it is read. */
+[data-marketing-site] {
+  --background: #f8f5ee;
+  --foreground: #1b1a17;
+  --surface: #fffdf8;
+  --secondary: #efeadf;
+  --border: rgb(27 26 23 / 0.14);
+  --muted: rgb(27 26 23 / 0.72);
+  --subtle: #4d6a86;
+  --ring: rgb(27 26 23 / 0.45);
+  --accent: #c0901c;
+  --on-accent: #1b1a17;
+  --accent-text: #7a5a0c;
+  --accent-indicator: #a87c14;
+  --accent-foreground: var(--on-accent);
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --primary: var(--foreground);
+  --primary-foreground: var(--background);
+  --secondary-foreground: var(--foreground);
+  --muted-foreground: var(--muted);
+  --input: var(--border);
+  --destructive: var(--danger);
+  --hover: color-mix(in srgb, var(--foreground) 6%, transparent);
+  --selected: color-mix(in srgb, var(--foreground) 12%, transparent);
+  --focus-color: var(--foreground);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-marketing-site] {
+    --background: #171613;
+    --foreground: #efe9dc;
+    --surface: #1f1e1a;
+    --secondary: #28261f;
+    --border: rgb(239 233 220 / 0.16);
+    --muted: rgb(239 233 220 / 0.72);
+    --subtle: #8fb0cf;
+    --ring: rgb(239 233 220 / 0.45);
+    --accent: #d6ab3c;
+    --on-accent: #171613;
+    --accent-text: #e3bd57;
+    --accent-indicator: #d6ab3c;
+  }
+}
+
 /* A branded subtree states its own lettering and re-resolves the aliases that read a brand role.
    `body` computes its font-family at <body>, above the subtree where `BrandStyle` writes
    `--font-body`, so a variable changed lower down never reaches inherited text unless the

@@ -18,8 +18,7 @@ export const metadata: Metadata = {
  *
  * They wear the marketing site's header and footer (`MarketingShell`), because somebody arriving
  * here has usually come from the front page and should still be in the same place. The header is
- * also the way out of a flow somebody entered by mistake. The phone demo bar is left off: it would
- * sit over the form.
+ * also the way out of a flow somebody entered by mistake.
  *
  * Signing in must keep working when GildOps' own homepage cannot be read, so a failed read falls
  * back to the plain name and the shell's default footer line.
@@ -45,7 +44,6 @@ export default async function AuthLayout({ children }: LayoutProps<'/'>) {
         tagline={site?.profile.tagline ?? null}
         contactEmail={site?.profile.contactEmail ?? null}
         contactPhone={site?.profile.contactPhone ?? null}
-        showMobileDemoCta={false}
       >
         <div className="flex flex-1 items-center justify-center px-4 py-10 sm:py-16">
           <div className="w-full max-w-sm rounded-lg border border-border bg-card p-6 text-card-foreground shadow-sm sm:p-8">

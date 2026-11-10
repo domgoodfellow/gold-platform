@@ -20,7 +20,7 @@ export function ProductLanding({ product }: { product: Product }) {
   };
 
   return (
-    <div className="flex flex-col gap-24 py-6 sm:gap-32 sm:py-10">
+    <div className="flex flex-col gap-14 py-6 sm:gap-20 sm:py-10">
       {product.faq.length ? (
         <script
           type="application/ld+json"
@@ -73,7 +73,7 @@ export function ProductLanding({ product }: { product: Product }) {
         ))}
       </section>
 
-      <section className="grid gap-8 rounded-xl border border-border bg-surface p-6 sm:p-10 lg:grid-cols-3">
+      <section className="grid gap-8 border-t border-border pt-8 lg:grid-cols-3 lg:gap-16">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">How {product.name} works with other GildOps products</h2>
         </div>

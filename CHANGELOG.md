@@ -32,6 +32,11 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-11-10
+
+- The GildOps website has its own look: charcoal on warm ivory, gold for the main action and links, steel blue for step numbers and other small details, with a matching dark version. It applies only to GildOps' own pages; a business's published website and the application keep their neutral colours, and a colour GildOps chooses in Studio still takes precedence.
+- On a phone the two actions in a page's opening section now sit side by side and wrap only when they do not fit, and the fixed "Request a consultation" bar along the bottom of the screen is gone: the header already carries that action on every width. Sections sit closer together, and the product lists, process steps and trust statements are drawn as ruled rows and columns instead of boxed cards, on GildOps' pages and on every website published from Studio.
+
 ## 2026-11-09
 
 - The GildOps website presents its products the way a business can buy them: tools to use on their own (Dialer, Websites and forms, Online booking), AI and automation set up with you (AI receptionist, Website chat assistant, Workflow automation, Business assistant), and connected applications (Sales, Operations, Customer Service). The Products menu lists all of them in those three groups. A new Products page says what each one does, what a business needs to start and what it works with, and a new Dialer page covers what the Dialer does before, during and after a call, who it suits, what it takes to start, and how it differs from the AI receptionist. No prices are published. The homepage shows the three groups as linked lists, with a new search title and description. A forward migration publishes it only where the current homepage is still the version migrations wrote. Footer, sitemap, Pricing, How it works and the demo page now match.

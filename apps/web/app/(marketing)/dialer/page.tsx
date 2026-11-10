@@ -38,7 +38,7 @@ export default function DialerPage() {
   };
 
   return (
-    <div className="flex flex-col gap-24 py-6 sm:gap-32 sm:py-10">
+    <div className="flex flex-col gap-14 py-6 sm:gap-20 sm:py-10">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }}

@@ -94,6 +94,18 @@ describe('the homepage presents products the way a visitor can buy them', () => 
     }
   });
 
+  it('lays the hero actions out as a row that wraps, and halves the gap between sections', () => {
+    // A primary button and a text link fit side by side on any phone; a column until 40rem stacked them for nothing.
+    expect(renderer).toContain("'mt-2 flex flex-wrap items-center gap-x-6 gap-y-3'");
+    expect(renderer).not.toMatch(/flex-col gap-4 @min-\[40rem\]\/site:flex-row/);
+    expect(renderer).not.toMatch(/gap-24|gap-32/);
+  });
+
+  it('draws capabilities, process and trust as ruled rows, not boxed panels', () => {
+    expect(renderer).not.toMatch(/rounded-xl border border-border bg-surface p-[56] shadow-sm/);
+    expect(renderer).not.toContain('Layers');
+  });
+
   it('leaves links to the content, never guessed from a card title in the shared renderer', () => {
     // A business's website is drawn by the same renderer: a card it titles "Sales" must not link to GildOps' page.
     expect(renderer).not.toMatch(/PRODUCT_HREF_BY_TITLE|PRODUCT_ICON_BY_TITLE/);

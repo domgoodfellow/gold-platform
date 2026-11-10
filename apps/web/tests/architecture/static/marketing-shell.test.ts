@@ -39,13 +39,27 @@ describe('the marketing header and footer have no dead links', () => {
 });
 
 describe('every marketing page shares one frame', () => {
-  it('renders header, footer and the phone demo bar from the group layout alone', () => {
+  it('renders header and footer from the group layout alone, with one primary action and no fixed phone bar', () => {
     const layout = read('app/(marketing)/layout.tsx');
     const shell = read('components/marketing/marketing-shell.tsx');
     expect(layout).toContain('MarketingShell');
     expect(shell).toContain('MarketingHeader');
     expect(shell).toContain('MarketingFooter');
-    expect(shell).toContain('MobileDemoCta');
+    // The header carries the consultation action on every width; a second, fixed copy along the
+    // bottom of a phone repeated it and covered the page.
+    expect(shell).not.toMatch(/MobileDemoCta|fixed inset-x-0 bottom-0/);
+    expect(existsSync(fileURLToPath(new URL('../../../components/marketing/mobile-demo-cta.tsx', import.meta.url)))).toBe(false);
+  });
+
+  it('scopes the GildOps palette to the marketing frame, never to a tenant renderer', () => {
+    const shell = read('components/marketing/marketing-shell.tsx');
+    const css = read('app/globals.css');
+    expect(shell).toContain('data-marketing-site');
+    expect(css).toContain('[data-marketing-site] {');
+    for (const file of ['features/public-site/section-renderers.tsx', 'features/public-site/site-view.tsx', 'app/(public)/layout.tsx']) {
+      const path = fileURLToPath(new URL(`../../../${file}`, import.meta.url));
+      if (existsSync(path)) expect(readFileSync(path, 'utf8'), file).not.toContain('data-marketing-site');
+    }
   });
 
   it('gives every marketing page its own metadata', () => {

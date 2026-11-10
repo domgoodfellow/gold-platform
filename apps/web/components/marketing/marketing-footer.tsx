@@ -29,9 +29,9 @@ export function MarketingFooter({
   contactPhone: string | null;
 }) {
   return (
-    <footer className="mt-24 bg-foreground text-background">
-      <div className="mx-auto w-full max-w-5xl px-6 pt-14 pb-24 sm:px-8 sm:pb-14">
-        <div className="grid gap-12 md:grid-cols-[1.6fr_repeat(4,1fr)] md:gap-8">
+    <footer className="mt-16 bg-foreground text-background">
+      <div className="mx-auto w-full max-w-5xl px-6 py-12 sm:px-8 sm:py-14">
+        <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-[1.6fr_repeat(4,1fr)] md:gap-8">
           <div className="flex flex-col gap-4">
             <span className="text-2xl font-semibold tracking-tight">{name}</span>
             <p className="max-w-xs text-sm leading-relaxed opacity-70">{tagline}</p>
@@ -69,7 +69,7 @@ export function MarketingFooter({
           ))}
         </div>
 
-        <div className="mt-14 flex flex-col-reverse items-start justify-between gap-3 border-t border-background/15 pt-6 text-xs opacity-70 sm:flex-row sm:items-center">
+        <div className="mt-12 flex flex-col-reverse items-start justify-between gap-3 border-t border-background/15 pt-6 text-xs opacity-70 sm:flex-row sm:items-center">
           <span>© {new Date().getFullYear()} {name}</span>
           <span className="flex items-center gap-2">
             <Link href="/privacy" className="hover:underline">Privacy</Link>

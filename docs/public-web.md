@@ -472,6 +472,12 @@ No product is bought by creating an account. Every product's call to action is a
 
 GildOps' homepage stays a published site revision edited in Studio. Its product rows are `capabilities` sections in the `list` layout whose cards link to those pages. A card link is typed content (`href` on the card), never inferred by the shared renderer from a card's title.
 
+### GildOps' own look
+
+The marketing frame (`MarketingShell`, marked `data-marketing-site`) carries GildOps' own palette, declared in `globals.css` and nowhere else: charcoal lettering on warm ivory, gold for the primary action and links, steel blue for the technical details that `--subtle` carries. It is scoped to that frame, so a business's published website, Studio's canvas and every operator surface keep the platform's neutral roles. An accent GildOps saves in Studio still wins over the default gold. The frame has one primary action, in the header, on every width; there is no fixed bar repeating it along the bottom of a phone.
+
+The shared section renderer is the same for GildOps and for a business's website, so its defaults are the plain ones: hero actions form a row that wraps only when they do not fit; sections sit a little over half a screen's worth of spacing apart; capabilities, process steps and trust statements are ruled rows and columns rather than boxed panels, so the one dark closing band keeps its weight. A GildOps-only treatment (motion, palette) hangs off the homepage's `data-marketing-home` scope or the frame's `data-marketing-site` scope, never off the renderer.
+
 ---
 
 ## Metadata and search
