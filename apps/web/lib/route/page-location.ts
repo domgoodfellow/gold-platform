@@ -517,6 +517,9 @@ export function resolveLocation(input: LocationInput): PageLocation {
     if (record?.state === 'ready' && step.kind === 'record') recordName = record.label;
     const pending = record?.state === 'loading' || record?.state === 'unknown' ? record.state : undefined;
     if (last) {
+      if (step.kind === 'workspace' && step.workspace === 'communications') {
+        trail.push({ id: `${step.id}:identity`, kind: 'group', label: labelOf(step, input.vocabulary) });
+      }
       current = { id: step.id, kind: step.kind, label, state: pending ?? 'ready' };
       break;
     }

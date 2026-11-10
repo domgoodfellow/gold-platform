@@ -12,7 +12,7 @@ import type { InboxItem } from '@/lib/domain/reception/inbox';
 export function NewCallButton({ organizationId, toNumber = '', compact = false }: { organizationId: string; toNumber?: string; compact?: boolean }) {
   // The Dialer is the one place to place a call; a number is carried across so it is already filled in.
   const href = `/organizations/${organizationId}/calls${toNumber ? `?to=${encodeURIComponent(toNumber)}` : ''}`;
-  return <ButtonLink href={href} tone={compact ? 'secondary' : 'primary'} size="small"><Phone aria-hidden />{compact ? 'Call back' : 'New call'}</ButtonLink>;
+  return <ButtonLink href={href} tone="secondary" size={compact ? 'small' : undefined}><Phone aria-hidden />{compact ? 'Call back' : 'New call'}</ButtonLink>;
 }
 
 export function ConversationActions({ organizationId, item }: { organizationId: string; item: InboxItem }) {

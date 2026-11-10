@@ -1,13 +1,10 @@
 import type { Db } from '@/lib/db/types';
 import { fromDatabaseError } from '@/lib/domain/errors';
-import { callbackBase, telephonyProvider } from '@/lib/adapters/telephony';
+import { loadCallingOptions } from './calling-options';
 import { messagingSenders } from '@/lib/domain/reception/channel-readiness';
 import { availableFeatureKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
 import { listCallPage, getCallCounts, callStatusLabel } from '@/lib/domain/reception/calls';
 import { currentMembershipId, getInboxCounts, listInbox, type InboxFilter } from '@/lib/domain/reception/inbox';
-import { listPhoneNumbers, resolveOutboundNumber } from '@/lib/domain/reception/numbers';
-import { communicationsProviderReadiness } from '@/lib/domain/reception/provider-readiness';
-import { listRoutes } from '@/lib/domain/reception/routing';
 import { listCallOutcomes } from '@/lib/domain/reception/outcomes';
 import { shiftDate, todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
 
@@ -20,7 +17,7 @@ export function communicationsParams(query: Query) {
   const channel = first('channel');
   return {
     when: when === 'week' || when === 'month' ? when : 'today',
-    attention: attention === 'unread' || attention === 'unassigned' || attention === 'wrap' || attention === 'routing' ? attention : 'missed',
+    attention: attention === 'unread' || attention === 'unassigned' || attention === 'wrap' || attention === 'missed' ? attention : null,
     queue: queue === 'open' || queue === 'waiting' || queue === 'unassigned' ? queue : 'all',
     channel: channel === 'sms' || channel === 'email' ? channel : 'all',
     search: (first('q') ?? '').slice(0, 100).trim(),
@@ -35,21 +32,17 @@ export async function loadCommunicationsDashboard(db: Db, input: { organizationI
   const today = todayInZone(timezone);
   const day = zonedDayRange(today, timezone);
   const window = { since: zonedDayRange(shiftDate(today, params.when === 'week' ? -6 : params.when === 'month' ? -29 : 0), timezone).startsAt, until: day.endsAt };
-  const [features, numbers, outbound, readiness, provider, senders, routes, outcomes, membershipId] = await Promise.all([
+  const [features, calling, senders, outcomes, membershipId] = await Promise.all([
     organizationResolvedFeatureStates(db, { organizationId }),
-    listPhoneNumbers(db, { organizationId }),
-    mayCall ? resolveOutboundNumber(db, { organizationId }) : null,
-    communicationsProviderReadiness(db, { organizationId }),
-    mayCall ? telephonyProvider() : null,
+    mayCall ? loadCallingOptions(db, { organizationId, mayCall }) : null,
     mayMessage ? messagingSenders(db, { organizationId }) : { numbers: [], senders: [] },
-    mayCall ? listRoutes(db, { organizationId }) : [],
     mayCall ? listCallOutcomes(db, { organizationId }) : [],
     mayMessage ? currentMembershipId(db, { organizationId }) : null,
   ]);
   const enabled = availableFeatureKeys(features);
   const canCall = mayCall && enabled.has('outbound_calling');
   const canEmail = mayMessage && senders.senders.length > 0;
-  const callingReady = canCall && !!provider && !!callbackBase() && readiness === 'ready' && !!outbound;
+  const callingReady = canCall && calling?.blocker === null;
   const smsNumbers = senders.numbers;
   const queueFilter: InboxFilter = { status: params.queue === 'open' || params.queue === 'waiting' ? params.queue : 'active', view: params.queue === 'unassigned' ? 'unassigned' : undefined, channel: params.channel === 'all' ? undefined : params.channel };
   const [counts, inboxCounts, calls, missed, wrap, queue, unread, unassigned, todayCalls, todayInbox, answered, recorded, recentCalls, recentInbox] = await Promise.all([
@@ -76,7 +69,7 @@ export async function loadCommunicationsDashboard(db: Db, input: { organizationI
   ].sort((a,b) => b.at.localeCompare(a.at)).slice(0, 6);
   const activity = projectActivity(recentCalls?.items ?? [], recentInbox?.items ?? []);
   const todayActivity = projectActivity(todayCalls?.items ?? [], todayInbox?.items ?? []);
-  return { params, today, window, mayCall, mayMessage, canCall, callingReady, canCompose: smsNumbers.length > 0 || canEmail, composeChannel: smsNumbers.length ? 'sms' : 'email', numbers, outbound, readiness, routes, outcomes, counts, inboxCounts, calls, missed, wrap, queue, unread, unassigned, activity, todayActivity, answered: answered?.count ?? 0, recorded: recorded?.count ?? 0 };
+  return { params, today, window, mayCall, mayMessage, canCall, callingReady, callingBlocker: calling?.blocker ?? null, canCompose: smsNumbers.length > 0 || canEmail, composeChannel: smsNumbers.length ? 'sms' : 'email', outcomes, counts, inboxCounts, calls, missed, wrap, queue, unread, unassigned, activity, todayActivity, answered: answered?.count ?? 0, recorded: recorded?.count ?? 0 };
 }
 
 export type CommunicationsDashboard = Awaited<ReturnType<typeof loadCommunicationsDashboard>>;

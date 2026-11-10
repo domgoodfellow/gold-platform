@@ -39,8 +39,8 @@ export function ReplyToForm({ organizationId, senders, hasDefault }: { organizat
       )}
       {current && !current.receivesInInbox ? (
         <Hint className="mt-2 max-w-prose">
-          Replies to {current.address} go wherever that address&rsquo;s mail is delivered today. They appear in the Inbox only
-          if the address receives into the Inbox (Communications → Inbox email).
+          Replies to {current.address} go wherever that address&rsquo;s mail is delivered today. They appear in Conversations only
+          if the address receives into Conversations (Communications → Incoming email).
         </Hint>
       ) : null}
     </Section>

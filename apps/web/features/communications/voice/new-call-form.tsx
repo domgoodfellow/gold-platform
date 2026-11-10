@@ -31,6 +31,8 @@ export function NewCallForm({
   presentation = 'form',
   onDraftChange,
   formId,
+  blockedReason,
+  blockedDescriptionId,
 }: {
   organizationId: string;
   /** Numbers that could ring out: active, ready and enabled for outbound calls. */
@@ -51,6 +53,9 @@ export function NewCallForm({
   onDraftChange?: (draft: { toNumber: string; phoneNumberId: string }) => void;
   /** Lets a control outside the form submit it, such as the queue's Start calling. */
   formId?: string;
+  /** A server-resolved blocker; the console may own its visible description. */
+  blockedReason?: string;
+  blockedDescriptionId?: string;
 }) {
   const { dial, dialing, error } = useDial(organizationId);
   const { activeCall, incoming } = useTelephoneDevice();
@@ -69,7 +74,9 @@ export function NewCallForm({
   useEffect(() => {
     onDraftChange?.({ toNumber, phoneNumberId });
   }, [onDraftChange, toNumber, phoneNumberId]);
-  const disabledCall = busy || unavailable || !toNumber || (!defaultNumber && !phoneNumberId);
+  const disabledCall = busy || !!blockedReason || unavailable || !toNumber || (!defaultNumber && !phoneNumberId);
+  const disabledReason = blockedReason ?? (unavailable ? 'No outbound line is available.' : !toNumber ? 'Enter a number to call.' : !defaultNumber && !phoneNumberId ? 'Choose an outbound line.' : busy ? 'Finish the current call before starting another.' : null);
+  const descriptionId = blockedDescriptionId ?? (disabledReason ? `${id}-call-reason` : undefined);
   const dialPad = (
     <div className={onConsole ? 'mx-auto grid w-full max-w-56 grid-cols-3 gap-1.5 self-start @min-[26rem]:max-w-none' : 'grid grid-cols-3 gap-2'} role="group" aria-label="Dial pad">
       {['1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '0'].map((digit) => (
@@ -91,7 +98,7 @@ export function NewCallForm({
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (busy || unavailable || (!defaultNumber && !phoneNumberId)) return;
+    if (busy || blockedReason || unavailable || (!defaultNumber && !phoneNumberId)) return;
     const matchesCustomer = toNumber === initialToNumber;
     void dial({ toNumber, contactLabel: matchesCustomer ? customerName ?? toNumber : toNumber, customerId: matchesCustomer ? customerId : undefined, phoneNumberId: phoneNumberId || null });
   };
@@ -109,10 +116,10 @@ export function NewCallForm({
               <FieldLabel htmlFor={`${id}-from`}>Call from</FieldLabel>
               <SelectField id={`${id}-from`} value={phoneNumberId} onValueChange={(next) => setPhoneNumberId(next)} disabled={unavailable || busy} className="w-full" options={[{ value: '', label: defaultNumber ? `My usual number (${defaultNumber.label ?? formatPhoneForDisplay(defaultNumber.e164)})` : unavailable ? 'No outbound number' : 'Select a number', disabled: !defaultNumber }, ...numbers.map((number) => ({ value: number.id, label: number.label ? `${number.label} (${formatPhoneForDisplay(number.e164)})` : formatPhoneForDisplay(number.e164) }))]} />
             </div>
-            <Button type="submit" className="h-11 w-full text-base" disabled={disabledCall}>
+            <Button type="submit" className="h-11 w-full text-base" disabled={disabledCall} aria-describedby={descriptionId}>
               <Phone aria-hidden /> {dialing ? 'Calling…' : 'Call'}
             </Button>
-            {activeCall || incoming ? <Hint>Finish the current call before starting another.</Hint> : null}
+            {disabledReason && !blockedDescriptionId ? <p id={descriptionId} className="text-sm text-muted">{disabledReason}</p> : null}
             {popout?.error ? <ErrorText>{popout.error}</ErrorText> : null}
             {error ? <ErrorText>{error}</ErrorText> : null}
           </div>

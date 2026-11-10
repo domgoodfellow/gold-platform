@@ -29,8 +29,8 @@ export async function loadCallingOptions(db: Db, input: { organizationId: string
   if (!input.mayCall) return unavailable('restricted', 'Your role cannot place calls.');
   const states = await organizationResolvedFeatureStates(db, { organizationId: input.organizationId });
   if (!availableFeatureKeys(states).has('outbound_calling')) return unavailable('not-configured', 'Outbound calling is not included for this business.');
-  if (!callingRuntimeConfigured(true)) return unavailable('unavailable', 'Calling setup is incomplete.');
-  if (await communicationsProviderReadiness(db, input) !== 'ready') return unavailable('unavailable', 'Calling isn’t ready yet.');
+  if (!await callingRuntimeConfigured(true)) return unavailable('unavailable', 'Calling isn’t enabled yet.');
+  if (await communicationsProviderReadiness(db, input) !== 'ready') return unavailable('unavailable', 'Calling is temporarily unavailable.');
   const [numbers, usual] = await Promise.all([listPhoneNumbers(db, input), resolveOutboundNumber(db, input)]);
   const dialable = numbers.filter(number => number.voiceOutboundEnabled && number.readiness === 'ready' && number.lifecycle === 'active' && (number.origin === 'provisioned' || number.origin === 'external'))
     .map(({ id, e164, label }) => ({ id, e164, label }));

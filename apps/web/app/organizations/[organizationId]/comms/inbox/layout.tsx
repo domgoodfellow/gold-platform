@@ -24,7 +24,7 @@ export default async function InboxLayout({
 
   return (
     <AppPage>
-      <CollectionHeader title={areaLabel('comms-inbox')} crumbs={workspaceAncestry(organizationId, 'comms-inbox')} />
+      <CollectionHeader title={areaLabel('comms-inbox')} crumbs={workspaceAncestry(organizationId, 'comms-inbox')} className="mb-0" />
       <InboxShell organizationId={organizationId}>{children}</InboxShell>
     </AppPage>
   );

@@ -74,7 +74,7 @@ export async function loadHome(db: Db, organization: Organization, rawQuery: Rec
   if (available('support')) add('case', 'support.case.create', 'New case', `${base}/support/cases?create=1`, 'Open Cases and create a problem or request');
   if (available('marketing')) add('campaign', 'marketing.manage', 'New campaign', `${base}/marketing/campaigns?create=1`, 'Open Campaigns and create a draft');
   if (available('finance-invoices')) add('invoice', 'invoice.issue', 'New invoice', `${base}/finance/invoices?create=1`, 'Open Finance and issue an invoice');
-  if (available('comms-inbox')) add('message', 'message.send', 'Compose message', `${base}/comms/inbox/new`, 'Open Inbox and write a message');
+  if (available('comms-inbox')) add('message', 'message.send', 'Compose message', `${base}/comms/inbox/new`, 'Open Conversations and write a message');
   if (available('automations')) add('rule', 'automation.manage', 'New automation', `${base}/automations/rules?create=1`, 'Create an automation');
   add('form', 'organization.manage', 'New form', `${base}/studio/forms?create=1`, 'Open Forms and create a draft');
   const search = [{ label: 'CRM', href: `${base}/crm/search` }, { label: 'Work', href: `${base}/work` }, ...results.filter(r => !['CRM', 'Work', 'Studio', 'AI', 'Finance', 'Automations'].includes(r.source)).map(r => ({ label: r.source, href: r.source === 'Support' ? `${base}/support/cases` : r.source === 'Marketing' ? `${base}/marketing/leads` : available('comms-inbox') ? `${base}/comms/inbox` : `${base}/calls` }))];

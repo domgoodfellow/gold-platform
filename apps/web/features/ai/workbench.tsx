@@ -615,7 +615,7 @@ export function AgentWorkbench({
                   tone="secondary"
                   href={`/organizations/${organizationId}/comms/inbox/website`}
                 >
-                  Open Communications Inbox
+                  Open Conversations
                 </ButtonLink>
                 <Button
                   tone="secondary"

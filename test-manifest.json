@@ -157,6 +157,10 @@
       "concerns": ["communications", "crm", "responsive", "calling", "readiness"],
       "note": "Rendered Dialer console: empty and populated businesses at wide, desktop, tablet and phone; Focus, Pop-out, history and a live call through the development test telephone. Never places a call."
     },
+    "apps/web/e2e/comms-cleanup.spec.ts": {"category": "playwright-acceptance", "concerns": ["communications", "navigation", "responsive", "readiness"], "note": "Disposable loopback acceptance at desktop, tablet and phone: operational Dashboard, truthful unavailable Dialer, history disclosure, Conversations independent filters, search and reload. No provider calls."},
+    "apps/web/tests/unit/calling-runtime.test.ts": {"category": "unit", "concerns": ["communications", "readiness", "authorization"], "note": "Await provider resolution; a null provider promise never establishes calling readiness."},
+    "apps/web/tests/component/communications-home.test.tsx": {"category": "component", "concerns": ["communications", "readiness", "navigation"], "note": "One platform blocker without tenant setup, explicit versus implicit attention and exact workload links, permission-projected number recovery and no empty table scaffolding."},
+    "apps/web/tests/component/inbox-shell.test.tsx": {"category": "component", "concerns": ["communications", "navigation", "accessibility"], "note": "Independent URL filters and search preserve telephone navigation; loading, empty, refused reads and stale pagination remain distinct."},
     "apps/web/tests/unit/calling-options.test.ts": {
       "category": "unit",
       "concerns": ["communications", "authorization", "readiness"]

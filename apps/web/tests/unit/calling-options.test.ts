@@ -22,7 +22,7 @@ describe('calling options admission', () => {
   });
   it.each([['entitlement', 'not-configured'], ['runtime', 'unavailable'], ['binding', 'unavailable']])('does not expose numbers when %s is unavailable', async (blocker, kind) => {
     if (blocker === 'entitlement') reads.features.mockResolvedValue([]);
-    if (blocker === 'runtime') reads.runtime.mockReturnValue(false);
+    if (blocker === 'runtime') reads.runtime.mockResolvedValue(false);
     if (blocker === 'binding') reads.readiness.mockResolvedValue('error');
     const result = await loadCallingOptions(db, { organizationId: 'tenant', mayCall: true });
     expect(result.numbers).toEqual([]); expect(result.defaultNumber).toBeNull(); expect(result.unavailableReason).toBeTruthy();

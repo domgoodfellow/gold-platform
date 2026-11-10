@@ -10,7 +10,7 @@ import { requireConfigurationTarget } from '@/lib/route/workspace-configuration'
 export const dynamic = 'force-dynamic';
 
 /**
- * Inbox email: how this business's addresses behave in the Communications Inbox — which of them
+ * Incoming email: how this business's addresses behave in the Conversations — which of them
  * receive replies here, and whether the Inbox can send email at all.
  *
  * **Not where email sending is set up.** Domains, sender addresses and the default sender are
@@ -27,7 +27,7 @@ export default async function InboxEmailPage({ params }: PageProps<'/organizatio
 
   return (
     <SettingsPageFrame>
-      <PageHeader title="Inbox email" crumbs={[...workspaceConfigCrumbs(organizationId, 'inbox-email', gate)]} />
+      <PageHeader title="Incoming email" crumbs={[...workspaceConfigCrumbs(organizationId, 'inbox-email', gate)]} />
       <div className="mt-6">
         <ChannelReadiness gate={gate} organizationId={organizationId} diagnostics={channels.diagnostics} maySend={organization.capabilities.includes('message.send')} channel="email" />
       </div>

@@ -48,6 +48,13 @@ describe('route recognition', () => {
     expect(at('/platform/integrations/new').id).toBe('create:platform-connector');
   });
 
+  it('keeps Communications identity beside its Dashboard without a self-link', () => {
+    const location = at(`${ORG}/comms`);
+    expect(location.current.label).toBe('Dashboard');
+    expect(location.trail).toContainEqual({ id: 'workspace:communications:identity', kind: 'group', label: 'Communications' });
+    expect(location.up).toBe(`${ORG}/home`);
+  });
+
   it('reports an unknown address as unresolved instead of inventing an ancestry', () => {
     expect(resolveLocation({ pathname: `${ORG}/nonsense` })).toEqual({ status: 'unresolved', pathname: `${ORG}/nonsense` });
     expect(resolveLocation({ pathname: `${ORG}/crm/contacts/a/b` }).status).toBe('unresolved');

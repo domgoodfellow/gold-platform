@@ -10,8 +10,7 @@ import { tabListStyles, tabTriggerStyles } from '@gold/ui/components/tab-styles'
 import { Button, ButtonLink } from '@/components/controls/button';
 import { Hint, TextInput } from '@/components/controls/inputs';
 import { cx, FOCUS_RING } from '@/components/class-names';
-import { IconWell, OperationalPanel, OwnerIdentity, PanelState, StatePill, type StatusTone } from '@/components/operational/primitives';
-import { ReadinessBadge } from '@/components/operational/readiness-badge';
+import { CompactEmptyState, IconWell, OperationalPanel, OwnerIdentity, PanelState, StatePill, type StatusTone } from '@/components/operational/primitives';
 import type { CallingBlocker, CallingOptions } from '@/lib/application/communications/calling-options';
 import type { DialerQueueEntry } from '@/lib/application/communications/dialer-queue';
 import { ActiveCallDock } from './active-call-dock';
@@ -26,17 +25,16 @@ type Draft = { toNumber: string; phoneNumberId: string };
 
 const FORM_ID = 'dialer-call-form';
 const DEVICE: Record<DeviceStatus, { label: string; tone: StatusTone }> = {
-  offline: { label: 'Not connected', tone: 'neutral' },
+  offline: { label: 'Connects when needed', tone: 'neutral' },
   connecting: { label: 'Connecting', tone: 'neutral' },
   ready: { label: 'Connected', tone: 'success' },
   error: { label: 'Connection failed', tone: 'danger' },
 };
-const BLOCKER_STATE = { restricted: 'restricted', 'not-configured': 'configuration-required', unavailable: 'unavailable' } as const;
 const BLOCKER_ICON = { restricted: Lock, 'not-configured': Settings2, unavailable: CircleAlert } as const;
 const REGIONS: { key: Region; label: string }[] = [
   { key: 'queue', label: 'Call list' },
   { key: 'call', label: 'Calling' },
-  { key: 'context', label: 'Customer' },
+  { key: 'context', label: 'Contact' },
 ];
 
 function initials(name: string): string {
@@ -124,14 +122,14 @@ export function DialerWorkspace({
   const poppedOut = !!popout?.container;
   const focus = mode === 'focus' && !poppedOut;
   const queueShown = showQueue && !focus;
-  const contextShown = showContext && !focus;
+  const contextShown = showContext && !focus && !!selected;
   const live = activeCall !== null || incoming !== null;
   const blocker = options.blocker ?? (options.unavailableReason ? { kind: 'unavailable', reason: options.unavailableReason, setup: null } satisfies CallingBlocker : null);
   const customerName = selected ? selected.customer?.name ?? selected.task.customerName : null;
   const customerPhone = selected?.customer?.phone ?? null;
   const formNumber = returned?.toNumber ?? customerPhone ?? prefill;
   const formCustomer = selected?.customer && formNumber === customerPhone ? selected.customer : undefined;
-  const columns = [queueShown && 'minmax(14rem,1fr)', 'minmax(0,2fr)', contextShown && 'minmax(14rem,1fr)'].filter(Boolean).join(' ');
+  const columns = [queueShown && 'minmax(14rem,1fr)', 'minmax(0,2.5fr)', contextShown && 'minmax(14rem,1fr)'].filter(Boolean).join(' ');
 
   const dayKey = (value: Date | number) => new Intl.DateTimeFormat('en-CA', { timeZone: timezone, dateStyle: 'short' }).format(value);
   const timeOf = new Intl.DateTimeFormat('en', { timeZone: timezone, hour: 'numeric', minute: '2-digit' });
@@ -181,33 +179,16 @@ export function DialerWorkspace({
   const BlockerIcon = blocker ? BLOCKER_ICON[blocker.kind] : null;
   const fromLabel = options.defaultNumber
     ? options.defaultNumber.label ? `${options.defaultNumber.label} · ${formatPhoneForDisplay(options.defaultNumber.e164)}` : formatPhoneForDisplay(options.defaultNumber.e164)
-    : options.numbers.length ? 'Choose a line when you call' : blocker && blocker.setup !== 'phone-numbers' ? 'Not available' : 'No outbound number';
+    : options.numbers.length ? 'Choose an outbound line' : 'No outbound number';
   const readiness = (
     <section aria-label="Calling readiness" className="shrink-0">
-      <dl className="grid grid-cols-3 overflow-hidden [&>div]:min-w-0 [&>div]:px-3 [&>div]:py-2 sm:[&>div]:px-4">
-        <div>
-          <dt className="text-xs text-muted">Calling from</dt>
-          <dd className={cx('mt-0.5 truncate text-sm font-medium tabular-nums', !options.defaultNumber && !options.numbers.length && 'text-muted')}>{fromLabel}</dd>
-        </div>
-        <div className="border-l border-border">
-          <dt className="truncate text-xs text-muted">Browser phone</dt>
-          <dd className="mt-1 flex flex-wrap items-center gap-2">
-            <StatePill tone={DEVICE[status].tone}>{DEVICE[status].label}</StatePill>
-            {!blocker ? <Button type="button" tone="text" size="tiny" disabled={status === 'connecting'} onClick={() => { if (status === 'ready') unregister(); else void register().catch(() => undefined); }}>{status === 'ready' ? 'Stop receiving calls' : 'Receive calls here'}</Button> : null}
-          </dd>
-        </div>
-        <div className="border-l border-border">
-          <dt className="text-xs text-muted">Calling</dt>
-          <dd className="mt-1"><ReadinessBadge state={blocker ? BLOCKER_STATE[blocker.kind] : 'configured'} /></dd>
-        </div>
-      </dl>
       {blocker && BlockerIcon ? (
-        <div role="status" data-state={blocker.kind} className={cx('flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border px-4 py-2 text-sm', blocker.kind === 'restricted' ? 'text-muted' : blocker.kind === 'unavailable' ? 'bg-danger/5' : 'bg-warning/5')}>
-          <BlockerIcon aria-hidden className={cx('size-4 shrink-0', blocker.kind === 'unavailable' ? 'text-danger' : blocker.kind === 'not-configured' ? 'text-warning' : 'text-muted')} />
-          <p className="min-w-0 flex-1">{blocker.reason}</p>
-          {blocker.setup && setupHref ? <ButtonLink href={setupHref} tone="secondary" size="small">Set up numbers</ButtonLink> : null}
+        <div role="status" data-state={blocker.kind} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-sm">
+          <BlockerIcon aria-hidden className="size-4 shrink-0 text-muted" />
+          <p id="dialer-readiness" className="min-w-0 flex-1">{blocker.reason}</p>
+          {blocker.setup && setupHref ? <ButtonLink href={setupHref} tone="secondary" size="small">Number assignments</ButtonLink> : null}
         </div>
-      ) : null}
+      ) : <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-sm"><span className="min-w-0 flex-1 tabular-nums">Calling from <span className="font-medium">{fromLabel}</span></span><span className={status === 'error' ? 'text-danger' : 'text-muted'}>{DEVICE[status].label}</span><Button type="button" tone="text" size="small" disabled={status === 'connecting'} onClick={() => { if (status === 'ready') unregister(); else void register().catch(() => undefined); }}>{status === 'ready' ? 'Stop receiving calls' : 'Receive calls here'}</Button></div>}
       {deviceError ? <p role="alert" className="border-t border-border px-4 py-2 text-sm text-danger">{deviceError}</p> : null}
     </section>
   );
@@ -260,16 +241,18 @@ export function DialerWorkspace({
         phoneNumberId={returned?.phoneNumberId}
         customerId={formCustomer?.id}
         customerName={formCustomer?.name}
+        blockedReason={blocker?.reason}
+        blockedDescriptionId={blocker ? 'dialer-readiness' : undefined}
       />
     </section>
   );
 
-  const workflow = (
+  const workflow = selected || wrapUp ? (
     <section aria-label="Call workflow" className="shrink-0 border-t border-border">
-      <Tabs defaultValue="details">
+      <Tabs key={selected ? 'task' : 'wrap'} defaultValue={selected ? 'details' : 'wrap-up'}>
         <TabsList variant="line" aria-label="Call workflow" className="w-full px-3">
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="wrap-up">Wrap-up</TabsTrigger>
+          {selected ? <TabsTrigger value="details">Call task</TabsTrigger> : null}
+          {wrapUp ? <TabsTrigger value="wrap-up">Needs wrap-up</TabsTrigger> : null}
         </TabsList>
         <TabsContent value="details" className="p-4">
           {selected ? (
@@ -287,14 +270,14 @@ export function DialerWorkspace({
                 <dd><Link className="underline underline-offset-4" href={`/organizations/${organizationId}/crm/opportunities/${selected.task.opportunityId}`}>{selected.task.opportunityTitle ?? 'Open opportunity'}</Link></dd>
               </> : null}
             </dl>
-          ) : <p className="text-sm text-muted">Choose someone in the call list to see their details.</p>}
+          ) : null}
         </TabsContent>
         <TabsContent value="wrap-up" className="p-4">
           {wrapUp ?? <PanelState kind="restricted">Your role cannot wrap up calls.</PanelState>}
         </TabsContent>
       </Tabs>
     </section>
-  );
+  ) : null;
 
   // --- Queue -----------------------------------------------------------------------------------
   const partial = queueTotal > queue.length;
@@ -306,15 +289,16 @@ export function DialerWorkspace({
       density="compact"
       body="edge-to-edge"
       fill={queueAvailable && queue.length > 0}
-      href={queueAvailable ? `/organizations/${organizationId}/crm/tasks?status=open&kind=call` : undefined}
-      hrefLabel="Show all"
+      href={queueAvailable && queueTotal > 0 ? `/organizations/${organizationId}/crm/tasks?status=open&kind=call` : undefined}
+      hrefLabel="All call tasks"
       action={queue.length > 0 ? addToList : undefined}
       className="min-h-0 flex-1"
     >
       {!queueAvailable ? <PanelState kind="not-configured">Tasks are not included for this business, so there is no call list.</PanelState> : queue.length === 0 ? (
         <div className="space-y-3 p-3">
-          <p className="text-sm text-muted">No one to call.</p>
+          <p className="text-sm text-muted">No contacts on the call list.</p>
           {addToList}
+          <ButtonLink tone="text" size="small" href={`/organizations/${organizationId}/crm/contacts`}>Open Contacts</ButtonLink>
         </div>
       ) : <>
         <div className="shrink-0 space-y-2 border-b border-border p-3">
@@ -359,9 +343,9 @@ export function DialerWorkspace({
 
   // --- Customer context ----------------------------------------------------------------------------
   const contextPanel = (
-    <OperationalPanel title="Customer" density="compact" fill={!!selected} className="min-h-0 flex-1">
+    <OperationalPanel title="Contact" density="compact" fill={!!selected} className="min-h-0 flex-1">
       {!selected ? (
-        <p className="text-sm text-muted">{queue.length ? 'Choose someone in the call list to see their details and recent calls.' : 'Customer details appear here when you call someone from the call list.'}</p>
+        <CompactEmptyState>Select a contact from the call list.</CompactEmptyState>
       ) : !selected.customer ? <PanelState kind="unavailable">Customer details are unavailable.</PanelState> : (
         <div className="space-y-5">
           <div className="flex items-center gap-3">
@@ -378,7 +362,7 @@ export function DialerWorkspace({
             <dd className={cx('truncate', !selected.customer.email && 'text-muted')}>{selected.customer.email ?? 'Not recorded'}</dd>
           </dl>
           <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Other calls for this customer</h3>
+            <h3 className="mb-2 text-sm font-medium">Other call tasks</h3>
             {otherOpen.length ? <ul className="space-y-1">{otherOpen.map(entry => <li key={entry.task.id}>
               <button type="button" onClick={() => choose(entry.task.id)} className={cx('-mx-2 flex w-[calc(100%+1rem)] items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-hover', FOCUS_RING)}>
                 <span className="truncate">{entry.task.title}</span>
@@ -387,10 +371,10 @@ export function DialerWorkspace({
             </li>)}</ul> : <p className="text-sm text-muted">No other calls in the list.</p>}
           </div>
           <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Recent calls</h3>
+            <h3 className="mb-2 text-sm font-medium">Recent calls</h3>
             {recentCalls[selected.customer.id] ?? <p className="text-sm text-muted">No recorded calls with this customer yet.</p>}
           </div>
-          <ButtonLink href={`/organizations/${organizationId}/crm/contacts/${selected.customer.id}`} tone="secondary" size="small" className="w-full">Open customer</ButtonLink>
+          <ButtonLink href={`/organizations/${organizationId}/crm/contacts/${selected.customer.id}`} tone="secondary" size="small" className="w-full">Open contact</ButtonLink>
         </div>
       )}
     </OperationalPanel>
@@ -406,7 +390,7 @@ export function DialerWorkspace({
       </div>
       <div role="group" aria-label="Panel visibility" className="hidden items-center gap-2 @min-[64rem]/dialer:flex">
         <Button type="button" tone="secondary" size="small" aria-label="Call list panel" aria-pressed={queueShown} disabled={focus} onClick={() => setShowQueue(value => !value)}><PanelLeft aria-hidden /> Call list</Button>
-        <Button type="button" tone="secondary" size="small" aria-label="Context panel" aria-pressed={contextShown} disabled={focus} onClick={() => setShowContext(value => !value)}><PanelRight aria-hidden /> Customer context</Button>
+        <Button type="button" tone="secondary" size="small" aria-label="Context panel" aria-pressed={contextShown} disabled={focus || !selected} onClick={() => setShowContext(value => !value)}><PanelRight aria-hidden /> Contact</Button>
       </div>
       <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
         {popout ? <Button type="button" tone="secondary" aria-label={poppedOut ? 'Show dialer window' : 'Pop out dialer'} data-dialer-popout-trigger onClick={openPopout}><ExternalLink aria-hidden /> {poppedOut ? 'Show dialer window' : 'Pop out'}</Button> : null}

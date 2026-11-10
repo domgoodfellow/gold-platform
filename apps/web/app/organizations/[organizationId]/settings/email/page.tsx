@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic';
  * automation messages and service notifications come from. Every state is the same answer a send
  * would get (`app.organization_email_sender`). Provider accounts and credentials are GildOps'
  * own and appear nowhere here. Team invitations are GildOps' own email and need none of this.
- * Which addresses receive into the Inbox stays with Communications (Inbox email).
+ * Which addresses receive into Conversations stays with Communications (Incoming email).
  */
 export default async function EmailSendingSettingsPage({ params }: PageProps<'/organizations/[organizationId]/settings/email'>) {
   const { organizationId } = await params;
@@ -67,8 +67,8 @@ export default async function EmailSendingSettingsPage({ params }: PageProps<'/o
       <TestSendForm organizationId={organizationId} ready={status.state === 'ready'} tests={tests} />
 
       <Hint className="mt-8">
-        Which addresses receive replies into the Inbox is set in{' '}
-        <Link className="text-accent-text underline" href={`/organizations/${organizationId}/comms/configuration/email`}>Communications → Inbox email</Link>.
+        Which addresses receive replies into Conversations is set in{' '}
+        <Link className="text-accent-text underline" href={`/organizations/${organizationId}/comms/configuration/email`}>Communications → Incoming email</Link>.
       </Hint>
     </SettingsPageFrame>
   );

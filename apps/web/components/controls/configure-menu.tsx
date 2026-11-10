@@ -15,7 +15,7 @@ import { ConfigureLink } from './configure-link';
  * workspace never presents a business-wide setting as if it owned it.
  */
 /** `compact` keeps only the icon on a phone (the name stays for assistive technology), for a header that must stay one row. */
-export function ConfigureMenu({ items, size, compact = false }: { items: { key: string; label: string; href: string; owner?: 'settings' }[]; size?: ButtonSize; compact?: boolean }) {
+export function ConfigureMenu({ items, size, compact = false, label = 'Settings' }: { items: { key: string; label: string; href: string; owner?: 'settings' }[]; size?: ButtonSize; compact?: boolean; label?: string }) {
   if (items.length === 0) return null;
   if (items.length === 1) return <ConfigureLink size={size} compact={compact} href={items[0].href} label={items[0].label} title={items[0].owner ? `${items[0].label} (Organization settings)` : items[0].label} />;
   const own = items.filter((item) => !item.owner);
@@ -28,7 +28,7 @@ export function ConfigureMenu({ items, size, compact = false }: { items: { key: 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button tone="secondary" size={size}><Settings2 aria-hidden /> <span className={compact ? 'max-sm:sr-only' : undefined}>Settings</span></Button>
+        <Button tone="secondary" size={size}><Settings2 aria-hidden /> <span className={compact ? 'max-sm:sr-only' : undefined}>{label}</span></Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-52">
         {own.map(link)}

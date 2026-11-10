@@ -376,7 +376,7 @@ export const AREAS: readonly Area[] = [
   // Inbox: one list of every asynchronous conversation, SMS and email together, and the one screen a conversation opens in. It replaced
   // the separate Text messages and Email pages (their old addresses redirect here, filtered). Gated by the sending authority (`message.send`)
   // and by either channel's Features: a business with only one of the two channels still has its Inbox.
-  { segment: 'comms-inbox', label: 'Inbox', group: 'workspaces', workspace: 'communications', route: 'comms/inbox', module: 'reception', relevantCapabilities: ['message.send'], featureKeys: ['inbound_sms', 'outbound_sms', 'sending'] },
+  { segment: 'comms-inbox', label: 'Conversations', group: 'workspaces', workspace: 'communications', route: 'comms/inbox', module: 'reception', relevantCapabilities: ['message.send'], featureKeys: ['inbound_sms', 'outbound_sms', 'sending'] },
   { segment: 'comms-numbers', label: 'Numbers', group: 'workspaces', workspace: 'communications', route: 'comms/configuration/numbers', sidebar: false, module: 'reception', relevantCapabilities: ['call.place', 'message.send'], featureKeys: ['number_inventory', 'caller_id'] },
   { segment: 'marketing', label: 'Marketing', group: 'workspaces', workspace: 'marketing', relevantCapabilities: ['marketing.read', 'marketing.manage'] },
   // Marketing's operating pages. Reading a collection is `marketing.read`; changing one stays `marketing.manage`, enforced by its own command.
@@ -824,7 +824,7 @@ export const WORKSPACE_CONFIGURE: Partial<Record<WorkspaceKey, readonly Workspac
     { target: 'communications', label: 'Messaging' },
     { target: 'phone-numbers', label: 'Numbers & assignments' },
     { target: 'email', label: 'Email sending' },
-    { target: 'inbox-email', label: 'Inbox email' },
+    { target: 'inbox-email', label: 'Incoming email' },
     { target: 'schedule-configuration', label: 'Business hours' },
   ],
   support: [

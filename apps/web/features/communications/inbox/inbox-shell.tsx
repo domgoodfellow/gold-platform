@@ -3,10 +3,13 @@
 import { formatPhoneForDisplay } from '@/lib/display/phone';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
-import { Mail, MessageSquare, Plus, User } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Mail, MessageSquare, Plus, Search, User } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/controls/button';
-import { EmptyState } from '@/components/surfaces/section';
+import { TextInput } from '@/components/controls/inputs';
+import { PeriodSelect } from '@/components/controls/period-select';
+import { ViewNav } from '@/components/navigation/view-nav';
+import { CompactEmptyState } from '@/components/operational/primitives';
 import { inboxCountsAction, listInboxAction } from '@/app/organizations/[organizationId]/comms/inbox/actions';
 import type { ConversationStatus, InboxCounts, InboxFilter, InboxItem } from '@/lib/domain/reception/inbox';
 import { CONVERSATION_STATUS_LABEL, INBOX_CHANGED, relativeTime } from './format';
@@ -15,35 +18,23 @@ type Channel = 'all' | 'sms' | 'email';
 type View = 'everything' | 'unread' | 'mine' | 'unassigned';
 type Status = 'active' | ConversationStatus | 'any';
 
-const CHANNELS: { key: Channel; label: string }[] = [{ key: 'all', label: 'All' }, { key: 'sms', label: 'SMS' }, { key: 'email', label: 'Email' }];
+const CHANNELS: { key: Channel; label: string }[] = [{ key: 'all', label: 'SMS & email' }, { key: 'sms', label: 'SMS' }, { key: 'email', label: 'Email' }];
 const VIEWS: { key: View; label: string; count?: keyof InboxCounts }[] = [
-  { key: 'everything', label: 'Everything' },
-  { key: 'unread', label: 'Unread', count: 'unread' },
-  { key: 'mine', label: 'Assigned to me', count: 'mine' },
+  { key: 'everything', label: 'All' },
+  { key: 'mine', label: 'Mine', count: 'mine' },
   { key: 'unassigned', label: 'Unassigned', count: 'unassigned' },
+  { key: 'unread', label: 'Unread', count: 'unread' },
 ];
 const STATUSES: { key: Status; label: string }[] = [
   { key: 'active', label: 'Active' },
   { key: 'open', label: 'Open' },
   { key: 'waiting', label: 'Waiting' },
   { key: 'closed', label: 'Closed' },
-  { key: 'any', label: 'Any' },
+  { key: 'any', label: 'All statuses' },
 ];
 
-function Chip({ active, href, children }: { active: boolean; href: string; children: ReactNode }) {
-  return (
-    <Link
-      href={href}
-      scroll={false}
-      aria-current={active ? 'true' : undefined}
-      className={`rounded-full border px-2.5 py-0.5 text-xs ${active ? 'border-accent bg-accent text-on-accent' : 'border-border hover:bg-hover'}`}
-    >
-      {children}
-    </Link>
-  );
-}
-
 function emptyMessage(filter: InboxFilter): string {
+  if (filter.search) return 'No conversations match this search.';
   if (filter.view === 'unread') return 'Nothing unread.';
   if (filter.view === 'mine') return 'Nothing is assigned to you.';
   if (filter.view === 'unassigned') return 'Every conversation has someone handling it.';
@@ -67,11 +58,12 @@ function emptyMessage(filter: InboxFilter): string {
 export function InboxShell({ organizationId, children }: { organizationId: string; children: ReactNode }) {
   const base = `/organizations/${organizationId}/comms/inbox`;
   const pathname = usePathname();
+  const router = useRouter();
   const params = useSearchParams();
 
-  const channel = (params.get('channel') as Channel | null) ?? 'all';
-  const view = (params.get('view') as View | null) ?? 'everything';
-  const status = (params.get('status') as Status | null) ?? 'active';
+  const channel = CHANNELS.find(option => option.key === params.get('channel'))?.key ?? 'all';
+  const view = VIEWS.find(option => option.key === params.get('view'))?.key ?? 'everything';
+  const status = STATUSES.find(option => option.key === params.get('status'))?.key ?? 'active';
   const search = params.get('q')?.slice(0, 100) ?? '';
   const selectedId = pathname.startsWith(`${base}/`) ? pathname.slice(base.length + 1).split('/')[0] : null;
   const detailOpen = selectedId !== null;
@@ -102,7 +94,7 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
       } else {
         setError(page.error);
       }
-      if (tally.ok) setCounts(tally.data);
+      setCounts(tally.ok ? tally.data : null);
       setLoadedFor(filterKey);
     },
     [filterKey],
@@ -113,8 +105,14 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
     const mine = ++generation.current;
     return Promise.all([listInboxAction(organizationId, filter, null), inboxCountsAction(organizationId)]).then((result) => {
       if (mine === generation.current) apply(result);
+    }).catch(() => {
+      if (mine !== generation.current) return;
+      setError('Conversations could not be loaded. Try again.');
+      setLoadedFor(filterKey);
     });
-  }, [organizationId, filter, apply]);
+  }, [organizationId, filter, filterKey, apply]);
+
+  const invalidate = useCallback(() => { generation.current++; }, []);
 
   useEffect(() => {
     void read();
@@ -124,19 +122,22 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
     return () => {
       window.removeEventListener(INBOX_CHANGED, again);
       window.clearInterval(timer);
+      invalidate();
     };
-  }, [read]);
+  }, [read, invalidate]);
 
   const loadMore = async () => {
     if (!cursor) return;
+    const mine = generation.current;
     const page = await listInboxAction(organizationId, filter, cursor);
+    if (mine !== generation.current) return;
     if (!page.ok) return setError(page.error);
     // A row that moved while the list was open can appear on a later page; it is shown once.
     setItems((previous) => [...previous, ...page.data.items.filter((item) => !previous.some((existing) => existing.id === item.id))]);
     setCursor(page.data.nextCursor);
   };
 
-  const hrefWith = (next: { channel?: Channel; view?: View; status?: Status }) => {
+  const hrefWith = (next: { channel?: Channel; view?: View; status?: Status; search?: string }) => {
     const q = new URLSearchParams();
     const c = next.channel ?? channel;
     const v = next.view ?? view;
@@ -144,6 +145,8 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
     if (c !== 'all') q.set('channel', c);
     if (v !== 'everything') q.set('view', v);
     if (s !== 'active') q.set('status', s);
+    const textSearch = (next.search ?? search).trim().slice(0, 100);
+    if (textSearch) q.set('q', textSearch);
     const text = q.toString();
     return text ? `${base}?${text}` : base;
   };
@@ -153,43 +156,34 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
   };
 
   return (
-    <div className="flex h-[calc(100dvh-11rem)] min-h-[24rem] overflow-hidden rounded-lg border border-border md:h-[78vh]">
-      {pathname.endsWith('/website') ? <div className="flex min-w-0 flex-1 flex-col"><Link href={base} className="border-b border-border p-3 text-sm text-accent-text">← SMS & email conversations</Link>{children}</div> : <>
-      <section aria-label="Conversations" className={`${detailOpen ? 'hidden md:flex' : 'flex'} w-full min-w-0 flex-col border-r border-border md:w-96 md:shrink-0`}>
-        <div className="flex flex-col gap-2 border-b border-border p-2">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex flex-wrap gap-1" role="group" aria-label="Channel">
-              <Link className="rounded border border-border px-2 py-1 text-xs" href={`${base}/website`}>Website</Link>
-              {CHANNELS.map((option) => (
-                <Chip key={option.key} active={channel === option.key} href={hrefWith({ channel: option.key })}>{option.label}</Chip>
-              ))}
-            </div>
-            <ButtonLink href={withQuery(`${base}/new`)} scroll={false} size="small">
-              <Plus aria-hidden /> New
-            </ButtonLink>
-          </div>
-          <div className="flex flex-wrap gap-1" role="group" aria-label="Show">
-            {VIEWS.map((option) => (
-              <Chip key={option.key} active={view === option.key} href={hrefWith({ view: option.key })}>
-                {option.label}{option.count && counts && counts[option.count] > 0 ? ` · ${counts[option.count]}` : ''}
-              </Chip>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-1" role="group" aria-label="Status">
-            {STATUSES.map((option) => (
-              <Chip key={option.key} active={status === option.key} href={hrefWith({ status: option.key })}>{option.label}</Chip>
-            ))}
-          </div>
+    <div className="@container/conversations overflow-hidden rounded-lg border border-border bg-surface">
+      {pathname.endsWith('/website') ? <div className="flex min-w-0 flex-col"><Link href={withQuery(base)} className="border-b border-border p-3 text-sm text-accent-text">← SMS & email conversations</Link>{children}</div> : <>
+      <div className="flex flex-wrap items-center gap-3 border-b border-border p-3">
+        <ViewNav label="Conversation views" current={view} scroll={false} className="mb-0 max-w-full flex-nowrap! overflow-x-auto" views={VIEWS.map(option => ({ key: option.key, label: <>{option.label}{option.count && counts && counts[option.count] > 0 ? ` (${counts[option.count]})` : ''}</>, href: hrefWith({ view: option.key }) }))} />
+        <PeriodSelect label="Messaging channel" value={channel} size="default" options={CHANNELS.map(option => ({ value: option.key, label: option.label, href: hrefWith({ channel: option.key }) }))} />
+        <PeriodSelect label="Conversation status" value={status} size="default" options={STATUSES.map(option => ({ value: option.key, label: option.label, href: hrefWith({ status: option.key }) }))} />
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <ButtonLink tone="secondary" href={withQuery(`${base}/website`)}>Website chat</ButtonLink>
+          <ButtonLink href={withQuery(`${base}/new`)} scroll={false}><Plus aria-hidden /> New message</ButtonLink>
         </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {error ? <p className="p-4 text-sm text-danger">{error}</p> : null}
-          {!loaded ? <p className="p-4 text-sm text-muted">Loading…</p> : null}
+      </div>
+      <div className={`flex ${detailOpen || loaded && !error && items.length ? 'h-[calc(100dvh-15rem)] min-h-96' : 'min-h-24'}`}>
+      <section aria-label="Conversation list" className={`${detailOpen ? 'hidden @min-[48rem]/conversations:flex' : 'flex'} min-w-0 flex-col ${detailOpen || loaded && !error && items.length ? 'w-full @min-[48rem]/conversations:w-96 @min-[48rem]/conversations:shrink-0 @min-[48rem]/conversations:border-r @min-[48rem]/conversations:border-border' : 'w-full'}`}>
+        <form role="search" className="flex items-center gap-2 border-b border-border p-3" onSubmit={event => { event.preventDefault(); router.push(hrefWith({ search: String(new FormData(event.currentTarget).get('q') ?? '') }), { scroll: false }); }}>
+          {channel !== 'all' ? <input type="hidden" name="channel" value={channel} /> : null}
+          {view !== 'everything' ? <input type="hidden" name="view" value={view} /> : null}
+          {status !== 'active' ? <input type="hidden" name="status" value={status} /> : null}
+          <TextInput key={search} type="search" name="q" aria-label="Search conversations" placeholder="Search conversations" defaultValue={search} maxLength={100} />
+          <Button type="submit" tone="secondary" aria-label="Search conversations"><Search aria-hidden /></Button>
+        </form>
+        <div className="min-h-0 flex-1 overflow-y-auto" aria-busy={!loaded}>
+          {loaded && error ? <div role="alert" className="flex flex-wrap items-center gap-3 p-4 text-sm"><p className="min-w-0 flex-1 text-danger">{error}</p><Button tone="secondary" onClick={() => void read()}>Try again</Button></div> : null}
+          {!loaded ? <div role="status" aria-label="Loading conversations" className="space-y-4 p-4"><span className="sr-only">Loading conversations…</span>{[0, 1, 2].map(row => <div key={row} aria-hidden className="space-y-2"><div className="h-4 w-1/2 rounded bg-hover" /><div className="h-3 w-3/4 rounded bg-hover" /></div>)}</div> : null}
           {loaded && items.length === 0 && !error ? (
-            <div className="p-6"><EmptyState>{emptyMessage(filter)}</EmptyState></div>
+            <CompactEmptyState action={search || channel !== 'all' || view !== 'everything' || status !== 'active' ? <ButtonLink tone="text" href={base}>Clear filters</ButtonLink> : undefined}>{emptyMessage(filter)}</CompactEmptyState>
           ) : null}
           <ul>
-            {items.map((item) => {
+            {loaded && !error ? items.map((item) => {
               const selected = item.id === selectedId;
               const ChannelIcon = item.channel === 'email' ? Mail : MessageSquare;
               return (
@@ -219,9 +213,9 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
                   </Link>
                 </li>
               );
-            })}
+            }) : null}
           </ul>
-          {cursor ? (
+          {loaded && !error && cursor ? (
             <div className="p-2">
               <Button type="button" size="small" tone="secondary" className="w-full" onClick={loadMore}>Load more</Button>
             </div>
@@ -229,9 +223,10 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
         </div>
       </section>
 
-      <section aria-label="Conversation" className={`${detailOpen ? 'flex' : 'hidden md:flex'} min-w-0 flex-1 flex-col`}>
+      {detailOpen || loaded && !error && items.length > 0 ? <section aria-label="Conversation" className={`${detailOpen ? 'flex' : 'hidden @min-[48rem]/conversations:flex'} min-w-0 flex-1 flex-col`}>
         {children}
-      </section>
+      </section> : null}
+      </div>
       </>}
     </div>
   );

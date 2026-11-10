@@ -78,10 +78,10 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
           <>
             <ButtonLink href="#call-history" tone="secondary">Call history</ButtonLink>
             {/* The Dialer configures calling, not the whole of Communications. */}
-            <ConfigureMenu items={doors.filter((door) => door.key === 'call-setup' || door.key === 'phone-numbers')} />
+            <ConfigureMenu label="Calling settings" items={doors.filter((door) => door.key === 'call-setup' || door.key === 'phone-numbers')} />
           </>
         }
-        wrapUp={toWrapUp ? <DialerWrapUp organizationId={organizationId} timeZone={organization.timezone} calls={toWrapUp.items} total={counts.needsWrapUp} outcomes={outcomes} href={`${callsHref(base, { wrap: '1' })}#call-history`} /> : undefined}
+        wrapUp={toWrapUp && counts.needsWrapUp > 0 ? <DialerWrapUp organizationId={organizationId} timeZone={organization.timezone} calls={toWrapUp.items} total={counts.needsWrapUp} outcomes={outcomes} href={`${callsHref(base, { wrap: '1' })}#call-history`} /> : undefined}
       />
       {/* Rendered by the page, not the console: Focus hides it with the console's presentation state. */}
       <div className="mt-4 peer-data-[presentation=focus]:hidden">

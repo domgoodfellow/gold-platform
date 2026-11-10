@@ -63,7 +63,7 @@ export function SenderAddresses({
                 {sender.displayName ? <div className="text-xs text-muted">Shown as {sender.displayName}</div> : null}
                 <div className="mt-1 text-sm">{STATE_LABEL[sender.state]}</div>
                 {sender.detail ? <div className="text-xs text-muted">{sender.detail}</div> : null}
-                <div className="text-xs text-muted">{sender.receivesInInbox ? 'Receives into the Inbox' : 'Does not receive into the Inbox'}</div>
+                <div className="text-xs text-muted">{sender.receivesInInbox ? 'Receives into Conversations' : 'Does not receive into Conversations'}</div>
               </div>
               {sender.state === 'ready' && !sender.isDefault ? <MakeDefault organizationId={organizationId} sender={sender} /> : null}
             </li>
@@ -72,7 +72,7 @@ export function SenderAddresses({
       )}
       {senders.length ? (
         <Hint className="mt-2">
-          Booking confirmations, automation messages and service notifications use the default address; the Inbox replies
+          Booking confirmations, automation messages and service notifications use the default address; Conversations replies
           from the address a conversation is on.
         </Hint>
       ) : null}

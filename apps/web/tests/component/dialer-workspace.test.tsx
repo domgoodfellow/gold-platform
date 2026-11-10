@@ -49,25 +49,28 @@ describe('dialer workspace', () => {
   });
   it('keeps every region of the console when the business has nothing recorded and cannot call yet', () => {
     render(<DialerWorkspace {...common} queue={[]} queueTotal={0} options={blocked('not-configured', 'No ready outbound number is assigned.', 'phone-numbers')} setupHref="/organizations/tenant/comms/configuration/numbers" />);
-    expect(screen.getByRole('region', { name: 'Call list' })).toHaveTextContent(/No one to call/);
-    expect(screen.getByRole('link', { name: 'Show all' })).toHaveAttribute('href', '/organizations/tenant/crm/tasks?status=open&kind=call');
-    expect(screen.getByRole('region', { name: 'Customer' })).toHaveTextContent(/appear here when you call someone from the call list/);
+    expect(screen.getByRole('region', { name: 'Call list' })).toHaveTextContent(/No contacts on the call list/);
+    expect(screen.queryByRole('link', { name: 'All call tasks' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open Contacts' })).toHaveAttribute('href', '/organizations/tenant/crm/contacts');
+    expect(screen.getByRole('region', { name: 'Contact' })).toHaveTextContent(/Select a contact from the call list/);
     const readiness = screen.getByRole('region', { name: 'Calling readiness' });
-    expect(within(readiness).getByText('No outbound number')).toBeVisible();
-    expect(within(readiness).getByText('Needs setting up')).toBeVisible();
+    expect(within(readiness).getAllByText('No ready outbound number is assigned.')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Call' })).toHaveAccessibleDescription('No ready outbound number is assigned.');
+    expect(screen.queryByRole('region', { name: 'Call workflow' })).not.toBeInTheDocument();
     expect(within(readiness).getByRole('status')).toHaveTextContent('No ready outbound number is assigned.');
-    expect(within(readiness).getByRole('link', { name: 'Set up numbers' })).toHaveAttribute('href', '/organizations/tenant/comms/configuration/numbers');
+    expect(within(readiness).getByRole('link', { name: 'Number assignments' })).toHaveAttribute('href', '/organizations/tenant/comms/configuration/numbers');
     expect(screen.getByRole('group', { name: 'Dial pad' })).toBeVisible();
     expect(screen.getByLabelText('Number to call')).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Call' })).toBeDisabled();
   });
   it.each([
-    ['restricted', 'Your role cannot place calls.', 'Restricted'],
-    ['unavailable', 'Calling isn’t ready yet.', 'Unavailable'],
-  ] as const)('words a %s blocker as its own state, with no setup link', (kind, reason, state) => {
+    ['restricted', 'Your role cannot place calls.'],
+    ['unavailable', 'Calling isn’t ready yet.'],
+  ] as const)('words a %s blocker as its own state, with no setup link', (kind, reason) => {
     render(<DialerWorkspace {...common} queue={[]} queueTotal={0} options={blocked(kind, reason)} setupHref="/never" />);
     const readiness = screen.getByRole('region', { name: 'Calling readiness' });
-    expect(within(readiness).getByText(state)).toBeVisible();
+    expect(within(readiness).getAllByText(reason)).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Call' })).toHaveAccessibleDescription(reason);
     expect(within(readiness).getByRole('status')).toHaveAttribute('data-state', kind);
     expect(within(readiness).queryByRole('link')).not.toBeInTheDocument();
   });
@@ -86,7 +89,7 @@ describe('dialer workspace', () => {
     expect(screen.getByText(/Showing the first 1 of 45/)).toBeVisible();
     app.rerender(<DialerWorkspace {...common} queue={[]} queueAvailable={false} />);
     expect(screen.getByText(/Tasks are not included for this business, so there is no call list/)).toBeVisible();
-    expect(screen.queryByRole('link', { name: 'Show all' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'All call tasks' })).not.toBeInTheDocument();
   });
 });
 
@@ -135,7 +138,7 @@ describe('dialer console presentation', () => {
   });
   it('shows the customer’s other calls in the list and their recorded calls', () => {
     render(<DialerWorkspace {...common} queue={[entry('first', 'Alice', '+14165550101', 'alice'), entry('second', 'Alice', '+14165550101', 'alice')]} recentCalls={{ alice: <p>Recorded call with Alice</p> }} />);
-    const context = screen.getByRole('region', { name: 'Customer' });
+    const context = screen.getByRole('region', { name: 'Contact' });
     expect(within(context).getByText('Recorded call with Alice')).toBeVisible();
     fireEvent.click(within(context).getByRole('button', { name: /Call Alice/ }));
     expect(screen.getAllByRole('button', { name: /Alice/ }).find(button => button.getAttribute('aria-pressed') === 'true')).toBeTruthy();

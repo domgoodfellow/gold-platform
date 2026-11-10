@@ -34,6 +34,8 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-11-10
 
+- Communications now calls its messaging destination Conversations, with independent view/channel/status controls, search, explicit loading/error recovery and compact empty states. Its Dashboard leads with operational counts instead of repeated setup summaries; Dialer shows one calling blocker, keeps contact context separate from Call task details and offers wrap-up only for outstanding recorded calls. Calling readiness awaits provider resolution, so missing platform infrastructure cannot be reported as configured. Existing routes, telephone continuity and channel permissions remain in place.
+
 - The GildOps website has its own look: charcoal on warm ivory, gold for the main action and links, steel blue for step numbers and other small details, with a matching dark version. It applies only to GildOps' own pages; a business's published website and the application keep their neutral colours, and a colour GildOps chooses in Studio still takes precedence.
 - On a phone the two actions in a page's opening section now sit side by side and wrap only when they do not fit, and the fixed "Request a consultation" bar along the bottom of the screen is gone: the header already carries that action on every width. Sections sit closer together, and the product lists, process steps and trust statements are drawn as ruled rows and columns instead of boxed cards, on GildOps' pages and on every website published from Studio.
 

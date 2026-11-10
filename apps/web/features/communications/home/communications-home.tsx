@@ -1,37 +1,60 @@
-import { formatPhoneForDisplay } from '@/lib/display/phone';
-import { ViewNav } from '@/components/navigation/view-nav';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ChevronRight, Mail, MessageSquare, Phone, PhoneIncoming, Route, ShieldCheck } from 'lucide-react';
+import { Mail, MessageSquare, Phone } from 'lucide-react';
 import { AppPage } from '@/components/layout/app-page';
 import { Badge } from '@/components/display/data';
 import { ButtonLink } from '@/components/controls/button';
 import { PageHeader } from '@/components/headers/page-header';
-import { OperationalPanel, PanelState } from '@/components/operational/primitives';
-import { ReadinessBadge } from '@/components/operational/readiness-badge';
-import type { ReadinessState } from '@/lib/application/readiness/evidence';
+import { CompactEmptyState, MetricTile, OperationalPanel } from '@/components/operational/primitives';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@gold/ui/components/table';
+import { ViewNav } from '@/components/navigation/view-nav';
 import { CallHistory } from '@/features/communications/voice/call-history';
 import { WrapUpCallSheet } from '@/features/communications/voice/wrap-up-sheet';
 import { callStatusLabel } from '@/lib/domain/reception/calls';
 import type { InboxItem } from '@/lib/domain/reception/inbox';
 import type { CommunicationsDashboard } from '@/lib/application/communications/dashboard';
+import { formatPhoneForDisplay } from '@/lib/display/phone';
+import { workspaceAncestry } from '@/lib/navigation';
 import { ConversationActions, NewCallButton } from './communication-actions';
 import { PeriodSelect } from '@/components/controls/period-select';
 
 const PERIODS = [{ value: 'today', label: 'Today' }, { value: 'week', label: 'Last 7 days' }, { value: 'month', label: 'Last 30 days' }] as const;
-const emptyCell = 'px-3 py-7 text-center text-sm text-muted';
-function Initials({ name }: { name: string }) { return <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-full bg-hover text-xs font-medium text-muted">{name.trim().split(/\s+/).slice(0,2).map(word => word[0]).join('').toUpperCase()}</span>; }
-function ChannelIcon({ channel }: { channel: string }) { const Icon = channel === 'email' ? Mail : channel === 'phone' ? Phone : MessageSquare; return <Icon aria-hidden className={`size-3.5 shrink-0 ${channel === 'phone' ? 'text-success' : 'text-accent-text'}`} />; }
-function formatTime(value: string, timezone: string) { return new Intl.DateTimeFormat('en-CA', { timeZone: timezone, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(value)); }
-function QueueTable({ items, organizationId, timezone, query = '' }: { items: InboxItem[]; organizationId: string; timezone: string; query?: string }) {
-  return <div className="overflow-x-auto"><Table className="w-full min-w-[38rem] table-fixed text-xs [&_td]:py-1"><colgroup>{[24,8,22,13,14,12,7].map((width,index) => <col key={index} style={{ width: `${width}%` }} />)}</colgroup><TableHeader><TableRow>{['Contact / Customer','Channel','Last message','Last activity','Assignee','Status','Actions'].map(label => <TableHead key={label} className="h-8 text-xs font-normal">{label}</TableHead>)}</TableRow></TableHeader><TableBody>{items.length ? items.map(item => <TableRow key={item.id}><TableCell><Link href={`/organizations/${organizationId}/comms/inbox/${item.id}${query}`} className="flex items-center gap-2 hover:underline"><Initials name={item.channel === 'sms' ? formatPhoneForDisplay(item.title) : item.title} /><span className="min-w-0"><span className="block truncate font-medium">{item.channel === 'sms' ? formatPhoneForDisplay(item.title) : item.title}</span><span className="block truncate text-muted">{item.channel === 'sms' ? formatPhoneForDisplay(item.externalAddress) : item.externalAddress}</span></span></Link></TableCell><TableCell><span className="flex items-center gap-1.5"><ChannelIcon channel={item.channel} />{item.channel === 'sms' ? 'SMS' : 'Email'}</span></TableCell><TableCell><span className="block truncate">{item.unread ? <strong className="font-semibold">Unread: </strong> : null}{item.preview || item.subject || 'No message preview'}</span></TableCell><TableCell className="whitespace-nowrap text-muted"><time dateTime={item.lastActivityAt} title={formatTime(item.lastActivityAt, timezone)}>{new Intl.DateTimeFormat('en-CA',{timeZone:timezone,hour:'numeric',minute:'2-digit'}).format(new Date(item.lastActivityAt))}</time></TableCell><TableCell><span className="flex items-center gap-1.5 overflow-hidden">{item.assignee ? <Initials name={item.assignee.name} /> : null}<span className="truncate">{item.assignee?.name ?? 'Unassigned'}</span></span></TableCell><TableCell><Badge tone={item.unread ? 'accent' : 'neutral'}>{item.status === 'open' ? 'Open' : item.status === 'waiting' ? 'Waiting' : 'Closed'}</Badge></TableCell><TableCell><ConversationActions organizationId={organizationId} item={item} /></TableCell></TableRow>) : <TableRow><TableCell colSpan={7} className={emptyCell}>No conversations match this queue.</TableCell></TableRow>}</TableBody></Table></div>;
+function Initials({ name }: { name: string }) {
+  return <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-hover text-xs font-medium text-muted">{name.trim().split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase()}</span>;
+}
+function formatTime(value: string, timezone: string) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: timezone, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(value));
+}
+function ConversationPreview({ items, organizationId, timezone, query = '' }: { items: InboxItem[]; organizationId: string; timezone: string; query?: string }) {
+  if (!items.length) return <CompactEmptyState>No conversations match this view.</CompactEmptyState>;
+  return <ul className="divide-y divide-border">{items.map(item => {
+    const Icon = item.channel === 'email' ? Mail : MessageSquare;
+    const name = item.channel === 'sms' ? formatPhoneForDisplay(item.title) : item.title;
+    return <li key={item.id} className="flex items-start gap-2 py-3 first:pt-0 last:pb-0">
+      <Link href={`/organizations/${organizationId}/comms/inbox/${item.id}${query}`} className="flex min-w-0 flex-1 items-start gap-3 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+        <Initials name={name} />
+        <span className="min-w-0 flex-1 space-y-1">
+          <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1"><span className="font-medium">{name}</span><time className="text-xs text-muted" dateTime={item.lastActivityAt}>{formatTime(item.lastActivityAt, timezone)}</time></span>
+          {item.subject ? <span className="block truncate text-sm">{item.subject}</span> : null}
+          <span className="block truncate text-sm text-muted">{item.preview || 'No message preview'}</span>
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted"><span className="inline-flex items-center gap-1"><Icon aria-hidden className="size-3.5" />{item.channel === 'sms' ? 'SMS' : 'Email'}</span>{item.unread ? <span className="font-medium text-accent-text">Unread</span> : null}<span>{item.assignee?.name ?? 'Unassigned'}</span><span>{item.status === 'open' ? 'Open' : item.status === 'waiting' ? 'Waiting' : 'Closed'}</span></span>
+        </span>
+      </Link>
+      <ConversationActions organizationId={organizationId} item={item} />
+    </li>;
+  })}</ul>;
 }
 
-export function CommunicationsHome({ organizationId, timezone, data, configure }: { organizationId: string; timezone: string; data: CommunicationsDashboard; configure?: ReactNode }) {
-  const base = `/organizations/${organizationId}`, home = `${base}/comms`, inbox = `${home}/inbox`, calls = `${base}/calls`, config = `${base}/comms/configuration/calling`;
+export function CommunicationsHome({ organizationId, timezone, data, configure, setupHref }: {
+  organizationId: string; timezone: string; data: CommunicationsDashboard; configure?: ReactNode; setupHref?: string;
+}) {
+  const base = `/organizations/${organizationId}`, home = `${base}/comms`, inbox = `${home}/inbox`, calls = `${base}/calls`;
   const { params, mayCall, mayMessage } = data;
-  const link = (change: Record<string,string>) => { const q = new URLSearchParams({ ...params, q: params.search, ...change }); q.delete('search'); return `${home}?${q}`; };
+  const link = (change: Record<string, string>) => {
+    const q = new URLSearchParams();
+    for (const [key, value] of Object.entries({ ...params, q: params.search, ...change })) if (value && key !== 'search') q.set(key, value);
+    return `${home}?${q}`;
+  };
   const inboxQuery = new URLSearchParams();
   if (params.queue === 'unassigned') inboxQuery.set('view', 'unassigned');
   else if (params.queue !== 'all') inboxQuery.set('status', params.queue);
@@ -39,54 +62,48 @@ export function CommunicationsHome({ organizationId, timezone, data, configure }
   if (params.search) inboxQuery.set('q', params.search);
   const inboxSuffix = inboxQuery.size ? `?${inboxQuery}` : '';
   const callSuffix = `?when=${params.when}${params.search ? `&q=${encodeURIComponent(params.search)}` : ''}`;
-  const routesEnabled = data.routes.filter(route => route.enabled).length;
-  const routingState = !data.routes.length ? 'No route yet' : !routesEnabled ? 'Off' : 'Set up';
   const attentionTabs = [
-    ...(mayCall ? [{ key: 'missed', label: 'Missed calls', count: data.missed?.total ?? 0 },{ key: 'wrap', label: 'Needs wrap-up', count: data.counts?.needsWrapUp ?? 0 }] : []),
-    ...(mayMessage ? [{ key: 'unread', label: 'Unread', count: data.inboxCounts?.unread ?? 0 },{ key: 'unassigned', label: 'Unassigned', count: data.inboxCounts?.unassigned ?? 0 }] : []),
-    ...(mayCall ? [{ key: 'routing', label: 'Routing setup', count: routesEnabled ? 0 : 1 }] : []),
+    ...(mayCall ? [{ key: 'missed', label: 'Missed calls', count: data.missed?.total ?? 0 }, { key: 'wrap', label: 'Needs wrap-up', count: data.counts?.needsWrapUp ?? 0 }] : []),
+    ...(mayMessage ? [{ key: 'unread', label: 'Unread', count: data.inboxCounts?.unread ?? 0 }, { key: 'unassigned', label: 'Unassigned', count: data.inboxCounts?.unassigned ?? 0 }] : []),
   ];
-  const attention = attentionTabs.find(tab => tab.key === params.attention)?.key ?? attentionTabs[0]?.key;
-  const attentionHref = attention === 'unread' || attention === 'unassigned' ? `${inbox}?view=${attention}` : attention === 'wrap' ? `${calls}?wrap=1` : attention === 'routing' ? `${config}#routing` : `${calls}?state=missed&when=${params.when}`;
+  const attention = attentionTabs.find(tab => tab.key === params.attention)?.key ?? attentionTabs.find(tab => tab.count > 0)?.key ?? attentionTabs[0]?.key;
+  const attentionHref = attention === 'unread' || attention === 'unassigned' ? `${inbox}?view=${attention}` : attention === 'wrap' ? `${calls}?wrap=1#call-history` : `${calls}?state=missed&when=${params.when}#call-history`;
   const attentionCalls = attention === 'wrap' ? data.wrap?.items ?? [] : data.missed?.items ?? [];
-  const stateTiles: { title: string; icon: typeof Phone; state?: ReadinessState; value: string; context: string; href: string }[] = [
-    { title: 'Outbound number', icon: Phone, state: !mayCall ? 'restricted' : data.callingReady ? 'operational' : 'configuration-required', value: mayCall ? data.outbound ? formatPhoneForDisplay(data.outbound.e164) : 'No assigned number' : 'Calling permission required', context: data.callingReady ? 'Assigned caller identity' : data.outbound ? 'Calling needs setup' : 'Assign an outbound number', href: `${home}/numbers` },
-    { title: 'Shared inbox', icon: Mail, state: !mayMessage ? 'restricted' : data.canCompose ? 'configured' : 'configuration-required', value: mayMessage ? `${data.inboxCounts?.unread ?? 0} unread` : 'Messaging permission required', context: mayMessage ? (data.canCompose ? `${data.inboxCounts?.unassigned ?? 0} unassigned` : 'No way to send yet') : 'Inbox access depends on your role', href: inbox },
-    { title: 'Call routing', icon: Route, state: !mayCall ? 'restricted' : routesEnabled > 0 ? 'configured' : 'configuration-required', value: mayCall ? `${routesEnabled} enabled routes` : 'Calling permission required', context: 'Preview saved routing', href: `${config}#routing` },
-    { title: 'Recordings', icon: ShieldCheck, value: mayCall ? `${data.recorded} recordings available` : 'Calling permission required', context: 'See recording details', href: `${config}#recording` },
-  ];
+  const period = PERIODS.find(entry => entry.value === params.when)?.label ?? 'Today';
+  const blocker = data.callingBlocker;
+  const noAttention = !attentionTabs.some(tab => tab.count > 0);
 
   return <AppPage data-communications-dashboard className="@container/comms space-y-3 pb-14 md:pb-0">
-    <PageHeader
-      title="Communications"
-      actions={<>
-        <PeriodSelect label="Communication date range" size="default" value={params.when} options={PERIODS.map(period => ({ ...period, href: link({ when: period.value }) }))} />
-        {mayMessage ? <ButtonLink tone="primary" href={inbox}><MessageSquare aria-hidden /> Open inbox</ButtonLink> : null}
-        {data.canCall ? <NewCallButton organizationId={organizationId} /> : null}
-        {data.canCompose ? <ButtonLink tone="secondary" href={`${inbox}/new?channel=${data.composeChannel}`}><Mail aria-hidden /> Compose message</ButtonLink> : null}
-        {configure}
-      </>}
-    />
-    <div className="grid overflow-hidden rounded-lg border border-border bg-surface grid-cols-2 @min-[64rem]/comms:grid-cols-4">{stateTiles.map(tile => <Link key={tile.title} href={tile.href} className="flex min-w-0 items-center gap-2 border-border p-3 hover:bg-hover border-r"><span className={`hidden size-8 shrink-0 items-center justify-center rounded-full @min-[36rem]/comms:flex ${tile.state === 'operational' ? 'bg-success/10 text-success' : 'bg-hover text-muted'}`}><tile.icon aria-hidden className="size-4" /></span><div className="min-w-0 flex-1"><div className="mb-1 flex flex-wrap items-center gap-2"><span className="text-xs text-muted">{tile.title}</span>{tile.state ? <ReadinessBadge state={tile.state} /> : null}</div><p className="break-words text-sm font-medium">{tile.value}</p><p className="mt-1 text-xs leading-tight text-muted">{tile.context}</p></div><ChevronRight aria-hidden className="hidden size-3.5 shrink-0 text-muted @min-[36rem]/comms:block" /></Link>)}</div>
-    <div className="grid min-w-0 gap-3 @min-[58rem]/comms:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]"><div className="min-w-0 space-y-3">
-      <OperationalPanel density="compact" title="Needs attention" href={attentionHref}><ViewNav label="Attention categories" scroll={false} className="mb-1" items={attentionTabs.map(tab => ({ key: tab.key, label: `${tab.label} (${tab.count})`, href: link({ attention: tab.key }), current: attention === tab.key }))} />
-      {attention === 'unread' || attention === 'unassigned' ? <QueueTable organizationId={organizationId} timezone={timezone} items={(attention === 'unread' ? data.unread : data.unassigned)?.items ?? []} /> : attention === 'routing' ? <div className="py-5 text-sm"><p>{routesEnabled ? `${routesEnabled} routes are on.` : 'No incoming route is on.'}</p><Link href={`${config}#routing`} className="mt-2 inline-flex text-xs font-medium text-accent-text">Call routing <ChevronRight aria-hidden className="size-4" /></Link></div> : <div className="overflow-x-auto"><Table className="min-w-[36rem] text-xs"><TableHeader><TableRow>{['Type','Contact / Customer','Context','Time','Owner','Status','Actions'].map(label => <TableHead key={label} className="h-8 text-xs font-normal">{label}</TableHead>)}</TableRow></TableHeader><TableBody>{attentionCalls.length ? attentionCalls.map(call => <TableRow key={call.id}><TableCell><span className="flex items-center gap-1.5"><PhoneIncoming aria-hidden className="size-3.5 text-danger" />{attention === 'wrap' ? 'Wrap-up' : 'Missed call'}</span></TableCell><TableCell><Link href={`${calls}/${call.id}`} className="flex items-center gap-2 hover:underline"><Initials name={call.customerName ?? call.externalNumber ?? '?'} /><span>{call.customerName ?? (call.externalNumber ? formatPhoneForDisplay(call.externalNumber) : 'Withheld number')}</span></Link></TableCell><TableCell><span className="block max-w-36 truncate text-muted">{call.note || (call.externalNumber ? formatPhoneForDisplay(call.externalNumber) : 'No notes recorded')}</span></TableCell><TableCell className="whitespace-nowrap text-muted">{formatTime(call.startedAt, timezone)}</TableCell><TableCell>{call.handledBy.map(member => member.name).join(', ') || 'Unassigned'}</TableCell><TableCell><Badge tone={attention === 'wrap' ? 'accent' : 'danger'}>{attention === 'wrap' ? 'Needs outcome' : callStatusLabel(call)}</Badge></TableCell><TableCell>{attention === 'wrap' ? <WrapUpCallSheet organizationId={organizationId} call={call} outcomes={data.outcomes} /> : data.canCall && call.externalNumber ? <NewCallButton compact organizationId={organizationId} toNumber={call.externalNumber} /> : <Link href={`${calls}/${call.id}`} className="text-accent-text">Open</Link>}</TableCell></TableRow>) : <TableRow><TableCell colSpan={7} className={emptyCell}>Nothing needs attention in this category.</TableCell></TableRow>}</TableBody></Table></div>}
-      <p className="mt-2 text-xs text-muted">Missed calls: selected period. Conversations and wrap-up: current outstanding work. Categories can overlap.</p></OperationalPanel>
-      <OperationalPanel density="compact" title="Inbox queue" count={data.queue?.total ?? 0} href={`${inbox}${inboxSuffix}`}><div className="mb-1 flex flex-wrap items-center justify-between gap-2"><ViewNav label="Inbox queue filters" scroll={false} items={['all','open','waiting','unassigned'].map(tab => ({ key: tab, label: tab === 'all' ? 'All active' : tab.charAt(0).toUpperCase() + tab.slice(1), href: link({ queue: tab }), current: params.queue === tab }))} /><ViewNav label="Inbox channels" scroll={false} className="mb-0" current={params.channel} views={['all','sms','email'].map(channel => ({ key: channel, href: link({ channel }), label: channel === 'all' ? 'All channels' : channel === 'sms' ? 'SMS' : 'Email' }))} /></div>{mayMessage ? <QueueTable items={data.queue?.items ?? []} organizationId={organizationId} timezone={timezone} query={inboxSuffix} /> : <PanelState kind="restricted">Your role cannot access conversations.</PanelState>}</OperationalPanel>
-      <OperationalPanel density="compact" title="Recent call activity" count={data.calls?.total ?? 0} href={`${calls}${callSuffix}`}><div className="[&_td]:py-1 [&_td]:text-xs [&_th]:text-xs">{data.calls?.items.length ? <CallHistory organizationId={organizationId} timeZone={timezone} compact calls={data.calls.items.slice(0,4)} renderWrapUp={call => call.status === 'completed' && !call.outcome ? <WrapUpCallSheet organizationId={organizationId} call={call} outcomes={data.outcomes} /> : null} /> : <div><div className="flex justify-between border-b border-border py-2 text-xs text-muted"><span>Time</span><span>Contact</span><span>Duration</span><span>Result</span></div><PanelState kind={mayCall ? 'empty' : 'restricted'}>{mayCall ? 'No calls recorded in this period.' : 'Your role cannot access calls.'}</PanelState></div>}</div></OperationalPanel>
-    </div><aside aria-label="Communications supporting information" className="min-w-0 space-y-3">
-      <OperationalPanel density="compact" title="Today" href={mayCall ? `${calls}?when=today` : inbox}><div className="space-y-1">{data.todayActivity.length ? data.todayActivity.slice(0,5).map(item => <Link key={item.id} href={item.href} className="flex items-start gap-2 text-xs leading-tight hover:bg-hover"><span className="w-16 shrink-0 pt-0.5 text-muted">{new Intl.DateTimeFormat('en-CA',{ timeZone: timezone, hour:'numeric',minute:'2-digit' }).format(new Date(item.at))}</span><span className="rounded-full bg-hover p-1.5"><ChannelIcon channel={item.channel} /></span><span className="min-w-0"><span className="block font-medium">{item.channel === 'sms' ? formatPhoneForDisplay(item.title) : item.title}</span><span className="block truncate text-muted">{item.context}</span></span></Link>) : <PanelState>No communication activity today.</PanelState>}</div></OperationalPanel>
-      <OperationalPanel density="compact" title="Communications status"><div className="divide-y divide-border">{[
-        { label:'Ready numbers', value:data.numbers.filter(n => n.lifecycle === 'active' && n.readiness === 'ready').length, href:`${home}/numbers` },
-        { label:'Outbound identity', value: mayCall ? data.outbound ? formatPhoneForDisplay(data.outbound.e164) : 'Not assigned' : 'Restricted', href:`${home}/numbers` },
-        { label:'Calling', value: mayCall ? data.callingReady ? 'Operational' : 'Needs setting up' : 'Restricted', href:config },
-        { label:'Unassigned conversations', value: data.inboxCounts?.unassigned ?? 'Restricted', href:`${inbox}?view=unassigned` },
-        { label:'Missed calls today', value:data.counts?.missedToday ?? 'Restricted', href:`${calls}?state=missed&when=today` },
-        { label:'Calls needing wrap-up', value:data.counts?.needsWrapUp ?? 'Restricted', href:`${calls}?wrap=1` },
-        { label:'Call routing', value: mayCall ? routingState : 'Restricted', href:`${config}#routing` },
-      ].map(row => <Link key={row.label} href={row.href} className="flex items-center justify-between gap-2 py-0.5 text-xs hover:bg-hover"><span className="text-muted">{row.label}</span><span className="ml-auto text-right font-medium tabular-nums">{row.value}</span><ChevronRight aria-hidden className="size-3 shrink-0 text-muted" /></Link>)}</div></OperationalPanel>
-      <OperationalPanel density="compact" title="Recent activity" href={mayCall ? calls : inbox}><div className="space-y-1">{data.activity.length ? data.activity.slice(0,5).map(item => <Link key={item.id} href={item.href} className="flex items-start gap-2 text-xs leading-tight hover:bg-hover"><span className="rounded-full bg-hover p-1.5"><ChannelIcon channel={item.channel} /></span><span className="min-w-0 flex-1"><span className="block font-medium">{item.channel === 'sms' ? formatPhoneForDisplay(item.title) : item.title}</span><span className="block truncate text-muted">{item.context}</span></span><span className="shrink-0 text-muted">{new Intl.DateTimeFormat('en-CA',{timeZone:timezone,hour:'numeric',minute:'2-digit'}).format(new Date(item.at))}</span></Link>) : <PanelState>No recent activity recorded.</PanelState>}</div></OperationalPanel>
-      <OperationalPanel density="compact" title="Insights"><p className="mb-2 text-xs text-muted">{PERIODS.find(period => period.value === params.when)?.label ?? 'Today'} · recorded activity</p><div className="grid grid-cols-2 gap-2"><Link href={`${calls}${callSuffix}`} className="rounded-md border border-border p-2"><span className="text-xs text-muted">Answered calls</span><span className="mt-1 block text-xl font-semibold tabular-nums">{mayCall && !params.search && data.calls?.total ? `${Math.round(data.answered / data.calls.total * 100)}%` : '—'}</span><span className="sr-only">{params.search ? 'Clear search for rate' : mayCall ? `${data.answered} answered` : 'Restricted'}</span></Link><Link href={`${inbox}?view=unread`} className="rounded-md border border-border p-2"><span className="text-xs text-muted">Unread conversations</span><span className="mt-1 block text-xl font-semibold tabular-nums">{data.inboxCounts?.unread ?? '—'}</span><span className="sr-only">Current Inbox</span></Link></div></OperationalPanel>
-    </aside></div>
+    <PageHeader title="Dashboard" crumbs={workspaceAncestry(organizationId, 'comms')} className="mb-0" actions={<>
+      <PeriodSelect label="Communication date range" size="default" value={params.when} options={PERIODS.map(entry => ({ ...entry, href: link({ when: entry.value }) }))} />
+      {mayMessage ? <ButtonLink tone="primary" href={inbox}><MessageSquare aria-hidden /> Conversations</ButtonLink> : null}
+      {data.canCall ? <NewCallButton organizationId={organizationId} /> : null}
+      {data.canCompose ? <ButtonLink tone="secondary" href={`${inbox}/new?channel=${data.composeChannel}`}><Mail aria-hidden /> New message</ButtonLink> : null}
+      {configure}
+    </>} />
+    {mayCall && blocker ? <div role="status" data-state={blocker.kind} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-surface px-4 py-3 text-sm"><Phone aria-hidden className="size-4 shrink-0 text-muted" /><p className="min-w-0 flex-1">{blocker.reason}</p>{blocker.setup && setupHref ? <ButtonLink tone="text" href={setupHref}>Number assignments</ButtonLink> : null}</div> : null}
+    <div className="grid grid-cols-2 gap-3 @min-[64rem]/comms:grid-cols-4">
+      {mayCall ? <><MetricTile label="Missed calls" value={data.missed?.total ?? '—'} detail={period} href={`${calls}?state=missed&when=${params.when}#call-history`} /><MetricTile label="Needs wrap-up" value={data.counts?.needsWrapUp ?? '—'} detail="Outstanding" href={`${calls}?wrap=1#call-history`} /></> : null}
+      {mayMessage ? <><MetricTile label="Unread conversations" value={data.inboxCounts?.unread ?? '—'} detail="Outstanding" href={`${inbox}?view=unread`} /><MetricTile label="Unassigned conversations" value={data.inboxCounts?.unassigned ?? '—'} detail="Outstanding" href={`${inbox}?view=unassigned`} /></> : null}
+    </div>
+    <div className="grid min-w-0 gap-3 @min-[64rem]/comms:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
+      <div className="min-w-0 space-y-3">
+        <OperationalPanel density="compact" title="Needs attention" href={noAttention ? undefined : attentionHref} hrefLabel={attention === 'unread' || attention === 'unassigned' ? 'Open conversations' : 'Open call history'}>
+          <ViewNav label="Attention categories" variant="line" scroll={false} className="mb-3" items={attentionTabs.map(tab => ({ key: tab.key, label: `${tab.label} (${tab.count})`, href: link({ attention: tab.key }), current: attention === tab.key }))} />
+          {attention === 'unread' || attention === 'unassigned' ? <ConversationPreview organizationId={organizationId} timezone={timezone} items={(attention === 'unread' ? data.unread : data.unassigned)?.items ?? []} query={`?view=${attention}`} /> : !attentionCalls.length ? <CompactEmptyState>{attention === 'wrap' ? 'No calls need wrap-up.' : 'No missed calls in this period.'}</CompactEmptyState> : <div className="overflow-x-auto"><Table className="text-sm"><TableHeader><TableRow>{['Contact', 'Time', 'Status', 'Action'].map(label => <TableHead key={label}>{label}</TableHead>)}</TableRow></TableHeader><TableBody>{attentionCalls.map(call => <TableRow key={call.id}>
+            <TableCell><Link href={`${calls}/${call.id}`} className="font-medium hover:underline">{call.customerName ?? (call.externalNumber ? formatPhoneForDisplay(call.externalNumber) : 'Withheld number')}</Link></TableCell>
+            <TableCell className="whitespace-nowrap text-muted">{formatTime(call.startedAt, timezone)}</TableCell>
+            <TableCell><Badge tone={attention === 'wrap' ? 'accent' : 'neutral'}>{attention === 'wrap' ? 'Needs outcome' : callStatusLabel(call)}</Badge></TableCell>
+            <TableCell>{attention === 'wrap' ? <WrapUpCallSheet organizationId={organizationId} call={call} outcomes={data.outcomes} /> : data.callingReady && call.externalNumber ? <NewCallButton compact organizationId={organizationId} toNumber={call.externalNumber} /> : <Link href={`${calls}/${call.id}`} className="text-accent-text">Open call</Link>}</TableCell>
+          </TableRow>)}</TableBody></Table></div>}
+        </OperationalPanel>
+        {mayMessage ? <OperationalPanel density="compact" title="Conversations" count={data.queue?.total} href={`${inbox}${inboxSuffix}`} hrefLabel="Open conversations"><ConversationPreview items={data.queue?.items ?? []} organizationId={organizationId} timezone={timezone} query={inboxSuffix} /></OperationalPanel> : null}
+        {mayCall ? <OperationalPanel density="compact" title="Recent calls" count={data.calls?.total} meta={period} href={`${calls}${callSuffix}#call-history`} hrefLabel="Open call history">{data.calls?.items.length ? <CallHistory organizationId={organizationId} timeZone={timezone} compact calls={data.calls.items.slice(0, 4)} renderWrapUp={call => call.status === 'completed' && !call.outcome ? <WrapUpCallSheet organizationId={organizationId} call={call} outcomes={data.outcomes} /> : null} /> : <CompactEmptyState>No calls recorded in this period.</CompactEmptyState>}</OperationalPanel> : null}
+      </div>
+      <aside aria-label="Communications activity" className="min-w-0 space-y-3">
+        <OperationalPanel density="compact" title="Recent activity">{data.activity.length ? <ul className="divide-y divide-border">{data.activity.map(item => <li key={item.id}><Link href={item.href} className="flex items-start gap-2 py-2 text-sm hover:underline"><span className="min-w-0 flex-1"><span className="block font-medium">{item.context}</span><span className="block text-xs text-muted">{item.title}</span><time className="block text-xs text-muted" dateTime={item.at}>{formatTime(item.at, timezone)}</time></span></Link></li>)}</ul> : <CompactEmptyState>No recent activity.</CompactEmptyState>}</OperationalPanel>
+        {mayCall ? <OperationalPanel density="compact" title="Call performance" meta={period}><dl className="space-y-3 text-sm"><div className="flex justify-between gap-3"><dt className="text-muted">Recorded calls</dt><dd className="font-medium tabular-nums">{data.calls?.total ?? '—'}</dd></div><div className="flex justify-between gap-3"><dt className="text-muted">Answer rate</dt><dd className="font-medium tabular-nums">{!params.search && data.calls?.total ? `${Math.round(data.answered / data.calls.total * 100)}%` : '—'}</dd></div></dl>{!data.calls?.total ? <p className="mt-3 text-xs text-muted">No calls recorded in this period.</p> : params.search ? <p className="mt-3 text-xs text-muted">Clear the search to see the answer rate.</p> : <p className="mt-3 text-xs text-muted">{data.answered} answered of {data.calls.total} recorded calls.</p>}</OperationalPanel> : null}
+      </aside>
+    </div>
   </AppPage>;
 }
