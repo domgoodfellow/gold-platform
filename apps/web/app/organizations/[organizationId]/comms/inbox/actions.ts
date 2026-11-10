@@ -9,9 +9,7 @@ import {
   claimConversation,
   createCustomerFromConversation,
   currentMembershipId,
-  getInboxCounts,
   linkConversationCustomer,
-  listInbox,
   releaseConversation,
   searchCustomersToLink,
   setConversationStatus,
@@ -21,6 +19,7 @@ import {
   type InboxFilter,
   type InboxPage,
 } from '@/lib/domain/reception/inbox';
+import { conversationFeedCounts, listConversationFeed } from '@/lib/domain/reception/conversation-feed';
 import { markConversationRead, type Message } from '@/lib/domain/reception/messaging';
 import { replyToConversation, sendEmail, sendSms } from '@/lib/domain/reception/outbound';
 import { requireOrganization } from '@/lib/route/organization';
@@ -50,7 +49,7 @@ export async function listInboxAction(organizationId: string, filter: InboxFilte
   await requireOrganization(organizationId);
   return attempt(organizationId, async () => {
     const db = await getDb();
-    return listInbox(db, { organizationId, filter, cursor, membershipId: await currentMembershipId(db, { organizationId }) });
+    return listConversationFeed(db, { organizationId, filter, cursor, membershipId: await currentMembershipId(db, { organizationId }) });
   }, false);
 }
 
@@ -58,7 +57,7 @@ export async function inboxCountsAction(organizationId: string): Promise<ActionR
   await requireOrganization(organizationId);
   return attempt(organizationId, async () => {
     const db = await getDb();
-    return getInboxCounts(db, { organizationId, membershipId: await currentMembershipId(db, { organizationId }) });
+    return conversationFeedCounts(db, { organizationId, membershipId: await currentMembershipId(db, { organizationId }) });
   }, false);
 }
 

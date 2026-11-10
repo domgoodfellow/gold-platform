@@ -20,6 +20,7 @@ export type CallListCandidate = { id: string; name: string; phone: string | null
 /** Who an add is for: contacts chosen by id, or every contact matching a Contacts directory view. */
 export type CallListTarget = { customerIds: readonly string[] } | { view: ContactDirectoryQuery };
 export type CallListPlan = { matching: number; toAdd: string[]; alreadyOnList: number; noPhone: number };
+export type CallListTaskDraft = { dueAt: string; ownerMembershipId: string; notes: string };
 
 /**
  * Whether this member may put people on the call list: the business has the Dialer (the
@@ -84,13 +85,14 @@ export async function planCallListAdd(db: Db, input: { organizationId: string; t
  * is skipped and counted, never added twice. All are added in one statement or none is. The caller
  * has already checked `assertCallListAccess`; the database checks task permission again.
  */
-export async function addToCallList(db: Db, input: { organizationId: string; target: CallListTarget; reason?: string; now?: Date }): Promise<{ added: number; alreadyOnList: number; noPhone: number }> {
+export async function addToCallList(db: Db, input: { organizationId: string; target: CallListTarget; reason?: string; now?: Date; dueAt?: string; ownerMembershipId?: string; notes?: string }): Promise<{ added: number; alreadyOnList: number; noPhone: number }> {
   const plan = await planCallListAdd(db, input);
   const added = await createCallTasks(db, {
     organizationId: input.organizationId,
     customerIds: plan.toAdd,
     title: input.reason?.trim() || DEFAULT_CALL_REASON,
-    dueAt: (input.now ?? new Date()).toISOString(),
+    dueAt: input.dueAt ?? (input.now ?? new Date()).toISOString(),
+    ownerMembershipId: input.ownerMembershipId, notes: input.notes,
   });
   return { added, alreadyOnList: plan.alreadyOnList, noPhone: plan.noPhone };
 }

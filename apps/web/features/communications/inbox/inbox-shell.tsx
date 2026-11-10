@@ -4,7 +4,7 @@ import { formatPhoneForDisplay } from '@/lib/display/phone';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Mail, MessageSquare, Plus, Search, User } from 'lucide-react';
+import { Globe, Mail, MessageSquare, Plus, Search, User } from 'lucide-react';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { TextInput } from '@/components/controls/inputs';
 import { PeriodSelect } from '@/components/controls/period-select';
@@ -14,11 +14,11 @@ import { inboxCountsAction, listInboxAction } from '@/app/organizations/[organiz
 import type { ConversationStatus, InboxCounts, InboxFilter, InboxItem } from '@/lib/domain/reception/inbox';
 import { CONVERSATION_STATUS_LABEL, INBOX_CHANGED, relativeTime } from './format';
 
-type Channel = 'all' | 'sms' | 'email';
+type Channel = 'all' | 'sms' | 'email' | 'web';
 type View = 'everything' | 'unread' | 'mine' | 'unassigned';
 type Status = 'active' | ConversationStatus | 'any';
 
-const CHANNELS: { key: Channel; label: string }[] = [{ key: 'all', label: 'SMS & email' }, { key: 'sms', label: 'SMS' }, { key: 'email', label: 'Email' }];
+const CHANNELS: { key: Channel; label: string }[] = [{ key: 'all', label: 'All channels' }, { key: 'sms', label: 'SMS' }, { key: 'email', label: 'Email' }, { key: 'web', label: 'Website chat' }];
 const VIEWS: { key: View; label: string; count?: keyof InboxCounts }[] = [
   { key: 'everything', label: 'All' },
   { key: 'mine', label: 'Mine', count: 'mine' },
@@ -35,7 +35,8 @@ const STATUSES: { key: Status; label: string }[] = [
 
 function emptyMessage(filter: InboxFilter): string {
   if (filter.search) return 'No conversations match this search.';
-  if (filter.view === 'unread') return 'Nothing unread.';
+  if (filter.channel === 'web' && filter.view === 'unread') return 'Website chat does not track read status.';
+  if (filter.view === 'unread') return 'No conversations marked unread.';
   if (filter.view === 'mine') return 'Nothing is assigned to you.';
   if (filter.view === 'unassigned') return 'Every conversation has someone handling it.';
   if (filter.channel === 'sms') return 'No text conversations match.';
@@ -65,7 +66,8 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
   const view = VIEWS.find(option => option.key === params.get('view'))?.key ?? 'everything';
   const status = STATUSES.find(option => option.key === params.get('status'))?.key ?? 'active';
   const search = params.get('q')?.slice(0, 100) ?? '';
-  const selectedId = pathname.startsWith(`${base}/`) ? pathname.slice(base.length + 1).split('/')[0] : null;
+  const websiteOpen = pathname.endsWith('/website');
+  const selectedId = websiteOpen ? params.get('thread') : pathname.startsWith(`${base}/`) ? pathname.slice(base.length + 1).split('/')[0] : null;
   const detailOpen = selectedId !== null;
 
   const filter = useMemo<InboxFilter>(
@@ -133,7 +135,7 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
     if (mine !== generation.current) return;
     if (!page.ok) return setError(page.error);
     // A row that moved while the list was open can appear on a later page; it is shown once.
-    setItems((previous) => [...previous, ...page.data.items.filter((item) => !previous.some((existing) => existing.id === item.id))]);
+    setItems((previous) => [...previous, ...page.data.items.filter((item) => !previous.some((existing) => existing.id === item.id && existing.source === item.source))]);
     setCursor(page.data.nextCursor);
   };
 
@@ -151,19 +153,20 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
     return text ? `${base}?${text}` : base;
   };
   const withQuery = (path: string) => {
-    const text = params.toString();
+    const query = new URLSearchParams(params.toString());
+    query.delete('thread');
+    const text = query.toString();
     return text ? `${path}?${text}` : path;
   };
 
   return (
     <div className="@container/conversations overflow-hidden rounded-lg border border-border bg-surface">
-      {pathname.endsWith('/website') ? <div className="flex min-w-0 flex-col"><Link href={withQuery(base)} className="border-b border-border p-3 text-sm text-accent-text">← SMS & email conversations</Link>{children}</div> : <>
+      <>
       <div className="flex flex-wrap items-center gap-3 border-b border-border p-3">
         <ViewNav label="Conversation views" current={view} scroll={false} className="mb-0 max-w-full flex-nowrap! overflow-x-auto" views={VIEWS.map(option => ({ key: option.key, label: <>{option.label}{option.count && counts && counts[option.count] > 0 ? ` (${counts[option.count]})` : ''}</>, href: hrefWith({ view: option.key }) }))} />
         <PeriodSelect label="Messaging channel" value={channel} size="default" options={CHANNELS.map(option => ({ value: option.key, label: option.label, href: hrefWith({ channel: option.key }) }))} />
         <PeriodSelect label="Conversation status" value={status} size="default" options={STATUSES.map(option => ({ value: option.key, label: option.label, href: hrefWith({ status: option.key }) }))} />
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <ButtonLink tone="secondary" href={withQuery(`${base}/website`)}>Website chat</ButtonLink>
           <ButtonLink href={withQuery(`${base}/new`)} scroll={false}><Plus aria-hidden /> New message</ButtonLink>
         </div>
       </div>
@@ -184,19 +187,23 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
           ) : null}
           <ul>
             {loaded && !error ? items.map((item) => {
-              const selected = item.id === selectedId;
-              const ChannelIcon = item.channel === 'email' ? Mail : MessageSquare;
+              const selected = item.id === selectedId && (item.source === 'website') === websiteOpen;
+              const ChannelIcon = item.channel === 'web' ? Globe : item.channel === 'email' ? Mail : MessageSquare;
+              const rowQuery = new URLSearchParams(params.toString());
+              rowQuery.delete('thread');
+              if (item.source === 'website') rowQuery.set('thread', item.id);
+              const destination = `${base}/${item.source === 'website' ? 'website' : item.id}${rowQuery.size ? `?${rowQuery}` : ''}`;
               return (
-                <li key={item.id}>
+                <li key={`${item.source ?? 'message'}-${item.id}`}>
                   <Link
-                    href={withQuery(`${base}/${item.id}`)}
+                    href={destination}
                     scroll={false}
                     aria-current={selected ? 'true' : undefined}
                     className={`block border-b border-border px-3 py-2 hover:bg-hover ${selected ? 'bg-hover' : ''}`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="flex min-w-0 items-center gap-1.5">
-                        <ChannelIcon className="h-3.5 w-3.5 shrink-0 text-muted" aria-label={item.channel === 'email' ? 'Email' : 'SMS'} role="img" />
+                        <ChannelIcon className="h-3.5 w-3.5 shrink-0 text-muted" aria-label={item.channel === 'web' ? 'Website chat' : item.channel === 'email' ? 'Email' : 'SMS'} role="img" />
                         <span className={`truncate ${item.unread ? 'font-semibold' : 'font-medium'}`}>{item.channel === 'sms' ? formatPhoneForDisplay(item.title) : item.title}</span>
                         {item.unread ? <span className="h-2 w-2 shrink-0 rounded-full bg-accent" role="img" aria-label="Unread" /> : null}
                       </span>
@@ -206,7 +213,8 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
                     {item.subject ? <div className={`truncate text-sm ${item.unread ? 'font-medium' : ''}`}>{item.subject}</div> : null}
                     <div className="truncate text-sm text-muted">{item.preview || '—'}</div>
                     <div className="mt-1 flex items-center gap-2 text-xs text-muted">
-                      <span>{CONVERSATION_STATUS_LABEL[item.status]}</span>
+                      <span>{item.source === 'website' ? ({ open: 'Open', handoff_requested: 'Human requested', claimed: 'Claimed', resolved: 'Resolved', closed: 'Closed' } as Record<string, string>)[item.sourceStatus ?? ''] ?? CONVERSATION_STATUS_LABEL[item.status] : CONVERSATION_STATUS_LABEL[item.status]}</span>
+                      {item.unread === null ? <span>Read status not tracked</span> : null}
                       <span aria-hidden>·</span>
                       <span className="inline-flex items-center gap-1"><User className="h-3 w-3" aria-hidden />{item.assignee ? item.assignee.name : 'Unassigned'}</span>
                     </div>
@@ -227,7 +235,7 @@ export function InboxShell({ organizationId, children }: { organizationId: strin
         {children}
       </section> : null}
       </div>
-      </>}
+      </>
     </div>
   );
 }

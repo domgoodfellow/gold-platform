@@ -35,7 +35,7 @@ test('Communications empty and unavailable states fit each canvas and preserve n
     await page.goto(`${base}/comms/inbox?q=sample&channel=email&status=waiting`);
     await expect(page.getByText('No conversations match this search.')).toBeVisible();
     await expect(page.getByText('Select a conversation', { exact: true })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Website chat', exact: true })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Messaging channel', exact: true })).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: info.outputPath(`conversations-${width}.png`), fullPage: true });
     await page.getByRole('navigation', { name: 'Conversation views' }).getByRole('link', { name: /^Mine/ }).click();

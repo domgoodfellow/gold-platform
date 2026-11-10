@@ -8,6 +8,8 @@ import type { DialerQueueEntry } from '@/lib/application/communications/dialer-q
 import { chooseOption, fieldValue } from '../support/select-field';
 
 const dial = vi.hoisted(() => vi.fn().mockResolvedValue(true));
+const lookup = vi.hoisted(() => vi.fn());
+vi.mock('@/app/organizations/[organizationId]/calls/actions', () => ({ matchDialerContact: lookup }));
 const telephone = vi.hoisted(() => ({ value: { activeCall: null as unknown, incoming: null as unknown, status: 'offline', error: null, register: vi.fn(), unregister: vi.fn() } }));
 vi.mock('@/features/communications/voice/use-dial', () => ({ useDial: () => ({ dial, dialing: false, error: null }) }));
 vi.mock('@/features/communications/voice/telephone-device', () => ({ useTelephoneDevice: () => telephone.value }));
@@ -24,6 +26,19 @@ const common = { organizationId: 'tenant', timezone: 'America/Toronto', queueTot
 afterEach(() => { cleanup(); vi.clearAllMocks(); telephone.value = { ...telephone.value, activeCall: null, incoming: null, status: 'offline' }; });
 
 describe('dialer workspace', () => {
+  it('shows a unique typed-number contact and clears that attribution for an ambiguous replacement', async () => {
+    lookup.mockResolvedValueOnce({ state: 'matched', contact: { id: 'matched', name: 'Matched contact', phone: '+14165550122', email: null } }).mockResolvedValueOnce({ state: 'ambiguous' });
+    render(<DialerWorkspace {...common} queue={[]} queueTotal={0} mayMatchContacts />);
+    fireEvent.change(screen.getByLabelText('Number to call'), { target: { value: '+14165550122' } });
+    expect(await screen.findByRole('link', { name: 'Matched contact' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Call' }));
+    expect(dial).toHaveBeenLastCalledWith(expect.objectContaining({ toNumber: '+14165550122', customerId: 'matched', contactLabel: 'Matched contact' }));
+    fireEvent.change(screen.getByLabelText('Number to call'), { target: { value: '+14165550123' } });
+    expect(screen.queryByRole('link', { name: 'Matched contact' })).not.toBeInTheDocument();
+    expect(await screen.findByText('Several contacts use this number. No contact is selected.')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Call' }));
+    expect(dial).toHaveBeenLastCalledWith(expect.objectContaining({ toNumber: '+14165550123', customerId: undefined }));
+  });
   it('selects a real follow-up, shows its context and binds the call to that customer', async () => {
     render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101'), entry('bob', 'Bob', '+14165550102')]} />);
     expect(screen.getByLabelText('Number to call')).toHaveValue('(416)555-0101');

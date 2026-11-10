@@ -69,10 +69,10 @@ export async function openCallCustomerIds(db: Db, input: { organizationId: strin
   return new Set((data ?? []).map(row => row.customer_id));
 }
 /** One open Call task per contact, in one statement: every contact is added or none is. */
-export async function createCallTasks(db: Db, input: { organizationId: string; customerIds: readonly string[]; title: string; dueAt: string }): Promise<number> {
+export async function createCallTasks(db: Db, input: { organizationId: string; customerIds: readonly string[]; title: string; dueAt: string; notes?: string; ownerMembershipId?: string | null }): Promise<number> {
   const actor = await requireActor(db);
   if (!input.customerIds.length) return 0;
-  const shared = values({ organizationId: input.organizationId, customerId: '', kind: 'call', title: input.title, dueAt: input.dueAt });
+  const shared = values({ ...input, customerId: '', kind: 'call' });
   const rows = input.customerIds.map(customerId => ({ ...shared, organization_id: input.organizationId, customer_id: customerId, created_by: actor.id }));
   const { data, error } = await db.from('crm_tasks').insert(rows).select('id');
   if (error) failure(error.message);

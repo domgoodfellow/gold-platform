@@ -28,7 +28,7 @@ export type InboxFilter = {
   search?: string;
   since?: string;
   until?: string;
-  channel?: ConversationChannel;
+  channel?: ConversationChannel | 'web';
   /** Narrow by who has to look at it. */
   view?: 'unread' | 'mine' | 'unassigned';
   /** `active` (the default) is open and waiting — everything not closed. */
@@ -37,7 +37,9 @@ export type InboxFilter = {
 
 export type InboxItem = {
   id: string;
-  channel: ConversationChannel;
+  channel: ConversationChannel | 'web';
+  source?: 'message' | 'website';
+  sourceStatus?: string;
   /** Who it is with, in words: the customer's name, or the address/number when nobody is linked. */
   title: string;
   /** The external address or number — always shown, so an unknown sender stays understandable. */
@@ -45,7 +47,7 @@ export type InboxItem = {
   subject: string | null;
   preview: string;
   lastActivityAt: string;
-  unread: boolean;
+  unread: boolean | null;
   status: ConversationStatus;
   assignee: { membershipId: string; name: string } | null;
   customer: { id: string; name: string } | null;

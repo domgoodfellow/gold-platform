@@ -9,6 +9,16 @@ import { createCallOutcome } from '@/lib/domain/reception/outcomes';
 import { linkCallCustomer, recordCall } from '@/lib/domain/reception/calls';
 import { setCallingNumber } from '@/lib/domain/reception/telephony';
 import { requireOrganization } from '@/lib/route/organization';
+import { requireOperatingArea } from '@/lib/route/workspace-configuration';
+import { dialerContactCandidates, type CallContact } from '@/lib/domain/reception/calls';
+
+export async function matchDialerContact(organizationId: string, number: string): Promise<{ state: 'matched'; contact: CallContact } | { state: 'none' | 'ambiguous' | 'unavailable' }> {
+  try {
+    const { db } = await requireOperatingArea(organizationId, 'calls');
+    const matches = await dialerContactCandidates(db, { organizationId, number });
+    return matches.length === 1 ? { state: 'matched', contact: matches[0] } : { state: matches.length ? 'ambiguous' : 'none' };
+  } catch (error) { if (error instanceof DomainError) return { state: 'unavailable' }; throw error; }
+}
 
 /**
  * The Voice module's writes.

@@ -74,6 +74,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
         setupHref={setupHref}
         recentCalls={recentCalls}
         mayAddToList={mayAddToList}
+        mayMatchContacts={mayCall}
         actions={
           <>
             <ButtonLink href="#call-history" tone="secondary">Call history</ButtonLink>

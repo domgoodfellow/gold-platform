@@ -145,7 +145,7 @@ Do not create a commercial Product because a workspace exists.
 
 ---
 
-Communications uses one operational Dashboard, the Dialer for calling and Conversations for sending and receiving messages. Conversations is the operator-facing name of the existing `/comms/inbox` destination; channel-level thread identity and permissions remain distinct. Workspace Home does not repeat onboarding: organization Setup owns onboarding, and platform infrastructure gaps have no tenant setup task. Website chat remains a distinct contextual destination until its thread model is integrated explicitly.
+Communications uses one operational Dashboard, the Dialer for calling and Conversations for sending and receiving messages. Conversations is the operator-facing name of the existing `/comms/inbox` destination. Its list includes SMS, email and website chat while channel-level thread identity, routes and permissions remain distinct. Workspace Home does not repeat onboarding: organization Setup owns onboarding, and platform infrastructure gaps have no tenant setup task.
 
 ### Workspace visibility
 
@@ -291,6 +291,8 @@ It includes:
 - organization-owned credentials and connection readiness.
 
 A file format is not a Connection.
+
+The shared Connect control opens an organization-owned account view. Entering a workspace changes relevance ordering, never the account's scope or authorization. Account management remains in Settings → Connections; selecting a worksheet or importing contacts remains a separate Library/CRM workflow. Platform-managed calling infrastructure is not a tenant connection.
 
 #### Plan & usage
 

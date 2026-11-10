@@ -34,6 +34,12 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-11-10
 
+- Conversations now lists website chat alongside SMS and email without merging their records. Website claim and unknown read states stay explicit; equal-time pages remain stable. Selected message conversations offer eligible Call links and contact/recent-call context; contact details use the shared drawer on narrow screens, and linked Support cases open on demand.
+
+- Contacts import now selects an account and one spreadsheet inside intake, with a nonce-bound OAuth return, readiness-gated sign-in and canonical Library synchronization before mapping/review. Call-list additions from Contacts, contact records and the Dialer share due date, owner and note fields over the existing atomic task command.
+
+- The shared Connect control shows organization accounts with their canonical app marks, readable connection health and workspace-relevant ordering. Its keyboard/touch popover refreshes stored status, offers available reconnect paths and keeps account management in Connections; OAuth reconnect opens separately during a call. Empty, unavailable and restricted states stay distinct, and the control is available on phone, tablet and desktop.
+
 - Communications now calls its messaging destination Conversations, with independent view/channel/status controls, search, explicit loading/error recovery and compact empty states. Its Dashboard leads with operational counts instead of repeated setup summaries; Dialer shows one calling blocker, keeps contact context separate from Call task details and offers wrap-up only for outstanding recorded calls. Calling readiness awaits provider resolution, so missing platform infrastructure cannot be reported as configured. Existing routes, telephone continuity and channel permissions remain in place.
 
 - The GildOps website has its own look: charcoal on warm ivory, gold for the main action and links, steel blue for step numbers and other small details, with a matching dark version. It applies only to GildOps' own pages; a business's published website and the application keep their neutral colours, and a colour GildOps chooses in Studio still takes precedence.

@@ -26,6 +26,10 @@ Implementation status belongs in `docs/roadmap.md`.
 
 ## Data objective
 
+`dialer_contact_candidates` exposes only the canonical contact-point match for one organization and requires current membership plus `call.place` before its privileged read. It returns at most two candidates to distinguish a unique match from ambiguity; it never links or creates a contact. Call-list additions retain the existing atomic task insert, including composite same-organization owner references, with the chosen due instant, owner and note.
+
+`20261110000001_conversations_feed.sql` adds a security-invoker, authenticated-read-only view over existing message conversations and website threads. It carries tenant IDs through every join and preserves website claim state and an unknown read state. It creates no new conversation authority or write path.
+
 `calendar_events` stores only native calendar appointments: Organization, workspace, title, start/end instants, notes, Scheduled/Cancelled status and creator attribution. A positive-duration check and constrained workspace/status vocabulary apply. Domain projections such as Follow-ups and Work are never duplicated into this table. Events may overlap; creating one does not reserve resources or bypass canonical scheduling feasibility. Tenant RLS and restricted column grants protect scope and attribution.
 
 Personal appearance is an account-owned exception to organization-owned operating records.

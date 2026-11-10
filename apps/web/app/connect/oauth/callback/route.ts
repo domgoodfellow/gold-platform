@@ -4,6 +4,7 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { completeOAuth } from '@/lib/domain/integrations/oauth';
 import { OAUTH_NONCE_COOKIE } from '@/lib/domain/integrations/oauth-cookie';
+import { connectionContinuation, OAUTH_CONTINUATION_COOKIE } from '@/lib/route/connection-continuation';
 
 const OAUTH_OWN = new Set(['code', 'state', 'error', 'error_description', 'error_uri']);
 
@@ -32,6 +33,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const jar = await cookies();
   const nonce = jar.get(OAUTH_NONCE_COOKIE)?.value ?? '';
+  const continuation = jar.get(OAUTH_CONTINUATION_COOKIE)?.value;
 
   // Only to choose where to show a failure: the state is not trusted here, and a value that is not
   // a UUID is ignored. The API is what verifies it before anything is connected.
@@ -47,13 +49,14 @@ export async function GET(request: Request) {
 
   const failed = (message: string) => {
     const target = new URL(
-      organizationHint ? `/organizations/${organizationHint}/settings/connections` : '/organizations',
+      connectionContinuation(continuation, nonce, organizationHint) ?? (organizationHint ? `/organizations/${organizationHint}/settings/connections` : '/organizations'),
       request.url,
     );
     target.searchParams.set('catalog', 'open');
     target.searchParams.set('oauth_error', message);
     const response = NextResponse.redirect(target);
     response.cookies.delete({ name: OAUTH_NONCE_COOKIE, path: '/connect/oauth' });
+    response.cookies.delete({ name: OAUTH_CONTINUATION_COOKIE, path: '/connect/oauth' });
     return response;
   };
 
@@ -67,10 +70,13 @@ export async function GET(request: Request) {
       nonce,
       extra: relayedParameters(url),
     });
-    const target = new URL(`/organizations/${done.organization_id}/settings/connections/${done.connection_id}`, request.url);
+    const returnToImport = connectionContinuation(continuation, nonce, done.organization_id);
+    const target = new URL(returnToImport ?? `/organizations/${done.organization_id}/settings/connections/${done.connection_id}`, request.url);
+    if (returnToImport) target.searchParams.set('connection', done.connection_id);
     target.searchParams.set('connected', '1');
     const response = NextResponse.redirect(target);
     response.cookies.delete({ name: OAUTH_NONCE_COOKIE, path: '/connect/oauth' });
+    response.cookies.delete({ name: OAUTH_CONTINUATION_COOKIE, path: '/connect/oauth' });
     return response;
   } catch (error) {
     if (!(error instanceof DomainError)) throw error;

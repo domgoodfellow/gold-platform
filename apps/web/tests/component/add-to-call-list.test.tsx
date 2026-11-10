@@ -3,11 +3,12 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AddToCallList } from '@/features/communications/voice/add-to-call-list';
+import '../support/select-field';
 
 const actions = vi.hoisted(() => ({ find: vi.fn(), add: vi.fn() }));
 const refresh = vi.hoisted(() => vi.fn());
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
-vi.mock('@/app/organizations/[organizationId]/calls/call-list-actions', () => ({ findCallListContacts: actions.find, addToCallListAction: actions.add }));
+vi.mock('@/app/organizations/[organizationId]/calls/call-list-actions', () => ({ findCallListContacts: actions.find, addToCallListAction: actions.add, callListTaskOptions: vi.fn(async () => ({ timezone: 'America/Toronto', dueAt: '2026-11-10T10:00', members: [] })) }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
 vi.mock('sonner', () => ({ toast }));
 
@@ -40,7 +41,7 @@ describe('Add to call list', () => {
     await user.click(within(dialog).getByRole('checkbox', { name: /Bob Tran/ }));
     await user.type(within(dialog).getByRole('textbox', { name: /Reason/ }), 'Spring offer');
     await user.click(within(dialog).getByRole('button', { name: 'Add 2 to list' }));
-    await waitFor(() => expect(actions.add).toHaveBeenCalledWith('tenant', { customerIds: ['alice', 'bob'] }, 'Spring offer'));
+    await waitFor(() => expect(actions.add).toHaveBeenCalledWith('tenant', { customerIds: ['alice', 'bob'] }, 'Spring offer', { dueAt: '2026-11-10T10:00', ownerMembershipId: '', notes: '' }));
     expect(toast.success).toHaveBeenCalledWith('Added 2 contacts to the call list.');
     expect(refresh).toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add to call list' })).toBeNull());

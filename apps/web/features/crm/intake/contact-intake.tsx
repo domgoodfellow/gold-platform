@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import { ArrowRight, FileSpreadsheet, Lock, RefreshCw, UserPlus, UserRoundPlus } from 'lucide-react';
-import { GuardedDialog, useGuardedDialogClose } from '@/components/panels/guarded-dialog';
+import { GuardedDialog } from '@/components/panels/guarded-dialog';
 import { Button, ButtonLink } from '@/components/controls/button';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import { BusinessLabel } from '@/lib/context/business-vocabulary';
@@ -11,8 +11,9 @@ import type { ContactIntakeOptions, IntakeChoice } from '@/lib/application/crm/c
 import type { CreateCustomerState } from '@/app/organizations/[organizationId]/crm/contacts/actions';
 import { CreateContactForm } from '@/features/crm/customers/create-contact-form';
 import { DialogBody, DialogFooterBar, StepHeader } from '@/components/panels/dialog-layout';
+import { ContactImport } from './contact-import';
 
-type View = 'choose' | 'manual' | 'created';
+type View = 'choose' | 'manual' | 'created' | 'import';
 type Identity = 'person' | 'company' | '';
 const IntakeContext = createContext<((view?: 'choose' | 'manual', identity?: Identity) => void) | null>(null);
 
@@ -31,14 +32,15 @@ function Unavailable({ choice }: { choice: Extract<IntakeChoice, { state: 'unava
  * synchronization stay Library's; this only leads there. Manual creation happens inside the dialog,
  * with unsaved-change protection on every way of closing it.
  */
-export function ContactIntakeProvider({ organizationId, definitions, options, children, defaultOpen = false, initialType = '' }: {
+export function ContactIntakeProvider({ organizationId, definitions, options, children, defaultOpen = false, initialType = '', initialImport = false, initialAccountId, oauthError }: {
   organizationId: string; definitions: FieldDefinition[]; options: ContactIntakeOptions; children: ReactNode;
   /** `?create=1` opens straight into manual creation, with `?type=` preselecting the identity. */
   defaultOpen?: boolean; initialType?: Identity;
+  initialImport?: boolean; initialAccountId?: string; oauthError?: string;
 }) {
   const startManual = defaultOpen && options.manual.state === 'available';
-  const [open, setOpen] = useState(startManual);
-  const [view, setView] = useState<View>(startManual ? 'manual' : 'choose');
+  const [open, setOpen] = useState(startManual || initialImport && options.import.state === 'available');
+  const [view, setView] = useState<View>(startManual ? 'manual' : initialImport && options.import.state === 'available' ? 'import' : 'choose');
   const [identity, setIdentity] = useState<Identity>(initialType);
   const [created, setCreated] = useState<CreateCustomerState | null>(null);
   const [formKey, setFormKey] = useState(0);
@@ -60,7 +62,7 @@ export function ContactIntakeProvider({ organizationId, definitions, options, ch
                 ? <button type="button" data-slot="selectable-card" onClick={() => setView('manual')} className={cx(CARD, 'transition-colors hover:bg-hover', FOCUS_RING)}><ChoiceBody Icon={UserRoundPlus} title="Create manually" description="Add a person or company." /><ArrowRight aria-hidden className="size-4 self-center text-muted" /></button>
                 : <div aria-disabled="true" className={cx(CARD, 'opacity-70')}><ChoiceBody Icon={UserRoundPlus} title="Create manually" description="Add a person or company."><Unavailable choice={options.manual} /></ChoiceBody></div>}</li>
               <li>{options.import.state === 'available'
-                ? <Link href={options.import.href!} data-slot="selectable-card" className={cx(CARD, 'transition-colors hover:bg-hover', FOCUS_RING)}><ChoiceBody Icon={FileSpreadsheet} title="Import records" description="Import a CSV, existing Library file, or saved source.">{options.import.note ? <span className="mt-2 block text-xs text-muted">{options.import.note}</span> : null}</ChoiceBody><ArrowRight aria-hidden className="size-4 self-center text-muted" /></Link>
+                ? <button type="button" onClick={() => setView('import')} data-slot="selectable-card" className={cx(CARD, 'transition-colors hover:bg-hover', FOCUS_RING)}><ChoiceBody Icon={FileSpreadsheet} title="Import records" description="Choose a spreadsheet, CSV, Library file, or saved source.">{options.import.note ? <span className="mt-2 block text-xs text-muted">{options.import.note}</span> : null}</ChoiceBody><ArrowRight aria-hidden className="size-4 self-center text-muted" /></button>
                 : <div aria-disabled="true" className={cx(CARD, 'opacity-70')}><ChoiceBody Icon={FileSpreadsheet} title="Import records" description="Import a CSV, existing Library file, or saved source."><Unavailable choice={options.import} /></ChoiceBody></div>}</li>
               <li><section aria-labelledby="intake-sync" className={cx(CARD, options.sync.state === 'unavailable' && 'opacity-70')}>
                 <ChoiceBody Icon={RefreshCw} titleId="intake-sync" title="Connect & synchronize" description="Use a supported external source and review subsequent changes.">
@@ -70,13 +72,14 @@ export function ContactIntakeProvider({ organizationId, definitions, options, ch
                       <Link href={source.href} className={cx('font-medium text-accent-text underline underline-offset-4', FOCUS_RING)}>Refresh and review</Link></span>)}</span>
                       : <span className="text-xs text-muted">No worksheet is connected yet.</span>}
                     <span className="text-xs text-muted">Nothing reaches CRM until you apply the review.</span>
-                    {options.sync.connectHref ? <Link href={options.sync.connectHref} className={cx('w-fit text-xs font-medium text-accent-text underline underline-offset-4', FOCUS_RING)}>Connect Google Workspace or Microsoft 365 (beta) in Connections</Link> : null}
+                    {options.sync.connectHref && options.import.state === 'available' ? <Button tone="text" size="small" onClick={() => setView('import')}>Choose a spreadsheet</Button> : null}
                   </span>}
                 </ChoiceBody>
               </section></li>
             </ul>
           </DialogBody>
-        </> : view === 'manual' ? <CreateContactForm key={formKey} organizationId={organizationId} definitions={definitions} initialType={identity} onCreated={onCreated} />
+        </> : view === 'import' ? <><StepHeader title="Import contacts" /><DialogBody><ContactImport organizationId={organizationId} initialAccountId={initialAccountId} oauthError={oauthError} /></DialogBody></>
+        : view === 'manual' ? <CreateContactForm key={formKey} organizationId={organizationId} definitions={definitions} initialType={identity} onCreated={onCreated} />
         : <>
           <StepHeader title="Contact added" description={<><span className="font-medium text-foreground">{created?.name}</span> was added as a {created?.contactType === 'company' ? 'company' : 'person'}.</>} />
           <DialogFooterBar>

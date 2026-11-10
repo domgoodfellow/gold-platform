@@ -7,8 +7,16 @@ import { disconnectConnection } from '@/lib/domain/integrations/connections';
 import { setAssistantAccess } from '@/lib/domain/integrations/assistant-grants';
 import { checkConnection } from '@/lib/domain/integrations/oauth';
 import { requireOrganization } from '@/lib/route/organization';
+import { loadConfigurationContext } from '@/lib/route/workspace-configuration';
+import { loadHeaderConnections } from '@/lib/application/shell/connection-menu';
 
 export type ConnectState = { error: string | null };
+
+/** Metadata only; every refresh proves membership, service access and current Connections eligibility. */
+export async function headerConnectionsAction(organizationId: string, includeReadiness = true) {
+  const { db, gate } = await loadConfigurationContext(organizationId);
+  return loadHeaderConnections(db, { organizationId, gate, includeReadiness });
+}
 
 export type DisconnectState = { error: string | null };
 

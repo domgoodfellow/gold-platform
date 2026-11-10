@@ -42,7 +42,7 @@ describe('one canonical Inbox', () => {
       expect(text, path).not.toMatch(/\.from\('(conversations|messages)'\)/);
       expect(text, path).not.toMatch(/listConversations\(/);
     }
-    expect(code('app/organizations/[organizationId]/comms/inbox/actions.ts')).toMatch(/listInbox\(/);
+    expect(code('app/organizations/[organizationId]/comms/inbox/actions.ts')).toMatch(/listConversationFeed\(/);
   });
 
   it('filters in the database and pages by keyset, never by downloading everything', () => {
@@ -50,6 +50,10 @@ describe('one canonical Inbox', () => {
     expect(inbox).toMatch(/\.limit\(limit \+ 1\)/);
     expect(inbox).toMatch(/last_message_at\.lt/);
     expect(inbox).not.toMatch(/\.filter\(\(item\)[^)]*status/);
+    const feed = code('lib/domain/reception/conversation-feed.ts');
+    expect(feed).toMatch(/\.limit\(limit \+ 1\)/);
+    expect(feed).toMatch(/last_activity_at\.lt/);
+    expect(feed).toMatch(/source\.lt/);
   });
 
   it('has one conversation screen, at a channel-neutral address', () => {
@@ -77,7 +81,7 @@ describe('one canonical Inbox', () => {
 
 describe('assignment is one mechanism, keyed by membership', () => {
   it('lives in one column on the one conversation table, not once per channel', () => {
-    const touching = migrations().filter(({ sql }) => /assignee_membership_id/.test(sql)).map(({ name }) => name);
+    const touching = migrations().filter(({ sql }) => /alter table public\.conversations[\s\S]*add column assignee_membership_id/.test(sql)).map(({ name }) => name);
     expect(touching).toEqual(['20261022000027_a_conversation_has_a_status_and_an_owner.sql']);
 
     const sql = migrations().find(({ name }) => name === touching[0])!.sql;

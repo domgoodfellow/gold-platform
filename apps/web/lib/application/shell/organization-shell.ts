@@ -8,6 +8,7 @@ import { hasSchedulableWork } from '@/lib/domain/work-items/types';
 import { projectHeaderUtilities, withAdministration } from '@/lib/shell';
 import { getBusinessProfile } from '@/lib/domain/tenancy/business-profile';
 import { projectBusinessNavigation } from './business-navigation';
+import { loadHeaderConnections } from './connection-menu';
 
 export async function loadOrganizationShellModel(db: Db, input: { organizationId: string; capabilities: readonly Capability[]; locked: boolean }) {
   const { organizationId, locked } = input;
@@ -23,6 +24,8 @@ export async function loadOrganizationShellModel(db: Db, input: { organizationId
   const capabilities = new Set(input.capabilities);
   const businessProfile = locked ? null : await getBusinessProfile(db,organizationId);
   const business = projectBusinessNavigation({ organizationId, enabledModules, featureAvailability, capabilities, schedulableWork },businessProfile);
+  const configGate = { enabledModules, featureAvailability, capabilities, schedulableWork };
+  const headerConnections = locked ? null : await loadHeaderConnections(db, { organizationId, gate: configGate });
   return {
     brand,
     businessProfile,
@@ -32,7 +35,8 @@ export async function loadOrganizationShellModel(db: Db, input: { organizationId
       manages: organization.capabilities.includes('organization.manage'),
     })),
     sections: platform ? withAdministration(business, organizationId, platform.permissions) : business,
-    configGate: { enabledModules, featureAvailability, capabilities, schedulableWork },
+    configGate,
+    headerConnections,
     utilities: locked ? [] : projectHeaderUtilities({ organizationId, enabledModules, featureAvailability, capabilities, schedulableWork }),
   };
 }

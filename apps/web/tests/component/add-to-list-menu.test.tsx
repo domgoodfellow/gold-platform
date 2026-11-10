@@ -1,17 +1,19 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { chooseOption } from '../support/select-field';
 import { AddToListMenu, callListAddedMessage } from '@/features/communications/voice/add-to-list-menu';
 import { ContactSelection, ContactSelectionBar, SelectAllContacts, SelectContact } from '@/features/crm/customers/contact-selection';
 
 const actions = vi.hoisted(() => ({ preview: vi.fn(), add: vi.fn() }));
 const refresh = vi.hoisted(() => vi.fn());
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
-vi.mock('@/app/organizations/[organizationId]/calls/call-list-actions', () => ({ previewAddToCallList: actions.preview, addToCallListAction: actions.add }));
+vi.mock('@/app/organizations/[organizationId]/calls/call-list-actions', () => ({ previewAddToCallList: actions.preview, addToCallListAction: actions.add, callListTaskOptions: vi.fn(async () => ({ timezone: 'America/Toronto', dueAt: '2026-11-10T10:00', members: [{ id: 'owner', name: 'Alice Owner' }] })) }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
 vi.mock('sonner', () => ({ toast }));
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
+beforeEach(() => { actions.preview.mockResolvedValue({ error: null, matching: 1, toAdd: 1, alreadyOnList: 0, noPhone: 0 }); });
 
 async function chooseCallList(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Add to…' }));
@@ -19,13 +21,19 @@ async function chooseCallList(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('Add to…', () => {
-  it('adds one contact at once from their own page', async () => {
+  it('uses the same task dialog from a contact record and retains the chosen due date, owner and note', async () => {
     actions.add.mockResolvedValue({ error: null, added: 1, alreadyOnList: 0, noPhone: 0 });
     const user = userEvent.setup();
     render(<AddToListMenu organizationId="tenant" target={{ customerIds: ['alice'] }} standing="ready" />);
     await user.click(await chooseCallList(user));
-    await waitFor(() => expect(actions.add).toHaveBeenCalledWith('tenant', { customerIds: ['alice'] }, ''));
-    expect(toast.success).toHaveBeenCalledWith('Added to the call list.');
+    expect(actions.add).not.toHaveBeenCalled();
+    const due = await screen.findByLabelText('Due');
+    fireEvent.change(due, { target: { value: '2026-11-12T14:30' } });
+    await chooseOption(screen.getByRole('combobox', { name: 'Owner' }), 'Alice Owner');
+    await user.type(screen.getByRole('textbox', { name: /Note/ }), 'Discuss renewal');
+    await user.click(screen.getByRole('button', { name: 'Add 1' }));
+    await waitFor(() => expect(actions.add).toHaveBeenCalledWith('tenant', { customerIds: ['alice'] }, '', { dueAt: '2026-11-12T14:30', ownerMembershipId: 'owner', notes: 'Discuss renewal' }));
+    expect(toast.success).toHaveBeenCalledWith('Added 1 contact to the call list.');
     expect(refresh).toHaveBeenCalled();
     expect(screen.queryByRole('dialog')).toBeNull();
   });
@@ -53,7 +61,7 @@ describe('Add to…', () => {
     expect(actions.preview).toHaveBeenCalledWith('tenant', target);
     await user.type(within(dialog).getByRole('textbox', { name: /Reason/ }), 'Spring offer');
     await user.click(within(dialog).getByRole('button', { name: 'Add 34' }));
-    await waitFor(() => expect(actions.add).toHaveBeenCalledWith('tenant', target, 'Spring offer'));
+    await waitFor(() => expect(actions.add).toHaveBeenCalledWith('tenant', target, 'Spring offer', { dueAt: '2026-11-10T10:00', ownerMembershipId: '', notes: '' }));
     expect(toast.success).toHaveBeenCalledWith('Added 34 contacts to the call list. Skipped 4 contacts already on it, 2 contacts with no phone number.');
     expect(onAdded).toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());

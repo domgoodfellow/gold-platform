@@ -36,13 +36,16 @@ export function ConnectorIcon({
   connector,
   logoUrl,
   size = 'default',
+  variant = 'default',
 }: {
   connector: Pick<Connector, 'key' | 'name'>;
   /** Resolved by the caller from `connector.iconRef` via `connectorLogoUrl` — never fetched here. */
   logoUrl: string | null;
   size?: 'small' | 'default' | 'large';
+  /** A curated compact symbol where the ordinary identity is a wide wordmark. */
+  variant?: 'default' | 'symbol';
 }) {
-  const mark = GENERATED_MARKS[connector.key];
+  const mark = (variant === 'symbol' ? GENERATED_MARKS[`${connector.key}:symbol`] : null) ?? GENERATED_MARKS[connector.key];
   if (mark) return <BrandMark label={connector.name} mark={mark} size={size} />;
   if (connector.key in BRAND_COLOR) return <BrandMark label={connector.name} background={BRAND_COLOR[connector.key]} size={size} />;
   // Not a curated built-in identity at all — the one case an uploaded logo is ever consulted.

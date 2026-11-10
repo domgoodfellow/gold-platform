@@ -42,6 +42,14 @@ export async function actingTelephonyAccount(db: Db, organizationId: string): Pr
  */
 
 export type CallDirection = 'outbound' | 'inbound';
+export type CallContact = { id: string; name: string; email: string | null; phone: string | null };
+
+/** At most two canonical matches: enough to distinguish a unique contact from ambiguity. */
+export async function dialerContactCandidates(db: Db, input: { organizationId: string; number: string }): Promise<CallContact[]> {
+  const { data, error } = await db.rpc('dialer_contact_candidates', { p_organization_id: input.organizationId, p_number: input.number });
+  if (error) throw fromDatabaseError(error, 'calls.contact_lookup_failed');
+  return data ?? [];
+}
 
 export type Call = {
   id: string;

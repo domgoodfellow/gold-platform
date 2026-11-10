@@ -18,8 +18,53 @@ import {
 import { beginImportRun, requireImportPipeline, resumeImportStaging } from '@/lib/domain/integrations/import-runs';
 import { requireOrganization } from '@/lib/route/organization';
 import { libraryImportHref, libraryNewImportHref } from '@/lib/route/library';
+import { loadConfigurationContext } from '@/lib/route/workspace-configuration';
+import { loadContactImportSources, type ContactImportSources } from '@/lib/application/crm/contact-import';
+import { getConnection } from '@/lib/domain/integrations/connections';
+import { listResources } from '@/lib/domain/integrations/resources';
+import { checkConnection } from '@/lib/domain/integrations/oauth';
 
 export type UploadState = { error: string | null };
+
+export async function contactImportSourcesAction(organizationId: string): Promise<{ sources: ContactImportSources | null; error: string | null }> {
+  const { db, organization, gate } = await loadConfigurationContext(organizationId);
+  if (!organization.capabilities.includes('integration.manage') || !organization.capabilities.some(capability => capability === 'customer.create' || capability === 'customer.update')) {
+    return { sources: null, error: 'Your role cannot import contacts.' };
+  }
+  try { return { sources: await loadContactImportSources(db, organizationId, gate), error: null }; }
+  catch (error) { if (error instanceof DomainError) return { sources: null, error: error.message }; throw error; }
+}
+
+export async function refreshContactImportAccountAction(organizationId: string, connectionId: string): Promise<{ sources: ContactImportSources | null; error: string | null }> {
+  const { db, organization, gate } = await loadConfigurationContext(organizationId);
+  if (!organization.capabilities.includes('integration.manage') || !organization.capabilities.some(capability => capability === 'customer.create' || capability === 'customer.update')) return { sources: null, error: 'Your role cannot import contacts.' };
+  try {
+    const connection = await getConnection(db, { organizationId, connectionId });
+    if (!connection || !['google_workspace', 'microsoft_365'].includes(connection.connectorKey)) return { sources: null, error: 'That account is unavailable.' };
+    await checkConnection(db, { connectionId });
+    return { sources: await loadContactImportSources(db, organizationId, gate), error: null };
+  } catch (error) { if (error instanceof DomainError) return { sources: null, error: error.message }; throw error; }
+}
+
+export async function importContactWorksheetAction(_previous: { error: string | null }, form: FormData): Promise<{ error: string | null }> {
+  const organizationId = String(form.get('organizationId') ?? '');
+  const resourceId = String(form.get('resourceId') ?? '');
+  const { db, organization } = await requireOrganization(organizationId);
+  if (!organization.capabilities.includes('integration.manage') || !organization.capabilities.some(capability => capability === 'customer.create' || capability === 'customer.update')) return { error: 'Your role cannot import contacts.' };
+  try {
+    const resource = (await listResources(db, { organizationId })).find(resource => resource.id === resourceId && resource.status === 'active' && ['google_sheet', 'microsoft_workbook'].includes(resource.resourceType));
+    const connection = resource?.connectionId ? await getConnection(db, { organizationId, connectionId: resource.connectionId }) : null;
+    if (!resource || !connection || connection.status !== 'active') return { error: 'Choose a worksheet from a connected account.' };
+    const syncForm = new FormData();
+    syncForm.set('organizationId', organizationId); syncForm.set('resourceId', resourceId); syncForm.set('intent', 'enable');
+    for (const key of ['range', 'worksheet', 'key_column']) if (form.has(key)) syncForm.set(key, String(form.get(key)));
+    const result = await syncLibraryResource({ error: null, message: null }, syncForm);
+    if (result.error) return { error: result.error };
+    const sync = await getResourceSync(db, organizationId, resourceId);
+    if (sync?.state !== 'idle' || !sync.last_success_at) return { error: result.message ?? 'Synchronization has not finished. Try again when it completes.' };
+  } catch (error) { if (error instanceof DomainError) return { error: error.message }; throw error; }
+  redirect(libraryNewImportHref(organizationId, resourceId));
+}
 
 export async function uploadSourceAction(
   _previous: UploadState,

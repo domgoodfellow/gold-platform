@@ -723,6 +723,8 @@ The Settings landing uses exact tenant-scoped counts and authorized directory de
 and search. It loads no provider credentials. Connections expose neutral verification failures to UI
 consumers; provider accounts, bindings and platform AI credentials retain their separate authorities.
 
+`lib/application/shell/connection-menu.ts` composes the shared header's metadata-only Connections model from the canonical connection, connector catalogue and readiness owners. Initial shell rendering performs no readiness API request. The Connections server action re-proves organization membership, service access and the registered configuration gate before any refresh; the pure model carries only account identity, stored health, catalogue relevance and authorized destinations. The feature renders through a generic authorized utility slot in `WorkspaceHeader`; the shared component imports no integration feature. OAuth navigation consumes the telephone owner's existing activity-retention hint. No provider account, credential, resource grant or workspace-specific connection authority is added.
+
 Legacy organizations still retain the catalogue's existing distinction between kernel runtime
 mappings and explicit Plan/module entitlement. Kernel surfaces are not commercially gated by a
 missing Plan assignment; a catalogue row without a legacy module mapping is not proof that the
@@ -885,6 +887,8 @@ Detailed rules belong in `docs/integrations.md`.
 ## Communications architecture
 
 Communications is multi-channel at the domain level.
+
+`lib/domain/reception/conversation-feed.ts` reads the security-invoker `conversation_feed` view for the Conversations operating list. It projects existing message conversations and website threads without moving either channel's writes or lifecycle into the other. Database filtering, exact counts and a timestamp/source/ID cursor keep equal-time pages stable; website read state remains unknown. The existing message and website commands retain their own authorization and records.
 
 Voice, SMS/messaging and email may have channel-specific records where their data differs, while sharing higher-level communication concepts where those semantics genuinely align.
 

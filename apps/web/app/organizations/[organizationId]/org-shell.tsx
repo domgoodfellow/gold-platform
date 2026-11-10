@@ -2,6 +2,9 @@
 
 import { CommandCenterProvider, CommandPalette, SearchEntry } from '@/features/home/command-center';
 import { LibraryMenu } from '@/features/library/library-nav';
+import { HeaderConnectionsControl } from '@/features/integrations/connections/header-connections';
+import type { HeaderConnections } from '@/lib/application/shell/connection-menu-model';
+import { WORKSPACES } from '@/lib/navigation';
 
 import { NavigationActivityContext } from '@/components/navigation/activity-context';
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
@@ -571,7 +574,7 @@ export function LockedOrgSidebar({
  */
 export function OrganizationFrame({
   organizationId, name, role, mark, organizations, sections, utilities, settings, settingsSearch,
-  locked, email, signOutAction, agent, children, displayName = '', setupPending = false, locationAccess, hostedData = false,
+  locked, email, signOutAction, agent, children, displayName = '', setupPending = false, locationAccess, hostedData = false, headerConnections,
 }: {
   displayName?: string;
   /** A development server reading the hosted project (`developmentSupabaseTarget`). Never true in production. */
@@ -586,6 +589,7 @@ export function OrganizationFrame({
   organizations: SwitchableOrganization[];
   sections: ShellSection[];
   utilities: HeaderUtility[];
+  headerConnections?: HeaderConnections | null;
   settings: ShellSection[];
   settingsSearch: SettingsSearchItem[];
   locked: boolean;
@@ -596,6 +600,8 @@ export function OrganizationFrame({
 }) {
   const pathname = usePathname();
   const settingsContext = inSettingsContext(pathname, organizationId) && settings.length > 0;
+  const enteredWorkspace = workspaceNavigation(sections, pathname)?.workspace;
+  const workspace = WORKSPACES.find(candidate => `workspace-${candidate.key}` === enteredWorkspace?.key);
 
   // The last page of this business that was not Settings, so "Back to app" can return to it. Kept
   // per tab and validated again when read; losing it only means Back goes to Home.
@@ -626,6 +632,7 @@ export function OrganizationFrame({
           navigationTrigger="always"
           agentTrigger="md"
           utilities={utilities}
+          utilityControls={headerConnections ? { connections: <HeaderConnectionsControl key={organizationId} organizationId={organizationId} initial={headerConnections} workspace={workspace && enteredWorkspace ? { key: workspace.key, label: enteredWorkspace.label } : undefined} /> } : undefined}
           beforeActions={<>
             {hostedData ? <Badge tone="danger" className="shrink-0 font-semibold">HOSTED DATA</Badge> : null}
             {!recovery ? <CommandPalette /> : null}

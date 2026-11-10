@@ -34,6 +34,8 @@ const TOP_LEVEL_FROM_LOGOS = {
 
   // Connectors (outside apps a tenant authorizes)
   google_workspace: 'google-workspace',
+  // Compact account controls need the suite vendor's symbol instead of its wide wordmark.
+  'google_workspace:symbol': 'google-icon',
   google_ads: 'google-ads',
   google_analytics: 'google-analytics',
   google_search_console: 'google-search-console',

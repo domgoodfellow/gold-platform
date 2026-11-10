@@ -9,6 +9,7 @@ import { chooseOption, fieldValue } from '../support/select-field';
 
 const customers = vi.hoisted(() => ({ createCustomerAction: vi.fn(), companyOptionsAction: vi.fn(async () => [{ id: 'c-1', name: 'Acme Ltd' }]) }));
 vi.mock('@/app/organizations/[organizationId]/crm/contacts/actions', () => customers);
+vi.mock('@/app/organizations/[organizationId]/library/imports/new/actions', () => ({ contactImportSourcesAction: vi.fn(async () => ({ sources: { accounts: [], worksheets: [], saved: [], files: [], providers: [] }, error: null })), importContactWorksheetAction: vi.fn(), selectLibraryFileAction: vi.fn(), uploadSourceAction: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }), usePathname: () => '/organizations/org/crm' }));
 
 const ALL: ContactIntakeOptions = {
@@ -44,9 +45,9 @@ describe('Add contacts intake', () => {
       await user.click(trigger);
       const choices = within(dialog('Add contacts')).getByRole('list', { name: 'Ways to add contacts' });
       expect(within(choices).getByRole('button', { name: /Create manually/ })).toBeInTheDocument();
-      expect(within(choices).getByRole('link', { name: /Import records/ })).toHaveAttribute('href', '/organizations/org/library/imports/new');
+      expect(within(choices).getByRole('button', { name: /Import records/ })).toBeInTheDocument();
       expect(within(choices).getByRole('link', { name: 'Refresh and review' })).toHaveAttribute('href', '/organizations/org/library/sources/r-1');
-      expect(within(choices).getByRole('link', { name: /Connections/ })).toHaveAttribute('href', '/organizations/org/settings/connections');
+      expect(within(choices).getByRole('button', { name: 'Choose a spreadsheet' })).toBeInTheDocument();
       expect(within(choices).queryByText(/Google Contacts|Outlook contacts/i)).toBeNull();
       await user.keyboard('{Escape}');
       await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());

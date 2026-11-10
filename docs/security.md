@@ -847,6 +847,8 @@ Required properties:
 
 An OAuth callback does not become trusted solely because it arrives at the correct path.
 
+Contacts import continuation accepts one application-owned intent, never an arbitrary return URL. Its HTTP-only, same-site, ten-minute cookie is tied to the OAuth browser nonce and organization; successful continuation also matches the API-verified organization. Both nonce and continuation cookies are consumed on return. Resuming intake rechecks current organization access, source permission and contact-write permission, and source/account selection remains tenant-scoped.
+
 ---
 
 ## Webhooks and provider callbacks

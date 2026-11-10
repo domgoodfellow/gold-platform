@@ -115,7 +115,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
 
   return (
     <AppPage>
-      <ContactIntakeProvider organizationId={organizationId} definitions={definitions} options={intake} initialType={query.type==='company'?'company':query.type==='person'?'person':''} defaultOpen={mayCreate && query.create === '1'}>
+      <ContactIntakeProvider organizationId={organizationId} definitions={definitions} options={intake} initialType={query.type==='company'?'company':query.type==='person'?'person':''} defaultOpen={mayCreate && query.create === '1'} initialImport={query.import === '1'} initialAccountId={single(query.connection)} oauthError={single(query.oauth_error)}>
         <CollectionHeader
           location={{}}
           actions={!emptyCollection ? (

@@ -17,6 +17,7 @@ export function WorkspaceHeader({
   context,
   beforeActions,
   utilities = [],
+  utilityControls = {},
   agentTrigger = 'always',
   phoneAction,
 }: {
@@ -27,6 +28,8 @@ export function WorkspaceHeader({
   beforeActions?: ReactNode;
   /** Already authorized organization-wide utility destinations. */
   utilities?: HeaderUtility[];
+  /** Feature-owned controls replace authorized utility links without adding navigation authority. */
+  utilityControls?: Partial<Record<HeaderUtility['key'], ReactNode>>;
   /** Use 'md' when mobile navigation carries Agent. */
   agentTrigger?: 'always' | 'md' | 'none';
   phoneAction?: ReactNode;
@@ -52,13 +55,15 @@ export function WorkspaceHeader({
       <span className="hidden flex-1 md:block" />
       {beforeActions}
       <div className="flex shrink-0 items-center gap-2">
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="flex items-center gap-2">
           {utilities.map((utility) => {
+            const replacement = utilityControls[utility.key];
+            if (replacement) return <div key={utility.key} className="flex items-center">{replacement}</div>;
             const Icon = utility.key === 'team' ? Users : Plug;
             return (
               <Tooltip key={utility.key}>
                 <TooltipTrigger asChild>
-                  <ButtonLink href={utility.href} aria-label={utility.label} size="small" className="size-9 p-0 [&_svg]:size-5">
+                  <ButtonLink href={utility.href} aria-label={utility.label} size="small" className="hidden size-9 p-0 md:inline-flex [&_svg]:size-5">
                     <Icon aria-hidden size={20} />
                   </ButtonLink>
                 </TooltipTrigger>

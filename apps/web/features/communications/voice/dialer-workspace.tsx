@@ -18,6 +18,8 @@ import { NewCallForm } from './new-call-form';
 import { AddToCallList } from './add-to-call-list';
 import { useTelephoneDevice, type DeviceStatus } from './telephone-device';
 import { useDialerPopout } from './dialer-popout-context';
+import { matchDialerContact } from '@/app/organizations/[organizationId]/calls/actions';
+import type { CallContact } from '@/lib/domain/reception/calls';
 
 type Mode = 'standard' | 'focus';
 type Region = 'queue' | 'call' | 'context';
@@ -79,6 +81,7 @@ export function DialerWorkspace({
   recentCalls = {},
   setupHref = null,
   mayAddToList = false,
+  mayMatchContacts = false,
 }: {
   organizationId: string;
   timezone: string;
@@ -96,6 +99,7 @@ export function DialerWorkspace({
   setupHref?: string | null;
   /** Offers Add to list (pick contacts; each becomes an open Call task) when the viewer may manage tasks. */
   mayAddToList?: boolean;
+  mayMatchContacts?: boolean;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(prefill ? null : queue[0]?.task.id ?? null);
   const [mode, setMode] = useState<Mode>('standard');
@@ -106,8 +110,10 @@ export function DialerWorkspace({
   const [dueOnly, setDueOnly] = useState(false);
   const [now] = useState(() => Date.now());
   const [returned, setReturned] = useState<(Draft & { at: number }) | null>(null);
+  const [numberDraft, setNumberDraft] = useState(prefill);
+  const [lookup, setLookup] = useState<{ number: string; result: Awaited<ReturnType<typeof matchDialerContact>> } | null>(null);
   const draft = useRef<Draft>({ toNumber: '', phoneNumberId: '' });
-  const onDraftChange = useCallback((next: Draft) => { draft.current = next; }, []);
+  const onDraftChange = useCallback((next: Draft) => { draft.current = next; setNumberDraft(next.toNumber); }, []);
   const selected = queue.find(entry => entry.task.id === selectedId);
   const { activeCall, incoming, status, register, unregister, error: deviceError } = useTelephoneDevice();
   const popout = useDialerPopout();
@@ -122,13 +128,23 @@ export function DialerWorkspace({
   const poppedOut = !!popout?.container;
   const focus = mode === 'focus' && !poppedOut;
   const queueShown = showQueue && !focus;
-  const contextShown = showContext && !focus && !!selected;
   const live = activeCall !== null || incoming !== null;
   const blocker = options.blocker ?? (options.unavailableReason ? { kind: 'unavailable', reason: options.unavailableReason, setup: null } satisfies CallingBlocker : null);
   const customerName = selected ? selected.customer?.name ?? selected.task.customerName : null;
   const customerPhone = selected?.customer?.phone ?? null;
   const formNumber = returned?.toNumber ?? customerPhone ?? prefill;
   const formCustomer = selected?.customer && formNumber === customerPhone ? selected.customer : undefined;
+  const currentLookup = lookup?.number === numberDraft ? lookup.result : null;
+  const contextCustomer: CallContact | null = selected?.customer && numberDraft === customerPhone ? selected.customer : currentLookup?.state === 'matched' ? currentLookup.contact : null;
+  const contextShown = showContext && !focus && !!contextCustomer;
+  useEffect(() => {
+    if (!mayMatchContacts || numberDraft.replace(/\D/g, '').length < 8) return;
+    let active = true;
+    const timer = setTimeout(() => { void matchDialerContact(organizationId, numberDraft).then(result => {
+      if (active) setLookup({ number: numberDraft, result });
+    }).catch(() => { if (active) setLookup({ number: numberDraft, result: { state: 'unavailable' } }); }); }, 250);
+    return () => { active = false; clearTimeout(timer); };
+  }, [organizationId, numberDraft, mayMatchContacts]);
   const columns = [queueShown && 'minmax(14rem,1fr)', 'minmax(0,2.5fr)', contextShown && 'minmax(14rem,1fr)'].filter(Boolean).join(' ');
 
   const dayKey = (value: Date | number) => new Intl.DateTimeFormat('en-CA', { timeZone: timezone, dateStyle: 'short' }).format(value);
@@ -148,7 +164,7 @@ export function DialerWorkspace({
     if (!needle) return true;
     return [task.customerName, task.title, task.ownerName, customer?.phone].filter(Boolean).join(' ').toLowerCase().includes(needle);
   });
-  const otherOpen = selected ? queue.filter(entry => entry.task.customerId === selected.task.customerId && entry.task.id !== selected.task.id) : [];
+  const otherOpen = queue.filter(entry => entry.task.customerId === contextCustomer?.id && entry.task.id !== selected?.task.id);
 
   const choose = (id: string) => {
     setSelectedId(id);
@@ -162,14 +178,14 @@ export function DialerWorkspace({
   const openPopout = () => {
     if (!popout) return;
     const current = draft.current;
-    const forCustomer = selected && current.toNumber === (customerPhone ?? '');
+    const forCustomer = contextCustomer && current.toNumber === numberDraft;
     popout.open({
       numbers: options.numbers,
       defaultNumber: options.defaultNumber,
       toNumber: current.toNumber,
       phoneNumberId: current.phoneNumberId,
-      customerId: forCustomer ? selected.customer?.id : undefined,
-      customerName: forCustomer ? customerName ?? undefined : undefined,
+      customerId: forCustomer ? contextCustomer.id : undefined,
+      customerName: forCustomer ? contextCustomer.name : undefined,
       onReturn: (back) => setReturned({ ...back, at: Date.now() }),
     });
   };
@@ -194,7 +210,7 @@ export function DialerWorkspace({
   );
 
   // --- Calling surface -----------------------------------------------------------------------
-  const identity = selected ? (
+  const identity = selected && contextCustomer?.id === selected.customer?.id ? (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <Avatar className="size-10 shrink-0"><AvatarFallback className="bg-secondary text-sm font-semibold text-muted">{initials(customerName ?? '')}</AvatarFallback></Avatar>
@@ -209,7 +225,7 @@ export function DialerWorkspace({
       <Button type="button" tone="secondary" size="small" aria-label="Dial another number" onClick={() => { setSelectedId(null); setReturned(null); }}>New number</Button>
     </div>
   ) : (
-    <h2 className="text-base font-semibold tracking-tight">New call</h2>
+    <h2 className="text-base font-semibold tracking-tight">{contextCustomer?.name ?? 'New call'}</h2>
   );
 
   const callSurface = poppedOut ? (
@@ -241,33 +257,36 @@ export function DialerWorkspace({
         phoneNumberId={returned?.phoneNumberId}
         customerId={formCustomer?.id}
         customerName={formCustomer?.name}
+        resolvedContact={contextCustomer ? { ...contextCustomer, number: numberDraft } : undefined}
         blockedReason={blocker?.reason}
         blockedDescriptionId={blocker ? 'dialer-readiness' : undefined}
       />
+      {currentLookup?.state === 'ambiguous' ? <p role="status" className="text-sm text-muted">Several contacts use this number. No contact is selected.</p> : currentLookup?.state === 'unavailable' ? <p role="status" className="text-sm text-muted">Contact lookup is unavailable.</p> : null}
     </section>
   );
 
-  const workflow = selected || wrapUp ? (
+  const taskContext = selected && contextCustomer?.id === selected.customer?.id ? selected : null;
+  const workflow = taskContext || wrapUp ? (
     <section aria-label="Call workflow" className="shrink-0 border-t border-border">
-      <Tabs key={selected ? 'task' : 'wrap'} defaultValue={selected ? 'details' : 'wrap-up'}>
+      <Tabs key={taskContext ? 'task' : 'wrap'} defaultValue={taskContext ? 'details' : 'wrap-up'}>
         <TabsList variant="line" aria-label="Call workflow" className="w-full px-3">
-          {selected ? <TabsTrigger value="details">Call task</TabsTrigger> : null}
+          {taskContext ? <TabsTrigger value="details">Call task</TabsTrigger> : null}
           {wrapUp ? <TabsTrigger value="wrap-up">Needs wrap-up</TabsTrigger> : null}
         </TabsList>
         <TabsContent value="details" className="p-4">
-          {selected ? (
+          {taskContext ? (
             <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[8rem_minmax(0,1fr)]">
               <dt className="text-muted">Reason</dt>
-              <dd className="font-medium">{selected.task.title}</dd>
+              <dd className="font-medium">{taskContext.task.title}</dd>
               <dt className="text-muted">Due</dt>
-              <dd className="tabular-nums">{fullDate.format(new Date(selected.task.dueAt))}</dd>
+              <dd className="tabular-nums">{fullDate.format(new Date(taskContext.task.dueAt))}</dd>
               <dt className="text-muted">Owner</dt>
-              <dd><OwnerIdentity name={selected.task.ownerName} /></dd>
+              <dd><OwnerIdentity name={taskContext.task.ownerName} /></dd>
               <dt className="text-muted">Notes</dt>
-              <dd className={cx('whitespace-pre-wrap', !selected.task.notes && 'text-muted')}>{selected.task.notes ?? 'No notes recorded.'}</dd>
-              {selected.task.opportunityId ? <>
+              <dd className={cx('whitespace-pre-wrap', !taskContext.task.notes && 'text-muted')}>{taskContext.task.notes ?? 'No notes recorded.'}</dd>
+              {taskContext.task.opportunityId ? <>
                 <dt className="text-muted">Opportunity</dt>
-                <dd><Link className="underline underline-offset-4" href={`/organizations/${organizationId}/crm/opportunities/${selected.task.opportunityId}`}>{selected.task.opportunityTitle ?? 'Open opportunity'}</Link></dd>
+                <dd><Link className="underline underline-offset-4" href={`/organizations/${organizationId}/crm/opportunities/${taskContext.task.opportunityId}`}>{taskContext.task.opportunityTitle ?? 'Open opportunity'}</Link></dd>
               </> : null}
             </dl>
           ) : null}
@@ -316,7 +335,7 @@ export function DialerWorkspace({
           <ul className="min-h-0 flex-1 divide-y divide-border overflow-y-auto" aria-label="Calls">
             {visible.map(({ task, customer }) => {
               const name = customer?.name ?? task.customerName;
-              const chosen = selectedId === task.id;
+              const chosen = selectedId === task.id && !!taskContext;
               return <li key={task.id}>
                 <button type="button" aria-pressed={chosen} onClick={() => choose(task.id)} className={cx('flex w-full items-start gap-3 border-l-2 px-3 py-2.5 text-left transition-colors', chosen ? 'border-accent bg-selected' : 'border-transparent hover:bg-hover', FOCUS_RING)}>
                   <Avatar className="mt-0.5 size-9 shrink-0"><AvatarFallback className="bg-secondary text-xs font-semibold text-muted">{initials(name)}</AvatarFallback></Avatar>
@@ -335,7 +354,7 @@ export function DialerWorkspace({
         )}
         {partial ? <p className="shrink-0 border-t border-border px-3 py-2 text-xs text-muted">Showing the first {queue.length} of {queueTotal} calls, earliest due first.</p> : null}
         <div className="shrink-0 border-t border-border p-3">
-          <Button type="submit" form={FORM_ID} className="w-full" disabled={live || poppedOut || !customerPhone || !!blocker}><Phone aria-hidden /> Start calling</Button>
+          <Button type="submit" form={FORM_ID} className="w-full" disabled={live || poppedOut || !taskContext || !customerPhone || !!blocker}><Phone aria-hidden /> Start calling</Button>
         </div>
       </>}
     </OperationalPanel>
@@ -343,23 +362,23 @@ export function DialerWorkspace({
 
   // --- Customer context ----------------------------------------------------------------------------
   const contextPanel = (
-    <OperationalPanel title="Contact" density="compact" fill={!!selected} className="min-h-0 flex-1">
-      {!selected ? (
+    <OperationalPanel title="Contact" density="compact" fill={!!contextCustomer} className="min-h-0 flex-1">
+      {!contextCustomer ? (
         <CompactEmptyState>Select a contact from the call list.</CompactEmptyState>
-      ) : !selected.customer ? <PanelState kind="unavailable">Customer details are unavailable.</PanelState> : (
+      ) : (
         <div className="space-y-5">
           <div className="flex items-center gap-3">
-            <Avatar className="size-10 shrink-0"><AvatarFallback className="bg-secondary text-sm font-semibold text-muted">{initials(selected.customer.name)}</AvatarFallback></Avatar>
+            <Avatar className="size-10 shrink-0"><AvatarFallback className="bg-secondary text-sm font-semibold text-muted">{initials(contextCustomer.name)}</AvatarFallback></Avatar>
             <div className="min-w-0">
-              <Link className="block truncate font-semibold underline-offset-4 hover:underline" href={`/organizations/${organizationId}/crm/contacts/${selected.customer.id}`}>{selected.customer.name}</Link>
-              <p className="truncate text-xs text-muted">{selected.task.title}</p>
+              <Link className="block truncate font-semibold underline-offset-4 hover:underline" href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.id}`}>{contextCustomer.name}</Link>
+              {selected?.customer?.id === contextCustomer.id ? <p className="truncate text-xs text-muted">{selected.task.title}</p> : null}
             </div>
           </div>
           <dl className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
             <dt className="text-muted">Phone</dt>
-            <dd className={cx('truncate tabular-nums', !selected.customer.phone && 'text-muted')}>{selected.customer.phone ? formatPhoneForDisplay(selected.customer.phone) : 'Not recorded'}</dd>
+            <dd className={cx('truncate tabular-nums', !contextCustomer.phone && 'text-muted')}>{contextCustomer.phone ? formatPhoneForDisplay(contextCustomer.phone) : 'Not recorded'}</dd>
             <dt className="text-muted">Email</dt>
-            <dd className={cx('truncate', !selected.customer.email && 'text-muted')}>{selected.customer.email ?? 'Not recorded'}</dd>
+            <dd className={cx('truncate', !contextCustomer.email && 'text-muted')}>{contextCustomer.email ?? 'Not recorded'}</dd>
           </dl>
           <div>
             <h3 className="mb-2 text-sm font-medium">Other call tasks</h3>
@@ -372,9 +391,9 @@ export function DialerWorkspace({
           </div>
           <div>
             <h3 className="mb-2 text-sm font-medium">Recent calls</h3>
-            {recentCalls[selected.customer.id] ?? <p className="text-sm text-muted">No recorded calls with this customer yet.</p>}
+            {recentCalls[contextCustomer.id] ?? <ButtonLink tone="text" size="small" href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.id}?section=activity&view=calls`}>Open call history</ButtonLink>}
           </div>
-          <ButtonLink href={`/organizations/${organizationId}/crm/contacts/${selected.customer.id}`} tone="secondary" size="small" className="w-full">Open contact</ButtonLink>
+          <ButtonLink href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.id}`} tone="secondary" size="small" className="w-full">Open contact</ButtonLink>
         </div>
       )}
     </OperationalPanel>
@@ -390,7 +409,7 @@ export function DialerWorkspace({
       </div>
       <div role="group" aria-label="Panel visibility" className="hidden items-center gap-2 @min-[64rem]/dialer:flex">
         <Button type="button" tone="secondary" size="small" aria-label="Call list panel" aria-pressed={queueShown} disabled={focus} onClick={() => setShowQueue(value => !value)}><PanelLeft aria-hidden /> Call list</Button>
-        <Button type="button" tone="secondary" size="small" aria-label="Context panel" aria-pressed={contextShown} disabled={focus || !selected} onClick={() => setShowContext(value => !value)}><PanelRight aria-hidden /> Contact</Button>
+        <Button type="button" tone="secondary" size="small" aria-label="Context panel" aria-pressed={contextShown} disabled={focus || !contextCustomer} onClick={() => setShowContext(value => !value)}><PanelRight aria-hidden /> Contact</Button>
       </div>
       <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
         {popout ? <Button type="button" tone="secondary" aria-label={poppedOut ? 'Show dialer window' : 'Pop out dialer'} data-dialer-popout-trigger onClick={openPopout}><ExternalLink aria-hidden /> {poppedOut ? 'Show dialer window' : 'Pop out'}</Button> : null}

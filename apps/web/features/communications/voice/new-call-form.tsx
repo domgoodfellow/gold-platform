@@ -27,6 +27,7 @@ export function NewCallForm({
   phoneNumberId: initialPhoneNumberId = '',
   customerId,
   customerName,
+  resolvedContact,
   compact = false,
   presentation = 'form',
   onDraftChange,
@@ -43,6 +44,7 @@ export function NewCallForm({
   phoneNumberId?: string;
   customerId?: string;
   customerName?: string;
+  resolvedContact?: { id: string; name: string; number: string };
   compact?: boolean;
   /**
    * `console` is the Dialer page's calling surface: a large number, the dial pad beside it and no
@@ -100,7 +102,8 @@ export function NewCallForm({
     event.preventDefault();
     if (busy || blockedReason || unavailable || (!defaultNumber && !phoneNumberId)) return;
     const matchesCustomer = toNumber === initialToNumber;
-    void dial({ toNumber, contactLabel: matchesCustomer ? customerName ?? toNumber : toNumber, customerId: matchesCustomer ? customerId : undefined, phoneNumberId: phoneNumberId || null });
+    const matched = resolvedContact?.number === toNumber ? resolvedContact : null;
+    void dial({ toNumber, contactLabel: matched?.name ?? (matchesCustomer ? customerName ?? toNumber : toNumber), customerId: matched?.id ?? (matchesCustomer ? customerId : undefined), phoneNumberId: phoneNumberId || null });
   };
 
   if (onConsole) {

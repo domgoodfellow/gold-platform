@@ -11,11 +11,13 @@ export function WebsiteConversationView({
   data,
   canReply,
   userId,
+  embedded = false,
 }: {
   organizationId: string;
   data: WebsiteConversations;
   canReply: boolean;
   userId: string;
+  embedded?: boolean;
 }) {
   const router = useRouter(),
     [text, setText] = useState(""),
@@ -42,8 +44,8 @@ export function WebsiteConversationView({
     });
   }
   return (
-    <div className="grid min-h-0 flex-1 overflow-auto md:grid-cols-[240px_minmax(0,1fr)]">
-      <section
+    <div className={embedded ? 'flex min-h-0 flex-1 flex-col overflow-auto' : 'grid min-h-0 flex-1 overflow-auto md:grid-cols-[240px_minmax(0,1fr)]'}>
+      {!embedded ? <section
         aria-label="Website conversations"
         className="border-r border-border p-3"
       >
@@ -63,8 +65,9 @@ export function WebsiteConversationView({
         {!data.threads.length && (
           <p className="text-sm text-muted">No website conversations.</p>
         )}
-      </section>
+      </section> : null}
       <section className="min-w-0 space-y-4 p-4">
+        {embedded ? <Link href={`/organizations/${organizationId}/comms/inbox?channel=web`} className="text-sm underline @min-[48rem]/conversations:hidden">Back to conversations</Link> : null}
         {data.selected ? (
           <>
             <header className="flex flex-wrap items-center justify-between gap-3">

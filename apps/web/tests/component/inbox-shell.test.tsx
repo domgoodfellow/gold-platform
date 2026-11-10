@@ -21,6 +21,18 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('Conversations operating shell', () => {
+  it('keeps website threads in the main list with their own destination, claim state and unknown read status', async () => {
+    state.query = 'channel=web&status=any&q=visitor';
+    state.list.mockResolvedValueOnce(page([{ ...item('thread-1', 'Website visitor'), source: 'website', channel: 'web', unread: null, sourceStatus: 'handoff_requested' }]));
+    render(app());
+    const row = await screen.findByRole('link', { name: /Website visitor/ });
+    expect(row).toHaveAttribute('href', '/organizations/tenant/comms/inbox/website?channel=web&status=any&q=visitor&thread=thread-1');
+    expect(row).toHaveTextContent('Human requested');
+    expect(row).toHaveTextContent('Read status not tracked');
+    expect(within(row).queryByRole('img', { name: 'Unread' })).not.toBeInTheDocument();
+    await chooseOption(screen.getByRole('combobox', { name: 'Messaging channel' }), 'Email');
+    expect(state.push).toHaveBeenCalledWith('/organizations/tenant/comms/inbox?channel=email&status=any&q=visitor', { scroll: false });
+  });
   it('preserves search and independent filters when changing a view or channel', async () => {
     state.query = 'q=service&channel=email&status=waiting';
     render(app());

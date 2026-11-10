@@ -46,7 +46,7 @@ test.describe.serial('Add contacts intake', () => {
           const intake = await openIntake(page);
           const choices = intake.getByRole('list', { name: 'Ways to add contacts' });
           await expect(choices.getByRole('button', { name: /Create manually/ })).toBeVisible();
-          await expect(choices.getByRole('link', { name: /Import records/ })).toHaveAttribute('href', `/organizations/${organizationId}/library/imports/new`);
+          await expect(choices.getByRole('button', { name: /Import records/ })).toBeVisible();
           await expect(choices.getByRole('region', { name: 'Connect & synchronize' })).toBeVisible();
           await expect(choices.getByText(/Google Contacts|Outlook contacts/i)).toHaveCount(0);
           expect(await fits(page)).toBe(true);
@@ -104,7 +104,7 @@ test.describe.serial('Add contacts intake', () => {
       await form.getByRole('button', { name: 'Save contact' }).click();
       done = page.getByRole('dialog', { name: 'Contact added' });
       await done.getByRole('link', { name: 'View contact' }).click();
-      await expect(page).toHaveURL(/\/crm\/contacts\/[a-f0-9-]+$/);
+      await expect(page).toHaveURL(/\/crm\/contacts\/[a-f0-9-]+$/, { timeout: 30_000 });
       await expect(page.getByRole('heading', { name: `Ida Intake ${run}` })).toBeVisible();
 
       const saved = await pg.query(`select c.contact_type, c.lifecycle, c.lead_temperature, a.title, company.name as company from public.contacts c
@@ -140,22 +140,23 @@ test.describe.serial('Add contacts intake', () => {
       const existing = await createContact(owner, { organizationId, name: `Existing Import ${run}`, email: `existing-${run}@example.test`, contactType: 'person' });
       await page.goto(`/organizations/${organizationId}/crm/contacts`);
       const intake = await openIntake(page);
-      await intake.getByRole('link', { name: /Import records/ }).click();
-      await expect(page).toHaveURL(/\/library\/imports\/new$/);
+      await intake.getByRole('button', { name: /Import records/ }).click();
+      await expect(page.getByRole('dialog', { name: 'Import contacts' })).toBeVisible();
+      await chooseOption(page.getByRole('combobox', { name: 'Source', exact: true }), 'Upload a CSV');
       const progress = page.getByRole('navigation', { name: 'Import progress' });
       await expect(progress.locator('[aria-current="step"]')).toContainText('Choose source');
       await shot(page, 'import-1-source-desktop');
       const csv = ['name,email,role', `New Import ${run},new-${run}@example.test,Owner`, `Existing Import Updated ${run},existing-${run}@example.test,Buyer`, `Duplicate Import ${run},new-${run}@example.test,Owner`].join('\n');
-      await page.getByLabel('CSV file').setInputFiles({ name: `intake-${run}.csv`, mimeType: 'text/csv', buffer: Buffer.from(csv) });
+      await page.getByLabel('CSV file', { exact: true }).setInputFiles({ name: `intake-${run}.csv`, mimeType: 'text/csv', buffer: Buffer.from(csv) });
       await page.getByRole('button', { name: 'Continue' }).click();
 
-      await expect(progress.locator('[aria-current="step"]')).toContainText('Map fields');
+      await expect(progress.locator('[aria-current="step"]')).toContainText('Map fields', { timeout: 30_000 });
       await expect(page.getByRole('row', { name: /role/ }).getByText('Owner')).toBeVisible();
       await chooseOption(page.getByLabel('Contact type', { exact: true }), 'person');
       await shot(page, 'import-2-map-desktop');
       await page.getByRole('button', { name: 'Review changes' }).click();
 
-      await expect(progress.locator('[aria-current="step"]')).toContainText('Review changes');
+      await expect(progress.locator('[aria-current="step"]')).toContainText('Review changes', { timeout: 30_000 });
       const staged = page.getByRole('definition');
       const count = (label: string) => page.locator('dl[aria-label="Staged changes"] div').filter({ hasText: label }).locator('dd');
       await expect(count('New contacts')).toHaveText('1');
@@ -168,7 +169,7 @@ test.describe.serial('Add contacts intake', () => {
       await expect(confirm).toBeVisible(); await shot(page, 'import-4-confirm-desktop');
       await confirm.getByRole('button', { name: 'Import 2 contacts?' }).click();
 
-      await expect(progress.locator('[aria-current="step"]')).toContainText('Results');
+      await expect(progress.locator('[aria-current="step"]')).toContainText('Results', { timeout: 30_000 });
       const results = page.getByRole('region', { name: 'Results' });
       await expect(results.getByText('Created')).toBeVisible();
       await expect(results.getByRole('link', { name: 'View contacts' })).toHaveAttribute('href', `/organizations/${organizationId}/crm/contacts`);

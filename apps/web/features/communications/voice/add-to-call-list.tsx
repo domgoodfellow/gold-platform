@@ -12,9 +12,10 @@ import { cx } from '@/components/class-names';
 import { GuardedDialog, useGuardedDialogClose, useGuardedDialogDirty } from '@/components/panels/guarded-dialog';
 import { DialogBody, DialogFooterBar, StepHeader } from '@/components/panels/dialog-layout';
 import { formatPhoneForDisplay } from '@/lib/display/phone';
-import type { CallListCandidate } from '@/lib/application/communications/call-list';
+import type { CallListCandidate, CallListTaskDraft } from '@/lib/application/communications/call-list';
 import { addToCallListAction, findCallListContacts } from '@/app/organizations/[organizationId]/calls/call-list-actions';
 import { callListAddedMessage } from './add-to-list-menu';
+import { CallListTaskFields } from './call-list-task-fields';
 
 /**
  * The Dialer's Add to list: pick contacts and put them on the call list in one step, without
@@ -39,9 +40,11 @@ function Picker({ organizationId, onAdded }: { organizationId: string; onAdded: 
   const [results, setResults] = useState<CallListCandidate[] | null>(null);
   const [chosen, setChosen] = useState<Map<string, string>>(() => new Map());
   const [reason, setReason] = useState('');
+  const [details, setDetails] = useState<CallListTaskDraft>({ dueAt: '', ownerMembershipId: '', notes: '' });
+  const [detailsDirty, setDetailsDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  useGuardedDialogDirty(chosen.size > 0 || reason.trim() !== '');
+  useGuardedDialogDirty(chosen.size > 0 || reason.trim() !== '' || detailsDirty);
 
   useEffect(() => {
     let active = true;
@@ -60,7 +63,7 @@ function Picker({ organizationId, onAdded }: { organizationId: string; onAdded: 
   });
   const add = () => startTransition(async () => {
     setError(null);
-    const result = await addToCallListAction(organizationId, { customerIds: [...chosen.keys()] }, reason);
+    const result = await addToCallListAction(organizationId, { customerIds: [...chosen.keys()] }, reason, details);
     if (result.error) { setError(result.error); return; }
     toast.success(callListAddedMessage(result));
     onAdded();
@@ -93,11 +96,12 @@ function Picker({ organizationId, onAdded }: { organizationId: string; onAdded: 
           </ul>
         ) : null}
         <FormField id={`${prefix}-reason`} label="Reason" optional>{p => <TextInput {...p} value={reason} onChange={event => setReason(event.target.value)} maxLength={200} placeholder="Call" />}</FormField>
+        <CallListTaskFields organizationId={organizationId} value={details} onChange={setDetails} onDirty={() => setDetailsDirty(true)} />
         <FormError>{error}</FormError>
       </div>
     </DialogBody>
     <DialogFooterBar>
-      <Button type="button" disabled={!chosen.size || pending} onClick={add}>{pending ? 'Adding…' : chosen.size ? `Add ${chosen.size} to list` : 'Add to list'}</Button>
+      <Button type="button" disabled={!chosen.size || pending || !details.dueAt} onClick={add}>{pending ? 'Adding…' : chosen.size ? `Add ${chosen.size} to list` : 'Add to list'}</Button>
       <Button type="button" tone="secondary" onClick={close}>Cancel</Button>
     </DialogFooterBar>
   </>;

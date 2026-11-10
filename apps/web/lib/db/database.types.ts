@@ -14832,6 +14832,27 @@ export type Database = {
           },
         ]
       }
+      conversation_feed: {
+        Row: {
+          assignee_membership_id: string | null
+          assignee_name: string | null
+          channel: string | null
+          customer_id: string | null
+          customer_name: string | null
+          external_address: string | null
+          id: string | null
+          last_activity_at: string | null
+          organization_id: string | null
+          preview: string | null
+          source: string | null
+          source_status: string | null
+          status: string | null
+          subject: string | null
+          title: string | null
+          unread: boolean | null
+        }
+        Relationships: []
+      }
       crm_follow_ups: {
         Row: {
           completed_at: string | null
@@ -16511,6 +16532,15 @@ export type Database = {
       detach_plan_addon: {
         Args: { p_addon_plan_id: string; p_plan_id: string }
         Returns: undefined
+      }
+      dialer_contact_candidates: {
+        Args: { p_number: string; p_organization_id: string }
+        Returns: {
+          email: string
+          id: string
+          name: string
+          phone: string
+        }[]
       }
       disconnect_integration: {
         Args: { p_connection_id: string; p_organization_id: string }
