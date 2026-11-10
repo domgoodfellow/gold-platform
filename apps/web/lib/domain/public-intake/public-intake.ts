@@ -12,6 +12,7 @@ const FIELD_LABEL: Record<keyof typeof PUBLIC_INTAKE_LIMITS, string> = {
   teamSize: 'team size',
   businessType: 'answer',
   topic: 'topic',
+  needs: 'set of answers',
 };
 
 /**
@@ -40,6 +41,8 @@ export async function submitPublicInquiry(
     businessType?: string;
     /** What a contact inquiry is about. */
     topic?: string;
+    /** A demo request's answers about the product it names, as one line. Ignored for a contact inquiry. */
+    needs?: string;
   },
 ): Promise<void> {
   const normalized = {
@@ -51,6 +54,7 @@ export async function submitPublicInquiry(
     teamSize: (input.teamSize ?? '').trim(),
     businessType: (input.businessType ?? '').trim(),
     topic: (input.topic ?? '').trim(),
+    needs: input.kind === 'demo' ? (input.needs ?? '').trim() : '',
   };
 
   if (input.kind === 'demo' && normalized.businessName.length === 0) {
@@ -97,6 +101,7 @@ export async function submitPublicInquiry(
     p_team_size: normalized.teamSize,
     p_business_type: normalized.businessType,
     p_topic: normalized.topic,
+    p_needs: normalized.needs,
   });
 
   // Ended either way — a failed attempt leaves no more of a session behind than a successful one —

@@ -2,10 +2,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { ButtonLink } from '@/components/controls/button';
+import { AvailabilityLabel } from '@/components/marketing/availability-label';
 import { CtaBand } from '@/components/marketing/cta-band';
 import { FaqSection, faqStructuredData } from '@/components/marketing/faq-section';
 import { FOCUS_RING, cx } from '@/components/class-names';
-import { DIALER, OFFERINGS, offeringHref } from '@/lib/marketing/content';
+import { AVAILABILITY, DIALER, OFFERINGS, consultationHref, offeringById, offeringHref } from '@/lib/marketing/content';
 import { canonicalUrl } from '@/lib/seo/site';
 
 const DESCRIPTION = 'Make and take business calls in the browser, work through a call list, transfer calls and record how each one went. Use it on its own or with other GildOps products.';
@@ -20,10 +21,13 @@ export const metadata: Metadata = {
 /** The products the Dialer is most often used with, each linking to where it is described. */
 const WORKS_WITH = ['sales', 'customer-service', 'ai-receptionist'].map((id) => OFFERINGS.find((offering) => offering.id === id)!);
 
+const OFFERING = offeringById('dialer')!;
+
 /**
- * The Dialer, sold on its own. Everything here is something the Dialer in the application does
- * today (`features/communications/voice`); nothing is shown as a picture of a screen, because a
- * made-up screen is not what the visitor would get. The page answers, in order: what it does,
+ * The Dialer, offered on its own. Everything here is something the Dialer in the application does
+ * (`features/communications/voice`), but the catalogue does not list it as available yet, so the
+ * page says so up front and asks for a consultation. Nothing is shown as a picture of a screen,
+ * because a made-up screen is not what the visitor would get. The page answers, in order: what it does,
  * who it is for and what it takes to start, how it differs from the AI receptionist, and what it
  * works with.
  */
@@ -41,11 +45,17 @@ export default function DialerPage() {
       />
 
       <section className="flex max-w-3xl flex-col items-start gap-6">
-        <p className="text-sm font-medium text-muted">Dialer</p>
+        <p className="flex flex-wrap items-center gap-3 text-sm font-medium text-muted">
+          Dialer
+          <AvailabilityLabel availability={OFFERING.availability} />
+        </p>
         <h1 className="text-balance text-4xl font-semibold leading-[1.04] tracking-tight sm:text-6xl">{DIALER.heading}</h1>
         <p className="max-w-xl text-pretty text-lg leading-relaxed text-muted">{DIALER.body}</p>
+        {OFFERING.availability === 'available' ? null : (
+          <p className="max-w-xl text-pretty text-sm leading-relaxed text-muted">{AVAILABILITY[OFFERING.availability].note}</p>
+        )}
         <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center">
-          <ButtonLink href="/demo" tone="primary">Ask about the Dialer</ButtonLink>
+          <ButtonLink href={consultationHref(OFFERING)} tone="primary">Ask about {OFFERING.inSentence}</ButtonLink>
           <a href="#compare" className={cx('rounded text-sm font-medium text-muted hover:text-foreground', FOCUS_RING)}>
             How it differs from the AI receptionist
           </a>
@@ -117,7 +127,10 @@ export default function DialerPage() {
                 href={offeringHref(offering)}
                 className={cx('group -mx-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-1 rounded-md px-3 py-5 transition-colors hover:bg-secondary', FOCUS_RING)}
               >
-                <span className="text-lg font-semibold tracking-tight">{offering.name}</span>
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="text-lg font-semibold tracking-tight">{offering.name}</span>
+                  <AvailabilityLabel availability={offering.availability} />
+                </span>
                 <span className="col-start-1 text-pretty text-sm leading-relaxed text-muted">{offering.summary}</span>
                 <ArrowRight aria-hidden size={18} className="col-start-2 row-span-2 row-start-1 text-muted transition-transform group-hover:text-foreground motion-safe:group-hover:translate-x-1" />
               </Link>
@@ -130,7 +143,8 @@ export default function DialerPage() {
 
       <CtaBand
         heading="Put your team's calls in one place."
-        body="Tell us how many people make calls and whether you need new numbers. We'll set the Dialer up and quote it."
+        body="Tell us how many people make calls and whether you need new numbers. We'll tell you what setting the Dialer up involves, what it costs and when it can be set up for you."
+        product={OFFERING}
         secondaryHref="/products"
         secondaryLabel="See every product"
       />

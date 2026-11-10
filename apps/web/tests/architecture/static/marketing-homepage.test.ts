@@ -100,6 +100,24 @@ describe('the homepage presents products the way a visitor can buy them', () => 
     expect(renderer).not.toMatch(/['"]\/(sales|operations|customer-service|dialer|products)['"]/);
   });
 
+  it('says a product is not yet available wherever the catalogue does not list it as available', () => {
+    // The homepage is database content, so it cannot read `availability`; it states it in words,
+    // and this keeps those words in step with the inventory the catalogue test checks.
+    for (const item of groups.flatMap((group) => group.items)) {
+      const offering = OFFERINGS.find((candidate) => candidate.name === item.title)!;
+      expect(item.body.includes('Not yet available'), item.title).toBe(offering.availability === 'not_yet');
+    }
+  });
+
+  it('opens with products a business can have today', () => {
+    const hero = sections.find((section) => section.kind === 'hero')!;
+    const first = groups[0]!.items[0]!;
+    expect(OFFERINGS.find((offering) => offering.name === first.title)!.availability).not.toBe('not_yet');
+    for (const offering of OFFERINGS.filter((candidate) => candidate.availability === 'not_yet')) {
+      expect(hero.kind === 'hero' && hero.body.toLowerCase().includes(offering.inSentence.replace(/^the /, '').toLowerCase()), offering.name).toBe(false);
+    }
+  });
+
   it('describes in the product inventory every product the homepage names', () => {
     const titles = groups.flatMap((group) => group.items.map((item) => item.title));
     const names = new Set(OFFERINGS.map((offering) => offering.name));

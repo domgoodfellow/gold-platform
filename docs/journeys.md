@@ -12,6 +12,7 @@ Contacts Import and Library Sources/file selections enter the same source, mappi
 
 | Step / route | Owner | Status and evidence |
 | --- | --- | --- |
+| Consultation request: a product's "Ask about" link → `/demo?product={id}` | Public intake / CRM | **Built.** `web/app/(marketing)/demo/`; `web/lib/marketing/inquiry.ts`; `submit_public_inquiry`. The chosen product (and the Dialer's optional answers) become the contact's `productInterest` discovery answer in GildOps' operating organization. Every product is acquired this way; none is bought by signing up. Products the catalogue does not list as available say so on the site and in the form. |
 | Prospect contact: `/organizations/{org}/crm/contacts/{customer}` | CRM | **Built.** `web/app/organizations/[organizationId]/crm/contacts/[contactId]/page.tsx`. Discovery/configuration/proposal reads and tabs require the configured GildOps operating organization and live platform authority. |
 | Discovery tab, same route | CRM discovery | **Built.** `web/features/crm/customers/discovery-snapshot-section.tsx`; `web/lib/domain/customers/discovery-snapshots.ts`. Durable operational answers. |
 | Proposed configuration tab, same route | CRM sales composition / Catalogue | **Partial.** `web/lib/domain/customers/configuration-recommendation.ts`. Catalogue-based recommendations exist; these do not configure the future tenant. |

@@ -34,7 +34,7 @@ describe('discovery requirements', () => {
     expect(salesDiscovery).toHaveLength(DISCOVERY_REQUIREMENTS.length);
 
     const publicIntake = discoveryRequirementsFor('public_intake');
-    expect(publicIntake.map((requirement) => requirement.key)).toEqual(['teamAccess', 'existingSoftware']);
+    expect(publicIntake.map((requirement) => requirement.key)).toEqual(['productInterest', 'teamAccess', 'existingSoftware']);
 
     // A stage nothing asks anything of yet still answers honestly, rather than throwing.
     expect(discoveryRequirementsFor('operational_setup')).toEqual([]);

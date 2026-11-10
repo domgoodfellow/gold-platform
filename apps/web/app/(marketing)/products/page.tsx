@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { AvailabilityLabel } from '@/components/marketing/availability-label';
 import { CtaBand } from '@/components/marketing/cta-band';
 import { FOCUS_RING, cx } from '@/components/class-names';
-import { OFFERING_GROUPS, offeringsIn } from '@/lib/marketing/content';
+import { AVAILABILITY, OFFERING_GROUPS, consultationHref, offeringsIn } from '@/lib/marketing/content';
 
 const DESCRIPTION = 'Every GildOps product: tools you can use on their own, AI and automation set up with you, and connected applications. What each does and what you need to start.';
 
@@ -30,8 +31,9 @@ export default function ProductsPage() {
           Use one tool, or several together.
         </h1>
         <p className="max-w-xl text-pretty text-lg leading-relaxed text-muted">
-          Every product below works on its own. Each says what it does, what you need to start, and
-          what it works with if you add more later.
+          Every product below works on its own. Each says whether you can have it today, what you
+          need to start, and what it works with if you add more later. Each is set up with you after
+          a consultation.
         </p>
         <nav aria-label="Product groups" className="flex flex-wrap gap-2 text-sm">
           {OFFERING_GROUPS.map((group) => (
@@ -62,14 +64,25 @@ export default function ProductsPage() {
                 className="grid scroll-mt-24 gap-6 border-t border-border py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:gap-16"
               >
                 <div className="flex flex-col items-start gap-3">
-                  <h3 id={`${offering.id}-name`} className="text-xl font-semibold tracking-tight">{offering.name}</h3>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <h3 id={`${offering.id}-name`} className="text-xl font-semibold tracking-tight">{offering.name}</h3>
+                    <AvailabilityLabel availability={offering.availability} />
+                  </div>
                   <p className="text-pretty leading-relaxed text-muted">{offering.summary}</p>
-                  {offering.page ? (
-                    <Link href={offering.page} className={cx('group mt-1 inline-flex items-center gap-1.5 rounded text-sm font-medium', FOCUS_RING)}>
-                      More about {offering.name}
-                      <ArrowRight aria-hidden size={14} className="transition-transform motion-safe:group-hover:translate-x-0.5" />
-                    </Link>
+                  {offering.availability === 'not_yet' ? (
+                    <p className="text-pretty text-sm leading-relaxed text-muted">{AVAILABILITY.not_yet.note}</p>
                   ) : null}
+                  <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-medium">
+                    {offering.page ? (
+                      <Link href={offering.page} className={cx('group inline-flex items-center gap-1.5 rounded', FOCUS_RING)}>
+                        More about {offering.inSentence}
+                        <ArrowRight aria-hidden size={14} className="transition-transform motion-safe:group-hover:translate-x-0.5" />
+                      </Link>
+                    ) : null}
+                    <Link href={consultationHref(offering)} className={cx('rounded text-muted underline underline-offset-4 hover:text-foreground', FOCUS_RING)}>
+                      Ask about {offering.inSentence}
+                    </Link>
+                  </div>
                 </div>
                 <dl className="grid gap-6 text-sm sm:grid-cols-2 sm:gap-8">
                   <div className="border-t-2 border-foreground pt-3">

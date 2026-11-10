@@ -83,7 +83,7 @@ test('public marketing menu groups authentication and demo in its footer', async
         const sheet = page.getByRole('dialog');
         const footer = sheet.locator('[data-slot="sheet-footer"]');
         await expect(footer.getByRole('link', { name: 'Log in' })).toHaveAttribute('href', '/login');
-        await expect(footer.getByRole('link', { name: 'Request a demo' })).toHaveAttribute('href', '/demo');
+        await expect(footer.getByRole('link', { name: 'Request a consultation' })).toHaveAttribute('href', '/demo');
         await expect(sheet.getByRole('navigation').getByRole('link', { name: 'Log in' })).toHaveCount(0);
         await page.screenshot({ path: testInfo.outputPath(`marketing-menu-${width}.png`) });
         await page.keyboard.press('Escape');

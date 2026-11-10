@@ -28,7 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
  * GOLD, which is why `public-profile.test.ts` scans `app/(public)/` and not this group.
  *
  * **The header's right side is Log in, then the primary CTA — never two equal buttons**
- * (product reality audit, Slice 4). Request a demo gets the strong treatment; signing in is the
+ * (product reality audit, Slice 4). Request a consultation gets the strong treatment; signing in is the
  * plain link beside it.
  */
 export default async function MarketingLayout({ children }: LayoutProps<'/'>) {

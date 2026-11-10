@@ -38,7 +38,7 @@ export default function HowItWorksPage() {
 
       <CtaBand
         heading="Ready to see it against your own business?"
-        body="Request a demo and tell us how you run today — we'll show you the parts of GildOps that fit."
+        body="Tell us how you run today — we'll show you the parts of GildOps that fit."
         secondaryHref="/pricing"
         secondaryLabel="See pricing"
       />

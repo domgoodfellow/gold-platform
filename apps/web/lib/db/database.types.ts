@@ -19077,6 +19077,7 @@ export type Database = {
           p_email: string
           p_kind: string
           p_name: string
+          p_needs?: string
           p_phone: string
           p_team_size: string
           p_topic: string

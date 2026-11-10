@@ -664,6 +664,7 @@ Lead/customer context in GildOps' own organization
 
 In GildOps' operating organization, platform-authorized viewers capture prospect facts:
 
+- which product they asked about, and what they need from it (started by the consultation form);
 - how customers contact them;
 - how work is booked;
 - who answers;

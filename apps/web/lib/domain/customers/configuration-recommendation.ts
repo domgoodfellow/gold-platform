@@ -17,6 +17,9 @@ import { WORKSPACES, type WorkspaceKey } from '@/lib/navigation';
  * slice arrives — this function is not that row.
  */
 const REQUIREMENT_FEATURE_MAP: Record<DiscoveryRequirementKey, readonly string[]> = {
+  // Names whichever product the visitor asked about; the signal here is only "answered", so it
+  // cannot say which Features that product needs. A salesperson's other answers do.
+  productInterest: [],
   contactChannels: ['inbound_calling', 'inbound_sms', 'outbound_sms'],
   bookingIntake: ['booking', 'booking_intake'],
   phoneHandling: ['inbound_calling', 'call_controls', 'voicemail', 'business_hours_routing'],

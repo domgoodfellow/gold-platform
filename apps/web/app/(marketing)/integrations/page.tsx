@@ -64,7 +64,7 @@ export default async function IntegrationsPage() {
 
       <CtaBand
         heading="Don't see what you use?"
-        body="Request a demo and tell us what you're running today — we'll tell you plainly whether it connects."
+        body="Tell us what you're running today — we'll tell you plainly whether it connects."
       />
     </div>
   );

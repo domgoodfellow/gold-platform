@@ -134,7 +134,7 @@ describe('discovery snapshots', () => {
     expect(snapshot).not.toBeNull();
 
     const completeness = discoverySnapshotCompleteness(snapshot!);
-    expect(completeness).toEqual({ answered: 2, total: 12 });
+    expect(completeness).toEqual({ answered: 2, total: 13 });
   });
 
   it('marks a requirement not_applicable with an empty value, and counts it toward completeness', async () => {

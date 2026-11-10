@@ -160,6 +160,103 @@ describe('the public intake, by somebody who is a member of nothing', () => {
     });
   });
 
+  it('keeps the product a consultation request names, with its answers, where GildOps staff read them', async () => {
+    const visitor = anonClient();
+    await submitPublicInquiry(visitor, {
+      kind: 'demo',
+      name: 'Ana Ruiz',
+      businessName: 'Ruiz Roofing (product)',
+      email: 'ana@example.test',
+      phone: '',
+      context: 'We call every lead back from personal mobiles.',
+      teamSize: '',
+      businessType: 'Dialer',
+      needs: 'People on calls: 2 to 5; Phone numbers: A number for each person; Calls: Both',
+    });
+
+    const customers = await listCustomers(target.db, { organizationId: target.organizationId });
+    const written = customers.find((customer) => customer.name === 'Ruiz Roofing (product)');
+    expect(written).toBeDefined();
+
+    // Read as a member of the organization that owns it: the Discovery tab's own read.
+    const snapshot = await getDiscoverySnapshot(target.db, { organizationId: target.organizationId, customerId: written!.id });
+    expect(snapshot?.answers.productInterest).toMatchObject({
+      value: 'Dialer — People on calls: 2 to 5; Phone numbers: A number for each person; Calls: Both',
+      status: 'provided',
+      source: 'demo_form',
+    });
+    expect(snapshot?.answers.existingSoftware?.value).toBe('We call every lead back from personal mobiles.');
+
+    const { rows } = await withConnection((pg) =>
+      pg.query<{ payload: Record<string, unknown> }>(
+        `select payload from public.events where organization_id = $1 and entity_id = $2 and action = 'customer.created'`,
+        [target.organizationId, written!.id],
+      ),
+    );
+    expect(rows[0]!.payload).toMatchObject({ source: 'demo', business_type: 'Dialer', needs: 'People on calls: 2 to 5; Phone numbers: A number for each person; Calls: Both' });
+  });
+
+  it('keeps a product named without answers, and keeps no product answers on a contact inquiry', async () => {
+    const visitor = anonClient();
+    await submitPublicInquiry(visitor, {
+      kind: 'demo',
+      name: 'Product Only',
+      businessName: 'Product Only Ltd',
+      email: 'product-only@example.test',
+      businessType: 'Online booking',
+    });
+    await submitPublicInquiry(visitor, {
+      kind: 'contact',
+      name: 'Contact With Needs',
+      email: 'contact-needs@example.test',
+      topic: 'General question',
+      context: 'A question.',
+      needs: 'People on calls: Just me',
+    });
+
+    const customers = await listCustomers(target.db, { organizationId: target.organizationId });
+    const productOnly = customers.find((customer) => customer.name === 'Product Only Ltd')!;
+    const snapshot = await getDiscoverySnapshot(target.db, { organizationId: target.organizationId, customerId: productOnly.id });
+    expect(snapshot?.answers.productInterest?.value).toBe('Online booking');
+
+    const contact = customers.find((customer) => customer.name === 'Contact With Needs')!;
+    expect(await getDiscoverySnapshot(target.db, { organizationId: target.organizationId, customerId: contact.id })).toBeNull();
+    const { rows } = await withConnection((pg) =>
+      pg.query<{ payload: Record<string, unknown> }>(
+        `select payload from public.events where organization_id = $1 and entity_id = $2`,
+        [target.organizationId, contact.id],
+      ),
+    );
+    expect(rows[0]!.payload.needs).toBeNull();
+  });
+
+  it('bounds product answers in the application and again in the database', async () => {
+    const visitor = anonClient();
+    await expect(
+      submitPublicInquiry(visitor, { kind: 'demo', name: 'Long', businessName: 'Long Needs Ltd', email: 'long@example.test', needs: 'x'.repeat(1001) }),
+    ).rejects.toMatchObject({ code: 'public_intake.field_too_long' });
+
+    const { error: signInError } = await visitor.auth.signInAnonymously();
+    if (signInError) throw signInError;
+    const { error } = await visitor.rpc('submit_public_inquiry', {
+      p_kind: 'demo',
+      p_topic: '',
+      p_name: 'Direct',
+      p_business_name: 'Direct Long Needs Ltd',
+      p_email: '',
+      p_phone: '',
+      p_context: '',
+      p_team_size: '',
+      p_business_type: 'Dialer',
+      p_needs: 'x'.repeat(1001),
+    });
+    expect(error?.code).toBe('22001');
+    await visitor.auth.signOut();
+
+    const customers = await listCustomers(target.db, { organizationId: target.organizationId });
+    expect(customers.some((customer) => customer.name === 'Direct Long Needs Ltd')).toBe(false);
+  });
+
   it('starts no discovery snapshot when the form gave nothing to map', async () => {
     const visitor = anonClient();
     await submitPublicInquiry(visitor, {

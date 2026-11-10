@@ -1,8 +1,9 @@
 import { CtaBand } from '@/components/marketing/cta-band';
 import { FaqSection, faqStructuredData } from '@/components/marketing/faq-section';
 import { ButtonLink } from '@/components/controls/button';
+import { AvailabilityLabel } from '@/components/marketing/availability-label';
 import { canonicalUrl } from '@/lib/seo/site';
-import type { Product } from '@/lib/marketing/content';
+import { AVAILABILITY, consultationHref, offeringById, type Product } from '@/lib/marketing/content';
 
 /**
  * The shared skeleton for the connected applications, `/sales`, `/operations` and
@@ -12,6 +13,7 @@ import type { Product } from '@/lib/marketing/content';
  * structured data, only when the product has questions to answer.
  */
 export function ProductLanding({ product }: { product: Product }) {
+  const offering = offeringById(product.slug)!;
   const structuredData = {
     '@context': 'https://schema.org',
     '@graph': [{ ...faqStructuredData(product.faq), '@id': `${canonicalUrl(product.href).toString()}#faq` }],
@@ -28,12 +30,18 @@ export function ProductLanding({ product }: { product: Product }) {
 
       <section className="max-w-3xl">
         <div className="flex flex-col items-start gap-6">
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-subtle">{product.name}</p>
+          <p className="flex flex-wrap items-center gap-3 text-sm font-medium text-muted">
+            {product.name}
+            <AvailabilityLabel availability={offering.availability} />
+          </p>
           <h1 className="max-w-2xl text-4xl font-semibold leading-[1.04] tracking-tight sm:text-5xl">
             {product.tagline}
           </h1>
           <p className="max-w-xl text-lg leading-relaxed text-muted">{product.problem}</p>
-          <ButtonLink href="/demo" tone="primary">Request a demo</ButtonLink>
+          {offering.availability === 'available' ? null : (
+            <p className="max-w-xl text-pretty text-sm leading-relaxed text-muted">{AVAILABILITY[offering.availability].note}</p>
+          )}
+          <ButtonLink href={consultationHref(offering)} tone="primary">Ask about {offering.inSentence}</ButtonLink>
         </div>
       </section>
 
@@ -77,7 +85,7 @@ export function ProductLanding({ product }: { product: Product }) {
       <section>
         <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Relevant integrations</h2>
         <p className="mt-3 max-w-xl text-muted">
-          {product.integrations.join(' and ')} connect directly — see every integration on{' '}
+          Works with {product.integrations.join(' and ')}. See every integration on{' '}
           <a href="/integrations" className="underline underline-offset-4">/integrations</a>.
         </p>
       </section>
@@ -85,8 +93,9 @@ export function ProductLanding({ product }: { product: Product }) {
       {product.faq.length ? <FaqSection items={product.faq} /> : null}
 
       <CtaBand
-        heading={`See ${product.name} on your own operation.`}
-        body={`Request a demo and we'll show you how ${product.name.toLowerCase()} would look in GildOps, using how your business actually works.`}
+        heading={`Talk to us about ${product.name}.`}
+        body={`Tell us how your business works today. We'll say what setting up ${product.name} involves, what it costs and when it can be ready.`}
+        product={offering}
       />
     </div>
   );

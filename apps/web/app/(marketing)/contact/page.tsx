@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { formatPhoneForDisplay } from '@/lib/display/phone';
 import type { Metadata } from 'next';
 import { Mail, Phone } from 'lucide-react';
@@ -33,7 +34,9 @@ export default async function ContactPage() {
         </h1>
         <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
           For a general question, an existing account, billing or a partnership. Looking to see GildOps
-          on your own business? Request a demo instead.
+          on your own business?{' '}
+          <Link href="/demo" className="font-medium text-foreground underline underline-offset-4">Request a consultation</Link>{' '}
+          instead.
         </p>
       </section>
 

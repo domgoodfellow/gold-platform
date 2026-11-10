@@ -8,6 +8,8 @@ export const PUBLIC_INTAKE_LIMITS = {
   teamSize: 100,
   businessType: 200,
   topic: 100,
+  /** A product's own answers, e.g. the Dialer's, as one line (lib/marketing/inquiry.ts). */
+  needs: 1000,
 } as const;
 
 /** `demo` is a qualified sales request; `contact` is a general inquiry. Both land the same way. */

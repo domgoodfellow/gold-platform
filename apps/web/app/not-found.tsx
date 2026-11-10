@@ -15,7 +15,7 @@ export default function NotFound() {
         <div className="flex flex-wrap items-center gap-4">
           <ButtonLink href="/">Return home</ButtonLink>
           <Link href="/demo" className="text-sm underline underline-offset-4">
-            Request a demo
+            Request a consultation
           </Link>
         </div>
       </div>

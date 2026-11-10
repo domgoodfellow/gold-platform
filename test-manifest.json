@@ -2372,6 +2372,16 @@
         "security"
       ]
     },
+    "apps/web/tests/integration/database/marketing-availability.test.ts": {
+      "category": "database-integration",
+      "concerns": ["marketing", "public", "catalogue"],
+      "note": "Each product's availability on the marketing site equals what the commercial catalogue's feature rows derive: planned or off sale is Not yet available, partial or beta is In testing."
+    },
+    "apps/web/tests/unit/marketing-inquiry.test.ts": {
+      "category": "unit",
+      "concerns": ["marketing", "public", "crm"],
+      "note": "Consultation form: only listed products and Dialer options are kept, composed into one line for the CRM; ?product= links resolve; not-yet-available products say so before sending."
+    },
     "apps/web/tests/integration/database/public-plan-catalog.test.ts": {
       "category": "database-integration",
       "concerns": [

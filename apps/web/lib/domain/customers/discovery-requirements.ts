@@ -16,6 +16,7 @@ export type DiscoveryStage =
   | 'operational_setup';
 
 export type DiscoveryRequirementKey =
+  | 'productInterest'
   | 'contactChannels'
   | 'bookingIntake'
   | 'phoneHandling'
@@ -44,6 +45,14 @@ export type DiscoveryRequirement = {
 };
 
 export const DISCOVERY_REQUIREMENTS: readonly DiscoveryRequirement[] = [
+  {
+    // What the consultation form names (`/demo?product=…`), with any answers that product asks.
+    key: 'productInterest',
+    category: 'Interest',
+    question: 'Which product are they asking about, and what do they need from it?',
+    answerType: 'text',
+    applicableStages: ['public_intake', 'sales_discovery'],
+  },
   {
     key: 'contactChannels',
     category: 'Communication',

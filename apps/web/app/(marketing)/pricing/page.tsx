@@ -50,7 +50,7 @@ export default function PricingPage() {
 
       <CtaBand
         heading="Get a number for your own business."
-        body="Request a demo — we'll walk through which plan fits and what implementation looks like for you."
+        body="Request a consultation and we'll walk through which plan fits and what implementation looks like for you."
       />
     </div>
   );
