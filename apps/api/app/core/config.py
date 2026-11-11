@@ -307,20 +307,17 @@ class VoiceSettings:
     no telephone, is an ordinary deployment. Folding them together would mean either switch
     turning the other off.
 
-    **The auth token is here and not in a registry**, unlike the message and model providers.
-    Those registries choose *which vendor sends*; this is the shared secret that proves an
-    unauthenticated request came from the one carrying the calls, and there is nothing to
-    choose between -- an endpoint with no token cannot verify anything and must not exist.
+    **No carrier secret is here.** Each business's calling account signs its own reports with its
+    own secret, which lives in Vault beside that account and is read per request by the
+    `voice_webhook` role (`app.services.communications.carrier_callbacks`). A deployment-wide
+    token could only ever verify one account, and a business's calls happen in its own.
     """
 
     supabase_url: str
     supabase_publishable_key: str
-    # Signs a 60-second token for `voice_webhook`, which holds no grant on any table and one
-    # execute. Not the service-role key, which the no-service-role rule refuses.
+    # Signs a 60-second token for `voice_webhook`, which holds no grant on any table and a
+    # handful of executes. Not the service-role key, which the no-service-role rule refuses.
     supabase_jwt_secret: str
-    # The carrier signs every callback with this. Without it the endpoints below would accept
-    # anything, which is a stranger writing calls into a business's record.
-    twilio_auth_token: str
 
 
 def load_voice_settings() -> VoiceSettings | None:
@@ -328,7 +325,6 @@ def load_voice_settings() -> VoiceSettings | None:
         "supabase_url": os.environ.get("SUPABASE_URL"),
         "supabase_publishable_key": _publishable_key(),
         "supabase_jwt_secret": os.environ.get("SUPABASE_JWT_SECRET"),
-        "twilio_auth_token": os.environ.get("TWILIO_AUTH_TOKEN"),
     }
 
     if not all(values.values()):

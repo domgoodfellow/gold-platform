@@ -53,18 +53,22 @@ import api.tenant_email_send as tenant_email_send
 import api.tenant_email_webhook as tenant_email_webhook
 import api.voice_agent_events as voice_agent_events
 import api.voice_inbound as voice_inbound
+import api.voice_operations as voice_operations
 import api.voice_outbound as voice_outbound
 import api.voice_recording as voice_recording
 import api.voice_status as voice_status
 import api.voice_wrap_up_call as voice_wrap_up_call
+import app.services.communications.carrier_callbacks as carrier_callbacks
 
 HOST = "gold.example"
-TOKEN = "an-account-auth-token"
+# The signing secret of one business's own calling account, and that account. Nothing in the
+# deployment's settings holds it: it is read per request, by account.
+TOKEN = "a-calling-account-signing-secret"
+ACCOUNT = "AC" + "1" * 32
 SETTINGS = SimpleNamespace(
     supabase_url="https://project.supabase.test",
     supabase_publishable_key="anon",
     supabase_jwt_secret="signing",
-    twilio_auth_token=TOKEN,
     stripe_signing_secret="whsec_test",
     signing_secret="whsec_platform",
     cron_secret="the-cron-secret",
@@ -139,26 +143,36 @@ def form(params: dict[str, str]) -> bytes:
 
 CALLBACKS = [
     # module, path, sink attribute (None: the endpoint writes nothing), body the carrier would send
-    (voice_status, "/voice/status", "record_call_event", {"CallSid": "CA1", "CallStatus": "completed", "CallDuration": "42"}),
+    (voice_status, "/voice/status", "record_call_event", {"AccountSid": ACCOUNT, "CallSid": "CA1", "CallStatus": "completed", "CallDuration": "42"}),
     (
         voice_recording,
         "/voice/recording",
         "record_call_event",
-        {"CallSid": "CA1", "RecordingSid": "RE1", "RecordingUrl": "https://api.twilio.com/2010-04-01/Recordings/RE1", "RecordingStatus": "completed"},
+        {"AccountSid": ACCOUNT, "CallSid": "CA1", "RecordingSid": "RE1", "RecordingUrl": "https://api.twilio.com/2010-04-01/Recordings/RE1", "RecordingStatus": "completed"},
     ),
-    (voice_inbound, "/voice/inbound", "inbound_response", {"AccountSid":"AC-test", "CallSid": "CA1", "To": "+31000000000", "From": "+31000000009"}),
-    (voice_outbound, "/voice/outbound", "record_call_leg", {"CallSid": "CA1", "Conference": "room-1"}),
-    (sms_inbound, "/sms/inbound", "record_inbound_message", {"MessageSid": "SM1", "To": "+31000000000", "From": "+31000000001", "Body": "Thanks"}),
-    (sms_status, "/sms/status", "record_message_status", {"MessageSid": "SM1", "MessageStatus": "delivered"}),
+    (voice_inbound, "/voice/inbound", "inbound_response", {"AccountSid": ACCOUNT, "CallSid": "CA1", "To": "+31000000000", "From": "+31000000009"}),
+    (voice_outbound, "/voice/outbound", "record_call_leg", {"AccountSid": ACCOUNT, "CallSid": "CA1", "Conference": "room-1"}),
+    (sms_inbound, "/sms/inbound", "record_inbound_message", {"AccountSid": ACCOUNT, "MessageSid": "SM1", "To": "+31000000000", "From": "+31000000001", "Body": "Thanks"}),
+    (sms_status, "/sms/status", "record_message_status", {"AccountSid": ACCOUNT, "MessageSid": "SM1", "MessageStatus": "delivered"}),
 ]
 IDS = [module.__name__.split(".")[-1] for module, *_ in CALLBACKS]
 
 
 @pytest.fixture
 def configured(monkeypatch):
-    monkeypatch.setenv("TWILIO_ACCOUNT_SID", "AC-test")
+    """One calling account GildOps created, with its own signing secret, and no other."""
+    monkeypatch.delenv("TWILIO_ACCOUNT_SID", raising=False)
+    monkeypatch.delenv("TWILIO_AUTH_TOKEN", raising=False)
+    lookups: list[str] = []
+
+    def secret_for(settings, *, account_sid):
+        lookups.append(account_sid)
+        return TOKEN if account_sid == ACCOUNT else None
+
+    monkeypatch.setattr(carrier_callbacks, "carrier_signing_secret", secret_for)
     for module in (voice_status, voice_recording, voice_inbound, voice_outbound, sms_inbound, sms_status):
         monkeypatch.setattr(module, "load_voice_settings", lambda: SETTINGS)
+    return lookups
 
 
 @pytest.mark.parametrize(("module", "path", "sink_name", "params"), CALLBACKS, ids=IDS)
@@ -214,6 +228,43 @@ class TestCarrierCallbacks:
         assert status == 403
         assert sink.calls == []
 
+    def test_an_account_gildops_did_not_create_is_refused_however_it_signs(self, configured, monkeypatch, module, path, sink_name, params):
+        """Another carrier customer signs correctly with its own secret. It is still nobody here."""
+        sink = self._sink(monkeypatch, module, sink_name)
+        foreign = {**params, "AccountSid": "AC" + "9" * 32}
+        signature = twilio_signature(f"https://{HOST}{path}", foreign, token="the-strangers-own-secret")
+
+        status, _ = call(module, "POST", path=path, headers={"host": HOST, "x-twilio-signature": signature}, body=form(foreign))
+
+        assert status == 403
+        assert sink.calls == []
+
+    def test_a_callback_naming_no_account_is_refused_without_asking_the_database(self, configured, monkeypatch, module, path, sink_name, params):
+        sink = self._sink(monkeypatch, module, sink_name)
+        nameless = {key: value for key, value in params.items() if key != "AccountSid"}
+        signature = twilio_signature(f"https://{HOST}{path}", nameless)
+
+        status, _ = call(module, "POST", path=path, headers={"host": HOST, "x-twilio-signature": signature}, body=form(nameless))
+
+        assert status == 403
+        assert sink.calls == []
+        assert configured == []
+
+    def test_a_secret_that_cannot_be_read_asks_the_carrier_to_retry(self, configured, monkeypatch, module, path, sink_name, params):
+        """A real report must not be discarded because the database blinked: 503 is retried, 403 is not."""
+        sink = self._sink(monkeypatch, module, sink_name)
+
+        def away(settings, *, account_sid):
+            raise RuntimeError("the database is away")
+
+        monkeypatch.setattr(carrier_callbacks, "carrier_signing_secret", away)
+        signature = twilio_signature(f"https://{HOST}{path}", params)
+
+        status, _ = call(module, "POST", path=path, headers={"host": HOST, "x-twilio-signature": signature}, body=form(params))
+
+        assert status == 503
+        assert sink.calls == []
+
 
 class TestCarrierCallbacksThatAreSigned:
     """The other half of the wiring: a genuine callback does reach the sink, once."""
@@ -254,8 +305,37 @@ class TestCarrierCallbacksThatAreSigned:
     def test_a_different_carrier_account_never_reaches_the_router(self, configured, monkeypatch):
         sink = Sink()
         monkeypatch.setattr(voice_inbound, 'inbound_response', sink)
-        status, _ = self._signed(voice_inbound, '/voice/inbound', {'CallSid':'CA1','AccountSid':'foreign'})
+        status, _ = self._signed(voice_inbound, '/voice/inbound', {'CallSid':'CA1','AccountSid':'AC' + '9' * 32})
         assert status == 403 and sink.calls == []
+
+    def test_the_deployments_own_account_cannot_report_a_call(self, configured, monkeypatch):
+        """Voice has no deployment-wide account. Its secret in the environment verifies nothing."""
+        deployment = "AC" + "7" * 32
+        monkeypatch.setenv("TWILIO_ACCOUNT_SID", deployment)
+        monkeypatch.setenv("TWILIO_AUTH_TOKEN", "the-deployment-token")
+        sink = Sink(result="a-call-row")
+        monkeypatch.setattr(voice_status, "record_call_event", sink)
+        params = {**CALLBACKS[0][3], "AccountSid": deployment}
+        signature = twilio_signature(f"https://{HOST}/voice/status", params, token="the-deployment-token")
+
+        status, _ = call(voice_status, "POST", path="/voice/status", headers={"host": HOST, "x-twilio-signature": signature}, body=form(params))
+
+        assert status == 403 and sink.calls == []
+
+    def test_a_text_report_from_the_deployments_own_account_is_still_accepted(self, configured, monkeypatch):
+        """Text is still sent from the deployment's account, so its reports are signed by it."""
+        deployment = "AC" + "7" * 32
+        monkeypatch.setenv("TWILIO_ACCOUNT_SID", deployment)
+        monkeypatch.setenv("TWILIO_AUTH_TOKEN", "the-deployment-token")
+        recorded = Sink(result="a-message-id")
+        monkeypatch.setattr(sms_status, "record_message_status", recorded)
+        params = {**CALLBACKS[5][3], "AccountSid": deployment}
+        signature = twilio_signature(f"https://{HOST}/sms/status", params, token="the-deployment-token")
+
+        status, body = call(sms_status, "POST", path="/sms/status", headers={"host": HOST, "x-twilio-signature": signature}, body=form(params))
+
+        assert (status, body) == (200, "recorded")
+        assert configured == []
 
     def test_a_signed_outbound_leg_joins_only_the_room_it_was_given(self, configured, monkeypatch) -> None:
         sink = Sink(result="a-leg")
@@ -268,7 +348,7 @@ class TestCarrierCallbacksThatAreSigned:
         (_, recorded), = sink.calls
         assert recorded["conference_name"] == "room-1" and recorded["external_id"] == "CA1"
 
-        status, _ = self._signed(voice_outbound, "/voice/outbound", {"CallSid": "CA1"})
+        status, _ = self._signed(voice_outbound, "/voice/outbound", {"AccountSid": ACCOUNT, "CallSid": "CA1"})
         assert status == 400
         assert len(sink.calls) == 1
 
@@ -297,7 +377,7 @@ class TestCarrierCallbacksThatAreSigned:
         monkeypatch.setattr(sms_inbound, "record_message_suppression", suppressed)
         monkeypatch.setattr(sms_inbound, "record_inbound_message", recorded)
 
-        params = {"MessageSid": "SM2", "To": "+31000000000", "From": "+31000000001", "Body": "STOP"}
+        params = {"AccountSid": ACCOUNT, "MessageSid": "SM2", "To": "+31000000000", "From": "+31000000001", "Body": "STOP"}
         status, body = self._signed(sms_inbound, "/sms/inbound", params)
 
         assert (status, body) == (200, "recorded")
@@ -326,7 +406,7 @@ class TestCarrierCallbacksThatAreSigned:
         recorded = Sink(result="a-message-id")
         monkeypatch.setattr(sms_status, "record_message_status", recorded)
 
-        params = {"MessageSid": "SM1", "MessageStatus": "failed", "ErrorCode": "30007"}
+        params = {"AccountSid": ACCOUNT, "MessageSid": "SM1", "MessageStatus": "failed", "ErrorCode": "30007"}
         self._signed(sms_status, "/sms/status", params)
 
         assert recorded.calls[0][1]["failure_reason"]
@@ -561,6 +641,8 @@ PEOPLE = [
     (routing_preview_outbound, "load_domain_settings", "resolve_outbound_identity"),
     (integration_operations, "load_integration_settings", "operate"),
     (provider_operations, "load_provider_operations_settings", "operate"),
+    (voice_operations, "load_provider_operations_settings", "operate"),
+    (voice_operations, "load_provider_operations_settings", "open_recording"),
     (platform_billing_customer, "load_platform_billing_provisioning_settings", "ensure_billing_customer"),
     (organization_domains, "load_provider_operations_settings", "run_domain_command"),
     (organization_email_domains, "load_provider_operations_settings", "run_email_domain_command"),
@@ -570,7 +652,7 @@ PEOPLE = [
 ]
 
 
-@pytest.mark.parametrize(("module", "loader", "command"), PEOPLE, ids=[m.__name__.split(".")[-1] for m, *_ in PEOPLE])
+@pytest.mark.parametrize(("module", "loader", "command"), PEOPLE, ids=[f"{m.__name__.split('.')[-1]}:{c}" for m, _, c in PEOPLE])
 class TestSignedInEndpoints:
     def _armed(self, monkeypatch, module, loader, command):
         monkeypatch.setattr(module, loader, lambda: SETTINGS)

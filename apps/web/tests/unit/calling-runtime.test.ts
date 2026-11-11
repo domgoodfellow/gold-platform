@@ -1,30 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { callingRuntimeConfigured } from '@/lib/application/communications/calling-runtime';
+import type { Db } from '@/lib/db/types';
 
-const adapter = vi.hoisted(() => ({ provider: vi.fn(), callback: vi.fn() }));
-vi.mock('@/lib/adapters/telephony', () => ({ telephonyProvider: adapter.provider, callbackBase: adapter.callback }));
+const calls = vi.hoisted(() => ({ telephony: vi.fn() }));
+vi.mock('@/lib/domain/reception/calls', () => ({ organizationTelephony: calls.telephony }));
+
+const db = {} as Db;
+const organizationId = 'an-organization';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  adapter.callback.mockReturnValue('https://callbacks.example.test');
-  adapter.provider.mockResolvedValue({});
+  calls.telephony.mockResolvedValue({});
 });
 
 describe('calling runtime readiness', () => {
-  it('awaits the provider lookup instead of treating a promise as a configured provider', async () => {
-    adapter.provider.mockResolvedValue(null);
-    expect(await callingRuntimeConfigured(true)).toBe(false);
+  it('awaits the lookup instead of treating a promise as a telephone', async () => {
+    calls.telephony.mockResolvedValue(null);
+    expect(await callingRuntimeConfigured(db, { organizationId, mayCall: true })).toBe(false);
   });
-  it('requires the provider and callback address', async () => {
-    expect(await callingRuntimeConfigured(true)).toBe(true);
-    adapter.callback.mockReturnValue(null);
-    adapter.provider.mockClear();
-    expect(await callingRuntimeConfigured(true)).toBe(false);
-    expect(adapter.provider).not.toHaveBeenCalled();
+  it('is ready when this business has a telephone of its own', async () => {
+    expect(await callingRuntimeConfigured(db, { organizationId, mayCall: true })).toBe(true);
+    expect(calls.telephony).toHaveBeenCalledWith(db, organizationId);
   });
   it('does not inspect infrastructure without calling permission', async () => {
-    expect(await callingRuntimeConfigured(false)).toBe(false);
-    expect(adapter.callback).not.toHaveBeenCalled();
-    expect(adapter.provider).not.toHaveBeenCalled();
+    expect(await callingRuntimeConfigured(db, { organizationId, mayCall: false })).toBe(false);
+    expect(calls.telephony).not.toHaveBeenCalled();
   });
 });

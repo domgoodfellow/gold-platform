@@ -22,7 +22,8 @@ import logging
 from api.voice_status import form_params, public_url
 from app.core.config import load_voice_settings
 from app.core.db import record_call_leg
-from app.providers.twilio.voice import conference_twiml, verify_signature
+from app.providers.twilio.voice import conference_twiml
+from app.services.communications.carrier_callbacks import callback_refusal
 
 logger = logging.getLogger(__name__)
 
@@ -41,13 +42,14 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
         # **Signed like every other callback**, and it matters more here rather than less: an
         # unverified request to this endpoint would let a stranger join a room a business is
         # holding a private conversation in.
-        if not verify_signature(
+        refusal = callback_refusal(
+            settings,
             url=public_url(self.headers, self.path),
             params=params,
             signature=self.headers.get("x-twilio-signature"),
-            auth_token=settings.twilio_auth_token,
-        ):
-            self._reply(403, "text/plain; charset=utf-8", "rejected")
+        )
+        if refusal is not None:
+            self._reply(refusal, "text/plain; charset=utf-8", "rejected")
             return
 
         # The room the web app already created and wrote onto the call row. Supplied by the

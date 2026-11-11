@@ -1121,6 +1121,44 @@
         "p_parameters"
       ],
       "role": "authenticated"
+    },
+    "telephony_signing_secret": {
+      "role": "voice_webhook",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_account_sid"
+      ]
+    },
+    "read_organization_telephony_credential": {
+      "role": "provider_operator",
+      "callers": [
+        "app/core/db.py"
+      ],
+      "sends": [
+        "p_organization_id"
+      ]
+    },
+    "telephony_caller": {
+      "role": "authenticated",
+      "callers": [
+        "app/services/communications/call_operations.py"
+      ],
+      "sends": [
+        "p_organization_id",
+        "p_places_calls"
+      ]
+    },
+    "call_recording_reference": {
+      "role": "authenticated",
+      "callers": [
+        "app/services/communications/call_operations.py"
+      ],
+      "sends": [
+        "p_organization_id",
+        "p_call_id"
+      ]
     }
   }
 }

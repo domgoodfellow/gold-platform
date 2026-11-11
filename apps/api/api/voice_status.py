@@ -19,7 +19,8 @@ from urllib.parse import parse_qs
 
 from app.core.config import load_voice_settings
 from app.core.db import record_call_event
-from app.providers.twilio.voice import payload_hash, status_report, verify_signature
+from app.providers.twilio.voice import payload_hash, status_report
+from app.services.communications.carrier_callbacks import callback_refusal
 
 
 def form_params(body: str) -> dict[str, str]:
@@ -56,13 +57,14 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
         body = self.rfile.read(length).decode("utf-8", errors="replace")
         params = form_params(body)
 
-        if not verify_signature(
+        refusal = callback_refusal(
+            settings,
             url=public_url(self.headers, self.path),
             params=params,
             signature=self.headers.get("x-twilio-signature"),
-            auth_token=settings.twilio_auth_token,
-        ):
-            self._reply(403, "rejected")
+        )
+        if refusal is not None:
+            self._reply(refusal, "rejected")
             return
 
         report = status_report(params)

@@ -346,7 +346,7 @@ Support sessions are an audit record and do not widen access to tenant operation
 |---|---|---|
 | API | `SUPABASE_JWT_SECRET` | Do not enter casually. If you choose to enable current machine-role flows before migration, enter it only as `TEMPORARY LEGACY REQUIREMENT`. |
 | API Preview | `TWILIO_AUTH_TOKEN`, `RESEND_API_KEY`, `MESSAGE_FROM_NUMBER` | Shared hosted Supabase means Preview could send against real data unless a separate staging project/provider setup exists. |
-| Web Preview | `TWILIO_AUTH_TOKEN`, `TWILIO_API_KEY_SECRET`, `TWILIO_API_KEY_SID`, `TWILIO_TWIML_APP_SID`, `TELEPHONY_CALLBACK_URL` | Same shared-data caution, plus callbacks need stable Preview URLs. |
+| Web Preview | `TWILIO_AUTH_TOKEN`, `TELEPHONY_CALLBACK_URL` | Same shared-data caution, plus callbacks need stable Preview URLs. |
 | Both | Tenant Stripe/Twilio/Resend credentials | TENANT CONFIG - NOT VERCEL. Store tenant provider IDs/resources through GOLD provider binding flows, not Vercel env. |
 
 ## Final Vercel table
@@ -365,12 +365,9 @@ Support sessions are an audit record and do not widen access to tenant operation
 | Web | `STRIPE_CONNECT_CLIENT_ID` | Production | READY TO CONFIGURE | NO | NO | Stripe Connect live client ID, `ca_...` | YES, when going live | Pair with live secret key. |
 | Web | `RESEND_API_KEY` | Preview + Production | NOT USED FOR SENDING | YES | YES | Resend Dashboard | NO | The web never sends email. It reads this only to show a status on Platform → Providers, so that status does not prove the API can send. Invitation email is sent by the API project (rows below). |
 | Web | `PLATFORM_EMAIL_FROM_ADDRESS` | Preview + Production | NOT USED FOR SENDING | NO | NO | Verified sender/domain | NO | Read only for the same Platform → Providers status. Set it in the API project, where invitations are sent. |
-| Web | `TWILIO_ACCOUNT_SID` | Production | READY TO CONFIGURE | NO | NO | Twilio Console | OPTIONAL | Needed for telephony provisioning/browser calling. |
+| Web | `TWILIO_ACCOUNT_SID` | Production | READY TO CONFIGURE | NO | NO | Twilio Console | OPTIONAL | Text messaging only. Calls use the account stored in Platform. |
 | Web | `TWILIO_AUTH_TOKEN` | Production | READY TO CONFIGURE | YES | YES | Twilio Console | OPTIONAL | Sensitive. |
-| Web | `TWILIO_API_KEY_SID` | Production | READY TO CONFIGURE | NO | NO | Twilio Console | OPTIONAL | Browser Voice SDK. |
-| Web | `TWILIO_API_KEY_SECRET` | Production | READY TO CONFIGURE | YES | YES | Twilio Console | OPTIONAL | Browser Voice SDK. |
-| Web | `TWILIO_TWIML_APP_SID` | Production | READY TO CONFIGURE | NO | NO | Twilio Console | OPTIONAL | Browser Voice SDK. |
-| Web | `TELEPHONY_CALLBACK_URL` | Production | READY TO CONFIGURE | NO | NO | API production URL | OPTIONAL | Needed for Twilio callbacks. |
+| Web | `TELEPHONY_CALLBACK_URL` | Production | READY TO CONFIGURE | NO | NO | API production URL | OPTIONAL | Needed to create a business's calling account. |
 | API | `SUPABASE_URL` | Preview + Production | READY TO CONFIGURE | NO | NO | Supabase project URL | YES | Same project as Web unless staging is split. Also where `app/auth` derives the JWKS discovery URL for verifying human callers — no separate variable needed. |
 | API | `SUPABASE_PUBLISHABLE_KEY` | Preview + Production | READY TO CONFIGURE | NO | NO | Supabase publishable key | YES | Current source name; `SUPABASE_ANON_KEY` remains a temporary fallback name only — do not configure both to different values. |
 | API | `SUPABASE_JWT_SECRET` | Production | TEMPORARY LEGACY REQUIREMENT | YES | YES | Supabase Dashboard JWT settings | ONLY AFTER APPROVAL | Required ONLY by the payment/automation/voice machine-role flows (`app/core/db.py`, `app/core/runner.py`). Not read anywhere on the human-auth path (`app/auth`), which verifies people's tokens through the project's JWKS instead. |
@@ -386,7 +383,7 @@ Support sessions are an audit record and do not widen access to tenant operation
 | API | `TENANT_EMAIL_WEBHOOK_SECRET` | Preview + Production | READY TO CONFIGURE | YES | YES | Resend webhook signing secret for business email | YES, for business email | Signs delivery reports and received mail for businesses' own email (`/webhooks/tenant-email`). One secret per Resend account whose domains businesses send from. |
 | API | `RESEND_API_BASE` | Local test runs only | DO NOT CONFIGURE | NO | NO | Not applicable | NO | Points the API at a fake Resend on this machine for tests. Ignored unless it is a loopback address, so a hosted value can never redirect real email. |
 | API | `TWILIO_ACCOUNT_SID` | Production | READY TO CONFIGURE | NO | NO | Twilio Console | OPTIONAL | SMS/callback support. |
-| API | `TWILIO_AUTH_TOKEN` | Production | READY TO CONFIGURE | YES | YES | Twilio Console | OPTIONAL | Also verifies voice callbacks. |
+| API | `TWILIO_AUTH_TOKEN` | Production | READY TO CONFIGURE | YES | YES | Twilio Console | OPTIONAL | Text messaging only. Voice callbacks are verified per calling account. |
 | API | `MESSAGE_FROM_NUMBER` | Production | READY TO CONFIGURE | NO | NO | Twilio phone number | OPTIONAL | SMS sender fallback. |
 | API | `ANTHROPIC_API_KEY` | Preview + Production | READY TO CONFIGURE | YES | YES | Anthropic Console | OPTIONAL | Answering and setup-drafting fallback, used only for a capability with no `platform_ai_runtime_assignments` row. The web project holds no model key. Usage and entitlement need `SUPABASE_JWT_SECRET` on this project as well. |
 | API | `ASSISTANT_BASE_URL` | Preview + Production | READY TO CONFIGURE | NO | NO | Chosen OpenAI-compatible provider | OPTIONAL | Pair with `ASSISTANT_MODEL`. |

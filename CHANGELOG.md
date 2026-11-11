@@ -32,6 +32,10 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-11-11
+
+- Calls now run in each business's own calling account from start to finish. The browser telephone signs in with that business's own key, incoming calls are accepted from any calling account GildOps created and from no other, and the carrier's reports are checked with that account's own signing secret, which is stored when the account is created. The web application holds no carrier credential: placing a call, hold, mute, transfer and playing a recording go through the API, which first has the database confirm the person may use that business's telephone. The five Twilio calling settings on the web project and the two on the API project are no longer read for calls (the account stored in Platform is the only copy); text messaging still uses the two account settings. A business with no calling account of its own can no longer place a call through a shared one. Not yet proven on a real telephone call.
+
 ## 2026-11-10
 
 - Conversations now lists website chat alongside SMS and email without merging their records. Website claim and unknown read states stay explicit; equal-time pages remain stable. Selected message conversations offer eligible Call links and contact/recent-call context; contact details use the shared drawer on narrow screens, and linked Support cases open on demand.

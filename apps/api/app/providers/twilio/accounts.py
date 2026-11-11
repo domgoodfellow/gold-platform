@@ -121,7 +121,25 @@ def create_subaccount(credential: dict, *, friendly_name: str) -> dict:
     body = _post(credential, "/Accounts.json", {"FriendlyName": friendly_name})
     if not isinstance(body.get("sid"), str):
         raise UpstreamRefused("Twilio created a subaccount with no identifier.")
-    return {"sid": body["sid"]}
+    if not isinstance(body.get("auth_token"), str) or not body["auth_token"]:
+        raise UpstreamRefused("Twilio created a subaccount with no signing secret.")
+    # The secret the carrier signs this subaccount's reports with. Returned once, to be stored in
+    # Vault beside the subaccount by the caller, exactly as a new API key's secret is.
+    return {"sid": body["sid"], "signing_secret": body["auth_token"]}
+
+
+def subaccount_signing_secret(credential: dict, *, subaccount_sid: str) -> dict:
+    """The signing secret of a subaccount that already exists beneath this parent.
+
+    For a subaccount made before its secret was kept, or whose storing failed part-way: the parent
+    may always ask again. A subaccount that is not this parent's is refused by the carrier.
+    """
+    body = _get(credential, f"/Accounts/{subaccount_sid}.json")
+    if body.get("owner_account_sid") != credential["external_account_id"]:
+        raise UpstreamRefused("That subaccount does not belong to this account.")
+    if not isinstance(body.get("auth_token"), str) or not body["auth_token"]:
+        raise UpstreamRefused("Twilio returned no signing secret for that subaccount.")
+    return {"signing_secret": body["auth_token"]}
 
 
 def create_api_key(credential: dict, *, subaccount_sid: str, friendly_name: str) -> dict:
@@ -147,6 +165,9 @@ OPERATIONS = {
     "verify": lambda credential, args: verify(credential),
     "list_subaccounts": lambda credential, args: {"subaccounts": list_subaccounts(credential)},
     "create_subaccount": lambda credential, args: create_subaccount(credential, friendly_name=args["friendly_name"]),
+    "subaccount_signing_secret": lambda credential, args: subaccount_signing_secret(
+        credential, subaccount_sid=args["subaccount_sid"]
+    ),
     "create_api_key": lambda credential, args: create_api_key(
         credential, subaccount_sid=args["subaccount_sid"], friendly_name=args["friendly_name"]
     ),

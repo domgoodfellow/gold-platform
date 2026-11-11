@@ -65,6 +65,10 @@
       "destination": "/api/voice_recording"
     },
     {
+      "source": "/voice/operate",
+      "destination": "/api/voice_operations"
+    },
+    {
       "source": "/providers/operate",
       "destination": "/api/provider_operations"
     },

@@ -82,18 +82,30 @@ export async function provisionTelephonySubaccount(
     const existing = await listProviderResources(db, { organizationId, providerKey });
     const friendlyName = telephonySubaccountName(organizationId);
 
-    let subaccountSid = existing.find(
+    const existingSubaccount = existing.find(
       (resource) => resource.resourceType === TELEPHONY_RESOURCE_TYPES.subaccount,
-    )?.externalId;
+    );
+    let subaccountSid = existingSubaccount?.externalId;
     if (!subaccountSid) {
       const created = await provisioner.createSubaccount({ friendlyName });
-      await recordProviderResource(db, {
+      const resourceId = await recordProviderResource(db, {
         organizationId,
         providerKey,
         resourceType: TELEPHONY_RESOURCE_TYPES.subaccount,
         externalId: created.sid,
       });
+      // What the carrier signs this account's reports with. Without it nothing the carrier says
+      // about this business's calls can be believed, so it is kept in the same act.
+      await storeProviderSecret(db, { organizationId, resourceId, secret: created.signingSecret });
       subaccountSid = created.sid;
+    } else if (existingSubaccount) {
+      // A resumed run cannot see whether the secret was kept, because nothing can read one back.
+      // Asking the carrier again and storing what it says is the same value, or the repair.
+      await storeProviderSecret(db, {
+        organizationId,
+        resourceId: existingSubaccount.id,
+        secret: await provisioner.subaccountSigningSecret({ subaccountSid }),
+      });
     }
 
     // The subaccount id itself is what every later call in this deployment addresses —

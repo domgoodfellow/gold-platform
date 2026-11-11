@@ -60,3 +60,41 @@ export async function callDomainCommand<TResult>(
 
   return payload as TResult;
 }
+
+/**
+ * The same call, for an answer that is a stream of bytes rather than JSON — a call recording.
+ * `null` when the API says there is nothing there, so a caller can tell "no recording" from a
+ * failure without parsing a message.
+ */
+export async function callDomainStream(
+  path: string,
+  input: { token: string; body: Record<string, unknown>; timeoutMs?: number },
+): Promise<{ body: ReadableStream<Uint8Array>; contentType: string } | null> {
+  const baseUrl = process.env.GOLD_API_URL;
+  if (!baseUrl) {
+    throw new DomainError('This isn’t available yet.', 'api.unconfigured');
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl.replace(/\/$/, '')}${path}`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${input.token}`,
+      },
+      body: JSON.stringify(input.body),
+      signal: AbortSignal.timeout(input.timeoutMs ?? 60_000),
+    });
+  } catch {
+    throw new DomainError('The API could not be reached.', 'api.unreachable');
+  }
+
+  if (response.status === 404) return null;
+  if (!response.ok || !response.body) {
+    const { error, code } = (await response.json().catch(() => ({}))) as { error?: string; code?: string };
+    throw new DomainError(error ?? `That could not be completed (${response.status}).`, `api.${code ?? 'failed'}`);
+  }
+
+  return { body: response.body, contentType: response.headers.get('content-type') ?? 'audio/mpeg' };
+}

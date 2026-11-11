@@ -1,4 +1,4 @@
-import { createHmac, randomUUID } from 'node:crypto';
+import { callDomainCommand, callDomainStream } from '@/lib/api/client';
 import type {
   CallStatus,
   PlacedCall,
@@ -10,190 +10,59 @@ import type {
 } from './index';
 
 /**
- * Twilio, behind the capability its interface names.
+ * A business's calls, placed and controlled inside that business's own calling account.
  *
- * **The only file in `apps/web` that knows Twilio carries voice.** Everything above it asks for
- * somebody to be rung into a room, and the no-vendor-SDK-in-domain rule is the test that keeps it that way.
- *
- * **No SDK**, for the reason the payment adapter gives: this is one HTTPS call, one form
- * encoding and one signed token, all stable and specified. An SDK would add a transitive
- * surface nothing here uses, and it would want a network at import time.
+ * **No credential is here and none can be.** Every method is one call to `apps/api`'s
+ * `/voice/operate`, carrying the asking person's own token and the business they are working in.
+ * That runtime lets the database answer whether this person may use this business's telephone,
+ * reads the business's own key from Vault and talks to the carrier. This file only translates
+ * between that command's JSON and the capability's types, exactly as `twilio-accounts.ts` does
+ * for GOLD's own account.
  *
  * **Only the outbound half is here.** What the carrier sends back when a call progresses is
- * webhook ingress, which is `apps/api`'s by the web/API runtime split and the authoritative-webhook rule — so this file makes requests and never
- * reads a callback. The mapping between their words and ours therefore exists twice, once on
- * each side, and that is the cost of the split rather than a duplication to remove: neither
- * runtime can call the other.
+ * webhook ingress, which is `apps/api`'s by the web/API runtime split and the authoritative-webhook rule.
  */
-
-const API = 'https://api.twilio.com/2010-04-01';
-
-function status(theirs: string): CallStatus {
-  switch (theirs) {
-    case 'queued':
-    case 'initiated':
-    case 'ringing':
-      return 'ringing';
-    case 'in-progress':
-      return 'in_progress';
-    case 'completed':
-      return 'completed';
-    case 'no-answer':
-      return 'no_answer';
-    case 'busy':
-      return 'busy';
-    default:
-      return 'failed';
+export function twilioTelephony(config: { token: string; organizationId: string }): TelephonyProvider {
+  function operate<T>(operation: string, args: Record<string, unknown> = {}): Promise<T> {
+    return callDomainCommand<T>('/voice/operate', {
+      token: config.token,
+      body: { organization_id: config.organizationId, operation, arguments: args },
+    });
   }
-}
-
-/** Base64url, which a JWT wants and `Buffer` does not produce by default. */
-function segment(value: object): string {
-  return Buffer.from(JSON.stringify(value)).toString('base64url');
-}
-
-export function twilioTelephony(config: {
-  account: string;
-  token: string;
-  apiKeySid: string;
-  apiKeySecret: string;
-  appSid: string;
-  /** A business's own subaccount, addressed with the master credentials above. */
-  actingAccountSid?: string | null;
-}): TelephonyProvider {
-  const basic = Buffer.from(`${config.account}:${config.token}`).toString('base64');
-  const actingAccount = config.actingAccountSid || config.account;
 
   return {
     async addToRoom(input): Promise<PlacedCall> {
-      // Adding a participant creates the room if it does not exist, so there is nothing to
-      // create first and no window in which a room exists with nobody in it.
-      const response = await fetch(
-        `${API}/Accounts/${actingAccount}/Conferences/${encodeURIComponent(input.room)}/Participants.json`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Basic ${basic}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            From: input.from,
-            To: input.to,
-            // The customer does not start the room and does not close it: they may answer
-            // before the agent's browser has joined, and hearing hold music beats hearing the
-            // line die.
-            StartConferenceOnEnter: 'false',
-            EndConferenceOnExit: 'false',
-            StatusCallback: `${input.reportTo}/voice/status`,
-            StatusCallbackEvent: 'initiated ringing answered completed',
-            StatusCallbackMethod: 'POST',
-            // Who is in the room is the carrier's fact, reported as people join and leave; the
-            // call is settled from those, not from any one leg's own ending.
-            ConferenceStatusCallback: `${input.reportTo}/voice/status`,
-            ConferenceStatusCallbackEvent: 'join leave',
-            ConferenceStatusCallbackMethod: 'POST',
-            // Recording is asked for here rather than configured at the account, so a
-            // deployment cannot be recording calls that this code does not know are recorded.
-            Record: 'true',
-            RecordingStatusCallback: `${input.reportTo}/voice/recording`,
-            RecordingStatusCallbackMethod: 'POST',
-          }).toString(),
-        },
-      );
-
-      if (!response.ok) {
-        // The carrier's own words, never a paraphrase. A rewritten message is the one thing
-        // that makes a failing integration unreadable at three in the morning.
-        const detail = await response.text();
-        throw new Error(`telephony refused the call (${response.status}): ${detail}`);
-      }
-
-      const body = (await response.json()) as { call_sid?: unknown; status?: unknown };
-      if (typeof body.call_sid !== 'string') {
-        throw new Error('telephony accepted the call but returned no identifier for it');
-      }
-
-      return {
-        externalId: body.call_sid,
-        status: status(typeof body.status === 'string' ? body.status : ''),
-      };
+      const placed = await operate<{ external_id: string; status: CallStatus }>('add_to_room', {
+        room: input.room,
+        from: input.from,
+        to: input.to,
+      });
+      return { externalId: placed.external_id, status: placed.status };
     },
 
-    async browserToken(input): Promise<string> {
-      // **Signed here rather than fetched**, which is why this needs an API key and not just
-      // the account's auth token: the credential a browser holds is a JWT this server mints,
-      // short-lived, naming exactly one person and one application.
-      const now = Math.floor(Date.now() / 1000);
-      const ttl = input.ttlSeconds ?? 3600;
-
-      const header = segment({ alg: 'HS256', typ: 'JWT', cty: 'twilio-fpa;v=1' });
-      const payload = segment({
-        jti: `${config.apiKeySid}-${randomUUID()}`,
-        iss: config.apiKeySid,
-        sub: config.account,
-        iat: now,
-        exp: now + ttl,
-        grants: {
-          identity: input.identity,
-          voice: {
-            outgoing: { application_sid: config.appSid },
-            // So a number pointed at this application can reach the person as well as the
-            // other way round. Which numbers do that is a tenant's configuration and does not
-            // exist yet; the grant costs nothing until it does.
-            incoming: { allow: true },
-          },
-        },
-      });
-
-      const signature = createHmac('sha256', config.apiKeySecret)
-        .update(`${header}.${payload}`)
-        .digest('base64url');
-
-      return `${header}.${payload}.${signature}`;
+    async browserToken(): Promise<string> {
+      return (await operate<{ token: string }>('browser_token')).token;
     },
 
     async updateParticipant(input): Promise<void> {
-      // Twilio's Conference resource takes either its SID or its friendly name in this path —
-      // the same fact `addToRoom` above already relies on to avoid a second lookup.
-      const form: Record<string, string> = {};
-      if (input.hold !== undefined) form.Hold = String(input.hold);
-      if (input.muted !== undefined) form.Muted = String(input.muted);
-      if (input.status) form.Status = input.status;
-      if (input.endsRoomOnExit !== undefined) form.EndConferenceOnExit = String(input.endsRoomOnExit);
-
-      const response = await fetch(
-        `${API}/Accounts/${actingAccount}/Conferences/${encodeURIComponent(input.room)}/Participants/${encodeURIComponent(input.externalId)}.json`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Basic ${basic}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams(form).toString(),
-        },
-      );
-
-      if (!response.ok) {
-        const detail = await response.text();
-        throw new Error(`telephony refused to update the participant (${response.status}): ${detail}`);
-      }
+      const args: Record<string, unknown> = { room: input.room, external_id: input.externalId };
+      if (input.hold !== undefined) args.hold = input.hold;
+      if (input.muted !== undefined) args.muted = input.muted;
+      if (input.status) args.status = input.status;
+      if (input.endsRoomOnExit !== undefined) args.ends_room_on_exit = input.endsRoomOnExit;
+      await operate('update_participant', args);
     },
 
-    async fetchRecording(input) {
-      // The reference came from a signed callback, but it is fetched with credentials, so it is
-      // held to the carrier's own host rather than trusted to be one.
-      const url = new URL(input.reference);
-      if (url.protocol !== 'https:' || url.hostname !== 'api.twilio.com') {
-        throw new Error('telephony will only fetch a recording from its own host');
-      }
-      const response = await fetch(url, { headers: { Authorization: `Basic ${basic}` } });
-      if (!response.ok || !response.body) {
-        throw new Error(`telephony could not return that recording (${response.status})`);
-      }
-      return { body: response.body, contentType: response.headers.get('content-type') ?? 'audio/mpeg' };
+    fetchRecording(input) {
+      return callDomainStream('/voice/operate', {
+        token: config.token,
+        body: { organization_id: config.organizationId, operation: 'recording', arguments: { call_id: input.callId } },
+      });
     },
   };
 }
+
+const API = 'https://api.twilio.com/2010-04-01';
 
 /**
  * Standing up a business's own scope inside GOLD's master account.
@@ -234,7 +103,24 @@ export function twilioProvisioner(config: { account: string; token: string }): T
       if (typeof body.sid !== 'string') {
         throw new Error('telephony provisioning created a subaccount with no identifier');
       }
-      return { sid: body.sid };
+      if (typeof body.auth_token !== 'string' || !body.auth_token) {
+        throw new Error('telephony provisioning created a subaccount with no signing secret');
+      }
+      return { sid: body.sid, signingSecret: body.auth_token };
+    },
+
+    async subaccountSigningSecret(input): Promise<string> {
+      const response = await fetch(`${API}/Accounts/${input.subaccountSid}.json`, {
+        headers: { Authorization: `Basic ${basic}` },
+      });
+      if (!response.ok) {
+        throw new Error(`telephony provisioning refused (${response.status}): ${await response.text()}`);
+      }
+      const body = (await response.json()) as Record<string, unknown>;
+      if (typeof body.auth_token !== 'string' || !body.auth_token) {
+        throw new Error('telephony provisioning returned no signing secret for that subaccount');
+      }
+      return body.auth_token;
     },
 
     async createApiKey(input): Promise<ProvisionedApiKey> {

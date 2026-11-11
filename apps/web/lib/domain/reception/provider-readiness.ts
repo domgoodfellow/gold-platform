@@ -12,11 +12,12 @@ export type CommunicationsReadiness = 'ready' | 'not_ready' | 'provisioning' | '
  * of readiness; `lib/domain/providers/status.ts`'s `providerReadiness` is the platform's own
  * reading of the same fact, for the same reason.
  *
- * **A business with no binding at all is `ready`, not `not_ready`.** It dials through the
- * deployment's own shared scope (`actingTelephonyAccount` in `calls.ts` falls back to it exactly
- * this way), which is the ordinary, fully working state for every business until staff provisions
- * one of its own — the target architecture's "one subaccount per applicable tenant" is a future
- * isolation upgrade, not a precondition for calling today.
+ * **A business with no binding at all reads `ready` here, and that is not a promise it can call.**
+ * This word reports faults in a calling account that exists. Whether a business has one at all is
+ * asked separately and first (`callingRuntimeConfigured`, `organizationTelephony` in `calls.ts`):
+ * calls happen only in a business's own calling account, and there is no shared one to fall back
+ * to. Text messaging still sends through the deployment's own account, which is why an absent
+ * binding is not a fault for that channel.
  */
 export function readinessFromBindingStatus(status: ProviderBinding['status'] | null): CommunicationsReadiness {
   switch (status) {

@@ -16,13 +16,13 @@ from __future__ import annotations
 from http.server import BaseHTTPRequestHandler
 
 from api.voice_status import form_params, public_url
+from app.services.communications.carrier_callbacks import callback_refusal
 from app.core.config import load_voice_settings
 from app.core.db import record_call_event
 from app.providers.twilio.voice import (
     payload_hash,
     recording_download_url,
     recording_report,
-    verify_signature,
 )
 
 
@@ -37,13 +37,14 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 - Vercel requires this name
         body = self.rfile.read(length).decode("utf-8", errors="replace")
         params = form_params(body)
 
-        if not verify_signature(
+        refusal = callback_refusal(
+            settings,
             url=public_url(self.headers, self.path),
             params=params,
             signature=self.headers.get("x-twilio-signature"),
-            auth_token=settings.twilio_auth_token,
-        ):
-            self._reply(403, "rejected")
+        )
+        if refusal is not None:
+            self._reply(refusal, "rejected")
             return
 
         report = recording_report(params)

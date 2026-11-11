@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { beginProviderBinding, recordProviderResource } from '@/lib/domain/providers/bindings';
+import { beginProviderBinding, recordProviderResource, setProviderBindingStatus } from '@/lib/domain/providers/bindings';
 import { createCustomer } from '@/lib/domain/customers/customers';
 import { getCall, getCallRecording, listCallPage, placeCall } from '@/lib/domain/reception/calls';
 import {
@@ -113,9 +113,23 @@ async function newTenant(label: string): Promise<Tenant> {
   return { db, email, userId, organizationId, membershipId };
 }
 
+const callingAccounts = new Map<string, string>();
+/** One calling account per business, as provisioning gives it. */
+function callingAccountOf(tenant: Tenant): string {
+  if (!callingAccounts.has(tenant.organizationId)) callingAccounts.set(tenant.organizationId, `AC${randomUUID().replace(/-/g, '')}`);
+  return callingAccounts.get(tenant.organizationId)!;
+}
+
 /** A real provisioned number, through the one staff door that creates one. */
 async function seedNumber(tenant: Tenant, e164 = phone()): Promise<{ id: string; e164: string; resourceId: string }> {
   await beginProviderBinding(staff, { organizationId: tenant.organizationId, providerKey: 'twilio' });
+  // A business calls only from a calling account of its own, so the one a number lives in is active.
+  await setProviderBindingStatus(staff, {
+    organizationId: tenant.organizationId,
+    providerKey: 'twilio',
+    status: 'active',
+    externalAccountId: callingAccountOf(tenant),
+  });
   const resourceId = await recordProviderResource(staff, {
     organizationId: tenant.organizationId,
     providerKey: 'twilio',
@@ -889,5 +903,37 @@ describe('a number says what it can do, and whether it is ready is read, never s
     const number = await seedNumber(mine);
     await expect(assignPhoneNumber(mine.db as never, { organizationId: mine.organizationId, phoneNumberId: number.id, memberId: other.membershipId })).rejects.toBeDefined();
     await expect(assignPhoneNumber(other.db as never, { organizationId: mine.organizationId, phoneNumberId: number.id, memberId: mine.membershipId })).rejects.toBeDefined();
+  });
+});
+
+describe('a business calls only from a calling account of its own', () => {
+  it('refuses a call, a browser telephone and a recording for a business that has none, and rings nobody', async () => {
+    const { browserTelephoneToken } = await import('@/lib/domain/reception/calls');
+    const without = await newTenant('no-account');
+    const before = operations().length;
+
+    await expect(placeCall(without.db as never, { organizationId: without.organizationId, toNumber: phone() })).rejects.toMatchObject({
+      code: 'calls.telephony_unconfigured',
+    });
+    await expect(browserTelephoneToken(without.db as never, { organizationId: without.organizationId })).rejects.toMatchObject({
+      code: 'calls.telephony_unconfigured',
+    });
+
+    expect(operations().length).toBe(before);
+    const { rows } = await pg.query('select count(*)::int as calls from public.calls where organization_id = $1', [without.organizationId]);
+    expect(rows[0].calls).toBe(0);
+  });
+
+  it('refuses the same for a business whose calling account is suspended', async () => {
+    const suspended = await newTenant('suspended-account');
+    await seedNumber(suspended);
+    await setProviderBindingStatus(staff, { organizationId: suspended.organizationId, providerKey: 'twilio', status: 'suspended' });
+    const before = operations().length;
+
+    await expect(placeCall(suspended.db as never, { organizationId: suspended.organizationId, toNumber: phone() })).rejects.toMatchObject({
+      code: 'calls.telephony_unconfigured',
+    });
+
+    expect(operations().length).toBe(before);
   });
 });

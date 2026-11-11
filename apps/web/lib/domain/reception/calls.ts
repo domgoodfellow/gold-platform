@@ -1,10 +1,11 @@
 import {
-  callbackBase,
   telephonyProvider,
   telephonyProviderKey,
   type CallStatus,
+  type TelephonyProvider,
 } from '@/lib/adapters/telephony';
 import { randomUUID } from 'node:crypto';
+import { requireAccessToken } from '@/lib/api/client';
 import type { Db } from '@/lib/db/types';
 import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
 import { LIST_LIMIT, counted, type Counted } from '@/lib/domain/counted';
@@ -14,13 +15,23 @@ import { currentMembershipId } from '@/lib/domain/reception/inbox';
 import { requireActor } from '@/lib/domain/tenancy/actor';
 
 /**
- * The scope a business's own calls happen inside, or `null` for one with no telephony binding
- * yet — which is every business until staff provisions one, and `telephonyProvider` reads that
- * exactly like GOLD's master scope, unchanged.
+ * The calling account a business's own calls happen inside, or `null` for a business that has
+ * none active. There is no shared account to fall back to: a business with no calling account of
+ * its own cannot place a call from here, and logs the calls it makes elsewhere.
  */
 export async function actingTelephonyAccount(db: Db, organizationId: string): Promise<string | null> {
   const binding = await getProviderBinding(db, { organizationId, providerKey: telephonyProviderKey() });
   return binding?.status === 'active' ? binding.externalAccountId : null;
+}
+
+/**
+ * The telephone of one business, for the person asking — or `null` when the business has no
+ * active calling account or this deployment cannot reach the runtime that places calls. The one
+ * place a call, a call control, a browser telephone and a recording all get their carrier from.
+ */
+export async function organizationTelephony(db: Db, organizationId: string): Promise<TelephonyProvider | null> {
+  if (!(await actingTelephonyAccount(db, organizationId))) return null;
+  return telephonyProvider({ token: await requireAccessToken(db), organizationId });
 }
 
 /**
@@ -397,10 +408,8 @@ export async function placeCall(
     );
   }
 
-  const reportTo = callbackBase();
-  const actingAccount = await actingTelephonyAccount(db, input.organizationId);
-  const provider = await telephonyProvider(actingAccount);
-  if (!provider || !reportTo) {
+  const provider = await organizationTelephony(db, input.organizationId);
+  if (!provider) {
     throw new DomainError(
       'Calling from GildOps isn’t available yet. Log the call once you have made it.',
       'calls.telephony_unconfigured',
@@ -454,7 +463,7 @@ export async function placeCall(
   // connection open for the length of somebody else's network.
   let placed;
   try {
-    placed = await provider.addToRoom({ room, from: from.e164, to, reportTo });
+    placed = await provider.addToRoom({ room, from: from.e164, to });
   } catch (cause) {
     // The row exists and nobody is going to ring. Marked failed rather than left ringing
     // forever, because a floor reading its own history must not find calls that never happened
@@ -514,8 +523,10 @@ async function rememberCustomerLeg(db: Db, organizationId: string, callId: strin
  * the policy on `calls` is what refuses somebody who may not dial. A second check here would be
  * a second authorization system shadowing the real one.
  *
- * The credential is signed by the deployment's own key; a per-business key is not built, so
- * the browser's *scope* is the deployment's and it names no account of its own.
+ * The credential is signed by this business's own key and names this business's own calling
+ * account, so the browser is a telephone in the same account its calls are placed in. Who the
+ * person is — their membership here — is resolved by the runtime that signs it, from their own
+ * session.
  */
 export async function browserTelephoneToken(db: Db, input: { organizationId: string }): Promise<string> {
   await requireActor(db);
@@ -525,7 +536,7 @@ export async function browserTelephoneToken(db: Db, input: { organizationId: str
     throw new DomainError('You are not a member of this business.', 'calls.not_a_member');
   }
 
-  const provider = await telephonyProvider();
+  const provider = await organizationTelephony(db, input.organizationId);
   if (!provider) {
     throw new DomainError(
       'Calling from GildOps isn’t available yet.',
@@ -533,7 +544,7 @@ export async function browserTelephoneToken(db: Db, input: { organizationId: str
     );
   }
 
-  return provider.browserToken({ identity: membershipId });
+  return provider.browserToken();
 }
 
 /**
@@ -643,11 +654,13 @@ export async function getCallRecording(
   }
   if (!data) return null;
 
-  const provider = await telephonyProvider(await actingTelephonyAccount(db, input.organizationId));
+  const provider = await organizationTelephony(db, input.organizationId);
   if (!provider) {
     throw new DomainError('Recordings aren’t available yet.', 'calls.telephony_unconfigured');
   }
-  return provider.fetchRecording({ reference: data as string });
+  // The reference above only answers "is there one, and may this person play it" for this layer's
+  // own wording. The runtime that fetches the audio asks the same question again for itself.
+  return provider.fetchRecording({ callId: input.callId });
 }
 
 /**

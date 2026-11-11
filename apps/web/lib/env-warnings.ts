@@ -23,14 +23,5 @@ export function environmentWarnings(): string[] {
   pair('STRIPE_SECRET_KEY', 'STRIPE_CONNECT_CLIENT_ID');
   pair('TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN');
 
-  const browserCallingVars = ['TWILIO_API_KEY_SID', 'TWILIO_API_KEY_SECRET', 'TWILIO_TWIML_APP_SID'];
-  const browserCallingSet = browserCallingVars.filter((name) => process.env[name]);
-  if (browserCallingSet.length > 0 && browserCallingSet.length < browserCallingVars.length) {
-    const missing = browserCallingVars.filter((name) => !process.env[name]);
-    warnings.push(
-      `${browserCallingSet.join(', ')} set without ${missing.join(', ')} — browser calling needs all three of ${browserCallingVars.join(', ')}.`,
-    );
-  }
-
   return warnings;
 }

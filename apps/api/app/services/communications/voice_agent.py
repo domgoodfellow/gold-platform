@@ -1,5 +1,5 @@
 from app.core.caller import call_command
-from app.core.db import machine_token, PROVIDER_ROLE, PROVIDER_ACTOR, read_provider_account_credential
+from app.core.db import carrier_signing_secret, machine_token, PROVIDER_ROLE, PROVIDER_ACTOR, read_provider_account_credential
 from app.providers.voice_agent.sessions import start_session, verify_event
 from app.providers.twilio.voice import voice_stream_twiml
 
@@ -48,11 +48,14 @@ def receive_voice_event(settings, *, payload, body, timestamp, signature):
         from app.providers.twilio.voice import dial_route_twiml, redirect_inbound_call
         target = command(settings, 'claim_voice_agent_transfer', {'session_id': session['id']})
         if target:
-            if target['account_sid'] != os.environ.get('TWILIO_ACCOUNT_SID'):
+            # The call lives in the business's own calling account, and that account's own secret
+            # is what may redirect it. An account GildOps did not create has none.
+            account_secret = carrier_signing_secret(settings, account_sid=target['account_sid'])
+            if not account_secret:
                 raise ValueError('Carrier account mismatch')
             callback = os.environ.get('TELEPHONY_CALLBACK_URL', '').rstrip('/')
             if not callback.startswith('https://'):
                 raise ValueError('Carrier callback unavailable')
             decision = SimpleNamespace(target_type='members', member_ids=target['member_ids'], external_number=None, ring_strategy='everyone', ring_timeout_seconds=20)
-            redirect_inbound_call(account_sid=target['account_sid'], auth_token=settings.twilio_auth_token, external_id=target['external_id'], twiml=dial_route_twiml(decision, action=callback + '/voice/inbound?stage=final'))
+            redirect_inbound_call(account_sid=target['account_sid'], auth_token=account_secret, external_id=target['external_id'], twiml=dial_route_twiml(decision, action=callback + '/voice/inbound?stage=final'))
     return True

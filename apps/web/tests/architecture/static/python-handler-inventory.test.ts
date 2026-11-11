@@ -23,7 +23,10 @@ const read = (path: string) => readFileSync(join(API, path), 'utf8');
 
 const TRUST = {
   'stripe-signature': /stripe-signature/i,
-  'twilio-signature': /verify_signature\(/,
+  // The one shared check every carrier callback runs: it finds the signing secret of the calling
+  // account the request names and verifies the carrier's signature with it.
+  // The email webhooks under this label verify their own provider's signature directly.
+  'twilio-signature': /callback_refusal\(|verify_signature\(/,
   'cron-secret': /cron_secret/i,
   'bearer-token': /require_caller\(/,
   'shared-key': /x-gold-public-chat-key/,
@@ -50,6 +53,7 @@ const INVENTORY: { file: string; route: string; trust: keyof typeof TRUST; runti
   { file: 'routing_preview_outbound', route: '/routing/preview-outbound', trust: 'bearer-token' },
   { file: 'integration_operations', route: '/integrations/operate', trust: 'bearer-token' },
   { file: 'provider_operations', route: '/providers/operate', trust: 'bearer-token' },
+  { file: 'voice_operations', route: '/voice/operate', trust: 'bearer-token' },
   { file: 'platform_billing_customer', route: '/platform-billing/customer', trust: 'bearer-token' },
   { file: 'organization_domains', route: '/organizations/domains', trust: 'bearer-token' },
   { file: 'organization_email_domains', route: '/organizations/email-domains', trust: 'bearer-token' },

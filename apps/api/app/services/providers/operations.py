@@ -8,9 +8,9 @@ that may read the credential.
 
 **Nothing here decides what the operation means.** Which operations exist, and how a provider
 spells them, is `app.providers`' subject; this module dispatches by name and returns the
-result. What is returned is never the credential -- a provisioned API key's secret is the one
-value a result may carry, because that key belongs to a tenant's subaccount, is created by this
-call, and is stored by the caller in the same act.
+result. What is returned is never the account's own credential. Two values a result may carry,
+both belonging to a tenant's subaccount and both stored by the caller in the same act: a newly
+provisioned API key's secret, and the subaccount's own signing secret.
 """
 
 from __future__ import annotations

@@ -19,13 +19,17 @@ from urllib.parse import urlencode
 import pytest
 
 import api.sms_status as sms_status
+import app.services.communications.carrier_callbacks as carrier_callbacks
 from app.providers.twilio.sms import failure_reason, normalize_status
 
-TOKEN = "an-account-auth-token"
-SETTINGS = SimpleNamespace(supabase_url="https://p.test", supabase_publishable_key="anon", supabase_jwt_secret="signing", twilio_auth_token=TOKEN)
+# The signing secret of the calling account the report names; read per request, by account.
+TOKEN = "a-calling-account-signing-secret"
+ACCOUNT = "AC" + "1" * 32
+SETTINGS = SimpleNamespace(supabase_url="https://p.test", supabase_publishable_key="anon", supabase_jwt_secret="signing")
 
 
 def post(params: dict[str, str]) -> tuple[int, str]:
+    params = {"AccountSid": ACCOUNT, **params}
     body = urlencode(params).encode()
     url = "https://gold.example/x"
     payload = url + "".join(f"{key}{params[key]}" for key in sorted(params))
@@ -62,6 +66,7 @@ class Recorder:
 def recorder(monkeypatch):
     sink = Recorder()
     monkeypatch.setattr(sms_status, "load_voice_settings", lambda: SETTINGS)
+    monkeypatch.setattr(carrier_callbacks, "carrier_signing_secret", lambda settings, *, account_sid: TOKEN if account_sid == ACCOUNT else None)
     monkeypatch.setattr(sms_status, "record_message_status", sink)
     monkeypatch.setattr(sms_status, "public_url", lambda headers, path: "https://gold.example/x")
     return sink

@@ -1,22 +1,21 @@
 """Signed inbound calling through the canonical organization routing resolver."""
 from __future__ import annotations
 import logging
-import os
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlsplit
 from api.voice_status import form_params, public_url
 from app.core.config import load_voice_settings
 from app.core.db import record_call_event
 from app.services.communications.inbound import inbound_response, REJECT
-from app.providers.twilio.voice import payload_hash, verify_signature
+from app.providers.twilio.voice import payload_hash
+from app.services.communications.carrier_callbacks import callback_refusal
 
 logger = logging.getLogger(__name__)
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         settings = load_voice_settings()
-        account = os.environ.get('TWILIO_ACCOUNT_SID')
-        if settings is None or not account:
+        if settings is None:
             self._reply(404, 'not found')
             return
         length = int(self.headers.get('content-length') or 0)
@@ -24,8 +23,11 @@ class handler(BaseHTTPRequestHandler):
             self._reply(413, 'rejected')
             return
         params = form_params(self.rfile.read(length).decode('utf-8', errors='replace'))
-        if params.get('AccountSid') != account or not verify_signature(url=public_url(self.headers, self.path), params=params, signature=self.headers.get('x-twilio-signature'), auth_token=settings.twilio_auth_token):
-            self._reply(403, 'rejected')
+        # A call is accepted from any calling account GildOps created, and from no other: only
+        # those have a signing secret for the request to verify against.
+        refusal = callback_refusal(settings, url=public_url(self.headers, self.path), params=params, signature=self.headers.get('x-twilio-signature'))
+        if refusal is not None:
+            self._reply(refusal, 'rejected')
             return
         stage = parse_qs(urlsplit(self.path).query).get('stage', [''])[0]
         status = params.get('DialCallStatus')

@@ -11,45 +11,25 @@ import type {
  * **The only file outside an implementation that names a carrier**, exactly as
  * `payments/registry.ts` is for processors. Everything above it names the capability.
  *
- * `null` when nothing is configured, rather than a throw. A business that dials from mobile
- * phones and writes down what happened is a complete business, and on a deployment with no
- * carrier configured that is what this platform offers: the call is recorded by hand, and the
- * button that would have dialled says why it cannot.
+ * **A business's calls happen in that business's own calling account.** The provider is built for
+ * one person working in one business: their token and that business's id. It holds no credential;
+ * `apps/api` reads the business's own key and reaches the carrier. There is no deployment-wide
+ * carrier credential for calls, so no business can place a call in another's account, and none
+ * shares one.
  *
- * **Five values rather than two, and the extra three are what a dialer costs.** Placing a call
- * from a server needs an account and its token. Letting a *browser* be a telephone needs an API
- * key to sign a short-lived credential with, and an application at the carrier to point that
- * credential at. A deployment holding the first two and not the last three can record calls and
- * cannot make them, which is a real state and the reason this returns null rather than half a
- * provider.
- *
- * **Selection is still by environment — GOLD's master account is always the credential — and
- * the telephony-identity design is why an organization argument does not change that.** A business's subaccount is a scope
- * inside GOLD's own account, not a second set of credentials: Twilio lets the parent's own
- * Account SID and auth token address a resource under any of its subaccounts by naming that
- * subaccount's SID in the request path. `actingAccountSid` is exactly that name. Passed, calls
- * happen inside that business's own scope; omitted, they happen inside GOLD's master scope
- * exactly as before this argument existed — a business with no Twilio binding yet is unaffected.
- *
- * The credential that mints a *browser's* token (`browserToken`) is unaffected by this argument.
- * A token granting access to one subaccount's own TwiML application can only be signed by an API
- * key belonging to that same subaccount, which is a deeper resolution — safely reading that
- * business's own generated key back out of Vault at the moment of signing — that this slice does
- * not build; the platform-economics separation (ADR-014) names it as what is not yet built here.
+ * `null` when this deployment has no `apps/api` to ask, rather than a throw. A business that
+ * dials from mobile phones and writes down what happened is a complete business: the call is
+ * recorded by hand, and the button that would have dialled says why it cannot. Whether a given
+ * business has a calling account at all is the domain's question (`actingTelephonyAccount`).
  */
-export async function telephonyProvider(
-  actingAccountSid?: string | null,
-): Promise<TelephonyProvider | null> {
-  const account = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const apiKeySid = process.env.TWILIO_API_KEY_SID;
-  const apiKeySecret = process.env.TWILIO_API_KEY_SECRET;
-  const appSid = process.env.TWILIO_TWIML_APP_SID;
-
-  if (!account || !token || !apiKeySid || !apiKeySecret || !appSid) return null;
+export async function telephonyProvider(input: {
+  token: string;
+  organizationId: string;
+}): Promise<TelephonyProvider | null> {
+  if (!process.env.GOLD_API_URL) return null;
 
   const { twilioTelephony } = await import('./twilio');
-  return twilioTelephony({ account, token, apiKeySid, apiKeySecret, appSid, actingAccountSid });
+  return twilioTelephony(input);
 }
 
 /**
@@ -73,16 +53,10 @@ export async function telephonyProvisioner(): Promise<TelephonyProvisioner | nul
 }
 
 /**
- * Where the carrier should report what happens next.
+ * The public base of this repository's own `apps/api` deployment, as the carrier reaches it.
  *
- * The public base of this repository's own `apps/api` deployment. **Passed per call rather than
- * configured once at the carrier**, so a deployment that moves does not leave its calls
- * reporting to an address that no longer answers — and so a preview and production can run side
- * by side without one of them collecting the other's callbacks.
- *
- * Separate from the assistant's base URL, which usually points at the same deployment: the two
- * features are separately configurable everywhere else in this repository, and folding them into
- * one variable would make either switch turn the other off.
+ * Read here for one purpose: provisioning points a new calling account's application at it. A
+ * call's own reports are addressed by `apps/api` itself, never from this value.
  */
 export function callbackBase(): string | null {
   const base = process.env.TELEPHONY_CALLBACK_URL;

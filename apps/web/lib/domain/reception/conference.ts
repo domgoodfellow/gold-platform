@@ -1,7 +1,7 @@
-import { callbackBase, telephonyProvider, type CallStatus, type TelephonyProvider } from '@/lib/adapters/telephony';
+import type { CallStatus, TelephonyProvider } from '@/lib/adapters/telephony';
 import type { Db } from '@/lib/db/types';
 import { DomainError, fromDatabaseError } from '@/lib/domain/errors';
-import { actingTelephonyAccount } from '@/lib/domain/reception/calls';
+import { organizationTelephony } from '@/lib/domain/reception/calls';
 import { currentMembershipId } from '@/lib/domain/reception/inbox';
 
 /**
@@ -116,7 +116,7 @@ function requireLive(context: CallContext): void {
 }
 
 async function carrier(db: Db, organizationId: string): Promise<TelephonyProvider> {
-  const provider = await telephonyProvider(await actingTelephonyAccount(db, organizationId));
+  const provider = await organizationTelephony(db, organizationId);
   if (!provider) {
     throw new DomainError('Calling from GildOps isn’t available yet.', 'conference.telephony_unconfigured');
   }
@@ -170,11 +170,7 @@ export async function addCallParticipant(
     );
   }
 
-  const reportTo = callbackBase();
   const provider = await carrier(db, input.organizationId);
-  if (!reportTo) {
-    throw new DomainError('Calling from GildOps isn’t available yet.', 'conference.telephony_unconfigured');
-  }
 
   const context = await callContext(db, input);
   requireLive(context);
@@ -195,7 +191,7 @@ export async function addCallParticipant(
 
   let placed;
   try {
-    placed = await provider.addToRoom({ room: context.room, from: context.businessNumber, to, reportTo });
+    placed = await provider.addToRoom({ room: context.room, from: context.businessNumber, to });
   } catch (cause) {
     await withdraw();
     throw carrierFailure('Could not add that participant', 'conference.add_failed', cause);

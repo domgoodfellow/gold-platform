@@ -41,15 +41,13 @@ export type TelephonyProvider = {
    * of being connected to each other, because hold, transfer, merge and supervision are each
    * one operation on somebody in a room and none of them is possible on a two-party line.
    *
-   * `reportTo` is where the carrier should send word of what happens next. Supplied per call
-   * rather than configured once at the provider, so a deployment that moves does not leave its
-   * calls reporting to an address that no longer answers.
+   * Where the carrier reports what happens next is not an argument: the runtime that places the
+   * call names its own address, so nobody asking for a call can have its reports sent elsewhere.
    */
   addToRoom(input: {
     room: string;
     from: string;
     to: string;
-    reportTo: string;
   }): Promise<PlacedCall>;
 
   /**
@@ -58,10 +56,11 @@ export type TelephonyProvider = {
    * **The thing that makes an agent reachable at all.** Without it a call rings a customer and
    * connects them to nobody, which is what the first reception slice actually did.
    *
-   * `identity` is who the browser is claiming to be, and it is this platform's own membership
-   * id rather than anything the vendor knows about. It is minted per session and never stored.
+   * Who the browser is — this person's own membership in this business — is resolved from their
+   * session by the runtime that signs the credential, never supplied by a caller. It is minted
+   * per session and never stored.
    */
-  browserToken(input: { identity: string; ttlSeconds?: number }): Promise<string>;
+  browserToken(): Promise<string>;
 
   /**
    * Change what one leg is doing inside a room that already exists — the operation the conference-call design promised
@@ -85,11 +84,11 @@ export type TelephonyProvider = {
   }): Promise<void>;
 
   /**
-   * The audio of a recording, fetched with this platform's own credentials from the reference the
-   * carrier gave. The reference is never handed to a person: it is not authorization, and a
-   * recording is played only through a route that has already checked who is asking.
+   * The audio of one call's recording, or `null` when the call has none. Whether this person may
+   * play it is checked, under their own session, by the runtime that fetches it; the carrier's
+   * reference is never handed to a person, because it is not authorization.
    */
-  fetchRecording(input: { reference: string }): Promise<{ body: ReadableStream<Uint8Array>; contentType: string }>;
+  fetchRecording(input: { callId: string }): Promise<{ body: ReadableStream<Uint8Array>; contentType: string } | null>;
 };
 
 /**
@@ -107,12 +106,15 @@ export type TelephonyProvider = {
  * retry is `lib/domain/providers/`'s question, not this one's — each method here does the one
  * externally-visible thing its name says and nothing to check first.
  */
-export type ProvisionedSubaccount = { sid: string };
+/** `signingSecret` is what the carrier signs this scope's reports with. Stored once, never shown. */
+export type ProvisionedSubaccount = { sid: string; signingSecret: string };
 export type ProvisionedApiKey = { sid: string; secret: string };
 export type ProvisionedTwimlApp = { sid: string };
 
 export type TelephonyProvisioner = {
   createSubaccount(input: { friendlyName: string }): Promise<ProvisionedSubaccount>;
+  /** The signing secret of a scope that already exists, for a provisioning run that is resuming. */
+  subaccountSigningSecret(input: { subaccountSid: string }): Promise<string>;
   createApiKey(input: { subaccountSid: string; friendlyName: string }): Promise<ProvisionedApiKey>;
   createTwimlApp(input: {
     subaccountSid: string;

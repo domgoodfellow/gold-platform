@@ -39,7 +39,18 @@ export function twilioAccountOperations(input: {
     },
 
     provisioner: {
-      createSubaccount: (args) => operate('create_subaccount', { friendly_name: args.friendlyName }),
+      async createSubaccount(args) {
+        const created = await operate<{ sid: string; signing_secret: string }>('create_subaccount', {
+          friendly_name: args.friendlyName,
+        });
+        return { sid: created.sid, signingSecret: created.signing_secret };
+      },
+      async subaccountSigningSecret(args) {
+        const found = await operate<{ signing_secret: string }>('subaccount_signing_secret', {
+          subaccount_sid: args.subaccountSid,
+        });
+        return found.signing_secret;
+      },
       createApiKey: (args) =>
         operate('create_api_key', { subaccount_sid: args.subaccountSid, friendly_name: args.friendlyName }),
       createTwimlApp: (args) =>

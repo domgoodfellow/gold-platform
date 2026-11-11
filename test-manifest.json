@@ -565,6 +565,14 @@
       ],
       "note": "send_invitation_email: the recipient always comes from the invitation row, the account is tried before the environment, every outcome is recorded. The vendor boundary (send_platform_email) is replaced."
     },
+    "apps/api/tests/component/test_call_operations.py": {
+      "category": "python-component",
+      "concerns": [
+        "voice",
+        "providers",
+        "security"
+      ]
+    },
     "apps/api/tests/component/test_provider_operations.py": {
       "category": "python-component",
       "concerns": [
@@ -1643,14 +1651,14 @@
         "providers"
       ]
     },
-    "apps/web/tests/contract/twilio-browser-token.test.ts": {
+    "apps/web/tests/contract/telephony-calls-adapter.test.ts": {
       "category": "offline-contract",
       "concerns": [
         "voice",
         "security",
         "providers"
       ],
-      "note": "The browser softphone token boundary (browserTelephoneToken) had no test."
+      "note": "The web side of the calls boundary: every call operation goes to apps/api with the person's token and no carrier credential. The browser token's own shape moved to apps/api/tests/component/test_call_operations.py with the signing."
     },
     "apps/web/tests/integration/database/agent-attachments.test.ts": {
       "category": "database-integration",

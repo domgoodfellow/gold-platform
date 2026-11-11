@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   beginProviderBinding,
   getProviderBinding,
@@ -298,43 +298,5 @@ describe("a tenant configures only what is already bound to it", () => {
     // A number nobody has ever bound to anybody stays exactly as free-text-settable as before
     // this slice — most businesses on this deployment have provisioned nothing yet.
     await setCallingNumber(tenant.db, { organizationId: tenant.organizationId, number: freshNumber() });
-  });
-});
-
-describe('telephony resolution is organization-aware', () => {
-  it("addresses a business's own subaccount when one is bound, and GOLD's master scope when none is", async () => {
-    const { twilioTelephony } = await import('@/lib/adapters/telephony/twilio');
-
-    const calls: string[] = [];
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
-      calls.push(String(url));
-      return new Response(JSON.stringify({ call_sid: 'CA123', status: 'queued' }), { status: 201 });
-    });
-
-    try {
-      const master = twilioTelephony({
-        account: 'ACMASTER',
-        token: 'tok',
-        apiKeySid: 'SK1',
-        apiKeySecret: 'secret',
-        appSid: 'AP1',
-      });
-      await master.addToRoom({ room: 'gold-1', from: '+14165550100', to: '+14165550101', reportTo: 'https://example.test' });
-      expect(calls[0]).toContain('/Accounts/ACMASTER/');
-
-      const scoped = twilioTelephony({
-        account: 'ACMASTER',
-        token: 'tok',
-        apiKeySid: 'SK1',
-        apiKeySecret: 'secret',
-        appSid: 'AP1',
-        actingAccountSid: 'ACSUBACCOUNT',
-      });
-      await scoped.addToRoom({ room: 'gold-2', from: '+14165550100', to: '+14165550101', reportTo: 'https://example.test' });
-      expect(calls[1]).toContain('/Accounts/ACSUBACCOUNT/');
-      expect(calls[1]).not.toContain('/Accounts/ACMASTER/');
-    } finally {
-      fetchSpy.mockRestore();
-    }
   });
 });

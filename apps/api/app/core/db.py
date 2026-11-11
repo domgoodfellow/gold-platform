@@ -457,6 +457,34 @@ def record_call_leg(settings: VoiceSettings, *, conference_name: str, external_i
     return response.json()
 
 
+def carrier_signing_secret(settings: VoiceSettings, *, account_sid: str) -> str | None:
+    """The signing secret of one GildOps-created calling account, or `None` for any other account.
+
+    Read under `voice_webhook`, per request, and used for exactly one comparison. `None` is the
+    whole of the "is this one of ours" test: an account nobody provisioned has no secret here, so
+    nothing it sends can verify.
+    """
+    token = machine_token(settings.supabase_jwt_secret, role=VOICE_ROLE, sub=VOICE_ACTOR)
+
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/telephony_signing_secret",
+        headers={
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={"p_account_sid": account_sid},
+        timeout=10.0,
+    )
+
+    if response.status_code >= 400:
+        # No body, for the reason `read_provider_account_credential` gives.
+        raise RuntimeError(f"telephony_signing_secret failed: {response.status_code}")
+
+    secret = response.json()
+    return secret if isinstance(secret, str) and secret else None
+
+
 SMS_ROLE = "sms_webhook"
 
 # The messaging integration's own auth.users row, fixed in
@@ -582,6 +610,42 @@ def read_provider_account_credential(
 
     rows = response.json()
     return rows[0] if rows else None
+
+
+def read_organization_telephony_credential(
+    settings: ProviderOperationsSettings,
+    *,
+    organization_id: str,
+    timeout: float = 10.0,
+) -> dict | None:
+    """One business's own calling account, key and application, or `None` when it has none active.
+
+    **Never GildOps' parent credential.** What comes back can act inside that one business's
+    calling account and nowhere else, so a call placed with it cannot land in another business's.
+    The caller has already proved, under the asking person's own token, that they may use this
+    business's telephone.
+    """
+    token = machine_token(settings.supabase_jwt_secret, role=PROVIDER_ROLE, sub=PROVIDER_ACTOR)
+
+    response = httpx.post(
+        f"{settings.supabase_url}/rest/v1/rpc/read_organization_telephony_credential",
+        headers={
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={"p_organization_id": organization_id},
+        timeout=timeout,
+    )
+
+    if response.status_code >= 400:
+        raise RuntimeError(f"read_organization_telephony_credential failed: {response.status_code}")
+
+    rows = response.json()
+    row = rows[0] if rows else None
+    if not row or not all(row.get(key) for key in ("account_sid", "api_key_sid", "api_key_secret", "application_sid")):
+        return None
+    return row
 
 
 def resolve_ai_runtime_assignment(

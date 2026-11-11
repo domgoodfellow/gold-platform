@@ -35,7 +35,7 @@ import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
  */
 
 // The carrier, reached through `apps/api`. Recorded so a test can count what was created.
-const calls = { createSubaccount: 0, createApiKey: 0, createTwimlApp: 0, verify: 0 };
+const calls = { createSubaccount: 0, createApiKey: 0, createTwimlApp: 0, verify: 0, readSigningSecret: 0 };
 let remoteSubaccounts: { sid: string; friendlyName: string | null; status: string | null }[] = [];
 let verifyAnswer = { ok: true, error: null as string | null, metadata: {} as Record<string, unknown> };
 let onVerify: (() => Promise<void>) | null = null;
@@ -59,7 +59,12 @@ vi.mock('@/lib/adapters/telephony', async (original) => {
     provisioner: {
       async createSubaccount() {
         calls.createSubaccount += 1;
-        return { sid: `AC${randomUUID().replace(/-/g, '')}` };
+        const sid = `AC${randomUUID().replace(/-/g, '')}`;
+        return { sid, signingSecret: `signs-${sid}` };
+      },
+      async subaccountSigningSecret(input: { subaccountSid: string }) {
+        calls.readSigningSecret += 1;
+        return `signs-${input.subaccountSid}`;
       },
       async createApiKey() {
         calls.createApiKey += 1;
@@ -249,7 +254,7 @@ describe('a credential goes in and never comes out', () => {
     expect(rows[0]).toEqual({ decrypted: false, secrets: false });
   });
 
-  it('gives the machine role no table grant and exactly twenty-six executes', async () => {
+  it('gives the machine role no table grant and exactly twenty-seven executes', async () => {
     const tables = await pg.query(`select table_name from information_schema.role_table_grants where grantee = 'provider_operator'`);
     expect(tables.rows).toEqual([]);
 
@@ -284,6 +289,11 @@ describe('a credential goes in and never comes out', () => {
     // Phase 3C, each acts only on the named call or session row, checks its state and organization,
     // sets `search_path = ''`, and is called only by apps/api's voice agent service, which must also
     // read the voice provider's credential — so this role, and no signed-in or anonymous caller.
+    // `read_organization_telephony_credential` joined when calls moved into each business's own
+    // calling account (20261111000001): apps/api, having had the database confirm under the asking
+    // person's own token that they may use that business's telephone, reads that one business's own
+    // key to place the call. It returns no parent credential, sets `search_path = ''`, answers only
+    // for an active binding, and is granted to this role alone.
     expect(functions.rows.map((row) => row.proname)).toEqual([
       'admit_voice_agent_session',
       'bind_voice_agent_session',
@@ -296,7 +306,8 @@ describe('a credential goes in and never comes out', () => {
       'email_sender_account',
       'email_test_send_account',
       'finish_email_test_send',
-      'mark_voice_agent_uncertain',
+        'mark_voice_agent_uncertain',
+      'read_organization_telephony_credential',
       'read_provider_account_credential',
       'record_ai_usage',
       'record_custom_domain_registration',
@@ -394,6 +405,91 @@ describe('provisioning an organization', () => {
 
     const [standing] = await listProviderOrganizationStandings(staff, { providerKey: 'twilio', organizationId: tenant.organizationId });
     expect(standing).toMatchObject({ bindingStatus: 'active', externalAccountId: first.subaccountSid, resourceCount: 3 });
+  });
+
+  it('keeps what the carrier signs that business\u2019s reports with, for the callback role and nobody else', async () => {
+    const [standing] = await listProviderOrganizationStandings(staff, { providerKey: 'twilio', organizationId: tenant.organizationId });
+    const account = standing.externalAccountId as string;
+
+    await pg.query('begin');
+    try {
+      await pg.query('set local role voice_webhook');
+      const { rows } = await pg.query('select public.telephony_signing_secret($1) as secret', [account]);
+      expect(rows[0].secret).toBe(`signs-${account}`);
+      const unknown = await pg.query('select public.telephony_signing_secret($1) as secret', [sid('AC').slice(0, 34)]);
+      expect(unknown.rows[0].secret).toBeNull();
+    } finally {
+      await pg.query('rollback');
+    }
+
+    // A person, staff included, cannot ask for it.
+    expect((await staff.rpc('telephony_signing_secret' as never, { p_account_sid: account } as never)).error).not.toBeNull();
+    expect((await tenant.db.rpc('telephony_signing_secret' as never, { p_account_sid: account } as never)).error).not.toBeNull();
+  });
+
+  it('repairs a missing signing secret when provisioning is resumed', async () => {
+    Object.assign(calls, { createSubaccount: 0, readSigningSecret: 0 });
+
+    await provisionTelephonySubaccount(staff, { organizationId: tenant.organizationId });
+
+    expect(calls).toMatchObject({ createSubaccount: 0, readSigningSecret: 1 });
+  });
+
+  it('hands a business\u2019s own calling credential to the operations role, whole or not at all', async () => {
+    const [standing] = await listProviderOrganizationStandings(staff, { providerKey: 'twilio', organizationId: tenant.organizationId });
+
+    const read = (organizationId: string) =>
+      asOperator(async () => (await pg.query('select * from public.read_organization_telephony_credential($1)', [organizationId])).rows);
+
+    const [credential] = await read(tenant.organizationId);
+    expect(credential.account_sid).toBe(standing.externalAccountId);
+    expect(credential.api_key_sid).toMatch(/^SK/);
+    expect(credential.api_key_secret).toBe('a-tenant-key-secret');
+    expect(credential.application_sid).toMatch(/^AP/);
+
+    // A business with no calling account has nothing to read, and a suspended one is not handed out.
+    const none = await newTenant('acct-none');
+    expect(await read(none.organizationId)).toEqual([]);
+    await setProviderBindingStatus(staff, { organizationId: tenant.organizationId, providerKey: 'twilio', status: 'suspended' });
+    expect(await read(tenant.organizationId)).toEqual([]);
+    await setProviderBindingStatus(staff, { organizationId: tenant.organizationId, providerKey: 'twilio', status: 'active' });
+
+    // No signed-in person may ask, and the callback role may not read a key.
+    expect((await staff.rpc('read_organization_telephony_credential' as never, { p_organization_id: tenant.organizationId } as never)).error).not.toBeNull();
+    expect((await tenant.db.rpc('read_organization_telephony_credential' as never, { p_organization_id: tenant.organizationId } as never)).error).not.toBeNull();
+    const { rows } = await pg.query(
+      `select has_function_privilege('authenticated', 'public.read_organization_telephony_credential(uuid)', 'execute') as person_reads_key,
+              has_function_privilege('anon', 'public.read_organization_telephony_credential(uuid)', 'execute') as anon_reads_key,
+              has_function_privilege('voice_webhook', 'public.read_organization_telephony_credential(uuid)', 'execute') as callback_reads_key,
+              has_function_privilege('authenticated', 'public.telephony_signing_secret(text)', 'execute') as person_reads_signing,
+              has_function_privilege('anon', 'public.telephony_signing_secret(text)', 'execute') as anon_reads_signing,
+              has_function_privilege('provider_operator', 'public.telephony_signing_secret(text)', 'execute') as operator_reads_signing`,
+    );
+    expect(rows[0]).toEqual({
+      person_reads_key: false,
+      anon_reads_key: false,
+      callback_reads_key: false,
+      person_reads_signing: false,
+      anon_reads_signing: false,
+      operator_reads_signing: false,
+    });
+  });
+
+  it('answers who may use a business\u2019s telephone under that person\u2019s own session', async () => {
+    const mine = await tenant.db.rpc('telephony_caller' as never, { p_organization_id: tenant.organizationId, p_places_calls: true } as never);
+    expect(mine.error).toBeNull();
+    const membership = await tenant.db.from('memberships').select('id').eq('organization_id', tenant.organizationId).single();
+    expect(mine.data).toBe(membership.data?.id);
+
+    // Another business's telephone is not theirs to hold, let alone dial from.
+    for (const placesCalls of [false, true]) {
+      const theirs = await tenant.db.rpc('telephony_caller' as never, { p_organization_id: second.organizationId, p_places_calls: placesCalls } as never);
+      expect(theirs.error?.code).toBe('42501');
+    }
+
+    // Platform staff are not members of a customer's business, and get no telephone in it.
+    const asStaff = await staff.rpc('telephony_caller' as never, { p_organization_id: tenant.organizationId, p_places_calls: false } as never);
+    expect(asStaff.error?.code).toBe('42501');
   });
 
   it('records which GOLD account owns the binding', async () => {
