@@ -1120,12 +1120,11 @@ describe('sibling views are navigation, not page actions', () => {
     expect(code(list)).not.toMatch(/<Link\b/);
   });
 
-  it('Team renders ViewNav for Members, Invitations and Roles, with nothing but views in it', () => {
+  it('Members, Invitations and Roles & permissions are Settings sidebar destinations, with no tab strip repeating them', () => {
     const page = read(`${ROUTES}/settings/access/access-page.tsx`);
-    expect(page).toContain('<ViewNav');
-    expect(page).not.toContain('TeamViewTabs');
+    expect(page).not.toMatch(/ViewNav|ViewTabs|TeamViewTabs/);
     expect(() => read(`${ROUTES}/settings/access/team-view-tabs.tsx`)).toThrow();
-    const nav = page.slice(page.indexOf('<ViewNav'), page.indexOf('/>', page.indexOf('views={[')));
-    expect(nav).not.toMatch(/Trigger|CreateRoleSheet|<Button/);
+    const nav = read(`${WEB_ROOT}/lib/settings-nav.ts`);
+    for (const label of ['Members', 'Invitations', 'Roles & permissions']) expect(nav).toContain(`label: '${label}'`);
   });
 });

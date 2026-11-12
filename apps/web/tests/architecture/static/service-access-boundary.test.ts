@@ -51,11 +51,25 @@ const RECOVERY_USERS = [
   'lib/route/platform.ts',
 ];
 
-const GUARD = /\brequireOrganization(ForBillingRecovery)?\(/;
+// `requireOrganization` is the guard. The wrappers in `lib/route/workspace-configuration.ts` are the
+// same guard plus a gate for one area or configuration target; the test below holds each of them to
+// reaching `requireOrganization`, so an action that calls one is guarded and cannot stop being so.
+const GUARD_WRAPPERS = ['loadConfigurationContext', 'requireWorkspaceConfiguration', 'requireConfigurationTarget', 'requireOperatingArea'];
+const GUARD = new RegExp(`\\b(requireOrganization(ForBillingRecovery)?|${GUARD_WRAPPERS.join('|')})\\(`);
 
 describe('service access is enforced by every server action inside a business', () => {
   it('finds the action files, so the rule is not passing over an empty tree', () => {
     expect(actionFiles.length).toBeGreaterThan(20);
+  });
+
+  it('counts a wrapper as a guard only because it reaches requireOrganization itself', () => {
+    const source = readFileSync(join(WEB, 'lib/route/workspace-configuration.ts'), 'utf8');
+    const loader = source.slice(source.indexOf('export const loadConfigurationContext'), source.indexOf('export async function requireWorkspaceConfiguration'));
+    expect(loader).toMatch(/await requireOrganization\(organizationId\)/);
+    for (const wrapper of GUARD_WRAPPERS.slice(1)) {
+      const body = source.split(`export async function ${wrapper}(`)[1]?.split(/^export /m)[0] ?? '';
+      expect(body, wrapper).toMatch(/await loadConfigurationContext\(organizationId\)/);
+    }
   });
 
   it('calls a guard in every exported action before anything else can decide', () => {

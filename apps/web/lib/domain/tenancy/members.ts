@@ -126,6 +126,9 @@ export async function addMember(
     if (error.code === '23503') {
       throw new DomainError('No such role here.', 'members.role_not_found');
     }
+    if (error.code === '42501' && error.details === 'grant_beyond_own') {
+      throw new DomainError('You can only give permissions you have yourself.', 'roles.grant_beyond_own');
+    }
     if (error.code === '42501') {
       throw new DomainError('You cannot manage people here.', 'members.forbidden');
     }

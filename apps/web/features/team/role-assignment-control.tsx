@@ -1,55 +1,86 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { ConfirmSubmit } from '@/components/controls/confirm-submit';
 import { ErrorText } from '@/components/controls/inputs';
+import { SelectField } from '@/components/controls/select-field';
 import type { Role } from '@/lib/domain/tenancy/roles';
 import { assignRoleAction, type AssignRoleState } from '@/app/organizations/[organizationId]/settings/access/actions';
-import { SelectField } from '@/components/controls/select-field';
 
 const INITIAL: AssignRoleState = { error: null };
 
 /**
- * One member's role, changed in place. Deliberately not a whole-table edit form: reassigning one
- * person is one independent command, so it submits itself rather than waiting on a screen-wide
- * save button.
+ * One member's role, changed in place. Reassigning one person is one independent command, so it
+ * is not part of a screen-wide save; but it changes what that person can do the moment it lands,
+ * so choosing a role only proposes it. The change is made from the confirmation, which names the
+ * person and both roles.
  *
- * The `SelectField` is controlled rather than left to the browser, for one reason: if `assign_role`
- * refuses the change (most often the last-manager invariant, `roles.last_manager`), the row must
- * visibly revert to the role that is actually still assigned — an uncontrolled control would
- * keep showing the rejected choice, silently lying about the caller's own membership.
+ * If `assign_role` refuses (most often the last-manager invariant, `roles.last_manager`), the row
+ * returns to the role that is actually still assigned and says why.
  */
 export function RoleAssignmentControl({
   organizationId,
   membershipId,
+  memberName,
   currentRoleId,
   roles,
+  assignableRoleIds,
 }: {
   organizationId: string;
   membershipId: string;
+  memberName: string;
   currentRoleId: string;
   roles: Role[];
+  assignableRoleIds: ReadonlySet<string>;
 }) {
   const [state, formAction, pending] = useActionState(assignRoleAction, INITIAL);
   const [value, setValue] = useState(currentRoleId);
+  // What is stored, as far as this row knows: the role it was given, or the one it just saved.
+  const [stored, setStored] = useState(currentRoleId);
 
-  // Reverting on refusal is a render-time adjustment, not an effect: React's own recommended
-  // shape for "reset local state when something the parent doesn't own has changed" is to
-  // compare against the previous render inline and call setState during render, which bails out
-  // before painting rather than committing the stale value and then re-rendering a second time.
-  // A successful change is never reverted here — it already matches what the caller picked.
+  // Settling after the action is a render-time adjustment. A refusal returns the row to the stored
+  // role; a success makes the chosen role the stored one, whether or not the page's own copy has
+  // arrived yet; a role arriving from the page always wins.
   const [seenState, setSeenState] = useState(state);
-  if (state !== seenState) {
+  const [seenRole, setSeenRole] = useState(currentRoleId);
+  if (currentRoleId !== seenRole) {
+    setSeenRole(currentRoleId);
     setSeenState(state);
-    if (state.error) {
-      setValue(currentRoleId);
-    }
+    setStored(currentRoleId);
+    setValue(currentRoleId);
+  } else if (state !== seenState) {
+    setSeenState(state);
+    if (state.error) setValue(stored);
+    else setStored(value);
   }
 
+  useEffect(() => {
+    if (state.savedAt) toast.success('Role changed');
+  }, [state.savedAt]);
+
+  const formId = `assign-role-${membershipId}`;
+  const name = (id: string) => roles.find((role) => role.id === id)?.name ?? 'this role';
+  const proposed = value !== stored;
+
   return (
-    <form action={formAction} className="flex flex-col gap-1">
+    <form id={formId} action={formAction} className="flex flex-col gap-1">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="membershipId" value={membershipId} />
-      <SelectField name="roleId" size="small" value={value} disabled={pending} aria-label="Role" onValueChange={(next) => setValue(next)} submitOnChange options={[...roles.map((role) => ({ value: role.id, label: role.name }))]} />
+      <div className="flex flex-wrap items-center gap-2">
+        <SelectField name="roleId" size="small" value={value} disabled={pending} aria-label={`Role for ${memberName}`} onValueChange={(next) => setValue(next)} options={[...roles.map((role) => ({ value: role.id, label: role.name, disabled: role.id !== stored && !assignableRoleIds.has(role.id) }))]} />
+        {proposed ? (
+          <ConfirmSubmit
+            formId={formId}
+            label="Change role"
+            ariaLabel={`Change role for ${memberName}`}
+            confirmLabel="Change role"
+            description={`Change ${memberName} from ${name(stored)} to ${name(value)}? What they can do changes straight away.`}
+            tone="primary"
+            pending={pending}
+          />
+        ) : null}
+      </div>
       <ErrorText role="alert">{state.error}</ErrorText>
     </form>
   );

@@ -21,7 +21,7 @@ export default async function FieldsPage({
   const query = await searchParams;
   const rawEntity = Array.isArray(query.entity) ? query.entity[0] : query.entity;
   const entityType = resolveFieldEntity(rawEntity);
-  if (entityType === 'customer') redirect(configurationRedirectHref(organizationId, 'sales/configuration/fields', query));
+  if (entityType === 'customer') redirect(configurationRedirectHref(organizationId, 'crm/configuration/fields', query));
   if (entityType === 'work_item') redirect(configurationRedirectHref(organizationId, 'work/configuration', { ...query, tab: 'fields' }));
   const { db, organization } = await requireOrganization(organizationId);
   const definitions = await listFieldDefinitions(db, { organizationId, entityType });

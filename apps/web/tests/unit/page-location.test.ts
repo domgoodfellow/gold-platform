@@ -299,8 +299,15 @@ describe('Organization Settings', () => {
     expect(location.up).toBeUndefined();
   });
 
-  it('keeps Team & access as plain text above its routed views', () => {
-    expect(trail(at(`${ORG}/settings/access/members`))).toEqual(['Settings', 'Team & access']);
+  it('keeps Access as plain text above its routed views', () => {
+    expect(trail(at(`${ORG}/settings/access/members`))).toEqual(['Settings', 'Access']);
+  });
+
+  it('links Roles & permissions above a role and a new role', () => {
+    const roles = `Roles & permissions → ${ORG}/settings/access/roles`;
+    expect(trail(at(`${ORG}/settings/access/roles/r1`, { records: { roleId: { state: 'ready', label: 'Dispatcher' } } }))).toEqual(['Settings', 'Access', roles]);
+    expect(at(`${ORG}/settings/access/roles/new`).current.label).toBe('New role');
+    expect(at(`${ORG}/settings/access/history`).current.label).toBe('Access history');
   });
 
   it('links Connections above a connection and an app being connected', () => {

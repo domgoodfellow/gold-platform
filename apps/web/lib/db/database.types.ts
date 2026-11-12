@@ -16525,6 +16525,7 @@ export type Database = {
         Args: { p_id: string }
         Returns: undefined
       }
+      delete_role: { Args: { p_role_id: string }; Returns: undefined }
       delete_secret_reference: {
         Args: { p_organization_id: string; p_secret_id: string }
         Returns: undefined

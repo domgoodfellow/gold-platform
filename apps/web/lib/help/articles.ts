@@ -139,10 +139,12 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     slug: 'team-and-permissions',
     title: 'Team and permissions',
     summary: 'Members, invitations and roles.',
-    opens: { label: 'Open Team & access', path: 'settings/access' },
+    opens: { label: 'Open Members', path: 'settings/access' },
     sections: [
       { heading: 'Members, invitations and roles', body: [
-        'Settings → Team & access lists who can sign in to this business, the invitations still waiting, and the roles that decide what each person can do.',
+        'Settings has an Access group with four pages: Members lists who can sign in to this business, Invitations lists the invitations still waiting, Roles & permissions lists the roles that decide what each person can do, and Access history lists who changed any of these and when.',
+        'Open a role to change its name or permissions, see who has it, or delete it. A role can be deleted only when nobody has it.',
+        'You can only give permissions you have yourself, so some may be greyed out when you edit a role or change somebody’s role.',
       ] },
       { heading: 'Why a menu item may be missing', body: [
         'Some options only appear if your role allows them. If you need one, ask an administrator to change your role.',

@@ -1,6 +1,7 @@
 import { Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
-import { DividedList, Section, SectionHeading } from '@/components/surfaces/section';
+import { CardSection } from '@/components/surfaces/card';
+import { DividedList } from '@/components/surfaces/section';
 import { GrantForm, RevokeGrantForm } from '@/features/integrations/mcp/mcp-controls';
 import type { IntegrationResource } from '@/lib/domain/integrations/resources';
 import type { Agent, NativeCapability, ToolGrant } from '@/lib/domain/integrations/tool-access';
@@ -42,8 +43,7 @@ export function ConnectionCapabilities({
   const resourceName = new Map(resources.map((resource) => [resource.id, resource.displayName]));
 
   return (
-    <Section className="mt-8">
-      <SectionHeading>What an agent can do with this</SectionHeading>
+    <CardSection title="What an agent can do with this" className="mt-6">
       <DividedList className="mt-3">
         {capabilities.map((capability) => {
           const given = grants.filter((grant) => grant.capabilityKey === capability.key);
@@ -93,6 +93,6 @@ export function ConnectionCapabilities({
       <Hint className="mt-2 max-w-2xl">
         Connecting does not let the agent use any of this. Give it each use you want. These only read from the app; none of them changes anything in it.
       </Hint>
-    </Section>
+    </CardSection>
   );
 }

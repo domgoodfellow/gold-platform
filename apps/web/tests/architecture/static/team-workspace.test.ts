@@ -4,10 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { resolveTeamView } from '@/features/team/team-views';
 
 /**
- * The Team workspace recomposition: one collection page with three URL-backed sibling views
- * (Members, Invitations, Roles) and bounded Sheets for creation/editing, replacing the inline
- * Disclosure forms ("Add somebody", "Invite by email", "Add a role") that used to expand inside
- * the primary page.
+ * Access: four URL-backed Settings destinations, including read-only history. Adding
+ * a person is a focused dialog; a role is created, edited and deleted on its own page, because 41
+ * permissions and their consequences do not fit a drawer.
  *
  * **Structural claims are a source scan**, for the reason `settings-configuration-center.test.ts`
  * already gives: these are facts about which component a server file renders, and this repository
@@ -20,12 +19,13 @@ const ROUTES = fileURLToPath(new URL('../../../app/organizations/[organizationId
 const FEATURES = fileURLToPath(new URL('../../../features/team', import.meta.url));
 
 describe('Team views are URL-backed', () => {
-  it('absent or invalid resolves to Members; the other two resolve exactly', () => {
+  it('absent or invalid resolves to Members; other destinations resolve exactly', () => {
     expect(resolveTeamView(undefined)).toBe('members');
     expect(resolveTeamView('')).toBe('members');
     expect(resolveTeamView('members')).toBe('members');
     expect(resolveTeamView('invitations')).toBe('invitations');
     expect(resolveTeamView('roles')).toBe('roles');
+    expect(resolveTeamView('history')).toBe('history');
     expect(resolveTeamView('nonsense')).toBe('members');
   });
 });
@@ -37,6 +37,12 @@ describe('Members is a collection, not an inline creation form', () => {
   it('renders the members collection and keeps role assignment reachable inline', () => {
     expect(page).toContain('MembersTable');
     expect(membersTable).toContain('RoleAssignmentControl');
+  });
+
+  it('changes a role only from a confirmation, never the moment a choice is made', () => {
+    const control = readFileSync(`${FEATURES}/role-assignment-control.tsx`, 'utf8');
+    expect(control).toContain('ConfirmSubmit');
+    expect(control).not.toContain('submitOnChange');
   });
 
   it('has no inline Disclosure form for adding a member', () => {
@@ -77,7 +83,7 @@ describe('one Add member dialog exposes both existing operations', () => {
     const page = readFileSync(`${ROUTES}/access-page.tsx`, 'utf8');
     // One trigger, in the page header, serving both views that add a person; Roles has its own.
     expect(page.match(/<AddMemberTrigger/g)?.length).toBe(1);
-    expect(page).toContain("view === 'roles' ? <CreateRoleSheet organizationId={organizationId} /> : <AddMemberTrigger />");
+    expect(page).toMatch(/view === 'roles' \? <ButtonLink[^>]*\/new`\}>/);
   });
 });
 
@@ -95,10 +101,9 @@ describe('Invitations is a collection with confirmed revocation', () => {
   });
 });
 
-describe('Roles is a compact collection, not a capability-form page', () => {
+describe('Roles is a compact collection, and a role is edited on its own page', () => {
   const rolesTable = readFileSync(`${FEATURES}/roles-table.tsx`, 'utf8');
-  const createSheet = readFileSync(`${FEATURES}/create-role-sheet.tsx`, 'utf8');
-  const editSheet = readFileSync(`${FEATURES}/edit-role-sheet.tsx`, 'utf8');
+  const editor = readFileSync(`${FEATURES}/role-editor.tsx`, 'utf8');
   const editorFields = readFileSync(`${FEATURES}/role-editor-fields.tsx`, 'utf8');
 
   it('summarizes permission count rather than rendering every capability as a badge', () => {
@@ -106,17 +111,24 @@ describe('Roles is a compact collection, not a capability-form page', () => {
     expect(rolesTable).toContain('permissionSummary');
   });
 
-  it('New role opens a Sheet and Edit continues to use a Sheet, both sharing CapabilitySelector', () => {
-    expect(createSheet).toContain('Sheet');
-    expect(editSheet).toContain('Sheet');
+  it('New role and an existing role are the same full-page editor, sharing CapabilitySelector', () => {
+    for (const route of ['roles/new/page.tsx', 'roles/[roleId]/page.tsx']) expect(readFileSync(`${ROUTES}/${route}`, 'utf8')).toContain('<RoleEditor');
+    expect(editor).toContain('RoleEditorFields');
     expect(editorFields).toContain('CapabilitySelector');
-    expect(createSheet).toContain('RoleEditorFields');
-    expect(editSheet).toContain('RoleEditorFields');
+    expect(`${editor}${editorFields}`).not.toMatch(/PageDrawer|Sheet/);
+    for (const retired of ['create-role-sheet.tsx', 'edit-role-sheet.tsx']) expect(() => readFileSync(`${FEATURES}/${retired}`, 'utf8')).toThrow();
   });
 
   it('creates no second capability vocabulary or checkbox implementation', () => {
-    expect(createSheet).not.toContain('type="checkbox"');
-    expect(editSheet).not.toContain('type="checkbox"');
+    expect(editor).not.toContain('type="checkbox"');
+    expect(editorFields).not.toContain('type="checkbox"');
+  });
+
+  it('protects unsaved work, confirms a save, and deletes only through a confirmation', () => {
+    expect(editor).toContain('useUnsavedChanges');
+    expect(editor).toContain("toast.success('Role saved')");
+    expect(editor).toContain('ConfirmSubmit');
+    expect(editor).toContain('deleteRoleAction');
   });
 });
 

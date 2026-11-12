@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { InviteMemberSchema } from '@gold/schemas';
 import { platformEmailSender } from '@/lib/adapters/email';
 import { requireAccessToken } from '@/lib/api/client';
@@ -8,16 +9,18 @@ import { getDb } from '@/lib/db/server';
 import { DomainError } from '@/lib/domain/errors';
 import { addMember } from '@/lib/domain/tenancy/members';
 import { inviteMember, listPendingInvitations, reissueInvitation, revokeInvitation } from '@/lib/domain/tenancy/invitations';
-import { assignRole, createRole, updateRoleCapabilities } from '@/lib/domain/tenancy/roles';
+import { assignRole, createRole, deleteRole, updateRoleCapabilities } from '@/lib/domain/tenancy/roles';
 import { requestOrigin } from '@/lib/route/origin';
 import { requireOrganization } from '@/lib/route/organization';
 
-export type CreateRoleState = { error: string | null; created: boolean };
+/** `savedAt` changes on every successful save, so the editor can confirm each one. */
+export type SaveRoleState = { error: string | null; savedAt: number | null; created?: boolean };
 
+/** Creates the role; the editor confirms success and returns to the list. */
 export async function createRoleAction(
-  _previous: CreateRoleState,
+  _previous: SaveRoleState,
   formData: FormData,
-): Promise<CreateRoleState> {
+): Promise<SaveRoleState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
   await requireOrganization(organizationId);
@@ -31,21 +34,19 @@ export async function createRoleAction(
     });
   } catch (error) {
     if (error instanceof DomainError) {
-      return { error: error.message, created: false };
+      return { error: error.message, savedAt: null };
     }
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings/access`);
-  return { error: null, created: true };
+  revalidatePath(`/organizations/${organizationId}/settings/access`, 'layout');
+  return { error: null, savedAt: Date.now(), created: true };
 }
 
-export type UpdateRoleState = { error: string | null };
-
 export async function updateRoleAction(
-  _previous: UpdateRoleState,
+  _previous: SaveRoleState,
   formData: FormData,
-): Promise<UpdateRoleState> {
+): Promise<SaveRoleState> {
   const db = await getDb();
   const organizationId = String(formData.get('organizationId') ?? '');
   await requireOrganization(organizationId);
@@ -58,13 +59,38 @@ export async function updateRoleAction(
     });
   } catch (error) {
     if (error instanceof DomainError) {
+      return { error: error.message, savedAt: null };
+    }
+    throw error;
+  }
+
+  revalidatePath(`/organizations/${organizationId}/settings/access`, 'layout');
+  return { error: null, savedAt: Date.now() };
+}
+
+export type DeleteRoleState = { error: string | null };
+
+/** Deletes an unused role and returns to the list. `delete_role` refuses one still in use. */
+export async function deleteRoleAction(
+  _previous: DeleteRoleState,
+  formData: FormData,
+): Promise<DeleteRoleState> {
+  const db = await getDb();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  await requireOrganization(organizationId);
+
+  try {
+    await deleteRole(db, { roleId: String(formData.get('roleId') ?? '') });
+  } catch (error) {
+    if (error instanceof DomainError) {
       return { error: error.message };
     }
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings/access`);
-  return { error: null };
+  revalidatePath(`/organizations/${organizationId}/settings/access/roles`);
+  revalidatePath(`/organizations/${organizationId}/settings/access/history`);
+  redirect(`/organizations/${organizationId}/settings/access/roles?deleted=1`);
 }
 
 export type AddMemberState = { error: string | null; created: boolean };
@@ -210,7 +236,7 @@ export async function reissueInvitationAction(
   return { error: null, link, email };
 }
 
-export type AssignRoleState = { error: string | null };
+export type AssignRoleState = { error: string | null; savedAt?: number };
 
 /**
  * Point an existing membership at a different role.
@@ -240,8 +266,8 @@ export async function assignRoleAction(
     throw error;
   }
 
-  revalidatePath(`/organizations/${organizationId}/settings/access`);
-  return { error: null };
+  revalidatePath(`/organizations/${organizationId}/settings/access`, 'layout');
+  return { error: null, savedAt: Date.now() };
 }
 
 export type RevokeInvitationState = { error: string | null };

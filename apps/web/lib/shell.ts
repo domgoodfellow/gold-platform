@@ -35,7 +35,7 @@ import type { Capability } from '@/lib/domain/tenancy/capabilities';
  * never a tenant workspace. Visibility is courtesy: each destination continues enforcing its own
  * authority.
  */
-export type ShellSectionKey = 'home' | 'library' | 'workspaces' | 'administration' | 'settings-personal' | 'settings-organization' | 'settings-administration';
+export type ShellSectionKey = 'home' | 'library' | 'workspaces' | 'administration' | 'settings-personal' | 'settings-organization' | 'settings-access' | 'settings-administration';
 
 export type NavItem = {
   /** Unique within a rendered context; also the icon key. Dashboard is shared across workspace contexts. */
@@ -115,6 +115,7 @@ const SECTION_LABELS: Record<ShellSectionKey, string | null> = {
   administration: null,
   'settings-personal': 'Personal',
   'settings-organization': 'Organization',
+  'settings-access': 'Access',
   'settings-administration': 'Administration',
 };
 

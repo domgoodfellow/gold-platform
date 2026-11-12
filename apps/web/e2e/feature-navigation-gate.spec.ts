@@ -1,4 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { createClient } from '@supabase/supabase-js';
+import { organizationResolvedFeatureStates } from '../lib/domain/catalogue/organization-plans';
+import { featureOperationalState } from '../lib/domain/catalogue/feature-operational-state';
+import { DEMO_PASSWORD } from '../scripts/demo/businesses';
 import { COLLEAGUE_STORAGE_STATE, OWNER_STORAGE_STATE, loadDemoContext } from './helpers';
 
 /**
@@ -28,10 +32,18 @@ test.describe('Settings > Features and the shell agree, and a disable removes ex
     // Entitled, usable Features carry their operational status in their product group.
     await expect(page.getByText('On', { exact: true }).first()).toBeVisible();
 
-    // What the plan does not include (card payments isn't part of this business's default shape)
-    // is not listed in operational settings: one line counts it and links to Plan & usage.
-    await expect(page.getByText(/available on other plans\.$/)).toBeVisible();
-    await expect(page.getByRole('link', { name: 'View plan & usage' })).toHaveCount(1);
+    // The ordinary demo has excluded features; the disposable all-products plan has none.
+    // Compare the rendered count with this business's actual entitlement in either harness.
+    const db = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+    const login = await db.auth.signInWithPassword({ email: context.ownerEmail, password: DEMO_PASSWORD });
+    if (login.error) throw login.error;
+    const notIncluded = (await organizationResolvedFeatureStates(db, { organizationId: context.organizationId })).filter((state) => featureOperationalState(state) === 'not_included').length;
+    if (notIncluded > 0) {
+      await expect(page.getByText(`${notIncluded === 1 ? '1 more feature is' : `${notIncluded} more features are`} available on other plans.`, { exact: true })).toBeVisible();
+    } else {
+      await expect(page.getByText(/available on other plans\.$/)).toHaveCount(0);
+    }
+    await expect(page.getByRole('link', { name: 'View plan & usage' })).toHaveCount(notIncluded > 0 ? 1 : 0);
     await expect(page.getByText(/Not in your plan|Limited availability/)).toHaveCount(0);
   });
 
@@ -39,10 +51,10 @@ test.describe('Settings > Features and the shell agree, and a disable removes ex
     const context = loadDemoContext();
     const orgHref = `/organizations/${context.organizationId}`;
 
-    // Before: Assets is a real, navigable area (desktop sidebar and phone bar both render the
-    // same `visibleAreas` list — see navigation.test.ts's parity proof for the pure predicate).
-    await page.goto(`${orgHref}/home`);
-    await expect(page.getByRole('link', { name: 'Assets', exact: true }).first()).toBeVisible();
+    // Before: Assets is a real, navigable destination of the Work workspace (desktop sidebar and
+    // phone bar both render the same `visibleAreas` list — see navigation.test.ts's parity proof).
+    await page.goto(`${orgHref}/field`);
+    await expect(page.getByRole('link', { name: 'Equipment & Assets', exact: true }).first()).toBeVisible();
 
     await page.goto(`${orgHref}/settings/features`);
     await page.getByRole('button', { name: 'More actions for Assets' }).click();
@@ -57,8 +69,8 @@ test.describe('Settings > Features and the shell agree, and a disable removes ex
     await expect(page.getByText('Disabled', { exact: true })).toBeVisible({ timeout: 15_000 });
 
     // The area is gone from navigation entirely — not merely relabelled.
-    await page.goto(`${orgHref}/home`);
-    await expect(page.getByRole('link', { name: 'Assets', exact: true })).toHaveCount(0);
+    await page.goto(`${orgHref}/field`);
+    await expect(page.getByRole('link', { name: 'Equipment & Assets', exact: true })).toHaveCount(0);
 
     // What it already recorded is untouched and still directly reachable — disabling a Feature
     // hides the door, not what is behind it. The page's own PageHeader is the one level-1 heading.
@@ -73,8 +85,8 @@ test.describe('Settings > Features and the shell agree, and a disable removes ex
     // Wait for the server action to land before leaving the page, or navigating away cancels it.
     await expect(page.getByText('Disabled', { exact: true })).toHaveCount(0, { timeout: 15_000 });
 
-    await page.goto(`${orgHref}/home`);
-    await expect(page.getByRole('link', { name: 'Assets', exact: true }).first()).toBeVisible();
+    await page.goto(`${orgHref}/field`);
+    await expect(page.getByRole('link', { name: 'Equipment & Assets', exact: true }).first()).toBeVisible();
   });
 
   test('Plan & usage no longer duplicates the activation control Features owns', async ({ page }) => {
@@ -84,36 +96,29 @@ test.describe('Settings > Features and the shell agree, and a disable removes ex
     await expect(page.getByRole('heading', { name: 'Plan & usage', level: 1 })).toBeVisible();
     // The one control for switching a Feature off lives on Features; this screen only links
     // there, rather than repeating a second Disable/Enable affordance beside its own listing.
-    await expect(page.getByRole('link', { name: 'Manage features →' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Manage features', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: /More actions for/ })).toHaveCount(0);
   });
 
   test("grants report.read to the colleague's role, then removes it again", async ({ page }) => {
     const context = loadDemoContext();
-    await page.goto(`/organizations/${context.organizationId}/settings/access/members`);
-    await page.getByRole('tab', { name: 'Roles & permissions' }).click();
-
-    await page.getByRole('button', { name: 'Edit Werfmedewerker' }).click();
-    await expect(page.getByRole('heading', { name: 'Edit Werfmedewerker' })).toBeVisible();
+    await page.goto(`/organizations/${context.organizationId}/settings/access/roles`);
+    await page.getByRole('link', { name: 'Werfmedewerker', exact: true }).click();
     await page.getByLabel('See what this business has billed and what its work cost').check();
     await page.getByRole('button', { name: 'Save role' }).click();
-    // The sheet stays open on success (it is not a wizard the save dismisses) — waiting for the
-    // pending label to clear is what proves the round trip finished; the colleague spec after
-    // this one, seeing Reports appear, is what proves it actually reached the database rather
-    // than merely not throwing client-side.
-    await expect(page.getByRole('button', { name: 'Save role' })).toBeVisible();
-    await expect(page.getByRole('alert')).toHaveCount(0);
-    await page.keyboard.press('Escape');
+    // The role's page confirms the save; the colleague spec after this one, seeing Reports appear,
+    // is what proves it reached the database rather than merely not throwing client-side.
+    await expect(page.getByText('Role saved')).toBeVisible();
   });
 });
 
 test.describe('a colleague sees Insights only while their role holds a relevant capability', () => {
   test.use({ storageState: COLLEAGUE_STORAGE_STATE });
 
-  test('sees Insights once the owner granted report.read', async ({ page }) => {
+  test('sees the Insights panel on Work once the owner granted report.read', async ({ page }) => {
     const context = loadDemoContext();
-    await page.goto(`/organizations/${context.organizationId}/home`);
-    await expect(page.getByRole('link', { name: 'Insights', exact: true }).first()).toBeVisible();
+    await page.goto(`/organizations/${context.organizationId}/work`);
+    await expect(page.getByRole('button', { name: 'Insights', exact: true })).toBeVisible();
   });
 });
 
@@ -122,25 +127,21 @@ test.describe('the owner revokes report.read again', () => {
 
   test('removes report.read from Werfmedewerker', async ({ page }) => {
     const context = loadDemoContext();
-    await page.goto(`/organizations/${context.organizationId}/settings/access/members`);
-    await page.getByRole('tab', { name: 'Roles & permissions' }).click();
-
-    await page.getByRole('button', { name: 'Edit Werfmedewerker' }).click();
-    await expect(page.getByRole('heading', { name: 'Edit Werfmedewerker' })).toBeVisible();
+    await page.goto(`/organizations/${context.organizationId}/settings/access/roles`);
+    await page.getByRole('link', { name: 'Werfmedewerker', exact: true }).click();
     await page.getByLabel('See what this business has billed and what its work cost').uncheck();
     await page.getByRole('button', { name: 'Save role' }).click();
-    await expect(page.getByRole('button', { name: 'Save role' })).toBeVisible();
-    await expect(page.getByRole('alert')).toHaveCount(0);
-    await page.keyboard.press('Escape');
+    await expect(page.getByText('Role saved')).toBeVisible();
   });
 });
 
 test.describe('the colleague loses Insights again once the capability is gone', () => {
   test.use({ storageState: COLLEAGUE_STORAGE_STATE });
 
-  test('no longer sees Insights', async ({ page }) => {
+  test('no longer sees the Insights panel', async ({ page }) => {
     const context = loadDemoContext();
-    await page.goto(`/organizations/${context.organizationId}/home`);
-    await expect(page.getByRole('link', { name: 'Insights', exact: true })).toHaveCount(0);
+    await page.goto(`/organizations/${context.organizationId}/work`);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Insights', exact: true })).toHaveCount(0);
   });
 });

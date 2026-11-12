@@ -76,7 +76,7 @@ type LocationNode = {
 const REDIRECT_AREAS = new Set(['library', 'organization-calendar-legacy', 'follow-up-calendar', 'insights', 'pricing', 'fields', 'roles', 'integrations', 'settings']);
 
 /** Labels for Settings pages the Settings projection does not list. */
-const SETTINGS_LABELS: Readonly<Record<string, string>> = { 'custom-fields': 'Custom fields', 'public-profile': 'Public profile', secrets: 'Secrets & credentials' };
+const SETTINGS_LABELS: Readonly<Record<string, string>> = { 'custom-fields': 'Custom fields', 'public-profile': 'Public profile', secrets: 'Secrets & credentials', team: 'Access' };
 
 /** Outstanding ownership decisions, carried on the location until Batch 3 settles them. */
 const OPEN_TARGETS: Readonly<Record<string, string>> = {
@@ -132,7 +132,10 @@ const LOCATION_METADATA: readonly LocationNode[] = [
   // Settings
   { id: 'view:access-members', scope: 'settings', kind: 'view', pattern: 'settings/access/members', parent: 'target:team', label: 'Members' },
   { id: 'view:access-invitations', scope: 'settings', kind: 'view', pattern: 'settings/access/invitations', parent: 'target:team', label: 'Invitations' },
-  { id: 'view:access-roles', scope: 'settings', kind: 'view', pattern: 'settings/access/roles', parent: 'target:team', label: 'Roles' },
+  { id: 'view:access-roles', scope: 'settings', kind: 'view', pattern: 'settings/access/roles', parent: 'target:team', label: 'Roles & permissions' },
+  { id: 'view:access-history', scope: 'settings', kind: 'view', pattern: 'settings/access/history', parent: 'target:team', label: 'Access history' },
+  { id: 'create:role', scope: 'settings', kind: 'create', pattern: 'settings/access/roles/new', parent: 'view:access-roles', label: 'New role' },
+  { id: 'record:role', scope: 'settings', kind: 'record', pattern: 'settings/access/roles/[roleId]', parent: 'view:access-roles', record: 'roleId' },
   { id: 'record:connection', scope: 'settings', kind: 'record', pattern: 'settings/connections/[connectionId]', parent: 'target:integrations', record: 'connectionId' },
   { id: 'record:connect-app', scope: 'settings', kind: 'create', pattern: 'settings/connections/apps/[applicationKey]', parent: 'target:integrations', record: 'applicationKey', recordLabel: (name) => `Connect ${name}` },
   { id: 'view:mcp-servers', scope: 'settings', kind: 'view', pattern: 'settings/connections/mcp', parent: 'target:integrations', label: 'MCP servers' },

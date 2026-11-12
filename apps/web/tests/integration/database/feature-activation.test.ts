@@ -1,3 +1,4 @@
+import { retainRoleManager } from '@/tests/support/role-manager';
 import { randomUUID } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { listFeaturesByRuntimeMapping } from '@/lib/domain/catalogue/catalogue';
@@ -11,7 +12,7 @@ import {
 import { createPlan, setPlanFeatureOverride } from '@/lib/domain/catalogue/plans';
 import { computeReadiness, computeSetupOverview } from '@/lib/domain/tenancy/lifecycle';
 import { createPriceBookItem } from '@/lib/domain/pricing/price-book';
-import { assignRole, createRole, listRoles } from '@/lib/domain/tenancy/roles';
+import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import { asPlatformStaff, foundBusiness } from '@/tests/support/founding';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
@@ -165,17 +166,17 @@ describe('feature entitlement, activation and readiness', () => {
       name: 'No Feature Manage',
       capabilities: ['role.manage'],
     });
+    const restoreRole = await retainRoleManager(db, { organizationId, membershipId: ownerMembershipId });
     await assignRole(db, { membershipId: ownerMembershipId, roleId: noFeatureManage });
-
-    await expect(
-      disableOrganizationFeature(db, { organizationId, featureId: billingFeatureId }),
-    ).rejects.toMatchObject({ code: 'organization_plans.feature_forbidden' });
-    await expect(enableOrganizationFeature(db, { organizationId, featureId: billingFeatureId }))
-      .rejects.toMatchObject({ code: 'organization_plans.feature_forbidden' });
-
-    const roles = await listRoles(db, { organizationId });
-    const admin = roles.find((r) => r.name === 'Admin')!;
-    await assignRole(db, { membershipId: ownerMembershipId, roleId: admin.id });
+    try {
+      await expect(
+        disableOrganizationFeature(db, { organizationId, featureId: billingFeatureId }),
+      ).rejects.toMatchObject({ code: 'organization_plans.feature_forbidden' });
+      await expect(enableOrganizationFeature(db, { organizationId, featureId: billingFeatureId }))
+        .rejects.toMatchObject({ code: 'organization_plans.feature_forbidden' });
+    } finally {
+      await restoreRole();
+    }
   });
 });
 

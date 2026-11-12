@@ -84,13 +84,14 @@ describe('business identity rules', () => {
 describe('the Settings context', () => {
   const everything = { capabilities: new Set(CAPABILITIES), enabledModules: new Set<string>(), featureAvailability: new Set<string>() };
 
-  it('groups cross-workspace administration under Personal, Organization and Administration', () => {
+  it('groups cross-workspace administration under Personal, Organization, Access and Administration', () => {
     const sections = projectSettingsNav(ORG, everything);
     expect(sections.map((section) => [section.label, section.items.map((item) => item.label)])).toEqual([
       ['Personal', ['Profile', 'Security & sign-in', 'Appearance']],
       // No module is enabled here, so Customer payments (billing-entitled) is absent.
       ['Organization', ['General', 'Branding', 'Domains', 'Email sending', 'Features', 'Words & navigation']],
-      ['Administration', ['Team & access', 'Connections', 'Plan & usage']],
+      ['Access', ['Members', 'Invitations', 'Roles & permissions', 'Access history']],
+      ['Administration', ['Connections', 'Plan & usage']],
     ]);
   });
 
@@ -123,7 +124,8 @@ describe('the Settings context', () => {
     const hours = items.find((item) => item.label === 'Working hours');
     expect(hours?.href).toBe(`/organizations/${ORG}/schedule/configuration`);
     expect(hours?.description).toBe('In Work');
-    expect(items.find((item) => item.label === 'Team & access')?.href).toBe(`/organizations/${ORG}/settings/access`);
+    expect(items.find((item) => item.label === 'Roles & permissions')?.href).toBe(`/organizations/${ORG}/settings/access/roles`);
+    expect(items.find((item) => item.label === 'Members')?.description).toBe('Access');
     // The business profile is found once, as the Settings destination, not again as workspace configuration.
     expect(items.filter((item) => item.label === 'General')).toHaveLength(1);
   });

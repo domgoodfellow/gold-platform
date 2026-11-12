@@ -13,11 +13,14 @@ export function MembersTable({
   organizationId,
   members,
   roles,
+  assignableRoleIds,
   mayManage,
 }: {
   organizationId: string;
   members: Member[];
   roles: Role[];
+  /** Roles the person managing may put somebody on: those whose permissions they hold themselves. */
+  assignableRoleIds: ReadonlySet<string>;
   mayManage: boolean;
 }) {
   return (
@@ -35,8 +38,10 @@ export function MembersTable({
               <RoleAssignmentControl
                 organizationId={organizationId}
                 membershipId={member.id}
+                memberName={member.displayName}
                 currentRoleId={member.role.id}
                 roles={roles}
+                assignableRoleIds={assignableRoleIds}
               />
             ) : (
               <Badge>{member.role.name}</Badge>

@@ -693,7 +693,7 @@ The shared page-identity components own this responsibility.
 
 - **One location.** Every page inside the organization, Settings and Platform shells shows one location: its ancestors and the current page, resolved by `resolveLocation` (`lib/route/page-location.ts`) from the canonical registries. A page supplies only server-known record labels; it never writes its own ancestors.
 - **Loading and missing.** A loading page keeps its known ancestors and shows the record name only once it is known. A missing, deleted or unauthorized record shows not-found inside its nearest valid ancestors, without disclosing which it was. Record data is never invented.
-- **Links.** An ancestor is a link only when it is a real page the viewer may open. Grouping levels and redirect-only addresses (Settings, Library, Team & access, every workspace's Configuration level) are plain text. Sidebar visibility is not the link rule.
+- **Links.** An ancestor is a link only when it is a real page the viewer may open. Grouping levels and redirect-only addresses (Settings, Library, Access, every workspace's Configuration level) are plain text. Sidebar visibility is not the link rule.
 - **Levels.** Query filters are not levels; a selection with its own route is. Settings presentation groups and Platform group headings are not levels. Platform starts at "Platform".
 - **Heading.** One meaningful `h1`. When the header bar shows the page, the `h1` is visually hidden; its accessible name may be longer than the breadcrumb label. Section headings stay visible. Home keeps its greeting as visible content that is not the heading; a long-form Help article may keep a visible reading title.
 - **Phone.** The hierarchical Up control goes to the last linked ancestor of the same trail and is separate from browser history.
@@ -1336,12 +1336,13 @@ Purpose:
 
 > Move between the cross-workspace administrative concerns of a person and an organization.
 
-Settings has no landing page and no directory page. Entering it swaps the shell's sidebar content, inside the same `Sidebar`, for Back to app, a settings search, and three groups:
+Settings has no landing page and no directory page. Entering it swaps the shell's sidebar content, inside the same `Sidebar`, for Back to app, a settings search, and four groups:
 
 ```text
-Personal        Profile, Security & sign-in
+Personal        Profile, Security & sign-in, Appearance
 Organization    General, Customer payments, Branding, Domains, Email sending, Features, Words & navigation
-Administration  Team & access, Connections, Plan & usage
+Access          Members, Invitations, Roles & permissions, Access history
+Administration  Connections, Plan & usage
 ```
 
 Opening Settings lands on the first destination the member may use. Every destination is a deep link and receives the Settings sidebar whether or not the person came through the menu. Back to app restores the appropriate workspace context and returns to the last page of the same business that was not Settings, validated as a path inside that business, otherwise Home.

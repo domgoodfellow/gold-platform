@@ -17,7 +17,10 @@ import { COLLEAGUE_STORAGE_STATE, loadDemoContext, OWNER_STORAGE_STATE, platform
  */
 
 const accountMenu = async (page: import('@playwright/test').Page) => {
-  await page.locator('[data-slot=sidebar-footer] .group\\/account-menu').filter({ visible: true }).click();
+  const trigger = page.locator('[data-slot=sidebar-footer] .group\\/account-menu').filter({ visible: true });
+  await trigger.focus();
+  await expect(trigger).toBeFocused();
+  await trigger.press('Enter');
   return page.getByRole('menu');
 };
 const sidebar = (page: import('@playwright/test').Page) => page.locator('[data-slot="sidebar-container"] nav[aria-label="This business"]');
@@ -49,40 +52,36 @@ test.describe('a tenant owner', () => {
       }
       if (width === 390) {
         await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();
-        // ADR-047: the phone menu reaches the workspace Home through its heading; there is no Overview child.
+        // The workspace's Dashboard entry opens its canonical root; there is no Overview child.
         const phoneNav = page.getByRole('navigation', { name: 'This business', exact: true }).filter({ visible: true });
-        await expect(phoneNav.getByRole('link', { name: / home$/ })).toBeVisible();
+        await expect(phoneNav.locator(`a[href="${base}/${home}"]`)).toBeVisible();
         await expect(phoneNav.getByRole('link', { name: 'Overview', exact: true })).toHaveCount(0);
       }
     }
   });
 
-  test('workspace header responds to docked Agent and Configure panels', async ({ page }, info) => {
+  test('workspace header fits with a docked Agent and Settings panel', async ({ page }, info) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     const base = `/organizations/${loadDemoContext().organizationId}`;
     await page.goto(`${base}/marketing`);
     const row = page.locator('[data-header-controls]').first();
-    await expect(row.getByRole('navigation')).toBeVisible();
-    const label = row.locator('nav a').last();
-    const original = await label.textContent();
-    await label.evaluate(element => { element.textContent = 'A much longer business-authored destination label that must yield to essential page actions'; });
+    await expect(row).toBeVisible();
     await expect(row.getByRole('navigation')).toHaveCount(0);
     expect(await row.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
-    await label.evaluate((element, text) => { element.textContent = text; }, original);
-    await expect(row.getByRole('navigation')).toBeVisible();
     await page.getByRole('button', { name: 'Agent', exact: true }).filter({ visible: true }).click();
     await expect(page.getByRole('button', { name: 'Close Agent', exact: true })).toBeVisible();
     await expect(row.getByRole('navigation')).toHaveCount(0);
     expect(await row.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
     await page.screenshot({ path: info.outputPath('marketing-agent-open.png') });
     await page.getByRole('button', { name: 'Close Agent', exact: true }).click();
-    await expect(row.getByRole('navigation')).toBeVisible();
+    await expect(row.getByRole('navigation')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Agent', exact: true }).filter({ visible: true })).toBeVisible();
     await page.goto(`${base}/support`);
-    await page.getByRole('button', { name: 'Configure', exact: true }).click();
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(page.getByRole('complementary', { name: 'Page panel', exact: true })).toBeVisible();
     await expect(row.getByRole('navigation')).toHaveCount(0);
     expect(await row.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
-    await page.screenshot({ path: info.outputPath('support-configure-open.png') });
+    await page.screenshot({ path: info.outputPath('support-settings-open.png') });
   });
   test('keeps workspace selection and contextual destinations through navigation, refresh and history', async ({page}) => {
     const {organizationId}=loadDemoContext();const base=`/organizations/${organizationId}`;
@@ -91,7 +90,7 @@ test.describe('a tenant owner', () => {
     // The probe proves the sidebar survives client navigation; a full load (reload, goto) rightly
     // discards it, so it is placed again before each workspace is entered.
     const placeProbe=()=>page.locator('[data-slot="sidebar-container"]').evaluate(element=>element.setAttribute('data-persistence-probe','retained'));
-    for(const path of ['crm','comms','field','finance','ai']) {
+    for(const path of ['crm','comms','work','field','finance','ai']) {
       if(!links.includes(`${base}/${path}`))continue;
       await placeProbe();
       await sidebar(page).locator(`a[href="${base}/${path}"]`).click();
@@ -109,7 +108,7 @@ test.describe('a tenant owner', () => {
     await page.setViewportSize({width,height:900});await page.goto(`/organizations/${loadDemoContext().organizationId}/crm/contacts`);
     if(width<768)await page.getByRole('button',{name:/^(Toggle Sidebar|Menu)$/}).click();
     const nav=page.getByRole('navigation',{name:'This business'}).filter({visible:true});
-    await expect(nav.getByRole('link',{name:'Customers',exact:true})).toBeVisible();
+    await expect(nav.getByRole('link',{name:'Contacts',exact:true})).toBeVisible();
     await expect(nav.getByRole('link',{name:'Home'})).toBeVisible();
     await expect(nav.getByRole('link',{name:'Invoices',exact:true})).toHaveCount(0);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
@@ -136,11 +135,16 @@ test.describe('a tenant colleague with a reduced role', () => {
     await expect(nav.getByText('Platform', { exact: true })).toHaveCount(0);
   });
 
-  test('is still refused the roles page by the server when the URL is typed', async ({ page }) => {
+  test('keeps Members read-only and refuses role editing and history when the URL is typed', async ({ page }) => {
     const { organizationId } = loadDemoContext();
     await page.goto(`/organizations/${organizationId}/settings/access/members`);
     // The page loads (it is read-only for them) but offers no way to change a role: hiding the row was courtesy.
-    await expect(page.getByRole('button', { name: 'New role' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'New role' })).toHaveCount(0);
+    await expect(page.getByRole('combobox', { name: /^Role for / })).toHaveCount(0);
+    for (const path of ['roles/new', 'history']) {
+      await page.goto(`/organizations/${organizationId}/settings/access/${path}`);
+      await expect(page.getByRole('heading', { name: 'This page does not exist', exact: true })).toBeVisible();
+    }
   });
 });
 
@@ -180,12 +184,20 @@ test.describe('GildOps platform staff',()=>{
 test.describe('account menu and icon-bearing Settings', () => {
   test.use({ storageState: OWNER_STORAGE_STATE });
   for (const width of [1440, 768, 390]) test(`Settings navigation and account menu at ${width}px`, async ({ page }, info) => {
+    // Two themes, several real page navigations and screenshots exceed the default single-page budget.
+    test.setTimeout(90_000);
     const { organizationId } = loadDemoContext();
     await page.setViewportSize({ width, height: 1000 });
     for (const colorScheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme });
       await page.goto(`/organizations/${organizationId}/crm/contacts`);
-      const open = async () => { if (width < 768) await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click(); };
+      const open = async () => {
+        if (width < 768) {
+          if (!await page.getByRole('dialog', { name: 'Sidebar' }).isVisible()) await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();
+        } else if (await page.locator('[data-slot="sidebar"][data-state="collapsed"]').count()) {
+          await page.locator('header').getByRole('button', { name: 'Toggle Sidebar', exact: true }).click();
+        }
+      };
       await open();
       await expect(page.getByRole('navigation', { name: 'Application controls' })).toHaveCount(0);
       const menu = await accountMenu(page);
@@ -199,25 +211,30 @@ test.describe('account menu and icon-bearing Settings', () => {
       await open();
       const settings = page.getByRole('navigation', { name: 'Settings', exact: true });
       await expect(settings).toBeVisible();
-      if (width >= 768) await page.locator('header').getByRole('button', { name: /^(Toggle Sidebar|Menu)$/ }).click();
-      for (const label of ['Profile', 'Security & sign-in', 'Appearance', 'General', 'Branding', 'Domains', 'Features', 'Team & access', 'Connections', 'Plan & usage']) {
+      if (width >= 768) {
+        await page.keyboard.press('Control+b');
+        await expect(page.locator('[data-slot="sidebar"]')).toHaveAttribute('data-state', 'collapsed');
+      }
+      for (const label of ['Profile', 'Security & sign-in', 'Appearance', 'General', 'Branding', 'Domains', 'Features', 'Members', 'Invitations', 'Roles & permissions', 'Access history', 'Connections', 'Plan & usage']) {
         const link = settings.getByRole('link', { name: label, exact: true });
         await expect(link).toBeVisible();
         await expect(link.locator('svg')).toHaveCount(1);
       }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.screenshot({ path: info.outputPath(`settings-${width}-${colorScheme}.png`) });
+      await open();
       await settings.getByRole('link', { name: 'Appearance', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Appearance', exact: true })).toBeVisible();
       await open();
       await settings.getByRole('link', { name: 'Back to app', exact: true }).click();
       await expect(page).toHaveURL(`/organizations/${organizationId}/crm/contacts`);
-      if (width >= 768) await page.locator('header').getByRole('button', { name: /^(Toggle Sidebar|Menu)$/ }).click();
       await page.goto(`/organizations/${organizationId}/comms`);
       await open();
       const business = page.getByRole('navigation', { name: 'This business' });
-      await business.getByRole('link', { name: 'Configuration', exact: true }).click();
+      await business.getByRole('button', { name: 'Settings', exact: true }).click();
+      await business.getByRole('link', { name: 'Calling & routing', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Calling & routing', exact: true })).toBeVisible();
+      await open();
       await expect(page.getByRole('navigation', { name: 'Configuration sections' })).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.screenshot({ path: info.outputPath(`configuration-${width}-${colorScheme}.png`) });
@@ -227,10 +244,8 @@ test.describe('account menu and icon-bearing Settings', () => {
       await open();
       await expect(business.getByRole('link', { name: 'Numbers & assignments', exact: true })).toHaveAttribute('aria-current', 'page');
       await expect(business.getByRole('link', { name: 'Numbers', exact: true })).toHaveCount(0);
-      await business.getByRole('link', { name: 'Calls', exact: true }).click();
-      await expect(page.getByRole('heading', { name: 'Calls', exact: true })).toBeVisible();
-
-      if (width >= 768) await page.locator('header').getByRole('button', { name: /^(Toggle Sidebar|Menu)$/ }).click();
+      await business.getByRole('link', { name: 'Dialer', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Dialer', exact: true })).toBeVisible();
     }
   });
 });
@@ -240,7 +255,7 @@ test.describe('legacy Communications configuration compatibility', () => {
   test.use({ storageState: OWNER_STORAGE_STATE });
   test('preserves query values and fragments and resolves each canonical owner', async ({ page }) => {
     const { organizationId } = loadDemoContext();
-    for (const [legacy, canonical] of [['settings/calls', 'comms/configuration/calling'], ['settings/communications', 'comms/configuration/messaging'], ['comms/numbers', 'comms/configuration/numbers'], ['settings/sales-stages', 'sales/configuration/relationship-stages'], ['settings/opportunity-stages', 'sales/configuration/opportunity-stages'], ['settings/pricing', 'finance/catalog']]) {
+    for (const [legacy, canonical] of [['settings/calls', 'comms/configuration/calling'], ['settings/communications', 'comms/configuration/messaging'], ['comms/numbers', 'comms/configuration/numbers'], ['settings/sales-stages', 'crm/configuration/relationship-stages'], ['settings/opportunity-stages', 'crm/configuration/opportunity-stages'], ['settings/pricing', 'finance/catalog']]) {
       await page.goto(`/organizations/${organizationId}/${legacy}?filter=a&filter=b#recording`);
       await expect(page).toHaveURL(`/organizations/${organizationId}/${canonical}?filter=a&filter=b#recording`);
       // Batch A: configuration pages draw no second navigation column, and no workspace has a landing.
@@ -251,8 +266,8 @@ test.describe('legacy Communications configuration compatibility', () => {
         'comms/configuration/calling': 'Calling & routing',
         'comms/configuration/messaging': 'Messaging',
         'comms/configuration/numbers': 'Numbers & assignments',
-        'sales/configuration/relationship-stages': 'Relationship stages',
-        'sales/configuration/opportunity-stages': 'Opportunity stages',
+        'crm/configuration/relationship-stages': 'Relationship stages',
+        'crm/configuration/opportunity-stages': 'Opportunity stages',
         'finance/catalog': 'Catalog & Pricing',
       } as Record<string, string>)[canonical];
       await expect(sidebar(page).getByRole('link', { name: label, exact: true })).toHaveAttribute('aria-current', 'page');

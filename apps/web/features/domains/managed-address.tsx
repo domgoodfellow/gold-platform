@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Section, SectionHeading } from '@/components/surfaces/section';
+import { CardSection } from '@/components/surfaces/card';
 import { CopyField } from '@/components/controls/copy-field';
 import { Hint } from '@/components/controls/inputs';
 import type { ManagedAddress as ManagedAddressState } from '@/lib/domain/domains/domains';
@@ -11,8 +11,7 @@ import type { ManagedAddress as ManagedAddressState } from '@/lib/domain/domains
  */
 export function ManagedAddress({ address, generalHref }: { address: ManagedAddressState; generalHref: string }) {
   return (
-    <Section>
-      <SectionHeading>GildOps address</SectionHeading>
+    <CardSection title="GildOps address">
       {address.state === 'ready' ? (
         <div className="mt-2 flex flex-col gap-2">
           <CopyField value={address.hostname} label="GildOps address" />
@@ -29,6 +28,6 @@ export function ManagedAddress({ address, generalHref }: { address: ManagedAddre
       ) : (
         <Hint className="mt-2">GildOps addresses aren’t available yet.</Hint>
       )}
-    </Section>
+    </CardSection>
   );
 }

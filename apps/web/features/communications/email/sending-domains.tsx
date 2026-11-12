@@ -1,7 +1,7 @@
 import { Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
-import { Section, SectionHeading } from '@/components/surfaces/section';
+import { CardSection } from '@/components/surfaces/card';
 import {
   SENDING_DOMAIN_BADGE,
   sendingDomainPresentation,
@@ -45,8 +45,7 @@ export function SendingDomains({
   const waiting = standing.filter((domain) => domain.records.length > 0 && domain.presentation !== 'ready');
 
   return (
-    <Section className="mt-8">
-      <SectionHeading>Your sending domains</SectionHeading>
+    <CardSection title="Your sending domains" className="mt-6">
       <div className="mt-3">
         <DataTable
           rows={standing}
@@ -100,6 +99,6 @@ export function SendingDomains({
           <RequiredRecordsTable records={domain.records} />
         </div>
       ))}
-    </Section>
+    </CardSection>
   );
 }

@@ -5,6 +5,7 @@ import { createCustomer } from '@/lib/domain/customers/customers';
 import { CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import {
   getOrganization } from '@/lib/domain/tenancy/organizations';
+import { addMember } from '@/lib/domain/tenancy/members';
 import { assignRole, createRole, listRoles } from '@/lib/domain/tenancy/roles';
 import { foundBusiness } from '@/tests/support/founding';
 
@@ -46,6 +47,8 @@ async function signUp(label: string): Promise<Actor> {
 
   return { db, userId: created.user.id, email };
 }
+
+let deputy: Awaited<ReturnType<typeof signUp>>;
 
 describe('roles and capabilities', () => {
   beforeAll(async () => {
@@ -136,6 +139,12 @@ describe('roles and capabilities', () => {
       capabilities: ['role.manage'],
     });
 
+    // A second administrator, added while the owner still holds everything. Once the owner steps
+    // down, only somebody who holds a permission can give it back.
+    deputy = await signUp('deputy');
+    const everything = (await listRoles(owner.db, { organizationId })).find((r) => r.name === 'Everything')!;
+    await addMember(owner.db, { organizationId, email: deputy.email, displayName: 'Deputy', roleId: everything.id });
+
     await assignRole(owner.db, { membershipId: ownerMembershipId, roleId: managerOnly });
 
     const organization = await getOrganization(owner.db, organizationId);
@@ -151,11 +160,17 @@ describe('roles and capabilities', () => {
     ).rejects.toMatchObject({ code: 'customers.create_failed' });
   });
 
-  it('restores the ability when the capability comes back', async () => {
+  it('cannot hand itself back what it gave up, and has the ability again once somebody who may restores it', async () => {
     const roles = await listRoles(owner.db, { organizationId });
     const everything = roles.find((r) => r.name === 'Everything')!;
 
-    await assignRole(owner.db, { membershipId: ownerMembershipId, roleId: everything.id });
+    // Holding only role.manage, the member may not move themselves onto a role that holds more.
+    await expect(
+      assignRole(owner.db, { membershipId: ownerMembershipId, roleId: everything.id }),
+    ).rejects.toMatchObject({ code: 'roles.grant_beyond_own' });
+
+    // The second administrator, who holds everything, gives it back.
+    await assignRole(deputy.db, { membershipId: ownerMembershipId, roleId: everything.id });
 
     await expect(
       createCustomer(owner.db, {
@@ -204,8 +219,10 @@ describe('roles and capabilities', () => {
 
     expect(error).toBeNull();
     expect(data!.length).toBeGreaterThan(0);
+    // Every change names whoever made it: the owner, or the second administrator who gave the owner's role back.
     for (const event of data!) {
-      expect(event.actor_id).toBe(owner.userId);
+      expect([owner.userId, deputy.userId]).toContain(event.actor_id);
     }
+    expect(data!.filter((event) => event.actor_id === deputy.userId)).toEqual([{ action: 'membership.role_assigned', actor_id: deputy.userId }]);
   });
 });

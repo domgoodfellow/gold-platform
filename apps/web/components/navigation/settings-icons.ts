@@ -1,4 +1,4 @@
-import { Banknote, Building2, CreditCard, Globe, Mail, Palette, Plug, Settings2, ShieldCheck, SlidersHorizontal, Tags, UserRound, UsersRound } from 'lucide-react';
+import { Banknote, Building2, CreditCard, Globe, History, KeyRound, Mail, MailPlus, Palette, Plug, Settings2, ShieldCheck, SlidersHorizontal, Tags, UserRound, UsersRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export const SETTINGS_ICONS: Record<string, LucideIcon> = {
@@ -12,7 +12,10 @@ export const SETTINGS_ICONS: Record<string, LucideIcon> = {
   'settings-email': Mail,
   'settings-features': Settings2,
   'settings-terminology': Tags,
-  'settings-access': UsersRound,
+  'settings-members': UsersRound,
+  'settings-invitations': MailPlus,
+  'settings-roles': KeyRound,
+  'settings-access-history': History,
   'settings-connections': Plug,
   'settings-plan': CreditCard,
 };

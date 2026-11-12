@@ -1,3 +1,4 @@
+import { retainRoleManager } from '@/tests/support/role-manager';
 import { randomUUID } from 'node:crypto';
 import { Client } from 'pg';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -17,7 +18,7 @@ import {
 import { createCustomer } from '@/lib/domain/customers/customers';
 import { createPriceBookItem, updatePriceBookItem } from '@/lib/domain/pricing/price-book';
 import { addPricedLine, listPricedWork, priceWorkItem, removePricedLine } from '@/lib/domain/pricing/prices';
-import { ALL_CAPABILITIES, CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
+import { CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
 import { listCustomerTimeline } from '@/lib/domain/timeline/timeline';
@@ -464,6 +465,7 @@ describe('money arriving', () => {
         (capability) => capability !== 'payment.record' && capability !== 'invoice.issue',
       ),
     });
+    const restoreRole = await retainRoleManager(alice.db, { organizationId: alice.organizationId, membershipId: alice.membershipId });
     await assignRole(alice.db, { membershipId: alice.membershipId, roleId });
 
     try {
@@ -473,12 +475,7 @@ describe('money arriving', () => {
       const other = await quotedJob(alice, 'Cannot invoice this');
       await expect(issueInvoice(alice.db, { workItemId: other })).rejects.toThrow();
     } finally {
-      const restored = await createRole(alice.db, {
-        organizationId: alice.organizationId,
-        name: `Owner ${randomUUID().slice(0, 6)}`,
-        capabilities: [...ALL_CAPABILITIES],
-      });
-      await assignRole(alice.db, { membershipId: alice.membershipId, roleId: restored });
+      await restoreRole();
     }
   });
 });

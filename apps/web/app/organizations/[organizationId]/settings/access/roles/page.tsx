@@ -5,8 +5,9 @@ export const dynamic = 'force-dynamic';
 
 export default async function RolesPage({
   params,
+  searchParams,
 }: PageProps<'/organizations/[organizationId]/settings/access/roles'>) {
   const { organizationId } = await params;
   const context = await requireOrganization(organizationId);
-  return <AccessPage organizationId={organizationId} view="roles" context={context} />;
+  return <AccessPage organizationId={organizationId} view="roles" context={context} roleDeleted={(await searchParams).deleted === '1'} />;
 }

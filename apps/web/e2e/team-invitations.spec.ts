@@ -90,7 +90,7 @@ async function invite(page: Page, email: string) {
   await page.goto(`/organizations/${orgA}/settings/access/invitations`);
   await page.getByRole('button', { name: 'Add member' }).click();
   await page.getByLabel('Email address').fill(email);
-  await chooseOption(page.getByLabel('Role'), { label: roleName });
+  await chooseOption(page.getByLabel('Role', { exact: true }), { label: roleName });
   await page.getByRole('button', { name: 'Send invitation' }).click();
 }
 
@@ -290,10 +290,11 @@ test('Email sending settings say what is missing, then which address sends, at e
   await expect(page.getByRole('heading', { level: 1, name: 'Email sending' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Not set up yet' })).toBeVisible();
   await expect(page.getByRole('status')).toContainText('bookings themselves still work');
-  await expect(page.getByText('Team invitations come from GildOps and need no setup here.')).toBeVisible();
-  // Organization Settings lists it; Communications links to it and keeps Inbox email.
+  // No sentence about team invitations: that copy was removed in "Enforce UI copy discipline", and
+  // invitations sending without this page's setup is proved by the invitation tests above.
+  // Organization Settings lists it; Communications links to it and keeps Incoming email.
   await expect(page.getByRole('link', { name: 'Email sending', exact: true }).first()).toHaveAttribute('href', settings);
-  await expect(page.getByRole('link', { name: 'Communications → Inbox email' })).toHaveAttribute('href', `/organizations/${orgA}/comms/configuration/email`);
+  await expect(page.getByRole('link', { name: 'Communications → Incoming email' })).toHaveAttribute('href', `/organizations/${orgA}/comms/configuration/email`);
   // Nothing about the provider's account or keys is on the page.
   await expect(page.getByText(/resend|api key|re_/i)).toHaveCount(0);
 
@@ -323,7 +324,7 @@ test('Email sending settings say what is missing, then which address sends, at e
     await page.screenshot({ path: path.join(OUT, `email-sending-${width}.png`), fullPage: true });
   }
   await page.goto(`/organizations/${orgA}/comms/configuration/email`);
-  await expect(page.getByRole('heading', { level: 1, name: 'Inbox email' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Incoming email' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Add address' })).toHaveCount(0);
   await page.screenshot({ path: path.join(OUT, 'inbox-email-1440.png'), fullPage: true });
 

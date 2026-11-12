@@ -52,6 +52,20 @@ export type Capability = (typeof CAPABILITIES)[number];
 /** Everything, granted to the role that founds an organization. */
 export const ALL_CAPABILITIES: Capability[] = [...CAPABILITIES];
 
+/**
+ * Permissions that reach beyond a person's own work: who may do what, the business's own settings
+ * and connections, money owed to GildOps, stored credentials, and rules that act with nobody
+ * present. The role editor marks them; nothing is enforced differently because of this list.
+ */
+export const SENSITIVE_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>([
+  'role.manage',
+  'organization.manage',
+  'integration.manage',
+  'billing.manage',
+  'secret.manage',
+  'automation.manage',
+]);
+
 export function isCapability(value: string): value is Capability {
   return (CAPABILITIES as readonly string[]).includes(value);
 }
@@ -66,45 +80,45 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'support.configure': 'Set up Support queues and service levels',
   'marketing.read': 'View campaigns, audiences and acquisition results',
   'marketing.manage': 'Manage campaigns and audiences and review acquisition inquiries',
-  'customer.create': 'Add customers',
+  'customer.create': 'Add contacts',
   'opportunity.create': 'Add opportunities',
   'opportunity.update': 'Edit opportunities and move their stages',
   'follow_up.manage': 'Create, edit, complete and cancel CRM tasks',
   /** Separate from creating one — correcting a record and moving a relationship along its stages are plausibly two different people. */
-  'customer.update': 'Correct a customer and move them along',
-  'role.manage': 'Manage roles',
+  'customer.update': 'Edit contacts and move them between relationship stages',
+  'role.manage': 'Manage members, invitations and roles',
   'field.manage': 'Define custom fields',
   'location.create': 'Add locations',
   'resource.create': 'Add resources',
   /** Correcting a resource past its name — today, only which member it represents (Slice 0B). Split from `resource.create` the same way `customer.update` is split from `customer.create`. */
-  'resource.update': 'Correct a resource, including which member it represents',
+  'resource.update': 'Edit resources, including which member each one represents',
   'work_item.create': 'Add work items',
   'asset.create': 'Add assets',
   'document.create': 'Attach documents',
-  'work_item.transition': 'Move work along its board',
+  'work_item.transition': 'Move work between stages',
   'work_item.schedule': 'Assign and schedule work',
   'work_item.record': 'Record time and cost',
-  'organization.manage': 'Change this business’s own settings',
+  'organization.manage': 'Change business settings',
   'price.manage': 'Set what this business charges',
-  'work_item.price': 'Put priced items on a job',
-  'work_item.update': 'Correct a job’s details',
+  'work_item.price': 'Add priced items to work',
+  'work_item.update': 'Edit work details',
   /** Split from recording payment — deciding a job is finished is whoever runs the work; writing down that money arrived is whoever opens the post. */
   'invoice.issue': 'Issue invoices, from Work or directly to a customer',
   'payment.record': 'Record a payment against an invoice',
   /** Its own authority — the one capability a role can hold that acts when nobody is present. */
-  'automation.manage': 'Write the rules this business runs on its own',
+  'automation.manage': 'Create and edit automation rules',
   /** Asking for a proposal, not applying one — applying is gated per-part by whatever capability that part needs. */
-  'configuration.propose': 'Ask the platform to draft this business’s setup',
+  'configuration.propose': 'Ask GildOps to draft this business’s setup',
   /** Its own authority because asking spends this deployment's money and shares this business's rows with whoever answers — not because a question is dangerous. */
-  'assistant.ask': 'Ask the platform questions about this business',
+  'assistant.ask': 'Ask the assistant questions about this business',
   /** Totals, not the rows behind them — anybody may open one invoice; this grants seeing a year of them added up. */
   'report.read': 'See what this business has billed and what its work cost',
   /** Authoring, not reading — saving a report others will see is closer to managing roles. */
   'report.manage': 'Save reports and choose which roles see them',
   /** Its own authority for the same reason as `assistant.ask` — placing a call spends money and shares this business's number. */
-  'call.place': 'Call a customer and record how it went',
+  'call.place': 'Place calls and record their outcome',
   /** Its own authority for the same reason as `call.place` — a receptionist may message without ever placing a call, and the reverse. */
-  'message.send': 'Send a text or an email message and see the conversation',
+  'message.send': 'Send texts and emails and see conversations',
   /** Connecting a source and applying what it imports are split from `customer.create`/`customer.update` on purpose — an import run still checks those per row, so this alone cannot write a customer. */
   'integration.manage': 'Connect external data sources and run imports',
   /** Deactivating or reactivating an entitled feature, not entitlement itself — a tenant cannot self-entitle. */

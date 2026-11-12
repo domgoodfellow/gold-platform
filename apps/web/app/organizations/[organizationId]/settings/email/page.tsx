@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Hint } from '@/components/controls/inputs';
-import { Section, SectionHeading } from '@/components/surfaces/section';
+import { CardSection } from '@/components/surfaces/card';
 import { AddSendingDomainForm } from '@/features/communications/email/add-sending-domain-form';
 import { SenderAddresses } from '@/features/communications/email/sender-addresses';
 import { ReplyToForm, TestSendForm } from '@/features/communications/email/reply-to-and-test';
@@ -43,14 +43,13 @@ export default async function EmailSendingSettingsPage({ params }: PageProps<'/o
 
       <SendingStatus status={status} senders={senders} />
 
-      <Section className="mt-8">
-        <SectionHeading>Sending domains</SectionHeading>
+      <CardSection title="Sending domains" className="mt-6">
         <AddSendingDomainForm organizationId={organizationId} />
         <Hint className="mt-2 max-w-prose">
           Verifying a domain lets you send from it; it does not create a mailbox: replies and other mail to your
           addresses still go wherever the domain&rsquo;s mail records point today.
         </Hint>
-      </Section>
+      </CardSection>
       <SendingDomains
         organizationId={organizationId}
         domains={domains}
@@ -66,7 +65,7 @@ export default async function EmailSendingSettingsPage({ params }: PageProps<'/o
       <ReplyToForm organizationId={organizationId} senders={senders} hasDefault={status.state !== 'missing'} />
       <TestSendForm organizationId={organizationId} ready={status.state === 'ready'} tests={tests} />
 
-      <Hint className="mt-8">
+      <Hint className="mt-6">
         Which addresses receive replies into Conversations is set in{' '}
         <Link className="text-accent-text underline" href={`/organizations/${organizationId}/comms/configuration/email`}>Communications → Incoming email</Link>.
       </Hint>
@@ -92,9 +91,8 @@ function SendingStatus({ status, senders }: { status: EmailSendingStatus; sender
     }
   })();
   return (
-    <Section className="mt-6" aria-labelledby="email-sending-status">
-      <SectionHeading id="email-sending-status">{heading}</SectionHeading>
+    <CardSection title={heading} headingId="email-sending-status" className="mt-6">
       <p role="status" className={status.state === 'ready' ? 'mt-1 text-sm' : 'mt-1 text-sm text-danger'}>{sentence}</p>
-    </Section>
+    </CardSection>
   );
 }

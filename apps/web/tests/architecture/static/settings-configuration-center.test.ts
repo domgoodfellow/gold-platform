@@ -180,7 +180,7 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
   it('/fields is canonical and renders the shared, entity-scoped fields component', () => {
     const page = readFileSync(`${ROUTES}/settings/custom-fields/page.tsx`, 'utf8');
     expect(page).toContain('EntityFieldsConfiguration');
-    expect(page).toContain("'sales/configuration/fields'");
+    expect(page).toContain("'crm/configuration/fields'");
     expect(
       readFileSync(
         fileURLToPath(new URL('../../../features/custom-fields/configuration/entity-fields-configuration.tsx', import.meta.url)),
@@ -191,12 +191,14 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
 
   it('/roles is canonical and renders the Team workspace â€” Members, Invitations and Roles as URL-backed sibling views', () => {
     const page = readFileSync(`${ROUTES}/settings/access/access-page.tsx`, 'utf8');
-    expect(page).toContain('<ViewNav');
+    expect(page).not.toContain('<ViewNav');
     expect(page).toContain('AddMemberDialogProvider');
     expect(page).toContain('MembersTable');
     expect(page).toContain('InvitationsTable');
     expect(page).toContain('RolesTable');
-    expect(page).toContain('CreateRoleSheet');
+    // A role is created and edited on its own page, not in a drawer over the collection.
+    expect(page).not.toMatch(/CreateRoleSheet|EditRoleSheet|PageDrawer/);
+    expect(page).toContain("/new`}");
     expect(page).not.toContain('CreateRoleForm');
     expect(page).not.toContain('./pending-invitations');
     expect(page).not.toContain('<PendingInvitations');
@@ -209,7 +211,8 @@ describe('Pricing, Automations, Custom fields and Team are canonical, not Settin
     expect(addMemberDialog).toContain('InviteMemberForm');
 
     const rolesTable = readFileSync(`${WEB_FEATURES}/team/roles-table.tsx`, 'utf8');
-    expect(rolesTable).toContain('EditRoleSheet');
+    expect(rolesTable).not.toContain('EditRoleSheet');
+    expect(rolesTable).toContain("teamViewHref(organizationId, 'roles')");
   });
 
   it('sends every retired Settings sub-route to its new canonical home, never a dead end', () => {

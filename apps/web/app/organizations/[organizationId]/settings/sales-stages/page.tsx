@@ -2,5 +2,5 @@ import { redirect } from 'next/navigation';
 import { configurationRedirectHref } from '@/lib/route/configuration-redirect';
 export default async function LegacyConfiguration({ params, searchParams }: PageProps<'/organizations/[organizationId]/settings/sales-stages'>) {
  const { organizationId } = await params;
- redirect(configurationRedirectHref(organizationId, 'sales/configuration/relationship-stages', await searchParams));
+ redirect(configurationRedirectHref(organizationId, 'crm/configuration/relationship-stages', await searchParams));
 }

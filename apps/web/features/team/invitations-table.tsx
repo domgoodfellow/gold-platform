@@ -14,11 +14,13 @@ export function InvitationsTable({
   invitations,
   deliveryStatus,
   mayManage,
+  assignableRoleIds,
 }: {
   organizationId: string;
   invitations: PendingInvitation[];
   deliveryStatus: Map<string, InvitationDeliveryStatus>;
   mayManage: boolean;
+  assignableRoleIds: ReadonlySet<string>;
 }) {
   return (
     <DataTable
@@ -49,7 +51,7 @@ export function InvitationsTable({
         mayManage
           ? (invitation) => (
               <div className="flex flex-wrap items-center justify-end gap-2">
-                <ResendInvitationButton organizationId={organizationId} invitation={invitation} />
+                {assignableRoleIds.has(invitation.roleId) ? <ResendInvitationButton organizationId={organizationId} invitation={invitation} /> : <span className="text-sm text-muted">Resending requires all permissions in this role.</span>}
                 <RevokeInvitationDialog organizationId={organizationId} invitation={invitation} />
               </div>
             )

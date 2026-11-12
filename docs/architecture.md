@@ -1434,8 +1434,8 @@ Classification precedes route migration. A legacy URL is compatibility only, nev
 | Messaging/visitor communication profile | Communications configuration | settings/communications | comms/configuration/messaging |
 | Sending domains, sender addresses and default sender | Organization Settings (Email sending), shared with Communications; organization.manage | comms/configuration/email | settings/email |
 | Which addresses receive into Conversations | Communications configuration (Incoming email); organization.manage | settings/email | comms/configuration/email |
-| Relationship/opportunity stages | CRM configuration; field.manage | settings/sales-stages, settings/opportunity-stages | sales/configuration/relationship-stages and opportunity-stages |
-| Customer-specific fields | CRM configuration over the shared field engine | settings/custom-fields?entity=customer | sales/configuration/fields, retaining the single field engine |
+| Relationship/opportunity stages | CRM configuration; field.manage | settings/sales-stages, settings/opportunity-stages | crm/configuration/relationship-stages and opportunity-stages |
+| Customer-specific fields | CRM configuration over the shared field engine | settings/custom-fields?entity=customer | crm/configuration/fields, retaining the single field engine |
 | Work types/stages/checklists/fields | Work configuration; field.manage | work/configuration | retain owner and integrate section navigation |
 | Business hours and scheduling buffer | Scheduling configuration; field.manage and work shape | schedule/configuration | retain owner and integrate Work section navigation |
 | Queues and service levels | Support configuration; existing support.read and support.configure | support/queues, support/service-levels | support/configuration/queues and service-levels; operating queue triage stays support/queues |

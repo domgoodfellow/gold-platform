@@ -33,6 +33,9 @@ export async function inviteMember(
   });
 
   if (error) {
+    if (error.code === '42501' && error.details === 'grant_beyond_own') {
+      throw new DomainError('You can only give permissions you have yourself.', 'roles.grant_beyond_own');
+    }
     if (error.code === '42501') {
       throw new DomainError('You cannot invite people here.', 'invitations.forbidden');
     }
@@ -125,6 +128,9 @@ export async function reissueInvitation(db: Db, input: { id: string }): Promise<
   const { data, error } = await db.rpc('reissue_invitation', { p_id: input.id });
 
   if (error) {
+    if (error.code === '42501' && error.details === 'grant_beyond_own') {
+      throw new DomainError('You can only give permissions you have yourself.', 'roles.grant_beyond_own');
+    }
     if (error.code === '42501') {
       throw new DomainError('You cannot send that invitation again.', 'invitations.reissue_forbidden');
     }

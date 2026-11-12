@@ -1,4 +1,5 @@
-import { DividedList, EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
+import { CardSection } from '@/components/surfaces/card';
+import { DividedList, EmptyState, GroupHeading } from '@/components/surfaces/section';
 import { ButtonLink } from '@/components/controls/button';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/settings-page-frame';
@@ -54,9 +55,9 @@ function usageCharge(entry: UsageEvent, format: (minor: number, currency: string
  */
 function PurchaseReview({ quote }: { quote: PurchaseQuote }) {
   return (
-    <div className="mt-3 rounded-md border border-line p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted">Review before you pay</p>
-      <DividedList className="mt-2">
+    <div className="mt-3">
+      <GroupHeading>Review before you pay</GroupHeading>
+      <DividedList as="div" className="mt-2">
         {[...quote.recurring, ...quote.dueNow].map((line, index) => (
           <div key={`${line.sourceType}-${line.sourceId}-${index}`} className="flex items-center justify-between py-1.5 text-sm">
             <span>
@@ -67,7 +68,7 @@ function PurchaseReview({ quote }: { quote: PurchaseQuote }) {
           </div>
         ))}
       </DividedList>
-      <div className="mt-2 flex items-center justify-between border-t border-line pt-2 text-sm">
+      <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-sm">
         <span className="text-muted">Due now</span>
         <span className="font-medium">{formatMinor(quote.dueNowTotalMinor, quote.currency)}</span>
       </div>
@@ -142,8 +143,7 @@ export function PlanUsageScreen({
         </Hint>
       ) : null}
 
-      <Section className="mt-8">
-        <SectionHeading>Plan</SectionHeading>
+      <CardSection title="Plan" className="mt-6">
         {basePlan ? (
           <div className="mt-2 text-sm">
             <p className="font-medium">{basePlan.label}</p>
@@ -157,11 +157,10 @@ export function PlanUsageScreen({
             below still apply.
           </EmptyState>
         )}
-      </Section>
+      </CardSection>
 
       {billingProvider ? (
-        <Section className="mt-8">
-          <SectionHeading>Billing</SectionHeading>
+        <CardSection title="Billing" className="mt-6">
           {subscription ? (
             <div className="mt-2 text-sm">
               <p>
@@ -209,22 +208,20 @@ export function PlanUsageScreen({
                 : 'No Plan is assigned to subscribe to yet.'}
             </EmptyState>
           )}
-        </Section>
+        </CardSection>
       ) : null}
 
       {allowances.length > 0 ? (
-        <Section className="mt-8">
-          <SectionHeading>What’s included</SectionHeading>
+        <CardSection title="What’s included" className="mt-6">
           <DividedList as="div" className="mt-2">
             {allowances.map((allowance) => (
               <AllowanceMeter key={allowance.allowanceKey} state={allowance} />
             ))}
           </DividedList>
-        </Section>
+        </CardSection>
       ) : null}
 
-      <Section className="mt-8">
-        <SectionHeading>What&rsquo;s been bought</SectionHeading>
+      <CardSection title="What’s been bought" className="mt-6">
         {terms.length === 0 ? (
           <EmptyState className="mt-2">Nothing recorded yet.</EmptyState>
         ) : (
@@ -242,10 +239,9 @@ export function PlanUsageScreen({
             ))}
           </DividedList>
         )}
-      </Section>
+      </CardSection>
 
-      <Section className="mt-8">
-        <SectionHeading>Usage</SectionHeading>
+      <CardSection title="Usage" className="mt-6">
         {usage.length === 0 ? (
             <EmptyState className="mt-2">No usage reported yet. Reports can arrive late.</EmptyState>
         ) : (
@@ -263,10 +259,9 @@ export function PlanUsageScreen({
             ))}
           </DividedList>
         )}
-      </Section>
+      </CardSection>
 
-      <Section className="mt-8">
-        <SectionHeading>Calling credit</SectionHeading>
+      <CardSection title="Calling credit" className="mt-6">
         {account.priced ? (
           <Hint className="mt-1">
             {formatMinor(account.balanceMinor, currency)} left.
@@ -276,7 +271,7 @@ export function PlanUsageScreen({
             No channel has a price for this business yet, so nothing is used up.
           </EmptyState>
         )}
-      </Section>
+      </CardSection>
     </SettingsPageFrame>
   );
 }

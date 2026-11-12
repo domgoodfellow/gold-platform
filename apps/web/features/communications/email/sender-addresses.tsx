@@ -4,7 +4,7 @@ import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
-import { Section, SectionHeading } from '@/components/surfaces/section';
+import { CardSection } from '@/components/surfaces/card';
 import { setDefaultEmailSenderAction, type EmailDomainState } from '@/app/organizations/[organizationId]/settings/email/actions';
 import type { EmailSender } from '@/lib/domain/email/sender';
 import { AddAddressForm } from './email-addresses';
@@ -46,8 +46,7 @@ export function SenderAddresses({
   domains: { resourceId: string; domain: string; ready: boolean }[];
 }) {
   return (
-    <Section className="mt-8">
-      <SectionHeading>Sender addresses</SectionHeading>
+    <CardSection title="Sender addresses" className="mt-6">
       {senders.length === 0 ? (
         <Hint className="mt-3">No sender address yet. Add one below once a domain is verified.</Hint>
       ) : (
@@ -78,6 +77,6 @@ export function SenderAddresses({
       ) : null}
 
       <AddAddressForm organizationId={organizationId} domains={domains} />
-    </Section>
+    </CardSection>
   );
 }

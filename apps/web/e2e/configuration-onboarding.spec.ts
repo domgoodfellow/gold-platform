@@ -24,10 +24,10 @@ test.describe('configuration onboarding', () => {
     const root = `/organizations/${organizationId}`;
     await page.goto(`${root}/setup?step=business`);
     await expect(page.getByRole('heading', { name: 'Set up your organization', exact: true })).toBeVisible();
-    await page.getByLabel('Organization name', { exact: true }).fill('Browser-confirmed business');
-    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await page.getByLabel('Business name', { exact: true }).fill('Browser-confirmed business');
+    await page.getByRole('button', { name: 'Save changes', exact: true }).click();
     await expect.poll(async () => (await getOrganization(owner, organizationId))?.name).toBe('Browser-confirmed business');
-    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Save changes', exact: true })).toBeEnabled();
     for (const width of [1440, 768, 390]) {
       await page.setViewportSize({ width, height: 1000 });
       await capture(page, info.outputPath(`01-setup-business-${width}.png`));
@@ -38,8 +38,8 @@ test.describe('configuration onboarding', () => {
     }
 
     await page.goto(`${root}/settings/access/roles`);
-    await page.getByRole('button', { name: 'New role', exact: true }).click();
-    await page.getByLabel('Role name').fill('Acceptance colleague');
+    await page.getByRole('link', { name: 'New role', exact: true }).click();
+    await page.getByLabel('Name', { exact: true }).fill('Acceptance colleague');
     await page.getByRole('button', { name: 'Create role', exact: true }).click();
     await expect.poll(async () => (await listRoles(owner, { organizationId })).map((role) => role.name)).toContain('Acceptance colleague');
     await page.goto(`${root}/settings/access/invitations`);
@@ -58,22 +58,24 @@ test.describe('configuration onboarding', () => {
     const inserted = await owner.from('configuration_proposals').insert({ organization_id: organizationId, created_by: actor.data.user!.id, description: 'Local browser acceptance: a reviewed request workflow.', drafted_by: 'browser acceptance fixture', shape }).select('id').single();
     expect(inserted.error).toBeNull();
     await page.goto(`${root}/setup/proposal`);
-    await expect(page.getByLabel('What you call the work')).toHaveValue('Acceptance request');
+    await expect(page.getByLabel('Kind of work 1 name')).toHaveValue('Acceptance request');
     for (const width of [1440, 768, 390]) {
       await page.setViewportSize({ width, height: 1000 });
-      for (const [group, number] of [['operations', '03'], ['finance', '04'], ['people', '05'], ['data', '06'], ['features', '07']] as const) {
-        await page.getByRole('button', { name: group, exact: true }).click();
+      const parts = page.getByRole('group', { name: 'Parts of this setup' });
+      for (const [group, number] of [['Work', '03'], ['Prices', '04'], ['Team', '05'], ['Records', '06'], ['Features', '07']] as const) {
+        await parts.getByRole('button', { name: group, exact: true }).click();
+        await expect(parts.getByRole('button', { name: group, exact: true })).toHaveAttribute('aria-pressed', 'true');
         await capture(page, info.outputPath(`${number}-proposal-${group}-${width}.png`));
       }
     }
-    await page.getByRole('button', { name: 'operations', exact: true }).click();
-    await page.getByLabel('What you call the work').fill('Reviewed request');
+    await page.getByRole('group', { name: 'Parts of this setup' }).getByRole('button', { name: 'Work', exact: true }).click();
+    await page.getByLabel('Kind of work 1 name').fill('Reviewed request');
     await expect(page.getByRole('button', { name: 'Apply this setup', exact: true })).toBeDisabled();
     await page.getByRole('button', { name: 'Save changes', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Apply this setup', exact: true })).toBeEnabled();
     await page.getByRole('button', { name: 'Apply this setup', exact: true }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
-    await page.getByRole('button', { name: 'Apply reviewed setup', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Apply setup', exact: true }).click();
     await expect.poll(async () => (await listWorkItemTypes(owner, { organizationId })).map((type) => type.name)).toContain('Reviewed request');
     for (const width of [1440, 768, 390]) {
       await page.setViewportSize({ width, height: 1000 });
@@ -89,8 +91,10 @@ test.describe('configuration onboarding', () => {
     await page.getByRole('button', { name: 'Launch organization', exact: true }).click();
     await expect(page).toHaveURL(`${root}/home`);
     expect((await getOrganization(owner, organizationId))?.operationalState).toBe('live');
+    // Settings has no landing page: it opens on General for an administrator.
     await page.goto(`/organizations/${existingId}/settings`);
-    await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+    await expect(page).toHaveURL(`/organizations/${existingId}/settings/general`);
+    await expect(page.getByRole('heading', { level: 1, name: 'General', exact: true })).toBeVisible();
     await expect(page.getByText('Browser-confirmed business', { exact: true })).toHaveCount(0);
   });
 
@@ -98,7 +102,10 @@ test.describe('configuration onboarding', () => {
     const { organizationId } = loadDemoContext();
     const root = `/organizations/${organizationId}/settings`;
     const errors: string[] = [];
-    page.on('pageerror', (error) => errors.push(error.message));
+    // A development build's React profiler reports a redirect page's timing as "cannot have a negative
+    // time stamp" (the root, /organization and /connections/apps redirect). It is not an application
+    // error and a production build never raises it, so that one message is not counted.
+    page.on('pageerror', (error) => { if (!/cannot have a negative time stamp/.test(error.message)) errors.push(error.message); });
     for (const width of [1440, 768, 390]) {
       await page.setViewportSize({ width, height: 1000 });
       for (const [path, number] of [['', '09'], ['/organization', '10'], ['/general', '11'], ['/account/profile', '12'], ['/account/security', '13'], ['/access/members', '14'], ['/access/roles', '15'], ['/features', '16'], ['/connections', '17'], ['/connections/apps', '18'], ['/plan', '19'], ['/access/invitations', '21']] as const) {
@@ -108,23 +115,29 @@ test.describe('configuration onboarding', () => {
             ? `/settings/account/security?org=${organizationId}`
             : `${root}${path}`;
         await page.goto(destination);
-        await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+        // A first visit compiles the page in a development build, which can take longer than the default wait.
+        await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 20_000 });
         await expect(page.getByText('This page does not exist', { exact: true })).toHaveCount(0);
         if (path === '/account/profile') await expect(page.getByLabel('Given name', { exact: true })).toBeVisible();
         if (path === '/account/security') await expect(page.getByLabel('Current password', { exact: true })).toBeVisible();
         await capture(page, info.outputPath(`${number}-${path.replaceAll('/', '-') || 'settings'}-${width}.png`));
         if (path === '/access/roles') {
-          await page.getByRole('button', { name: 'New role', exact: true }).click();
-          await expect(page.getByLabel('Role name')).toBeVisible();
+          await page.getByRole('link', { name: 'New role', exact: true }).click();
+          await expect(page.getByLabel('Name', { exact: true })).toBeVisible();
           await expect(page.getByRole('button', { name: 'Create role', exact: true })).toBeVisible();
-          await capture(page, info.outputPath(`20-role-drawer-${width}.png`));
-          await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
+          await capture(page, info.outputPath(`20-role-editor-${width}.png`));
+          await page.goBack();
         }
       }
+      // Below desktop width the Settings sidebar, and its search, opens from the header.
       await page.goto(root);
-      await page.getByLabel('Search settings').fill('timezone');
+      await expect(page).toHaveURL(`${root}/general`);
+      if (width < 768) await page.locator('header').getByRole('button', { name: 'Menu', exact: true }).click();
+      else if (await page.locator('[data-slot="sidebar"][data-state="collapsed"]').count()) await page.locator('header').getByRole('button', { name: 'Toggle Sidebar', exact: true }).click();
+      const search = page.getByRole('searchbox', { name: 'Search settings', exact: true }).filter({ visible: true });
+      await search.fill('timezone');
       await expect(page.getByRole('link', { name: /^General/ })).toBeVisible();
-      await page.getByLabel('Search settings').fill('no such setting');
+      await search.fill('no such setting');
       await expect(page.getByText(/No settings match/)).toBeVisible();
     }
     expect(errors).toEqual([]);

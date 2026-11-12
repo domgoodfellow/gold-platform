@@ -4,6 +4,9 @@ import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { ButtonLink } from '@/components/controls/button';
 import { Hint, TextInput } from '@/components/controls/inputs';
+import { Alert } from '@gold/ui/components/alert';
+import { Toolbar } from '@/components/display/data';
+import { Card } from '@/components/surfaces/card';
 import { EmptyState } from '@/components/surfaces/section';
 import { cx, FOCUS_RING } from '@/components/class-names';
 import type { ResolvedFeatureState } from '@/lib/domain/catalogue/organization-plans';
@@ -66,8 +69,8 @@ export function FeatureCatalogue({ organizationId, features, mayManage }: { orga
 
   return (
     <div className="mt-4 grid gap-4">
-      <div className="grid gap-3 rounded-lg border border-border bg-surface p-3">
-        <label className="relative block">
+      <Toolbar variant="outlined">
+        <label className="relative block min-w-56 flex-1">
           <span className="sr-only">Search features</span>
           <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <TextInput type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search features" className="pl-8" />
@@ -84,10 +87,10 @@ export function FeatureCatalogue({ organizationId, features, mayManage }: { orga
             );
           })}
         </div>
-      </div>
+      </Toolbar>
       <p role="status" className="sr-only">{matches.length} features shown</p>
 
-      {pageReasons.length ? <div role="note" className="rounded-lg border border-border bg-warning/10 px-4 py-3 text-xs">{pageReasons.map((reason) => <p key={reason}><span className="font-medium">Needs setup:</span> {reason} <span className="text-muted">Affects {reasonFeatures.get(reason)!.join(', ')}.</span></p>)}</div> : null}
+      {pageReasons.length ? <Alert role="note" variant="warning" className="block text-xs">{pageReasons.map((reason) => <p key={reason}><span className="font-medium">Needs setup:</span> {reason} <span>Affects {reasonFeatures.get(reason)!.join(', ')}.</span></p>)}</Alert> : null}
       {products.length === 0 ? <EmptyState>{operational.length === 0 ? 'No features are included for this business yet.' : `No features match${needle ? ` “${query.trim()}”` : ''}.`}</EmptyState> : null}
 
       {products.map((product) => {
@@ -95,7 +98,7 @@ export function FeatureCatalogue({ organizationId, features, mayManage }: { orga
         const reasons = [...new Set(inProduct.filter(({ status }) => status === 'setup_required').map(({ feature }) => feature.state.reason).filter((reason): reason is string => !!reason && !pageReasons.includes(reason)))];
         const headingId = `features-${product.replace(/\W+/g, '-').toLowerCase()}`;
         return (
-          <section key={product} aria-labelledby={headingId} className="rounded-lg border border-border bg-surface">
+          <Card as="section" key={product} aria-labelledby={headingId} className="p-0 py-0">
             <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border px-4 py-3">
               <h2 id={headingId} className="text-sm font-semibold">{product}</h2>
               <p className="text-xs text-muted">{inProduct.length} included</p>
@@ -106,7 +109,7 @@ export function FeatureCatalogue({ organizationId, features, mayManage }: { orga
                 <FeatureRow key={feature.id} organizationId={organizationId} label={feature.label} description={feature.description} meta={feature.module} state={feature.state} mayManage={mayManage} mayConfigure={feature.mayConfigure} showReason={false} />
               ))}
             </div>
-          </section>
+          </Card>
         );
       })}
 

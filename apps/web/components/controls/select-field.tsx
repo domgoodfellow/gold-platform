@@ -73,6 +73,10 @@ export function SelectField({
   const inputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const resetting = useRef(false);
+  const currentRef = useRef(current);
+  useLayoutEffect(() => {
+    currentRef.current = current;
+  }, [current]);
 
   // The hidden input is the form's copy of the value; it is uncontrolled so React never rewinds it.
   useLayoutEffect(() => {
@@ -92,6 +96,9 @@ export function SelectField({
       window.setTimeout(() => {
         resetting.current = false;
         if (!controlled) setOwn(inputRef.current?.value ?? initial);
+        // A controlled field's value is the caller's, so the form's copy returns to it rather than
+        // to the value the field was first rendered with.
+        else if (inputRef.current) inputRef.current.value = currentRef.current;
       });
     };
     owner.addEventListener('reset', reset, true);

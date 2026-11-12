@@ -32,7 +32,23 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-11-12
+
+- Conversations checks operating-area access before mounting its persistent list, alongside the existing checks on each conversation page. A configuration-only member no longer sees the frame around a refused page.
+
+- Access history now pages through older changes. Renewing an invitation checks the same permission limit as creating one; managers can still revoke invitations beyond their own permissions. Role suggestions also match the business industry against published template names. Legacy field and stage settings now redirect directly to CRM configuration.
+
 ## 2026-11-11
+
+- Settings has an Access group with Members, Invitations and Roles & permissions as three separate pages; the "Team & access" entry and its tab strip are gone. A role is now created and edited on its own page instead of a narrow drawer: permissions are grouped by area with search and Select all, sensitive permissions are marked, the page lists who holds the role, says what a save adds and removes and for how many people, protects unsaved changes and confirms a save.
+- A role nobody holds can be deleted. A role that members still hold, or that an open invitation names, cannot: its members are moved to another role first.
+- Changing a member's role now asks for confirmation, naming the person and both roles, instead of saving the moment a role is chosen.
+- A member who manages roles can now only give permissions they hold themselves: they cannot add a permission they lack to a role, or put anyone (themselves included) on a role that holds more than they do. Before, managing roles amounted to every permission. The role page disables what cannot be given.
+- Settings has an Access history page: who changed a role, a member's role or an invitation, and when.
+- A new role can start from a role suggested for the business's industry, taken from the published industry templates.
+- Permission names use the product's own words: "Add contacts", "Edit contacts and move them between relationship stages", "Edit work details", "Create and edit automation rules" and so on. The Customers group is Contacts.
+
+- Every Settings page now follows the visual style chosen in Appearance. Email sending, Domains, Security & sign-in, Plan & usage, Connections, the App Library, MCP servers and Features drew their groups as ruled sections or hand-built boxes, so Minimal, Layered and Expressive changed General and Profile but not these. Their groups now sit on the same shared card, and take its corners, depth and spacing.
 
 - Calls now run in each business's own calling account from start to finish. The browser telephone signs in with that business's own key, incoming calls are accepted from any calling account GildOps created and from no other, and the carrier's reports are checked with that account's own signing secret, which is stored when the account is created. The web application holds no carrier credential: placing a call, hold, mute, transfer and playing a recording go through the API, which first has the database confirm the person may use that business's telephone. The five Twilio calling settings on the web project and the two on the API project are no longer read for calls (the account stored in Platform is the only copy); text messaging still uses the two account settings. A business with no calling account of its own can no longer place a call through a shared one. Not yet proven on a real telephone call.
 

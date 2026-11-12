@@ -381,27 +381,29 @@ describe('work item transitions', () => {
   });
 
   it('refuses the title to a member who may transition but not edit', async () => {
+    const moverTenant = await newTenant('moves-only');
+    await createWorkItem(moverTenant.db, { organizationId: moverTenant.organizationId, title: 'Must not be renamed', statusId: moverTenant.open });
     // The other half, and the one the per-column trigger exists for: this role passes the
     // policy — it holds `work_item.transition`, so it has a reason to be writing here — and
     // is refused the column anyway. A policy sees the old row or the new one but never both,
     // so only a trigger can say "you may change the status and not the title".
-    const mover = await createRole(bob.db, {
-      organizationId: bob.organizationId,
+    const mover = await createRole(moverTenant.db, {
+      organizationId: moverTenant.organizationId,
       name: 'Moves Only',
       capabilities: ['role.manage', 'work_item.create', 'work_item.transition'],
     });
 
-    const { data: membership } = await bob.db
+    const { data: membership } = await moverTenant.db
       .from('memberships')
       .select('id')
-      .eq('organization_id', bob.organizationId)
+      .eq('organization_id', moverTenant.organizationId)
       .single();
-    await assignRole(bob.db, { membershipId: membership!.id, roleId: mover });
+    await assignRole(moverTenant.db, { membershipId: membership!.id, roleId: mover });
 
-    const { error } = await bob.db
+    const { error } = await moverTenant.db
       .from('work_items')
       .update({ title: 'Renamed by a mover' })
-      .eq('organization_id', bob.organizationId);
+      .eq('organization_id', moverTenant.organizationId);
 
     expect(error).not.toBeNull();
     expect(error!.message).toContain('edit the details');

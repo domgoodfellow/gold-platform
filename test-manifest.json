@@ -842,7 +842,9 @@
       "concerns": [
         "settings",
         "navigation",
-        "routing"
+        "routing",
+        "access",
+        "authorization"
       ]
     },
     "apps/web/e2e/configuration-onboarding.spec.ts": {
@@ -2483,7 +2485,25 @@
         "resources"
       ]
     },
+    "apps/web/tests/integration/database/access-history.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "rbac"
+      ]
+    },
+    "apps/web/tests/integration/database/role-deletion.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "rbac"
+      ]
+    },
     "apps/web/tests/integration/database/role-editing.test.ts": {
+      "category": "database-integration",
+      "concerns": [
+        "rbac"
+      ]
+    },
+    "apps/web/tests/integration/database/role-granting.test.ts": {
       "category": "database-integration",
       "concerns": [
         "rbac"

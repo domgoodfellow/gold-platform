@@ -1,3 +1,4 @@
+import { retainRoleManager } from '@/tests/support/role-manager';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -7,7 +8,7 @@ import { dueSoonWindow, financeFilters, loadFinanceOperating } from '@/lib/appli
 import { createCustomer } from '@/lib/domain/customers/customers';
 import { createPriceBookItem } from '@/lib/domain/pricing/price-book';
 import { addPricedLine } from '@/lib/domain/pricing/prices';
-import { ALL_CAPABILITIES, CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
+import { CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import { setModuleEnabled } from '@/lib/domain/tenancy/modules';
 import { assignRole, createRole } from '@/lib/domain/tenancy/roles';
@@ -131,12 +132,12 @@ describe('Finance views stay inside the organization and its permissions', () =>
 
   it('refuses a correction from a role without payment recording, and the history is unchanged', async () => {
     const roleId = await createRole(alice.db, { organizationId: alice.organizationId, name: 'No payments', capabilities: CAPABILITIES.filter(capability => capability !== 'payment.record') });
+    const restoreRole = await retainRoleManager(alice.db, { organizationId: alice.organizationId, membershipId: alice.membershipId });
     await assignRole(alice.db, { membershipId: alice.membershipId, roleId });
     try {
       await expect(recordPayment(alice.db, { invoiceId: invoices.overdue, amountMinor: -500 })).rejects.toThrow('You cannot record payments here.');
     } finally {
-      const restored = await createRole(alice.db, { organizationId: alice.organizationId, name: `Owner ${randomUUID().slice(0, 6)}`, capabilities: [...ALL_CAPABILITIES] });
-      await assignRole(alice.db, { membershipId: alice.membershipId, roleId: restored });
+      await restoreRole();
     }
     expect((await readFinancePayments(alice.db, alice.organizationId, { entry: 'corrections' })).total).toBe(1);
   });

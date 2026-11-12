@@ -1,5 +1,5 @@
 import { Hint } from '@/components/controls/inputs';
-import { Section, SectionHeading } from '@/components/surfaces/section';
+import { CardSection } from '@/components/surfaces/card';
 import { DataTable } from '@/components/display/table';
 import { Badge, DefinitionList, Detail } from '@/components/display/data';
 import type { IntegrationConnection } from '@/lib/domain/integrations/connections';
@@ -56,8 +56,7 @@ export function ConnectionDetail({
         </Hint>
       ) : null}
 
-      <Section>
-        <SectionHeading>Overview</SectionHeading>
+      <CardSection title="Overview">
         <DefinitionList className="mt-3">
           <Detail label="App">
             <div className="flex items-center gap-2">
@@ -78,13 +77,12 @@ export function ConnectionDetail({
           </Detail>
           <Detail label="Connected">{new Date(connection.createdAt).toLocaleString('en-GB')}</Detail>
         </DefinitionList>
-      </Section>
+      </CardSection>
 
       {repositories ? (
         <RepositoriesSection repositories={repositories} connectionStatus={connection.status} />
       ) : (
-        <Section className="mt-8">
-          <SectionHeading>Resources</SectionHeading>
+        <CardSection title="Resources" className="mt-6">
           <div className="mt-3">
             <DataTable
               rows={resources}
@@ -119,7 +117,7 @@ export function ConnectionDetail({
             />
           </div>
           <Hint className="mt-2">Connecting does not let the assistant read any of it — turn that on for each resource.</Hint>
-        </Section>
+        </CardSection>
       )}
     </>
   );
@@ -139,8 +137,7 @@ function RepositoriesSection({
   connectionStatus: IntegrationConnection['status'];
 }) {
   return (
-    <Section className="mt-8">
-      <SectionHeading>Repositories</SectionHeading>
+    <CardSection title="Repositories" className="mt-6">
       {connectionStatus === 'active' ? null : (
         <Hint role="status" className="mt-1">This connection is not active, so none of them is available to use until it is reconnected.</Hint>
       )}
@@ -173,6 +170,6 @@ function RepositoriesSection({
           ]}
         />
       </div>
-    </Section>
+    </CardSection>
   );
 }

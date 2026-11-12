@@ -515,6 +515,8 @@ A role assignment is not a global Person attribute.
 
 The same Person may have different Roles in different Organizations.
 
+Creating, editing, assigning and deleting a Role each require `role.manage`, enforced in the database. `role.manage` is not every permission: a member can only give what they hold. The database (`app.assert_may_grant`) refuses a role manager who adds a permission they lack to any role, their own included, or who puts anyone, themselves included, on a role that holds more than they do, whether by adding, reassigning, inviting or renewing an invitation. Removing permissions and renaming are not restricted. The rule does not apply to writes with no signed-in person or by someone not yet a member (founding a business, accepting an invitation, platform provisioning), which have their own checks. Consequence: a business whose only administrator steps down to a narrower role cannot climb back without another member who holds the permissions. An Organization always keeps at least one member who can manage roles. A Role is deleted only when no member holds it and no open invitation names it (`public.delete_role`); nobody is moved off a Role as a side effect of removing it.
+
 ---
 
 ### Capabilities

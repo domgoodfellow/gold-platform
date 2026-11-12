@@ -23,6 +23,14 @@ const ORGANIZATION: readonly { key: string; label: string; target: string }[] = 
   { key: 'settings-terminology', label: 'Words & navigation', target: 'terminology' },
 ];
 
+/** Access is its own group: who is here, who has been asked, and what each role may do. */
+const ACCESS: readonly { key: string; label: string; view: string }[] = [
+  { key: 'settings-members', label: 'Members', view: 'members' },
+  { key: 'settings-invitations', label: 'Invitations', view: 'invitations' },
+  { key: 'settings-roles', label: 'Roles & permissions', view: 'roles' },
+  { key: 'settings-access-history', label: 'Access history', view: 'history' },
+];
+
 function item(organizationId: string, spec: { key: string; label: string; target: string }, section: NavItem['section'], gate: ConfigGate): NavItem | null {
   const target = configTarget(spec.target);
   if (!configTargetOffered(target, gate)) return null;
@@ -38,8 +46,11 @@ export function projectSettingsNav(organizationId: string, gate: ConfigGate): Sh
   const connections = configTargetOffered(configTarget('integrations'), gate) || configTargetOffered(configTarget('secrets'), gate)
     ? [{ key: 'settings-connections', label: 'Connections', href: `/organizations/${organizationId}/${configTarget('integrations').path}`, section: 'settings-administration' as const }]
     : [];
+  const team = configTarget('team');
+  const access: NavItem[] = configTargetOffered(team, gate)
+    ? ACCESS.map((spec) => ({ key: spec.key, label: spec.label, href: `/organizations/${organizationId}/${team.path}/${spec.view}`, section: 'settings-access' as const }))
+    : [];
   const administration = [
-    item(organizationId, { key: 'settings-access', label: 'Team & access', target: 'team' }, 'settings-administration', gate),
     ...connections,
     item(organizationId, { key: 'settings-plan', label: 'Plan & usage', target: 'plan' }, 'settings-administration', gate),
   ].filter((entry): entry is NavItem => entry !== null);
@@ -47,6 +58,7 @@ export function projectSettingsNav(organizationId: string, gate: ConfigGate): Sh
   return [
     { key: 'settings-personal', label: 'Personal', items: personal },
     { key: 'settings-organization', label: 'Organization', items: organization },
+    { key: 'settings-access', label: 'Access', items: access },
     { key: 'settings-administration', label: 'Administration', items: administration },
   ].filter((section) => section.items.length > 0) as ShellSection[];
 }

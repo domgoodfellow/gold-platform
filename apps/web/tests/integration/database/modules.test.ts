@@ -1,3 +1,4 @@
+import { retainRoleManager } from '@/tests/support/role-manager';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -9,7 +10,7 @@ import {
 } from '@/lib/domain/billing/payment-accounts';
 import { createPriceBookItem } from '@/lib/domain/pricing/price-book';
 import { createResource } from '@/lib/domain/resources/resources';
-import { ALL_CAPABILITIES, CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
+import { CAPABILITIES } from '@/lib/domain/tenancy/capabilities';
 import { listMembers } from '@/lib/domain/tenancy/members';
 import {
   listEnabledModules,
@@ -299,6 +300,7 @@ describe('what a business has switched on', () => {
       name: `Dispatcher ${randomUUID().slice(0, 6)}`,
       capabilities: CAPABILITIES.filter((capability) => capability !== 'organization.manage'),
     });
+    const restoreRole = await retainRoleManager(shop.db, { organizationId: shop.organizationId, membershipId: shop.membershipId });
     await assignRole(shop.db, { membershipId: shop.membershipId, roleId });
 
     try {
@@ -324,12 +326,7 @@ describe('what a business has switched on', () => {
       expect(error).toBeNull();
       expect((data ?? []).length).toBeGreaterThan(0);
     } finally {
-      const restored = await createRole(shop.db, {
-        organizationId: shop.organizationId,
-        name: `Owner ${randomUUID().slice(0, 6)}`,
-        capabilities: [...ALL_CAPABILITIES],
-      });
-      await assignRole(shop.db, { membershipId: shop.membershipId, roleId: restored });
+      await restoreRole();
     }
   });
 });
@@ -400,6 +397,7 @@ describe('a connected payment account', () => {
       name: `Tech ${randomUUID().slice(0, 6)}`,
       capabilities: CAPABILITIES.filter((capability) => capability !== 'organization.manage'),
     });
+    const restoreRole = await retainRoleManager(shop.db, { organizationId: shop.organizationId, membershipId: shop.membershipId });
     await assignRole(shop.db, { membershipId: shop.membershipId, roleId });
 
     try {
@@ -427,12 +425,7 @@ describe('a connected payment account', () => {
       });
       expect(still).not.toBeNull();
     } finally {
-      const restored = await createRole(shop.db, {
-        organizationId: shop.organizationId,
-        name: `Owner ${randomUUID().slice(0, 6)}`,
-        capabilities: [...ALL_CAPABILITIES],
-      });
-      await assignRole(shop.db, { membershipId: shop.membershipId, roleId: restored });
+      await restoreRole();
     }
   });
 

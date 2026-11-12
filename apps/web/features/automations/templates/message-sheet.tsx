@@ -26,8 +26,8 @@ import {
 } from '../shared';
 
 /**
- * New and Edit share one PageDrawer, the same shape `EditRoleSheet` uses for roles — a template is
- * small enough that a PageDrawer is the whole editor, never a detail route.
+ * New and Edit share one PageDrawer: a template is small enough that it is the whole editor,
+ * never a detail route.
  *
  * **Every word here belongs to the business.** The placeholders are the platform's whole
  * contribution — five names for things it already has — and an unknown one is left exactly as

@@ -2,7 +2,7 @@ import { Hint } from '@/components/controls/inputs';
 import { ConnectDomainDialog } from '@/features/domains/connect-domain-dialog';
 import { DomainsList } from '@/features/domains/domains-list';
 import { PublicBookingAddressForm } from '@/features/public-profile/public-booking-address-form';
-import { Section, SectionHeading } from '@/components/surfaces/section';
+import { CardSection } from '@/components/surfaces/card';
 import { listBookableTypes } from '@/lib/domain/booking/booking';
 import { ManagedAddress } from '@/features/domains/managed-address';
 import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/settings-page-frame';
@@ -35,15 +35,15 @@ export default async function DomainsSettingsPage({ params }: PageProps<'/organi
           ) : undefined
         }
       />
+      <div className="flex flex-col gap-6">
       {mayManage ? (
-        <Section id="booking-address" className="mb-8 scroll-mt-6">
-          <SectionHeading>Public booking address</SectionHeading>
+        <CardSection id="booking-address" title="Public booking address" className="scroll-mt-6">
           <PublicBookingAddressForm
             organizationId={organizationId}
             slug={organization.slug}
             hasBookableType={bookableTypes.length > 0}
           />
-        </Section>
+        </CardSection>
       ) : null}
       {mayManage ? (
         <>
@@ -53,9 +53,10 @@ export default async function DomainsSettingsPage({ params }: PageProps<'/organi
       ) : (
         <>
           <ManagedAddress address={address} generalHref={`/organizations/${organizationId}/settings/general`} />
-          <Hint className="mt-5">Your role, {organization.role}, cannot connect or manage domains for this business.</Hint>
+          <Hint>Your role, {organization.role}, cannot connect or manage domains for this business.</Hint>
         </>
       )}
+      </div>
     </SettingsPageFrame>
   );
 }

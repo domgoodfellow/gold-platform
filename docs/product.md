@@ -238,7 +238,7 @@ Settings configures the environment in which work happens.
 
 It is not a workspace and is not a second application shell.
 
-Settings is one contextual navigation of the shell, grouped as **Personal** (Profile, Security & sign-in, Appearance), **Organization** (General, Customer payments, Branding, Domains, Email sending, Features, Words & navigation) and **Administration** (Team & access, Connections, Plan & usage). Settings, Help & documentation and Contact GildOps Support are destinations in the Account menu; product support remains separate from the organization Support workspace. Account owns person/session information and Sign out. Opening Settings lands on the first destination the member may use. The five scopes below keep their separate owners.
+Settings is one contextual navigation of the shell, grouped as **Personal** (Profile, Security & sign-in, Appearance), **Organization** (General, Customer payments, Branding, Domains, Email sending, Features, Words & navigation), **Access** (Members, Invitations, Roles & permissions, Access history) and **Administration** (Connections, Plan & usage). Settings, Help & documentation and Contact GildOps Support are destinations in the Account menu; product support remains separate from the organization Support workspace. Account owns person/session information and Sign out. Opening Settings lands on the first destination the member may use. The five scopes below keep their separate owners.
 
 Configuration that controls how one workspace performs its work is configured in that workspace, never in Settings. Settings search reaches it and routes to its owner.
 

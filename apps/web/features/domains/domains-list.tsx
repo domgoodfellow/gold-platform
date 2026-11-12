@@ -1,4 +1,4 @@
-import { Section, SectionHeading } from '@/components/surfaces/section';
+import { CardSection } from '@/components/surfaces/card';
 import { Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
@@ -32,8 +32,7 @@ export function DomainsList({
   const waiting = domains.filter((domain) => domainPresentation(domain) === 'pending_dns' && domain.dnsRecords.length > 0);
 
   return (
-    <Section>
-      <SectionHeading>Your domains</SectionHeading>
+    <CardSection title="Your domains">
       <div className="mt-2">
         <DataTable
           rows={domains}
@@ -105,6 +104,6 @@ export function DomainsList({
           </div>
         );
       })}
-    </Section>
+    </CardSection>
   );
 }

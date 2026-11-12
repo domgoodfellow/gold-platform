@@ -38,13 +38,16 @@ test.describe('People & Roles — reassigning an existing member', () => {
 
     const row = page.getByRole('row', { name: 'Joris Bakker' });
     await expect(row).toBeVisible();
-    const select = row.getByRole('combobox', { name: 'Role' });
+    const select = row.getByRole('combobox', { name: 'Role for Joris Bakker' });
     await expect(selectFieldValue(select)).toHaveValue(await optionValue(select, 'Werfmedewerker'));
 
-    // The control submits itself; wait for that save to answer before reloading, or the reload
-    // can be served before the change is committed.
-    const saved = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/settings/access'));
+    // Choosing only proposes the change; it is made from the confirmation, which names it. Wait
+    // for that save to answer before reloading, or the reload can be served before it is committed.
     await chooseOption(select, { label: 'Admin' });
+    await row.getByRole('button', { name: 'Change role for Joris Bakker' }).click();
+    await expect(page.getByRole('dialog')).toContainText('Change Joris Bakker from Werfmedewerker to Admin?');
+    const saved = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/settings/access'));
+    await page.getByRole('dialog').getByRole('button', { name: 'Change role' }).click();
     expect((await saved).ok()).toBe(true);
     await expect(selectFieldValue(select)).toHaveValue(await optionValue(select, 'Admin'));
     await expect(row.getByRole('alert')).toHaveCount(0);
@@ -53,11 +56,14 @@ test.describe('People & Roles — reassigning an existing member', () => {
     // optimistically in this one client.
     await page.reload();
     const reloadedRow = page.getByRole('row', { name: 'Joris Bakker' });
-    const reloadedSelect = reloadedRow.getByRole('combobox', { name: 'Role' });
+    const reloadedSelect = reloadedRow.getByRole('combobox', { name: 'Role for Joris Bakker' });
     await expect(selectFieldValue(reloadedSelect)).toHaveValue(await optionValue(reloadedSelect, 'Admin'));
 
     // Leave the fixture as it was found — this demo data persists between runs.
     await chooseOption(reloadedSelect, { label: 'Werfmedewerker' });
+    await reloadedRow.getByRole('button', { name: 'Change role for Joris Bakker' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Change role' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(selectFieldValue(reloadedSelect)).toHaveValue(await optionValue(reloadedSelect, 'Werfmedewerker'));
     await expect(reloadedRow.getByRole('alert')).toHaveCount(0);
   });
@@ -70,13 +76,24 @@ test.describe('People & Roles — reassigning an existing member', () => {
 
     const row = page.getByRole('row', { name: 'Sanne de Vries' });
     await expect(row).toBeVisible();
-    const select = row.getByRole('combobox', { name: 'Role' });
+    const select = row.getByRole('combobox', { name: 'Role for Sanne de Vries' });
     const adminValue = await optionValue(select, 'Admin');
     await expect(selectFieldValue(select)).toHaveValue(adminValue);
 
-    // Sanne is the organization's only role.manage holder — moving her off Admin would leave
-    // nobody who can manage roles, which `assign_role` refuses as a cross-row invariant.
+    // This only holds while Sanne is the business's one administrator. With a second one the
+    // change is allowed and would really demote the demo owner, so the test does not attempt it;
+    // the invariant itself is proved against the database in `roles.test.ts`.
+    const administrators = await page.getByRole('combobox', { name: /^Role for / }).evaluateAll(
+      (controls, admin) => controls.filter((control) => control.closest('[data-slot="select-field"]')?.querySelector<HTMLInputElement>('input[data-slot="select-field-value"]')?.value === admin).length,
+      adminValue,
+    );
+    test.skip(administrators > 1, 'The demo business has more than one administrator, so moving Sanne off Admin is allowed.');
+
+    // Moving her off Admin would leave nobody who can manage roles, which `assign_role` refuses
+    // as a cross-row invariant.
     await chooseOption(select, { label: 'Werfmedewerker' });
+    await row.getByRole('button', { name: 'Change role for Sanne de Vries' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Change role' }).click();
 
     await expect(row.getByText('That would leave nobody able to manage roles here.')).toBeVisible();
     // The control shows what is actually still assigned, not the rejected choice.
@@ -91,7 +108,7 @@ test.describe('People & Roles — a caller without role.manage', () => {
     const ctx = loadDemoContext();
     await page.goto(`/organizations/${ctx.organizationId}/settings/access/members`);
 
-    await expect(page.getByRole('combobox', { name: 'Role' })).toHaveCount(0);
+    await expect(page.getByRole('combobox', { name: /^Role for / })).toHaveCount(0);
     const row = page.getByRole('row', { name: 'Joris Bakker' });
     await expect(row.getByText('Werfmedewerker')).toBeVisible();
   });
@@ -103,7 +120,7 @@ test.describe('Customer Portal — making and revoking a link', () => {
   test('makes a portal link, then revokes it into history', async ({ page }) => {
     const ctx = loadDemoContext();
     await page.goto(`/organizations/${ctx.organizationId}/crm/contacts/${ctx.customerId}`);
-    await page.getByRole('tab', { name: 'Portal' }).click();
+    await page.getByRole('link', { name: 'Portal', exact: true }).click();
 
     await page.getByRole('button', { name: 'Make a portal link' }).click();
 
@@ -138,11 +155,11 @@ test.describe('Customer Portal — a caller without customer.create', () => {
     const ctx = loadDemoContext();
     await page.goto(`/organizations/${ctx.organizationId}/crm/contacts/${ctx.customerId}`);
     // Open the Portal tab first, so the absent control is checked where it would appear.
-    await page.getByRole('tab', { name: 'Portal' }).click();
+    await page.getByRole('link', { name: 'Portal', exact: true }).click();
 
     await expect(page.getByRole('button', { name: 'Make a portal link' })).toHaveCount(0);
     await expect(
-      page.getByText("cannot manage this customer's portal access", { exact: false }),
+      page.getByText("cannot manage this contact's portal access", { exact: false }),
     ).toBeVisible();
   });
 });

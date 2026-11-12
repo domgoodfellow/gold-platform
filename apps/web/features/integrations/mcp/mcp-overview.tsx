@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import { Hint } from '@/components/controls/inputs';
 import { Badge } from '@/components/display/data';
 import { DataTable } from '@/components/display/table';
-import { EmptyState, Section, SectionHeading } from '@/components/surfaces/section';
+import { Card, CardSection } from '@/components/surfaces/card';
+import { EmptyState, SectionHeading } from '@/components/surfaces/section';
 import { DisconnectForm } from '@/features/integrations/connections/connection-controls';
 import type { IntegrationConnection } from '@/lib/domain/integrations/connections';
 import type { McpServer, McpTool } from '@/lib/domain/integrations/mcp';
@@ -70,8 +71,7 @@ export function McpOverview({
         {mayManage ? <AddServerDialog organizationId={organizationId} /> : null}
       </div>
 
-      <Section className="mt-8">
-        <SectionHeading>Waiting for your approval</SectionHeading>
+      <CardSection title="Waiting for your approval" className="mt-6">
         <ApprovalQueue
           organizationId={organizationId}
           mayManage={mayManage}
@@ -83,15 +83,15 @@ export function McpOverview({
           }))}
         />
         {waiting.length === 0 ? <Hint className="mt-2">Nothing is waiting. A tool from an MCP server always stops here until a person approves it.</Hint> : null}
-      </Section>
+      </CardSection>
 
       {live.length === 0 ? (
-        <Section className="mt-8">
+        <div className="mt-6">
           <EmptyState
             title="No MCP servers yet"
             description="Add a server to see the tools it offers. Nothing is switched on until you have looked at it."
           />
-        </Section>
+        </div>
       ) : (
         live.map((server) => (
           <ServerPanel
@@ -107,8 +107,7 @@ export function McpOverview({
         ))
       )}
 
-      <Section className="mt-8">
-        <SectionHeading>Recent activity</SectionHeading>
+      <CardSection title="Recent activity" className="mt-6">
         <div className="mt-2">
           <DataTable
             rows={executions}
@@ -152,7 +151,7 @@ export function McpOverview({
           />
         </div>
         <Hint className="mt-2">Only what happened is kept: who, which tool, the outcome and how long it took. What was asked and what came back are not stored.</Hint>
-      </Section>
+      </CardSection>
     </>
   );
 }
@@ -179,10 +178,10 @@ function ServerPanel({
   const removed = server.tools.filter((tool) => tool.status === 'removed');
 
   return (
-    <Section className="mt-8">
+    <Card as="section" aria-labelledby={`mcp-server-${server.id}`} className="mt-6 min-w-0">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <SectionHeading>{server.name}</SectionHeading>
+          <SectionHeading id={`mcp-server-${server.id}`}>{server.name}</SectionHeading>
           <p className="break-all text-sm text-muted">{hostOf(server.endpoint)}</p>
         </div>
         {mayManage ? (
@@ -286,7 +285,7 @@ function ServerPanel({
           {removed.map((tool) => tool.name).join(', ')}. Access to {removed.length === 1 ? 'it' : 'them'} has stopped.
         </Hint>
       ) : null}
-    </Section>
+    </Card>
   );
 }
 

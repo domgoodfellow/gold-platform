@@ -151,7 +151,7 @@ async function invite(page: Page, email: string) {
   await page.goto(`/organizations/${orgA}/settings/access/invitations`);
   await page.getByRole('button', { name: 'Add member' }).click();
   await page.getByLabel('Email address').fill(email);
-  await chooseOption(page.getByLabel('Role'), { label: roleName });
+  await chooseOption(page.getByLabel('Role', { exact: true }), { label: roleName });
   await page.getByRole('button', { name: 'Send invitation' }).click();
 }
 

@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { Button } from '@/components/controls/button';
 import { ErrorText, Hint } from '@/components/controls/inputs';
-import { Section, SectionHeading } from '@/components/surfaces/section';
+import { CardSection } from '@/components/surfaces/card';
 import {
   sendTestEmailAction,
   setEmailReplyToAction,
@@ -24,8 +24,7 @@ export function ReplyToForm({ organizationId, senders, hasDefault }: { organizat
   const eligible = senders.filter((sender) => sender.canTakeReplies);
   const current = senders.find((sender) => sender.isReplyTo) ?? null;
   return (
-    <Section className="mt-8">
-      <SectionHeading>Where replies go</SectionHeading>
+    <CardSection title="Where replies go" className="mt-6">
       {!hasDefault ? (
         <Hint className="mt-3">Choose a default sender first.</Hint>
       ) : (
@@ -43,7 +42,7 @@ export function ReplyToForm({ organizationId, senders, hasDefault }: { organizat
           if the address receives into Conversations (Communications → Incoming email).
         </Hint>
       ) : null}
-    </Section>
+    </CardSection>
   );
 }
 
@@ -60,8 +59,7 @@ const REPORT: Record<string, string> = { delivered: 'Delivered', delayed: 'Deliv
 export function TestSendForm({ organizationId, ready, tests }: { organizationId: string; ready: boolean; tests: EmailTestSend[] }) {
   const [state, run, pending] = useActionState(sendTestEmailAction, INITIAL);
   return (
-    <Section className="mt-8">
-      <SectionHeading>Send a test email</SectionHeading>
+    <CardSection title="Send a test email" className="mt-6">
       <form action={run} className="mt-3 flex flex-wrap items-center gap-2">
         <input type="hidden" name="organizationId" value={organizationId} />
         <Button type="submit" tone="secondary" disabled={pending || !ready}>{pending ? 'Sending…' : 'Send test email to me'}</Button>
@@ -80,6 +78,6 @@ export function TestSendForm({ organizationId, ready, tests }: { organizationId:
           ))}
         </ul>
       ) : null}
-    </Section>
+    </CardSection>
   );
 }

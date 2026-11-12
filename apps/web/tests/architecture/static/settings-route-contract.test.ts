@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { CONFIG_TARGETS } from '@/lib/navigation';
@@ -50,6 +50,9 @@ describe('canonical Settings route contract', () => {
       'settings/access/members/page.tsx',
       'settings/access/invitations/page.tsx',
       'settings/access/roles/page.tsx',
+      'settings/access/roles/new/page.tsx',
+      'settings/access/roles/[roleId]/page.tsx',
+      'settings/access/history/page.tsx',
       'settings/connections/page.tsx',
       'settings/connections/apps/page.tsx',
       'settings/connections/[connectionId]/page.tsx',
@@ -155,12 +158,14 @@ describe('Settings is one contextual sidebar, not a landing page or a directory'
     }
   });
 
-  it('Access keeps its local Members/Invitations/Roles navigation, and Account keeps Profile/Security', () => {
+  it('Access has sidebar destinations with no local tab strip, and Account keeps Profile/Security', () => {
     const access = read('app/organizations/[organizationId]/settings/access/access-page.tsx');
-    expect(access).toContain('<ViewNav');
-    expect(access).toContain("label: 'Members'");
-    expect(access).toContain("label: 'Roles'");
-    expect(access).toContain('`Invitations');
+    expect(access).not.toContain('<ViewNav');
+    const nav = read('lib/settings-nav.ts');
+    expect(nav).toContain("label: 'Members', view: 'members'");
+    expect(nav).toContain("label: 'Invitations', view: 'invitations'");
+    expect(nav).toContain("label: 'Roles & permissions', view: 'roles'");
+    expect(nav).toContain("label: 'Access history', view: 'history'");
 
     const profile = read('app/settings/account/page.tsx');
     const security = read('app/settings/account/security/page.tsx');
@@ -170,5 +175,26 @@ describe('Settings is one contextual sidebar, not a landing page or a directory'
 
   it('Connections keeps its local nav rather than the retired global scope tabs', () => {
     expect(read('app/organizations/[organizationId]/settings/connections/connections-page.tsx')).toContain('<IntegrationsNav');
+  });
+
+  // ADR-016: the services GildOps runs for every business (its calling, email and AI accounts,
+  // their credentials, provisioning and health) are administered in Platform only. A business
+  // connects its own accounts in Connections and sets up what it was given in the feature that
+  // uses it. So nothing a business can open in Settings may reach the provider-administration code.
+  it('no organization Settings page or feature administers GildOps provider infrastructure', () => {
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(`${ROOT}/${dir}`, { withFileTypes: true })) {
+        if (entry.isDirectory()) walk(`${dir}/${entry.name}`);
+        else if (/\.tsx?$/.test(entry.name)) files.push(`${dir}/${entry.name}`);
+      }
+    };
+    for (const dir of ['app/organizations/[organizationId]/settings', 'app/settings', 'features/settings', 'features/team', 'features/integrations', 'features/secrets']) walk(dir);
+    expect(files.length).toBeGreaterThan(40);
+    const offenders = files.filter((file) => /from '@\/(lib\/domain\/providers|features\/platform\/providers|lib\/domain\/platform)\//.test(read(file)));
+    expect(offenders).toEqual([]);
+
+    const nav = read('lib/settings-nav.ts');
+    expect(nav).not.toMatch(/label: '[^']*[Pp]rovider/);
   });
 });

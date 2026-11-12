@@ -1,55 +1,96 @@
 'use client';
 
 import { useState } from 'react';
-import { TextInput } from '@/components/controls/inputs';
-import { CapabilitySelector } from '@/features/tenancy/capability-selector';
-import type { Capability } from '@/lib/domain/tenancy/capabilities';
-import { ROLE_PRESETS } from '@/lib/domain/tenancy/role-presets';
+import { Search } from 'lucide-react';
+import { FormField } from '@/components/controls/form';
+import { Hint, TextInput } from '@/components/controls/inputs';
 import { SelectField } from '@/components/controls/select-field';
+import { CardSection } from '@/components/surfaces/card';
+import { CapabilitySelector } from '@/features/tenancy/capability-selector';
+import { CAPABILITIES, type Capability } from '@/lib/domain/tenancy/capabilities';
+import { ROLE_PRESETS } from '@/lib/domain/tenancy/role-presets';
+import type { RoleSuggestion } from '@/lib/domain/tenancy/role-suggestions';
 
 /**
- * The fields Create and Edit share — name and the capability checklist — so the two Sheets stay
- * one system rather than drifting into two hand-maintained forms. Neither Sheet duplicates
- * `CapabilitySelector`'s vocabulary or grouping.
+ * The fields of a role, for creating and editing alike: its name and the grouped permission
+ * checklist. The editor that renders this owns the values, so it can say what a save will change.
  *
- * `withPresets` (Create only) adds a *Start from* choice that ticks a template's capabilities. It
- * only fills the checklist, which stays fully editable; the saved role records no preset.
+ * `withPresets` (a new role only) adds a *Start from* choice that ticks a starting point's
+ * permissions: first the roles suggested for this kind of business, which also fill an empty name,
+ * then the general ones. It only fills the form, which stays fully editable; the saved role
+ * records nothing about where it started.
  */
 export function RoleEditorFields({
-  defaultName,
-  selected,
+  name,
+  onNameChange,
+  capabilities,
+  onCapabilitiesChange,
+  grantable,
   idPrefix,
   withPresets = false,
+  suggestions = [],
 }: {
-  defaultName?: string;
-  /** Which capabilities start checked — absent for a new role, the role's own set when editing. */
-  selected?: ReadonlySet<Capability>;
+  name: string;
+  onNameChange: (next: string) => void;
+  capabilities: ReadonlySet<Capability>;
+  onCapabilitiesChange: (next: ReadonlySet<Capability>) => void;
+  /** What the person editing holds; they can give nothing beyond it. */
+  grantable: ReadonlySet<Capability>;
   idPrefix: string;
   withPresets?: boolean;
+  suggestions?: readonly RoleSuggestion[];
 }) {
   const [preset, setPreset] = useState('');
-  const chosen = ROLE_PRESETS.find((candidate) => candidate.key === preset);
-  const start = chosen ? new Set<Capability>(chosen.capabilities) : selected;
+  const starts = [
+    ...suggestions.map((suggestion, index) => ({ value: `suggested:${index}`, label: `${suggestion.name} (suggested for ${suggestion.from})`, name: suggestion.name, capabilities: suggestion.capabilities as readonly Capability[] })),
+    ...ROLE_PRESETS.map((candidate) => ({ value: candidate.key, label: candidate.label, name: null, capabilities: candidate.capabilities })),
+  ];
+  const [query, setQuery] = useState('');
 
   return (
     <>
-      <TextInput
-        name="name"
-        type="text"
-        required
-        maxLength={64}
-        defaultValue={defaultName}
-        placeholder="Name, e.g. Dispatcher"
-        aria-label="Role name"
-      />
-      {withPresets ? (
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-muted">Start from</span>
-          <SelectField value={preset} onValueChange={(next) => setPreset(next)} aria-label="Starting point" options={[{ value: '', label: 'Nothing ticked' }, ...ROLE_PRESETS.map((candidate) => ({ value: candidate.key, label: candidate.label }))]} />
-        </label>
-      ) : null}
-      {/* Keyed by preset so choosing another remounts the checklist with that template's boxes ticked. */}
-      <CapabilitySelector key={preset} selected={start} idPrefix={idPrefix} />
+      <CardSection title="Role">
+        <div className="mt-3 grid max-w-2xl gap-4 sm:grid-cols-2">
+          <FormField id={`${idPrefix}-name`} label="Name">
+            {(field) => (
+              <TextInput {...field} name="name" type="text" required maxLength={64} value={name} onChange={(event) => onNameChange(event.target.value)} />
+            )}
+          </FormField>
+          {withPresets ? (
+            <FormField id={`${idPrefix}-start`} label="Start from">
+              {(field) => (
+                <SelectField
+                  {...field}
+                  value={preset}
+                  onValueChange={(next) => {
+                    setPreset(next);
+                    const start = starts.find((candidate) => candidate.value === next);
+                    onCapabilitiesChange(new Set((start?.capabilities ?? []).filter((capability) => grantable.has(capability))));
+                    if (start?.name && !name.trim()) onNameChange(start.name);
+                  }}
+                  options={[{ value: '', label: 'Nothing ticked' }, ...starts.map((candidate) => ({ value: candidate.value, label: candidate.label }))]}
+                />
+              )}
+            </FormField>
+          ) : null}
+        </div>
+      </CardSection>
+
+      <CardSection
+        title="Permissions"
+        action={
+          <label className="relative block w-full sm:w-64">
+            <span className="sr-only">Search permissions</span>
+            <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted" />
+            <TextInput type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search permissions" className="pl-8" />
+          </label>
+        }
+      >
+        {grantable.size < CAPABILITIES.length ? <Hint className="mt-2">You can only give permissions you have yourself. The others cannot be ticked.</Hint> : null}
+        <div className="mt-4">
+          <CapabilitySelector value={capabilities} onChange={onCapabilitiesChange} query={query} grantable={grantable} idPrefix={idPrefix} />
+        </div>
+      </CardSection>
     </>
   );
 }

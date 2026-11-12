@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ButtonLink } from '@/components/controls/button';
-import { DividedList, Section, SectionHeading } from '@/components/surfaces/section';
+import { CardSection } from '@/components/surfaces/card';
+import { DividedList } from '@/components/surfaces/section';
 import { Badge } from '@/components/display/data';
 import { Widget, WidgetGrid } from '@/components/display/widget';
 import type { IntegrationConnection } from '@/lib/domain/integrations/connections';
@@ -52,8 +53,7 @@ export function ConnectedApps({
   const connectedKeys = new Set(active.map((connection) => connection.connectorKey));
   const offered = connectable.filter((connector) => !connectedKeys.has(connector.key)).slice(0, 6);
   const addConnections = (
-    <Section className="mt-8" aria-labelledby="add-connections-heading">
-      <SectionHeading id="add-connections-heading">{active.length === 0 ? `Connect systems to ${organizationName}` : 'Add connections'}</SectionHeading>
+    <CardSection headingId="add-connections-heading" title={active.length === 0 ? `Connect systems to ${organizationName}` : 'Add connections'} className="mt-6">
       {offered.length > 0 ? (
         <DividedList className="mt-2">
           {offered.map((connector) => (
@@ -75,10 +75,10 @@ export function ConnectedApps({
         <p className="mt-1 max-w-2xl text-sm text-muted">Nothing else is available to connect right now.</p>
       )}
       <ButtonLink href={catalogHref} tone="secondary" className="mt-4" aria-expanded={catalogOpen} aria-controls="app-library">{catalogOpen ? 'Hide the App Library' : 'Browse the App Library'}</ButtonLink>
-    </Section>
+    </CardSection>
   );
 
-  if (active.length === 0) return <div className="mt-6">{addConnections}</div>;
+  if (active.length === 0) return addConnections;
 
   return (
     <>
@@ -92,8 +92,7 @@ export function ConnectedApps({
         />
       </WidgetGrid>
 
-      <Section className="mt-8">
-        <SectionHeading>Connected</SectionHeading>
+      <CardSection title="Connected" className="mt-6">
           <DividedList className="mt-2">
             {active.map((connection) => {
               const connector = connectorByKey.get(connection.connectorKey);
@@ -123,7 +122,7 @@ export function ConnectedApps({
               );
             })}
           </DividedList>
-      </Section>
+      </CardSection>
       {addConnections}
     </>
   );

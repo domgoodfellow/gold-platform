@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Alert } from '@gold/ui/components/alert';
 import { Hint } from '@/components/controls/inputs';
 import { SettingsPageFrame, SettingsPageHeader } from '@/features/settings/settings-page-frame';
 import { LegacyAnchorRedirect } from '@/features/settings/legacy-anchor-redirect';
@@ -32,9 +33,9 @@ export default async function GeneralSettingsPage({
       {mayManage ? (
         <>
           {missing.length > 0 ? (
-            <p role="status" className="mb-6 rounded-lg border border-border bg-hover/40 p-4 text-sm">
+            <Alert role="status" className="mb-6 block">
               To complete your business profile, add {missing.join(', ').replace(/, ([^,]*)$/, ' and $1')}.
-            </p>
+            </Alert>
           ) : null}
           <OrganizationSettingsForm
             organizationId={organizationId}

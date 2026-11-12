@@ -14,16 +14,16 @@ test('Settings is one contextual sidebar, and Back to app returns to where the p
   await expect(page).toHaveURL(`/organizations/${organizationId}/settings/general`);
 
   const nav = page.getByRole('navigation', { name: 'Settings' });
-  for (const name of ['Profile', 'Security & sign-in', 'General', 'Branding', 'Domains', 'Features', 'Team & access', 'Connections', 'Plan & usage']) {
+  for (const name of ['Profile', 'Security & sign-in', 'General', 'Branding', 'Domains', 'Features', 'Members', 'Invitations', 'Roles & permissions', 'Access history', 'Connections', 'Plan & usage']) {
     await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
   }
   // Workspaces are not drawn beside it, and the global bar says Settings once.
   await expect(nav.getByRole('link', { name: 'CRM', exact: true })).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 1, name: 'General' })).toBeVisible();
 
-  await nav.getByRole('link', { name: 'Team & access' }).click();
-  await expect(page).toHaveURL(/\/settings\/access/);
-  await expect(page.getByRole('navigation', { name: 'Settings' }).getByRole('link', { name: 'Team & access' })).toHaveAttribute('aria-current', 'page');
+  await nav.getByRole('link', { name: 'Roles & permissions' }).click();
+  await expect(page).toHaveURL(/\/settings\/access\/roles/);
+  await expect(page.getByRole('navigation', { name: 'Settings' }).getByRole('link', { name: 'Roles & permissions' })).toHaveAttribute('aria-current', 'page');
 
   await page.getByRole('link', { name: 'Back to app' }).click();
   await expect(page).toHaveURL(`/organizations/${organizationId}/finance`);
@@ -59,7 +59,8 @@ test('the business profile persists, proposes a clock without applying it, and k
   await page.getByLabel('Postal code').fill('H2X 1Y4');
   await page.getByLabel('Street address').fill('123 Rue Example');
   await page.getByLabel('Unit or suite').fill('Suite 4');
-  await page.getByLabel('Email').fill('info@grachtwerk.test');
+  // Scoped to the page: the Settings sidebar's "Email sending" link also matches the label.
+  await page.getByRole('main').getByLabel('Email').fill('info@grachtwerk.test');
   await page.getByLabel('Phone').fill('+1 514 555 0100');
   await page.getByLabel('Website').fill('grachtwerk.test');
   await page.getByRole('button', { name: 'Save changes' }).click();
@@ -84,7 +85,7 @@ test('the business profile persists, proposes a clock without applying it, and k
 
   // Leave the shared demo business as it was found.
   await page.goto(`/organizations/${organizationId}/settings/general`);
-  for (const label of ['Legal name', 'Industry', 'City', 'Postal code', 'Street address', 'Unit or suite', 'Email', 'Phone', 'Website']) await page.getByLabel(label).fill('');
+  for (const label of ['Legal name', 'Industry', 'City', 'Postal code', 'Street address', 'Unit or suite', 'Email', 'Phone', 'Website']) await page.getByRole('main').getByLabel(label).fill('');
   await chooseOption(page.getByLabel('Country'), '');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Business profile saved' })).toBeVisible();
@@ -130,9 +131,10 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 800
     await page.evaluate(() => { const scroller = document.querySelector('[data-slot="sidebar-inset"]'); if (scroller) scroller.scrollTop = scroller.scrollHeight; });
     const box = await save.boundingBox();
     const view = page.viewportSize()!;
-    // On a phone the persistent bar covers the bottom 56px; the save control must sit above it with room to spare.
-    const covered = viewport.width < 768 ? 56 : 0;
-    expect(box!.y + box!.height).toBeLessThanOrEqual(view.height - covered - 16);
+    // Nothing is fixed over the bottom of Settings at any width (the phone opens navigation from the
+    // header's Menu), so the save control only has to clear the edge with room to spare.
+    await expect(page.getByRole('button', { name: 'Menu' })).toHaveCount(viewport.width < 768 ? 1 : 0);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(view.height - 16);
   });
 }
 

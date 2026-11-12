@@ -81,6 +81,9 @@ export async function createRole(
     if (error.code === '23505') {
       throw new DomainError('A role with that name already exists here.', 'roles.name_taken');
     }
+    if (error.code === '42501' && error.details === 'grant_beyond_own') {
+      throw new DomainError('You can only give permissions you have yourself.', 'roles.grant_beyond_own');
+    }
     if (error.code === '42501') {
       throw new DomainError('You cannot manage roles here.', 'roles.forbidden');
     }
@@ -142,6 +145,9 @@ export async function updateRoleCapabilities(
         'roles.last_manager',
       );
     }
+    if (error.code === '42501' && error.details === 'grant_beyond_own') {
+      throw new DomainError('You can only give permissions you have yourself.', 'roles.grant_beyond_own');
+    }
     if (error.code === '42501') {
       throw new DomainError('You cannot manage roles here.', 'roles.forbidden');
     }
@@ -174,6 +180,9 @@ export async function assignRole(
         'roles.last_manager',
       );
     }
+    if (error.code === '42501' && error.details === 'grant_beyond_own') {
+      throw new DomainError('You can only give permissions you have yourself.', 'roles.grant_beyond_own');
+    }
     if (error.code === '42501') {
       throw new DomainError('You cannot manage roles here.', 'roles.forbidden');
     }
@@ -184,5 +193,33 @@ export async function assignRole(
       throw new DomainError('No such role here.', 'roles.role_not_found');
     }
     throw fromDatabaseError(error, 'roles.assign_failed');
+  }
+}
+
+/**
+ * Delete a role nobody holds.
+ *
+ * `public.delete_role` decides everything: whether the caller may, and whether the role is still
+ * in use. A role with members or an open invitation is refused there, so nobody is ever moved off
+ * a role as a side effect of removing it.
+ */
+export async function deleteRole(db: Db, input: { roleId: string }): Promise<void> {
+  await requireActor(db);
+
+  const { error } = await db.rpc('delete_role', { p_role_id: input.roleId });
+
+  if (error) {
+    if (error.code === '23503') {
+      throw error.details === 'invitations'
+        ? new DomainError('An open invitation still names this role. Revoke it first.', 'roles.invited')
+        : new DomainError('People still have this role. Move them to another role first.', 'roles.in_use');
+    }
+    if (error.code === '42501' && error.details === 'grant_beyond_own') {
+      throw new DomainError('You can only give permissions you have yourself.', 'roles.grant_beyond_own');
+    }
+    if (error.code === '42501') {
+      throw new DomainError('You cannot manage roles here.', 'roles.forbidden');
+    }
+    throw fromDatabaseError(error, 'roles.delete_failed');
   }
 }
