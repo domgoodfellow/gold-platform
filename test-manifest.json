@@ -3131,6 +3131,7 @@
     "apps/web/tests/component/appearance-editor.test.tsx": {"category":"component","concerns":["personal appearance","account ownership"]},
     "apps/web/tests/integration/database/appearance.test.ts": {"category":"database-integration","concerns":["personal appearance","account ownership"]},
     "apps/web/e2e/appearance.spec.ts": {"category":"playwright-acceptance","concerns":["personal appearance","account ownership"]},
+    "apps/web/e2e/visual-system.spec.ts": {"category":"playwright-acceptance","concerns":["personal appearance","application canvas","interaction states","responsive","public isolation"],"note":"Uses isolated setup/teardown and a verified loopback server; VISUAL_SYSTEM_PHASE=before captures the baseline."},
     "apps/web/tests/integration/database/client-tenants.test.ts": {"category":"database-integration","concerns":["crm","tenancy","security"]},
     "apps/web/tests/component/client-tenant-section.test.tsx": {"category":"component","concerns":["crm","tenancy","accessibility"]},
     "apps/web/tests/integration/database/service-engagements.test.ts": {"category":"database-integration","concerns":["crm","managed services","security"]},

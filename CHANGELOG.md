@@ -34,6 +34,9 @@ Entries describe the product or operational change, not every file touched.
 
 ## 2026-11-12
 
+- Personal Appearance backgrounds cover the full application canvas beneath the header across workspaces and Settings, including long pages. The draft preview now shows an application frame using the same surfaces and background layer. Selected cards and tabs keep a restrained persistent state without stacked brand rings and shadows; keyboard focus remains distinct.
+- Expressive uses the normal thin panel borders; the thick decorative top stripe is removed from panels, configuration editors and board columns.
+
 - Conversations checks operating-area access before mounting its persistent list, alongside the existing checks on each conversation page. A configuration-only member no longer sees the frame around a refused page.
 
 - Access history now pages through older changes. Renewing an invitation checks the same permission limit as creating one; managers can still revoke invitations beyond their own permissions. Role suggestions also match the business industry against published template names. Legacy field and stage settings now redirect directly to CRM configuration.

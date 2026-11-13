@@ -7,6 +7,7 @@ import { cx } from '../class-names';
 import { PAGE_BOTTOM_CLEARANCE, PAGE_BOTTOM_CLEARANCE_WITH_NAV, PAGE_PADDING } from './workspace-geometry';
 import { PagePanel } from '../panels/workspace-right-rail';
 import { useShellLayout } from './shell-layout-context';
+import { ApplicationCanvasBackground } from '../display/background-treatment';
 
 /** Choosing a destination closes the phone sheet and a tablet overlay; neither is meant to stay open. */
 function MobileNavigationDismissal({ children }: { children: ReactNode }) {
@@ -55,11 +56,12 @@ export function AppShell({
             available height to fill rather than an auto-growing one. Every other page is
             unaffected: `min-h-0 overflow-y-auto` below just moves its scrollbar from the document
             to this `main`, which looks identical. */}
-        <SidebarInset className="min-h-0 overflow-y-auto">
+        <SidebarInset className="isolate min-h-0 overflow-y-auto">
           <Fragment key="header">{header}</Fragment>
+          <ApplicationCanvasBackground />
           {/* Beneath the workspace header, beside the page: the page drawer lives here, so it starts
               under the header and the page stays visible next to it. */}
-          <div className="flex min-h-0 min-w-0 flex-1">
+          <div className="relative flex min-h-0 min-w-0 flex-1">
             {/* This column is `min-h-0` so a page can fill it, which also means a long page overflows it
                 instead of growing it — and a flex container's own bottom padding is not part of that
                 overflow, so the last control sat flush against the scroll edge. The clearance is a real

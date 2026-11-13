@@ -192,10 +192,16 @@ colors plus raised/recessed/accent surfaces, strong border, focus, pressed feedb
 elevation/overlay shadows, caption/body/title/display typography, control height/spacing and
 motion durations/easing. Minimal is flat: lighter borders, no elevation, neutral selection.
 Layered adds restrained hierarchy, moderate elevation and a faint brand tint on selection.
-Expressive adds larger shapes, stronger depth, a brand edge on panels, configuration editors and
-board columns, a brand underline on the selected tab and a richer brand-tinted selection. The preset
-tokens `--visual-border-strength`, `--visual-selected-mix` and `--visual-edge` carry these
-differences; no preset adds animation. None changes status colors, the focus indicator or brand
+Expressive adds larger shapes, stronger depth and a restrained brand-tinted selection. Panels,
+configuration editors and board columns retain their normal thin borders on every side, with
+no decorative top stripe. The preset tokens `--visual-border-strength` and `--visual-selected-mix` carry these
+differences; selection keeps its neutral foundation with a 4% brand mix in Layered and 8% in
+Expressive. Segmented tabs use selected fill and weight; line tabs use their existing underline.
+Selectable cards use selected fill and a foreground border (with caller-supplied checks where
+appropriate), without a second brand ring or elevation. Hover remains subtle and transient,
+pressed feedback lasts only during activation, and the keyboard outline stays independent.
+Accent surfaces use `--visual-accent-mix`; elevation describes surface hierarchy,
+not selection. No preset changes status colors, the focus indicator or brand
 contrast derivation. Color always accompanies a label, icon, border or selection state.
 
 `VisualScope` is an explicit opt-in boundary. Account shells apply only saved personal choices;
@@ -215,7 +221,7 @@ Canonical variant ownership:
 | Card | `@gold/ui/components/card`: default, quiet, outlined, elevated, accent; web `surfaces/card` forwards the variant |
 | Operational panel | `components/operational/primitives`: same surface variant map, existing density and composition retained |
 | Button | `@gold/ui/components/button`: existing variants plus soft and loading; web `controls/button` maps soft/ghost tones and forwards loading |
-| Selectable card | `components/controls/selectable-card`: native button over shared Button; aria-pressed, visible ring, caller-owned selection policy; no nested actions |
+| Selectable card | `components/controls/selectable-card`: native button over shared Button; aria-pressed, selected fill/border, keyboard focus outline, caller-owned selection policy; no nested actions |
 | Tabs / segmented content | shared Radix Tabs; `TabsList` segmented (default) or line; URL navigation uses `ViewNav` |
 | Menu / popover | shared Radix content: menu default/comfortable density, popover default/compact; scoped tokens preserve keyboard behavior |
 | Select / Combobox | `@gold/ui/components/select` (Radix Select) and `@gold/ui/components/combobox` share one trigger, popup and item style; web `controls/select-field` owns form membership (see Selection controls) |
@@ -273,25 +279,34 @@ gradient, grid or ambient3d. Last successful account save wins.
 
 A background treatment is a personal Appearance choice, never part of a preset or of Branding.
 `DecorativeBackground` (`components/display/background-treatment.tsx`) is the only component that
-draws one. It renders inside a designated decorative region only: the `WorkspaceHome`
-introduction (`data-slot="workspace-intro"`) and the Appearance and Branding previews. It never
-sits behind tables, forms, dialogs or record content. The layer is `aria-hidden`,
-`pointer-events: none` and behind content inside an isolated region, so it never covers or
-intercepts controls. Colours come only from the brand and neutral tokens.
+draws one. `ApplicationCanvasBackground` mounts it once in `AppShell`, beside the sidebar and
+beneath the global header, across Organization, personal Settings and Platform frames. The
+viewport-sized layer stays sticky in the existing main scroller; its negative margin leaves page
+geometry and bottom clearance unchanged. Long pages retain the treatment throughout scrolling.
+The main scroller is isolated, never transformed; the sidebar, header, opaque content surfaces,
+drawers and portal overlays keep their separate layers. The layer is `aria-hidden`,
+`pointer-events: none` and below content, with no focusable descendants. Workspace introductions
+draw no extra treatment and gain no treatment-dependent spacing. Colours come only from brand
+and neutral tokens. Bounded Appearance and Branding previews use the same renderer; public
+websites, marketing, booking, forms and customer portals never mount the personal canvas layer.
 
-- None (default): nothing is drawn and the region keeps its normal spacing.
+- None (default): nothing is drawn; canvas and page geometry stay the same.
 - Ambient gradient and Fine grid: static CSS.
 - Ambient 3D: a Three.js wireframe surface in the brand colours, imported on the client only when
-  chosen. It draws at low opacity and fades out at every edge and before the region's controls, so
-  it reads as part of the introduction rather than an overlay; the introduction is padded only while
-  a treatment is drawn. It falls back to the static gradient when WebGL is unavailable, on narrow (≤ 40rem) or
+  chosen. Low-opacity lines soften at the edges behind content. It falls back to the static
+  gradient when WebGL is unavailable, on narrow (≤ 40rem) or
   low-core devices, or on any load or start-up error, so it never blocks a page. It draws one still
   frame under system or saved reduced motion, pauses while the page is hidden, caps the device
-  pixel ratio at 1.5, and disposes its geometry, materials and renderer on unmount.
+  pixel ratio at 1.5, and disposes its geometry, materials and renderer on unmount. Reduced-motion
+  changes take effect while mounted, and a still scene redraws when its canvas resizes. Static
+  gradient and grid treatments use CSS only, with no animation loop.
 
 `AppearanceEditor` owns a local draft. Visual style is one native radio group of compact tiles;
 the single Preview renders the draft through `VisualScope` with real shared components and is
-the only rendered sample on the page. Changing controls
+the only rendered sample on the page. Its bounded application frame shows a sidebar, sticky
+header, the same scrolling canvas layer, cards, an operational panel, a collection, inputs,
+buttons, selection and semantic feedback. It inherits the organization's canonical brand roles.
+Preview overlays portal outside the clipped frame into the draft scope. Changing controls
 does not persist or change the shell. Save and Reset are explicit server actions; Discard restores
 the saved selection. Independent light/dark preview controls never become saved preferences.
 Pending, unsaved, saved and refused-write states remain distinct, and rejected drafts survive.
@@ -299,7 +314,7 @@ The action revalidates the root layout and the editor refreshes server component
 document reload. No cookies, localStorage or runtime CSS are preference authorities.
 
 `AccountAppearance` reads under the caller's JWT and renders the semantic attributes during SSR.
-It wraps OrganizationShell (including nested Platform), personal Settings' organization/fallback
+It wraps OrganizationShell, the standalone Platform shell, personal Settings' organization/fallback
 frames, no-business onboarding and the signed-in invitation surface. The active-call dock sits
 inside the same scope while telephone providers remain above the shell. Dialer popouts copy the
 validated account scope and observe saved updates. PageDrawer portals remain inside the existing
@@ -349,7 +364,7 @@ brand_settings → getBrand → organizationPalette → brandTokens → BrandSty
 - `brandTokens` is the one place a palette becomes custom properties; the shell and both previews use it. Token map: `--accent` / `--on-accent` / `--accent-text` / `--accent-indicator` (primary: primary actions, selected states, links); `--brand-secondary` / `--on-brand-secondary` / `--brand-secondary-text` (supporting decoration); `--brand-highlight` / `--on-brand-highlight` / `--brand-highlight-indicator` (non-semantic emphasis).
 - `BrandStyle` writes those tokens (theme-dependent values through `light-dark()`) with `--font-heading` and `--font-body` on `[data-brand]`, which the Organization shell and public pages set. Switching Organization renders the other Organization's style; nothing carries over. An Organization that has chosen nothing writes nothing and renders the platform's neutral look. A font choice applies without a colour.
 - `[data-brand]` also sets `font-family: var(--font-body)`. Body text inherits from the `<body>` element, which sits above the brand scope, so the scope must apply the font itself.
-- The Branding preview renders the shared `Button` and `TextInput`, the three palette roles with their foregrounds, a selected row and a decorated dashboard introduction inside its own `[data-brand]` scope whose properties come from `brandStyleProperties`, the same derivation the shell uses. `[data-appearance="light|dark"]` forces a scheme for the preview; a role that is an alias must be declared again inside that selector.
+- The Branding preview renders the shared `Button` and `TextInput`, the three palette roles with their foregrounds, a selected row and a decorated workspace canvas inside its own `[data-brand]` scope whose properties come from `brandStyleProperties`, the same derivation the shell uses. `[data-appearance="light|dark"]` forces a scheme for the preview; a role that is an alias must be declared again inside that selector.
 
 Role ownership:
 

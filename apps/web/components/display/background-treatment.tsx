@@ -6,12 +6,11 @@ import type { BackgroundTreatment } from '@gold/ui/design-system';
 import { cx } from '../class-names';
 
 /**
- * The one decorative-background interface. A designated decorative region (a dashboard
- * introduction, an Appearance or Branding preview) renders `<DecorativeBackground />` as its first
- * child inside a `relative isolate` container; nothing else in the app draws backgrounds.
+ * The one decorative-background renderer. The application shell mounts it through
+ * ApplicationCanvasBackground; bounded brand previews may mount it in a relative isolate.
  *
  * It is purely decorative: `aria-hidden`, `pointer-events: none`, behind content (`-z-10` inside an
- * isolated region), and never used behind tables, forms or dialogs. Colours come only from the
+ * isolated region). Opaque content and overlay surfaces retain their own roles. Colours come only from the
  * brand and neutral tokens (`--accent`, `--brand-secondary`, `--brand-highlight`), so they follow the
  * organization palette and the theme. The choice is the person's (Appearance); `treatment`
  * overrides it only in previews.
@@ -29,6 +28,16 @@ export function DecorativeBackground({ treatment, clear = 'end', className }: {
   return <div aria-hidden data-decorative-background={chosen} className={cx('pointer-events-none absolute inset-0 -z-10 overflow-hidden', className)} style={chosen === 'grid' ? GRID : GRADIENT} />;
 }
 
+/** A viewport-sized layer in the existing main scroller. Its negative margin leaves layout and
+ * page height unchanged; sticky positioning keeps long pages covered beneath the sticky header.
+ * The parent is isolated, but never clipped or transformed (fixed overlays keep their viewport).
+ * Previews supply their frame height through --application-canvas-height. */
+export function ApplicationCanvasBackground() {
+  const appearance = useVisualAppearance();
+  if (!appearance.background || appearance.background === 'none') return null;
+  return <div aria-hidden data-slot="application-canvas-background"><DecorativeBackground /></div>;
+}
+
 const GRADIENT: CSSProperties = {
   backgroundImage: [
     'radial-gradient(60% 90% at 12% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%)',
@@ -39,12 +48,10 @@ const GRADIENT: CSSProperties = {
 
 const GRID: CSSProperties = {
   backgroundImage: [
-    'linear-gradient(color-mix(in srgb, var(--accent-indicator, var(--foreground)) 14%, transparent) 1px, transparent 1px)',
-    'linear-gradient(90deg, color-mix(in srgb, var(--accent-indicator, var(--foreground)) 14%, transparent) 1px, transparent 1px)',
+    'linear-gradient(color-mix(in srgb, var(--accent-indicator, var(--foreground)) 7%, transparent) 1px, transparent 1px)',
+    'linear-gradient(90deg, color-mix(in srgb, var(--accent-indicator, var(--foreground)) 7%, transparent) 1px, transparent 1px)',
   ].join(','),
   backgroundSize: '24px 24px',
-  maskImage: 'radial-gradient(ellipse at 30% 0%, black 0%, transparent 75%)',
-  WebkitMaskImage: 'radial-gradient(ellipse at 30% 0%, black 0%, transparent 75%)',
 };
 
 /** Resolve a token (which may be var(), light-dark() or lab()) to a hex string for WebGL. */
@@ -88,15 +95,15 @@ function Ambient3d({ className, clear, reducedMotion }: { className?: string; cl
       usable = !constrained && Boolean(probe.getContext('webgl2') ?? probe.getContext('webgl'));
     } catch { usable = false; }
     if (!usable) { fallBack(); return; }
-    const still = reducedMotion || matches('(prefers-reduced-motion: reduce)') || Boolean(element.closest('[data-motion=reduced]'));
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let still = reducedMotion || motionQuery.matches;
 
     import('three').then(THREE => {
       if (disposed) return;
       const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
       renderer.domElement.setAttribute('aria-hidden', 'true');
-      // Fades out toward the region's content side, so the lines never run behind text or controls, and
-      // softens every edge, so the surface reads as part of the region rather than a panel laid over it.
+      // Low-opacity lines soften toward the content side; opaque surfaces stay above the decoration.
       const fade = `linear-gradient(${clear === 'end' ? 'to right' : 'to left'},#000 0%,#000 20%,transparent 60%),linear-gradient(to bottom,transparent 0%,#000 35%,#000 65%,transparent 100%)`;
       renderer.domElement.style.cssText = `position:absolute;inset:0;width:100%;height:100%;pointer-events:none;mask-image:${fade};-webkit-mask-image:${fade};mask-composite:intersect;-webkit-mask-composite:source-in;`;
       element.appendChild(renderer.domElement);
@@ -122,8 +129,6 @@ function Ambient3d({ className, clear, reducedMotion }: { className?: string; cl
         camera.fov = Math.min(60, Math.max(8, (2 * Math.atan(Math.tan(Math.PI / 6) / camera.aspect) * 180) / Math.PI));
         camera.updateProjectionMatrix();
       };
-      const observer = new ResizeObserver(resize); observer.observe(element); resize();
-
       let frame = 0; let running = false; const started = performance.now();
       const draw = (time: number) => {
         const t = (time - started) / 4000;
@@ -138,13 +143,18 @@ function Ambient3d({ className, clear, reducedMotion }: { className?: string; cl
       const start = () => { if (still || running || document.hidden) return; running = true; frame = requestAnimationFrame(loop); };
       const stop = () => { running = false; cancelAnimationFrame(frame); };
       const visibility = () => (document.hidden ? stop() : start());
+      const motionChanged = () => { still = reducedMotion || motionQuery.matches; if (still) { stop(); draw(started); } else start(); };
+      motionQuery.addEventListener('change', motionChanged);
       document.addEventListener('visibilitychange', visibility);
+      const observer = new ResizeObserver(() => { resize(); draw(still ? started : performance.now()); });
+      observer.observe(element); resize();
       draw(performance.now());
       start();
 
       cleanup = () => {
         stop();
         document.removeEventListener('visibilitychange', visibility);
+        motionQuery.removeEventListener('change', motionChanged);
         observer.disconnect();
         geometry.dispose(); primary.dispose(); secondary.dispose();
         renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove();

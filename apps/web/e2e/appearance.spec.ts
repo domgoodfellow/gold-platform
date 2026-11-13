@@ -125,7 +125,7 @@ test('draft, durable save, opposite-system theme, account scope, public regressi
   }
   expect(await page.getByLabel('Example input').evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
   await page.getByRole('button', { name: 'Open preview filter' }).click();
-  const feedback = page.getByText('Filters inherit your appearance.');
+  const feedback = page.getByLabel('Lifecycle', { exact: true });
   await expect(feedback).toBeVisible();
   expect(await feedback.evaluate(el => el.closest('[data-appearance]')?.getAttribute('data-appearance'))).toBe('light');
   await page.keyboard.press('Escape');

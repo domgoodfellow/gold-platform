@@ -12,6 +12,9 @@ export const HEADER_HEIGHT = '3.5rem';
 export const SIDEBAR_HEADER_HEIGHT = 'h-(--header-height)';
 export const HEADER_HEIGHT_STYLE = { '--header-height': HEADER_HEIGHT } as CSSProperties;
 
+/** Bounded Appearance sample; uses the real header band and canvas scrolling geometry. */
+export const APPLICATION_PREVIEW_FRAME = 'flex h-[32rem] overflow-hidden rounded-[inherit] [--application-canvas-height:calc(32rem-var(--header-height))]';
+
 /** The canvas inset every page sits in. */
 export const PAGE_PADDING = 'p-4 sm:p-6 lg:p-8';
 

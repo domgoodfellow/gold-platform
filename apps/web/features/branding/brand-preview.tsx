@@ -107,9 +107,9 @@ export function BrandPreview({
           </div>
 
           {surface === 'workspace' ? (
-            <div className="flex flex-col gap-4 p-4">
-              <div className="relative isolate overflow-hidden rounded-md border border-border px-3 py-3">
-                <DecorativeBackground treatment="gradient" clear="start" />
+            <div className="relative isolate flex flex-col gap-4 p-4">
+              <DecorativeBackground treatment="gradient" clear="start" />
+              <div>
                 <h3 className="text-lg font-semibold">Today&rsquo;s schedule</h3>
                 <p className="text-sm text-muted">Three visits, one waiting for confirmation.</p>
               </div>

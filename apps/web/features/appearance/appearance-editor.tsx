@@ -2,11 +2,10 @@
 
 import { useId, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, Check, User, X } from 'lucide-react';
+import { Check, Home, PanelLeft, Users } from 'lucide-react';
 import { VISUAL_PRESETS, type BackgroundTreatment, type PersonalAppearancePreferences, type VisualPreset } from '@gold/ui/design-system';
-import { DecorativeBackground } from '@/components/display/background-treatment';
+import { ApplicationCanvasBackground } from '@/components/display/background-treatment';
 import { VisualScope } from '@gold/ui/components/visual-scope';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@gold/ui/components/tabs';
 import { Popover, PopoverTrigger, PopoverContent } from '@gold/ui/components/popover';
 import { Button } from '@/components/controls/button';
 import { TextInput } from '@/components/controls/inputs';
@@ -14,15 +13,15 @@ import { FormField, FormActions, FormError } from '@/components/controls/form';
 import { SelectableCard } from '@/components/controls/selectable-card';
 import { Card } from '@/components/surfaces/card';
 import { Toolbar } from '@/components/display/data';
-import { EntityIdentity, EntityRow } from '@/components/display/entity-row';
-import { StatusSummary } from '@/components/display/status-summary';
-import { ViewNav } from '@/components/navigation/view-nav';
+import { OperationalPanel, StatePill } from '@/components/operational/primitives';
+import { NavigationList } from '@/components/navigation/navigation-list';
 import { DialogBody, DialogFooterBar, StepHeader } from '@/components/panels/dialog-layout';
-import { Dialog, DialogContent, DialogTrigger } from '@gold/ui/components/dialog';
+import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@gold/ui/components/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@gold/ui/components/table';
 import { cx, FOCUS_RING_WITHIN } from '@/components/class-names';
 import { updateAppearanceAction } from '@/app/settings/account/actions';
 import { SelectField } from '@/components/controls/select-field';
+import { APPLICATION_PREVIEW_FRAME, HEADER_HEIGHT_STYLE, SIDEBAR_HEADER_HEIGHT } from '@/components/layout/workspace-geometry';
 
 const PRESET_CHOICES: { value?: VisualPreset; label: string }[] = [
   { label: 'Platform default' },
@@ -37,7 +36,6 @@ export function AppearanceEditor({ saved }: { saved: PersonalAppearancePreferenc
   const [baseline, setBaseline] = useState(saved);
   const [draft, setDraft] = useState(saved);
   const [previewScheme, setPreviewScheme] = useState<'light' | 'dark'>('light');
-  const [previewSurface, setPreviewSurface] = useState('Services');
   const [message, setMessage] = useState('');
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
@@ -94,41 +92,8 @@ export function AppearanceEditor({ saved }: { saved: PersonalAppearancePreferenc
     </fieldset>
     <section aria-label="Appearance preview" className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3"><h2 className="text-lg font-semibold">Preview</h2><div className="w-40"><FormField id="appearance-preview-scheme" label="Preview theme">{props => <SelectField {...props} value={previewScheme} onValueChange={(next) => setPreviewScheme(next as 'light' | 'dark')} options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />}</FormField></div></div>
-      <VisualScope selection={{ ...draft, appearance: previewScheme }} data-testid="appearance-preview" className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4 rounded-xl border border-border p-4 sm:p-6">
-        <div data-testid="appearance-preview-intro" className="relative isolate overflow-hidden rounded-(--visual-radius,0.625rem) border border-border px-4 py-5 col-span-full">
-          <DecorativeBackground clear="start" />
-          <h3 className="text-lg font-semibold">Good morning</h3>
-          <p className="text-sm text-muted">Dashboard introduction. {draft.background && draft.background !== 'none' ? 'Shown behind introductions.' : 'No background.'}</p>
-        </div>
-        <Card className="space-y-4">
-          <h3 className="font-semibold">Your workspace</h3>
-          <FormField id="appearance-example-input" label="Example input">{props => <TextInput {...props} placeholder="Enter a preview value" />}</FormField>
-          <Toolbar><Tabs defaultValue="overview"><TabsList variant="segmented" aria-label="Preview views"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="activity">Activity</TabsTrigger></TabsList><TabsContent value="overview">Overview preview</TabsContent><TabsContent value="activity">Activity preview</TabsContent></Tabs>
-            <Popover><PopoverTrigger asChild><Button tone="secondary">Open preview filter</Button></PopoverTrigger><PopoverContent><p>Sample filter.</p></PopoverContent></Popover>
-          </Toolbar>
-          <FormActions><Button type="button">Primary action</Button><Button type="button" tone="secondary" aria-pressed>Selected control</Button></FormActions>
-        </Card>
-        <div className="grid content-start gap-4">
-          <div role="group" aria-label="Preview surface" className="grid grid-cols-2 gap-2">
-            {['Services', 'Products'].map(surface => <SelectableCard key={surface} selected={previewSurface === surface} onClick={() => setPreviewSurface(surface)} className="min-h-0">
-              {surface}<span className="text-xs font-normal text-muted">{previewSurface === surface ? 'Selected' : 'Choose'}</span>
-            </SelectableCard>)}
-          </div>
-          <Card variant="accent" className="space-y-1"><h3 className="font-semibold">Accent surface</h3><p className="text-sm text-muted">Sample highlighted content.</p></Card>
-        </div>
-        {/* Representative operational surfaces, drawn with the real shared components so every preset,
-            density and shape is shown on rows, tables, selected views, filters and dialogs. */}
-        <Card className="space-y-3 [grid-column:1/-1]" aria-label="Collection preview">
-          <h3 className="font-semibold">Collection</h3>
-          <ViewNav label="Preview collection views" className="mb-0" items={[{ key: 'all', label: 'All', href: '#appearance-preview', current: true }, { key: 'people', label: 'People', href: '#appearance-preview' }, { key: 'companies', label: 'Companies', href: '#appearance-preview' }]} />
-          <div role="group" aria-label="Preview active filters" className="flex flex-wrap gap-2"><span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs">Lifecycle: Customer <X aria-hidden className="size-3" /></span></div>
-          <ul className="divide-y divide-border overflow-hidden rounded-[var(--visual-radius,0.625rem)] border border-border">
-            <EntityRow identity={<EntityIdentity icon={User} kind="Person" name="Example person" secondary="Person · Example company" />} status={<StatusSummary label="Example person lifecycle" items={[{ label: 'Lifecycle', value: 'Customer' }]} />} activity="Call completed (3 min)" timestamp="Today" />
-            <EntityRow identity={<EntityIdentity icon={Building2} kind="Company" name="Example company" secondary="Company" />} status={<StatusSummary label="Example company lifecycle" items={[{ label: 'Lifecycle', value: 'Prospect' }]} />} activity="Opportunity opened" timestamp="Yesterday" />
-          </ul>
-          <Table><TableHeader><TableRow><TableHead>Contact</TableHead><TableHead>Lifecycle</TableHead></TableRow></TableHeader><TableBody><TableRow><TableCell>Example person</TableCell><TableCell>Customer</TableCell></TableRow><TableRow><TableCell>Example company</TableCell><TableCell>Prospect</TableCell></TableRow></TableBody></Table>
-          <Dialog><DialogTrigger asChild><Button type="button" tone="secondary">Open preview dialog</Button></DialogTrigger><DialogContent className="flex flex-col gap-0 p-0"><StepHeader title="Preview dialog" steps={['Essentials', 'Additional information']} current={0} /><DialogBody><FormField id="appearance-dialog-input" label="Name">{props => <TextInput {...props} />}</FormField></DialogBody><DialogFooterBar><Button type="button">Save</Button><Button type="button" tone="secondary">Cancel</Button></DialogFooterBar></DialogContent></Dialog>
-        </Card>
+      <VisualScope id="appearance-preview" selection={{ ...draft, appearance: previewScheme }} data-brand="" data-testid="appearance-preview" className="rounded-xl border border-border">
+        <ApplicationPreview />
       </VisualScope>
     </section>
     <div className="space-y-3 border-t border-border pt-4">
@@ -137,6 +102,58 @@ export function AppearanceEditor({ saved }: { saved: PersonalAppearancePreferenc
       <FormActions><Button type="button" disabled={!dirty} loading={pending} onClick={() => persist()}>Save appearance</Button>
         <Button type="button" tone="secondary" disabled={!dirty || pending} onClick={() => { setDraft(baseline); setError(undefined); setMessage('Changes discarded.'); }}>Discard changes</Button>
         <Button type="button" tone="text" disabled={pending} onClick={() => persist(true)}>Reset to defaults</Button></FormActions>
+    </div>
+  </div>;
+}
+
+/** A bounded application composition, not another shell or preference owner. Portal content
+ * stays outside the clipped frame but inside the draft VisualScope. */
+function ApplicationPreview() {
+  const [filter, setFilter] = useState('All');
+  const [lifecycle, setLifecycle] = useState('customer');
+  return <div className={APPLICATION_PREVIEW_FRAME} style={HEADER_HEIGHT_STYLE}>
+    <aside aria-label="Preview sidebar" className="w-12 shrink-0 border-r border-border bg-sidebar p-1 sm:w-36 sm:p-2">
+      <div className="flex h-10 items-center justify-center text-sm font-semibold sm:justify-start sm:px-3"><span className="sm:hidden">G</span><span className="hidden sm:inline">GildOps</span></div>
+      <div className="hidden sm:block"><NavigationList label="Preview navigation" density="compact" items={[
+        { key: 'home', title: 'Home', icon: <Home />, href: '#appearance-preview' },
+        { key: 'crm', title: 'CRM', icon: <Users />, current: true, href: '#appearance-preview' },
+      ]} /></div>
+      <nav aria-label="Preview compact navigation" className="space-y-1 sm:hidden">
+        <Button tone="ghost" aria-label="Preview Home" className="w-full px-0"><Home aria-hidden /></Button>
+        <Button tone="ghost" aria-label="Preview CRM" aria-pressed className="w-full px-0"><Users aria-hidden /></Button>
+      </nav>
+    </aside>
+    <div data-slot="preview-main" className="relative isolate flex min-w-0 flex-1 flex-col overflow-y-auto">
+      <header className={cx('sticky top-0 z-20 flex shrink-0 items-center gap-2 border-b border-border bg-background px-3 sm:px-4', SIDEBAR_HEADER_HEIGHT)}>
+        <PanelLeft aria-hidden className="size-4 shrink-0 text-muted" /><span className="text-sm font-medium">CRM</span><span aria-hidden className="text-muted">/</span><span className="truncate text-sm">Contacts</span>
+      </header>
+      <ApplicationCanvasBackground />
+      <div className="relative space-y-4 p-3 sm:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-lg font-semibold">Contacts</h3><Button type="button">Add contact</Button></div>
+        <div className="grid grid-cols-2 gap-3">
+          <Card><span className="text-xs text-muted">Contacts</span><span className="block text-xl font-semibold">24</span></Card>
+          <Card variant="accent"><span className="text-xs text-muted">Follow-ups</span><span className="block text-xl font-semibold">3</span></Card>
+        </div>
+        <OperationalPanel title="Directory">
+          <div className="space-y-3">
+            <Toolbar><FormField id="appearance-example-input" label="Example input">{props => <TextInput {...props} placeholder="Find a contact" />}</FormField>
+              <Popover><PopoverTrigger asChild><Button type="button" tone="secondary">Open preview filter</Button></PopoverTrigger><PopoverContent><FormField id="appearance-filter-status" label="Lifecycle">{props => <SelectField {...props} value={lifecycle} onValueChange={setLifecycle} options={[{ value: 'customer', label: 'Customer' }, { value: 'prospect', label: 'Prospect' }]} />}</FormField></PopoverContent></Popover>
+            </Toolbar>
+            <div role="group" aria-label="Preview collection filter" className="grid grid-cols-2 gap-2">
+              {['All', 'Customers'].map(value => <SelectableCard key={value} selected={filter === value} onClick={() => setFilter(value)} className="min-h-11 flex-row items-center justify-between p-2">{value}{filter === value && <Check aria-hidden className="size-4" />}</SelectableCard>)}
+            </div>
+            <Table aria-label="Collection preview"><TableHeader><TableRow><TableHead>Contact</TableHead><TableHead>Follow-up</TableHead></TableRow></TableHeader><TableBody>
+              <TableRow data-state="selected"><TableCell>Alex Morgan</TableCell><TableCell><StatePill tone="success">Completed</StatePill></TableCell></TableRow>
+              {filter === 'All' && <TableRow><TableCell>Northstar Ltd</TableCell><TableCell><StatePill tone="danger">Overdue</StatePill></TableCell></TableRow>}
+              <TableRow><TableCell>Jordan Lee</TableCell><TableCell><StatePill>Scheduled</StatePill></TableCell></TableRow>
+            </TableBody></Table>
+            <FormActions>
+              <Dialog><DialogTrigger asChild><Button type="button" tone="secondary">Open preview dialog</Button></DialogTrigger><DialogContent className="flex flex-col gap-0 p-0"><StepHeader title="Preview dialog" steps={['Essentials', 'Additional information']} current={0} /><DialogBody><FormField id="appearance-dialog-input" label="Name">{props => <TextInput {...props} />}</FormField></DialogBody><DialogFooterBar><DialogClose asChild><Button type="button" tone="secondary">Close</Button></DialogClose></DialogFooterBar></DialogContent></Dialog>
+              <Button type="button" tone="secondary" disabled>Export</Button>
+            </FormActions>
+          </div>
+        </OperationalPanel>
+      </div>
     </div>
   </div>;
 }

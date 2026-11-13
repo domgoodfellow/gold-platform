@@ -11,16 +11,16 @@ export type SurfaceVariant = 'default' | 'quiet' | 'outlined' | 'elevated' | 'ac
 /**
  * Minimal: clean surfaces, light borders, no elevation, neutral selection.
  * Layered: clear surface hierarchy, moderate elevation, a faint brand tint on selection.
- * Expressive: stronger depth, a visible brand edge on panels and selected tabs, richer selection.
+ * Expressive: larger shapes, stronger depth and a restrained selection tint.
  * Density, shape and motion stay independent overrides; no preset adds animation of its own.
  */
 export const VISUAL_PRESETS = {
-  minimal: { label: 'Minimal', radius: '0.375rem', elevation: 'none', overlay: '0 4px 16px rgb(0 0 0 / .12)', duration: '100ms', feedback: '0%', border: '55%', selected: '0%', edge: '0px' },
-  layered: { label: 'Layered', radius: '0.625rem', elevation: '0 2px 6px rgb(0 0 0 / .08), 0 12px 24px rgb(0 0 0 / .04)', overlay: '0 8px 32px rgb(0 0 0 / .18)', duration: '160ms', feedback: '4%', border: '100%', selected: '6%', edge: '0px' },
-  expressive: { label: 'Expressive', radius: '1rem', elevation: '0 6px 16px rgb(0 0 0 / .12), 0 22px 44px rgb(0 0 0 / .10)', overlay: '0 12px 40px rgb(0 0 0 / .24)', duration: '220ms', feedback: '10%', border: '100%', selected: '14%', edge: '3px' },
+  minimal: { label: 'Minimal', radius: '0.375rem', elevation: 'none', overlay: '0 4px 16px rgb(0 0 0 / .12)', duration: '100ms', feedback: '0%', border: '55%', selected: '0%' },
+  layered: { label: 'Layered', radius: '0.625rem', elevation: '0 2px 6px rgb(0 0 0 / .08), 0 12px 24px rgb(0 0 0 / .04)', overlay: '0 8px 32px rgb(0 0 0 / .18)', duration: '160ms', feedback: '4%', border: '100%', selected: '4%' },
+  expressive: { label: 'Expressive', radius: '1rem', elevation: '0 6px 16px rgb(0 0 0 / .12), 0 22px 44px rgb(0 0 0 / .10)', overlay: '0 12px 40px rgb(0 0 0 / .24)', duration: '220ms', feedback: '10%', border: '100%', selected: '8%' },
 } as const;
 
-/** Optional decorative backgrounds for designated regions only; a personal choice, never part of a preset. */
+/** Optional application canvas backgrounds; a personal choice, never part of a preset or publication. */
 export const BACKGROUND_TREATMENTS = ['none', 'gradient', 'grid', 'ambient3d'] as const;
 export type BackgroundTreatment = (typeof BACKGROUND_TREATMENTS)[number];
 
@@ -53,7 +53,7 @@ export function designProperties(selection: DesignSelection): CSSProperties {
       '--visual-radius': preset.radius, '--visual-elevation': preset.elevation,
       '--visual-overlay-shadow': preset.overlay, '--motion-fast': preset.duration,
       '--motion-normal': preset.duration, '--visual-accent-mix': preset.feedback,
-      '--visual-border-strength': preset.border, '--visual-selected-mix': preset.selected, '--visual-edge': preset.edge,
+      '--visual-border-strength': preset.border, '--visual-selected-mix': preset.selected,
     });
   }
   const shapes = { square: '0.25rem', rounded: '0.625rem', soft: '1rem' };

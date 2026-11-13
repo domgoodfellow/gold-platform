@@ -86,6 +86,34 @@ it('previews drafts without saving, discards, and keeps the preview scheme indep
   expect(screen.getByRole('button', { name: 'Save appearance' })).toBeDisabled();
 });
 
+it('uses a single application canvas behind the preview and keeps background drafts isolated', async () => {
+  const user = userEvent.setup(); const { container } = render(<AppearanceEditor saved={{ background: 'grid' }} />);
+  expect(preview().querySelectorAll('[data-slot=application-canvas-background]')).toHaveLength(1);
+  expect(within(preview()).getByLabelText('Preview sidebar')).toBeVisible();
+  expect(within(preview()).getByRole('table', { name: 'Collection preview' })).toBeVisible();
+  expect(within(preview()).getByRole('region', { name: 'Directory' })).toBeVisible();
+  expect(container.querySelectorAll('[data-decorative-background]')).toHaveLength(1);
+  await chooseOption(screen.getByLabelText('Background'), 'gradient');
+  expect(preview()).toHaveAttribute('data-background', 'gradient');
+  expect(preview().querySelector('[data-decorative-background=gradient]')).not.toBeNull();
+  expect(updateAppearanceAction).not.toHaveBeenCalled();
+  await user.click(screen.getByRole('button', { name: 'Discard changes' }));
+  expect(preview()).toHaveAttribute('data-background', 'grid');
+  await chooseOption(screen.getByLabelText('Background'), 'none');
+  expect(preview().querySelector('[data-slot=application-canvas-background]')).toBeNull();
+});
+
+it('keeps draft preview overlays in the draft scope outside its scroll frame', async () => {
+  const user = userEvent.setup(); render(<AppearanceEditor saved={{ preset: 'minimal' }} />);
+  await chooseOption(screen.getByLabelText('Preview theme'), 'dark');
+  await user.click(screen.getByRole('button', { name: 'Open preview dialog' }));
+  const dialog = await screen.findByRole('dialog');
+  expect(dialog.closest('[data-testid=appearance-preview]')).toBe(preview());
+  expect(dialog.closest('[data-slot=preview-main]')).toBeNull();
+  expect(dialog.closest('[data-appearance]')).toHaveAttribute('data-appearance', 'dark');
+  await user.click(within(dialog).getAllByRole('button', { name: /^Close$/ })[0]);
+});
+
 it('never turns the preview theme into an unsaved theme change', async () => {
   const user = userEvent.setup(); render(<AppearanceEditor saved={{ appearance: 'light' }} />);
   await chooseOption(screen.getByLabelText('Preview theme'), 'dark');

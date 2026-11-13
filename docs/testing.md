@@ -10,6 +10,15 @@ The `infra` stack (`pnpm db:start`, ports 54321/54322) is the working developmen
 
 ## Purpose
 
+### Shared visual system acceptance
+
+`pnpm --filter @gold/web exec playwright test visual-system.spec.ts --config playwright.isolated.config.ts`
+uses the verified loopback server and manifest-owned disposable fixtures described below. It
+checks Appearance, Home, Contacts, Studio, Website and Branding at desktop/tablet/phone widths
+in both schemes, canvas coverage during scrolling, presets, keyboard/pressed states, scoped
+overlays, preview accessibility, preference persistence and public isolation. Screenshots stay
+under ignored `.artifacts/visual-system/`; `VISUAL_SYSTEM_PHASE=before` captures the baseline.
+
 ### Disposable V1.1 browser acceptance
 
 `playwright.stabilization.config.ts` runs Contacts identity/affiliations/classification, reviewed CSV duplicates and repeat imports, simulated worksheet removal, existing contact history, legacy CRM redirects, workspace Dashboard navigation, breadcrumbs and responsive shell checks. It uses the manifest-owned isolated setup/teardown, not shared demo organizations. Platform staff journeys require a separate operating-organization fixture and are excluded explicitly.
