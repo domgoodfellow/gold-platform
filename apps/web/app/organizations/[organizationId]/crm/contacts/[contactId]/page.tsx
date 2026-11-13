@@ -37,6 +37,7 @@ import { ServiceEngagementSection } from '@/features/crm/customers/service-engag
 import { listServiceEngagements } from '@/lib/domain/customers/service-engagements';
 import { callListAvailable } from '@/lib/application/communications/call-list';
 import { openCallCustomerIds } from '@/lib/domain/tasks/tasks';
+import { contactRemovalCheck } from '@/lib/domain/contacts/contacts';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +46,8 @@ export default async function CustomerPage({ params, searchParams }: PageProps<'
   const raw = await searchParams;
   const one = (key: string) => (typeof raw[key] === 'string' ? raw[key] as string : undefined);
   const { db, organization } = await requireOrganization(organizationId);
+  // Contacts are `customer.read`; the database withholds them too, this refuses before reading anything.
+  if (!organization.capabilities.includes('customer.read')) notFound();
   const customer = await getContact(db, { organizationId, customerId });
   if (!customer) notFound();
   // Discovery and configuration describe a GildOps tenant being set up, so they stay with the
@@ -78,10 +81,14 @@ export default async function CustomerPage({ params, searchParams }: PageProps<'
   const followUpsEnabled = await followUpsAvailable(db, organizationId);
   const followUps = followUpsEnabled ? await relatedFollowUps(db, organizationId, customerId) : null;
   const voice = modules.has('reception');
-  // Add to the call list: offered only with the Dialer and task permission; the menu says why it cannot add.
-  const callList = await callListAvailable(db, organization)
+  // Add to the call list: offered only with the Dialer and task permission, and never for an archived
+  // contact; the menu says why it cannot add.
+  const callList = !customer.archivedAt && await callListAvailable(db, organization)
     ? (await openCallCustomerIds(db, { organizationId, customerIds: [customerId] })).has(customerId) ? 'on-list' as const : customer.phone ? 'ready' as const : 'no-phone' as const
     : undefined;
+
+  // Archive, restore and delete are `customer.delete`; the check names only kinds of record that keep the contact.
+  const removal = organization.capabilities.includes('customer.delete') ? await contactRemovalCheck(db, { organizationId, contactId: customerId }) : undefined;
 
   const mayHandoff = await isPlatformStaff(db);
   const [relationships, engagements] = await Promise.all([getClientTenantRelationships(db, organizationId, customerId), listServiceEngagements(db, organizationId, customerId)]);
@@ -117,12 +124,13 @@ export default async function CustomerPage({ params, searchParams }: PageProps<'
         opportunityCount={opportunities.total}
         openTaskCount={followUps?.open.length}
         callList={callList}
+        removal={removal}
         customer={customer}
         affiliations={<ContactAffiliations db={db} organizationId={organizationId} contact={customer} mayEdit={organization.capabilities.includes('customer.update')}/>}
         accessibleTenantIds={relationships.filter(r => r.may_open).map(r => r.tenant_organization_id)}
         services={<div className="mb-6 space-y-6"><ClientTenantSection organizationId={organizationId} customerId={customerId} timezone={organization.timezone} relationships={relationships} tenants={tenantOptions} mayManage={mayManageServices} mayLink={mayLink}/><ServiceEngagementSection organizationId={organizationId} customerId={customerId} relationships={relationships} items={engagements.items} total={engagements.total} mayManage={mayManageServices} opportunities={opportunities} proposals={commercialProposals} work={work}/></div>}
         support={<RelatedSupport organizationId={organizationId} kind="customer" recordId={customerId} customerName={customer.name}/>}
-        followUps={followUps ? <RelatedFollowUps organizationId={organizationId} timezone={organization.timezone} members={members} mayManage={organization.capabilities.includes('follow_up.manage')} customer={customer} {...followUps}/> : undefined}
+        followUps={followUps ? <RelatedFollowUps organizationId={organizationId} timezone={organization.timezone} members={members} mayManage={organization.capabilities.includes('follow_up.manage')} mayRemoveFromCallList={organization.capabilities.includes('call_list.remove')} customer={customer} {...followUps}/> : undefined}
         opportunities={<CustomerOpportunities organizationId={organizationId} customer={customer} items={opportunities} total={opportunities.total} stages={opportunityStages} members={members} defaultCurrency={organization.currency ?? ''} mayCreate={organization.capabilities.includes('opportunity.create')} />}
         stage={voice ? stages.find((entry) => entry.id === customer.stageId) ?? null : null}
         stages={stages}

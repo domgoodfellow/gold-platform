@@ -354,8 +354,10 @@ export const AREAS: readonly Area[] = [
   ...WORKSPACES.filter(workspace => !['crm', 'field'].includes(workspace.key)).map(workspace => ({ segment: `${workspace.key}-calendar`, label: `${workspace.label} calendar`, group: 'workspaces' as const, workspace: workspace.key, route: `${workspace.home}/calendar`, sidebar: false })),
   { segment: 'calendar', label: 'Calendar', group: 'workspaces', workspace: 'crm', route: 'crm/calendar', sidebar: false },
   { segment: 'follow-up-calendar', label: 'Calendar (legacy link)', group: 'workspaces', workspace: 'crm', route: 'crm/tasks/calendar', sidebar: false },
-  { segment: 'customers', route: 'crm/contacts', label: 'Contacts', group: 'workspaces', workspace: 'crm' },
-  { segment: 'pipeline', label: 'Relationship stages', group: 'workspaces', workspace: 'crm', route: 'crm/contacts/stages', sidebar: false, module: 'reception', featureKeys: ['pipeline', 'configurable_stages', 'qualification_state'] },
+  // The contact directory and its stage board are entirely contacts, so they follow `customer.read`;
+  // the rest of CRM (opportunities, tasks, search) stays open and withholds only the contacts.
+  { segment: 'customers', route: 'crm/contacts', label: 'Contacts', group: 'workspaces', workspace: 'crm', relevantCapabilities: ['customer.read'] },
+  { segment: 'pipeline', label: 'Relationship stages', group: 'workspaces', workspace: 'crm', route: 'crm/contacts/stages', sidebar: false, module: 'reception', relevantCapabilities: ['customer.read'], featureKeys: ['pipeline', 'configurable_stages', 'qualification_state'] },
   { segment: 'opportunities', route: 'crm/opportunities', label: 'Opportunities', group: 'workspaces', workspace: 'crm', sidebar: false },
   { segment: 'opportunity-pipeline', label: 'Pipeline', group: 'workspaces', workspace: 'crm', route: 'crm/pipeline' },
   { segment: 'follow-ups', route: 'crm/tasks', label: 'Tasks', group: 'workspaces', workspace: 'crm', sidebar: false, featureKeys: ['follow_ups'] },

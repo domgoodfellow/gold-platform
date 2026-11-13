@@ -34,7 +34,7 @@ type ReadRow = {
   next_follow_up_id?: string | null; next_follow_up_title?: string | null; next_follow_up_due_at?: string | null;
 };
 function opportunity(row: ReadRow, ownerNames?: Map<string, string>): Opportunity {
-  return { id: row.id, customerId: row.customer_id, customerName: row.customer?.name ?? 'Customer', title: row.title,
+  return { id: row.id, customerId: row.customer_id, customerName: row.customer?.name ?? 'Contact', title: row.title,
     stageId: row.stage_id, stage: row.stage ? { ...row.stage, kind: row.stage.kind as OpportunityKind } : null,
     amountMinor: row.amount_minor, currency: row.currency, ownerMembershipId: row.owner_membership_id,
     ownerName: row.owner_membership_id ? ownerNames?.get(row.owner_membership_id) ?? row.owner?.display_name ?? 'Member' : null,

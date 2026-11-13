@@ -18,7 +18,8 @@ import type { CrmSummary,CurrencyTotal,SalesComposition } from '@/lib/applicatio
 import { winRate } from '@/lib/application/crm/dashboard';
 import { formatOpportunityValue } from '@/lib/domain/opportunities/money';
 export type CrmHomeProps = {
-  organizationId:string;timezone:string;month:string;overview:RelationshipOverview;
+  organizationId:string;timezone:string;month:string;/** Null for a role that may not view contacts: the contact panels are left out, never shown empty. */
+  overview:RelationshipOverview|null;
   relationships:{rows:RelationshipRow[];mode:'active'|'added';grouped:boolean};
   /** Null when the sales section is not composed; its queries are then never run. */
   sales:{summary:CrmSummary;stages:OpportunitySummary[]}|null;salesComposition:SalesComposition;
@@ -52,9 +53,9 @@ export function CrmHome({organizationId,timezone,month,overview,relationships,sa
   const actions=<><ConfigureMenu items={configureItems} />{followUpsEnabled?<ButtonLink tone="secondary" href={`${base}/crm/calendar`}><CalendarDays aria-hidden/> Calendar</ButtonLink>:null}{mayAddContacts?<AddContactsTrigger/>:null}{mayCreateOpportunity&&salesEnabled?<OpportunitySheet {...opportunityOptions} triggerTone="secondary"/>:null}</>;
   const attentionSources=followUpsEnabled||salesEnabled; const attentionTotal=attention.overdue+attention.today+(salesEnabled?attention.unassigned+(followUpsEnabled?attention.noNext:0):0);
   const allClear=attentionSources&&!attentionTotal;
-  const lifecycleTotal=LIFECYCLES.reduce((sum,[key])=>sum+overview.lifecycles[key],0);
+  const lifecycleTotal=overview?LIFECYCLES.reduce((sum,[key])=>sum+overview.lifecycles[key],0):0;
   return <WorkspaceHome location={{}} activity actions={actions}>
-    <section aria-label="Relationship overview" className="mb-6 grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)]">
+    {overview?<section aria-label="Relationship overview" className="mb-6 grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)]">
       <MetricTile label="Contacts" value={overview.total} detail={<span className="flex flex-wrap gap-x-3 gap-y-1">
         <Link className="underline underline-offset-4" href={`${contacts}?contactType=person`}>{overview.people} {overview.people===1?'person':'people'}</Link>
         <Link className="underline underline-offset-4" href={`${contacts}?contactType=company`}>{overview.companies} {overview.companies===1?'company':'companies'}</Link>
@@ -65,9 +66,9 @@ export function CrmHome({organizationId,timezone,month,overview,relationships,sa
         {lifecycleTotal?<div aria-hidden className="mt-2 flex h-2 overflow-hidden rounded-full bg-secondary">{LIFECYCLES.map(([key])=>overview.lifecycles[key]?<span key={key} className={SHADES[key]} style={{width:`${overview.lifecycles[key]/lifecycleTotal*100}%`}}/>:null)}</div>:null}
         <ul aria-label="Contacts by lifecycle" className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">{LIFECYCLES.map(([key,label])=><li key={key}><Link className="flex items-center gap-1.5 hover:underline" href={`${contacts}?lifecycle=${key}`}><span aria-hidden className={`size-2 shrink-0 rounded-full ${SHADES[key]}`}/>{label} <span className="tabular-nums font-semibold">{overview.lifecycles[key]}</span></Link></li>)}</ul>
       </div>
-    </section>
-    <div className={`mb-6 grid min-w-0 items-start gap-6 ${attentionSources&&!allClear?'xl:grid-cols-[minmax(0,1fr)_24rem]':''}`}>
-      <RecentRelationships organizationId={organizationId} timezone={timezone} {...relationships} hrefFor={group=>dashboardHref(base,{month:sales?monthParam:undefined,group})} totalContacts={overview.total} mayAddContacts={mayAddContacts}/>
+    </section>:null}
+    <div className={`mb-6 grid min-w-0 items-start gap-6 ${overview&&attentionSources&&!allClear?'xl:grid-cols-[minmax(0,1fr)_24rem]':''}`}>
+      {overview?<RecentRelationships organizationId={organizationId} timezone={timezone} {...relationships} hrefFor={group=>dashboardHref(base,{month:sales?monthParam:undefined,group})} totalContacts={overview.total} mayAddContacts={mayAddContacts}/>:null}
       {attentionSources&&!allClear?<OperationalPanel className="min-w-0" title="Needs attention" action={followUpsEnabled&&followUpOptions.mayManage?<FollowUpSheet {...followUpOptions}/>:null}><NeedsAttention counts={attention} overdue={overdue} today={today} noNext={noNext} unassigned={unassigned} options={followUpOptions} followUpsEnabled={followUpsEnabled} salesEnabled={salesEnabled}/></OperationalPanel>:null}
       {allClear?<p role="status" className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm"><CircleCheck aria-hidden className="size-4 text-muted"/><span><span className="font-medium">Needs attention:</span> nothing overdue{followUpsEnabled?' or due today':''}{salesEnabled?', and every open opportunity has an owner':''}.</span></p>:null}
     </div>

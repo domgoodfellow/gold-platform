@@ -69,7 +69,8 @@ export async function loadHome(db: Db, organization: Organization, rawQuery: Rec
   const base = `/organizations/${organizationId}`;
   const quickActions: HomeData['quickActions'] = [];
   const add = (key: string, capability: string, label: string, href: string, description: string) => { if (capabilities.has(capability)) quickActions.push({ key, label, href, description }); };
-  add('customer', 'customer.create', 'New contact', `${base}/crm/contacts?create=1`, 'Open CRM and add a contact');
+  // A role that adds contacts without viewing them adds from CRM Home; the directory is not theirs to open.
+  add('customer', 'customer.create', 'New contact', capabilities.has('customer.read') ? `${base}/crm/contacts?create=1` : `${base}/crm?create=1`, 'Open CRM and add a contact');
   add('work', 'work_item.create', 'New work', `${base}/work/new`, 'Create and assign Work');
   if (available('support')) add('case', 'support.case.create', 'New case', `${base}/support/cases?create=1`, 'Open Cases and create a problem or request');
   if (available('marketing')) add('campaign', 'marketing.manage', 'New campaign', `${base}/marketing/campaigns?create=1`, 'Open Campaigns and create a draft');

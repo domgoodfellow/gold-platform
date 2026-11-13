@@ -31,7 +31,7 @@ describe('CRM dashboard relationship reads under real PostgreSQL RLS',()=>{
     old=await createContact(owner.db,{organizationId,name:'Old Company',contactType:'company'});
     // No API role may rewrite creation time, so the 40-day-old fixture is dated directly in local PostgreSQL.
     const pg=new Client({connectionString:CONNECTION});await pg.connect();try{await pg.query("update public.contacts set created_at=now()-interval '40 days' where id=$1",[old]);await pg.query('update public.contacts set lifecycle=null where id=$1',[legacy]);}finally{await pg.end();}
-    const roleId=await createRole(owner.db,{organizationId,name:'Relationship reader',capabilities:['customer.update']});await addMember(owner.db,{organizationId,email:reader.email,roleId});
+    const roleId=await createRole(owner.db,{organizationId,name:'Relationship reader',capabilities:['customer.read','customer.update']});await addMember(owner.db,{organizationId,email:reader.email,roleId});
   });
   it('counts identity type and lifecycle as separate dimensions, with a 30-day creation window',async()=>{
     // Ada and Solo were created as Leads; Ben and Old Company were created without a lifecycle (V1.4: Unclassified), and the legacy record was cleared.

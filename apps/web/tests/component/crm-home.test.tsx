@@ -39,7 +39,7 @@ describe('relationship-first CRM dashboard',()=>{
     expect(order.slice(0,4)).toEqual(['Relationship overview','Recently active relationships','Needs attention','Opportunities & Pipeline']);
   });
   it('hides Unspecified when there are none',()=>{
-    render(<CrmHome {...defaults} overview={{...defaults.overview,unspecified:0}}/>);
+    render(<CrmHome {...defaults} overview={{...defaults.overview!,unspecified:0}}/>);
     expect(screen.queryByRole('link',{name:/unspecified/})).toBeNull();
   });
   it('lists people and companies as independent rows with their latest interaction and only real next tasks',()=>{
@@ -151,5 +151,11 @@ describe('relationship-first CRM dashboard',()=>{
   it('offers canonical drawers and configuration only for authorized mutation',()=>{
     render(<CrmHome {...defaults} mayAddContacts mayCreateOpportunity mayConfigure configureItems={[{key:'sales-stages',label:'Relationship stages',href:'/organizations/org/crm/configuration/relationship-stages'},{key:'opportunity-stages',label:'Opportunity stages',href:'/organizations/org/crm/configuration/opportunity-stages'}]} followUpOptions={{...defaults.followUpOptions,mayManage:true}}/>);
     for(const name of ['Add contacts','New opportunity','New task','Settings'])expect(screen.getByRole('button',{name})).toBeInTheDocument();
+  });
+  it('leaves the contact panels out entirely for a role that may not view contacts',()=>{
+    render(<CrmHome {...defaults} overview={null} relationships={{rows:[],mode:'active',grouped:false}}/>);
+    expect(screen.queryByRole('region',{name:'Relationship overview'})).toBeNull();
+    expect(screen.queryByText('Ada Person')).toBeNull();
+    expect(screen.getByRole('link',{name:'View pipeline'})).toBeInTheDocument();
   });
 });

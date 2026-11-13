@@ -64,7 +64,7 @@ describe('editing a role', () => {
       updateRoleCapabilities(owner.db, {
         roleId: adminRoleId,
         name: 'Admin',
-        capabilities: ['customer.delete'],
+        capabilities: ['customer.destroy' as never],
       }),
     ).rejects.toMatchObject({ code: 'roles.capability_unknown' });
   });

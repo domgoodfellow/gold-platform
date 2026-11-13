@@ -12,8 +12,10 @@ export const CAPABILITIES = [
   'support.configure',
   'marketing.read',
   'marketing.manage',
+  'customer.read',
   'customer.create',
   'customer.update',
+  'customer.delete',
   'opportunity.create',
   'opportunity.update',
   'follow_up.manage',
@@ -40,6 +42,7 @@ export const CAPABILITIES = [
   'report.read',
   'report.manage',
   'call.place',
+  'call_list.remove',
   'message.send',
   'integration.manage',
   'feature.manage',
@@ -53,11 +56,12 @@ export type Capability = (typeof CAPABILITIES)[number];
 export const ALL_CAPABILITIES: Capability[] = [...CAPABILITIES];
 
 /**
- * Permissions that reach beyond a person's own work: who may do what, the business's own settings
- * and connections, money owed to GildOps, stored credentials, and rules that act with nobody
- * present. The role editor marks them; nothing is enforced differently because of this list.
+ * Permissions that reach beyond a person's own work: who may do what, removing contacts from the
+ * business, the business's own settings and connections, money owed to GildOps, stored
+ * credentials, and rules that act with nobody present. The role editor marks them; nothing is enforced differently because of this list.
  */
 export const SENSITIVE_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>([
+  'customer.delete',
   'role.manage',
   'organization.manage',
   'integration.manage',
@@ -80,12 +84,16 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'support.configure': 'Set up Support queues and service levels',
   'marketing.read': 'View campaigns, audiences and acquisition results',
   'marketing.manage': 'Manage campaigns and audiences and review acquisition inquiries',
+  /** Viewing and searching contacts and their history. Another workspace's record that refers to a contact stays readable without it; only the contact is withheld. Placing calls shows the name and number of contacts on the call list, nothing more. */
+  'customer.read': 'View contacts',
   'customer.create': 'Add contacts',
   'opportunity.create': 'Add opportunities',
   'opportunity.update': 'Edit opportunities and move their stages',
   'follow_up.manage': 'Create, edit, complete and cancel CRM tasks',
-  /** Separate from creating one — correcting a record and moving a relationship along its stages are plausibly two different people. */
-  'customer.update': 'Edit contacts and move them between relationship stages',
+  /** Separate from creating one — correcting a record and moving a relationship along its stages are plausibly two different people. Covers identity, classification, affiliations, fields and relationship stage. */
+  'customer.update': 'Edit contacts',
+  /** Archive, restore and permanent deletion. Separate from editing: correcting a record is not deciding it leaves the business. Deletion is refused while anything the business must keep refers to the contact; archive keeps it. Not the same as taking someone off the call list (`call_list.remove`). */
+  'customer.delete': 'Delete contacts',
   'role.manage': 'Manage members, invitations and roles',
   'field.manage': 'Define custom fields',
   'location.create': 'Add locations',
@@ -117,6 +125,8 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   'report.manage': 'Save reports and choose which roles see them',
   /** Its own authority for the same reason as `assistant.ask` — placing a call spends money and shares this business's number. */
   'call.place': 'Place calls and record their outcome',
+  /** Its own authority, not part of `follow_up.manage`: whoever fills the call list is not necessarily who decides someone comes off it. Removing cancels the open Call task; the contact and their history stay. */
+  'call_list.remove': 'Remove contacts from call list',
   /** Its own authority for the same reason as `call.place` — a receptionist may message without ever placing a call, and the reverse. */
   'message.send': 'Send texts and emails and see conversations',
   /** Connecting a source and applying what it imports are split from `customer.create`/`customer.update` on purpose — an import run still checks those per row, so this alone cannot write a customer. */

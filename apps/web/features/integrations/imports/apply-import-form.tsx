@@ -15,10 +15,13 @@ export function ApplyImportForm({
   organizationId,
   runId,
   readyCount,
+  blocked = false,
 }: {
   organizationId: string;
   runId: string;
   readyCount: number;
+  /** Rows still need a decision; the database refuses to apply until they have one. */
+  blocked?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(applyImportRunAction, APPLY_INITIAL);
   const formId = `apply-${runId}`;
@@ -36,6 +39,7 @@ export function ApplyImportForm({
         tone="primary"
         size="default"
         pending={pending}
+        disabled={blocked || readyCount === 0}
       />
       <ErrorText>{state.error}</ErrorText>
     </form>

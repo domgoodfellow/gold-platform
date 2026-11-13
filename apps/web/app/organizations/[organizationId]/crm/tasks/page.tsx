@@ -28,7 +28,7 @@ export default async function FollowUpsPage({params,searchParams}:{params:Promis
   const [items,members,customers,opportunities,customer,opportunity]=await Promise.all([listTasks(db,{organizationId,id:selected,search:q.q,status,kind,customerId:q.customer,opportunityId:q.opportunity,
     ownerMembershipId:q.owner==='unassigned'?null:q.owner||undefined,from:isDate(q.from)?zonedDayRange(q.from,organization.timezone).startsAt:bounds.from,before:isDate(q.to)?zonedDayRange(shiftDate(q.to,1),organization.timezone).startsAt:bounds.before,
     limit:50,offset:(page-1)*50}),listMembers(db,{organizationId}),listContacts(db,{organizationId,search:q.customerSearch,limit:20}),listOpportunities(db,{organizationId,customerId:q.customer,search:q.opportunitySearch,limit:20}),q.customer?getContact(db,{organizationId,customerId:q.customer}):null,q.opportunity?getOpportunity(db,{organizationId,opportunityId:q.opportunity}):null]);
-  const options={organizationId,timezone:organization.timezone,members,mayManage:organization.capabilities.includes('follow_up.manage')};
+  const options={organizationId,timezone:organization.timezone,members,mayManage:organization.capabilities.includes('follow_up.manage'),mayRemoveFromCallList:organization.capabilities.includes('call_list.remove')};
   const href=`/organizations/${organizationId}/crm/tasks`;
   const pageHref=(p:number)=>{const state=new URLSearchParams();for(const [key,value] of Object.entries(q))if(value && key!=='page')state.set(key,value);state.set('page',String(p));return `${href}?${state}`;};
   return <AppPage><CollectionHeader location={{}} actions={<><ButtonLink href={`${href}/calendar`}>Calendar</ButtonLink>{options.mayManage?<FollowUpSheet {...options}/>:null}</>}/>

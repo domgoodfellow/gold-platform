@@ -43,6 +43,7 @@ export function ConversationDetailView({
   mayHandle,
   mayReply = mayHandle,
   mayCreateCustomer,
+  mayViewContacts = true,
   support,
   contactContext,
   callHref,
@@ -54,6 +55,8 @@ export function ConversationDetailView({
   mayHandle: boolean;
   mayReply?: boolean;
   mayCreateCustomer: boolean;
+  /** Finding a contact to link is browsing contacts (`customer.read`). */
+  mayViewContacts?: boolean;
   support?: ReactNode;
   contactContext?: ReactNode;
   callHref?: string;
@@ -181,6 +184,7 @@ export function ConversationDetailView({
           detail={detail}
           mayHandle={mayHandle}
           mayCreateCustomer={mayCreateCustomer}
+          mayViewContacts={mayViewContacts}
           onLink={(customerId) => act(() => linkCustomerAction(organizationId, conversation.id, customerId))}
           onCreate={(name) => act(() => createCustomerAction(organizationId, conversation.id, name))}
         />
@@ -277,6 +281,7 @@ function CustomerPanel({
   detail,
   mayHandle,
   mayCreateCustomer,
+  mayViewContacts,
   onLink,
   onCreate,
 }: {
@@ -284,6 +289,7 @@ function CustomerPanel({
   detail: ConversationDetail;
   mayHandle: boolean;
   mayCreateCustomer: boolean;
+  mayViewContacts: boolean;
   onLink: (customerId: string | null) => void;
   onCreate: (name: string) => void;
 }) {
@@ -309,10 +315,19 @@ function CustomerPanel({
     };
   }, [organizationId, search]);
 
+  if (resolution.state === 'restricted') {
+    return (
+      <div className="flex flex-wrap items-center gap-2 text-xs" role="group" aria-label="Contact">
+        <span className="text-muted">Contact</span>
+        <span>Linked to a contact your role can’t view.</span>
+      </div>
+    );
+  }
+
   if (resolution.state === 'resolved') {
     return (
-      <div className="flex flex-wrap items-center gap-2 text-xs" role="group" aria-label="Customer">
-        <span className="text-muted">Customer</span>
+      <div className="flex flex-wrap items-center gap-2 text-xs" role="group" aria-label="Contact">
+        <span className="text-muted">Contact</span>
         <Link className="font-medium underline" href={`/organizations/${organizationId}/crm/contacts/${resolution.customer.id}`}>{resolution.customer.name}</Link>
         {mayHandle ? <Button type="button" size="small" tone="secondary" onClick={() => onLink(null)}>Unlink</Button> : null}
       </div>
@@ -321,15 +336,15 @@ function CustomerPanel({
 
   const candidates = resolution.state === 'suggested' || resolution.state === 'ambiguous' ? resolution.candidates : [];
   return (
-    <div className="flex flex-col gap-2 text-xs" role="group" aria-label="Customer">
+    <div className="flex flex-col gap-2 text-xs" role="group" aria-label="Contact">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-muted">Customer</span>
+        <span className="text-muted">Contact</span>
         <span>
           {resolution.state === 'ambiguous'
-            ? `More than one customer has this ${detail.conversation.channel === 'email' ? 'address' : 'number'}. Choose the right one.`
+            ? `More than one contact has this ${detail.conversation.channel === 'email' ? 'address' : 'number'}. Choose the right one.`
             : resolution.state === 'suggested'
-              ? 'Not linked. A customer has this contact detail:'
-              : 'Not linked to a customer.'}
+              ? `Not linked. A contact has this ${detail.conversation.channel === 'email' ? 'address' : 'number'}:`
+              : 'Not linked to a contact.'}
         </span>
       </div>
       {candidates.map((candidate) => (
@@ -341,12 +356,12 @@ function CustomerPanel({
       ))}
       {mayHandle ? (
         <div className="flex flex-wrap items-center gap-2">
-          <TextInput size="small" placeholder="Find a customer to link…" value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Find a customer to link" className="w-56" />
-          {mayCreateCustomer && !creating ? <Button type="button" size="small" tone="secondary" onClick={() => setCreating(true)}>Create customer</Button> : null}
+          {mayViewContacts ? <TextInput size="small" placeholder="Find a contact to link…" value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Find a contact to link" className="w-56" /> : null}
+          {mayCreateCustomer && !creating ? <Button type="button" size="small" tone="secondary" onClick={() => setCreating(true)}>Create contact</Button> : null}
         </div>
       ) : null}
       {searching && results !== null ? (
-        results.length === 0 ? <span className="pl-2 text-muted">No customer matches.</span> : (
+        results.length === 0 ? <span className="pl-2 text-muted">No contact matches.</span> : (
           <ul className="flex flex-col gap-1 pl-2">
             {results.map((candidate) => (
               <li key={candidate.id} className="flex flex-wrap items-center gap-2">
@@ -360,7 +375,7 @@ function CustomerPanel({
       ) : null}
       {creating ? (
         <div className="flex flex-wrap items-center gap-2">
-          <TextInput size="small" placeholder="Customer name" value={name} onChange={(event) => setName(event.target.value)} aria-label="New customer name" className="w-56" />
+          <TextInput size="small" placeholder="Contact name" value={name} onChange={(event) => setName(event.target.value)} aria-label="New contact name" className="w-56" />
           <Button type="button" size="small" disabled={!name.trim()} onClick={() => onCreate(name)}>Create and link</Button>
           <Button type="button" size="small" tone="secondary" onClick={() => setCreating(false)}>Cancel</Button>
         </div>

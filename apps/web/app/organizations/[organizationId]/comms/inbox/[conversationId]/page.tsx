@@ -56,6 +56,7 @@ export default async function ConversationPage({ params }: PageProps<'/organizat
       mayHandle={organization.capabilities.includes('message.send')}
       mayReply={mayReply}
       mayCreateCustomer={organization.capabilities.includes('customer.create')}
+      mayViewContacts={organization.capabilities.includes('customer.read')}
     />
   );
 }

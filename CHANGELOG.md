@@ -32,6 +32,15 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-11-13
+
+- The Dialer's Add to list is three steps: choose contacts (several, kept across searches, with phone numbers and who is already listed), give a required reason for calling with due date, owner and note, then review the chosen contacts as they stand now and add only those still eligible. The result names anyone not added and why. Members who may add contacts can create one without leaving the dialog. Contacts' Add to also asks for the reason; no Call task is named "Call" by default any more.
+- Each Dialer call list entry has Remove from list for members holding the new Remove contacts from call list permission (administrators receive it). It cancels the open Call task and keeps the contact, their history and any call in progress. Task permission alone no longer cancels an open Call task or changes its kind.
+- A contact can have only one open Call task; simultaneous adds create one entry and report the rest. Existing extra open Call tasks for a contact are cancelled when the update is applied, keeping the one due first; each cancellation is recorded as the data migration's, with the task's creator kept beside it.
+- Contact imports hold rows for review when several contacts share an email, when email matching is off for the source, or when only a phone number matches. Each held row is decided as Create, Update a listed contact or Skip before importing. Repeated imports and contacts added after review are not created twice. A row imported before from a file with another name is held too when its whole row, or its source ID with the same name or email, matches. Rows that will update a contact show each changed value, current and incoming, before importing.
+- New permissions View contacts and Delete contacts. Every existing role keeps viewing contacts; administrators receive Delete contacts. Without View contacts a role does not see Contacts, CRM Home and search leave contacts out, contact history and counts are withheld, and other workspaces show "Contact" instead of the name, while the Dialer still shows the name and number of people on the call list to anyone who places calls. Adding to the call list and reviewing imports now also need View contacts. A role may add contacts without viewing them.
+- Contacts can be archived, restored and, when nothing the business must keep refers to them, deleted permanently, from the contact's More actions. A contact that cannot be deleted says which kinds of record keep it and offers Archive. Archived contacts leave the directory (an Archived status filter finds them), pickers, the call list, audiences and counts. Every archive, restore and deletion is recorded with who did it.
+
 ## 2026-11-12
 
 - Personal Appearance backgrounds cover the full application canvas beneath the header across workspaces and Settings, including long pages. The draft preview now shows an application frame using the same surfaces and background layer. Selected cards and tabs keep a restrained persistent state without stacked brand rings and shadows; keyboard focus remains distinct.

@@ -18,18 +18,18 @@ export const ROLE_PRESETS: readonly RolePreset[] = [
     key: 'administrator',
     label: 'Administrator',
     capabilities: [
-      'customer.create', 'customer.update', 'role.manage', 'field.manage', 'location.create', 'resource.create',
+      'customer.read', 'customer.create', 'customer.update', 'customer.delete', 'role.manage', 'field.manage', 'location.create', 'resource.create',
       'resource.update', 'work_item.create', 'asset.create', 'document.create', 'work_item.transition', 'work_item.schedule',
       'work_item.record', 'organization.manage', 'price.manage', 'work_item.price', 'work_item.update',
       'invoice.issue', 'payment.record', 'automation.manage', 'configuration.propose', 'assistant.ask',
-      'report.read', 'report.manage', 'call.place', 'message.send', 'integration.manage', 'feature.manage', 'billing.manage', 'secret.manage',
+      'report.read', 'report.manage', 'call.place', 'call_list.remove', 'message.send', 'integration.manage', 'feature.manage', 'billing.manage', 'secret.manage',
     ],
   },
   {
     key: 'manager',
     label: 'Manager',
     capabilities: [
-      'customer.create', 'customer.update', 'location.create', 'resource.create', 'resource.update', 'work_item.create',
+      'customer.read', 'customer.create', 'customer.update', 'location.create', 'resource.create', 'resource.update', 'work_item.create',
       'asset.create', 'document.create', 'work_item.transition', 'work_item.schedule', 'work_item.record',
       'work_item.price', 'work_item.update', 'invoice.issue', 'payment.record', 'assistant.ask', 'report.read', 'call.place', 'message.send',
     ],
@@ -37,22 +37,22 @@ export const ROLE_PRESETS: readonly RolePreset[] = [
   {
     key: 'sales',
     label: 'Sales',
-    capabilities: ['customer.create', 'customer.update', 'call.place', 'message.send', 'document.create', 'assistant.ask', 'report.read'],
+    capabilities: ['customer.read', 'customer.create', 'customer.update', 'call.place', 'message.send', 'document.create', 'assistant.ask', 'report.read'],
   },
   {
     key: 'support',
     label: 'Support',
-    capabilities: ['customer.create', 'customer.update', 'call.place', 'message.send', 'document.create', 'work_item.create', 'assistant.ask'],
+    capabilities: ['customer.read', 'customer.create', 'customer.update', 'call.place', 'message.send', 'document.create', 'work_item.create', 'assistant.ask'],
   },
   {
     key: 'dispatcher',
     label: 'Dispatcher',
-    capabilities: ['customer.update', 'work_item.create', 'work_item.transition', 'work_item.schedule', 'work_item.update', 'resource.create', 'resource.update'],
+    capabilities: ['customer.read', 'customer.update', 'work_item.create', 'work_item.transition', 'work_item.schedule', 'work_item.update', 'resource.create', 'resource.update'],
   },
   {
     key: 'technician',
     label: 'Technician',
-    capabilities: ['work_item.transition', 'work_item.record', 'document.create'],
+    capabilities: ['customer.read', 'work_item.transition', 'work_item.record', 'document.create'],
   },
-  { key: 'viewer', label: 'Viewer', capabilities: [] },
+  { key: 'viewer', label: 'Viewer', capabilities: ['customer.read'] },
 ];

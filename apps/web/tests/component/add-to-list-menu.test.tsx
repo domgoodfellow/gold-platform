@@ -31,8 +31,11 @@ describe('Add to…', () => {
     fireEvent.change(due, { target: { value: '2026-11-12T14:30' } });
     await chooseOption(screen.getByRole('combobox', { name: 'Owner' }), 'Alice Owner');
     await user.type(screen.getByRole('textbox', { name: /Note/ }), 'Discuss renewal');
+    // The reason for calling is asked for, never filled in as "Call".
+    expect(screen.getByRole('button', { name: 'Add 1' })).toBeDisabled();
+    await user.type(screen.getByRole('textbox', { name: 'Reason for calling' }), 'Renewal');
     await user.click(screen.getByRole('button', { name: 'Add 1' }));
-    await waitFor(() => expect(actions.add).toHaveBeenCalledWith('tenant', { customerIds: ['alice'] }, '', { dueAt: '2026-11-12T14:30', ownerMembershipId: 'owner', notes: 'Discuss renewal' }));
+    await waitFor(() => expect(actions.add).toHaveBeenCalledWith('tenant', { customerIds: ['alice'] }, 'Renewal', { dueAt: '2026-11-12T14:30', ownerMembershipId: 'owner', notes: 'Discuss renewal' }));
     expect(toast.success).toHaveBeenCalledWith('Added 1 contact to the call list.');
     expect(refresh).toHaveBeenCalled();
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -87,6 +90,7 @@ describe('Add to…', () => {
   it('words the toast for every mix of added and skipped', () => {
     expect(callListAddedMessage({ added: 1, alreadyOnList: 0, noPhone: 0 })).toBe('Added 1 contact to the call list.');
     expect(callListAddedMessage({ added: 0, alreadyOnList: 2, noPhone: 1 })).toBe('No one added: 2 contacts already on it, 1 contact with no phone number.');
+    expect(callListAddedMessage({ added: 2, alreadyOnList: 0, noPhone: 0, conflicts: 1 })).toBe('Added 2 contacts to the call list. Skipped 1 contact added by someone else just now.');
   });
 });
 

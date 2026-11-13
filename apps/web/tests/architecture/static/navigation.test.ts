@@ -618,14 +618,20 @@ describe('canonical Feature-level navigation gating', () => {
 
 describe('capability-relevance filtering (Slice E)', () => {
   it('leaves every kernel and general operational area visible to any role', () => {
-    // Today, Work, Schedule, Customers and the rest of the areas nobody assigned no
-    // `relevantCapabilities` — a role with zero capabilities still sees them, exactly as before
-    // this field existed.
+    // Today, Work, Schedule and the rest of the areas nobody assigned no `relevantCapabilities`
+    // — a role with zero capabilities still sees them, exactly as before this field existed.
     const noCapabilities = new Set<Capability>();
     const shown = AREA_GROUPS.flatMap((group) => areasIn(group.key, undefined, noCapabilities));
-    for (const segment of ['home', 'work', 'schedule', 'customers', 'locations', 'settings']) {
+    for (const segment of ['home', 'work', 'schedule', 'locations', 'settings']) {
       expect(shown.map((area) => area.segment)).toContain(segment);
     }
+  });
+
+  it('shows the contact directory only to a role that may view contacts', () => {
+    const contacts = (capabilities: Capability[]) => AREA_GROUPS.flatMap((group) => areasIn(group.key, undefined, new Set(capabilities))).map((area) => area.segment);
+    expect(contacts([])).not.toContain('customers');
+    expect(contacts(['customer.create', 'customer.update'])).not.toContain('customers');
+    expect(contacts(['customer.read'])).toContain('customers');
   });
 
   it('hides a feature-specific area from a role with none of its relevant capabilities', () => {

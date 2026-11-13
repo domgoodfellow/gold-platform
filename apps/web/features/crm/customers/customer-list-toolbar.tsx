@@ -19,10 +19,12 @@ export type CustomerDirectoryView = {
   added?: string;
   /** `1`: Needs review — Unspecified identity or no lifecycle yet. */
   review?: string;
+  /** `1`: archived contacts, where they are found and restored. */
+  archived?: string;
   optional: string[];
 };
 
-const KEYS = ['contactType', 'review', 'companyId', 'sort', 'group', 'lifecycle', 'temperature', 'stage', 'industry', 'website', 'added'] as const;
+const KEYS = ['contactType', 'review', 'companyId', 'sort', 'group', 'lifecycle', 'temperature', 'stage', 'industry', 'website', 'added', 'archived'] as const;
 
 /** The directory address for this view with some values replaced or removed — the one place the URL view model is written. */
 export function directoryHref(organizationId: string, view: CustomerDirectoryView, overrides: Partial<Record<keyof CustomerDirectoryView | 'page', string | undefined>> = {}) {
@@ -68,6 +70,7 @@ export function CustomerListToolbar({ organizationId, stages, industries, choice
     ['industry', 'Industry', value => value],
     ['website', 'Website', value => value === 'with' ? 'Has a website' : 'No website'],
     ['added', 'Added', () => 'Last 30 days'],
+    ['archived', 'Status', () => 'Archived'],
   ];
   const active: ActiveFilter[] = [
     ...(view.search ? [{ key: 'search', label: `Search: ${view.search}`, removeHref: href({ search: '' }) }] : []),
@@ -88,6 +91,7 @@ export function CustomerListToolbar({ organizationId, stages, industries, choice
         {industries.length > 0 ? <label className="flex flex-col gap-1 text-sm">Industry<SelectField name="industry" aria-label="Filter by industry" defaultValue={view.industry} options={[{ value: '', label: 'Any industry' }, ...industries.map((item) => ({ value: item, label: item }))]} /></label> : null}
         <label className="flex flex-col gap-1 text-sm">Website<SelectField name="website" aria-label="Filter by website" defaultValue={view.website} options={[{ value: '', label: 'Any website' }, { value: 'with', label: 'Has a website' }, { value: 'without', label: 'No website' }]} /></label>
         <label className="flex flex-col gap-1 text-sm">Added<SelectField name="added" aria-label="Filter by date added" defaultValue={view.added ?? ''} options={[{ value: '', label: 'Any time' }, { value: '30d', label: 'In the last 30 days' }]} /></label>
+        <label className="flex flex-col gap-1 text-sm">Status<SelectField name="archived" aria-label="Filter by status" defaultValue={view.archived ?? ''} options={[{ value: '', label: 'Active' }, { value: '1', label: 'Archived' }]} /></label>
       </>}
       sort={<SelectField name="sort" aria-label="Sort contacts" defaultValue={view.sort ?? ''} className="w-full md:w-40" options={[{ value: '', label: 'Newest first' }, { value: 'name', label: 'Name' }, { value: 'company', label: 'Company' }]} />}
       display={<>

@@ -17,6 +17,7 @@ const ALL: ContactIntakeOptions = {
   import: { state: 'available', href: '/organizations/org/library/imports/new' },
   sync: { state: 'available', href: '/organizations/org/library/sources', connectHref: '/organizations/org/settings/connections',
     sources: [{ id: 'r-1', name: 'Leads sheet', type: 'Google Sheets worksheet', href: '/organizations/org/library/sources/r-1', connection: 'active' }] },
+  mayView: true,
 };
 const definition = (key: string, label: string): FieldDefinition => ({ id: key, key, label, kind: 'text', entityType: 'customer', required: false, options: [], position: 0, createdAt: '2026-01-01' }) as FieldDefinition;
 const confirmation = () => screen.queryByRole('alertdialog', { name: 'Discard unsaved changes?' });
@@ -55,7 +56,7 @@ describe('Add contacts intake', () => {
   });
 
   it('explains unavailable paths instead of offering them', async () => {
-    const user = setup({ manual: { state: 'unavailable', reason: 'Your role cannot add contacts.' }, import: { state: 'unavailable', reason: 'Importing needs permission to manage data sources.' }, sync: { state: 'unavailable', reason: 'Synchronizing needs permission to manage data sources.', sources: [] } });
+    const user = setup({ manual: { state: 'unavailable', reason: 'Your role cannot add contacts.' }, import: { state: 'unavailable', reason: 'Importing needs permission to manage data sources.' }, sync: { state: 'unavailable', reason: 'Synchronizing needs permission to manage data sources.', sources: [] }, mayView: true });
     await user.click(screen.getAllByRole('button', { name: /Add contacts/ })[0]);
     const box = dialog('Add contacts');
     expect(within(box).queryByRole('button', { name: /Create manually/ })).toBeNull();
@@ -184,5 +185,17 @@ describe('Add contacts intake', () => {
     expect(await screen.findByRole('dialog', { name: 'Add a contact' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /Company/ })).toBeChecked();
     expect(screen.getByLabelText('Company name')).toBeInTheDocument();
+  });
+
+  it('does not offer View contact to a role that may add contacts but not view them', async () => {
+    customers.createCustomerAction.mockResolvedValue({ error: null, created: true, id: 'p-2', contactType: 'person', name: 'Blind Add' });
+    const user = setup({ ...ALL, mayView: false });
+    await manual(user);
+    await user.click(screen.getByRole('radio', { name: /Person/ }));
+    await user.type(screen.getByLabelText('Name'), 'Blind Add');
+    await user.click(screen.getByRole('button', { name: 'Save contact' }));
+    await screen.findByRole('dialog', { name: 'Contact added' });
+    expect(screen.queryByRole('link', { name: 'View contact' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Add another' })).toBeInTheDocument();
   });
 });

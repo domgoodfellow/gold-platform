@@ -22,7 +22,7 @@ import type { CommercialProposal } from '@/lib/domain/customers/commercial-propo
 import type { ProposalInvite } from '@/lib/domain/customers/proposal-invites';
 import type { AcceptedProposalHandoff } from '@/lib/domain/customers/proposal-handoff';
 import type { ConfigurationRecommendation } from '@/lib/domain/customers/configuration-recommendation';
-import type { Contact } from '@/lib/domain/contacts/contacts';
+import type { Contact, ContactRemoval } from '@/lib/domain/contacts/contacts';
 import type { DiscoverySnapshot } from '@/lib/domain/customers/discovery-snapshots';
 import type { CustomerStage } from '@/lib/domain/customers/stages';
 import type { StoredDocument } from '@/lib/domain/documents/documents';
@@ -94,6 +94,8 @@ export function CustomerDetail(props: {
   features: { voice: boolean; billing: boolean; portal: boolean };
   /** This contact's standing on the Dialer's call list, when Add to is offered. */
   callList?: CallListStanding;
+  /** Archive, restore and delete, offered to a member who holds `customer.delete`. */
+  removal?: ContactRemoval;
   permissions: { edit: boolean; call: boolean; attach: boolean; portal: boolean; priceManage: boolean };
 }) {
   const { organizationId, customer, stage, stages, definitions, features, permissions, mayPropose, role, timezone } = props;
@@ -114,7 +116,7 @@ export function CustomerDetail(props: {
 
   return (
     <>
-      <CustomerHeader organizationId={organizationId} customer={customer} stage={stage} definitions={definitions} stages={editStages} mayEdit={permissions.edit} mayCall={features.voice && permissions.call} openEditOn={classify === 'identity' ? 'identity' : classify === 'lifecycle' ? 'relationship' : undefined} callList={props.callList} />
+      <CustomerHeader organizationId={organizationId} customer={customer} stage={stage} definitions={definitions} stages={editStages} mayEdit={permissions.edit} mayCall={features.voice && permissions.call} openEditOn={classify === 'identity' ? 'identity' : classify === 'lifecycle' ? 'relationship' : undefined} callList={props.callList} removal={props.removal} />
       <RecordSubnavigation label="Contact sections" sections={sectionItems} current={section} subsections={viewItems} currentSubsection={view} />
       <div className="min-w-0">{renderSection(section, view)}</div>
     </>

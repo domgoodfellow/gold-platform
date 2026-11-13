@@ -6,6 +6,14 @@ import { DialerPopoutContext } from '@/features/communications/voice/dialer-popo
 import type { CallingOptions } from '@/lib/application/communications/calling-options';
 import type { DialerQueueEntry } from '@/lib/application/communications/dialer-queue';
 import { chooseOption, fieldValue } from '../support/select-field';
+import userEvent from '@testing-library/user-event';
+
+const removal = vi.hoisted(() => vi.fn());
+const refresh = vi.hoisted(() => vi.fn());
+const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+vi.mock('@/app/organizations/[organizationId]/calls/call-list-actions', () => ({ removeFromCallListAction: removal }));
+vi.mock('next/navigation', async (original) => ({ ...(await original<typeof import('next/navigation')>()), useRouter: () => ({ refresh }) }));
+vi.mock('sonner', () => ({ toast }));
 
 const dial = vi.hoisted(() => vi.fn().mockResolvedValue(true));
 const lookup = vi.hoisted(() => vi.fn());
@@ -17,7 +25,7 @@ vi.mock('@/features/communications/voice/add-to-call-list', () => ({ AddToCallLi
 vi.mock('@/features/communications/voice/active-call-dock', () => ({ ActiveCallDock: ({ placement }: { placement: string }) => <div data-testid="live-call">Live call controls ({placement})</div> }));
 const entry = (id: string, name: string, phone: string | null, customerId = id): DialerQueueEntry => ({
   task: { id, customerId, customerName: name, title: `Call ${name}`, notes: `Recorded notes for ${name}`, dueAt: '2026-10-17T12:00:00Z', kind: 'call', status: 'open', opportunityId: null, opportunityTitle: null, ownerMembershipId: null, ownerName: null, completedAt: null, createdAt: '2026-10-16T12:00:00Z' },
-  customer: { id: customerId, name, phone, email: null, stageId: null, custom: {}, createdAt: '2026-10-16T12:00:00Z' },
+  customer: { id: customerId, name, phone, email: null },
   recentCalls: [],
 });
 const options: CallingOptions = { numbers: [{ id: 'office', e164: '+14165550100', label: 'Office' }], defaultNumber: { id: 'office', e164: '+14165550100', label: 'Office' }, unavailableReason: null, blocker: null };
@@ -226,4 +234,74 @@ describe('dialer toolbar composition', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Call' }));
     await waitFor(() => expect(dial).toHaveBeenCalledWith(expect.objectContaining({ toNumber: '+14165550188', customerId: undefined, phoneNumberId: 'other-line' })));
   });
+});
+
+describe('removing someone from the call list', () => {
+  it('is offered on each entry only to members who hold the removal permission', () => {
+    const app = render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101'), entry('bob', 'Bob', '+14165550102')]} mayRemoveFromList />);
+    expect(screen.getByRole('button', { name: 'Actions for Alice' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Actions for Bob' })).toBeVisible();
+    app.rerender(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101')]} />);
+    expect(screen.queryByRole('button', { name: 'Actions for Alice' })).not.toBeInTheDocument();
+  });
+
+  it('asks first, says what is kept, then cancels only that entry and confirms with a toast', async () => {
+    removal.mockResolvedValue({ error: null });
+    const user = userEvent.setup();
+    render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101'), entry('bob', 'Bob', '+14165550102')]} mayRemoveFromList />);
+    await user.click(screen.getByRole('button', { name: 'Actions for Bob' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Remove from list' }));
+    const confirm = await screen.findByRole('alertdialog', { name: 'Remove Bob from the call list?' });
+    expect(confirm).toHaveTextContent('The contact, their notes and call history are kept, and a call in progress is not ended.');
+    expect(removal).not.toHaveBeenCalled();
+    await user.click(within(confirm).getByRole('button', { name: 'Remove from list' }));
+    await waitFor(() => expect(removal).toHaveBeenCalledWith('tenant', 'bob'));
+    expect(toast.success).toHaveBeenCalledWith('Removed Bob from the call list.');
+    expect(refresh).toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+  });
+
+  it('keeps the dialog open with the reason when removal is refused, and Cancel removes nothing', async () => {
+    removal.mockResolvedValue({ error: 'Your role cannot remove contacts from the call list.' });
+    const user = userEvent.setup();
+    render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101')]} mayRemoveFromList />);
+    await user.click(screen.getByRole('button', { name: 'Actions for Alice' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Remove from list' }));
+    const confirm = await screen.findByRole('alertdialog');
+    await user.click(within(confirm).getByRole('button', { name: 'Remove from list' }));
+    expect(await within(confirm).findByText('Your role cannot remove contacts from the call list.')).toBeVisible();
+    expect(toast.success).not.toHaveBeenCalled();
+    await user.click(within(confirm).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(removal).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves a call in progress connected when its entry is removed', async () => {
+    removal.mockResolvedValue({ error: null });
+    telephone.value = { ...telephone.value, status: 'ready', activeCall: { status: 'in_progress', direction: 'outgoing', muted: false, startedAt: Date.now(), callId: 'call', contactLabel: 'Alice' } };
+    const user = userEvent.setup();
+    const app = render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101')]} mayRemoveFromList />);
+    await user.click(screen.getByRole('button', { name: 'Actions for Alice' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Remove from list' }));
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Remove from list' }));
+    await waitFor(() => expect(removal).toHaveBeenCalledWith('tenant', 'alice'));
+    // The refreshed page no longer lists them; the call carries on in the console.
+    app.rerender(<DialerWorkspace {...common} queue={[]} queueTotal={0} mayRemoveFromList />);
+    expect(screen.getByTestId('live-call')).toHaveTextContent('inline');
+    expect(telephone.value.unregister).not.toHaveBeenCalled();
+  });
+
+describe('a caller who may not view contacts', () => {
+  it('still shows the listed contact’s name and number, without links into Contacts', () => {
+    render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101')]} mayViewContacts={false} />);
+    expect(screen.getAllByText('Alice').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('link', { name: 'Alice' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Open contact' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Open call history' })).toBeNull();
+  });
+  it('offers the contact record to a caller who may view contacts', () => {
+    render(<DialerWorkspace {...common} queue={[entry('alice', 'Alice', '+14165550101')]} />);
+    expect(screen.getByRole('link', { name: 'Open contact' })).toHaveAttribute('href', '/organizations/tenant/crm/contacts/alice');
+  });
+});
 });

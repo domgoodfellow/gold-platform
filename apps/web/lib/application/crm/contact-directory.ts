@@ -6,6 +6,8 @@ export type ContactDirectoryQuery = {
   search?: string; contactType?: string; companyId?: string; sort?: string; group?: string;
   lifecycle?: string; temperature?: string; stage?: string; industry?: string; website?: string;
   added?: string; review?: string;
+  /** `1`: archived contacts instead of active ones. */
+  archived?: string;
 };
 
 /** The CRM Dashboard's New contacts window: the 30 days before the request. */
@@ -29,10 +31,11 @@ export function directoryFilter(view: ContactDirectoryQuery, now: Date = new Dat
     website: view.website === 'with' || view.website === 'without' ? view.website : undefined,
     addedSince: view.added === '30d' ? thirtyDaysAgo(now) : undefined,
     needsReview: view.review === '1',
+    archived: view.archived === '1',
   };
 }
 
 /** Whether a view narrows the directory at all; an unfiltered view means every contact. */
 export function directoryFiltered(view: ContactDirectoryQuery): boolean {
-  return Boolean(view.contactType || view.companyId || view.lifecycle || view.temperature || view.search || view.stage || view.industry || view.website || view.added || view.review);
+  return Boolean(view.contactType || view.companyId || view.lifecycle || view.temperature || view.search || view.stage || view.industry || view.website || view.added || view.review || view.archived);
 }

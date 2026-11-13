@@ -257,6 +257,19 @@ Rollback: rolling back the web app removes Send invoice. Do not roll the API bac
 
 Rollback never restores member writes. Before step 5, a web or API rollback returns to the 2G behaviour, which is still vulnerable. After step 5, rolling back the web or API only stops PDF creation, which fails closed: invoices are still issued, and Create PDF can be used once the writer is back. Do not recreate the dropped policies or function. To stop the writer, revoke `execute` on its four functions from `invoice_document_writer`. Fix forward.
 
+
+### Dialer call list, contact permissions and contact removal
+
+Migrations `20261113000001_one_call_list_entry_and_explicit_removal`, `20261113000002_contact_read_and_removal` and `20261113000003_import_review_matching` ship with one web release. The API is unchanged.
+
+1. Compare the target's migration history with the repository. Every earlier migration must be applied first; the local development database was found missing eight committed migrations (`20261108000001` to `20261112192221`), some applied by hand without a history row. Apply reviewed predecessors only.
+2. Take a backup or confirm point-in-time recovery for the target.
+3. Run the read-only preflight and keep its output: `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/preflight/20261113_contacts_and_call_list.sql`. It reports whether anything is already applied, how many contacts have duplicate open Call tasks and every task the cleanup would cancel (with the one kept), how many roles gain View contacts, Delete contacts and call list removal, which roles manage tasks but will lose Cancel on Call tasks until granted `call_list.remove` (an owner decision before release), the industry templates updated and any imports waiting to be applied.
+4. Apply the three migrations in order, each in its own transaction. Then deploy the web app straight away: between the two, the previous web app reports a second add of the same contact to the call list as a failure, and cannot decide import rows held for review.
+5. Validate: rerun the preflight (section 1 all true, section 2 zero); `select count(*) from events where action = 'follow_up.cancelled' and payload->>'reason' = 'duplicate_call_list_entry'` equals the preflight's tasks to cancel, each with actor `00000000-0000-4000-8000-0000000000a3`; every role holds `customer.read`, and every role holding `organization.manage` holds `customer.delete` and `call_list.remove`; `roles_capabilities_update_guard` is enabled. In a sandbox business, as an administrator, archive and restore a test contact and delete one with no records; as a role without View contacts, confirm Contacts is not offered and the Dialer list still shows names and numbers.
+
+Recovery: the database changes are forward-only. Nothing is deleted by the migrations. Duplicate Call tasks are cancelled, not deleted, and are listed by the event query above. Reopening one needs the other open Call task for that contact to be completed or cancelled first, because one open Call task per contact is enforced. Permission grants can be changed by owners in Roles & Permissions. Rolling the web app back is safe: every existing role can still view contacts, and the previous app does not offer archive or delete.
+
 ---
 
 ## Scheduled execution

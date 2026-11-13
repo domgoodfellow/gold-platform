@@ -62,7 +62,17 @@ export type ImportRun = {
   finishedAt: string | null;
 };
 
-export type StagingRowStatus = 'ready' | 'duplicate' | 'invalid' | 'ignored' | 'applied' | 'failed';
+export type StagingRowStatus = 'ready' | 'review' | 'duplicate' | 'invalid' | 'ignored' | 'applied' | 'failed';
+
+/**
+ * Why staging chose a row's action. `source`: linked to its contact by the source's stable ID.
+ * `email`: the one contact with this email. `email_shared` / `email_unconfirmed`: contacts with this
+ * email that a person must choose between (several share it, or the mapping does not trust email).
+ * `phone`: contacts with this phone number and no email to tell them apart. `phone_in_file`,
+ * `email_in_file`, `contact_in_file`: an earlier row of the same file.
+ */
+export type ImportMatchReason = 'source' | 'source_other_file' | 'email' | 'email_shared' | 'email_unconfirmed' | 'phone' | 'phone_in_file' | 'email_in_file' | 'contact_in_file';
+export type ImportRowDecision = 'create' | 'update' | 'skip';
 
 export type StagingRow = {
   id: string;
@@ -70,9 +80,14 @@ export type StagingRow = {
   raw: Record<string, string>;
   normalized: Record<string, unknown>;
   validationErrors: string[];
-  proposedAction: 'create' | 'update' | 'skip';
+  proposedAction: 'create' | 'update' | 'skip' | 'review';
   matchedCustomerId: string | null;
   status: StagingRowStatus;
+  matchReason: ImportMatchReason | null;
+  /** Existing contacts this row might be; a person chooses, nothing acts on them alone. */
+  candidateIds: string[];
+  /** Whether a person decided this row's action rather than staging. */
+  decided: boolean;
 };
 
 function toRun(row: {
@@ -144,7 +159,7 @@ export async function listStagingRows(
 ): Promise<StagingRow[]> {
   let query = db
     .from('import_staging_rows')
-    .select('id, source_record_key, raw, normalized, validation_errors, proposed_action, matched_customer_id, status')
+    .select('id, source_record_key, raw, normalized, validation_errors, proposed_action, matched_customer_id, status, match_reason, candidate_customer_ids, decided_by')
     .eq('organization_id', input.organizationId)
     .eq('run_id', input.runId)
     .order('created_at', { ascending: true });
@@ -170,6 +185,9 @@ export async function listStagingRows(
     proposedAction: row.proposed_action as StagingRow['proposedAction'],
     matchedCustomerId: row.matched_customer_id,
     status: row.status as StagingRowStatus,
+    matchReason: row.match_reason as ImportMatchReason | null,
+    candidateIds: row.candidate_customer_ids ?? [],
+    decided: row.decided_by !== null,
   }));
 }
 
@@ -265,6 +283,40 @@ export async function applyImportRun(
     if (error.code === '22023' && error.message.includes('already been applied')) {
       throw new DomainError('This import has already run.', 'integrations.already_applied');
     }
+    if (error.code === '22023' && error.message.includes('Needs review')) {
+      throw new DomainError(error.message, 'integrations.review_pending');
+    }
     throw fromDatabaseError(error, 'integrations.apply_failed');
   }
+}
+
+/** The database's refusals of a decision are written for the person deciding; anything else is a failure. */
+function decisionFailure(error: { code?: string; message: string }): never {
+  if (error.code === '42501') throw new DomainError('You cannot run imports here.', 'integrations.forbidden');
+  if (error.code === '22023' && /^[A-Z]/.test(error.message)) throw new DomainError(error.message, 'integrations.decision_refused');
+  throw fromDatabaseError(error, 'integrations.decision_failed');
+}
+
+/**
+ * A person's decision on one staged row before applying: create a new contact, update one of the
+ * contacts it might be (`customerId`, from its candidates or its match), or skip it.
+ */
+export async function decideImportRow(
+  db: Db,
+  input: { organizationId: string; runId: string; rowId: string; decision: ImportRowDecision; customerId?: string | null },
+): Promise<void> {
+  await requireActor(db);
+  const { error } = await db.rpc('decide_import_row', {
+    p_organization_id: input.organizationId, p_run_id: input.runId, p_row_id: input.rowId,
+    p_decision: input.decision, p_customer_id: (input.customerId ?? null) as string,
+  });
+  if (error) decisionFailure(error);
+}
+
+/** Skips every row still marked Needs review, in one step. Returns how many were skipped. */
+export async function skipUndecidedImportRows(db: Db, input: { organizationId: string; runId: string }): Promise<number> {
+  await requireActor(db);
+  const { data, error } = await db.rpc('skip_undecided_import_rows', { p_organization_id: input.organizationId, p_run_id: input.runId });
+  if (error) decisionFailure(error);
+  return data ?? 0;
 }

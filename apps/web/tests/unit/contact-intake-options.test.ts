@@ -19,18 +19,18 @@ beforeEach(() => {
 
 describe('contact intake permission contract', () => {
   it('offers every path to a member who holds each destination capability', async () => {
-    const result = await options(['customer.create', 'customer.update', 'integration.manage'], ['integrations']);
+    const result = await options(['customer.read', 'customer.create', 'customer.update', 'integration.manage'], ['integrations']);
     expect(result.manual).toEqual({ state: 'available' });
     expect(result.import).toEqual({ state: 'available', href: '/organizations/org/library/imports/new', note: undefined });
     expect(result.sync).toMatchObject({ state: 'available', connectHref: '/organizations/org/settings/connections',
       sources: [{ id: 'sheet', name: 'Leads sheet', type: 'Google Sheets worksheet', connection: 'needs_attention', href: '/organizations/org/library/sources/sheet' }] });
   });
   it('does not require the Integrations module for file import; it only gates connecting a provider', async () => {
-    const result = await options(['customer.create', 'customer.update', 'integration.manage']);
+    const result = await options(['customer.read', 'customer.create', 'customer.update', 'integration.manage']);
     expect(result.import.state).toBe('available');
     expect(result.sync).toMatchObject({ state: 'available', connectHref: undefined });
     sources.listResources.mockResolvedValue([]);
-    expect((await options(['customer.create', 'customer.update', 'integration.manage'])).sync).toMatchObject({ state: 'unavailable', reason: expect.stringContaining('Integrations in your plan') });
+    expect((await options(['customer.read', 'customer.create', 'customer.update', 'integration.manage'])).sync).toMatchObject({ state: 'unavailable', reason: expect.stringContaining('Integrations in your plan') });
   });
   it('explains each refused path separately and never reads sources without integration.manage', async () => {
     const result = await options(['customer.update']);
@@ -41,8 +41,17 @@ describe('contact intake permission contract', () => {
     expect(anyIntake(result)).toBe(false);
   });
   it('matches the per-row write checks: import needs customer.create or customer.update and says which half is missing', async () => {
-    expect((await options(['integration.manage'])).import).toMatchObject({ state: 'unavailable', reason: expect.stringContaining('cannot add or change') });
-    expect((await options(['integration.manage', 'customer.update'])).import).toMatchObject({ state: 'available', note: expect.stringContaining('cannot add new ones') });
-    expect((await options(['integration.manage', 'customer.create'])).import).toMatchObject({ state: 'available', note: expect.stringContaining('cannot update existing ones') });
+    expect((await options(['customer.read', 'integration.manage'])).import).toMatchObject({ state: 'unavailable', reason: expect.stringContaining('cannot add or change') });
+    expect((await options(['customer.read', 'integration.manage', 'customer.update'])).import).toMatchObject({ state: 'available', note: expect.stringContaining('cannot add new ones') });
+    expect((await options(['customer.read', 'integration.manage', 'customer.create'])).import).toMatchObject({ state: 'available', note: expect.stringContaining('cannot update existing ones') });
+  });
+  it('keeps adding apart from viewing: a role that cannot view contacts adds by hand but does not import, sync or open the result', async () => {
+    const result = await options(['customer.create', 'customer.update', 'integration.manage'], ['integrations']);
+    expect(result.manual).toEqual({ state: 'available' });
+    expect(result.mayView).toBe(false);
+    expect(result.import).toMatchObject({ state: 'unavailable', reason: expect.stringContaining('cannot view') });
+    expect(result.sync).toMatchObject({ state: 'unavailable', reason: expect.stringContaining('cannot view') });
+    expect(sources.listResources).not.toHaveBeenCalled();
+    expect((await options(['customer.read', 'customer.create'])).mayView).toBe(true);
   });
 });

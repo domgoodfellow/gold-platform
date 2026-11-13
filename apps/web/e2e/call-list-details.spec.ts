@@ -29,6 +29,7 @@ test('call-list task details persist atomically and typed-number matching refuse
       await page.getByRole('button', { name: 'Add to…', exact: true }).click();
       await page.getByRole('menuitem', { name: 'Call list', exact: true }).click();
       const dialog = page.getByRole('dialog', { name: 'Add to call list' });
+      await dialog.getByRole('textbox', { name: 'Reason for calling', exact: true }).fill('Renewal');
       await dialog.getByLabel('Due', { exact: true }).fill('2026-11-12T14:30');
       await chooseOption(dialog.getByRole('combobox', { name: 'Owner', exact: true }), owner.display_name);
       await dialog.getByRole('textbox', { name: /^Note/ }).fill('Discuss the renewal');
@@ -47,8 +48,9 @@ test('call-list task details persist atomically and typed-number matching refuse
     expect(saved.rows).toHaveLength(1);
     expect(new Date(saved.rows[0].due_at).toISOString()).toBe(localDateTimeToInstant('2026-11-12T14:30', org.timezone));
     expect(saved.rows[0]).toMatchObject({ owner_membership_id: owner.id, notes: 'Discuss the renewal' });
+    expect((await pg.query('select title from crm_tasks where organization_id=$1 and customer_id=$2', [organizationId, contact])).rows[0].title).toBe('Renewal');
     const fresh = await createContact(db, { organizationId, name: 'Refused owner fixture', phone: '+14165550989' });
-    await expect(addToCallList(db, { organizationId, target: { customerIds: [fresh] }, ownerMembershipId: '99999999-9999-4999-8999-999999999999', notes: 'Must not be saved' })).rejects.toThrow();
+    await expect(addToCallList(db, { organizationId, target: { customerIds: [fresh] }, reason: 'Renewal', ownerMembershipId: '99999999-9999-4999-8999-999999999999', notes: 'Must not be saved' })).rejects.toThrow();
     expect((await pg.query('select id from crm_tasks where organization_id=$1 and customer_id=$2', [organizationId, fresh])).rows).toHaveLength(0);
     expect(await dialerContactCandidates(db, { organizationId, number: '+1 (416) 555-0988' })).toMatchObject([{ id: contact }]);
     await page.goto(`${base}/calls?to=%2B14165550988`);

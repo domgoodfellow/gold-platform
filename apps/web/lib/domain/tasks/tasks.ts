@@ -22,6 +22,12 @@ export type TaskFilter = {
 };
 const SELECT = '*, customer:contacts!crm_follow_ups_organization_id_customer_id_fkey(name), opportunity:opportunities!crm_follow_ups_organization_id_customer_id_opportunity_id_fkey(title)';
 function failure(message: string): never { throw new DomainError(message, 'follow_ups.failed'); }
+/** The call list's own database rules, said in the words of the screen that tripped them. */
+function writeFailure(error: { code?: string; message: string }): never {
+  if (error.code === '23505' && error.message.includes('crm_tasks_one_open_call_per_contact')) throw new DomainError('This contact is already on the call list.', 'call_list.already_listed');
+  if (error.code === '42501' && error.message.includes('call list')) throw new DomainError('Your role cannot remove contacts from the call list.', 'call_list.remove_forbidden');
+  failure(error.message);
+}
 export async function listTasks(db: Db, input: TaskFilter): Promise<Counted<CrmTask>> {
   let query = db.from('crm_tasks').select(SELECT, { count: 'exact' }).eq('organization_id', input.organizationId);
   if (input.id) query = query.eq('id',input.id);
@@ -57,7 +63,7 @@ function values(input: TaskInput) {
 export async function createTask(db: Db, input: TaskInput): Promise<string> {
   const actor = await requireActor(db);
   const { data, error } = await db.from('crm_tasks').insert({ ...values(input), organization_id: input.organizationId, customer_id: input.customerId, created_by: actor.id }).select('id').single();
-  if (error) failure(error.message);
+  if (error) writeFailure(error);
   return data.id;
 }
 /** Of these contacts, the ones that already have an open Call task: on the Dialer's call list. */
@@ -68,26 +74,45 @@ export async function openCallCustomerIds(db: Db, input: { organizationId: strin
   if (error) failure(error.message);
   return new Set((data ?? []).map(row => row.customer_id));
 }
-/** One open Call task per contact, in one statement: every contact is added or none is. */
-export async function createCallTasks(db: Db, input: { organizationId: string; customerIds: readonly string[]; title: string; dueAt: string; notes?: string; ownerMembershipId?: string | null }): Promise<number> {
-  const actor = await requireActor(db);
-  if (!input.customerIds.length) return 0;
+/**
+ * One open Call task per contact, in one statement. The database keeps one open Call task per
+ * contact, so someone put on the list by another person a moment earlier is skipped rather than
+ * added twice or failing the rest. Returns the contacts actually added.
+ */
+export async function createCallTasks(db: Db, input: { organizationId: string; customerIds: readonly string[]; title: string; dueAt: string; notes?: string; ownerMembershipId?: string | null }): Promise<string[]> {
+  await requireActor(db);
+  if (!input.customerIds.length) return [];
   const shared = values({ ...input, customerId: '', kind: 'call' });
-  const rows = input.customerIds.map(customerId => ({ ...shared, organization_id: input.organizationId, customer_id: customerId, created_by: actor.id }));
-  const { data, error } = await db.from('crm_tasks').insert(rows).select('id');
-  if (error) failure(error.message);
-  return data.length;
+  const { data, error } = await db.rpc('add_call_list_entries', {
+    p_organization_id: input.organizationId, p_customer_ids: [...input.customerIds], p_title: shared.title, p_due_at: shared.due_at,
+    p_owner_membership_id: shared.owner_membership_id as string, p_notes: shared.notes as string,
+  });
+  if (error) writeFailure(error);
+  return (data ?? []) as string[];
+}
+/**
+ * Takes one contact off the call list by cancelling their open Call task. The contact, completed
+ * calls, notes and history stay, and a call in progress is not a task, so it is not touched.
+ * Needs `call_list.remove`, which the database checks.
+ */
+export async function removeFromCallList(db: Db, input: { organizationId: string; taskId: string }): Promise<void> {
+  await requireActor(db);
+  const { error } = await db.rpc('remove_from_call_list', { p_organization_id: input.organizationId, p_task_id: input.taskId });
+  if (!error) return;
+  if (error.code === 'P0002') throw new DomainError('This contact is no longer on the call list.', 'call_list.not_listed');
+  if (error.code === '42501') throw new DomainError('Your role cannot remove contacts from the call list.', 'call_list.remove_forbidden');
+  failure(error.message);
 }
 export async function updateTask(db: Db, input: TaskInput & { id: string }): Promise<void> {
   await requireActor(db);
   const { data, error } = await db.from('crm_tasks').update(values(input)).eq('organization_id', input.organizationId).eq('customer_id',input.customerId).eq('id',input.id).eq('status','open').select('id');
-  if (error) failure(error.message);
+  if (error) writeFailure(error);
   if (!data.length) failure('This task is no longer open or is not yours to edit.');
 }
 export async function changeTaskStatus(db: Db, input: { organizationId: string; id: string; status: 'completed' | 'cancelled' }): Promise<void> {
   await requireActor(db);
   if (!['completed','cancelled'].includes(input.status)) failure('Choose complete or cancel.');
   const { data, error } = await db.from('crm_tasks').update({ status: input.status }).eq('organization_id', input.organizationId).eq('id', input.id).eq('status','open').select('id');
-  if (error) failure(error.message);
+  if (error) writeFailure(error);
   if (!data.length) failure('This task is no longer open or is not yours to change.');
 }

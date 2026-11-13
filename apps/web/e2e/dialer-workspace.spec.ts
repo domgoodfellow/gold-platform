@@ -41,8 +41,9 @@ test('Dialer lists the tenant’s open Call tasks and the global pop-out survive
     await createCustomer(db, { organizationId, name: 'Erin Florist', phone: '+14165550104' });
     const finn = await createCustomer(db, { organizationId, name: 'Finn Garage', phone: '+14165550105' });
     const add = (customerId: string, title: string, kind: 'call' | 'email' = 'call', org = organizationId) => createFollowUp(db, { organizationId: org, customerId, title, kind, notes: 'Recorded customer follow-up context', dueAt: '2026-10-17T12:00:00Z' });
-    await add(alice, 'Discuss the recorded quote'); await add(bob, 'Confirm appointment'); await add(alice, 'Excluded email follow-up', 'email');
+    // One open Call task per contact: the completed call came first.
     const completed = await add(alice, 'Excluded completed call'); await changeFollowUpStatus(db, { organizationId, id: completed, status: 'completed' });
+    await add(alice, 'Discuss the recorded quote'); await add(bob, 'Confirm appointment'); await add(alice, 'Excluded email follow-up', 'email');
     await add(hidden, 'Excluded other business call', 'call', otherOrg);
     await pg.query('delete from platform_staff where user_id=$1', [made.data.user.id]);
     await page.goto('/login'); await page.getByLabel('Email', { exact: true }).fill(email); await page.getByLabel('Password', { exact: true }).fill(password);
@@ -53,7 +54,7 @@ test('Dialer lists the tenant’s open Call tasks and the global pop-out survive
       await page.goto(`${base}/calls`);
       await expect(page.getByRole('heading', { name: 'Dialer', exact: true })).toHaveCount(1);
       // Below desktop width one region is shown at a time; choosing a row returns to Calling.
-      const region = async (name: 'Call list' | 'Customer') => { const switcher = page.getByRole('group', { name: 'Dialer region' }); if (await switcher.isVisible()) await switcher.getByRole('button', { name, exact: true }).click(); };
+      const region = async (name: 'Call list' | 'Contact') => { const switcher = page.getByRole('group', { name: 'Dialer region' }); if (await switcher.isVisible()) await switcher.getByRole('button', { name, exact: true }).click(); };
       await region('Call list');
       await expect(page.getByRole('button', { name: /Alice Plumbing.*Discuss/ })).toBeVisible();
       await expect(page.getByText('Excluded email follow-up')).toHaveCount(0);
@@ -66,7 +67,7 @@ test('Dialer lists the tenant’s open Call tasks and the global pop-out survive
       await region('Call list');
       await page.getByRole('button', { name: /Alice Plumbing.*Discuss/ }).click();
       await expect(page.getByRole('textbox', { name: 'Number to call', exact: true })).toHaveValue('(416)555-0101');
-      await region('Customer');
+      await region('Contact');
       await expect(page.getByRole('link', { name: 'Alice Plumbing', exact: true })).toHaveAttribute('href', `${base}/crm/contacts/${alice}`);
       await page.getByRole('link', { name: 'Call history', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Call history', exact: true })).toBeVisible();
@@ -89,10 +90,8 @@ test('Dialer lists the tenant’s open Call tasks and the global pop-out survive
       await popup.getByRole('button', { name: 'Return to GildOps', exact: true }).click();
       await expect.poll(() => popup.isClosed()).toBe(true);
     }
-    // Add to list: pick contacts from inside the Dialer; each joins the call list without leaving it.
-    for (const width of [1440, 390]) {
-      await page.setViewportSize({ width, height: 1000 });
-      await page.goto(`${base}/calls`);
+    // Add to list, in three steps: choose contacts, say why to call them, then review and add.
+    const openAddToList = async () => {
       const switcher = page.getByRole('group', { name: 'Dialer region' });
       const addToList = page.getByRole('region', { name: 'Call list' }).getByRole('button', { name: 'Add to list', exact: true });
       // Until the page is interactive a tap on the region switch can be lost, so it is repeated until the list shows.
@@ -102,35 +101,98 @@ test('Dialer lists the tenant’s open Call tasks and the global pop-out survive
       }).toPass({ timeout: 15_000 });
       await addToList.click();
       const picker = page.getByRole('dialog', { name: 'Add to call list' });
+      await expect(picker.getByRole('list', { name: 'Contacts' })).toBeVisible();
+      return picker;
+    };
+    const fitsWidth = () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+      await page.goto(`${base}/calls`);
+      const picker = await openAddToList();
       await expect(picker.getByRole('checkbox', { name: /Alice Plumbing/ })).toBeDisabled();
       await expect(picker.getByRole('checkbox', { name: /Dana Bakery/ })).toBeDisabled();
       await expect(picker.getByText('Other business private customer')).toHaveCount(0);
-      if (width === 1440) {
-        await picker.getByRole('searchbox', { name: 'Find contacts' }).fill('Carl');
-        await picker.getByRole('checkbox', { name: /Carl Roofing/ }).click();
-        await picker.getByRole('textbox', { name: /Reason/ }).fill('Roof quote');
-        await picker.getByRole('button', { name: 'Add 1 to list', exact: true }).click();
-        await expect(page.getByText('Added 1 contact to the call list.')).toBeVisible();
-        await expect(picker).toBeHidden();
-        await expect(page.getByRole('button', { name: /Carl Roofing.*Roof quote/ })).toBeVisible();
-      } else {
-        await expect(picker.getByRole('checkbox', { name: /Carl Roofing/ })).toBeDisabled();
-        await page.screenshot({ path: testInfo.outputPath('add-to-list-390.png'), fullPage: true });
-        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-        await picker.getByRole('button', { name: 'Cancel', exact: true }).click();
-        await expect(picker).toBeHidden();
-      }
+      // The dialog keeps its size while a search runs and when it narrows the results.
+      const before = await picker.boundingBox();
+      await picker.getByRole('searchbox', { name: 'Find contacts' }).fill(width === 1440 ? 'Carl' : 'Erin');
+      await expect(picker.getByRole('checkbox', { name: /Alice Plumbing/ })).toHaveCount(0);
+      const after = await picker.boundingBox();
+      expect(Math.abs(after!.height - before!.height)).toBeLessThan(1);
+      expect(Math.abs(after!.width - before!.width)).toBeLessThan(1);
+      await picker.getByRole('checkbox', { name: width === 1440 ? /Carl Roofing/ : /Erin Florist/ }).click();
+      await expect(picker.getByRole('status').filter({ hasText: '1 contact chosen' })).toBeVisible();
+      await page.screenshot({ path: testInfo.outputPath(`add-to-list-contacts-${width}.png`) });
+      await picker.getByRole('button', { name: 'Next', exact: true }).click();
+      const reason = picker.getByRole('textbox', { name: 'Reason for calling', exact: true });
+      await expect(picker.getByRole('button', { name: 'Review', exact: true })).toBeDisabled();
+      await reason.fill(width === 1440 ? 'Roof quote' : 'Flower order');
+      await picker.getByRole('button', { name: 'Back', exact: true }).click();
+      await expect(picker.getByRole('checkbox', { name: width === 1440 ? /Carl Roofing/ : /Erin Florist/ })).toBeChecked();
+      await picker.getByRole('button', { name: 'Next', exact: true }).click();
+      await expect(reason).toHaveValue(width === 1440 ? 'Roof quote' : 'Flower order');
+      await page.screenshot({ path: testInfo.outputPath(`add-to-list-details-${width}.png`) });
+      await picker.getByRole('button', { name: 'Review', exact: true }).click();
+      await expect(picker.getByRole('heading', { name: 'Will be added (1)' })).toBeVisible();
+      await expect(picker.getByRole('button', { name: 'Add 1 to list', exact: true })).toBeInViewport();
+      expect(await fitsWidth()).toBe(true);
+      await page.screenshot({ path: testInfo.outputPath(`add-to-list-review-${width}.png`) });
+      await picker.getByRole('button', { name: 'Add 1 to list', exact: true }).click();
+      await expect(page.getByText('Added 1 contact to the call list.')).toBeVisible();
+      await expect(picker).toBeHidden();
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(`${base}/calls`);
+    await expect(page.getByRole('button', { name: /Carl Roofing.*Roof quote/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Erin Florist.*Flower order/ })).toBeVisible();
+    // A contact created inside Add to list, through the ordinary contact form, is chosen and added.
+    const picker = await openAddToList();
+    await picker.getByRole('button', { name: 'Create contact', exact: true }).click();
+    const form = page.getByRole('dialog', { name: 'Add a contact' });
+    await form.getByRole('radio', { name: /Person/ }).check({ force: true });
+    await form.getByLabel('Name', { exact: true }).fill('Gina Gallery');
+    await form.getByLabel(/^Phone/).fill('+14165550107');
+    await form.getByRole('button', { name: 'Save contact', exact: true }).click();
+    await expect(picker.getByRole('checkbox', { name: /Gina Gallery/ })).toBeChecked();
+    await picker.getByRole('button', { name: 'Next', exact: true }).click();
+    await picker.getByRole('textbox', { name: 'Reason for calling', exact: true }).fill('Welcome call');
+    await picker.getByRole('button', { name: 'Review', exact: true }).click();
+    await picker.getByRole('button', { name: 'Add 1 to list', exact: true }).click();
+    await expect(picker).toBeHidden();
+    await expect(page.getByRole('button', { name: /Gina Gallery.*Welcome call/ })).toBeVisible();
+
+    // Remove from list: asks first, cancels the Call task only, and the contact stays.
+    for (const [width, name] of [[1440, 'Carl Roofing'], [390, 'Gina Gallery']] as const) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+      await page.goto(`${base}/calls`);
+      const switcher = page.getByRole('group', { name: 'Dialer region' });
+      const actions = page.getByRole('button', { name: `Actions for ${name}`, exact: true });
+      await expect(async () => {
+        if (await switcher.isVisible()) await switcher.getByRole('button', { name: 'Call list', exact: true }).click();
+        await expect(actions).toBeVisible({ timeout: 1_000 });
+      }).toPass({ timeout: 15_000 });
+      await actions.click();
+      await page.getByRole('menuitem', { name: 'Remove from list', exact: true }).click();
+      const confirm = page.getByRole('alertdialog', { name: `Remove ${name} from the call list?` });
+      await expect(confirm).toContainText('a call in progress is not ended');
+      await page.screenshot({ path: testInfo.outputPath(`remove-from-list-${width}.png`) });
+      expect(await fitsWidth()).toBe(true);
+      await confirm.getByRole('button', { name: 'Remove from list', exact: true }).click();
+      await expect(page.getByText(`Removed ${name} from the call list.`)).toBeVisible();
+      await expect(page.getByRole('button', { name: new RegExp(name) })).toHaveCount(0);
+      const rows = await pg.query("select t.status, c.name from crm_tasks t join contacts c on c.organization_id=t.organization_id and c.id=t.customer_id where t.organization_id=$1 and c.name=$2 and t.kind='call'", [organizationId, name]);
+      expect(rows.rows).toEqual([{ status: 'cancelled', name }]);
     }
     // Add to from Contacts: tick rows, or everyone matching the search; and from a contact's own page.
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto(`${base}/crm/contacts?q=Erin`);
-    await page.getByRole('checkbox', { name: 'Select Erin Florist' }).click();
+    await page.goto(`${base}/crm/contacts?q=Gina`);
+    await page.getByRole('checkbox', { name: 'Select Gina Gallery' }).click();
     const bar = page.getByRole('region', { name: 'Selected contacts' });
     await expect(bar).toContainText('1 selected');
     await bar.getByRole('button', { name: 'Add to…' }).click();
     await page.getByRole('menuitem', { name: /Call list/ }).click();
     const confirm = page.getByRole('dialog', { name: 'Add to call list' });
     await expect(confirm.getByText('1 contact will be added.')).toBeVisible();
+    await confirm.getByRole('textbox', { name: 'Reason for calling', exact: true }).fill('Seasonal order');
     await confirm.getByRole('button', { name: 'Add 1', exact: true }).click();
     await expect(page.getByText('Added 1 contact to the call list.')).toBeVisible();
     await expect(bar).toBeHidden();
@@ -144,15 +206,17 @@ test('Dialer lists the tenant’s open Call tasks and the global pop-out survive
     await page.goto(`${base}/crm/contacts/${finn}`);
     await page.getByRole('button', { name: 'Add to…' }).click();
     await page.getByRole('menuitem', { name: /Call list/ }).click();
-    await expect(page.getByText('Added to the call list.')).toBeVisible();
+    await confirm.getByRole('textbox', { name: 'Reason for calling', exact: true }).fill('Service reminder');
+    await confirm.getByRole('button', { name: 'Add 1', exact: true }).click();
+    await expect(page.getByText('Added 1 contact to the call list.')).toBeVisible();
     await page.reload();
     await page.getByRole('button', { name: 'Add to…' }).click();
     await expect(page.getByRole('menuitem', { name: /Call list/ })).toHaveAttribute('aria-disabled', 'true');
     await expect(page.getByRole('menuitem', { name: /Call list/ })).toContainText('On the list');
     await page.keyboard.press('Escape');
     await page.goto(`${base}/calls`);
-    await expect(page.getByRole('button', { name: /Erin Florist/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Finn Garage/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Gina Gallery.*Seasonal order/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Finn Garage.*Service reminder/ })).toBeVisible();
     await page.setViewportSize({ width: 390, height: 1000 });
     await page.goto(`${base}/crm/contacts`);
     await expect(async () => {

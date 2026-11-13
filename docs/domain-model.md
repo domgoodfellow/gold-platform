@@ -336,6 +336,8 @@ External actors receive only the minimum access required for their specific flow
 
 CRM owns the Customer relationship. Lifecycle (`lead`, `prospect`, `customer`) is independent of optional lead temperature (`unrated`, `cold`, `warm`, `hot`), configurable relationship stage and each associated opportunity stage. Legacy NULL lifecycle means unclassified; no payment, stage or name is used to infer it. Classification never replaces the record or its associated history.
 
+A Contact is active or archived. Archiving keeps the record, its ID and everything that refers to it; an archived Contact is left out of working lists, pickers, the call list, Marketing audiences and CRM counts until restored. Permanent deletion exists only for a Contact that no record the business must keep refers to (opportunities, tasks, calls, conversations, invoices and proposals, work and assets, support cases, services, portal access, form responses, discovery, documents, locations, affiliations, import history, saved reports); history events are kept either way. Contacts are never merged or their records reassigned to make deletion possible. Taking a Contact off the call list cancels a task and is not removal of the Contact.
+
 A Customer may be related to:
 
 - communications;
@@ -422,7 +424,7 @@ A Task is an actionable obligation. A Follow-up is an optional task purpose or w
 
 Contact and Opportunity detail, Pipeline, dashboard attention and the shared Organization Calendar project the same `crm_tasks` records. The old Follow-ups API and URLs remain compatibility adapters. Tasks is not a primary CRM navigation destination.
 
-On screen these records are always Tasks (owner decision, 2026-11-09). Follow-up is one reason a task exists, such as a call to return, never the name of the list, a page, a panel or a control; code may keep its older follow-up names, but nothing a business sees does. The Dialer shows open Call tasks as its Call list. Calendar does not copy task records or own their pipeline stages or resource scheduling. Completed and cancelled tasks remain historical. Broader task architecture is deferred.
+On screen these records are always Tasks (owner decision, 2026-11-09). Follow-up is one reason a task exists, such as a call to return, never the name of the list, a page, a panel or a control; code may keep its older follow-up names, but nothing a business sees does. The Dialer shows open Call tasks as its Call list. A contact has at most one open Call task. Taking someone off the call list cancels that task and is its own permission, `call_list.remove`; completing the call is not removal. Calendar does not copy task records or own their pipeline stages or resource scheduling. Completed and cancelled tasks remain historical. Broader task architecture is deferred.
 
 CRM Home forecasts currently Open Opportunity values with an expected-close date in the selected month, unweighted and grouped by currency. Win rate is Won / (Won + Lost), using the last recorded closed transition per Opportunity in the selected month, including creation in a terminal stage. Reclosures count once per Opportunity in that month. Later reopening does not erase recorded closure evidence. A period with no closures has no defined win rate.
 

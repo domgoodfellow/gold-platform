@@ -83,7 +83,7 @@ export function ContactIntakeProvider({ organizationId, definitions, options, ch
         : <>
           <StepHeader title="Contact added" description={<><span className="font-medium text-foreground">{created?.name}</span> was added as a {created?.contactType === 'company' ? 'company' : 'person'}.</>} />
           <DialogFooterBar>
-            {created?.id ? <ButtonLink tone="primary" href={`${base}/crm/contacts/${created.id}`}>View contact</ButtonLink> : null}
+            {created?.id && options.mayView ? <ButtonLink tone="primary" href={`${base}/crm/contacts/${created.id}`}>View contact</ButtonLink> : null}
             <Button type="button" tone="secondary" onClick={() => show('manual')}>Add another</Button>
             <Button type="button" tone="text" onClick={() => setOpen(false)} className="sm:mr-auto">Close</Button>
           </DialogFooterBar>

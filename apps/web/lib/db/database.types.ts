@@ -2422,6 +2422,8 @@ export type Database = {
       }
       contacts: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           contact_type: string
           created_at: string
           created_by: string
@@ -2436,6 +2438,8 @@ export type Database = {
           stage_id: string | null
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           contact_type?: string
           created_at?: string
           created_by: string
@@ -2450,6 +2454,8 @@ export type Database = {
           stage_id?: string | null
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           contact_type?: string
           created_at?: string
           created_by?: string
@@ -4802,8 +4808,12 @@ export type Database = {
       }
       import_staging_rows: {
         Row: {
+          candidate_customer_ids: string[]
           created_at: string
+          decided_at: string | null
+          decided_by: string | null
           id: string
+          match_reason: string | null
           matched_customer_id: string | null
           normalized: Json
           organization_id: string
@@ -4815,8 +4825,12 @@ export type Database = {
           validation_errors: Json
         }
         Insert: {
+          candidate_customer_ids?: string[]
           created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
           id?: string
+          match_reason?: string | null
           matched_customer_id?: string | null
           normalized?: Json
           organization_id: string
@@ -4828,8 +4842,12 @@ export type Database = {
           validation_errors?: Json
         }
         Update: {
+          candidate_customer_ids?: string[]
           created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
           id?: string
+          match_reason?: string | null
           matched_customer_id?: string | null
           normalized?: Json
           organization_id?: string
@@ -14785,6 +14803,7 @@ export type Database = {
       }
       contact_directory: {
         Row: {
+          archived_at: string | null
           company_sort: string | null
           contact_type: string | null
           created_at: string | null
@@ -15579,6 +15598,17 @@ export type Database = {
         }
         Returns: string
       }
+      add_call_list_entries: {
+        Args: {
+          p_customer_ids: string[]
+          p_due_at: string
+          p_notes?: string
+          p_organization_id: string
+          p_owner_membership_id?: string
+          p_title: string
+        }
+        Returns: string[]
+      }
       add_call_participant: {
         Args: {
           p_call_id: string
@@ -15705,6 +15735,10 @@ export type Database = {
           p_subscription_reference: string
         }
         Returns: string
+      }
+      archive_contact: {
+        Args: { p_contact_id: string; p_organization_id: string }
+        Returns: undefined
       }
       assign_conversation: {
         Args: {
@@ -15911,6 +15945,15 @@ export type Database = {
         }
         Returns: string
       }
+      call_list_contacts: {
+        Args: { p_customer_ids: string[]; p_organization_id: string }
+        Returns: {
+          email: string
+          id: string
+          name: string
+          phone: string
+        }[]
+      }
       call_recording_reference: {
         Args: { p_call_id: string; p_organization_id: string }
         Returns: string
@@ -15935,6 +15978,8 @@ export type Database = {
           p_stage_id: string
         }
         Returns: {
+          archived_at: string | null
+          archived_by: string | null
           contact_type: string
           created_at: string
           created_by: string
@@ -16139,6 +16184,10 @@ export type Database = {
           p_subject: string
         }
         Returns: string
+      }
+      contact_removal_check: {
+        Args: { p_contact_id: string; p_organization_id: string }
+        Returns: Json
       }
       conversation_customer_candidates: {
         Args: { p_conversation_id: string; p_organization_id: string }
@@ -16493,6 +16542,16 @@ export type Database = {
           time_zone: string
         }[]
       }
+      decide_import_row: {
+        Args: {
+          p_customer_id?: string
+          p_decision: string
+          p_organization_id: string
+          p_row_id: string
+          p_run_id: string
+        }
+        Returns: undefined
+      }
       decide_integration_execution: {
         Args: { p_approve: boolean; p_execution_id: string }
         Returns: Json
@@ -16511,6 +16570,10 @@ export type Database = {
       }
       delete_ai_deployment: {
         Args: { p_id: string; p_organization_id: string }
+        Returns: undefined
+      }
+      delete_contact: {
+        Args: { p_contact_id: string; p_organization_id: string }
         Returns: undefined
       }
       delete_relationship_stage: {
@@ -17661,6 +17724,15 @@ export type Database = {
           status: string
         }[]
       }
+      read_organization_telephony_credential: {
+        Args: { p_organization_id: string }
+        Returns: {
+          account_sid: string
+          api_key_secret: string
+          api_key_sid: string
+          application_sid: string
+        }[]
+      }
       read_provider_account_credential: {
         Args: { p_account_id: string }
         Returns: {
@@ -18405,6 +18477,10 @@ export type Database = {
         Args: { p_connector_app_id: string; p_feature_id: string }
         Returns: undefined
       }
+      remove_from_call_list: {
+        Args: { p_organization_id: string; p_task_id: string }
+        Returns: undefined
+      }
       remove_operating_hours: { Args: { p_id: string }; Returns: undefined }
       remove_plan_quota: {
         Args: { p_allowance_key: string; p_plan_id: string }
@@ -18526,6 +18602,10 @@ export type Database = {
           p_expected_version: number
           p_review_id: string
         }
+        Returns: undefined
+      }
+      restore_contact: {
+        Args: { p_contact_id: string; p_organization_id: string }
         Returns: undefined
       }
       retry_configuration_proposal: {
@@ -19047,6 +19127,10 @@ export type Database = {
         Args: { p_id: string; p_schedulable: boolean }
         Returns: undefined
       }
+      skip_undecided_import_rows: {
+        Args: { p_organization_id: string; p_run_id: string }
+        Returns: number
+      }
       stage_import_rows: {
         Args: { p_organization_id: string; p_rows: Json; p_run_id: string }
         Returns: number
@@ -19158,6 +19242,14 @@ export type Database = {
           status: string
           tool_label: string
         }[]
+      }
+      telephony_caller: {
+        Args: { p_organization_id: string; p_places_calls: boolean }
+        Returns: string
+      }
+      telephony_signing_secret: {
+        Args: { p_account_sid: string }
+        Returns: string
       }
       time_committed: {
         Args: {

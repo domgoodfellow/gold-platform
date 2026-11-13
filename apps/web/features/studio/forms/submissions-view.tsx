@@ -40,7 +40,7 @@ function CustomerLine({ organizationId, formId, submission }: { organizationId: 
       <>
         <dt>Customer</dt>
         <dd>
-          <Link href={`/organizations/${organizationId}/crm/contacts/${submission.customerId}`} className="underline underline-offset-4">{submission.customerName ?? 'Customer'}</Link>
+          <Link href={`/organizations/${organizationId}/crm/contacts/${submission.customerId}`} className="underline underline-offset-4">{submission.customerName ?? 'Contact'}</Link>
           {submission.source !== 'portal' && submission.source !== 'booking' ? <Button tone="text" size="tiny" disabled={pending} onClick={() => link(null)}>Unlink</Button> : null}
         </dd>
       </>

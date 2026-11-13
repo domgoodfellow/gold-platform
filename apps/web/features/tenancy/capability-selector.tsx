@@ -13,7 +13,7 @@ import { CAPABILITIES, CAPABILITY_LABELS, SENSITIVE_CAPABILITIES, type Capabilit
  * fails `navigation.test.ts`.
  */
 const GROUPS: readonly { label: string; capabilities: readonly Capability[] }[] = [
-  { label: 'Contacts', capabilities: ['customer.create', 'customer.update'] },
+  { label: 'Contacts', capabilities: ['customer.read', 'customer.create', 'customer.update', 'customer.delete'] },
   { label: 'Opportunities', capabilities: ['opportunity.create', 'opportunity.update'] },
   { label: 'Tasks', capabilities: ['follow_up.manage'] },
   {
@@ -31,7 +31,7 @@ const GROUPS: readonly { label: string; capabilities: readonly Capability[] }[] 
     label: 'Locations / assets / resources',
     capabilities: ['location.create', 'asset.create', 'resource.create', 'resource.update'],
   },
-  { label: 'Communications', capabilities: ['call.place', 'message.send'] },
+  { label: 'Communications', capabilities: ['call.place', 'call_list.remove', 'message.send'] },
   { label: 'Marketing', capabilities: ['marketing.read', 'marketing.manage'] },
   {
     label: 'Support',

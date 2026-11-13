@@ -51,10 +51,24 @@ Resume uses the frozen mapping and stored source. Application refuses incomplete
 staging and commits at most 100 ready rows per invocation; a Running run can resume.
 Completed runs are repeat-safe. Source IDs are scoped by the source filename; when
 no ID exists, the canonicalized raw row supplies the key. Reordering records with
-source IDs does not change identity. Renaming the source file changes its namespace;
-keep the filename stable for repeat imports. Conflicting duplicate source keys are
+source IDs does not change identity. Renaming the source file changes its namespace,
+so a renamed copy is not linked by its keys: its rows match by email as below, and a row
+whose whole content, or whose source ID with the same name or email, was imported from
+another file of the source is held for review as imported before from another file (a
+bare source ID is not enough, because unrelated files number rows the same way). Keep
+the filename stable for repeat imports. Conflicting duplicate source keys are
 refused rather than silently dropping rows. The source-link check is repeated at
-commit under a tenant/source lock so concurrent runs cannot create duplicate Customers.
+commit under a per-business import lock so concurrent runs cannot create duplicate Customers.
+After the source link, a row matches the one contact with the same normalized email
+(when the mapping trusts email). Shared emails, untrusted email matches and phone-only
+matches are held for a person's Create, Update or Skip decision; a name never matches.
+Two people sharing a business phone number are never merged: a phone match only holds
+a row. Reviewing and deciding rows needs `customer.read`. Before applying, each row that
+will update a contact shows a Changes column with every mapped value that differs, as
+current and incoming, following the apply rules (an empty incoming value keeps the
+current one, Unspecified never replaces a known type, fields are added to); conflicts
+with local edits are still decided when applying. Source identity stays in
+`external_record_links`; it never becomes the contact's own identity.
 
 `20261022000074_prospect_import_batches.sql` replaces only the two existing import
 functions and adds a read-only pipeline-version check. The app refuses imports

@@ -131,7 +131,7 @@ export async function readFinanceQuotes(db: Db, organizationId: string, f: Finan
   if (f.q && searchTerm(f.q)) { const q = searchTerm(f.q); query = query.or(`title.ilike.%${q}%,customer_name.ilike.%${q}%`); }
   const { data, error, count } = await ordered(query, 'quotes', f.sort, 'work_item_id').range(...bounds(f));
   if (error) throw fromDatabaseError(error, 'quotes.list_failed');
-  const rows: FinanceQuoteRow[] = (data ?? []).map(r => ({ workItemId: r.work_item_id!, title: r.title!, status: r.status ?? '', customer: r.customer_id ? { id: r.customer_id, name: r.customer_name ?? 'Customer' } : null,
+  const rows: FinanceQuoteRow[] = (data ?? []).map(r => ({ workItemId: r.work_item_id!, title: r.title!, status: r.status ?? '', customer: r.customer_id ? { id: r.customer_id, name: r.customer_name ?? 'Contact' } : null,
     createdAt: r.created_at!, lineCount: r.line_count ?? 0, quoted: r.total_minor === null ? null : { totalMinor: safeMinor(r.total_minor), currency: r.currency! }, invoiced: r.invoiced ?? false }));
   return { rows, total: count ?? 0 };
 }

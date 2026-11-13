@@ -8,6 +8,7 @@ import { workspaceConfigureDoors } from '@/features/settings/workspace-configure
 import { listContacts } from '@/lib/domain/contacts/contacts';
 import { listCustomerStages } from '@/lib/domain/customers/stages';
 import { activeModuleKeys, organizationResolvedFeatureStates } from '@/lib/domain/catalogue/organization-plans';
+import { notFound } from 'next/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 
 export const dynamic = 'force-dynamic';
@@ -15,6 +16,8 @@ export const dynamic = 'force-dynamic';
 export default async function PipelinePage({ params }: PageProps<'/organizations/[organizationId]/crm/contacts/stages'>) {
   const { organizationId } = await params;
   const { db, organization } = await requireOrganization(organizationId);
+  // Contacts are `customer.read`; the database withholds them too, this refuses before reading anything.
+  if (!organization.capabilities.includes('customer.read')) notFound();
   // The same answer the Customers list uses to offer this view at all — one source, so the two
   // sibling views can never disagree about whether the Pipeline exists.
   const [customers, stages, resolvedFeatures, doors] = await Promise.all([

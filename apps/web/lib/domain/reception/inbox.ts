@@ -196,7 +196,9 @@ export type CustomerResolution =
   | { state: 'resolved'; customer: { id: string; name: string; email: string | null; phone: string | null } }
   | { state: 'unresolved' }
   | { state: 'suggested'; candidates: CustomerCandidate[] }
-  | { state: 'ambiguous'; candidates: CustomerCandidate[] };
+  | { state: 'ambiguous'; candidates: CustomerCandidate[] }
+  /** Linked to a contact this member's role may not view (`customer.read`): the link stands, the contact is withheld. */
+  | { state: 'restricted' };
 
 export type ActivityItem = { id: string; at: string; text: string };
 
@@ -296,6 +298,7 @@ export async function getConversationDetail(db: Db, input: { organizationId: str
   const found = candidates.data ?? [];
   const resolution: CustomerResolution = customerRow.data
     ? { state: 'resolved', customer: customerRow.data }
+    : row.customer_id ? { state: 'restricted' }
     : found.length === 0
       ? { state: 'unresolved' }
       : found.length === 1

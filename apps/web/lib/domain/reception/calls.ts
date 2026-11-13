@@ -55,6 +55,17 @@ export async function organizationTelephony(db: Db, organizationId: string): Pro
 export type CallDirection = 'outbound' | 'inbound';
 export type CallContact = { id: string; name: string; email: string | null; phone: string | null };
 
+/**
+ * The contacts on the call list among these ids, with only what calling them needs. The Dialer's
+ * disclosure for `call.place`: a contact without an open Call task is not returned.
+ */
+export async function callListContacts(db: Db, input: { organizationId: string; customerIds: readonly string[] }): Promise<CallContact[]> {
+  if (!input.customerIds.length) return [];
+  const { data, error } = await db.rpc('call_list_contacts', { p_organization_id: input.organizationId, p_customer_ids: [...input.customerIds] });
+  if (error) throw fromDatabaseError(error, 'calls.contact_lookup_failed');
+  return data ?? [];
+}
+
 /** At most two canonical matches: enough to distinguish a unique contact from ambiguity. */
 export async function dialerContactCandidates(db: Db, input: { organizationId: string; number: string }): Promise<CallContact[]> {
   const { data, error } = await db.rpc('dialer_contact_candidates', { p_organization_id: input.organizationId, p_number: input.number });

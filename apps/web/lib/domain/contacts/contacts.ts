@@ -33,6 +33,8 @@ export type Contact = {
    */
   stageId: string | null;
   createdAt: string;
+  /** Set while archived: kept with all its history, left out of working lists and pickers. */
+  archivedAt?: string | null;
 };
 
 const NAME_MAX = 200;
@@ -52,7 +54,9 @@ export async function listContacts(
   let query = db
     .from('contacts')
     .select('id, name, email, phone, custom, stage_id, contact_type, lifecycle, lead_temperature, created_at', { count: 'exact' })
-    .eq('organization_id', input.organizationId);
+    .eq('organization_id', input.organizationId)
+    // Pickers and working lists offer active contacts only; an archived one is reached from the directory's Archived view.
+    .is('archived_at', null);
 
   const search = input.search?.trim().replace(/[%_,()]/g, ' ');
   if (search) {
@@ -107,6 +111,8 @@ export type ContactPageFilter = {
   addedSince?: string;
   /** Needs review: an Unspecified identity or no lifecycle yet. Never inferred, only listed for a person to classify. */
   needsReview?: boolean;
+  /** Archived contacts instead of active ones. The directory shows active contacts unless asked. */
+  archived?: boolean;
   /** One-based. */
   page: number;
 };
@@ -148,6 +154,7 @@ function applyDirectoryFilter<Q extends { or: any; eq: any; in: any; is: any; no
   if (filter.website === 'without') query = query.or('custom->>website.is.null,custom->>website.eq.');
   if (filter.addedSince) query = query.gte('created_at', filter.addedSince);
   if (filter.needsReview) query = query.or('contact_type.eq.unspecified,lifecycle.is.null');
+  query = filter.archived ? query.not('archived_at', 'is', null) : query.is('archived_at', null);
   return query;
 }
 
@@ -159,7 +166,7 @@ export async function listContactPage(
   const affiliatedIds = await affiliatedPeople(db, input.organizationId, filter);
   const query = applyDirectoryFilter(db
     .from('contact_directory')
-    .select('id, name, email, phone, custom, stage_id, contact_type, lifecycle, lead_temperature, directory_company_id, directory_company_name, created_at', { count: 'exact' })
+    .select('id, name, email, phone, custom, stage_id, contact_type, lifecycle, lead_temperature, directory_company_id, directory_company_name, created_at, archived_at', { count: 'exact' })
     .eq('organization_id', input.organizationId), filter, affiliatedIds);
 
   const from = (filter.page - 1) * CONTACT_PAGE_SIZE;
@@ -187,6 +194,7 @@ export async function listContactPage(
       createdAt: row.created_at!,
       companyId:row.directory_company_id,
       companyName:row.directory_company_name,
+      archivedAt: row.archived_at,
     })),
     count,
   );
@@ -211,12 +219,39 @@ export async function listContactPhonesMatching(
   return counted((data ?? []).map((row) => ({ id: row.id!, phone: row.phone })), count);
 }
 
-/** The recorded phone of each of these contacts in this organization; an id not found is absent. */
-export async function listContactPhones(db: Db, input: { organizationId: string; ids: readonly string[] }): Promise<Map<string, string | null>> {
-  if (!input.ids.length) return new Map();
-  const { data, error } = await db.from('contacts').select('id, phone').eq('organization_id', input.organizationId).in('id', [...input.ids]);
-  if (error) throw fromDatabaseError(error, 'customers.list_failed');
-  return new Map((data ?? []).map((row) => [row.id, row.phone]));
+export type ContactSummary = { id: string; name: string; email: string | null; phone: string | null };
+
+/** Name, email and recorded phone of each of these contacts in this organization; an id not found is absent. */
+export async function listContactSummaries(db: Db, input: { organizationId: string; ids: readonly string[] }): Promise<Map<string, ContactSummary>> {
+  const ids = [...new Set(input.ids)];
+  const found = new Map<string, ContactSummary>();
+  // Bounded requests: a long list of ids is read in parts rather than one oversized query.
+  for (let offset = 0; offset < ids.length; offset += 100) {
+    const { data, error } = await db.from('contacts').select('id, name, email, phone').eq('organization_id', input.organizationId).in('id', ids.slice(offset, offset + 100));
+    if (error) throw fromDatabaseError(error, 'customers.list_failed');
+    for (const row of data ?? []) found.set(row.id, { id: row.id, name: row.name, email: row.email, phone: row.phone });
+  }
+  return found;
+}
+
+/** The values an import can change on a contact, as they stand now: what an import review compares against. */
+export type ContactCurrentValues = ContactSummary & {
+  lifecycle: ContactLifecycle | null; leadTemperature: LeadTemperature; contactType: ContactType; custom: CustomValues;
+};
+
+export async function listContactCurrentValues(db: Db, input: { organizationId: string; ids: readonly string[] }): Promise<Map<string, ContactCurrentValues>> {
+  const ids = [...new Set(input.ids)];
+  const found = new Map<string, ContactCurrentValues>();
+  for (let offset = 0; offset < ids.length; offset += 100) {
+    const { data, error } = await db.from('contacts').select('id, name, email, phone, lifecycle, lead_temperature, contact_type, custom')
+      .eq('organization_id', input.organizationId).in('id', ids.slice(offset, offset + 100));
+    if (error) throw fromDatabaseError(error, 'customers.list_failed');
+    for (const row of data ?? []) found.set(row.id, {
+      id: row.id, name: row.name, email: row.email, phone: row.phone, lifecycle: row.lifecycle as ContactLifecycle | null,
+      leadTemperature: row.lead_temperature as LeadTemperature, contactType: row.contact_type as ContactType, custom: (row.custom ?? {}) as CustomValues,
+    });
+  }
+  return found;
 }
 
 /**
@@ -350,7 +385,7 @@ export async function getContact(
   // contact_directory is the same security-invoker row plus a person's primary active company.
   const { data, error } = await db
     .from('contact_directory')
-    .select('id, name, email, phone, custom, stage_id, contact_type, lifecycle, lead_temperature, created_at, directory_company_id, directory_company_name')
+    .select('id, name, email, phone, custom, stage_id, contact_type, lifecycle, lead_temperature, created_at, directory_company_id, directory_company_name, archived_at')
     .eq('organization_id', input.organizationId)
     .eq('id', input.customerId)
     .maybeSingle();
@@ -373,6 +408,7 @@ export async function getContact(
     createdAt: data.created_at!,
     companyId: data.contact_type === 'person' ? data.directory_company_id : null,
     companyName: data.contact_type === 'person' ? data.directory_company_name : null,
+    archivedAt: data.archived_at,
   };
 }
 
@@ -485,7 +521,7 @@ export async function listContactLastActivity(db: Db, input: {organizationId:str
 
 
 export async function listCompanies(db: Db, organizationId: string) {
- const {data,error}=await db.from('contacts').select('id,name').eq('organization_id',organizationId).eq('contact_type','company').order('name').limit(500);
+ const {data,error}=await db.from('contacts').select('id,name').eq('organization_id',organizationId).eq('contact_type','company').is('archived_at',null).order('name').limit(500);
  if(error) throw fromDatabaseError(error, 'contacts.companies_failed');
  return data ?? [];
 }
@@ -494,4 +530,40 @@ export async function listAffiliations(db:Db,organizationId:string,contactId:str
  .eq('organization_id',organizationId).or(`person_id.eq.${contactId},company_id.eq.${contactId}`).order('active',{ascending:false}).order('is_primary',{ascending:false});
  if(error) throw fromDatabaseError(error, 'contacts.affiliations_failed');
  return data ?? [];
+}
+
+/** Kinds of record that keep a contact from being deleted; the database names kinds only, never the records. */
+export const RETAINED_RECORD_KINDS = ['opportunities', 'tasks', 'calls', 'conversations', 'finance', 'work', 'support', 'services', 'portal', 'forms', 'discovery', 'documents', 'locations', 'affiliations', 'imports', 'reports'] as const;
+export type RetainedRecordKind = (typeof RETAINED_RECORD_KINDS)[number];
+export type ContactRemoval = { archived: boolean; retained: RetainedRecordKind[] };
+
+/** Whether this contact can be deleted permanently, and if not which kinds of record keep it. Needs `customer.delete`. */
+export async function contactRemovalCheck(db: Db, input: { organizationId: string; contactId: string }): Promise<ContactRemoval> {
+  const { data, error } = await db.rpc('contact_removal_check', { p_organization_id: input.organizationId, p_contact_id: input.contactId });
+  if (error) throw removalFailure(error, 'contacts.removal_check_failed');
+  const value = (data ?? {}) as { archived?: boolean; retained?: string[] };
+  return { archived: Boolean(value.archived), retained: (value.retained ?? []).filter((kind): kind is RetainedRecordKind => (RETAINED_RECORD_KINDS as readonly string[]).includes(kind)) };
+}
+
+function removalFailure(error: { code?: string; message: string }, code: string): DomainError {
+  if (error.code === '42501') return new DomainError('Your role cannot archive or delete contacts.', 'contacts.removal_forbidden');
+  if (error.code === 'P0002' || error.code === '22023' || error.code === '23503') return new DomainError(error.message, code);
+  return fromDatabaseError(error, code);
+}
+
+/** Archive: the contact and everything that refers to it are kept; it leaves working lists until restored. */
+export async function archiveContact(db: Db, input: { organizationId: string; contactId: string }): Promise<void> {
+  const { error } = await db.rpc('archive_contact', { p_organization_id: input.organizationId, p_contact_id: input.contactId });
+  if (error) throw removalFailure(error, 'contacts.archive_failed');
+}
+
+export async function restoreContact(db: Db, input: { organizationId: string; contactId: string }): Promise<void> {
+  const { error } = await db.rpc('restore_contact', { p_organization_id: input.organizationId, p_contact_id: input.contactId });
+  if (error) throw removalFailure(error, 'contacts.restore_failed');
+}
+
+/** Permanent deletion. The database refuses while any record the business must keep refers to the contact. */
+export async function deleteContact(db: Db, input: { organizationId: string; contactId: string }): Promise<void> {
+  const { error } = await db.rpc('delete_contact', { p_organization_id: input.organizationId, p_contact_id: input.contactId });
+  if (error) throw removalFailure(error, 'contacts.delete_failed');
 }

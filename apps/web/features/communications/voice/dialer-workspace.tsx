@@ -16,6 +16,7 @@ import type { DialerQueueEntry } from '@/lib/application/communications/dialer-q
 import { ActiveCallDock } from './active-call-dock';
 import { NewCallForm } from './new-call-form';
 import { AddToCallList } from './add-to-call-list';
+import { CallListEntryActions } from './remove-from-call-list';
 import { useTelephoneDevice, type DeviceStatus } from './telephone-device';
 import { useDialerPopout } from './dialer-popout-context';
 import { matchDialerContact } from '@/app/organizations/[organizationId]/calls/actions';
@@ -81,7 +82,10 @@ export function DialerWorkspace({
   recentCalls = {},
   setupHref = null,
   mayAddToList = false,
+  mayCreateContacts = false,
+  mayRemoveFromList = false,
   mayMatchContacts = false,
+  mayViewContacts = true,
 }: {
   organizationId: string;
   timezone: string;
@@ -99,7 +103,13 @@ export function DialerWorkspace({
   setupHref?: string | null;
   /** Offers Add to list (pick contacts; each becomes an open Call task) when the viewer may manage tasks. */
   mayAddToList?: boolean;
+  /** Offers Create contact inside Add to list, for a member who may add contacts. */
+  mayCreateContacts?: boolean;
+  /** Offers Remove from list on each call list entry, for a member who holds `call_list.remove`. */
+  mayRemoveFromList?: boolean;
   mayMatchContacts?: boolean;
+  /** Links into Contacts, for a member who holds `customer.read`; without it the list still shows each entry's name and number. */
+  mayViewContacts?: boolean;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(prefill ? null : queue[0]?.task.id ?? null);
   const [mode, setMode] = useState<Mode>('standard');
@@ -300,7 +310,7 @@ export function DialerWorkspace({
 
   // --- Queue -----------------------------------------------------------------------------------
   const partial = queueTotal > queue.length;
-  const addToList = mayAddToList && queueAvailable ? <AddToCallList organizationId={organizationId} /> : null;
+  const addToList = mayAddToList && queueAvailable ? <AddToCallList organizationId={organizationId} mayCreateContacts={mayCreateContacts} /> : null;
   const queuePanel = (
     <OperationalPanel
       title="Call list"
@@ -317,7 +327,7 @@ export function DialerWorkspace({
         <div className="space-y-3 p-3">
           <p className="text-sm text-muted">No contacts on the call list.</p>
           {addToList}
-          <ButtonLink tone="text" size="small" href={`/organizations/${organizationId}/crm/contacts`}>Open Contacts</ButtonLink>
+          {mayViewContacts ? <ButtonLink tone="text" size="small" href={`/organizations/${organizationId}/crm/contacts`}>Open Contacts</ButtonLink> : null}
         </div>
       ) : <>
         <div className="shrink-0 space-y-2 border-b border-border p-3">
@@ -336,8 +346,8 @@ export function DialerWorkspace({
             {visible.map(({ task, customer }) => {
               const name = customer?.name ?? task.customerName;
               const chosen = selectedId === task.id && !!taskContext;
-              return <li key={task.id}>
-                <button type="button" aria-pressed={chosen} onClick={() => choose(task.id)} className={cx('flex w-full items-start gap-3 border-l-2 px-3 py-2.5 text-left transition-colors', chosen ? 'border-accent bg-selected' : 'border-transparent hover:bg-hover', FOCUS_RING)}>
+              return <li key={task.id} className={cx('flex items-start', chosen && 'bg-selected')}>
+                <button type="button" aria-pressed={chosen} onClick={() => choose(task.id)} className={cx('flex min-w-0 flex-1 items-start gap-3 border-l-2 px-3 py-2.5 text-left transition-colors', chosen ? 'border-accent' : 'border-transparent hover:bg-hover', FOCUS_RING)}>
                   <Avatar className="mt-0.5 size-9 shrink-0"><AvatarFallback className="bg-secondary text-xs font-semibold text-muted">{initials(name)}</AvatarFallback></Avatar>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
@@ -348,6 +358,7 @@ export function DialerWorkspace({
                     <span className="block truncate text-xs tabular-nums text-muted">{customer?.phone ? formatPhoneForDisplay(customer.phone) : 'No phone number'}{task.ownerName ? ` · ${task.ownerName}` : ''}</span>
                   </span>
                 </button>
+                {mayRemoveFromList ? <div className="shrink-0 py-2 pr-1"><CallListEntryActions organizationId={organizationId} taskId={task.id} name={name} /></div> : null}
               </li>;
             })}
           </ul>
@@ -370,7 +381,7 @@ export function DialerWorkspace({
           <div className="flex items-center gap-3">
             <Avatar className="size-10 shrink-0"><AvatarFallback className="bg-secondary text-sm font-semibold text-muted">{initials(contextCustomer.name)}</AvatarFallback></Avatar>
             <div className="min-w-0">
-              <Link className="block truncate font-semibold underline-offset-4 hover:underline" href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.id}`}>{contextCustomer.name}</Link>
+              {mayViewContacts ? <Link className="block truncate font-semibold underline-offset-4 hover:underline" href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.id}`}>{contextCustomer.name}</Link> : <p className="truncate font-semibold">{contextCustomer.name}</p>}
               {selected?.customer?.id === contextCustomer.id ? <p className="truncate text-xs text-muted">{selected.task.title}</p> : null}
             </div>
           </div>
@@ -391,9 +402,9 @@ export function DialerWorkspace({
           </div>
           <div>
             <h3 className="mb-2 text-sm font-medium">Recent calls</h3>
-            {recentCalls[contextCustomer.id] ?? <ButtonLink tone="text" size="small" href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.id}?section=activity&view=calls`}>Open call history</ButtonLink>}
+            {recentCalls[contextCustomer.id] ?? (mayViewContacts ? <ButtonLink tone="text" size="small" href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.id}?section=activity&view=calls`}>Open call history</ButtonLink> : <p className="text-sm text-muted">No recent calls.</p>)}
           </div>
-          <ButtonLink href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.id}`} tone="secondary" size="small" className="w-full">Open contact</ButtonLink>
+          {mayViewContacts ? <ButtonLink href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.id}`} tone="secondary" size="small" className="w-full">Open contact</ButtonLink> : null}
         </div>
       )}
     </OperationalPanel>

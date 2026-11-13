@@ -73,9 +73,9 @@ describe('the Contacts collection', () => {
     route.pathname = `${base}/crm/contacts/c1`;
     render(<Shell withAccess={false}><PageLocationRecords records={{ contactId: { state: 'ready', label: 'Acme Ltd' } }} /></Shell>);
     expect(trail()).toEqual(['CRM', 'Contacts', 'Acme Ltd']);
-    // CRM's Home and Contacts are kernel destinations: no entitlement or permission gates them.
+    // CRM's Home is a kernel destination; Contacts needs `customer.read`, so without access facts it is named, not linked.
     expect(bar().getByRole('link', { name: 'CRM' })).toHaveAttribute('href', `${base}/crm`);
-    expect(bar().getByRole('link', { name: 'Contacts' })).toHaveAttribute('href', `${base}/crm/contacts`);
+    expect(bar().queryByRole('link', { name: 'Contacts' })).toBeNull();
   });
 
   it('never shows a second, page-authored trail on a resolver-owned route', () => {

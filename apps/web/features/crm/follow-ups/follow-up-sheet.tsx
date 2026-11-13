@@ -11,7 +11,8 @@ import { saveFollowUpAction, searchFollowUpOpportunities, readFollowUpForDrawer 
 import { searchOpportunityCustomers } from '@/app/organizations/[organizationId]/crm/opportunities/actions';
 import type { CrmTask } from '@/lib/domain/tasks/tasks';
 import { SelectField } from '@/components/controls/select-field';
-export type FollowUpOptions = { organizationId: string; timezone: string; members: { id: string; displayName: string }[]; mayManage: boolean };
+/** `mayRemoveFromCallList`: cancelling an open Call task takes the contact off the call list, which needs `call_list.remove` as well. */
+export type FollowUpOptions = { organizationId: string; timezone: string; members: { id: string; displayName: string }[]; mayManage: boolean; mayRemoveFromCallList?: boolean };
 type Props = FollowUpOptions & { item?: CrmTask; reference?: {id:string;title:string}; customer?: { id: string; name: string }; opportunity?: { id: string; title: string }; children?: ReactNode };
 function localInput(instant: string, timezone: string) {
   const parts = new Intl.DateTimeFormat('en-CA',{ timeZone: timezone, year:'numeric', month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23' }).formatToParts(new Date(instant));

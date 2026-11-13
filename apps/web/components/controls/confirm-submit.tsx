@@ -33,6 +33,7 @@ export function ConfirmSubmit({
   tone = 'danger',
   size = 'small',
   pending,
+  disabled = false,
   className,
   ariaLabel,
 }: {
@@ -43,6 +44,8 @@ export function ConfirmSubmit({
   tone?: ButtonTone;
   size?: ButtonSize;
   pending?: boolean;
+  /** Not available right now, for a reason the page states beside it; unlike `pending`, the label stays. */
+  disabled?: boolean;
   className?: string;
   ariaLabel?: string;
 }) {
@@ -57,7 +60,7 @@ export function ConfirmSubmit({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" tone={tone} size={size} disabled={pending} aria-label={ariaLabel} className={className}>
+        <Button type="button" tone={tone} size={size} disabled={pending || disabled} aria-label={ariaLabel} className={className}>
           {pending ? '…' : label}
         </Button>
       </DialogTrigger>

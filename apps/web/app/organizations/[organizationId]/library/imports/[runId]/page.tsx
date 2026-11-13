@@ -7,6 +7,8 @@ import { requireOrganization } from '@/lib/route/organization';
 import { ImportRunDetail, summarizeStaging } from '@/features/integrations/imports/import-run-detail';
 import { ImportSteps } from '@/features/integrations/imports/import-steps';
 import { ErrorText } from '@/components/controls/inputs';
+import { listContactCurrentValues } from '@/lib/domain/contacts/contacts';
+import { listFieldDefinitions } from '@/lib/domain/fields/field-definitions';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +18,7 @@ export default async function ImportRunPage({
 }: PageProps<'/organizations/[organizationId]/library/imports/[runId]'>) {
   const { organizationId, runId } = await params;
   const { status: statusParam, stageError } = await searchParams;
-  const { db } = await requireOrganization(organizationId);
+  const { db, organization } = await requireOrganization(organizationId);
 
   const run = await getImportRun(db, { organizationId, runId });
   if (!run) notFound();
@@ -27,6 +29,14 @@ export default async function ImportRunPage({
   const rows = status ? allRows.filter((row) => row.status === status) : allRows;
   const readyCount = allRows.filter((row) => row.status === 'ready').length;
   const finished = run.status === 'completed' || run.status === 'completed_with_errors';
+  // Choosing between existing contacts is viewing them, so only `customer.read` reviews rows; the
+  // database refuses a decision without it, and withholds the contacts below.
+  const mayReview = organization.capabilities.includes('customer.read');
+  // The existing contacts named by the rows shown, with the values an update would change.
+  const [contacts, definitions] = await Promise.all([
+    mayReview ? listContactCurrentValues(db, { organizationId, ids: rows.flatMap((row) => [...row.candidateIds, ...(row.matchedCustomerId ? [row.matchedCustomerId] : [])]) }) : new Map(),
+    listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
+  ]);
 
   return (
     <>
@@ -42,6 +52,9 @@ export default async function ImportRunPage({
         summary={summarizeStaging(allRows)}
         readyCount={readyCount}
         status={status}
+        contacts={contacts}
+        fieldLabels={Object.fromEntries(definitions.map((definition) => [definition.key, definition.label]))}
+        mayReview={mayReview}
       />
     </>
   );

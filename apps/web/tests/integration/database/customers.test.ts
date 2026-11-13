@@ -185,7 +185,7 @@ describe('contact lifecycle and temperature', () => {
 describe('contact command authority',()=>{
   it('allows creation with classification without granting later editing authority',async()=>{
     const creator=await newTenant('classification-creator');
-    const roleId=await createRole(creator.db,{organizationId:creator.organizationId,name:'Create without editing',capabilities:['customer.create','role.manage']});
+    const roleId=await createRole(creator.db,{organizationId:creator.organizationId,name:'Create without editing',capabilities:['customer.read','customer.create','role.manage']});
     const membership=await creator.db.from('memberships').select('id').eq('organization_id',creator.organizationId).single();
     await assignRole(creator.db,{membershipId:membership.data!.id,roleId});
     const id=await createCustomer(creator.db,{organizationId:creator.organizationId,name:'Create only contact',lifecycle:'prospect',leadTemperature:'hot'});

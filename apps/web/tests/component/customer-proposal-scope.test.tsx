@@ -13,7 +13,7 @@ const boundary = vi.hoisted(() => ({
   plans: vi.fn(),
   catalog: vi.fn(),
   modules: new Set<string>(),
-  capabilities: [] as string[],
+  capabilities: ['customer.read'] as string[],
   recommendation: vi.fn(),
   handoff: vi.fn(),
 }));
@@ -82,7 +82,7 @@ beforeEach(() => {
   boundary.operating = true;
   boundary.authority = true;
   boundary.modules = new Set();
-  boundary.capabilities = [];
+  boundary.capabilities = ['customer.read'];
   boundary.discovery.mockResolvedValue(null);
   boundary.proposals.mockResolvedValue([{ id: 'accepted-proposal', status: 'accepted', basis: 'platform_plan' }]);
   boundary.catalog.mockResolvedValue([]);
@@ -130,7 +130,7 @@ describe('customer proposal scope', () => {
     boundary.operating = false;
     boundary.authority = false;
     boundary.modules = new Set(['billing']);
-    boundary.capabilities = ['price.manage'];
+    boundary.capabilities = ['customer.read', 'price.manage'];
     boundary.proposals.mockResolvedValue([{ id: 'accepted-catalog', status: 'accepted', basis: 'catalog' }]);
     await renderPage({ section: 'sales' });
     expect(screen.getByRole('link', { name: 'Commercial proposals' })).toHaveAttribute('href', expect.stringContaining('section=sales&view=commercial'));
@@ -150,5 +150,11 @@ describe('customer proposal scope', () => {
     boundary.modules = new Set();
     await renderPage({ section: 'sales' });
     expect(screen.getByRole('link', { name: 'Commercial proposals' })).toBeInTheDocument();
+  });
+
+  it('refuses a contact page to a role that may not view contacts, before any read', async () => {
+    boundary.capabilities = ['customer.create', 'customer.update'];
+    await expect(renderPage()).rejects.toThrow('NEXT_HTTP_ERROR_FALLBACK;404');
+    for (const read of [boundary.discovery, boundary.proposals, boundary.catalog, boundary.invites]) expect(read).not.toHaveBeenCalled();
   });
 });

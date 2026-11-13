@@ -29,6 +29,7 @@ import { todayInZone } from '@/lib/domain/scheduling/window';
 import { areaAvailable } from '@/lib/navigation';
 import { CustomersInsights } from '@/features/insights/workspace-insights';
 import { WorkspaceActivity } from '@/features/timeline/workspace-activity';
+import { notFound } from 'next/navigation';
 import { requireOrganization } from '@/lib/route/organization';
 import { directoryFilter, directoryFiltered } from '@/lib/application/crm/contact-directory';
 import { callListAvailable } from '@/lib/application/communications/call-list';
@@ -48,6 +49,8 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
   const requestedPage = Number(single(query.page));
   const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   const { db, organization } = await requireOrganization(organizationId);
+  // Contacts are `customer.read`; the database withholds them too, this refuses before reading anything.
+  if (!organization.capabilities.includes('customer.read')) notFound();
 
   const [definitions, resolvedFeatures, stages] = await Promise.all([
     listFieldDefinitions(db, { organizationId, entityType: 'customer' }),
@@ -87,6 +90,7 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
     website: single(query.website),
     added: single(query.added) === '30d' ? '30d' : undefined,
     review: single(query.review) === '1' ? '1' : undefined,
+    archived: single(query.archived) === '1' ? '1' : undefined,
     optional: (Array.isArray(query.column) ? query.column : query.column ? [query.column] : []).filter((id) => validChoices.has(id)),
   };
   const companies=await listCompanies(db,organizationId);
@@ -105,8 +109,9 @@ export default async function CustomersPage({ params, searchParams }: PageProps<
   // person has no way to change it.
   const emptyCollection = customers.total === 0 && !filtered;
   const mayCreate = organization.capabilities.includes('customer.create');
-  // Add to (the Dialer's call list) is offered only where the business has the Dialer and this member may manage tasks.
-  const mayAddToList = !emptyCollection && customers.total > 0 && await callListAvailable(db, organization);
+  // Add to (the Dialer's call list) is offered only where the business has the Dialer and this member may manage
+  // tasks, and never over archived contacts.
+  const mayAddToList = !emptyCollection && !view.archived && customers.total > 0 && await callListAvailable(db, organization);
   // The view as the URL states it, without the display-only column choice, so Add to reaches exactly who the filters match.
   const directoryView = { ...view, optional: undefined };
 

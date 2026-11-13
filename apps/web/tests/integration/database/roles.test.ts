@@ -93,7 +93,7 @@ describe('roles and capabilities', () => {
       createRole(owner.db, {
         organizationId,
         name: 'Impossible',
-        capabilities: ['customer.delete'],
+        capabilities: ['customer.destroy' as never],
       }),
     ).rejects.toMatchObject({ code: 'roles.capability_unknown' });
   });

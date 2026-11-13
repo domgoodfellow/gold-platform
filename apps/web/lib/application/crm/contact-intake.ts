@@ -14,6 +14,8 @@ export type ContactIntakeOptions = {
   manual: IntakeChoice;
   import: IntakeChoice;
   sync: IntakeChoice & { sources: SyncSource[]; connectHref?: string };
+  /** Whether a contact just added can be opened: adding and viewing are separate permissions. */
+  mayView: boolean;
 };
 
 /**
@@ -21,7 +23,9 @@ export type ContactIntakeOptions = {
  * same checks the destinations enforce: manual creation needs `customer.create`; Library imports
  * need `integration.manage`, and applying one needs `customer.create` for new rows and
  * `customer.update` for updates (checked per row by the database); synchronized worksheets need `integration.manage`, and connecting a new
- * provider account is Connections' own door, entitled by the Integrations module. Nothing here
+ * provider account is Connections' own door, entitled by the Integrations module. Imports and
+ * synchronizing also need `customer.read`, because reviewing one compares its rows with existing
+ * contacts and names them. Nothing here
  * grants access; it only avoids offering a path that would be refused.
  */
 export async function contactIntakeOptions(db: Db, input: {
@@ -32,13 +36,15 @@ export async function contactIntakeOptions(db: Db, input: {
   const manual: IntakeChoice = mayCreate ? { state: 'available' } : { state: 'unavailable', reason: 'Your role cannot add contacts.' };
   // Applying an import writes contacts: new rows need `customer.create`, updates need `customer.update`
   // (both checked per row by apply_import_run). With neither, every write would be refused.
-  const mayUpdate = has('customer.update');
+  const mayUpdate = has('customer.update'); const mayView = has('customer.read');
   const importChoice: IntakeChoice = !mayIntegrate
     ? { state: 'unavailable', reason: 'Importing needs permission to manage data sources.' }
+    : !mayView ? { state: 'unavailable', reason: 'Importing compares rows with existing contacts, which your role cannot view.' }
     : !mayCreate && !mayUpdate ? { state: 'unavailable', reason: 'Importing writes contacts, which your role cannot add or change.' }
     : { state: 'available', href: libraryNewImportHref(organizationId),
       note: !mayCreate ? 'Your role can update existing contacts from a file but cannot add new ones.' : !mayUpdate ? 'Your role can add new contacts from a file but cannot update existing ones.' : undefined };
-  if (!mayIntegrate) return { manual, import: importChoice, sync: { state: 'unavailable', reason: 'Synchronizing needs permission to manage data sources.', sources: [] } };
+  if (!mayIntegrate) return { manual, import: importChoice, sync: { state: 'unavailable', reason: 'Synchronizing needs permission to manage data sources.', sources: [] }, mayView };
+  if (!mayView) return { manual, import: importChoice, sync: { state: 'unavailable', reason: 'Synchronizing compares rows with existing contacts, which your role cannot view.', sources: [] }, mayView };
 
   const [resources, connections] = await Promise.all([listResources(db, { organizationId }), listConnections(db, { organizationId })]);
   const status = new Map(connections.map(connection => [connection.id, connection.status]));
@@ -50,7 +56,7 @@ export async function contactIntakeOptions(db: Db, input: {
   const sync = sources.length || connectHref
     ? { state: 'available' as const, href: libraryHref(organizationId, 'sources'), sources, connectHref }
     : { state: 'unavailable' as const, reason: 'No worksheet is connected, and connecting one needs Integrations in your plan.', sources };
-  return { manual, import: importChoice, sync };
+  return { manual, import: importChoice, sync, mayView };
 }
 
 /** Whether any intake path is open, so an entry point is shown only when it leads somewhere. */

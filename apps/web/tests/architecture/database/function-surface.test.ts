@@ -57,6 +57,9 @@ describe('SECURITY DEFINER functions in app', () => {
         'current_role_id',
         'current_tenant_ids',
         'has_capability',
+        // The organizations where the caller's role holds one permission, for a row policy that
+        // must evaluate it once per statement rather than once per row (`customer.read`).
+        'tenant_ids_with',
         'is_organization_member',
         'is_platform_staff',
         'require_platform_staff',

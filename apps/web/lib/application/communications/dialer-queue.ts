@@ -1,28 +1,27 @@
 import type { Db } from '@/lib/db/types';
-import { getContact, type Contact } from '@/lib/domain/contacts/contacts';
 import { listTasks, type CrmTask } from '@/lib/domain/tasks/tasks';
-import { listCallPage, type Call } from '@/lib/domain/reception/calls';
+import { callListContacts, listCallPage, type Call, type CallContact } from '@/lib/domain/reception/calls';
 
 /** How many of a queued customer's most recent recorded calls the Dialer shows beside them. */
 export const RECENT_CALLS_PER_CUSTOMER = 3;
 
-export type DialerQueueEntry = { task: CrmTask; customer: Contact | null; recentCalls: Call[] };
+export type DialerQueueEntry = { task: CrmTask; customer: CallContact | null; recentCalls: Call[] };
 
 /**
- * The Dialer's call list: the first page of open Call tasks, earliest due first, with each customer read once and
- * their few most recent recorded calls. Bounded by the page: at most 25 customers, each read in
- * the same organization under the caller's own access.
+ * The Dialer's call list: the first page of open Call tasks, earliest due first, with each listed
+ * contact's name, email and number and their few most recent recorded calls. Contacts are read
+ * through `call_list_contacts`, the Dialer's own disclosure: placing calls shows who is on the
+ * list without opening the contact directory. Bounded by the page: at most 25 contacts.
  */
 export async function loadDialerQueue(db: Db, organizationId: string): Promise<{ items: DialerQueueEntry[]; total: number }> {
   const tasks = await listTasks(db, { organizationId, status: 'open', kind: 'call', limit: 25 });
   const ids = [...new Set(tasks.map(item => item.customerId))];
-  const context = new Map(await Promise.all(ids.map(async customerId => {
-    const [customer, calls] = await Promise.all([
-      getContact(db, { organizationId, customerId }),
-      listCallPage(db, { organizationId, filter: { customerId }, limit: RECENT_CALLS_PER_CUSTOMER }),
-    ]);
-    return [customerId, { customer, recentCalls: calls.items }] as const;
-  })));
+  const [contacts, history] = await Promise.all([
+    callListContacts(db, { organizationId, customerIds: ids }),
+    Promise.all(ids.map(async customerId => [customerId, (await listCallPage(db, { organizationId, filter: { customerId }, limit: RECENT_CALLS_PER_CUSTOMER })).items] as const)),
+  ]);
+  const byId = new Map(contacts.map(contact => [contact.id, contact]));
+  const context = new Map(history.map(([customerId, recentCalls]) => [customerId, { customer: byId.get(customerId) ?? null, recentCalls }] as const));
   return {
     items: tasks.map(task => ({ task, customer: context.get(task.customerId)?.customer ?? null, recentCalls: context.get(task.customerId)?.recentCalls ?? [] })),
     total: tasks.total,

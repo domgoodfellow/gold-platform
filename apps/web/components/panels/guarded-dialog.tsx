@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@gold/ui/components/dialog';
 import { Button } from '../controls/button';
 import { cx } from '../class-names';
@@ -64,6 +64,23 @@ export function GuardedDialog({ open, onOpenChange, children, className, size = 
       </DialogContent>
     </Dialog>
   </Guard.Provider>;
+}
+
+/**
+ * A step inside a `GuardedDialog` that hosts another form, such as creating a contact while
+ * choosing contacts. The inner form's Cancel calls `onCancel` (back to the step) instead of closing
+ * the dialog, and the dialog stays guarded while either the step (`dirty`) or the inner form has
+ * unsaved input.
+ */
+export function GuardedDialogScope({ dirty, onCancel, children }: { dirty: boolean; onCancel: () => void; children: ReactNode }) {
+  const guard = useContext(Guard);
+  const inner = useRef(false);
+  useEffect(() => { guard?.setDirty(dirty || inner.current); }, [guard, dirty]);
+  const value = useMemo<GuardContext | null>(() => guard && {
+    requestClose: onCancel,
+    setDirty: (value: boolean) => { inner.current = value; guard.setDirty(dirty || value); },
+  }, [guard, dirty, onCancel]);
+  return <Guard.Provider value={value}>{children}</Guard.Provider>;
 }
 
 /** Report whether the form inside differs from what it opened with. Outside a `GuardedDialog` it does nothing. */

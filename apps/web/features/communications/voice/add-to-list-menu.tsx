@@ -10,21 +10,25 @@ import { FormError, FormField } from '@/components/controls/form';
 import { TextInput } from '@/components/controls/inputs';
 import { GuardedDialog, useGuardedDialogClose, useGuardedDialogDirty } from '@/components/panels/guarded-dialog';
 import { DialogBody, DialogFooterBar, StepHeader } from '@/components/panels/dialog-layout';
-import type { CallListTarget, CallListTaskDraft } from '@/lib/application/communications/call-list';
+import type { CallListStanding, CallListTarget, CallListTaskDraft } from '@/lib/application/communications/call-list';
 import { addToCallListAction, previewAddToCallList, type AddToCallListResult, type CallListPreview } from '@/app/organizations/[organizationId]/calls/call-list-actions';
 import { CallListTaskFields } from './call-list-task-fields';
 
 const people = (count: number) => `${count} ${count === 1 ? 'contact' : 'contacts'}`;
 
 /** The toast after an add: who was added, and who was skipped and why. */
-export function callListAddedMessage({ added, alreadyOnList, noPhone }: Pick<AddToCallListResult, 'added' | 'alreadyOnList' | 'noPhone'>): string {
-  const skipped = [alreadyOnList ? `${people(alreadyOnList)} already on it` : '', noPhone ? `${people(noPhone)} with no phone number` : ''].filter(Boolean).join(', ');
+export function callListAddedMessage({ added, alreadyOnList, noPhone, conflicts = 0 }: Pick<AddToCallListResult, 'added' | 'alreadyOnList' | 'noPhone'> & { conflicts?: number }): string {
+  const skipped = [
+    alreadyOnList ? `${people(alreadyOnList)} already on it` : '',
+    conflicts ? `${people(conflicts)} added by someone else just now` : '',
+    noPhone ? `${people(noPhone)} with no phone number` : '',
+  ].filter(Boolean).join(', ');
   if (!added) return skipped ? `No one added: ${skipped}.` : 'No one added.';
   return `Added ${people(added)} to the call list.${skipped ? ` Skipped ${skipped}.` : ''}`;
 }
 
 /** One contact's standing on the call list, decided on the server. */
-export type CallListStanding = 'ready' | 'on-list' | 'no-phone';
+export type { CallListStanding };
 
 /**
  * Add to…: the lists a contact can be put on. Today that is the Dialer's call list; the page only
@@ -105,13 +109,13 @@ function ConfirmAdd({ organizationId, target: given, onAdded }: { organizationId
           <p className="font-medium">{toAdd ? `${people(toAdd)} will be added.` : 'No one here can be added.'}</p>
           {skipped.length ? <p className="text-muted">Skipped: {skipped.join(', ')}.</p> : null}
         </div> : null}
-        {toAdd ? <FormField id={`${prefix}-reason`} label="Reason" optional>{p => <TextInput {...p} value={reason} onChange={event => setReason(event.target.value)} maxLength={200} placeholder="Call" />}</FormField> : null}
+        {toAdd ? <FormField id={`${prefix}-reason`} label="Reason for calling">{p => <TextInput {...p} required value={reason} onChange={event => setReason(event.target.value)} maxLength={200} />}</FormField> : null}
         {toAdd ? <div onChange={() => setDetailsDirty(true)}><CallListTaskFields organizationId={organizationId} value={details} onChange={setDetails} onDirty={() => setDetailsDirty(true)} /></div> : null}
         <FormError>{error}</FormError>
       </div>
     </DialogBody>
     <DialogFooterBar>
-      <Button type="button" disabled={!toAdd || pending || !details.dueAt} onClick={add}>{pending ? 'Adding…' : toAdd ? `Add ${toAdd}` : 'Add'}</Button>
+      <Button type="button" disabled={!toAdd || pending || !details.dueAt || !reason.trim()} onClick={add}>{pending ? 'Adding…' : toAdd ? `Add ${toAdd}` : 'Add'}</Button>
       <Button type="button" tone="secondary" onClick={close}>Cancel</Button>
     </DialogFooterBar>
   </>;
