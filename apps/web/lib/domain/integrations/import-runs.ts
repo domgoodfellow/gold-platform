@@ -71,7 +71,7 @@ export type StagingRowStatus = 'ready' | 'review' | 'duplicate' | 'invalid' | 'i
  * `phone`: contacts with this phone number and no email to tell them apart. `phone_in_file`,
  * `email_in_file`, `contact_in_file`: an earlier row of the same file.
  */
-export type ImportMatchReason = 'source' | 'source_other_file' | 'email' | 'email_shared' | 'email_unconfirmed' | 'phone' | 'phone_in_file' | 'email_in_file' | 'contact_in_file';
+export type ImportMatchReason = 'source' | 'source_other_file' | 'source_deleted' | 'email' | 'email_shared' | 'email_unconfirmed' | 'phone' | 'phone_in_file' | 'email_in_file' | 'contact_in_file';
 export type ImportRowDecision = 'create' | 'update' | 'skip';
 
 export type StagingRow = {

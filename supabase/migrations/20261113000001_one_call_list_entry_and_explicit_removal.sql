@@ -2,28 +2,39 @@
 -- database rule rather than a read-before-insert check, and makes taking someone off the list its
 -- own permission (`call_list.remove`) that broader task permission cannot route around.
 
--- 1. The permission. Administrators (roles that already change business settings) receive it, the
---    same forward backfill `follow_up.manage` used; every other role is granted it explicitly.
-do $$
-declare v_known text[]; v_constraint text;
+-- 1. The permission. Unrestricted administrators (roles holding every existing permission)
+--    receive it; every other role, including those that manage tasks, is granted it explicitly.
+create function pg_temp.add_capabilities(p_add text[], p_to_every_role text[], p_to_unrestricted text[]) returns void
+language plpgsql as $$
+declare v_constraint text; v_before text[]; v_after text[];
 begin
   select pg_get_constraintdef(oid) into v_constraint from pg_constraint
     where conrelid = 'public.roles'::regclass and conname = 'roles_capabilities_known';
-  select array_agg(distinct m[1]) into v_known from regexp_matches(v_constraint, '''([^'']+)''::text', 'g') m;
-  if not 'call_list.remove' = any(v_known) then
-    v_known := v_known || array['call_list.remove'];
-  end if;
+  select array_agg(distinct m[1]) into v_before from regexp_matches(v_constraint, '''([^'']+)''::text', 'g') m;
+  v_after := v_before || array(select c from unnest(p_add) c where not c = any(v_before));
   alter table public.roles drop constraint roles_capabilities_known;
   execute format('alter table public.roles add constraint roles_capabilities_known check (capabilities <@ array[%s]::text[])',
-    (select string_agg(quote_literal(c), ',' order by c) from unnest(v_known) c));
+    (select string_agg(quote_literal(c), ',' order by c) from unnest(v_after) c));
+  -- These updates only add permissions, so they cannot leave a business without someone who
+  -- manages roles. The guard for that is set aside for them alone, because it refuses any change
+  -- in a business that already has nobody holding `role.manage`. This runs as one statement:
+  -- if anything fails, the guard's suspension is undone with everything else, and no other
+  -- session ever sees the guard off.
+  alter table public.roles disable trigger roles_capabilities_update_guard;
+  update public.roles set capabilities = capabilities || array(select c from unnest(p_to_every_role) c where not c = any(capabilities))
+    where not capabilities @> p_to_every_role;
+  -- An unrestricted administrator is a role holding every permission that existed before this
+  -- migration: the founding role (provisioned with all of them) and copies of it. A role someone
+  -- deliberately restricted, even slightly, does not gain a new destructive permission.
+  update public.roles set capabilities = capabilities || array(select c from unnest(p_to_unrestricted) c where not c = any(capabilities))
+    where capabilities @> v_before and not capabilities @> p_to_unrestricted;
+  alter table public.roles enable trigger roles_capabilities_update_guard;
+  if (select tgenabled from pg_trigger where tgrelid = 'public.roles'::regclass and tgname = 'roles_capabilities_update_guard') <> 'O' then
+    raise exception 'roles_capabilities_update_guard was not restored';
+  end if;
 end $$;
--- Only adds a permission, so it cannot leave a business without someone who manages roles; the
--- guard for that is set aside for this statement because it also refuses any change at all in a
--- business that already has nobody holding `role.manage` (seen in existing data).
-alter table public.roles disable trigger roles_capabilities_update_guard;
-update public.roles set capabilities = capabilities || array['call_list.remove']
-  where 'organization.manage' = any(capabilities) and not 'call_list.remove' = any(capabilities);
-alter table public.roles enable trigger roles_capabilities_update_guard;
+select pg_temp.add_capabilities(array['call_list.remove'], array[]::text[], array['call_list.remove']);
+drop function pg_temp.add_capabilities(text[], text[], text[]);
 
 -- 2. Existing duplicates. Before the rule can exist, a contact with several open Call tasks keeps
 --    the one due first (then the one created first, then the lowest id, so the choice is the same on
@@ -34,23 +45,28 @@ alter table public.roles enable trigger roles_capabilities_update_guard;
 insert into auth.users (id, instance_id, aud, role)
 values ('00000000-0000-4000-8000-0000000000a3', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated')
 on conflict (id) do nothing;
-alter table public.crm_tasks disable trigger follow_up_observed;
-with ranked as (
-  select id, row_number() over (partition by organization_id, customer_id order by due_at, created_at, id) as position
-    from public.crm_tasks where status = 'open' and kind = 'call'
-), cancelled as (
-  update public.crm_tasks t set status = 'cancelled'
-    from ranked r where t.id = r.id and r.position > 1
-  returning t.*
-)
-insert into public.events(organization_id, actor_id, entity_type, entity_id, action, payload)
-  select organization_id, '00000000-0000-4000-8000-0000000000a3', 'follow_up', id, 'follow_up.cancelled',
-    jsonb_build_object('customer_id', customer_id, 'opportunity_id', opportunity_id, 'title', title, 'kind', kind,
-      'due_at', due_at, 'status', 'cancelled', 'owner_membership_id', owner_membership_id,
-      'reason', 'duplicate_call_list_entry', 'recorded_by', 'migration',
-      'migration', '20261113000001_one_call_list_entry_and_explicit_removal', 'task_created_by', created_by)
-  from cancelled;
-alter table public.crm_tasks enable trigger follow_up_observed;
+-- One statement, so the trigger that records each change (it would attribute these to nobody) is
+-- off only inside it and is back on whatever happens.
+do $$
+begin
+  alter table public.crm_tasks disable trigger follow_up_observed;
+  with ranked as (
+    select id, row_number() over (partition by organization_id, customer_id order by due_at, created_at, id) as position
+      from public.crm_tasks where status = 'open' and kind = 'call'
+  ), cancelled as (
+    update public.crm_tasks t set status = 'cancelled'
+      from ranked r where t.id = r.id and r.position > 1
+    returning t.*
+  )
+  insert into public.events(organization_id, actor_id, entity_type, entity_id, action, payload)
+    select organization_id, '00000000-0000-4000-8000-0000000000a3', 'follow_up', id, 'follow_up.cancelled',
+      jsonb_build_object('customer_id', customer_id, 'opportunity_id', opportunity_id, 'title', title, 'kind', kind,
+        'due_at', due_at, 'status', 'cancelled', 'owner_membership_id', owner_membership_id,
+        'reason', 'duplicate_call_list_entry', 'recorded_by', 'migration',
+        'migration', '20261113000001_one_call_list_entry_and_explicit_removal', 'task_created_by', created_by)
+    from cancelled;
+  alter table public.crm_tasks enable trigger follow_up_observed;
+end $$;
 
 -- 3. One open Call task per contact. A completed or cancelled one never blocks adding them again.
 create unique index crm_tasks_one_open_call_per_contact on public.crm_tasks(organization_id, customer_id)

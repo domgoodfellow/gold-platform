@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { foundBusiness } from '@/tests/support/founding';
-import { createContact, getContact } from '@/lib/domain/contacts/contacts';
+import { createContact, deleteContact, getContact } from '@/lib/domain/contacts/contacts';
 import { uploadImportFile } from '@/lib/domain/integrations/resources';
 import { createMapping, type MappingField } from '@/lib/domain/integrations/mappings';
 import {
@@ -227,5 +227,40 @@ describe('contact import matching and review under real PostgreSQL', () => {
     expect(await contactsNamed(`Linked ${tag}`)).toHaveLength(1);
     // Once applied, a run's decisions are history.
     await expect(decideImportRow(owner.db, { organizationId, runId: again.runId, rowId: row.id, decision: 'skip' })).rejects.toThrow('This import has already been applied.');
+  });
+
+  it('deleting an imported contact keeps the source link as evidence without their details, and a later import of the same record is held, not re-created', async () => {
+    const csv = ['source_record_id,name,email,phone', `X-9,Gone Gus ${tag},${mail('gus')},`].join('\n');
+    const fileName = `deleted-${tag}.csv`;
+    const first = await stage(csv, { fileName });
+    await applyImportRun(owner.db, { organizationId, runId: first.runId });
+    const gus = (await contactsNamed(`Gone Gus ${tag}`))[0].id;
+    await deleteContact(owner.db, { organizationId, contactId: gus });
+    const evidence = await (async () => {
+      const pg = new Client(process.env.SUPABASE_DB_URL); await pg.connect();
+      try {
+        return {
+          link: (await pg.query("select gold_entity_id, contact_deleted_at is not null as deleted from external_record_links where organization_id = $1 and gold_entity_id = $2", [organizationId, gus])).rows,
+          row: (await pg.query('select status, raw, normalized, matched_customer_id from import_staging_rows where organization_id = $1 and run_id = $2', [organizationId, first.runId])).rows,
+        };
+      } finally { await pg.end(); }
+    })();
+    expect(evidence.link).toEqual([{ gold_entity_id: gus, deleted: true }]);
+    expect(evidence.row).toEqual([{ status: 'applied', raw: {}, normalized: {}, matched_customer_id: null }]);
+    // The same record again: held for a person, never quietly added back.
+    const again = await stage(csv, { fileName });
+    expect(again.rows[0]).toMatchObject({ status: 'review', proposedAction: 'review', matchReason: 'source_deleted', candidateIds: [] });
+    await expect(applyImportRun(owner.db, { organizationId, runId: again.runId })).rejects.toThrow('Decide every row marked Needs review before importing.');
+    await decideImportRow(owner.db, { organizationId, runId: again.runId, rowId: again.rows[0].id, decision: 'skip' });
+    await applyImportRun(owner.db, { organizationId, runId: again.runId });
+    expect(await contactsNamed(`Gone Gus ${tag}`)).toEqual([]);
+    // A person may still bring them back on purpose; the source link then follows the new contact.
+    const deliberately = await stage(csv, { fileName });
+    await decideImportRow(owner.db, { organizationId, runId: deliberately.runId, rowId: deliberately.rows[0].id, decision: 'create' });
+    await applyImportRun(owner.db, { organizationId, runId: deliberately.runId });
+    const back = await contactsNamed(`Gone Gus ${tag}`);
+    expect(back).toHaveLength(1);
+    const relinked = await (async () => { const pg = new Client(process.env.SUPABASE_DB_URL); await pg.connect(); try { return (await pg.query("select gold_entity_id, contact_deleted_at from external_record_links where organization_id = $1 and external_record_id = $2", [organizationId, deliberately.rows[0].sourceRecordKey])).rows; } finally { await pg.end(); } })();
+    expect(relinked).toEqual([{ gold_entity_id: back[0].id, contact_deleted_at: null }]);
   });
 });

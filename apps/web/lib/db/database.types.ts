@@ -4357,6 +4357,7 @@ export type Database = {
       external_record_links: {
         Row: {
           connector_key: string
+          contact_deleted_at: string | null
           external_record_id: string
           first_imported_at: string
           gold_entity_id: string
@@ -4370,6 +4371,7 @@ export type Database = {
         }
         Insert: {
           connector_key: string
+          contact_deleted_at?: string | null
           external_record_id: string
           first_imported_at?: string
           gold_entity_id: string
@@ -4383,6 +4385,7 @@ export type Database = {
         }
         Update: {
           connector_key?: string
+          contact_deleted_at?: string | null
           external_record_id?: string
           first_imported_at?: string
           gold_entity_id?: string
@@ -15948,6 +15951,7 @@ export type Database = {
       call_list_contacts: {
         Args: { p_customer_ids: string[]; p_organization_id: string }
         Returns: {
+          archived: boolean
           email: string
           id: string
           name: string

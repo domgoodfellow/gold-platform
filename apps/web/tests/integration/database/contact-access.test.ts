@@ -98,7 +98,7 @@ describe('contact read and removal permissions under real PostgreSQL RLS', () =>
   it('shows a caller the name and number of contacts on the call list, and nothing else of the directory', async () => {
     const shown = await caller.db.rpc('call_list_contacts', { p_organization_id: organizationId, p_customer_ids: [listed, unlisted, foreign] });
     expect(shown.error).toBeNull();
-    expect(shown.data).toEqual([{ id: listed, name: `Listed ${tag}`, email: `listed-${tag}@example.test`, phone: '+14165550200' }]);
+    expect(shown.data).toEqual([{ id: listed, name: `Listed ${tag}`, email: `listed-${tag}@example.test`, phone: '+14165550200', archived: false }]);
     // Without calling or viewing permission there is no door at all.
     expect((await creator.db.rpc('call_list_contacts', { p_organization_id: organizationId, p_customer_ids: [listed] })).error?.code).toBe('42501');
     // Another business's call list is not this caller's.
@@ -175,8 +175,10 @@ describe('contact read and removal permissions under real PostgreSQL RLS', () =>
     const referencing = await asPostgres(async pg => (await pg.query<{ name: string }>(
       "select distinct conrelid::regclass::text as name from pg_constraint where confrelid = 'public.contacts'::regclass and contype = 'f' order by 1")).rows.map(row => row.name));
     const body = await asPostgres(async pg => (await pg.query<{ body: string }>("select prosrc as body from pg_proc where proname = 'contact_retained_records'")).rows[0].body);
-    const goesWithContact = ['contact_people', 'contact_companies'];
-    const unaccounted = referencing.filter(name => !goesWithContact.includes(name) && !body.includes(name.includes('.') ? name : `public.${name}`));
+    // Handled by deletion itself: the contact's own details go with it, its location links are
+    // removed (with any place nothing else uses), and import history keeps its evidence.
+    const handledByDeletion = ['contact_people', 'contact_companies', 'customer_locations', 'import_staging_rows'];
+    const unaccounted = referencing.filter(name => !handledByDeletion.includes(name) && !body.includes(name.includes('.') ? name : `public.${name}`));
     expect(unaccounted).toEqual([]);
   });
 });

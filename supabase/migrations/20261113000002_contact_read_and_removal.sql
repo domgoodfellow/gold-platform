@@ -6,31 +6,41 @@
 -- restored) or, only when nothing the business must keep refers to it, permanent deletion.
 -- Taking a contact off the call list (`call_list.remove`) is a different thing and stays so.
 
--- 1. The permissions.
-do $$
-declare v_known text[]; v_constraint text;
+-- 1. The permissions. Until now membership alone showed every contact, so every existing role
+--    receives `customer.read`. Deleting contacts is new destructive authority, so only unrestricted
+--    administrators (roles holding every existing permission) receive `customer.delete`; changing
+--    business settings alone does not imply it, and every other role is granted it explicitly.
+create function pg_temp.add_capabilities(p_add text[], p_to_every_role text[], p_to_unrestricted text[]) returns void
+language plpgsql as $$
+declare v_constraint text; v_before text[]; v_after text[];
 begin
   select pg_get_constraintdef(oid) into v_constraint from pg_constraint
     where conrelid = 'public.roles'::regclass and conname = 'roles_capabilities_known';
-  select array_agg(distinct m[1]) into v_known from regexp_matches(v_constraint, '''([^'']+)''::text', 'g') m;
-  v_known := v_known || array(select c from unnest(array['customer.read', 'customer.delete']) c where not c = any(v_known));
+  select array_agg(distinct m[1]) into v_before from regexp_matches(v_constraint, '''([^'']+)''::text', 'g') m;
+  v_after := v_before || array(select c from unnest(p_add) c where not c = any(v_before));
   alter table public.roles drop constraint roles_capabilities_known;
   execute format('alter table public.roles add constraint roles_capabilities_known check (capabilities <@ array[%s]::text[])',
-    (select string_agg(quote_literal(c), ',' order by c) from unnest(v_known) c));
+    (select string_agg(quote_literal(c), ',' order by c) from unnest(v_after) c));
+  -- These updates only add permissions, so they cannot leave a business without someone who
+  -- manages roles. The guard for that is set aside for them alone, because it refuses any change
+  -- in a business that already has nobody holding `role.manage`. This runs as one statement:
+  -- if anything fails, the guard's suspension is undone with everything else, and no other
+  -- session ever sees the guard off.
+  alter table public.roles disable trigger roles_capabilities_update_guard;
+  update public.roles set capabilities = capabilities || array(select c from unnest(p_to_every_role) c where not c = any(capabilities))
+    where not capabilities @> p_to_every_role;
+  -- An unrestricted administrator is a role holding every permission that existed before this
+  -- migration: the founding role (provisioned with all of them) and copies of it. A role someone
+  -- deliberately restricted, even slightly, does not gain a new destructive permission.
+  update public.roles set capabilities = capabilities || array(select c from unnest(p_to_unrestricted) c where not c = any(capabilities))
+    where capabilities @> v_before and not capabilities @> p_to_unrestricted;
+  alter table public.roles enable trigger roles_capabilities_update_guard;
+  if (select tgenabled from pg_trigger where tgrelid = 'public.roles'::regclass and tgname = 'roles_capabilities_update_guard') <> 'O' then
+    raise exception 'roles_capabilities_update_guard was not restored';
+  end if;
 end $$;
-
--- Until now membership alone showed every contact, so every existing role keeps that. Both
--- updates only add permissions; the guard against leaving a business with nobody who manages
--- roles is set aside for them, as in 20261113000001, because it refuses any change in a business
--- that already has nobody holding `role.manage`.
-alter table public.roles disable trigger roles_capabilities_update_guard;
-update public.roles set capabilities = capabilities || array['customer.read']
-  where not 'customer.read' = any(capabilities);
--- Removing contacts goes only to administrators (roles that change business settings), the same
--- forward backfill `call_list.remove` used. Editing or task permission never implies it.
-update public.roles set capabilities = capabilities || array['customer.delete']
-  where 'organization.manage' = any(capabilities) and not 'customer.delete' = any(capabilities);
-alter table public.roles enable trigger roles_capabilities_update_guard;
+select pg_temp.add_capabilities(array['customer.read', 'customer.delete'], array['customer.read'], array['customer.delete']);
+drop function pg_temp.add_capabilities(text[], text[], text[]);
 -- Industry templates carry copies of roles; a role made from one could see contacts until now, so
 -- each template role gains `customer.read` too (the role presets in code changed the same way).
 update public.industry_templates t
@@ -41,6 +51,28 @@ update public.industry_templates t
        from jsonb_array_elements(t.shape->'roles') with ordinality as e(r, position)))
  where jsonb_typeof(t.shape->'roles') = 'array'
    and exists (select 1 from jsonb_array_elements(t.shape->'roles') r where not coalesce(r->'capabilities' ? 'customer.read', false));
+
+-- Setups not yet applied carry roles too. A draft, or a failed setup (retrying copies its roles
+-- into a new draft), would otherwise create roles that cannot view contacts. Each one changed is
+-- logged under the data migration account (20261113000001). A setup being applied is locked
+-- against edits and is left as it is; the preflight lists any.
+with updated as (
+  update public.configuration_proposals p
+     set shape = jsonb_set(p.shape, '{roles}', (
+       select jsonb_agg(case when r->'capabilities' ? 'customer.read' then r
+                             else jsonb_set(r, '{capabilities}', jsonb_build_array('customer.read') || coalesce(r->'capabilities', '[]'::jsonb)) end
+                        order by position)
+         from jsonb_array_elements(p.shape->'roles') with ordinality as e(r, position)))
+   where p.outcome in ('draft', 'failed')
+     and jsonb_typeof(p.shape->'roles') = 'array'
+     and exists (select 1 from jsonb_array_elements(p.shape->'roles') r where not coalesce(r->'capabilities' ? 'customer.read', false))
+  returning p.id, p.organization_id, p.outcome
+)
+insert into public.events (organization_id, actor_id, entity_type, entity_id, action, payload)
+  select organization_id, '00000000-0000-4000-8000-0000000000a3', 'configuration_proposal', id, 'configuration_proposal.roles_updated',
+         jsonb_build_object('added', 'customer.read', 'outcome', outcome, 'recorded_by', 'migration',
+           'migration', '20261113000002_contact_read_and_removal')
+    from updated;
 
 -- 2. The organizations where the caller's role holds a permission. A row policy written as
 --    `organization_id in (select app.tenant_ids_with(...))` evaluates this once per statement.
@@ -121,17 +153,18 @@ $$;
 
 -- 5. The Dialer's disclosure. Whoever places calls sees the name, email and phone number of the
 --    contacts on the call list (contacts with an open Call task), and nothing else of the
---    directory: no other contact, no notes, fields or history. `dialer_contact_candidates` stays
---    the matching disclosure for a number the caller already has.
+--    directory: no other contact, no notes, fields or history. Whether the contact is archived is
+--    included, so an archived contact's open call stays visible and marked rather than hidden.
+--    `dialer_contact_candidates` stays the matching disclosure for a number the caller already has.
 create function public.call_list_contacts(p_organization_id uuid, p_customer_ids uuid[])
-returns table(id uuid, name text, email text, phone text)
+returns table(id uuid, name text, email text, phone text, archived boolean)
 language plpgsql stable security definer set search_path = '' as $$
 begin
   if not (app.has_capability(p_organization_id, 'call.place') or app.has_capability(p_organization_id, 'customer.read')) then
     raise exception 'insufficient privilege' using errcode = '42501';
   end if;
   return query
-    select c.id, c.name, c.email, c.phone
+    select c.id, c.name, c.email, c.phone, c.archived_at is not null
       from public.contacts c
      where c.organization_id = p_organization_id
        and c.id = any (p_customer_ids[1:100])
@@ -168,8 +201,11 @@ create or replace view public.contact_directory with (security_invoker = true) a
 
 -- What refers to a contact and must be kept, by kind; empty when deleting it loses nothing the
 -- business is required to keep. Event history is kept either way and never blocks. Every table
--- with a foreign key to contacts appears here except the contact's own person/company details;
--- the contact-removal database test fails when a new one is added without a decision.
+-- with a foreign key to contacts appears here except three that deleting handles itself: the
+-- contact's own person/company details (removed with it), its location links (removed, and a
+-- place nothing else uses is removed too) and import provenance (kept as evidence without the
+-- person's values; see `app.release_contact_import_provenance`). The contact-removal database
+-- test fails when a new reference is added without a decision.
 create function app.contact_retained_records(p_organization_id uuid, p_contact_id uuid) returns text[]
 language sql stable security definer set search_path = '' as $$
   select array_remove(array[
@@ -198,12 +234,8 @@ language sql stable security definer set search_path = '' as $$
            or exists (select 1 from public.form_submissions x where x.organization_id = p_organization_id and x.customer_id = p_contact_id) then 'forms' end,
     case when exists (select 1 from public.customer_discovery_snapshots x where x.organization_id = p_organization_id and x.customer_id = p_contact_id) then 'discovery' end,
     case when exists (select 1 from public.document_links x where x.organization_id = p_organization_id and x.customer_id = p_contact_id) then 'documents' end,
-    case when exists (select 1 from public.customer_locations x where x.organization_id = p_organization_id and x.customer_id = p_contact_id) then 'locations' end,
     case when exists (select 1 from public.contact_affiliations x where x.organization_id = p_organization_id
                         and (x.person_id = p_contact_id or x.company_id = p_contact_id)) then 'affiliations' end,
-    case when exists (select 1 from public.external_record_links x where x.organization_id = p_organization_id
-                        and x.gold_entity_type = 'customer' and x.gold_entity_id = p_contact_id)
-           or exists (select 1 from public.import_staging_rows x where x.organization_id = p_organization_id and x.matched_customer_id = p_contact_id) then 'imports' end,
     case when exists (select 1 from public.report_definitions x where x.organization_id = p_organization_id and x.customer_id = p_contact_id) then 'reports' end
   ]::text[], null);
 $$;
@@ -258,13 +290,20 @@ grant execute on function public.restore_contact(uuid, uuid) to authenticated;
 -- Permanent deletion: only a contact nothing the business must keep refers to. The check and the
 -- delete run under the contact's row lock, so a record attached a moment earlier still refuses
 -- it, and any reference the check does not know about refuses it through its foreign key rather
--- than being cascaded away. The event log keeps who deleted whom and when.
+-- than being cascaded away. Removed with the contact, in the same transaction: its location
+-- links, each of its places that nothing else uses (checked against every reference to a
+-- location, so no cascade reaches another record), and the person's values in import history,
+-- whose source links stay as evidence so an import cannot quietly add them back. The event log
+-- keeps who deleted whom and when, with the name only.
 create function public.delete_contact(p_organization_id uuid, p_contact_id uuid) returns void
 language plpgsql volatile security definer set search_path = '' as $$
 declare
   v_actor uuid := app.require_capability(p_organization_id, 'customer.delete');
   v_contact public.contacts;
   v_retained text[];
+  v_places uuid[];
+  v_removed_places integer := 0;
+  v_import_links integer;
 begin
   select * into v_contact from public.contacts where organization_id = p_organization_id and id = p_contact_id for update;
   if not found then raise exception 'This contact no longer exists.' using errcode = 'P0002'; end if;
@@ -273,10 +312,33 @@ begin
     raise exception 'This contact has records that must be kept. Archive it instead.'
       using errcode = '23503', detail = array_to_string(v_retained, ',');
   end if;
+
+  with gone as (
+    delete from public.customer_locations where organization_id = p_organization_id and customer_id = p_contact_id returning location_id
+  ) select coalesce(array_agg(distinct location_id), '{}') into v_places from gone;
+  with removed as (
+    delete from public.locations l
+     where l.organization_id = p_organization_id and l.id = any (v_places)
+       and not exists (select 1 from public.customer_locations x where x.organization_id = l.organization_id and x.location_id = l.id)
+       and not exists (select 1 from public.work_items x where x.organization_id = l.organization_id and x.location_id = l.id)
+       and not exists (select 1 from public.assets x where x.organization_id = l.organization_id and x.location_id = l.id)
+       and not exists (select 1 from public.document_links x where x.organization_id = l.organization_id and x.location_id = l.id)
+       and not exists (select 1 from public.external_readings x where x.organization_id = l.organization_id and x.location_id = l.id)
+       and not exists (select 1 from public.report_definitions x where x.organization_id = l.organization_id and x.location_id = l.id)
+       and not exists (select 1 from public.resources x where x.organization_id = l.organization_id and x.base_location_id = l.id)
+       and not exists (select 1 from public.support_case_links x where x.organization_id = l.organization_id and x.location_id = l.id)
+    returning 1
+  ) select count(*) into v_removed_places from removed;
+
+  -- Defined with the import tables (20261113000003): keeps each source link as evidence and clears
+  -- the person's values from import history.
+  v_import_links := app.release_contact_import_provenance(p_organization_id, p_contact_id);
+
   insert into public.events (organization_id, actor_id, entity_type, entity_id, action, payload)
   values (p_organization_id, v_actor, 'customer', p_contact_id, 'customer.deleted',
     jsonb_build_object('name', v_contact.name, 'contact_type', v_contact.contact_type,
-      'created_at', v_contact.created_at, 'created_by', v_contact.created_by, 'archived_at', v_contact.archived_at));
+      'created_at', v_contact.created_at, 'created_by', v_contact.created_by, 'archived_at', v_contact.archived_at,
+      'location_links_removed', cardinality(v_places), 'places_removed', v_removed_places, 'import_links_kept', v_import_links));
   begin
     delete from public.contacts where organization_id = p_organization_id and id = p_contact_id;
   exception when foreign_key_violation then

@@ -305,3 +305,11 @@ describe('a caller who may not view contacts', () => {
   });
 });
 });
+
+describe('an archived contact still on the call list', () => {
+  it('stays listed and is marked Archived rather than hidden', () => {
+    const archived = entry('alice', 'Alice', '+14165550101');
+    render(<DialerWorkspace {...common} queue={[{ ...archived, customer: { ...archived.customer!, archived: true } }]} />);
+    expect(screen.getByRole('button', { name: /Alice.*Archived/ })).toBeInTheDocument();
+  });
+});

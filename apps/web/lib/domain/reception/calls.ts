@@ -53,7 +53,7 @@ export async function organizationTelephony(db: Db, organizationId: string): Pro
  */
 
 export type CallDirection = 'outbound' | 'inbound';
-export type CallContact = { id: string; name: string; email: string | null; phone: string | null };
+export type CallContact = { id: string; name: string; email: string | null; phone: string | null; /** Set by the call list read: the contact is archived but still has this open call. */ archived?: boolean };
 
 /**
  * The contacts on the call list among these ids, with only what calling them needs. The Dialer's

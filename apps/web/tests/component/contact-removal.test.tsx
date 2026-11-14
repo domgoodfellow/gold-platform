@@ -28,7 +28,7 @@ describe('Archive, Restore and Delete permanently on a contact', () => {
     expect(screen.queryByRole('menuitem', { name: 'Restore contact' })).toBeNull();
     await user.click(await screen.findByRole('menuitem', { name: 'Archive contact' }));
     const confirm = await screen.findByRole('alertdialog', { name: 'Archive Ada?' });
-    expect(confirm).toHaveTextContent('Their records and history are kept, and you can restore them.');
+    expect(confirm).toHaveTextContent('Their records and history are kept, open tasks stay open');
     expect(actions.archiveContactAction).not.toHaveBeenCalled();
     await user.click(within(confirm).getByRole('button', { name: 'Archive contact' }));
     await waitFor(() => expect(actions.archiveContactAction).toHaveBeenCalledWith('org', 'ada'));

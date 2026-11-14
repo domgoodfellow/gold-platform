@@ -1,9 +1,9 @@
 -- Contact import matching and review. Staging decides one of: update the contact this source
 -- record is already linked to; update the one contact with the same email (when the mapping trusts
 -- email); hold the row for a person to decide (several contacts share the email, the email match is
--- not trusted, the same source record was imported before from a file with another name, or only
--- the phone number matches); skip a repeat of an earlier row of the same file; or create a new
--- contact. A name alone never matches. A person decides held rows (Create, Update
+-- not trusted, the same source record was imported before from a file with another name, its
+-- contact was deleted, or only the phone number matches); skip a repeat of an earlier row of the
+-- same file; or create a new contact. A name alone never matches. A person decides held rows (Create, Update
 -- one of the matching contacts, or Skip) before anything is applied, and applying never creates a
 -- contact that has appeared since the review without being decided.
 
@@ -16,13 +16,43 @@ alter table public.import_staging_rows add constraint import_staging_rows_propos
 alter table public.import_staging_rows
   -- Why staging chose what it did; null for rows staged before this existed and for plain creates.
   add column match_reason text check (match_reason in
-    ('source', 'source_other_file', 'email', 'email_shared', 'email_unconfirmed', 'phone', 'phone_in_file', 'email_in_file', 'contact_in_file')),
+    ('source', 'source_other_file', 'source_deleted', 'email', 'email_shared', 'email_unconfirmed', 'phone', 'phone_in_file', 'email_in_file', 'contact_in_file')),
   -- Existing contacts this row might be, for a person to choose between. Never acted on alone.
   add column candidate_customer_ids uuid[] not null default '{}' check (cardinality(candidate_customer_ids) <= 10),
   add column decided_by uuid references auth.users(id),
   add column decided_at timestamptz,
   add constraint import_staging_rows_decision_attributed check ((decided_by is null) = (decided_at is null)),
   add constraint import_staging_rows_review_undecided check ((status = 'review') = (proposed_action = 'review'));
+
+-- A source link whose contact was deleted stays, marked, as evidence that this source record was
+-- imported and its contact deliberately removed; a later import of the same record is held for a
+-- person instead of adding them back.
+alter table public.external_record_links add column contact_deleted_at timestamptz;
+
+-- Called by `delete_contact` (20261113000002) in its transaction. Marks the contact's source links,
+-- clears the person's values from finished import rows (their outcome, run and source key stay),
+-- holds again any waiting row that would have updated them, and drops them from candidate lists.
+-- Returns how many source links were kept.
+create function app.release_contact_import_provenance(p_organization_id uuid, p_contact_id uuid) returns integer
+language plpgsql volatile security definer set search_path = '' as $fn$
+declare v_links integer;
+begin
+  update public.external_record_links set contact_deleted_at = now()
+   where organization_id = p_organization_id and gold_entity_type = 'customer' and gold_entity_id = p_contact_id;
+  get diagnostics v_links = row_count;
+  update public.import_staging_rows set raw = '{}'::jsonb, normalized = '{}'::jsonb, matched_customer_id = null
+   where organization_id = p_organization_id and matched_customer_id = p_contact_id
+     and status in ('applied', 'failed', 'duplicate', 'invalid', 'ignored');
+  update public.import_staging_rows
+     set status = 'review', proposed_action = 'review', match_reason = 'source_deleted', matched_customer_id = null,
+         candidate_customer_ids = array_remove(candidate_customer_ids, p_contact_id), decided_by = null, decided_at = null
+   where organization_id = p_organization_id and matched_customer_id = p_contact_id and status = 'ready';
+  update public.import_staging_rows set candidate_customer_ids = array_remove(candidate_customer_ids, p_contact_id)
+   where organization_id = p_organization_id and p_contact_id = any (candidate_customer_ids);
+  return v_links;
+end;
+$fn$;
+revoke all on function app.release_contact_import_provenance(uuid, uuid) from public, anon, authenticated;
 
 create or replace function public.stage_import_rows(p_organization_id uuid, p_run_id uuid, p_rows jsonb)
 returns integer language plpgsql volatile security definer set search_path = '' as $fn$
@@ -41,6 +71,7 @@ declare
   v_candidates uuid[];
   v_others uuid[];
   v_suffix text;
+  v_deleted boolean;
   v_trust_email boolean;
 begin
   perform app.require_capability(p_organization_id, 'integration.manage');
@@ -88,11 +119,17 @@ begin
       join public.contacts c on c.organization_id=l.organization_id and c.id=l.gold_entity_id
       where l.organization_id=p_organization_id and l.connector_key=v_run.connector_key
         and l.external_record_id=v_row->>'source_record_key' and l.gold_entity_type='customer';
+    -- This source record was imported before and its contact deliberately deleted.
+    v_deleted := v_customer is null and exists(select 1 from public.external_record_links l
+      where l.organization_id=p_organization_id and l.connector_key=v_run.connector_key
+        and l.external_record_id=v_row->>'source_record_key' and l.gold_entity_type='customer' and l.contact_deleted_at is not null);
 
     if jsonb_array_length(v_errors)>0 then
       v_status:='invalid'; v_action:='skip';
     elsif v_customer is not null then
       v_action:='update'; v_reason:='source';
+    elsif v_deleted then
+      v_status:='review'; v_action:='review'; v_reason:='source_deleted';
     elsif v_email is not null and exists(select 1 from public.import_staging_rows s
         where s.organization_id=p_organization_id and s.run_id=p_run_id and s.status in ('ready','review')
           and app.normalize_email(s.normalized->>'email')=v_email) then
@@ -431,7 +468,7 @@ begin
       from public.import_runs r
       where r.id = p_run_id
       on conflict (organization_id, connector_key, external_record_id, gold_entity_type)
-      do update set gold_entity_id = excluded.gold_entity_id, run_id = excluded.run_id, last_synced_at = now();
+      do update set gold_entity_id = excluded.gold_entity_id, run_id = excluded.run_id, last_synced_at = now(), contact_deleted_at = null;
 
       update public.import_staging_rows set status = 'applied', proposed_action=v_row.proposed_action, matched_customer_id=v_customer_id where id = v_row.id;
     exception when others then

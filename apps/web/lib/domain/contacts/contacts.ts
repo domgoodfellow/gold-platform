@@ -533,7 +533,7 @@ export async function listAffiliations(db:Db,organizationId:string,contactId:str
 }
 
 /** Kinds of record that keep a contact from being deleted; the database names kinds only, never the records. */
-export const RETAINED_RECORD_KINDS = ['opportunities', 'tasks', 'calls', 'conversations', 'finance', 'work', 'support', 'services', 'portal', 'forms', 'discovery', 'documents', 'locations', 'affiliations', 'imports', 'reports'] as const;
+export const RETAINED_RECORD_KINDS = ['opportunities', 'tasks', 'calls', 'conversations', 'finance', 'work', 'support', 'services', 'portal', 'forms', 'discovery', 'documents', 'affiliations', 'reports'] as const;
 export type RetainedRecordKind = (typeof RETAINED_RECORD_KINDS)[number];
 export type ContactRemoval = { archived: boolean; retained: RetainedRecordKind[] };
 

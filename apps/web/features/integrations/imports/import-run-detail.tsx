@@ -52,6 +52,7 @@ export function matchDescription(row: StagingRow, contacts: ReadonlyMap<string, 
   switch (row.matchReason) {
     case 'source': return `Linked to ${names([row.matchedCustomerId])} by source ID`;
     case 'source_other_file': return `Imported before from another file as ${names(row.candidateIds)}`;
+    case 'source_deleted': return 'Imported before; its contact was deleted';
     case 'email': return `Same email as ${names([row.matchedCustomerId])}`;
     case 'email_shared': return `Email used by ${names(row.candidateIds)}`;
     case 'email_unconfirmed': return `Same email as ${names(row.candidateIds)}`;

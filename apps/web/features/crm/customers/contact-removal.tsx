@@ -26,9 +26,7 @@ const RETAINED_LABEL: Record<RetainedRecordKind, string> = {
   forms: 'Form responses or inquiries',
   discovery: 'Discovery answers',
   documents: 'Documents',
-  locations: 'Locations',
   affiliations: 'Company affiliations',
-  imports: 'Import history',
   reports: 'Saved reports',
 };
 
@@ -93,7 +91,7 @@ export function ContactRemovalActions({ organizationId, contactId, name, removal
         {step === 'archive' ? <>
           <DialogHeader>
             <DialogTitle>Archive {name}?</DialogTitle>
-            <DialogDescription>They leave the contact list, pickers and counts. Their records and history are kept, and you can restore them.</DialogDescription>
+            <DialogDescription>They leave the contact list, pickers and counts. Their records and history are kept, open tasks stay open (a call on the Dialer list is marked Archived), and you can restore them.</DialogDescription>
           </DialogHeader>
           <FormError>{error}</FormError>
           <DialogFooter>
@@ -124,7 +122,7 @@ export function ContactRemovalActions({ organizationId, contactId, name, removal
         </> : <>
           <DialogHeader>
             <DialogTitle>Delete {name} permanently?</DialogTitle>
-            <DialogDescription>The contact and their details are removed and can’t be restored. The history log keeps a record that they were deleted.</DialogDescription>
+            <DialogDescription>The contact, their details and any of their locations nothing else uses are removed and can’t be restored. The history log keeps a record that they were deleted, and an import will not add them back without asking.</DialogDescription>
           </DialogHeader>
           <FormError>{error}</FormError>
           <DialogFooter>

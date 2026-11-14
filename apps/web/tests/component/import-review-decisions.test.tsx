@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ImportRunDetail, importChanges, matchDescription, summarizeStaging } from '@/features/integrations/imports/import-run-detail';
+import { ImportRunDetail, decisionChoices, importChanges, matchDescription, summarizeStaging } from '@/features/integrations/imports/import-run-detail';
 import type { ImportRun, StagingRow } from '@/lib/domain/integrations/import-runs';
 import type { ContactSummary } from '@/lib/domain/contacts/contacts';
 import { chooseOption, fieldValue, optionLabels } from '../support/select-field';
@@ -95,6 +95,11 @@ describe('what an Update would change', () => {
     const before = screen.getAllByText('Eve Original')[0];
     expect(before).toHaveClass('line-through');
     expect(before.closest('dd')).toHaveTextContent('from Eve Original → to Eve Renamed');
+  });
+  it('describes a row whose contact was deleted, offering only Create or Skip', () => {
+    const held = row('gone', 'Gone', { status: 'review', proposedAction: 'review', matchReason: 'source_deleted', candidateIds: [] });
+    expect(matchDescription(held, contacts)).toBe('Imported before; its contact was deleted');
+    expect(decisionChoices(held, contacts)?.map(choice => choice.value)).toEqual(['create', 'skip']);
   });
   it('describes a row imported before from another file', () => {
     expect(matchDescription(row('x', 'Eve', { matchReason: 'source_other_file', candidateIds: ['eve'] }), contacts)).toBe('Imported before from another file as Eve Original');

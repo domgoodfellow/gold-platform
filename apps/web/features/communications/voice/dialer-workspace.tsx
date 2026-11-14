@@ -351,7 +351,7 @@ export function DialerWorkspace({
                   <Avatar className="mt-0.5 size-9 shrink-0"><AvatarFallback className="bg-secondary text-xs font-semibold text-muted">{initials(name)}</AvatarFallback></Avatar>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
-                      <span className="truncate text-sm font-semibold">{name}</span>
+                      <span className="flex min-w-0 items-center gap-2"><span className="truncate text-sm font-semibold">{name}</span>{customer?.archived ? <StatePill tone="warning">Archived</StatePill> : null}</span>
                       {isDue(task.dueAt) ? <span className="shrink-0 text-xs font-medium text-warning">Due now</span> : <span className="shrink-0 text-xs tabular-nums text-muted">{dueLabel(task.dueAt)}</span>}
                     </span>
                     <span className="block truncate text-xs text-muted">{task.title}</span>
