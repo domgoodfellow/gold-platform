@@ -61,12 +61,13 @@ test('Dialer lists the tenant’s open Call tasks and the global pop-out survive
       await expect(page.getByText('Excluded completed call')).toHaveCount(0);
       await expect(page.getByText('Excluded other business call')).toHaveCount(0);
       await page.getByRole('button', { name: /Bob Clinic.*Confirm/ }).click();
-      await expect(page.getByText(/No customer phone number is recorded/).filter({ visible: true })).toHaveCount(1);
-      await expect(page.getByText(/No customer phone number is recorded/).filter({ visible: true })).toBeVisible();
+      await expect(page.getByText('No phone number is recorded for this contact.').filter({ visible: true })).toHaveCount(1);
+      await expect(page.getByText('No phone number is recorded for this contact.').filter({ visible: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Call', exact: true })).toBeDisabled();
       await region('Call list');
       await page.getByRole('button', { name: /Alice Plumbing.*Discuss/ }).click();
-      await expect(page.getByRole('textbox', { name: 'Number to call', exact: true })).toHaveValue('(416)555-0101');
+      await expect(page.getByRole('region', { name: 'Calling console' })).toContainText('(416)555-0101');
+      await expect(page.getByRole('textbox', { name: 'Number to call', exact: true })).toHaveCount(0);
       await region('Contact');
       await expect(page.getByRole('link', { name: 'Alice Plumbing', exact: true })).toHaveAttribute('href', `${base}/crm/contacts/${alice}`);
       await page.getByRole('link', { name: 'Call history', exact: true }).click();

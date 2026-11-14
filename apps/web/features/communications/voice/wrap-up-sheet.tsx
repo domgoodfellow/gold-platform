@@ -7,10 +7,11 @@ import type { Call } from '@/lib/domain/reception/calls';
 import type { CallOutcome } from '@/lib/domain/reception/outcomes';
 import { WrapUpCallForm } from './wrap-up-form';
 
-export function WrapUpCallSheet({ organizationId, call, outcomes }: { organizationId: string; call: Call; outcomes: CallOutcome[] }) {
+/** `prominent` is the trigger where wrapping up is the next step, such as straight after a call; in a list it stays a row action. */
+export function WrapUpCallSheet({ organizationId, call, outcomes, prominent = false }: { organizationId: string; call: Pick<Call, 'id' | 'note' | 'outcome'>; outcomes: CallOutcome[]; prominent?: boolean }) {
   return (
     <PageDrawer>
-      <PageDrawerTrigger asChild><Button type="button" tone="text" size="tiny"><ClipboardCheck aria-hidden /> Wrap up</Button></PageDrawerTrigger>
+      <PageDrawerTrigger asChild><Button type="button" tone={prominent ? 'primary' : 'text'} size={prominent ? 'default' : 'tiny'}><ClipboardCheck aria-hidden /> Wrap up</Button></PageDrawerTrigger>
       <PageDrawerContent>
         <PageDrawerHeader><PageDrawerTitle>Wrap up call</PageDrawerTitle><PageDrawerDescription>Record how the call went.</PageDrawerDescription></PageDrawerHeader>
         <div><WrapUpCallForm organizationId={organizationId} callId={call.id} outcomes={outcomes} note={call.note} outcomeId={call.outcome?.id ?? null} /></div>

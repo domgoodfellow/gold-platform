@@ -35,16 +35,31 @@ export type ActiveCall = {
   /** The business call this telephone belongs to — null for an incoming call until it is answered and identified server-side. */
   callId: string | null;
   contactLabel: string | null;
+  /** The contact the call was placed to, when the number was theirs. Attribution belongs to the call, never to whichever list entry is highlighted. */
+  customerId?: string | null;
+};
+
+/** The call this telephone was last on, kept after it ends so a presentation can offer what follows a call. */
+export type EndedCall = {
+  callId: string | null;
+  contactLabel: string | null;
+  customerId: string | null;
+  direction: 'incoming' | 'outgoing';
+  /** Seconds this telephone was connected; null when the call never connected. */
+  durationSeconds: number | null;
 };
 
 export type TelephoneDeviceContextValue = {
   status: DeviceStatus;
   error: string | null;
   activeCall: ActiveCall | null;
+  /** The last call this telephone left, until it is dismissed or another call starts. */
+  ended?: EndedCall | null;
+  dismissEnded?: () => void;
   incoming: { accept: () => void; reject: () => void } | null;
   register: () => Promise<void>;
   unregister: () => void;
-  connectToRoom: (room: string, meta: { callId: string; contactLabel: string }) => Promise<void>;
+  connectToRoom: (room: string, meta: { callId: string; contactLabel: string; customerId?: string | null }) => Promise<void>;
   hangUp: () => void;
   toggleMute: () => void;
   sendDigits: (digits: string) => void;
@@ -66,33 +81,51 @@ export function TelephoneDeviceProvider({ organizationId, children }: { organiza
   const [status, setStatus] = useState<DeviceStatus>('offline');
   const [error, setError] = useState<string | null>(null);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
+  const [ended, setEnded] = useState<EndedCall | null>(null);
   const [incomingCall, setIncomingCall] = useState<Call | null>(null);
+  // The handlers below outlive the render that attached them, so they read the call from here.
+  const current = useRef<ActiveCall | null>(null);
+  const update = useCallback((change: ActiveCall | null | ((previous: ActiveCall | null) => ActiveCall | null)) => {
+    current.current = typeof change === 'function' ? change(current.current) : change;
+    setActiveCall(current.current);
+  }, []);
+  const dismissEnded = useCallback(() => setEnded(null), []);
 
   const attachCallHandlers = useCallback(
-    (call: Call, direction: 'incoming' | 'outgoing', meta?: { callId: string; contactLabel: string }) => {
+    (call: Call, direction: 'incoming' | 'outgoing', meta?: { callId: string; contactLabel: string; customerId?: string | null }) => {
       callRef.current = call;
-      setActiveCall({
+      setEnded(null);
+      update({
         status: 'ringing',
         direction,
         muted: false,
         startedAt: Date.now(),
         callId: meta?.callId ?? null,
         contactLabel: meta?.contactLabel ?? null,
+        customerId: meta?.customerId ?? null,
       });
 
-      call.on('accept', () => setActiveCall((prev) => (prev ? { ...prev, status: 'in_progress', startedAt: Date.now() } : prev)));
+      call.on('accept', () => update((prev) => (prev ? { ...prev, status: 'in_progress', startedAt: Date.now() } : prev)));
       call.on('disconnect', () => {
+        const last = current.current;
         callRef.current = null;
-        setActiveCall(null);
+        update(null);
+        if (last) setEnded({
+          callId: last.callId,
+          contactLabel: last.contactLabel,
+          customerId: last.customerId ?? null,
+          direction: last.direction,
+          durationSeconds: last.status === 'in_progress' ? Math.max(0, Math.round((Date.now() - last.startedAt) / 1000)) : null,
+        });
       });
       call.on('cancel', () => {
         callRef.current = null;
-        setActiveCall(null);
+        update(null);
       });
       call.on('error', (callError) => setError(callError.message));
-      call.on('mute', (isMuted) => setActiveCall((prev) => (prev ? { ...prev, muted: isMuted } : prev)));
+      call.on('mute', (isMuted) => update((prev) => (prev ? { ...prev, muted: isMuted } : prev)));
     },
-    [],
+    [update],
   );
 
   /**
@@ -157,8 +190,8 @@ export function TelephoneDeviceProvider({ organizationId, children }: { organiza
     deviceRef.current = null;
     registration.current = null;
     setStatus('offline');
-    setActiveCall(null);
-  }, []);
+    update(null);
+  }, [update]);
 
   useEffect(() => () => unregister(), [unregister]);
 
@@ -168,7 +201,7 @@ export function TelephoneDeviceProvider({ organizationId, children }: { organiza
    * `calls`/`call_participants` rows this room already names.
    */
   const connectToRoom = useCallback(
-    async (room: string, meta: { callId: string; contactLabel: string }) => {
+    async (room: string, meta: { callId: string; contactLabel: string; customerId?: string | null }) => {
       await register();
       const device = deviceRef.current;
       if (!device) throw new Error('The dialer is not ready.');
@@ -202,14 +235,14 @@ export function TelephoneDeviceProvider({ organizationId, children }: { organiza
           incomingCall.reject();
           setIncomingCall(null);
           callRef.current = null;
-          setActiveCall(null);
+          update(null);
         },
       }
     : null;
 
   return (
     <TelephoneDeviceContext.Provider
-      value={{ status, error, activeCall, incoming, register, unregister, connectToRoom, hangUp, toggleMute, sendDigits }}
+      value={{ status, error, activeCall, ended, dismissEnded, incoming, register, unregister, connectToRoom, hangUp, toggleMute, sendDigits }}
     >
       <NavigationActivityContext.Provider value={!!activeCall || !!incomingCall}>{children}</NavigationActivityContext.Provider>
     </TelephoneDeviceContext.Provider>

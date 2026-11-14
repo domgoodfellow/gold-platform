@@ -10,6 +10,8 @@ export type PopoutCallDraft = {
   phoneNumberId: string;
   customerId?: string;
   customerName?: string;
+  /** Why calling cannot start, when whoever opened the window already knows. */
+  blockedReason?: string;
   onReturn?: (draft: { toNumber: string; phoneNumberId: string }) => void;
 };
 

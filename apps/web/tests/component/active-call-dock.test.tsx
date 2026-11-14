@@ -88,7 +88,7 @@ describe('the live call bar', () => {
   it('says who is on the call and what state it is in, from the call’s own participants', async () => {
     renderDock([own, caller, leg({ id: 'leg-t', party: 'transfer_target', status: 'ringing' })]);
     expect(await screen.findByText('Ada Lovelace')).toBeInTheDocument();
-    expect(screen.getByText('In call')).toBeInTheDocument();
+    expect(await screen.findByText('In call')).toBeInTheDocument();
     const roster = await screen.findByRole('list', { name: 'Who is on this call' });
     expect(roster).toHaveTextContent('You');
     expect(roster).toHaveTextContent('Caller');
@@ -179,6 +179,8 @@ describe('the live call bar', () => {
       const user = userEvent.setup();
       actions.coldTransferAction.mockResolvedValue({ ok: true, data: { participantId: 'leg-t' } });
       renderDock([own, caller]);
+      // Transfer waits for the call's own roster to say the caller has answered.
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Transfer' })).toBeEnabled());
       await user.click(screen.getByRole('button', { name: 'Transfer' }));
       await user.type(screen.getByLabelText('Number to transfer to'), '+14165550143');
       await user.click(screen.getByRole('button', { name: 'Hand off now' }));
@@ -190,6 +192,7 @@ describe('the live call bar', () => {
       const user = userEvent.setup();
       actions.coldTransferAction.mockResolvedValue({ ok: false, error: 'The person you are transferring to did not answer. You are still on the call.' });
       renderDock([own, caller]);
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Transfer' })).toBeEnabled());
       await user.click(screen.getByRole('button', { name: 'Transfer' }));
       await user.type(screen.getByLabelText('Number to transfer to'), '+14165550143');
       await user.click(screen.getByRole('button', { name: 'Hand off now' }));
@@ -245,6 +248,68 @@ describe('the live call bar', () => {
       await user.click(screen.getByRole('button', { name: '#' }));
       expect(device.sendDigits.mock.calls).toEqual([['5'], ['#']]);
     });
+  });
+});
+
+describe('where the call stands, and what can be done at each point', () => {
+  const ringing = leg({ ...caller, status: 'ringing' });
+
+  it('says a placed call is ringing until its roster shows the caller answered', async () => {
+    renderDock([own, ringing]);
+    // This browser has joined the room; that is not evidence anyone picked up.
+    expect(screen.getByText('Ringing', { selector: '[data-slot="live-call"] > div span' })).toBeInTheDocument();
+    await screen.findByRole('list', { name: 'Who is on this call' });
+    expect(document.querySelector('[data-slot="live-call"]')).toHaveAttribute('data-phase', 'ringing');
+    expect(screen.queryByText('In call')).not.toBeInTheDocument();
+  });
+
+  it('offers hanging up, mute and the keypad while ringing, and holds back hold and transfer', async () => {
+    renderDock([own, ringing]);
+    await screen.findByRole('list', { name: 'Who is on this call' });
+    expect(screen.getByRole('button', { name: 'Hold caller' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Transfer' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Mute' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Keypad' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /End call/ })).toBeEnabled();
+  });
+
+  it('says so while the telephone itself is still connecting, and holds the same controls back', async () => {
+    renderDock([own, caller], { status: 'ringing' });
+    await screen.findByRole('list', { name: 'Who is on this call' });
+    expect(document.querySelector('[data-slot="live-call"]')).toHaveAttribute('data-phase', 'ringing');
+    expect(screen.getByRole('button', { name: 'Hold caller' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Transfer' })).toBeDisabled();
+  });
+
+  it('says the caller is on hold when the roster says so', async () => {
+    renderDock([own, leg({ ...caller, onHold: true })]);
+    await screen.findByRole('button', { name: 'Resume caller' });
+    expect(document.querySelector('[data-slot="live-call"]')).toHaveAttribute('data-phase', 'on-hold');
+  });
+
+  it('offers only what this telephone can do for a call the business’s room does not hold', () => {
+    renderDock([], { callId: null, direction: 'incoming' });
+    expect(document.querySelector('[data-slot="live-call"]')).toHaveAttribute('data-phase', 'connected');
+    expect(screen.getByRole('button', { name: 'Mute' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Keypad' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /End call/ })).toBeInTheDocument();
+    for (const name of ['Add', 'Transfer', 'Hold caller']) expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+    expect(actions.listCallParticipantsAction).not.toHaveBeenCalled();
+  });
+
+  it('draws the same controls as the Dialer’s calling workspace, without the dock’s fixed strip', async () => {
+    actions.listCallParticipantsAction.mockResolvedValue({ ok: true, data: { participants: [own, caller], ownMembershipId: ME } });
+    const value = {
+      status: 'ready', error: null,
+      activeCall: { status: 'in_progress', direction: 'outgoing', muted: false, startedAt: Date.now(), callId: CALL, contactLabel: 'Ada Lovelace' },
+      incoming: null, register: vi.fn(), unregister: vi.fn(), connectToRoom: vi.fn(), ...device,
+    } as TelephoneDeviceContextValue;
+    render(<TelephoneDeviceContext.Provider value={value}><ActiveCallDock organizationId={ORG} placement="console" /></TelephoneDeviceContext.Provider>);
+    const controls = screen.getByRole('group', { name: 'Call controls' });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Transfer' })).toBeEnabled());
+    for (const name of ['Mute', 'Hold caller', 'Keypad', 'Add', 'Transfer', 'End call']) expect(controls).toContainElement(screen.getByRole('button', { name }));
+    expect(screen.getByLabelText('Call duration')).toBeInTheDocument();
+    expect(document.querySelector('[class*="fixed"]')).toBeNull();
   });
 });
 

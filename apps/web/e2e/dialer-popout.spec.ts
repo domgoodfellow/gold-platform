@@ -6,6 +6,10 @@ test.use({ storageState: OWNER_STORAGE_STATE });
 test('compact dialer preserves its draft across workspace navigation and window closure', async ({ page }, testInfo) => {
   const { organizationId } = loadDemoContext();
   await page.goto(`/organizations/${organizationId}/calls`);
+  // With someone on the call list the Dialer opens on that contact; manual entry is one press away.
+  const calling = page.getByRole('region', { name: 'Calling console' });
+  await expect(calling).toHaveAttribute('data-state', /^(manual|contact)$/);
+  if (await calling.getAttribute('data-state') === 'contact') await calling.getByRole('button', { name: 'Dial another number', exact: true }).click();
   await page.getByLabel('Number to call', { exact: true }).fill('+1514555012');
   const popupPromise = page.waitForEvent('popup');
   await page.getByRole('group', { name: 'Dialer toolbar' }).getByRole('button', { name: 'Pop out dialer' }).click();

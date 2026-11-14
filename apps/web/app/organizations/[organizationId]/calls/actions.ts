@@ -10,7 +10,7 @@ import { linkCallCustomer, recordCall } from '@/lib/domain/reception/calls';
 import { setCallingNumber } from '@/lib/domain/reception/telephony';
 import { requireOrganization } from '@/lib/route/organization';
 import { requireOperatingArea } from '@/lib/route/workspace-configuration';
-import { dialerContactCandidates, type CallContact } from '@/lib/domain/reception/calls';
+import { dialerContactCandidates, getCall, type CallContact } from '@/lib/domain/reception/calls';
 
 export async function matchDialerContact(organizationId: string, number: string): Promise<{ state: 'matched'; contact: CallContact } | { state: 'none' | 'ambiguous' | 'unavailable' }> {
   try {
@@ -18,6 +18,18 @@ export async function matchDialerContact(organizationId: string, number: string)
     const matches = await dialerContactCandidates(db, { organizationId, number });
     return matches.length === 1 ? { state: 'matched', contact: matches[0] } : { state: matches.length ? 'ambiguous' : 'none' };
   } catch (error) { if (error instanceof DomainError) return { state: 'unavailable' }; throw error; }
+}
+
+/** What the Dialer needs to offer wrap-up for a call that has just ended: its recorded status and any outcome already given. */
+export type EndedCallRecord = { id: string; status: string; note: string; outcome: { id: string; name: string; reached: boolean } | null };
+
+/** Reads one call of this business as the viewer; null when it is not theirs to see or cannot be read. */
+export async function endedCallRecord(organizationId: string, callId: string): Promise<EndedCallRecord | null> {
+  try {
+    const { db } = await requireOperatingArea(organizationId, 'calls');
+    const call = await getCall(db, { organizationId, callId });
+    return call ? { id: call.id, status: call.status, note: call.note, outcome: call.outcome } : null;
+  } catch (error) { if (error instanceof DomainError) return null; throw error; }
 }
 
 /**

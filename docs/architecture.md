@@ -898,7 +898,7 @@ Likewise, do not duplicate customer/conversation state per channel.
 
 Provider callback execution updates canonical communication state through narrow trusted paths.
 
-The browser telephone and dialer pop-out are owned by the persistent Organization layout. Pop-out mode portals the compact calling form and existing live-call controls into a same-origin browser window; it does not register another telephone or create another call lifecycle. Workspace navigation preserves that window. Closing it returns controls to GildOps without ending the call. The main browser tab must stay open to retain its telephone connection.
+The browser telephone and dialer pop-out are owned by the persistent Organization layout. That one telephone session is what every presentation draws: the Dialer page's calling workspace, the dock on other pages and the pop-out window. It carries the call's own contact attribution and, after a call, the ended call until it is dismissed or another call starts, so no presentation derives who a call is with from its own selection. Pop-out mode portals the calling form and existing live-call controls into a same-origin browser window; it does not register another telephone or create another call lifecycle. While a call is live, links that leave the business (another business, Platform, personal Settings) open in a separate tab, so the call keeps its tab, its business and its authorization, and the other business is reached only through its own access checks. Workspace navigation preserves that window. Closing it returns controls to GildOps without ending the call. The main browser tab must stay open to retain its telephone connection.
 
 ---
 

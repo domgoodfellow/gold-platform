@@ -4,9 +4,18 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DialerPopoutProvider } from '@/features/communications/voice/dialer-popout';
 import { ActiveCallDock } from '@/features/communications/voice/active-call-dock';
+import { DialerWorkspace } from '@/features/communications/voice/dialer-workspace';
 import { NewCallForm } from '@/features/communications/voice/new-call-form';
 import { DialerTrigger } from '@/features/communications/voice/dialer-trigger';
 import { TelephoneDeviceContext, type TelephoneDeviceContextValue } from '@/features/communications/voice/telephone-device';
+import '../support/select-field';
+
+/**
+ * The pop-out window over the real provider, the real Dialer page and the real live-call controls,
+ * with a fake telephone and a fake browser window. What it proves is that the window is another
+ * presentation of the same session: the draft travels both ways, the one telephone is never
+ * registered again or hung up by opening, closing or navigating, and both windows use one wording.
+ */
 
 vi.mock('@/app/organizations/[organizationId]/calls/conference-actions', () => ({
   mintBrowserTokenAction: vi.fn(),
@@ -14,6 +23,11 @@ vi.mock('@/app/organizations/[organizationId]/calls/conference-actions', () => (
   endCallAction: vi.fn(),
   listCallParticipantsAction: vi.fn().mockResolvedValue({ ok: true, data: { participants: [], ownMembershipId: null } }),
 }));
+vi.mock('@/app/organizations/[organizationId]/calls/actions', () => ({ matchDialerContact: vi.fn().mockResolvedValue({ state: 'none' }), endedCallRecord: vi.fn().mockResolvedValue(null) }));
+vi.mock('@/app/organizations/[organizationId]/calls/call-list-actions', () => ({ removeFromCallListAction: vi.fn() }));
+vi.mock('@/features/communications/voice/add-to-call-list', () => ({ AddToCallList: () => null }));
+vi.mock('@/features/communications/voice/wrap-up-sheet', () => ({ WrapUpCallSheet: () => null }));
+vi.mock('next/navigation', async (original) => ({ ...(await original<typeof import('next/navigation')>()), useRouter: () => ({ refresh: vi.fn() }) }));
 
 const number = { id: 'number-1', e164: '+14385550194', label: 'Main line' };
 const loadOptions = vi.hoisted(() => vi.fn());
@@ -23,13 +37,15 @@ const device: TelephoneDeviceContextValue = {
   register: vi.fn(), unregister: vi.fn(), connectToRoom: vi.fn(),
   hangUp: vi.fn(), toggleMute: vi.fn(), sendDigits: vi.fn(),
 };
+const options = { numbers: [number], defaultNumber: number, unavailableReason: null, blocker: null };
 
-function App({ value = device, showForm = true }: { value?: TelephoneDeviceContextValue; showForm?: boolean }) {
+/** The organization layout's providers around the header's phone button, a page and the dock. */
+function App({ value = device, showDialer = true }: { value?: TelephoneDeviceContextValue; showDialer?: boolean }) {
   return (
     <TelephoneDeviceContext.Provider value={value}>
       <DialerPopoutProvider organizationId="org-1">
         <DialerTrigger />
-        {showForm ? <NewCallForm organizationId="org-1" numbers={[number]} defaultNumber={number} /> : <h1>Another workspace</h1>}
+        {showDialer ? <DialerWorkspace organizationId="org-1" timezone="America/Toronto" queue={[]} queueTotal={0} queueAvailable options={options} /> : <h1>Another workspace</h1>}
         <ActiveCallDock organizationId="org-1" />
       </DialerPopoutProvider>
     </TelephoneDeviceContext.Provider>
@@ -52,8 +68,8 @@ afterEach(() => { cleanup(); document.querySelectorAll('iframe').forEach((frame)
 describe('compact dialer pop-out', () => {
   it('opens from the global phone button and loads current calling options without registering a telephone', async () => {
     const { popup } = fakePopup();
-    loadOptions.mockResolvedValue({ numbers: [number], defaultNumber: number, unavailableReason: null });
-    render(<App showForm={false} />);
+    loadOptions.mockResolvedValue(options);
+    render(<App showDialer={false} />);
     await userEvent.click(screen.getByRole('button', { name: 'Open dialer' }));
     await waitFor(() => expect(popup.getByLabelText('Number to call')).toBeVisible());
     expect(loadOptions).toHaveBeenCalledWith('org-1');
@@ -64,17 +80,35 @@ describe('compact dialer pop-out', () => {
   it('shows unavailable calling from the global phone button without enabling a call', async () => {
     const { popup } = fakePopup();
     loadOptions.mockResolvedValue({ numbers: [], defaultNumber: null, unavailableReason: 'Your role cannot place calls.' });
-    render(<App showForm={false} />);
+    render(<App showDialer={false} />);
     await userEvent.click(screen.getByRole('button', { name: 'Open dialer' }));
     await waitFor(() => expect(popup.getByText('Your role cannot place calls.')).toBeVisible());
     expect(popup.getByRole('button', { name: 'Call' })).toBeDisabled();
+    expect(popup.getByRole('button', { name: 'Call' })).toHaveAccessibleDescription('Your role cannot place calls.');
     expect(device.register).not.toHaveBeenCalled();
   });
+
+  it('carries the Dialer’s own blocker into the window it opens', async () => {
+    const { popup } = fakePopup();
+    const blocked = { numbers: [], defaultNumber: null, unavailableReason: 'Calling is temporarily unavailable.', blocker: { kind: 'unavailable' as const, reason: 'Calling is temporarily unavailable.', setup: null } };
+    render(
+      <TelephoneDeviceContext.Provider value={device}>
+        <DialerPopoutProvider organizationId="org-1">
+          <DialerWorkspace organizationId="org-1" timezone="America/Toronto" queue={[]} queueTotal={0} queueAvailable options={blocked} />
+        </DialerPopoutProvider>
+      </TelephoneDeviceContext.Provider>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Pop out dialer' }));
+    expect(popup.getAllByText('Calling is temporarily unavailable.')).toHaveLength(1);
+    expect(popup.getByRole('button', { name: 'Call' })).toHaveAccessibleDescription('Calling is temporarily unavailable.');
+  });
+
   it('keeps the form available and explains when the browser blocks the window', async () => {
     vi.spyOn(window, 'open').mockReturnValue(null);
     render(<App />);
     await userEvent.click(screen.getByRole('button', { name: 'Pop out dialer' }));
-    expect(screen.getByRole('alert')).toHaveTextContent(/Allow pop-ups for GildOps/);
+    for (const alert of screen.getAllByRole('alert')) expect(alert).toHaveTextContent(/Allow pop-ups for GildOps/);
+    expect(screen.getAllByRole('alert').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('Number to call')).toBeInTheDocument();
     expect(device.register).not.toHaveBeenCalled();
   });
@@ -85,6 +119,9 @@ describe('compact dialer pop-out', () => {
     fireEvent.change(screen.getByLabelText('Number to call'), { target: { value: '+1514555012' } });
     await userEvent.click(screen.getByRole('button', { name: 'Pop out dialer' }));
     expect(popup.getByLabelText('Number to call')).toHaveValue('+1514555012');
+    // The Dialer page hands the form over; it is not drawn twice.
+    expect(screen.queryByLabelText('Number to call')).not.toBeInTheDocument();
+    expect(screen.getByText('The dialer is open in a separate window.')).toBeVisible();
     fireEvent.click(popup.getByRole('button', { name: 'Dial 3' }));
     expect(popup.getByLabelText('Number to call')).toHaveValue('+15145550123');
     expect(popup.getByLabelText('Call from')).toHaveValue('');
@@ -95,16 +132,33 @@ describe('compact dialer pop-out', () => {
     expect(device.register).not.toHaveBeenCalled();
   });
 
+  it('words this browser’s telephone the same way in the window and on the Dialer page', async () => {
+    const { popup } = fakePopup();
+    const app = render(<App value={{ ...device, status: 'offline' }} />);
+    const onPage = screen.getByRole('region', { name: 'Calling readiness' });
+    expect(onPage).toHaveTextContent('Browser phone Connects when needed');
+    expect(within(onPage).getByRole('button', { name: 'Receive calls here' })).toBeEnabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Pop out dialer' }));
+    expect(popup.getByText('Connects when needed')).toBeVisible();
+    expect(popup.getByRole('button', { name: 'Receive calls here' })).toBeEnabled();
+    app.rerender(<App value={{ ...device, status: 'ready' }} />);
+    expect(popup.getByText('Connected')).toBeVisible();
+    expect(popup.getByRole('button', { name: 'Stop receiving calls' })).toBeEnabled();
+    expect(within(screen.getByRole('region', { name: 'Calling readiness' })).getByText('Connected')).toBeVisible();
+  });
+
   it('survives a workspace change and controls the existing live telephone', async () => {
     const { popup } = fakePopup();
     const app = render(<App />);
     await userEvent.click(screen.getByRole('button', { name: 'Pop out dialer' }));
     const value: TelephoneDeviceContextValue = { ...device,
       activeCall: { status: 'in_progress', direction: 'outgoing', muted: false, startedAt: Date.now(), callId: null, contactLabel: 'Sarah Mitchell' } };
-    app.rerender(<App value={value} showForm={false} />);
+    app.rerender(<App value={value} showDialer={false} />);
     expect(screen.getByText('Another workspace')).toBeInTheDocument();
     expect(popup.getByText('Sarah Mitchell')).toBeInTheDocument();
     expect(popup.queryByLabelText('Number to call')).not.toBeInTheDocument();
+    // The call is drawn once: in the window, not also in the dock behind it.
+    expect(screen.queryByText('Sarah Mitchell')).not.toBeInTheDocument();
     fireEvent.click(popup.getByRole('button', { name: 'Mute' }));
     expect(device.toggleMute).toHaveBeenCalledTimes(1);
     fireEvent.click(popup.getByRole('button', { name: 'Keypad' }));
@@ -113,6 +167,25 @@ describe('compact dialer pop-out', () => {
     fireEvent.click(popup.getByRole('button', { name: 'Return to GildOps' }));
     expect(screen.getByText('Sarah Mitchell')).toBeInTheDocument();
     expect(device.hangUp).not.toHaveBeenCalled();
+  });
+
+  it('keeps a live call when the Dialer page changes presentation or hands it to the window and back', async () => {
+    fakePopup();
+    const value: TelephoneDeviceContextValue = { ...device,
+      activeCall: { status: 'in_progress', direction: 'outgoing', muted: false, startedAt: Date.now(), callId: null, contactLabel: 'Sarah Mitchell' } };
+    render(<App value={value} />);
+    const controls = () => screen.getByRole('group', { name: 'Call controls' });
+    expect(controls()).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Focus' }));
+    expect(controls()).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Standard' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Pop out dialer' }));
+    expect(screen.getByText('This call is in the separate dialer window.')).toBeVisible();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Return to GildOps' })[0]);
+    await waitFor(() => expect(controls()).toBeInTheDocument());
+    expect(device.hangUp).not.toHaveBeenCalled();
+    expect(device.unregister).not.toHaveBeenCalled();
+    expect(device.register).not.toHaveBeenCalled();
   });
 
   it('restores controls when the popup is closed using browser chrome', async () => {
@@ -125,10 +198,14 @@ describe('compact dialer pop-out', () => {
   });
 
   it('does not enable calling without an outbound number or during another call', () => {
-    const app = render(<TelephoneDeviceContext.Provider value={device}><NewCallForm organizationId="org-1" numbers={[]} defaultNumber={null} compact /></TelephoneDeviceContext.Provider>);
-    fireEvent.change(screen.getByLabelText('Number to call'), { target: { value: '+15145550123' } });
+    const form = (value: TelephoneDeviceContextValue, numbers = [number]) => <TelephoneDeviceContext.Provider value={value}><NewCallForm organizationId="org-1" numbers={numbers} defaultNumber={numbers[0] ?? null} toNumber="+15145550123" presentation="window" /></TelephoneDeviceContext.Provider>;
+    const app = render(form(device, []));
     expect(screen.getByRole('button', { name: 'Call' })).toBeDisabled();
-    app.rerender(<App value={{ ...device, incoming: { accept: vi.fn(), reject: vi.fn() } }} />);
+    expect(screen.getByRole('button', { name: 'Call' })).toHaveAccessibleDescription('No outbound line is available.');
+    app.rerender(form(device));
+    expect(screen.getByRole('button', { name: 'Call' })).toBeEnabled();
+    app.rerender(form({ ...device, incoming: { accept: vi.fn(), reject: vi.fn() } }));
     expect(screen.getByRole('button', { name: 'Call' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Call' })).toHaveAccessibleDescription('Finish the current call before starting another.');
   });
 });

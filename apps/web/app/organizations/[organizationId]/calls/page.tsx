@@ -7,7 +7,6 @@ import { CallHistoryDisclosure } from '@/features/communications/voice/call-hist
 import { DialerRecentCalls, DialerWrapUp } from '@/features/communications/voice/dialer-context';
 import { VoiceCounters } from '@/features/communications/voice/voice-overview';
 import { workspaceConfigureDoors } from '@/features/settings/workspace-configure';
-import { ConfigureMenu } from '@/components/controls/configure-menu';
 import { WrapUpCallSheet } from '@/features/communications/voice/wrap-up-sheet';
 import { getCallCounts, listCallPage } from '@/lib/domain/reception/calls';
 import { listPhoneNumbers } from '@/lib/domain/reception/numbers';
@@ -25,7 +24,7 @@ import { callListAvailable, callListRemovalAvailable } from '@/lib/application/c
 
 export const dynamic = 'force-dynamic';
 
-/** Calls waiting for an outcome shown in the Dialer's Wrap-up tab before it points at the history. */
+/** Calls waiting for an outcome shown under Needs wrap-up in the Dialer before it points at the history. */
 const WRAP_UP_PREVIEW = 3;
 
 export default async function CallsPage({ params, searchParams }: PageProps<'/organizations/[organizationId]/calls'>) {
@@ -78,13 +77,10 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
         mayRemoveFromList={mayRemoveFromList}
         mayMatchContacts={mayCall}
         mayViewContacts={organization.capabilities.includes('customer.read')}
-        actions={
-          <>
-            <ButtonLink href="#call-history" tone="secondary">Call history</ButtonLink>
-            {/* The Dialer configures calling, not the whole of Communications. */}
-            <ConfigureMenu label="Calling settings" items={doors.filter((door) => door.key === 'call-setup' || door.key === 'phone-numbers')} />
-          </>
-        }
+        actions={<ButtonLink href="#call-history" tone="secondary">Call history</ButtonLink>}
+        // The Dialer configures calling, not the whole of Communications.
+        settings={doors.filter((door) => door.key === 'call-setup' || door.key === 'phone-numbers').map(({ key, label, href }) => ({ key, label, href }))}
+        outcomes={mayCall ? outcomes : undefined}
         wrapUp={toWrapUp && counts.needsWrapUp > 0 ? <DialerWrapUp organizationId={organizationId} timeZone={organization.timezone} calls={toWrapUp.items} total={counts.needsWrapUp} outcomes={outcomes} href={`${callsHref(base, { wrap: '1' })}#call-history`} /> : undefined}
       />
       {/* Rendered by the page, not the console: Focus hides it with the console's presentation state. */}

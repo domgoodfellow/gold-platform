@@ -32,6 +32,12 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-11-14
+
+- The Dialer's centre is now one calling workspace that follows the call. With nobody chosen it is manual dialing, with the keypad opened on request. With someone chosen from the call list it shows who they are, why they are being called, their number, the outbound line and one Call; Dial another number returns to manual entry. During a call it shows the call, and afterwards it offers the existing wrap-up once the call is recorded as completed, the call record and a way on. Start calling is removed from the call list: Call in the workspace is the one control that places a call.
+- A live call keeps its own contact. The workspace and the Contact panel show who the call is with, taken from the call, not the highlighted list entry. A placed call says Ringing until the other person answers; hold and transfer wait for that, and a call answered directly in the browser offers only mute, the keypad and hanging up. Stop receiving calls is not offered during a call.
+- The Dialer states the outbound line once, in Call from. Calling settings move into a More menu beside Call history. The Call task and Needs wrap-up tabs become plain sections, and Other call tasks is removed. A contact with no phone number is said so even when calling is blocked for another reason. The pop-out window uses the same form, controls and wording as the page, and is told why calling is blocked when the page already knows.
+
 ## 2026-11-13
 
 - The Dialer's Add to list is three steps: choose contacts (several, kept across searches, with phone numbers and who is already listed), give a required reason for calling with due date, owner and note, then review the chosen contacts as they stand now and add only those still eligible. The result names anyone not added and why. Members who may add contacts can create one without leaving the dialog. Contacts' Add to also asks for the reason; no Call task is named "Call" by default any more.

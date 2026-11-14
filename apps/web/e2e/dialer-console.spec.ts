@@ -18,8 +18,9 @@ import { currentMembershipId } from '../lib/domain/reception/inbox';
  * Rendered evidence for the Dialer console: an unconfigured business with nothing recorded, and a
  * business with a queue and a locally assigned outbound number. **Call is never pressed**: the
  * local environment may hold real carrier credentials, and an assigned number here is a database
- * fact, not carrier acceptance. Live-call presentation is captured from the development fixture
- * route, which stands a test telephone where the real one would be.
+ * fact, not carrier acceptance. Each state of a call (ringing, connected, incoming, ended) is
+ * captured from the development fixture route, which stands a test telephone where the real one
+ * would be.
  */
 test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -95,12 +96,25 @@ test('Dialer console keeps its operating composition empty, populated, focused a
       await expect(page.getByRole('heading', { name: 'Dialer', exact: true })).not.toBeInViewport();
       await expect(page.getByRole('group', { name: 'Presentation' })).toBeVisible();
       await expect(page.getByRole('region', { name: 'Calling readiness' })).toBeVisible();
-      await expect(page.getByRole('group', { name: 'Dial pad' })).toBeVisible();
+      // Manual dialing: the number field, with the keypad on request rather than always there.
+      const workspace = page.getByRole('region', { name: 'Calling console' });
+      await expect(workspace).toHaveAttribute('data-state', 'manual');
+      await expect(page.getByRole('textbox', { name: 'Number to call' })).toBeVisible();
+      await expect(page.getByRole('group', { name: 'Dial pad' })).toHaveCount(0);
+      await expect(async () => {
+        if (!await page.getByRole('group', { name: 'Dial pad' }).count()) await workspace.getByRole('button', { name: 'Keypad', exact: true }).click();
+        await expect(page.getByRole('group', { name: 'Dial pad' })).toBeVisible({ timeout: 1_000 });
+      }).toPass({ timeout: 15_000 });
+      await noHorizontalScroll(page);
+      await page.screenshot({ path: testInfo.outputPath(`empty-keypad-${name}.png`) });
+      await workspace.getByRole('button', { name: 'Keypad', exact: true }).click();
+      await expect(page.getByRole('group', { name: 'Dial pad' })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Call', exact: true })).toBeDisabled();
       desktop = await page.locator('[data-presentation]:not([data-slot])').filter({ visible: true }).evaluate(element => element.clientWidth >= 1024);
       if (desktop) {
-        await expect(page.getByRole('region', { name: 'Call list' })).toContainText('No one to call');
-        await expect(page.getByRole('region', { name: 'Customer' })).toBeVisible();
+        await expect(page.getByRole('region', { name: 'Call list' })).toContainText('No contacts on the call list');
+        // With nobody chosen there is no contact context, so no third column is held open for it.
+        await expect(page.getByRole('region', { name: 'Contact' })).toBeHidden();
         const queueBox = (await page.getByRole('region', { name: 'Call list' }).boundingBox())!;
         const consoleBox = (await page.getByRole('region', { name: 'Calling console' }).boundingBox())!;
         expect(consoleBox.width).toBeGreaterThan(queueBox.width * 1.6);
@@ -112,31 +126,63 @@ test('Dialer console keeps its operating composition empty, populated, focused a
 
       await page.goto(`/organizations/${populated}/calls`);
       await expect(page.getByRole('group', { name: 'Presentation' })).toBeVisible();
+      // Someone chosen from the call list: who, why, their number, the line and one Call. No number field, no keypad.
+      const calling = page.getByRole('region', { name: 'Calling console' });
+      await expect(calling).toHaveAttribute('data-state', 'contact');
       await expect(page.getByRole('heading', { name: 'Sarah Mitchell', level: 2 })).toBeVisible();
-      await expect(page.getByRole('textbox', { name: 'Number to call' })).toHaveValue('(438)555-0194');
-      if (desktop) await expect(page.getByRole('region', { name: 'Customer' })).toContainText('sarah@northshore.example.test');
+      await expect(calling).toContainText('(438)555-0194');
+      await expect(calling).toContainText('Quote follow-up for the boiler service');
+      await expect(page.getByRole('textbox', { name: 'Number to call' })).toHaveCount(0);
+      await expect(page.getByRole('group', { name: 'Dial pad' })).toHaveCount(0);
+      await expect(page.getByLabel('Call from')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Call', exact: true })).toHaveCount(1);
+      await expect(page.getByRole('button', { name: 'Start calling' })).toHaveCount(0);
+      await expect(page.getByRole('region', { name: 'Call task' })).toContainText('Asked for a call before Friday about the quote.');
+      if (desktop) await expect(page.getByRole('region', { name: 'Contact' })).toContainText('sarah@northshore.example.test');
       desktop = await page.locator('[data-presentation]:not([data-slot])').filter({ visible: true }).evaluate(element => element.clientWidth >= 1024);
       const toolbar = page.getByRole('group', { name: 'Dialer toolbar', exact: true });
       await expect(toolbar.getByRole('button', { name: 'Standard', exact: true })).toBeVisible();
       await expect(toolbar.getByRole('button', { name: 'Pop out dialer', exact: true })).toBeVisible();
       await expect(toolbar.getByRole('link', { name: 'Call history', exact: true })).toBeVisible();
-      await expect(toolbar.getByRole('button', { name: 'Settings', exact: true })).toBeVisible();
+      await expect(toolbar.getByRole('button', { name: 'More Dialer actions', exact: true })).toBeVisible();
       if (desktop) await expect(page.getByRole('group', { name: 'Dialer region', exact: true })).toBeHidden();
       else await expect(page.getByRole('group', { name: 'Dialer region', exact: true })).toBeVisible();
       if (!desktop) {
         await page.getByRole('group', { name: 'Dialer region', exact: true }).getByRole('button', { name: 'Call list', exact: true }).click();
         await expect(page.getByRole('region', { name: 'Call list', exact: true })).toBeVisible();
-        await page.getByRole('button', { name: /Mike Chen/ }).click();
-        await expect(page.getByRole('textbox', { name: 'Number to call' })).toHaveValue('(438)555-0123');
+        await page.getByRole('button', { name: /Mike Chen.*Confirm/ }).click();
+        await expect(calling).toContainText('(438)555-0123');
       }
-      expect(await page.getByRole('textbox', { name: 'Number to call' }).evaluate(element => element.getBoundingClientRect().width <= 576)).toBe(true);
+      // The one Call control is within reach at every width.
+      const call = (await page.getByRole('button', { name: 'Call', exact: true }).boundingBox())!;
+      expect(call.x).toBeGreaterThanOrEqual(0);
+      expect(call.x + call.width).toBeLessThanOrEqual(width);
       await page.screenshot({ path: testInfo.outputPath(`populated-${name}.png`) });
       await noHorizontalScroll(page);
     }
 
     await page.setViewportSize({ width: 1680, height: 1000 });
     await page.goto(`/organizations/${populated}/calls`);
-    await expect(page.getByRole('region', { name: 'Customer' })).toContainText('Recent calls');
+    await expect(page.getByRole('region', { name: 'Contact' })).toContainText('Recent calls');
+    // The regions end inside the visible canvas, whatever sits above the console.
+    for (const region of ['Call list', 'Contact']) {
+      const box = (await page.getByRole('region', { name: region, exact: true }).boundingBox())!;
+      expect(box.y + box.height).toBeLessThanOrEqual(1000 + 1);
+    }
+    // The settings are one press further away than calling, in a named menu.
+    await page.getByRole('button', { name: 'More Dialer actions', exact: true }).click();
+    await expect(page.getByRole('menuitem', { name: 'Calling & routing', exact: true })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Numbers & assignments', exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('toolbar-menu-wide.png') });
+    await page.keyboard.press('Escape');
+    // Manual entry stays one press away from a chosen contact, and clears who the call is for.
+    await page.getByRole('button', { name: 'Dial another number', exact: true }).click();
+    await expect(page.getByRole('region', { name: 'Calling console' })).toHaveAttribute('data-state', 'manual');
+    await expect(page.getByRole('textbox', { name: 'Number to call' })).toHaveValue('');
+    await expect(page.getByRole('region', { name: 'Contact' })).toBeHidden();
+    await page.screenshot({ path: testInfo.outputPath('manual-after-contact-wide.png') });
+    await page.getByRole('button', { name: /Sarah Mitchell.*Quote/ }).click();
+    await expect(page.getByRole('region', { name: 'Contact' })).toBeVisible();
     await page.getByRole('link', { name: 'Call history', exact: true }).click();
     await expect(page.locator('#call-history:visible')).toHaveAttribute('open', '');
     const history = page.locator('#call-history:visible');
@@ -149,19 +195,21 @@ test('Dialer console keeps its operating composition empty, populated, focused a
     expect(hierarchy).toBe(true);
     await page.screenshot({ path: testInfo.outputPath('history-wide.png'), fullPage: true });
     await page.goto(`/organizations/${populated}/calls`);
-    await page.getByRole('tab', { name: 'Wrap-up' }).click();
-    await expect(page.getByRole('button', { name: 'Wrap up' })).toBeVisible();
-    await page.getByRole('tab', { name: 'Details' }).click();
+    // Calls waiting for an outcome are a plain section of the workspace, not a tab.
+    await expect(page.getByRole('tab')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Needs wrap-up', exact: true })).toBeVisible();
+    await expect(page.locator('section[aria-labelledby="dialer-wrap-up"]').getByRole('button', { name: 'Wrap up' })).toBeVisible();
     await page.getByRole('button', { name: 'Focus', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Focus', exact: true })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByRole('region', { name: 'Call list' })).toBeHidden();
-    await expect(page.getByRole('region', { name: 'Customer' })).toBeHidden();
+    await expect(page.getByRole('region', { name: 'Contact' })).toBeHidden();
     await expect(page.locator('#call-history:visible')).toHaveCount(0);
-    await expect(page.getByRole('textbox', { name: 'Number to call' })).toHaveValue('(438)555-0194');
+    await expect(page.getByRole('region', { name: 'Calling console' })).toContainText('(438)555-0194');
     await page.screenshot({ path: testInfo.outputPath('focus-wide.png') });
     await page.getByRole('button', { name: 'Standard', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Call list' })).toBeVisible();
 
+    const line = (await page.getByLabel('Call from').textContent())!.trim();
     const popupEvent = page.waitForEvent('popup');
     await page.getByRole('button', { name: 'Pop out dialer' }).click();
     const popup = await popupEvent;
@@ -172,6 +220,11 @@ test('Dialer console keeps its operating composition empty, populated, focused a
     await expect(popup.getByLabel('Number to call')).toHaveValue('+14385550194');
     await expect(page.getByText('The dialer is open in a separate window.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Show dialer window' })).not.toHaveAttribute('aria-pressed');
+    // One wording for this browser's telephone in both windows, and the same line stated in each.
+    const phoneStatus = (await page.getByRole('region', { name: 'Calling readiness' }).locator('[data-state]').first().textContent())!;
+    await expect(popup.getByText(phoneStatus, { exact: true })).toBeVisible();
+    await expect(popup.getByLabel('Call from')).toContainText(line);
+    await expect(popup.getByRole('group', { name: 'Dial pad' })).toBeVisible();
     await popup.getByRole('button', { name: 'Return to GildOps', exact: true }).click();
     await expect.poll(() => popup.isClosed()).toBe(true);
     await expect(page.getByRole('button', { name: 'Standard', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -202,14 +255,70 @@ test('Dialer console keeps its operating composition empty, populated, focused a
 
     // Live call: the development fixture's test telephone, the real shell and page, and the real
     // roster read for the locally recorded call. No control here is pressed: each would reach the carrier.
-    for (const { name, width, height } of [WIDTHS[1], WIDTHS[WIDTHS.length - 1]]) {
+    const fixture = `/dev/dialer?organizationId=${populated}&callId=${liveCall}&contact=Sarah%20Mitchell&customer=${customers[0]}`;
+    for (const { name, width, height } of [WIDTHS[1], WIDTHS[3], WIDTHS[WIDTHS.length - 1]]) {
       await page.setViewportSize({ width, height });
-      await page.goto(`/dev/dialer?organizationId=${populated}&callId=${liveCall}&contact=Sarah%20Mitchell`);
+      const wide = width >= 1280;
+      const calling = page.getByRole('region', { name: 'Calling console' });
       const controls = page.getByRole('group', { name: 'Call controls' });
+
+      // Ringing: the telephone has not connected, so hold and transfer are held back.
+      await page.goto(`${fixture}&state=ringing`);
+      await expect(calling).toHaveAttribute('data-state', 'live');
+      await expect(calling.locator('[data-slot="live-call"]')).toHaveAttribute('data-phase', 'ringing');
+      await expect(calling.getByText('Ringing', { exact: true }).first()).toBeVisible();
+      await expect(controls.getByRole('button', { name: 'End call', exact: true })).toBeEnabled();
+      await expect(controls.getByRole('button', { name: 'Transfer', exact: true })).toBeDisabled();
+      await expect(controls.getByRole('button', { name: 'Hold caller', exact: true })).toBeDisabled();
+      await noHorizontalScroll(page);
+      await page.screenshot({ path: testInfo.outputPath(`ringing-${name}.png`) });
+
+      // Incoming: answer or decline, in place of whatever was being prepared.
+      await page.goto(`${fixture}&state=incoming`);
+      await expect(calling).toHaveAttribute('data-state', 'incoming');
+      await expect(calling.getByRole('button', { name: 'Answer', exact: true })).toBeVisible();
+      await expect(calling.getByRole('button', { name: 'Decline', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Call', exact: true })).toHaveCount(0);
+      await noHorizontalScroll(page);
+      await page.screenshot({ path: testInfo.outputPath(`incoming-${name}.png`) });
+
+      // Ended: what follows a call, then back to the chosen contact. The fixture's call is still
+      // recorded as in progress, so wrap-up is not offered on a guess.
+      await page.goto(`${fixture}&state=ended`);
+      await expect(calling).toHaveAttribute('data-state', 'ended');
+      await expect(calling.getByText('Call ended', { exact: true })).toBeVisible();
+      await expect(calling.getByRole('link', { name: 'Open call record', exact: true })).toHaveAttribute('href', `/organizations/${populated}/calls/${liveCall}`);
+      await expect(calling.getByRole('button', { name: 'Wrap up' })).toHaveCount(0);
+      await noHorizontalScroll(page);
+      await page.screenshot({ path: testInfo.outputPath(`ended-${name}.png`) });
+      await calling.getByRole('button', { name: 'Done', exact: true }).click();
+      await expect(calling).toHaveAttribute('data-state', 'contact');
+      await expect(page.getByRole('button', { name: 'Call', exact: true })).toHaveCount(1);
+
+      // Connected.
+      await page.goto(fixture);
       await expect(controls).toBeVisible();
+      await expect(calling.locator('[data-slot="live-call"]')).toHaveAttribute('data-phase', 'connected');
       for (const control of ['Mute', 'Hold caller', 'Keypad', 'Add', 'Transfer', 'End call']) await expect(controls.getByRole('button', { name: control, exact: true })).toBeVisible();
+      await expect(controls.getByRole('button', { name: 'Transfer', exact: true })).toBeEnabled();
       await expect(page.getByLabel('Call duration')).toBeVisible();
       await expect(page.getByRole('textbox', { name: 'Number to call' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Call', exact: true })).toHaveCount(0);
+      // The call's own contact and task, with the list open to prepare the next call.
+      if (wide) {
+        await expect(page.getByRole('region', { name: 'Contact' })).toContainText('sarah@northshore.example.test');
+        await expect(page.getByRole('region', { name: 'Call task' })).toContainText('Quote follow-up for the boiler service');
+        await page.getByRole('button', { name: /Mike Chen.*Confirm/ }).click();
+        await expect(controls).toBeVisible();
+        await expect(page.getByRole('region', { name: 'Contact' })).toContainText('sarah@northshore.example.test');
+        await expect(page.getByRole('region', { name: 'Contact' })).not.toContainText('Mike Chen');
+        await expect(page.getByRole('region', { name: 'Call task' })).toHaveCount(0);
+      }
+      // The live controls survive a change of presentation.
+      await page.getByRole('button', { name: 'Focus', exact: true }).click();
+      await expect(controls).toBeVisible();
+      await page.getByRole('button', { name: 'Standard', exact: true }).click();
+      await expect(controls).toBeVisible();
       if (width < 1024) {
         await page.getByRole('group', { name: 'Dialer region', exact: true }).getByRole('button', { name: 'Call list', exact: true }).click();
         await expect(controls).toBeHidden();

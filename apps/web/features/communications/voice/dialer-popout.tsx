@@ -4,15 +4,20 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom';
 import { ArrowDownLeft, Phone } from 'lucide-react';
 import { Button } from '@/components/controls/button';
-import { Badge } from '@/components/display/data';
+import { BrowserPhone } from './browser-phone';
 import { DialerPopoutContext, type PopoutCallDraft } from './dialer-popout-context';
 import { NewCallForm } from './new-call-form';
 import { useTelephoneDevice } from './telephone-device';
 import { loadDialerAction } from '@/app/organizations/[organizationId]/calls/dialer-actions';
 
-/** Only the controls move windows; the organization layout retains the telephone connection. */
+/**
+ * The pop-out window: the same call form and the same live-call controls as the Dialer, drawn in a
+ * separate browser window so a conversation can carry on beside other work. Only the controls move
+ * windows; the organization layout retains the one telephone connection, so opening, closing or
+ * returning never touches the call.
+ */
 export function DialerPopoutProvider({ organizationId, children }: { organizationId: string; children: ReactNode }) {
-  const { activeCall, incoming, status, register, unregister, error: deviceError } = useTelephoneDevice();
+  const { activeCall, incoming } = useTelephoneDevice();
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const [draft, setDraft] = useState<PopoutCallDraft | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
@@ -133,6 +138,7 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
     };
   }, [container, close]);
 
+  const blocked = unavailableReason ?? draft?.blockedReason ?? null;
   return (
     <DialerPopoutContext.Provider value={{ container, error, open, close, updateDraft, inlineHost, setInlineHost }}>
       {children}
@@ -143,18 +149,25 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
             <Button tone="secondary" size="small" onClick={close}><ArrowDownLeft aria-hidden /> Return to GildOps</Button>
           </header>
           {!activeCall && !incoming ? (
-            <main className="order-2 p-4">
-              <div className="mb-4 space-y-2">
-                <Button type="button" tone="secondary" disabled={status === 'connecting'} onClick={() => { if (status === 'ready') unregister(); else void register().catch(() => undefined); }}>{status === 'ready' ? 'Stop receiving calls' : 'Receive calls in this browser'}</Button>
-                {deviceError ? <p role="alert" className="text-sm text-danger">{deviceError}</p> : null}
-              </div>
-              <div className="mb-4 flex items-center justify-between text-sm">
-                <span className="text-muted">Outbound call</span>
-                <Badge tone={status === 'ready' ? 'success' : status === 'error' ? 'danger' : 'neutral'}>{status === 'ready' ? 'Connected' : status === 'error' ? 'Connection failed' : status === 'connecting' ? 'Connecting' : 'Connects when you call'}</Badge>
-              </div>
+            <main className="order-2 flex flex-col gap-4 p-4">
+              <BrowserPhone />
               {loading ? <p role="status" className="text-sm text-muted">Loading calling options…</p> : null}
-              {unavailableReason ? <p role="status" className="mb-3 text-sm text-muted">{unavailableReason}</p> : null}
-              {draft ? <NewCallForm key={organizationId} organizationId={organizationId} {...draft} compact /> : null}
+              {blocked ? <p id="dialer-window-readiness" role="status" className="text-sm">{blocked}</p> : null}
+              {draft ? (
+                <NewCallForm
+                  key={organizationId}
+                  organizationId={organizationId}
+                  presentation="window"
+                  numbers={draft.numbers}
+                  defaultNumber={draft.defaultNumber}
+                  toNumber={draft.toNumber}
+                  phoneNumberId={draft.phoneNumberId}
+                  customerId={draft.customerId}
+                  customerName={draft.customerName}
+                  blockedReason={blocked ?? undefined}
+                  blockedDescriptionId={blocked ? 'dialer-window-readiness' : undefined}
+                />
+              ) : null}
             </main>
           ) : null}
           <p className="order-3 mt-auto px-4 py-3 text-xs text-muted">Keep the main GildOps window open while calling.</p>
