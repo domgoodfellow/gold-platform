@@ -10,6 +10,7 @@ import {
   AssignNumberForm,
   ConfigureNumberForm,
   ReleaseAssignmentForm,
+  ShareNumberForm,
   UseAsMineForm,
 } from '@/features/communications/numbers/number-configuration';
 import {
@@ -98,10 +99,17 @@ export default async function PhoneNumberDetailPage({
 
       <section className="mt-6">
         <GroupHeading>Who dials from it</GroupHeading>
-        {ownAssignments.length === 0 ? (
+        {ownAssignments.length === 0 && !number.outboundShared ? (
           <EmptyState className="mt-2">Nobody is assigned to this number.</EmptyState>
         ) : (
           <ul className="mt-2 flex flex-col gap-1">
+            {number.outboundShared ? (
+              <li className="flex flex-wrap items-center gap-2 text-sm">
+                <span>Everyone who may place calls</span>
+                <Badge>Shared</Badge>
+                {mayManage ? <ShareNumberForm organizationId={organizationId} phoneNumberId={number.id} shared /> : null}
+              </li>
+            ) : null}
             {ownAssignments.map((assignment) => (
               <li key={assignment.id} className="flex flex-wrap items-center gap-2 text-sm">
                 <span>{assignment.memberId ? (memberName.get(assignment.memberId) ?? 'A member') : 'A resource'}</span>
@@ -113,6 +121,9 @@ export default async function PhoneNumberDetailPage({
         )}
         {mayManage && number.voiceOutboundEnabled ? (
           <AssignNumberForm organizationId={organizationId} phoneNumberId={number.id} members={members.map((member) => ({ id: member.id, displayName: member.displayName }))} />
+        ) : null}
+        {mayManage && number.voiceOutboundEnabled && !number.outboundShared ? (
+          <div className="mt-3"><ShareNumberForm organizationId={organizationId} phoneNumberId={number.id} shared={false} /></div>
         ) : null}
         {iDialFromIt ? (
           <Hint className="mt-3">This is the number you dial from.</Hint>

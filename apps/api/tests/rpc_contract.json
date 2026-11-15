@@ -464,6 +464,20 @@
         "p_organization_id"
       ]
     },
+    "resolve_outbound_number": {
+      "role": "authenticated",
+      "callers": [
+        "app/domains/communications/routing.py"
+      ],
+      "naming": "bare",
+      "sends": [
+        "p_organization_id",
+        "p_phone_number_id"
+      ],
+      "optional": [
+        "p_phone_number_id"
+      ]
+    },
     "organization_open_now": {
       "role": "authenticated",
       "callers": [

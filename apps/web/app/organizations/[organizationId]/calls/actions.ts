@@ -10,7 +10,8 @@ import { linkCallCustomer, recordCall } from '@/lib/domain/reception/calls';
 import { setCallingNumber } from '@/lib/domain/reception/telephony';
 import { requireOrganization } from '@/lib/route/organization';
 import { requireOperatingArea } from '@/lib/route/workspace-configuration';
-import { dialerContactCandidates, getCall, type CallContact } from '@/lib/domain/reception/calls';
+import { callContact, callTiming, dialerContactCandidates, getCall, listCallPage, type CallContact } from '@/lib/domain/reception/calls';
+import { recentCallRows, type RecentCallRow } from '@/features/communications/voice/format';
 
 export async function matchDialerContact(organizationId: string, number: string): Promise<{ state: 'matched'; contact: CallContact } | { state: 'none' | 'ambiguous' | 'unavailable' }> {
   try {
@@ -20,15 +21,39 @@ export async function matchDialerContact(organizationId: string, number: string)
   } catch (error) { if (error instanceof DomainError) return { state: 'unavailable' }; throw error; }
 }
 
-/** What the Dialer needs to offer wrap-up for a call that has just ended: its recorded status and any outcome already given. */
-export type EndedCallRecord = { id: string; status: string; note: string; outcome: { id: string; name: string; reached: boolean } | null };
+/**
+ * What the Dialer needs after a call: its recorded status, any outcome already given, and its
+ * time in two parts as the carrier's events recorded them (see `callTiming`).
+ */
+export type EndedCallRecord = { id: string; status: string; note: string; outcome: { id: string; name: string; reached: boolean } | null; ringSeconds: number | null; talkSeconds: number | null };
 
 /** Reads one call of this business as the viewer; null when it is not theirs to see or cannot be read. */
 export async function endedCallRecord(organizationId: string, callId: string): Promise<EndedCallRecord | null> {
   try {
     const { db } = await requireOperatingArea(organizationId, 'calls');
     const call = await getCall(db, { organizationId, callId });
-    return call ? { id: call.id, status: call.status, note: call.note, outcome: call.outcome } : null;
+    return call ? { id: call.id, status: call.status, note: call.note, outcome: call.outcome, ...callTiming(call) } : null;
+  } catch (error) { if (error instanceof DomainError) return null; throw error; }
+}
+
+/** How many of a call's contact's recent calls the Dialer shows beside a call. */
+const CALL_CONTEXT_RECENT = 3;
+
+/** Who a call is with, and their recent calls. `contact` is null for a call linked to nobody. */
+export type CallContactContext = { callId: string; contact: CallContact | null; recentCalls: RecentCallRow[] };
+
+/**
+ * The contact a call is linked to, read from the call itself as the viewer. It does not depend on
+ * the call list page the Dialer happens to have loaded, and it never matches by phone number: a
+ * call linked to nobody answers nobody. Null when the call cannot be read at all.
+ */
+export async function callContactContext(organizationId: string, callId: string): Promise<CallContactContext | null> {
+  try {
+    const { db, organization } = await requireOperatingArea(organizationId, 'calls');
+    const contact = await callContact(db, { organizationId, callId });
+    if (!contact) return { callId, contact: null, recentCalls: [] };
+    const recent = await listCallPage(db, { organizationId, filter: { customerId: contact.id }, limit: CALL_CONTEXT_RECENT });
+    return { callId, contact, recentCalls: recentCallRows(recent.items, organization.timezone) };
   } catch (error) { if (error instanceof DomainError) return null; throw error; }
 }
 

@@ -95,10 +95,11 @@ describe('contact read and removal permissions under real PostgreSQL RLS', () =>
     expect(tasks.data).toEqual([expect.objectContaining({ title: 'Renewal', customer_id: listed, customer: null })]);
   });
 
-  it('shows a caller the name and number of contacts on the call list, and nothing else of the directory', async () => {
+  it('shows a caller the name, number and business of contacts on the call list, and nothing else of the directory', async () => {
     const shown = await caller.db.rpc('call_list_contacts', { p_organization_id: organizationId, p_customer_ids: [listed, unlisted, foreign] });
     expect(shown.error).toBeNull();
-    expect(shown.data).toEqual([{ id: listed, name: `Listed ${tag}`, email: `listed-${tag}@example.test`, phone: '+14165550200', archived: false }]);
+    // Exactly these fields: who they are, how to reach them, what kind of contact, and the business they belong to (none here).
+    expect(shown.data).toEqual([{ id: listed, name: `Listed ${tag}`, email: `listed-${tag}@example.test`, phone: '+14165550200', archived: false, contact_type: 'unspecified', company_id: null, company_name: null, title: null }]);
     // Without calling or viewing permission there is no door at all.
     expect((await creator.db.rpc('call_list_contacts', { p_organization_id: organizationId, p_customer_ids: [listed] })).error?.code).toBe('42501');
     // Another business's call list is not this caller's.

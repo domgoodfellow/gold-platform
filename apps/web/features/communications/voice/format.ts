@@ -47,6 +47,19 @@ export function callStatusTone(call: Pick<Call, 'status' | 'direction'>): 'neutr
   return 'neutral';
 }
 
+/** One recorded call as the Dialer's Contact region lists it: words only, so it can be drawn on the server or in the browser. */
+export type RecentCallRow = { id: string; inbound: boolean; status: string; tone: 'neutral' | 'success' | 'danger'; detail: string };
+
+export function recentCallRows(calls: readonly Call[], timeZone: string): RecentCallRow[] {
+  return calls.map((call) => ({
+    id: call.id,
+    inbound: call.direction === 'inbound',
+    status: callStatusLabel(call),
+    tone: callStatusTone(call),
+    detail: `${formatCallTime(call.startedAt, timeZone)}${call.answeredAt ? ` · ${formatCallDuration(call.durationSeconds)}` : ''}${call.outcome ? ` · ${call.outcome.name}` : ''}`,
+  }));
+}
+
 export type TimelineEntry = { at: string; text: string };
 
 /**

@@ -301,15 +301,82 @@ describe('where the call stands, and what can be done at each point', () => {
     actions.listCallParticipantsAction.mockResolvedValue({ ok: true, data: { participants: [own, caller], ownMembershipId: ME } });
     const value = {
       status: 'ready', error: null,
-      activeCall: { status: 'in_progress', direction: 'outgoing', muted: false, startedAt: Date.now(), callId: CALL, contactLabel: 'Ada Lovelace' },
+      activeCall: { status: 'in_progress', direction: 'outgoing', muted: false, startedAt: Date.now() - 20_000, answeredAt: Date.now() - 5_000, callId: CALL, contactLabel: 'Ada Lovelace' },
       incoming: null, register: vi.fn(), unregister: vi.fn(), connectToRoom: vi.fn(), ...device,
     } as TelephoneDeviceContextValue;
     render(<TelephoneDeviceContext.Provider value={value}><ActiveCallDock organizationId={ORG} placement="console" /></TelephoneDeviceContext.Provider>);
     const controls = screen.getByRole('group', { name: 'Call controls' });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Transfer' })).toBeEnabled());
     for (const name of ['Mute', 'Hold caller', 'Keypad', 'Add', 'Transfer', 'End call']) expect(controls).toContainElement(screen.getByRole('button', { name }));
-    expect(screen.getByLabelText('Call duration')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText('Talk time')).toHaveTextContent('0:05'));
+    expect(screen.queryByLabelText('Ringing time')).not.toBeInTheDocument();
     expect(document.querySelector('[class*="fixed"]')).toBeNull();
+  });
+});
+
+describe('ringing time and talk time are two clocks', () => {
+  const NOW = Date.parse('2026-10-05T10:02:00Z');
+  beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(NOW); });
+  afterEach(() => vi.useRealTimers());
+
+  function renderTimed(participants: Participant[], call: Partial<ActiveCall>, placement: 'dock' | 'console' = 'console') {
+    actions.listCallParticipantsAction.mockResolvedValue({ ok: true, data: { participants, ownMembershipId: ME } });
+    const noteAnswered = vi.fn();
+    const value = {
+      status: 'ready', error: null, incoming: null, register: vi.fn(), unregister: vi.fn(), connectToRoom: vi.fn(), noteAnswered, ...device,
+      activeCall: { status: 'in_progress', direction: 'outgoing', muted: false, startedAt: NOW - 20_000, answeredAt: null, callId: CALL, contactLabel: 'Ada Lovelace', ...call },
+    } as TelephoneDeviceContextValue;
+    render(<TelephoneDeviceContext.Provider value={value}><ActiveCallDock organizationId={ORG} placement={placement} /></TelephoneDeviceContext.Provider>);
+    return noteAnswered;
+  }
+
+  it('times ringing from when the call began, and does not call it talk time', async () => {
+    const noteAnswered = renderTimed([own, leg({ id: 'leg-caller', party: 'customer', status: 'ringing', joinedAt: null })], {});
+    await waitFor(() => expect(screen.getByLabelText('Ringing time')).toHaveTextContent('0:20'));
+    expect(screen.queryByLabelText('Talk time')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-slot="live-call"]')).toHaveAttribute('data-phase', 'ringing');
+    await waitFor(() => expect(actions.listCallParticipantsAction).toHaveBeenCalled());
+    // The other person has not answered, so the session is told nothing.
+    expect(noteAnswered).not.toHaveBeenCalled();
+  });
+
+  it('times talking from the answer alone, leaving the ringing out', async () => {
+    renderTimed([own, caller], { answeredAt: NOW - 5_000 });
+    await waitFor(() => expect(screen.getByLabelText('Talk time')).toHaveTextContent('0:05'));
+    expect(screen.queryByLabelText('Ringing time')).not.toBeInTheDocument();
+  });
+
+  it('tells the one telephone session when the call’s roster shows the answer, with the recorded instant', async () => {
+    const noteAnswered = renderTimed([own, leg({ id: 'leg-caller', party: 'customer', joinedAt: '2026-10-05T10:01:52Z' })], {});
+    await waitFor(() => expect(noteAnswered).toHaveBeenCalledWith(Date.parse('2026-10-05T10:01:52Z')));
+  });
+
+  it('does not report an answer while this telephone is itself still connecting', async () => {
+    const noteAnswered = renderTimed([own, caller], { status: 'ringing' });
+    await waitFor(() => expect(actions.listCallParticipantsAction).toHaveBeenCalled());
+    expect(await screen.findByLabelText('Ringing time')).toBeInTheDocument();
+    expect(noteAnswered).not.toHaveBeenCalled();
+  });
+
+  it('keeps the same two clocks in the dock strip', async () => {
+    renderTimed([own, caller], { answeredAt: NOW - 65_000 }, 'dock');
+    await waitFor(() => expect(screen.getByLabelText('Talk time')).toHaveTextContent('1:05'));
+  });
+
+  it('names the call by the contact its own record gives, in place of the number that was dialed', () => {
+    const value = { status: 'ready', error: null, incoming: null, register: vi.fn(), unregister: vi.fn(), connectToRoom: vi.fn(), ...device,
+      activeCall: { status: 'in_progress', direction: 'outgoing', muted: false, startedAt: NOW, callId: CALL, contactLabel: '+14165550900' } } as TelephoneDeviceContextValue;
+    actions.listCallParticipantsAction.mockResolvedValue({ ok: true, data: { participants: [], ownMembershipId: ME } });
+    const app = render(<TelephoneDeviceContext.Provider value={value}><ActiveCallDock organizationId={ORG} placement="console" contactName="Zed Okafor" /></TelephoneDeviceContext.Provider>);
+    expect(screen.getByText('Zed Okafor')).toBeInTheDocument();
+    expect(screen.queryByText('(416)555-0900')).not.toBeInTheDocument();
+    app.rerender(<TelephoneDeviceContext.Provider value={value}><ActiveCallDock organizationId={ORG} placement="console" /></TelephoneDeviceContext.Provider>);
+    expect(screen.getByText('(416)555-0900')).toBeInTheDocument();
+  });
+
+  it('says which of the business’s numbers the call was placed from', async () => {
+    renderTimed([own, caller], { answeredAt: NOW - 5_000, fromNumber: '+14165550100' });
+    expect(await screen.findByText(/Outgoing · from \(416\)555-0100/)).toBeInTheDocument();
   });
 });
 

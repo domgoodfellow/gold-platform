@@ -33,6 +33,22 @@ export function readinessFromBindingStatus(status: ProviderBinding['status'] | n
   }
 }
 
+/**
+ * The state of the calling account a business's calls happen in, with its absence said as its
+ * own state: `communicationsProviderReadiness` reads an absent account as no fault, which is right
+ * for text messaging and not an answer for calling.
+ */
+export async function callingAccountState(
+  db: Db,
+  input: { organizationId: string },
+): Promise<'absent' | ProviderBinding['status']> {
+  const binding = await getProviderBinding(db, {
+    organizationId: input.organizationId,
+    providerKey: telephonyProviderKey(),
+  });
+  return binding?.status ?? 'absent';
+}
+
 export async function communicationsProviderReadiness(
   db: Db,
   input: { organizationId: string },

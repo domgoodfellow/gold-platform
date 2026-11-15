@@ -264,68 +264,47 @@ class OutboundIdentityRefused(RuntimeError):
         self.reason = reason
 
 
-def _member_eligible_assignments(settings, token, organization_id: str, member_id: str) -> list[dict]:
-    """This member's own active, ready, outbound-capable numbers -- never another member's,
-    and never a number this business has taken out of service. Ready is the database's reading of
-    the provider's state (`phone_number_readiness`), not a flag a business or this resolver keeps."""
-    rows = _get(settings, token, "phone_number_assignments", {
-        "organization_id": f"eq.{organization_id}", "member_id": f"eq.{member_id}", "released_at": "is.null",
-        "select": "id,phone_number_id,is_default,number:phone_numbers!phone_number_assignments_organization_id_phone_number_id_fkey(id,e164,lifecycle,voice_outbound_enabled)",
-    })
-    if not rows:
-        return []
-    ready = {
-        row["phone_number_id"]
-        for row in _get(settings, token, "phone_number_readiness", {
-            "organization_id": f"eq.{organization_id}",
-            "phone_number_id": f"in.({','.join(row['phone_number_id'] for row in rows)})",
-            "readiness": "eq.ready",
-            "select": "phone_number_id",
-        })
-    }
-    eligible = []
-    for row in rows:
-        number = row.get("number") or {}
-        if number.get("lifecycle") == "active" and number.get("voice_outbound_enabled") and row["phone_number_id"] in ready:
-            eligible.append(row)
-    return eligible
+_OUTBOUND_REASON = {
+    "preference": "auto_preference",
+    "member_default": "auto_default_assignment",
+    "member": "auto_first_eligible",
+    "organization_default": "auto_organization_default",
+    "shared": "auto_shared",
+}
 
 
 def resolve_outbound_identity(
     settings: SupabaseCallerSettings, *, token: str, organization_id: str, member_id: str,
     mode: str, selected_phone_number_id: str | None = None,
 ) -> OutboundIdentityDecision:
-    """AUTO picks the member's own default assignment, else the organization's calling number.
-    MANUAL trusts nothing the caller merely names: the selection must be one of this member's own
-    active assignments, resolved server-side (the work order's own rule -- the browser selects
-    nothing on its own authority)."""
-    assignments = _member_eligible_assignments(settings, token, organization_id, member_id)
+    """Asks the database's one resolver, `resolve_outbound_number`, under the caller's own token.
+
+    That function is what a placed call uses, so this answer and a real call cannot differ: the
+    same candidates (the member's preference, their default, their other assigned numbers, the
+    business's default, a shared number), the same readiness, the same order. Nothing is decided
+    here. `member_id` is accepted for the endpoint's existing contract; the member is whoever the
+    token belongs to, and naming another member changes nothing.
+
+    AUTO names no number. MANUAL names one, and the resolver answers only if this member may dial
+    from it (the browser selects nothing on its own authority)."""
+    if mode == "manual" and not selected_phone_number_id:
+        raise OutboundIdentityRefused("selection_required", "Choose one of your own numbers.")
+
+    arguments: dict[str, Any] = {"organization_id": organization_id}
+    if mode == "manual":
+        arguments["phone_number_id"] = selected_phone_number_id
+    rows = _rpc(settings, token, "resolve_outbound_number", arguments)
+    row = rows[0] if isinstance(rows, list) and rows else None
+
+    if not row:
+        if mode == "manual":
+            raise OutboundIdentityRefused("not_assigned", "That number is not one you may call from, or is not currently usable.")
+        raise OutboundIdentityRefused("no_eligible_identity", "No outbound number is available to you in this business yet.")
 
     if mode == "manual":
-        if not selected_phone_number_id:
-            raise OutboundIdentityRefused("selection_required", "Choose one of your own numbers.")
-        match = next((row for row in assignments if row["phone_number_id"] == selected_phone_number_id), None)
-        if not match:
-            raise OutboundIdentityRefused("not_assigned", "That number is not assigned to you, or is not currently usable.")
-        number = match["number"]
-        return OutboundIdentityDecision("manual", "manual", number["id"], number["e164"], "manual_selected")
-
-    default_assignment = next((row for row in assignments if row["is_default"]), None)
-    if default_assignment:
-        number = default_assignment["number"]
-        return OutboundIdentityDecision("auto", "auto", number["id"], number["e164"], "auto_default_assignment")
-
-    if assignments:
-        number = assignments[0]["number"]
-        return OutboundIdentityDecision("auto", "auto", number["id"], number["e164"], "auto_first_eligible",
-                                          ["No default number is set; using the first eligible one assigned to you."])
-
-    org_default = _get(settings, token, "telephony_settings", {"organization_id": f"eq.{organization_id}", "select": "calling_number"})
-    calling_number = org_default[0]["calling_number"] if org_default else None
-    if calling_number:
-        return OutboundIdentityDecision("auto", "auto", None, calling_number, "auto_organization_default")
-
-    raise OutboundIdentityRefused("no_eligible_identity", "No outbound number is available for this business yet.")
+        return OutboundIdentityDecision("manual", "manual", row["phone_number_id"], row["e164"], "manual_selected")
+    return OutboundIdentityDecision("auto", "auto", row["phone_number_id"], row["e164"],
+                                      _OUTBOUND_REASON.get(row.get("source"), "auto"))
 
 
 def resolve_inbound_route(

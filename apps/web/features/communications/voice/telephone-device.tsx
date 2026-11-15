@@ -31,7 +31,16 @@ export type ActiveCall = {
   status: 'ringing' | 'in_progress' | 'closed';
   direction: 'incoming' | 'outgoing';
   muted: boolean;
+  /** When this telephone began the call: dialing started, or the incoming call arrived. Ringing is timed from here. */
   startedAt: number;
+  /**
+   * When the conversation began: the other person answered a placed call, or this person answered
+   * an incoming one. Null while it is still ringing. Talk time is timed from here, never from
+   * `startedAt`, and joining the room ahead of the other person does not set it.
+   */
+  answeredAt?: number | null;
+  /** The business number a placed call rings from, as the server resolved it when the call was placed. */
+  fromNumber?: string | null;
   /** The business call this telephone belongs to — null for an incoming call until it is answered and identified server-side. */
   callId: string | null;
   contactLabel: string | null;
@@ -45,9 +54,14 @@ export type EndedCall = {
   contactLabel: string | null;
   customerId: string | null;
   direction: 'incoming' | 'outgoing';
-  /** Seconds this telephone was connected; null when the call never connected. */
+  /** Seconds it rang before it was answered, or before it ended unanswered. */
+  ringSeconds?: number;
+  /** Seconds of conversation, from the answer to the end; null when nobody answered. */
   durationSeconds: number | null;
+  fromNumber?: string | null;
 };
+
+type CallMeta = { callId: string; contactLabel: string; customerId?: string | null; fromNumber?: string | null };
 
 export type TelephoneDeviceContextValue = {
   status: DeviceStatus;
@@ -56,10 +70,15 @@ export type TelephoneDeviceContextValue = {
   /** The last call this telephone left, until it is dismissed or another call starts. */
   ended?: EndedCall | null;
   dismissEnded?: () => void;
+  /**
+   * Told when the call's own record shows the other person answered, with that instant when it is
+   * known. The first report stands; later ones change nothing.
+   */
+  noteAnswered?: (at?: number | null) => void;
   incoming: { accept: () => void; reject: () => void } | null;
   register: () => Promise<void>;
   unregister: () => void;
-  connectToRoom: (room: string, meta: { callId: string; contactLabel: string; customerId?: string | null }) => Promise<void>;
+  connectToRoom: (room: string, meta: CallMeta) => Promise<void>;
   hangUp: () => void;
   toggleMute: () => void;
   sendDigits: (digits: string) => void;
@@ -90,9 +109,17 @@ export function TelephoneDeviceProvider({ organizationId, children }: { organiza
     setActiveCall(current.current);
   }, []);
   const dismissEnded = useCallback(() => setEnded(null), []);
+  const noteAnswered = useCallback((at?: number | null) => {
+    update((prev) => {
+      if (!prev || prev.answeredAt != null) return prev;
+      const now = Date.now();
+      // The instant comes from the server's clock; it is kept inside this call's own span here.
+      return { ...prev, answeredAt: Math.min(now, Math.max(prev.startedAt, at ?? now)) };
+    });
+  }, [update]);
 
   const attachCallHandlers = useCallback(
-    (call: Call, direction: 'incoming' | 'outgoing', meta?: { callId: string; contactLabel: string; customerId?: string | null }) => {
+    (call: Call, direction: 'incoming' | 'outgoing', meta?: CallMeta) => {
       callRef.current = call;
       setEnded(null);
       update({
@@ -100,23 +127,33 @@ export function TelephoneDeviceProvider({ organizationId, children }: { organiza
         direction,
         muted: false,
         startedAt: Date.now(),
+        answeredAt: null,
+        fromNumber: meta?.fromNumber ?? null,
         callId: meta?.callId ?? null,
         contactLabel: meta?.contactLabel ?? null,
         customerId: meta?.customerId ?? null,
       });
 
-      call.on('accept', () => update((prev) => (prev ? { ...prev, status: 'in_progress', startedAt: Date.now() } : prev)));
+      // Accepting an incoming call is the answer. For a placed call it only means this telephone
+      // joined the room; the other person answering is reported through `noteAnswered`.
+      call.on('accept', () => update((prev) => (prev ? { ...prev, status: 'in_progress', answeredAt: direction === 'incoming' ? Date.now() : prev.answeredAt ?? null } : prev)));
       call.on('disconnect', () => {
         const last = current.current;
         callRef.current = null;
         update(null);
-        if (last) setEnded({
-          callId: last.callId,
-          contactLabel: last.contactLabel,
-          customerId: last.customerId ?? null,
-          direction: last.direction,
-          durationSeconds: last.status === 'in_progress' ? Math.max(0, Math.round((Date.now() - last.startedAt) / 1000)) : null,
-        });
+        if (last) {
+          const now = Date.now();
+          const answeredAt = last.answeredAt ?? null;
+          setEnded({
+            callId: last.callId,
+            contactLabel: last.contactLabel,
+            customerId: last.customerId ?? null,
+            direction: last.direction,
+            ringSeconds: Math.max(0, Math.round(((answeredAt ?? now) - last.startedAt) / 1000)),
+            durationSeconds: answeredAt === null ? null : Math.max(0, Math.round((now - answeredAt) / 1000)),
+            fromNumber: last.fromNumber ?? null,
+          });
+        }
       });
       call.on('cancel', () => {
         callRef.current = null;
@@ -201,7 +238,7 @@ export function TelephoneDeviceProvider({ organizationId, children }: { organiza
    * `calls`/`call_participants` rows this room already names.
    */
   const connectToRoom = useCallback(
-    async (room: string, meta: { callId: string; contactLabel: string; customerId?: string | null }) => {
+    async (room: string, meta: CallMeta) => {
       await register();
       const device = deviceRef.current;
       if (!device) throw new Error('The dialer is not ready.');
@@ -242,7 +279,7 @@ export function TelephoneDeviceProvider({ organizationId, children }: { organiza
 
   return (
     <TelephoneDeviceContext.Provider
-      value={{ status, error, activeCall, ended, dismissEnded, incoming, register, unregister, connectToRoom, hangUp, toggleMute, sendDigits }}
+      value={{ status, error, activeCall, ended, dismissEnded, noteAnswered, incoming, register, unregister, connectToRoom, hangUp, toggleMute, sendDigits }}
     >
       <NavigationActivityContext.Provider value={!!activeCall || !!incomingCall}>{children}</NavigationActivityContext.Provider>
     </TelephoneDeviceContext.Provider>

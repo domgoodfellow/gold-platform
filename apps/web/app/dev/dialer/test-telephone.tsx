@@ -20,8 +20,9 @@ export function TestTelephone({ callId, contactLabel, customerId = null, state: 
   const value: TelephoneDeviceContextValue = {
     status: 'ready',
     error: null,
-    activeCall: onCall ? { status: state === 'ringing' ? 'ringing' : 'in_progress', direction: 'outgoing', muted, startedAt, callId, contactLabel, customerId } : null,
-    ended: state === 'ended' ? { callId, contactLabel, customerId, direction: 'outgoing', durationSeconds: 137 } : null,
+    // It rang for twelve seconds and has been answered since, so the two clocks can be told apart.
+    activeCall: onCall ? { status: state === 'ringing' ? 'ringing' : 'in_progress', direction: 'outgoing', muted, startedAt, answeredAt: state === 'ringing' ? null : startedAt + 12_000, fromNumber: null, callId, contactLabel, customerId } : null,
+    ended: state === 'ended' ? { callId, contactLabel, customerId, direction: 'outgoing', ringSeconds: 12, durationSeconds: 125 } : null,
     dismissEnded: () => setState('idle'),
     incoming: state === 'incoming' ? { accept: () => setState('connected'), reject: () => setState('idle') } : null,
     register: async () => undefined,

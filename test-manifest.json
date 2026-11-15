@@ -155,7 +155,7 @@
     "apps/web/e2e/dialer-console.spec.ts": {
       "category": "playwright-acceptance",
       "concerns": ["communications", "crm", "responsive", "calling", "readiness"],
-      "note": "Rendered Dialer console: empty and populated businesses at wide, desktop, tablet and phone; manual dialing with the keypad on request, a chosen contact with one Call, the settings menu, Focus, Pop-out with matching wording, history, and a ringing, incoming, connected and ended call through the development test telephone at desktop, tablet and phone. Never places a call."
+      "note": "Rendered Dialer console: a business with no calling account and a populated one with a recorded calling account, an assigned and a shared number, at wide, desktop, tablet and phone; manual dialing with the keypad on request, a chosen contact with one Call, Call from as Automatic with its reason and grouped alternatives, the settings menu, Focus, Pop-out with matching wording, history, and a ringing, incoming, connected and ended call (two clocks, the waiting state) and a call with a contact outside the call list through the development test telephone at desktop, tablet and phone. Never places a call."
     },
     "apps/web/e2e/comms-cleanup.spec.ts": {"category": "playwright-acceptance", "concerns": ["communications", "navigation", "responsive", "readiness"], "note": "Disposable loopback acceptance at desktop, tablet and phone: operational Dashboard, truthful unavailable Dialer, history disclosure, Conversations independent filters, search and reload. No provider calls."},
     "apps/web/e2e/header-connections.spec.ts": {"category": "playwright-acceptance", "concerns": ["integrations", "permissions", "responsive", "navigation"], "note": "Disposable loopback account metadata, workspace relevance, warning refresh, canonical management navigation, Escape focus and desktop/tablet/phone popover geometry; restricted members receive no account metadata. No provider calls."},
@@ -172,7 +172,8 @@
     "apps/web/tests/component/inbox-shell.test.tsx": {"category": "component", "concerns": ["communications", "navigation", "accessibility"], "note": "Independent URL filters and search preserve telephone navigation; loading, empty, refused reads and stale pagination remain distinct."},
     "apps/web/tests/unit/calling-options.test.ts": {
       "category": "unit",
-      "concerns": ["communications", "authorization", "readiness"]
+      "concerns": ["communications", "authorization", "readiness"],
+      "note": "Calling readiness in order (role, plan, calling account, service, numbers) with each condition's own code and wording; the offered numbers are the resolver's candidates, never a filtered inventory; a blocker's link only through a door the viewer holds."
     },
     "apps/web/tests/unit/dialer-queue.test.ts": {
       "category": "unit",
@@ -181,7 +182,7 @@
     "apps/web/tests/component/dialer-workspace.test.tsx": {
       "category": "component",
       "concerns": ["communications", "crm", "calling", "permissions"],
-      "note": "Dialer console regions and the state-driven calling workspace (manual, contact, incoming, live, ended); one Call control; attribution following the number; a live or ended call keeping its own contact over the highlighted entry; wrap-up only for a completed call and a permitted member; toolbar and settings menu; pop-out draft; Remove from list per entry only with call_list.remove, confirmed first, refusal kept in the dialog, a live call left connected."
+      "note": "Dialer console regions and the state-driven calling workspace (manual, contact, incoming, live, ended); one Call control; attribution following the number; Call from as Automatic with its number and reason, grouped alternatives, a dropped choice falling back and a refusal re-reading options; a live or ended call's contact read from the call (outside the loaded list, linked to nobody, another call's answer ignored); business and title on the list and Contact region; ringing and talk time apart; the waiting state after a call with slowing checks that stop, Check again and return to the tab; wrap-up only for a completed call and a permitted member; toolbar and settings menu; pop-out draft and blocker; Remove from list per entry only with call_list.remove, confirmed first, refusal kept in the dialog, a live call left connected."
     },
     "apps/web/tests/component/add-to-call-list.test.tsx": {"category": "component", "concerns": ["communications", "crm", "accessibility"], "note": "Dialer Add to list in three steps: fixed dialog size and results region while loading and searching, choices across searches, Back/Next keeping choices and details, required reason, fresh review of eligible/already-listed/no-phone, only eligible added with the actual result, conflicts reported, inline contact creation for permitted roles only, discard guard."},
     "apps/web/tests/component/add-to-list-menu.test.tsx": {"category": "component", "concerns": ["communications", "crm", "accessibility"], "note": "Add to: a required reason for calling, one contact added at once or refused with the reason shown, everyone-matching and ticked rows confirmed with counts and skips first, ticking and select-all with the selection bar, ticks dropped when the shown rows change."},
@@ -281,9 +282,9 @@
     "apps/web/tests/integration/database/support-workspace.test.ts": { "category": "database-integration", "concerns": ["support", "authorization", "tenant-isolation", "sla", "history"] },
     "apps/web/e2e/marketing.spec.ts": { "category": "playwright-acceptance", "concerns": ["marketing", "forms", "crm", "responsive"] },
     "apps/web/tests/integration/database/marketing.test.ts": { "category": "database-integration", "concerns": ["marketing", "forms", "crm", "authorization", "attribution"] },
-    "apps/web/e2e/dialer-popout.spec.ts": {"category": "playwright-acceptance", "concerns": ["communications", "voice"], "note": "Real browser popup, draft, workspace navigation, mobile geometry and browser-chrome closure; never places a call."},
+    "apps/web/e2e/dialer-popout.spec.ts": {"category": "playwright-acceptance", "concerns": ["communications", "voice"], "note": "Real browser popup, draft, workspace navigation, mobile geometry and browser-chrome closure; runs on a disposable business (playwright.isolated.config.ts); never places a call."},
     "apps/web/tests/component/routing-editor.test.tsx": {"category": "component", "concerns": ["communications", "routing"]},
-    "apps/web/tests/component/dialer-popout.test.tsx": {"category": "component", "concerns": ["communications", "voice"], "note": "Pop-out window over the real Dialer page: shares telephone state, carries drafts and the calling blocker, words the browser telephone as the page does, keeps a live call through Focus, pop-out and return, and restores controls without ending calls."},
+    "apps/web/tests/component/dialer-popout.test.tsx": {"category": "component", "concerns": ["communications", "voice"], "note": "Pop-out window over the real Dialer page: shares telephone state, carries drafts, the same Automatic number and reason, and the calling blocker with its kind and permitted link; words the browser telephone as the page does, keeps a live call through Focus, pop-out and return, and restores controls without ending calls."},
     "apps/web/e2e/communications-operating.spec.ts": {"category": "playwright-acceptance", "concerns": ["communications", "voice", "inbox", "routing"]},
     "apps/web/e2e/finance-operating.spec.ts": {"category": "playwright-acceptance", "concerns": ["finance", "pricing", "payments"]},
     "apps/web/e2e/work-composition.spec.ts": {"category": "playwright-acceptance", "concerns": ["ui", "work", "composition", "permissions", "responsive"], "note": "Run with playwright.composition.config.ts against loopback Supabase. Exact rendered panel gutters, creation parity, readiness, role gates, errors, success, toolbar and sidebar geometry; disposable fixtures with enforced teardown."},
@@ -467,7 +468,7 @@
         "voice",
         "routing"
       ],
-      "note": "The routing resolver's own branching over a faked transport — business hours, ring strategies, fallback, cycle rejection, callback affinity, outbound AUTO/MANUAL."
+      "note": "The routing resolver's own branching over a faked transport — business hours, ring strategies, fallback, cycle rejection, callback affinity; outbound AUTO/MANUAL ask the database's one resolver and decide nothing themselves."
     },
     "apps/api/tests/component/test_domains_voice.py": {
       "category": "python-component",
@@ -1483,8 +1484,9 @@
         "voice",
         "ui"
       ],
-      "note": "The live call controls over a fake telephone, as the dock and as the Dialer's calling workspace; leave vs end, hold, add and transfer tell the truth about what the server said; ringing, in call and on hold come from the call's own roster, and a control is offered only when it can work."
+      "note": "The live call controls over a fake telephone, as the dock and as the Dialer's calling workspace; leave vs end, hold, add and transfer tell the truth about what the server said; ringing, in call and on hold come from the call's own roster, ringing time and talk time are separate clocks, the answer is reported to the one session with its recorded instant, the number the call was placed from is shown, and a control is offered only when it can work."
     },
+    "apps/web/tests/component/telephone-device.test.tsx": {"category": "component", "concerns": ["voice"], "note": "The one telephone session over a fake carrier device: a placed call rings until its record reports the answer (joining the room is not one), an incoming call is answered on accept, the first reported answer stands inside the call's own span, and an ended call carries ringing and talk time apart with the number it was placed from."},
     "apps/web/tests/component/agent-bootstrap.test.tsx": {
       "category": "component",
       "concerns": ["ai", "reliability"]
@@ -1787,6 +1789,7 @@
       ],
       "note": "Phase F: a call is one fact settled from its legs, inbound recording, live controls and transfers against a fake carrier, and number configuration."
     },
+    "apps/web/tests/integration/database/outbound-identity.test.ts": {"category": "database-integration", "concerns": ["voice", "tenancy", "security", "crm"], "note": "Outbound numbers under real RLS with a recorder for the carrier: Automatic with one and several candidates in a fixed order, explicit assigned and shared choices, sharing only by a manager and only for callers, readiness of shared numbers, released assignments, stale preferences, ended sharing and a revoked role refused at once, no substitution when nothing is eligible, another business told nothing, exact readiness reasons, the number recorded on the call; and a call's own contact with business from the affiliation, ambiguity naming nobody, and no disclosure without call or contact permission."},
     "apps/web/tests/integration/database/catalogue-plans.test.ts": {
       "category": "database-integration",
       "concerns": [

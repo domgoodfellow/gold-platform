@@ -8,6 +8,7 @@ import {
   assignNumberAction,
   configureNumberAction,
   releaseAssignmentAction,
+  shareNumberAction,
   useNumberAsMineAction,
   type NumberFormState,
 } from '@/app/organizations/[organizationId]/comms/configuration/numbers/actions';
@@ -90,6 +91,21 @@ export function ReleaseAssignmentForm({ organizationId, phoneNumberId, assignmen
       <input type="hidden" name="phoneNumberId" value={phoneNumberId} />
       <input type="hidden" name="assignmentId" value={assignmentId} />
       <Button type="submit" tone="text" size="tiny" disabled={pending}>Release</Button>
+      <ErrorText>{state.error}</ErrorText>
+    </form>
+  );
+}
+
+/** Share a number with everyone in the business who may place calls, or stop sharing it. */
+export function ShareNumberForm({ organizationId, phoneNumberId, shared }: { organizationId: string; phoneNumberId: string; shared: boolean }) {
+  const [state, formAction, pending] = useActionState(shareNumberAction, INITIAL);
+
+  return (
+    <form action={formAction} className="inline-flex items-center gap-2">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="phoneNumberId" value={phoneNumberId} />
+      <input type="hidden" name="shared" value={shared ? 'false' : 'true'} />
+      <Button type="submit" tone={shared ? 'text' : 'secondary'} size={shared ? 'tiny' : 'small'} disabled={pending}>{pending ? 'Saving…' : shared ? 'Stop sharing' : 'Share with everyone who places calls'}</Button>
       <ErrorText>{state.error}</ErrorText>
     </form>
   );

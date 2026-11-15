@@ -95,8 +95,13 @@ type Panel = 'keypad' | 'add' | 'transfer' | null;
  * **Not verified against a live carrier.** Mute and the keypad act on this browser's own
  * telephone; hold, add, transfer and removal go through the server to the carrier.
  */
-export function ActiveCallDock({ organizationId, placement = 'dock' }: { organizationId: string; placement?: 'dock' | 'console' }) {
-  const { status, error, activeCall, incoming, hangUp, toggleMute, sendDigits } = useTelephoneDevice();
+export function ActiveCallDock({ organizationId, placement = 'dock', contactName }: {
+  organizationId: string;
+  placement?: 'dock' | 'console';
+  /** Who the call is with, when whoever draws this has read it from the call's own record. Otherwise the label the call was placed with is shown. */
+  contactName?: string | null;
+}) {
+  const { status, error, activeCall, incoming, hangUp, toggleMute, sendDigits, noteAnswered } = useTelephoneDevice();
   const popout = useDialerPopout();
   // The server and hydration render share a placeholder; the browser clock starts after mount.
   const [now, setNow] = useState<number | null>(null);
@@ -139,6 +144,15 @@ export function ActiveCallDock({ organizationId, placement = 'dock' }: { organiz
       clearInterval(interval);
     };
   }, [organizationId, activeCallId]);
+
+  // The call's own roster is what says the other person answered, and when. Told to the one
+  // telephone session, so talk time starts there in every presentation and survives a change of one.
+  const rosterCustomer = roster && roster.callId === activeCallId ? roster.participants.find((participant) => participant.party === 'customer' && participant.leftAt === null) : undefined;
+  const customerAnswered = activeCall?.status === 'in_progress' && rosterCustomer?.status === 'in_progress';
+  const customerJoinedAt = rosterCustomer?.joinedAt ?? null;
+  useEffect(() => {
+    if (customerAnswered) noteAnswered?.(customerJoinedAt ? Date.parse(customerJoinedAt) : null);
+  }, [customerAnswered, customerJoinedAt, noteAnswered]);
 
   // One live presentation owns the call: the pop-out window when it is open, else the Dialer page when it is hosting, else the dock.
   if (placement === 'dock' && !container && popout?.inlineHost) return null;
@@ -208,9 +222,15 @@ export function ActiveCallDock({ organizationId, placement = 'dock' }: { organiz
 
   const controlSize = roomy ? 'default' : 'small';
   const tile = roomy ? 'h-16 flex-col gap-1 text-xs [&_svg]:size-5' : undefined;
-  const name = formatPhoneForDisplay(activeCall.contactLabel ?? 'Call');
+  const who = contactName ?? activeCall.contactLabel;
+  const name = formatPhoneForDisplay(who ?? 'Call');
   const direction = activeCall.direction === 'outgoing' ? 'Outgoing' : 'Incoming';
-  const duration = now === null ? '—' : elapsed(activeCall.startedAt, now);
+  // Two clocks, never added together: how long it has rung, then how long they have talked.
+  const answeredAt = activeCall.answeredAt ?? null;
+  const talking = answeredAt !== null;
+  const timeLabel = talking ? 'Talk time' : 'Ringing time';
+  const duration = now === null ? '—' : elapsed(answeredAt ?? activeCall.startedAt, now);
+  const fromLine = activeCall.fromNumber ? `from ${formatPhoneForDisplay(activeCall.fromNumber)}` : null;
   const pills = (
     <>
       <StatePill tone={PHASE[phase].tone}>{PHASE[phase].label}</StatePill>
@@ -229,14 +249,17 @@ export function ActiveCallDock({ organizationId, placement = 'dock' }: { organiz
         {roomy ? (
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-4">
-              <Avatar className="size-14 shrink-0"><AvatarFallback className="bg-secondary text-lg font-semibold text-muted">{initials(activeCall.contactLabel)}</AvatarFallback></Avatar>
+              <Avatar className="size-14 shrink-0"><AvatarFallback className="bg-secondary text-lg font-semibold text-muted">{initials(who)}</AvatarFallback></Avatar>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">{pills}</div>
                 <p className="mt-1 truncate text-2xl font-semibold tracking-tight">{name}</p>
-                <p className="text-sm text-muted">{direction}</p>
+                <p className="text-sm text-muted tabular-nums">{direction}{fromLine ? ` · ${fromLine}` : ''}</p>
               </div>
             </div>
-            <p className="text-3xl font-semibold tabular-nums tracking-tight" aria-label="Call duration">{duration}</p>
+            <div className="text-right">
+              <p className="text-3xl font-semibold tabular-nums tracking-tight" aria-label={timeLabel} data-slot="call-clock" data-clock={talking ? 'talk' : 'ring'}>{duration}</p>
+              <p aria-hidden className="text-xs text-muted">{timeLabel}</p>
+            </div>
           </div>
         ) : (
           <div className="min-w-0">
@@ -244,7 +267,7 @@ export function ActiveCallDock({ organizationId, placement = 'dock' }: { organiz
               <span className="font-medium">{name}</span>
               {pills}
             </div>
-            <div className="text-sm text-muted tabular-nums">{duration} · {direction}</div>
+            <div className="text-sm text-muted tabular-nums"><span aria-label={timeLabel} data-slot="call-clock" data-clock={talking ? 'talk' : 'ring'}>{duration}</span> · {direction}{fromLine ? ` · ${fromLine}` : ''}</div>
           </div>
         )}
 

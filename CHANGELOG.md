@@ -32,6 +32,13 @@ Entries describe the product or operational change, not every file touched.
 
 ---
 
+## 2026-11-15
+
+- Call from now says which number a call will use and why. Automatic is the default and shows the number the server resolves for the member, with the reason; members with more than one number can choose among Your numbers and Shared numbers. A business can share a number with everyone who places calls, from the number's page under Numbers & assignments. The Dialer, the pop-out window and a placed call read one resolver, so a number that is offered is never refused and a released assignment or ended sharing stops working at once. A preference no longer outlives the assignment it was made from.
+- The Dialer names the exact reason calling cannot start: the role, the plan, the calling account (missing, being set up, faulty or suspended), the service, or the numbers (none, none switched on for calls, none ready, none assigned or shared), with a link to Numbers & assignments only for members who may open it.
+- A call shows its own contact wherever they are: the Dialer reads who a live or ended call is with from the call's record, so a contact outside the loaded call list still appears, and a number several contacts share names nobody. The call list and Contact panel show a person's business and title.
+- Ringing time and talk time are shown apart during and after a call, and the call shows the business number it was placed from. After a call the Dialer says when it is waiting for the carrier to confirm the end, keeps checking for a few minutes, checks again on request or on return to the tab, and never holds the operator there. Call history durations are unchanged.
+
 ## 2026-11-14
 
 - The Dialer's centre is now one calling workspace that follows the call. With nobody chosen it is manual dialing, with the keypad opened on request. With someone chosen from the call list it shows who they are, why they are being called, their number, the outbound line and one Call; Dial another number returns to manual entry. During a call it shows the call, and afterwards it offers the existing wrap-up once the call is recorded as completed, the call record and a way on. Start calling is removed from the call list: Call in the workspace is the one control that places a call.

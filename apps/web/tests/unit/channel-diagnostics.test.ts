@@ -3,7 +3,7 @@ import { channelDiagnostics } from '@/lib/domain/reception/channel-diagnostics';
 import type { PhoneNumber } from '@/lib/domain/reception/numbers';
 import type { EmailIdentityView } from '@/lib/domain/email/identities';
 const feature = { implementationState: 'available' as const, entitled: true, activation: 'active' as const, readiness: 'ready' as const };
-const number: PhoneNumber = { id: 'one', e164: '+14165550100', label: null, lifecycle: 'active', purpose: 'main', voiceInboundEnabled: true, voiceOutboundEnabled: true, smsInboundEnabled: true, smsOutboundEnabled: true, readiness: 'ready', origin: 'provisioned', createdBy: null };
+const number: PhoneNumber = { id: 'one', e164: '+14165550100', label: null, lifecycle: 'active', purpose: 'main', voiceInboundEnabled: true, voiceOutboundEnabled: true, smsInboundEnabled: true, smsOutboundEnabled: true, outboundShared: false, readiness: 'ready', origin: 'provisioned', createdBy: null };
 const identity: EmailIdentityView = { id: 'sender', address: 'hello@example.test', displayName: null, canSend: true, canReceive: false, ownership: 'customer_domain', sendingDomainResourceId: 'domain', integrationConnectionId: null, status: 'active', createdAt: '', readiness: { state: 'ready', reason: null } };
 const ready = { smsFeature: feature, emailFeature: feature, numbers: [number], identities: [identity], smsProviderConfigured: true, callbackConfigured: true, providerReadiness: 'ready' as const, emailRelayConfigured: true };
 describe('channel configuration evidence', () => {

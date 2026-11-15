@@ -38,7 +38,7 @@ export function useDial(organizationId: string) {
         return false;
       }
       try {
-        await device.connectToRoom(placed.data.room, { callId: placed.data.callId, contactLabel: input.contactLabel, customerId: input.customerId ?? null });
+        await device.connectToRoom(placed.data.room, { callId: placed.data.callId, contactLabel: input.contactLabel, customerId: input.customerId ?? null, fromNumber: placed.data.fromNumber });
       } catch (cause) {
         await endCallAction(organizationId, { callId: placed.data.callId });
         throw cause;

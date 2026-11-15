@@ -10,18 +10,20 @@ import { useDial } from './use-dial';
 import { useDialerPopout } from './dialer-popout-context';
 import { useTelephoneDevice } from './telephone-device';
 import { SelectField } from '@/components/controls/select-field';
-
-export type DialableNumber = { id: string; e164: string; label: string | null };
+import type { OutboundLine } from '@/lib/application/communications/calling-options';
+import { AUTOMATIC_REASON, LINE_GROUP_LABEL, lineLabel } from './outbound-line';
 
 /**
  * Start a call. The form owns the two things a call is placed with, the number to ring and the
  * line to ring from, wherever it is drawn: the Dialer's calling workspace or the pop-out window.
  *
- * **The line.** With nothing named, the server resolves it for this person: their own number, then
- * their default, then the business's. Naming another of their own is checked again by the server.
- * The first option always says what that resolution is, so the line a call will use is stated
- * once, here, before dialing. The options are whatever the server reports as eligible; this form
- * adds no selection rule of its own.
+ * **The line.** Automatic is the default: the server resolves the number for this person and the
+ * first option shows that number, with the reason under the control, so what a call will use is
+ * stated once, here, before dialing. The other options are the numbers the server reports this
+ * person may use, grouped as theirs or shared; choosing one states an intent that the server
+ * checks again when the call is placed. This form adds no selection rule of its own. A chosen
+ * number that stops being offered (an assignment released, sharing ended) falls back to Automatic,
+ * and a call the server refuses asks whoever drew the form to read the options again.
  *
  * **The number.** With `destination="contact"` the number is the selected contact's and is shown,
  * not edited; `onChangeNumber` is how the operator asks for manual entry instead. Otherwise the
@@ -45,15 +47,16 @@ export function NewCallForm({
   numberStatus,
   onDraftChange,
   onDial,
+  onRefused,
   formId,
   blockedReason,
   blockedDescriptionId,
 }: {
   organizationId: string;
-  /** Numbers that could ring out: active, ready and enabled for outbound calls. */
-  numbers: DialableNumber[];
-  /** What the server would choose with nothing named, for the first option to say. */
-  defaultNumber: DialableNumber | null;
+  /** The numbers the server would accept from this person, in its own order. */
+  numbers: OutboundLine[];
+  /** What the server chooses with nothing named: Automatic. */
+  defaultNumber: OutboundLine | null;
   toNumber?: string;
   phoneNumberId?: string;
   customerId?: string;
@@ -71,6 +74,8 @@ export function NewCallForm({
   onDraftChange?: (draft: { toNumber: string; phoneNumberId: string }) => void;
   /** Told who a call is being placed to, the moment it is placed. */
   onDial?: (contact: { id: string; name: string } | null) => void;
+  /** Told when the server refuses a call, so stale options can be read again. */
+  onRefused?: () => void;
   formId?: string;
   /** A server-resolved blocker; whoever draws it owns its visible description. */
   blockedReason?: string;
@@ -82,8 +87,10 @@ export function NewCallForm({
   const id = useId();
   const inWindow = presentation === 'window';
   const [toNumber, setToNumber] = useState(initialToNumber);
-  const [phoneNumberId, setPhoneNumberId] = useState(initialPhoneNumberId);
+  const [chosenLine, setPhoneNumberId] = useState(initialPhoneNumberId);
   const [keypad, setKeypad] = useState(inWindow);
+  // A choice is an intent, not a grant: one the server no longer offers is not sent.
+  const phoneNumberId = numbers.some((number) => number.id === chosenLine) ? chosenLine : '';
 
   const unavailable = numbers.length === 0 && defaultNumber === null;
   const busy = dialing || activeCall !== null || incoming !== null;
@@ -116,10 +123,12 @@ export function NewCallForm({
     const matched = resolvedContact?.number === toNumber ? resolvedContact : null;
     const contact = matched ? { id: matched.id, name: matched.name } : matchesCustomer && customerId ? { id: customerId, name: customerName ?? toNumber } : null;
     onDial?.(contact);
-    void dial({ toNumber, contactLabel: contact?.name ?? toNumber, customerId: contact?.id, phoneNumberId: phoneNumberId || null });
+    void dial({ toNumber, contactLabel: contact?.name ?? toNumber, customerId: contact?.id, phoneNumberId: phoneNumberId || null }).then((placed) => { if (!placed) onRefused?.(); });
   };
 
-  const line = (number: DialableNumber) => number.label ? `${number.label} (${formatPhoneForDisplay(number.e164)})` : formatPhoneForDisplay(number.e164);
+  // One number needs no choosing: Automatic is that number.
+  const alternatives = numbers.length > 1 ? numbers : [];
+  const lineNote = unavailable ? null : phoneNumberId ? null : defaultNumber ? AUTOMATIC_REASON[defaultNumber.source] : null;
 
   return (
     <form id={formId} data-destination={destination} className="@container flex w-full flex-col gap-4" onSubmit={submit}>
@@ -152,7 +161,7 @@ export function NewCallForm({
         </div>
       ) : null}
 
-      <div className="grid gap-3 @min-[28rem]:grid-cols-[minmax(0,1fr)_auto] @min-[28rem]:items-end">
+      <div className="grid gap-3 @min-[28rem]:grid-cols-[minmax(0,1fr)_auto] @min-[28rem]:items-start">
         <div className="flex min-w-0 flex-col gap-1">
           <FieldLabel htmlFor={`${id}-from`}>Call from</FieldLabel>
           <SelectField
@@ -161,13 +170,15 @@ export function NewCallForm({
             onValueChange={(next) => setPhoneNumberId(next)}
             disabled={unavailable || busy}
             className="h-11 w-full"
+            aria-describedby={lineNote ? `${id}-line-note` : undefined}
             options={[
-              { value: '', label: defaultNumber ? `My usual number (${defaultNumber.label ?? formatPhoneForDisplay(defaultNumber.e164)})` : unavailable ? 'No outbound number' : 'Select a number', disabled: !defaultNumber },
-              ...numbers.map((number) => ({ value: number.id, label: line(number) })),
+              { value: '', label: defaultNumber ? `Automatic · ${lineLabel(defaultNumber)}` : unavailable ? 'No outbound number' : 'Select a number', disabled: !defaultNumber },
+              ...alternatives.map((number) => ({ value: number.id, label: lineLabel(number), group: LINE_GROUP_LABEL[number.group] })),
             ]}
           />
+          {lineNote ? <p id={`${id}-line-note`} data-slot="line-note" className="text-xs text-muted">{lineNote}</p> : null}
         </div>
-        <Button type="submit" className="h-11 w-full px-8 text-base @min-[28rem]:w-auto" disabled={disabledCall} aria-describedby={descriptionId}>
+        <Button type="submit" className="h-11 w-full px-8 text-base @min-[28rem]:mt-6 @min-[28rem]:w-auto" disabled={disabledCall} aria-describedby={descriptionId}>
           <Phone aria-hidden /> {dialing ? 'Calling…' : 'Call'}
         </Button>
       </div>

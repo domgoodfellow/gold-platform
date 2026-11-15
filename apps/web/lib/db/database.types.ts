@@ -9035,6 +9035,7 @@ export type Database = {
           lifecycle: string
           organization_id: string
           origin: string
+          outbound_shared: boolean
           provider_resource_id: string | null
           purpose: string
           sms_inbound_enabled: boolean
@@ -9052,6 +9053,7 @@ export type Database = {
           lifecycle?: string
           organization_id: string
           origin?: string
+          outbound_shared?: boolean
           provider_resource_id?: string | null
           purpose?: string
           sms_inbound_enabled?: boolean
@@ -9069,6 +9071,7 @@ export type Database = {
           lifecycle?: string
           organization_id?: string
           origin?: string
+          outbound_shared?: boolean
           provider_resource_id?: string | null
           purpose?: string
           sms_inbound_enabled?: boolean
@@ -15948,14 +15951,32 @@ export type Database = {
         }
         Returns: string
       }
-      call_list_contacts: {
-        Args: { p_customer_ids: string[]; p_organization_id: string }
+      call_contact: {
+        Args: { p_call_id: string; p_organization_id: string }
         Returns: {
           archived: boolean
+          company_id: string
+          company_name: string
+          contact_type: string
           email: string
           id: string
           name: string
           phone: string
+          title: string
+        }[]
+      }
+      call_list_contacts: {
+        Args: { p_customer_ids: string[]; p_organization_id: string }
+        Returns: {
+          archived: boolean
+          company_id: string
+          company_name: string
+          contact_type: string
+          email: string
+          id: string
+          name: string
+          phone: string
+          title: string
         }[]
       }
       call_recording_reference: {
@@ -16604,10 +16625,15 @@ export type Database = {
       dialer_contact_candidates: {
         Args: { p_number: string; p_organization_id: string }
         Returns: {
+          archived: boolean
+          company_id: string
+          company_name: string
+          contact_type: string
           email: string
           id: string
           name: string
           phone: string
+          title: string
         }[]
       }
       disconnect_integration: {
@@ -17306,6 +17332,16 @@ export type Database = {
           reconciled_currency: string
           retail_state: string
           usage_event_id: string
+        }[]
+      }
+      outbound_number_options: {
+        Args: { p_organization_id: string }
+        Returns: {
+          automatic: boolean
+          e164: string
+          label: string
+          phone_number_id: string
+          source: string
         }[]
       }
       places_to_watch: {
@@ -18963,6 +18999,14 @@ export type Database = {
           p_muted: boolean
           p_organization_id: string
           p_participant_id: string
+        }
+        Returns: undefined
+      }
+      set_phone_number_outbound_sharing: {
+        Args: {
+          p_organization_id: string
+          p_phone_number_id: string
+          p_shared: boolean
         }
         Returns: undefined
       }

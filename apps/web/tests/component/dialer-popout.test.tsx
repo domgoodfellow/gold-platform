@@ -8,6 +8,7 @@ import { DialerWorkspace } from '@/features/communications/voice/dialer-workspac
 import { NewCallForm } from '@/features/communications/voice/new-call-form';
 import { DialerTrigger } from '@/features/communications/voice/dialer-trigger';
 import { TelephoneDeviceContext, type TelephoneDeviceContextValue } from '@/features/communications/voice/telephone-device';
+import type { OutboundLine } from '@/lib/application/communications/calling-options';
 import '../support/select-field';
 
 /**
@@ -23,13 +24,13 @@ vi.mock('@/app/organizations/[organizationId]/calls/conference-actions', () => (
   endCallAction: vi.fn(),
   listCallParticipantsAction: vi.fn().mockResolvedValue({ ok: true, data: { participants: [], ownMembershipId: null } }),
 }));
-vi.mock('@/app/organizations/[organizationId]/calls/actions', () => ({ matchDialerContact: vi.fn().mockResolvedValue({ state: 'none' }), endedCallRecord: vi.fn().mockResolvedValue(null) }));
+vi.mock('@/app/organizations/[organizationId]/calls/actions', () => ({ matchDialerContact: vi.fn().mockResolvedValue({ state: 'none' }), endedCallRecord: vi.fn().mockResolvedValue(null), callContactContext: vi.fn().mockResolvedValue(null) }));
 vi.mock('@/app/organizations/[organizationId]/calls/call-list-actions', () => ({ removeFromCallListAction: vi.fn() }));
 vi.mock('@/features/communications/voice/add-to-call-list', () => ({ AddToCallList: () => null }));
 vi.mock('@/features/communications/voice/wrap-up-sheet', () => ({ WrapUpCallSheet: () => null }));
 vi.mock('next/navigation', async (original) => ({ ...(await original<typeof import('next/navigation')>()), useRouter: () => ({ refresh: vi.fn() }) }));
 
-const number = { id: 'number-1', e164: '+14385550194', label: 'Main line' };
+const number: OutboundLine = { id: 'number-1', e164: '+14385550194', label: 'Main line', source: 'member_default', group: 'assigned' };
 const loadOptions = vi.hoisted(() => vi.fn());
 vi.mock('@/app/organizations/[organizationId]/calls/dialer-actions', () => ({ loadDialerAction: loadOptions }));
 const device: TelephoneDeviceContextValue = {
@@ -79,7 +80,7 @@ describe('compact dialer pop-out', () => {
 
   it('shows unavailable calling from the global phone button without enabling a call', async () => {
     const { popup } = fakePopup();
-    loadOptions.mockResolvedValue({ numbers: [], defaultNumber: null, unavailableReason: 'Your role cannot place calls.' });
+    loadOptions.mockResolvedValue({ numbers: [], defaultNumber: null, unavailableReason: 'Your role cannot place calls.', blocker: { kind: 'restricted', code: 'no-permission', reason: 'Your role cannot place calls.', setup: null }, setup: null });
     render(<App showDialer={false} />);
     await userEvent.click(screen.getByRole('button', { name: 'Open dialer' }));
     await waitFor(() => expect(popup.getByText('Your role cannot place calls.')).toBeVisible());
@@ -88,9 +89,54 @@ describe('compact dialer pop-out', () => {
     expect(device.register).not.toHaveBeenCalled();
   });
 
+  it('shows the same Automatic number and reason in the window as on the page', async () => {
+    const { popup } = fakePopup();
+    const shared: OutboundLine = { id: 'pool', e164: '+14385550111', label: 'Sales line', source: 'shared', group: 'shared' };
+    render(
+      <TelephoneDeviceContext.Provider value={device}>
+        <DialerPopoutProvider organizationId="org-1">
+          <DialerWorkspace organizationId="org-1" timezone="America/Toronto" queue={[]} queueTotal={0} queueAvailable options={{ ...options, numbers: [number, shared] }} />
+        </DialerPopoutProvider>
+      </TelephoneDeviceContext.Provider>,
+    );
+    const onPage = 'Automatic · Main line · (438)555-0194';
+    expect(screen.getByLabelText('Call from')).toHaveTextContent(onPage);
+    expect(screen.getByText('Your default number')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Pop out dialer' }));
+    expect(popup.getByLabelText('Call from')).toHaveTextContent(onPage);
+    expect(popup.getAllByText('Your default number')).toHaveLength(1);
+    // The page hands the form over, so the number is stated in one window at a time.
+    expect(screen.queryByLabelText('Call from')).not.toBeInTheDocument();
+  });
+
+  it('gives a blocker loaded for the window its kind and the link the viewer may open', async () => {
+    const { popup } = fakePopup();
+    const reason = 'No outbound number is assigned to you or shared in this business.';
+    loadOptions.mockResolvedValue({ numbers: [], defaultNumber: null, unavailableReason: reason, blocker: { kind: 'not-configured', code: 'no-eligible-number', reason, setup: 'phone-numbers' }, setup: { href: '/organizations/org-1/comms/configuration/numbers', label: 'Numbers & assignments' } });
+    render(<App showDialer={false} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Open dialer' }));
+    const status = await waitFor(() => popup.getByRole('status'));
+    expect(status).toHaveAttribute('data-state', 'not-configured');
+    expect(within(status).getByRole('link', { name: 'Numbers & assignments' })).toHaveAttribute('href', '/organizations/org-1/comms/configuration/numbers');
+    // The main window holds the telephone, so the link opens beside it, not in the dialer window.
+    expect(within(status).getByRole('link', { name: 'Numbers & assignments' })).toHaveAttribute('target', '_blank');
+    expect(popup.getByRole('button', { name: 'Call' })).toHaveAccessibleDescription(reason);
+  });
+
+  it('offers no link in the window to a viewer who has no door to the fix', async () => {
+    const { popup } = fakePopup();
+    const reason = 'No outbound number is assigned to you or shared in this business.';
+    loadOptions.mockResolvedValue({ numbers: [], defaultNumber: null, unavailableReason: reason, blocker: { kind: 'not-configured', code: 'no-eligible-number', reason, setup: 'phone-numbers' }, setup: null });
+    render(<App showDialer={false} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Open dialer' }));
+    const status = await waitFor(() => popup.getByRole('status'));
+    expect(status).toHaveTextContent(reason);
+    expect(within(status).queryByRole('link')).not.toBeInTheDocument();
+  });
+
   it('carries the Dialer’s own blocker into the window it opens', async () => {
     const { popup } = fakePopup();
-    const blocked = { numbers: [], defaultNumber: null, unavailableReason: 'Calling is temporarily unavailable.', blocker: { kind: 'unavailable' as const, reason: 'Calling is temporarily unavailable.', setup: null } };
+    const blocked = { numbers: [], defaultNumber: null, unavailableReason: 'Calling is temporarily unavailable.', blocker: { kind: 'unavailable' as const, code: 'service-unavailable' as const, reason: 'Calling is temporarily unavailable.', setup: null } };
     render(
       <TelephoneDeviceContext.Provider value={device}>
         <DialerPopoutProvider organizationId="org-1">

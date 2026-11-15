@@ -11,7 +11,7 @@ vi.mock('@/features/communications/home/communication-actions', () => ({ NewCall
 function fixture(): CommunicationsDashboard {
   return {
     params: { when: 'today', attention: null, queue: 'all', channel: 'all', search: '' }, today: '2026-11-10', window: { since: '2026-11-10T05:00:00Z', until: '2026-11-11T05:00:00Z' },
-    mayCall: true, mayMessage: true, canCall: true, callingReady: false, callingBlocker: { kind: 'unavailable', reason: 'Calling isn’t enabled yet.', setup: null }, canCompose: false, composeChannel: 'email',
+    mayCall: true, mayMessage: true, canCall: true, callingReady: false, callingBlocker: { kind: 'unavailable', code: 'no-calling-account', reason: 'Calling isn’t enabled yet.', setup: null }, canCompose: false, composeChannel: 'email',
     outcomes: [], counts: { active: 0, today: 0, missedToday: 0, needsWrapUp: 0 }, inboxCounts: { unread: 0, mine: 0, unassigned: 0, open: 0, waiting: 0 },
     calls: { items: [], total: 0, nextCursor: null }, missed: { items: [], total: 0, nextCursor: null }, wrap: { items: [], total: 0, nextCursor: null },
     queue: { items: [], total: 0, nextCursor: null }, unread: { items: [], total: 0, nextCursor: null }, unassigned: { items: [], total: 0, nextCursor: null },
@@ -47,7 +47,7 @@ describe('Communications operational Dashboard', () => {
   });
   it('offers an eligible number-assignment recovery only for an organization-owned gap', () => {
     const data = fixture();
-    data.callingBlocker = { kind: 'not-configured', reason: 'No ready outbound number is assigned.', setup: 'phone-numbers' };
+    data.callingBlocker = { kind: 'not-configured', code: 'no-eligible-number', reason: 'No ready outbound number is assigned.', setup: 'phone-numbers' };
     const app = render(<CommunicationsHome organizationId="tenant" timezone="America/Toronto" data={data} setupHref="/organizations/tenant/comms/configuration/numbers" />);
     expect(screen.getByRole('link', { name: 'Number assignments' })).toHaveAttribute('href', '/organizations/tenant/comms/configuration/numbers');
     app.rerender(<CommunicationsHome organizationId="tenant" timezone="America/Toronto" data={data} />);

@@ -16,16 +16,17 @@ test('compact dialer preserves its draft across workspace navigation and window 
   const popup = await popupPromise;
   await expect(popup.getByRole('heading', { name: 'Dialer', exact: true })).toBeVisible();
   await popup.getByRole('button', { name: 'Dial 3', exact: true }).click();
-  await expect(popup.getByLabel('Number to call')).toHaveValue('+15145550123');
+  // A complete number is shown in the shared phone field's own format; the digits are the draft.
+  await expect(popup.getByLabel('Number to call')).toHaveValue('(514)555-0123');
   await popup.screenshot({ path: testInfo.outputPath('dialer-popout-desktop.png') });
 
   await page.locator(`a[href="/organizations/${organizationId}/comms"]`).first().click();
   await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/comms$`));
-  await expect(popup.getByLabel('Number to call')).toHaveValue('+15145550123');
+  await expect(popup.getByLabel('Number to call')).toHaveValue('(514)555-0123');
   await page.getByRole('navigation', { name: 'This business' }).first().getByRole('link', { name: 'Home' }).click();
   await page.getByRole('navigation', { name: 'This business' }).first().getByRole('link', { name: 'CRM', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/organizations/${organizationId}/crm$`));
-  await expect(popup.getByLabel('Number to call')).toHaveValue('+15145550123');
+  await expect(popup.getByLabel('Number to call')).toHaveValue('(514)555-0123');
   await popup.setViewportSize({ width: 390, height: 844 });
   expect(await popup.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await popup.screenshot({ path: testInfo.outputPath('dialer-popout-mobile.png') });

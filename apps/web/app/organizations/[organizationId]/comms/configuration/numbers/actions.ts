@@ -9,6 +9,7 @@ import {
   configurePhoneNumber,
   releasePhoneNumberAssignment,
   setOutboundPreference,
+  setOutboundSharing,
   type NumberPurpose,
 } from '@/lib/domain/reception/numbers';
 import { requireOrganization } from '@/lib/route/organization';
@@ -30,6 +31,8 @@ async function attempt(organizationId: string, phoneNumberId: string, run: () =>
   }
   revalidatePath(`/organizations/${organizationId}/comms/configuration/numbers`);
   revalidatePath(`/organizations/${organizationId}/comms/configuration/numbers/${phoneNumberId}`);
+  // Who may call from a number changes what the Dialer offers.
+  revalidatePath(`/organizations/${organizationId}/calls`);
   return { error: null };
 }
 
@@ -79,6 +82,18 @@ export async function releaseAssignmentAction(_previous: NumberFormState, formDa
   return attempt(organizationId, phoneNumberId, async () => {
     const db = await getDb();
     await releasePhoneNumberAssignment(db, { organizationId, assignmentId: String(formData.get('assignmentId') ?? '') });
+  });
+}
+
+/** Share a number with everyone who may place calls, or stop sharing it. */
+export async function shareNumberAction(_previous: NumberFormState, formData: FormData): Promise<NumberFormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const phoneNumberId = String(formData.get('phoneNumberId') ?? '');
+  await requireOrganization(organizationId);
+
+  return attempt(organizationId, phoneNumberId, async () => {
+    const db = await getDb();
+    await setOutboundSharing(db, { organizationId, phoneNumberId, shared: formData.get('shared') === 'true' });
   });
 }
 

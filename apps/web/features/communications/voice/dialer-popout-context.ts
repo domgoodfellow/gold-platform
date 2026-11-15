@@ -1,17 +1,20 @@
 'use client';
 
 import { createContext, useContext } from 'react';
-import type { DialableNumber } from './new-call-form';
+import type { CallingBlocker, OutboundLine } from '@/lib/application/communications/calling-options';
+
+/** Why calling cannot start, as the window draws it: the kind, the reason, and where it is fixed when the viewer may go there. */
+export type PopoutBlocker = { kind: CallingBlocker['kind']; reason: string; setup?: { href: string; label: string } | null };
 
 export type PopoutCallDraft = {
-  numbers: DialableNumber[];
-  defaultNumber: DialableNumber | null;
+  numbers: OutboundLine[];
+  defaultNumber: OutboundLine | null;
   toNumber: string;
   phoneNumberId: string;
   customerId?: string;
   customerName?: string;
   /** Why calling cannot start, when whoever opened the window already knows. */
-  blockedReason?: string;
+  blocker?: PopoutBlocker | null;
   onReturn?: (draft: { toNumber: string; phoneNumberId: string }) => void;
 };
 

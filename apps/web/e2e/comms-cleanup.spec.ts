@@ -13,7 +13,7 @@ test('Communications empty and unavailable states fit each canvas and preserve n
     await page.goto(`${base}/comms`);
     await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeAttached();
     if (width >= 768) await expect(page.getByRole('navigation', { name: 'breadcrumb' })).toContainText('Communications');
-    await expect(page.getByRole('status').filter({ hasText: 'Calling isn’t enabled yet.' })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Calling is not set up for this business yet.' })).toBeVisible();
     await expect(page.getByText('Needs Setting Up', { exact: false })).toHaveCount(0);
     await expect(page.getByRole('link', { name: /Routing setup/ })).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -22,10 +22,10 @@ test('Communications empty and unavailable states fit each canvas and preserve n
     await page.goto(`${base}/calls`);
     if (width >= 768) await expect(page.getByRole('navigation', { name: 'breadcrumb' })).toContainText('Communications');
     const readiness = page.getByRole('region', { name: 'Calling readiness' });
-    await expect(readiness).toHaveText('Calling isn’t enabled yet.');
+    await expect(readiness).toHaveText('Calling is not set up for this business yet.');
     await expect(readiness.getByRole('link')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Call', exact: true })).toBeDisabled();
-    await expect(page.getByRole('button', { name: 'Call', exact: true })).toHaveAccessibleDescription('Calling isn’t enabled yet.');
+    await expect(page.getByRole('button', { name: 'Call', exact: true })).toHaveAccessibleDescription('Calling is not set up for this business yet.');
     await expect(page.getByRole('region', { name: 'Call workflow' })).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: info.outputPath(`dialer-${width}.png`), fullPage: true });

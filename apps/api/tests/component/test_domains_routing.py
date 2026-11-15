@@ -40,14 +40,6 @@ class FakeTransport:
     def get(self, url, headers=None, params=None, timeout=None):
         table = url.rsplit("/", 1)[-1]
         self.calls.append(("GET", table))
-        if table == "phone_number_readiness":
-            # The view the database derives from the provider's state; the real request asks for
-            # the ready ones only, so the fake answers that way.
-            return _Response(200, [
-                {"phone_number_id": row["phone_number_id"], "readiness": "ready"}
-                for row in self.tables.get("phone_number_assignments", [])
-                if row["number"].get("ready", True)
-            ])
         return _Response(200, self.tables.get(table, []))
 
     def post(self, url, headers=None, json=None, timeout=None):
@@ -296,69 +288,68 @@ def test_a_route_naming_another_route_as_destination_resolves_the_target(monkeyp
 # Outbound identity
 # ---------------------------------------------------------------------------
 
-def _assignment(number_id: str, e164: str, *, is_default: bool, lifecycle="active", outbound_enabled=True, ready=True) -> dict:
-    return {
-        "id": f"assignment-{number_id}",
-        "phone_number_id": number_id,
-        "is_default": is_default,
-        "number": {"id": number_id, "e164": e164, "lifecycle": lifecycle, "voice_outbound_enabled": outbound_enabled, "ready": ready},
-    }
+def _resolved(number_id: str, e164: str, source: str) -> list[dict]:
+    """What `resolve_outbound_number` answers: one row, or none."""
+    return [{"phone_number_id": number_id, "e164": e164, "source": source}]
 
 
-def test_auto_picks_the_members_own_default_assignment(monkeypatch):
-    transport = FakeTransport(tables={"phone_number_assignments": [
-        _assignment("n1", "+14165550101", is_default=False),
-        _assignment("n2", "+14165550102", is_default=True),
-    ]})
-    _wire(monkeypatch, transport)
+class RecordingPost:
+    """Stands where `httpx.post` would, answering the one resolver RPC and keeping what was sent."""
+
+    def __init__(self, answer):
+        self.answer = answer
+        self.sent: list[tuple[str, dict]] = []
+
+    def __call__(self, url, headers=None, json=None, timeout=None):
+        self.sent.append((url.rsplit("/", 1)[-1], json))
+        return _Response(200, self.answer)
+
+
+@pytest.mark.parametrize(("source", "reason"), [
+    ("preference", "auto_preference"),
+    ("member_default", "auto_default_assignment"),
+    ("member", "auto_first_eligible"),
+    ("organization_default", "auto_organization_default"),
+    ("shared", "auto_shared"),
+])
+def test_auto_reports_what_the_database_resolver_chose_and_why(monkeypatch, source, reason):
+    post = RecordingPost(_resolved("n2", "+14165550102", source))
+    monkeypatch.setattr(caller.httpx, "post", post)
     decision = resolve_outbound_identity(SETTINGS, token="t", organization_id=ORG, member_id="m1", mode="auto")
-    assert decision.e164 == "+14165550102"
-    assert decision.reason == "auto_default_assignment"
+    assert (decision.phone_number_id, decision.e164, decision.reason) == ("n2", "+14165550102", reason)
+    # One question, to the one resolver, naming no number: nothing is decided in this runtime.
+    assert post.sent == [("resolve_outbound_number", {"p_organization_id": ORG})]
 
 
-def test_auto_excludes_a_number_that_is_not_ready(monkeypatch):
-    transport = FakeTransport(tables={"phone_number_assignments": [
-        _assignment("n1", "+14165550101", is_default=True, ready=False),
-        _assignment("n2", "+14165550102", is_default=False),
-    ]})
+def test_auto_reads_no_table_of_its_own(monkeypatch):
+    transport = FakeTransport(rpcs={"resolve_outbound_number": _resolved("n1", "+14165550101", "member_default")})
     _wire(monkeypatch, transport)
-    decision = resolve_outbound_identity(SETTINGS, token="t", organization_id=ORG, member_id="m1", mode="auto")
-    assert decision.e164 == "+14165550102"
-    assert decision.reason == "auto_first_eligible"
-
-
-def test_auto_falls_back_to_the_organization_default_with_no_assignment(monkeypatch):
-    transport = FakeTransport(tables={
-        "phone_number_assignments": [],
-        "telephony_settings": [{"calling_number": "+14165550100"}],
-    })
-    _wire(monkeypatch, transport)
-    decision = resolve_outbound_identity(SETTINGS, token="t", organization_id=ORG, member_id="m1", mode="auto")
-    assert decision.e164 == "+14165550100"
-    assert decision.phone_number_id is None
-    assert decision.reason == "auto_organization_default"
+    resolve_outbound_identity(SETTINGS, token="t", organization_id=ORG, member_id="m1", mode="auto")
+    assert transport.calls == [("POST", "resolve_outbound_number")]
 
 
 def test_auto_with_nothing_at_all_refuses_rather_than_guessing(monkeypatch):
-    transport = FakeTransport(tables={"phone_number_assignments": [], "telephony_settings": []})
+    transport = FakeTransport(rpcs={"resolve_outbound_number": []})
     _wire(monkeypatch, transport)
     with pytest.raises(OutboundIdentityRefused) as excinfo:
         resolve_outbound_identity(SETTINGS, token="t", organization_id=ORG, member_id="m1", mode="auto")
     assert excinfo.value.reason == "no_eligible_identity"
 
 
-def test_manual_accepts_one_of_the_members_own_assignments(monkeypatch):
-    transport = FakeTransport(tables={"phone_number_assignments": [_assignment("n1", "+14165550101", is_default=True)]})
-    _wire(monkeypatch, transport)
+def test_manual_asks_the_resolver_about_the_named_number(monkeypatch):
+    post = RecordingPost(_resolved("n1", "+14165550101", "member"))
+    monkeypatch.setattr(caller.httpx, "post", post)
     decision = resolve_outbound_identity(SETTINGS, token="t", organization_id=ORG, member_id="m1", mode="manual", selected_phone_number_id="n1")
     assert decision.e164 == "+14165550101"
     assert decision.mode_applied == "manual"
+    assert decision.reason == "manual_selected"
+    assert post.sent == [("resolve_outbound_number", {"p_organization_id": ORG, "p_phone_number_id": "n1"})]
 
 
-def test_manual_refuses_a_number_not_assigned_to_this_member(monkeypatch):
-    # The transport holds nothing for this member — a number belonging to somebody else, or to
-    # nobody, looks identical here, which is the point: the browser's choice authorizes nothing.
-    transport = FakeTransport(tables={"phone_number_assignments": []})
+def test_manual_refuses_a_number_the_resolver_does_not_allow(monkeypatch):
+    # The database answers nothing for a number that belongs to somebody else, to another business
+    # or to nobody. They look identical here, which is the point: the browser's choice authorizes nothing.
+    transport = FakeTransport(rpcs={"resolve_outbound_number": []})
     _wire(monkeypatch, transport)
     with pytest.raises(OutboundIdentityRefused) as excinfo:
         resolve_outbound_identity(SETTINGS, token="t", organization_id=ORG, member_id="m1", mode="manual", selected_phone_number_id="not-mine")
@@ -366,8 +357,9 @@ def test_manual_refuses_a_number_not_assigned_to_this_member(monkeypatch):
 
 
 def test_manual_with_no_selection_is_refused_before_any_guess(monkeypatch):
-    transport = FakeTransport(tables={"phone_number_assignments": []})
+    transport = FakeTransport()
     _wire(monkeypatch, transport)
     with pytest.raises(OutboundIdentityRefused) as excinfo:
         resolve_outbound_identity(SETTINGS, token="t", organization_id=ORG, member_id="m1", mode="manual")
     assert excinfo.value.reason == "selection_required"
+    assert transport.calls == []

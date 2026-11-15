@@ -24,7 +24,8 @@ import { CallListEntryActions } from './remove-from-call-list';
 import { WrapUpCallSheet } from './wrap-up-sheet';
 import { useTelephoneDevice } from './telephone-device';
 import { useDialerPopout } from './dialer-popout-context';
-import { endedCallRecord, matchDialerContact, type EndedCallRecord } from '@/app/organizations/[organizationId]/calls/actions';
+import { RecentCallRows } from './recent-call-rows';
+import { callContactContext, endedCallRecord, matchDialerContact, type CallContactContext, type EndedCallRecord } from '@/app/organizations/[organizationId]/calls/actions';
 import type { CallContact } from '@/lib/domain/reception/calls';
 
 type Mode = 'standard' | 'focus';
@@ -45,10 +46,24 @@ const REGIONS: { key: Region; label: string }[] = [
 ];
 /** Statuses a call record holds while the carrier has not yet reported how it finished. */
 const UNSETTLED = new Set(['queued', 'initiated', 'ringing', 'in_progress']);
+/**
+ * How long to wait before each further read of a call that has ended here but is not yet recorded
+ * as finished: quickly at first, because the carrier usually reports within seconds, then slowly,
+ * then not at all. About five minutes in total; after that the operator asks, or returns to the tab.
+ */
+const SETTLE_WAITS_MS = [...Array<number>(6).fill(2_500), ...Array<number>(6).fill(10_000), ...Array<number>(8).fill(30_000)];
+/** What a finished call that was never answered is called, by its recorded status. */
+const UNANSWERED_LABEL: Record<string, string> = { no_answer: 'No answer', busy: 'Busy', failed: 'Failed' };
 
 function initials(name: string): string {
   const words = name.replace(/[^\p{L}\s]/gu, '').trim().split(/\s+/).filter(Boolean);
   return words.length ? words.slice(0, 2).map(word => word[0]).join('').toUpperCase() : '#';
+}
+
+/** The business a person belongs to, with their title there. A company is its own business, so it has none to add. */
+function business(contact: CallContact | null | undefined): string | null {
+  if (!contact?.companyName || contact.companyId === contact.id) return null;
+  return contact.title ? `${contact.title}, ${contact.companyName}` : contact.companyName;
 }
 
 function clock(seconds: number): string {
@@ -99,8 +114,14 @@ function useAvailableHeight() {
  * **Choosing someone in the call list never dials.** It fills the number and the contact context.
  *
  * **A call keeps its own identity.** While a call is live or has just ended, the workspace and the
- * contact context show who that call is with, taken from the call itself, never whichever list
- * entry is highlighted.
+ * contact context show who that call is with, read from the call's own record as the viewer, never
+ * whichever list entry is highlighted and never matched by phone number. It does not matter whether
+ * that contact is on the page of the call list loaded here.
+ *
+ * **After a call the operator is never left waiting on the carrier.** Wrap-up is offered once the
+ * call is recorded as completed. Until then the workspace says it is waiting, keeps checking at a
+ * slowing pace for a few minutes, checks again when the operator returns to the tab or asks, and
+ * always lets them move on; a call recorded later appears under Needs wrap-up.
  *
  * **Attribution follows the number.** A call is tied to a contact only while the number is the one
  * that contact was resolved from; dialing another number clears it.
@@ -128,7 +149,7 @@ export function DialerWorkspace({
   wrapUp,
   outcomes,
   recentCalls = {},
-  setupHref = null,
+  setup = null,
   mayAddToList = false,
   mayCreateContacts = false,
   mayRemoveFromList = false,
@@ -152,8 +173,8 @@ export function DialerWorkspace({
   outcomes?: CallOutcome[];
   /** Each listed contact's recent calls, drawn on the server, by contact id. */
   recentCalls?: Record<string, ReactNode>;
-  /** Where the business fixes a calling blocker it owns, when the viewer may configure it. */
-  setupHref?: string | null;
+  /** Where a calling blocker is fixed or its state can be seen, when the viewer may open it. */
+  setup?: { href: string; label: string } | null;
   /** Offers Add to list (pick contacts; each becomes an open Call task) when the viewer may manage tasks. */
   mayAddToList?: boolean;
   /** Offers Create contact inside Add to list, for a member who may add contacts. */
@@ -182,6 +203,9 @@ export function DialerWorkspace({
   const [lookup, setLookup] = useState<{ number: string; result: Awaited<ReturnType<typeof matchDialerContact>> } | null>(null);
   const [dialed, setDialed] = useState<CallContact | null>(null);
   const [record, setRecord] = useState<EndedCallRecord | null>(null);
+  const [settling, setSettling] = useState<{ callId: string; state: 'checking' | 'paused' } | null>(null);
+  const [recheck, setRecheck] = useState(0);
+  const [callInfo, setCallInfo] = useState<CallContactContext | null>(null);
   const draft = useRef<Draft>({ toNumber: '', phoneNumberId: '' });
   const onDraftChange = useCallback((next: Draft) => { draft.current = next; setNumberDraft(next.toNumber); }, []);
   const { activeCall, incoming, ended = null, dismissEnded } = useTelephoneDevice();
@@ -199,7 +223,7 @@ export function DialerWorkspace({
   const focus = mode === 'focus' && !poppedOut;
   const queueShown = showQueue && !focus;
   const live = activeCall !== null || incoming !== null;
-  const blocker = options.blocker ?? (options.unavailableReason ? { kind: 'unavailable', reason: options.unavailableReason, setup: null } satisfies CallingBlocker : null);
+  const blocker = options.blocker ?? (options.unavailableReason ? { kind: 'unavailable', code: 'service-unavailable', reason: options.unavailableReason, setup: null } satisfies CallingBlocker : null);
 
   // --- What is being prepared --------------------------------------------------------------
   const selected = queue.find(entry => entry.task.id === selectedId);
@@ -220,12 +244,23 @@ export function DialerWorkspace({
   }, [organizationId, numberDraft, mayMatchContacts, selectedTask]);
 
   // --- Who a call is with, from the call itself ----------------------------------------------
+  // The call's own record is the authority. What this page already holds for the same contact (a
+  // list entry, the contact just dialed) only fills the moment before that read returns.
   const contactById = (id: string | null | undefined): CallContact | null => (id ? [...queue.map(entry => entry.customer), dialed].find(contact => contact?.id === id) ?? null : null);
-  const taskFor = (id: string | null | undefined) => (id && selected?.customer?.id === id ? selected : null);
   const state: CallingState = poppedOut ? 'popped-out' : incoming ? 'incoming' : activeCall ? 'live' : ended ? 'ended' : selectedTask ? 'contact' : 'manual';
-  const callCustomerId = activeCall ? activeCall.customerId : ended?.customerId;
+  const callId = activeCall ? activeCall.callId : ended?.callId ?? null;
   const afterCall = live || state === 'ended';
-  const contextCustomer = afterCall ? (incoming ? null : contactById(callCustomerId)) : draftContact;
+  useEffect(() => {
+    if (!callId) return undefined;
+    let active = true;
+    void callContactContext(organizationId, callId).then(next => { if (active && next) setCallInfo(next); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [organizationId, callId]);
+  const callContext = callInfo && callInfo.callId === callId ? callInfo : null;
+  const callCustomerId = callContext ? callContext.contact?.id ?? null : activeCall ? activeCall.customerId : ended?.customerId;
+  const callContactNow = callContext ? callContext.contact : contactById(callCustomerId);
+  const taskFor = (id: string | null | undefined) => (id && selected?.customer?.id === id ? selected : null);
+  const contextCustomer = afterCall ? (incoming ? null : callContactNow) : draftContact;
   const task = afterCall ? (incoming ? null : taskFor(callCustomerId)) : selectedTask;
   const contextShown = showContext && !focus && !!contextCustomer;
 
@@ -236,20 +271,44 @@ export function DialerWorkspace({
     let active = true;
     let attempts = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let settled = false;
+    let paused = false;
     const read = async () => {
+      clearTimeout(timer);
+      paused = false;
+      setSettling({ callId: endedCallId, state: 'checking' });
       const next = await endedCallRecord(organizationId, endedCallId).catch(() => null);
       if (!active) return;
       setRecord(next);
+      // The carrier reports the finish a moment after the telephone hangs up, and sometimes much later.
+      if (next && !UNSETTLED.has(next.status)) {
+        settled = true;
+        setSettling(null);
+        refreshPage.current();
+        return;
+      }
+      const wait = SETTLE_WAITS_MS[attempts];
       attempts += 1;
-      // The carrier reports the finish a moment after the telephone hangs up.
-      if ((!next || UNSETTLED.has(next.status)) && attempts < 6) timer = setTimeout(() => void read(), 2500);
-      else refreshPage.current();
+      if (wait === undefined) {
+        paused = true;
+        setSettling({ callId: endedCallId, state: 'paused' });
+      } else timer = setTimeout(() => void read(), wait);
     };
+    // Coming back to the tab is a reason to look once more, without resuming the timed checks.
+    const onReturn = () => { if (!settled && paused && document.visibilityState === 'visible') void read(); };
     refreshPage.current();
     void read();
-    return () => { active = false; clearTimeout(timer); };
-  }, [organizationId, endedCallId]);
+    document.addEventListener('visibilitychange', onReturn);
+    window.addEventListener('focus', onReturn);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onReturn);
+      window.removeEventListener('focus', onReturn);
+    };
+  }, [organizationId, endedCallId, recheck]);
   const endedRecord = record && record.id === endedCallId ? record : null;
+  const endedPending = !!endedCallId && settling?.callId === endedCallId && (!endedRecord || UNSETTLED.has(endedRecord.status)) ? settling.state : null;
 
   const columns = [queueShown && 'minmax(15rem,1fr)', 'minmax(0,2.4fr)', contextShown && 'minmax(15rem,1fr)'].filter(Boolean).join(' ');
 
@@ -268,7 +327,7 @@ export function DialerWorkspace({
   const visible = queue.filter(({ task: entry, customer }) => {
     if (dueOnly && !isDue(entry.dueAt)) return false;
     if (!needle) return true;
-    return [entry.customerName, entry.title, entry.ownerName, customer?.phone].filter(Boolean).join(' ').toLowerCase().includes(needle);
+    return [entry.customerName, entry.title, entry.ownerName, customer?.phone, customer?.companyName].filter(Boolean).join(' ').toLowerCase().includes(needle);
   });
 
   const choose = (id: string) => {
@@ -298,7 +357,7 @@ export function DialerWorkspace({
       phoneNumberId: current.phoneNumberId,
       customerId: forCustomer ? draftContact.id : undefined,
       customerName: forCustomer ? draftContact.name : undefined,
-      blockedReason: blocker?.reason,
+      blocker: blocker ? { kind: blocker.kind, reason: blocker.reason, setup: blocker.setup ? setup : null } : null,
       onReturn: (back) => { setReturned({ ...back, at: Date.now() }); setNumberDraft(back.toNumber); },
     });
   };
@@ -312,7 +371,7 @@ export function DialerWorkspace({
         <div role="status" data-state={blocker.kind} className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
           <BlockerIcon aria-hidden className="size-4 shrink-0 text-muted" />
           <p id="dialer-readiness" className="min-w-0 flex-1">{blocker.reason}</p>
-          {blocker.setup && setupHref ? <ButtonLink href={setupHref} tone="secondary" size="small">Number assignments</ButtonLink> : null}
+          {blocker.setup && setup ? <ButtonLink href={setup.href} tone="secondary" size="small">{setup.label}</ButtonLink> : null}
         </div>
       ) : <BrowserPhone />}
     </section>
@@ -328,6 +387,7 @@ export function DialerWorkspace({
       onChangeNumber={dialAnother}
       onDraftChange={onDraftChange}
       onDial={(contact) => setDialed(contact && draftContact?.id === contact.id ? draftContact : null)}
+      onRefused={() => refreshPage.current()}
       organizationId={organizationId}
       numbers={options.numbers}
       defaultNumber={options.defaultNumber}
@@ -355,21 +415,38 @@ export function DialerWorkspace({
       </div>
     );
   } else if (state === 'incoming' || state === 'live') {
-    surface = <ActiveCallDock organizationId={organizationId} placement="console" />;
+    surface = <ActiveCallDock organizationId={organizationId} placement="console" contactName={incoming ? null : callContactNow?.name} />;
   } else if (state === 'ended' && ended) {
-    const label = formatPhoneForDisplay(ended.contactLabel ?? 'Call');
+    const label = formatPhoneForDisplay(callContactNow?.name ?? ended.contactLabel ?? 'Call');
+    // Once the call is recorded as finished, its recorded times are the ones shown; until then,
+    // what this telephone measured. Ringing and talking are never added together.
+    const recorded = endedRecord && !UNSETTLED.has(endedRecord.status) ? endedRecord : null;
+    const talkSeconds = recorded ? recorded.talkSeconds : ended.durationSeconds;
+    const ringSeconds = recorded ? recorded.ringSeconds : ended.ringSeconds ?? null;
+    const timing = [
+      ended.direction === 'outgoing' ? 'Outgoing' : 'Incoming',
+      talkSeconds !== null ? `Talk time ${clock(talkSeconds)}` : recorded ? UNANSWERED_LABEL[recorded.status] ?? 'Not answered' : 'Not answered',
+      ringSeconds !== null ? `Rang ${clock(ringSeconds)}` : null,
+      ended.fromNumber ? `from ${formatPhoneForDisplay(ended.fromNumber)}` : null,
+    ].filter(Boolean).join(' · ');
     surface = (
       <div className={cx(pad, 'flex flex-col gap-5')}>
         <div className="flex min-w-0 items-center gap-4">
-          <Avatar className="size-14 shrink-0"><AvatarFallback className="bg-secondary text-lg font-semibold text-muted">{initials(ended.contactLabel ?? '')}</AvatarFallback></Avatar>
+          <Avatar className="size-14 shrink-0"><AvatarFallback className="bg-secondary text-lg font-semibold text-muted">{initials(callContactNow?.name ?? ended.contactLabel ?? '')}</AvatarFallback></Avatar>
           <div className="min-w-0">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <h2 className="min-w-0 truncate text-2xl font-semibold tracking-tight">{label}</h2>
               <StatePill>Call ended</StatePill>
             </div>
-            <p className="text-sm text-muted tabular-nums">{ended.direction === 'outgoing' ? 'Outgoing' : 'Incoming'}{ended.durationSeconds !== null ? ` · ${clock(ended.durationSeconds)}` : ''}</p>
+            <p data-slot="call-timing" className="text-sm text-muted tabular-nums">{timing}</p>
           </div>
         </div>
+        {endedPending ? (
+          <div role="status" data-state={endedPending} className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+            <p className="min-w-0 flex-1 text-muted">{outcomes ? 'Waiting for the carrier to confirm this call has ended. Wrap-up opens once it does.' : 'Waiting for the carrier to confirm this call has ended.'}</p>
+            <Button type="button" tone="secondary" size="small" onClick={() => setRecheck(value => value + 1)}>Check again</Button>
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
           {outcomes && endedRecord?.status === 'completed' ? <WrapUpCallSheet organizationId={organizationId} call={endedRecord} outcomes={outcomes} prominent /> : null}
           {ended.callId ? <ButtonLink href={`/organizations/${organizationId}/calls/${ended.callId}`} tone="secondary">Open call record</ButtonLink> : null}
@@ -388,6 +465,7 @@ export function DialerWorkspace({
               <h2 className="min-w-0 truncate text-2xl font-semibold tracking-tight">{name}</h2>
               {selectedTask.customer?.archived ? <StatePill tone="warning">Archived</StatePill> : null}
             </div>
+            {business(selectedTask.customer) ? <p className="truncate text-sm text-muted">{business(selectedTask.customer)}</p> : null}
             <p className="mt-0.5 text-sm">{selectedTask.task.title}</p>
             <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
               {isDue(selectedTask.task.dueAt) ? <StatePill tone="warning">Due now</StatePill> : null}
@@ -484,6 +562,7 @@ export function DialerWorkspace({
                       <span className="flex min-w-0 items-center gap-2"><span className="truncate text-sm font-semibold">{name}</span>{customer?.archived ? <StatePill tone="warning">Archived</StatePill> : null}</span>
                       {isDue(entry.dueAt) ? <span className="shrink-0 text-xs font-medium text-warning">Due now</span> : <span className="shrink-0 text-xs tabular-nums text-muted">{dueLabel(entry.dueAt)}</span>}
                     </span>
+                    {business(customer) ? <span data-slot="contact-business" className="block truncate text-xs">{business(customer)}</span> : null}
                     <span className="block truncate text-xs text-muted">{entry.title}</span>
                     <span className="block truncate text-xs tabular-nums text-muted">{customer?.phone ? formatPhoneForDisplay(customer.phone) : 'No phone number'}{entry.ownerName ? ` · ${entry.ownerName}` : ''}</span>
                   </span>
@@ -509,10 +588,15 @@ export function DialerWorkspace({
             <Avatar className="size-10 shrink-0"><AvatarFallback className="bg-secondary text-sm font-semibold text-muted">{initials(contextCustomer.name)}</AvatarFallback></Avatar>
             <div className="min-w-0">
               {mayViewContacts ? <Link className="block truncate font-semibold underline-offset-4 hover:underline" href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.id}`}>{contextCustomer.name}</Link> : <p className="truncate font-semibold">{contextCustomer.name}</p>}
+              {contextCustomer.title ? <p className="truncate text-sm text-muted">{contextCustomer.title}</p> : null}
               {contextCustomer.archived ? <StatePill tone="warning">Archived</StatePill> : null}
             </div>
           </div>
           <dl className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
+            {contextCustomer.companyName && contextCustomer.companyId !== contextCustomer.id ? <>
+              <dt className="text-muted">Business</dt>
+              <dd className="truncate">{mayViewContacts && contextCustomer.companyId ? <Link className="underline underline-offset-4" href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.companyId}`}>{contextCustomer.companyName}</Link> : contextCustomer.companyName}</dd>
+            </> : null}
             <dt className="text-muted">Phone</dt>
             <dd className={cx('truncate tabular-nums', !contextCustomer.phone && 'text-muted')}>{contextCustomer.phone ? formatPhoneForDisplay(contextCustomer.phone) : 'Not recorded'}</dd>
             <dt className="text-muted">Email</dt>
@@ -520,7 +604,7 @@ export function DialerWorkspace({
           </dl>
           <div>
             <h3 className="mb-2 text-sm font-medium">Recent calls</h3>
-            {recentCalls[contextCustomer.id] ?? (mayViewContacts ? <ButtonLink tone="text" size="small" href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.id}?section=activity&view=calls`}>Open call history</ButtonLink> : <p className="text-sm text-muted">No recent calls.</p>)}
+            {(afterCall && callContext?.contact?.id === contextCustomer.id ? <RecentCallRows organizationId={organizationId} rows={callContext.recentCalls} /> : null) ?? recentCalls[contextCustomer.id] ?? (mayViewContacts ? <ButtonLink tone="text" size="small" href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.id}?section=activity&view=calls`}>Open call history</ButtonLink> : <p className="text-sm text-muted">No recent calls.</p>)}
           </div>
           {mayViewContacts ? <ButtonLink href={`/organizations/${organizationId}/crm/contacts/${contextCustomer.id}`} tone="secondary" size="small" className="w-full">Open contact</ButtonLink> : null}
         </div>

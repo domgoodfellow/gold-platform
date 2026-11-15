@@ -43,6 +43,7 @@ export function NumberList({ organizationId, numbers, assignedCount }: {
         },
         { key: 'origin', header: 'Source', cell: (number) => ORIGIN_LABEL[number.origin] },
         { key: 'assignments', header: 'Assigned to', numeric: true, cell: (number) => assignedCount.get(number.id) ?? 0 },
+        { key: 'shared', header: 'Shared', cell: (number) => (number.outboundShared ? <Badge>Shared</Badge> : <span className="text-subtle">No</span>) },
       ]}
     />
   );

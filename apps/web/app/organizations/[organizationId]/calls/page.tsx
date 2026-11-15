@@ -16,7 +16,7 @@ import { todayInZone, zonedDayRange } from '@/lib/domain/scheduling/window';
 import { areaLabel, workspaceAncestry } from '@/lib/navigation';
 import { requireOperatingArea } from '@/lib/route/workspace-configuration';
 
-import { loadCallingOptions } from '@/lib/application/communications/calling-options';
+import { callingSetupDoor, loadCallingOptions } from '@/lib/application/communications/calling-options';
 import { loadDialerQueue } from '@/lib/application/communications/dialer-queue';
 import { followUpsAvailable } from '@/lib/application/crm/follow-ups';
 import { DialerWorkspace } from '@/features/communications/voice/dialer-workspace';
@@ -54,7 +54,6 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
   const numberById = new Map(numbers.map((entry) => [entry.id, { e164: entry.e164, label: entry.label }]));
   const queue = queueAvailable ? await loadDialerQueue(db, organizationId) : { items: [], total: 0 };
   const filtered = Object.keys(callParams).length > 0;
-  const setupHref = options.blocker?.setup ? doors.find((door) => door.key === options.blocker?.setup)?.href ?? null : null;
   const recentCalls = Object.fromEntries(queue.items.flatMap(({ customer, recentCalls: calls }) => customer
     ? [[customer.id, <DialerRecentCalls key={customer.id} organizationId={organizationId} timeZone={organization.timezone} calls={calls} />]]
     : []));
@@ -70,7 +69,7 @@ export default async function CallsPage({ params, searchParams }: PageProps<'/or
         queueAvailable={queueAvailable}
         options={options}
         prefill={prefill}
-        setupHref={setupHref}
+        setup={callingSetupDoor(options.blocker, doors)}
         recentCalls={recentCalls}
         mayAddToList={mayAddToList}
         mayCreateContacts={organization.capabilities.includes('customer.create')}

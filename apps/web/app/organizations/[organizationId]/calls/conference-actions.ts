@@ -52,7 +52,7 @@ async function attempt<T>(organizationId: string, run: () => Promise<T>): Promis
 export async function dialAction(
   organizationId: string,
   input: { customerId?: string | null; toNumber: string; phoneNumberId?: string | null },
-): Promise<ActionResult<{ callId: string; room: string }>> {
+): Promise<ActionResult<{ callId: string; room: string; fromNumber: string }>> {
   await requireOrganization(organizationId);
   return attempt(organizationId, async () => {
     const db = await getDb();

@@ -38,13 +38,15 @@ export type PhoneNumber = {
   voiceOutboundEnabled: boolean;
   smsInboundEnabled: boolean;
   smsOutboundEnabled: boolean;
+  /** Anyone in the business who may place calls may dial from it. */
+  outboundShared: boolean;
   readiness: NumberReadiness;
   origin: PhoneNumberOrigin;
   createdBy: string | null;
 };
 
 const NUMBER_COLUMNS =
-  'id, e164, label, lifecycle, purpose, voice_inbound_enabled, voice_outbound_enabled, sms_inbound_enabled, sms_outbound_enabled, origin, created_by';
+  'id, e164, label, lifecycle, purpose, voice_inbound_enabled, voice_outbound_enabled, sms_inbound_enabled, sms_outbound_enabled, outbound_shared, origin, created_by';
 
 type NumberRow = {
   id: string;
@@ -56,6 +58,7 @@ type NumberRow = {
   voice_outbound_enabled: boolean;
   sms_inbound_enabled: boolean;
   sms_outbound_enabled: boolean;
+  outbound_shared: boolean;
   origin: string;
   created_by: string | null;
 };
@@ -71,6 +74,7 @@ function toPhoneNumber(row: NumberRow, readiness: NumberReadiness): PhoneNumber 
     voiceOutboundEnabled: row.voice_outbound_enabled,
     smsInboundEnabled: row.sms_inbound_enabled,
     smsOutboundEnabled: row.sms_outbound_enabled,
+    outboundShared: row.outbound_shared,
     readiness,
     origin: row.origin as PhoneNumberOrigin,
     createdBy: row.created_by,
@@ -188,17 +192,62 @@ export async function releasePhoneNumberAssignment(
   }
 }
 
-/** Where a resolved number came from, in the order the resolver prefers them. */
-export type OutboundNumberSource = 'preference' | 'member_default' | 'member' | 'organization_default';
+/**
+ * Share a number, or stop sharing it. A shared number may be dialed from by anyone in the business
+ * who may place calls; it is a fact about the number, apart from any one member's assignment.
+ */
+export async function setOutboundSharing(
+  db: Db,
+  input: { organizationId: string; phoneNumberId: string; shared: boolean },
+): Promise<void> {
+  const { error } = await db.rpc('set_phone_number_outbound_sharing', {
+    p_organization_id: input.organizationId,
+    p_phone_number_id: input.phoneNumberId,
+    p_shared: input.shared,
+  });
+  if (error) {
+    throw new DomainError(
+      error.code === '42501' ? 'Your role cannot change who may call from this number.' : error.message,
+      'numbers.sharing_failed',
+    );
+  }
+}
+
+/**
+ * Why a person may dial from a number, in the order the resolver prefers them: the number they
+ * chose as theirs, their default, another number assigned to them, the business's default number,
+ * then a number the business shares.
+ */
+export type OutboundNumberSource = 'preference' | 'member_default' | 'member' | 'organization_default' | 'shared';
 
 export type OutboundNumber = { phoneNumberId: string; e164: string; source: OutboundNumberSource };
 
+/** One number this person may dial from. `automatic` marks the one a call uses when none is named. */
+export type OutboundNumberOption = OutboundNumber & { label: string | null; automatic: boolean };
+
 /**
- * The number this person dials from: their preference, then their default, then the business's. The
- * only answer to the question — the New call screen, the dialler and the number page all ask the
- * database function and none re-derives it. Naming a number asks whether this person may use that
- * one; it never widens what they may use. Null when nothing usable is configured, which is an
- * ordinary state and not a fault.
+ * Every number this person may dial from, in the resolver's order. It reads the same candidates
+ * `resolveOutboundNumber` does, so nothing listed here is refused when a call names it, and
+ * nothing a call would accept is missing.
+ */
+export async function listOutboundNumberOptions(db: Db, input: { organizationId: string }): Promise<OutboundNumberOption[]> {
+  const { data, error } = await db.rpc('outbound_number_options', { p_organization_id: input.organizationId });
+  if (error) throw fromDatabaseError(error, 'numbers.options_failed');
+  return (data ?? []).map((row) => ({
+    phoneNumberId: row.phone_number_id,
+    e164: row.e164,
+    label: row.label,
+    source: row.source as OutboundNumberSource,
+    automatic: row.automatic,
+  }));
+}
+
+/**
+ * The number this person dials from: their preference, their default, another number assigned to
+ * them, the business's default, then a shared number. The only answer to the question: the Dialer,
+ * the pop-out window, a contact's page and the number page all ask the database function and none
+ * re-derives it. Naming a number asks whether this person may use that one; it never widens what
+ * they may use. Null when nothing usable is configured, which is an ordinary state and not a fault.
  */
 export async function resolveOutboundNumber(
   db: Db,

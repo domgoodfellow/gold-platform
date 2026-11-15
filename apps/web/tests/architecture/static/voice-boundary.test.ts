@@ -150,15 +150,17 @@ describe('numbers are configured, never provisioned, from the screen', () => {
     }
   });
 
-  it('writes a number only through the configuring, assigning and releasing doors', () => {
+  it('writes a number only through the configuring, assigning, releasing and sharing doors, and reads who may call from it through the resolver', () => {
     const numbers = source('lib/domain/reception/numbers.ts');
     expect([...numbers.matchAll(/\.(insert|update|delete|upsert)\(/g)]).toEqual([]);
     const rpcs = [...numbers.matchAll(/rpc\('([a-z_]+)'/g)].map((match) => match[1]).sort();
     expect(rpcs).toEqual([
       'assign_phone_number',
       'configure_phone_number',
+      'outbound_number_options',
       'release_phone_number_assignment',
       'resolve_outbound_number',
+      'set_phone_number_outbound_sharing',
       'set_user_phone_number_preference',
     ]);
   });

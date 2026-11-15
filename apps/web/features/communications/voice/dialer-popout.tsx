@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { ArrowDownLeft, Phone } from 'lucide-react';
 import { Button } from '@/components/controls/button';
 import { BrowserPhone } from './browser-phone';
-import { DialerPopoutContext, type PopoutCallDraft } from './dialer-popout-context';
+import { DialerPopoutContext, type PopoutBlocker, type PopoutCallDraft } from './dialer-popout-context';
 import { NewCallForm } from './new-call-form';
 import { useTelephoneDevice } from './telephone-device';
 import { loadDialerAction } from '@/app/organizations/[organizationId]/calls/dialer-actions';
@@ -23,7 +23,7 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
   const [error, setError] = useState<string | null>(null);
   const [inlineHost, setInlineHost] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [unavailableReason, setUnavailableReason] = useState<string | null>(null);
+  const [loadedBlocker, setLoadedBlocker] = useState<PopoutBlocker | null>(null);
   const opener = useRef<HTMLElement | null>(null);
   const draftRef = useRef<PopoutCallDraft | undefined>(undefined);
   const popupWindow = useRef<Window | null>(null);
@@ -53,7 +53,7 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
     base.href = document.baseURI;
     child.document.head.append(base);
     setError(null);
-    setUnavailableReason(null);
+    setLoadedBlocker(null);
     draftRef.current = draft ? { ...draft } : undefined;
     popupWindow.current = child;
     setDraft(draft);
@@ -62,14 +62,14 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
     if (!draft) {
       void loadDialerAction(organizationId).then(options => {
         if (popupWindow.current !== child || child.closed) return;
-        const next = { ...options, toNumber: '', phoneNumberId: '' };
+        const next = { numbers: options.numbers, defaultNumber: options.defaultNumber, toNumber: '', phoneNumberId: '' };
         draftRef.current = next;
         setDraft(next);
-        setUnavailableReason(options.unavailableReason);
+        setLoadedBlocker(options.blocker ? { kind: options.blocker.kind, reason: options.blocker.reason, setup: options.setup } : null);
         setLoading(false);
       }).catch(() => {
         if (popupWindow.current !== child || child.closed) return;
-        setUnavailableReason('Calling options could not be loaded. Close and reopen the dialer to retry.');
+        setLoadedBlocker({ kind: 'unavailable', reason: 'Calling options could not be loaded. Close and reopen the dialer to retry.' });
         setLoading(false);
       });
     }
@@ -138,7 +138,7 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
     };
   }, [container, close]);
 
-  const blocked = unavailableReason ?? draft?.blockedReason ?? null;
+  const blocker = loadedBlocker ?? draft?.blocker ?? null;
   return (
     <DialerPopoutContext.Provider value={{ container, error, open, close, updateDraft, inlineHost, setInlineHost }}>
       {children}
@@ -152,7 +152,13 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
             <main className="order-2 flex flex-col gap-4 p-4">
               <BrowserPhone />
               {loading ? <p role="status" className="text-sm text-muted">Loading calling options…</p> : null}
-              {blocked ? <p id="dialer-window-readiness" role="status" className="text-sm">{blocked}</p> : null}
+              {blocker ? (
+                <div role="status" data-state={blocker.kind} className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+                  <p id="dialer-window-readiness" className="min-w-0 flex-1">{blocker.reason}</p>
+                  {/* Opens beside the main window: this window only holds the dialer. */}
+                  {blocker.setup ? <a href={blocker.setup.href} target="_blank" rel="noreferrer" className="underline underline-offset-4">{blocker.setup.label}</a> : null}
+                </div>
+              ) : null}
               {draft ? (
                 <NewCallForm
                   key={organizationId}
@@ -164,8 +170,8 @@ export function DialerPopoutProvider({ organizationId, children }: { organizatio
                   phoneNumberId={draft.phoneNumberId}
                   customerId={draft.customerId}
                   customerName={draft.customerName}
-                  blockedReason={blocked ?? undefined}
-                  blockedDescriptionId={blocked ? 'dialer-window-readiness' : undefined}
+                  blockedReason={blocker?.reason}
+                  blockedDescriptionId={blocker ? 'dialer-window-readiness' : undefined}
                 />
               ) : null}
             </main>

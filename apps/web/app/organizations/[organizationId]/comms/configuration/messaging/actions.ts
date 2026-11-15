@@ -19,7 +19,7 @@ export async function saveCommunicationProfileAction(_state: CommunicationProfil
   await requireOrganization(organizationId);
   try {
     const db = await getDb();
-    const rpc = db.rpc.bind(db) as unknown as (name: string, args?: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+    const rpc = (db as unknown as { rpc: (name: string, args?: Record<string, unknown>) => Promise<{ error: { message: string } | null }> }).rpc.bind(db);
     const result = await rpc('update_public_communication_profile', {
       p_organization_id: organizationId,
       p_site_id: siteId,

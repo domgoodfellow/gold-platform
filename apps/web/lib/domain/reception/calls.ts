@@ -53,7 +53,37 @@ export async function organizationTelephony(db: Db, organizationId: string): Pro
  */
 
 export type CallDirection = 'outbound' | 'inbound';
-export type CallContact = { id: string; name: string; email: string | null; phone: string | null; /** Set by the call list read: the contact is archived but still has this open call. */ archived?: boolean };
+export type CallContact = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  /** The contact is archived; a call or an open call task still refers to them. */
+  archived?: boolean;
+  /** Whether the contact is a person or a business, as recorded; never read from the name. */
+  contactType?: 'person' | 'company' | 'unspecified';
+  /** The business the contact belongs to: a company itself, or a person's primary active affiliation. */
+  companyId?: string | null;
+  companyName?: string | null;
+  /** The person's title at that business. */
+  title?: string | null;
+};
+
+type ContactCardRow = { id: string; name: string; email: string | null; phone: string | null; archived: boolean; contact_type: string; company_id: string | null; company_name: string | null; title: string | null };
+
+function toCallContact(row: ContactCardRow): CallContact {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    archived: row.archived,
+    contactType: row.contact_type as CallContact['contactType'],
+    companyId: row.company_id,
+    companyName: row.company_name,
+    title: row.title,
+  };
+}
 
 /**
  * The contacts on the call list among these ids, with only what calling them needs. The Dialer's
@@ -63,14 +93,26 @@ export async function callListContacts(db: Db, input: { organizationId: string; 
   if (!input.customerIds.length) return [];
   const { data, error } = await db.rpc('call_list_contacts', { p_organization_id: input.organizationId, p_customer_ids: [...input.customerIds] });
   if (error) throw fromDatabaseError(error, 'calls.contact_lookup_failed');
-  return data ?? [];
+  return (data ?? []).map(toCallContact);
+}
+
+/**
+ * The contact a call is linked to, or null when it is linked to nobody. Read from the call's own
+ * link, so it does not depend on the call list and is never guessed from a phone number that
+ * several contacts may share. For a member who may place calls or view contacts.
+ */
+export async function callContact(db: Db, input: { organizationId: string; callId: string }): Promise<CallContact | null> {
+  const { data, error } = await db.rpc('call_contact', { p_organization_id: input.organizationId, p_call_id: input.callId });
+  if (error) throw fromDatabaseError(error, 'calls.contact_lookup_failed');
+  const row = (data ?? [])[0];
+  return row ? toCallContact(row) : null;
 }
 
 /** At most two canonical matches: enough to distinguish a unique contact from ambiguity. */
 export async function dialerContactCandidates(db: Db, input: { organizationId: string; number: string }): Promise<CallContact[]> {
   const { data, error } = await db.rpc('dialer_contact_candidates', { p_organization_id: input.organizationId, p_number: input.number });
   if (error) throw fromDatabaseError(error, 'calls.contact_lookup_failed');
-  return data ?? [];
+  return (data ?? []).map(toCallContact);
 }
 
 export type Call = {
@@ -98,6 +140,21 @@ export type Call = {
   /** The people from this business who were on it. */
   handledBy: { membershipId: string; name: string }[];
 };
+
+/**
+ * A call's time, kept in its two parts. Ringing runs from when the call started until the other
+ * person answered (or until it ended unanswered). Talk time runs from the answer to the end, and
+ * is null for a call nobody answered. Both come from the instants the carrier's events recorded
+ * on the call; `durationSeconds`, the figure call history has always shown, is left as it is.
+ */
+export function callTiming(call: Pick<Call, 'startedAt' | 'answeredAt' | 'endedAt'>): { ringSeconds: number | null; talkSeconds: number | null } {
+  const seconds = (from: string, to: string) => Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / 1000));
+  const ringEnd = call.answeredAt ?? call.endedAt;
+  return {
+    ringSeconds: ringEnd ? seconds(call.startedAt, ringEnd) : null,
+    talkSeconds: call.answeredAt && call.endedAt ? seconds(call.answeredAt, call.endedAt) : null,
+  };
+}
 
 // **One string literal, and it has to stay one.** supabase-js parses the select at the type
 // level, so a string built by concatenation is `string` to the compiler and every row comes back
@@ -408,7 +465,7 @@ export async function getCall(
 export async function placeCall(
   db: Db,
   input: { organizationId: string; customerId?: string | null; toNumber: string; phoneNumberId?: string | null },
-): Promise<{ callId: string; room: string }> {
+): Promise<{ callId: string; room: string; fromNumber: string }> {
   await requireActor(db);
 
   const to = input.toNumber.trim();
@@ -434,8 +491,8 @@ export async function placeCall(
   if (!from) {
     throw new DomainError(
       input.phoneNumberId
-        ? 'You cannot call from that number. Choose one of yours, or ask for it to be assigned to you.'
-        : 'There is no number for you to call from yet. Assign one under Numbers, or set one under Calls, in Set up.',
+        ? 'You can no longer call from that number. Choose another, or use Automatic.'
+        : 'No outbound number is assigned to you or shared in this business.',
       'calls.no_calling_number',
     );
   }
@@ -501,7 +558,9 @@ export async function placeCall(
     );
   }
 
-  return { callId: placedCallId, room };
+  // The number this call was actually placed from. The call row keeps it, so later changes to
+  // assignments or sharing never change what a past call says it used.
+  return { callId: placedCallId, room, fromNumber: from.e164 };
 }
 
 async function rememberCustomerLeg(db: Db, organizationId: string, callId: string, externalId: string): Promise<boolean> {

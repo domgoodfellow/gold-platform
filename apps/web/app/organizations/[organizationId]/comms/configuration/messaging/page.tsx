@@ -24,7 +24,7 @@ export default async function CommunicationsPage({
 
   const site = mayManageWebsite ? await siteEditorState(db as Db, organizationId) : null;
   const profileResult = site
-    ? await (db.rpc.bind(db) as unknown as (name: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)('public_communication_profile', { p_site_id: site.siteId })
+    ? await (db as unknown as { rpc: (name: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }> }).rpc('public_communication_profile', { p_site_id: site.siteId })
     : null;
   const profileValue = profileResult?.data as { displayName?: string; greeting?: string; instructions?: string; handoffMessage?: string } | null;
 
