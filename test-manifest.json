@@ -137,6 +137,8 @@
     ]
   },
   "files": {
+    "apps/web/tests/integration/database/shared-surfaces-access.test.ts": {"category":"database-integration","concerns":["calendar","activity","rbac","tenant-isolation"]},
+    "apps/web/tests/component/organization-activity.test.tsx": {"category":"component","concerns":["activity","accessibility","panels"]},
     "apps/web/e2e/shared-surfaces.spec.ts": {"category":"playwright-acceptance","concerns":["calendar","navigation","rbac","responsive","activity"]},
     "apps/web/tests/unit/calendar-navigation.test.ts": {"category":"unit","concerns":["calendar","navigation"]},
     "apps/web/tests/component/configuration-continuity.test.tsx": {"category":"component","concerns":["setup","configuration","platform","security"]},

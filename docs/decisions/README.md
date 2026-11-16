@@ -196,6 +196,7 @@ It is not a duplicate specification.
 | ADR-050 | The organization header carries no workspace Calendar shortcut; supersedes ADR-048 point 4 | [`ADR-050-no-calendar-in-organization-header.md`](ADR-050-no-calendar-in-organization-header.md) |
 | ADR-051 | Organization Finance owns reusable commercial capabilities; GildOps sells through its own Finance; supersedes ADR-014 in part | [`ADR-051-reusable-commercial-capabilities.md`](ADR-051-reusable-commercial-capabilities.md) |
 | ADR-052 | Calendar is a shared organization destination; retains contextual previews and Work scheduling ownership | [`ADR-052-shared-organization-calendar.md`](ADR-052-shared-organization-calendar.md) |
+| ADR-053 | Organization Activity is an independently authorized global history utility, separate from page support and notifications | [`ADR-053-organization-activity-utility.md`](ADR-053-organization-activity-utility.md) |
 
 ## Adding a new decision
 

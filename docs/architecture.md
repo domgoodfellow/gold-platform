@@ -636,6 +636,8 @@ A workspace with no real Home/operating surface does not receive an empty naviga
 
 Activity, Insights and Configure are page/workspace support modes.
 
+The organization shell supplies Global Activity content to `WorkspaceShell`, and `WorkspaceRailProvider` owns its independent state and arbitration with page panels and Agent (ADR-053). It never registers through page-support Activity. `listOrganizationActivity` in the existing timeline domain resolves actual membership, entitled event families and record visibility before reusing timeline formatting; the server action rechecks operational service access. The client receives descriptions, actor names and authorized canonical links, never raw event payloads. Loading is on demand and bounded.
+
 They are not automatically top-level navigation destinations.
 
 Use them only when an honest source exists.

@@ -1596,6 +1596,8 @@ Supported file formats belong to file-intake policy and parsing, not the connect
 
 ## Events, activity and audit
 
+Organization Activity is a bounded projection of canonical history, not another entity or notification lifecycle (ADR-053). The global reader resolves actual tenant membership, source eligibility and referenced record visibility before formatting event snapshots or exposing links; unsupported private event families are omitted. No read/unread state is stored.
+
 ### Domain Event
 
 **Definition:** A durable record that something meaningful happened in the business.

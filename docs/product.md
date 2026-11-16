@@ -182,6 +182,8 @@ Marketing (`/marketing`) is an operational workspace for Campaigns, dynamic Audi
 
 ## Shared organization surfaces
 
+Organization Activity is a persistent header utility after Team and Connections and before Agent (ADR-053), showing recent authorized history with canonical record links. Page-support Activity remains contextual and independent. Activity has no unread count, read state, notification subscription or delivery semantics, and is not a workspace. Platform does not receive this utility.
+
 Not every important surface is a workspace.
 
 ### Organization Home

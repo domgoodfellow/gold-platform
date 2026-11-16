@@ -45,8 +45,9 @@ export function ActivityList({
               timeZone: timezone,
             }).format(new Date(entry.occurredAt))}
           </time>
-          <div className={cx('min-w-0', dense ? 'flex-1 text-xs' : 'text-sm')}>
-            <div>{organizationId && entry.record && ['work_item', 'resource', 'location', 'customer', 'asset'].includes(entry.record.type) ? <Link className="hover:underline" href={`/organizations/${organizationId}/${({ work_item: 'work', resource: 'resources', location: 'locations', customer: 'customers', asset: 'assets' } as Record<string, string>)[entry.record.type]}/${entry.record.id}`}>{entry.description}</Link> : entry.description}</div>
+          <div className={cx('min-w-0 break-words', dense ? 'flex-1 text-xs' : 'text-sm')}>
+            {entry.context?<div className="mb-0.5 text-xs text-muted">{entry.context}</div>:null}
+            <div>{entry.href?<Link className="hover:underline" href={entry.href}>{entry.description}</Link>:organizationId && entry.record && ['work_item', 'resource', 'location', 'customer', 'asset'].includes(entry.record.type) ? <Link className="hover:underline" href={`/organizations/${organizationId}/${({ work_item: 'work', resource: 'resources', location: 'locations', customer: 'crm/contacts', asset: 'assets' } as Record<string, string>)[entry.record.type]}/${entry.record.id}`}>{entry.description}</Link> : entry.description}</div>
             {/* Actor attribution is an actor id; a name is what this tenant chose to call them, and somebody
                 who has left the business no longer has one. */}
             {!dense ? <div className="text-xs text-subtle">{entry.actorName ?? 'A former member'}</div> : null}

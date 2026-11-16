@@ -76,6 +76,8 @@ One dialog element and conversation subtree remain in place across layout change
 
 ## Persistent application controls
 
+The persistent organization header groups Team, Connections and Activity before Agent. Activity is an icon-only control named Organization activity with an Activity tooltip at every width. Its nonmodal responsive panel shows chronological recent history, actor and time, useful authorized record context, and canonical links, with loading, empty, error/retry and bounded Load more states. The shell supplies it independently of page Activity; both retain state, with the selected secondary panel visible. Global Activity overlays the page at tablet/desktop widths and uses the nonmodal phone sheet; Activity and Agent follow last-opened arbitration, while existing page panels retain wide coexistence with Agent. Escape and Close restore the global trigger. No unread indicator or notifications model is added; Platform receives no control (ADR-053).
+
 The sidebar footer holds the Account/session menu, which represents the signed-in person: Settings,
 Help & documentation, Contact GildOps Support, then Sign out. Help and Contact are organization-scoped
 and appear only where an organization is in context. Mobile Agent remains a Sheet control. Locked

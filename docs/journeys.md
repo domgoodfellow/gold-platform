@@ -76,6 +76,10 @@ Dashboard attention links open `/organizations/{org}/work/dispatch` with the mat
 
 `/organizations/{org}/home` gives a cross-workspace overview using existing authorized source projections. Exact overview figures lead attention, distinct personal responsibilities, other dated obligations, relevant business performance and recent activity. Work exceptions open Dispatch with date and selection/filter context; invoices open Finance's existing inspector; CRM responsibilities open the selected task. Today and Upcoming are disjoint in Home, with continuing Work kept under Today and all seven subsequent local dates included in Upcoming. Attention and reporting controls preserve their own URL state. Quick actions and the existing command palette/Agent remain shared; New work opens the canonical `/work/new` route. Optional performance/activity selections stay in browser storage with explicit save-failure feedback. Source failures omit unknown figures while healthy workspaces remain readable.
 
+## Organization activity
+
+The organization header's Activity control opens recent authorized organization history from any workspace. Global Activity and the page's own Activity retain independent state; closing the global panel reveals an existing page panel without discarding its draft. Canonical history links open owning records, and the organization/service and source/record authorization checks run again on each read. Platform has no global Activity entry.
+
 ## Gaps
 
 - One open Call task per contact: a contact cannot have several independently scheduled calls on the Dialer list at once.

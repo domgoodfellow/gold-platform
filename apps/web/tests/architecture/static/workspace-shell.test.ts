@@ -131,8 +131,10 @@ describe('Agent is workspace-global and the support modes are page-level', () =>
   it('holds one support mode at a time, so switching reuses the rail rather than stacking drawers', () => {
     expect(workspaceRightRail).toContain("export const SUPPORT_MODES = ['activity', 'insights', 'configure'] as const");
     expect(workspaceRightRail).toMatch(/const \[supportMode, setSupportMode\] = useState<SupportMode \| null>/);
-    // No second open-state per mode: the three drawers are one value compared to their own mode.
-    expect(workspaceRightRail).not.toMatch(/activityOpen|insightsOpen|configureOpen/);
+    // Page modes remain one value; the approved global utility has independent state (ADR-053).
+    expect(workspaceRightRail).not.toMatch(/insightsOpen|configureOpen/);
+    expect(workspaceRightRail).toContain('const [activityOpen, setActivityOpen] = useState(false)');
+    expect(workspaceRightRail).toContain('organizationActivity, activityOpen, showActivity');
     const registrar = readFileSync(`${WEB}/components/panels/support-registrar.tsx`, 'utf8');
     expect(registrar).toContain('<PageDrawer open={supportMode === mode}');
     // Closing on unmount is scoped to this registrar's own mode.
@@ -311,7 +313,8 @@ describe('the right rail — Agent and the page drawer are independent panels', 
     expect(workspaceRightRail).toContain('const WIDE_BREAKPOINT = 1720');
     expect(workspaceRightRail).toContain('const DOCK_BREAKPOINT = 1280');
     expect(workspaceRightRail).toContain('const TABLET_BREAKPOINT = 768');
-    expect(workspaceRightRail).toContain("const roomForBoth = layout === 'wide'");
+    expect(workspaceRightRail).toContain("const roomForBoth = layout === 'wide' && selected === 'page'");
+    expect(workspaceRightRail).toContain("const panelLayout = layout === 'phone' ? 'phone' : 'overlay'");
     expect(workspaceRightRail).toMatch(/const \[agentOpen, setAgentOpen\]/);
     expect(workspaceRightRail).toMatch(/const \[supportMode, setSupportMode\]/);
   });
@@ -480,7 +483,7 @@ describe('the page-header contract — the page, not the workspace header, owns 
       const label = page.slice(root.length);
       // A pure redirect renders nothing, and so does an unmatched-address catch-all that only
       // throws `notFound()` so the segment's own `not-found.tsx` renders inside its layout.
-      if ((/^\s*redirect\(/m.test(source) || /^\s*notFound\(\);/m.test(source)) && !identity.test(source)) continue;
+      if ((/^\s*(?:return\s+)?redirect\(/m.test(source) || /^\s*notFound\(\);/m.test(source)) && !identity.test(source)) continue;
       // A thin page may delegate to a loader and then the feature screen that draws the header; follow imports two files deep.
       const draws = (text: string, depth: number): boolean => {
         if (identity.test(text)) return true;

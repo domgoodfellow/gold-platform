@@ -704,7 +704,7 @@ The shared page-identity components own this responsibility.
 
 ### Page location contract (ADR-047)
 
-**Status.** This is the approved target. Migration is per route (`RESOLVED_LOCATION_ROUTES` in `lib/route/page-location.ts`). Today the CRM operating pages take their location from the resolver: CRM Home, Customers and Customer detail, Relationship pipeline, Opportunities and Opportunity detail, Tasks, CRM Calendar and CRM Search. The Opportunity pipeline (open decision U-17), CRM configuration (Batch 3) and every other workspace still publish their own trail through `PageLocation`. A route uses exactly one of the two, never both. On a migrated route the shell resolves the location once, and the bar, the phone's Up control and the page's `h1` read that one answer; loading and refused states keep the known ancestors.
+**Status.** This is the approved target. Migration is per route (`RESOLVED_LOCATION_ROUTES` in `lib/route/page-location.ts`). Today the CRM operating pages take their location from the resolver: CRM Home, Customers and Customer detail, Relationship pipeline, Opportunities and Opportunity detail, Tasks, shared Calendar and CRM Search. The Opportunity pipeline (open decision U-17), CRM configuration (Batch 3) and every other workspace still publish their own trail through `PageLocation`. A route uses exactly one of the two, never both. On a migrated route the shell resolves the location once, and the bar, the phone's Up control and the page's `h1` read that one answer; loading and refused states keep the known ancestors.
 
 - **One location.** Every page inside the organization, Settings and Platform shells shows one location: its ancestors and the current page, resolved by `resolveLocation` (`lib/route/page-location.ts`) from the canonical registries. A page supplies only server-known record labels; it never writes its own ancestors.
 - **Loading and missing.** A loading page keeps its known ancestors and shows the record name only once it is known. A missing, deleted or unauthorized record shows not-found inside its nearest valid ancestors, without disclosing which it was. Record data is never invented.
@@ -1177,6 +1177,8 @@ A page renders only modes for which it has a real source.
 ---
 
 ### Activity
+
+Global organization Activity is a header utility distinct from page-support Activity (ADR-053). It uses the existing nonmodal overlay and phone-sheet geometry, retains page drafts, uses the same rail owner for last-opened arbitration with Agent and returns focus to its trigger on closing. The icon control uses an accessible name, tooltip and expanded state. Its history contains authorized record links, times and actor names, with bounded loading and explicit empty/unavailable states; it has no unread badge.
 
 Activity shows relevant historical/current events for the page context.
 

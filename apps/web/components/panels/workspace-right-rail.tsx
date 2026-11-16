@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -24,7 +25,7 @@ import { cx, FOCUS_RING } from '@/components/class-names';
 import { HEADER_HEIGHT_STYLE, MOBILE_NAV_HEIGHT_STYLE } from '../layout/workspace-geometry';
 
 /**
- * Two independent panels beside the workspace, each with its own open state:
+ * Agent, page support and organization history share one panel owner with independent state:
  *
  * - **Agent** is workspace-scoped and always the outermost right panel. Its header is the
  *   workspace header's band.
@@ -36,7 +37,11 @@ import { HEADER_HEIGHT_STYLE, MOBILE_NAV_HEIGHT_STYLE } from '../layout/workspac
  *   `supportMode` is a single value, so choosing another mode replaces the open one in the same
  *   footprint instead of stacking a second drawer.
  *
- * Agent is modal only on phones. Page-support panels remain nonmodal.
+ * Global Activity is supplied by the organization shell and never registers as page support.
+ * It shares the secondary footprint, floats over the page, and uses last-opened arbitration
+ * with Agent. Hidden page drafts stay mounted.
+ *
+ * Agent is modal only on phones. Page-support and Global Activity panels remain nonmodal.
  */
 
 const AGENT_MIN_WIDTH = 320;
@@ -90,7 +95,7 @@ function readStoredWidth(): number {
   return AGENT_DEFAULT_WIDTH;
 }
 
-type Panel = 'agent' | 'page';
+type Panel = 'agent' | 'page' | 'activity';
 
 /** What the page-support rail can show, in the order a page header offers it. */
 export const SUPPORT_MODES = ['activity', 'insights', 'configure'] as const;
@@ -104,6 +109,12 @@ const SUPPORT_MODE_LABELS: Record<SupportMode, { label: string; icon: LucideIcon
 
 type RailContextValue = {
   layout: RailLayout;
+  organizationActivity?: ReactNode;
+  activityOpen: boolean;
+  showActivity: boolean;
+  activityPanelId: string;
+  toggleActivity: () => void;
+  closeActivity: () => void;
   agentOpen: boolean;
   toggleAgent: () => void;
   openAgent: (returnFocus?: HTMLElement | null) => void;
@@ -130,7 +141,7 @@ type RailContextValue = {
 
 const RailContext = createContext<RailContextValue | null>(null);
 
-export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
+export function WorkspaceRailProvider({ children, organizationActivity }: { children: ReactNode; organizationActivity?: ReactNode }) {
   const layout = useRailLayout();
   const [agentOpen, setAgentOpen] = useState(false);
   const [agentLaunch, setAgentLaunch] = useState<{ id: number; prompt: string } | null>(null);
@@ -140,6 +151,24 @@ export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
   const [pageSlot, setPageSlot] = useState<HTMLElement | null>(null);
   const [pageStack, setPageStack] = useState<string[]>([]);
   const [latest, setLatest] = useState<Panel>('page');
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [secondary, setSecondary] = useState<'page' | 'activity'>('page');
+  const activityPanelId = useId();
+  const activityReturnFocus = useRef<HTMLElement | null>(null);
+  const closeActivity = useCallback(() => {
+    setActivityOpen(false);
+    activityReturnFocus.current?.focus();
+  }, []);
+  const toggleActivity = useCallback(() => {
+    if (activityOpen && !(agentOpen && latest === 'agent') && !(pageStack.length && secondary === 'page')) {
+      closeActivity();
+      return;
+    }
+    activityReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setActivityOpen(true);
+    setSecondary('activity');
+    setLatest('activity');
+  }, [activityOpen, agentOpen, latest, pageStack.length, secondary, closeActivity]);
   const agentReturnFocus = useRef<HTMLElement | null>(null);
   const openAgent = useCallback((returnFocus?: HTMLElement | null) => {
     agentReturnFocus.current = returnFocus ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
@@ -163,10 +192,6 @@ export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
 
   const registerAgent = useCallback((content: ReactNode | null) => setAgent(content), []);
 
-  const toggleAgent = useCallback(() => {
-    if (agentOpen) setAgentOpen(false);
-    else openAgent();
-  }, [agentOpen, openAgent]);
   const closeAgent = useCallback(() => setAgentOpen(false), []);
   const toggleSupport = useCallback(
     (mode: SupportMode) => setSupportMode((current) => (current === mode ? null : mode)),
@@ -176,21 +201,28 @@ export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
   const openPage = useCallback((id: string) => {
     setPageStack((stack) => (stack.includes(id) ? stack : [...stack, id]));
     setLatest('page');
+    setSecondary('page');
   }, []);
   const closePage = useCallback((id: string) => {
     setPageStack((stack) => stack.filter((entry) => entry !== id));
   }, []);
 
   const pageOpen = pageStack.length > 0;
-  // Where both cannot sit beside the page, the one opened last is the one shown; closing it
-  // brings the other back.
-  const both = agentOpen && pageOpen;
-  const roomForBoth = layout === 'wide';
-  const showAgent = agentOpen && (!both || roomForBoth || latest === 'agent');
-  const showPage = pageOpen && (!both || roomForBoth || latest === 'page');
+  const sideOpen = pageOpen || activityOpen;
+  const selected = activityOpen && (secondary === 'activity' || !pageOpen) ? 'activity' : 'page';
+  const roomForBoth = layout === 'wide' && selected === 'page';
+  const showAgent = agentOpen && (!sideOpen || roomForBoth || latest === 'agent');
+  const showSecondary = sideOpen && (!agentOpen || roomForBoth || latest !== 'agent');
+  const showPage = showSecondary && selected === 'page' && pageOpen;
+  const showActivity = showSecondary && selected === 'activity' && activityOpen;
+  const toggleAgent = useCallback(() => {
+    if (showAgent) setAgentOpen(false);
+    else openAgent();
+  }, [showAgent, openAgent]);
 
   const value = useMemo<RailContextValue>(
     () => ({
+      organizationActivity, activityOpen, showActivity, activityPanelId, toggleActivity, closeActivity,
       layout,
       agentOpen,
       toggleAgent,
@@ -215,6 +247,7 @@ export function WorkspaceRailProvider({ children }: { children: ReactNode }) {
       showPage,
     }),
     [
+      organizationActivity, activityOpen, showActivity, activityPanelId, toggleActivity, closeActivity,
       layout,
       agentOpen,
       toggleAgent,
@@ -458,12 +491,16 @@ export function PagePanel() {
   const style: CSSProperties | undefined = docked(layout) ? { width: PAGE_DRAWER_WIDTH } : undefined;
 
   return (
-    <aside
-      ref={setPageSlot}
-      aria-label="Page panel"
-      className={panelClass('page', layout, showPage)}
-      style={style}
-    />
+    <>
+      <aside
+        ref={setPageSlot}
+        aria-label="Page panel"
+        aria-hidden={!showPage}
+        className={panelClass('page', layout, showPage)}
+        style={style}
+      />
+      <OrganizationActivityPanel />
+    </>
   );
 }
 
@@ -482,5 +519,50 @@ export function WorkspaceRightRail({ main, bottomInset = false }: { main: ReactN
         <AgentPanel />
       </div>
     </div>
+  );
+}
+
+
+/** Global organization history shares rail geometry/arbitration, not page-support registration. */
+export function OrganizationActivityTrigger() {
+  const { showActivity, activityPanelId, toggleActivity } = useWorkspaceRail();
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button type="button" tone="secondary" size="small" aria-label="Organization activity"
+          aria-expanded={showActivity} aria-controls={activityPanelId} onClick={toggleActivity} className="size-9 shrink-0 p-0">
+          <History aria-hidden size={20} />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>Activity</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function OrganizationActivityPanel() {
+  const { layout, organizationActivity, activityOpen, showActivity, activityPanelId, closeActivity } = useWorkspaceRail();
+  const panelLayout = layout === 'phone' ? 'phone' : 'overlay';
+  const ref = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (showActivity) ref.current?.querySelector<HTMLButtonElement>('button')?.focus();
+  }, [showActivity]);
+  if (!organizationActivity) return null;
+
+  return (
+    <aside ref={ref} id={activityPanelId} hidden={!showActivity} role="dialog" aria-modal="false"
+      aria-label="Organization activity" className={panelClass('page', panelLayout, showActivity)}
+      onKeyDown={event => {
+        if (event.key === 'Escape' && !event.defaultPrevented) {
+          event.stopPropagation();
+          closeActivity();
+        }
+      }}>
+      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-2">
+        <h2 className="text-sm font-semibold">Activity</h2>
+        <Button type="button" tone="ghost" size="small" aria-label="Close organization activity"
+          onClick={closeActivity} className="size-8 p-0"><X aria-hidden size={16} /></Button>
+      </div>
+      {activityOpen ? organizationActivity : null}
+    </aside>
   );
 }

@@ -1,5 +1,9 @@
 import { classificationLabel } from '@/lib/domain/customers/classification';
 import type { Db } from '@/lib/db/types';
+import { getOrganization } from '@/lib/domain/tenancy/organizations';
+import { organizationResolvedFeatureStates, availableFeatureKeys, activeModuleKeys } from '@/lib/domain/catalogue/organization-plans';
+import { areaAvailable } from '@/lib/navigation';
+import { DomainError } from '@/lib/domain/errors';
 import { fromDatabaseError } from '@/lib/domain/errors';
 import { formatMoney } from '@/lib/domain/work-items/consumption';
 
@@ -18,6 +22,9 @@ const FOLLOW_UP_EVENT: Record<string, string> = { 'follow_up.created': 'created'
 export type TimelineEntry = {
   id: string;
   record?: { type: string; id: string };
+  /** Server-authorized canonical destination and record context for the organization utility. */
+  href?: string;
+  context?: string;
   occurredAt: string;
   /** The platform's own word for what happened. Never a tenant's. */
   action: string;
@@ -433,6 +440,7 @@ export async function listRecentActivity(
   if (input.opportunityId) query = query.eq('entity_type', 'opportunity').eq('entity_id', input.opportunityId);
   const { data, error } = await query
     .order('occurred_at', { ascending: false })
+    .order('id', { ascending: false })
     .limit(limit);
 
   if (error) {
@@ -442,23 +450,33 @@ export async function listRecentActivity(
   const rows = (data ?? []) as EventRow[];
   if (rows.length === 0) return [];
 
+  return formatActivityRows(db, input.organizationId, rows, input.includeRecords);
+}
+
+async function formatActivityRows(db: Db, organizationId: string, rows: EventRow[], includeRecords = false, strict = false): Promise<TimelineEntry[]> {
   // Not every row names a work item — a customer or organization event's `entity_id` is not
   // one — so this over-asks by a few ids rather than branching on action first, and the query
   // simply matches nothing for the ones that aren't.
   const entityIds = [...new Set(rows.map((row) => row.entity_id))];
 
   const [statuses, resources, members, stages, outcomes, jobs] = await Promise.all([
-    db.from('work_item_statuses').select('id, name').eq('organization_id', input.organizationId),
-    db.from('resources').select('id, name').eq('organization_id', input.organizationId),
-    db.from('memberships').select('user_id, display_name').eq('organization_id', input.organizationId),
-    db.from('contact_relationship_stages').select('id, name').eq('organization_id', input.organizationId),
-    db.from('call_outcomes').select('id, name').eq('organization_id', input.organizationId),
+    db.from('work_item_statuses').select('id, name').eq('organization_id', organizationId),
+    db.from('resources').select('id, name').eq('organization_id', organizationId),
+    db.from('memberships').select('user_id, display_name').eq('organization_id', organizationId),
+    db.from('contact_relationship_stages').select('id, name').eq('organization_id', organizationId),
+    db.from('call_outcomes').select('id, name').eq('organization_id', organizationId),
     db
       .from('work_items')
       .select('id, title')
-      .eq('organization_id', input.organizationId)
+      .eq('organization_id', organizationId)
       .in('id', entityIds),
   ]);
+
+  if (strict) {
+    for (const result of [statuses, resources, members, stages, outcomes, jobs]) {
+      if (result.error) throw fromDatabaseError(result.error, 'timeline.activity_failed');
+    }
+  }
 
   const words: Vocabulary = {
     statuses: new Map((statuses.data ?? []).map((row) => [row.id, row.name])),
@@ -471,7 +489,7 @@ export async function listRecentActivity(
 
   return rows.map((row) => ({
     id: row.id,
-    ...(input.includeRecords && row.entity_type ? { record: { type: row.entity_type, id: row.entity_id } } : {}),
+    ...(includeRecords && row.entity_type ? { record: { type: row.entity_type, id: row.entity_id } } : {}),
     occurredAt: row.occurred_at,
     action: row.action,
     description: describe(row, words),
@@ -779,4 +797,113 @@ export async function listAssetTimeline(
     description: describe(row, words),
     actorName: eventActorName(row, names),
   }));
+}
+
+
+export type OrganizationActivity = { entries: TimelineEntry[]; more: boolean; limited: boolean };
+
+/**
+ * Resolve actual membership and allowed event families, then prove each referenced record
+ * readable under the caller's RLS before formatting snapshots or returning destinations.
+ * Private service/Agent/notification payloads never enter this organization utility.
+ */
+export async function listOrganizationActivity(
+  db: Db,
+  input: { organizationId: string; limit?: number },
+): Promise<OrganizationActivity> {
+  const organization = await getOrganization(db, input.organizationId);
+  if (!organization) throw new DomainError('Organization membership required.', 'activity.forbidden');
+
+  const states = await organizationResolvedFeatureStates(db, { organizationId: input.organizationId });
+  const features = availableFeatureKeys(states);
+  const enabled = activeModuleKeys(states);
+  const capabilities = new Set(organization.capabilities);
+  const available = (key: string) => areaAvailable(key, { enabled, featureAvailability: features, capabilities });
+  const financial = available('finance-invoices') && capabilities.has('report.read');
+  const financialActions = new Set([
+    'work_item.line_added', 'work_item.line_removed', 'work_item.cost_recorded', 'invoice.issued', 'payment.recorded',
+  ]);
+  const actions: string[] = ['organization.created', 'organization.launched'];
+  if (available('work')) actions.push(...WORK_ITEM_ACTIONS.filter(action => !financialActions.has(action) || financial));
+  if (capabilities.has('customer.read')) actions.push(...ACTIVITY_SCOPE_ACTIONS.customers);
+  if (available('opportunities')) actions.push(...OPPORTUNITY_ACTIONS);
+  if (features.has('follow_ups')) actions.push(...FOLLOW_UP_ACTIONS);
+  if (available('calls') && capabilities.has('customer.read')) actions.push('call.placed', 'call.wrapped_up');
+
+  const limit = Math.max(1, Math.min(100, Number.isFinite(input.limit) ? Math.trunc(input.limit!) : 20));
+  const result = await db.from('events')
+    .select('id,action,payload,occurred_at,actor_id,entity_id,entity_type')
+    .eq('organization_id', input.organizationId)
+    .in('action', actions)
+    .order('occurred_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(500);
+  if (result.error) throw fromDatabaseError(result.error, 'timeline.activity_failed');
+  const rows = (result.data ?? []) as EventRow[];
+
+  // Call writers record customer history, not a call entity. Match canonical writers rather
+  // than trusting an arbitrary entity_type to decide which record's visibility will suffice.
+  const kind = (row: EventRow) => {
+    if (row.action.startsWith('organization.')) return 'organization';
+    if (row.action.startsWith('opportunity.')) return 'opportunity';
+    if (row.action.startsWith('follow_up.')) return 'follow_up';
+    if (row.action.startsWith('customer.') || row.action.startsWith('contact.') || row.action.startsWith('call.')) return 'customer';
+    return 'work_item';
+  };
+  const candidates = rows.filter(row => row.entity_type === kind(row));
+  const ids = (type: string) => [...new Set(candidates.filter(row => row.entity_type === type).map(row => row.entity_id))];
+  const visible = async (table: 'contacts' | 'opportunities' | 'crm_tasks' | 'work_items', type: string) => {
+    const keys = ids(type);
+    if (!keys.length) return new Set<string>();
+    const pages = await Promise.all(Array.from({ length: Math.ceil(keys.length / 100) }, (_, index) =>
+      db.from(table).select('id').eq('organization_id', input.organizationId).in('id', keys.slice(index * 100, index * 100 + 100)),
+    ));
+    const result = new Set<string>();
+    for (const page of pages) {
+      if (page.error) throw fromDatabaseError(page.error, 'timeline.activity_failed');
+      for (const row of page.data ?? []) result.add(row.id);
+    }
+    return result;
+  };
+  const [contacts, opportunities, tasks, work] = await Promise.all([
+    visible('contacts', 'customer'), visible('opportunities', 'opportunity'),
+    visible('crm_tasks', 'follow_up'), visible('work_items', 'work_item'),
+  ]);
+  const allowed: Record<string, Set<string>> = {
+    customer: contacts, opportunity: opportunities, follow_up: tasks, work_item: work,
+    organization: new Set([input.organizationId]),
+  };
+  const permitted = candidates.filter(row => allowed[row.entity_type!]?.has(row.entity_id));
+  const shown = permitted.slice(0, limit);
+  const contactNames = new Map<string, string>();
+  const shownContacts = [...new Set(shown.filter(row => row.entity_type === 'customer').map(row => row.entity_id))];
+  if (shownContacts.length) {
+    const names = await db.from('contacts').select('id,name').eq('organization_id', input.organizationId).in('id', shownContacts);
+    if (names.error) throw fromDatabaseError(names.error, 'timeline.activity_failed');
+    for (const row of names.data ?? []) contactNames.set(row.id, row.name);
+  }
+
+  const entries = await formatActivityRows(db, input.organizationId, shown, true, true);
+  const base = `/organizations/${input.organizationId}`;
+  const links: Record<string, string> = {
+    customer: `${base}/crm/contacts/`, opportunity: `${base}/crm/opportunities/`,
+    follow_up: `${base}/crm/tasks?status=all&selected=`, work_item: `${base}/work/`,
+  };
+  const contexts: Record<string, string> = {
+    customer: 'CRM: Contact', opportunity: 'CRM: Opportunity', follow_up: 'CRM: Task',
+    work_item: 'Work', organization: 'Business',
+  };
+  return {
+    entries: entries.map(entry => {
+      const record = entry.record!;
+      const isFinancial = financialActions.has(entry.action);
+      const context = isFinancial ? 'Finance' : record.type === 'customer'
+        ? `CRM: ${contactNames.get(record.id) ?? 'Contact'}` : contexts[record.type];
+      const href = record.type === 'organization' ? `${base}/home`
+        : `${links[record.type]}${record.id}${isFinancial ? '?section=financials' : ''}`;
+      return { ...entry, context, href };
+    }),
+    more: permitted.length > limit && limit < 100,
+    limited: (rows.length === 500 && permitted.length <= limit) || (permitted.length > limit && limit === 100),
+  };
 }

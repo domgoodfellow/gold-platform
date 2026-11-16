@@ -7,6 +7,8 @@
 
 **Amended:** 2026-11-16, owner-approved CRM Calendar Navigation & Dashboard Integration work order: CRM Calendar is a first-class workspace sidebar destination; its sidebar and Dashboard agenda links replace the redundant CRM page-header actions. The organization-header restriction remains.
 
+**Extended:** 2026-11-16 by ADR-053: organization Activity joins the header utilities as authorized history. The Calendar-shortcut and notification restrictions remain.
+
 ## Context
 
 ADR-048 point 4 kept a Calendar shortcut in the persistent organization header, offered for the entered workspace while its Home was usable. The header is organization chrome: it appeared and disappeared as a person moved between workspaces, and it treated one workspace's calendar as an organization utility. Only CRM and Work register calendars, and both are already reached from their own pages.

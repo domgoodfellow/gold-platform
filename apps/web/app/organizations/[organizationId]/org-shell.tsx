@@ -7,6 +7,7 @@ import type { HeaderConnections } from '@/lib/application/shell/connection-menu-
 import { WORKSPACES } from '@/lib/navigation';
 
 import { NavigationActivityContext } from '@/components/navigation/activity-context';
+import { OrganizationActivityTrigger } from '@/components/panels/workspace-right-rail';
 import { WorkspaceHeader } from '@/components/headers/workspace-header';
 import { Badge } from '@/components/display/data';
 import { SIDEBAR_HEADER_HEIGHT } from '@/components/layout/workspace-geometry';
@@ -341,7 +342,7 @@ function NavGroupRow({ item, active, open, setOpen }: { item: NavItem; active: s
 }
 
 /**
- * Home, Search and Library: the same three controls at every depth of the organization, drawn once
+ * Home, Search, Calendar and Library: the same primary controls at every depth of the organization, drawn once
  * by this component for the business's own rows and for any workspace or Administration context.
  */
 function PrimaryNavigation({ organizationId, home, calendar, library, active }: { organizationId: string; home?: NavItem; calendar?: NavItem; library?: NavItem; active: string | null }) {
@@ -577,7 +578,7 @@ export function LockedOrgSidebar({
  */
 export function OrganizationFrame({
   organizationId, name, role, mark, organizations, sections, utilities, settings, settingsSearch,
-  locked, email, signOutAction, agent, children, displayName = '', setupPending = false, locationAccess, hostedData = false, headerConnections,
+  locked, email, signOutAction, agent, children, displayName = '', setupPending = false, locationAccess, hostedData = false, headerConnections, organizationActivity,
 }: {
   displayName?: string;
   /** A development server reading the hosted project (`developmentSupabaseTarget`). Never true in production. */
@@ -593,6 +594,7 @@ export function OrganizationFrame({
   sections: ShellSection[];
   utilities: HeaderUtility[];
   headerConnections?: HeaderConnections | null;
+  organizationActivity?: ReactNode;
   settings: ShellSection[];
   settingsSearch: SettingsSearchItem[];
   locked: boolean;
@@ -625,7 +627,7 @@ export function OrganizationFrame({
   const administration = sections.find((section) => section.key === 'administration')?.items[0];
   const shared = { mark, name, organizations, email, signOutAction };
   // ADR-050: the organization header carries no workspace Calendar shortcut. Calendars stay registered
-  // destinations, reached in context (CRM Dashboard and Tasks, Work Dashboard).
+  // destinations in primary navigation, with contextual Dashboard links.
   return (
     <CommandCenterProvider key={organizationId} organizationId={organizationId} displayName={displayName}><WorkspaceShell
       locationNavigation={{ organizationId, sections: recovery ? [] : settingsContext ? settings : sections, configurationHrefs: recovery ? [] : settingsSearch.map((item) => item.href), ...(recovery || !locationAccess ? {} : { access: locationAccess }) }}
@@ -635,6 +637,7 @@ export function OrganizationFrame({
           navigationTrigger="always"
           agentTrigger="md"
           utilities={utilities}
+          activityControl={!recovery && organizationActivity && !inPlatformScope(pathname) ? <OrganizationActivityTrigger/> : undefined}
           utilityControls={headerConnections ? { connections: <HeaderConnectionsControl key={organizationId} organizationId={organizationId} initial={headerConnections} workspace={workspace && enteredWorkspace ? { key: workspace.key, label: enteredWorkspace.label } : undefined} /> } : undefined}
           beforeActions={<>
             {hostedData ? <Badge tone="danger" className="shrink-0 font-semibold">HOSTED DATA</Badge> : null}
@@ -643,6 +646,7 @@ export function OrganizationFrame({
         />
       }
       agent={agent}
+      organizationActivity={!recovery && !inPlatformScope(pathname) ? organizationActivity : undefined}
     >
       {children}
       {mayCreate ? (
